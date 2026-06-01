@@ -234,19 +234,19 @@ pub trait F16Convert: F32x4Convert {
     }
 }
 
-// Blanket default for every token. Concrete x86 tiers below provide their own
-// `impl F16Convert` *items* (the override methods); this blanket supplies the
-// software-default methods for all other tokens. To avoid coherence conflicts
-// the blanket is the *only* impl for non-x86 tokens, and the x86 tiers opt in
-// to the hardware override individually rather than relying on specialization
-// (which is unstable).
+// Blanket default for every token. Concrete x86 / aarch64 tiers below provide
+// their own `impl F16Convert` *items* (the override methods); this blanket
+// supplies the software-default methods for all other tokens. To avoid
+// coherence conflicts the blanket is the *only* impl on targets that have no
+// hardware path, and the hardware tiers opt in individually rather than relying
+// on specialization (which is unstable).
 //
 // Implementation note: Rust has no stable specialization, so we cannot write
 // one blanket impl and override it per type. Instead the blanket impl is
-// gated to exclude the tokens that want the hardware path, and those tokens
-// get an explicit impl. This keeps every `impl` block free of `unsafe` — the
-// hardware intrinsics live behind `#[arcane]` boundaries below.
-#[cfg(not(target_arch = "x86_64"))]
+// gated to exclude the arches that want a hardware path, and on those arches
+// each token gets an explicit impl. This keeps every `impl` block free of
+// `unsafe` — the hardware intrinsics live behind `#[arcane]` boundaries below.
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
 impl<T: F32x4Convert> F16Convert for T {}
 
 // On x86-64, give the software default to every token *except* the F16C tiers,
@@ -288,6 +288,161 @@ mod x86_dispatch {
             f16c_encode_v3(self, input, output);
         }
     }
+}
+
+// On aarch64, give the software default to `ScalarToken`, then implement the
+// `NeonToken` tier. NEON's *baseline* `neon` feature does NOT include the
+// half-precision conversion instructions — `vcvt_f32_f16` / `vcvt_f16_f32`
+// require the `fp16` target feature (the archmage `Arm64V2Token` tier:
+// `neon,crc,rdm,dotprod,fp16,…`, present on Cortex-A55+, Apple M1+, Graviton 2+
+// and every post-2017 ARM core). A bare `NeonToken` only proves `neon`, so the
+// override probes for `fp16` at runtime (`Arm64V2Token::summon()`); when it is
+// present the hardware kernel runs, otherwise the branchless software kernel
+// does. Both `impl` blocks stay free of `unsafe` — the intrinsics live behind
+// the `#[arcane]` boundaries below.
+//
+// The hardware kernels are compiled only when the `archmage_has_neon_f16` cfg
+// is set by `build.rs` (its capability probe succeeds on a toolchain where the
+// `stdarch_neon_fp16` intrinsics are stable — Rust ≥ 1.94). On older toolchains
+// (down to the crate MSRV) the cfg is unset, the kernels are not compiled, and
+// `NeonToken` falls through to the software path with no MSRV bump and no
+// compile error. This is the capability-version-gate pattern: see the
+// `build.rs` module docs and the "Adding a newer-stable intrinsic above MSRV"
+// section in the crate docs.
+#[cfg(target_arch = "aarch64")]
+mod aarch64_dispatch {
+    use super::*;
+
+    // The always-available scalar token gets the software default.
+    impl F16Convert for archmage::ScalarToken {}
+
+    // `NeonToken` is the only aarch64 token that implements `F32x4Convert`, so
+    // it is the only aarch64 token that can satisfy this trait's supertrait
+    // bound and reach the public slice entry points. Its override uses the
+    // NEON-f16 hardware path when `fp16` is available at runtime, else the
+    // software kernel.
+    impl F16Convert for archmage::NeonToken {
+        #[inline]
+        fn f16_to_f32_into(self, input: &[u16], output: &mut [f32]) {
+            neon_f16_decode(self, input, output);
+        }
+        #[inline]
+        fn f32_to_f16_into(self, input: &[f32], output: &mut [u16]) {
+            neon_f16_encode(self, input, output);
+        }
+    }
+}
+
+/// `NeonToken` f16→f32 decode: hardware NEON-f16 (`vcvt_f32_f16`) when the CPU
+/// proves `fp16` at runtime, otherwise the branchless software kernel.
+///
+/// The bare `neon` feature carried by a `NeonToken` does not include the
+/// half-precision conversion instructions, so we summon an `Arm64V2Token`
+/// (whose tier includes `fp16`) to prove the feature before dispatching to the
+/// hardware kernel. When `fp16` is absent — or the toolchain is too old for the
+/// `stdarch_neon_fp16` intrinsics to be stable (cfg unset, the
+/// `#[cfg(archmage_has_neon_f16)]` arm is not compiled) — this runs the
+/// software kernel, exactly matching every other backend.
+#[cfg(target_arch = "aarch64")]
+#[inline]
+fn neon_f16_decode(token: archmage::NeonToken, input: &[u16], output: &mut [f32]) {
+    #[cfg(archmage_has_neon_f16)]
+    {
+        use archmage::SimdToken;
+        if let Some(v2) = archmage::Arm64V2Token::summon() {
+            neon_f16_decode_hw(v2, input, output);
+            return;
+        }
+    }
+    // Software fallback: no `fp16`, or toolchain < 1.94 (cfg unset).
+    f16_to_f32_slice_soft(token, input, output);
+}
+
+/// `NeonToken` f32→f16 encode: hardware NEON-f16 (`vcvt_f16_f32`, RTNE) when
+/// `fp16` is available at runtime, otherwise the branchless software kernel.
+/// See [`neon_f16_decode`] for the dispatch rationale.
+#[cfg(target_arch = "aarch64")]
+#[inline]
+fn neon_f16_encode(token: archmage::NeonToken, input: &[f32], output: &mut [u16]) {
+    #[cfg(archmage_has_neon_f16)]
+    {
+        use archmage::SimdToken;
+        if let Some(v2) = archmage::Arm64V2Token::summon() {
+            neon_f16_encode_hw(v2, input, output);
+            return;
+        }
+    }
+    f32_to_f16_slice_soft(token, input, output);
+}
+
+/// Hardware NEON-f16 decode kernel: `&[u16]` → `&mut [f32]` via `vcvt_f32_f16`.
+///
+/// Gated on `archmage_has_neon_f16` (set by `build.rs` when the
+/// `stdarch_neon_fp16` intrinsics are stable, i.e. Rust ≥ 1.94). `#[arcane]`
+/// wraps this in a `#[target_feature(enable = "neon,…,fp16")]` sibling (the
+/// `Arm64V2Token` tier enables `fp16`) and a safe `#[inline(always)]`
+/// trampoline, so it is sound to call from cold code while emitting the
+/// `FCVTL`/`FCVT` instructions inside a feature-enabled region. Processes 4
+/// lanes per `vcvt_f32_f16`, then a scalar tail through the software kernel.
+///
+/// Bit-identity vs the software kernel: every **finite, subnormal, and Inf**
+/// f16 decodes identically (verified exhaustively over all 65 536 f16 under
+/// QEMU). For a NaN *input* `vcvt_f32_f16` returns the hardware-quieted f32 NaN
+/// (mantissa MSB set), whereas the software kernel widens the f16 payload
+/// directly — the same benign, NaN-only divergence the F16C path documents (the
+/// divergence set is exactly the 1022 f16 signaling-NaN patterns).
+#[cfg(all(target_arch = "aarch64", archmage_has_neon_f16))]
+// The `incompatible_msrv` lint flags these intrinsics as "stable since 1.94"
+// against the 1.89 MSRV. That is *correct* in general — and exactly why this
+// item is `#[cfg(archmage_has_neon_f16)]`: it is only compiled on a toolchain
+// where the capability probe in `build.rs` proved the intrinsics are stable.
+// The cfg is the MSRV gate; the lint cannot see it, so we allow it here.
+#[allow(clippy::incompatible_msrv)]
+#[archmage::arcane(import_intrinsics)]
+fn neon_f16_decode_hw(token: archmage::Arm64V2Token, input: &[u16], output: &mut [f32]) {
+    let (in4, in_tail) = input.as_chunks::<4>();
+    let (out4, out_tail) = output.as_chunks_mut::<4>();
+    for (inp, out) in in4.iter().zip(out4.iter_mut()) {
+        // Load 4 f16 bit patterns into a NEON `uint16x4_t`, reinterpret as the
+        // `float16x4_t` lane type, widen all 4 to f32, store 4 f32.
+        //
+        // `vreinterpret_f16_u16` is the safe lane-type cast between the two
+        // 64-bit NEON vector views; `vcvt_f32_f16` is the widening convert.
+        let h_u16 = vld1_u16(inp);
+        let h = vreinterpret_f16_u16(h_u16);
+        let f = vcvt_f32_f16(h);
+        vst1q_f32(out, f);
+    }
+    // Scalar tail: reuse the branchless software kernel for bit-identity.
+    f16_to_f32_slice_soft(token.neon(), in_tail, out_tail);
+}
+
+/// Hardware NEON-f16 encode kernel: `&[f32]` → `&mut [u16]` via `vcvt_f16_f32`
+/// (round-to-nearest-even — the only rounding mode the narrowing convert
+/// offers). See [`neon_f16_decode_hw`] for the `#[arcane]` / gating rationale.
+///
+/// Bit-identical to the software kernel for every **finite and Inf** f32
+/// (verified over the f16-roundtrip grid + dense f32 sweep under QEMU); for a
+/// NaN input both produce a valid quiet f16 NaN whose payload bits may differ —
+/// the same tolerance the software encode and the F16C path already document.
+#[cfg(all(target_arch = "aarch64", archmage_has_neon_f16))]
+// See `neon_f16_decode_hw`: the `archmage_has_neon_f16` cfg is the MSRV gate;
+// `incompatible_msrv` cannot see it, so we allow the (here false-positive) lint.
+#[allow(clippy::incompatible_msrv)]
+#[archmage::arcane(import_intrinsics)]
+fn neon_f16_encode_hw(token: archmage::Arm64V2Token, input: &[f32], output: &mut [u16]) {
+    let (in4, in_tail) = input.as_chunks::<4>();
+    let (out4, out_tail) = output.as_chunks_mut::<4>();
+    for (inp, out) in in4.iter().zip(out4.iter_mut()) {
+        let f = vld1q_f32(inp);
+        // Narrow 4 f32 → 4 f16 (RTNE), reinterpret the `float16x4_t` lanes as
+        // `uint16x4_t`, store 4 f16 bit patterns.
+        let h = vcvt_f16_f32(f);
+        let h_u16 = vreinterpret_u16_f16(h);
+        vst1_u16(out, h_u16);
+    }
+    // Scalar tail: reuse the branchless software kernel for bit-identity.
+    f32_to_f16_slice_soft(token.neon(), in_tail, out_tail);
 }
 
 /// F16C decode kernel: `&[u16]` → `&mut [f32]` using `vcvtph2ps`.

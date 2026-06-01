@@ -4,3 +4,13 @@
 
 [target.wasm32-wasip1]
 runner = "wasmtime -W simd=y"
+
+# aarch64 user-mode emulation via QEMU. `-cpu max` advertises the full feature
+# set (incl. `fp16`), so `Arm64V2Token::summon()` succeeds and the NEON-f16
+# hardware converter path is exercised — not just the software fallback. `-L`
+# points QEMU at the cross sysroot's dynamic loader. Set the linker via
+# `CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc` (or a
+# `[target.aarch64-unknown-linux-gnu] linker = …` entry on machines that have
+# the cross toolchain installed).
+[target.aarch64-unknown-linux-gnu]
+runner = "qemu-aarch64-static -L /usr/aarch64-linux-gnu -cpu max"

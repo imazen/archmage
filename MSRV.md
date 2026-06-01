@@ -153,3 +153,56 @@ fn main() {
 ```
 
 No `#![feature(...)]`, no `unsafe`, no nightly. `#![forbid(unsafe_code)]` works. That's why the MSRV is 1.89.
+
+## Newer-stable intrinsics *above* the MSRV — the capability gate
+
+Some hardware paths want an intrinsic that became `#[stable]` *after* 1.89.
+Example: the aarch64 NEON half-precision converters `vcvt_f32_f16` /
+`vcvt_f16_f32` are stable only since **1.94** (`stdarch_neon_f16`). A static
+`cfg` on them would drag the whole crate's MSRV up to 1.94 — losing every user
+on 1.89–1.93.
+
+Instead we **probe capability at build time and adapt** — inspired by
+`if_rust_version` / `autocfg`, but feature-detection rather than version-number
+matching. magetypes ships a `build.rs` that, for each such intrinsic,
+try-compiles a tiny snippet for the build target:
+
+```text
+build.rs probe ──try-compile snippet──▶ compiles?
+                                          │ yes → cargo:rustc-cfg=archmage_has_neon_f16
+                                          │ no  → (nothing)
+                                          └──── cargo:rustc-check-cfg=cfg(archmage_has_neon_f16)
+```
+
+- On **rustc ≥ 1.94** the snippet compiles, the cfg is set, and the hardware
+  kernel (gated `#[cfg(archmage_has_neon_f16)]`) is built and wired into the
+  runtime token dispatch.
+- On **rustc 1.89–1.93** the snippet fails (intrinsic unstable), the cfg stays
+  unset, the hardware kernel is *not compiled*, and the token falls through to
+  the already-shipped branchless **software** kernel. **No compile error, no
+  MSRV bump.**
+
+`cargo:rustc-check-cfg` is emitted unconditionally so downstream crates get no
+unexpected-`cfg` warnings (Rust 1.80+ checks them; the 1.89 MSRV supports it).
+The probe shells out to the same `$RUSTC` Cargo invoked it with, so there is **no
+build-dependency**.
+
+Capability probing (not `rustc --version` comparison) is the robust choice: it
+is correct across target variance, intrinsic backports, and custom toolchains —
+the answer is "does *this* compiler accept the intrinsic for *this* target",
+which is exactly the question that matters.
+
+### Adding the next one
+
+The pattern generalizes to any future newer-stable intrinsic (AVX-512-FP16
+`_mm512_cvtph_ps`, SVE, …):
+
+1. Add a `#![no_std]` snippet that *uses* the intrinsic behind its
+   `#[target_feature]` to `build.rs` and a `probe_for_arch(...)` call.
+2. Add the cfg name to `declare_check_cfgs`.
+3. Gate the hardware impl with `#[cfg(archmage_has_<name>)]`, wire it into the
+   runtime token dispatch, and keep the software kernel as the
+   `#[cfg(not(archmage_has_<name>))]` fallback.
+
+The crate adapts to whatever toolchain compiles it, rather than baking one
+static MSRV decision.
