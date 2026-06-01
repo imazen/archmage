@@ -2,6 +2,11 @@
 name = "archmage-no-features-test"
 version = "0.0.0"
 edition = "2024"
+# Stays at 1.89: this crate uses bare `#[autoversion]`, whose default tier list
+# includes `v4` (AVX-512), so its generated code emits `#[target_feature(enable
+# = "avx512f, …")]` — which needs 1.89 even with no cargo features. It is the
+# fixture the `msrv-base` CI job uses to ASSERT that default-tier macro output
+# fails on 1.88 (see .github/workflows/ci.yml).
 rust-version = "1.89"
 publish = false
 

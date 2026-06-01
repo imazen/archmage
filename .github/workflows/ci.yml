@@ -489,10 +489,100 @@ jobs:
           RUSTDOCFLAGS: -Dwarnings
 
   # ==========================================================================
-  # MSRV check — verify advertised MSRV on every platform
+  # MSRV check — verify advertised MSRV on every platform.
+  #
+  # Base MSRV is 1.88: the archmage + magetypes LIBRARIES build and their unit
+  # tests pass on 1.88. The opt-in `avx512` feature, AND the DEFAULT macro
+  # output (`#[autoversion]` / default `#[magetypes]` always include the v4
+  # AVX-512 tier, which emits `#[target_feature(enable="avx512f,...")]` on
+  # x86_64), both require 1.89. So this is split into two jobs: a 1.88 base
+  # job (default-feature library build + lib tests + v4-free downstream usage)
+  # and a 1.89 job (the avx512 feature at its required floor). See MSRV.md.
   # ==========================================================================
-  msrv:
-    name: MSRV 1.89 (${{ matrix.name }})
+  msrv-base:
+    name: MSRV 1.88 base (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, name: x64 Linux }
+          - { os: windows-latest, name: x64 Windows }
+          - { os: macos-26-intel, name: x64 macOS Intel }
+          - { os: ubuntu-24.04-arm, name: aarch64 Linux }
+          - { os: macos-14, name: aarch64 macOS }
+          - { os: windows-11-arm, name: aarch64 Windows }
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust 1.88
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.88"
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      # Default features (NO avx512). Proves the libraries build on the base MSRV.
+      - name: Build libraries (default features)
+        run: cargo build -p archmage -p magetypes
+
+      # Library unit tests on 1.88. NOTE: the full `cargo test` is NOT run here
+      # because many dev-only integration tests/examples use `#[autoversion]` /
+      # `#[magetypes(v4, ...)]`, whose v4 (AVX-512) variant needs 1.89.
+      - name: Library unit tests (default features)
+        run: cargo test -p archmage -p magetypes --lib
+
+      # v4-free macro usage compiles on 1.88: explicit tier lists that omit the
+      # AVX-512 v4/v4x tiers are the recommended path for 1.88 consumers. Built
+      # from a throwaway crate so it doesn't drag in published deps with their
+      # own (higher) MSRVs.
+      - name: Assert v4-free macro usage compiles on 1.88
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          mkdir -p /tmp/v4free/src
+          cat > /tmp/v4free/Cargo.toml <<EOF
+          [package]
+          name = "v4free"
+          version = "0.0.0"
+          edition = "2024"
+          [dependencies]
+          archmage = { path = "$GITHUB_WORKSPACE" }
+          [workspace]
+          EOF
+          cat > /tmp/v4free/src/lib.rs <<'EOF'
+          use archmage::prelude::*;
+          // Explicit tier list WITHOUT v4/v4x — no AVX-512 target_feature, so 1.88-safe.
+          #[autoversion(v3, neon, wasm128)]
+          pub fn dot(_t: SimdToken, a: &[f32], b: &[f32]) -> f32 {
+              a.iter().zip(b).map(|(x, y)| x * y).sum()
+          }
+          EOF
+          cargo build --manifest-path /tmp/v4free/Cargo.toml
+
+      # Negative assertion (x64 Linux only): the DEFAULT macro output includes
+      # the v4 AVX-512 tier, so a bare `#[autoversion]` downstream crate MUST
+      # fail to *compile* on 1.88 (E0658, avx512f unstable). The no-features
+      # crate declares rust-version = 1.89, so `--ignore-rust-version` is used
+      # to bypass the cargo MSRV gate and reach the real codegen error.
+      # Documents the floor — if this ever compiles on 1.88, the
+      # v4-tier-needs-1.89 docs are stale.
+      - name: Assert default-tier (v4) macro output fails to compile on 1.88
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          if cargo build -p archmage-no-features-test --ignore-rust-version 2>build_188.log; then
+            echo "::error::Expected bare #[autoversion] (default tiers incl. v4) to FAIL on 1.88, but it built. MSRV docs may be stale."
+            exit 1
+          fi
+          if ! grep -q 'avx512f' build_188.log; then
+            echo "::error::no-features-crate failed on 1.88 but NOT with the expected avx512f E0658 error:"
+            cat build_188.log
+            exit 1
+          fi
+          echo "OK: bare #[autoversion] fails to compile on 1.88 with avx512f E0658, as documented."
+
+  msrv-avx512:
+    name: MSRV 1.89 avx512 (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -515,7 +605,9 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Check MSRV
+      # The avx512 feature requires 1.89 (its required floor). Also exercises the
+      # default-tier macro output (v4 AVX-512) that needs 1.89.
+      - name: Check avx512 feature at its 1.89 floor
         run: cargo check --features "${{ env.FEATURES }}"
 
       - name: CPU survey

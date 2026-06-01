@@ -13,6 +13,10 @@
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 - Make `w512` non-default in magetypes — users who need 512-bit types add `features = ["w512"]`; saves ~25% build time for the majority who don't
 
+### Changed
+
+- Lower base MSRV from 1.89 to **1.88** (workspace + `xtask` + `tests/no-features-crate`). The archmage and magetypes libraries build, and their unit tests pass, on 1.88; v4-free dispatch (explicit tier lists without `v4`/`v4x`, e.g. `#[autoversion(v3, neon, wasm128)]`) also works on 1.88. The opt-in **`avx512` feature** and the **default macro tiers** (`#[autoversion]` / default `#[magetypes]` always include the `v4` AVX-512 tier, which emits `#[target_feature(enable = "avx512f, …")]` regardless of the feature) still require **Rust 1.89+**, where the `avx512f`/`avx512vl` target features stabilized. Lowering the declared MSRV is semver-safe (strictly more permissive). The dev-dependency `safe_unaligned_simd` no longer enables `avx512` unconditionally (it would force the AVX-512 module to compile on 1.88); Cargo re-unifies the feature with the normal dependency when `--features avx512` is set, so avx512-gated tests are unaffected. Docs (`MSRV.md`, README) updated to describe the 1.88-base / 1.89-for-AVX-512 split; CI gains a 1.88 base-MSRV job and a 1.89 avx512 job (replacing the single 1.89 MSRV job).
+
 ## [0.9.24] - 2026-05-26
 
 ### Added

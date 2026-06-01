@@ -9,7 +9,13 @@ Archmage lets you write SIMD code in Rust without `unsafe`. It works on x86-64, 
 archmage = "0.9"
 ```
 
-### MSRV: Rust 1.89 — [How Rust 1.89 brought the safe SIMD story together for Archmage](MSRV.md)
+### MSRV: Rust 1.88 base; AVX-512 needs 1.89 — [How Rust brought the safe SIMD story together for Archmage](MSRV.md)
+
+The libraries build on **Rust 1.88**, as does v4-free dispatch (explicit tier
+lists without `v4`/`v4x`, e.g. `#[autoversion(v3, neon, wasm128)]`). The opt-in
+**`avx512` feature** and the **default macro tiers** (`#[autoversion]` /
+default `#[magetypes]` always include the `v4` AVX-512 tier) require **Rust
+1.89+** — that's where the `avx512f`/`avx512vl`/… target features stabilized.
 
 ## The problem
 

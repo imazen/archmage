@@ -1,6 +1,30 @@
-# How Rust 1.89 brought the safe SIMD story together for Archmage
+# How Rust brought the safe SIMD story together for Archmage
 
-Archmage requires Rust 1.89+. This isn't arbitrary — 1.89 is the version where Rust's SIMD story finally came together. Four releases turned SIMD from "unsafe everything" to "zero unsafe with full feature coverage."
+**Base MSRV: Rust 1.88.** The archmage and magetypes libraries build, and their
+unit tests pass, on Rust 1.88. SIMD dispatch that omits the AVX-512 tiers also
+works on 1.88 — e.g. an explicit tier list like `#[autoversion(v3, neon,
+wasm128)]` or `#[magetypes(v3, neon, wasm128, scalar)]`.
+
+**AVX-512 (the `v4` / `v4x` tiers and the opt-in `avx512` feature) requires Rust
+1.89+.** This is not arbitrary — the `avx512f`/`avx512vl`/… target features
+stabilized in 1.89. Two practical consequences:
+
+- The opt-in **`avx512` feature** requires 1.89 (it also pulls in the
+  `safe_unaligned_simd` AVX-512 module, which uses those target features).
+- **The DEFAULT macro output requires 1.89 on x86_64.** `#[autoversion]` (no
+  args) and a default-tier `#[magetypes]` *always include the `v4` (AVX-512)
+  tier*, and that variant emits `#[target_feature(enable = "avx512f, …")]`
+  regardless of the `avx512` cargo feature. So a downstream crate that writes a
+  bare `#[autoversion] fn …` compiles on 1.89 but not on 1.88. To target 1.88,
+  give the macro an explicit tier list without `v4`/`v4x`.
+
+> Note on tier naming: in archmage, **`v3` is AVX2/FMA** (x86-64-v3) and **`v4`
+> is AVX-512** (x86-64-v4: F+CD+VL+DQ+BW). `v4x` is the extended AVX-512 set.
+> See `token-registry.toml`.
+
+The rest of this document walks through the four releases that turned SIMD from
+"unsafe everything" to "zero unsafe with full feature coverage" — the last of
+which, 1.89, is why AVX-512 needs that version.
 
 ## Rust 1.86 — safe `#[target_feature]` calls (April 2025)
 
@@ -152,4 +176,4 @@ fn main() {
 }
 ```
 
-No `#![feature(...)]`, no `unsafe`, no nightly. `#![forbid(unsafe_code)]` works. That's why the MSRV is 1.89.
+No `#![feature(...)]`, no `unsafe`, no nightly. `#![forbid(unsafe_code)]` works. That's why **AVX-512 needs 1.89** — and why the default macro tiers (which include `v4`) and the `avx512` feature do too. The base MSRV stays at **1.88** for v4-free dispatch.
