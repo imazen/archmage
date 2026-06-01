@@ -363,6 +363,7 @@ dependencies = [
  "archmage",
  "macrotest",
  "proptest",
+ "rustversion",
  "trybuild",
  "zenbench",
 ]

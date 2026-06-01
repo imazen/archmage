@@ -221,6 +221,73 @@ jobs:
         run: cross test -p archmage-no-features-test --target ${{ matrix.target }}
 
   # ==========================================================================
+  # f16 toolchain-version gate — BOTH sides of the 1.94 boundary
+  #
+  # The aarch64 NEON-f16 hardware kernels (`vcvt_f32_f16` / `vcvt_f16_f32`,
+  # stable since 1.94 = `stdarch_neon_f16`) are gated by
+  # `#[rustversion::since(1.94)]` in `magetypes/src/simd/generic/convert_f16.rs`,
+  # with a `#[rustversion::before(1.94)]` software-only fallback — so the crate
+  # MSRV stays 1.89 and the same source compiles on 1.89–1.93 without the
+  # intrinsic. A version *number* can be wrong (off-by-one bound, a backported
+  # stabilization); this matrix is the safety net that makes the named bound
+  # load-bearing by BUILDING + RUNNING the exhaustive `convert_f16` bit-identity
+  # test on aarch64 across both sides of the boundary:
+  #
+  #   * 1.93    — the `before(1.94)` software fallback MUST compile with no MSRV
+  #               violation and pass (software-vs-software, 0 NaN divergence). A
+  #               compile failure here is the intended alarm for a wrong bound.
+  #   * 1.94    — the stabilization version: the gate flips on, the HW kernel
+  #               compiles, `vcvt_*` resolves.
+  #   * stable  — ongoing coverage of the HW path.
+  #   * nightly — the opportunistic path + the nightly-probe scaffold
+  #               (`magetypes/build.rs`, gated `#[rustversion::nightly]`).
+  #
+  # aarch64 runs under QEMU via `cross`; `QEMU_CPU=max` advertises `fp16` so the
+  # HW path is actually TAKEN on ≥ 1.94 (the test asserts the exact 1022 f16
+  # signaling-NaN HW/SW divergence — proving HW ran, not the fallback). On 1.93
+  # the same QEMU presents fp16 but the HW kernel is not compiled, so the test
+  # correctly expects the software path (0 divergence) via the rustversion-gated
+  # `neon_f16_hw_compiled()` helper. `fail-fast: false` so every cell reports.
+  # ==========================================================================
+  f16-version-gate:
+    name: f16 gate (rustc ${{ matrix.toolchain }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain: ["1.93", "1.94", "stable", "nightly"]
+    env:
+      TARGET: aarch64-unknown-linux-gnu
+      # Force `fp16` so the HW path is exercised on a ≥ 1.94 toolchain; cross
+      # passes this through to its QEMU runner.
+      QEMU_CPU: max
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust ${{ matrix.toolchain }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          targets: aarch64-unknown-linux-gnu
+
+      - name: Install cross
+        uses: taiki-e/install-action@cross
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      # MSRV-safety proof, the 1.93 cell's whole point: the `before(1.94)`
+      # software fallback must COMPILE with no MSRV violation and no unresolved
+      # intrinsic. A failure here means the version bound is wrong.
+      - name: Build convert_f16 (cross, aarch64) — both gate sides must compile
+        run: cross build -p magetypes --features "std avx512" --target aarch64-unknown-linux-gnu
+
+      # Run the exhaustive bit-identity test on the ACTUALLY-SELECTED path for
+      # this toolchain (HW on ≥ 1.94 + QEMU_CPU=max, software on 1.93).
+      - name: Test convert_f16 (cross/QEMU, fp16=on) — verify selected path
+        run: cross test -p magetypes --features "std avx512" --target aarch64-unknown-linux-gnu --test convert_f16_exhaustive
+
+  # ==========================================================================
   # WASM SIMD128 testing
   # ==========================================================================
   test-wasm:

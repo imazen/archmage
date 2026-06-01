@@ -660,7 +660,7 @@ fn native_f16c_encode_matches_software() {
 // `f16_to_f32_slice` / `f32_to_f16_slice` dispatch to aarch64 NEON-f16
 // (`vcvt_f32_f16` / `vcvt_f16_f32`) when handed a `NeonToken` *and* the CPU
 // presents `fp16` (the `Arm64V2Token` tier) *and* the toolchain is ≥ 1.94 (so
-// the `build.rs` capability probe set `archmage_has_neon_f16`). When any of
+// the `#[rustversion::since(1.94)]`-gated HW kernels are compiled). When any of
 // those is false the same `NeonToken` runs the branchless software kernel.
 //
 // These tests prove the path the runtime actually takes (HW when available,
@@ -675,7 +675,30 @@ fn native_f16c_encode_matches_software() {
 // kernel and these tests still pass (they degenerate to a software-vs-software
 // comparison). Run under QEMU with `-cpu max` to exercise the hardware path
 // (see `.cargo/config.toml`).
+//
+// The HW kernel only EXISTS on rustc ≥ 1.94 (gated by `#[rustversion::since(1.94)]`
+// in `convert_f16.rs`). The tiny `neon_f16_hw_compiled()` helper below mirrors
+// that gate so the parity test expects software-vs-software on the pre-1.94
+// fallback even when the CPU presents `fp16` — the exact condition the CI
+// matrix's 1.93 cell runs under QEMU `-cpu max`.
 // ============================================================================
+
+/// Whether the NEON-f16 hardware kernel is compiled into this build — mirrors
+/// the `#[rustversion::since(1.94)]` gate on `neon_f16_decode_hw` /
+/// `neon_f16_encode_hw`. `true` only on rustc ≥ 1.94.
+#[cfg(target_arch = "aarch64")]
+#[rustversion::since(1.94)]
+fn neon_f16_hw_compiled() -> bool {
+    true
+}
+
+/// Pre-stabilization toolchain (rustc < 1.94): the HW kernel is not compiled,
+/// so a `NeonToken` always runs the software path — even on `fp16` hardware.
+#[cfg(target_arch = "aarch64")]
+#[rustversion::before(1.94)]
+fn neon_f16_hw_compiled() -> bool {
+    false
+}
 
 /// All 65 536 f16 decoded through the `NeonToken` slice path must match the
 /// oracle bit-for-bit (every length residue 0..7 exercised so the 4-wide chunk
@@ -751,7 +774,15 @@ fn native_neon_f16_decode_matches_software_exhaustive() {
         eprintln!("NeonToken not available — skipping native-vs-software decode parity");
         return;
     };
-    let fp16 = archmage::Arm64V2Token::summon().is_some();
+    // The NEON-f16 hardware kernel only EXISTS on rustc ≥ 1.94 (it is gated by
+    // `#[rustversion::since(1.94)]` in `convert_f16.rs`). The HW path is taken
+    // iff that kernel is compiled AND the CPU presents `fp16` at runtime. On
+    // rustc < 1.94 a `NeonToken` runs the software kernel even on `fp16`
+    // hardware (e.g. QEMU `-cpu max`), so the divergence count is 0 — this is
+    // exactly the pre-1.94 fallback the CI matrix's 1.93 cell exercises, and it
+    // must NOT expect the 1022-NaN HW divergence.
+    let hw_compiled = neon_f16_hw_compiled();
+    let fp16 = hw_compiled && archmage::Arm64V2Token::summon().is_some();
     let all: Vec<u16> = (0u32..=0xFFFF).map(|v| v as u16).collect();
     let mut hw_out = vec![0f32; all.len()];
     let mut sw_out = vec![0f32; all.len()];
@@ -785,10 +816,13 @@ fn native_neon_f16_decode_matches_software_exhaustive() {
              signaling-NaN patterns (got {nan_payload_diffs}); fp16 was detected"
         );
     } else {
-        // No `fp16`: NeonToken ran the software kernel — must be identical.
+        // Software path: either `fp16` is absent at runtime, or the toolchain
+        // is < 1.94 so the HW kernel was never compiled. Either way `NeonToken`
+        // ran the software kernel — byte-identical to `ScalarToken`.
         assert_eq!(
             nan_payload_diffs, 0,
-            "fp16 absent: NeonToken should be byte-identical to ScalarToken software path"
+            "software path (no fp16 or rustc < 1.94): NeonToken should be byte-identical \
+             to the ScalarToken software path (hw_compiled={hw_compiled})"
         );
     }
 }

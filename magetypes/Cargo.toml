@@ -35,6 +35,11 @@ avx512 = ["w512", "archmage/avx512"]
 [dependencies]
 # Core tokens and macros
 archmage = { version = "0.9.24", path = "..", default-features = false }
+# Toolchain-version gate (proc-macro, dep-light, dtolnay) for newer-stable
+# `core::arch` intrinsics above the crate MSRV — gates the aarch64 NEON-f16
+# hardware path (`vcvt_*`, stable since 1.94) without raising the 1.89 floor.
+# See `simd::generic::convert_f16` and `MSRV.md`.
+rustversion = "1.0.22"
 
 # proptest and zenbench don't support WASM; trybuild/macrotest require host execution
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
@@ -42,6 +47,13 @@ proptest = "1.5"
 zenbench = { version = "0.1.2", features = ["criterion-compat"] }
 trybuild = "1.0"
 macrotest = "1.2.1"
+
+# Integration tests use rustversion to mirror the convert_f16 toolchain gate:
+# the aarch64 NEON-f16 HW kernel only exists on rustc >= 1.94, so the parity
+# test must expect software-vs-software (no HW divergence) on the pre-1.94
+# fallback even when the CPU/QEMU presents `fp16` at runtime.
+[dev-dependencies]
+rustversion = "1.0.22"
 
 [[bench]]
 name = "asm_patterns"

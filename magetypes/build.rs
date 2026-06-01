@@ -1,56 +1,57 @@
-//! Capability-probe build script for magetypes.
+//! Nightly-opportunistic capability-probe scaffold for magetypes.
 //!
-//! # Why this exists
+//! # Why this build script is *nightly-only* now
 //!
-//! magetypes pins a low MSRV (workspace `rust-version`, currently 1.89) so it
-//! compiles on a broad range of toolchains. But some hardware SIMD paths use
-//! `core::arch` intrinsics that only became `#[stable]` *after* that floor —
-//! e.g. the aarch64 NEON half-precision converters `vcvt_f32_f16` /
-//! `vcvt_f16_f32` are `#[stable(feature = "stdarch_neon_fp16", since =
-//! "1.94.0")]`. A *static* `cfg` gate on those would force the whole crate's
-//! MSRV up to 1.94.
+//! The previous incarnation of this script probed **stable** newer-stable
+//! intrinsics (e.g. the aarch64 NEON-f16 converters `vcvt_f32_f16` /
+//! `vcvt_f16_f32`, stable since 1.94). That case has moved to a
+//! `rustversion`-plus-`target_arch` gate in `src/simd/generic/convert_f16.rs`,
+//! verified by a CI matrix that builds + tests **both sides** of the 1.94
+//! boundary — no build script, a trusted dep-light proc-macro, and the matrix
+//! makes the named version bound load-bearing. See `MSRV.md`.
 //!
-//! Instead we **probe capability by try-compiling**: for each newer-stable
-//! intrinsic of interest, this script attempts to compile a tiny snippet for
-//! the crate's build target. If it compiles, the corresponding `cfg` is emitted
-//! and the hardware path lights up; if it does not (older toolchain), the crate
-//! silently falls back to its already-shipped, branchless software kernel. The
-//! MSRV floor never moves, and the same source builds clean on every toolchain
-//! ≥ MSRV.
+//! A try-compile probe still wins in exactly **one** situation: a **nightly-only**
+//! intrinsic that has *no stable version yet*. There, you can't name a version,
+//! and a blind `#![feature(<gate>)]` breaks whenever the nightly feature gate is
+//! renamed or removed between nightlies. The robust answer is "does *this*
+//! nightly actually compile the feature + intrinsic?" — a try-compile probe,
+//! run **only under nightly**, that enables the path iff it compiles and falls
+//! back otherwise.
 //!
-//! This is the autocfg / "feature-detection-not-version-matching" approach: it
-//! is robust against target variance, backports, and custom toolchains in a way
-//! that a bare `rustc --version` comparison is not.
+//! # Status: scaffold, not yet load-bearing
 //!
-//! # Why we probe the *build target*, not a fixed cross target
+//! archmage has **no nightly-only intrinsic to gate today**, so this script is a
+//! documented scaffold:
 //!
-//! A probe pinned to e.g. `--target aarch64-unknown-linux-gnu` would fail on a
-//! capable toolchain whenever that target's precompiled `core` isn't installed
-//! (a common case on an x86 host) — yielding the *wrong* answer (cfg off on a
-//! 1.94+ toolchain). Each intrinsic's `cfg` is only ever consumed inside a
-//! `#[cfg(target_arch = "…")]` block, so it only matters when the crate is
-//! actually being *built for* that arch. We therefore run a given arch's probe
-//! only when `CARGO_CFG_TARGET_ARCH` matches, and probe the real build `TARGET`
-//! — whose `core` is guaranteed present because Cargo is compiling the crate
-//! for it. (A native aarch64 build and an x86-host `cargo check --target
-//! aarch64-…` both report `CARGO_CFG_TARGET_ARCH = aarch64`, so both are
-//! covered.)
+//! - On a **nightly** toolchain it runs [`probe_nightly`] (which currently
+//!   try-compiles a trivially-stable placeholder snippet, so it always succeeds)
+//!   and emits `archmage_nightly_probe_example`. This keeps the try-compile
+//!   machinery exercised by the CI nightly cell without inventing a fake
+//!   intrinsic.
+//! - On a **non-nightly** toolchain it does nothing but declare the check-cfg,
+//!   so stable/beta builds pay **zero** probe cost.
 //!
-//! # Adding the next newer-stable intrinsic
+//! The cfg is consumed by a `#[rustversion::nightly] #[cfg(archmage_nightly_probe_example)]`
+//! item in `src/simd/generic/convert_f16.rs` (see `NIGHTLY_PROBE_OK`) so the
+//! wiring pattern is real and compiles end-to-end.
 //!
-//! 1. Write a `#![no_std]` snippet that *uses* the intrinsic behind the
-//!    `#[target_feature]` it requires.
-//! 2. Add a `probe_for_arch("archmage_has_<name>", "<arch>", snippet)` call in
-//!    `main` (it self-gates on `CARGO_CFG_TARGET_ARCH`).
-//! 3. Add the cfg name to `declare_check_cfgs` (Rust 1.80+ checks unexpected
-//!    cfgs; the crate MSRV ≥ 1.89 supports `cargo:rustc-check-cfg`).
-//! 4. Gate the hardware impl with `#[cfg(archmage_has_<name>)]`, wire it into
-//!    the runtime token dispatch, and keep the software kernel as the
-//!    `#[cfg(not(archmage_has_<name>))]` fallback.
+//! # Adding a real nightly-only intrinsic
 //!
-//! No external build-dependency is used: the probe shells out to the same
-//! `rustc` Cargo invoked us with (`$RUSTC`), keeping a foundational crate's
-//! dependency graph empty.
+//! 1. Replace the placeholder snippet in [`probe_nightly`] with a
+//!    `#![feature(<gate>)] #![no_std]` snippet that *uses* the intrinsic behind
+//!    its `#[target_feature]`, and `probe_for_arch(...)` it for the right arch.
+//! 2. Give the cfg a real name (e.g. `archmage_nightly_<name>`); add it to
+//!    [`declare_check_cfgs`].
+//! 3. Gate the hardware impl `#[rustversion::nightly] #[cfg(archmage_nightly_<name>)]`,
+//!    wire it into the runtime token dispatch, and keep the software kernel as
+//!    the fallback (`#[rustversion::not(nightly)]` or `cfg(not(...))`).
+//! 4. The CI nightly cell already exercises that the scaffold compiles; it will
+//!    cover the real probe too.
+//!
+//! No external build-dependency is used: the script shells out to the same
+//! `rustc` Cargo invoked it with (`$RUSTC`), keeping a foundational crate's
+//! dependency graph empty. Nightly detection is `$RUSTC --version` channel
+//! sniffing (a build script can't use the `rustversion` proc-macro).
 
 use std::env;
 use std::fs;
@@ -58,59 +59,46 @@ use std::path::PathBuf;
 use std::process::Command;
 
 fn main() {
-    // Re-run only when this script changes; the probe result depends solely on
-    // the toolchain + target (captured via the rustc invocation), not on any
-    // crate source.
+    // The probe result depends only on the toolchain + target, not crate source.
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=RUSTC");
 
     declare_check_cfgs();
 
-    // --- aarch64 NEON f16 (stdarch_neon_fp16, stable since 1.94.0) ----------
-    //
-    // `vcvt_f32_f16` (decode) and `vcvt_f16_f32` (encode) require the `fp16`
-    // target feature. The snippet enables `neon,fp16` and uses both. It only
-    // needs to type-check, so we emit metadata (no codegen) and never run it.
-    // Test *every* intrinsic the hardware kernel uses, not just one. They are
-    // all gated behind the single `stdarch_neon_f16` library feature (the
-    // `float16x4_t` type gates the whole set), so they stabilize atomically —
-    // but probing all of them keeps the gate honest if that ever changes.
-    let neon_f16_snippet = r#"
-#![allow(internal_features)]
-#![no_std]
-use core::arch::aarch64::{
-    float16x4_t, float32x4_t, uint16x4_t,
-    vcvt_f32_f16, vcvt_f16_f32, vreinterpret_f16_u16, vreinterpret_u16_f16,
-};
-#[target_feature(enable = "neon,fp16")]
-unsafe fn _decode(h: float16x4_t) -> float32x4_t { vcvt_f32_f16(h) }
-#[target_feature(enable = "neon,fp16")]
-unsafe fn _encode(f: float32x4_t) -> float16x4_t { vcvt_f16_f32(f) }
-#[target_feature(enable = "neon,fp16")]
-unsafe fn _cast_in(x: uint16x4_t) -> float16x4_t { vreinterpret_f16_u16(x) }
-#[target_feature(enable = "neon,fp16")]
-unsafe fn _cast_out(x: float16x4_t) -> uint16x4_t { vreinterpret_u16_f16(x) }
-"#;
-    probe_for_arch("archmage_has_neon_f16", "aarch64", neon_f16_snippet);
+    // Nightly-only: stable/beta builds skip the probe entirely (zero cost).
+    if !is_nightly() {
+        return;
+    }
+    probe_nightly();
 }
 
-/// Declare every custom `cfg` this script may emit so that Rust 1.80+'s
+/// Declare every custom `cfg` this script may emit so Rust 1.80+'s
 /// unexpected-`cfg` lint stays quiet for downstream crates and our own source.
 /// Each name must appear here whether or not the probe sets it.
 fn declare_check_cfgs() {
-    println!("cargo:rustc-check-cfg=cfg(archmage_has_neon_f16)");
+    println!("cargo:rustc-check-cfg=cfg(archmage_nightly_probe_example)");
 }
 
-/// If the crate is being built for `arch`, try-compile `snippet` for the real
-/// build `TARGET` and emit `cargo:rustc-cfg=<cfg_name>` on success. Skipped
-/// entirely (cfg left unset) when building for a different arch — which is
-/// correct, because the cfg is only consumed inside a matching
-/// `#[cfg(target_arch = "…")]` block.
-fn probe_for_arch(cfg_name: &str, arch: &str, snippet: &str) {
-    let build_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
-    if build_arch != arch {
-        return;
-    }
+/// The single nightly probe. Currently a **scaffold**: it try-compiles a
+/// trivially-stable placeholder snippet (so it always succeeds, exercising the
+/// machinery), and emits `archmage_nightly_probe_example` on success. Replace
+/// the snippet with a real `#![feature(<gate>)]` + nightly-intrinsic snippet
+/// when one is needed (see the module docs).
+fn probe_nightly() {
+    // PLACEHOLDER: a `#![no_std]` snippet that compiles on every toolchain. A
+    // real nightly-only probe would put `#![feature(<gate>)]` here and *use* the
+    // nightly intrinsic behind its `#[target_feature]`.
+    let placeholder_snippet = r#"
+#![no_std]
+pub const fn _probe_marker() -> u32 { 0 }
+"#;
+    probe("archmage_nightly_probe_example", placeholder_snippet);
+}
+
+/// Try-compile `snippet` to metadata-only for the build target; emit
+/// `cargo:rustc-cfg=<cfg_name>` on success, stay silent on failure (the software
+/// fallback is selected by `cfg(not(..))` / `#[rustversion::not(nightly)]`).
+fn probe(cfg_name: &str, snippet: &str) {
     let target = env::var("TARGET").unwrap_or_default();
     if target.is_empty() {
         return;
@@ -118,20 +106,16 @@ fn probe_for_arch(cfg_name: &str, arch: &str, snippet: &str) {
     if try_compile(&target, snippet) {
         println!("cargo:rustc-cfg={cfg_name}");
     }
-    // else: stay silent; the software fallback is selected by `cfg(not(..))`.
-    // We deliberately do NOT emit a `cargo:warning` on success — it would fire
-    // on every build of this target and spam downstream consumers. The cfg
-    // itself is the observable signal (visible via `cargo build -vv`).
 }
 
-/// Compile `snippet` to metadata-only for `target`, returning whether it
-/// type-checked. Uses the same `rustc` Cargo invoked us with. Never runs the
-/// produced artifact and writes only into `OUT_DIR`.
+/// Compile `snippet` to metadata-only for `target` using the same `rustc` Cargo
+/// invoked us with; return whether it type-checked. Never runs the artifact and
+/// writes only into `OUT_DIR`.
 fn try_compile(target: &str, snippet: &str) -> bool {
     let rustc = env::var_os("RUSTC").unwrap_or_else(|| "rustc".into());
     let out_dir = PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR set by cargo"));
 
-    let src = out_dir.join(format!("probe_{}.rs", sanitize(target)));
+    let src = out_dir.join(format!("nightly_probe_{}.rs", sanitize(target)));
     if fs::write(&src, snippet).is_err() {
         return false;
     }
@@ -153,6 +137,19 @@ fn try_compile(target: &str, snippet: &str) -> bool {
         Ok(status) => status.success(),
         Err(_) => false,
     }
+}
+
+/// Channel-sniff the active toolchain via `$RUSTC --version`. A build script
+/// cannot use the `rustversion` proc-macro (it runs at build time, not compile
+/// time of the crate), so we read the version string's `-nightly`/`-dev` marker.
+fn is_nightly() -> bool {
+    let rustc = env::var_os("RUSTC").unwrap_or_else(|| "rustc".into());
+    let Ok(out) = Command::new(&rustc).arg("--version").output() else {
+        return false;
+    };
+    let v = String::from_utf8_lossy(&out.stdout);
+    // e.g. "rustc 1.96.0-nightly (abc 2026-..)" — stable/beta lack "-nightly".
+    v.contains("-nightly") || v.contains("-dev")
 }
 
 fn sanitize(s: &str) -> String {

@@ -301,14 +301,14 @@ mod x86_dispatch {
 // does. Both `impl` blocks stay free of `unsafe` — the intrinsics live behind
 // the `#[arcane]` boundaries below.
 //
-// The hardware kernels are compiled only when the `archmage_has_neon_f16` cfg
-// is set by `build.rs` (its capability probe succeeds on a toolchain where the
-// `stdarch_neon_fp16` intrinsics are stable — Rust ≥ 1.94). On older toolchains
-// (down to the crate MSRV) the cfg is unset, the kernels are not compiled, and
-// `NeonToken` falls through to the software path with no MSRV bump and no
-// compile error. This is the capability-version-gate pattern: see the
-// `build.rs` module docs and the "Adding a newer-stable intrinsic above MSRV"
-// section in the crate docs.
+// The hardware kernels are compiled only on a toolchain where the
+// `stdarch_neon_f16` intrinsics are stable (Rust ≥ 1.94), selected by
+// `#[rustversion::since(1.94)]` (paired with `#[rustversion::before(1.94)]` on
+// the software-only selector). On older toolchains (down to the crate MSRV) the
+// kernels are not compiled, and `NeonToken` falls through to the software path
+// with no MSRV bump and no compile error. This is the toolchain-version-gate
+// pattern: see the `neon_f16_decode_select` docs below and the "Newer-stable
+// intrinsics above the MSRV" section in `MSRV.md`.
 #[cfg(target_arch = "aarch64")]
 mod aarch64_dispatch {
     use super::*;
@@ -340,22 +340,14 @@ mod aarch64_dispatch {
 /// half-precision conversion instructions, so we summon an `Arm64V2Token`
 /// (whose tier includes `fp16`) to prove the feature before dispatching to the
 /// hardware kernel. When `fp16` is absent — or the toolchain is too old for the
-/// `stdarch_neon_fp16` intrinsics to be stable (cfg unset, the
-/// `#[cfg(archmage_has_neon_f16)]` arm is not compiled) — this runs the
-/// software kernel, exactly matching every other backend.
+/// `stdarch_neon_fp16` intrinsics to be stable (rustc < 1.94, where the
+/// `#[rustversion::since(1.94)]` arm of [`neon_f16_decode_select`] is not
+/// compiled) — this runs the software kernel, exactly matching every other
+/// backend.
 #[cfg(target_arch = "aarch64")]
 #[inline]
 fn neon_f16_decode(token: archmage::NeonToken, input: &[u16], output: &mut [f32]) {
-    #[cfg(archmage_has_neon_f16)]
-    {
-        use archmage::SimdToken;
-        if let Some(v2) = archmage::Arm64V2Token::summon() {
-            neon_f16_decode_hw(v2, input, output);
-            return;
-        }
-    }
-    // Software fallback: no `fp16`, or toolchain < 1.94 (cfg unset).
-    f16_to_f32_slice_soft(token, input, output);
+    neon_f16_decode_select(token, input, output);
 }
 
 /// `NeonToken` f32→f16 encode: hardware NEON-f16 (`vcvt_f16_f32`, RTNE) when
@@ -364,21 +356,134 @@ fn neon_f16_decode(token: archmage::NeonToken, input: &[u16], output: &mut [f32]
 #[cfg(target_arch = "aarch64")]
 #[inline]
 fn neon_f16_encode(token: archmage::NeonToken, input: &[f32], output: &mut [u16]) {
-    #[cfg(archmage_has_neon_f16)]
-    {
-        use archmage::SimdToken;
-        if let Some(v2) = archmage::Arm64V2Token::summon() {
-            neon_f16_encode_hw(v2, input, output);
-            return;
-        }
+    neon_f16_encode_select(token, input, output);
+}
+
+// ----------------------------------------------------------------------------
+// Toolchain-version gate (rustversion + arch), replacing the build.rs probe.
+//
+// The NEON-f16 intrinsics (`vcvt_f32_f16` / `vcvt_f16_f32`) are
+// `#[stable(feature = "stdarch_neon_f16", since = "1.94.0")]` — *above* the
+// crate MSRV (1.89). A static `cfg` referencing them would drag the whole
+// crate's MSRV to 1.94. Instead we pick the path by *toolchain version* via
+// `rustversion`, scoped to `#[cfg(target_arch = "aarch64")]`:
+//
+//   * `#[rustversion::since(1.94)]`  — the HW-selecting helper exists; the
+//     `vcvt_*` kernels (also version-gated) compile and the runtime token
+//     decides HW-vs-software per CPU.
+//   * `#[rustversion::before(1.94)]` — only the software-selecting helper
+//     exists; the `vcvt_*` kernels are not compiled at all, so the same source
+//     builds clean on 1.89–1.93 with **no MSRV bump and no missing-intrinsic
+//     error**.
+//
+// The version gate selects whether the HW impl EXISTS; the runtime
+// `Arm64V2Token::summon()` probe (inside the `since` helper) selects whether to
+// USE it on the actual CPU. The two are orthogonal — exactly the layering the
+// removed build.rs probe provided, but with a trusted proc-macro dependency and
+// no build script. A CI matrix exercises both sides of the 1.94 boundary (1.93
+// fallback, 1.94 flip-on, stable, nightly) to keep the version bound honest.
+//
+// Rust attribute rule worth noting: `rustversion::{since,before}` gate whole
+// *items* (here, two paired free functions), not statement-level blocks — so
+// the runtime `summon()` selection lives inside the `since` helper rather than
+// as a `#[cfg]`'d block inside a single function (which is how the build.rs-cfg
+// version was written).
+
+// ----------------------------------------------------------------------------
+// Nightly-opportunistic probe scaffold (the one place a try-compile probe still
+// wins over version-matching).
+//
+// A *stable* intrinsic has a nameable stabilization version → `rustversion`
+// gate + CI matrix (above). A *nightly-only* intrinsic has none, and its
+// `#![feature(<gate>)]` can be renamed/removed between nightlies, so a blind
+// feature gate breaks. The robust answer is a try-compile probe, run ONLY under
+// nightly (`magetypes/build.rs`), that enables the path iff it compiles on THIS
+// nightly. archmage has no nightly-only intrinsic today, so the probe currently
+// sets `archmage_nightly_probe_example` from a trivially-stable placeholder
+// snippet — this const wires that cfg into real source so the pattern compiles
+// end-to-end and the CI nightly cell exercises it. Replace with a real
+// nightly-intrinsic gate when one is needed (see the `build.rs` module docs).
+//
+// `#[rustversion::nightly]` ensures the consuming item only exists under
+// nightly; the `cfg(archmage_nightly_probe_example)` adds the "and it actually
+// compiled" half. On stable/beta neither the build-script probe nor this item
+// is active — zero cost.
+
+/// `true` iff built on a nightly toolchain where the nightly-probe scaffold's
+/// placeholder snippet compiled (`magetypes/build.rs` set
+/// `archmage_nightly_probe_example`). A real nightly-only intrinsic gate would
+/// drive its own `#[rustversion::nightly] #[cfg(archmage_nightly_<name>)]`
+/// hardware kernel the same way the `since(1.94)` gate drives the NEON-f16 one.
+#[rustversion::nightly]
+#[cfg(archmage_nightly_probe_example)]
+#[allow(dead_code)]
+pub(crate) const NIGHTLY_PROBE_OK: bool = true;
+
+/// Fallback for stable/beta, or a nightly where the probe snippet failed: the
+/// nightly-only path is not compiled. Mirrors the `cfg(not(..))` software
+/// fallback a real nightly intrinsic gate would carry.
+#[rustversion::not(nightly)]
+#[allow(dead_code)]
+pub(crate) const NIGHTLY_PROBE_OK: bool = false;
+
+/// Nightly toolchain where the probe snippet did NOT set the cfg (e.g. a real
+/// nightly intrinsic that this nightly no longer accepts).
+#[rustversion::nightly]
+#[cfg(not(archmage_nightly_probe_example))]
+#[allow(dead_code)]
+pub(crate) const NIGHTLY_PROBE_OK: bool = false;
+
+/// HW-capable toolchain (rustc ≥ 1.94): try the NEON-f16 hardware decode when
+/// the CPU proves `fp16`, else the branchless software kernel.
+#[cfg(target_arch = "aarch64")]
+#[rustversion::since(1.94)]
+#[inline]
+fn neon_f16_decode_select(token: archmage::NeonToken, input: &[u16], output: &mut [f32]) {
+    use archmage::SimdToken;
+    if let Some(v2) = archmage::Arm64V2Token::summon() {
+        neon_f16_decode_hw(v2, input, output);
+        return;
     }
+    // `fp16` absent at runtime: software fallback.
+    f16_to_f32_slice_soft(token, input, output);
+}
+
+/// Pre-stabilization toolchain (rustc < 1.94): the `vcvt_*` intrinsics are not
+/// stable yet, so only the software kernel is compiled. No MSRV bump.
+#[cfg(target_arch = "aarch64")]
+#[rustversion::before(1.94)]
+#[inline]
+fn neon_f16_decode_select(token: archmage::NeonToken, input: &[u16], output: &mut [f32]) {
+    f16_to_f32_slice_soft(token, input, output);
+}
+
+/// HW-capable toolchain (rustc ≥ 1.94): try the NEON-f16 hardware encode when
+/// the CPU proves `fp16`, else the branchless software kernel.
+#[cfg(target_arch = "aarch64")]
+#[rustversion::since(1.94)]
+#[inline]
+fn neon_f16_encode_select(token: archmage::NeonToken, input: &[f32], output: &mut [u16]) {
+    use archmage::SimdToken;
+    if let Some(v2) = archmage::Arm64V2Token::summon() {
+        neon_f16_encode_hw(v2, input, output);
+        return;
+    }
+    f32_to_f16_slice_soft(token, input, output);
+}
+
+/// Pre-stabilization toolchain (rustc < 1.94): software-only encode. No MSRV
+/// bump.
+#[cfg(target_arch = "aarch64")]
+#[rustversion::before(1.94)]
+#[inline]
+fn neon_f16_encode_select(token: archmage::NeonToken, input: &[f32], output: &mut [u16]) {
     f32_to_f16_slice_soft(token, input, output);
 }
 
 /// Hardware NEON-f16 decode kernel: `&[u16]` → `&mut [f32]` via `vcvt_f32_f16`.
 ///
-/// Gated on `archmage_has_neon_f16` (set by `build.rs` when the
-/// `stdarch_neon_fp16` intrinsics are stable, i.e. Rust ≥ 1.94). `#[arcane]`
+/// Compiled only on a toolchain where the `stdarch_neon_f16` intrinsics are
+/// stable (Rust ≥ 1.94, gated by `#[rustversion::since(1.94)]`). `#[arcane]`
 /// wraps this in a `#[target_feature(enable = "neon,…,fp16")]` sibling (the
 /// `Arm64V2Token` tier enables `fp16`) and a safe `#[inline(always)]`
 /// trampoline, so it is sound to call from cold code while emitting the
@@ -391,12 +496,12 @@ fn neon_f16_encode(token: archmage::NeonToken, input: &[f32], output: &mut [u16]
 /// (mantissa MSB set), whereas the software kernel widens the f16 payload
 /// directly — the same benign, NaN-only divergence the F16C path documents (the
 /// divergence set is exactly the 1022 f16 signaling-NaN patterns).
-#[cfg(all(target_arch = "aarch64", archmage_has_neon_f16))]
-// The `incompatible_msrv` lint flags these intrinsics as "stable since 1.94"
-// against the 1.89 MSRV. That is *correct* in general — and exactly why this
-// item is `#[cfg(archmage_has_neon_f16)]`: it is only compiled on a toolchain
-// where the capability probe in `build.rs` proved the intrinsics are stable.
-// The cfg is the MSRV gate; the lint cannot see it, so we allow it here.
+#[cfg(target_arch = "aarch64")]
+#[rustversion::since(1.94)]
+// `#[rustversion::since(1.94)]` is the MSRV gate: this item only compiles on a
+// toolchain where the `stdarch_neon_f16` intrinsics are stable, so the
+// `incompatible_msrv` lint (which flags them as "stable since 1.94" against the
+// 1.89 MSRV) is a false positive here — the gate guarantees ≥ 1.94. Allow it.
 #[allow(clippy::incompatible_msrv)]
 #[archmage::arcane(import_intrinsics)]
 fn neon_f16_decode_hw(token: archmage::Arm64V2Token, input: &[u16], output: &mut [f32]) {
@@ -425,8 +530,9 @@ fn neon_f16_decode_hw(token: archmage::Arm64V2Token, input: &[u16], output: &mut
 /// (verified over the f16-roundtrip grid + dense f32 sweep under QEMU); for a
 /// NaN input both produce a valid quiet f16 NaN whose payload bits may differ —
 /// the same tolerance the software encode and the F16C path already document.
-#[cfg(all(target_arch = "aarch64", archmage_has_neon_f16))]
-// See `neon_f16_decode_hw`: the `archmage_has_neon_f16` cfg is the MSRV gate;
+#[cfg(target_arch = "aarch64")]
+#[rustversion::since(1.94)]
+// See `neon_f16_decode_hw`: `#[rustversion::since(1.94)]` is the MSRV gate;
 // `incompatible_msrv` cannot see it, so we allow the (here false-positive) lint.
 #[allow(clippy::incompatible_msrv)]
 #[archmage::arcane(import_intrinsics)]

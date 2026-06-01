@@ -154,7 +154,7 @@ fn main() {
 
 No `#![feature(...)]`, no `unsafe`, no nightly. `#![forbid(unsafe_code)]` works. That's why the MSRV is 1.89.
 
-## Newer-stable intrinsics *above* the MSRV — the capability gate
+## Newer-stable intrinsics *above* the MSRV — the version gate
 
 Some hardware paths want an intrinsic that became `#[stable]` *after* 1.89.
 Example: the aarch64 NEON half-precision converters `vcvt_f32_f16` /
@@ -162,47 +162,101 @@ Example: the aarch64 NEON half-precision converters `vcvt_f32_f16` /
 `cfg` on them would drag the whole crate's MSRV up to 1.94 — losing every user
 on 1.89–1.93.
 
-Instead we **probe capability at build time and adapt** — inspired by
-`if_rust_version` / `autocfg`, but feature-detection rather than version-number
-matching. magetypes ships a `build.rs` that, for each such intrinsic,
-try-compiles a tiny snippet for the build target:
+archmage uses **two different mechanisms** here, picked by whether the intrinsic
+has a stable version yet:
 
-```text
-build.rs probe ──try-compile snippet──▶ compiles?
-                                          │ yes → cargo:rustc-cfg=archmage_has_neon_f16
-                                          │ no  → (nothing)
-                                          └──── cargo:rustc-check-cfg=cfg(archmage_has_neon_f16)
+| Intrinsic state | Mechanism | Why |
+|---|---|---|
+| **Stable since a known version** (e.g. NEON-f16 @ 1.94) | `rustversion` + `target_arch` gate, verified by a CI matrix that builds + tests **both sides** of the version boundary | The stabilization version is a fact you can name; `#[rustversion::since(X)]` selects the path by toolchain version with **no build script** and a trusted, dep-light proc-macro. The CI matrix (1.93 fallback / 1.94 flip-on / stable / nightly) makes the named bound load-bearing — an off-by-one bound fails to compile in the 1.93 cell. |
+| **Nightly-only** (no stable version yet) | a tiny **try-compile probe** that runs *only* under nightly | Nightly feature gates churn (renamed/removed between nightlies), so a blind `#![feature(...)]` breaks. The probe enables the path iff it actually compiles on *this* nightly, else falls back. This is the one place feature-detection genuinely beats version-matching. |
+
+### Stable case — `rustversion` + arch (the NEON-f16 gate)
+
+The NEON-f16 hardware kernels live in `magetypes/src/simd/generic/convert_f16.rs`,
+inside `#[cfg(target_arch = "aarch64")]`, gated by toolchain version:
+
+```rust
+// HW kernel: only compiled where the intrinsics are stable.
+#[cfg(target_arch = "aarch64")]
+#[rustversion::since(1.94)]
+#[archmage::arcane(import_intrinsics)]
+fn neon_f16_decode_hw(token: Arm64V2Token, input: &[u16], output: &mut [f32]) { /* vcvt_f32_f16 */ }
+
+// Path selector — two paired items, one per side of the bound:
+#[cfg(target_arch = "aarch64")]
+#[rustversion::since(1.94)]   // HW exists → runtime token decides HW vs software
+fn neon_f16_decode_select(token: NeonToken, ..) { if fp16 { hw } else { software } }
+
+#[cfg(target_arch = "aarch64")]
+#[rustversion::before(1.94)]  // HW not compiled → software only, no MSRV bump
+fn neon_f16_decode_select(token: NeonToken, ..) { software }
 ```
 
-- On **rustc ≥ 1.94** the snippet compiles, the cfg is set, and the hardware
-  kernel (gated `#[cfg(archmage_has_neon_f16)]`) is built and wired into the
-  runtime token dispatch.
-- On **rustc 1.89–1.93** the snippet fails (intrinsic unstable), the cfg stays
-  unset, the hardware kernel is *not compiled*, and the token falls through to
-  the already-shipped branchless **software** kernel. **No compile error, no
-  MSRV bump.**
+- The **version gate** (`since`/`before`) selects whether the HW impl *exists*.
+- The **runtime token** (`Arm64V2Token::summon()` → proves `fp16`) selects
+  whether to *use* it on the actual CPU. The two are orthogonal.
+- On **rustc ≥ 1.94** the HW kernel compiles and the runtime picks it on
+  `fp16` hardware (Cortex-A55+/Apple M1+/Graviton 2+).
+- On **rustc 1.89–1.93** the HW kernel is not compiled at all; the same source
+  builds clean with the branchless **software** kernel. **No compile error, no
+  MSRV bump** (proven by `cargo +1.93 check --target aarch64-unknown-linux-gnu`).
 
-`cargo:rustc-check-cfg` is emitted unconditionally so downstream crates get no
-unexpected-`cfg` warnings (Rust 1.80+ checks them; the 1.89 MSRV supports it).
-The probe shells out to the same `$RUSTC` Cargo invoked it with, so there is **no
-build-dependency**.
+Why not the build-script capability probe we trialed first? It worked (~80 ms
+one-time cold compile, ~0 hot — see `benchmarks/build_script_overhead_*.md`),
+but `rustversion` + a CI matrix is more maintainable: no build script, a trusted
+dtolnay proc-macro, and none of the bespoke-probe gotchas (e.g. a cross-`core`
+false-negative when probing an uninstalled target). The matrix is what makes
+the named version bound safe — see below.
 
-Capability probing (not `rustc --version` comparison) is the robust choice: it
-is correct across target variance, intrinsic backports, and custom toolchains —
-the answer is "does *this* compiler accept the intrinsic for *this* target",
-which is exactly the question that matters.
+#### The CI matrix is the safety net
 
-### Adding the next one
+A version *number* can be wrong (off-by-one bound, a backport that moved
+stabilization). The `.github/workflows/ci.yml` job **`f16-version-gate`** builds
+and runs the exhaustive `convert_f16` bit-identity test on `aarch64-unknown-linux-gnu`
+across **1.93 / 1.94 / stable / nightly** (`fail-fast: false`):
 
-The pattern generalizes to any future newer-stable intrinsic (AVX-512-FP16
+- **1.93** — proves the `before(1.94)` software fallback compiles, has **no MSRV
+  violation**, and tests pass (software-vs-software, 0 NaN divergence). A cell
+  that fails to compile here is the intended alarm for a wrong bound.
+- **1.94** — the stabilization version: the gate flips on, the HW kernel
+  compiles, the intrinsic resolves.
+- **stable** — ongoing coverage.
+- **nightly** — the opportunistic path + the nightly-probe scaffold (below).
+
+aarch64 is exercised under QEMU (`-cpu max`, so `fp16` is present and the HW
+path is actually taken on ≥ 1.94) via the `.cargo/config.toml` runner — the same
+pattern the existing `test-cross` job uses.
+
+### Nightly-only case — the try-compile probe scaffold
+
+There is **no nightly-only intrinsic in archmage today**, so this is a documented
+*scaffold* (a real example would replace the placeholder cfg name + snippet). The
+shape, when one is needed:
+
+1. A `build.rs` (re-introduced for this case only) that, **gated on
+   `version_check`/`rustversion`-style nightly detection**, try-compiles a tiny
+   `#![feature(<gate>)] #![no_std]` snippet using the *intrinsic*. On success it
+   emits `cargo:rustc-cfg=archmage_nightly_<name>` (+ matching
+   `cargo:rustc-check-cfg`).
+2. The path is gated `#[rustversion::nightly] #[cfg(archmage_nightly_<name>)]`,
+   with a `#[rustversion::not(nightly)]`-or-`cfg(not(...))` software fallback.
+3. The CI nightly cell exercises that the scaffold compiles.
+
+The probe (not a version compare) is correct here precisely because the answer
+"does *this* nightly still accept this feature + intrinsic" can change build to
+build, with no stable version to name.
+
+### Adding the next stable intrinsic
+
+For an intrinsic that has stabilized at a known version (AVX-512-FP16
 `_mm512_cvtph_ps`, SVE, …):
 
-1. Add a `#![no_std]` snippet that *uses* the intrinsic behind its
-   `#[target_feature]` to `build.rs` and a `probe_for_arch(...)` call.
-2. Add the cfg name to `declare_check_cfgs`.
-3. Gate the hardware impl with `#[cfg(archmage_has_<name>)]`, wire it into the
-   runtime token dispatch, and keep the software kernel as the
-   `#[cfg(not(archmage_has_<name>))]` fallback.
+1. Write the HW kernel inside `#[cfg(target_arch = "<arch>")]`, gated
+   `#[rustversion::since(<ver>)]`.
+2. Write the paired `*_select` helper: `#[rustversion::since(<ver>)]` (HW +
+   runtime token) and `#[rustversion::before(<ver>)]` (software only).
+3. Add a matrix cell to the `f16-version-gate` CI job at `<ver> - 1` (the
+   fallback side) and `<ver>` (the flip-on side).
 
 The crate adapts to whatever toolchain compiles it, rather than baking one
-static MSRV decision.
+static MSRV decision — and the CI matrix proves the version bound is right.
