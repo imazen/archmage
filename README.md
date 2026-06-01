@@ -543,8 +543,10 @@ For the full testing API, see the [testing docs](https://imazen.github.io/archma
 |---------|---------|---|
 | `std` | yes | Standard library (required for runtime detection) |
 | `macros` | yes | No-op (macros are always available). Kept for backwards compatibility |
-| `avx512` | no | AVX-512 tokens (`X64V4Token`, `X64V4xToken`, `Avx512Fp16Token`) |
+| `safe_unaligned_simd` | yes | No-op (`safe_unaligned_simd` is always included). Kept for backwards compatibility |
+| `avx512` | no | AVX-512 tokens (`X64V4Token`, `X64V4xToken`, `Avx512Token`, `Avx512Fp16Token`) plus AVX-512 safe memory ops |
 | `testable_dispatch` | no | Makes token disabling work with `-Ctarget-cpu=native` |
+| `forge-token-api` | no | Exposes `forge_token_dangerously()` (unsafe, deprecated — prefer `summon()`); for testing token infrastructure from external crates |
 
 ## Acknowledgments
 
