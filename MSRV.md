@@ -156,33 +156,19 @@ No `#![feature(...)]`, no `unsafe`, no nightly. `#![forbid(unsafe_code)]` works.
 
 ## Newer-stable intrinsics *above* the MSRV — the version gate
 
-Some hardware paths want an intrinsic that became `#[stable]` *after* 1.89.
-Example: the aarch64 NEON half-precision converters `vcvt_f32_f16` /
-`vcvt_f16_f32` are stable only since **1.94** (`stdarch_neon_f16`). A static
-`cfg` on them would drag the whole crate's MSRV up to 1.94 — losing every user
-on 1.89–1.93.
+The MSRV stays **1.89**. When a hardware path needs a `core::arch` intrinsic
+that stabilized *above* it — e.g. the aarch64 NEON-f16 converters `vcvt_f32_f16`
+/ `vcvt_f16_f32`, stable since **1.94** (`stdarch_neon_f16`) — a static `cfg` on
+the intrinsic would drag the whole crate's MSRV to 1.94. Instead the path is
+picked by **toolchain version** with `rustversion`, inside `#[cfg(target_arch =
+…)]`: the HW kernel compiles on rustc ≥ X, a branchless software fallback below.
+**No build script, no MSRV bump.**
 
-archmage uses **two different mechanisms** here, picked by whether the intrinsic
-has a stable version yet:
-
-| Intrinsic state | Mechanism | Why |
-|---|---|---|
-| **Stable since a known version** (e.g. NEON-f16 @ 1.94) | `rustversion` + `target_arch` gate; both arms covered by the **normal** CI (MSRV `cargo check` below the bound, stable `test-aarch64`/`test-cross` above it) | The stabilization version is a fact you can name; `#[rustversion::since(X)]` selects the path by toolchain version with **no build script** and a trusted, dep-light proc-macro. No dedicated boundary job — see "Both arms are covered by the normal CI matrix" below. |
-| **Nightly-only** (no stable version yet) | a tiny **try-compile probe** that runs *only* under nightly | Nightly feature gates churn (renamed/removed between nightlies), so a blind `#![feature(...)]` breaks. The probe enables the path iff it actually compiles on *this* nightly, else falls back. This is the one place feature-detection genuinely beats version-matching. |
-
-### Stable case — `rustversion` + arch (the NEON-f16 gate)
-
-The NEON-f16 hardware kernels live in `magetypes/src/simd/generic/convert_f16.rs`,
-inside `#[cfg(target_arch = "aarch64")]`, gated by toolchain version:
+| Intrinsic state | Mechanism |
+|---|---|
+| **Stable since a known version** (NEON-f16 @ 1.94) | `rustversion` + `target_arch` gate, both arms covered by normal CI |
 
 ```rust
-// HW kernel: only compiled where the intrinsics are stable.
-#[cfg(target_arch = "aarch64")]
-#[rustversion::since(1.94)]
-#[archmage::arcane(import_intrinsics)]
-fn neon_f16_decode_hw(token: Arm64V2Token, input: &[u16], output: &mut [f32]) { /* vcvt_f32_f16 */ }
-
-// Path selector — two paired items, one per side of the bound:
 #[cfg(target_arch = "aarch64")]
 #[rustversion::since(1.94)]   // HW exists → runtime token decides HW vs software
 fn neon_f16_decode_select(token: NeonToken, ..) { if fp16 { hw } else { software } }
@@ -192,75 +178,23 @@ fn neon_f16_decode_select(token: NeonToken, ..) { if fp16 { hw } else { software
 fn neon_f16_decode_select(token: NeonToken, ..) { software }
 ```
 
-- The **version gate** (`since`/`before`) selects whether the HW impl *exists*.
-- The **runtime token** (`Arm64V2Token::summon()` → proves `fp16`) selects
-  whether to *use* it on the actual CPU. The two are orthogonal.
-- On **rustc ≥ 1.94** the HW kernel compiles and the runtime picks it on
-  `fp16` hardware (Cortex-A55+/Apple M1+/Graviton 2+).
-- On **rustc 1.89–1.93** the HW kernel is not compiled at all; the same source
-  builds clean with the branchless **software** kernel. **No compile error, no
-  MSRV bump** (proven by `cargo +1.93 check --target aarch64-unknown-linux-gnu`).
+The `since`/`before` gate selects whether the HW impl *exists*; the runtime
+token (`Arm64V2Token::summon()`, proving `fp16`) selects whether to *use* it.
 
-Why not the build-script capability probe we trialed first? It worked (~80 ms
-one-time cold compile, ~0 hot — see `benchmarks/build_script_overhead_*.md`),
-but `rustversion` is more maintainable: no build script, a trusted dtolnay
-proc-macro, and none of the bespoke-probe gotchas (e.g. a cross-`core`
-false-negative when probing an uninstalled target).
+Both arms are covered by the **normal** CI matrix: the MSRV 1.89 `cargo check`
+compiles the `before` software arm below the bound, and the stable
+`test-aarch64`/`test-cross` jobs compile **and run** the `since` HW arm above it.
+The exact `1.94` literal is not independently re-validated — it's documented in
+std, and a wrong bound surfaces at the next toolchain reaching the gap.
 
-#### Both arms are covered by the normal CI matrix
-
-The stabilization version is a documented fact (`#[stable(since = "1.94.0")]`),
-not a guess, and both arms of the gate are already exercised by the existing CI
-— **no dedicated boundary job**:
-
-- **below the bound** — the **MSRV 1.89 `aarch64 Linux`** job `cargo check`s the
-  crate, compiling the `before(1.94)` software arm with no MSRV violation.
-- **above the bound** — the **`test-aarch64`** (native ubuntu-24.04-arm) and
-  **`test-cross`** (aarch64 QEMU) jobs run at stable, compiling **and running**
-  the `since(1.94)` HW arm so `vcvt_*` resolves and the bit-identity test passes.
-- the software arm's *correctness* also runs on every x86 test job (the kernel is
-  generic, branchless, arch-independent) and under Miri (nightly) for UB.
-
-What this does **not** independently re-validate is the exact `1.94` literal —
-a too-low/too-high bound is only detectable by a cell at `1.94 ± 1`, which
-neither 1.89 nor stable is. That was judged not worth a perpetual dedicated
-`cross` job: the version is documented in std, and a wrong literal surfaces at
-the next toolchain reaching the gap. If a *future* intrinsic's stabilization
-version is genuinely uncertain, add a **transient** 2-cell `cross` matrix at
-`<ver> - 1` / `<ver>` to pin it, then remove it once confirmed.
-
-### Nightly-only case — the try-compile probe pattern (not currently shipped)
-
-There is **no nightly-only intrinsic in archmage today**, so **no `build.rs`
-ships** (keeping build time + complexity at zero for downstream consumers). This
-is the documented pattern to re-introduce when one is actually needed:
-
-1. A `build.rs` (re-introduced for this case only) that, **gated on
-   `version_check`/`rustversion`-style nightly detection**, try-compiles a tiny
-   `#![feature(<gate>)] #![no_std]` snippet using the *intrinsic*. On success it
-   emits `cargo:rustc-cfg=archmage_nightly_<name>` (+ matching
-   `cargo:rustc-check-cfg`).
-2. The path is gated `#[rustversion::nightly] #[cfg(archmage_nightly_<name>)]`,
-   with a `#[rustversion::not(nightly)]`-or-`cfg(not(...))` software fallback.
-3. A CI nightly cell exercises that the probe + gated path compile.
-
-The probe (not a version compare) is correct here precisely because the answer
-"does *this* nightly still accept this feature + intrinsic" can change build to
-build, with no stable version to name.
+A **nightly-only** intrinsic (no stable version to name) would instead need a
+try-compile `build.rs` probe gated on nightly; archmage ships none today.
 
 ### Adding the next stable intrinsic
 
-For an intrinsic that has stabilized at a known version (AVX-512-FP16
-`_mm512_cvtph_ps`, SVE, …):
-
 1. Write the HW kernel inside `#[cfg(target_arch = "<arch>")]`, gated
    `#[rustversion::since(<ver>)]`.
-2. Write the paired `*_select` helper: `#[rustversion::since(<ver>)]` (HW +
-   runtime token) and `#[rustversion::before(<ver>)]` (software only).
-3. The normal CI already covers both arms (MSRV `cargo check` below `<ver>`,
-   stable `test-aarch64`/`test-cross` above it). If `<ver>` itself is uncertain,
-   add a **transient** 2-cell `cross` matrix at `<ver> - 1` / `<ver>` to pin it,
-   then remove it once confirmed.
-
-The crate adapts to whatever toolchain compiles it, rather than baking one
-static MSRV decision.
+2. Add the paired `*_select` helper: `#[rustversion::since(<ver>)]` (HW + runtime
+   token) and `#[rustversion::before(<ver>)]` (software only).
+3. The normal CI covers both arms; if `<ver>` is uncertain, add a transient
+   2-cell `cross` matrix at `<ver> - 1` / `<ver>` to pin it, then remove it.
