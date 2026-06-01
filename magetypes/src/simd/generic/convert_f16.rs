@@ -47,25 +47,32 @@
 //! proven on one target holds on every target, because the underlying bit
 //! operations are identical everywhere.
 //!
-//! ## Hardware fast path (F16C, widened to AVX-512F)
+//! ## Hardware fast path (F16C 8-wide, AVX-512F 16-wide)
 //!
 //! The slice entry points ([`F16Convert::f16_to_f32_slice`] /
-//! [`F16Convert::f32_to_f16_slice`])
-//! dispatch on the SIMD token (via the sealed [`F16Convert`] trait): an
-//! `X64V3Token` (x86-64-v3, whose feature tier includes F16C) routes through
-//! the native `vcvtph2ps` / `vcvtps2ph` instructions; every other token runs
-//! the branchless software kernel. AVX-512 (`X64V4Token`) holders reach this
-//! path by extracting a V3 token — `token.v3()` — which is sound because V4's
-//! feature set is a strict superset of V3's.
+//! [`F16Convert::f32_to_f16_slice`]) dispatch on the SIMD token (via the sealed
+//! [`F16Convert`] trait). A **slice** is a whole-buffer op, so it may summon the
+//! best tier once per call (amortized over every lane — the cached `summon()` is
+//! ~1.3 ns); the single-vector register methods never summon.
 //!
-//! When the crate is built with the `avx512` feature, the V3 (F16C) path
-//! *self-upgrades* to the strictly wider AVX-512F conversions
-//! (`_mm512_cvtph_ps` / `_mm512_cvtps_ph`, 16 f16 per instruction vs F16C's 8):
-//! the F16C kernel summons an `X64V4Token` at runtime and, when the CPU proves
-//! it, runs the 16-wide kernel for the bulk of the slice, with the 8/4-wide
-//! F16C kernel handling the tail. This mirrors the aarch64 NEON path's runtime
-//! `fp16`-tier probe, so a V3-token caller on AVX-512 hardware (the common case)
-//! gets the wider path with no API change. AVX-512 **FP16** (`avx512fp16`,
+//! - `X64V3Token` (x86-64-v3, whose tier includes F16C) → the native 8-wide
+//!   `vcvtph2ps` / `vcvtps2ph` (`_mm256_cvtph_ps` / `_mm256_cvtps_ph`), and —
+//!   with the `avx512` feature, on a CPU that proves it — summons-up to the
+//!   16-wide AVX-512F `_mm512_cvtph_ps` / `_mm512_cvtps_ph` for the slice bulk.
+//! - `X64V4Token` / `X64V4xToken` / `Avx512Fp16Token` (with the `avx512`
+//!   feature) → the 16-wide kernel **directly**, no probe (the token already
+//!   proves V4; V4x / FP16 downcast via `.v4()`). This "plain V4 path" lets a
+//!   V4 holder call the slice converters without extracting a V3 token first.
+//! - `NeonToken` → native NEON-f16 (`vcvt_f32_f16`) when the CPU proves `fp16`
+//!   (summons `Arm64V2Token`), else the software kernel.
+//! - Every other token → the branchless software kernel.
+//!
+//! On Zen 4 (which double-pumps AVX-512 on 256-bit units) the measured 16-wide
+//! win over 8-wide F16C is *modest* — decode ≈1.2–1.5×, encode ≈1.5–1.8× when
+//! L1-resident, ≈parity once memory-bandwidth-bound; **not 2×** (see
+//! `benchmarks/f16_convert_zen4-7950x_2026-06-01.md`). It is bit-identical to
+//! the 8-wide path, so it is never a regression, and parts with a native
+//! 512-bit datapath should gain more. AVX-512 **FP16** (`avx512fp16`,
 //! Sapphire Rapids / Zen 5+) is *not* used here: its `vcvtph2psx` / `vcvtps2phx`
 //! do the same f16↔f32 conversion at the same throughput as AVX-512F, so the
 //! more widely-available AVX-512F instructions cover it; the FP16 ISA's real
@@ -407,13 +414,13 @@ mod x86_dispatch {
     // call from cold, non-`target_feature` code — exactly how the public
     // slice entry points call them.
     //
-    // `X64V4Token` (AVX-512) also lists `f16c`, but it does not implement the
-    // `F32x4Convert` family (only the `F32x4Backend` / `F32x8Backend`
-    // delegations exist), so it cannot satisfy this trait's supertrait bound —
-    // and it could not call the (previously `T: F32x4Convert`) public entry
-    // points either. V4 holders take the F16C path by extracting a V3 token:
-    // `f16_to_f32_slice(token.v3(), ..)`. The `.v3()` extractor is sound
-    // because V4's feature set is a strict superset of V3's.
+    // Slice methods summon-up to the best available tier, amortized over the
+    // whole slice: `f16c_decode_select` / `f16c_encode_select` summon a
+    // `X64V4Token` once per call and run the 16-wide kernel when the CPU has it,
+    // else the 8-wide F16C kernel. (Summoning for a *slice* is fine — the
+    // ~1.3 ns cached `summon()` is amortized over every lane; single-vector
+    // register ops never summon.) A caller who already holds a V4 token skips the
+    // probe via the plain V4 path below.
     impl F16Convert for archmage::X64V3Token {
         #[inline]
         fn f16_to_f32_into(self, input: &[u16], output: &mut [f32]) {
@@ -422,6 +429,52 @@ mod x86_dispatch {
         #[inline]
         fn f32_to_f16_into(self, input: &[f32], output: &mut [u16]) {
             f16c_encode_select(self, input, output);
+        }
+    }
+
+    // Plain V4 path: the AVX-512 tier tokens implement `F16Convert` directly, so
+    // a V4 / V4x / FP16 holder can call the slice converters *without* extracting
+    // a V3 token first, routing straight to the 16-wide AVX-512F kernel (no
+    // `summon()` probe — the token already proves V4). `X64V4xToken` /
+    // `Avx512Fp16Token` downcast to `X64V4Token` with the guaranteed `.v4()`
+    // extractor. Gated on the `avx512` feature: that is what compiles the 16-wide
+    // kernel *and* the `F32x4Convert` supertrait delegation these tokens need
+    // (`impls/x86_v4_f32_delegated.rs`, also `avx512`-gated). Without `avx512`
+    // these tokens carry no W128 backends at all, so a V4 holder takes the 8-wide
+    // F16C path the usual way: `f16_to_f32_slice(token.v3(), ..)`.
+    #[cfg(feature = "avx512")]
+    impl F16Convert for archmage::X64V4Token {
+        #[inline]
+        fn f16_to_f32_into(self, input: &[u16], output: &mut [f32]) {
+            f16c_decode_v4(self, input, output);
+        }
+        #[inline]
+        fn f32_to_f16_into(self, input: &[f32], output: &mut [u16]) {
+            f16c_encode_v4(self, input, output);
+        }
+    }
+
+    #[cfg(feature = "avx512")]
+    impl F16Convert for archmage::X64V4xToken {
+        #[inline]
+        fn f16_to_f32_into(self, input: &[u16], output: &mut [f32]) {
+            f16c_decode_v4(self.v4(), input, output);
+        }
+        #[inline]
+        fn f32_to_f16_into(self, input: &[f32], output: &mut [u16]) {
+            f16c_encode_v4(self.v4(), input, output);
+        }
+    }
+
+    #[cfg(feature = "avx512")]
+    impl F16Convert for archmage::Avx512Fp16Token {
+        #[inline]
+        fn f16_to_f32_into(self, input: &[u16], output: &mut [f32]) {
+            f16c_decode_v4(self.v4(), input, output);
+        }
+        #[inline]
+        fn f32_to_f16_into(self, input: &[f32], output: &mut [u16]) {
+            f16c_encode_v4(self.v4(), input, output);
         }
     }
 }
@@ -658,31 +711,30 @@ fn neon_f16_encode_hw(token: archmage::Arm64V2Token, input: &[f32], output: &mut
 }
 
 // ----------------------------------------------------------------------------
-// x86 width selector (F16C 8-wide ↔ AVX-512F 16-wide), mirroring the aarch64
-// `neon_f16_*_select` runtime-probe pattern above.
+// x86 slice dispatch: summon-up to the best tier (amortized over the slice).
 //
-// The slice entry points hand the V3 (F16C) override a *V3* token — either
-// because the caller summoned a `X64V3Token`, or because a V4 holder downcast
-// with `token.v3()`. F16C tops out at 8 f16 per `vcvtph2ps`. AVX-512F adds the
-// strictly wider `_mm512_cvtph_ps` / `_mm512_cvtps_ph` (16 f16 per
-// instruction), which every V4 CPU has — so when the `avx512` feature is built
-// the selector summons an `X64V4Token` and, when the CPU proves it, routes the
-// bulk of the slice through the 16-wide kernel (8/4-wide F16C handles the tail).
+// The slice methods hand the F16C entry a *V3* token (the caller's, or a V4
+// holder's `.v3()`). F16C tops out at 8 f16 per `vcvtph2ps`; AVX-512F adds the
+// wider `_mm512_cvtph_ps` / `_mm512_cvtps_ph` (16 f16), present on every V4 CPU.
+// So when the `avx512` feature is built the selector summons an `X64V4Token`
+// once per call and, when the CPU proves it, runs the 16-wide kernel (8/4-wide
+// F16C handles the < 16-lane tail). The cached `summon()` (~1.3 ns) is amortized
+// over the whole slice — fine for a slice op (single-vector register ops never
+// summon). A caller who already holds a V4-tier token skips the probe entirely
+// via the plain V4 path (the direct `F16Convert` impls for `X64V4Token` /
+// `X64V4xToken` / `Avx512Fp16Token`).
 //
-// `_mm512_cvtph_ps` / `_mm512_cvtps_ph` produce bit-identical results to the
-// F16C 8-wide path for every finite, subnormal, and infinite value, with the
-// same RTNE rounding on encode and the same hardware-quieted NaN on decode —
-// so the documented F16C↔software contract holds unchanged on the 16-wide path
-// (verified by the `*_v4_*` parity tests in `tests/convert_f16_exhaustive.rs`).
-//
-// The 16-wide kernel and its `summon()` probe are gated on the `avx512` cargo
-// feature: the AVX-512 intrinsics inside `#[arcane]` require it (archmage's
-// macro emits a `compile_error!` for a V4 token without `avx512`). Without the
-// feature, only the F16C path is compiled and the selector is a thin forward —
-// no behavior change, no MSRV or feature surprise.
+// `_mm512_cvtph_ps` / `_mm512_cvtps_ph` are bit-identical to the F16C 8-wide
+// path for every finite, subnormal, and infinite value (same RTNE encode, same
+// hardware-quieted NaN decode), so the F16C↔software contract holds unchanged
+// on the 16-wide path (verified by the `x86_avx512f` parity tests). The 16-wide
+// kernels and the `summon()` probe are gated on the `avx512` cargo feature: the
+// AVX-512 intrinsics inside `#[arcane]` require it (archmage emits a
+// `compile_error!` for a V4 token without `avx512`), and that feature also
+// compiles the V4 W128 backends the plain-V4-path impls need.
 
-/// `avx512` build: prefer the AVX-512F 16-wide decode when the CPU proves a
-/// V4 token, else the F16C 8-wide kernel.
+/// `avx512` build: summon the best tier (16-wide AVX-512F when the CPU proves a
+/// V4 token, else 8-wide F16C). The summon is once-per-slice (amortized).
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[inline]
 fn f16c_decode_select(token: archmage::X64V3Token, input: &[u16], output: &mut [f32]) {
@@ -694,15 +746,15 @@ fn f16c_decode_select(token: archmage::X64V3Token, input: &[u16], output: &mut [
     f16c_decode_v3(token, input, output);
 }
 
-/// Non-`avx512` build: only the F16C 8-wide decode is compiled.
+/// Non-`avx512` build: only the 8-wide F16C decode is compiled.
 #[cfg(all(target_arch = "x86_64", not(feature = "avx512")))]
 #[inline]
 fn f16c_decode_select(token: archmage::X64V3Token, input: &[u16], output: &mut [f32]) {
     f16c_decode_v3(token, input, output);
 }
 
-/// `avx512` build: prefer the AVX-512F 16-wide encode when the CPU proves a
-/// V4 token, else the F16C 8-wide kernel.
+/// `avx512` build: summon the best tier for encode (16-wide AVX-512F, else
+/// 8-wide F16C). Once-per-slice summon (amortized).
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[inline]
 fn f16c_encode_select(token: archmage::X64V3Token, input: &[f32], output: &mut [u16]) {
@@ -714,7 +766,7 @@ fn f16c_encode_select(token: archmage::X64V3Token, input: &[f32], output: &mut [
     f16c_encode_v3(token, input, output);
 }
 
-/// Non-`avx512` build: only the F16C 8-wide encode is compiled.
+/// Non-`avx512` build: only the 8-wide F16C encode is compiled.
 #[cfg(all(target_arch = "x86_64", not(feature = "avx512")))]
 #[inline]
 fn f16c_encode_select(token: archmage::X64V3Token, input: &[f32], output: &mut [u16]) {

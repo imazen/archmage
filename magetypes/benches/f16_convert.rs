@@ -20,12 +20,25 @@
 //! isolates `vcvt` vs branchless-NEON on identical hardware; the `scalar/*`
 //! column must match across builds (sanity).
 //!
+//! ## x86-64 paths
+//!
+//! With `--features "std avx512"` this binary measures, same process:
+//!   * `scalar/*` — branchless software baseline.
+//!   * `f16c/*`   — `X64V3Token` slice (the production path; summons-up to the
+//!                  best tier, so 16-wide AVX-512F on a V4 CPU, else 8-wide F16C).
+//!   * `v4/*`     — `X64V4Token` slice (the plain V4 path; 16-wide directly, no
+//!                  probe). `f16c` ≈ `v4` on a V4 CPU shows the summon is free.
+//!
+//! The 8-wide-vs-16-wide *width* isolation lives in the dedicated microbench in
+//! `benchmarks/f16_convert_zen4-7950x_2026-06-01.md` (the production path here
+//! auto-upgrades, so it can't pin 8-wide on a V4 box).
+//!
 //! Sizes span the regimes: tiny (call-overhead-dominated) → large (memory-
-//! bandwidth-bound, where a 1-instruction `vcvt` and a ~10-op branchless kernel
-//! both saturate the load/store path and any compute win disappears).
+//! bandwidth-bound, where the wider convert saturates the load/store path and
+//! the compute win shrinks toward parity).
 
 use archmage::ScalarToken;
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 use archmage::SimdToken;
 use magetypes::simd::generic::F16Convert;
 use zenbench::criterion_compat::*;
@@ -68,6 +81,22 @@ fn bench_decode(c: &mut Criterion) {
                 b.iter(|| nt.f16_to_f32_slice(black_box(&input), black_box(&mut out)))
             });
         }
+
+        // x86-64: `f16c` = X64V3Token slice (production path, summons-up to best
+        // tier); `v4` = X64V4Token slice (plain V4 path, 16-wide direct). On a V4
+        // CPU both run 16-wide — `f16c ≈ v4` shows the summon is amortized away.
+        #[cfg(target_arch = "x86_64")]
+        if let Some(t) = archmage::X64V3Token::summon() {
+            c.bench_function(&format!("decode/f16c/{n}"), |b| {
+                b.iter(|| t.f16_to_f32_slice(black_box(&input), black_box(&mut out)))
+            });
+        }
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        if let Some(t) = archmage::X64V4Token::summon() {
+            c.bench_function(&format!("decode/v4/{n}"), |b| {
+                b.iter(|| t.f16_to_f32_slice(black_box(&input), black_box(&mut out)))
+            });
+        }
     }
 }
 
@@ -84,6 +113,21 @@ fn bench_encode(c: &mut Criterion) {
         if let Some(nt) = archmage::NeonToken::summon() {
             c.bench_function(&format!("encode/neon/{n}"), |b| {
                 b.iter(|| nt.f32_to_f16_slice(black_box(&input), black_box(&mut out)))
+            });
+        }
+
+        // x86-64: `f16c` = V3 slice (production, summons-up); `v4` = V4 slice
+        // (plain path, direct). See decode.
+        #[cfg(target_arch = "x86_64")]
+        if let Some(t) = archmage::X64V3Token::summon() {
+            c.bench_function(&format!("encode/f16c/{n}"), |b| {
+                b.iter(|| t.f32_to_f16_slice(black_box(&input), black_box(&mut out)))
+            });
+        }
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        if let Some(t) = archmage::X64V4Token::summon() {
+            c.bench_function(&format!("encode/v4/{n}"), |b| {
+                b.iter(|| t.f32_to_f16_slice(black_box(&input), black_box(&mut out)))
             });
         }
     }

@@ -55,7 +55,7 @@
 
 #![cfg(all(target_arch = "x86_64", feature = "avx512"))]
 
-use crate::simd::backends::{F32x4Backend, F32x8Backend};
+use crate::simd::backends::{F32x4Backend, F32x4Convert, F32x8Backend, I32x4Backend};
 
 /// Delegate every [`F32x4Backend`] method on `$token` to `X64V3Token`'s
 /// impl. `Self::Repr` is set to V3's repr (`__m128`); all method bodies
@@ -421,3 +421,204 @@ delegate_f32x4_to_v3!(archmage::Avx512Fp16Token);
 delegate_f32x8_to_v3!(archmage::X64V4Token);
 delegate_f32x8_to_v3!(archmage::X64V4xToken);
 delegate_f32x8_to_v3!(archmage::Avx512Fp16Token);
+
+/// Delegate every [`I32x4Backend`] method on `$token` to `X64V3Token`'s impl,
+/// same `.v3()`-extractor pattern and subset-soundness proof as
+/// [`delegate_f32x4_to_v3`]. Needed so the V4-tier tokens can satisfy the
+/// [`F32x4Convert`] supertrait bound (`F32x4Backend + I32x4Backend`) and thus
+/// implement the f16 [`F16Convert`](crate::simd::generic::F16Convert) slice
+/// trait directly (the "plain V4 path").
+macro_rules! delegate_i32x4_to_v3 {
+    ($token:ty) => {
+        impl I32x4Backend for $token {
+            type Repr = <archmage::X64V3Token as I32x4Backend>::Repr;
+
+            #[inline(always)]
+            fn splat(self, v: i32) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::splat(self.v3(), v)
+            }
+            #[inline(always)]
+            fn zero(self) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::zero(self.v3())
+            }
+            #[inline(always)]
+            fn load(self, d: &[i32; 4]) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::load(self.v3(), d)
+            }
+            #[inline(always)]
+            fn from_array(self, a: [i32; 4]) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::from_array(self.v3(), a)
+            }
+            #[inline(always)]
+            fn store(self, r: Self::Repr, o: &mut [i32; 4]) {
+                <archmage::X64V3Token as I32x4Backend>::store(self.v3(), r, o)
+            }
+            #[inline(always)]
+            fn to_array(self, r: Self::Repr) -> [i32; 4] {
+                <archmage::X64V3Token as I32x4Backend>::to_array(self.v3(), r)
+            }
+
+            #[inline(always)]
+            fn add(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::add(self.v3(), a, b)
+            }
+            #[inline(always)]
+            fn sub(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::sub(self.v3(), a, b)
+            }
+            #[inline(always)]
+            fn mul(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::mul(self.v3(), a, b)
+            }
+            #[inline(always)]
+            fn neg(self, a: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::neg(self.v3(), a)
+            }
+
+            #[inline(always)]
+            fn min(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::min(self.v3(), a, b)
+            }
+            #[inline(always)]
+            fn max(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::max(self.v3(), a, b)
+            }
+            #[inline(always)]
+            fn abs(self, a: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::abs(self.v3(), a)
+            }
+
+            #[inline(always)]
+            fn simd_eq(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::simd_eq(self.v3(), a, b)
+            }
+            #[inline(always)]
+            fn simd_ne(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::simd_ne(self.v3(), a, b)
+            }
+            #[inline(always)]
+            fn simd_lt(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::simd_lt(self.v3(), a, b)
+            }
+            #[inline(always)]
+            fn simd_le(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::simd_le(self.v3(), a, b)
+            }
+            #[inline(always)]
+            fn simd_gt(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::simd_gt(self.v3(), a, b)
+            }
+            #[inline(always)]
+            fn simd_ge(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::simd_ge(self.v3(), a, b)
+            }
+            #[inline(always)]
+            fn blend(self, m: Self::Repr, t: Self::Repr, f: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::blend(self.v3(), m, t, f)
+            }
+
+            #[inline(always)]
+            fn reduce_add(self, a: Self::Repr) -> i32 {
+                <archmage::X64V3Token as I32x4Backend>::reduce_add(self.v3(), a)
+            }
+
+            #[inline(always)]
+            fn not(self, a: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::not(self.v3(), a)
+            }
+            #[inline(always)]
+            fn bitand(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::bitand(self.v3(), a, b)
+            }
+            #[inline(always)]
+            fn bitor(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::bitor(self.v3(), a, b)
+            }
+            #[inline(always)]
+            fn bitxor(self, a: Self::Repr, b: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::bitxor(self.v3(), a, b)
+            }
+
+            #[inline(always)]
+            fn shl_const<const N: i32>(self, a: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::shl_const::<N>(self.v3(), a)
+            }
+            #[inline(always)]
+            fn shr_arithmetic_const<const N: i32>(self, a: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::shr_arithmetic_const::<N>(self.v3(), a)
+            }
+            #[inline(always)]
+            fn shr_logical_const<const N: i32>(self, a: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as I32x4Backend>::shr_logical_const::<N>(self.v3(), a)
+            }
+
+            #[inline(always)]
+            fn all_true(self, a: Self::Repr) -> bool {
+                <archmage::X64V3Token as I32x4Backend>::all_true(self.v3(), a)
+            }
+            #[inline(always)]
+            fn any_true(self, a: Self::Repr) -> bool {
+                <archmage::X64V3Token as I32x4Backend>::any_true(self.v3(), a)
+            }
+            #[inline(always)]
+            fn bitmask(self, a: Self::Repr) -> u32 {
+                <archmage::X64V3Token as I32x4Backend>::bitmask(self.v3(), a)
+            }
+        }
+    };
+}
+
+/// Delegate the five [`F32x4Convert`] methods on `$token` to `X64V3Token`. With
+/// [`delegate_f32x4_to_v3`] (F32x4Backend) and [`delegate_i32x4_to_v3`]
+/// (I32x4Backend) this completes the `F32x4Convert` supertrait set for the
+/// V4-tier tokens. All Reprs equal V3's (`__m128` / `__m128i`) by the two
+/// backend delegations, so the forwarded calls type-check directly.
+macro_rules! delegate_f32x4_convert_to_v3 {
+    ($token:ty) => {
+        impl F32x4Convert for $token {
+            #[inline(always)]
+            fn bitcast_f32_to_i32(
+                self,
+                a: <Self as F32x4Backend>::Repr,
+            ) -> <Self as I32x4Backend>::Repr {
+                <archmage::X64V3Token as F32x4Convert>::bitcast_f32_to_i32(self.v3(), a)
+            }
+            #[inline(always)]
+            fn bitcast_i32_to_f32(
+                self,
+                a: <Self as I32x4Backend>::Repr,
+            ) -> <Self as F32x4Backend>::Repr {
+                <archmage::X64V3Token as F32x4Convert>::bitcast_i32_to_f32(self.v3(), a)
+            }
+            #[inline(always)]
+            fn convert_f32_to_i32(
+                self,
+                a: <Self as F32x4Backend>::Repr,
+            ) -> <Self as I32x4Backend>::Repr {
+                <archmage::X64V3Token as F32x4Convert>::convert_f32_to_i32(self.v3(), a)
+            }
+            #[inline(always)]
+            fn convert_f32_to_i32_round(
+                self,
+                a: <Self as F32x4Backend>::Repr,
+            ) -> <Self as I32x4Backend>::Repr {
+                <archmage::X64V3Token as F32x4Convert>::convert_f32_to_i32_round(self.v3(), a)
+            }
+            #[inline(always)]
+            fn convert_i32_to_f32(
+                self,
+                a: <Self as I32x4Backend>::Repr,
+            ) -> <Self as F32x4Backend>::Repr {
+                <archmage::X64V3Token as F32x4Convert>::convert_i32_to_f32(self.v3(), a)
+            }
+        }
+    };
+}
+
+delegate_i32x4_to_v3!(archmage::X64V4Token);
+delegate_i32x4_to_v3!(archmage::X64V4xToken);
+delegate_i32x4_to_v3!(archmage::Avx512Fp16Token);
+
+delegate_f32x4_convert_to_v3!(archmage::X64V4Token);
+delegate_f32x4_convert_to_v3!(archmage::X64V4xToken);
+delegate_f32x4_convert_to_v3!(archmage::Avx512Fp16Token);

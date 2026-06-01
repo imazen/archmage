@@ -2,14 +2,6 @@
 
 ## [Unreleased]
 
-### Added
-
-- magetypes: **AVX-512F 16-wide fast path** for the f16 slice converters. When built with the `avx512` feature, the x86-64 F16C slice path (`token.f16_to_f32_slice` / `token.f32_to_f16_slice`) self-upgrades from 8-wide F16C to the strictly wider `_mm512_cvtph_ps` / `_mm512_cvtps_ph` (16 f16 per instruction) whenever an `X64V4Token` is summonable: the F16C kernel summons a V4 token at runtime and routes the bulk of the slice through the 16-wide kernel, with the existing 8/4-wide F16C kernel handling the < 16-lane tail. This mirrors the aarch64 NEON path's runtime `fp16`-tier probe, so a V3-token caller on AVX-512 hardware (the common case, incl. Skylake-X+/Zen 4+) gets the wider path **with no API change** — no need to hold or pass a V4 token. Verified **bit-identical to the software path** (and thus to the 8-wide F16C path) over all 65 536 f16 (decode) and the f16-roundtrip-grid + dense-sweep encode coverage, with the same documented benign **NaN-only** divergences as F16C; the 16-wide `vcvtph2ps`/`vcvtps2ph` (zmm) emission is confirmed in `objdump`, and the new `x86_avx512f` test module in `tests/convert_f16_exhaustive.rs` prints which width path is active so the coverage is visible in CI logs (which build `--features avx512`). AVX-512 **FP16** (`avx512fp16`, Sapphire Rapids / Zen 5+) is intentionally **not** used: its `vcvtph2psx` / `vcvtps2phx` do the same f16↔f32 conversion at the same throughput as AVX-512F, which is available on far more CPUs; the FP16 ISA's value is native half-precision *arithmetic*, which a converter does not need. Gated on the `avx512` cargo feature (the AVX-512 intrinsics inside `#[arcane]` require it); without the feature only the 8-wide F16C path is compiled. Public API unchanged; purely additive.
-
-### Changed
-
-- archmage: anchor root-level paths in `include` with leading `/` to prevent `docs/site/themes/goyo` git submodule files from leaking into published tarballs via gitignore-style glob depth-matching (e.g. `LICENSE*` was matching `docs/site/themes/goyo/LICENSE`)
-
 ### QUEUED BREAKING CHANGES
 
 - Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)
@@ -20,6 +12,17 @@
 - Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with deprecation warning)
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 - Make `w512` non-default in magetypes — users who need 512-bit types add `features = ["w512"]`; saves ~25% build time for the majority who don't
+
+## [0.9.26] - 2026-06-01
+
+### Added
+
+- magetypes: **AVX-512F 16-wide f16 slice path** (`token.f16_to_f32_slice` / `token.f32_to_f16_slice`). A slice is a whole-buffer op, so it summons-up to the best tier **once per call** (amortized over every lane — the cached `summon()` is ~1.3 ns; single-vector register methods never summon): a `X64V3Token` slice runs 8-wide F16C (`_mm256_cvtph_ps` / `_mm256_cvtps_ph`) and, with the `avx512` feature on a CPU that proves it, the 16-wide AVX-512F `_mm512_cvtph_ps` / `_mm512_cvtps_ph` for the bulk (8/4-wide F16C tail). A caller who already holds a V4-tier token skips the probe via the **plain V4 path**: `X64V4Token` / `X64V4xToken` / `Avx512Fp16Token` implement `F16Convert` directly (16-wide, no summon — they already prove V4; V4x / FP16 downcast via `.v4()`), so a V4 holder can call the slice converters without extracting a V3 token first. The plain V4 path delegates the V4-tier tokens' `F32x4Convert` supertrait (`F32x4Backend` + `I32x4Backend` + the five convert methods) to `X64V3Token` in `impls/x86_v4_f32_delegated.rs` (sound since V4 ⊃ V3); gated on `avx512`, which compiles both the 16-wide kernel and the V4-tier W128/W256 backends. Verified **bit-identical to the software (and 8-wide F16C) path** over the full f16 sweep with the same benign **NaN-only** divergences (16-wide zmm `vcvtph2ps`/`vcvtps2ph` emission confirmed in `objdump`; `tests/convert_f16_exhaustive.rs` adds the `x86_avx512f` 16-lane-boundary tests + `plain_v4_path_tokens_accepted_directly`). AVX-512 **FP16** (`avx512fp16`, Sapphire Rapids / Zen 5+) is intentionally **not** used — its `vcvtph2psx` / `vcvtps2phx` match AVX-512F throughput for f16↔f32 while being far less available; the FP16 ISA's value is native half-precision *arithmetic*, which a converter does not need. Public API unchanged (sealed-trait impls; `cargo semver-checks` clean); purely additive. **Measured (Zen 4 / 7950X, `benchmarks/f16_convert_zen4-7950x_2026-06-01.md`):** the 16-wide path is a *modest* win over 8-wide F16C, **not 2×** — decode ≈1.2–1.5×, encode ≈1.5–1.8× when compute-bound (L1-resident), ≈parity once memory-bandwidth-bound (Zen 4 double-pumps AVX-512 on 256-bit units; native-512-bit Intel server parts should gain more, **unmeasured** here); the once-per-slice summon in the V3 path is fully amortized (production `f16c` ≈ `v4` direct, within 1%) (9c63dc2).
+
+### Changed
+
+- archmage: anchor root-level paths in `include` with a leading `/` to prevent `docs/site/themes/goyo` git-submodule files from leaking into published tarballs via gitignore-style glob depth-matching (e.g. `LICENSE*` was matching `docs/site/themes/goyo/LICENSE`) (4fb9e7c).
+- archmage: stop publishing the `tests/` directory in the crate tarball (727 KB / 276 files removed from the published package) (beb38dd).
 
 ## [0.9.25] - 2026-05-31
 

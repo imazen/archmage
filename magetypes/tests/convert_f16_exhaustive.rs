@@ -454,6 +454,12 @@ mod scalar {
 // On a host without F16C the tests print a notice and pass; correctness on
 // such hosts is covered by the always-run scalar tests above.
 //
+// These drive a `X64V3Token`. Its slice methods summon-up to the best tier
+// (amortized): with `--features avx512` on an AVX-512 CPU they run the 16-wide
+// kernel, else the 8-wide F16C kernel — so under `avx512` they double as the
+// exhaustive 16-wide correctness proof. The `x86_avx512f` module below drives a
+// `X64V4Token` (the plain V4 path, direct 16-wide) and the 16-lane boundary.
+//
 // The whole module carries the x86_64 arch gate at the module boundary, so
 // the gate is applied once — a new x86 test added here inherits it.
 // ============================================================================
@@ -744,19 +750,18 @@ mod x86_f16c {
 mod x86_avx512f {
     use super::*;
 
-    /// Summon a V4 token to confirm the 16-wide selector path is active, print
-    /// which width path runs, and return the V3 token used to enter the
-    /// (auto-upgrading) slice API. `None` ⇒ no AVX-512 on this host (8-wide F16C
+    /// Summon a `X64V4Token` — the token that drives the 16-wide path directly
+    /// (the "plain V4 path"). `None` ⇒ no AVX-512F on this host (8-wide F16C
     /// covers correctness via the `x86_f16c` suite).
-    fn v4_slice_entry() -> Option<archmage::X64V3Token> {
+    fn v4_slice_entry() -> Option<archmage::X64V4Token> {
         use archmage::SimdToken;
         match archmage::X64V4Token::summon() {
             Some(v4) => {
                 eprintln!(
-                    "AVX-512F present: f16 slice path runs the 16-wide \
-                     _mm512_cvtph_ps / _mm512_cvtps_ph kernel."
+                    "AVX-512F present: X64V4Token runs the 16-wide \
+                     _mm512_cvtph_ps / _mm512_cvtps_ph kernel directly."
                 );
-                Some(v4.v3())
+                Some(v4)
             }
             None => {
                 eprintln!(
@@ -768,30 +773,10 @@ mod x86_avx512f {
         }
     }
 
-    /// All 65 536 f16 decoded through the (16-wide) slice path must be
-    /// bit-identical to the branchless software slice — finite/subnormal/Inf
-    /// exact, NaN required only to stay NaN. This is the definitive 16-wide
-    /// decode-correctness proof, explicitly under the AVX-512F name.
-    #[test]
-    fn decode_exhaustive_vs_software_16wide() {
-        let Some(hw) = v4_slice_entry() else { return };
-        let all: Vec<u16> = (0u32..=0xFFFF).map(|v| v as u16).collect();
-        let mut hw_out = vec![0f32; all.len()];
-        let mut sw_out = vec![0f32; all.len()];
-        hw.f16_to_f32_slice(&all, &mut hw_out);
-        archmage::ScalarToken.f16_to_f32_slice(&all, &mut sw_out);
-        for (&h, (&a, &b)) in all.iter().zip(hw_out.iter().zip(sw_out.iter())) {
-            if is_f16_nan(h) {
-                assert!(a.is_nan() && b.is_nan(), "16-wide decode NaN f16 {h:#06x}");
-            } else {
-                assert_eq!(
-                    a.to_bits(),
-                    b.to_bits(),
-                    "AVX-512F 16-wide decode parity vs software h={h:#06x}"
-                );
-            }
-        }
-    }
+    // These tests drive the 16-wide path through a `X64V4Token` directly. The
+    // exhaustive correctness sweep lives in the `x86_f16c` suite (8-wide, plus
+    // the always-run scalar suite); here we cover the 16-lane chunk boundary and
+    // confirm the V4-tier tokens are accepted directly.
 
     /// Decode parity vs software focused on the 16-lane chunk boundary: lengths
     /// 13..=49 straddle 16/32/48, exercising the `_mm512_cvtph_ps` loop AND the
@@ -825,45 +810,6 @@ mod x86_avx512f {
         }
     }
 
-    /// Encode parity vs software through the (16-wide) slice path: the
-    /// f16-roundtrip grid plus a dense f32 sweep. Finite/Inf bit-identical; NaN
-    /// payload may differ (both must be a quiet f16 NaN) — the documented contract.
-    #[test]
-    fn encode_vs_software_16wide() {
-        let Some(hw) = v4_slice_entry() else { return };
-        let mut inputs: Vec<f32> = (0u32..=0xFFFF)
-            .map(|hv| ref_f16_to_f32(hv as u16))
-            .collect();
-        let stride: u32 = 1009;
-        let mut bits: u32 = 0;
-        loop {
-            inputs.push(f32::from_bits(bits));
-            let (next, ov) = bits.overflowing_add(stride);
-            if ov {
-                break;
-            }
-            bits = next;
-        }
-        let mut hw_out = vec![0u16; inputs.len()];
-        let mut sw_out = vec![0u16; inputs.len()];
-        hw.f32_to_f16_slice(&inputs, &mut hw_out);
-        archmage::ScalarToken.f32_to_f16_slice(&inputs, &mut sw_out);
-        for (i, ((&x, &a), &b)) in inputs
-            .iter()
-            .zip(hw_out.iter())
-            .zip(sw_out.iter())
-            .enumerate()
-        {
-            if a == b {
-                continue;
-            }
-            assert!(
-                x.is_nan() && is_f16_nan(a) && is_f16_nan(b),
-                "AVX-512F vs software encode differ at idx={i} x={x:e}: hw={a:#06x} sw={b:#06x}"
-            );
-        }
-    }
-
     /// Encode parity vs software focused on the 16-lane boundary (lengths
     /// 13..=49), covering the `_mm512_cvtps_ph` loop and the tail handoff.
     #[test]
@@ -886,6 +832,70 @@ mod x86_avx512f {
                     "AVX-512F encode boundary parity len={len} x={x:e}: hw={a:#06x} sw={b:#06x}"
                 );
             }
+        }
+    }
+
+    /// The **plain V4 path**: `X64V4Token` / `X64V4xToken` / `Avx512Fp16Token`
+    /// implement `F16Convert` directly (their `F32x4Convert` supertrait is
+    /// delegated to V3), so a V4-tier holder calls the slice converters **without
+    /// extracting a V3 token first**. This test passes those tokens straight to
+    /// `f16_to_f32_slice` / `f32_to_f16_slice` (the `.v3()`-free call that only
+    /// compiles if the direct impls exist) and checks bit-identity vs software
+    /// over a representative sample incl. the 16-lane boundary. Each token is
+    /// summon-gated (only `X64V4Token` is guaranteed on this Zen 4 box; V4x/FP16
+    /// skip with a notice when absent).
+    #[test]
+    fn plain_v4_path_tokens_accepted_directly() {
+        use archmage::SimdToken;
+        fn check<T: F16Convert>(tok: T, label: &str) {
+            for len in [16usize, 17, 31, 48, 1000] {
+                let f16in: Vec<u16> = (0..len)
+                    .map(|i| ((i * 2179 + 0x33ff) & 0xFFFF) as u16)
+                    .collect();
+                let (mut hw, mut sw) = (vec![0f32; len], vec![0f32; len]);
+                tok.f16_to_f32_slice(&f16in, &mut hw); // direct — no .v3()
+                archmage::ScalarToken.f16_to_f32_slice(&f16in, &mut sw);
+                for (&h, (&a, &b)) in f16in.iter().zip(hw.iter().zip(sw.iter())) {
+                    if is_f16_nan(h) {
+                        assert!(a.is_nan() && b.is_nan(), "{label} decode NaN {h:#06x}");
+                    } else {
+                        assert_eq!(
+                            a.to_bits(),
+                            b.to_bits(),
+                            "{label} decode len={len} h={h:#06x}"
+                        );
+                    }
+                }
+                let f32in: Vec<f32> = sw.clone();
+                let (mut he, mut se) = (vec![0u16; len], vec![0u16; len]);
+                tok.f32_to_f16_slice(&f32in, &mut he); // direct — no .v3()
+                archmage::ScalarToken.f32_to_f16_slice(&f32in, &mut se);
+                for (&x, (&a, &b)) in f32in.iter().zip(he.iter().zip(se.iter())) {
+                    if a != b {
+                        assert!(
+                            x.is_nan() && is_f16_nan(a) && is_f16_nan(b),
+                            "{label} encode len={len} x={x:e}: hw={a:#06x} sw={b:#06x}"
+                        );
+                    }
+                }
+            }
+            eprintln!("plain V4 path: {label} accepted directly (16-wide)");
+        }
+        let mut n = 0;
+        if let Some(t) = archmage::X64V4Token::summon() {
+            check(t, "X64V4Token");
+            n += 1;
+        }
+        if let Some(t) = archmage::X64V4xToken::summon() {
+            check(t, "X64V4xToken");
+            n += 1;
+        }
+        if let Some(t) = archmage::Avx512Fp16Token::summon() {
+            check(t, "Avx512Fp16Token");
+            n += 1;
+        }
+        if n == 0 {
+            eprintln!("no V4-tier token summonable — plain V4 path not exercised on this host");
         }
     }
 }
