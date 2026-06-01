@@ -153,3 +153,7 @@ fn main() {
 ```
 
 No `#![feature(...)]`, no `unsafe`, no nightly. `#![forbid(unsafe_code)]` works. That's why the MSRV is 1.89.
+
+## Intrinsics above the MSRV
+
+A few hardware paths use `core::arch` intrinsics that stabilized *above* 1.89 (e.g. the aarch64 NEON-f16 `vcvt_*` converters, stable since 1.94), so they are selected by toolchain version with `rustversion` inside a `#[cfg(target_arch = …)]` scope — the hardware kernel compiles on rustc ≥ its stabilization version and a branchless software fallback compiles below it — which keeps the MSRV at 1.89 with no build script. Both arms are exercised by the normal CI matrix: the MSRV `cargo check` below the bound, the stable aarch64 jobs above it. The mechanism, rationale, and the recipe for adding the next such intrinsic live in the dev doc [`docs/VERSION_GATING.md`](docs/VERSION_GATING.md).
