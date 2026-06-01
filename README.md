@@ -372,6 +372,33 @@ pub fn scale_plane(plane: &mut [f32], factor: f32) {
 
 `#[magetypes(rite, ...)]` is a second flag that emits `#[rite]`-style direct `#[target_feature]` + `#[inline]` variants instead of `#[arcane]` wrappers — for inner helpers called from matching-feature contexts where the optimization-boundary cost matters. See the [idiomatic_patterns_all](magetypes/examples/idiomatic_patterns_all.rs) example for the full vocabulary.
 
+### f16 ↔ f32 conversion
+
+Pipelines that store pixels as IEEE-754 binary16 (`f16`) bit patterns and decode them to `f32` for filtering can use the converters in `magetypes::simd::generic` (also re-exported at `magetypes::simd`). They take an archmage token and operate on slices:
+
+```rust
+use archmage::prelude::*;
+use magetypes::simd::generic::{f16_to_f32_slice, f32_to_f16_slice};
+
+// Decode f16 bit patterns (&[u16]) into f32; lengths must match.
+fn widen(half: &[u16], out: &mut [f32]) {
+    if let Some(token) = X64V3Token::summon() {
+        f16_to_f32_slice(token, half, out); // F16C: vcvtph2ps
+    } else {
+        f16_to_f32_slice(ScalarToken, half, out); // branchless software kernel
+    }
+}
+
+// Encode f32 into f16 bit patterns (&mut [u16]), round-to-nearest-even.
+fn narrow(src: &[f32], out: &mut [u16]) {
+    f32_to_f16_slice(ScalarToken, src, out);
+}
+```
+
+The single-lane in-register kernels `f16_to_f32x4` / `f32_to_f16x4` are also public for callers that already hold `i32x4` / `f32x4` lanes.
+
+These use Fabian Giesen's branchless conversion (magic-multiply decode, round-to-nearest-even magic-add encode) — correct over the full range including subnormals, ±Inf, and NaN, with no data-dependent branches, so even the scalar/NEON/WASM software path is straight-line code LLVM can vectorize. The slice entry points dispatch on the token: the **F16C** hardware path (`vcvtph2ps` / `vcvtps2ph`) engages automatically when the token proves x86-64-v3 at runtime, and the **NEON-f16** hardware path (`vcvt_f32_f16` / `vcvt_f16_f32`) engages automatically on aarch64 with a `NeonToken` when built on Rust ≥ 1.94 and the CPU presents `fp16`; otherwise the branchless software kernel runs. Every path is verified bit-identical to a scalar IEEE reference for all finite, subnormal, and infinite values (NaN inputs always yield a valid NaN, though hardware and software may emit different NaN payload bits).
+
 ## Tier naming conventions
 
 `incant!` and `#[autoversion]` dispatch to suffixed functions. `incant!(sum(data))` calls `sum_v3`, `sum_neon`, etc. These suffixes correspond to tokens:
