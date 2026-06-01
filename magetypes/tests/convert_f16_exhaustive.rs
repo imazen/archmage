@@ -23,6 +23,30 @@ use magetypes::simd::backends::F32x4Convert;
 use magetypes::simd::generic::{f16_to_f32x4, f32_to_f16x4, i32x4};
 
 // ============================================================================
+// Miri sub-sampling.
+//
+// Under Miri the interpreter runs the kernel ~1000× slower than native, so the
+// exhaustive 65 536-point and 2³²-strided sweeps below would take hours (the
+// `encode_dense_sweep` 2³²/1009 ≈ 4.3M-point walk alone is hopeless). Miri's
+// role here is **UB detection**, not bit-exact correctness — and because the
+// converters are *branchless* (the identical instruction sequence executes for
+// every input, with no data-dependent control flow), a coarsely-strided sample
+// that still spans every f16/f32 regime (zero, subnormal, the flush/overflow/
+// Inf boundaries, NaN) exercises the exact same code paths for UB purposes as
+// the full sweep. Full bit-exact correctness is proven stride-1 on every
+// **native** target by these same tests.
+//
+// This is the standard Rust-ecosystem pattern for exhaustive tests under Miri
+// (the standard library does the same). It is NOT a hidden runtime skip: the
+// CI `Miri (UB Detection)` job opts in by running `cargo miri test`, the tests
+// still execute (checking UB on the sample), and the stride is `cfg(miri)`-
+// gated here in plain sight — visible in the CI→test chain.
+#[cfg(miri)]
+const MIRI_F16_STRIDE: usize = 263; // coprime-with-2: visits ~250 of 65 536, varied mantissa residues
+#[cfg(not(miri))]
+const MIRI_F16_STRIDE: usize = 1; // native: every f16 bit pattern
+
+// ============================================================================
 // Scalar IEEE-754 reference (the correctness oracle).
 //
 // This is a plain, branchy, element-at-a-time implementation written
@@ -139,7 +163,7 @@ fn vec_encode<T: F32x4Convert>(token: T, x: f32) -> u16 {
 
 fn exhaustive_decode<T: F32x4Convert>(token: T) {
     let mut mismatches = 0u64;
-    for hv in 0u32..=0xFFFF {
+    for hv in (0u32..=0xFFFF).step_by(MIRI_F16_STRIDE) {
         let h = hv as u16;
         let want = ref_f16_to_f32(h).to_bits();
         let got = vec_decode(token, h);
@@ -205,7 +229,7 @@ fn check_encode<T: F32x4Convert>(token: T, x: f32) -> u64 {
 fn encode_f16_roundtrip<T: F32x4Convert>(token: T) {
     // Every value exactly representable as f16 must round-trip and match.
     let mut mismatches = 0u64;
-    for hv in 0u32..=0xFFFF {
+    for hv in (0u32..=0xFFFF).step_by(MIRI_F16_STRIDE) {
         let x = ref_f16_to_f32(hv as u16);
         mismatches += check_encode(token, x);
     }
@@ -238,7 +262,14 @@ fn encode_boundary_bands<T: F32x4Convert>(token: T) {
     // flush-to-zero edge. This window is ~10 binades = ~84M f32 in release.
     let sub_lo: u32 = 100u32 << 23; // a binade below the smallest f16 subnormal
     let sub_hi: u32 = 113u32 << 23; // first normal-f16 |f32|
-    let step: u32 = if cfg!(debug_assertions) { 251 } else { 1 };
+    // Under Miri stride far coarser (~1k samples over the band) — see MIRI_F16_STRIDE rationale.
+    let step: u32 = if cfg!(miri) {
+        100_003
+    } else if cfg!(debug_assertions) {
+        251
+    } else {
+        1
+    };
     let mut bits = sub_lo;
     while bits < sub_hi {
         mismatches += check_encode(token, f32::from_bits(bits));
@@ -262,7 +293,11 @@ fn encode_boundary_bands<T: F32x4Convert>(token: T) {
         // Stride-1 near both edges (within 4096 of either endpoint), coarse
         // in between, so the saturation boundary itself is never skipped.
         let near_edge = bits.saturating_sub(ov_lo) < 4096 || ov_hi.saturating_sub(bits) < 4096;
-        let s = if cfg!(debug_assertions) && !near_edge {
+        let s = if cfg!(miri) {
+            // Coarse under Miri (~1k samples); the exact ov_lo/ov_hi endpoints
+            // are still hit (loop starts at ov_lo, `.min(ov_hi)` clamps the end).
+            1_000_003
+        } else if cfg!(debug_assertions) && !near_edge {
             251
         } else {
             1
@@ -278,7 +313,9 @@ fn encode_dense_sweep<T: F32x4Convert>(token: T) {
     // visits ~4.3M points spread over every exponent and a varied mantissa
     // residue, covering the normal-range RTNE behavior without a full 2³² run.
     let mut mismatches = 0u64;
-    let stride: u32 = 1009; // coprime-with-2 stride to walk mantissa residues
+    // coprime-with-2 stride to walk mantissa residues; far coarser under Miri
+    // (~1k samples across the whole f32 space) — see MIRI_F16_STRIDE rationale.
+    let stride: u32 = if cfg!(miri) { 4_000_037 } else { 1009 };
     let mut bits: u32 = 0;
     loop {
         let x = f32::from_bits(bits);
@@ -375,8 +412,12 @@ fn slice_encode_matches_reference_all_lengths() {
 fn slice_roundtrip_decode_then_encode_is_identity() {
     use magetypes::simd::generic::{f16_to_f32_slice, f32_to_f16_slice};
     // Every f16 bit pattern decoded then re-encoded must return itself
-    // (excluding NaN payload, which the encode canonicalizes).
-    let input: Vec<u16> = (0u32..=0xFFFF).map(|v| v as u16).collect();
+    // (excluding NaN payload, which the encode canonicalizes). Under Miri the
+    // 65 536-element slice round-trip is sub-sampled — see MIRI_F16_STRIDE.
+    let input: Vec<u16> = (0u32..=0xFFFF)
+        .step_by(MIRI_F16_STRIDE)
+        .map(|v| v as u16)
+        .collect();
     let mut f32buf = vec![0.0f32; input.len()];
     let mut back = vec![0u16; input.len()];
     f16_to_f32_slice(archmage::ScalarToken, &input, &mut f32buf);
