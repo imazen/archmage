@@ -22,7 +22,9 @@ categories = ["development-tools", "hardware-support", "no-std"]
 include = [
     "src/**",
     "benches/**",
-    "tests/**",
+    # tests/** intentionally NOT published — 727 KB of integration tests (276
+    # files, all auto-discovered, no [[test]] decls) that consumers never build.
+    # Files stay on disk so local `cargo test` is unaffected.
     "examples/**",
     "token-registry.toml",
     # Anchor root-level files with leading slash so they don't match inside
