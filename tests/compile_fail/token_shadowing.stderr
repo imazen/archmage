@@ -1,10 +1,10 @@
-error[E0599]: no associated item named `__ARCHMAGE_TIER_TAG` found for struct `X64V3Token` in the current scope
+error[E0599]: no associated function or constant named `__ARCHMAGE_TIER_TAG` found for struct `X64V3Token` in the current scope
   --> tests/compile_fail/token_shadowing.rs:11:1
    |
  9 | struct X64V3Token;
-   | ----------------- associated item `__ARCHMAGE_TIER_TAG` not found for this struct
+   | ----------------- associated function or constant `__ARCHMAGE_TIER_TAG` not found for this struct
 10 |
 11 | #[arcane]
-   | ^^^^^^^^^ associated item not found in `X64V3Token`
+   | ^^^^^^^^^ associated function or constant not found in `X64V3Token`
    |
    = note: this error originates in the attribute macro `arcane` (in Nightly builds, run with -Z macro-backtrace for more info)
