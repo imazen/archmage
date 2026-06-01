@@ -147,13 +147,13 @@ fn is_f16_nan(h: u16) -> bool {
 
 fn vec_decode<T: F16Convert>(token: T, h: u16) -> u32 {
     let v = i32x4::splat(token, h as i32);
-    token.f16_to_f32x4(v).to_array()[0].to_bits()
+    v.f16_to_f32().to_array()[0].to_bits()
 }
 
 fn vec_encode<T: F16Convert>(token: T, x: f32) -> u16 {
     use magetypes::simd::generic::f32x4;
     let v = f32x4::splat(token, x);
-    token.f32_to_f16x4(v).to_array()[0] as u16
+    v.to_f16().to_array()[0] as u16
 }
 
 // ============================================================================

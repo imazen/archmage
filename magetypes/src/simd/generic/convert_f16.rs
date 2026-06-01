@@ -32,17 +32,17 @@
 //!
 //! Verified exhaustively (`tests/convert_f16_exhaustive.rs`):
 //!
-//! - [`F16Convert::f16_to_f32x4`] is **bit-identical** to a scalar IEEE
+//! - [`i32x4::f16_to_f32`] is **bit-identical** to a scalar IEEE
 //!   reference for all 65 536 f16 inputs, including subnormals and Inf, and
 //!   reproduces the reference's NaN bit patterns too.
-//! - [`F16Convert::f32_to_f16x4`] is **bit-identical** to a scalar
+//! - [`f32x4::to_f16`] is **bit-identical** to a scalar
 //!   round-to-nearest-even IEEE reference for all 2³² finite and infinite f32
 //!   inputs, including the subnormal flush-to-f16-subnormal range and the
 //!   overflow-to-Inf boundary. For NaN inputs both produce *some* f16 NaN
 //!   (exponent all ones, mantissa non-zero); the NaN payload bits may differ.
 //!
-//! The in-register kernels ([`F16Convert::f16_to_f32x4`] /
-//! [`F16Convert::f32_to_f16x4`]) are pure safe integer/float arithmetic — no
+//! The in-register kernels ([`i32x4::f16_to_f32`] /
+//! [`f32x4::to_f16`]) are pure safe integer/float arithmetic — no
 //! `unsafe`, no intrinsics. They are therefore arch-independent: a result
 //! proven on one target holds on every target, because the underlying bit
 //! operations are identical everywhere.
@@ -77,85 +77,53 @@ use crate::simd::backends::F32x4Convert;
 use crate::simd::generic::{f32x4, i32x4};
 
 // ============================================================================
-// Hardware-accelerated backend dispatch
+// Register-level conversions — inherent methods on the value types
 // ============================================================================
 //
-// The in-register kernels (`F16Convert::f16_to_f32x4` /
-// `F16Convert::f32_to_f16x4`, default-implemented on the trait below) are pure
-// branchless arithmetic — correct on every target, but they do *not* use a
-// CPU's native f16-conversion instructions. Where the platform has them
-// (x86-64 F16C: `vcvtph2ps` / `vcvtps2ph`), a single instruction converts a
-// whole lane, so the slice methods dispatch to a hardware kernel when the
-// token proves the feature is present, and fall back to the branchless
-// software kernel otherwise.
+// A register conversion is a value→value operation, so — like `f32x4::sqrt`,
+// `f32x4::min`, etc. — it lives as an inherent method on the value type rather
+// than on the token trait. The token comes from the value itself (the `i32x4`
+// / `f32x4` tuple structs store it in field `.1`).
 //
-// The dispatch is keyed on the token type through the sealed `F16Convert`
-// trait: the default `*_into` trait methods run the software kernel; concrete
-// tokens whose feature tier includes a native f16 conversion override them.
-// Because the trait is sealed (its supertrait bound is `F32x4Convert`, itself
-// sealed), no downstream crate can observe or break this dispatch, and adding
-// it is a purely additive, semver-compatible change.
+// The bound is `T: F32x4Convert` (which gives `F32x4Backend + I32x4Backend +
+// SimdToken`) — exactly what the branchless kernel needs, and NOT `F16Convert`
+// (the slice trait). These are additive inherent `impl` blocks on the generated
+// types; Rust permits multiple inherent `impl` blocks for a type in the same
+// crate, and these are NOT touched by code generation (they live here, not in
+// the generated dir).
+//
+// The kernel bodies are bit-identical to the prior (token-method) versions:
+// `self` is now the value and `token = self.1` recovers the token, but every
+// arithmetic operation is unchanged — verified exhaustively in
+// `tests/convert_f16_exhaustive.rs`.
 
-/// Token-keyed converters between IEEE-754 binary16 (`f16`) bit patterns and
-/// `f32`.
-///
-/// The token (the implementing type) is passed by value as `self`, matching
-/// the magetypes convention for token-keyed operations (cf.
-/// [`F32x4Convert`](crate::simd::backends::F32x4Convert) and
-/// [`F32x8FromHalves`](crate::simd::generic::F32x8FromHalves)).
-///
-/// Two layers of operation live here:
-///
-/// - **Register kernels** — [`f16_to_f32x4`](Self::f16_to_f32x4) /
-///   [`f32_to_f16x4`](Self::f32_to_f16x4) convert one SIMD lane (held in
-///   `i32x4` / `f32x4`) with the branchless Giesen arithmetic. Their default
-///   implementations are pure safe integer/float arithmetic — no `unsafe`, no
-///   intrinsics — so a result proven on one target holds on every target.
-/// - **Slice converters** — [`f16_to_f32_slice`](Self::f16_to_f32_slice) /
-///   [`f32_to_f16_slice`](Self::f32_to_f16_slice) convert whole `&[u16]` ↔
-///   `&mut [f32]` slices. They assert equal lengths, then dispatch through
-///   the overridable [`f16_to_f32_into`](Self::f16_to_f32_into) /
-///   [`f32_to_f16_into`](Self::f32_to_f16_into) methods: the default runs the
-///   branchless software kernel, while tokens whose CPU-feature tier includes
-///   a native half-precision conversion (currently x86-64 F16C, via
-///   `X64V3Token`) override them with the hardware path. AVX-512
-///   (`X64V4Token`) holders take the F16C path by extracting a V3 token
-///   (`token.v3()`).
-///
-/// Every override is verified **bit-identical** to the software kernel over
-/// the full exhaustive f16 sweep (`tests/convert_f16_exhaustive.rs`) for all
-/// finite, subnormal, and infinite values, so the public API has identical
-/// observable behavior regardless of which backend the runtime selects. NaN
-/// inputs are the only exception: the hardware and software paths each
-/// produce a valid NaN whose payload bits may differ (see the module-level
-/// docs for the exact F16C divergence).
-///
-/// This trait is sealed via its [`F32x4Convert`](crate::simd::backends::F32x4Convert)
-/// supertrait bound and is not nameable by downstream crates.
-pub trait F16Convert: F32x4Convert {
+impl<T: F32x4Convert> i32x4<T> {
     /// Decode four IEEE-754 binary16 (`f16`) bit patterns held in the low 16
-    /// bits of each `i32` lane into an [`f32x4`].
+    /// bits of each lane (`self`) into an [`f32x4`].
     ///
     /// Each input lane must hold an `f16` bit pattern zero-extended to 32 bits
     /// (i.e. `h as i32` for a `u16` `h`); the upper 16 bits of each lane are
     /// ignored except that they should be zero for a clean decode. See
-    /// [`f16_to_f32_slice`](Self::f16_to_f32_slice) for the slice-oriented
-    /// entry point that loads from `&[u16]`.
+    /// [`F16Convert::f16_to_f32_slice`] for the slice-oriented entry point that
+    /// loads from `&[u16]`.
     ///
     /// Bit-identical to a scalar IEEE f16→f32 reference for every finite,
     /// subnormal, and infinite input, and reproduces the reference's NaN bit
     /// patterns. Branchless on every backend.
-    #[inline(always)]
-    fn f16_to_f32x4(self, h: i32x4<Self>) -> f32x4<Self> {
+    #[inline]
+    pub fn f16_to_f32(self) -> f32x4<T> {
+        let token = self.1;
+        let h = self;
+
         // 2^112 as f32 bits — rescales the magic-shifted exponent and, in the
         // same multiply, denormalizes f16 subnormals.
-        let magic = f32x4::splat(self, f32::from_bits(0x7780_0000));
+        let magic = f32x4::splat(token, f32::from_bits(0x7780_0000));
 
-        let mask_sign = i32x4::splat(self, 0x8000);
-        let mask_mag = i32x4::splat(self, 0x7fff);
-        let mask_expmant = i32x4::splat(self, 0x007f_ffff);
-        let inf_exp = i32x4::splat(self, 0x7f80_0000);
-        let f16_expmask = i32x4::splat(self, 0x7c00);
+        let mask_sign = i32x4::splat(token, 0x8000);
+        let mask_mag = i32x4::splat(token, 0x7fff);
+        let mask_expmant = i32x4::splat(token, 0x007f_ffff);
+        let inf_exp = i32x4::splat(token, 0x7f80_0000);
+        let f16_expmask = i32x4::splat(token, 0x7c00);
 
         // Sign bit moved to the f32 sign position.
         let sign = (h & mask_sign).shl_const::<16>();
@@ -173,10 +141,12 @@ pub trait F16Convert: F32x4Convert {
 
         (body | sign).bitcast_f32x4()
     }
+}
 
-    /// Encode an [`f32x4`] into four IEEE-754 binary16 (`f16`) bit patterns,
-    /// returned in the low 16 bits of each `i32` lane (the upper 16 bits are
-    /// zero).
+impl<T: F32x4Convert> f32x4<T> {
+    /// Encode this [`f32x4`] (round-to-nearest-even) into four IEEE-754
+    /// binary16 (`f16`) bit patterns, returned in the low 16 bits of each
+    /// `i32` lane (the upper 16 bits are zero).
     ///
     /// Uses round-to-nearest-even, flushes f32 values too small to represent
     /// even as an f16 subnormal to ±0, and saturates overflow to ±Inf —
@@ -184,10 +154,13 @@ pub trait F16Convert: F32x4Convert {
     /// finite and infinite f32. NaN inputs map to a canonical quiet f16 NaN
     /// (the payload bits are not preserved). Branchless on every backend.
     ///
-    /// See [`f32_to_f16_slice`](Self::f32_to_f16_slice) for the slice-oriented
-    /// entry point that stores to `&mut [u16]`.
-    #[inline(always)]
-    fn f32_to_f16x4(self, f: f32x4<Self>) -> i32x4<Self> {
+    /// See [`F16Convert::f32_to_f16_slice`] for the slice-oriented entry point
+    /// that stores to `&mut [u16]`.
+    #[inline]
+    pub fn to_f16(self) -> i32x4<T> {
+        let token = self.1;
+        let f = self;
+
         // Fabian Giesen, `float_to_half_full_rtne`.
         //
         // Boundary constants (all in the |value| domain, top bit cleared):
@@ -197,15 +170,15 @@ pub trait F16Convert: F32x4Convert {
         //   denorm_magic  = ((127 - 15) + (23 - 10) + 1) << 23
         let bits = f.bitcast_i32x4();
 
-        let sign_mask = i32x4::splat(self, 0x8000_0000u32 as i32);
-        let f32infty = i32x4::splat(self, 255 << 23);
-        let f16max = i32x4::splat(self, (127 + 16) << 23);
-        let denorm_cutoff = i32x4::splat(self, 113 << 23);
-        let denorm_magic = i32x4::splat(self, ((127 - 15) + (23 - 10) + 1) << 23);
-        let one = i32x4::splat(self, 1);
-        let bias_bits = i32x4::splat(self, ((15i32.wrapping_sub(127)) << 23).wrapping_add(0xfff));
-        let nan_out = i32x4::splat(self, 0x7e00);
-        let inf_out = i32x4::splat(self, 0x7c00);
+        let sign_mask = i32x4::splat(token, 0x8000_0000u32 as i32);
+        let f32infty = i32x4::splat(token, 255 << 23);
+        let f16max = i32x4::splat(token, (127 + 16) << 23);
+        let denorm_cutoff = i32x4::splat(token, 113 << 23);
+        let denorm_magic = i32x4::splat(token, ((127 - 15) + (23 - 10) + 1) << 23);
+        let one = i32x4::splat(token, 1);
+        let bias_bits = i32x4::splat(token, ((15i32.wrapping_sub(127)) << 23).wrapping_add(0xfff));
+        let nan_out = i32x4::splat(token, 0x7e00);
+        let inf_out = i32x4::splat(token, 0x7c00);
 
         let sign = bits & sign_mask;
         let absf = bits ^ sign;
@@ -238,13 +211,70 @@ pub trait F16Convert: F32x4Convert {
         // Reattach the sign (moved down from bit 31 to bit 15).
         o | sign.shr_logical_const::<16>()
     }
+}
 
+// ============================================================================
+// Hardware-accelerated backend dispatch
+// ============================================================================
+//
+// The in-register kernels (`i32x4::f16_to_f32` / `f32x4::to_f16`, inherent
+// methods on the value types above) are pure
+// branchless arithmetic — correct on every target, but they do *not* use a
+// CPU's native f16-conversion instructions. Where the platform has them
+// (x86-64 F16C: `vcvtph2ps` / `vcvtps2ph`), a single instruction converts a
+// whole lane, so the slice methods dispatch to a hardware kernel when the
+// token proves the feature is present, and fall back to the branchless
+// software kernel otherwise.
+//
+// The dispatch is keyed on the token type through the sealed `F16Convert`
+// trait: the default `*_into` trait methods run the software kernel; concrete
+// tokens whose feature tier includes a native f16 conversion override them.
+// Because the trait is sealed (its supertrait bound is `F32x4Convert`, itself
+// sealed), no downstream crate can observe or break this dispatch, and adding
+// it is a purely additive, semver-compatible change.
+
+/// Token-keyed **slice** converters between IEEE-754 binary16 (`f16`) bit
+/// patterns and `f32`.
+///
+/// The token (the implementing type) is passed by value as `self`, matching
+/// the magetypes convention for token-keyed operations (cf.
+/// [`F32x4Convert`](crate::simd::backends::F32x4Convert) and
+/// [`F32x8FromHalves`](crate::simd::generic::F32x8FromHalves)). The slice
+/// converters are inherently token-keyed — they take `&[u16]` / `&[f32]`
+/// slices, not vector values — which is why they live on the token trait. The
+/// register-level conversions, being value→value operations, are inherent
+/// methods on the value types instead ([`i32x4::f16_to_f32`] /
+/// [`f32x4::to_f16`]).
+///
+/// - **Slice converters** — [`f16_to_f32_slice`](Self::f16_to_f32_slice) /
+///   [`f32_to_f16_slice`](Self::f32_to_f16_slice) convert whole `&[u16]` ↔
+///   `&mut [f32]` slices. They assert equal lengths, then dispatch through
+///   the overridable [`f16_to_f32_into`](Self::f16_to_f32_into) /
+///   [`f32_to_f16_into`](Self::f32_to_f16_into) methods: the default runs the
+///   branchless software kernel (calling the [`i32x4::f16_to_f32`] /
+///   [`f32x4::to_f16`] register methods four lanes at a time), while tokens
+///   whose CPU-feature tier includes a native half-precision conversion
+///   (currently x86-64 F16C, via `X64V3Token`) override them with the
+///   hardware path. AVX-512 (`X64V4Token`) holders take the F16C path by
+///   extracting a V3 token (`token.v3()`).
+///
+/// Every override is verified **bit-identical** to the software kernel over
+/// the full exhaustive f16 sweep (`tests/convert_f16_exhaustive.rs`) for all
+/// finite, subnormal, and infinite values, so the public API has identical
+/// observable behavior regardless of which backend the runtime selects. NaN
+/// inputs are the only exception: the hardware and software paths each
+/// produce a valid NaN whose payload bits may differ (see the module-level
+/// docs for the exact F16C divergence).
+///
+/// This trait is sealed via its [`F32x4Convert`](crate::simd::backends::F32x4Convert)
+/// supertrait bound and is not nameable by downstream crates.
+pub trait F16Convert: F32x4Convert {
     /// Decode a slice of IEEE-754 binary16 (`f16`) bit patterns (`&[u16]`)
     /// into `&mut [f32]`.
     ///
     /// On an x86-64 `X64V3Token` (F16C) this dispatches to the native
     /// `vcvtph2ps` instruction; on every other target it runs the branchless
-    /// software kernel ([`f16_to_f32x4`](Self::f16_to_f32x4), four lanes at a
+    /// software kernel ([`i32x4::f16_to_f32`], four lanes at a
     /// time, with a scalar tail).
     ///
     /// For every **finite, subnormal, and infinite** input both paths are
@@ -278,7 +308,7 @@ pub trait F16Convert: F32x4Convert {
     /// On an x86-64 `X64V3Token` (F16C) this dispatches to the native
     /// `vcvtps2ph` instruction (round-to-nearest-even); on every other target
     /// it runs the branchless software kernel
-    /// ([`f32_to_f16x4`](Self::f32_to_f16x4), four lanes at a time, with a
+    /// ([`f32x4::to_f16`], four lanes at a time, with a
     /// scalar tail). Both paths are **bit-identical** to a scalar IEEE RTNE
     /// reference for every finite and infinite input; NaN maps to an f16 NaN
     /// (the F16C `vcvtps2ph` and the software path may emit different NaN
@@ -685,8 +715,9 @@ fn f16c_encode_v3(token: archmage::X64V3Token, input: &[f32], output: &mut [u16]
 ///
 /// Bound is `T: F16Convert` (not just `F32x4Convert`) because it is only ever
 /// invoked from `F16Convert::f16_to_f32_into` and the hardware tail kernels —
-/// all contexts where the token already implements `F16Convert` — and it calls
-/// the [`F16Convert::f16_to_f32x4`] register method.
+/// all contexts where the token already implements `F16Convert`. It builds an
+/// [`i32x4`] from the token and calls the [`i32x4::f16_to_f32`] register
+/// method (whose own bound, `F32x4Convert`, is implied by `F16Convert`).
 #[inline]
 fn f16_to_f32_slice_soft<T: F16Convert>(token: T, input: &[u16], output: &mut [f32]) {
     let (in_chunks, in_tail) = input.as_chunks::<4>();
@@ -696,13 +727,13 @@ fn f16_to_f32_slice_soft<T: F16Convert>(token: T, input: &[u16], output: &mut [f
             token,
             [inp[0] as i32, inp[1] as i32, inp[2] as i32, inp[3] as i32],
         );
-        *out = token.f16_to_f32x4(h).to_array();
+        *out = h.f16_to_f32().to_array();
     }
     for (inp, out) in in_tail.iter().zip(out_tail.iter_mut()) {
         // Single-lane decode reuses the same vector kernel with a splat,
         // keeping one branchless code path (no scalar reference fork).
         let h = i32x4::splat(token, *inp as i32);
-        *out = token.f16_to_f32x4(h).to_array()[0];
+        *out = h.f16_to_f32().to_array()[0];
     }
 }
 
@@ -711,14 +742,15 @@ fn f16_to_f32_slice_soft<T: F16Convert>(token: T, input: &[u16], output: &mut [f
 ///
 /// Bound is `T: F16Convert` for the same reason as
 /// [`f16_to_f32_slice_soft`]: every caller already holds an `F16Convert`
-/// token and it calls the [`F16Convert::f32_to_f16x4`] register method.
+/// token. It builds an [`f32x4`] from the token and calls the
+/// [`f32x4::to_f16`] register method.
 #[inline]
 fn f32_to_f16_slice_soft<T: F16Convert>(token: T, input: &[f32], output: &mut [u16]) {
     let (in_chunks, in_tail) = input.as_chunks::<4>();
     let (out_chunks, out_tail) = output.as_chunks_mut::<4>();
     for (inp, out) in in_chunks.iter().zip(out_chunks.iter_mut()) {
         let f = f32x4::from_array(token, [inp[0], inp[1], inp[2], inp[3]]);
-        let bits = token.f32_to_f16x4(f).to_array();
+        let bits = f.to_f16().to_array();
         out[0] = bits[0] as u16;
         out[1] = bits[1] as u16;
         out[2] = bits[2] as u16;
@@ -726,6 +758,6 @@ fn f32_to_f16_slice_soft<T: F16Convert>(token: T, input: &[f32], output: &mut [u
     }
     for (inp, out) in in_tail.iter().zip(out_tail.iter_mut()) {
         let f = f32x4::splat(token, *inp);
-        *out = token.f32_to_f16x4(f).to_array()[0] as u16;
+        *out = f.to_f16().to_array()[0] as u16;
     }
 }
