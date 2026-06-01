@@ -6,9 +6,9 @@
 runner = "wasmtime -W simd=y"
 
 # aarch64 NEON-f16 testing under emulation is driven by `cross` (see the
-# `f16-version-gate` and `test-cross` CI jobs), which manages its own QEMU and
-# advertises `fp16` via `QEMU_CPU=max` — so the NEON-f16 hardware converter
-# path is exercised on ≥ 1.94 toolchains there. A committed
+# `test-cross` CI job), which manages its own QEMU and advertises `fp16` via
+# `QEMU_CPU=max` — so the NEON-f16 hardware converter path is exercised on
+# ≥ 1.94 toolchains there. A committed
 # `[target.aarch64-unknown-linux-gnu] runner = "qemu-aarch64-static …"` is
 # deliberately NOT set here: it would also apply to the NATIVE aarch64 runners
 # (`ubuntu-24.04-arm`, Apple Silicon), routing their tests through a QEMU binary
