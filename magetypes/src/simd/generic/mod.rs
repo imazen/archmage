@@ -11,7 +11,7 @@
 mod convert_f16;
 mod cross_width;
 mod generated;
-pub use convert_f16::{F16Convert, f16_to_f32_slice, f16_to_f32x4, f32_to_f16_slice, f32_to_f16x4};
+pub use convert_f16::F16Convert;
 pub use cross_width::F32x8FromHalves;
 #[cfg(feature = "w512")]
 pub use cross_width::F32x16FromHalves;
