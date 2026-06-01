@@ -167,7 +167,7 @@ has a stable version yet:
 
 | Intrinsic state | Mechanism | Why |
 |---|---|---|
-| **Stable since a known version** (e.g. NEON-f16 @ 1.94) | `rustversion` + `target_arch` gate, verified by a CI matrix that builds + tests **both sides** of the version boundary | The stabilization version is a fact you can name; `#[rustversion::since(X)]` selects the path by toolchain version with **no build script** and a trusted, dep-light proc-macro. The CI matrix (1.93 fallback / 1.94 flip-on / stable / nightly) makes the named bound load-bearing — an off-by-one bound fails to compile in the 1.93 cell. |
+| **Stable since a known version** (e.g. NEON-f16 @ 1.94) | `rustversion` + `target_arch` gate; both arms covered by the **normal** CI (MSRV `cargo check` below the bound, stable `test-aarch64`/`test-cross` above it) | The stabilization version is a fact you can name; `#[rustversion::since(X)]` selects the path by toolchain version with **no build script** and a trusted, dep-light proc-macro. No dedicated boundary job — see "Both arms are covered by the normal CI matrix" below. |
 | **Nightly-only** (no stable version yet) | a tiny **try-compile probe** that runs *only* under nightly | Nightly feature gates churn (renamed/removed between nightlies), so a blind `#![feature(...)]` breaks. The probe enables the path iff it actually compiles on *this* nightly, else falls back. This is the one place feature-detection genuinely beats version-matching. |
 
 ### Stable case — `rustversion` + arch (the NEON-f16 gate)
@@ -203,29 +203,31 @@ fn neon_f16_decode_select(token: NeonToken, ..) { software }
 
 Why not the build-script capability probe we trialed first? It worked (~80 ms
 one-time cold compile, ~0 hot — see `benchmarks/build_script_overhead_*.md`),
-but `rustversion` + a CI matrix is more maintainable: no build script, a trusted
-dtolnay proc-macro, and none of the bespoke-probe gotchas (e.g. a cross-`core`
-false-negative when probing an uninstalled target). The matrix is what makes
-the named version bound safe — see below.
+but `rustversion` is more maintainable: no build script, a trusted dtolnay
+proc-macro, and none of the bespoke-probe gotchas (e.g. a cross-`core`
+false-negative when probing an uninstalled target).
 
-#### The CI matrix is the safety net
+#### Both arms are covered by the normal CI matrix
 
-A version *number* can be wrong (off-by-one bound, a backport that moved
-stabilization). The `.github/workflows/ci.yml` job **`f16-version-gate`** builds
-and runs the exhaustive `convert_f16` bit-identity test on `aarch64-unknown-linux-gnu`
-across **1.93 / 1.94 / stable / nightly** (`fail-fast: false`):
+The stabilization version is a documented fact (`#[stable(since = "1.94.0")]`),
+not a guess, and both arms of the gate are already exercised by the existing CI
+— **no dedicated boundary job**:
 
-- **1.93** — proves the `before(1.94)` software fallback compiles, has **no MSRV
-  violation**, and tests pass (software-vs-software, 0 NaN divergence). A cell
-  that fails to compile here is the intended alarm for a wrong bound.
-- **1.94** — the stabilization version: the gate flips on, the HW kernel
-  compiles, the intrinsic resolves.
-- **stable** — ongoing coverage.
-- **nightly** — ongoing coverage of the HW path on nightly toolchains.
+- **below the bound** — the **MSRV 1.89 `aarch64 Linux`** job `cargo check`s the
+  crate, compiling the `before(1.94)` software arm with no MSRV violation.
+- **above the bound** — the **`test-aarch64`** (native ubuntu-24.04-arm) and
+  **`test-cross`** (aarch64 QEMU) jobs run at stable, compiling **and running**
+  the `since(1.94)` HW arm so `vcvt_*` resolves and the bit-identity test passes.
+- the software arm's *correctness* also runs on every x86 test job (the kernel is
+  generic, branchless, arch-independent) and under Miri (nightly) for UB.
 
-aarch64 is exercised under QEMU (`-cpu max`, so `fp16` is present and the HW
-path is actually taken on ≥ 1.94) via the `.cargo/config.toml` runner — the same
-pattern the existing `test-cross` job uses.
+What this does **not** independently re-validate is the exact `1.94` literal —
+a too-low/too-high bound is only detectable by a cell at `1.94 ± 1`, which
+neither 1.89 nor stable is. That was judged not worth a perpetual dedicated
+`cross` job: the version is documented in std, and a wrong literal surfaces at
+the next toolchain reaching the gap. If a *future* intrinsic's stabilization
+version is genuinely uncertain, add a **transient** 2-cell `cross` matrix at
+`<ver> - 1` / `<ver>` to pin it, then remove it once confirmed.
 
 ### Nightly-only case — the try-compile probe pattern (not currently shipped)
 
@@ -255,8 +257,10 @@ For an intrinsic that has stabilized at a known version (AVX-512-FP16
    `#[rustversion::since(<ver>)]`.
 2. Write the paired `*_select` helper: `#[rustversion::since(<ver>)]` (HW +
    runtime token) and `#[rustversion::before(<ver>)]` (software only).
-3. Add a matrix cell to the `f16-version-gate` CI job at `<ver> - 1` (the
-   fallback side) and `<ver>` (the flip-on side).
+3. The normal CI already covers both arms (MSRV `cargo check` below `<ver>`,
+   stable `test-aarch64`/`test-cross` above it). If `<ver>` itself is uncertain,
+   add a **transient** 2-cell `cross` matrix at `<ver> - 1` / `<ver>` to pin it,
+   then remove it once confirmed.
 
 The crate adapts to whatever toolchain compiles it, rather than baking one
-static MSRV decision — and the CI matrix proves the version bound is right.
+static MSRV decision.
