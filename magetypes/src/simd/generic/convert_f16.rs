@@ -47,17 +47,31 @@
 //! proven on one target holds on every target, because the underlying bit
 //! operations are identical everywhere.
 //!
-//! ## Hardware fast path (F16C)
+//! ## Hardware fast path (F16C, widened to AVX-512F)
 //!
 //! The slice entry points ([`F16Convert::f16_to_f32_slice`] /
 //! [`F16Convert::f32_to_f16_slice`])
 //! dispatch on the SIMD token (via the sealed [`F16Convert`] trait): an
 //! `X64V3Token` (x86-64-v3, whose feature tier includes F16C) routes through
 //! the native `vcvtph2ps` / `vcvtps2ph` instructions; every other token runs
-//! the branchless software kernel. AVX-512 (`X64V4Token`) holders reach the
-//! same F16C path by extracting a V3 token — `token.v3()` — which is sound
-//! because V4's feature set is a strict superset of V3's. The
-//! hardware path is verified **bit-identical to the software path over all
+//! the branchless software kernel. AVX-512 (`X64V4Token`) holders reach this
+//! path by extracting a V3 token — `token.v3()` — which is sound because V4's
+//! feature set is a strict superset of V3's.
+//!
+//! When the crate is built with the `avx512` feature, the V3 (F16C) path
+//! *self-upgrades* to the strictly wider AVX-512F conversions
+//! (`_mm512_cvtph_ps` / `_mm512_cvtps_ph`, 16 f16 per instruction vs F16C's 8):
+//! the F16C kernel summons an `X64V4Token` at runtime and, when the CPU proves
+//! it, runs the 16-wide kernel for the bulk of the slice, with the 8/4-wide
+//! F16C kernel handling the tail. This mirrors the aarch64 NEON path's runtime
+//! `fp16`-tier probe, so a V3-token caller on AVX-512 hardware (the common case)
+//! gets the wider path with no API change. AVX-512 **FP16** (`avx512fp16`,
+//! Sapphire Rapids / Zen 5+) is *not* used here: its `vcvtph2psx` / `vcvtps2phx`
+//! do the same f16↔f32 conversion at the same throughput as AVX-512F, so the
+//! more widely-available AVX-512F instructions cover it; the FP16 ISA's real
+//! value is native half-precision *arithmetic*, which a converter does not need.
+//!
+//! Every hardware path is verified **bit-identical to the software path over all
 //! 65 536 f16 (decode) and the boundary-band + dense-sweep encode coverage**,
 //! with two documented, benign NaN-only divergences:
 //!
@@ -403,11 +417,11 @@ mod x86_dispatch {
     impl F16Convert for archmage::X64V3Token {
         #[inline]
         fn f16_to_f32_into(self, input: &[u16], output: &mut [f32]) {
-            f16c_decode_v3(self, input, output);
+            f16c_decode_select(self, input, output);
         }
         #[inline]
         fn f32_to_f16_into(self, input: &[f32], output: &mut [u16]) {
-            f16c_encode_v3(self, input, output);
+            f16c_encode_select(self, input, output);
         }
     }
 }
@@ -641,6 +655,118 @@ fn neon_f16_encode_hw(token: archmage::Arm64V2Token, input: &[f32], output: &mut
     }
     // Scalar tail: reuse the branchless software kernel for bit-identity.
     f32_to_f16_slice_soft(token.neon(), in_tail, out_tail);
+}
+
+// ----------------------------------------------------------------------------
+// x86 width selector (F16C 8-wide ↔ AVX-512F 16-wide), mirroring the aarch64
+// `neon_f16_*_select` runtime-probe pattern above.
+//
+// The slice entry points hand the V3 (F16C) override a *V3* token — either
+// because the caller summoned a `X64V3Token`, or because a V4 holder downcast
+// with `token.v3()`. F16C tops out at 8 f16 per `vcvtph2ps`. AVX-512F adds the
+// strictly wider `_mm512_cvtph_ps` / `_mm512_cvtps_ph` (16 f16 per
+// instruction), which every V4 CPU has — so when the `avx512` feature is built
+// the selector summons an `X64V4Token` and, when the CPU proves it, routes the
+// bulk of the slice through the 16-wide kernel (8/4-wide F16C handles the tail).
+//
+// `_mm512_cvtph_ps` / `_mm512_cvtps_ph` produce bit-identical results to the
+// F16C 8-wide path for every finite, subnormal, and infinite value, with the
+// same RTNE rounding on encode and the same hardware-quieted NaN on decode —
+// so the documented F16C↔software contract holds unchanged on the 16-wide path
+// (verified by the `*_v4_*` parity tests in `tests/convert_f16_exhaustive.rs`).
+//
+// The 16-wide kernel and its `summon()` probe are gated on the `avx512` cargo
+// feature: the AVX-512 intrinsics inside `#[arcane]` require it (archmage's
+// macro emits a `compile_error!` for a V4 token without `avx512`). Without the
+// feature, only the F16C path is compiled and the selector is a thin forward —
+// no behavior change, no MSRV or feature surprise.
+
+/// `avx512` build: prefer the AVX-512F 16-wide decode when the CPU proves a
+/// V4 token, else the F16C 8-wide kernel.
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[inline]
+fn f16c_decode_select(token: archmage::X64V3Token, input: &[u16], output: &mut [f32]) {
+    use archmage::SimdToken;
+    if let Some(v4) = archmage::X64V4Token::summon() {
+        f16c_decode_v4(v4, input, output);
+        return;
+    }
+    f16c_decode_v3(token, input, output);
+}
+
+/// Non-`avx512` build: only the F16C 8-wide decode is compiled.
+#[cfg(all(target_arch = "x86_64", not(feature = "avx512")))]
+#[inline]
+fn f16c_decode_select(token: archmage::X64V3Token, input: &[u16], output: &mut [f32]) {
+    f16c_decode_v3(token, input, output);
+}
+
+/// `avx512` build: prefer the AVX-512F 16-wide encode when the CPU proves a
+/// V4 token, else the F16C 8-wide kernel.
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[inline]
+fn f16c_encode_select(token: archmage::X64V3Token, input: &[f32], output: &mut [u16]) {
+    use archmage::SimdToken;
+    if let Some(v4) = archmage::X64V4Token::summon() {
+        f16c_encode_v4(v4, input, output);
+        return;
+    }
+    f16c_encode_v3(token, input, output);
+}
+
+/// Non-`avx512` build: only the F16C 8-wide encode is compiled.
+#[cfg(all(target_arch = "x86_64", not(feature = "avx512")))]
+#[inline]
+fn f16c_encode_select(token: archmage::X64V3Token, input: &[f32], output: &mut [u16]) {
+    f16c_encode_v3(token, input, output);
+}
+
+/// AVX-512F decode kernel: `&[u16]` → `&mut [f32]` using `vcvtph2ps` widened to
+/// 512 bits (`_mm512_cvtph_ps`, 16 f16 → 16 f32 per instruction). The
+/// remainder (< 16 lanes) drops to the V3 F16C path (`token.v3()`), which
+/// handles the 8- and 4-wide chunks and the scalar tail.
+///
+/// `#[arcane]` emits the `#[target_feature(enable = "...,avx512f,...")]`
+/// codegen region and a safe trampoline (so it is sound to call from cold
+/// code). Bit-identical to the F16C 8-wide path — and therefore to the
+/// branchless software kernel — for every finite, subnormal, and infinite
+/// f16; NaN inputs take the same hardware quieting `vcvtph2ps` already
+/// documents. Compiled only with the `avx512` cargo feature.
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[archmage::arcane(import_intrinsics)]
+fn f16c_decode_v4(token: archmage::X64V4Token, input: &[u16], output: &mut [f32]) {
+    let (in16, in_rest) = input.as_chunks::<16>();
+    let (out16, out_rest) = output.as_chunks_mut::<16>();
+    for (inp, out) in in16.iter().zip(out16.iter_mut()) {
+        // Load 16 f16 (32 bytes) as `__m256i`; `_mm512_cvtph_ps` widens all 16
+        // to f32; store 16 f32.
+        let h = _mm256_loadu_si256(inp);
+        let f = _mm512_cvtph_ps(h);
+        _mm512_storeu_ps(out, f);
+    }
+    // Tail (< 16 lanes): reuse the V3 F16C 8/4-wide kernel for bit-identity.
+    f16c_decode_v3(token.v3(), in_rest, out_rest);
+}
+
+/// AVX-512F encode kernel: `&[f32]` → `&mut [u16]` using `vcvtps2ph` widened to
+/// 512 bits (`_mm512_cvtps_ph`, round-to-nearest-even, 16 f32 → 16 f16 per
+/// instruction). See [`f16c_decode_v4`] for the `#[arcane]` / gating rationale.
+/// The remainder drops to the V3 F16C path for bit-identity.
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[archmage::arcane(import_intrinsics)]
+fn f16c_encode_v4(token: archmage::X64V4Token, input: &[f32], output: &mut [u16]) {
+    let (in16, in_rest) = input.as_chunks::<16>();
+    let (out16, out_rest) = output.as_chunks_mut::<16>();
+    for (inp, out) in in16.iter().zip(out16.iter_mut()) {
+        let f = _mm512_loadu_ps(inp);
+        // RTNE = `_MM_FROUND_TO_NEAREST_INT` (0x00); the `_NO_EXC` bit is out of
+        // range for this intrinsic's immediate and must not be ORed in (matching
+        // the F16C `f16c_encode_v3` path).
+        let h = _mm512_cvtps_ph::<{ _MM_FROUND_TO_NEAREST_INT }>(f);
+        _mm256_storeu_si256(out, h);
+    }
+    // Tail (< 16 lanes): reuse the V3 F16C 8/4-wide kernel for bit-identity.
+    f16c_encode_v3(token.v3(), in_rest, out_rest);
 }
 
 /// F16C decode kernel: `&[u16]` → `&mut [f32]` using `vcvtph2ps`.

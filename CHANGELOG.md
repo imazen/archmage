@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- magetypes: **AVX-512F 16-wide fast path** for the f16 slice converters. When built with the `avx512` feature, the x86-64 F16C slice path (`token.f16_to_f32_slice` / `token.f32_to_f16_slice`) self-upgrades from 8-wide F16C to the strictly wider `_mm512_cvtph_ps` / `_mm512_cvtps_ph` (16 f16 per instruction) whenever an `X64V4Token` is summonable: the F16C kernel summons a V4 token at runtime and routes the bulk of the slice through the 16-wide kernel, with the existing 8/4-wide F16C kernel handling the < 16-lane tail. This mirrors the aarch64 NEON path's runtime `fp16`-tier probe, so a V3-token caller on AVX-512 hardware (the common case, incl. Skylake-X+/Zen 4+) gets the wider path **with no API change** — no need to hold or pass a V4 token. Verified **bit-identical to the software path** (and thus to the 8-wide F16C path) over all 65 536 f16 (decode) and the f16-roundtrip-grid + dense-sweep encode coverage, with the same documented benign **NaN-only** divergences as F16C; the 16-wide `vcvtph2ps`/`vcvtps2ph` (zmm) emission is confirmed in `objdump`, and the new `x86_avx512f` test module in `tests/convert_f16_exhaustive.rs` prints which width path is active so the coverage is visible in CI logs (which build `--features avx512`). AVX-512 **FP16** (`avx512fp16`, Sapphire Rapids / Zen 5+) is intentionally **not** used: its `vcvtph2psx` / `vcvtps2phx` do the same f16↔f32 conversion at the same throughput as AVX-512F, which is available on far more CPUs; the FP16 ISA's value is native half-precision *arithmetic*, which a converter does not need. Gated on the `avx512` cargo feature (the AVX-512 intrinsics inside `#[arcane]` require it); without the feature only the 8-wide F16C path is compiled. Public API unchanged; purely additive.
+
 ### Changed
 
 - archmage: anchor root-level paths in `include` with leading `/` to prevent `docs/site/themes/goyo` git submodule files from leaking into published tarballs via gitignore-style glob depth-matching (e.g. `LICENSE*` was matching `docs/site/themes/goyo/LICENSE`)

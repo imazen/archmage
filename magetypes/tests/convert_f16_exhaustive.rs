@@ -721,6 +721,176 @@ mod x86_f16c {
 }
 
 // ============================================================================
+// Native AVX-512F 16-wide hardware path (x86_64, `avx512` feature).
+//
+// When built with the `avx512` feature, the F16C slice path self-upgrades to
+// the wider `_mm512_cvtph_ps` / `_mm512_cvtps_ph` (16 f16 per instruction)
+// whenever an `X64V4Token` is summonable — the F16C kernel summons a V4 token
+// internally and routes the bulk of the slice through the 16-wide kernel, with
+// the 8/4-wide F16C kernel handling the < 16-lane tail (see `convert_f16.rs`).
+//
+// These tests make that coverage explicit and visible (the `x86_f16c` suite
+// above hits the same upgraded path but is *named* for F16C, so a reader can't
+// tell which width ran). A V4 token enters via `v4.v3()` because `X64V4Token`
+// does not itself implement the (`F32x4Convert`-bounded) `F16Convert` trait;
+// the `.v3()` extractor is sound since V4 ⊃ V3.
+//
+// On an x86_64 host without AVX-512 (pre-Skylake-X, or AMD pre-Zen 4 — and note
+// the dev 7950X has AVX-512F but *not* avx512fp16) the `X64V4Token` is absent,
+// the selector stays on the 8-wide F16C path, and these tests print a notice and
+// pass — the `x86_f16c` suite covers that host.
+// ============================================================================
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+mod x86_avx512f {
+    use super::*;
+
+    /// Summon a V4 token to confirm the 16-wide selector path is active, print
+    /// which width path runs, and return the V3 token used to enter the
+    /// (auto-upgrading) slice API. `None` ⇒ no AVX-512 on this host (8-wide F16C
+    /// covers correctness via the `x86_f16c` suite).
+    fn v4_slice_entry() -> Option<archmage::X64V3Token> {
+        use archmage::SimdToken;
+        match archmage::X64V4Token::summon() {
+            Some(v4) => {
+                eprintln!(
+                    "AVX-512F present: f16 slice path runs the 16-wide \
+                     _mm512_cvtph_ps / _mm512_cvtps_ph kernel."
+                );
+                Some(v4.v3())
+            }
+            None => {
+                eprintln!(
+                    "X64V4Token (AVX-512F) not available — 8-wide F16C path covers \
+                     correctness (see x86_f16c suite)."
+                );
+                None
+            }
+        }
+    }
+
+    /// All 65 536 f16 decoded through the (16-wide) slice path must be
+    /// bit-identical to the branchless software slice — finite/subnormal/Inf
+    /// exact, NaN required only to stay NaN. This is the definitive 16-wide
+    /// decode-correctness proof, explicitly under the AVX-512F name.
+    #[test]
+    fn decode_exhaustive_vs_software_16wide() {
+        let Some(hw) = v4_slice_entry() else { return };
+        let all: Vec<u16> = (0u32..=0xFFFF).map(|v| v as u16).collect();
+        let mut hw_out = vec![0f32; all.len()];
+        let mut sw_out = vec![0f32; all.len()];
+        hw.f16_to_f32_slice(&all, &mut hw_out);
+        archmage::ScalarToken.f16_to_f32_slice(&all, &mut sw_out);
+        for (&h, (&a, &b)) in all.iter().zip(hw_out.iter().zip(sw_out.iter())) {
+            if is_f16_nan(h) {
+                assert!(a.is_nan() && b.is_nan(), "16-wide decode NaN f16 {h:#06x}");
+            } else {
+                assert_eq!(
+                    a.to_bits(),
+                    b.to_bits(),
+                    "AVX-512F 16-wide decode parity vs software h={h:#06x}"
+                );
+            }
+        }
+    }
+
+    /// Decode parity vs software focused on the 16-lane chunk boundary: lengths
+    /// 13..=49 straddle 16/32/48, exercising the `_mm512_cvtph_ps` loop AND the
+    /// V3 8/4-wide + scalar tail handoff.
+    #[test]
+    fn decode_16wide_boundary_vs_software() {
+        let Some(hw) = v4_slice_entry() else { return };
+        for len in 13..=49usize {
+            // A coprime stride walks varied exponents (incl. Inf/NaN bands) per length.
+            let input: Vec<u16> = (0..len)
+                .map(|i| ((i * 1237 + 0x77ff) & 0xFFFF) as u16)
+                .collect();
+            let mut hw_out = vec![0f32; len];
+            let mut sw_out = vec![0f32; len];
+            hw.f16_to_f32_slice(&input, &mut hw_out);
+            archmage::ScalarToken.f16_to_f32_slice(&input, &mut sw_out);
+            for (&h, (&a, &b)) in input.iter().zip(hw_out.iter().zip(sw_out.iter())) {
+                if is_f16_nan(h) {
+                    assert!(
+                        a.is_nan() && b.is_nan(),
+                        "len={len} decode NaN f16 {h:#06x}"
+                    );
+                } else {
+                    assert_eq!(
+                        a.to_bits(),
+                        b.to_bits(),
+                        "AVX-512F decode boundary parity len={len} h={h:#06x}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// Encode parity vs software through the (16-wide) slice path: the
+    /// f16-roundtrip grid plus a dense f32 sweep. Finite/Inf bit-identical; NaN
+    /// payload may differ (both must be a quiet f16 NaN) — the documented contract.
+    #[test]
+    fn encode_vs_software_16wide() {
+        let Some(hw) = v4_slice_entry() else { return };
+        let mut inputs: Vec<f32> = (0u32..=0xFFFF)
+            .map(|hv| ref_f16_to_f32(hv as u16))
+            .collect();
+        let stride: u32 = 1009;
+        let mut bits: u32 = 0;
+        loop {
+            inputs.push(f32::from_bits(bits));
+            let (next, ov) = bits.overflowing_add(stride);
+            if ov {
+                break;
+            }
+            bits = next;
+        }
+        let mut hw_out = vec![0u16; inputs.len()];
+        let mut sw_out = vec![0u16; inputs.len()];
+        hw.f32_to_f16_slice(&inputs, &mut hw_out);
+        archmage::ScalarToken.f32_to_f16_slice(&inputs, &mut sw_out);
+        for (i, ((&x, &a), &b)) in inputs
+            .iter()
+            .zip(hw_out.iter())
+            .zip(sw_out.iter())
+            .enumerate()
+        {
+            if a == b {
+                continue;
+            }
+            assert!(
+                x.is_nan() && is_f16_nan(a) && is_f16_nan(b),
+                "AVX-512F vs software encode differ at idx={i} x={x:e}: hw={a:#06x} sw={b:#06x}"
+            );
+        }
+    }
+
+    /// Encode parity vs software focused on the 16-lane boundary (lengths
+    /// 13..=49), covering the `_mm512_cvtps_ph` loop and the tail handoff.
+    #[test]
+    fn encode_16wide_boundary_vs_software() {
+        let Some(hw) = v4_slice_entry() else { return };
+        for len in 13..=49usize {
+            let input: Vec<f32> = (0..len)
+                .map(|i| ref_f16_to_f32(((i * 1237 + 0x3c00) & 0xFFFF) as u16))
+                .collect();
+            let mut hw_out = vec![0u16; len];
+            let mut sw_out = vec![0u16; len];
+            hw.f32_to_f16_slice(&input, &mut hw_out);
+            archmage::ScalarToken.f32_to_f16_slice(&input, &mut sw_out);
+            for (&x, (&a, &b)) in input.iter().zip(hw_out.iter().zip(sw_out.iter())) {
+                if a == b {
+                    continue;
+                }
+                assert!(
+                    x.is_nan() && is_f16_nan(a) && is_f16_nan(b),
+                    "AVX-512F encode boundary parity len={len} x={x:e}: hw={a:#06x} sw={b:#06x}"
+                );
+            }
+        }
+    }
+}
+
+// ============================================================================
 // Native NEON-f16 hardware path (aarch64): exhaustive bit-identity vs the
 // oracle AND vs the software kernel.
 //
