@@ -220,7 +220,6 @@ jobs:
       - name: Test no-features-crate (cross/QEMU)
         run: cross test -p archmage-no-features-test --target ${{ matrix.target }}
 
-
   # ==========================================================================
   # WASM SIMD128 testing
   # ==========================================================================
