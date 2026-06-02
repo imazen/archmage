@@ -112,7 +112,9 @@ def extract_intrinsics(arch_dir, arch_name):
                 content = f.read()
 
             tf_pattern = re.compile(r'#\[target_feature\(enable\s*=\s*"([^"]+)"\)\]')
-            fn_pattern = re.compile(r'pub\s+(?:unsafe\s+)?fn\s+(\w+)')
+            # Match `pub fn`, `pub unsafe fn`, `pub const fn`, `pub const unsafe fn`
+            # (newer Rust const-stabilized many intrinsics → `pub const fn`).
+            fn_pattern = re.compile(r'pub\s+(?:(?:const|unsafe)\s+)*fn\s+(\w+)')
             stable_pattern = re.compile(r'#\[stable\(')
             unstable_pattern = re.compile(r'#\[unstable\(')
             # pub use X as Y — re-exports inherit the features of X
@@ -154,12 +156,15 @@ def extract_intrinsics(arch_dir, arch_name):
                                 in_arm_only_attr = True
                                 in_not_arm_attr = False
 
-                            if 'stable(' in fline and 'unstable(' not in fline:
-                                if not in_arm_only_attr:
-                                    stability = "stable"
-                            elif 'unstable(' in fline:
-                                if not in_not_arm_attr and not in_arm_only_attr:
-                                    stability = "unstable"
+                            # Ignore `rustc_const_{un}stable` — it gates *const*
+                            # usage, not the fn's own (stable) availability.
+                            if 'rustc_const' not in fline:
+                                if 'stable(' in fline and 'unstable(' not in fline:
+                                    if not in_arm_only_attr:
+                                        stability = "stable"
+                                elif 'unstable(' in fline:
+                                    if not in_not_arm_attr and not in_arm_only_attr:
+                                        stability = "unstable"
 
                             bracket_depth += fline.count('[') - fline.count(']')
                             if bracket_depth <= 0:
@@ -187,13 +192,16 @@ def extract_intrinsics(arch_dir, arch_name):
                                     in_not_arm_attr = True
                                 elif 'target_arch = "arm"' in fline:
                                     in_arm_only_attr = True
-                            # Check stability on single-line attrs too
-                            if 'stable(' in fline and 'unstable(' not in fline:
-                                if not in_arm_only_attr:
-                                    stability = "stable"
-                            elif 'unstable(' in fline:
-                                if not in_not_arm_attr and not in_arm_only_attr:
-                                    stability = "unstable"
+                            # Check stability on single-line attrs too (ignore
+                            # `rustc_const_{un}stable` — it gates const usage, not
+                            # the fn's own stability).
+                            if 'rustc_const' not in fline:
+                                if 'stable(' in fline and 'unstable(' not in fline:
+                                    if not in_arm_only_attr:
+                                        stability = "stable"
+                                elif 'unstable(' in fline:
+                                    if not in_not_arm_attr and not in_arm_only_attr:
+                                        stability = "unstable"
                             bracket_depth = fline.count('[') - fline.count(']')
                             if bracket_depth <= 0:
                                 bracket_depth = 0

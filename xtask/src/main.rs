@@ -691,7 +691,7 @@ fn generate_x86_reference(db: &HashMap<String, IntrinsicEntry>) -> String {
     doc.push_str(
         "# x86 Intrinsics by Archmage Token\n\n\
         Auto-generated reference mapping stdarch intrinsics to archmage tokens.\n\
-        Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`\n\n",
+        Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`\n\n",
     );
 
     // Collect x86 intrinsics and organize by token tier
@@ -833,7 +833,7 @@ fn generate_aarch64_reference(db: &HashMap<String, IntrinsicEntry>) -> String {
     doc.push_str(
         "# AArch64 Intrinsics by Archmage Token\n\n\
         Auto-generated reference mapping stdarch intrinsics to archmage tokens.\n\
-        Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`\n\n",
+        Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`\n\n",
     );
 
     // Group by feature set

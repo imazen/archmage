@@ -1,7 +1,7 @@
 # x86 Intrinsics by Archmage Token
 
 Auto-generated reference mapping stdarch intrinsics to archmage tokens.
-Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
+Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 
 ## Baseline (SSE, SSE2) (325 intrinsics)
 Token: `None (always available on x86-64)`

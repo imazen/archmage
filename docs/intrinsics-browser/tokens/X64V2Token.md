@@ -127,7 +127,7 @@ fn process_chunk(_: X64V2Token, chunk: &mut [f32; 4]) {
 | `_mm_mul_epi32` | Multiplies the low 32-bit integers from each packed 64-bit e... | pmuldq | 10/2, 4/1 |
 | `_mm_mulhrs_epi16` | Multiplies packed 16-bit signed integer values, truncate the... | pmulhrsw | — |
 | `_mm_mullo_epi32` | Multiplies the packed 32-bit integers in `a` and `b`, produc... | pmulld | 10/2, 4/1 |
-| `_mm_packus_epi32` | Converts packed 32-bit integers from `a` and `b` to packed 1... | packusdw | 1/1, 1/1 |
+| `_mm_packus_epi32` | Converts packed signed 32-bit integers from `a` and `b` to p... | packusdw | 1/1, 1/1 |
 | `_mm_round_pd` | Round the packed double-precision (64-bit) floating-point el... | roundpd | — |
 | `_mm_round_ps` | Round the packed single-precision (32-bit) floating-point el... | roundps | — |
 | `_mm_round_sd` | Round the lower double-precision (64-bit) floating-point ele... | roundsd | — |

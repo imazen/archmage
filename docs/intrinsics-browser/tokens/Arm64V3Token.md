@@ -99,14 +99,14 @@ fn process_chunk(_: Arm64V3Token, chunk: &mut [f32; 4]) {
 | `vmmlaq_s32` | 8-bit integer matrix multiply-accumulate | nop |
 | `vmmlaq_u32` | 8-bit integer matrix multiply-accumulate | nop |
 | `vsudot_lane_s32` | Dot product index form with signed and unsigned integers | vsudot |
-| `vsudot_laneq_s32` | Dot product index form with signed and unsigned integers | sudot |
+| `vsudot_laneq_s32` | Dot product index form with signed and unsigned integers | vsudot |
 | `vsudotq_lane_s32` | Dot product index form with signed and unsigned integers | vsudot |
-| `vsudotq_laneq_s32` | Dot product index form with signed and unsigned integers | sudot |
+| `vsudotq_laneq_s32` | Dot product index form with signed and unsigned integers | vsudot |
 | `vusdot_lane_s32` | Dot product index form with unsigned and signed integers | vusdot |
-| `vusdot_laneq_s32` | Dot product index form with unsigned and signed integers | usdot |
+| `vusdot_laneq_s32` | Dot product index form with unsigned and signed integers | vusdot |
 | `vusdot_s32` | Dot product vector form with unsigned and signed integers | vusdot |
 | `vusdotq_lane_s32` | Dot product index form with unsigned and signed integers | vusdot |
-| `vusdotq_laneq_s32` | Dot product index form with unsigned and signed integers | usdot |
+| `vusdotq_laneq_s32` | Dot product index form with unsigned and signed integers | vusdot |
 | `vusdotq_s32` | Dot product vector form with unsigned and signed integers | vusdot |
 | `vusmmlaq_s32` | Unsigned and signed 8-bit integer matrix multiply-accumulate | nop |
 

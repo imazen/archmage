@@ -242,9 +242,9 @@ fn process_chunk(_: X64V1Token, chunk: &mut [f32; 4]) {
 | `_mm_or_pd` | Computes the bitwise OR of `a` and `b` | orps | 1/1, 1/1 |
 | `_mm_or_ps` | Bitwise OR of packed single-precision (32-bit) floating-poin... | orps | 1/1, 1/1 |
 | `_mm_or_si128` | Computes the bitwise OR of 128 bits (representing integer da... | orps | 1/1, 1/1 |
-| `_mm_packs_epi16` | Converts packed 16-bit integers from `a` and `b` to packed 8... | packsswb | 1/1, 1/1 |
-| `_mm_packs_epi32` | Converts packed 32-bit integers from `a` and `b` to packed 1... | packssdw | 1/1, 1/1 |
-| `_mm_packus_epi16` | Converts packed 16-bit integers from `a` and `b` to packed 8... | packuswb | 1/1, 1/1 |
+| `_mm_packs_epi16` | Converts packed signed 16-bit integers from `a` and `b` to p... | packsswb | 1/1, 1/1 |
+| `_mm_packs_epi32` | Converts packed signed 32-bit integers from `a` and `b` to p... | packssdw | 1/1, 1/1 |
+| `_mm_packus_epi16` | Converts packed signed 16-bit integers from `a` and `b` to p... | packuswb | 1/1, 1/1 |
 | `_mm_prefetch` | Fetch the cache line that contains address `p` using the giv... | prefetcht0 | — |
 | `_mm_rcp_ps` | Returns the approximate reciprocal of packed single-precisio... | rcpps | 5/1, 4/1 |
 | `_mm_rcp_ss` | Returns the approximate reciprocal of the first single-preci... | rcpss | 5/1, 4/1 |
@@ -263,7 +263,7 @@ fn process_chunk(_: X64V1Token, chunk: &mut [f32; 4]) {
 | `_mm_set_epi8` | Sets packed 8-bit integers with the supplied values |  | — |
 | `_mm_set_pd` | Sets packed double-precision (64-bit) floating-point element... |  | — |
 | `_mm_set_pd1` | Broadcasts double-precision (64-bit) floating-point value a ... |  | — |
-| `_mm_set_ps` | Construct a `__m128` from four floating point values highest... | unpcklps | — |
+| `_mm_set_ps` | Construct a `__m128` from four floating point values highest... |  | — |
 | `_mm_set_ps1` | Alias for | shufps | — |
 | `_mm_set_sd` | Copies double-precision (64-bit) floating-point element `a` ... |  | — |
 | `_mm_set_ss` | Construct a `__m128` with the lowest element set to `a` and ... | movss | — |
@@ -328,7 +328,7 @@ fn process_chunk(_: X64V1Token, chunk: &mut [f32; 4]) {
 | `_mm_ucomineq_sd` | Compares the lower element of `a` and `b` for not-equal | ucomisd | — |
 | `_mm_ucomineq_ss` | Compares two 32-bit floats from the low-order bits of `a` an... | ucomiss | — |
 | `_mm_undefined_pd` | Returns vector of type __m128d with indeterminate elements.w... |  | — |
-| `_mm_undefined_ps` | Returns vector of type __m128 with indeterminate elements.wi... |  | — |
+| `_mm_undefined_ps` | Returns vector of type __m128 with indeterminate elements. D... |  | — |
 | `_mm_undefined_si128` | Returns vector of type __m128i with indeterminate elements.w... |  | — |
 | `_mm_unpackhi_epi16` | Unpacks and interleave 16-bit integers from the high half of... | punpckhwd | 1/1, 1/1 |
 | `_mm_unpackhi_epi32` | Unpacks and interleave 32-bit integers from the high half of... | unpckhps | 1/1, 1/1 |

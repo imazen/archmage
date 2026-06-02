@@ -39,12 +39,12 @@ fn process_chunk(_: Wasm128Token, chunk: &mut [f32; 4]) {
 | Name | Description | Instruction | Timing (H/Z4) |
 |------|-------------|-------------|---------------|
 | `f32x4_relaxed_madd` | Computes `a * b + c` with either one rounding or two roundin... |  | — |
-| `f32x4_relaxed_max` | A relaxed version of `f32x4_max` which is either `f32x4_max`... |  | — |
-| `f32x4_relaxed_min` | A relaxed version of `f32x4_min` which is either `f32x4_min`... |  | — |
+| `f32x4_relaxed_max` | A relaxed version of `f32x4_max` which has implementation-sp... |  | — |
+| `f32x4_relaxed_min` | A relaxed version of `f32x4_min` which has implementation-sp... |  | — |
 | `f32x4_relaxed_nmadd` | Computes `-a * b + c` with either one rounding or two roundi... |  | — |
 | `f64x2_relaxed_madd` | Computes `a * b + c` with either one rounding or two roundin... |  | — |
-| `f64x2_relaxed_max` | A relaxed version of `f64x2_max` which is either `f64x2_max`... |  | — |
-| `f64x2_relaxed_min` | A relaxed version of `f64x2_min` which is either `f64x2_min`... |  | — |
+| `f64x2_relaxed_max` | A relaxed version of `f64x2_max` which has implementation-sp... |  | — |
+| `f64x2_relaxed_min` | A relaxed version of `f64x2_min` which has implementation-sp... |  | — |
 | `f64x2_relaxed_nmadd` | Computes `-a * b + c` with either one rounding or two roundi... |  | — |
 | `i16x8_relaxed_dot_i8x16_i7x16` | A relaxed dot-product instruction.  This instruction will pe... |  | — |
 | `i16x8_relaxed_laneselect` | A relaxed version of `v128_bitselect` where this either beha... |  | — |

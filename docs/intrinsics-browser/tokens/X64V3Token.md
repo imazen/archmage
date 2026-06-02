@@ -248,10 +248,10 @@ fn process_chunk(_: X64V3Token, chunk: &mut [f32; 8]) {
 | `_mm256_or_pd` | Computes the bitwise OR packed double-precision (64-bit) flo... | vorp | 1/1, 1/1 |
 | `_mm256_or_ps` | Computes the bitwise OR packed single-precision (32-bit) flo... | vorps | 1/1, 1/1 |
 | `_mm256_or_si256` | Computes the bitwise OR of 256 bits (representing integer da... | vorps | 1/1, 1/1 |
-| `_mm256_packs_epi16` | Converts packed 16-bit integers from `a` and `b` to packed 8... | vpacksswb | 1/1, 1/1 |
-| `_mm256_packs_epi32` | Converts packed 32-bit integers from `a` and `b` to packed 1... | vpackssdw | 1/1, 1/1 |
-| `_mm256_packus_epi16` | Converts packed 16-bit integers from `a` and `b` to packed 8... | vpackuswb | 1/1, 1/1 |
-| `_mm256_packus_epi32` | Converts packed 32-bit integers from `a` and `b` to packed 1... | vpackusdw | 1/1, 1/1 |
+| `_mm256_packs_epi16` | Converts packed signed 16-bit integers from `a` and `b` to p... | vpacksswb | 1/1, 1/1 |
+| `_mm256_packs_epi32` | Converts packed signed 32-bit integers from `a` and `b` to p... | vpackssdw | 1/1, 1/1 |
+| `_mm256_packus_epi16` | Converts packed signed 16-bit integers from `a` and `b` to p... | vpackuswb | 1/1, 1/1 |
+| `_mm256_packus_epi32` | Converts packed signed 32-bit integers from `a` and `b` to p... | vpackusdw | 1/1, 1/1 |
 | `_mm256_permute2f128_pd` | Shuffles 256 bits (composed of 4 packed double-precision (64... | vperm2f128 | 3/1, 2/1 |
 | `_mm256_permute2f128_ps` | Shuffles 256 bits (composed of 8 packed single-precision (32... | vperm2f128 | 3/1, 2/1 |
 | `_mm256_permute2f128_si256` | Shuffles 128-bits (composed of integer data) selected by `im... | vperm2f128 | 3/1, 2/1 |
@@ -282,7 +282,7 @@ fn process_chunk(_: X64V3Token, chunk: &mut [f32; 8]) {
 | `_mm256_set_m128` | Sets packed __m256 returned vector with the supplied values | vinsertf128 | — |
 | `_mm256_set_m128d` | Sets packed __m256d returned vector with the supplied values | vinsertf128 | — |
 | `_mm256_set_m128i` | Sets packed __m256i returned vector with the supplied values | vinsertf128 | — |
-| `_mm256_set_pd` | Sets packed double-precision (64-bit) floating-point element... | vinsertf128 | — |
+| `_mm256_set_pd` | Sets packed double-precision (64-bit) floating-point element... |  | — |
 | `_mm256_set_ps` | Sets packed single-precision (32-bit) floating-point element... |  | — |
 | `_mm256_setr_epi16` | Sets packed 16-bit integers in returned vector with the supp... |  | — |
 | `_mm256_setr_epi32` | Sets packed 32-bit integers in returned vector with the supp... |  | — |

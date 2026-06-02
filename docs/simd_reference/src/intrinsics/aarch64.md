@@ -1,7 +1,7 @@
 # AArch64 Intrinsics by Archmage Token
 
 Auto-generated reference mapping stdarch intrinsics to archmage tokens.
-Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
+Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 
 ## NeonAesToken (115 intrinsics)
 
@@ -156,7 +156,7 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vsha512su1q_u64`
 - `vxarq_u64`
 
-## NeonToken / Arm64 (4044 intrinsics)
+## NeonToken / Arm64 (4084 intrinsics)
 
 ### Load
 
@@ -550,6 +550,13 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vld4q_u32` (unsafe)
 - `vld4q_u64` (unsafe)
 - `vld4q_u8` (unsafe)
+- `vldap1_lane_p64` (unsafe)
+- `vldap1_lane_s64` (unsafe)
+- `vldap1_lane_u64` (unsafe)
+- `vldap1q_lane_f64` (unsafe)
+- `vldap1q_lane_p64` (unsafe)
+- `vldap1q_lane_s64` (unsafe)
+- `vldap1q_lane_u64` (unsafe)
 - `vldrq_p128` (unsafe)
 
 ### Other
@@ -724,10 +731,14 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vaddw_u16`
 - `vaddw_u32`
 - `vaddw_u8`
+- `vamax_f16`
 - `vamax_f32`
+- `vamaxq_f16`
 - `vamaxq_f32`
 - `vamaxq_f64`
+- `vamin_f16`
 - `vamin_f32`
+- `vaminq_f16`
 - `vaminq_f32`
 - `vaminq_f64`
 - `vand_s16`
@@ -1765,18 +1776,34 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vhsubq_u16`
 - `vhsubq_u32`
 - `vhsubq_u8`
+- `vluti2_lane_f16` (unsafe)
 - `vluti2_lane_p16` (unsafe)
 - `vluti2_lane_p8` (unsafe)
 - `vluti2_lane_s16` (unsafe)
 - `vluti2_lane_s8` (unsafe)
 - `vluti2_lane_u16` (unsafe)
 - `vluti2_lane_u8` (unsafe)
+- `vluti2_laneq_f16` (unsafe)
+- `vluti2_laneq_p16` (unsafe)
+- `vluti2_laneq_p8` (unsafe)
+- `vluti2_laneq_s16` (unsafe)
+- `vluti2_laneq_s8` (unsafe)
+- `vluti2_laneq_u16` (unsafe)
+- `vluti2_laneq_u8` (unsafe)
+- `vluti2q_lane_f16` (unsafe)
 - `vluti2q_lane_p16` (unsafe)
 - `vluti2q_lane_p8` (unsafe)
 - `vluti2q_lane_s16` (unsafe)
 - `vluti2q_lane_s8` (unsafe)
 - `vluti2q_lane_u16` (unsafe)
 - `vluti2q_lane_u8` (unsafe)
+- `vluti2q_laneq_f16` (unsafe)
+- `vluti2q_laneq_p16` (unsafe)
+- `vluti2q_laneq_p8` (unsafe)
+- `vluti2q_laneq_s16` (unsafe)
+- `vluti2q_laneq_s8` (unsafe)
+- `vluti2q_laneq_u16` (unsafe)
+- `vluti2q_laneq_u8` (unsafe)
 - `vluti4q_lane_f16_x2` (unsafe)
 - `vluti4q_lane_p16_x2` (unsafe)
 - `vluti4q_lane_p8` (unsafe)
@@ -3390,6 +3417,11 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vrsubhn_u16`
 - `vrsubhn_u32`
 - `vrsubhn_u64`
+- `vscale_f16`
+- `vscale_f32`
+- `vscaleq_f16`
+- `vscaleq_f32`
+- `vscaleq_f64`
 - `vset_lane_f16`
 - `vset_lane_f32`
 - `vset_lane_f64`
@@ -4209,5 +4241,13 @@ Based on Rust 1.92 stdarch. Regenerate: `cargo xtask generate`
 - `vst4q_u32` (unsafe)
 - `vst4q_u64` (unsafe)
 - `vst4q_u8` (unsafe)
+- `vstl1_lane_f64`
+- `vstl1_lane_p64`
+- `vstl1_lane_s64`
+- `vstl1_lane_u64`
+- `vstl1q_lane_f64`
+- `vstl1q_lane_p64`
+- `vstl1q_lane_s64`
+- `vstl1q_lane_u64`
 - `vstrq_p128` (unsafe)
 

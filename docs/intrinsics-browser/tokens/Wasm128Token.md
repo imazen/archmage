@@ -3,7 +3,7 @@
 Proof that WASM SIMD128 is available.
 
 **Architecture:** wasm32 | **Features:** simd128
-**Total intrinsics:** 302 (277 safe, 25 unsafe, 302 stable, 0 unstable/unknown)
+**Total intrinsics:** 312 (287 safe, 25 unsafe, 302 stable, 10 unstable/unknown)
 
 ## Usage
 
@@ -366,5 +366,20 @@ fn process_chunk(_: Wasm128Token, chunk: &mut [f32; 4]) {
 | `v128_store32_lane` | Stores the 32-bit value from lane `L` of `v` into `m`  This ... | — |
 | `v128_store64_lane` | Stores the 64-bit value from lane `L` of `v` into `m`  This ... | — |
 | `v128_store8_lane` | Stores the 8-bit value from lane `L` of `v` into `m`  This i... | — |
+
+### Unstable/Nightly (10 intrinsics)
+
+| Name | Description | Instruction |
+|------|-------------|-------------|
+| `f32x4` |  |  |
+| `f64x2` |  |  |
+| `i16x8` |  |  |
+| `i32x4` |  |  |
+| `i64x2` |  |  |
+| `i8x16` |  |  |
+| `u16x8` |  |  |
+| `u32x4` |  |  |
+| `u64x2` |  |  |
+| `u8x16` |  |  |
 
 
