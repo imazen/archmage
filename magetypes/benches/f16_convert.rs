@@ -26,8 +26,6 @@
 //!   * `scalar/*` — branchless software baseline.
 //!   * `f16c/*`   — `X64V3Token` slice (the production path; summons-up to the
 //!                  best tier, so 16-wide AVX-512F on a V4 CPU, else 8-wide F16C).
-//!   * `v4/*`     — `X64V4Token` slice (the plain V4 path; 16-wide directly, no
-//!                  probe). `f16c` ≈ `v4` on a V4 CPU shows the summon is free.
 //!
 //! The 8-wide-vs-16-wide *width* isolation lives in the dedicated microbench in
 //! `benchmarks/f16_convert_zen4-7950x_2026-06-01.md` (the production path here
@@ -82,18 +80,11 @@ fn bench_decode(c: &mut Criterion) {
             });
         }
 
-        // x86-64: `f16c` = X64V3Token slice (production path, summons-up to best
-        // tier); `v4` = X64V4Token slice (plain V4 path, 16-wide direct). On a V4
-        // CPU both run 16-wide — `f16c ≈ v4` shows the summon is amortized away.
+        // x86-64: `f16c` = X64V3Token slice (the production path; summons-up to the
+        // best tier, so 16-wide AVX-512F on a V4 CPU, else 8-wide F16C).
         #[cfg(target_arch = "x86_64")]
         if let Some(t) = archmage::X64V3Token::summon() {
             c.bench_function(&format!("decode/f16c/{n}"), |b| {
-                b.iter(|| t.f16_to_f32_slice(black_box(&input), black_box(&mut out)))
-            });
-        }
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-        if let Some(t) = archmage::X64V4Token::summon() {
-            c.bench_function(&format!("decode/v4/{n}"), |b| {
                 b.iter(|| t.f16_to_f32_slice(black_box(&input), black_box(&mut out)))
             });
         }
@@ -116,17 +107,10 @@ fn bench_encode(c: &mut Criterion) {
             });
         }
 
-        // x86-64: `f16c` = V3 slice (production, summons-up); `v4` = V4 slice
-        // (plain path, direct). See decode.
+        // x86-64: `f16c` = V3 slice (production path; summons-up to best). See decode.
         #[cfg(target_arch = "x86_64")]
         if let Some(t) = archmage::X64V3Token::summon() {
             c.bench_function(&format!("encode/f16c/{n}"), |b| {
-                b.iter(|| t.f32_to_f16_slice(black_box(&input), black_box(&mut out)))
-            });
-        }
-        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-        if let Some(t) = archmage::X64V4Token::summon() {
-            c.bench_function(&format!("encode/v4/{n}"), |b| {
                 b.iter(|| t.f32_to_f16_slice(black_box(&input), black_box(&mut out)))
             });
         }
