@@ -196,6 +196,8 @@ fn pipeline_impl(token: Token, plane: &mut [f32], bias: f32, factor: f32) {
 }
 ```
 
+Both `clamp01_impl` and `scale_plane_impl` above are token-based families, so the token in scope is threaded to them automatically. To call a **tokenless** multi-tier helper instead (one from `#[rite(v3, neon)]`, `#[autoversion]`, or a `#[magetypes]` scalar/default variant), add the `without token` modifier — `incant!(helper(args) without token)` rewrites to `helper_<this-tier>(args)` with no token threaded. It works in every variant a `#[magetypes]` family generates, **including the scalar/default one**. See [`without token`](@/archmage/dispatch/incant.md) for the rules.
+
 See [SPEC-INCANT-REWRITING.md](https://github.com/imazen/archmage/blob/main/docs/SPEC-INCANT-REWRITING.md) for the rewriting rules and measurements (0.94 ns vs 5.6 ns with re-dispatch).
 
 ## Passthrough Dispatch

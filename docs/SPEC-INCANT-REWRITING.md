@@ -232,9 +232,12 @@ The tier is derived from the token type via `canonical_token_to_tier_suffix`.
 **Single-tier with token**: Same as arcane — scan body, derive tier from
 token type, rewrite.
 
-**Single-tier tokenless** (`#[rite(v3)]`): **Cannot participate** in incant!
-rewriting as a caller because there's no token to pass. The function itself
-is a valid **callee** (other code can `incant!` into it).
+**Single-tier tokenless** (`#[rite(v3)]`): a **plain** `incant!(foo(args))`
+cannot be rewritten here — there's no token to thread to the callee — so it is
+left untouched. But `incant!(foo(args) without token)` **is** rewritten (the
+body is scanned with `has_token: false`), emitting `foo_v3(args)` for this
+tier. The function itself is also a valid **callee** (other code can `incant!`
+into it).
 
 **Multi-tier**: Each generated variant knows its tier. Scan body per variant,
 rewrite incant! calls to matching tier.
