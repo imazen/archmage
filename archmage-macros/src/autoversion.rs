@@ -267,15 +267,22 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
         }
 
         // Rewrite incant!() calls in the variant body to direct tier calls.
-        // Skip for scalar/default — they don't have target_feature context.
-        if tier.name != "scalar" && tier.name != "default" {
-            let ctx = crate::rewrite::CallerContext {
-                tier_suffix: tier.suffix.to_string(),
-                target_arch: tier.target_arch,
-                token_ident: token_param.ident.clone(),
-            };
-            variant_fn.body = crate::rewrite::rewrite_incant_in_body(variant_fn.body, &ctx);
-        }
+        // scalar/default have no token to thread, so they only rewrite
+        // `incant!(.. without token)` (the tokenless variant call); plain
+        // `incant!` there is left for standalone expansion, as before.
+        let has_token = tier.name != "scalar" && tier.name != "default";
+        let token_ident = if has_token {
+            token_param.ident.clone()
+        } else {
+            quote::format_ident!("_")
+        };
+        let ctx = crate::rewrite::CallerContext {
+            tier_suffix: tier.suffix.to_string(),
+            target_arch: tier.target_arch,
+            token_ident,
+            has_token,
+        };
+        variant_fn.body = crate::rewrite::rewrite_incant_in_body(variant_fn.body, &ctx);
 
         // cfg guard: arch + optional feature gate from tier(feature) syntax
         let allow_attr = if tier.allow_unexpected_cfg {

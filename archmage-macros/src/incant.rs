@@ -18,8 +18,12 @@ pub(crate) struct IncantInput {
     pub(crate) func_path: syn::Path,
     /// Arguments to pass
     pub(crate) args: Vec<syn::Expr>,
-    /// Optional token variable for passthrough mode
+    /// Optional token variable for passthrough mode (`with token_expr`).
     pub(crate) with_token: Option<syn::Expr>,
+    /// Tokenless mode (`without token`): inside a tier-macro body, rewrite to the
+    /// caller's exact-tier variant called with NO token (`f_v3(args)`). Only
+    /// valid in a tier-macro body; errors in plain/cold code.
+    pub(crate) without_token: bool,
     /// Optional explicit tier list (None = default tiers)
     pub(crate) tiers: Option<(Vec<String>, proc_macro2::Span)>,
 }
@@ -39,16 +43,29 @@ impl Parse for IncantInput {
             .into_iter()
             .collect();
 
-        // Check for optional "with token"
-        let with_token = if input.peek(Ident) {
+        // Modifier slot: `with <token_expr>` (passthrough) | `without token` (tokenless).
+        let mut with_token = None;
+        let mut without_token = false;
+        if input.peek(Ident) {
             let kw: Ident = input.parse()?;
-            if kw != "with" {
-                return Err(syn::Error::new_spanned(kw, "expected `with` keyword"));
+            if kw == "with" {
+                with_token = Some(input.parse()?);
+            } else if kw == "without" {
+                let t: Ident = input.parse()?;
+                if t != "token" {
+                    return Err(syn::Error::new_spanned(
+                        t,
+                        "expected `token` after `without` (the only `without` form is `without token`)",
+                    ));
+                }
+                without_token = true;
+            } else {
+                return Err(syn::Error::new_spanned(
+                    kw,
+                    "expected `with <token>` or `without token`",
+                ));
             }
-            Some(input.parse()?)
-        } else {
-            None
-        };
+        }
 
         // Check for optional tier list: , [tier1, tier2(feature), ...]
         // tier(feature) wraps dispatch in #[cfg(feature = "feature")].
@@ -69,10 +86,18 @@ impl Parse for IncantInput {
             None
         };
 
+        if without_token && tiers.is_some() {
+            return Err(syn::Error::new(
+                proc_macro2::Span::call_site(),
+                "`without token` takes no tier list — it resolves to the caller's own tier",
+            ));
+        }
+
         Ok(IncantInput {
             func_path,
             args,
             with_token,
+            without_token,
             tiers,
         })
     }
@@ -150,6 +175,21 @@ impl Parse for IncantInput {
 /// - `_wasm128` for `Wasm128Token`
 /// - `_scalar` for `ScalarToken`
 pub(crate) fn incant_impl(input: IncantInput) -> TokenStream {
+    // `without token` is only meaningful inside a tier-macro body, where the
+    // body rewriter resolves it to the caller's exact-tier variant. Reaching
+    // here means it was written in plain/cold code — there is no caller tier to
+    // resolve to, so it is an error.
+    if input.without_token {
+        return syn::Error::new(
+            proc_macro2::Span::call_site(),
+            "`incant!(.. without token)` is only valid inside a tier-macro body \
+             (`#[arcane]`, `#[rite]`, `#[magetypes]`, `#[autoversion]`) — there is \
+             no caller tier to resolve the variant against in plain code",
+        )
+        .to_compile_error()
+        .into();
+    }
+
     let func_path = &input.func_path;
     let args = &input.args;
 

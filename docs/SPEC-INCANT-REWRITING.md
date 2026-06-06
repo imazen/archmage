@@ -111,8 +111,30 @@ emitting the code.
 | autoversion dispatcher | (none) | full dispatch (unchanged) |
 | `#[arcane]` with `X64V3Token` | `token: X64V3Token` | `foo_v3(token, args)` |
 | `#[rite(v3)]` with token | `token: X64V3Token` | `foo_v3(token, args)` |
-| `#[rite(v3)]` tokenless | (no token) | **not supported** — use token form |
+| `#[rite(v3)]` tokenless | (no token) | only `incant!(.. without token)` rewrites; plain `incant!` left for standalone |
 | plain code (no macro) | (none) | full dispatch (unchanged) |
+
+### `without token` — tokenless variant call
+
+`incant!(foo(args) without token)` rewrites to the caller's exact-tier variant
+called **with no token**: `foo_<caller_tier>(args)`. No token threaded, no
+`summon()`, no fallback arms — the caller is already inside the matching
+`#[target_feature]` region, so it's a safe matching-feature call (a missing
+`foo_<tier>` or a feature mismatch is a compile error).
+
+| Outer context | `incant!(foo(a) without token)` becomes |
+|---|---|
+| any tier variant (`#[rite(v3,…)]`, `#[autoversion]`, `#[arcane]`, `#[magetypes]`) v3 | `foo_v3(a)` |
+| neon variant | `foo_neon(a)` |
+| scalar variant | `foo_scalar(a)` |
+| plain code (no tier macro) | **compile error** — no caller tier to resolve against |
+
+This is the way to compose **tokenless** multi-tier helpers (tier-based
+`#[rite(v3, neon)]`), which `incant!`'s token-first rewrite can't call (no token
+to thread). The target **must be multi-tier / suffixed** (`foo_v3`, `foo_neon`):
+`without token` always emits a `_<tier>` suffix. A single-tier `#[rite(v3)]`
+helper keeps its bare name and is simply called directly. `without token` takes
+no tier list — it resolves to the caller's own tier.
 
 ### Token passing
 

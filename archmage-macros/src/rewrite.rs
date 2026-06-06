@@ -25,6 +25,10 @@ pub(crate) struct CallerContext {
     pub target_arch: Option<&'static str>,
     /// The token ident available in the caller's scope (e.g., `token`, `__token`, `_token`)
     pub token_ident: Ident,
+    /// Whether a real token is in scope. `false` for tokenless tier bodies
+    /// (tier-based `#[rite(v3, …)]`): only `incant!(.. without token)` is rewritten
+    /// there; plain `incant!`/`with token` are left for standalone expansion.
+    pub has_token: bool,
 }
 
 /// Rewrite `incant!()` calls in a function body for a specific tier context.
@@ -68,9 +72,18 @@ pub(crate) fn rewrite_incant_in_body(body: TokenStream, ctx: &CallerContext) -> 
             // Try to parse the incant arguments
             let inner = group.stream();
             if let Ok(input) = syn::parse2::<IncantInput>(inner) {
-                // Rewrite this incant! call
-                let rewritten = rewrite_single_incant(&input, ctx);
-                result.extend(rewritten);
+                match rewrite_single_incant(&input, ctx) {
+                    // Rewrote this incant! call to a direct tier call.
+                    Some(rewritten) => result.extend(rewritten),
+                    // Not rewritten (passthrough / tokenless body / parse issue):
+                    // emit the original `incant ! ( ... )` tokens verbatim so the
+                    // standalone `incant!` macro expands them unchanged (byte-identical).
+                    None => {
+                        result.push(tokens[i].clone());
+                        result.push(tokens[i + 1].clone());
+                        result.push(tokens[i + 2].clone());
+                    }
+                }
                 i += 3; // skip `incant`, `!`, `(...)`
                 continue;
             }
@@ -94,12 +107,30 @@ pub(crate) fn rewrite_incant_in_body(body: TokenStream, ctx: &CallerContext) -> 
     result.into_iter().collect()
 }
 
-/// Rewrite a single parsed `incant!()` invocation.
-fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> TokenStream {
-    // If passthrough mode (`with token`), don't rewrite — leave for incant! to handle
+/// Rewrite a single parsed `incant!()` invocation. Returns `None` when the call
+/// should be left as-is (the caller then emits the original tokens verbatim).
+fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<TokenStream> {
+    // `without token`: tokenless direct call to the caller's exact-tier variant.
+    // `f_<caller_tier>(args)` — no token threaded, no summon. The caller is
+    // already inside the matching `#[target_feature]` region, so this is a safe
+    // matching-feature call; a missing `f_<tier>` or a feature mismatch is a
+    // compile error. Works whether or not the caller itself holds a token.
+    if input.without_token {
+        let fn_suffixed = suffix_path(&input.func_path, &ctx.tier_suffix);
+        let args = &input.args;
+        return Some(quote! { #fn_suffixed(#(#args),*) });
+    }
+
+    // Passthrough mode (`with token`): leave for the standalone incant! to handle.
     if input.with_token.is_some() {
-        // Reconstruct the original incant! call
-        return reconstruct_incant(input);
+        return None;
+    }
+
+    // Tokenless tier body (no token in scope): only `without token` is rewritten
+    // (handled above). Plain `incant!` is left for standalone expansion (it will
+    // summon its own token), exactly as before this body was scanned.
+    if !ctx.has_token {
+        return None;
     }
 
     let func_path = &input.func_path;
@@ -113,7 +144,7 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> TokenStrea
     let error_span = proc_macro2::Span::call_site();
     let tiers = match tiers::resolve_tiers(&tier_names, error_span, true) {
         Ok(t) => t,
-        Err(_) => return reconstruct_incant(input), // parse error — let incant! handle it
+        Err(_) => return None, // parse error — let standalone incant! handle it
     };
 
     // Partition callee tiers into:
@@ -227,7 +258,7 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> TokenStrea
         }
     };
 
-    if upgrade_arms.is_empty() {
+    Some(if upgrade_arms.is_empty() {
         // No upgrades to try — just the direct call, no labeled block needed
         fallback_call
     } else {
@@ -239,29 +270,7 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> TokenStrea
                 #fallback_call
             }
         }
-    }
-}
-
-/// Reconstruct the original `incant!(...)` call (for cases we don't rewrite).
-fn reconstruct_incant(input: &IncantInput) -> TokenStream {
-    let func_path = &input.func_path;
-    let args = &input.args;
-
-    let with_part = input.with_token.as_ref().map(|t| quote! { with #t });
-    let tier_part = input.tiers.as_ref().map(|(names, _)| {
-        let tier_strs: Vec<_> = names
-            .iter()
-            .map(|n| {
-                let ident = format_ident!("{}", n);
-                quote! { #ident }
-            })
-            .collect();
-        quote! { , [#(#tier_strs),*] }
-    });
-
-    quote! {
-        archmage::incant!(#func_path(#(#args),*) #with_part #tier_part)
-    }
+    })
 }
 
 fn is_ident(tt: &TokenTree, name: &str) -> bool {
@@ -282,6 +291,7 @@ mod tests {
             tier_suffix: tier.to_string(),
             target_arch: arch,
             token_ident: format_ident!("__token"),
+            has_token: true,
         }
     }
 

@@ -376,6 +376,28 @@ fn inner<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
 }
 ```
 
+**Tokenless variant call** (`without token`) — call the caller's exact-tier
+variant with NO token, NO summon. For composing **tokenless** multi-tier helpers
+(tier-based `#[rite(v3, neon)]`) from inside another tier body, where the
+token-first rewrite can't reach (no token to thread):
+
+```rust
+#[rite(v3, neon)] fn helper(x: f32) -> f32 { /* per-tier body */ x * 2.0 }
+
+#[rite(v3, neon)]
+fn caller(x: f32) -> f32 {
+    incant!(helper(x) without token)   // v3 variant → helper_v3(x); neon → helper_neon(x)
+}
+```
+
+Rewrites to `helper_<caller_tier>(x)` — a direct, safe matching-feature call
+(the caller is already in that `#[target_feature]` region); a missing variant or
+feature mismatch is a compile error. Only valid inside a tier-macro body
+(`#[rite]`/`#[arcane]`/`#[magetypes]`/`#[autoversion]`) — errors in plain code.
+The target must be **multi-tier / suffixed** (`without token` always emits a
+`_<tier>` suffix); a single-tier `#[rite(v3)]` helper keeps its bare name and is
+called directly. Takes no tier list (resolves to the caller's own tier).
+
 ### `#[autoversion]`: Auto-Vectorized Dispatch
 
 Write plain scalar code with a `SimdToken` placeholder. `#[autoversion]` generates per-tier

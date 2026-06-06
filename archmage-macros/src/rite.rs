@@ -272,18 +272,36 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
     }
 
     // Rewrite incant!() calls in the body to direct tier calls.
-    // Only when a real token parameter exists — tokenless rite (e.g., #[rite(v3)])
-    // has no token to pass to callees.
-    if token_ident != "_"
+    // - With a real token param: full rewrite (token-first direct calls +
+    //   `without token`). Tokenless rite (`#[rite(v3)]`) has no token to thread,
+    //   so it only rewrites `incant!(.. without token)` (the tokenless variant
+    //   call); plain `incant!`/`with token` are left for standalone expansion.
+    let rewrite_ctx = if token_ident != "_"
         && let Some(ref type_name) = _token_type_name
         && let Some(tier_suffix) = crate::generated::canonical_token_to_tier_suffix(type_name)
         && let Some(tier) = crate::tiers::find_tier(tier_suffix)
     {
-        let ctx = crate::rewrite::CallerContext {
+        Some(crate::rewrite::CallerContext {
             tier_suffix: tier_suffix.to_string(),
             target_arch: tier.target_arch,
             token_ident: token_ident.clone(),
-        };
+            has_token: true,
+        })
+    } else if let Some(tier_token) = args.tier_tokens.first()
+        && let Some(tier_suffix) = crate::generated::canonical_token_to_tier_suffix(tier_token)
+        && let Some(tier) = crate::tiers::find_tier(tier_suffix)
+    {
+        // Tokenless tier-based `#[rite(v3)]`: only `without token` is rewritten.
+        Some(crate::rewrite::CallerContext {
+            tier_suffix: tier_suffix.to_string(),
+            target_arch: tier.target_arch,
+            token_ident: quote::format_ident!("_"),
+            has_token: false,
+        })
+    } else {
+        None
+    };
+    if let Some(ctx) = rewrite_ctx {
         input_fn.body = crate::rewrite::rewrite_incant_in_body(input_fn.body.clone(), &ctx);
     }
 
@@ -431,15 +449,23 @@ pub(crate) fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenS
         let mut variant_fn = input_fn.clone();
         variant_fn.sig.ident = suffixed_ident;
 
-        // Rewrite incant!() calls in the variant body.
-        // Only for rite functions with a token param — tokenless rite can't pass tokens.
-        if let Some(tier) = crate::tiers::find_tier(suffix)
-            && let Some(token_info) = crate::token_discovery::find_token_param(&variant_fn.sig)
-        {
-            let ctx = crate::rewrite::CallerContext {
-                tier_suffix: suffix.to_string(),
-                target_arch: tier.target_arch,
-                token_ident: token_info.ident,
+        // Rewrite incant!() calls in the variant body. With a token param: full
+        // rewrite. Tokenless variant: only `incant!(.. without token)` (the
+        // tokenless variant call) — it needs no token, just the caller's tier.
+        if let Some(tier) = crate::tiers::find_tier(suffix) {
+            let ctx = match crate::token_discovery::find_token_param(&variant_fn.sig) {
+                Some(token_info) => crate::rewrite::CallerContext {
+                    tier_suffix: suffix.to_string(),
+                    target_arch: tier.target_arch,
+                    token_ident: token_info.ident,
+                    has_token: true,
+                },
+                None => crate::rewrite::CallerContext {
+                    tier_suffix: suffix.to_string(),
+                    target_arch: tier.target_arch,
+                    token_ident: quote::format_ident!("_"),
+                    has_token: false,
+                },
             };
             variant_fn.body = crate::rewrite::rewrite_incant_in_body(variant_fn.body.clone(), &ctx);
         }

@@ -267,6 +267,7 @@ pub(crate) fn arcane_impl(
             tier_suffix: tier_suffix.to_string(),
             target_arch: tier.target_arch,
             token_ident: _token_ident.clone(),
+            has_token: true,
         };
         input_fn.body = crate::rewrite::rewrite_incant_in_body(input_fn.body.clone(), &ctx);
     }

@@ -654,6 +654,40 @@ fn gen_rewrite_tests(files: &mut Vec<TestFile>) {
                   fn main() {}\n"
             .to_string(),
     });
+
+    // `without token`: tokenless multi-tier rite caller → tokenless rite helper.
+    // Each variant calls its own tier's helper with NO token: helper_v3(x) / helper_neon(x).
+    files.push(TestFile {
+        path: "rewrite/without_token_rite_multi.rs".to_string(),
+        content: "// Rewrite: `without token` — tokenless variant call, no token, no summon\n\
+                  use archmage::{rite, incant};\n\
+                  #[rite(v3, neon)] fn helper(x: f32) -> f32 { x * 2.0 }\n\
+                  #[rite(v3, neon)]\n\
+                  fn outer(x: f32) -> f32 {\n\
+                      incant!(helper(x) without token) + 1.0\n\
+                  }\n\
+                  fn main() {}\n"
+            .to_string(),
+    });
+
+    // `without token` from a tokened #[arcane] context — the token is ignored;
+    // the matching *suffixed* helper variant is called directly: helper_v3(x).
+    // (The target must be multi-tier/suffixed — `without token` always emits a
+    // `_<tier>` suffix; a single-tier `#[rite(v3)]` helper keeps its bare name
+    // and is called directly without this macro.)
+    files.push(TestFile {
+        path: "rewrite/without_token_from_arcane.rs".to_string(),
+        content: "// Rewrite: `without token` from a tokened #[arcane] body\n\
+                  use archmage::{rite, arcane, incant, X64V3Token};\n\
+                  #[rite(v3, neon)] fn helper(x: f32) -> f32 { x * 2.0 }\n\
+                  #[arcane]\n\
+                  fn outer(token: X64V3Token, x: f32) -> f32 {\n\
+                      let _ = token;\n\
+                      incant!(helper(x) without token) + 1.0\n\
+                  }\n\
+                  fn main() {}\n"
+            .to_string(),
+    });
 }
 
 // ============================================================================
