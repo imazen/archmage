@@ -87,6 +87,22 @@ pub(crate) fn magetypes_impl(
             };
         }
 
+        // Resolve `incant!(.. without token)` to this tier's tokenless variant
+        // call (`f_<suffix>(args)`). `has_token: false` ⇒ only `without token` is
+        // rewritten here; plain `incant!`/`with token` are left untouched. Tiered
+        // variants are also `#[arcane]`-wrapped (which handles the token-first
+        // forms); this pass is what gives the scalar/default variants — emitted
+        // plain, with no arcane wrapper — a working `without token` too.
+        {
+            let ctx = crate::rewrite::CallerContext {
+                tier_suffix: tier.suffix.to_string(),
+                target_arch: tier.target_arch,
+                token_ident: quote::format_ident!("_"),
+                has_token: false,
+            };
+            variant_fn.body = crate::rewrite::rewrite_incant_in_body(variant_fn.body.clone(), &ctx);
+        }
+
         // Replace `Token` ident with the concrete token path at the token level.
         // This is safe: each identifier is a discrete token tree, so `ScalarToken`,
         // `IntoConcreteToken`, etc. are single Ident nodes that do NOT match "Token".
