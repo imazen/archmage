@@ -15,9 +15,18 @@ test-nightly:
 lint:
     cargo clippy --features "std avx512" -- -D warnings
 
-# Format code
+# Format code + regenerate the public-API surface snapshots (docs/public-api/)
 fmt:
     cargo fmt
+    cargo test -p archmage --test public_api_doc
+
+# Regenerate the public-API surface snapshots only
+api-doc:
+    cargo test -p archmage --test public_api_doc
+
+# Verify the committed snapshots are current (what CI runs)
+api-doc-check:
+    ZEN_API_DOC=check cargo test -p archmage --test public_api_doc
 
 # Check formatting
 fmt-check:
