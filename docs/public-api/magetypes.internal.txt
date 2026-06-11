@@ -1,0 +1,120 @@
+# magetypes public API — doc(hidden) items and excluded-feature surface
+# excluded features: (none)
+# (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
+# Encodings: crate-name prefix stripped; auto traits collapse to a
+# count + exceptions; trait impls collapse to one roster line per
+# type (method signatures live at the trait definition); blanket
+# impls omitted; re-export duplicates annotated `[also: path]`.
+# DO NOT EDIT BY HAND — commit regenerated changes with the code.
+
+## summary
+#
+#   pub modules                                 2
+#   pub types (struct/enum/trait/alias)         1
+#   pub macros                                  8
+#   free functions                             28
+#   trait roster entries (type × trait)        60
+#
+# per-module pub lines:
+#   (root)                           10
+#   bypass_adversarial                1
+#   nostd_math                       20
+#   simd                              8
+
+## items (32 lines)
+
+pub fn nostd_math::cbrt_lowp_f32(f32) -> f32
+pub fn nostd_math::cbrt_midp_f32(f32) -> f32
+pub fn nostd_math::ceil(f64) -> f64
+pub fn nostd_math::ceilf(f32) -> f32
+pub fn nostd_math::exp2_f64(f64) -> f64
+pub fn nostd_math::exp_f64(f64) -> f64
+pub fn nostd_math::floor(f64) -> f64
+pub fn nostd_math::floorf(f32) -> f32
+pub fn nostd_math::fma(f64, f64, f64) -> f64
+pub fn nostd_math::fmaf(f32, f32, f32) -> f32
+pub fn nostd_math::ln_f64(f64) -> f64
+pub fn nostd_math::log10_f64(f64) -> f64
+pub fn nostd_math::log2_f64(f64) -> f64
+pub fn nostd_math::powf_f64(f64, f64) -> f64
+pub fn nostd_math::round(f64) -> f64
+pub fn nostd_math::roundeven(f64) -> f64
+pub fn nostd_math::roundevenf(f32) -> f32
+pub fn nostd_math::roundf(f32) -> f32
+pub fn nostd_math::sqrt(f64) -> f64
+pub fn nostd_math::sqrtf(f32) -> f32
+pub fn simd::i8x1::assert_fields_are_eq(&self) [also: simd::i16x1, simd::i32x1, simd::i64x1, simd::u16x1, simd::u32x1, simd::u64x1, simd::u8x1]
+pub macro impl_arithmetic_ops!
+pub macro impl_assign_ops!
+pub macro impl_bitwise_ops!
+pub macro impl_float_assign_ops!
+pub macro impl_index!
+pub macro impl_int_arithmetic_ops!
+pub macro impl_int_mul_op!
+pub macro impl_neg!
+pub mod bypass_adversarial
+pub mod nostd_math
+pub struct bypass_adversarial::BypassAdversarialProofs
+
+## trait impls (60 types)
+
+simd::f32x1: TrivialClone
+simd::f64x1: TrivialClone
+simd::i16x1: TrivialClone
+simd::i32x1: TrivialClone
+simd::i64x1: TrivialClone
+simd::i8x1: TrivialClone
+simd::polyfill::v3::f32x8: TrivialClone
+simd::polyfill::v3::f64x4: TrivialClone
+simd::polyfill::v3::i16x16: TrivialClone
+simd::polyfill::v3::i32x8: TrivialClone
+simd::polyfill::v3::i64x4: TrivialClone
+simd::polyfill::v3::i8x32: TrivialClone
+simd::polyfill::v3::u16x16: TrivialClone
+simd::polyfill::v3::u32x8: TrivialClone
+simd::polyfill::v3::u64x4: TrivialClone
+simd::polyfill::v3::u8x32: TrivialClone
+simd::polyfill::v3_512::f32x16: TrivialClone
+simd::polyfill::v3_512::f64x8: TrivialClone
+simd::polyfill::v3_512::i16x32: TrivialClone
+simd::polyfill::v3_512::i32x16: TrivialClone
+simd::polyfill::v3_512::i64x8: TrivialClone
+simd::polyfill::v3_512::i8x64: TrivialClone
+simd::polyfill::v3_512::u16x32: TrivialClone
+simd::polyfill::v3_512::u32x16: TrivialClone
+simd::polyfill::v3_512::u64x8: TrivialClone
+simd::polyfill::v3_512::u8x64: TrivialClone
+simd::u16x1: TrivialClone
+simd::u32x1: TrivialClone
+simd::u64x1: TrivialClone
+simd::u8x1: TrivialClone
+simd::v3::f32x8: TrivialClone
+simd::v3::f64x4: TrivialClone
+simd::v3::i16x16: TrivialClone
+simd::v3::i32x8: TrivialClone
+simd::v3::i64x4: TrivialClone
+simd::v3::i8x32: TrivialClone
+simd::v3::u16x16: TrivialClone
+simd::v3::u32x8: TrivialClone
+simd::v3::u64x4: TrivialClone
+simd::v3::u8x32: TrivialClone
+simd::x86::w128::f32x4: TrivialClone
+simd::x86::w128::f64x2: TrivialClone
+simd::x86::w128::i16x8: TrivialClone
+simd::x86::w128::i32x4: TrivialClone
+simd::x86::w128::i64x2: TrivialClone
+simd::x86::w128::i8x16: TrivialClone
+simd::x86::w128::u16x8: TrivialClone
+simd::x86::w128::u32x4: TrivialClone
+simd::x86::w128::u64x2: TrivialClone
+simd::x86::w128::u8x16: TrivialClone
+simd::x86::w512::f32x16: TrivialClone
+simd::x86::w512::f64x8: TrivialClone
+simd::x86::w512::i16x32: TrivialClone
+simd::x86::w512::i32x16: TrivialClone
+simd::x86::w512::i64x8: TrivialClone
+simd::x86::w512::i8x64: TrivialClone
+simd::x86::w512::u16x32: TrivialClone
+simd::x86::w512::u32x16: TrivialClone
+simd::x86::w512::u64x8: TrivialClone
+simd::x86::w512::u8x64: TrivialClone

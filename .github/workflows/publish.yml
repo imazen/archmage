@@ -8,9 +8,6 @@ env:
   CARGO_TERM_COLOR: always
   CI: true
   FEATURES: "std avx512"
-  # Skip the public-API snapshot regen test (no nightly/cargo-public-api here;
-  # ci.yml's clippy job runs the ZEN_API_DOC=check gate).
-  ZEN_API_DOC: off
 
 jobs:
   # ==========================================================================

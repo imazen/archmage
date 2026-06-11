@@ -15,8 +15,14 @@ tests/avx512-cfg-tests/*/target/
 tests/downstream-compat/*/target/
 copter-report/
 
+# apidoc/ snapshot-runner package: build dir stays out
+apidoc/target/
+
 # Tooling noise
 Cargo.lock
+# ...but the apidoc runner's lockfile IS committed (negation must come after
+# the global Cargo.lock ignore — last matching pattern wins).
+!apidoc/Cargo.lock
 .superwork/
 .claude/
 .workongoing

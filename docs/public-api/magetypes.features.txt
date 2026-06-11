@@ -1,0 +1,482 @@
+# magetypes public API — additions from non-default features
+# features: avx512,std,w512
+# (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
+# Encodings: crate-name prefix stripped; auto traits collapse to a
+# count + exceptions; trait impls collapse to one roster line per
+# type (method signatures live at the trait definition); blanket
+# impls omitted; re-export duplicates annotated `[also: path]`.
+# DO NOT EDIT BY HAND — commit regenerated changes with the code.
+
+## summary
+#
+#   pub modules                                 1
+#   pub types (struct/enum/trait/alias)        65
+#   pub consts/statics                         60
+#   free functions                           1487
+#   enum variants                              20
+#   trait roster entries (type × trait)       241
+#   auto-trait-complete types                  10
+#
+# per-module pub lines:
+#   (root)                           80
+#   prelude                           5
+#   simd                           1548
+
+## items (378 lines)
+
+#[repr(transparent)] pub struct prelude::F32Vec(_)
+pub fn simd::x86::w512::f32x16::as_array(&self) -> &[f32; 16] [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::as_array_mut(&mut self) -> &mut [f32; 16] [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::cast_slice(archmage::tokens::generated::x86::X64V4Token, &[f32]) -> core::option::Option<&[Self]> [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::cast_slice_mut(archmage::tokens::generated::x86::X64V4Token, &mut [f32]) -> core::option::Option<&mut [Self]> [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::cbrt_lowp(self) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::cbrt_midp(self) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::cbrt_midp_precise(self) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::exp2_lowp_unchecked(self) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::exp2_midp(self) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::exp2_midp_unchecked(self) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::exp_lowp_unchecked(self) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::exp_midp(self) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::exp_midp_unchecked(self) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::from_array(archmage::tokens::generated::x86::X64V4Token, [f32; 16]) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::from_i32x16(simd::x86::w512::i32x16) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::from_m512(archmage::tokens::generated::x86::X64V4Token, core::core_arch::x86::__m512) -> Self [also: simd::x86::w512::f32x16]
+pub unsafe fn simd::x86::w512::f32x16::from_raw(core::core_arch::x86::__m512) -> Self
+pub fn simd::x86::w512::f32x16::from_raw_checked(archmage::tokens::generated::x86::X64V4Token, core::core_arch::x86::__m512) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::from_slice(archmage::tokens::generated::x86::X64V4Token, &[f32]) -> Self [also: simd::x86::w512::f32x16]
+pub const fn simd::x86::w512::f32x16::implementation_name() -> &'static str [also: (root)]
+pub fn simd::x86::w512::f32x16::ln_lowp_unchecked(self) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::ln_midp(self) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::ln_midp_precise(self) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::ln_midp_unchecked(self) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::load(archmage::tokens::generated::x86::X64V4Token, &[f32; 16]) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::load_8x8(&[f32; 64]) -> [Self; 8] [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::log10_lowp_unchecked(self) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::log10_midp(self) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::log10_midp_precise(self) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::log10_midp_unchecked(self) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::log2_lowp_unchecked(self) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::log2_midp(self) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::log2_midp_precise(self) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::log2_midp_unchecked(self) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::partition_slice(archmage::tokens::generated::x86::X64V4Token, &[f32]) -> (&[[f32; 16]], &[f32]) [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::partition_slice_mut(archmage::tokens::generated::x86::X64V4Token, &mut [f32]) -> (&mut [[f32; 16]], &mut [f32]) [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::pow_lowp(self, f32) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::pow_lowp_unchecked(self, f32) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::pow_midp(self, f32) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::pow_midp_precise(self, f32) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::pow_midp_unchecked(self, f32) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::raw(self) -> core::core_arch::x86::__m512 [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::reduce_add(self) -> f32 [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::reduce_max(self) -> f32 [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::reduce_min(self) -> f32 [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::splat(archmage::tokens::generated::x86::X64V4Token, f32) -> Self [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::store(self, &mut [f32; 16]) [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::store_8x8(&[Self; 8], &mut [f32; 64]) [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::to_array(self) -> [f32; 16] [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::to_i32x16(self) -> simd::x86::w512::i32x16 [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::to_i32x16_round(self) -> simd::x86::w512::i32x16 [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::transpose_8x8(&mut [Self; 8]) [also: simd::x86::w512::f32x16]
+pub fn simd::x86::w512::f32x16::transpose_8x8_copy([Self; 8]) -> [Self; 8] [also: simd::x86::w512::f32x16]
+pub fn [f32; 16]::from(simd::x86::w512::f32x16) -> Self [also: (root)]
+#[repr(transparent)] pub struct prelude::F64Vec(_)
+pub const simd::x86::w512::f64x8::LANES: usize [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::abs(self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64]
+pub fn simd::x86::w512::f64x8::as_array(&self) -> &[f64; 8] [also: simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::as_array_mut(&mut self) -> &mut [f64; 8] [also: simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::as_bytes(&self) -> &[u8; 64] [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::as_bytes_mut(&mut self) -> &mut [u8; 64] [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_i16x32(self) -> simd::x86::w512::i16x32 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_i32x16(self) -> simd::x86::w512::i32x16 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_i64x8(self) -> simd::x86::w512::i64x8 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_i8x64(self) -> simd::x86::w512::i8x64 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_mut_i16x32(&mut self) -> &mut simd::x86::w512::i16x32 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_mut_i32x16(&mut self) -> &mut simd::x86::w512::i32x16 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_mut_i64x8(&mut self) -> &mut simd::x86::w512::i64x8 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_mut_i8x64(&mut self) -> &mut simd::x86::w512::i8x64 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_mut_u16x32(&mut self) -> &mut simd::x86::w512::u16x32 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_mut_u32x16(&mut self) -> &mut simd::x86::w512::u32x16 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_mut_u64x8(&mut self) -> &mut simd::x86::w512::u64x8 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_mut_u8x64(&mut self) -> &mut simd::x86::w512::u8x64 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8]
+pub fn simd::x86::w512::f64x8::bitcast_ref_i16x32(&self) -> &simd::x86::w512::i16x32 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_ref_i32x16(&self) -> &simd::x86::w512::i32x16 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_ref_i64x8(&self) -> &simd::x86::w512::i64x8 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_ref_i8x64(&self) -> &simd::x86::w512::i8x64 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_ref_u16x32(&self) -> &simd::x86::w512::u16x32 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_ref_u32x16(&self) -> &simd::x86::w512::u32x16 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_ref_u64x8(&self) -> &simd::x86::w512::u64x8 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_ref_u8x64(&self) -> &simd::x86::w512::u8x64 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8]
+pub fn simd::x86::w512::f64x8::bitcast_u16x32(self) -> simd::x86::w512::u16x32 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_u32x16(self) -> simd::x86::w512::u32x16 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_u64x8(self) -> simd::x86::w512::u64x8 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::bitcast_u8x64(self) -> simd::x86::w512::u8x64 [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8]
+pub fn simd::x86::w512::f64x8::blend(Self, Self, Self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::cast_slice(archmage::tokens::generated::x86::X64V4Token, &[f64]) -> core::option::Option<&[Self]> [also: simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::cast_slice_mut(archmage::tokens::generated::x86::X64V4Token, &mut [f64]) -> core::option::Option<&mut [Self]> [also: simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::ceil(self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::clamp(self, Self, Self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::exp2_lowp(self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::exp_lowp(self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::floor(self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::from_array(archmage::tokens::generated::x86::X64V4Token, [f64; 8]) -> Self [also: simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::from_bytes(archmage::tokens::generated::x86::X64V4Token, &[u8; 64]) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::from_bytes_owned(archmage::tokens::generated::x86::X64V4Token, [u8; 64]) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::from_m512d(archmage::tokens::generated::x86::X64V4Token, core::core_arch::x86::__m512d) -> Self [also: simd::x86::w512::f64x8]
+pub unsafe fn simd::x86::w512::f64x8::from_raw(core::core_arch::x86::__m512d) -> Self
+pub fn simd::x86::w512::f64x8::from_raw_checked(archmage::tokens::generated::x86::X64V4Token, core::core_arch::x86::__m512d) -> Self [also: simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::from_slice(archmage::tokens::generated::x86::X64V4Token, &[f64]) -> Self [also: simd::x86::w512::f64x8]
+pub const fn simd::x86::w512::f64x8::implementation_name() -> &'static str [also: (root)]
+pub fn simd::x86::w512::f64x8::ln_lowp(self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::load(archmage::tokens::generated::x86::X64V4Token, &[f64; 8]) -> Self [also: simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::log10_lowp(self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::log2_lowp(self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::max(self, Self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::min(self, Self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::mul_add(self, Self, Self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::mul_sub(self, Self, Self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::not(self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::partition_slice(archmage::tokens::generated::x86::X64V4Token, &[f64]) -> (&[[f64; 8]], &[f64]) [also: simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::partition_slice_mut(archmage::tokens::generated::x86::X64V4Token, &mut [f64]) -> (&mut [[f64; 8]], &mut [f64]) [also: simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::pow_lowp(self, f64) -> Self [also: simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::raw(self) -> core::core_arch::x86::__m512d [also: simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::rcp_approx(self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::recip(self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::reduce_add(self) -> f64 [also: simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::reduce_max(self) -> f64 [also: simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::reduce_min(self) -> f64 [also: simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::round(self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::rsqrt(self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::rsqrt_approx(self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::simd_eq(self, Self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::simd_ge(self, Self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::simd_gt(self, Self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::simd_le(self, Self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::simd_lt(self, Self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::simd_ne(self, Self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::f64x8::splat(archmage::tokens::generated::x86::X64V4Token, f64) -> Self [also: simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::sqrt(self) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::store(self, &mut [f64; 8]) [also: simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::to_array(self) -> [f64; 8] [also: simd::x86::w512::f64x8]
+pub fn simd::x86::w512::f64x8::zero(archmage::tokens::generated::x86::X64V4Token) -> Self [also: simd::x86::w512::f32x16, simd::x86::w512::f64x8, simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn [f64; 8]::from(simd::x86::w512::f64x8) -> Self [also: (root)]
+pub fn simd::x86::w512::i16x32::as_array(&self) -> &[i16; 32] [also: simd::x86::w512::i16x32]
+pub fn simd::x86::w512::i16x32::as_array_mut(&mut self) -> &mut [i16; 32] [also: simd::x86::w512::i16x32]
+pub fn simd::x86::w512::i16x32::cast_slice(archmage::tokens::generated::x86::X64V4Token, &[i16]) -> core::option::Option<&[Self]> [also: simd::x86::w512::i16x32]
+pub fn simd::x86::w512::i16x32::cast_slice_mut(archmage::tokens::generated::x86::X64V4Token, &mut [i16]) -> core::option::Option<&mut [Self]> [also: simd::x86::w512::i16x32]
+pub fn simd::x86::w512::i16x32::from_array(archmage::tokens::generated::x86::X64V4Token, [i16; 32]) -> Self [also: simd::x86::w512::i16x32]
+pub unsafe fn simd::x86::w512::i16x32::from_raw(core::core_arch::x86::__m512i) -> Self
+pub fn simd::x86::w512::i16x32::from_slice(archmage::tokens::generated::x86::X64V4Token, &[i16]) -> Self [also: simd::x86::w512::i16x32]
+pub const fn simd::x86::w512::i16x32::implementation_name() -> &'static str [also: (root)]
+pub fn simd::x86::w512::i16x32::load(archmage::tokens::generated::x86::X64V4Token, &[i16; 32]) -> Self [also: simd::x86::w512::i16x32]
+pub fn simd::x86::w512::i16x32::partition_slice(archmage::tokens::generated::x86::X64V4Token, &[i16]) -> (&[[i16; 32]], &[i16]) [also: simd::x86::w512::i16x32]
+pub fn simd::x86::w512::i16x32::partition_slice_mut(archmage::tokens::generated::x86::X64V4Token, &mut [i16]) -> (&mut [[i16; 32]], &mut [i16]) [also: simd::x86::w512::i16x32]
+pub fn simd::x86::w512::i16x32::reduce_add(self) -> i16 [also: simd::x86::w512::i16x32]
+pub fn simd::x86::w512::i16x32::splat(archmage::tokens::generated::x86::X64V4Token, i16) -> Self [also: simd::x86::w512::i16x32]
+pub fn simd::x86::w512::i16x32::store(self, &mut [i16; 32]) [also: simd::x86::w512::i16x32]
+pub fn simd::x86::w512::i16x32::to_array(self) -> [i16; 32] [also: simd::x86::w512::i16x32]
+pub fn [i16; 32]::from(simd::x86::w512::i16x32) -> Self [also: (root)]
+#[repr(transparent)] pub struct prelude::I32Vec(_)
+pub fn simd::x86::w512::i32x16::as_array(&self) -> &[i32; 16] [also: simd::x86::w512::i32x16]
+pub fn simd::x86::w512::i32x16::as_array_mut(&mut self) -> &mut [i32; 16] [also: simd::x86::w512::i32x16]
+pub fn simd::x86::w512::i32x16::cast_slice(archmage::tokens::generated::x86::X64V4Token, &[i32]) -> core::option::Option<&[Self]> [also: simd::x86::w512::i32x16]
+pub fn simd::x86::w512::i32x16::cast_slice_mut(archmage::tokens::generated::x86::X64V4Token, &mut [i32]) -> core::option::Option<&mut [Self]> [also: simd::x86::w512::i32x16]
+pub fn simd::x86::w512::i32x16::from_array(archmage::tokens::generated::x86::X64V4Token, [i32; 16]) -> Self [also: simd::x86::w512::i32x16]
+pub unsafe fn simd::x86::w512::i32x16::from_raw(core::core_arch::x86::__m512i) -> Self
+pub fn simd::x86::w512::i32x16::from_slice(archmage::tokens::generated::x86::X64V4Token, &[i32]) -> Self [also: simd::x86::w512::i32x16]
+pub const fn simd::x86::w512::i32x16::implementation_name() -> &'static str [also: (root)]
+pub fn simd::x86::w512::i32x16::load(archmage::tokens::generated::x86::X64V4Token, &[i32; 16]) -> Self [also: simd::x86::w512::i32x16]
+pub fn simd::x86::w512::i32x16::partition_slice(archmage::tokens::generated::x86::X64V4Token, &[i32]) -> (&[[i32; 16]], &[i32]) [also: simd::x86::w512::i32x16]
+pub fn simd::x86::w512::i32x16::partition_slice_mut(archmage::tokens::generated::x86::X64V4Token, &mut [i32]) -> (&mut [[i32; 16]], &mut [i32]) [also: simd::x86::w512::i32x16]
+pub fn simd::x86::w512::i32x16::reduce_add(self) -> i32 [also: simd::x86::w512::i32x16]
+pub fn simd::x86::w512::i32x16::splat(archmage::tokens::generated::x86::X64V4Token, i32) -> Self [also: simd::x86::w512::i32x16]
+pub fn simd::x86::w512::i32x16::store(self, &mut [i32; 16]) [also: simd::x86::w512::i32x16]
+pub fn simd::x86::w512::i32x16::to_array(self) -> [i32; 16] [also: simd::x86::w512::i32x16]
+pub fn simd::x86::w512::i32x16::to_f32x16(self) -> simd::x86::w512::f32x16 [also: simd::x86::w512::i32x16]
+pub fn [i32; 16]::from(simd::x86::w512::i32x16) -> Self [also: (root)]
+#[repr(transparent)] pub struct prelude::I64Vec(_)
+pub fn simd::x86::w512::i64x8::all_true(self) -> bool [also: simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::i64x8::any_true(self) -> bool [also: simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::i64x8::as_array(&self) -> &[i64; 8] [also: simd::x86::w512::i64x8]
+pub fn simd::x86::w512::i64x8::as_array_mut(&mut self) -> &mut [i64; 8] [also: simd::x86::w512::i64x8]
+pub fn simd::x86::w512::i64x8::bitcast_f32x16(self) -> simd::x86::w512::f32x16 [also: simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::i64x8::bitcast_f64x8(self) -> simd::x86::w512::f64x8 [also: simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::i64x8::bitcast_mut_f32x16(&mut self) -> &mut simd::x86::w512::f32x16 [also: simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::i64x8::bitcast_mut_f64x8(&mut self) -> &mut simd::x86::w512::f64x8 [also: simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::i64x8::bitcast_ref_f32x16(&self) -> &simd::x86::w512::f32x16 [also: simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::i64x8::bitcast_ref_f64x8(&self) -> &simd::x86::w512::f64x8 [also: simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::i64x8::bitmask(self) -> u32 [also: simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::i64x8::cast_slice(archmage::tokens::generated::x86::X64V4Token, &[i64]) -> core::option::Option<&[Self]> [also: simd::x86::w512::i64x8]
+pub fn simd::x86::w512::i64x8::cast_slice_mut(archmage::tokens::generated::x86::X64V4Token, &mut [i64]) -> core::option::Option<&mut [Self]> [also: simd::x86::w512::i64x8]
+pub fn simd::x86::w512::i64x8::from_array(archmage::tokens::generated::x86::X64V4Token, [i64; 8]) -> Self [also: simd::x86::w512::i64x8]
+pub fn simd::x86::w512::i64x8::from_m512i(archmage::tokens::generated::x86::X64V4Token, core::core_arch::x86::__m512i) -> Self [also: simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub unsafe fn simd::x86::w512::i64x8::from_raw(core::core_arch::x86::__m512i) -> Self
+pub fn simd::x86::w512::i64x8::from_raw_checked(archmage::tokens::generated::x86::X64V4Token, core::core_arch::x86::__m512i) -> Self [also: simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::i64x8::from_slice(archmage::tokens::generated::x86::X64V4Token, &[i64]) -> Self [also: simd::x86::w512::i64x8]
+pub const fn simd::x86::w512::i64x8::implementation_name() -> &'static str [also: (root)]
+pub fn simd::x86::w512::i64x8::load(archmage::tokens::generated::x86::X64V4Token, &[i64; 8]) -> Self [also: simd::x86::w512::i64x8]
+pub fn simd::x86::w512::i64x8::partition_slice(archmage::tokens::generated::x86::X64V4Token, &[i64]) -> (&[[i64; 8]], &[i64]) [also: simd::x86::w512::i64x8]
+pub fn simd::x86::w512::i64x8::partition_slice_mut(archmage::tokens::generated::x86::X64V4Token, &mut [i64]) -> (&mut [[i64; 8]], &mut [i64]) [also: simd::x86::w512::i64x8]
+pub fn simd::x86::w512::i64x8::raw(self) -> core::core_arch::x86::__m512i [also: simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::i64x8::reduce_add(self) -> i64 [also: simd::x86::w512::i64x8]
+pub fn simd::x86::w512::i64x8::shl<const N: u32>(self) -> Self [also: simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::i64x8::shr_arithmetic<const N: u32>(self) -> Self [also: simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64]
+pub fn simd::x86::w512::i64x8::shr_logical<const N: u32>(self) -> Self [also: simd::x86::w512::i16x32, simd::x86::w512::i32x16, simd::x86::w512::i64x8, simd::x86::w512::i8x64, simd::x86::w512::u16x32, simd::x86::w512::u32x16, simd::x86::w512::u64x8, simd::x86::w512::u8x64]
+pub fn simd::x86::w512::i64x8::splat(archmage::tokens::generated::x86::X64V4Token, i64) -> Self [also: simd::x86::w512::i64x8]
+pub fn simd::x86::w512::i64x8::store(self, &mut [i64; 8]) [also: simd::x86::w512::i64x8]
+pub fn simd::x86::w512::i64x8::to_array(self) -> [i64; 8] [also: simd::x86::w512::i64x8]
+pub fn [i64; 8]::from(simd::x86::w512::i64x8) -> Self [also: (root)]
+pub fn simd::x86::w512::i8x64::as_array(&self) -> &[i8; 64] [also: simd::x86::w512::i8x64]
+pub fn simd::x86::w512::i8x64::as_array_mut(&mut self) -> &mut [i8; 64] [also: simd::x86::w512::i8x64]
+pub fn simd::x86::w512::i8x64::cast_slice(archmage::tokens::generated::x86::X64V4Token, &[i8]) -> core::option::Option<&[Self]> [also: simd::x86::w512::i8x64]
+pub fn simd::x86::w512::i8x64::cast_slice_mut(archmage::tokens::generated::x86::X64V4Token, &mut [i8]) -> core::option::Option<&mut [Self]> [also: simd::x86::w512::i8x64]
+pub fn simd::x86::w512::i8x64::from_array(archmage::tokens::generated::x86::X64V4Token, [i8; 64]) -> Self [also: simd::x86::w512::i8x64]
+pub unsafe fn simd::x86::w512::i8x64::from_raw(core::core_arch::x86::__m512i) -> Self
+pub fn simd::x86::w512::i8x64::from_slice(archmage::tokens::generated::x86::X64V4Token, &[i8]) -> Self [also: simd::x86::w512::i8x64]
+pub const fn simd::x86::w512::i8x64::implementation_name() -> &'static str [also: (root)]
+pub fn simd::x86::w512::i8x64::load(archmage::tokens::generated::x86::X64V4Token, &[i8; 64]) -> Self [also: simd::x86::w512::i8x64]
+pub fn simd::x86::w512::i8x64::partition_slice(archmage::tokens::generated::x86::X64V4Token, &[i8]) -> (&[[i8; 64]], &[i8]) [also: simd::x86::w512::i8x64]
+pub fn simd::x86::w512::i8x64::partition_slice_mut(archmage::tokens::generated::x86::X64V4Token, &mut [i8]) -> (&mut [[i8; 64]], &mut [i8]) [also: simd::x86::w512::i8x64]
+pub fn simd::x86::w512::i8x64::reduce_add(self) -> i8 [also: simd::x86::w512::i8x64]
+pub fn simd::x86::w512::i8x64::splat(archmage::tokens::generated::x86::X64V4Token, i8) -> Self [also: simd::x86::w512::i8x64]
+pub fn simd::x86::w512::i8x64::store(self, &mut [i8; 64]) [also: simd::x86::w512::i8x64]
+pub fn simd::x86::w512::i8x64::to_array(self) -> [i8; 64] [also: simd::x86::w512::i8x64]
+pub fn [i8; 64]::from(simd::x86::w512::i8x64) -> Self [also: (root)]
+pub fn simd::x86::w512::u16x32::as_array(&self) -> &[u16; 32] [also: simd::x86::w512::u16x32]
+pub fn simd::x86::w512::u16x32::as_array_mut(&mut self) -> &mut [u16; 32] [also: simd::x86::w512::u16x32]
+pub fn simd::x86::w512::u16x32::cast_slice(archmage::tokens::generated::x86::X64V4Token, &[u16]) -> core::option::Option<&[Self]> [also: simd::x86::w512::u16x32]
+pub fn simd::x86::w512::u16x32::cast_slice_mut(archmage::tokens::generated::x86::X64V4Token, &mut [u16]) -> core::option::Option<&mut [Self]> [also: simd::x86::w512::u16x32]
+pub fn simd::x86::w512::u16x32::from_array(archmage::tokens::generated::x86::X64V4Token, [u16; 32]) -> Self [also: simd::x86::w512::u16x32]
+pub unsafe fn simd::x86::w512::u16x32::from_raw(core::core_arch::x86::__m512i) -> Self
+pub fn simd::x86::w512::u16x32::from_slice(archmage::tokens::generated::x86::X64V4Token, &[u16]) -> Self [also: simd::x86::w512::u16x32]
+pub const fn simd::x86::w512::u16x32::implementation_name() -> &'static str [also: (root)]
+pub fn simd::x86::w512::u16x32::load(archmage::tokens::generated::x86::X64V4Token, &[u16; 32]) -> Self [also: simd::x86::w512::u16x32]
+pub fn simd::x86::w512::u16x32::partition_slice(archmage::tokens::generated::x86::X64V4Token, &[u16]) -> (&[[u16; 32]], &[u16]) [also: simd::x86::w512::u16x32]
+pub fn simd::x86::w512::u16x32::partition_slice_mut(archmage::tokens::generated::x86::X64V4Token, &mut [u16]) -> (&mut [[u16; 32]], &mut [u16]) [also: simd::x86::w512::u16x32]
+pub fn simd::x86::w512::u16x32::reduce_add(self) -> u16 [also: simd::x86::w512::u16x32]
+pub fn simd::x86::w512::u16x32::splat(archmage::tokens::generated::x86::X64V4Token, u16) -> Self [also: simd::x86::w512::u16x32]
+pub fn simd::x86::w512::u16x32::store(self, &mut [u16; 32]) [also: simd::x86::w512::u16x32]
+pub fn simd::x86::w512::u16x32::to_array(self) -> [u16; 32] [also: simd::x86::w512::u16x32]
+pub fn [u16; 32]::from(simd::x86::w512::u16x32) -> Self [also: (root)]
+#[repr(transparent)] pub struct prelude::U32Vec(_)
+pub fn simd::x86::w512::u32x16::as_array(&self) -> &[u32; 16] [also: simd::x86::w512::u32x16]
+pub fn simd::x86::w512::u32x16::as_array_mut(&mut self) -> &mut [u32; 16] [also: simd::x86::w512::u32x16]
+pub fn simd::x86::w512::u32x16::cast_slice(archmage::tokens::generated::x86::X64V4Token, &[u32]) -> core::option::Option<&[Self]> [also: simd::x86::w512::u32x16]
+pub fn simd::x86::w512::u32x16::cast_slice_mut(archmage::tokens::generated::x86::X64V4Token, &mut [u32]) -> core::option::Option<&mut [Self]> [also: simd::x86::w512::u32x16]
+pub fn simd::x86::w512::u32x16::from_array(archmage::tokens::generated::x86::X64V4Token, [u32; 16]) -> Self [also: simd::x86::w512::u32x16]
+pub unsafe fn simd::x86::w512::u32x16::from_raw(core::core_arch::x86::__m512i) -> Self
+pub fn simd::x86::w512::u32x16::from_slice(archmage::tokens::generated::x86::X64V4Token, &[u32]) -> Self [also: simd::x86::w512::u32x16]
+pub const fn simd::x86::w512::u32x16::implementation_name() -> &'static str [also: (root)]
+pub fn simd::x86::w512::u32x16::load(archmage::tokens::generated::x86::X64V4Token, &[u32; 16]) -> Self [also: simd::x86::w512::u32x16]
+pub fn simd::x86::w512::u32x16::partition_slice(archmage::tokens::generated::x86::X64V4Token, &[u32]) -> (&[[u32; 16]], &[u32]) [also: simd::x86::w512::u32x16]
+pub fn simd::x86::w512::u32x16::partition_slice_mut(archmage::tokens::generated::x86::X64V4Token, &mut [u32]) -> (&mut [[u32; 16]], &mut [u32]) [also: simd::x86::w512::u32x16]
+pub fn simd::x86::w512::u32x16::reduce_add(self) -> u32 [also: simd::x86::w512::u32x16]
+pub fn simd::x86::w512::u32x16::splat(archmage::tokens::generated::x86::X64V4Token, u32) -> Self [also: simd::x86::w512::u32x16]
+pub fn simd::x86::w512::u32x16::store(self, &mut [u32; 16]) [also: simd::x86::w512::u32x16]
+pub fn simd::x86::w512::u32x16::to_array(self) -> [u32; 16] [also: simd::x86::w512::u32x16]
+pub fn [u32; 16]::from(simd::x86::w512::u32x16) -> Self [also: (root)]
+pub fn simd::x86::w512::u64x8::as_array(&self) -> &[u64; 8] [also: simd::x86::w512::u64x8]
+pub fn simd::x86::w512::u64x8::as_array_mut(&mut self) -> &mut [u64; 8] [also: simd::x86::w512::u64x8]
+pub fn simd::x86::w512::u64x8::cast_slice(archmage::tokens::generated::x86::X64V4Token, &[u64]) -> core::option::Option<&[Self]> [also: simd::x86::w512::u64x8]
+pub fn simd::x86::w512::u64x8::cast_slice_mut(archmage::tokens::generated::x86::X64V4Token, &mut [u64]) -> core::option::Option<&mut [Self]> [also: simd::x86::w512::u64x8]
+pub fn simd::x86::w512::u64x8::from_array(archmage::tokens::generated::x86::X64V4Token, [u64; 8]) -> Self [also: simd::x86::w512::u64x8]
+pub unsafe fn simd::x86::w512::u64x8::from_raw(core::core_arch::x86::__m512i) -> Self
+pub fn simd::x86::w512::u64x8::from_slice(archmage::tokens::generated::x86::X64V4Token, &[u64]) -> Self [also: simd::x86::w512::u64x8]
+pub const fn simd::x86::w512::u64x8::implementation_name() -> &'static str [also: (root)]
+pub fn simd::x86::w512::u64x8::load(archmage::tokens::generated::x86::X64V4Token, &[u64; 8]) -> Self [also: simd::x86::w512::u64x8]
+pub fn simd::x86::w512::u64x8::partition_slice(archmage::tokens::generated::x86::X64V4Token, &[u64]) -> (&[[u64; 8]], &[u64]) [also: simd::x86::w512::u64x8]
+pub fn simd::x86::w512::u64x8::partition_slice_mut(archmage::tokens::generated::x86::X64V4Token, &mut [u64]) -> (&mut [[u64; 8]], &mut [u64]) [also: simd::x86::w512::u64x8]
+pub fn simd::x86::w512::u64x8::reduce_add(self) -> u64 [also: simd::x86::w512::u64x8]
+pub fn simd::x86::w512::u64x8::splat(archmage::tokens::generated::x86::X64V4Token, u64) -> Self [also: simd::x86::w512::u64x8]
+pub fn simd::x86::w512::u64x8::store(self, &mut [u64; 8]) [also: simd::x86::w512::u64x8]
+pub fn simd::x86::w512::u64x8::to_array(self) -> [u64; 8] [also: simd::x86::w512::u64x8]
+pub fn [u64; 8]::from(simd::x86::w512::u64x8) -> Self [also: (root)]
+pub fn simd::x86::w512::u8x64::as_array(&self) -> &[u8; 64] [also: simd::x86::w512::u8x64]
+pub fn simd::x86::w512::u8x64::as_array_mut(&mut self) -> &mut [u8; 64] [also: simd::x86::w512::u8x64]
+pub fn simd::x86::w512::u8x64::cast_slice(archmage::tokens::generated::x86::X64V4Token, &[u8]) -> core::option::Option<&[Self]> [also: simd::x86::w512::u8x64]
+pub fn simd::x86::w512::u8x64::cast_slice_mut(archmage::tokens::generated::x86::X64V4Token, &mut [u8]) -> core::option::Option<&mut [Self]> [also: simd::x86::w512::u8x64]
+pub fn simd::x86::w512::u8x64::from_array(archmage::tokens::generated::x86::X64V4Token, [u8; 64]) -> Self [also: simd::x86::w512::u8x64]
+pub unsafe fn simd::x86::w512::u8x64::from_raw(core::core_arch::x86::__m512i) -> Self
+pub fn simd::x86::w512::u8x64::from_slice(archmage::tokens::generated::x86::X64V4Token, &[u8]) -> Self [also: simd::x86::w512::u8x64]
+pub const fn simd::x86::w512::u8x64::implementation_name() -> &'static str [also: (root)]
+pub fn simd::x86::w512::u8x64::load(archmage::tokens::generated::x86::X64V4Token, &[u8; 64]) -> Self [also: simd::x86::w512::u8x64]
+pub fn simd::x86::w512::u8x64::partition_slice(archmage::tokens::generated::x86::X64V4Token, &[u8]) -> (&[[u8; 64]], &[u8]) [also: simd::x86::w512::u8x64]
+pub fn simd::x86::w512::u8x64::partition_slice_mut(archmage::tokens::generated::x86::X64V4Token, &mut [u8]) -> (&mut [[u8; 64]], &mut [u8]) [also: simd::x86::w512::u8x64]
+pub fn simd::x86::w512::u8x64::reduce_add(self) -> u8 [also: simd::x86::w512::u8x64]
+pub fn simd::x86::w512::u8x64::splat(archmage::tokens::generated::x86::X64V4Token, u8) -> Self [also: simd::x86::w512::u8x64]
+pub fn simd::x86::w512::u8x64::store(self, &mut [u8; 64]) [also: simd::x86::w512::u8x64]
+pub fn simd::x86::w512::u8x64::to_array(self) -> [u8; 64] [also: simd::x86::w512::u8x64]
+pub fn [u8; 64]::from(simd::x86::w512::u8x64) -> Self [also: (root)]
+pub trait simd::backends::i16x32PopcntBackend: simd::backends::I16x32Backend
+pub trait simd::backends::i32x16PopcntBackend: simd::backends::I32x16Backend
+pub trait simd::backends::i64x8PopcntBackend: simd::backends::I64x8Backend
+pub fn simd::backends::i64x8PopcntBackend::popcnt(self, Self::Repr) -> Self::Repr [also: simd::backends::i16x32PopcntBackend, simd::backends::i32x16PopcntBackend, simd::backends::i8x64PopcntBackend, simd::backends::u16x32PopcntBackend, simd::backends::u32x16PopcntBackend, simd::backends::u64x8PopcntBackend, simd::backends::u8x64PopcntBackend]
+pub trait simd::backends::i8x64PopcntBackend: simd::backends::I8x64Backend
+pub trait simd::backends::u16x32PopcntBackend: simd::backends::U16x32Backend
+pub trait simd::backends::u32x16PopcntBackend: simd::backends::U32x16Backend
+pub trait simd::backends::u64x8PopcntBackend: simd::backends::U64x8Backend
+pub trait simd::backends::u8x64PopcntBackend: simd::backends::U8x64Backend
+pub const fn simd::generic::f32x16<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str
+pub const fn simd::generic::f32x16<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str
+pub const fn simd::generic::f64x8<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str
+pub const fn simd::generic::f64x8<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str
+pub const fn simd::generic::i16x32<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str
+pub const fn simd::generic::i16x32<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str
+pub const fn simd::generic::i32x16<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str
+pub const fn simd::generic::i32x16<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str
+pub const fn simd::generic::i64x8<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str
+pub const fn simd::generic::i64x8<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str
+pub fn simd::generic::i64x8<T>::popcnt(self) -> Self [also: simd::generic::i16x32<T>, simd::generic::i32x16<T>, simd::generic::i8x64<T>, simd::generic::u16x32<T>, simd::generic::u32x16<T>, simd::generic::u64x8<T>, simd::generic::u8x64<T>]
+pub const fn simd::generic::i8x64<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str
+pub const fn simd::generic::i8x64<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str
+pub const fn simd::generic::u16x32<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str
+pub const fn simd::generic::u16x32<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str
+pub const fn simd::generic::u32x16<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str
+pub const fn simd::generic::u32x16<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str
+pub const fn simd::generic::u64x8<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str
+pub const fn simd::generic::u64x8<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str
+pub const fn simd::generic::u8x64<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str
+pub const fn simd::generic::u8x64<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str
+pub fn simd::v3::i64x4::abs_fast(self, archmage::tokens::generated::x86::X64V4Token) -> Self [also: simd::v3::i64x4, simd::x86::w128::i64x2]
+pub fn simd::v3::i64x4::max_fast(self, Self, archmage::tokens::generated::x86::X64V4Token) -> Self [also: simd::v3::i64x4, simd::v3::u64x4, simd::x86::w128::i64x2, simd::x86::w128::u64x2]
+pub fn simd::v3::i64x4::min_fast(self, Self, archmage::tokens::generated::x86::X64V4Token) -> Self [also: simd::v3::i64x4, simd::v3::u64x4, simd::x86::w128::i64x2, simd::x86::w128::u64x2]
+pub type simd::v4::Token = archmage::tokens::generated::x86::X64V4Token
+pub type simd::v4::f32x16 = simd::generic::f32x16<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::f32xN = simd::generic::f32x16<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::f64x8 = simd::generic::f64x8<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::f64xN = simd::generic::f64x8<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::i16x32 = simd::generic::i16x32<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::i16xN = simd::generic::i16x32<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::i32x16 = simd::generic::i32x16<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::i32xN = simd::generic::i32x16<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::i64x8 = simd::generic::i64x8<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::i64xN = simd::generic::i64x8<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::i8x64 = simd::generic::i8x64<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::i8xN = simd::generic::i8x64<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::u16x32 = simd::generic::u16x32<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::u16xN = simd::generic::u16x32<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::u32x16 = simd::generic::u32x16<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::u32xN = simd::generic::u32x16<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::u64x8 = simd::generic::u64x8<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::u64xN = simd::generic::u64x8<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::u8x64 = simd::generic::u8x64<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::u8xN = simd::generic::u8x64<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4x::Token = archmage::tokens::generated::x86::X64V4xToken
+pub type simd::v4x::f32x16 = simd::generic::f32x16<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::f32xN = simd::generic::f32x16<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::f64x8 = simd::generic::f64x8<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::f64xN = simd::generic::f64x8<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::i16x32 = simd::generic::i16x32<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::i16xN = simd::generic::i16x32<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::i32x16 = simd::generic::i32x16<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::i32xN = simd::generic::i32x16<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::i64x8 = simd::generic::i64x8<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::i64xN = simd::generic::i64x8<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::i8x64 = simd::generic::i8x64<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::i8xN = simd::generic::i8x64<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::u16x32 = simd::generic::u16x32<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::u16xN = simd::generic::u16x32<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::u32x16 = simd::generic::u32x16<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::u32xN = simd::generic::u32x16<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::u64x8 = simd::generic::u64x8<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::u64xN = simd::generic::u64x8<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::u8x64 = simd::generic::u8x64<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::u8xN = simd::generic::u8x64<archmage::tokens::generated::x86::X64V4xToken>
+pub mod simd::x86::w512
+#[repr(transparent)] pub struct simd::x86::w512::f32x16(_)
+pub unsafe fn simd::x86::w512::f32x16::from_raw(core::core_arch::x86::__m512) -> Self
+#[repr(transparent)] pub struct simd::x86::w512::f64x8(_)
+pub unsafe fn simd::x86::w512::f64x8::from_raw(core::core_arch::x86::__m512d) -> Self
+#[repr(transparent)] pub struct simd::x86::w512::i16x32(_)
+pub unsafe fn simd::x86::w512::i16x32::from_raw(core::core_arch::x86::__m512i) -> Self
+#[repr(transparent)] pub struct simd::x86::w512::i32x16(_)
+pub unsafe fn simd::x86::w512::i32x16::from_raw(core::core_arch::x86::__m512i) -> Self
+#[repr(transparent)] pub struct simd::x86::w512::i64x8(_)
+pub unsafe fn simd::x86::w512::i64x8::from_raw(core::core_arch::x86::__m512i) -> Self
+#[repr(transparent)] pub struct simd::x86::w512::i8x64(_)
+pub unsafe fn simd::x86::w512::i8x64::from_raw(core::core_arch::x86::__m512i) -> Self
+#[repr(transparent)] pub struct simd::x86::w512::u16x32(_)
+pub unsafe fn simd::x86::w512::u16x32::from_raw(core::core_arch::x86::__m512i) -> Self
+#[repr(transparent)] pub struct simd::x86::w512::u32x16(_)
+pub unsafe fn simd::x86::w512::u32x16::from_raw(core::core_arch::x86::__m512i) -> Self
+#[repr(transparent)] pub struct simd::x86::w512::u64x8(_)
+pub unsafe fn simd::x86::w512::u64x8::from_raw(core::core_arch::x86::__m512i) -> Self
+#[repr(transparent)] pub struct simd::x86::w512::u8x64(_)
+pub unsafe fn simd::x86::w512::u8x64::from_raw(core::core_arch::x86::__m512i) -> Self
+
+## trait impls (23 types)
+
+[f32; 16]: From<simd::x86::w512::f32x16>
+[f64; 8]: From<simd::x86::w512::f64x8>
+[i16; 32]: From<simd::x86::w512::i16x32>
+[i32; 16]: From<simd::x86::w512::i32x16>
+[i64; 8]: From<simd::x86::w512::i64x8>
+[i8; 64]: From<simd::x86::w512::i8x64>
+[u16; 32]: From<simd::x86::w512::u16x32>
+[u32; 16]: From<simd::x86::w512::u32x16>
+[u64; 8]: From<simd::x86::w512::u64x8>
+[u8; 64]: From<simd::x86::w512::u8x64>
+archmage::tokens::generated::x86::Avx512Fp16Token: simd::backends::F32x4Backend, simd::backends::F32x8Backend, simd::generic::F32x8FromHalves
+archmage::tokens::generated::x86::X64V4Token: SimdTypes, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x8Backend, simd::backends::F64x8Backend, simd::backends::I16x32Backend, simd::backends::I32x16Backend, simd::backends::I64x8Backend, simd::backends::I8x64Backend, simd::backends::U16x32Backend, simd::backends::U32x16Backend, simd::backends::U64x8Backend, simd::backends::U8x64Backend, simd::generic::F32x16FromHalves, simd::generic::F32x8FromHalves
+archmage::tokens::generated::x86::X64V4xToken: SimdTypes, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x8Backend, simd::backends::F64x8Backend, simd::backends::I16x32Backend, simd::backends::I32x16Backend, simd::backends::I64x8Backend, simd::backends::I8x64Backend, simd::backends::U16x32Backend, simd::backends::U32x16Backend, simd::backends::U64x8Backend, simd::backends::U8x64Backend, simd::backends::i16x32PopcntBackend, simd::backends::i32x16PopcntBackend, simd::backends::i64x8PopcntBackend, simd::backends::i8x64PopcntBackend, simd::backends::u16x32PopcntBackend, simd::backends::u32x16PopcntBackend, simd::backends::u64x8PopcntBackend, simd::backends::u8x64PopcntBackend, simd::generic::F32x16FromHalves, simd::generic::F32x8FromHalves
+simd::x86::w512::f32x16: Add, Add<f32>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Clone, Copy, Debug, Div, Div<f32>, DivAssign, Index<usize>, IndexMut<usize>, Mul, Mul<f32>, MulAssign, Neg, Sub, Sub<f32>, SubAssign
+simd::x86::w512::f64x8: Add, Add<f64>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Clone, Copy, Debug, Div, Div<f64>, DivAssign, Index<usize>, IndexMut<usize>, Mul, Mul<f64>, MulAssign, Neg, Sub, Sub<f64>, SubAssign
+simd::x86::w512::i16x32: Add, Add<i16>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Clone, Copy, Debug, Index<usize>, IndexMut<usize>, Mul, Sub, Sub<i16>, SubAssign
+simd::x86::w512::i32x16: Add, Add<i32>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Clone, Copy, Debug, Index<usize>, IndexMut<usize>, Mul, Sub, Sub<i32>, SubAssign
+simd::x86::w512::i64x8: Add, Add<i64>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Clone, Copy, Debug, Index<usize>, IndexMut<usize>, Sub, Sub<i64>, SubAssign
+simd::x86::w512::i8x64: Add, Add<i8>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Clone, Copy, Debug, Index<usize>, IndexMut<usize>, Sub, Sub<i8>, SubAssign
+simd::x86::w512::u16x32: Add, Add<u16>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Clone, Copy, Debug, Index<usize>, IndexMut<usize>, Mul, Sub, Sub<u16>, SubAssign
+simd::x86::w512::u32x16: Add, Add<u32>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Clone, Copy, Debug, Index<usize>, IndexMut<usize>, Mul, Sub, Sub<u32>, SubAssign
+simd::x86::w512::u64x8: Add, Add<u64>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Clone, Copy, Debug, Index<usize>, IndexMut<usize>, Sub, Sub<u64>, SubAssign
+simd::x86::w512::u8x64: Add, Add<u8>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Clone, Copy, Debug, Index<usize>, IndexMut<usize>, Sub, Sub<u8>, SubAssign
+
+## auto traits
+
+10 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
+
+## removed by features (45 lines)
+
+pub type prelude::F32Vec = simd::generic::f32x8<archmage::tokens::generated::x86::X64V3Token>
+pub type prelude::F64Vec = simd::generic::f64x4<archmage::tokens::generated::x86::X64V3Token>
+pub type prelude::I32Vec = simd::generic::i32x8<archmage::tokens::generated::x86::X64V3Token>
+pub type prelude::I64Vec = simd::generic::i64x4<archmage::tokens::generated::x86::X64V3Token>
+pub type prelude::U32Vec = simd::generic::u32x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::f32x16 = simd::generic::f32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::f32xN = simd::generic::f32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::f64x8 = simd::generic::f64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::f64xN = simd::generic::f64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::i16x32 = simd::generic::i16x32<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::i16xN = simd::generic::i16x32<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::i32x16 = simd::generic::i32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::i32xN = simd::generic::i32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::i64x8 = simd::generic::i64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::i64xN = simd::generic::i64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::i8x64 = simd::generic::i8x64<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::i8xN = simd::generic::i8x64<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::u16x32 = simd::generic::u16x32<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::u16xN = simd::generic::u16x32<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::u32x16 = simd::generic::u32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::u32xN = simd::generic::u32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::u64x8 = simd::generic::u64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::u64xN = simd::generic::u64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::u8x64 = simd::generic::u8x64<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::u8xN = simd::generic::u8x64<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::f32x16 = simd::generic::f32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::f32xN = simd::generic::f32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::f64x8 = simd::generic::f64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::f64xN = simd::generic::f64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::i16x32 = simd::generic::i16x32<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::i16xN = simd::generic::i16x32<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::i32x16 = simd::generic::i32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::i32xN = simd::generic::i32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::i64x8 = simd::generic::i64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::i64xN = simd::generic::i64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::i8x64 = simd::generic::i8x64<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::i8xN = simd::generic::i8x64<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::u16x32 = simd::generic::u16x32<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::u16xN = simd::generic::u16x32<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::u32x16 = simd::generic::u32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::u32xN = simd::generic::u32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::u64x8 = simd::generic::u64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::u64xN = simd::generic::u64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::u8x64 = simd::generic::u8x64<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::u8xN = simd::generic::u8x64<archmage::tokens::generated::x86::X64V3Token>

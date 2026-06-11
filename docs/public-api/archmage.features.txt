@@ -1,0 +1,456 @@
+# archmage public API — additions from non-default features
+# features: avx512,forge-token-api,macros,safe_unaligned_simd,std,testable_dispatch
+# (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
+# Encodings: crate-name prefix stripped; auto traits collapse to a
+# count + exceptions; trait impls collapse to one roster line per
+# type (method signatures live at the trait definition); blanket
+# impls omitted; re-export duplicates annotated `[also: path]`.
+# DO NOT EDIT BY HAND — commit regenerated changes with the code.
+
+## summary
+#
+#   enum variants                              51
+#   re-exports                                384
+#
+# per-module pub lines:
+#   (root)                           51
+#   intrinsics                      192
+#   prelude                         192
+
+## items (435 lines)
+
+pub use intrinsics::x86_64::_mm256_loadu_epi16
+pub use intrinsics::x86_64::_mm256_loadu_epi32
+pub use intrinsics::x86_64::_mm256_loadu_epi64
+pub use intrinsics::x86_64::_mm256_loadu_epi8
+pub use intrinsics::x86_64::_mm256_mask_compressstoreu_epi16
+pub use intrinsics::x86_64::_mm256_mask_compressstoreu_epi32
+pub use intrinsics::x86_64::_mm256_mask_compressstoreu_epi64
+pub use intrinsics::x86_64::_mm256_mask_compressstoreu_epi8
+pub use intrinsics::x86_64::_mm256_mask_compressstoreu_pd
+pub use intrinsics::x86_64::_mm256_mask_compressstoreu_ps
+pub use intrinsics::x86_64::_mm256_mask_cvtepi16_storeu_epi8
+pub use intrinsics::x86_64::_mm256_mask_cvtepi32_storeu_epi16
+pub use intrinsics::x86_64::_mm256_mask_cvtepi32_storeu_epi8
+pub use intrinsics::x86_64::_mm256_mask_cvtepi64_storeu_epi16
+pub use intrinsics::x86_64::_mm256_mask_cvtepi64_storeu_epi32
+pub use intrinsics::x86_64::_mm256_mask_cvtepi64_storeu_epi8
+pub use intrinsics::x86_64::_mm256_mask_cvtsepi16_storeu_epi8
+pub use intrinsics::x86_64::_mm256_mask_cvtsepi32_storeu_epi16
+pub use intrinsics::x86_64::_mm256_mask_cvtsepi32_storeu_epi8
+pub use intrinsics::x86_64::_mm256_mask_cvtsepi64_storeu_epi16
+pub use intrinsics::x86_64::_mm256_mask_cvtsepi64_storeu_epi32
+pub use intrinsics::x86_64::_mm256_mask_cvtsepi64_storeu_epi8
+pub use intrinsics::x86_64::_mm256_mask_cvtusepi16_storeu_epi8
+pub use intrinsics::x86_64::_mm256_mask_cvtusepi32_storeu_epi16
+pub use intrinsics::x86_64::_mm256_mask_cvtusepi32_storeu_epi8
+pub use intrinsics::x86_64::_mm256_mask_cvtusepi64_storeu_epi16
+pub use intrinsics::x86_64::_mm256_mask_cvtusepi64_storeu_epi32
+pub use intrinsics::x86_64::_mm256_mask_cvtusepi64_storeu_epi8
+pub use intrinsics::x86_64::_mm256_mask_expandloadu_epi16
+pub use intrinsics::x86_64::_mm256_mask_expandloadu_epi32
+pub use intrinsics::x86_64::_mm256_mask_expandloadu_epi64
+pub use intrinsics::x86_64::_mm256_mask_expandloadu_epi8
+pub use intrinsics::x86_64::_mm256_mask_expandloadu_pd
+pub use intrinsics::x86_64::_mm256_mask_expandloadu_ps
+pub use intrinsics::x86_64::_mm256_mask_loadu_epi16
+pub use intrinsics::x86_64::_mm256_mask_loadu_epi32
+pub use intrinsics::x86_64::_mm256_mask_loadu_epi64
+pub use intrinsics::x86_64::_mm256_mask_loadu_epi8
+pub use intrinsics::x86_64::_mm256_mask_loadu_pd
+pub use intrinsics::x86_64::_mm256_mask_loadu_ps
+pub use intrinsics::x86_64::_mm256_mask_storeu_epi16
+pub use intrinsics::x86_64::_mm256_mask_storeu_epi32
+pub use intrinsics::x86_64::_mm256_mask_storeu_epi64
+pub use intrinsics::x86_64::_mm256_mask_storeu_epi8
+pub use intrinsics::x86_64::_mm256_mask_storeu_pd
+pub use intrinsics::x86_64::_mm256_mask_storeu_ps
+pub use intrinsics::x86_64::_mm256_maskz_expandloadu_epi16
+pub use intrinsics::x86_64::_mm256_maskz_expandloadu_epi32
+pub use intrinsics::x86_64::_mm256_maskz_expandloadu_epi64
+pub use intrinsics::x86_64::_mm256_maskz_expandloadu_epi8
+pub use intrinsics::x86_64::_mm256_maskz_expandloadu_pd
+pub use intrinsics::x86_64::_mm256_maskz_expandloadu_ps
+pub use intrinsics::x86_64::_mm256_maskz_loadu_epi16
+pub use intrinsics::x86_64::_mm256_maskz_loadu_epi32
+pub use intrinsics::x86_64::_mm256_maskz_loadu_epi64
+pub use intrinsics::x86_64::_mm256_maskz_loadu_epi8
+pub use intrinsics::x86_64::_mm256_maskz_loadu_pd
+pub use intrinsics::x86_64::_mm256_maskz_loadu_ps
+pub use intrinsics::x86_64::_mm256_storeu_epi16
+pub use intrinsics::x86_64::_mm256_storeu_epi32
+pub use intrinsics::x86_64::_mm256_storeu_epi64
+pub use intrinsics::x86_64::_mm256_storeu_epi8
+pub use intrinsics::x86_64::_mm512_loadu_epi16
+pub use intrinsics::x86_64::_mm512_loadu_epi32
+pub use intrinsics::x86_64::_mm512_loadu_epi64
+pub use intrinsics::x86_64::_mm512_loadu_epi8
+pub use intrinsics::x86_64::_mm512_loadu_pd
+pub use intrinsics::x86_64::_mm512_loadu_ps
+pub use intrinsics::x86_64::_mm512_loadu_si512
+pub use intrinsics::x86_64::_mm512_mask_compressstoreu_epi16
+pub use intrinsics::x86_64::_mm512_mask_compressstoreu_epi32
+pub use intrinsics::x86_64::_mm512_mask_compressstoreu_epi64
+pub use intrinsics::x86_64::_mm512_mask_compressstoreu_epi8
+pub use intrinsics::x86_64::_mm512_mask_compressstoreu_pd
+pub use intrinsics::x86_64::_mm512_mask_compressstoreu_ps
+pub use intrinsics::x86_64::_mm512_mask_cvtepi16_storeu_epi8
+pub use intrinsics::x86_64::_mm512_mask_cvtepi32_storeu_epi16
+pub use intrinsics::x86_64::_mm512_mask_cvtepi32_storeu_epi8
+pub use intrinsics::x86_64::_mm512_mask_cvtepi64_storeu_epi16
+pub use intrinsics::x86_64::_mm512_mask_cvtepi64_storeu_epi32
+pub use intrinsics::x86_64::_mm512_mask_cvtepi64_storeu_epi8
+pub use intrinsics::x86_64::_mm512_mask_cvtsepi16_storeu_epi8
+pub use intrinsics::x86_64::_mm512_mask_cvtsepi32_storeu_epi16
+pub use intrinsics::x86_64::_mm512_mask_cvtsepi32_storeu_epi8
+pub use intrinsics::x86_64::_mm512_mask_cvtsepi64_storeu_epi16
+pub use intrinsics::x86_64::_mm512_mask_cvtsepi64_storeu_epi32
+pub use intrinsics::x86_64::_mm512_mask_cvtsepi64_storeu_epi8
+pub use intrinsics::x86_64::_mm512_mask_cvtusepi16_storeu_epi8
+pub use intrinsics::x86_64::_mm512_mask_cvtusepi32_storeu_epi16
+pub use intrinsics::x86_64::_mm512_mask_cvtusepi32_storeu_epi8
+pub use intrinsics::x86_64::_mm512_mask_cvtusepi64_storeu_epi16
+pub use intrinsics::x86_64::_mm512_mask_cvtusepi64_storeu_epi32
+pub use intrinsics::x86_64::_mm512_mask_cvtusepi64_storeu_epi8
+pub use intrinsics::x86_64::_mm512_mask_expandloadu_epi16
+pub use intrinsics::x86_64::_mm512_mask_expandloadu_epi32
+pub use intrinsics::x86_64::_mm512_mask_expandloadu_epi64
+pub use intrinsics::x86_64::_mm512_mask_expandloadu_epi8
+pub use intrinsics::x86_64::_mm512_mask_expandloadu_pd
+pub use intrinsics::x86_64::_mm512_mask_expandloadu_ps
+pub use intrinsics::x86_64::_mm512_mask_loadu_epi16
+pub use intrinsics::x86_64::_mm512_mask_loadu_epi32
+pub use intrinsics::x86_64::_mm512_mask_loadu_epi64
+pub use intrinsics::x86_64::_mm512_mask_loadu_epi8
+pub use intrinsics::x86_64::_mm512_mask_loadu_pd
+pub use intrinsics::x86_64::_mm512_mask_loadu_ps
+pub use intrinsics::x86_64::_mm512_mask_storeu_epi16
+pub use intrinsics::x86_64::_mm512_mask_storeu_epi32
+pub use intrinsics::x86_64::_mm512_mask_storeu_epi64
+pub use intrinsics::x86_64::_mm512_mask_storeu_epi8
+pub use intrinsics::x86_64::_mm512_mask_storeu_pd
+pub use intrinsics::x86_64::_mm512_mask_storeu_ps
+pub use intrinsics::x86_64::_mm512_maskz_expandloadu_epi16
+pub use intrinsics::x86_64::_mm512_maskz_expandloadu_epi32
+pub use intrinsics::x86_64::_mm512_maskz_expandloadu_epi64
+pub use intrinsics::x86_64::_mm512_maskz_expandloadu_epi8
+pub use intrinsics::x86_64::_mm512_maskz_expandloadu_pd
+pub use intrinsics::x86_64::_mm512_maskz_expandloadu_ps
+pub use intrinsics::x86_64::_mm512_maskz_loadu_epi16
+pub use intrinsics::x86_64::_mm512_maskz_loadu_epi32
+pub use intrinsics::x86_64::_mm512_maskz_loadu_epi64
+pub use intrinsics::x86_64::_mm512_maskz_loadu_epi8
+pub use intrinsics::x86_64::_mm512_maskz_loadu_pd
+pub use intrinsics::x86_64::_mm512_maskz_loadu_ps
+pub use intrinsics::x86_64::_mm512_storeu_epi16
+pub use intrinsics::x86_64::_mm512_storeu_epi32
+pub use intrinsics::x86_64::_mm512_storeu_epi64
+pub use intrinsics::x86_64::_mm512_storeu_epi8
+pub use intrinsics::x86_64::_mm512_storeu_pd
+pub use intrinsics::x86_64::_mm512_storeu_ps
+pub use intrinsics::x86_64::_mm512_storeu_si512
+pub use intrinsics::x86_64::_mm_loadu_epi16
+pub use intrinsics::x86_64::_mm_loadu_epi32
+pub use intrinsics::x86_64::_mm_loadu_epi64
+pub use intrinsics::x86_64::_mm_loadu_epi8
+pub use intrinsics::x86_64::_mm_mask_compressstoreu_epi16
+pub use intrinsics::x86_64::_mm_mask_compressstoreu_epi32
+pub use intrinsics::x86_64::_mm_mask_compressstoreu_epi64
+pub use intrinsics::x86_64::_mm_mask_compressstoreu_epi8
+pub use intrinsics::x86_64::_mm_mask_compressstoreu_pd
+pub use intrinsics::x86_64::_mm_mask_compressstoreu_ps
+pub use intrinsics::x86_64::_mm_mask_cvtepi16_storeu_epi8
+pub use intrinsics::x86_64::_mm_mask_cvtepi32_storeu_epi16
+pub use intrinsics::x86_64::_mm_mask_cvtepi32_storeu_epi8
+pub use intrinsics::x86_64::_mm_mask_cvtepi64_storeu_epi16
+pub use intrinsics::x86_64::_mm_mask_cvtepi64_storeu_epi32
+pub use intrinsics::x86_64::_mm_mask_cvtepi64_storeu_epi8
+pub use intrinsics::x86_64::_mm_mask_cvtsepi16_storeu_epi8
+pub use intrinsics::x86_64::_mm_mask_cvtsepi32_storeu_epi16
+pub use intrinsics::x86_64::_mm_mask_cvtsepi32_storeu_epi8
+pub use intrinsics::x86_64::_mm_mask_cvtsepi64_storeu_epi16
+pub use intrinsics::x86_64::_mm_mask_cvtsepi64_storeu_epi32
+pub use intrinsics::x86_64::_mm_mask_cvtsepi64_storeu_epi8
+pub use intrinsics::x86_64::_mm_mask_cvtusepi16_storeu_epi8
+pub use intrinsics::x86_64::_mm_mask_cvtusepi32_storeu_epi16
+pub use intrinsics::x86_64::_mm_mask_cvtusepi32_storeu_epi8
+pub use intrinsics::x86_64::_mm_mask_cvtusepi64_storeu_epi16
+pub use intrinsics::x86_64::_mm_mask_cvtusepi64_storeu_epi32
+pub use intrinsics::x86_64::_mm_mask_cvtusepi64_storeu_epi8
+pub use intrinsics::x86_64::_mm_mask_expandloadu_epi16
+pub use intrinsics::x86_64::_mm_mask_expandloadu_epi32
+pub use intrinsics::x86_64::_mm_mask_expandloadu_epi64
+pub use intrinsics::x86_64::_mm_mask_expandloadu_epi8
+pub use intrinsics::x86_64::_mm_mask_expandloadu_pd
+pub use intrinsics::x86_64::_mm_mask_expandloadu_ps
+pub use intrinsics::x86_64::_mm_mask_loadu_epi16
+pub use intrinsics::x86_64::_mm_mask_loadu_epi32
+pub use intrinsics::x86_64::_mm_mask_loadu_epi64
+pub use intrinsics::x86_64::_mm_mask_loadu_epi8
+pub use intrinsics::x86_64::_mm_mask_loadu_pd
+pub use intrinsics::x86_64::_mm_mask_loadu_ps
+pub use intrinsics::x86_64::_mm_mask_storeu_epi16
+pub use intrinsics::x86_64::_mm_mask_storeu_epi32
+pub use intrinsics::x86_64::_mm_mask_storeu_epi64
+pub use intrinsics::x86_64::_mm_mask_storeu_epi8
+pub use intrinsics::x86_64::_mm_mask_storeu_pd
+pub use intrinsics::x86_64::_mm_mask_storeu_ps
+pub use intrinsics::x86_64::_mm_maskz_expandloadu_epi16
+pub use intrinsics::x86_64::_mm_maskz_expandloadu_epi32
+pub use intrinsics::x86_64::_mm_maskz_expandloadu_epi64
+pub use intrinsics::x86_64::_mm_maskz_expandloadu_epi8
+pub use intrinsics::x86_64::_mm_maskz_expandloadu_pd
+pub use intrinsics::x86_64::_mm_maskz_expandloadu_ps
+pub use intrinsics::x86_64::_mm_maskz_loadu_epi16
+pub use intrinsics::x86_64::_mm_maskz_loadu_epi32
+pub use intrinsics::x86_64::_mm_maskz_loadu_epi64
+pub use intrinsics::x86_64::_mm_maskz_loadu_epi8
+pub use intrinsics::x86_64::_mm_maskz_loadu_pd
+pub use intrinsics::x86_64::_mm_maskz_loadu_ps
+pub use intrinsics::x86_64::_mm_storeu_epi16
+pub use intrinsics::x86_64::_mm_storeu_epi32
+pub use intrinsics::x86_64::_mm_storeu_epi64
+pub use intrinsics::x86_64::_mm_storeu_epi8
+pub use prelude::_mm256_loadu_epi16
+pub use prelude::_mm256_loadu_epi32
+pub use prelude::_mm256_loadu_epi64
+pub use prelude::_mm256_loadu_epi8
+pub use prelude::_mm256_mask_compressstoreu_epi16
+pub use prelude::_mm256_mask_compressstoreu_epi32
+pub use prelude::_mm256_mask_compressstoreu_epi64
+pub use prelude::_mm256_mask_compressstoreu_epi8
+pub use prelude::_mm256_mask_compressstoreu_pd
+pub use prelude::_mm256_mask_compressstoreu_ps
+pub use prelude::_mm256_mask_cvtepi16_storeu_epi8
+pub use prelude::_mm256_mask_cvtepi32_storeu_epi16
+pub use prelude::_mm256_mask_cvtepi32_storeu_epi8
+pub use prelude::_mm256_mask_cvtepi64_storeu_epi16
+pub use prelude::_mm256_mask_cvtepi64_storeu_epi32
+pub use prelude::_mm256_mask_cvtepi64_storeu_epi8
+pub use prelude::_mm256_mask_cvtsepi16_storeu_epi8
+pub use prelude::_mm256_mask_cvtsepi32_storeu_epi16
+pub use prelude::_mm256_mask_cvtsepi32_storeu_epi8
+pub use prelude::_mm256_mask_cvtsepi64_storeu_epi16
+pub use prelude::_mm256_mask_cvtsepi64_storeu_epi32
+pub use prelude::_mm256_mask_cvtsepi64_storeu_epi8
+pub use prelude::_mm256_mask_cvtusepi16_storeu_epi8
+pub use prelude::_mm256_mask_cvtusepi32_storeu_epi16
+pub use prelude::_mm256_mask_cvtusepi32_storeu_epi8
+pub use prelude::_mm256_mask_cvtusepi64_storeu_epi16
+pub use prelude::_mm256_mask_cvtusepi64_storeu_epi32
+pub use prelude::_mm256_mask_cvtusepi64_storeu_epi8
+pub use prelude::_mm256_mask_expandloadu_epi16
+pub use prelude::_mm256_mask_expandloadu_epi32
+pub use prelude::_mm256_mask_expandloadu_epi64
+pub use prelude::_mm256_mask_expandloadu_epi8
+pub use prelude::_mm256_mask_expandloadu_pd
+pub use prelude::_mm256_mask_expandloadu_ps
+pub use prelude::_mm256_mask_loadu_epi16
+pub use prelude::_mm256_mask_loadu_epi32
+pub use prelude::_mm256_mask_loadu_epi64
+pub use prelude::_mm256_mask_loadu_epi8
+pub use prelude::_mm256_mask_loadu_pd
+pub use prelude::_mm256_mask_loadu_ps
+pub use prelude::_mm256_mask_storeu_epi16
+pub use prelude::_mm256_mask_storeu_epi32
+pub use prelude::_mm256_mask_storeu_epi64
+pub use prelude::_mm256_mask_storeu_epi8
+pub use prelude::_mm256_mask_storeu_pd
+pub use prelude::_mm256_mask_storeu_ps
+pub use prelude::_mm256_maskz_expandloadu_epi16
+pub use prelude::_mm256_maskz_expandloadu_epi32
+pub use prelude::_mm256_maskz_expandloadu_epi64
+pub use prelude::_mm256_maskz_expandloadu_epi8
+pub use prelude::_mm256_maskz_expandloadu_pd
+pub use prelude::_mm256_maskz_expandloadu_ps
+pub use prelude::_mm256_maskz_loadu_epi16
+pub use prelude::_mm256_maskz_loadu_epi32
+pub use prelude::_mm256_maskz_loadu_epi64
+pub use prelude::_mm256_maskz_loadu_epi8
+pub use prelude::_mm256_maskz_loadu_pd
+pub use prelude::_mm256_maskz_loadu_ps
+pub use prelude::_mm256_storeu_epi16
+pub use prelude::_mm256_storeu_epi32
+pub use prelude::_mm256_storeu_epi64
+pub use prelude::_mm256_storeu_epi8
+pub use prelude::_mm512_loadu_epi16
+pub use prelude::_mm512_loadu_epi32
+pub use prelude::_mm512_loadu_epi64
+pub use prelude::_mm512_loadu_epi8
+pub use prelude::_mm512_loadu_pd
+pub use prelude::_mm512_loadu_ps
+pub use prelude::_mm512_loadu_si512
+pub use prelude::_mm512_mask_compressstoreu_epi16
+pub use prelude::_mm512_mask_compressstoreu_epi32
+pub use prelude::_mm512_mask_compressstoreu_epi64
+pub use prelude::_mm512_mask_compressstoreu_epi8
+pub use prelude::_mm512_mask_compressstoreu_pd
+pub use prelude::_mm512_mask_compressstoreu_ps
+pub use prelude::_mm512_mask_cvtepi16_storeu_epi8
+pub use prelude::_mm512_mask_cvtepi32_storeu_epi16
+pub use prelude::_mm512_mask_cvtepi32_storeu_epi8
+pub use prelude::_mm512_mask_cvtepi64_storeu_epi16
+pub use prelude::_mm512_mask_cvtepi64_storeu_epi32
+pub use prelude::_mm512_mask_cvtepi64_storeu_epi8
+pub use prelude::_mm512_mask_cvtsepi16_storeu_epi8
+pub use prelude::_mm512_mask_cvtsepi32_storeu_epi16
+pub use prelude::_mm512_mask_cvtsepi32_storeu_epi8
+pub use prelude::_mm512_mask_cvtsepi64_storeu_epi16
+pub use prelude::_mm512_mask_cvtsepi64_storeu_epi32
+pub use prelude::_mm512_mask_cvtsepi64_storeu_epi8
+pub use prelude::_mm512_mask_cvtusepi16_storeu_epi8
+pub use prelude::_mm512_mask_cvtusepi32_storeu_epi16
+pub use prelude::_mm512_mask_cvtusepi32_storeu_epi8
+pub use prelude::_mm512_mask_cvtusepi64_storeu_epi16
+pub use prelude::_mm512_mask_cvtusepi64_storeu_epi32
+pub use prelude::_mm512_mask_cvtusepi64_storeu_epi8
+pub use prelude::_mm512_mask_expandloadu_epi16
+pub use prelude::_mm512_mask_expandloadu_epi32
+pub use prelude::_mm512_mask_expandloadu_epi64
+pub use prelude::_mm512_mask_expandloadu_epi8
+pub use prelude::_mm512_mask_expandloadu_pd
+pub use prelude::_mm512_mask_expandloadu_ps
+pub use prelude::_mm512_mask_loadu_epi16
+pub use prelude::_mm512_mask_loadu_epi32
+pub use prelude::_mm512_mask_loadu_epi64
+pub use prelude::_mm512_mask_loadu_epi8
+pub use prelude::_mm512_mask_loadu_pd
+pub use prelude::_mm512_mask_loadu_ps
+pub use prelude::_mm512_mask_storeu_epi16
+pub use prelude::_mm512_mask_storeu_epi32
+pub use prelude::_mm512_mask_storeu_epi64
+pub use prelude::_mm512_mask_storeu_epi8
+pub use prelude::_mm512_mask_storeu_pd
+pub use prelude::_mm512_mask_storeu_ps
+pub use prelude::_mm512_maskz_expandloadu_epi16
+pub use prelude::_mm512_maskz_expandloadu_epi32
+pub use prelude::_mm512_maskz_expandloadu_epi64
+pub use prelude::_mm512_maskz_expandloadu_epi8
+pub use prelude::_mm512_maskz_expandloadu_pd
+pub use prelude::_mm512_maskz_expandloadu_ps
+pub use prelude::_mm512_maskz_loadu_epi16
+pub use prelude::_mm512_maskz_loadu_epi32
+pub use prelude::_mm512_maskz_loadu_epi64
+pub use prelude::_mm512_maskz_loadu_epi8
+pub use prelude::_mm512_maskz_loadu_pd
+pub use prelude::_mm512_maskz_loadu_ps
+pub use prelude::_mm512_storeu_epi16
+pub use prelude::_mm512_storeu_epi32
+pub use prelude::_mm512_storeu_epi64
+pub use prelude::_mm512_storeu_epi8
+pub use prelude::_mm512_storeu_pd
+pub use prelude::_mm512_storeu_ps
+pub use prelude::_mm512_storeu_si512
+pub use prelude::_mm_loadu_epi16
+pub use prelude::_mm_loadu_epi32
+pub use prelude::_mm_loadu_epi64
+pub use prelude::_mm_loadu_epi8
+pub use prelude::_mm_mask_compressstoreu_epi16
+pub use prelude::_mm_mask_compressstoreu_epi32
+pub use prelude::_mm_mask_compressstoreu_epi64
+pub use prelude::_mm_mask_compressstoreu_epi8
+pub use prelude::_mm_mask_compressstoreu_pd
+pub use prelude::_mm_mask_compressstoreu_ps
+pub use prelude::_mm_mask_cvtepi16_storeu_epi8
+pub use prelude::_mm_mask_cvtepi32_storeu_epi16
+pub use prelude::_mm_mask_cvtepi32_storeu_epi8
+pub use prelude::_mm_mask_cvtepi64_storeu_epi16
+pub use prelude::_mm_mask_cvtepi64_storeu_epi32
+pub use prelude::_mm_mask_cvtepi64_storeu_epi8
+pub use prelude::_mm_mask_cvtsepi16_storeu_epi8
+pub use prelude::_mm_mask_cvtsepi32_storeu_epi16
+pub use prelude::_mm_mask_cvtsepi32_storeu_epi8
+pub use prelude::_mm_mask_cvtsepi64_storeu_epi16
+pub use prelude::_mm_mask_cvtsepi64_storeu_epi32
+pub use prelude::_mm_mask_cvtsepi64_storeu_epi8
+pub use prelude::_mm_mask_cvtusepi16_storeu_epi8
+pub use prelude::_mm_mask_cvtusepi32_storeu_epi16
+pub use prelude::_mm_mask_cvtusepi32_storeu_epi8
+pub use prelude::_mm_mask_cvtusepi64_storeu_epi16
+pub use prelude::_mm_mask_cvtusepi64_storeu_epi32
+pub use prelude::_mm_mask_cvtusepi64_storeu_epi8
+pub use prelude::_mm_mask_expandloadu_epi16
+pub use prelude::_mm_mask_expandloadu_epi32
+pub use prelude::_mm_mask_expandloadu_epi64
+pub use prelude::_mm_mask_expandloadu_epi8
+pub use prelude::_mm_mask_expandloadu_pd
+pub use prelude::_mm_mask_expandloadu_ps
+pub use prelude::_mm_mask_loadu_epi16
+pub use prelude::_mm_mask_loadu_epi32
+pub use prelude::_mm_mask_loadu_epi64
+pub use prelude::_mm_mask_loadu_epi8
+pub use prelude::_mm_mask_loadu_pd
+pub use prelude::_mm_mask_loadu_ps
+pub use prelude::_mm_mask_storeu_epi16
+pub use prelude::_mm_mask_storeu_epi32
+pub use prelude::_mm_mask_storeu_epi64
+pub use prelude::_mm_mask_storeu_epi8
+pub use prelude::_mm_mask_storeu_pd
+pub use prelude::_mm_mask_storeu_ps
+pub use prelude::_mm_maskz_expandloadu_epi16
+pub use prelude::_mm_maskz_expandloadu_epi32
+pub use prelude::_mm_maskz_expandloadu_epi64
+pub use prelude::_mm_maskz_expandloadu_epi8
+pub use prelude::_mm_maskz_expandloadu_pd
+pub use prelude::_mm_maskz_expandloadu_ps
+pub use prelude::_mm_maskz_loadu_epi16
+pub use prelude::_mm_maskz_loadu_epi32
+pub use prelude::_mm_maskz_loadu_epi64
+pub use prelude::_mm_maskz_loadu_epi8
+pub use prelude::_mm_maskz_loadu_pd
+pub use prelude::_mm_maskz_loadu_ps
+pub use prelude::_mm_storeu_epi16
+pub use prelude::_mm_storeu_epi32
+pub use prelude::_mm_storeu_epi64
+pub use prelude::_mm_storeu_epi8
+pub unsafe fn tokens::Arm64V2Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::Arm64V3Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::Avx512Fp16Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::NeonAesToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::NeonCrcToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::NeonSha3Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::NeonToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::ScalarToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::Wasm128RelaxedToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::Wasm128Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64CryptoToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64V1Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64V2Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64V3CryptoToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64V3Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64V4Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64V4xToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::Arm64V2Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::Arm64V3Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::Avx512Fp16Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::NeonAesToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::NeonCrcToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::NeonSha3Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::NeonToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::ScalarToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::Wasm128RelaxedToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::Wasm128Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64CryptoToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64V1Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64V2Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64V3CryptoToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64V3Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64V4Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64V4xToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::Arm64V2Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::Arm64V3Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::Avx512Fp16Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::NeonAesToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::NeonCrcToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::NeonSha3Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::NeonToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::ScalarToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::Wasm128RelaxedToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::Wasm128Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64CryptoToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64V1Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64V2Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64V3CryptoToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64V3Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64V4Token::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64V4xToken::forge_token_dangerously() -> Self

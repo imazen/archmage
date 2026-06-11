@@ -1,5 +1,9 @@
 [workspace]
 members = [".", "archmage-macros", "magetypes", "xtask", "tests/no-features-crate"]
+# `apidoc/` is the CI-free public-API snapshot runner: excluded so plain
+# `cargo test` and every CI job never compile its dependency tree or run
+# rustdoc. Regenerate via `just api-doc`.
+exclude = ["apidoc"]
 
 [workspace.package]
 version = "0.9.26"
@@ -75,10 +79,6 @@ safe_unaligned_simd = { version = "0.2.5" }
 # so this entry never resolves on any other target.
 [target.'cfg(all(target_os = "windows", target_arch = "aarch64"))'.dependencies]
 winarm-cpufeatures = { version = "0.1.2", default-features = false, features = ["registry"] }
-
-[dev-dependencies]
-# tests/public_api_doc.rs parses `cargo metadata` for the feature list
-serde_json = "1.0.150"
 
 # Dev dependencies that don't support WASM
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]

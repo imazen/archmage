@@ -1,0 +1,16 @@
+# CI-free public-API snapshot runner — the only package depending on
+# zenutils-apidoc. The real workspace `exclude`s this directory, so plain
+# `cargo test` and every CI job (including --all-features ones) never
+# compile the apidoc tree or run rustdoc. Regenerate via `just api-doc`.
+[package]
+name = "archmage-apidoc"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+zenutils-apidoc = "0.1.0"
+
+# Standalone workspace root: never attaches to the parent workspace, even
+# without the parent's `exclude` entry.
+[workspace]

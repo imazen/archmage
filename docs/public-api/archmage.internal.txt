@@ -1,0 +1,97 @@
+# archmage public API — doc(hidden) items and excluded-feature surface
+# excluded features: (none)
+# (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
+# Encodings: crate-name prefix stripped; auto traits collapse to a
+# count + exceptions; trait impls collapse to one roster line per
+# type (method signatures live at the trait definition); blanket
+# impls omitted; re-export duplicates annotated `[also: path]`.
+# DO NOT EDIT BY HAND — commit regenerated changes with the code.
+
+## summary
+#
+#   pub modules                                 1
+#   pub consts/statics                         17
+#   pub macros                                  5
+#   free functions                              1
+#   inherent methods                           22
+#   re-exports                                  2
+#   trait roster entries (type × trait)        18
+#
+# per-module pub lines:
+#   (root)                            8
+#   __private                         1
+#   prelude                           2
+#   testing                           1
+#   tokens                           36
+
+## items (48 lines)
+
+pub const tokens::Arm64V2Token::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::Arm64V3Token::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::Avx512Fp16Token::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::NeonAesToken::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::NeonCrcToken::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::NeonSha3Token::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::NeonToken::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::ScalarToken::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::Wasm128RelaxedToken::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::Wasm128Token::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::X64CryptoToken::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::X64V1Token::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::X64V2Token::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::X64V3CryptoToken::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::X64V3Token::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::X64V4Token::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::X64V4xToken::__ARCHMAGE_TIER_TAG: u32
+pub fn SimdToken::try_new() -> core::option::Option<Self>
+pub fn __private::assert_archmage_token<T: tokens::SimdToken>(&T)
+pub fn prelude::SimdToken::try_new() -> core::option::Option<Self>
+pub fn testing::CompileTimePolicy::assert_fields_are_eq(&self)
+pub fn tokens::Arm64V2Token::try_new() -> core::option::Option<Self>
+pub fn tokens::Arm64V3Token::try_new() -> core::option::Option<Self>
+pub fn tokens::Avx512Fp16Token::try_new() -> core::option::Option<Self>
+pub fn tokens::NeonAesToken::try_new() -> core::option::Option<Self>
+pub fn tokens::NeonCrcToken::try_new() -> core::option::Option<Self>
+pub fn tokens::NeonSha3Token::try_new() -> core::option::Option<Self>
+pub fn tokens::NeonToken::try_new() -> core::option::Option<Self>
+pub fn tokens::ScalarToken::assert_fields_are_eq(&self)
+pub fn tokens::ScalarToken::try_new() -> core::option::Option<Self>
+pub fn tokens::SimdToken::try_new() -> core::option::Option<Self>
+pub fn tokens::Wasm128RelaxedToken::try_new() -> core::option::Option<Self>
+pub fn tokens::Wasm128Token::try_new() -> core::option::Option<Self>
+pub fn tokens::X64CryptoToken::try_new() -> core::option::Option<Self>
+pub fn tokens::X64V1Token::try_new() -> core::option::Option<Self>
+pub fn tokens::X64V2Token::try_new() -> core::option::Option<Self>
+pub fn tokens::X64V3CryptoToken::try_new() -> core::option::Option<Self>
+pub fn tokens::X64V3Token::try_new() -> core::option::Option<Self>
+pub fn tokens::X64V4Token::try_new() -> core::option::Option<Self>
+pub fn tokens::X64V4xToken::try_new() -> core::option::Option<Self>
+pub macro __impl_aarch64_apple_or_runtime_check!
+pub macro __impl_aarch64_feature_check!
+pub macro __impl_aarch64_runtime_only_check!
+pub macro __impl_feature_check!
+pub macro __impl_runtime_only_check!
+pub mod __private
+pub use prelude::simd_fn
+pub use simd_fn
+
+## trait impls (18 types)
+
+testing::CompileTimePolicy: TrivialClone
+tokens::Arm64V2Token: TrivialClone
+tokens::Arm64V3Token: TrivialClone
+tokens::Avx512Fp16Token: TrivialClone
+tokens::NeonAesToken: TrivialClone
+tokens::NeonCrcToken: TrivialClone
+tokens::NeonSha3Token: TrivialClone
+tokens::NeonToken: TrivialClone
+tokens::ScalarToken: TrivialClone
+tokens::Wasm128RelaxedToken: TrivialClone
+tokens::Wasm128Token: TrivialClone
+tokens::X64CryptoToken: TrivialClone
+tokens::X64V1Token: TrivialClone
+tokens::X64V2Token: TrivialClone
+tokens::X64V3CryptoToken: TrivialClone
+tokens::X64V3Token: TrivialClone
+tokens::X64V4Token: TrivialClone
+tokens::X64V4xToken: TrivialClone

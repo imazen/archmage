@@ -14,9 +14,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  # Skip the public-API snapshot regen test (no nightly/cargo-public-api here;
-  # ci.yml's clippy job runs the ZEN_API_DOC=check gate).
-  ZEN_API_DOC: off
 
 jobs:
   check-update:
