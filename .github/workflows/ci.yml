@@ -668,28 +668,16 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Cache Intel SDE
-        id: sde-cache
-        uses: actions/cache@v5
+      # Intel retires old downloadmirror URLs (9.44 now 404s/empty), so fetch
+      # SDE from the setup-sde action, which hosts the tarballs in its repo.
+      # Pinned by commit SHA (= v5.0).
+      - name: Setup Intel SDE
+        uses: petarpetrovt/setup-sde@31aa4a8e85e109bef00f1d838613fcc6ec421271 # v5.0
         with:
-          path: sde-external-9.44.0-2024-08-22-lin
-          key: intel-sde-9.44.0
-
-      - name: Download Intel SDE
-        if: steps.sde-cache.outputs.cache-hit != 'true'
-        run: |
-          wget -q --tries=5 --waitretry=10 --retry-connrefused \
-            https://downloadmirror.intel.com/831748/sde-external-9.44.0-2024-08-22-lin.tar.xz
-          # Intel's mirror rate-limits and serves an HTML page; fail loud
-          # before tar produces a confusing 'not a tar archive' error.
-          file sde-external-9.44.0-2024-08-22-lin.tar.xz | grep -q 'XZ compressed' || {
-            echo "::error::Intel SDE download is not an XZ archive (mirror flake/rate limit)"
-            head -c 200 sde-external-9.44.0-2024-08-22-lin.tar.xz; exit 1
-          }
-          tar -xf sde-external-9.44.0-2024-08-22-lin.tar.xz
+          sdeVersion: 10.8.0
 
       - name: Add Intel SDE to PATH
-        run: echo "$PWD/sde-external-9.44.0-2024-08-22-lin" >> $GITHUB_PATH
+        run: echo "$SDE_PATH" >> $GITHUB_PATH
 
       - name: Build tests
         run: cargo test --features "${{ env.FEATURES }}" --no-run
