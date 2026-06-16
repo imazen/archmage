@@ -4,6 +4,33 @@ Token-gated SIMD vector types. Write one kernel, run on AVX2, AVX-512, NEON, WAS
 
 **[Intrinsics Browser](https://imazen.github.io/archmage/intrinsics/)** · [Tutorial Book](https://imazen.github.io/archmage/) · [API Docs](https://docs.rs/magetypes)
 
+## Add it to your project
+
+```toml
+[dependencies]
+magetypes = "0.9.26"
+archmage  = "0.9.26"   # required: provides the macros + tokens magetypes uses
+```
+
+**Why both?** The vector *types* (`f32x8`, `u8x16`, …) come from `magetypes`, but the macros (`#[magetypes]`, `incant!`, `#[arcane]`, `#[autoversion]`, `#[rite]`) and the tokens (`Token`, `X64V3Token`, `NeonToken`, `ScalarToken`, …) come from `archmage` — every example here opens with `use archmage::prelude::*;`. So add `archmage` as a direct dependency. (`magetypes` does re-export it, so `magetypes::archmage::prelude::*` works with `magetypes` alone — but a direct `archmage` dep is the idiomatic path and what the examples assume.)
+
+Default features (`std`, `w512`) are on. For `no_std + alloc`, use `default-features = false`. For native AVX-512 impls on x86-64, add `features = ["avx512"]` (implies `w512`). See [Cargo features](#cargo-features).
+
+### Imports at a glance
+
+| You want… | Import |
+|---|---|
+| The macros + tokens (`#[magetypes]`, `incant!`, `Token`, `X64V3Token`, …) | `use archmage::prelude::*;` |
+| A fixed-width type explicitly | `use magetypes::simd::f32x8;` (8 lanes everywhere, polyfilled off-x86) |
+| Inside a `#[magetypes]` body | nothing extra — `define(f32x8)` injects the alias per tier |
+| Platform-"best" aliases for single-target code | `use magetypes::prelude::*;` (`F32Vec`, `LANES`, `RecommendedToken`, …) |
+
+The vector types live under `magetypes::simd::*` — there are no root re-exports (the surface is kept stable during development), so reach for `magetypes::simd::f32x8`, not `magetypes::f32x8`.
+
+### Load / store are **unaligned**
+
+`f32x8::load(token, &[f32; 8])` and `.store(&mut [f32; 8])` take **fixed-size array references** and perform an **unaligned** transfer — on x86-64 they lower to `_mm256_loadu_ps` / `_mm256_storeu_ps`. A `&[f32; 8]` only guarantees 4-byte (`f32`) alignment, and that's all that's required; there is **no 32-byte SIMD-alignment precondition**. Consequently `partition_slice_mut` (which reinterprets an arbitrary `&mut [f32]` as `&mut [[f32; 8]]` chunks) is sound on any slice — the bulk chunks feed straight into `load`/`store`. Don't reach for aligned allocators or hand-padded buffers; window your slice and go.
+
 ## The canonical pattern
 
 ```rust

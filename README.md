@@ -264,6 +264,75 @@ The 4x penalty is LLVM's `#[target_feature]` boundary, not archmage overhead. Ba
 
 For trait impls, use `#[arcane(_self = Type)]` — a nested inner-function approach (since sibling would add methods not in the trait definition).
 
+### Processing a whole `&[f32]` slice with raw intrinsics
+
+The examples above take `&[f32; 8]` — a single register's worth, fixed-size. Real buffers are `&[f32]` slices of arbitrary length. The safe `_mm256_loadu_ps` / `_mm256_storeu_ps` shadows take `&[f32; 8]` / `&mut [f32; 8]`, so you **window the slice into fixed-size array refs** with `chunk.try_into().unwrap()` (the `try_into` from `&[f32]` to `&[f32; 8]` is infallible for a length-8 sub-slice and the panic branch is optimized out), then handle the leftover with a scalar tail. This is the same shape as a hand-rolled SIMD loop — and per "The target-feature boundary" above, the loop lives **inside** the `#[arcane]` body so each lane stays on the fast path.
+
+If LLVM can already auto-vectorize the scalar version, prefer `#[autoversion]` (next section) — it's the first-try-clean path and needs no intrinsics. Reach for explicit intrinsics like this when you need a specific instruction the auto-vectorizer won't pick, or a cross-lane op it can't express.
+
+```rust
+use archmage::prelude::*;
+
+// One `#[arcane]` entry point per tier. The loop is inside, so the whole
+// slice is processed without re-crossing the target-feature boundary.
+
+#[arcane]
+fn scale_v3(_: X64V3Token, data: &mut [f32], factor: f32) {
+    let factor_v = _mm256_set1_ps(factor);
+    let mut chunks = data.chunks_exact_mut(8);
+    for chunk in &mut chunks {
+        // &mut [f32] (len 8) -> &mut [f32; 8]; infallible, panic branch elided.
+        let arr: &mut [f32; 8] = chunk.try_into().unwrap();
+        let v = _mm256_loadu_ps(&*arr);          // safe: &[f32; 8] (reborrow)
+        _mm256_storeu_ps(arr, _mm256_mul_ps(v, factor_v));  // safe: &mut [f32; 8]
+    }
+    for x in chunks.into_remainder() {           // scalar tail (0..7 elems)
+        *x *= factor;
+    }
+}
+
+// _scalar is MANDATORY — incant! always emits the unconditional fallback call.
+#[arcane]
+fn scale_scalar(_: ScalarToken, data: &mut [f32], factor: f32) {
+    for x in data {
+        *x *= factor;
+    }
+}
+
+// Public entry: runtime-dispatch to the best available tier.
+pub fn scale(data: &mut [f32], factor: f32) {
+    incant!(scale(data, factor), [v3, neon, scalar])
+}
+```
+
+`incant!` resolves `scale` to `scale_v3` / `scale_neon` / `scale_scalar` by suffix, wrapping each in the matching `#[cfg(target_arch)]` so you only define variants for the architectures you target.
+
+> **Alignment:** `_mm256_loadu_ps` / `_mm256_storeu_ps` are the *unaligned* load/store — `&[f32; 8]` only guarantees 4-byte (`f32`) alignment, and that's all these need. There's no 32-byte-alignment requirement, so windowing an arbitrary `&[f32]` is sound. (For the aligned `_mm256_load_ps`, you'd have to guarantee 32-byte alignment yourself; the unaligned form is the right default and the speed difference is negligible on modern cores.)
+
+#### NEON variant of the same loop
+
+On AArch64 the same pattern uses 128-bit registers — window into `&[f32; 4]` instead of `&[f32; 8]`. The memory ops are `vld1q_f32` (safe shadow, takes `&[f32; 4]`) and `vst1q_f32` (safe shadow, takes `&mut [f32; 4]`); the arithmetic `vmulq_f32` / `vdupq_n_f32` are `core::arch::aarch64` value intrinsics, safe inside `#[arcane]` since Rust 1.87. Add this `_neon` variant and the `incant!` above routes to it on ARM with no other change:
+
+```rust
+use archmage::prelude::*;
+
+#[arcane]
+fn scale_neon(_: NeonToken, data: &mut [f32], factor: f32) {
+    let factor_v = vdupq_n_f32(factor);          // value intrinsic
+    let mut chunks = data.chunks_exact_mut(4);
+    for chunk in &mut chunks {
+        let arr: &mut [f32; 4] = chunk.try_into().unwrap();
+        let v = vld1q_f32(&*arr);                 // safe shadow: &[f32; 4] (reborrow)
+        vst1q_f32(arr, vmulq_f32(v, factor_v));   // safe shadow: &mut [f32; 4]
+    }
+    for x in chunks.into_remainder() {
+        *x *= factor;
+    }
+}
+```
+
+> **NEON memory-op caveat (verified):** unlike x86's `loadu`, NEON's `vld1q_f32` / `vst1q_f32` are *element-aligned*, not freely unaligned — the underlying instruction's alignment behavior is governed by the system control register, so [`safe_unaligned_simd`](https://crates.io/crates/safe_unaligned_simd) only guarantees soundness on `rustc >= 1.88.0` (the LLVM bug that inserted spurious alignment assertions was fixed there). To load genuinely-unaligned `f32` data on NEON, load it as a `u8x16` and reinterpret. See that crate's `aarch64` module docs for the full statement. `&[f32; 4]` (4-byte alignment) is fine for the windowing here.
+
 ## Auto-vectorization with `#[autoversion]`
 
 Don't want to write intrinsics? Write plain scalar code and let the compiler vectorize it:
