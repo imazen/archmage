@@ -125,7 +125,8 @@ pub trait F64x4Backend: SimdToken + Sealed + Copy + 'static {
 
     // ====== Approximations ======
 
-    /// Fast reciprocal approximation (~12-bit precision where available).
+    /// Fast reciprocal approximation (1/x): backend-dependent precision
+    /// (x86 ~12-bit, ARM ~16-bit, WASM full). [`recip`] is full f32 everywhere.
     ///
     /// **Default body returns the input unchanged** — every shipped
     /// backend overrides this with a native intrinsic. The original
@@ -138,7 +139,8 @@ pub trait F64x4Backend: SimdToken + Sealed + Copy + 'static {
         a
     }
 
-    /// Fast reciprocal square root approximation (~12-bit precision where available).
+    /// Fast reciprocal square root approximation: backend-dependent
+    /// (x86 ~12-bit, ARM ~16-bit, WASM full). [`rsqrt`] is full f32 everywhere.
     ///
     /// See [`rcp_approx`] for default-body rationale.
     #[inline(always)]
