@@ -134,16 +134,16 @@ impl SimdTypes for archmage::X64V4xToken {
 
 #[cfg(target_arch = "aarch64")]
 impl SimdTypes for archmage::NeonToken {
-    type F32 = crate::simd::arm::w128::f32x4;
-    type F64 = crate::simd::arm::w128::f64x2;
-    type I8 = crate::simd::arm::w128::i8x16;
-    type I16 = crate::simd::arm::w128::i16x8;
-    type I32 = crate::simd::arm::w128::i32x4;
-    type I64 = crate::simd::arm::w128::i64x2;
-    type U8 = crate::simd::arm::w128::u8x16;
-    type U16 = crate::simd::arm::w128::u16x8;
-    type U32 = crate::simd::arm::w128::u32x4;
-    type U64 = crate::simd::arm::w128::u64x2;
+    type F32 = crate::simd::generic::f32x4<archmage::NeonToken>;
+    type F64 = crate::simd::generic::f64x2<archmage::NeonToken>;
+    type I8 = crate::simd::generic::i8x16<archmage::NeonToken>;
+    type I16 = crate::simd::generic::i16x8<archmage::NeonToken>;
+    type I32 = crate::simd::generic::i32x4<archmage::NeonToken>;
+    type I64 = crate::simd::generic::i64x2<archmage::NeonToken>;
+    type U8 = crate::simd::generic::u8x16<archmage::NeonToken>;
+    type U16 = crate::simd::generic::u16x8<archmage::NeonToken>;
+    type U32 = crate::simd::generic::u32x4<archmage::NeonToken>;
+    type U64 = crate::simd::generic::u64x2<archmage::NeonToken>;
 
     const F32_LANES: usize = 4;
     const F64_LANES: usize = 2;
@@ -156,16 +156,16 @@ impl SimdTypes for archmage::NeonToken {
 
 #[cfg(target_arch = "wasm32")]
 impl SimdTypes for archmage::Wasm128Token {
-    type F32 = crate::simd::wasm::w128::f32x4;
-    type F64 = crate::simd::wasm::w128::f64x2;
-    type I8 = crate::simd::wasm::w128::i8x16;
-    type I16 = crate::simd::wasm::w128::i16x8;
-    type I32 = crate::simd::wasm::w128::i32x4;
-    type I64 = crate::simd::wasm::w128::i64x2;
-    type U8 = crate::simd::wasm::w128::u8x16;
-    type U16 = crate::simd::wasm::w128::u16x8;
-    type U32 = crate::simd::wasm::w128::u32x4;
-    type U64 = crate::simd::wasm::w128::u64x2;
+    type F32 = crate::simd::generic::f32x4<archmage::Wasm128Token>;
+    type F64 = crate::simd::generic::f64x2<archmage::Wasm128Token>;
+    type I8 = crate::simd::generic::i8x16<archmage::Wasm128Token>;
+    type I16 = crate::simd::generic::i16x8<archmage::Wasm128Token>;
+    type I32 = crate::simd::generic::i32x4<archmage::Wasm128Token>;
+    type I64 = crate::simd::generic::i64x2<archmage::Wasm128Token>;
+    type U8 = crate::simd::generic::u8x16<archmage::Wasm128Token>;
+    type U16 = crate::simd::generic::u16x8<archmage::Wasm128Token>;
+    type U32 = crate::simd::generic::u32x4<archmage::Wasm128Token>;
+    type U64 = crate::simd::generic::u64x2<archmage::Wasm128Token>;
 
     const F32_LANES: usize = 4;
     const F64_LANES: usize = 2;

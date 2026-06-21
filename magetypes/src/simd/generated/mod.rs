@@ -278,16 +278,6 @@ pub mod wasm {
 // generic::<T> versions. Old concrete types remain at original paths
 // (e.g., simd::generated::x86::w128::i8x16) for migration.
 
-#[cfg(target_arch = "aarch64")]
-pub use arm::w128::*;
-#[cfg(target_arch = "aarch64")]
-pub use polyfill::neon::*;
-
-#[cfg(target_arch = "wasm32")]
-pub use polyfill::wasm128::*;
-#[cfg(target_arch = "wasm32")]
-pub use wasm::w128::*;
-
 // Polyfill module for emulating wider types on narrower hardware
 pub mod polyfill;
 

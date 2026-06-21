@@ -4520,8 +4520,10 @@ fn generate_neon_native_i32_impl(ty: &I32VecType) -> String {
             #[inline(always)]
             fn bitmask(self, a: int32x4_t) -> u32 {{
                 unsafe {{
-                    // Extract sign bit of each 32-bit lane
-                    let shift = vreinterpretq_u32_s32(vshrq_n_s32::<31>(a));
+                    // Extract sign bit of each 32-bit lane as 0/1 (LOGICAL shift on
+                    // the u32 view — an arithmetic s32 shift would sign-extend to
+                    // 0xFFFF_FFFF and corrupt the packed mask).
+                    let shift = vshrq_n_u32::<31>(vreinterpretq_u32_s32(a));
                     // Pack: lane0 | (lane1<<1) | (lane2<<2) | (lane3<<3)
                     let lane0 = vgetq_lane_u32::<0>(shift);
                     let lane1 = vgetq_lane_u32::<1>(shift);
@@ -4769,7 +4771,7 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
             body.push_str("            let mut bits = 0u32;\n");
             for i in 0..sub_count {
                 let base = i * 4;
-                body.push_str(&format!("            let s{i} = vreinterpretq_u32_s32(vshrq_n_s32::<31>(a[{i}]));\n"));
+                body.push_str(&format!("            let s{i} = vshrq_n_u32::<31>(vreinterpretq_u32_s32(a[{i}]));\n"));
                 body.push_str(&format!("            bits |= vgetq_lane_u32::<0>(s{i}) << {base};\n"));
                 body.push_str(&format!("            bits |= (vgetq_lane_u32::<1>(s{i})) << {};\n", base + 1));
                 body.push_str(&format!("            bits |= (vgetq_lane_u32::<2>(s{i})) << {};\n", base + 2));

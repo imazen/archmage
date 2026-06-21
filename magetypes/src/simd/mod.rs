@@ -437,8 +437,136 @@ mod _type_aliases {
         feature = "w512"
     ))]
     pub type u16x32 = super::generic::u16x32<archmage::ScalarToken>;
+
+    // ======== aarch64 (NeonToken natural width) ========
+    // The bare names route through the sound, token-carrying generic types here
+    // too (they were the concrete `arm::w128`/`polyfill::neon` structs before).
+    #[cfg(target_arch = "aarch64")]
+    pub type f32x4 = super::generic::f32x4<archmage::NeonToken>;
+    #[cfg(target_arch = "aarch64")]
+    pub type f32x8 = super::generic::f32x8<archmage::NeonToken>;
+    #[cfg(target_arch = "aarch64")]
+    pub type f64x2 = super::generic::f64x2<archmage::NeonToken>;
+    #[cfg(target_arch = "aarch64")]
+    pub type f64x4 = super::generic::f64x4<archmage::NeonToken>;
+    #[cfg(target_arch = "aarch64")]
+    pub type i8x16 = super::generic::i8x16<archmage::NeonToken>;
+    #[cfg(target_arch = "aarch64")]
+    pub type i8x32 = super::generic::i8x32<archmage::NeonToken>;
+    #[cfg(target_arch = "aarch64")]
+    pub type u8x16 = super::generic::u8x16<archmage::NeonToken>;
+    #[cfg(target_arch = "aarch64")]
+    pub type u8x32 = super::generic::u8x32<archmage::NeonToken>;
+    #[cfg(target_arch = "aarch64")]
+    pub type i16x8 = super::generic::i16x8<archmage::NeonToken>;
+    #[cfg(target_arch = "aarch64")]
+    pub type i16x16 = super::generic::i16x16<archmage::NeonToken>;
+    #[cfg(target_arch = "aarch64")]
+    pub type u16x8 = super::generic::u16x8<archmage::NeonToken>;
+    #[cfg(target_arch = "aarch64")]
+    pub type u16x16 = super::generic::u16x16<archmage::NeonToken>;
+    #[cfg(target_arch = "aarch64")]
+    pub type i32x4 = super::generic::i32x4<archmage::NeonToken>;
+    #[cfg(target_arch = "aarch64")]
+    pub type i32x8 = super::generic::i32x8<archmage::NeonToken>;
+    #[cfg(target_arch = "aarch64")]
+    pub type u32x4 = super::generic::u32x4<archmage::NeonToken>;
+    #[cfg(target_arch = "aarch64")]
+    pub type u32x8 = super::generic::u32x8<archmage::NeonToken>;
+    #[cfg(target_arch = "aarch64")]
+    pub type i64x2 = super::generic::i64x2<archmage::NeonToken>;
+    #[cfg(target_arch = "aarch64")]
+    pub type i64x4 = super::generic::i64x4<archmage::NeonToken>;
+    #[cfg(target_arch = "aarch64")]
+    pub type u64x2 = super::generic::u64x2<archmage::NeonToken>;
+    #[cfg(target_arch = "aarch64")]
+    pub type u64x4 = super::generic::u64x4<archmage::NeonToken>;
+    #[cfg(all(target_arch = "aarch64", feature = "w512"))]
+    pub type f32x16 = super::generic::f32x16<archmage::NeonToken>;
+    #[cfg(all(target_arch = "aarch64", feature = "w512"))]
+    pub type f64x8 = super::generic::f64x8<archmage::NeonToken>;
+    #[cfg(all(target_arch = "aarch64", feature = "w512"))]
+    pub type i8x64 = super::generic::i8x64<archmage::NeonToken>;
+    #[cfg(all(target_arch = "aarch64", feature = "w512"))]
+    pub type u8x64 = super::generic::u8x64<archmage::NeonToken>;
+    #[cfg(all(target_arch = "aarch64", feature = "w512"))]
+    pub type i16x32 = super::generic::i16x32<archmage::NeonToken>;
+    #[cfg(all(target_arch = "aarch64", feature = "w512"))]
+    pub type u16x32 = super::generic::u16x32<archmage::NeonToken>;
+    #[cfg(all(target_arch = "aarch64", feature = "w512"))]
+    pub type i32x16 = super::generic::i32x16<archmage::NeonToken>;
+    #[cfg(all(target_arch = "aarch64", feature = "w512"))]
+    pub type u32x16 = super::generic::u32x16<archmage::NeonToken>;
+    #[cfg(all(target_arch = "aarch64", feature = "w512"))]
+    pub type i64x8 = super::generic::i64x8<archmage::NeonToken>;
+    #[cfg(all(target_arch = "aarch64", feature = "w512"))]
+    pub type u64x8 = super::generic::u64x8<archmage::NeonToken>;
+
+    // ======== wasm32 (Wasm128Token natural width) ========
+    #[cfg(target_arch = "wasm32")]
+    pub type f32x4 = super::generic::f32x4<archmage::Wasm128Token>;
+    #[cfg(target_arch = "wasm32")]
+    pub type f32x8 = super::generic::f32x8<archmage::Wasm128Token>;
+    #[cfg(target_arch = "wasm32")]
+    pub type f64x2 = super::generic::f64x2<archmage::Wasm128Token>;
+    #[cfg(target_arch = "wasm32")]
+    pub type f64x4 = super::generic::f64x4<archmage::Wasm128Token>;
+    #[cfg(target_arch = "wasm32")]
+    pub type i8x16 = super::generic::i8x16<archmage::Wasm128Token>;
+    #[cfg(target_arch = "wasm32")]
+    pub type i8x32 = super::generic::i8x32<archmage::Wasm128Token>;
+    #[cfg(target_arch = "wasm32")]
+    pub type u8x16 = super::generic::u8x16<archmage::Wasm128Token>;
+    #[cfg(target_arch = "wasm32")]
+    pub type u8x32 = super::generic::u8x32<archmage::Wasm128Token>;
+    #[cfg(target_arch = "wasm32")]
+    pub type i16x8 = super::generic::i16x8<archmage::Wasm128Token>;
+    #[cfg(target_arch = "wasm32")]
+    pub type i16x16 = super::generic::i16x16<archmage::Wasm128Token>;
+    #[cfg(target_arch = "wasm32")]
+    pub type u16x8 = super::generic::u16x8<archmage::Wasm128Token>;
+    #[cfg(target_arch = "wasm32")]
+    pub type u16x16 = super::generic::u16x16<archmage::Wasm128Token>;
+    #[cfg(target_arch = "wasm32")]
+    pub type i32x4 = super::generic::i32x4<archmage::Wasm128Token>;
+    #[cfg(target_arch = "wasm32")]
+    pub type i32x8 = super::generic::i32x8<archmage::Wasm128Token>;
+    #[cfg(target_arch = "wasm32")]
+    pub type u32x4 = super::generic::u32x4<archmage::Wasm128Token>;
+    #[cfg(target_arch = "wasm32")]
+    pub type u32x8 = super::generic::u32x8<archmage::Wasm128Token>;
+    #[cfg(target_arch = "wasm32")]
+    pub type i64x2 = super::generic::i64x2<archmage::Wasm128Token>;
+    #[cfg(target_arch = "wasm32")]
+    pub type i64x4 = super::generic::i64x4<archmage::Wasm128Token>;
+    #[cfg(target_arch = "wasm32")]
+    pub type u64x2 = super::generic::u64x2<archmage::Wasm128Token>;
+    #[cfg(target_arch = "wasm32")]
+    pub type u64x4 = super::generic::u64x4<archmage::Wasm128Token>;
+    #[cfg(all(target_arch = "wasm32", feature = "w512"))]
+    pub type f32x16 = super::generic::f32x16<archmage::Wasm128Token>;
+    #[cfg(all(target_arch = "wasm32", feature = "w512"))]
+    pub type f64x8 = super::generic::f64x8<archmage::Wasm128Token>;
+    #[cfg(all(target_arch = "wasm32", feature = "w512"))]
+    pub type i8x64 = super::generic::i8x64<archmage::Wasm128Token>;
+    #[cfg(all(target_arch = "wasm32", feature = "w512"))]
+    pub type u8x64 = super::generic::u8x64<archmage::Wasm128Token>;
+    #[cfg(all(target_arch = "wasm32", feature = "w512"))]
+    pub type i16x32 = super::generic::i16x32<archmage::Wasm128Token>;
+    #[cfg(all(target_arch = "wasm32", feature = "w512"))]
+    pub type u16x32 = super::generic::u16x32<archmage::Wasm128Token>;
+    #[cfg(all(target_arch = "wasm32", feature = "w512"))]
+    pub type i32x16 = super::generic::i32x16<archmage::Wasm128Token>;
+    #[cfg(all(target_arch = "wasm32", feature = "w512"))]
+    pub type u32x16 = super::generic::u32x16<archmage::Wasm128Token>;
+    #[cfg(all(target_arch = "wasm32", feature = "w512"))]
+    pub type i64x8 = super::generic::i64x8<archmage::Wasm128Token>;
+    #[cfg(all(target_arch = "wasm32", feature = "w512"))]
+    pub type u64x8 = super::generic::u64x8<archmage::Wasm128Token>;
 }
-// On aarch64/wasm32, type aliases come from generated/ — this module is empty,
-// but the pub use is harmless and needed on x86_64 and scalar targets.
+// On x86_64/scalar these aliases are defined above; on aarch64/wasm32 they are
+// the generic types pinned to the natural-width token (Neon/Wasm128). The
+// concrete per-platform structs remain reachable at full paths
+// (`simd::arm::w128::f32x4`, …) for backwards-compat.
 #[allow(unused_imports)]
 pub use _type_aliases::*;

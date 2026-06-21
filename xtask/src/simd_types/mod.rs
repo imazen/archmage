@@ -136,17 +136,11 @@ fn generate_generated_mod_rs(types: &[SimdType]) -> String {
     code.push_str("// generic::<T> versions. Old concrete types remain at original paths\n");
     code.push_str("// (e.g., simd::generated::x86::w128::i8x16) for migration.\n\n");
 
-    // Re-exports for ARM
-    code.push_str("#[cfg(target_arch = \"aarch64\")]\n");
-    code.push_str("pub use arm::w128::*;\n");
-    code.push_str("#[cfg(target_arch = \"aarch64\")]\n");
-    code.push_str("pub use polyfill::neon::*;\n\n");
-
-    // Re-exports for WASM
-    code.push_str("#[cfg(target_arch = \"wasm32\")]\n");
-    code.push_str("pub use wasm::w128::*;\n");
-    code.push_str("#[cfg(target_arch = \"wasm32\")]\n");
-    code.push_str("pub use polyfill::wasm128::*;\n\n");
+    // NOTE: ARM/WASM concrete types are intentionally NOT glob-re-exported to the
+    // bare `simd::*` names. The bare names resolve to the sound, token-carrying
+    // generic types via `_type_aliases` in simd/mod.rs (matching x86). The
+    // concrete structs remain reachable at their full paths
+    // (`simd::arm::w128::f32x4`, `simd::polyfill::neon::f32x8`, …).
 
     // Polyfill module (auto-generated W256 from pairs of W128)
     code.push_str("// Polyfill module for emulating wider types on narrower hardware\n");

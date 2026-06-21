@@ -1282,8 +1282,10 @@ impl I32x4Backend for archmage::NeonToken {
     #[inline(always)]
     fn bitmask(self, a: int32x4_t) -> u32 {
         unsafe {
-            // Extract sign bit of each 32-bit lane
-            let shift = vreinterpretq_u32_s32(vshrq_n_s32::<31>(a));
+            // Extract sign bit of each 32-bit lane as 0/1 (LOGICAL shift on
+            // the u32 view — an arithmetic s32 shift would sign-extend to
+            // 0xFFFF_FFFF and corrupt the packed mask).
+            let shift = vshrq_n_u32::<31>(vreinterpretq_u32_s32(a));
             // Pack: lane0 | (lane1<<1) | (lane2<<2) | (lane3<<3)
             let lane0 = vgetq_lane_u32::<0>(shift);
             let lane1 = vgetq_lane_u32::<1>(shift);
@@ -1508,12 +1510,12 @@ impl I32x8Backend for archmage::NeonToken {
     fn bitmask(self, a: [int32x4_t; 2]) -> u32 {
         unsafe {
             let mut bits = 0u32;
-            let s0 = vreinterpretq_u32_s32(vshrq_n_s32::<31>(a[0]));
+            let s0 = vshrq_n_u32::<31>(vreinterpretq_u32_s32(a[0]));
             bits |= vgetq_lane_u32::<0>(s0) << 0;
             bits |= (vgetq_lane_u32::<1>(s0)) << 1;
             bits |= (vgetq_lane_u32::<2>(s0)) << 2;
             bits |= (vgetq_lane_u32::<3>(s0)) << 3;
-            let s1 = vreinterpretq_u32_s32(vshrq_n_s32::<31>(a[1]));
+            let s1 = vshrq_n_u32::<31>(vreinterpretq_u32_s32(a[1]));
             bits |= vgetq_lane_u32::<0>(s1) << 4;
             bits |= (vgetq_lane_u32::<1>(s1)) << 5;
             bits |= (vgetq_lane_u32::<2>(s1)) << 6;
