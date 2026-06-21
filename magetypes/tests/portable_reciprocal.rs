@@ -38,7 +38,7 @@ fn inputs() -> Vec<f32> {
             m += 4099;
         }
     }
-    while v.len() % 4 != 0 {
+    while v.len() % 16 != 0 {
         v.push(1.0);
     }
     v
@@ -134,4 +134,82 @@ fn portable_reciprocal_bit_identity_and_precision() {
     assert!(rc8.1 < 6e-3, "rcp_approx_portable err {:.3e}", rc8.1);
     assert!(rc16.1 < 1e-4, "rcp + 1 refine err {:.3e}", rc16.1);
     assert!(rcf.1 < 1e-6, "recip_portable err {:.3e}", rcf.1);
+}
+
+/// Collect every output bit pattern of `$method` over `$data`, processed
+/// `$lanes` at a time through the `$ty` vector.
+macro_rules! collect_bits {
+    ($ty:ty, $lanes:literal, $token:expr, $data:expr, $method:ident) => {{
+        let mut out: Vec<u32> = Vec::with_capacity($data.len());
+        for chunk in $data.chunks_exact($lanes) {
+            let arr: [f32; $lanes] = chunk.try_into().unwrap();
+            let r = <$ty>::from_array($token, arr).$method().to_array();
+            out.extend(r.iter().map(|v| v.to_bits()));
+        }
+        out
+    }};
+}
+
+/// The wider widths are generated from the identical template (only the lane
+/// count differs), so they must produce **exactly** the same bits as `f32x4`,
+/// lane for lane. Combined with the cross-architecture proof above, this
+/// transitively makes `f32x8`/`f32x16` bit-identical across machines too.
+#[test]
+fn portable_cross_width_consistency() {
+    let Some(token) = Tok::summon() else {
+        eprintln!("portable_cross_width_consistency: native {ARCH} token unavailable — skipping");
+        return;
+    };
+    let data = inputs(); // length is a multiple of 16
+
+    let rs4 = collect_bits!(f32x4<Tok>, 4, token, &data, rsqrt_approx_portable);
+    let rc4 = collect_bits!(f32x4<Tok>, 4, token, &data, rcp_approx_portable);
+    let rs8 = collect_bits!(
+        magetypes::simd::generic::f32x8<Tok>,
+        8,
+        token,
+        &data,
+        rsqrt_approx_portable
+    );
+    let rc8 = collect_bits!(
+        magetypes::simd::generic::f32x8<Tok>,
+        8,
+        token,
+        &data,
+        rcp_approx_portable
+    );
+    assert_eq!(rs4, rs8, "f32x8 rsqrt_approx_portable diverges from f32x4");
+    assert_eq!(rc4, rc8, "f32x8 rcp_approx_portable diverges from f32x4");
+
+    #[cfg(feature = "w512")]
+    {
+        let rs16 = collect_bits!(
+            magetypes::simd::generic::f32x16<Tok>,
+            16,
+            token,
+            &data,
+            rsqrt_approx_portable
+        );
+        let rc16 = collect_bits!(
+            magetypes::simd::generic::f32x16<Tok>,
+            16,
+            token,
+            &data,
+            rcp_approx_portable
+        );
+        assert_eq!(
+            rs4, rs16,
+            "f32x16 rsqrt_approx_portable diverges from f32x4"
+        );
+        assert_eq!(rc4, rc16, "f32x16 rcp_approx_portable diverges from f32x4");
+    }
+
+    eprintln!(
+        "portable_cross_width_consistency on {ARCH}: f32x4 == f32x8{} (bit-for-bit) ✓",
+        if cfg!(feature = "w512") {
+            " == f32x16"
+        } else {
+            ""
+        }
+    );
 }
