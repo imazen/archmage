@@ -698,6 +698,46 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
     let lanes = ty.lanes;
     let array = ty.array_type();
     let zero_lit = ty.zero_lit();
+    let sqrt_fn = if elem == "f32" { "sqrtf" } else { "sqrt" };
+
+    // The W512 float backend trait defaults rcp_approx/rsqrt_approx to the
+    // identity, so every backend MUST override them. `rcp_approx` is exact
+    // division (fastest); `rsqrt_approx` (f32) is the bit-hack seed + 2 Newton
+    // steps (~17-bit, much cheaper than scalar sqrt+div). f64 is exact division
+    // throughout. `recip`/`rsqrt` are always exact.
+    let recip_section = if elem == "f32" {
+        formatdoc! {r#"
+            #[inline(always)]
+            fn rcp_approx(self, a: {array}) -> {array} {{
+                core::array::from_fn(|i| 1.0 / a[i])
+            }}
+            #[inline(always)]
+            fn rsqrt_approx(self, a: {array}) -> {array} {{
+                core::array::from_fn(|i| {{
+                    let x = a[i];
+                    let seed = f32::from_bits(0x5f37_59df_u32.wrapping_sub(x.to_bits() >> 1));
+                    let hx = 0.5 * x;
+                    let y = seed * (1.5 - hx * seed * seed);
+                    y * (1.5 - hx * y * y)
+                }})
+            }}
+            #[inline(always)]
+            fn recip(self, a: {array}) -> {array} {{ core::array::from_fn(|i| 1.0 / a[i]) }}
+            #[inline(always)]
+            fn rsqrt(self, a: {array}) -> {array} {{ core::array::from_fn(|i| 1.0 / crate::nostd_math::{sqrt_fn}(a[i])) }}
+        "#}
+    } else {
+        formatdoc! {r#"
+            #[inline(always)]
+            fn rcp_approx(self, a: {array}) -> {array} {{ core::array::from_fn(|i| 1.0 / a[i]) }}
+            #[inline(always)]
+            fn rsqrt_approx(self, a: {array}) -> {array} {{ core::array::from_fn(|i| 1.0 / crate::nostd_math::{sqrt_fn}(a[i])) }}
+            #[inline(always)]
+            fn recip(self, a: {array}) -> {array} {{ core::array::from_fn(|i| 1.0 / a[i]) }}
+            #[inline(always)]
+            fn rsqrt(self, a: {array}) -> {array} {{ core::array::from_fn(|i| 1.0 / crate::nostd_math::{sqrt_fn}(a[i])) }}
+        "#}
+    };
 
     formatdoc! {r#"
         impl {trait_name} for archmage::ScalarToken {{
@@ -747,6 +787,7 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
                 core::array::from_fn(|i| crate::nostd_math::{sqrt_fn}(a[i]))
             }}
 
+{recip_section}
             #[inline(always)]
             fn abs(self, a: {array}) -> {array} {{
                 core::array::from_fn(|i| {elem}::from_bits(a[i].to_bits() & {abs_mask}))
@@ -820,7 +861,6 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
     "#,
         elem_name = format!("{zero_lit}"),
         uint = if elem == "f32" { "u32" } else { "u64" },
-        sqrt_fn = if elem == "f32" { "sqrtf" } else { "sqrt" },
         floor_fn = if elem == "f32" { "floorf" } else { "floor" },
         ceil_fn = if elem == "f32" { "ceilf" } else { "ceil" },
         round_fn = if elem == "f32" { "roundevenf" } else { "roundeven" },
@@ -1316,6 +1356,22 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
                     <archmage::X64V3Token as {half_trait}>::rsqrt_approx(self, a[1]),
                 ]
             }}
+
+            #[inline(always)]
+            fn recip(self, a: {v3_repr}) -> {v3_repr} {{
+                [
+                    <archmage::X64V3Token as {half_trait}>::recip(self, a[0]),
+                    <archmage::X64V3Token as {half_trait}>::recip(self, a[1]),
+                ]
+            }}
+
+            #[inline(always)]
+            fn rsqrt(self, a: {v3_repr}) -> {v3_repr} {{
+                [
+                    <archmage::X64V3Token as {half_trait}>::rsqrt(self, a[0]),
+                    <archmage::X64V3Token as {half_trait}>::rsqrt(self, a[1]),
+                ]
+            }}
         "#});
     } else {
         // Integer-specific: abs (signed only), reduce, shifts, boolean
@@ -1690,6 +1746,29 @@ fn generate_4way_polyfill_impl(
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::sqrt(self, a[i]))
             }}
 
+            // Reciprocals delegate to the quarter backend so the full-precision
+            // and per-platform-approx behaviour matches the narrower widths.
+            // (Without these the trait defaults make recip/rcp_approx the identity.)
+            #[inline(always)]
+            fn rcp_approx(self, a: {repr}) -> {repr} {{
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::rcp_approx(self, a[i]))
+            }}
+
+            #[inline(always)]
+            fn rsqrt_approx(self, a: {repr}) -> {repr} {{
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::rsqrt_approx(self, a[i]))
+            }}
+
+            #[inline(always)]
+            fn recip(self, a: {repr}) -> {repr} {{
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::recip(self, a[i]))
+            }}
+
+            #[inline(always)]
+            fn rsqrt(self, a: {repr}) -> {repr} {{
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::rsqrt(self, a[i]))
+            }}
+
             #[inline(always)]
             fn abs(self, a: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::abs(self, a[i]))
@@ -1934,6 +2013,33 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
     } else {
         "0x7FFF_FFFF_FFFF_FFFFu64 as i64"
     };
+    // Full-precision Newton steps from the 14-bit rcp14/rsqrt14 estimate:
+    // f64 (53-bit) needs 2 (14→28→56), f32 (24-bit) needs 1 (14→28).
+    let n_full_steps = if elem == "f64" { 2 } else { 1 };
+    // Each step refines `r`/`y`; the last is a tail expression (no `let`, so no
+    // clippy::let_and_return).
+    let recip_full_steps = (0..n_full_steps)
+        .map(|i| {
+            let step = format!("_mm512_mul_{s}(r, _mm512_sub_{s}(two, _mm512_mul_{s}(a, r)))");
+            if i + 1 < n_full_steps {
+                format!("let r = {step};")
+            } else {
+                step
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n                    ");
+    let rsqrt_full_steps = (0..n_full_steps)
+        .map(|i| {
+            let step = format!("_mm512_mul_{s}(_mm512_mul_{s}(half, y), _mm512_sub_{s}(three, _mm512_mul_{s}(a, _mm512_mul_{s}(y, y))))");
+            if i + 1 < n_full_steps {
+                format!("let y = {step};")
+            } else {
+                step
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n                    ");
 
     formatdoc! {r#"
         #[cfg(target_arch = "x86_64")]
@@ -2115,27 +2221,34 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
                 unsafe {{ _mm512_reduce_max_{s}(a) }}
             }}
 
+            // Raw 14-bit hardware estimate — the cheapest >=12-bit path on AVX-512.
             #[inline(always)]
             fn rcp_approx(self, a: {inner}) -> {inner} {{
-                unsafe {{
-                    let approx = _mm512_rcp14_{s}(a);
-                    // One Newton-Raphson iteration: x' = x * (2 - a*x)
-                    let two = _mm512_set1_{s}(2.0);
-                    _mm512_mul_{s}(approx, _mm512_sub_{s}(two, _mm512_mul_{s}(a, approx)))
-                }}
+                unsafe {{ _mm512_rcp14_{s}(a) }}
             }}
 
             #[inline(always)]
             fn rsqrt_approx(self, a: {inner}) -> {inner} {{
+                unsafe {{ _mm512_rsqrt14_{s}(a) }}
+            }}
+
+            // Newton-Raphson to full precision ({n_full_steps} step(s) from rcp14/rsqrt14).
+            #[inline(always)]
+            fn recip(self, a: {inner}) -> {inner} {{
                 unsafe {{
-                    let approx = _mm512_rsqrt14_{s}(a);
-                    // One Newton-Raphson iteration: x' = 0.5 * x * (3 - a*x*x)
+                    let two = _mm512_set1_{s}(2.0);
+                    let r = _mm512_rcp14_{s}(a);
+                    {recip_full_steps}
+                }}
+            }}
+
+            #[inline(always)]
+            fn rsqrt(self, a: {inner}) -> {inner} {{
+                unsafe {{
                     let half = _mm512_set1_{s}(0.5);
                     let three = _mm512_set1_{s}(3.0);
-                    _mm512_mul_{s}(
-                        _mm512_mul_{s}(half, approx),
-                        _mm512_sub_{s}(three, _mm512_mul_{s}(a, _mm512_mul_{s}(approx, approx)))
-                    )
+                    let y = _mm512_rsqrt14_{s}(a);
+                    {rsqrt_full_steps}
                 }}
             }}
 

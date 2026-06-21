@@ -199,26 +199,36 @@ impl F32x16Backend for archmage::X64V4Token {
         unsafe { _mm512_reduce_max_ps(a) }
     }
 
+    // Raw 14-bit hardware estimate — the cheapest >=12-bit path on AVX-512.
     #[inline(always)]
     fn rcp_approx(self, a: __m512) -> __m512 {
-        unsafe {
-            let approx = _mm512_rcp14_ps(a);
-            // One Newton-Raphson iteration: x' = x * (2 - a*x)
-            let two = _mm512_set1_ps(2.0);
-            _mm512_mul_ps(approx, _mm512_sub_ps(two, _mm512_mul_ps(a, approx)))
-        }
+        unsafe { _mm512_rcp14_ps(a) }
     }
 
     #[inline(always)]
     fn rsqrt_approx(self, a: __m512) -> __m512 {
+        unsafe { _mm512_rsqrt14_ps(a) }
+    }
+
+    // Newton-Raphson to full precision (1 step(s) from rcp14/rsqrt14).
+    #[inline(always)]
+    fn recip(self, a: __m512) -> __m512 {
         unsafe {
-            let approx = _mm512_rsqrt14_ps(a);
-            // One Newton-Raphson iteration: x' = 0.5 * x * (3 - a*x*x)
+            let two = _mm512_set1_ps(2.0);
+            let r = _mm512_rcp14_ps(a);
+            _mm512_mul_ps(r, _mm512_sub_ps(two, _mm512_mul_ps(a, r)))
+        }
+    }
+
+    #[inline(always)]
+    fn rsqrt(self, a: __m512) -> __m512 {
+        unsafe {
             let half = _mm512_set1_ps(0.5);
             let three = _mm512_set1_ps(3.0);
+            let y = _mm512_rsqrt14_ps(a);
             _mm512_mul_ps(
-                _mm512_mul_ps(half, approx),
-                _mm512_sub_ps(three, _mm512_mul_ps(a, _mm512_mul_ps(approx, approx))),
+                _mm512_mul_ps(half, y),
+                _mm512_sub_ps(three, _mm512_mul_ps(a, _mm512_mul_ps(y, y))),
             )
         }
     }
@@ -427,26 +437,41 @@ impl F64x8Backend for archmage::X64V4Token {
         unsafe { _mm512_reduce_max_pd(a) }
     }
 
+    // Raw 14-bit hardware estimate — the cheapest >=12-bit path on AVX-512.
     #[inline(always)]
     fn rcp_approx(self, a: __m512d) -> __m512d {
-        unsafe {
-            let approx = _mm512_rcp14_pd(a);
-            // One Newton-Raphson iteration: x' = x * (2 - a*x)
-            let two = _mm512_set1_pd(2.0);
-            _mm512_mul_pd(approx, _mm512_sub_pd(two, _mm512_mul_pd(a, approx)))
-        }
+        unsafe { _mm512_rcp14_pd(a) }
     }
 
     #[inline(always)]
     fn rsqrt_approx(self, a: __m512d) -> __m512d {
+        unsafe { _mm512_rsqrt14_pd(a) }
+    }
+
+    // Newton-Raphson to full precision (2 step(s) from rcp14/rsqrt14).
+    #[inline(always)]
+    fn recip(self, a: __m512d) -> __m512d {
         unsafe {
-            let approx = _mm512_rsqrt14_pd(a);
-            // One Newton-Raphson iteration: x' = 0.5 * x * (3 - a*x*x)
+            let two = _mm512_set1_pd(2.0);
+            let r = _mm512_rcp14_pd(a);
+            let r = _mm512_mul_pd(r, _mm512_sub_pd(two, _mm512_mul_pd(a, r)));
+            _mm512_mul_pd(r, _mm512_sub_pd(two, _mm512_mul_pd(a, r)))
+        }
+    }
+
+    #[inline(always)]
+    fn rsqrt(self, a: __m512d) -> __m512d {
+        unsafe {
             let half = _mm512_set1_pd(0.5);
             let three = _mm512_set1_pd(3.0);
+            let y = _mm512_rsqrt14_pd(a);
+            let y = _mm512_mul_pd(
+                _mm512_mul_pd(half, y),
+                _mm512_sub_pd(three, _mm512_mul_pd(a, _mm512_mul_pd(y, y))),
+            );
             _mm512_mul_pd(
-                _mm512_mul_pd(half, approx),
-                _mm512_sub_pd(three, _mm512_mul_pd(a, _mm512_mul_pd(approx, approx))),
+                _mm512_mul_pd(half, y),
+                _mm512_sub_pd(three, _mm512_mul_pd(a, _mm512_mul_pd(y, y))),
             )
         }
     }
@@ -2243,26 +2268,36 @@ impl F32x16Backend for archmage::X64V4xToken {
         unsafe { _mm512_reduce_max_ps(a) }
     }
 
+    // Raw 14-bit hardware estimate — the cheapest >=12-bit path on AVX-512.
     #[inline(always)]
     fn rcp_approx(self, a: __m512) -> __m512 {
-        unsafe {
-            let approx = _mm512_rcp14_ps(a);
-            // One Newton-Raphson iteration: x' = x * (2 - a*x)
-            let two = _mm512_set1_ps(2.0);
-            _mm512_mul_ps(approx, _mm512_sub_ps(two, _mm512_mul_ps(a, approx)))
-        }
+        unsafe { _mm512_rcp14_ps(a) }
     }
 
     #[inline(always)]
     fn rsqrt_approx(self, a: __m512) -> __m512 {
+        unsafe { _mm512_rsqrt14_ps(a) }
+    }
+
+    // Newton-Raphson to full precision (1 step(s) from rcp14/rsqrt14).
+    #[inline(always)]
+    fn recip(self, a: __m512) -> __m512 {
         unsafe {
-            let approx = _mm512_rsqrt14_ps(a);
-            // One Newton-Raphson iteration: x' = 0.5 * x * (3 - a*x*x)
+            let two = _mm512_set1_ps(2.0);
+            let r = _mm512_rcp14_ps(a);
+            _mm512_mul_ps(r, _mm512_sub_ps(two, _mm512_mul_ps(a, r)))
+        }
+    }
+
+    #[inline(always)]
+    fn rsqrt(self, a: __m512) -> __m512 {
+        unsafe {
             let half = _mm512_set1_ps(0.5);
             let three = _mm512_set1_ps(3.0);
+            let y = _mm512_rsqrt14_ps(a);
             _mm512_mul_ps(
-                _mm512_mul_ps(half, approx),
-                _mm512_sub_ps(three, _mm512_mul_ps(a, _mm512_mul_ps(approx, approx))),
+                _mm512_mul_ps(half, y),
+                _mm512_sub_ps(three, _mm512_mul_ps(a, _mm512_mul_ps(y, y))),
             )
         }
     }
@@ -2471,26 +2506,41 @@ impl F64x8Backend for archmage::X64V4xToken {
         unsafe { _mm512_reduce_max_pd(a) }
     }
 
+    // Raw 14-bit hardware estimate — the cheapest >=12-bit path on AVX-512.
     #[inline(always)]
     fn rcp_approx(self, a: __m512d) -> __m512d {
-        unsafe {
-            let approx = _mm512_rcp14_pd(a);
-            // One Newton-Raphson iteration: x' = x * (2 - a*x)
-            let two = _mm512_set1_pd(2.0);
-            _mm512_mul_pd(approx, _mm512_sub_pd(two, _mm512_mul_pd(a, approx)))
-        }
+        unsafe { _mm512_rcp14_pd(a) }
     }
 
     #[inline(always)]
     fn rsqrt_approx(self, a: __m512d) -> __m512d {
+        unsafe { _mm512_rsqrt14_pd(a) }
+    }
+
+    // Newton-Raphson to full precision (2 step(s) from rcp14/rsqrt14).
+    #[inline(always)]
+    fn recip(self, a: __m512d) -> __m512d {
         unsafe {
-            let approx = _mm512_rsqrt14_pd(a);
-            // One Newton-Raphson iteration: x' = 0.5 * x * (3 - a*x*x)
+            let two = _mm512_set1_pd(2.0);
+            let r = _mm512_rcp14_pd(a);
+            let r = _mm512_mul_pd(r, _mm512_sub_pd(two, _mm512_mul_pd(a, r)));
+            _mm512_mul_pd(r, _mm512_sub_pd(two, _mm512_mul_pd(a, r)))
+        }
+    }
+
+    #[inline(always)]
+    fn rsqrt(self, a: __m512d) -> __m512d {
+        unsafe {
             let half = _mm512_set1_pd(0.5);
             let three = _mm512_set1_pd(3.0);
+            let y = _mm512_rsqrt14_pd(a);
+            let y = _mm512_mul_pd(
+                _mm512_mul_pd(half, y),
+                _mm512_sub_pd(three, _mm512_mul_pd(a, _mm512_mul_pd(y, y))),
+            );
             _mm512_mul_pd(
-                _mm512_mul_pd(half, approx),
-                _mm512_sub_pd(three, _mm512_mul_pd(a, _mm512_mul_pd(approx, approx))),
+                _mm512_mul_pd(half, y),
+                _mm512_sub_pd(three, _mm512_mul_pd(a, _mm512_mul_pd(y, y))),
             )
         }
     }

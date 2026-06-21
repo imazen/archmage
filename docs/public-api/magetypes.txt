@@ -6,14 +6,14 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2777 lines (supported surface) | magetypes.features.txt 402 added (features: avx512,std,w512) | magetypes.internal.txt 92 lines (99 hidden + 0 excluded-feature)
+# files: magetypes.txt 2795 lines (supported surface) | magetypes.features.txt 402 added (features: avx512,std,w512) | magetypes.internal.txt 92 lines (99 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                18
 #   pub types (struct/enum/trait/alias)       416
-#   pub consts/statics                        382
-#   free functions                           9218
+#   pub consts/statics                        390
+#   free functions                           9236
 #   inherent methods                         1108
 #   enum variants                              96
 #   re-exports                                  3
@@ -26,9 +26,9 @@
 #   (root)                          536
 #   cast                              3
 #   prelude                          16
-#   simd                          10686
+#   simd                          10712
 
-## items (2573 lines)
+## items (2591 lines)
 
 pub mod magetypes
 pub use archmage
@@ -248,6 +248,8 @@ pub fn simd::backends::F32x16Convert::convert_f32_to_i32_round(self, <Self as si
 pub fn simd::backends::F32x16Convert::convert_i32_to_f32(self, <Self as simd::backends::I32x16Backend>::Repr) -> <Self as simd::backends::F32x16Backend>::Repr
 pub trait simd::backends::F32x4Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::F32x4Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub const simd::backends::F32x4Backend::HW_RECIP_ESTIMATE: bool
+pub const simd::backends::F32x4Backend::HW_RECIP_ESTIMATE_12BIT: bool
 pub fn simd::backends::F32x4Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::bitand(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -295,6 +297,8 @@ pub fn simd::backends::F32x4Convert::convert_f32_to_i32_round(self, <Self as sim
 pub fn simd::backends::F32x4Convert::convert_i32_to_f32(self, <Self as simd::backends::I32x4Backend>::Repr) -> <Self as simd::backends::F32x4Backend>::Repr
 pub trait simd::backends::F32x8Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::F32x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub const simd::backends::F32x8Backend::HW_RECIP_ESTIMATE: bool
+pub const simd::backends::F32x8Backend::HW_RECIP_ESTIMATE_12BIT: bool
 pub fn simd::backends::F32x8Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::bitand(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -342,6 +346,8 @@ pub fn simd::backends::F32x8Convert::convert_f32_to_i32_round(self, <Self as sim
 pub fn simd::backends::F32x8Convert::convert_i32_to_f32(self, <Self as simd::backends::I32x8Backend>::Repr) -> <Self as simd::backends::F32x8Backend>::Repr
 pub trait simd::backends::F64x2Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::F64x2Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub const simd::backends::F64x2Backend::HW_RECIP_ESTIMATE: bool
+pub const simd::backends::F64x2Backend::HW_RECIP_ESTIMATE_12BIT: bool
 pub fn simd::backends::F64x2Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::bitand(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -383,6 +389,8 @@ pub fn simd::backends::F64x2Backend::to_array(self, Self::Repr) -> [f64; 2]
 pub fn simd::backends::F64x2Backend::zero(self) -> Self::Repr
 pub trait simd::backends::F64x4Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::F64x4Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub const simd::backends::F64x4Backend::HW_RECIP_ESTIMATE: bool
+pub const simd::backends::F64x4Backend::HW_RECIP_ESTIMATE_12BIT: bool
 pub fn simd::backends::F64x4Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::bitand(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1287,6 +1295,8 @@ pub fn simd::generic::f32x16<T>::into_repr(self) -> <T as simd::backends::F32x16
 pub fn simd::generic::f32x16<T>::load(T, &[f32; 16]) -> Self
 pub fn simd::generic::f32x16<T>::partition_slice(T, &[f32]) -> (&[[f32; 16]], &[f32])
 pub fn simd::generic::f32x16<T>::partition_slice_mut(T, &mut [f32]) -> (&mut [[f32; 16]], &mut [f32])
+pub fn simd::generic::f32x16<T>::rcp_approx_portable(self) -> Self where T: simd::backends::F32x16Convert
+pub fn simd::generic::f32x16<T>::rsqrt_approx_portable(self) -> Self where T: simd::backends::F32x16Convert
 pub fn simd::generic::f32x16<T>::store(self, &mut [f32; 16]) [also: simd::polyfill::v3_512::f32x16]
 pub fn simd::generic::f32x16<T>::to_array(self) -> [f32; 16] [also: simd::polyfill::v3_512::f32x16]
 pub fn simd::generic::f32x16<T>::bitcast_i32x16(self) -> simd::generic::i32x16<T>
@@ -1313,6 +1323,12 @@ pub fn simd::generic::f32x4<T>::into_repr(self) -> <T as simd::backends::F32x4Ba
 pub fn simd::generic::f32x4<T>::load(T, &[f32; 4]) -> Self
 pub fn simd::generic::f32x4<T>::partition_slice(T, &[f32]) -> (&[[f32; 4]], &[f32])
 pub fn simd::generic::f32x4<T>::partition_slice_mut(T, &mut [f32]) -> (&mut [[f32; 4]], &mut [f32])
+pub fn simd::generic::f32x4<T>::rcp_approx_portable(self) -> Self where T: simd::backends::F32x4Convert
+pub fn simd::generic::f32x4<T>::recip_newton_portable(self, Self) -> Self [also: simd::generic::f32x16<T>, simd::generic::f32x8<T>]
+pub fn simd::generic::f32x4<T>::recip_portable(self) -> Self [also: simd::generic::f32x16<T>, simd::generic::f32x8<T>]
+pub fn simd::generic::f32x4<T>::rsqrt_approx_portable(self) -> Self where T: simd::backends::F32x4Convert
+pub fn simd::generic::f32x4<T>::rsqrt_newton_portable(self, Self) -> Self [also: simd::generic::f32x16<T>, simd::generic::f32x8<T>]
+pub fn simd::generic::f32x4<T>::rsqrt_portable(self) -> Self [also: simd::generic::f32x16<T>, simd::generic::f32x8<T>]
 pub fn simd::generic::f32x4<T>::splat(T, f32) -> Self [also: simd::generic::f32x16<T>, simd::generic::f32x8<T>]
 pub fn simd::generic::f32x4<T>::zero(T) -> Self [also: simd::generic::f32x16<T>, simd::generic::f32x8<T>, simd::generic::f64x2<T>, simd::generic::f64x4<T>, simd::generic::f64x8<T>, simd::generic::i16x16<T>, simd::generic::i16x32<T>, simd::generic::i16x8<T>, simd::generic::i32x16<T>, simd::generic::i32x4<T>, simd::generic::i32x8<T>, simd::generic::i64x2<T>, simd::generic::i64x4<T>, simd::generic::i64x8<T>, simd::generic::i8x16<T>, simd::generic::i8x32<T>, simd::generic::i8x64<T>, simd::generic::u16x16<T>, simd::generic::u16x32<T>, simd::generic::u16x8<T>, simd::generic::u32x16<T>, simd::generic::u32x4<T>, simd::generic::u32x8<T>, simd::generic::u64x2<T>, simd::generic::u64x4<T>, simd::generic::u64x8<T>, simd::generic::u8x16<T>, simd::generic::u8x32<T>, simd::generic::u8x64<T>]
 pub fn simd::generic::f32x4<T>::cast_slice(T, &[f32]) -> core::option::Option<&[Self]> [also: simd::generic::f32x8<T>]
@@ -1347,6 +1363,8 @@ pub fn simd::generic::f32x8<T>::into_repr(self) -> <T as simd::backends::F32x8Ba
 pub fn simd::generic::f32x8<T>::load(T, &[f32; 8]) -> Self
 pub fn simd::generic::f32x8<T>::partition_slice(T, &[f32]) -> (&[[f32; 8]], &[f32])
 pub fn simd::generic::f32x8<T>::partition_slice_mut(T, &mut [f32]) -> (&mut [[f32; 8]], &mut [f32])
+pub fn simd::generic::f32x8<T>::rcp_approx_portable(self) -> Self where T: simd::backends::F32x8Convert
+pub fn simd::generic::f32x8<T>::rsqrt_approx_portable(self) -> Self where T: simd::backends::F32x8Convert
 pub fn simd::generic::f32x8<T>::from_bytes(T, &[u8; 32]) -> Self [also: simd::generic::f64x4<T>, simd::generic::i32x8<T>]
 pub fn simd::generic::f32x8<T>::from_bytes_owned(T, [u8; 32]) -> Self [also: simd::generic::f64x4<T>, simd::generic::i32x8<T>]
 pub fn simd::generic::f32x8<T>::from_u8(T, &[u8; 8]) -> Self

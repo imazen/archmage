@@ -11,6 +11,9 @@ use crate::simd::backends::*;
 impl F32x4Backend for archmage::X64V3Token {
     type Repr = __m128;
 
+    const HW_RECIP_ESTIMATE: bool = true;
+    const HW_RECIP_ESTIMATE_12BIT: bool = true;
+
     // ====== Construction ======
 
     #[inline(always)]
@@ -206,36 +209,31 @@ impl F32x4Backend for archmage::X64V3Token {
         unsafe { _mm_rsqrt_ps(a) }
     }
 
-    // Newton-Raphson refinement over the *_approx variants. Constants
-    // built via value-based intrinsic splat directly (no token needed for
-    // the splat; this impl block is gated on the relevant target feature).
+    // Newton-Raphson refinement to full precision (1 step(s)).
+    // Constants via value-based splat (impl block is target-feature gated).
     #[inline(always)]
     fn recip(self, a: __m128) -> __m128 {
-        let approx = <Self as F32x4Backend>::rcp_approx(self, a);
         let two = unsafe { _mm_set1_ps(2.0) };
+        let r = <Self as F32x4Backend>::rcp_approx(self, a);
         <Self as F32x4Backend>::mul(
             self,
-            approx,
-            <Self as F32x4Backend>::sub(self, two, <Self as F32x4Backend>::mul(self, a, approx)),
+            r,
+            <Self as F32x4Backend>::sub(self, two, <Self as F32x4Backend>::mul(self, a, r)),
         )
     }
 
     #[inline(always)]
     fn rsqrt(self, a: __m128) -> __m128 {
-        let approx = <Self as F32x4Backend>::rsqrt_approx(self, a);
         let half = unsafe { _mm_set1_ps(0.5) };
         let three = unsafe { _mm_set1_ps(3.0) };
+        let y = <Self as F32x4Backend>::rsqrt_approx(self, a);
         <Self as F32x4Backend>::mul(
             self,
-            <Self as F32x4Backend>::mul(self, half, approx),
+            <Self as F32x4Backend>::mul(self, half, y),
             <Self as F32x4Backend>::sub(
                 self,
                 three,
-                <Self as F32x4Backend>::mul(
-                    self,
-                    a,
-                    <Self as F32x4Backend>::mul(self, approx, approx),
-                ),
+                <Self as F32x4Backend>::mul(self, a, <Self as F32x4Backend>::mul(self, y, y)),
             ),
         )
     }
@@ -270,6 +268,9 @@ impl F32x4Backend for archmage::X64V3Token {
 #[cfg(target_arch = "x86_64")]
 impl F32x8Backend for archmage::X64V3Token {
     type Repr = __m256;
+
+    const HW_RECIP_ESTIMATE: bool = true;
+    const HW_RECIP_ESTIMATE_12BIT: bool = true;
 
     // ====== Construction ======
 
@@ -475,36 +476,31 @@ impl F32x8Backend for archmage::X64V3Token {
         unsafe { _mm256_rsqrt_ps(a) }
     }
 
-    // Newton-Raphson refinement over the *_approx variants. Constants
-    // built via value-based intrinsic splat directly (no token needed for
-    // the splat; this impl block is gated on the relevant target feature).
+    // Newton-Raphson refinement to full precision (1 step(s)).
+    // Constants via value-based splat (impl block is target-feature gated).
     #[inline(always)]
     fn recip(self, a: __m256) -> __m256 {
-        let approx = <Self as F32x8Backend>::rcp_approx(self, a);
         let two = unsafe { _mm256_set1_ps(2.0) };
+        let r = <Self as F32x8Backend>::rcp_approx(self, a);
         <Self as F32x8Backend>::mul(
             self,
-            approx,
-            <Self as F32x8Backend>::sub(self, two, <Self as F32x8Backend>::mul(self, a, approx)),
+            r,
+            <Self as F32x8Backend>::sub(self, two, <Self as F32x8Backend>::mul(self, a, r)),
         )
     }
 
     #[inline(always)]
     fn rsqrt(self, a: __m256) -> __m256 {
-        let approx = <Self as F32x8Backend>::rsqrt_approx(self, a);
         let half = unsafe { _mm256_set1_ps(0.5) };
         let three = unsafe { _mm256_set1_ps(3.0) };
+        let y = <Self as F32x8Backend>::rsqrt_approx(self, a);
         <Self as F32x8Backend>::mul(
             self,
-            <Self as F32x8Backend>::mul(self, half, approx),
+            <Self as F32x8Backend>::mul(self, half, y),
             <Self as F32x8Backend>::sub(
                 self,
                 three,
-                <Self as F32x8Backend>::mul(
-                    self,
-                    a,
-                    <Self as F32x8Backend>::mul(self, approx, approx),
-                ),
+                <Self as F32x8Backend>::mul(self, a, <Self as F32x8Backend>::mul(self, y, y)),
             ),
         )
     }
@@ -539,6 +535,9 @@ impl F32x8Backend for archmage::X64V3Token {
 #[cfg(target_arch = "x86_64")]
 impl F64x2Backend for archmage::X64V3Token {
     type Repr = __m128d;
+
+    const HW_RECIP_ESTIMATE: bool = false;
+    const HW_RECIP_ESTIMATE_12BIT: bool = false;
 
     // ====== Construction ======
 
@@ -719,6 +718,30 @@ impl F64x2Backend for archmage::X64V3Token {
 
     // ====== Approximations ======
 
+    #[inline(always)]
+    fn rcp_approx(self, a: __m128d) -> __m128d {
+        let one = unsafe { _mm_set1_pd(1.0) };
+        <Self as F64x2Backend>::div(self, one, a)
+    }
+
+    #[inline(always)]
+    fn rsqrt_approx(self, a: __m128d) -> __m128d {
+        let one = unsafe { _mm_set1_pd(1.0) };
+        <Self as F64x2Backend>::div(self, one, <Self as F64x2Backend>::sqrt(self, a))
+    }
+
+    #[inline(always)]
+    fn recip(self, a: __m128d) -> __m128d {
+        let one = unsafe { _mm_set1_pd(1.0) };
+        <Self as F64x2Backend>::div(self, one, a)
+    }
+
+    #[inline(always)]
+    fn rsqrt(self, a: __m128d) -> __m128d {
+        let one = unsafe { _mm_set1_pd(1.0) };
+        <Self as F64x2Backend>::div(self, one, <Self as F64x2Backend>::sqrt(self, a))
+    }
+
     // ====== Bitwise ======
 
     #[inline(always)]
@@ -749,6 +772,9 @@ impl F64x2Backend for archmage::X64V3Token {
 #[cfg(target_arch = "x86_64")]
 impl F64x4Backend for archmage::X64V3Token {
     type Repr = __m256d;
+
+    const HW_RECIP_ESTIMATE: bool = false;
+    const HW_RECIP_ESTIMATE_12BIT: bool = false;
 
     // ====== Construction ======
 
@@ -937,6 +963,30 @@ impl F64x4Backend for archmage::X64V3Token {
     }
 
     // ====== Approximations ======
+
+    #[inline(always)]
+    fn rcp_approx(self, a: __m256d) -> __m256d {
+        let one = unsafe { _mm256_set1_pd(1.0) };
+        <Self as F64x4Backend>::div(self, one, a)
+    }
+
+    #[inline(always)]
+    fn rsqrt_approx(self, a: __m256d) -> __m256d {
+        let one = unsafe { _mm256_set1_pd(1.0) };
+        <Self as F64x4Backend>::div(self, one, <Self as F64x4Backend>::sqrt(self, a))
+    }
+
+    #[inline(always)]
+    fn recip(self, a: __m256d) -> __m256d {
+        let one = unsafe { _mm256_set1_pd(1.0) };
+        <Self as F64x4Backend>::div(self, one, a)
+    }
+
+    #[inline(always)]
+    fn rsqrt(self, a: __m256d) -> __m256d {
+        let one = unsafe { _mm256_set1_pd(1.0) };
+        <Self as F64x4Backend>::div(self, one, <Self as F64x4Backend>::sqrt(self, a))
+    }
 
     // ====== Bitwise ======
 
@@ -4438,6 +4488,22 @@ impl F32x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
+    fn recip(self, a: [__m256; 2]) -> [__m256; 2] {
+        [
+            <archmage::X64V3Token as F32x8Backend>::recip(self, a[0]),
+            <archmage::X64V3Token as F32x8Backend>::recip(self, a[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn rsqrt(self, a: [__m256; 2]) -> [__m256; 2] {
+        [
+            <archmage::X64V3Token as F32x8Backend>::rsqrt(self, a[0]),
+            <archmage::X64V3Token as F32x8Backend>::rsqrt(self, a[1]),
+        ]
+    }
+
+    #[inline(always)]
     fn simd_eq(self, a: [__m256; 2], b: [__m256; 2]) -> [__m256; 2] {
         [
             <archmage::X64V3Token as F32x8Backend>::simd_eq(self, a[0], b[0]),
@@ -4726,6 +4792,22 @@ impl F64x8Backend for archmage::X64V3Token {
         [
             <archmage::X64V3Token as F64x4Backend>::rsqrt_approx(self, a[0]),
             <archmage::X64V3Token as F64x4Backend>::rsqrt_approx(self, a[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn recip(self, a: [__m256d; 2]) -> [__m256d; 2] {
+        [
+            <archmage::X64V3Token as F64x4Backend>::recip(self, a[0]),
+            <archmage::X64V3Token as F64x4Backend>::recip(self, a[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn rsqrt(self, a: [__m256d; 2]) -> [__m256d; 2] {
+        [
+            <archmage::X64V3Token as F64x4Backend>::rsqrt(self, a[0]),
+            <archmage::X64V3Token as F64x4Backend>::rsqrt(self, a[1]),
         ]
     }
 

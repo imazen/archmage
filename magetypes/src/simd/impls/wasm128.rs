@@ -151,15 +151,22 @@ impl F32x4Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn rsqrt_approx(self, a: v128) -> v128 {
-        f32x4_div(f32x4_splat(1.0), f32x4_sqrt(a))
+        let onehalf = f32x4_splat(1.5);
+        let hx = f32x4_mul(f32x4_splat(0.5), a);
+        let seed = i32x4_sub(i32x4_splat(0x5f37_59df_i32), u32x4_shr(a, 1));
+        let y = f32x4_mul(
+            seed,
+            f32x4_sub(onehalf, f32x4_mul(f32x4_mul(hx, seed), seed)),
+        );
+        f32x4_mul(y, f32x4_sub(onehalf, f32x4_mul(f32x4_mul(hx, y), y)))
     }
     #[inline(always)]
     fn recip(self, a: v128) -> v128 {
-        <Self as F32x4Backend>::rcp_approx(self, a)
+        f32x4_div(f32x4_splat(1.0), a)
     }
     #[inline(always)]
     fn rsqrt(self, a: v128) -> v128 {
-        <Self as F32x4Backend>::rsqrt_approx(self, a)
+        f32x4_div(f32x4_splat(1.0), f32x4_sqrt(a))
     }
 
     #[inline(always)]
@@ -354,28 +361,22 @@ impl F32x8Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn rcp_approx(self, a: [v128; 2]) -> [v128; 2] {
-        let one = f32x4_splat(1.0);
-        [f32x4_div(one, a[0]), f32x4_div(one, a[1])]
+        core::array::from_fn(|i| <Self as F32x4Backend>::rcp_approx(self, a[i]))
     }
 
     #[inline(always)]
     fn rsqrt_approx(self, a: [v128; 2]) -> [v128; 2] {
-        let one = f32x4_splat(1.0);
-        [
-            f32x4_div(one, f32x4_sqrt(a[0])),
-            f32x4_div(one, f32x4_sqrt(a[1])),
-        ]
+        core::array::from_fn(|i| <Self as F32x4Backend>::rsqrt_approx(self, a[i]))
     }
 
-    // Override defaults: WASM has no fast approximation, already full precision
     #[inline(always)]
     fn recip(self, a: [v128; 2]) -> [v128; 2] {
-        <Self as F32x8Backend>::rcp_approx(self, a)
+        core::array::from_fn(|i| <Self as F32x4Backend>::recip(self, a[i]))
     }
 
     #[inline(always)]
     fn rsqrt(self, a: [v128; 2]) -> [v128; 2] {
-        <Self as F32x8Backend>::rsqrt_approx(self, a)
+        core::array::from_fn(|i| <Self as F32x4Backend>::rsqrt(self, a[i]))
     }
 
     #[inline(always)]
@@ -539,11 +540,11 @@ impl F64x2Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn recip(self, a: v128) -> v128 {
-        <Self as F64x2Backend>::rcp_approx(self, a)
+        f64x2_div(f64x2_splat(1.0), a)
     }
     #[inline(always)]
     fn rsqrt(self, a: v128) -> v128 {
-        <Self as F64x2Backend>::rsqrt_approx(self, a)
+        f64x2_div(f64x2_splat(1.0), f64x2_sqrt(a))
     }
 
     #[inline(always)]
@@ -735,28 +736,22 @@ impl F64x4Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn rcp_approx(self, a: [v128; 2]) -> [v128; 2] {
-        let one = f64x2_splat(1.0);
-        [f64x2_div(one, a[0]), f64x2_div(one, a[1])]
+        core::array::from_fn(|i| <Self as F64x2Backend>::rcp_approx(self, a[i]))
     }
 
     #[inline(always)]
     fn rsqrt_approx(self, a: [v128; 2]) -> [v128; 2] {
-        let one = f64x2_splat(1.0);
-        [
-            f64x2_div(one, f64x2_sqrt(a[0])),
-            f64x2_div(one, f64x2_sqrt(a[1])),
-        ]
+        core::array::from_fn(|i| <Self as F64x2Backend>::rsqrt_approx(self, a[i]))
     }
 
-    // Override defaults: WASM has no fast approximation, already full precision
     #[inline(always)]
     fn recip(self, a: [v128; 2]) -> [v128; 2] {
-        <Self as F64x4Backend>::rcp_approx(self, a)
+        core::array::from_fn(|i| <Self as F64x2Backend>::recip(self, a[i]))
     }
 
     #[inline(always)]
     fn rsqrt(self, a: [v128; 2]) -> [v128; 2] {
-        <Self as F64x4Backend>::rsqrt_approx(self, a)
+        core::array::from_fn(|i| <Self as F64x2Backend>::rsqrt(self, a[i]))
     }
 
     #[inline(always)]
@@ -3520,6 +3515,29 @@ impl F32x16Backend for archmage::Wasm128Token {
         core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::sqrt(self, a[i]))
     }
 
+    // Reciprocals delegate to the quarter backend so the full-precision
+    // and per-platform-approx behaviour matches the narrower widths.
+    // (Without these the trait defaults make recip/rcp_approx the identity.)
+    #[inline(always)]
+    fn rcp_approx(self, a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::rcp_approx(self, a[i]))
+    }
+
+    #[inline(always)]
+    fn rsqrt_approx(self, a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::rsqrt_approx(self, a[i]))
+    }
+
+    #[inline(always)]
+    fn recip(self, a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::recip(self, a[i]))
+    }
+
+    #[inline(always)]
+    fn rsqrt(self, a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::rsqrt(self, a[i]))
+    }
+
     #[inline(always)]
     fn abs(self, a: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::abs(self, a[i]))
@@ -3770,6 +3788,29 @@ impl F64x8Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn sqrt(self, a: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::sqrt(self, a[i]))
+    }
+
+    // Reciprocals delegate to the quarter backend so the full-precision
+    // and per-platform-approx behaviour matches the narrower widths.
+    // (Without these the trait defaults make recip/rcp_approx the identity.)
+    #[inline(always)]
+    fn rcp_approx(self, a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::rcp_approx(self, a[i]))
+    }
+
+    #[inline(always)]
+    fn rsqrt_approx(self, a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::rsqrt_approx(self, a[i]))
+    }
+
+    #[inline(always)]
+    fn recip(self, a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::recip(self, a[i]))
+    }
+
+    #[inline(always)]
+    fn rsqrt(self, a: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::rsqrt(self, a[i]))
     }
 
     #[inline(always)]

@@ -753,8 +753,18 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
 
             // ====== Approximations ======
 
-            /// Fast reciprocal approximation (1/x): backend-dependent precision
-            /// (x86 ~12-bit, ARM ~8-bit, WASM full). [`recip`] is full f32 everywhere.
+            /// Whether `rcp_approx`/`rsqrt_approx` use a hardware estimate
+            /// instruction (`true`) rather than a full-precision polyfill such as
+            /// division (`false` — WASM/scalar). Drives the generic `rsqrt_approx`
+            /// ≥12-bit dispatch.
+            const HW_RECIP_ESTIMATE: bool = false;
+            /// Whether that hardware estimate is already ≥~12-bit (`true`, x86) or
+            /// needs one refinement step to reach it (`false`, ARM ~8-bit).
+            const HW_RECIP_ESTIMATE_12BIT: bool = false;
+
+            /// Raw per-backend reciprocal seed (1/x). On x86/ARM this is the
+            /// hardware estimate; the generic `rcp_approx` refines it to a ≥12-bit
+            /// floor. WASM/scalar override `rcp_approx` on the generic type.
             ///
             /// **Default body returns the input unchanged** — every shipped
             /// backend overrides this with a native intrinsic. The original
@@ -1154,6 +1164,19 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
     };
 
     let approx_section = if !rcp_fn.is_empty() {
+        // The hardware estimate is ~12-14 bit and each Newton step doubles the
+        // correct bits, so f32 (24-bit mantissa) needs 1 step but f64 (53-bit)
+        // needs 2 to reach full precision.
+        let n_steps = if elem == "f64" { 2 } else { 1 };
+        // Last step is a tail expression (no `let`, so no clippy::let_and_return).
+        let recip_steps = (0..n_steps).map(|i| {
+            let step = format!("<Self as {trait_name}>::mul(self, r, <Self as {trait_name}>::sub(self, two, <Self as {trait_name}>::mul(self, a, r)))");
+            if i + 1 < n_steps { format!("let r = {step};") } else { step }
+        }).collect::<Vec<_>>().join("\n");
+        let rsqrt_steps = (0..n_steps).map(|i| {
+            let step = format!("<Self as {trait_name}>::mul(self, <Self as {trait_name}>::mul(self, half, y), <Self as {trait_name}>::sub(self, three, <Self as {trait_name}>::mul(self, a, <Self as {trait_name}>::mul(self, y, y))))");
+            if i + 1 < n_steps { format!("let y = {step};") } else { step }
+        }).collect::<Vec<_>>().join("\n");
         formatdoc! {r#"
             #[inline(always)]
             fn rcp_approx(self, a: {inner}) -> {inner} {{
@@ -1165,25 +1188,52 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
                 unsafe {{ {p}_{rsqrt_fn}_{s}(a) }}
             }}
 
-            // Newton-Raphson refinement over the *_approx variants. Constants
-            // built via value-based intrinsic splat directly (no token needed for
-            // the splat; this impl block is gated on the relevant target feature).
+            // Newton-Raphson refinement to full precision ({n_steps} step(s)).
+            // Constants via value-based splat (impl block is target-feature gated).
             #[inline(always)]
             fn recip(self, a: {inner}) -> {inner} {{
-                let approx = <Self as {trait_name}>::rcp_approx(self, a);
                 let two = unsafe {{ {p}_set1_{s}(2.0) }};
-                <Self as {trait_name}>::mul(self, approx, <Self as {trait_name}>::sub(self, two, <Self as {trait_name}>::mul(self, a, approx)))
+                let r = <Self as {trait_name}>::rcp_approx(self, a);
+                {recip_steps}
             }}
 
             #[inline(always)]
             fn rsqrt(self, a: {inner}) -> {inner} {{
-                let approx = <Self as {trait_name}>::rsqrt_approx(self, a);
                 let half = unsafe {{ {p}_set1_{s}(0.5) }};
                 let three = unsafe {{ {p}_set1_{s}(3.0) }};
-                <Self as {trait_name}>::mul(self,
-                    <Self as {trait_name}>::mul(self, half, approx),
-                    <Self as {trait_name}>::sub(self, three, <Self as {trait_name}>::mul(self, a, <Self as {trait_name}>::mul(self, approx, approx))),
-                )
+                let y = <Self as {trait_name}>::rsqrt_approx(self, a);
+                {rsqrt_steps}
+            }}
+        "#}
+    } else if elem == "f64" {
+        // No hardware reciprocal estimate for f64 below AVX-512. Both the
+        // "approx" and full methods use exact IEEE division / sqrt — full
+        // precision and deterministic. Mirrors the WASM/scalar fallback, and
+        // overrides the trait default (which is identity) so f64x2/f64x4 are
+        // correct rather than returning the input unchanged.
+        formatdoc! {r#"
+            #[inline(always)]
+            fn rcp_approx(self, a: {inner}) -> {inner} {{
+                let one = unsafe {{ {p}_set1_{s}(1.0) }};
+                <Self as {trait_name}>::div(self, one, a)
+            }}
+
+            #[inline(always)]
+            fn rsqrt_approx(self, a: {inner}) -> {inner} {{
+                let one = unsafe {{ {p}_set1_{s}(1.0) }};
+                <Self as {trait_name}>::div(self, one, <Self as {trait_name}>::sqrt(self, a))
+            }}
+
+            #[inline(always)]
+            fn recip(self, a: {inner}) -> {inner} {{
+                let one = unsafe {{ {p}_set1_{s}(1.0) }};
+                <Self as {trait_name}>::div(self, one, a)
+            }}
+
+            #[inline(always)]
+            fn rsqrt(self, a: {inner}) -> {inner} {{
+                let one = unsafe {{ {p}_set1_{s}(1.0) }};
+                <Self as {trait_name}>::div(self, one, <Self as {trait_name}>::sqrt(self, a))
             }}
         "#}
     } else {
@@ -1204,9 +1254,13 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
 
     let _ = extract_hi; // Used in reduce_* bodies
 
+    let has_hw_est = !rcp_fn.is_empty();
     formatdoc! {r#"
         impl {trait_name} for archmage::{token} {{
             type Repr = {inner};
+
+            const HW_RECIP_ESTIMATE: bool = {has_hw_est};
+            const HW_RECIP_ESTIMATE_12BIT: bool = {has_hw_est};
 
             // ====== Construction ======
 
@@ -1730,6 +1784,58 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
 
     let sign_shift = if elem == "f32" { "31" } else { "63" };
 
+    // No hardware reciprocal estimate on the scalar fallback. `rcp_approx` is
+    // exact division (measured fastest: a bit-hack estimate is ~1.8x slower per
+    // `examples/scalar_reciprocal_bench.rs`). `rsqrt_approx` replaces the very slow
+    // scalar sqrt+div with a bit-hack seed + 2 Newton steps (~17-bit) — measured
+    // ~11x faster — bit-identical to `rsqrt_approx_portable` then one more
+    // `rsqrt_newton_portable`. `recip`/`rsqrt` stay exact; f64 keeps exact division.
+    let recip_section = if elem == "f32" {
+        formatdoc! {r#"
+            #[inline(always)]
+            fn rcp_approx(self, a: {array}) -> {array} {{
+                core::array::from_fn(|i| 1.0 / a[i])
+            }}
+            #[inline(always)]
+            fn rsqrt_approx(self, a: {array}) -> {array} {{
+                core::array::from_fn(|i| {{
+                    let x = a[i];
+                    let seed = f32::from_bits(0x5f37_59df_u32.wrapping_sub(x.to_bits() >> 1));
+                    let hx = 0.5 * x;
+                    let y = seed * (1.5 - hx * seed * seed);
+                    y * (1.5 - hx * y * y)
+                }})
+            }}
+            #[inline(always)]
+            fn recip(self, a: {array}) -> {array} {{
+                core::array::from_fn(|i| 1.0 / a[i])
+            }}
+            #[inline(always)]
+            fn rsqrt(self, a: {array}) -> {array} {{
+                core::array::from_fn(|i| 1.0 / {elem}_sqrt(a[i]))
+            }}
+        "#}
+    } else {
+        formatdoc! {r#"
+            #[inline(always)]
+            fn rcp_approx(self, a: {array}) -> {array} {{
+                core::array::from_fn(|i| 1.0 / a[i])
+            }}
+            #[inline(always)]
+            fn rsqrt_approx(self, a: {array}) -> {array} {{
+                core::array::from_fn(|i| 1.0 / {elem}_sqrt(a[i]))
+            }}
+            #[inline(always)]
+            fn recip(self, a: {array}) -> {array} {{
+                core::array::from_fn(|i| 1.0 / a[i])
+            }}
+            #[inline(always)]
+            fn rsqrt(self, a: {array}) -> {array} {{
+                core::array::from_fn(|i| 1.0 / {elem}_sqrt(a[i]))
+            }}
+        "#}
+    };
+
     formatdoc! {r#"
         impl {trait_name} for archmage::ScalarToken {{
             type Repr = {array};
@@ -1952,33 +2058,7 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
             }}
 
             // ====== Approximations ======
-
-            #[inline(always)]
-            fn rcp_approx(self, a: {array}) -> {array} {{
-                {rcp_lanes}
-            }}
-
-            #[inline(always)]
-            fn rsqrt_approx(self, a: {array}) -> {array} {{
-                let mut r = [{zero_lit}; {lanes}];
-                for i in 0..{lanes} {{
-                    r[i] = 1.0 / {elem}_sqrt(a[i]);
-                }}
-                r
-            }}
-
-            // Override defaults: scalar doesn't need Newton-Raphson (already full precision)
-            // Use FQS because ScalarToken implements multiple backend traits.
-            #[inline(always)]
-            fn recip(self, a: {array}) -> {array} {{
-                <Self as {trait_name}>::rcp_approx(self, a)
-            }}
-
-            #[inline(always)]
-            fn rsqrt(self, a: {array}) -> {array} {{
-                <Self as {trait_name}>::rsqrt_approx(self, a)
-            }}
-
+{recip_section}
             // ====== Bitwise ======
 
             #[inline(always)]
@@ -2014,10 +2094,6 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
         mul_add = mul_add_lanes(),
         mul_sub = mul_sub_lanes(),
         reduce_add = reduce_add(),
-        rcp_lanes = {
-            let items: Vec<String> = (0..lanes).map(|i| format!("1.0 / a[{i}]")).collect();
-            format!("[{}]", items.join(", "))
-        },
         not_lanes = bitwise_unary_lanes("!"),
         and_lanes = bitwise_binary_lanes("&"),
         or_lanes = bitwise_binary_lanes("|"),
@@ -2356,6 +2432,8 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
                 {reduce_max_body}
             }}
 
+            const HW_RECIP_ESTIMATE: bool = true;
+
             // ====== Approximations ======
             //
             // `_approx` is the raw hardware estimate (one vrecpe/vrsqrte per
@@ -2465,20 +2543,48 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             format!("unsafe {{ [{}] }}", items.join(", "))
         },
         recip_2step_body = {
-            // two native FRECPS Newton steps over the raw estimate held in `y`
+            // Native FRECPS Newton steps over the raw estimate held in `y`.
+            // f64 (53-bit) needs 3 from the 8-bit estimate; f32 (24-bit) needs 2.
+            let nsteps = if elem == "f64" { 3 } else { 2 };
             let items: Vec<String> = (0..sub_count)
-                .map(|i| format!(
-                    "{{ let y1 = vmulq_{ns}(vrecpsq_{ns}(a[{i}], y[{i}]), y[{i}]); vmulq_{ns}(vrecpsq_{ns}(a[{i}], y1), y1) }}"
-                ))
+                .map(|i| {
+                    let mut chain = String::from("{ ");
+                    let mut cur = format!("y[{i}]");
+                    for s in 0..nsteps {
+                        let step = format!("vmulq_{ns}(vrecpsq_{ns}(a[{i}], {cur}), {cur})");
+                        if s + 1 < nsteps {
+                            chain.push_str(&format!("let t{s} = {step}; "));
+                            cur = format!("t{s}");
+                        } else {
+                            chain.push_str(&format!("{step} "));
+                        }
+                    }
+                    chain.push('}');
+                    chain
+                })
                 .collect();
             format!("unsafe {{ [{}] }}", items.join(", "))
         },
         rsqrt_2step_body = {
-            // two native FRSQRTS Newton steps over the raw estimate held in `y`
+            // Native FRSQRTS Newton steps over the raw estimate held in `y`.
+            // f64 (53-bit) needs 3 from the 8-bit estimate; f32 (24-bit) needs 2.
+            let nsteps = if elem == "f64" { 3 } else { 2 };
             let items: Vec<String> = (0..sub_count)
-                .map(|i| format!(
-                    "{{ let y1 = vmulq_{ns}(vrsqrtsq_{ns}(vmulq_{ns}(a[{i}], y[{i}]), y[{i}]), y[{i}]); vmulq_{ns}(vrsqrtsq_{ns}(vmulq_{ns}(a[{i}], y1), y1), y1) }}"
-                ))
+                .map(|i| {
+                    let mut chain = String::from("{ ");
+                    let mut cur = format!("y[{i}]");
+                    for s in 0..nsteps {
+                        let step = format!("vmulq_{ns}(vrsqrtsq_{ns}(vmulq_{ns}(a[{i}], {cur}), {cur}), {cur})");
+                        if s + 1 < nsteps {
+                            chain.push_str(&format!("let t{s} = {step}; "));
+                            cur = format!("t{s}");
+                        } else {
+                            chain.push_str(&format!("{step} "));
+                        }
+                    }
+                    chain.push('}');
+                    chain
+                })
                 .collect();
             format!("unsafe {{ [{}] }}", items.join(", "))
         },
@@ -2512,6 +2618,33 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
     } else {
         format!("vmvnq_u{eb}(vceqq_{ns}(a, b))")
     };
+
+    // f64 (53-bit mantissa) needs 3 Newton steps from the 8-bit NEON estimate to
+    // reach full precision; f32 (24-bit) needs 2.
+    let n_nr_steps = if elem == "f64" { 3 } else { 2 };
+    // Last step is a tail expression (no `let`, so no clippy::let_and_return).
+    let recip_nr_steps = (0..n_nr_steps)
+        .map(|i| {
+            let step = format!("vmulq_{ns}(vrecpsq_{ns}(a, y), y)");
+            if i + 1 < n_nr_steps {
+                format!("let y = {step};")
+            } else {
+                step
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n                    ");
+    let rsqrt_nr_steps = (0..n_nr_steps)
+        .map(|i| {
+            let step = format!("vmulq_{ns}(vrsqrtsq_{ns}(vmulq_{ns}(a, y), y), y)");
+            if i + 1 < n_nr_steps {
+                format!("let y = {step};")
+            } else {
+                step
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n                    ");
 
     // For native types, reduce pattern is different
     let reduce_pairwise = |pairwise: &str| -> String {
@@ -2640,6 +2773,8 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
                 {reduce_max}
             }}
 
+            const HW_RECIP_ESTIMATE: bool = true;
+
             // `_approx` is the raw hardware estimate — one `vrecpe`/`vrsqrte`
             // instruction (~8-bit), the fastest path. Cross-architecture
             // bit-identity is the job of the `_portable` family, not this one,
@@ -2663,16 +2798,14 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             fn recip(self, a: {repr}) -> {repr} {{
                 let y = <Self as {trait_name}>::rcp_approx(self, a);
                 unsafe {{
-                    let y = vmulq_{ns}(vrecpsq_{ns}(a, y), y);
-                    vmulq_{ns}(vrecpsq_{ns}(a, y), y)
+                    {recip_nr_steps}
                 }}
             }}
             #[inline(always)]
             fn rsqrt(self, a: {repr}) -> {repr} {{
                 let y = <Self as {trait_name}>::rsqrt_approx(self, a);
                 unsafe {{
-                    let y = vmulq_{ns}(vrsqrtsq_{ns}(vmulq_{ns}(a, y), y), y);
-                    vmulq_{ns}(vrsqrtsq_{ns}(vmulq_{ns}(a, y), y), y)
+                    {rsqrt_nr_steps}
                 }}
             }}
 
@@ -2795,6 +2928,10 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
         body
     };
 
+    // Reciprocals delegate to the native 128-bit sub-backend so the polyfill
+    // inherits its per-platform `_approx` (the f32 bit-hack) and exact full
+    // methods — no second copy of the estimate to keep in sync.
+    let sub_trait = format!("F{}x{}Backend", &elem[1..], native_lanes);
     formatdoc! {r#"
         impl {trait_name} for archmage::Wasm128Token {{
             type Repr = {repr};
@@ -2908,25 +3045,22 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
 
             #[inline(always)]
             fn rcp_approx(self, a: {repr}) -> {repr} {{
-                let one = {wp}_splat(1.0);
-                [{rcp_lanes}]
+                core::array::from_fn(|i| <Self as {sub_trait}>::rcp_approx(self, a[i]))
             }}
 
             #[inline(always)]
             fn rsqrt_approx(self, a: {repr}) -> {repr} {{
-                let one = {wp}_splat(1.0);
-                [{rsqrt_lanes}]
+                core::array::from_fn(|i| <Self as {sub_trait}>::rsqrt_approx(self, a[i]))
             }}
 
-            // Override defaults: WASM has no fast approximation, already full precision
             #[inline(always)]
             fn recip(self, a: {repr}) -> {repr} {{
-                <Self as {trait_name}>::rcp_approx(self, a)
+                core::array::from_fn(|i| <Self as {sub_trait}>::recip(self, a[i]))
             }}
 
             #[inline(always)]
             fn rsqrt(self, a: {repr}) -> {repr} {{
-                <Self as {trait_name}>::rsqrt_approx(self, a)
+                core::array::from_fn(|i| <Self as {sub_trait}>::rsqrt(self, a[i]))
             }}
 
             #[inline(always)]
@@ -2977,12 +3111,6 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
         reduce_add = reduce_add_body(),
         reduce_min = reduce_minmax(&format!("{wp}_min"), "min"),
         reduce_max = reduce_minmax(&format!("{wp}_max"), "max"),
-        rcp_lanes = (0..sub_count)
-            .map(|i| format!("{wp}_div(one, a[{i}])"))
-            .collect::<Vec<_>>().join(", "),
-        rsqrt_lanes = (0..sub_count)
-            .map(|i| format!("{wp}_div(one, {wp}_sqrt(a[{i}]))"))
-            .collect::<Vec<_>>().join(", "),
         not = unary_op("v128_not"),
         and = binary_op("v128_and"),
         or = binary_op("v128_or"),
@@ -3026,6 +3154,50 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
         format!("{}\n        {fold}", extracts.join("\n        "))
     };
 
+    // WASM has no hardware reciprocal estimate. For f32 the fast `_approx` is an
+    // integer bit-hack seed + one Newton step (~16-bit) — faster than f32x4
+    // division and bit-identical to `rcp_approx_portable` (same magic constant
+    // and mul/sub order). `recip`/`rsqrt` stay exact (full-precision division).
+    // f64 has no cheap estimate worth the divergence, so it keeps exact division
+    // for both the approx and full methods.
+    let recip_section = if elem == "f32" {
+        // `rcp_approx` is exact division: it is the fastest >=12-bit reciprocal on
+        // WASM (a single f32x4.div), and a bit-hack estimate is no faster while
+        // being less accurate (measured). `rsqrt_approx`, by contrast, replaces the
+        // expensive sqrt+div with a bit-hack seed + 2 Newton steps (~17-bit) —
+        // ~1.9x faster on WASM (`examples/wasm_reciprocal_bench.rs`). The seed +
+        // 2 steps is bit-identical to `rsqrt_approx_portable` then one more
+        // `rsqrt_newton_portable` (asserted in the tests). `recip`/`rsqrt` are
+        // exact.
+        r#"
+            #[inline(always)]
+            fn rcp_approx(self, a: v128) -> v128 { f32x4_div(f32x4_splat(1.0), a) }
+            #[inline(always)]
+            fn rsqrt_approx(self, a: v128) -> v128 {
+                let onehalf = f32x4_splat(1.5);
+                let hx = f32x4_mul(f32x4_splat(0.5), a);
+                let seed = i32x4_sub(i32x4_splat(0x5f37_59df_i32), u32x4_shr(a, 1));
+                let y = f32x4_mul(seed, f32x4_sub(onehalf, f32x4_mul(f32x4_mul(hx, seed), seed)));
+                f32x4_mul(y, f32x4_sub(onehalf, f32x4_mul(f32x4_mul(hx, y), y)))
+            }
+            #[inline(always)]
+            fn recip(self, a: v128) -> v128 { f32x4_div(f32x4_splat(1.0), a) }
+            #[inline(always)]
+            fn rsqrt(self, a: v128) -> v128 { f32x4_div(f32x4_splat(1.0), f32x4_sqrt(a)) }
+"#
+        .to_string()
+    } else {
+        formatdoc! {r#"
+            #[inline(always)]
+            fn rcp_approx(self, a: v128) -> v128 {{ {wp}_div({wp}_splat(1.0), a) }}
+            #[inline(always)]
+            fn rsqrt_approx(self, a: v128) -> v128 {{ {wp}_div({wp}_splat(1.0), {wp}_sqrt(a)) }}
+            #[inline(always)]
+            fn recip(self, a: v128) -> v128 {{ {wp}_div({wp}_splat(1.0), a) }}
+            #[inline(always)]
+            fn rsqrt(self, a: v128) -> v128 {{ {wp}_div({wp}_splat(1.0), {wp}_sqrt(a)) }}
+        "#}
+    };
     formatdoc! {r#"
         impl {trait_name} for archmage::Wasm128Token {{
             type Repr = v128;
@@ -3103,15 +3275,7 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
                 {reduce_max}
             }}
 
-            #[inline(always)]
-            fn rcp_approx(self, a: v128) -> v128 {{ {wp}_div({wp}_splat(1.0), a) }}
-            #[inline(always)]
-            fn rsqrt_approx(self, a: v128) -> v128 {{ {wp}_div({wp}_splat(1.0), {wp}_sqrt(a)) }}
-            #[inline(always)]
-            fn recip(self, a: v128) -> v128 {{ <Self as {trait_name}>::rcp_approx(self, a) }}
-            #[inline(always)]
-            fn rsqrt(self, a: v128) -> v128 {{ <Self as {trait_name}>::rsqrt_approx(self, a) }}
-
+{recip_section}
             #[inline(always)]
             fn not(self, a: v128) -> v128 {{ v128_not(a) }}
             #[inline(always)]

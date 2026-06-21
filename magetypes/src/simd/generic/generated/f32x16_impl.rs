@@ -373,25 +373,25 @@ impl<T: F32x16Backend> f32x16<T> {
 
     // ====== Approximations ======
 
-    /// Fast reciprocal approximation (1/x): x86 ~12-bit, ARM ~8-bit, WASM full.
+    /// Fast reciprocal approximation (1/x): the backend's native estimate.
     #[inline(always)]
     pub fn rcp_approx(self) -> Self {
         Self(T::rcp_approx(self.1, self.0), self.1)
     }
 
-    /// Precise reciprocal (1/x), full f32 precision on every backend (Newton-Raphson refined).
+    /// Precise reciprocal (1/x), full precision (Newton-Raphson refined).
     #[inline(always)]
     pub fn recip(self) -> Self {
         Self(T::recip(self.1, self.0), self.1)
     }
 
-    /// Fast reciprocal square root approximation: x86 ~12-bit, ARM ~8-bit, WASM full.
+    /// Fast reciprocal square root approximation: the backend's native estimate.
     #[inline(always)]
     pub fn rsqrt_approx(self) -> Self {
         Self(T::rsqrt_approx(self.1, self.0), self.1)
     }
 
-    /// Precise reciprocal square root, full f32 precision on every backend (Newton-Raphson refined).
+    /// Precise reciprocal square root, full precision (Newton-Raphson refined).
     #[inline(always)]
     pub fn rsqrt(self) -> Self {
         Self(T::rsqrt(self.1, self.0), self.1)

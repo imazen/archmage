@@ -695,11 +695,16 @@ pub fn generate_approx_ops(ty: &SimdType) -> String {
             }}
 
             /// Precise reciprocal (1/x) using Newton-Raphson refinement.
+            ///
+            /// f64 needs two Newton steps from the 14-bit estimate (14->28->56)
+            /// to reach the full 53-bit mantissa.
             #[inline(always)]
             pub fn recip(self) -> Self {{
-            let approx = self.rcp_approx();
+            // Newton-Raphson: r' = r * (2 - a*r)
             let two = Self(unsafe {{ {prefix}_set1_pd(2.0) }});
-            approx * (two - self * approx)
+            let r = self.rcp_approx();
+            let r = r * (two - self * r);
+            r * (two - self * r)
             }}
 
             /// Fast reciprocal square root approximation (1/sqrt(x)) with ~14-bit precision.
@@ -709,12 +714,17 @@ pub fn generate_approx_ops(ty: &SimdType) -> String {
             }}
 
             /// Precise reciprocal square root (1/sqrt(x)) using Newton-Raphson refinement.
+            ///
+            /// f64 needs two Newton steps from the 14-bit estimate to reach the
+            /// full 53-bit mantissa.
             #[inline(always)]
             pub fn rsqrt(self) -> Self {{
-            let approx = self.rsqrt_approx();
+            // Newton-Raphson for rsqrt: y' = 0.5 * y * (3 - a*y*y)
             let half = Self(unsafe {{ {prefix}_set1_pd(0.5) }});
             let three = Self(unsafe {{ {prefix}_set1_pd(3.0) }});
-            half * approx * (three - self * approx * approx)
+            let y = self.rsqrt_approx();
+            let y = half * y * (three - self * y * y);
+            half * y * (three - self * y * y)
             }}
 
         "};

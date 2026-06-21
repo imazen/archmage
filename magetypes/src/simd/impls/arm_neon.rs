@@ -159,6 +159,8 @@ impl F32x4Backend for archmage::NeonToken {
         }
     }
 
+    const HW_RECIP_ESTIMATE: bool = true;
+
     // `_approx` is the raw hardware estimate — one `vrecpe`/`vrsqrte`
     // instruction (~8-bit), the fastest path. Cross-architecture
     // bit-identity is the job of the `_portable` family, not this one,
@@ -484,6 +486,8 @@ impl F32x8Backend for archmage::NeonToken {
         }
     }
 
+    const HW_RECIP_ESTIMATE: bool = true;
+
     // ====== Approximations ======
     //
     // `_approx` is the raw hardware estimate (one vrecpe/vrsqrte per
@@ -507,12 +511,12 @@ impl F32x8Backend for archmage::NeonToken {
         unsafe {
             [
                 {
-                    let y1 = vmulq_f32(vrecpsq_f32(a[0], y[0]), y[0]);
-                    vmulq_f32(vrecpsq_f32(a[0], y1), y1)
+                    let t0 = vmulq_f32(vrecpsq_f32(a[0], y[0]), y[0]);
+                    vmulq_f32(vrecpsq_f32(a[0], t0), t0)
                 },
                 {
-                    let y1 = vmulq_f32(vrecpsq_f32(a[1], y[1]), y[1]);
-                    vmulq_f32(vrecpsq_f32(a[1], y1), y1)
+                    let t0 = vmulq_f32(vrecpsq_f32(a[1], y[1]), y[1]);
+                    vmulq_f32(vrecpsq_f32(a[1], t0), t0)
                 },
             ]
         }
@@ -524,12 +528,12 @@ impl F32x8Backend for archmage::NeonToken {
         unsafe {
             [
                 {
-                    let y1 = vmulq_f32(vrsqrtsq_f32(vmulq_f32(a[0], y[0]), y[0]), y[0]);
-                    vmulq_f32(vrsqrtsq_f32(vmulq_f32(a[0], y1), y1), y1)
+                    let t0 = vmulq_f32(vrsqrtsq_f32(vmulq_f32(a[0], y[0]), y[0]), y[0]);
+                    vmulq_f32(vrsqrtsq_f32(vmulq_f32(a[0], t0), t0), t0)
                 },
                 {
-                    let y1 = vmulq_f32(vrsqrtsq_f32(vmulq_f32(a[1], y[1]), y[1]), y[1]);
-                    vmulq_f32(vrsqrtsq_f32(vmulq_f32(a[1], y1), y1), y1)
+                    let t0 = vmulq_f32(vrsqrtsq_f32(vmulq_f32(a[1], y[1]), y[1]), y[1]);
+                    vmulq_f32(vrsqrtsq_f32(vmulq_f32(a[1], t0), t0), t0)
                 },
             ]
         }
@@ -745,6 +749,8 @@ impl F64x2Backend for archmage::NeonToken {
         }
     }
 
+    const HW_RECIP_ESTIMATE: bool = true;
+
     // `_approx` is the raw hardware estimate — one `vrecpe`/`vrsqrte`
     // instruction (~8-bit), the fastest path. Cross-architecture
     // bit-identity is the job of the `_portable` family, not this one,
@@ -773,6 +779,7 @@ impl F64x2Backend for archmage::NeonToken {
         let y = <Self as F64x2Backend>::rcp_approx(self, a);
         unsafe {
             let y = vmulq_f64(vrecpsq_f64(a, y), y);
+            let y = vmulq_f64(vrecpsq_f64(a, y), y);
             vmulq_f64(vrecpsq_f64(a, y), y)
         }
     }
@@ -780,6 +787,7 @@ impl F64x2Backend for archmage::NeonToken {
     fn rsqrt(self, a: float64x2_t) -> float64x2_t {
         let y = <Self as F64x2Backend>::rsqrt_approx(self, a);
         unsafe {
+            let y = vmulq_f64(vrsqrtsq_f64(vmulq_f64(a, y), y), y);
             let y = vmulq_f64(vrsqrtsq_f64(vmulq_f64(a, y), y), y);
             vmulq_f64(vrsqrtsq_f64(vmulq_f64(a, y), y), y)
         }
@@ -1067,6 +1075,8 @@ impl F64x4Backend for archmage::NeonToken {
         }
     }
 
+    const HW_RECIP_ESTIMATE: bool = true;
+
     // ====== Approximations ======
     //
     // `_approx` is the raw hardware estimate (one vrecpe/vrsqrte per
@@ -1090,12 +1100,14 @@ impl F64x4Backend for archmage::NeonToken {
         unsafe {
             [
                 {
-                    let y1 = vmulq_f64(vrecpsq_f64(a[0], y[0]), y[0]);
-                    vmulq_f64(vrecpsq_f64(a[0], y1), y1)
+                    let t0 = vmulq_f64(vrecpsq_f64(a[0], y[0]), y[0]);
+                    let t1 = vmulq_f64(vrecpsq_f64(a[0], t0), t0);
+                    vmulq_f64(vrecpsq_f64(a[0], t1), t1)
                 },
                 {
-                    let y1 = vmulq_f64(vrecpsq_f64(a[1], y[1]), y[1]);
-                    vmulq_f64(vrecpsq_f64(a[1], y1), y1)
+                    let t0 = vmulq_f64(vrecpsq_f64(a[1], y[1]), y[1]);
+                    let t1 = vmulq_f64(vrecpsq_f64(a[1], t0), t0);
+                    vmulq_f64(vrecpsq_f64(a[1], t1), t1)
                 },
             ]
         }
@@ -1107,12 +1119,14 @@ impl F64x4Backend for archmage::NeonToken {
         unsafe {
             [
                 {
-                    let y1 = vmulq_f64(vrsqrtsq_f64(vmulq_f64(a[0], y[0]), y[0]), y[0]);
-                    vmulq_f64(vrsqrtsq_f64(vmulq_f64(a[0], y1), y1), y1)
+                    let t0 = vmulq_f64(vrsqrtsq_f64(vmulq_f64(a[0], y[0]), y[0]), y[0]);
+                    let t1 = vmulq_f64(vrsqrtsq_f64(vmulq_f64(a[0], t0), t0), t0);
+                    vmulq_f64(vrsqrtsq_f64(vmulq_f64(a[0], t1), t1), t1)
                 },
                 {
-                    let y1 = vmulq_f64(vrsqrtsq_f64(vmulq_f64(a[1], y[1]), y[1]), y[1]);
-                    vmulq_f64(vrsqrtsq_f64(vmulq_f64(a[1], y1), y1), y1)
+                    let t0 = vmulq_f64(vrsqrtsq_f64(vmulq_f64(a[1], y[1]), y[1]), y[1]);
+                    let t1 = vmulq_f64(vrsqrtsq_f64(vmulq_f64(a[1], t0), t0), t0);
+                    vmulq_f64(vrsqrtsq_f64(vmulq_f64(a[1], t1), t1), t1)
                 },
             ]
         }
@@ -4357,6 +4371,29 @@ impl F32x16Backend for archmage::NeonToken {
         core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::sqrt(self, a[i]))
     }
 
+    // Reciprocals delegate to the quarter backend so the full-precision
+    // and per-platform-approx behaviour matches the narrower widths.
+    // (Without these the trait defaults make recip/rcp_approx the identity.)
+    #[inline(always)]
+    fn rcp_approx(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
+        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::rcp_approx(self, a[i]))
+    }
+
+    #[inline(always)]
+    fn rsqrt_approx(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
+        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::rsqrt_approx(self, a[i]))
+    }
+
+    #[inline(always)]
+    fn recip(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
+        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::recip(self, a[i]))
+    }
+
+    #[inline(always)]
+    fn rsqrt(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
+        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::rsqrt(self, a[i]))
+    }
+
     #[inline(always)]
     fn abs(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
         core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::abs(self, a[i]))
@@ -4610,6 +4647,29 @@ impl F64x8Backend for archmage::NeonToken {
     #[inline(always)]
     fn sqrt(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
         core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::sqrt(self, a[i]))
+    }
+
+    // Reciprocals delegate to the quarter backend so the full-precision
+    // and per-platform-approx behaviour matches the narrower widths.
+    // (Without these the trait defaults make recip/rcp_approx the identity.)
+    #[inline(always)]
+    fn rcp_approx(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
+        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::rcp_approx(self, a[i]))
+    }
+
+    #[inline(always)]
+    fn rsqrt_approx(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
+        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::rsqrt_approx(self, a[i]))
+    }
+
+    #[inline(always)]
+    fn recip(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
+        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::recip(self, a[i]))
+    }
+
+    #[inline(always)]
+    fn rsqrt(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
+        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::rsqrt(self, a[i]))
     }
 
     #[inline(always)]

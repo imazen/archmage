@@ -325,31 +325,27 @@ impl F32x4Backend for archmage::ScalarToken {
     }
 
     // ====== Approximations ======
-
     #[inline(always)]
     fn rcp_approx(self, a: [f32; 4]) -> [f32; 4] {
-        [1.0 / a[0], 1.0 / a[1], 1.0 / a[2], 1.0 / a[3]]
+        core::array::from_fn(|i| 1.0 / a[i])
     }
-
     #[inline(always)]
     fn rsqrt_approx(self, a: [f32; 4]) -> [f32; 4] {
-        let mut r = [0.0f32; 4];
-        for i in 0..4 {
-            r[i] = 1.0 / f32_sqrt(a[i]);
-        }
-        r
+        core::array::from_fn(|i| {
+            let x = a[i];
+            let seed = f32::from_bits(0x5f37_59df_u32.wrapping_sub(x.to_bits() >> 1));
+            let hx = 0.5 * x;
+            let y = seed * (1.5 - hx * seed * seed);
+            y * (1.5 - hx * y * y)
+        })
     }
-
-    // Override defaults: scalar doesn't need Newton-Raphson (already full precision)
-    // Use FQS because ScalarToken implements multiple backend traits.
     #[inline(always)]
     fn recip(self, a: [f32; 4]) -> [f32; 4] {
-        <Self as F32x4Backend>::rcp_approx(self, a)
+        core::array::from_fn(|i| 1.0 / a[i])
     }
-
     #[inline(always)]
     fn rsqrt(self, a: [f32; 4]) -> [f32; 4] {
-        <Self as F32x4Backend>::rsqrt_approx(self, a)
+        core::array::from_fn(|i| 1.0 / f32_sqrt(a[i]))
     }
 
     // ====== Bitwise ======
@@ -721,40 +717,27 @@ impl F32x8Backend for archmage::ScalarToken {
     }
 
     // ====== Approximations ======
-
     #[inline(always)]
     fn rcp_approx(self, a: [f32; 8]) -> [f32; 8] {
-        [
-            1.0 / a[0],
-            1.0 / a[1],
-            1.0 / a[2],
-            1.0 / a[3],
-            1.0 / a[4],
-            1.0 / a[5],
-            1.0 / a[6],
-            1.0 / a[7],
-        ]
+        core::array::from_fn(|i| 1.0 / a[i])
     }
-
     #[inline(always)]
     fn rsqrt_approx(self, a: [f32; 8]) -> [f32; 8] {
-        let mut r = [0.0f32; 8];
-        for i in 0..8 {
-            r[i] = 1.0 / f32_sqrt(a[i]);
-        }
-        r
+        core::array::from_fn(|i| {
+            let x = a[i];
+            let seed = f32::from_bits(0x5f37_59df_u32.wrapping_sub(x.to_bits() >> 1));
+            let hx = 0.5 * x;
+            let y = seed * (1.5 - hx * seed * seed);
+            y * (1.5 - hx * y * y)
+        })
     }
-
-    // Override defaults: scalar doesn't need Newton-Raphson (already full precision)
-    // Use FQS because ScalarToken implements multiple backend traits.
     #[inline(always)]
     fn recip(self, a: [f32; 8]) -> [f32; 8] {
-        <Self as F32x8Backend>::rcp_approx(self, a)
+        core::array::from_fn(|i| 1.0 / a[i])
     }
-
     #[inline(always)]
     fn rsqrt(self, a: [f32; 8]) -> [f32; 8] {
-        <Self as F32x8Backend>::rsqrt_approx(self, a)
+        core::array::from_fn(|i| 1.0 / f32_sqrt(a[i]))
     }
 
     // ====== Bitwise ======
@@ -1064,31 +1047,21 @@ impl F64x2Backend for archmage::ScalarToken {
     }
 
     // ====== Approximations ======
-
     #[inline(always)]
     fn rcp_approx(self, a: [f64; 2]) -> [f64; 2] {
-        [1.0 / a[0], 1.0 / a[1]]
+        core::array::from_fn(|i| 1.0 / a[i])
     }
-
     #[inline(always)]
     fn rsqrt_approx(self, a: [f64; 2]) -> [f64; 2] {
-        let mut r = [0.0f64; 2];
-        for i in 0..2 {
-            r[i] = 1.0 / f64_sqrt(a[i]);
-        }
-        r
+        core::array::from_fn(|i| 1.0 / f64_sqrt(a[i]))
     }
-
-    // Override defaults: scalar doesn't need Newton-Raphson (already full precision)
-    // Use FQS because ScalarToken implements multiple backend traits.
     #[inline(always)]
     fn recip(self, a: [f64; 2]) -> [f64; 2] {
-        <Self as F64x2Backend>::rcp_approx(self, a)
+        core::array::from_fn(|i| 1.0 / a[i])
     }
-
     #[inline(always)]
     fn rsqrt(self, a: [f64; 2]) -> [f64; 2] {
-        <Self as F64x2Backend>::rsqrt_approx(self, a)
+        core::array::from_fn(|i| 1.0 / f64_sqrt(a[i]))
     }
 
     // ====== Bitwise ======
@@ -1396,31 +1369,21 @@ impl F64x4Backend for archmage::ScalarToken {
     }
 
     // ====== Approximations ======
-
     #[inline(always)]
     fn rcp_approx(self, a: [f64; 4]) -> [f64; 4] {
-        [1.0 / a[0], 1.0 / a[1], 1.0 / a[2], 1.0 / a[3]]
+        core::array::from_fn(|i| 1.0 / a[i])
     }
-
     #[inline(always)]
     fn rsqrt_approx(self, a: [f64; 4]) -> [f64; 4] {
-        let mut r = [0.0f64; 4];
-        for i in 0..4 {
-            r[i] = 1.0 / f64_sqrt(a[i]);
-        }
-        r
+        core::array::from_fn(|i| 1.0 / f64_sqrt(a[i]))
     }
-
-    // Override defaults: scalar doesn't need Newton-Raphson (already full precision)
-    // Use FQS because ScalarToken implements multiple backend traits.
     #[inline(always)]
     fn recip(self, a: [f64; 4]) -> [f64; 4] {
-        <Self as F64x4Backend>::rcp_approx(self, a)
+        core::array::from_fn(|i| 1.0 / a[i])
     }
-
     #[inline(always)]
     fn rsqrt(self, a: [f64; 4]) -> [f64; 4] {
-        <Self as F64x4Backend>::rsqrt_approx(self, a)
+        core::array::from_fn(|i| 1.0 / f64_sqrt(a[i]))
     }
 
     // ====== Bitwise ======
@@ -8835,6 +8798,29 @@ impl F32x16Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
+    fn rcp_approx(self, a: [f32; 16]) -> [f32; 16] {
+        core::array::from_fn(|i| 1.0 / a[i])
+    }
+    #[inline(always)]
+    fn rsqrt_approx(self, a: [f32; 16]) -> [f32; 16] {
+        core::array::from_fn(|i| {
+            let x = a[i];
+            let seed = f32::from_bits(0x5f37_59df_u32.wrapping_sub(x.to_bits() >> 1));
+            let hx = 0.5 * x;
+            let y = seed * (1.5 - hx * seed * seed);
+            y * (1.5 - hx * y * y)
+        })
+    }
+    #[inline(always)]
+    fn recip(self, a: [f32; 16]) -> [f32; 16] {
+        core::array::from_fn(|i| 1.0 / a[i])
+    }
+    #[inline(always)]
+    fn rsqrt(self, a: [f32; 16]) -> [f32; 16] {
+        core::array::from_fn(|i| 1.0 / crate::nostd_math::sqrtf(a[i]))
+    }
+
+    #[inline(always)]
     fn abs(self, a: [f32; 16]) -> [f32; 16] {
         core::array::from_fn(|i| f32::from_bits(a[i].to_bits() & 0x7FFF_FFFF))
     }
@@ -9049,6 +9035,23 @@ impl F64x8Backend for archmage::ScalarToken {
     #[inline(always)]
     fn sqrt(self, a: [f64; 8]) -> [f64; 8] {
         core::array::from_fn(|i| crate::nostd_math::sqrt(a[i]))
+    }
+
+    #[inline(always)]
+    fn rcp_approx(self, a: [f64; 8]) -> [f64; 8] {
+        core::array::from_fn(|i| 1.0 / a[i])
+    }
+    #[inline(always)]
+    fn rsqrt_approx(self, a: [f64; 8]) -> [f64; 8] {
+        core::array::from_fn(|i| 1.0 / crate::nostd_math::sqrt(a[i]))
+    }
+    #[inline(always)]
+    fn recip(self, a: [f64; 8]) -> [f64; 8] {
+        core::array::from_fn(|i| 1.0 / a[i])
+    }
+    #[inline(always)]
+    fn rsqrt(self, a: [f64; 8]) -> [f64; 8] {
+        core::array::from_fn(|i| 1.0 / crate::nostd_math::sqrt(a[i]))
     }
 
     #[inline(always)]
