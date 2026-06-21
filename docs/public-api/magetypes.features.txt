@@ -12,7 +12,7 @@
 #   pub modules                                 1
 #   pub types (struct/enum/trait/alias)        65
 #   pub consts/statics                         60
-#   free functions                           1487
+#   free functions                           1485
 #   enum variants                              20
 #   trait roster entries (type × trait)       241
 #   auto-trait-complete types                  10
@@ -20,9 +20,9 @@
 # per-module pub lines:
 #   (root)                           80
 #   prelude                           5
-#   simd                           1548
+#   simd                           1546
 
-## items (378 lines)
+## items (377 lines)
 
 #[repr(transparent)] pub struct prelude::F32Vec(_)
 pub fn simd::x86::w512::f32x16::as_array(&self) -> &[f32; 16] [also: simd::x86::w512::f32x16]
@@ -50,7 +50,6 @@ pub fn simd::x86::w512::f32x16::ln_midp(self) -> Self [also: simd::x86::w512::f3
 pub fn simd::x86::w512::f32x16::ln_midp_precise(self) -> Self [also: simd::x86::w512::f32x16]
 pub fn simd::x86::w512::f32x16::ln_midp_unchecked(self) -> Self [also: simd::x86::w512::f32x16]
 pub fn simd::x86::w512::f32x16::load(archmage::tokens::generated::x86::X64V4Token, &[f32; 16]) -> Self [also: simd::x86::w512::f32x16]
-pub fn simd::x86::w512::f32x16::load_8x8(&[f32; 64]) -> [Self; 8] [also: simd::x86::w512::f32x16]
 pub fn simd::x86::w512::f32x16::log10_lowp_unchecked(self) -> Self [also: simd::x86::w512::f32x16]
 pub fn simd::x86::w512::f32x16::log10_midp(self) -> Self [also: simd::x86::w512::f32x16]
 pub fn simd::x86::w512::f32x16::log10_midp_precise(self) -> Self [also: simd::x86::w512::f32x16]

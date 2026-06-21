@@ -1268,18 +1268,8 @@ impl f32x4 {
 
     // ========== Load and Convert ==========
 
-    /// Load 4 u8 values and convert to f32x4.
-    ///
-    /// Useful for image processing: load pixel values directly to float.
-    #[inline(always)]
-    pub fn from_u8(bytes: &[u8; 4]) -> Self {
-        // Load 4 bytes into lane 0 as u32, then extend through u8->u16->u32->f32
-        let val = u32::from_ne_bytes(*bytes);
-        let v = i32x4_replace_lane::<0>(i32x4_splat(0), val as i32);
-        let v16 = u16x8_extend_low_u8x16(v);
-        let v32 = u32x4_extend_low_u16x8(v16);
-        Self(f32x4_convert_u32x4(v32))
-    }
+    // `from_u8` removed: raw bytes → SIMD with no token/`Self` proof. Use the
+    // generic `f32x4<T>::from_u8(token, …)`.
 
     /// Convert to 4 u8 values with saturation.
     ///
@@ -1294,31 +1284,8 @@ impl f32x4 {
         (val as u32).to_ne_bytes()
     }
 
-    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors.
-    ///
-    /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
-    /// Output: (R, G, B, A) where each is f32x4 with values in [0.0, 255.0].
-    #[inline(always)]
-    pub fn load_4_rgba_u8(rgba: &[u8; 16]) -> (Self, Self, Self, Self) {
-        unsafe {
-            // Load 16 bytes and interpret as 4 u32 pixels
-            let v = v128_load(rgba.as_ptr() as *const v128);
-            let mask = u32x4_splat(0xFF);
-
-            // Extract channels via mask and shift
-            let r = v128_and(v, mask);
-            let g = v128_and(u32x4_shr(v, 8), mask);
-            let b = v128_and(u32x4_shr(v, 16), mask);
-            let a = u32x4_shr(v, 24);
-
-            (
-                Self(f32x4_convert_u32x4(r)),
-                Self(f32x4_convert_u32x4(g)),
-                Self(f32x4_convert_u32x4(b)),
-                Self(f32x4_convert_u32x4(a)),
-            )
-        }
-    }
+    // `load_4_rgba_u8` removed: raw bytes → SIMD with no token/`Self` proof.
+    // Use the generic `f32x4<T>::load_4_rgba_u8(token, …)`.
 
     /// Interleave 4 f32x4 channels and store as 4 RGBA u8 pixels.
     ///

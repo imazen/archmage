@@ -1127,18 +1127,8 @@ impl f32x8 {
 
     // ========== Load and Convert ==========
 
-    /// Load 8 u8 values and convert to f32x8.
-    ///
-    /// Useful for image processing: load pixel values directly to float.
-    #[inline(always)]
-    pub fn from_u8(bytes: &[u8; 8]) -> Self {
-        unsafe {
-            // Load 8 bytes into low part of XMM register
-            let b = _mm_loadl_epi64(bytes.as_ptr() as *const __m128i);
-            let i32s = _mm256_cvtepu8_epi32(b);
-            Self(_mm256_cvtepi32_ps(i32s))
-        }
-    }
+    // `from_u8` removed: raw bytes → SIMD with no token/`Self` proof —
+    // unsound (AVX2 on a CPU lacking it). Use generic `f32x8<T>::from_u8(token, …)`.
 
     /// Convert to 8 u8 values with saturation.
     ///
@@ -1270,66 +1260,8 @@ impl f32x8 {
         }
     }
 
-    /// Load 8 RGBA u8 pixels and deinterleave to 4 f32x8 channel vectors.
-    ///
-    /// Input: 32 bytes = 8 RGBA pixels in interleaved format.
-    /// Output: (R, G, B, A) where each is f32x8 with values in [0.0, 255.0].
-    #[inline(always)]
-    pub fn load_8_rgba_u8(rgba: &[u8; 32]) -> (Self, Self, Self, Self) {
-        unsafe {
-            // Load 32 bytes
-            let v = _mm256_loadu_si256(rgba.as_ptr() as *const __m256i);
-
-            // Use vpshufb to gather channels within each 128-bit lane
-            // Lane 0: pixels 0-3, Lane 1: pixels 4-7
-            let r_mask = _mm256_setr_epi8(
-                0, 4, 8, 12, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 4, 8, 12, -1, -1,
-                -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            );
-            let g_mask = _mm256_setr_epi8(
-                1, 5, 9, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1, 5, 9, 13, -1, -1,
-                -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            );
-            let b_mask = _mm256_setr_epi8(
-                2, 6, 10, 14, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 2, 6, 10, 14, -1, -1,
-                -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            );
-            let a_mask = _mm256_setr_epi8(
-                3, 7, 11, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 3, 7, 11, 15, -1, -1,
-                -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-            );
-
-            // Gather each channel's bytes into low 4 bytes of each lane
-            let r_bytes = _mm256_shuffle_epi8(v, r_mask);
-            let g_bytes = _mm256_shuffle_epi8(v, g_mask);
-            let b_bytes = _mm256_shuffle_epi8(v, b_mask);
-            let a_bytes = _mm256_shuffle_epi8(v, a_mask);
-
-            // Extract low 128-bit and high 128-bit lanes, combine low 4 bytes of each
-            // to get 8 consecutive bytes, then extend to f32x8
-            let r_lo = _mm256_castsi256_si128(r_bytes);
-            let r_hi = _mm256_extracti128_si256::<1>(r_bytes);
-            let r_combined = _mm_unpacklo_epi32(r_lo, r_hi); // [R0-3, R4-7, ...]
-            let r_f32 = _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(r_combined));
-
-            let g_lo = _mm256_castsi256_si128(g_bytes);
-            let g_hi = _mm256_extracti128_si256::<1>(g_bytes);
-            let g_combined = _mm_unpacklo_epi32(g_lo, g_hi);
-            let g_f32 = _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(g_combined));
-
-            let b_lo = _mm256_castsi256_si128(b_bytes);
-            let b_hi = _mm256_extracti128_si256::<1>(b_bytes);
-            let b_combined = _mm_unpacklo_epi32(b_lo, b_hi);
-            let b_f32 = _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(b_combined));
-
-            let a_lo = _mm256_castsi256_si128(a_bytes);
-            let a_hi = _mm256_extracti128_si256::<1>(a_bytes);
-            let a_combined = _mm_unpacklo_epi32(a_lo, a_hi);
-            let a_f32 = _mm256_cvtepi32_ps(_mm256_cvtepu8_epi32(a_combined));
-
-            (Self(r_f32), Self(g_f32), Self(b_f32), Self(a_f32))
-        }
-    }
+    // `load_8_rgba_u8` removed: raw bytes → SIMD with no token/`Self`
+    // proof. Use the generic `f32x8<T>::load_8_rgba_u8(token, …)`.
 
     /// Interleave 4 f32x8 channels and store as 8 RGBA u8 pixels.
     ///
@@ -1416,22 +1348,9 @@ impl f32x8 {
         result
     }
 
-    /// Load an 8x8 f32 block from a contiguous array.
-    #[inline(always)]
-    pub fn load_8x8(block: &[f32; 64]) -> [Self; 8] {
-        unsafe {
-            [
-                Self(_mm256_loadu_ps(block.as_ptr())),
-                Self(_mm256_loadu_ps(block.as_ptr().add(8))),
-                Self(_mm256_loadu_ps(block.as_ptr().add(16))),
-                Self(_mm256_loadu_ps(block.as_ptr().add(24))),
-                Self(_mm256_loadu_ps(block.as_ptr().add(32))),
-                Self(_mm256_loadu_ps(block.as_ptr().add(40))),
-                Self(_mm256_loadu_ps(block.as_ptr().add(48))),
-                Self(_mm256_loadu_ps(block.as_ptr().add(56))),
-            ]
-        }
-    }
+    // `load_8x8` removed: raw `&[f32;64]` → SIMD with no token/`Self` proof —
+    // unsound (AVX loads on a CPU lacking it). Use the generic
+    // `f32x8<T>::load_8x8(token, &block)`.
 
     /// Store 8 row vectors to a contiguous 8x8 f32 block.
     #[inline(always)]

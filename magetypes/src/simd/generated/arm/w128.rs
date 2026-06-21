@@ -1331,22 +1331,8 @@ impl f32x4 {
 
     // ========== Load and Convert ==========
 
-    /// Load 4 u8 values and convert to f32x4.
-    ///
-    /// Useful for image processing: load pixel values directly to float.
-    #[inline(always)]
-    pub fn from_u8(bytes: &[u8; 4]) -> Self {
-        unsafe {
-            // Load 4 bytes as a u32 into lane 0 of a u8x16 vector
-            let val = u32::from_ne_bytes(*bytes);
-            let v = vsetq_lane_u32::<0>(val, vdupq_n_u32(0));
-            let v8 = vreinterpretq_u8_u32(v);
-            // Extend u8 -> u16 -> u32 -> f32
-            let v16 = vmovl_u8(vget_low_u8(v8));
-            let v32 = vmovl_u16(vget_low_u16(v16));
-            Self(vcvtq_f32_u32(v32))
-        }
-    }
+    // `from_u8` removed: raw bytes → SIMD with no token/`Self` proof. Use the
+    // generic `f32x4<T>::from_u8(token, …)`.
 
     /// Convert to 4 u8 values with saturation.
     ///
@@ -1365,32 +1351,8 @@ impl f32x4 {
         }
     }
 
-    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors.
-    ///
-    /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
-    /// Output: (R, G, B, A) where each is f32x4 with values in [0.0, 255.0].
-    #[inline(always)]
-    pub fn load_4_rgba_u8(rgba: &[u8; 16]) -> (Self, Self, Self, Self) {
-        unsafe {
-            // Load 16 bytes and reinterpret as 4 u32 pixels
-            let v = vld1q_u8(rgba.as_ptr());
-            let v32 = vreinterpretq_u32_u8(v);
-            let mask = vdupq_n_u32(0xFF);
-
-            // Extract channels via mask and shift
-            let r_u32 = vandq_u32(v32, mask);
-            let g_u32 = vandq_u32(vshrq_n_u32::<8>(v32), mask);
-            let b_u32 = vandq_u32(vshrq_n_u32::<16>(v32), mask);
-            let a_u32 = vshrq_n_u32::<24>(v32);
-
-            (
-                Self(vcvtq_f32_u32(r_u32)),
-                Self(vcvtq_f32_u32(g_u32)),
-                Self(vcvtq_f32_u32(b_u32)),
-                Self(vcvtq_f32_u32(a_u32)),
-            )
-        }
-    }
+    // `load_4_rgba_u8` removed: raw bytes → SIMD with no token/`Self` proof.
+    // Use the generic `f32x4<T>::load_4_rgba_u8(token, …)`.
 
     /// Interleave 4 f32x4 channels and store as 4 RGBA u8 pixels.
     ///

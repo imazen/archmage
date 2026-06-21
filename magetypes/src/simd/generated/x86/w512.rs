@@ -1243,36 +1243,8 @@ impl f32x16 {
         result
     }
 
-    /// Load an 8x8 f32 block into 8 f32x16 vectors (lower 8 elements used).
-    #[inline(always)]
-    pub fn load_8x8(block: &[f32; 64]) -> [Self; 8] {
-        unsafe {
-            [
-                Self(_mm512_castps256_ps512(_mm256_loadu_ps(block.as_ptr()))),
-                Self(_mm512_castps256_ps512(_mm256_loadu_ps(
-                    block.as_ptr().add(8),
-                ))),
-                Self(_mm512_castps256_ps512(_mm256_loadu_ps(
-                    block.as_ptr().add(16),
-                ))),
-                Self(_mm512_castps256_ps512(_mm256_loadu_ps(
-                    block.as_ptr().add(24),
-                ))),
-                Self(_mm512_castps256_ps512(_mm256_loadu_ps(
-                    block.as_ptr().add(32),
-                ))),
-                Self(_mm512_castps256_ps512(_mm256_loadu_ps(
-                    block.as_ptr().add(40),
-                ))),
-                Self(_mm512_castps256_ps512(_mm256_loadu_ps(
-                    block.as_ptr().add(48),
-                ))),
-                Self(_mm512_castps256_ps512(_mm256_loadu_ps(
-                    block.as_ptr().add(56),
-                ))),
-            ]
-        }
-    }
+    // `load_8x8` removed: raw `&[f32;64]` → SIMD with no token/`Self` proof.
+    // Use the generic `f32x16<T>::load_8x8(token, &block)`.
 
     /// Store 8 f32x16 vectors (lower 8 elements) to a contiguous 8x8 f32 block.
     #[inline(always)]

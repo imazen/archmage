@@ -1089,18 +1089,9 @@ impl f32x4 {
 
     // ========== Load and Convert ==========
 
-    /// Load 4 u8 values and convert to f32x4.
-    ///
-    /// Useful for image processing: load pixel values directly to float.
-    #[inline(always)]
-    pub fn from_u8(bytes: &[u8; 4]) -> Self {
-        unsafe {
-            // Load 4 bytes into low part of XMM register
-            let b = _mm_cvtsi32_si128(i32::from_ne_bytes(*bytes));
-            let i32s = _mm_cvtepu8_epi32(b);
-            Self(_mm_cvtepi32_ps(i32s))
-        }
-    }
+    // `from_u8` removed: it built a SIMD register from raw bytes with
+    // no token and no `Self` to borrow proof from — unsound (would run
+    // SSE4 on a CPU lacking it). Use the generic `f32x4<T>::from_u8(token, …)`.
 
     /// Convert to 4 u8 values with saturation.
     ///
@@ -1171,41 +1162,8 @@ impl f32x4 {
         Self::transpose_4x4_copy(channels)
     }
 
-    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors.
-    ///
-    /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
-    /// Output: (R, G, B, A) where each is f32x4 with values in [0.0, 255.0].
-    #[inline(always)]
-    pub fn load_4_rgba_u8(rgba: &[u8; 16]) -> (Self, Self, Self, Self) {
-        unsafe {
-            let v = _mm_loadu_si128(rgba.as_ptr() as *const __m128i);
-
-            // Shuffle masks to gather each channel
-            // R: bytes 0, 4, 8, 12 → positions 0, 1, 2, 3
-            let r_mask = _mm_setr_epi8(0, -1, -1, -1, 4, -1, -1, -1, 8, -1, -1, -1, 12, -1, -1, -1);
-            // G: bytes 1, 5, 9, 13
-            let g_mask = _mm_setr_epi8(1, -1, -1, -1, 5, -1, -1, -1, 9, -1, -1, -1, 13, -1, -1, -1);
-            // B: bytes 2, 6, 10, 14
-            let b_mask =
-                _mm_setr_epi8(2, -1, -1, -1, 6, -1, -1, -1, 10, -1, -1, -1, 14, -1, -1, -1);
-            // A: bytes 3, 7, 11, 15
-            let a_mask =
-                _mm_setr_epi8(3, -1, -1, -1, 7, -1, -1, -1, 11, -1, -1, -1, 15, -1, -1, -1);
-
-            // Shuffle and convert to f32
-            let r_i32 = _mm_shuffle_epi8(v, r_mask);
-            let g_i32 = _mm_shuffle_epi8(v, g_mask);
-            let b_i32 = _mm_shuffle_epi8(v, b_mask);
-            let a_i32 = _mm_shuffle_epi8(v, a_mask);
-
-            (
-                Self(_mm_cvtepi32_ps(r_i32)),
-                Self(_mm_cvtepi32_ps(g_i32)),
-                Self(_mm_cvtepi32_ps(b_i32)),
-                Self(_mm_cvtepi32_ps(a_i32)),
-            )
-        }
-    }
+    // `load_4_rgba_u8` removed: raw bytes → SIMD with no token/`Self`
+    // proof. Use the generic `f32x4<T>::load_4_rgba_u8(token, …)`.
 
     /// Interleave 4 f32x4 channels and store as 4 RGBA u8 pixels.
     ///

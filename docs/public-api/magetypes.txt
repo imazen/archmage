@@ -6,14 +6,14 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2787 lines (supported surface) | magetypes.features.txt 402 added (features: avx512,std,w512) | magetypes.internal.txt 92 lines (99 hidden + 0 excluded-feature)
+# files: magetypes.txt 2782 lines (supported surface) | magetypes.features.txt 401 added (features: avx512,std,w512) | magetypes.internal.txt 92 lines (99 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                18
 #   pub types (struct/enum/trait/alias)       416
 #   pub consts/statics                        382
-#   free functions                           9236
+#   free functions                           9213
 #   inherent methods                         1108
 #   enum variants                              96
 #   re-exports                                  3
@@ -26,9 +26,9 @@
 #   (root)                          536
 #   cast                              3
 #   prelude                          16
-#   simd                          10704
+#   simd                          10681
 
-## items (2583 lines)
+## items (2578 lines)
 
 pub mod magetypes
 pub use archmage
@@ -2007,10 +2007,8 @@ pub fn simd::x86::w128::f32x4::from_i32x4(simd::x86::w128::i32x4) -> Self [also:
 pub fn simd::x86::w128::f32x4::from_m128(archmage::tokens::generated::x86::X64V3Token, core::core_arch::x86::__m128) -> Self [also: simd::generic::f32x4<archmage::tokens::generated::x86::X64V3Token>, simd::x86::w128::f32x4]
 pub unsafe fn simd::x86::w128::f32x4::from_raw(core::core_arch::x86::__m128) -> Self
 pub fn simd::x86::w128::f32x4::from_raw_checked(archmage::tokens::generated::x86::X64V3Token, core::core_arch::x86::__m128) -> Self [also: simd::x86::w128::f32x4]
-pub fn simd::x86::w128::f32x4::from_u8(&[u8; 4]) -> Self [also: simd::x86::w128::f32x4]
 pub const fn simd::x86::w128::f32x4::implementation_name() -> &'static str [also: (root)]
 pub fn simd::x86::w128::f32x4::load(archmage::tokens::generated::x86::X64V3Token, &[f32; 4]) -> Self [also: simd::x86::w128::f32x4]
-pub fn simd::x86::w128::f32x4::load_4_rgba_u8(&[u8; 16]) -> (Self, Self, Self, Self) [also: simd::x86::w128::f32x4]
 pub fn simd::x86::w128::f32x4::partition_slice(archmage::tokens::generated::x86::X64V3Token, &[f32]) -> (&[[f32; 4]], &[f32]) [also: simd::x86::w128::f32x4]
 pub fn simd::x86::w128::f32x4::partition_slice_mut(archmage::tokens::generated::x86::X64V3Token, &mut [f32]) -> (&mut [[f32; 4]], &mut [f32]) [also: simd::x86::w128::f32x4]
 pub fn simd::x86::w128::f32x4::raw(self) -> core::core_arch::x86::__m128 [also: simd::generic::f32x4<archmage::tokens::generated::x86::X64V3Token>, simd::x86::w128::f32x4]
@@ -2046,7 +2044,6 @@ pub fn simd::v3::f32x8::from_m256(archmage::tokens::generated::x86::X64V3Token, 
 pub unsafe fn simd::v3::f32x8::from_raw(core::core_arch::x86::__m256) -> Self
 pub fn simd::v3::f32x8::from_raw_checked(archmage::tokens::generated::x86::X64V3Token, core::core_arch::x86::__m256) -> Self [also: simd::v3::f32x8]
 pub fn simd::v3::f32x8::from_slice(archmage::tokens::generated::x86::X64V3Token, &[f32]) -> Self [also: simd::v3::f32x8, simd::x86::w128::f32x4]
-pub fn simd::v3::f32x8::from_u8(&[u8; 8]) -> Self [also: simd::v3::f32x8]
 pub const fn simd::v3::f32x8::implementation_name() -> &'static str [also: (root)]
 pub fn simd::v3::f32x8::interleave(self, Self) -> (Self, Self) [also: simd::generic::f32x4<T>, simd::generic::f32x8<T>, simd::v3::f32x8, simd::x86::w128::f32x4]
 pub fn simd::v3::f32x8::interleave_4ch([Self; 4]) -> [Self; 4] [also: simd::generic::f32x4<T>, simd::generic::f32x8<T>, simd::v3::f32x8, simd::x86::w128::f32x4]
@@ -2058,8 +2055,6 @@ pub fn simd::v3::f32x8::ln_midp(self) -> Self [also: simd::generic::f32x16<T>, s
 pub fn simd::v3::f32x8::ln_midp_precise(self) -> Self [also: simd::generic::f32x16<T>, simd::generic::f32x4<T>, simd::generic::f32x8<T>, simd::v3::f32x8, simd::x86::w128::f32x4]
 pub fn simd::v3::f32x8::ln_midp_unchecked(self) -> Self [also: simd::generic::f32x16<T>, simd::generic::f32x4<T>, simd::generic::f32x8<T>, simd::v3::f32x8, simd::x86::w128::f32x4]
 pub fn simd::v3::f32x8::load(archmage::tokens::generated::x86::X64V3Token, &[f32; 8]) -> Self [also: simd::polyfill::v3::f32x8, simd::v3::f32x8]
-pub fn simd::v3::f32x8::load_8_rgba_u8(&[u8; 32]) -> (Self, Self, Self, Self) [also: simd::v3::f32x8]
-pub fn simd::v3::f32x8::load_8x8(&[f32; 64]) -> [Self; 8] [also: simd::v3::f32x8]
 pub fn simd::v3::f32x8::log10_lowp(self) -> Self [also: simd::generic::f32x16<T>, simd::generic::f32x4<T>, simd::generic::f32x8<T>, simd::v3::f32x8, simd::v3::f64x4, simd::x86::w128::f32x4, simd::x86::w128::f64x2]
 pub fn simd::v3::f32x8::log10_lowp_unchecked(self) -> Self [also: simd::generic::f32x16<T>, simd::generic::f32x4<T>, simd::generic::f32x8<T>, simd::v3::f32x8, simd::x86::w128::f32x4]
 pub fn simd::v3::f32x8::log10_midp(self) -> Self [also: simd::generic::f32x16<T>, simd::generic::f32x4<T>, simd::generic::f32x8<T>, simd::v3::f32x8, simd::x86::w128::f32x4]
