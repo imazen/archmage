@@ -74,6 +74,10 @@ harness = false
 name = "safe_memory_overhead"
 harness = false
 
+[[bench]]
+name = "rsqrt_arm"
+harness = false
+
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]

@@ -1,0 +1,48 @@
+     Running benches/rsqrt_arm.rs (target/release/deps/rsqrt_arm-4619e71d93db0528)
+  rsqrt_approx/1_original_raw_8bit  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      6.1 ±0.2µs  [5.9–6.4]µs    [1]
+  [1] CV=21%
+  rsqrt_approx/2_frsqrts_16bit  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base 
+  ╰─ _      10.0 ±0.1µs  [9.9–10.1]µs   
+  rsqrt_approx/3_portable_8bit  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      14.9 ±0.2µs  [14.8–15.1]µs   
+  rsqrt_full/1_original_2manual  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      25.4 ±0.5µs  [24.9–26.0]µs   
+  rsqrt_full/2_frsqrts_2step  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      16.8 ±0.3µs  [16.8–16.9]µs   
+  rsqrt_full/3_portable_divsqrt  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      36.1 ±0.3µs  [36.0–36.3]µs   
+  rcp_approx/1_original_raw_8bit  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      5.8 ±0.1µs  [5.7–6.0]µs   
+  rcp_approx/2_frsqrts_16bit  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      8.1 ±0.0µs  [8.0–8.1]µs   
+  rcp_approx/3_portable_8bit  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      8.8 ±0.1µs  [8.8–8.8]µs   
+  rcp_full/1_original_2manual  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      16.0 ±0.1µs  [15.9–16.0]µs   
+  rcp_full/2_frsqrts_2step  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      12.1 ±0.1µs  [12.1–12.2]µs   
+  rcp_full/3_portable_div  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      16.8 ±0.2µs  [16.7–16.8]µs   
+[zenbench] calibration: int=0.68ns/iter mem_bw=30.4GiB/s mem_lat=98.0ns
+[zenbench] timer resolution: 40ns, loop overhead: 0.67ns/iter, TSC: 0.025 ticks/ns (invariant)
+[zenbench] results → /tmp/zenbench/zenbench-1782008814-1260c1.txt
+═══════════════════════════════════════════════════════════════
+  zenbench  1782008814-1260c1
+═══════════════════════════════════════════════════════════════
+  total: 0.0s
+═══════════════════════════════════════════════════════════════
+  filter: cargo bench -- --group=NAME  format: --format=llm|csv|md|json
+BENCH_RC=0
