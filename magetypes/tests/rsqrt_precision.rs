@@ -18,6 +18,12 @@
 //!   cargo test --test rsqrt_precision -- --nocapture
 //!   cross test --test rsqrt_precision --target aarch64-unknown-linux-gnu -- --nocapture
 
+// Needs std for the f64 reference math and `eprintln!` reporting, and a
+// std-backed runtime feature detection to summon the native backend token. The
+// CI no_std step (`cargo test -p magetypes --no-default-features`) drives this
+// gate, so the skip is controlled by the caller, not buried in the test body.
+#![cfg(feature = "std")]
+
 use archmage::SimdToken;
 use magetypes::simd::generic::f32x4;
 
@@ -149,7 +155,12 @@ fn raw_seed_errs(_data: &[f32]) -> Option<(f64, f64)> {
 #[test]
 fn rsqrt_rcp_precision_report() {
     let Some(token) = Tok::summon() else {
-        panic!("native backend token unavailable on {ARCH} — cannot characterize precision");
+        // The host CPU lacks this SIMD tier (the realistic case is a pre-AVX2
+        // x86 runner). The precision contract is also enforced by
+        // `scalar_parity` on whatever tiers are present, so skip loudly rather
+        // than fail — same idiom the generated parity tests use.
+        eprintln!("rsqrt_precision: native {ARCH} backend token unavailable — skipping");
+        return;
     };
     let data = inputs();
 
