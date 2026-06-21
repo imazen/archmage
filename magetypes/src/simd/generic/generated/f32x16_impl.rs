@@ -397,6 +397,93 @@ impl<T: F32x16Backend> f32x16<T> {
         Self(T::rsqrt(self.1, self.0), self.1)
     }
 
+    // ====== Deterministic (cross-platform bit-identical) reciprocals ======
+    //
+    // The `_portable` family returns **the same bits on every architecture**
+    // (x86 / ARM / WASM). Two ingredients make that hold:
+    //   * the seed is an integer bit-trick — pure integer math, so it is
+    //     identical by construction (the shift is logical, not arch-dependent);
+    //   * the Newton steps use plain IEEE-754 `mul`/`sub`, never `mul_add`
+    //     (FMA): WASM SIMD has no fused FMA, and FMA-vs-non-FMA itself
+    //     diverges, so fused ops are avoided on purpose.
+    //
+    // Hardware estimate instructions (`rsqrtps`, `vrsqrte`) are deliberately
+    // NOT used here — their bits differ across vendors and generations. For
+    // the faster, per-platform (non-deterministic) variants see
+    // [`rsqrt_approx`](Self::rsqrt_approx) / [`recip`](Self::recip).
+
+    /// Deterministic reciprocal-sqrt estimate (~8-bit), bit-identical on
+    /// every platform.
+    ///
+    /// Seed (integer bit-trick) plus one non-FMA Newton step. Opt into more
+    /// accuracy with [`rsqrt_newton_portable`](Self::rsqrt_newton_portable)
+    /// (one more step ≈ 16-bit), or use
+    /// [`rsqrt_portable`](Self::rsqrt_portable) for full precision.
+    #[inline(always)]
+    pub fn rsqrt_approx_portable(self) -> Self
+    where
+        T: crate::simd::backends::F32x16Convert,
+    {
+        let t = self.1;
+        let bits = self.bitcast_to_i32();
+        let seed = Self::from_i32_bitcast(
+            t,
+            super::i32x16::splat(t, 0x5f3759df_i32) - bits.shr_logical_const::<1>(),
+        );
+        seed.rsqrt_newton_portable(self)
+    }
+
+    /// One deterministic Newton refinement step for `1/sqrt(x)`:
+    /// `y * (1.5 - 0.5*x*y*y)`, where `self` is the current estimate `y`
+    /// and `x` is the original input. Non-FMA → bit-identical everywhere.
+    #[inline(always)]
+    pub fn rsqrt_newton_portable(self, x: Self) -> Self {
+        let t = self.1;
+        let half = Self::splat(t, 0.5);
+        let three_halves = Self::splat(t, 1.5);
+        self * (three_halves - half * x * self * self)
+    }
+
+    /// Deterministic full-precision `1/sqrt(x)` via IEEE sqrt + division.
+    /// Correctly-rounded, so bit-identical and ~24-bit on every platform.
+    #[inline(always)]
+    pub fn rsqrt_portable(self) -> Self {
+        Self::splat(self.1, 1.0) / self.sqrt()
+    }
+
+    /// Deterministic reciprocal estimate (~8-bit), bit-identical on every
+    /// platform.
+    ///
+    /// Seed (integer bit-trick) plus one non-FMA Newton step. Opt into more
+    /// accuracy with [`recip_newton_portable`](Self::recip_newton_portable),
+    /// or use [`recip_portable`](Self::recip_portable) for full precision.
+    #[inline(always)]
+    pub fn rcp_approx_portable(self) -> Self
+    where
+        T: crate::simd::backends::F32x16Convert,
+    {
+        let t = self.1;
+        let bits = self.bitcast_to_i32();
+        let seed = Self::from_i32_bitcast(t, super::i32x16::splat(t, 0x7ef127ea_i32) - bits);
+        seed.recip_newton_portable(self)
+    }
+
+    /// One deterministic Newton refinement step for `1/x`: `y * (2 - x*y)`,
+    /// where `self` is the current estimate `y` and `x` is the input.
+    #[inline(always)]
+    pub fn recip_newton_portable(self, x: Self) -> Self {
+        let t = self.1;
+        let two = Self::splat(t, 2.0);
+        self * (two - x * self)
+    }
+
+    /// Deterministic full-precision `1/x` via IEEE division. Correctly-rounded,
+    /// so bit-identical and ~24-bit on every platform.
+    #[inline(always)]
+    pub fn recip_portable(self) -> Self {
+        Self::splat(self.1, 1.0) / self
+    }
+
     // ====== Bitwise ======
 
     /// Bitwise NOT.
