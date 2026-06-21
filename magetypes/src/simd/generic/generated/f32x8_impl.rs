@@ -361,21 +361,9 @@ impl<T: F32x8Backend> f32x8<T> {
     /// for full precision use [`recip`](Self::recip).
     #[inline(always)]
     pub fn rcp_approx(self) -> Self {
-        if <T as F32x8Backend>::HW_RECIP_ESTIMATE {
-            let e = Self(T::rcp_approx(self.1, self.0), self.1);
-            if <T as F32x8Backend>::HW_RECIP_ESTIMATE_12BIT {
-                e
-            }
-            // ARM: raw estimate ~8-bit, lift to ~16 with one (non-fused)
-            // Newton step. Pure mul/sub — no bitcast bound.
-            else {
-                e.recip_newton_portable(self)
-            }
-        } else {
-            // WASM/scalar: no hardware estimate; backend rcp_approx is
-            // already exact division (full precision).
-            Self(T::rcp_approx(self.1, self.0), self.1)
-        }
+        // Each backend owns its >=12-bit estimate (x86 raw rcpps; ARM
+        // raw vrecpe + 1 fused FRECPS; WASM/scalar exact division).
+        Self(T::rcp_approx(self.1, self.0), self.1)
     }
 
     /// Precise reciprocal (1/x), full f32 precision (Newton-Raphson refined).
@@ -388,19 +376,9 @@ impl<T: F32x8Backend> f32x8<T> {
     /// [`rcp_approx`](Self::rcp_approx) for the per-platform strategy.
     #[inline(always)]
     pub fn rsqrt_approx(self) -> Self {
-        if <T as F32x8Backend>::HW_RECIP_ESTIMATE {
-            let e = Self(T::rsqrt_approx(self.1, self.0), self.1);
-            if <T as F32x8Backend>::HW_RECIP_ESTIMATE_12BIT {
-                e
-            }
-            // ARM: one Newton step lifts the ~8-bit estimate to ~16.
-            else {
-                e.rsqrt_newton_portable(self)
-            }
-        } else {
-            // WASM/scalar: backend rsqrt_approx is exact (1/sqrt via div).
-            Self(T::rsqrt_approx(self.1, self.0), self.1)
-        }
+        // ARM uses raw vrsqrte + 1 fused FRSQRTS; WASM/scalar a bit-hack
+        // seed + 2 Newton steps; x86 the raw rsqrtps estimate.
+        Self(T::rsqrt_approx(self.1, self.0), self.1)
     }
 
     /// Precise reciprocal square root, full f32 precision (Newton-Raphson refined).

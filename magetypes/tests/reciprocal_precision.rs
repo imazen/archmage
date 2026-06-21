@@ -259,3 +259,46 @@ fn wasm_scalar_rsqrt_approx_is_portable_bitexact() {
         check_bitexact!(f32x16, w, Wasm128Token, 16, "f32x16<Wasm>");
     }
 }
+
+/// The legacy concrete `arm::w128::f32x4` and the modern generic
+/// `f32x4<NeonToken>` must produce **bit-identical** `rcp_approx` / `rsqrt_approx`
+/// / `recip` / `rsqrt` — they are the same raw-vrecpe + FRECPS/FRSQRTS sequence
+/// and must never drift (this guards the divergence that prompted the fix: the
+/// legacy `rcp_approx` used to be the bare ~8-bit estimate while the generic one
+/// already refined to ~16-bit).
+#[cfg(target_arch = "aarch64")]
+#[test]
+fn arm_legacy_concrete_matches_generic() {
+    use archmage::NeonToken;
+    use magetypes::simd::arm::w128::f32x4 as Legacy;
+    use magetypes::simd::generic::f32x4 as Generic;
+
+    let t = NeonToken::summon().expect("neon");
+    for chunk in inputs().chunks(4) {
+        if chunk.len() < 4 {
+            continue;
+        }
+        let mut arr = [0.0f32; 4];
+        for (d, s) in arr.iter_mut().zip(chunk) {
+            *d = *s as f32;
+        }
+        let g = Generic::<NeonToken>::from_array(t, arr);
+        let l = Legacy::from_array(t, arr);
+        macro_rules! eq {
+            ($m:ident) => {{
+                let mut go = [0.0f32; 4];
+                g.$m().store(&mut go);
+                assert_eq!(
+                    go.map(f32::to_bits),
+                    l.$m().to_array().map(f32::to_bits),
+                    "legacy vs generic f32x4::{} differ",
+                    stringify!($m)
+                );
+            }};
+        }
+        eq!(rcp_approx);
+        eq!(rsqrt_approx);
+        eq!(recip);
+        eq!(rsqrt);
+    }
+}

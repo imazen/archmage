@@ -6,13 +6,13 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2795 lines (supported surface) | magetypes.features.txt 402 added (features: avx512,std,w512) | magetypes.internal.txt 92 lines (99 hidden + 0 excluded-feature)
+# files: magetypes.txt 2787 lines (supported surface) | magetypes.features.txt 402 added (features: avx512,std,w512) | magetypes.internal.txt 92 lines (99 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                18
 #   pub types (struct/enum/trait/alias)       416
-#   pub consts/statics                        390
+#   pub consts/statics                        382
 #   free functions                           9236
 #   inherent methods                         1108
 #   enum variants                              96
@@ -26,9 +26,9 @@
 #   (root)                          536
 #   cast                              3
 #   prelude                          16
-#   simd                          10712
+#   simd                          10704
 
-## items (2591 lines)
+## items (2583 lines)
 
 pub mod magetypes
 pub use archmage
@@ -248,8 +248,6 @@ pub fn simd::backends::F32x16Convert::convert_f32_to_i32_round(self, <Self as si
 pub fn simd::backends::F32x16Convert::convert_i32_to_f32(self, <Self as simd::backends::I32x16Backend>::Repr) -> <Self as simd::backends::F32x16Backend>::Repr
 pub trait simd::backends::F32x4Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::F32x4Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
-pub const simd::backends::F32x4Backend::HW_RECIP_ESTIMATE: bool
-pub const simd::backends::F32x4Backend::HW_RECIP_ESTIMATE_12BIT: bool
 pub fn simd::backends::F32x4Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::bitand(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -297,8 +295,6 @@ pub fn simd::backends::F32x4Convert::convert_f32_to_i32_round(self, <Self as sim
 pub fn simd::backends::F32x4Convert::convert_i32_to_f32(self, <Self as simd::backends::I32x4Backend>::Repr) -> <Self as simd::backends::F32x4Backend>::Repr
 pub trait simd::backends::F32x8Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::F32x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
-pub const simd::backends::F32x8Backend::HW_RECIP_ESTIMATE: bool
-pub const simd::backends::F32x8Backend::HW_RECIP_ESTIMATE_12BIT: bool
 pub fn simd::backends::F32x8Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::bitand(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -346,8 +342,6 @@ pub fn simd::backends::F32x8Convert::convert_f32_to_i32_round(self, <Self as sim
 pub fn simd::backends::F32x8Convert::convert_i32_to_f32(self, <Self as simd::backends::I32x8Backend>::Repr) -> <Self as simd::backends::F32x8Backend>::Repr
 pub trait simd::backends::F64x2Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::F64x2Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
-pub const simd::backends::F64x2Backend::HW_RECIP_ESTIMATE: bool
-pub const simd::backends::F64x2Backend::HW_RECIP_ESTIMATE_12BIT: bool
 pub fn simd::backends::F64x2Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::bitand(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -389,8 +383,6 @@ pub fn simd::backends::F64x2Backend::to_array(self, Self::Repr) -> [f64; 2]
 pub fn simd::backends::F64x2Backend::zero(self) -> Self::Repr
 pub trait simd::backends::F64x4Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::F64x4Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
-pub const simd::backends::F64x4Backend::HW_RECIP_ESTIMATE: bool
-pub const simd::backends::F64x4Backend::HW_RECIP_ESTIMATE_12BIT: bool
 pub fn simd::backends::F64x4Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::bitand(self, Self::Repr, Self::Repr) -> Self::Repr

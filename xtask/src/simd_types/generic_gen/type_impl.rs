@@ -742,10 +742,10 @@ fn gen_comparisons(signedness: &str) -> String {
 
 fn gen_approximations(ty: &SimdType) -> String {
     let lanes = ty.lanes();
-    // The ≥12-bit "cheapest path per platform" dispatch keys off the per-backend
-    // HW_RECIP_ESTIMATE consts, which exist for f32 at the 128/256-bit widths.
-    // f64 and the W512 f32x16 width fall back to the plain backend forward (their
-    // `_approx` is the backend's native estimate / exact division).
+    // Both branches just forward to the backend — each backend owns its own
+    // ≥12-bit per-platform `_approx` and correctly-rounded full path. The only
+    // difference is documentation: f32 at 128/256-bit also has the deterministic
+    // `_portable` family, so its docs cross-link to `rcp_approx_portable`.
     if ty.elem == ElementType::F32 && lanes <= 8 {
         formatdoc! {"
             \x20   /// Fast reciprocal (1/x), ≥~12-bit floor by the cheapest path per
@@ -756,17 +756,9 @@ fn gen_approximations(ty: &SimdType) -> String {
                 /// for full precision use [`recip`](Self::recip).
                 #[inline(always)]
                 pub fn rcp_approx(self) -> Self {{
-                    if <T as F32x{lanes}Backend>::HW_RECIP_ESTIMATE {{
-                        let e = Self(T::rcp_approx(self.1, self.0), self.1);
-                        if <T as F32x{lanes}Backend>::HW_RECIP_ESTIMATE_12BIT {{ e }}
-                        // ARM: raw estimate ~8-bit, lift to ~16 with one (non-fused)
-                        // Newton step. Pure mul/sub — no bitcast bound.
-                        else {{ e.recip_newton_portable(self) }}
-                    }} else {{
-                        // WASM/scalar: no hardware estimate; backend rcp_approx is
-                        // already exact division (full precision).
-                        Self(T::rcp_approx(self.1, self.0), self.1)
-                    }}
+                    // Each backend owns its >=12-bit estimate (x86 raw rcpps; ARM
+                    // raw vrecpe + 1 fused FRECPS; WASM/scalar exact division).
+                    Self(T::rcp_approx(self.1, self.0), self.1)
                 }}
 
                 /// Precise reciprocal (1/x), full f32 precision (Newton-Raphson refined).
@@ -779,15 +771,9 @@ fn gen_approximations(ty: &SimdType) -> String {
                 /// [`rcp_approx`](Self::rcp_approx) for the per-platform strategy.
                 #[inline(always)]
                 pub fn rsqrt_approx(self) -> Self {{
-                    if <T as F32x{lanes}Backend>::HW_RECIP_ESTIMATE {{
-                        let e = Self(T::rsqrt_approx(self.1, self.0), self.1);
-                        if <T as F32x{lanes}Backend>::HW_RECIP_ESTIMATE_12BIT {{ e }}
-                        // ARM: one Newton step lifts the ~8-bit estimate to ~16.
-                        else {{ e.rsqrt_newton_portable(self) }}
-                    }} else {{
-                        // WASM/scalar: backend rsqrt_approx is exact (1/sqrt via div).
-                        Self(T::rsqrt_approx(self.1, self.0), self.1)
-                    }}
+                    // ARM uses raw vrsqrte + 1 fused FRSQRTS; WASM/scalar a bit-hack
+                    // seed + 2 Newton steps; x86 the raw rsqrtps estimate.
+                    Self(T::rsqrt_approx(self.1, self.0), self.1)
                 }}
 
                 /// Precise reciprocal square root, full f32 precision (Newton-Raphson refined).
@@ -796,7 +782,7 @@ fn gen_approximations(ty: &SimdType) -> String {
                     Self(T::rsqrt(self.1, self.0), self.1)
                 }}
 
-        ", lanes = lanes}
+        "}
     } else {
         formatdoc! {"
             \x20   /// Fast reciprocal approximation (1/x): the backend's native estimate.

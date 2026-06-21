@@ -125,15 +125,6 @@ pub trait F64x4Backend: SimdToken + Sealed + Copy + 'static {
 
     // ====== Approximations ======
 
-    /// Whether `rcp_approx`/`rsqrt_approx` use a hardware estimate
-    /// instruction (`true`) rather than a full-precision polyfill such as
-    /// division (`false` — WASM/scalar). Drives the generic `rsqrt_approx`
-    /// ≥12-bit dispatch.
-    const HW_RECIP_ESTIMATE: bool = false;
-    /// Whether that hardware estimate is already ≥~12-bit (`true`, x86) or
-    /// needs one refinement step to reach it (`false`, ARM ~8-bit).
-    const HW_RECIP_ESTIMATE_12BIT: bool = false;
-
     /// Raw per-backend reciprocal seed (1/x). On x86/ARM this is the
     /// hardware estimate; the generic `rcp_approx` refines it to a ≥12-bit
     /// floor. WASM/scalar override `rcp_approx` on the generic type.

@@ -11,9 +11,6 @@ use crate::simd::backends::*;
 impl F32x4Backend for archmage::X64V3Token {
     type Repr = __m128;
 
-    const HW_RECIP_ESTIMATE: bool = true;
-    const HW_RECIP_ESTIMATE_12BIT: bool = true;
-
     // ====== Construction ======
 
     #[inline(always)]
@@ -268,9 +265,6 @@ impl F32x4Backend for archmage::X64V3Token {
 #[cfg(target_arch = "x86_64")]
 impl F32x8Backend for archmage::X64V3Token {
     type Repr = __m256;
-
-    const HW_RECIP_ESTIMATE: bool = true;
-    const HW_RECIP_ESTIMATE_12BIT: bool = true;
 
     // ====== Construction ======
 
@@ -536,9 +530,6 @@ impl F32x8Backend for archmage::X64V3Token {
 impl F64x2Backend for archmage::X64V3Token {
     type Repr = __m128d;
 
-    const HW_RECIP_ESTIMATE: bool = false;
-    const HW_RECIP_ESTIMATE_12BIT: bool = false;
-
     // ====== Construction ======
 
     #[inline(always)]
@@ -772,9 +763,6 @@ impl F64x2Backend for archmage::X64V3Token {
 #[cfg(target_arch = "x86_64")]
 impl F64x4Backend for archmage::X64V3Token {
     type Repr = __m256d;
-
-    const HW_RECIP_ESTIMATE: bool = false;
-    const HW_RECIP_ESTIMATE_12BIT: bool = false;
 
     // ====== Construction ======
 
