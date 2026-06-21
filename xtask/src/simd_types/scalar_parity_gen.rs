@@ -779,23 +779,20 @@ fn gen_float_type_tests(code: &mut String, elem: &str, lanes: usize) {
 
     // Approximation ops — relative tolerance.
     //
-    // `_approx` variants carry a precision floor across all backends. The raw
-    // hardware seeds differ wildly — ARM `vrsqrteq_f32` is ~8-bit, x86
-    // `_mm_rsqrt_ps` is ~12-bit (1.5 × 2⁻¹² ≈ 3.66e-4), WASM has none (full
-    // division) — so the NEON `_approx` applies one native FRSQRTS/FRECPS
-    // Newton step to lift its seed to ~16-bit. The least-precise backend is
-    // then x86's raw ~12-bit estimate. A 1e-3 bound (≈ 2.7× margin over x86's
-    // spec) holds everywhere yet still fails a regression back to a raw
-    // ~8-bit estimate (≈ 3.9e-3) — it pins the floor that tightens the
-    // cross-arch spread, instead of encoding x86 precision as the contract.
+    // `_approx` is each backend's raw hardware estimate — the fastest path, with
+    // intentional per-architecture variance (the `_portable` family is the
+    // deterministic, same-bits-everywhere option). The loosest backend is ARM
+    // `vrecpeq`/`vrsqrteq` at the ARMv8 spec worst case ≤ 2⁻⁸ ≈ 3.91e-3 (x86
+    // `_mm_rcp_ps` is tighter at 1.5 × 2⁻¹² ≈ 3.66e-4; WASM uses full division).
+    // QEMU emulates NEON at the spec worst case, so 4e-3 is the universal bound.
     //
-    // `recip` / `rsqrt`: Newton-refined to full f32. x86 takes one step over
-    // its 12-bit estimate; NEON takes two over the 8-bit seed (native
-    // FRSQRTS/FRECPS). Both reach ~24-bit, so 1e-5 holds on all platforms.
+    // `recip` / `rsqrt`: Newton-refined to full f32. x86 takes one step over its
+    // 12-bit estimate; NEON takes two over the 8-bit seed (native FRSQRTS/FRECPS
+    // for the fused step). Both reach ~24-bit, so 1e-5 holds on all platforms.
     if elem == "f32" {
         for (op, tol) in &[
-            ("rcp_approx", "1e-3"),
-            ("rsqrt_approx", "1e-3"),
+            ("rcp_approx", "4e-3"),
+            ("rsqrt_approx", "4e-3"),
             ("recip", "1e-5"),
             ("rsqrt", "1e-5"),
         ] {

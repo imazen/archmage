@@ -754,7 +754,7 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             // ====== Approximations ======
 
             /// Fast reciprocal approximation (1/x): backend-dependent precision
-            /// (x86 ~12-bit, ARM ~16-bit, WASM full). [`recip`] is full f32 everywhere.
+            /// (x86 ~12-bit, ARM ~8-bit, WASM full). [`recip`] is full f32 everywhere.
             ///
             /// **Default body returns the input unchanged** — every shipped
             /// backend overrides this with a native intrinsic. The original
@@ -766,7 +766,7 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             fn rcp_approx(self, a: Self::Repr) -> Self::Repr {{ a }}
 
             /// Fast reciprocal square root approximation: backend-dependent
-            /// (x86 ~12-bit, ARM ~16-bit, WASM full). [`rsqrt`] is full f32 everywhere.
+            /// (x86 ~12-bit, ARM ~8-bit, WASM full). [`rsqrt`] is full f32 everywhere.
             ///
             /// See [`rcp_approx`] for default-body rationale.
             #[inline(always)]
@@ -2358,10 +2358,10 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
 
             // ====== Approximations ======
             //
-            // Same FRECPS / FRSQRTS native-step approach as the 128-bit impl
-            // (see `generate_neon_native_impl`), applied per 128-bit lane:
-            // `_approx` = seed + one step (~16-bit), `recip` / `rsqrt` = one
-            // further step (full precision). No 2.0 / 3.0 / 0.5 splats.
+            // `_approx` is the raw hardware estimate (one vrecpe/vrsqrte per
+            // 128-bit lane). `recip` / `rsqrt` refine it to full precision with
+            // two native FRECPS / FRSQRTS Newton steps — see
+            // `generate_neon_native_impl` for the rationale.
 
             #[inline(always)]
             fn rcp_approx(self, a: {repr}) -> {repr} {{
@@ -2376,13 +2376,13 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn recip(self, a: {repr}) -> {repr} {{
                 let y = <Self as {trait_name}>::rcp_approx(self, a);
-                {recip_step_body}
+                {recip_2step_body}
             }}
 
             #[inline(always)]
             fn rsqrt(self, a: {repr}) -> {repr} {{
                 let y = <Self as {trait_name}>::rsqrt_approx(self, a);
-                {rsqrt_step_body}
+                {rsqrt_2step_body}
             }}
 
             // ====== Bitwise ======
@@ -2451,37 +2451,33 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
         reduce_min_body = reduce_combine(&format!("vminq_{ns}"), &format!("vpminq_{ns}")),
         reduce_max_body = reduce_combine(&format!("vmaxq_{ns}"), &format!("vpmaxq_{ns}")),
         rcp_approx_body = {
-            // seed + one FRECPS step: y' = y * (2 - a*y)
+            // raw hardware reciprocal estimate (one vrecpe per 128-bit lane)
             let items: Vec<String> = (0..sub_count)
-                .map(|i| format!(
-                    "{{ let y = vrecpeq_{ns}(a[{i}]); vmulq_{ns}(vrecpsq_{ns}(a[{i}], y), y) }}"
-                ))
+                .map(|i| format!("vrecpeq_{ns}(a[{i}])"))
                 .collect();
             format!("unsafe {{ [{}] }}", items.join(", "))
         },
         rsqrt_approx_body = {
-            // seed + one FRSQRTS step: y' = y * (3 - a*y*y)/2
+            // raw hardware reciprocal-sqrt estimate (one vrsqrte per lane)
+            let items: Vec<String> = (0..sub_count)
+                .map(|i| format!("vrsqrteq_{ns}(a[{i}])"))
+                .collect();
+            format!("unsafe {{ [{}] }}", items.join(", "))
+        },
+        recip_2step_body = {
+            // two native FRECPS Newton steps over the raw estimate held in `y`
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!(
-                    "{{ let y = vrsqrteq_{ns}(a[{i}]); vmulq_{ns}(vrsqrtsq_{ns}(vmulq_{ns}(a[{i}], y), y), y) }}"
+                    "{{ let y1 = vmulq_{ns}(vrecpsq_{ns}(a[{i}], y[{i}]), y[{i}]); vmulq_{ns}(vrecpsq_{ns}(a[{i}], y1), y1) }}"
                 ))
                 .collect();
             format!("unsafe {{ [{}] }}", items.join(", "))
         },
-        recip_step_body = {
-            // one further FRECPS step over the `_approx` result held in `y`
+        rsqrt_2step_body = {
+            // two native FRSQRTS Newton steps over the raw estimate held in `y`
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!(
-                    "vmulq_{ns}(vrecpsq_{ns}(a[{i}], y[{i}]), y[{i}])"
-                ))
-                .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
-        },
-        rsqrt_step_body = {
-            // one further FRSQRTS step over the `_approx` result held in `y`
-            let items: Vec<String> = (0..sub_count)
-                .map(|i| format!(
-                    "vmulq_{ns}(vrsqrtsq_{ns}(vmulq_{ns}(a[{i}], y[{i}]), y[{i}]), y[{i}])"
+                    "{{ let y1 = vmulq_{ns}(vrsqrtsq_{ns}(vmulq_{ns}(a[{i}], y[{i}]), y[{i}]), y[{i}]); vmulq_{ns}(vrsqrtsq_{ns}(vmulq_{ns}(a[{i}], y1), y1), y1) }}"
                 ))
                 .collect();
             format!("unsafe {{ [{}] }}", items.join(", "))
@@ -2644,43 +2640,40 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
                 {reduce_max}
             }}
 
-            // Reciprocal and reciprocal-square-root via NEON's native
-            // Newton-Raphson assist instructions. FRECPS (`vrecpsq`) computes
-            // `2 - a*y` and FRSQRTS (`vrsqrtsq`) computes `(3 - a*y*y)/2` as a
-            // single fused step each — no intermediate rounding, and no 2.0 /
-            // 3.0 / 0.5 constants to splat. Convergence is quadratic: the
-            // vrecpe / vrsqrte seed is ~8-bit, one step reaches ~16-bit, a
-            // second saturates the f32 mantissa (~24-bit). `_approx` takes one
-            // step (~16-bit — well past the raw ~8-bit seed and on par with
-            // x86's ~12-bit hardware estimate, which tightens the cross-arch
-            // precision spread); `recip` / `rsqrt` take one more to reach full
-            // precision. (f64 rides the same code: ~16-bit approx, ~32-bit
-            // full — a third step would be needed for the 52-bit mantissa.)
-            // This block is already gated on the NEON target feature, so the
-            // value intrinsics need only a bare `unsafe`.
+            // `_approx` is the raw hardware estimate — one `vrecpe`/`vrsqrte`
+            // instruction (~8-bit), the fastest path. Cross-architecture
+            // bit-identity is the job of the `_portable` family, not this one,
+            // so the per-platform variance here is intentional.
+            //
+            // `recip` / `rsqrt` refine that ~8-bit seed to full f32 precision
+            // with two NEON Newton-Raphson assist steps: FRECPS (`vrecpsq`)
+            // computes `2 - a*y` and FRSQRTS (`vrsqrtsq`) computes
+            // `(3 - a*y*y)/2` as one fused step each — no intermediate rounding,
+            // no 2.0/3.0/0.5 splats, and measurably faster than hand-rolled
+            // mul/sub on real silicon (1.3–1.5x; see
+            // `benchmarks/rsqrt_arm_neoverse-n1`). Each step roughly doubles the
+            // correct bits (~8 → ~16 → ~24; f64 reaches ~32-bit in two — full
+            // f64 would need a third). This block is already gated on the NEON
+            // target feature, so the value intrinsics need only `unsafe`.
             #[inline(always)]
-            fn rcp_approx(self, a: {repr}) -> {repr} {{
+            fn rcp_approx(self, a: {repr}) -> {repr} {{ unsafe {{ vrecpeq_{ns}(a) }} }}
+            #[inline(always)]
+            fn rsqrt_approx(self, a: {repr}) -> {repr} {{ unsafe {{ vrsqrteq_{ns}(a) }} }}
+            #[inline(always)]
+            fn recip(self, a: {repr}) -> {repr} {{
+                let y = <Self as {trait_name}>::rcp_approx(self, a);
                 unsafe {{
-                    let y = vrecpeq_{ns}(a);
+                    let y = vmulq_{ns}(vrecpsq_{ns}(a, y), y);
                     vmulq_{ns}(vrecpsq_{ns}(a, y), y)
                 }}
             }}
             #[inline(always)]
-            fn rsqrt_approx(self, a: {repr}) -> {repr} {{
-                unsafe {{
-                    let y = vrsqrteq_{ns}(a);
-                    vmulq_{ns}(vrsqrtsq_{ns}(vmulq_{ns}(a, y), y), y)
-                }}
-            }}
-            #[inline(always)]
-            fn recip(self, a: {repr}) -> {repr} {{
-                let y = <Self as {trait_name}>::rcp_approx(self, a);
-                unsafe {{ vmulq_{ns}(vrecpsq_{ns}(a, y), y) }}
-            }}
-            #[inline(always)]
             fn rsqrt(self, a: {repr}) -> {repr} {{
                 let y = <Self as {trait_name}>::rsqrt_approx(self, a);
-                unsafe {{ vmulq_{ns}(vrsqrtsq_{ns}(vmulq_{ns}(a, y), y), y) }}
+                unsafe {{
+                    let y = vmulq_{ns}(vrsqrtsq_{ns}(vmulq_{ns}(a, y), y), y);
+                    vmulq_{ns}(vrsqrtsq_{ns}(vmulq_{ns}(a, y), y), y)
+                }}
             }}
 
             #[inline(always)]

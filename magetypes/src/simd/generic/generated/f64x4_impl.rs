@@ -336,7 +336,7 @@ impl<T: F64x4Backend> f64x4<T> {
 
     // ====== Approximations ======
 
-    /// Fast reciprocal approximation (1/x): x86 ~12-bit, ARM ~16-bit, WASM full.
+    /// Fast reciprocal approximation (1/x): x86 ~12-bit, ARM ~8-bit, WASM full.
     #[inline(always)]
     pub fn rcp_approx(self) -> Self {
         Self(T::rcp_approx(self.1, self.0), self.1)
@@ -348,7 +348,7 @@ impl<T: F64x4Backend> f64x4<T> {
         Self(T::recip(self.1, self.0), self.1)
     }
 
-    /// Fast reciprocal square root approximation: x86 ~12-bit, ARM ~16-bit, WASM full.
+    /// Fast reciprocal square root approximation: x86 ~12-bit, ARM ~8-bit, WASM full.
     #[inline(always)]
     pub fn rsqrt_approx(self) -> Self {
         Self(T::rsqrt_approx(self.1, self.0), self.1)

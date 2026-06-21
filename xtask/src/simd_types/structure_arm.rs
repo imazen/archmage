@@ -436,59 +436,57 @@ fn generate_math_ops(ty: &SimdType) -> String {
             let recpe_fn = Arm::recpe_intrinsic(ty.elem);
             let rsqrte_fn = Arm::rsqrte_intrinsic(ty.elem);
 
-            // NEON's native Newton-Raphson assist instructions: FRECPS
-            // (`vrecpsq_f32`) computes `2 - a*y` and FRSQRTS (`vrsqrtsq_f32`)
-            // computes `(3 - a*y*y)/2` as one fused step each — no 2.0/3.0/0.5
-            // constants, no intermediate rounding. The vrecpe/vrsqrte seed is
-            // ~8-bit; each step roughly doubles the correct bits (~16-bit after
-            // one, full f32 ~24-bit after two). This matches the backend-trait
-            // impl in `backend_gen.rs` so both code paths agree.
+            // `_approx` is the raw ~8-bit `vrecpe`/`vrsqrte` hardware estimate
+            // (fastest path; reach for the `_portable` family on the generic
+            // types when you need the same bits on every machine). `recip` /
+            // `rsqrt` refine that seed to full f32 (~24-bit) with two native
+            // Newton-Raphson assist steps: FRECPS (`vrecpsq_f32`) = `2 - a*y`,
+            // FRSQRTS (`vrsqrtsq_f32`) = `(3 - a*y*y)/2`, each fused (faster than
+            // hand-rolled mul/sub, no 2.0/3.0/0.5 splats). Matches the
+            // backend-trait impl in `backend_gen.rs` so both code paths agree.
             code.push_str(&formatdoc! {r#"
                 // ========== Approximation Operations ==========
 
-                /// Fast reciprocal approximation (1/x), ~16-bit precision.
+                /// Fast reciprocal approximation (1/x) — raw ~8-bit hardware estimate.
                 ///
-                /// One FRECPS Newton-Raphson step over the ~8-bit hardware seed.
-                /// For full precision, use `recip()`.
+                /// A single `vrecpe` instruction (fastest). For full precision use
+                /// `recip()`.
                 #[inline(always)]
                 pub fn rcp_approx(self) -> Self {{
+                Self(unsafe {{ {recpe_fn}(self.0) }})
+                }}
+
+                /// Precise reciprocal (1/x), full f32 precision.
+                ///
+                /// The raw estimate refined with two native FRECPS Newton steps.
+                #[inline(always)]
+                pub fn recip(self) -> Self {{
+                let y = self.rcp_approx().0;
                 Self(unsafe {{
-                    let y = {recpe_fn}(self.0);
+                    let y = vmulq_f32(vrecpsq_f32(self.0, y), y);
                     vmulq_f32(vrecpsq_f32(self.0, y), y)
                 }})
                 }}
 
-                /// Precise reciprocal (1/x) using Newton-Raphson refinement.
+                /// Fast reciprocal square root approximation (1/sqrt(x)) — raw ~8-bit estimate.
                 ///
-                /// One FRECPS step beyond `rcp_approx()`, reaching full f32
-                /// (~24-bit) precision. For maximum speed with acceptable
-                /// precision loss, use `rcp_approx()`.
-                #[inline(always)]
-                pub fn recip(self) -> Self {{
-                let y = self.rcp_approx().0;
-                Self(unsafe {{ vmulq_f32(vrecpsq_f32(self.0, y), y) }})
-                }}
-
-                /// Fast reciprocal square root approximation (1/sqrt(x)), ~16-bit precision.
-                ///
-                /// One FRSQRTS Newton-Raphson step over the ~8-bit hardware seed.
-                /// For full precision, use `rsqrt()`.
+                /// A single `vrsqrte` instruction (fastest). For full precision use
+                /// `rsqrt()`.
                 #[inline(always)]
                 pub fn rsqrt_approx(self) -> Self {{
-                Self(unsafe {{
-                    let y = {rsqrte_fn}(self.0);
-                    vmulq_f32(vrsqrtsq_f32(vmulq_f32(self.0, y), y), y)
-                }})
+                Self(unsafe {{ {rsqrte_fn}(self.0) }})
                 }}
 
-                /// Precise reciprocal square root (1/sqrt(x)) using Newton-Raphson refinement.
+                /// Precise reciprocal square root (1/sqrt(x)), full f32 precision.
                 ///
-                /// One FRSQRTS step beyond `rsqrt_approx()`, reaching full f32
-                /// (~24-bit) precision.
+                /// The raw estimate refined with two native FRSQRTS Newton steps.
                 #[inline(always)]
                 pub fn rsqrt(self) -> Self {{
                 let y = self.rsqrt_approx().0;
-                Self(unsafe {{ vmulq_f32(vrsqrtsq_f32(vmulq_f32(self.0, y), y), y) }})
+                Self(unsafe {{
+                    let y = vmulq_f32(vrsqrtsq_f32(vmulq_f32(self.0, y), y), y);
+                    vmulq_f32(vrsqrtsq_f32(vmulq_f32(self.0, y), y), y)
+                }})
                 }}
 
             "#});

@@ -971,7 +971,7 @@ fn rcp_approx() {
             let input: [f32; 4] = chunk.try_into().unwrap();
             let s = generic::f32x4::<ScalarToken>::from_array(token_s, input).rcp_approx().to_array();
             let n = generic::f32x4::<$native_token>::from_array(token_n, input).rcp_approx().to_array();
-            super::assert_f32_approx(&s, &n, "f32x4::rcp_approx", &input, 1e-3);
+            super::assert_f32_approx(&s, &n, "f32x4::rcp_approx", &input, 4e-3);
         }
     }
 }
@@ -989,7 +989,7 @@ fn rsqrt_approx() {
             let input: [f32; 4] = chunk.try_into().unwrap();
             let s = generic::f32x4::<ScalarToken>::from_array(token_s, input).rsqrt_approx().to_array();
             let n = generic::f32x4::<$native_token>::from_array(token_n, input).rsqrt_approx().to_array();
-            super::assert_f32_approx(&s, &n, "f32x4::rsqrt_approx", &input, 1e-3);
+            super::assert_f32_approx(&s, &n, "f32x4::rsqrt_approx", &input, 4e-3);
         }
     }
 }
@@ -1412,7 +1412,7 @@ fn rcp_approx() {
             let input: [f32; 8] = chunk.try_into().unwrap();
             let s = generic::f32x8::<ScalarToken>::from_array(token_s, input).rcp_approx().to_array();
             let n = generic::f32x8::<$native_token>::from_array(token_n, input).rcp_approx().to_array();
-            super::assert_f32_approx(&s, &n, "f32x8::rcp_approx", &input, 1e-3);
+            super::assert_f32_approx(&s, &n, "f32x8::rcp_approx", &input, 4e-3);
         }
     }
 }
@@ -1430,7 +1430,7 @@ fn rsqrt_approx() {
             let input: [f32; 8] = chunk.try_into().unwrap();
             let s = generic::f32x8::<ScalarToken>::from_array(token_s, input).rsqrt_approx().to_array();
             let n = generic::f32x8::<$native_token>::from_array(token_n, input).rsqrt_approx().to_array();
-            super::assert_f32_approx(&s, &n, "f32x8::rsqrt_approx", &input, 1e-3);
+            super::assert_f32_approx(&s, &n, "f32x8::rsqrt_approx", &input, 4e-3);
         }
     }
 }
