@@ -1600,9 +1600,6 @@ pub(crate) use registry::*;
     let simd_dir = PathBuf::from("magetypes/src/simd");
     fs::create_dir_all(&simd_dir)?;
     fs::create_dir_all(simd_dir.join("generated"))?;
-    fs::create_dir_all(simd_dir.join("generated/x86"))?;
-    fs::create_dir_all(simd_dir.join("generated/arm"))?;
-    fs::create_dir_all(simd_dir.join("generated/wasm"))?;
 
     // Generate split files
     let simd_files = simd_types::generate_simd_types_split();

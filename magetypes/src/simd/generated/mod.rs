@@ -252,35 +252,6 @@ macro_rules! impl_index {
 // Type modules
 // ============================================================================
 
-// x86-64 types (SSE, AVX, AVX-512)
-#[cfg(target_arch = "x86_64")]
-pub mod x86 {
-    pub mod w128;
-    pub mod w256;
-    #[cfg(feature = "avx512")]
-    pub mod w512;
-}
-
-// AArch64 types (NEON)
-#[cfg(target_arch = "aarch64")]
-pub mod arm {
-    pub mod w128;
-}
-
-// WebAssembly types (SIMD128)
-#[cfg(target_arch = "wasm32")]
-pub mod wasm {
-    pub mod w128;
-}
-
-// All SIMD types (W128, W256, W512) are migrated to generic strategy-pattern types.
-// They are re-exported as type aliases from simd/mod.rs pointing to
-// generic::<T> versions. Old concrete types remain at original paths
-// (e.g., simd::generated::x86::w128::i8x16) for migration.
-
-// Polyfill module for emulating wider types on narrower hardware
-pub mod polyfill;
-
 // ============================================================================
 // Per-token namespaces (all available widths per token level)
 //
@@ -301,19 +272,44 @@ pub mod v3 {
     //! (emulated via 2×256-bit ops). All take `X64V3Token`.
 
     #[cfg(target_arch = "x86_64")]
-    pub use super::x86::w256::{
+    #[allow(non_camel_case_types)]
+    mod _w256_aliases {
+        pub type f32x8 = crate::simd::generic::f32x8<archmage::X64V3Token>;
+        pub type f64x4 = crate::simd::generic::f64x4<archmage::X64V3Token>;
+        pub type i8x32 = crate::simd::generic::i8x32<archmage::X64V3Token>;
+        pub type u8x32 = crate::simd::generic::u8x32<archmage::X64V3Token>;
+        pub type i16x16 = crate::simd::generic::i16x16<archmage::X64V3Token>;
+        pub type u16x16 = crate::simd::generic::u16x16<archmage::X64V3Token>;
+        pub type i32x8 = crate::simd::generic::i32x8<archmage::X64V3Token>;
+        pub type u32x8 = crate::simd::generic::u32x8<archmage::X64V3Token>;
+        pub type i64x4 = crate::simd::generic::i64x4<archmage::X64V3Token>;
+        pub type u64x4 = crate::simd::generic::u64x4<archmage::X64V3Token>;
+    }
+    #[cfg(target_arch = "x86_64")]
+    pub use _w256_aliases::*;
+
+    #[cfg(target_arch = "x86_64")]
+    pub use _w256_aliases::{
         f32x8 as f32xN, f64x4 as f64xN, i8x32 as i8xN, i16x16 as i16xN, i32x8 as i32xN,
         i64x4 as i64xN, u8x32 as u8xN, u16x16 as u16xN, u32x8 as u32xN, u64x4 as u64xN,
     };
 
     #[cfg(target_arch = "x86_64")]
-    pub use super::x86::w256::*;
-
-    // 128-bit native types (same X64V3Token)
+    #[allow(non_camel_case_types)]
+    mod _w128_aliases {
+        pub type f32x4 = crate::simd::generic::f32x4<archmage::X64V3Token>;
+        pub type f64x2 = crate::simd::generic::f64x2<archmage::X64V3Token>;
+        pub type i8x16 = crate::simd::generic::i8x16<archmage::X64V3Token>;
+        pub type u8x16 = crate::simd::generic::u8x16<archmage::X64V3Token>;
+        pub type i16x8 = crate::simd::generic::i16x8<archmage::X64V3Token>;
+        pub type u16x8 = crate::simd::generic::u16x8<archmage::X64V3Token>;
+        pub type i32x4 = crate::simd::generic::i32x4<archmage::X64V3Token>;
+        pub type u32x4 = crate::simd::generic::u32x4<archmage::X64V3Token>;
+        pub type i64x2 = crate::simd::generic::i64x2<archmage::X64V3Token>;
+        pub type u64x2 = crate::simd::generic::u64x2<archmage::X64V3Token>;
+    }
     #[cfg(target_arch = "x86_64")]
-    pub use super::x86::w128::{
-        f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2,
-    };
+    pub use _w128_aliases::*;
 
     // 512-bit generic types (2×256-bit polyfill, same X64V3Token)
     #[cfg(all(target_arch = "x86_64", feature = "w512"))]
@@ -388,17 +384,39 @@ pub mod v4 {
         i64x8 as i64xN, u8x64 as u8xN, u16x32 as u16xN, u32x16 as u32xN, u64x8 as u64xN,
     };
 
-    // 128-bit native types (use token.v3() to downcast)
     #[cfg(target_arch = "x86_64")]
-    pub use super::x86::w128::{
-        f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2,
-    };
+    #[allow(non_camel_case_types)]
+    mod _w128_aliases {
+        pub type f32x4 = crate::simd::generic::f32x4<archmage::X64V3Token>;
+        pub type f64x2 = crate::simd::generic::f64x2<archmage::X64V3Token>;
+        pub type i8x16 = crate::simd::generic::i8x16<archmage::X64V3Token>;
+        pub type u8x16 = crate::simd::generic::u8x16<archmage::X64V3Token>;
+        pub type i16x8 = crate::simd::generic::i16x8<archmage::X64V3Token>;
+        pub type u16x8 = crate::simd::generic::u16x8<archmage::X64V3Token>;
+        pub type i32x4 = crate::simd::generic::i32x4<archmage::X64V3Token>;
+        pub type u32x4 = crate::simd::generic::u32x4<archmage::X64V3Token>;
+        pub type i64x2 = crate::simd::generic::i64x2<archmage::X64V3Token>;
+        pub type u64x2 = crate::simd::generic::u64x2<archmage::X64V3Token>;
+    }
+    #[cfg(target_arch = "x86_64")]
+    pub use _w128_aliases::*;
 
-    // 256-bit native types (use token.v3() to downcast)
     #[cfg(target_arch = "x86_64")]
-    pub use super::x86::w256::{
-        f32x8, f64x4, i8x32, i16x16, i32x8, i64x4, u8x32, u16x16, u32x8, u64x4,
-    };
+    #[allow(non_camel_case_types)]
+    mod _w256_aliases {
+        pub type f32x8 = crate::simd::generic::f32x8<archmage::X64V3Token>;
+        pub type f64x4 = crate::simd::generic::f64x4<archmage::X64V3Token>;
+        pub type i8x32 = crate::simd::generic::i8x32<archmage::X64V3Token>;
+        pub type u8x32 = crate::simd::generic::u8x32<archmage::X64V3Token>;
+        pub type i16x16 = crate::simd::generic::i16x16<archmage::X64V3Token>;
+        pub type u16x16 = crate::simd::generic::u16x16<archmage::X64V3Token>;
+        pub type i32x8 = crate::simd::generic::i32x8<archmage::X64V3Token>;
+        pub type u32x8 = crate::simd::generic::u32x8<archmage::X64V3Token>;
+        pub type i64x4 = crate::simd::generic::i64x4<archmage::X64V3Token>;
+        pub type u64x4 = crate::simd::generic::u64x4<archmage::X64V3Token>;
+    }
+    #[cfg(target_arch = "x86_64")]
+    pub use _w256_aliases::*;
 
     /// Token type for this width level
     #[cfg(feature = "avx512")]
@@ -457,17 +475,39 @@ pub mod v4x {
         i64x8 as i64xN, u8x64 as u8xN, u16x32 as u16xN, u32x16 as u32xN, u64x8 as u64xN,
     };
 
-    // 128-bit native types (use token.v3() to downcast)
     #[cfg(target_arch = "x86_64")]
-    pub use super::x86::w128::{
-        f32x4, f64x2, i8x16, i16x8, i32x4, i64x2, u8x16, u16x8, u32x4, u64x2,
-    };
+    #[allow(non_camel_case_types)]
+    mod _w128_aliases {
+        pub type f32x4 = crate::simd::generic::f32x4<archmage::X64V3Token>;
+        pub type f64x2 = crate::simd::generic::f64x2<archmage::X64V3Token>;
+        pub type i8x16 = crate::simd::generic::i8x16<archmage::X64V3Token>;
+        pub type u8x16 = crate::simd::generic::u8x16<archmage::X64V3Token>;
+        pub type i16x8 = crate::simd::generic::i16x8<archmage::X64V3Token>;
+        pub type u16x8 = crate::simd::generic::u16x8<archmage::X64V3Token>;
+        pub type i32x4 = crate::simd::generic::i32x4<archmage::X64V3Token>;
+        pub type u32x4 = crate::simd::generic::u32x4<archmage::X64V3Token>;
+        pub type i64x2 = crate::simd::generic::i64x2<archmage::X64V3Token>;
+        pub type u64x2 = crate::simd::generic::u64x2<archmage::X64V3Token>;
+    }
+    #[cfg(target_arch = "x86_64")]
+    pub use _w128_aliases::*;
 
-    // 256-bit native types (use token.v3() to downcast)
     #[cfg(target_arch = "x86_64")]
-    pub use super::x86::w256::{
-        f32x8, f64x4, i8x32, i16x16, i32x8, i64x4, u8x32, u16x16, u32x8, u64x4,
-    };
+    #[allow(non_camel_case_types)]
+    mod _w256_aliases {
+        pub type f32x8 = crate::simd::generic::f32x8<archmage::X64V3Token>;
+        pub type f64x4 = crate::simd::generic::f64x4<archmage::X64V3Token>;
+        pub type i8x32 = crate::simd::generic::i8x32<archmage::X64V3Token>;
+        pub type u8x32 = crate::simd::generic::u8x32<archmage::X64V3Token>;
+        pub type i16x16 = crate::simd::generic::i16x16<archmage::X64V3Token>;
+        pub type u16x16 = crate::simd::generic::u16x16<archmage::X64V3Token>;
+        pub type i32x8 = crate::simd::generic::i32x8<archmage::X64V3Token>;
+        pub type u32x8 = crate::simd::generic::u32x8<archmage::X64V3Token>;
+        pub type i64x4 = crate::simd::generic::i64x4<archmage::X64V3Token>;
+        pub type u64x4 = crate::simd::generic::u64x4<archmage::X64V3Token>;
+    }
+    #[cfg(target_arch = "x86_64")]
+    pub use _w256_aliases::*;
 
     /// Token type for this width level
     #[cfg(feature = "avx512")]
@@ -489,19 +529,44 @@ pub mod neon {
     //! All take `NeonToken`.
 
     #[cfg(target_arch = "aarch64")]
-    pub use super::arm::w128::{
+    #[allow(non_camel_case_types)]
+    mod _w128_aliases {
+        pub type f32x4 = crate::simd::generic::f32x4<archmage::NeonToken>;
+        pub type f64x2 = crate::simd::generic::f64x2<archmage::NeonToken>;
+        pub type i8x16 = crate::simd::generic::i8x16<archmage::NeonToken>;
+        pub type u8x16 = crate::simd::generic::u8x16<archmage::NeonToken>;
+        pub type i16x8 = crate::simd::generic::i16x8<archmage::NeonToken>;
+        pub type u16x8 = crate::simd::generic::u16x8<archmage::NeonToken>;
+        pub type i32x4 = crate::simd::generic::i32x4<archmage::NeonToken>;
+        pub type u32x4 = crate::simd::generic::u32x4<archmage::NeonToken>;
+        pub type i64x2 = crate::simd::generic::i64x2<archmage::NeonToken>;
+        pub type u64x2 = crate::simd::generic::u64x2<archmage::NeonToken>;
+    }
+    #[cfg(target_arch = "aarch64")]
+    pub use _w128_aliases::*;
+
+    #[cfg(target_arch = "aarch64")]
+    pub use _w128_aliases::{
         f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN, i32x4 as i32xN,
         i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN, u32x4 as u32xN, u64x2 as u64xN,
     };
 
     #[cfg(target_arch = "aarch64")]
-    pub use super::arm::w128::*;
-
-    // 256-bit polyfilled types (2×128-bit NEON, same NeonToken)
+    #[allow(non_camel_case_types)]
+    mod _w256_aliases {
+        pub type f32x8 = crate::simd::generic::f32x8<archmage::NeonToken>;
+        pub type f64x4 = crate::simd::generic::f64x4<archmage::NeonToken>;
+        pub type i8x32 = crate::simd::generic::i8x32<archmage::NeonToken>;
+        pub type u8x32 = crate::simd::generic::u8x32<archmage::NeonToken>;
+        pub type i16x16 = crate::simd::generic::i16x16<archmage::NeonToken>;
+        pub type u16x16 = crate::simd::generic::u16x16<archmage::NeonToken>;
+        pub type i32x8 = crate::simd::generic::i32x8<archmage::NeonToken>;
+        pub type u32x8 = crate::simd::generic::u32x8<archmage::NeonToken>;
+        pub type i64x4 = crate::simd::generic::i64x4<archmage::NeonToken>;
+        pub type u64x4 = crate::simd::generic::u64x4<archmage::NeonToken>;
+    }
     #[cfg(target_arch = "aarch64")]
-    pub use super::polyfill::neon::{
-        f32x8, f64x4, i8x32, i16x16, i32x8, i64x4, u8x32, u16x16, u32x8, u64x4,
-    };
+    pub use _w256_aliases::*;
 
     /// Token type for this width level
     pub type Token = archmage::NeonToken;
@@ -522,19 +587,44 @@ pub mod wasm128 {
     //! All take `Wasm128Token`.
 
     #[cfg(target_arch = "wasm32")]
-    pub use super::wasm::w128::{
+    #[allow(non_camel_case_types)]
+    mod _w128_aliases {
+        pub type f32x4 = crate::simd::generic::f32x4<archmage::Wasm128Token>;
+        pub type f64x2 = crate::simd::generic::f64x2<archmage::Wasm128Token>;
+        pub type i8x16 = crate::simd::generic::i8x16<archmage::Wasm128Token>;
+        pub type u8x16 = crate::simd::generic::u8x16<archmage::Wasm128Token>;
+        pub type i16x8 = crate::simd::generic::i16x8<archmage::Wasm128Token>;
+        pub type u16x8 = crate::simd::generic::u16x8<archmage::Wasm128Token>;
+        pub type i32x4 = crate::simd::generic::i32x4<archmage::Wasm128Token>;
+        pub type u32x4 = crate::simd::generic::u32x4<archmage::Wasm128Token>;
+        pub type i64x2 = crate::simd::generic::i64x2<archmage::Wasm128Token>;
+        pub type u64x2 = crate::simd::generic::u64x2<archmage::Wasm128Token>;
+    }
+    #[cfg(target_arch = "wasm32")]
+    pub use _w128_aliases::*;
+
+    #[cfg(target_arch = "wasm32")]
+    pub use _w128_aliases::{
         f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN, i32x4 as i32xN,
         i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN, u32x4 as u32xN, u64x2 as u64xN,
     };
 
     #[cfg(target_arch = "wasm32")]
-    pub use super::wasm::w128::*;
-
-    // 256-bit polyfilled types (2×128-bit WASM SIMD, same Wasm128Token)
+    #[allow(non_camel_case_types)]
+    mod _w256_aliases {
+        pub type f32x8 = crate::simd::generic::f32x8<archmage::Wasm128Token>;
+        pub type f64x4 = crate::simd::generic::f64x4<archmage::Wasm128Token>;
+        pub type i8x32 = crate::simd::generic::i8x32<archmage::Wasm128Token>;
+        pub type u8x32 = crate::simd::generic::u8x32<archmage::Wasm128Token>;
+        pub type i16x16 = crate::simd::generic::i16x16<archmage::Wasm128Token>;
+        pub type u16x16 = crate::simd::generic::u16x16<archmage::Wasm128Token>;
+        pub type i32x8 = crate::simd::generic::i32x8<archmage::Wasm128Token>;
+        pub type u32x8 = crate::simd::generic::u32x8<archmage::Wasm128Token>;
+        pub type i64x4 = crate::simd::generic::i64x4<archmage::Wasm128Token>;
+        pub type u64x4 = crate::simd::generic::u64x4<archmage::Wasm128Token>;
+    }
     #[cfg(target_arch = "wasm32")]
-    pub use super::polyfill::wasm128::{
-        f32x8, f64x4, i8x32, i16x16, i32x8, i64x4, u8x32, u16x16, u32x8, u64x4,
-    };
+    pub use _w256_aliases::*;
 
     /// Token type for this width level
     pub type Token = archmage::Wasm128Token;

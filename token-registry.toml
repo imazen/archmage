@@ -367,32 +367,11 @@ width = 128
 token = "Wasm128Token"
 
 # ──── Magetypes File-to-Token Validation Mappings ────
-# All generated files are under generated/ subfolder
-
-[[magetypes_file]]
-rel_path = "generated/x86/w128.rs"
-token = "X64V3Token"
-arch = "x86"
-
-[[magetypes_file]]
-rel_path = "generated/x86/w256.rs"
-token = "X64V3Token"
-arch = "x86"
-
-[[magetypes_file]]
-rel_path = "generated/x86/w512.rs"
-token = "X64V4Token"
-arch = "x86"
-
-[[magetypes_file]]
-rel_path = "generated/arm/w128.rs"
-token = "NeonToken"
-arch = "arm"
-
-[[magetypes_file]]
-rel_path = "generated/wasm/w128.rs"
-token = "Wasm128Token"
-arch = "wasm"
+# The legacy concrete per-platform type files (generated/x86/w128.rs, …) are
+# retired. Their bare-`unsafe` intrinsics were what this per-file token check
+# validated. Every SIMD type is now the generic `generic::TYPE<Token>`, whose
+# `#[inline(always)]` backends inherit features from the `#[arcane]` caller and
+# are covered by the separate static `soundness` check. No file entries remain.
 
 # ──── Polyfill Platforms ────
 # Polyfills import from generated submodules

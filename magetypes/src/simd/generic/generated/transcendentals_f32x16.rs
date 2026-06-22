@@ -190,7 +190,7 @@ impl<T: F32x16Convert> f32x16<T> {
 
     /// Mid-precision base-2 logarithm with edge case handling.
     ///
-    /// Returns -inf for 0, NaN for negative values.
+    /// Returns -inf for 0, NaN for negative values, +inf for +inf.
     #[inline(always)]
     pub fn log2_midp(self) -> Self {
         let result = self.log2_midp_unchecked();
@@ -200,7 +200,11 @@ impl<T: F32x16Convert> f32x16<T> {
             splat_f32::<T>(self.1, f32::NEG_INFINITY),
             result,
         );
-        Self::blend(self.simd_lt(zero), splat_f32::<T>(self.1, f32::NAN), result)
+        let result = Self::blend(self.simd_lt(zero), splat_f32::<T>(self.1, f32::NAN), result);
+        // +inf -> +inf; the polynomial otherwise returns inf's raw
+        // unbiased exponent (128) for an infinite input.
+        let inf = splat_f32::<T>(self.1, f32::INFINITY);
+        Self::blend(self.simd_eq(inf), inf, result)
     }
 
     /// Mid-precision base-2 logarithm with denormal handling.

@@ -1,13 +1,12 @@
-//! Demonstration of polyfilled SIMD types.
+//! Demonstration of width-abstracted SIMD types.
 //!
 //! Run with: `cargo run --example polyfill_demo --release`
 //!
-//! This example shows how to use the polyfill module to write code
-//! targeting AVX2-width vectors (f32x8) while running on SSE hardware.
-//!
-//! The polyfilled types use two SSE operations for each AVX2-equivalent
-//! operation, so they're slower than native AVX2, but faster than scalar
-//! and allow writing code targeting a single width.
+//! This example shows how to write code against a fixed vector width (`f32x8`)
+//! via the `simd::v3` namespace. The same source runs everywhere: it maps to
+//! native AVX2 on x86-64, and is transparently polyfilled (two 128-bit ops)
+//! on ARM/WASM — the polyfill lives inside the generic backend, not in a
+//! separate concrete type. Here on x86-64 it is native AVX2.
 
 // x86-only example - stub main for other platforms
 #[cfg(not(target_arch = "x86_64"))]
@@ -16,7 +15,7 @@ fn main() {}
 #[cfg(target_arch = "x86_64")]
 mod x86_impl {
     use archmage::{SimdToken, X64V3Token, arcane};
-    use magetypes::simd::polyfill::v3 as poly;
+    use magetypes::simd::v3 as poly;
     use std::time::Instant;
 
     const N: usize = 64 * 1024;
@@ -106,7 +105,7 @@ mod x86_impl {
             let polyfill_result = sum_polyfill(token, &data);
             let native_sse_result = sum_native_sse(token, &data);
 
-            println!("Polyfilled f32x8 on SSE: {:.2}", polyfill_result);
+            println!("Width-abstracted f32x8 (v3) : {:.2}", polyfill_result);
             println!("Native SSE f32x4:        {:.2}", native_sse_result);
 
             assert!(
@@ -147,7 +146,7 @@ mod x86_impl {
             }
             let polyfill_time = start.elapsed();
             println!(
-                "  Polyfill f32x8:   {:>8.2} ms ({:.1}x faster than scalar)",
+                "  Abstracted f32x8: {:>8.2} ms ({:.1}x faster than scalar)",
                 polyfill_time.as_secs_f64() * 1000.0,
                 scalar_time.as_secs_f64() / polyfill_time.as_secs_f64()
             );

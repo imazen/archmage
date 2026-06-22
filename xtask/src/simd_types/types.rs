@@ -52,51 +52,6 @@ impl ElementType {
             Self::F32 | Self::F64 | Self::I8 | Self::I16 | Self::I32 | Self::I64
         )
     }
-
-    /// Intrinsic suffix for this type (e.g., "ps" for f32, "epi32" for i32)
-    /// Note: Unsigned integers use signed intrinsics (bit patterns are identical)
-    pub fn x86_suffix(&self) -> &'static str {
-        match self {
-            Self::F32 => "ps",
-            Self::F64 => "pd",
-            Self::I8 | Self::U8 => "epi8",
-            Self::I16 | Self::U16 => "epi16",
-            Self::I32 | Self::U32 => "epi32",
-            Self::I64 | Self::U64 => "epi64",
-        }
-    }
-
-    /// Intrinsic suffix for min/max operations (differs for signed vs unsigned)
-    pub fn x86_minmax_suffix(&self) -> &'static str {
-        match self {
-            Self::F32 => "ps",
-            Self::F64 => "pd",
-            Self::I8 => "epi8",
-            Self::U8 => "epu8",
-            Self::I16 => "epi16",
-            Self::U16 => "epu16",
-            Self::I32 => "epi32",
-            Self::U32 => "epu32",
-            Self::I64 => "epi64",
-            Self::U64 => "epu64",
-        }
-    }
-
-    /// Default value literal
-    pub fn zero_literal(&self) -> &'static str {
-        match self {
-            Self::F32 => "0.0f32",
-            Self::F64 => "0.0f64",
-            Self::I8 => "0i8",
-            Self::U8 => "0u8",
-            Self::I16 => "0i16",
-            Self::U16 => "0u16",
-            Self::I32 => "0i32",
-            Self::U32 => "0u32",
-            Self::I64 => "0i64",
-            Self::U64 => "0u64",
-        }
-    }
 }
 
 /// SIMD register width
@@ -120,7 +75,7 @@ impl SimdWidth {
         self.bits() / 8
     }
 
-    /// x86 intrinsic type for floats
+    /// x86 intrinsic type for floats (used by the generic backend generator)
     pub fn x86_float_type(&self, elem: ElementType) -> &'static str {
         match (self, elem) {
             (Self::W128, ElementType::F32) => "__m128",
@@ -133,38 +88,12 @@ impl SimdWidth {
         }
     }
 
-    /// x86 intrinsic type for integers
+    /// x86 intrinsic type for integers (used by the generic backend generator)
     pub fn x86_int_type(&self) -> &'static str {
         match self {
             Self::W128 => "__m128i",
             Self::W256 => "__m256i",
             Self::W512 => "__m512i",
-        }
-    }
-
-    /// Intrinsic prefix (mm, mm256, mm512)
-    pub fn x86_prefix(&self) -> &'static str {
-        match self {
-            Self::W128 => "_mm",
-            Self::W256 => "_mm256",
-            Self::W512 => "_mm512",
-        }
-    }
-
-    /// Required token for this width
-    pub fn required_token(&self, _needs_int_ops: bool) -> &'static str {
-        match self {
-            Self::W128 => "X64V3Token",
-            Self::W256 => "X64V3Token",
-            Self::W512 => "X64V4Token",
-        }
-    }
-
-    /// Required feature flag
-    pub fn required_feature(&self) -> Option<&'static str> {
-        match self {
-            Self::W128 | Self::W256 => None,
-            Self::W512 => Some("avx512"),
         }
     }
 }
@@ -189,20 +118,6 @@ impl SimdType {
     /// Type name (e.g., "f32x8")
     pub fn name(&self) -> String {
         format!("{}x{}", self.elem.name(), self.lanes())
-    }
-
-    /// Underlying x86 intrinsic type
-    pub fn x86_inner_type(&self) -> &'static str {
-        if self.elem.is_float() {
-            self.width.x86_float_type(self.elem)
-        } else {
-            self.width.x86_int_type()
-        }
-    }
-
-    /// Token required for construction
-    pub fn token(&self) -> &'static str {
-        self.width.required_token(!self.elem.is_float())
     }
 }
 
@@ -247,34 +162,6 @@ pub fn indent_continuation(s: &str, spaces: usize) -> String {
     }
 
     result
-}
-
-/// Generate a simple unary method: `pub fn name(self) -> Self { body }`
-pub fn gen_unary_method(doc: &str, name: &str, body: &str) -> String {
-    indent(
-        &formatdoc! {"
-            /// {doc}
-            #[inline(always)]
-            pub fn {name}(self) -> Self {{
-                {body}
-            }}
-        "},
-        4,
-    ) + "\n"
-}
-
-/// Generate a binary method: `pub fn name(self, other: Self) -> Self { body }`
-pub fn gen_binary_method(doc: &str, name: &str, body: &str) -> String {
-    indent(
-        &formatdoc! {"
-            /// {doc}
-            #[inline(always)]
-            pub fn {name}(self, other: Self) -> Self {{
-                {body}
-            }}
-        "},
-        4,
-    ) + "\n"
 }
 
 /// Generate a method returning a scalar: `pub fn name(self) -> T { body }`

@@ -19,24 +19,10 @@ pub mod backend_gen;
 pub mod backend_gen_i64;
 pub mod backend_gen_remaining_int;
 pub mod backend_gen_w512;
-mod block_ops;
-pub mod block_ops_arm;
-pub mod block_ops_wasm;
-pub mod extend_ops_arm;
-pub mod extend_ops_wasm;
 pub mod generic_gen;
-mod ops;
-pub mod ops_bitcast;
-mod ops_comparison;
 pub mod parity_tests;
 pub mod scalar_parity_gen;
 mod structure;
-mod structure_arm;
-pub mod structure_polyfill;
-mod structure_wasm;
-mod transcendental;
-pub mod transcendental_arm;
-pub mod transcendental_wasm;
 pub mod types;
 pub mod width_dispatch;
 
@@ -86,74 +72,20 @@ fn generate_generated_mod_rs(types: &[SimdType]) -> String {
         "// ============================================================================\n\n",
     );
 
-    // Group types by width for organized output
-    let mut w128_types = Vec::new();
-    let mut w256_types = Vec::new();
-    let mut w512_types = Vec::new();
-
-    for ty in types {
-        let name = ty.name();
-        match ty.width {
-            SimdWidth::W128 => w128_types.push(name),
-            SimdWidth::W256 => w256_types.push(name),
-            SimdWidth::W512 => w512_types.push(name),
-        }
-    }
-
-    // x86 module (SSE, AVX, AVX-512) - public for parity tests
-    code.push_str("// x86-64 types (SSE, AVX, AVX-512)\n");
-    code.push_str("#[cfg(target_arch = \"x86_64\")]\n");
-    code.push_str("pub mod x86 {\n");
-    code.push_str("    pub mod w128;\n");
-    code.push_str("    pub mod w256;\n");
-    code.push_str("    #[cfg(feature = \"avx512\")]\n");
-    code.push_str("    pub mod w512;\n");
-    code.push_str("}\n\n");
-
-    // ARM module (NEON) - public for parity tests
-    code.push_str("// AArch64 types (NEON)\n");
-    code.push_str("#[cfg(target_arch = \"aarch64\")]\n");
-    code.push_str("pub mod arm {\n");
-    code.push_str("    pub mod w128;\n");
-    code.push_str("}\n\n");
-
-    // WASM module (SIMD128) - public for parity tests
-    code.push_str("// WebAssembly types (SIMD128)\n");
-    code.push_str("#[cfg(target_arch = \"wasm32\")]\n");
-    code.push_str("pub mod wasm {\n");
-    code.push_str("    pub mod w128;\n");
-    code.push_str("}\n\n");
-
-    // Re-exports for x86
-    // Types migrated to generic strategy-pattern types are excluded from glob
-    // re-exports. They are re-exported as type aliases from simd/mod.rs pointing
-    // to generic::<T> versions. Old concrete types remain accessible at their
-    // original paths (e.g., simd::x86::w256::f32x8) for migration.
-    code.push_str(
-        "// All SIMD types (W128, W256, W512) are migrated to generic strategy-pattern types.\n",
-    );
-    code.push_str("// They are re-exported as type aliases from simd/mod.rs pointing to\n");
-    code.push_str("// generic::<T> versions. Old concrete types remain at original paths\n");
-    code.push_str("// (e.g., simd::generated::x86::w128::i8x16) for migration.\n\n");
-
-    // NOTE: ARM/WASM concrete types are intentionally NOT glob-re-exported to the
-    // bare `simd::*` names. The bare names resolve to the sound, token-carrying
-    // generic types via `_type_aliases` in simd/mod.rs (matching x86). The
-    // concrete structs remain reachable at their full paths
-    // (`simd::arm::w128::f32x4`, `simd::polyfill::neon::f32x8`, …).
-
-    // Polyfill module (auto-generated W256 from pairs of W128)
-    code.push_str("// Polyfill module for emulating wider types on narrower hardware\n");
-    code.push_str("pub mod polyfill;\n\n");
+    // The legacy concrete per-platform structs (`x86::w128`, `arm::w128`,
+    // `wasm::w128`, `polyfill`) are fully retired. Every SIMD type is now the
+    // sound, token-carrying `generic::TYPE<Token>`. Bare `simd::TYPE` names
+    // resolve to those via `_type_aliases` in the hand-written `simd/mod.rs`;
+    // the per-token namespaces below alias them per tier.
 
     // Generate width-aliased namespaces for multi-width dispatch
     code.push_str(&generate_width_namespaces(types));
 
     // Generate NEON namespace
-    code.push_str(&generate_neon_namespace());
+    code.push_str(&generate_neon_namespace(types));
 
     // Generate WASM SIMD128 namespace
-    code.push_str(&generate_simd128_namespace());
+    code.push_str(&generate_simd128_namespace(types));
 
     // Generate Scalar fallback namespace (available on all architectures)
     code.push_str(&generate_scalar_namespace());
@@ -161,20 +93,42 @@ fn generate_generated_mod_rs(types: &[SimdType]) -> String {
     code
 }
 
+/// Emit `mod {modname} { pub type … = generic::…<token>; }` + a glob re-export,
+/// one generic alias per `width` type, all bound to `token`, gated on `cfg`.
+///
+/// This is how every per-token namespace exposes a width's types now that the
+/// concrete per-platform structs are retired — every name is a thin alias to the
+/// sound, token-carrying `generic::TYPE<Token>`.
+fn push_generic_alias_block(
+    code: &mut String,
+    types: &[SimdType],
+    width: SimdWidth,
+    token: &str,
+    cfg: &str,
+    modname: &str,
+) {
+    code.push_str(&format!(
+        "    #[cfg({cfg})]\n    #[allow(non_camel_case_types)]\n    mod {modname} {{\n"
+    ));
+    for ty in types.iter().filter(|t| t.width == width) {
+        let name = ty.name();
+        code.push_str(&format!(
+            "        pub type {name} = crate::simd::generic::{name}<archmage::{token}>;\n"
+        ));
+    }
+    code.push_str("    }\n");
+    code.push_str(&format!("    #[cfg({cfg})]\n    pub use {modname}::*;\n\n"));
+}
+
 /// Generate width-aliased namespace modules for multi-width dispatch
 ///
 /// Creates modules like `v3`, `v4` that export ALL types available for that
-/// token level: native types at natural width, plus narrower native types
-/// and wider polyfilled types. The `xN` aliases point to the natural width.
+/// token level, every one a generic `generic::TYPE<Token>` alias. The `xN`
+/// aliases point to the natural width.
 fn generate_width_namespaces(types: &[SimdType]) -> String {
     let mut code = String::new();
 
-    // Collect type names per width for selective re-exports
-    let w128_types: Vec<String> = types
-        .iter()
-        .filter(|t| t.width == SimdWidth::W128)
-        .map(|t| t.name())
-        .collect();
+    // Collect W512 type names for the W512 alias blocks.
     let w512_types: Vec<String> = types
         .iter()
         .filter(|t| t.width == SimdWidth::W512)
@@ -209,25 +163,34 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     code.push_str("    //! Also includes 128-bit native types and 512-bit polyfills\n");
     code.push_str("    //! (emulated via 2×256-bit ops). All take `X64V3Token`.\n\n");
 
-    // xN aliases (natural width = 256-bit) — cfg-gated
+    // 256-bit generic aliases (X64V3Token — the sole x86 ≤256-bit backend)
+    push_generic_alias_block(
+        &mut code,
+        types,
+        SimdWidth::W256,
+        "X64V3Token",
+        "target_arch = \"x86_64\"",
+        "_w256_aliases",
+    );
+
+    // xN aliases (natural width = 256-bit)
     code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
-    code.push_str("    pub use super::x86::w256::{\n");
+    code.push_str("    pub use _w256_aliases::{\n");
     for ty in types.iter().filter(|t| t.width == SimdWidth::W256) {
         let name = ty.name();
         code.push_str(&format!("        {name} as {}xN,\n", ty.elem.name()));
     }
     code.push_str("    };\n\n");
 
-    // Native 256-bit (natural width) — cfg-gated
-    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
-    code.push_str("    pub use super::x86::w256::*;\n\n");
-
-    // Native 128-bit (narrower, same token) — cfg-gated
-    code.push_str("    // 128-bit native types (same X64V3Token)\n");
-    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
-    code.push_str("    pub use super::x86::w128::{\n");
-    code.push_str(&format!("        {},\n", w128_types.join(", ")));
-    code.push_str("    };\n\n");
+    // 128-bit generic aliases (narrower, same X64V3Token)
+    push_generic_alias_block(
+        &mut code,
+        types,
+        SimdWidth::W128,
+        "X64V3Token",
+        "target_arch = \"x86_64\"",
+        "_w128_aliases",
+    );
 
     // 512-bit generic types (2×256-bit polyfill via V3 backend, same X64V3Token)
     // Gated behind `w512` feature — these aliases depend on the W512 generic
@@ -315,24 +278,24 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     }
     code.push_str("    };\n\n");
 
-    // Native 128-bit (narrower, needs token.v3()) — cfg-gated
-    code.push_str("    // 128-bit native types (use token.v3() to downcast)\n");
-    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
-    code.push_str("    pub use super::x86::w128::{\n");
-    code.push_str(&format!("        {},\n", w128_types.join(", ")));
-    code.push_str("    };\n\n");
-
-    // Native 256-bit (narrower, needs token.v3()) — cfg-gated
-    code.push_str("    // 256-bit native types (use token.v3() to downcast)\n");
-    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
-    code.push_str("    pub use super::x86::w256::{\n");
-    let w256_types: Vec<String> = types
-        .iter()
-        .filter(|t| t.width == SimdWidth::W256)
-        .map(|t| t.name())
-        .collect();
-    code.push_str(&format!("        {},\n", w256_types.join(", ")));
-    code.push_str("    };\n\n");
+    // 128-bit + 256-bit generic aliases (X64V3Token — sole x86 ≤256-bit backend;
+    // AVX-512 adds nothing below 512-bit, so V4 work uses the V3 backend here).
+    push_generic_alias_block(
+        &mut code,
+        types,
+        SimdWidth::W128,
+        "X64V3Token",
+        "target_arch = \"x86_64\"",
+        "_w128_aliases",
+    );
+    push_generic_alias_block(
+        &mut code,
+        types,
+        SimdWidth::W256,
+        "X64V3Token",
+        "target_arch = \"x86_64\"",
+        "_w256_aliases",
+    );
 
     // Token type alias — gated on avx512 feature
     code.push_str("    /// Token type for this width level\n");
@@ -392,19 +355,23 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
     }
     code.push_str("    };\n\n");
 
-    // Native 128-bit (narrower, needs token.v3()) — cfg-gated
-    code.push_str("    // 128-bit native types (use token.v3() to downcast)\n");
-    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
-    code.push_str("    pub use super::x86::w128::{\n");
-    code.push_str(&format!("        {},\n", w128_types.join(", ")));
-    code.push_str("    };\n\n");
-
-    // Native 256-bit (narrower, needs token.v3()) — cfg-gated
-    code.push_str("    // 256-bit native types (use token.v3() to downcast)\n");
-    code.push_str("    #[cfg(target_arch = \"x86_64\")]\n");
-    code.push_str("    pub use super::x86::w256::{\n");
-    code.push_str(&format!("        {},\n", w256_types.join(", ")));
-    code.push_str("    };\n\n");
+    // 128-bit + 256-bit generic aliases (X64V3Token — sole x86 ≤256-bit backend).
+    push_generic_alias_block(
+        &mut code,
+        types,
+        SimdWidth::W128,
+        "X64V3Token",
+        "target_arch = \"x86_64\"",
+        "_w128_aliases",
+    );
+    push_generic_alias_block(
+        &mut code,
+        types,
+        SimdWidth::W256,
+        "X64V3Token",
+        "target_arch = \"x86_64\"",
+        "_w256_aliases",
+    );
 
     // Token type alias — gated on avx512 feature
     code.push_str("    /// Token type for this width level\n");
@@ -421,11 +388,8 @@ fn generate_width_namespaces(types: &[SimdType]) -> String {
 }
 
 /// Generate NEON width namespace for ARM
-fn generate_neon_namespace() -> String {
+fn generate_neon_namespace(types: &[SimdType]) -> String {
     let mut code = String::new();
-
-    // Polyfill type names (256-bit emulated via 2×128-bit NEON)
-    let polyfill_types = "f32x8, f64x4, i8x32, u8x32, i16x16, u16x16, i32x8, u32x8, i64x4, u64x4";
 
     // Module is always present; SIMD type re-exports are cfg-gated inside.
     code.push_str("\npub mod neon {\n");
@@ -436,24 +400,33 @@ fn generate_neon_namespace() -> String {
     code.push_str("    //! Also includes 256-bit polyfills (emulated via 2×128-bit NEON ops).\n");
     code.push_str("    //! All take `NeonToken`.\n\n");
 
-    // xN aliases (natural width = 128-bit) — cfg-gated
+    // 128-bit generic aliases (NeonToken)
+    push_generic_alias_block(
+        &mut code,
+        types,
+        SimdWidth::W128,
+        "NeonToken",
+        "target_arch = \"aarch64\"",
+        "_w128_aliases",
+    );
+
+    // xN aliases (natural width = 128-bit)
     code.push_str("    #[cfg(target_arch = \"aarch64\")]\n");
-    code.push_str("    pub use super::arm::w128::{\n");
+    code.push_str("    pub use _w128_aliases::{\n");
     code.push_str("        f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN,\n");
     code.push_str("        i32x4 as i32xN, i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN,\n");
     code.push_str("        u32x4 as u32xN, u64x2 as u64xN,\n");
     code.push_str("    };\n\n");
 
-    // Native 128-bit (natural width) — cfg-gated
-    code.push_str("    #[cfg(target_arch = \"aarch64\")]\n");
-    code.push_str("    pub use super::arm::w128::*;\n\n");
-
-    // Polyfilled 256-bit (wider, same token) — cfg-gated
-    code.push_str("    // 256-bit polyfilled types (2×128-bit NEON, same NeonToken)\n");
-    code.push_str("    #[cfg(target_arch = \"aarch64\")]\n");
-    code.push_str(&format!(
-        "    pub use super::polyfill::neon::{{{polyfill_types}}};\n\n"
-    ));
+    // 256-bit generic aliases (2×128-bit NEON polyfill via the backend, same NeonToken)
+    push_generic_alias_block(
+        &mut code,
+        types,
+        SimdWidth::W256,
+        "NeonToken",
+        "target_arch = \"aarch64\"",
+        "_w256_aliases",
+    );
 
     // Token and LANES constants — always available
     code.push_str("    /// Token type for this width level\n");
@@ -469,11 +442,8 @@ fn generate_neon_namespace() -> String {
 }
 
 /// Generate WASM SIMD128 width namespace
-fn generate_simd128_namespace() -> String {
+fn generate_simd128_namespace(types: &[SimdType]) -> String {
     let mut code = String::new();
-
-    // Polyfill type names (256-bit emulated via 2×128-bit WASM SIMD)
-    let polyfill_types = "f32x8, f64x4, i8x32, u8x32, i16x16, u16x16, i32x8, u32x8, i64x4, u64x4";
 
     // Module is always present; SIMD type re-exports are cfg-gated inside.
     code.push_str("\npub mod wasm128 {\n");
@@ -484,24 +454,33 @@ fn generate_simd128_namespace() -> String {
     code.push_str("    //! Also includes 256-bit polyfills (emulated via 2×128-bit WASM ops).\n");
     code.push_str("    //! All take `Wasm128Token`.\n\n");
 
-    // xN aliases (natural width = 128-bit) — cfg-gated
+    // 128-bit generic aliases (Wasm128Token)
+    push_generic_alias_block(
+        &mut code,
+        types,
+        SimdWidth::W128,
+        "Wasm128Token",
+        "target_arch = \"wasm32\"",
+        "_w128_aliases",
+    );
+
+    // xN aliases (natural width = 128-bit)
     code.push_str("    #[cfg(target_arch = \"wasm32\")]\n");
-    code.push_str("    pub use super::wasm::w128::{\n");
+    code.push_str("    pub use _w128_aliases::{\n");
     code.push_str("        f32x4 as f32xN, f64x2 as f64xN, i8x16 as i8xN, i16x8 as i16xN,\n");
     code.push_str("        i32x4 as i32xN, i64x2 as i64xN, u8x16 as u8xN, u16x8 as u16xN,\n");
     code.push_str("        u32x4 as u32xN, u64x2 as u64xN,\n");
     code.push_str("    };\n\n");
 
-    // Native 128-bit (natural width) — cfg-gated
-    code.push_str("    #[cfg(target_arch = \"wasm32\")]\n");
-    code.push_str("    pub use super::wasm::w128::*;\n\n");
-
-    // Polyfilled 256-bit (wider, same token) — cfg-gated
-    code.push_str("    // 256-bit polyfilled types (2×128-bit WASM SIMD, same Wasm128Token)\n");
-    code.push_str("    #[cfg(target_arch = \"wasm32\")]\n");
-    code.push_str(&format!(
-        "    pub use super::polyfill::wasm128::{{{polyfill_types}}};\n\n"
-    ));
+    // 256-bit generic aliases (2×128-bit WASM SIMD polyfill via the backend)
+    push_generic_alias_block(
+        &mut code,
+        types,
+        SimdWidth::W256,
+        "Wasm128Token",
+        "target_arch = \"wasm32\"",
+        "_w256_aliases",
+    );
 
     // Token and LANES constants — always available
     code.push_str("    /// Token type for this width level\n");
@@ -624,41 +603,6 @@ fn generate_scalar_namespace() -> String {
     "#}
 }
 
-/// Generate a file containing types of a specific width
-fn generate_width_file(types: &[SimdType], width: SimdWidth) -> String {
-    let mut code = String::new();
-
-    // Header comment
-    let width_name = match width {
-        SimdWidth::W128 => "128-bit (SSE)",
-        SimdWidth::W256 => "256-bit (AVX/AVX2)",
-        SimdWidth::W512 => "512-bit (AVX-512)",
-    };
-    code.push_str(&format!("//! {} SIMD types.\n", width_name));
-    code.push_str("//!\n");
-    code.push_str("//! **Auto-generated** by `cargo xtask generate` - do not edit manually.\n\n");
-
-    // Imports
-    code.push_str("use core::arch::x86_64::*;\n");
-    code.push_str("use core::ops::{\n");
-    code.push_str(
-        "    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign,\n",
-    );
-    code.push_str("    Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,\n");
-    code.push_str("};\n\n");
-
-    // Note: SimdEq, SimdNe, etc. traits are defined in parent but not currently used
-    // Macros are exported at crate root via #[macro_export]
-
-    // Generate each type of this width
-    let width_types: Vec<_> = types.iter().filter(|t| t.width == width).collect();
-    for ty in &width_types {
-        code.push_str(&structure::generate_type(ty));
-    }
-
-    code
-}
-
 /// Generate SIMD types split into multiple files
 /// Returns a map of relative path -> file content
 ///
@@ -671,113 +615,17 @@ pub fn generate_simd_types_split() -> BTreeMap<String, String> {
     // Root mod.rs (magetypes/src/simd/mod.rs) is hand-written, not generated.
     // It just does: mod generated; pub use generated::*;
 
-    // generated/mod.rs contains the real generated code
+    // generated/mod.rs contains the real generated code. The legacy concrete
+    // per-platform type files (`x86/`, `arm/`, `wasm/`, `polyfill.rs`) are
+    // retired — every SIMD type is now the generic `generic::TYPE<Token>`,
+    // generated separately by `generic_gen` + `backend_gen*` and declared in
+    // the hand-written `simd/mod.rs`.
     files.insert(
         "generated/mod.rs".to_string(),
         generate_generated_mod_rs(&types),
     );
 
-    // x86 directory mod.rs
-    let x86_mod = r#"//! x86-64 SIMD types.
-//!
-//! **Auto-generated** by `cargo xtask generate` - do not edit manually.
-
-pub mod w128;
-pub mod w256;
-#[cfg(feature = "avx512")]
-pub mod w512;
-"#;
-    files.insert("generated/x86/mod.rs".to_string(), x86_mod.to_string());
-
-    // Generate x86 width-specific files
-    files.insert(
-        "generated/x86/w128.rs".to_string(),
-        generate_width_file(&types, SimdWidth::W128),
-    );
-    files.insert(
-        "generated/x86/w256.rs".to_string(),
-        generate_width_file(&types, SimdWidth::W256),
-    );
-    files.insert(
-        "generated/x86/w512.rs".to_string(),
-        generate_width_file(&types, SimdWidth::W512),
-    );
-
-    // ARM directory mod.rs
-    let arm_mod = r#"//! ARM AArch64 SIMD types (NEON).
-//!
-//! **Auto-generated** by `cargo xtask generate` - do not edit manually.
-
-pub mod w128;
-"#;
-    files.insert("generated/arm/mod.rs".to_string(), arm_mod.to_string());
-
-    // Generate ARM NEON types
-    let neon_types = structure_arm::all_neon_types();
-    files.insert(
-        "generated/arm/w128.rs".to_string(),
-        structure_arm::generate_arm_w128(&neon_types),
-    );
-
-    // WASM directory mod.rs
-    let wasm_mod = r#"//! WebAssembly SIMD types (SIMD128).
-//!
-//! **Auto-generated** by `cargo xtask generate` - do not edit manually.
-
-pub mod w128;
-"#;
-    files.insert("generated/wasm/mod.rs".to_string(), wasm_mod.to_string());
-
-    // Generate WASM SIMD128 types
-    let wasm_types = structure_wasm::all_wasm_types();
-    files.insert(
-        "generated/wasm/w128.rs".to_string(),
-        structure_wasm::generate_wasm_w128(&wasm_types),
-    );
-
-    // Generate polyfill types (W256 from pairs of W128)
-    files.insert(
-        "generated/polyfill.rs".to_string(),
-        structure_polyfill::generate_polyfill(),
-    );
-
     files
-}
-
-/// Generate all SIMD types (legacy single-file output)
-#[allow(dead_code)]
-pub fn generate_simd_types() -> String {
-    let mut code = String::new();
-
-    // Header
-    code.push_str(file_header());
-    code.push_str(
-        r#"#[cfg(target_arch = "x86_64")]
-use core::arch::x86_64::*;
-
-#[cfg(target_arch = "aarch64")]
-use core::arch::aarch64::*;
-
-use core::ops::{
-    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign,
-    Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign,
-};
-
-"#,
-    );
-
-    // Generate comparison traits
-    code.push_str(&structure::generate_comparison_traits());
-
-    // Generate macros
-    code.push_str(&structure::generate_macros());
-
-    // Generate each type
-    for ty in &all_simd_types() {
-        code.push_str(&structure::generate_type(ty));
-    }
-
-    code
 }
 
 /// Generate tests for SIMD types
@@ -1303,16 +1151,11 @@ fn test_f32x4_bitcast_i32x4_roundtrip() {
 }
 
 #[test]
-fn test_i32x8_bitcast_u32x8() {
-    // Uses old concrete type — generic i32x8<T> doesn't have u32x8 bitcast yet
-    // (blocked on generic u32x8 type, task #12)
-    use magetypes::simd::x86::w256::i32x8 as old_i32x8;
+fn test_u32x8_bitcast_i32x8() {
     if let Some(token) = X64V3Token::summon() {
-        let i = old_i32x8::splat(token, -1);
-        let u = i.bitcast_u32x8();
-        assert_eq!(u[0], u32::MAX);
-        let i2 = u.bitcast_i32x8();
-        assert_eq!(i2[0], -1);
+        let u = u32x8::splat(token, u32::MAX);
+        let i = u.bitcast_i32x8();
+        assert_eq!(i[0], -1);
     }
 }
 
@@ -1337,17 +1180,12 @@ fn test_f32x8_bitcast_mut() {
 }
 
 #[test]
-fn test_f64x4_bitcast_i64x4_roundtrip() {
-    // Uses old concrete type — generic f64x4<T> doesn't have i64x4 bitcast yet
-    // (blocked on generic i64x4 type, task #12)
-    use magetypes::simd::x86::w256::f64x4 as old_f64x4;
+fn test_i64x4_bitcast_f64x4() {
     if let Some(token) = X64V3Token::summon() {
-        let f = old_f64x4::splat(token, 1.0f64);
-        let i = f.bitcast_i64x4();
         // IEEE 754: 1.0f64 = 0x3FF0000000000000
-        assert_eq!(i[0], 0x3FF0_0000_0000_0000_i64);
-        let f2 = i.bitcast_f64x4();
-        assert_eq!(f2.to_array(), f.to_array());
+        let i = i64x4::splat(token, 0x3FF0_0000_0000_0000_i64);
+        let f = i.bitcast_f64x4();
+        assert_eq!(f[0], 1.0f64);
     }
 }
 

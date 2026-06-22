@@ -134,14 +134,20 @@ const TOKEN_CONFIGS: &[TokenConfig] = &[
         mod_name: "x86_impl",
         native_width: 256,
         poly_w256: None, // native
-        poly_w512: Some("crate::simd::polyfill::v3_512"),
+        // 512-bit: array of four native 128-bit parts. The generic
+        // `simd::v3::f32x16` (2×256 polyfill) is `w512`-feature-gated, but this
+        // trait is compiled unconditionally, so it uses the always-available
+        // array form — the same fallback ARM/WASM use.
+        poly_w512: None,
     },
     TokenConfig {
         token: "NeonToken",
         cfg: "target_arch = \"aarch64\"",
         mod_name: "arm_impl",
         native_width: 128,
-        poly_w256: Some("crate::simd::polyfill::neon"),
+        // 256-bit via the generic `simd::neon` namespace (2×128 polyfill lives
+        // inside the backend now; the old concrete `polyfill::neon` is retired).
+        poly_w256: Some("crate::simd::neon"),
         poly_w512: None, // array fallback
     },
     TokenConfig {
@@ -149,7 +155,7 @@ const TOKEN_CONFIGS: &[TokenConfig] = &[
         cfg: "target_arch = \"wasm32\"",
         mod_name: "wasm_impl",
         native_width: 128,
-        poly_w256: Some("crate::simd::polyfill::wasm128"),
+        poly_w256: Some("crate::simd::wasm128"),
         poly_w512: None, // array fallback
     },
 ];

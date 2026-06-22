@@ -20,6 +20,9 @@ pub struct Registry {
     #[serde(rename = "trait")]
     pub traits: Vec<TraitDef>,
     pub width_namespace: Vec<WidthNamespace>,
+    // Empty since the concrete per-platform type files were retired (every type
+    // is now generic, validated by the static `soundness` check instead).
+    #[serde(default)]
     pub magetypes_file: Vec<MagetypesFile>,
     #[serde(default)]
     pub polyfill_w256: Vec<PolyfillW256>,

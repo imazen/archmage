@@ -13,7 +13,7 @@
 #   pub types (struct/enum/trait/alias)         1
 #   pub macros                                  8
 #   free functions                             28
-#   trait roster entries (type × trait)        60
+#   trait roster entries (type × trait)        10
 #
 # per-module pub lines:
 #   (root)                           10
@@ -56,7 +56,7 @@ pub mod bypass_adversarial
 pub mod nostd_math
 pub struct bypass_adversarial::BypassAdversarialProofs
 
-## trait impls (60 types)
+## trait impls (10 types)
 
 simd::f32x1: TrivialClone
 simd::f64x1: TrivialClone
@@ -64,57 +64,7 @@ simd::i16x1: TrivialClone
 simd::i32x1: TrivialClone
 simd::i64x1: TrivialClone
 simd::i8x1: TrivialClone
-simd::polyfill::v3::f32x8: TrivialClone
-simd::polyfill::v3::f64x4: TrivialClone
-simd::polyfill::v3::i16x16: TrivialClone
-simd::polyfill::v3::i32x8: TrivialClone
-simd::polyfill::v3::i64x4: TrivialClone
-simd::polyfill::v3::i8x32: TrivialClone
-simd::polyfill::v3::u16x16: TrivialClone
-simd::polyfill::v3::u32x8: TrivialClone
-simd::polyfill::v3::u64x4: TrivialClone
-simd::polyfill::v3::u8x32: TrivialClone
-simd::polyfill::v3_512::f32x16: TrivialClone
-simd::polyfill::v3_512::f64x8: TrivialClone
-simd::polyfill::v3_512::i16x32: TrivialClone
-simd::polyfill::v3_512::i32x16: TrivialClone
-simd::polyfill::v3_512::i64x8: TrivialClone
-simd::polyfill::v3_512::i8x64: TrivialClone
-simd::polyfill::v3_512::u16x32: TrivialClone
-simd::polyfill::v3_512::u32x16: TrivialClone
-simd::polyfill::v3_512::u64x8: TrivialClone
-simd::polyfill::v3_512::u8x64: TrivialClone
 simd::u16x1: TrivialClone
 simd::u32x1: TrivialClone
 simd::u64x1: TrivialClone
 simd::u8x1: TrivialClone
-simd::v3::f32x8: TrivialClone
-simd::v3::f64x4: TrivialClone
-simd::v3::i16x16: TrivialClone
-simd::v3::i32x8: TrivialClone
-simd::v3::i64x4: TrivialClone
-simd::v3::i8x32: TrivialClone
-simd::v3::u16x16: TrivialClone
-simd::v3::u32x8: TrivialClone
-simd::v3::u64x4: TrivialClone
-simd::v3::u8x32: TrivialClone
-simd::x86::w128::f32x4: TrivialClone
-simd::x86::w128::f64x2: TrivialClone
-simd::x86::w128::i16x8: TrivialClone
-simd::x86::w128::i32x4: TrivialClone
-simd::x86::w128::i64x2: TrivialClone
-simd::x86::w128::i8x16: TrivialClone
-simd::x86::w128::u16x8: TrivialClone
-simd::x86::w128::u32x4: TrivialClone
-simd::x86::w128::u64x2: TrivialClone
-simd::x86::w128::u8x16: TrivialClone
-simd::x86::w512::f32x16: TrivialClone
-simd::x86::w512::f64x8: TrivialClone
-simd::x86::w512::i16x32: TrivialClone
-simd::x86::w512::i32x16: TrivialClone
-simd::x86::w512::i64x8: TrivialClone
-simd::x86::w512::i8x64: TrivialClone
-simd::x86::w512::u16x32: TrivialClone
-simd::x86::w512::u32x16: TrivialClone
-simd::x86::w512::u64x8: TrivialClone
-simd::x86::w512::u8x64: TrivialClone

@@ -80,7 +80,7 @@ pub use archmage::SimdToken;
 // ============================================================================
 
 #[cfg(all(target_arch = "x86_64", not(feature = "avx512")))]
-pub use crate::simd::x86::w256::{
+pub use crate::simd::v3::{
     i8x32 as I8Vec, i16x16 as I16Vec, u8x32 as U8Vec, u16x16 as U16Vec, u64x4 as U64Vec,
 };
 #[cfg(all(target_arch = "x86_64", not(feature = "avx512")))]
@@ -112,7 +112,7 @@ pub const I32_LANES: usize = 8;
 // ============================================================================
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-pub use crate::simd::x86::w512::{
+pub use crate::simd::v4::{
     f32x16 as F32Vec, f64x8 as F64Vec, i8x64 as I8Vec, i16x32 as I16Vec, i32x16 as I32Vec,
     i64x8 as I64Vec, u8x64 as U8Vec, u16x32 as U16Vec, u32x16 as U32Vec, u64x8 as U64Vec,
 };
@@ -141,7 +141,7 @@ pub const I32_LANES: usize = 16;
 // ============================================================================
 
 #[cfg(target_arch = "aarch64")]
-pub use crate::simd::arm::w128::{
+pub use crate::simd::neon::{
     f32x4 as F32Vec, f64x2 as F64Vec, i8x16 as I8Vec, i16x8 as I16Vec, i32x4 as I32Vec,
     i64x2 as I64Vec, u8x16 as U8Vec, u16x8 as U16Vec, u32x4 as U32Vec, u64x2 as U64Vec,
 };
@@ -170,7 +170,7 @@ pub const I32_LANES: usize = 4;
 // ============================================================================
 
 #[cfg(target_arch = "wasm32")]
-pub use crate::simd::wasm::w128::{
+pub use crate::simd::wasm128::{
     f32x4 as F32Vec, f64x2 as F64Vec, i8x16 as I8Vec, i16x8 as I16Vec, i32x4 as I32Vec,
     i64x2 as I64Vec, u8x16 as U8Vec, u16x8 as U16Vec, u32x4 as U32Vec, u64x2 as U64Vec,
 };

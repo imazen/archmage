@@ -285,7 +285,7 @@ jobs:
       # (see commit 6ea5448 / issue #39). Runs the full integration
       # suite: scalar_parity, exhaustive_intrinsics, bypass_closed,
       # bypass_adversarial doctests, generic_*, transcendental_*,
-      # polyfill_parity, polyfill_verification, etc.
+      # reciprocal_precision, etc.
       - name: Test magetypes on WASM (wasmtime)
         env:
           RUSTFLAGS: "-C target-feature=+simd128"
