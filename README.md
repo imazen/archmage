@@ -391,7 +391,7 @@ magetypes = "0.9"
 
 ```rust
 use archmage::prelude::*;
-use magetypes::simd::f32x8;
+use magetypes::simd::generic::f32x8;
 
 fn dot_product(a: &[f32], b: &[f32]) -> f32 {
     if let Some(token) = X64V3Token::summon() {
@@ -470,7 +470,7 @@ Write platform-specific variants with concrete types, then dispatch at runtime:
 
 ```rust
 use archmage::prelude::*;
-use magetypes::simd::f32x8;
+use magetypes::simd::generic::f32x8;
 
 // No #[cfg] needed — #[arcane] handles it
 #[arcane]

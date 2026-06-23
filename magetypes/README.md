@@ -8,8 +8,8 @@ Token-gated SIMD vector types. Write one kernel, run on AVX2, AVX-512, NEON, WAS
 
 ```toml
 [dependencies]
-magetypes = "0.9.26"
-archmage  = "0.9.26"   # required: provides the macros + tokens magetypes uses
+magetypes = "0.9.27"
+archmage  = "0.9.27"   # required: provides the macros + tokens magetypes uses
 ```
 
 **Why both?** The vector *types* (`f32x8`, `u8x16`, …) come from `magetypes`, but the macros (`#[magetypes]`, `incant!`, `#[arcane]`, `#[autoversion]`, `#[rite]`) and the tokens (`Token`, `X64V3Token`, `NeonToken`, `ScalarToken`, …) come from `archmage` — every example here opens with `use archmage::prelude::*;`. So add `archmage` as a direct dependency. (`magetypes` does re-export it, so `magetypes::archmage::prelude::*` works with `magetypes` alone — but a direct `archmage` dep is the idiomatic path and what the examples assume.)
@@ -23,7 +23,7 @@ Default features (`std`, `w512`) are on. For `no_std + alloc`, use `default-feat
 | The macros + tokens (`#[magetypes]`, `incant!`, `Token`, `X64V3Token`, …) | `use archmage::prelude::*;` |
 | A fixed-width type explicitly | `use magetypes::simd::f32x8;` (8 lanes everywhere, polyfilled off-x86) |
 | Inside a `#[magetypes]` body | nothing extra — `define(f32x8)` injects the alias per tier |
-| Platform-"best" aliases for single-target code | `use magetypes::prelude::*;` (`F32Vec`, `LANES`, `RecommendedToken`, …) |
+| The generic SIMD types + `SimdToken` | `use magetypes::prelude::*;` — then name the token: `f32x8::<X64V3Token>` |
 
 The vector types live under `magetypes::simd::*` — there are no root re-exports (the surface is kept stable during development), so reach for `magetypes::simd::f32x8`, not `magetypes::f32x8`.
 

@@ -68,10 +68,10 @@ fn load_first_chunk_128(_t: X64V3Token, data: &[f32]) -> __m128 {
 ## Magetypes load
 
 ```rust
-use magetypes::simd::f32x8;
+use magetypes::simd::generic::f32x8;
 
 #[arcane(import_intrinsics)]
-fn load_f32x8_from_slice(_t: X64V3Token, data: &[f32]) -> f32x8 {
+fn load_f32x8_from_slice(_t: X64V3Token, data: &[f32]) -> f32x8<X64V3Token> {
     f32x8::from_slice(_t, data)
 }
 ```

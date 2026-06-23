@@ -9,15 +9,15 @@ Add archmage to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-archmage = "0.8"
+archmage = "0.9"
 ```
 
 For SIMD vector types with natural operators, you can also add [magetypes](/magetypes/) — our exploratory companion crate (API may change between releases):
 
 ```toml
 [dependencies]
-archmage = "0.8"
-magetypes = "0.8"
+archmage = "0.9"
+magetypes = "0.9"
 ```
 
 ## Feature Flags

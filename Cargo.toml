@@ -6,7 +6,7 @@ members = [".", "archmage-macros", "magetypes", "xtask", "tests/no-features-crat
 exclude = ["apidoc"]
 
 [workspace.package]
-version = "0.9.26"
+version = "0.9.27"
 edition = "2024"
 rust-version = "1.89"
 license = "MIT OR Apache-2.0"
@@ -65,7 +65,7 @@ forge-token-api = []
 
 [dependencies]
 # Proc-macro crate for #[arcane], #[rite], #[autoversion], incant!, etc.
-archmage-macros = { version = "0.9.26", path = "archmage-macros" }
+archmage-macros = { version = "0.9.27", path = "archmage-macros" }
 # Safe unaligned SIMD load/store (reference-based, no raw pointers)
 safe_unaligned_simd = { version = "0.2.5" }
 

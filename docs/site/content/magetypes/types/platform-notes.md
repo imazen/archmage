@@ -24,22 +24,15 @@ fn process<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
 
 The function above compiles correctly on x86-64 (backed by `__m256`), AArch64 (polyfilled with two `float32x4_t`), and WASM (polyfilled with two `v128`). The token type determines the backend.
 
-## Platform-Specific Imports
+## No Platform-Specific Imports
 
-The platform submodules only exist on their target architecture, so `#[cfg]` guards are required:
+The generic types in `magetypes::simd::generic` compile on every architecture — you pass a token and the backend follows — so there are no `#[cfg]`-guarded platform module imports to manage:
 
 ```rust
-#[cfg(target_arch = "x86_64")]
-use magetypes::simd::x86::*;
-
-#[cfg(target_arch = "aarch64")]
-use magetypes::simd::arm::*;
-
-#[cfg(target_arch = "wasm32")]
-use magetypes::simd::wasm::*;
+use magetypes::simd::generic::f32x8;
 ```
 
-You rarely need these. The generic types from `magetypes::simd::generic` work on all platforms. Use platform-specific imports only when you need a type that doesn't exist in the generic namespace.
+The crate root also re-exports bare aliases (`magetypes::simd::f32x8`, etc.) that bind the generic type to each architecture's recommended token — `X64V3Token` on x86-64, `NeonToken` on AArch64, `Wasm128Token` on WASM. Prefer the explicit `generic::f32x8<T>` form in portable code so the token stays visible.
 
 ## Feature Flags
 

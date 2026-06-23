@@ -47,10 +47,10 @@ The compiler typically optimizes this to write directly to the caller's return s
 ## Magetypes store
 
 ```rust
-use magetypes::simd::f32x8;
+use magetypes::simd::generic::f32x8;
 
 #[arcane(import_intrinsics)]
-fn store_f32x8(token: X64V3Token, v: f32x8, out: &mut [f32; 8]) {
+fn store_f32x8(token: X64V3Token, v: f32x8<X64V3Token>, out: &mut [f32; 8]) {
     v.store(token, out);
 }
 ```

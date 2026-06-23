@@ -417,7 +417,7 @@ archmage SIMD types **must** be used within functions annotated with `#[arcane]`
 
 ```rust
 use archmage::{arcane, X64V3Token, SimdToken};
-use magetypes::simd::f32x8;
+use magetypes::simd::generic::f32x8;
 
 // WRONG - intrinsics won't inline
 fn slow_version(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {

@@ -33,7 +33,7 @@ avx512 = ["w512", "archmage/avx512"]
 
 [dependencies]
 # Core tokens and macros
-archmage = { version = "0.9.26", path = "..", default-features = false }
+archmage = { version = "0.9.27", path = "..", default-features = false }
 # Toolchain-version gate (proc-macro, dep-light, dtolnay) for newer-stable
 # `core::arch` intrinsics above the crate MSRV — gates the aarch64 NEON-f16
 # hardware path (`vcvt_*`, stable since 1.94) without raising the 1.89 floor.

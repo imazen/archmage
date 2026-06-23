@@ -18,8 +18,6 @@
 //! - Tier traits: [`HasX64V2`], [`HasX64V4`] (with `avx512`), [`HasNeon`],
 //!   [`HasNeonAes`], [`HasNeonSha3`] — For generic bounds when you want to
 //!   accept any token at a given capability level.
-//! - Width traits: [`Has128BitSimd`], [`Has256BitSimd`], [`Has512BitSimd`] —
-//!   Deprecated; prefer concrete tokens instead.
 //!
 //! ## 2. Tokens
 //!
@@ -136,8 +134,6 @@ pub use crate::tokens::HasX64V2;
 pub use crate::tokens::HasX64V4;
 pub use crate::tokens::IntoConcreteToken;
 pub use crate::tokens::SimdToken;
-#[allow(deprecated)]
-pub use crate::tokens::{Has128BitSimd, Has256BitSimd, Has512BitSimd};
 pub use crate::tokens::{HasArm64V2, HasArm64V3, HasNeon, HasNeonAes, HasNeonSha3};
 
 // -- Tokens (all compile on all platforms; summon() returns None on wrong arch) --

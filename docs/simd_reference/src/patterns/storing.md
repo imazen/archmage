@@ -15,7 +15,7 @@ Getting data from SIMD registers back into slices and arrays.
 
 ```rust
 use archmage::{X64V3Token, arcane};
-use magetypes::simd::f32x8;
+use magetypes::simd::generic::f32x8;
 
 #[arcane(import_intrinsics)]
 fn double(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {

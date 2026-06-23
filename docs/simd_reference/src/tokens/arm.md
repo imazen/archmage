@@ -45,7 +45,7 @@ fn fma_neon(token: Arm64, a: f32x4, b: f32x4, c: f32x4) -> f32x4 {
 NEON only has 128-bit registers. For `f32x8` and wider types, magetypes uses polyfills — two 128-bit operations per 256-bit operation:
 
 ```rust
-use magetypes::simd::f32x8;
+use magetypes::simd::generic::f32x8;
 
 #[arcane(import_intrinsics)]
 fn process(token: Arm64, data: &[f32; 8]) -> f32 {

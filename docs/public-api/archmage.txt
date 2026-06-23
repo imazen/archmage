@@ -11,7 +11,7 @@
 ## summary
 #
 #   pub modules                                 7
-#   pub types (struct/enum/trait/alias)       114
+#   pub types (struct/enum/trait/alias)       111
 #   pub consts/statics                         12
 #   pub macros                                  2
 #   free functions                              7
@@ -27,7 +27,7 @@
 #   (root)                           85
 #   detect                            3
 #   intrinsics                       45
-#   prelude                         114
+#   prelude                         111
 #   testing                          13
 #   tokens                          249
 
@@ -424,9 +424,9 @@ pub fn tokens::X64V4xToken::v4(self) -> tokens::X64V4Token
 pub fn tokens::X64V4xToken::x64_crypto(self) -> tokens::X64CryptoToken
 pub fn tokens::X64V4xToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V4xToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
-pub trait Has128BitSimd: tokens::SimdToken [also: prelude, tokens]
-pub trait Has256BitSimd: tokens::Has128BitSimd [also: prelude, tokens]
-pub trait Has512BitSimd: tokens::Has256BitSimd [also: prelude, tokens]
+pub trait Has128BitSimd: tokens::SimdToken [also: tokens]
+pub trait Has256BitSimd: tokens::Has128BitSimd [also: tokens]
+pub trait Has512BitSimd: tokens::Has256BitSimd [also: tokens]
 pub trait HasArm64V2: tokens::HasNeon + tokens::HasNeonAes [also: prelude, tokens]
 pub trait HasArm64V3: tokens::HasArm64V2 + tokens::HasNeonSha3 [also: prelude, tokens]
 pub trait HasNeon: tokens::SimdToken [also: prelude, tokens]

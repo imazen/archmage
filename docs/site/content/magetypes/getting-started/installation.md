@@ -7,8 +7,8 @@ Magetypes depends on archmage for capability tokens. Add both to your `Cargo.tom
 
 ```toml
 [dependencies]
-archmage = "0.8"
-magetypes = "0.8"
+archmage = "0.9"
+magetypes = "0.9"
 ```
 
 Magetypes re-exports what it needs from archmage, but you'll want archmage directly for `SimdToken`, token types, and macros like `#[arcane]`.
@@ -34,8 +34,8 @@ Enable AVX-512 types in both crates:
 
 ```toml
 [dependencies]
-archmage = { version = "0.8", features = ["avx512"] }
-magetypes = { version = "0.8", features = ["avx512"] }
+archmage = { version = "0.9", features = ["avx512"] }
+magetypes = { version = "0.9", features = ["avx512"] }
 ```
 
 ## `no_std`
@@ -44,8 +44,8 @@ Both crates support `no_std` with `alloc`:
 
 ```toml
 [dependencies]
-archmage = { version = "0.8", default-features = false }
-magetypes = { version = "0.8", default-features = false }
+archmage = { version = "0.9", default-features = false }
+magetypes = { version = "0.9", default-features = false }
 ```
 
 ## Platform Requirements

@@ -9,30 +9,12 @@
 //! - **Upcast** (narrower context → wider): Requires being in the wider context
 //!   (inside an `#[arcane]` function with the appropriate token)
 //!
-//! # Example
+//! # Generic context
 //!
-//! ```rust,ignore
-//! use archmage::{arcane, X64V3Token};
-//! use magetypes::simd::x86::{w128, w256};
-//!
-//! #[arcane]
-//! fn process(token: X64V3Token, input: w128::f32x4) -> w256::f32x8 {
-//!     // Inside #[arcane], we have AVX2 context
-//!     // Can safely use 128-bit vectors with VEX encoding
-//!     let doubled = w256::f32x8::from_halves(token, input, input);
-//!     doubled
-//! }
-//! ```
-//!
-//! # Cross-Tier Casting Rules
-//!
-//! | From | To | Method | Context Required |
-//! |------|-----|--------|------------------|
-//! | Any | Same type | (identity) | None |
-//! | w256::* | w128::* (half) | `.low()`, `.high()` | None |
-//! | w512::* | w256::* (half) | `.low()`, `.high()` | None |
-//! | w128::* | w256::* | `from_halves()` | AVX2 context |
-//! | w256::* | w512::* | `from_halves()` | AVX-512 context |
+//! In the generic type system every value already carries its token, so most
+//! cross-context use is just passing the right `generic::fNxM<T>` around. These
+//! marker traits exist for the cases that need an explicit, type-level cast
+//! between same-width vectors bound to different tokens.
 
 /// Marker trait for types that can be safely downcast.
 ///
@@ -65,16 +47,11 @@ pub trait Upcast<T> {
 
 #[cfg(target_arch = "x86_64")]
 mod x86_impl {
-    // Note: Cross-tier casting between same-width vectors (e.g., SSE f32x4 vs AVX f32x4)
-    // is a transmute of the same underlying type. The main practical casting is:
-    //
-    // 1. Extracting halves: w256 → two w128, w512 → two w256
-    //    These are available as .low() and .high() methods on the types.
-    //
-    // 2. Combining halves: two w128 → w256, two w256 → w512
-    //    These are available as from_halves() constructors.
-    //
-    // Both patterns are already implemented in the generated types.
+    // Cross-tier casting between same-width vectors (e.g. an SSE-context f32x4
+    // used inside an AVX2 region) is a no-op on the generic types: the value
+    // already carries its token, so there is nothing to convert. Width changes
+    // (half extraction / combination) are not currently exposed on the generic
+    // types.
 }
 
 #[cfg(test)]
@@ -83,6 +60,5 @@ mod tests {
     #[test]
     fn downcast_is_documented() {
         // This test just verifies the module compiles and documents the casting rules.
-        // Actual casting uses .low(), .high(), and from_halves() on the types.
     }
 }

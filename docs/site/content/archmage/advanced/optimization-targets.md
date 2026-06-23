@@ -52,7 +52,7 @@ Require the `avx512` cargo feature in your dependency:
 
 ```toml
 [dependencies]
-archmage = { version = "0.8", features = ["avx512"] }
+archmage = { version = "0.9", features = ["avx512"] }
 ```
 
 ### Arm64V2Token fourth
@@ -76,7 +76,7 @@ WASM is a special case in several ways:
 
 **No runtime dispatch.** SIMD128 availability is decided at compile time via `-Ctarget-feature=+simd128`. `Wasm128Token::summon()` compiles down to a constant -- there's no CPUID or feature probing.
 
-**No unsafe overhead.** On wasm32, `#[target_feature(enable = "simd128")]` functions are safe. The wasm validation model traps deterministically on unsupported instructions -- there's no undefined behavior from a feature mismatch. As of archmage 0.8.10, `#[arcane]` on wasm32 skips the unsafe wrapper entirely and emits the function directly with `#[target_feature]` + `#[inline]`.
+**No unsafe overhead.** On wasm32, `#[target_feature(enable = "simd128")]` functions are safe. The wasm validation model traps deterministically on unsupported instructions -- there's no undefined behavior from a feature mismatch. On wasm32, `#[arcane]` skips the unsafe wrapper entirely and emits the function directly with `#[target_feature]` + `#[inline]`.
 
 **Compile-time only.** You either build with SIMD128 or you don't. For browser deployment, ship two WASM binaries (SIMD and non-SIMD) and feature-detect in JavaScript, or rely on the scalar fallback.
 

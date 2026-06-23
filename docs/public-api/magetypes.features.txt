@@ -9,28 +9,39 @@
 
 ## summary
 #
-#   pub types (struct/enum/trait/alias)        60
-#   pub consts/statics                         20
-#   free functions                             16
+#   pub types (struct/enum/trait/alias)        50
+#   pub consts/statics                         40
+#   free functions                             24
 #   trait roster entries (type × trait)        43
 #
 # per-module pub lines:
-#   (root)                           20
-#   prelude                          10
-#   simd                             66
+#   (root)                           40
+#   prelude                          16
+#   simd                             58
 
-## items (82 lines)
+## items (72 lines)
 
-pub type prelude::F32Vec = simd::generic::f32x16<archmage::tokens::generated::x86::X64V4Token>
-pub type prelude::F64Vec = simd::generic::f64x8<archmage::tokens::generated::x86::X64V4Token>
-pub type prelude::I16Vec = simd::generic::i16x32<archmage::tokens::generated::x86::X64V4Token>
-pub type prelude::I32Vec = simd::generic::i32x16<archmage::tokens::generated::x86::X64V4Token>
-pub type prelude::I64Vec = simd::generic::i64x8<archmage::tokens::generated::x86::X64V4Token>
-pub type prelude::I8Vec = simd::generic::i8x64<archmage::tokens::generated::x86::X64V4Token>
-pub type prelude::U16Vec = simd::generic::u16x32<archmage::tokens::generated::x86::X64V4Token>
-pub type prelude::U32Vec = simd::generic::u32x16<archmage::tokens::generated::x86::X64V4Token>
-pub type prelude::U64Vec = simd::generic::u64x8<archmage::tokens::generated::x86::X64V4Token>
-pub type prelude::U8Vec = simd::generic::u8x64<archmage::tokens::generated::x86::X64V4Token>
+pub const fn prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::f32x16<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::f64x8<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::f64x8<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::i16x32<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::i16x32<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::i32x16<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::i32x16<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::i64x8<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::i64x8<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str [also: (root)]
+pub fn prelude::i64x8<T>::popcnt(self) -> Self [also: prelude::i16x32<T>, prelude::i32x16<T>, prelude::i64x8<T>, prelude::i8x64<T>, prelude::u16x32<T>, prelude::u32x16<T>, prelude::u64x8<T>, prelude::u8x64<T>]
+pub const fn prelude::i8x64<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::i8x64<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::u16x32<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::u16x32<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::u32x16<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::u32x16<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::u64x8<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::u64x8<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::u8x64<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::u8x64<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str [also: (root)]
 pub trait simd::backends::i16x32PopcntBackend: simd::backends::I16x32Backend
 pub trait simd::backends::i32x16PopcntBackend: simd::backends::I32x16Backend
 pub trait simd::backends::i64x8PopcntBackend: simd::backends::I64x8Backend
@@ -40,125 +51,94 @@ pub trait simd::backends::u16x32PopcntBackend: simd::backends::U16x32Backend
 pub trait simd::backends::u32x16PopcntBackend: simd::backends::U32x16Backend
 pub trait simd::backends::u64x8PopcntBackend: simd::backends::U64x8Backend
 pub trait simd::backends::u8x64PopcntBackend: simd::backends::U8x64Backend
-pub const fn simd::generic::f32x16<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str
-pub const fn simd::generic::f32x16<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str
-pub const fn simd::generic::f64x8<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str
-pub const fn simd::generic::f64x8<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str
-pub const fn simd::generic::i16x32<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str
-pub const fn simd::generic::i16x32<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str
-pub const fn simd::generic::i32x16<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str
-pub const fn simd::generic::i32x16<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str
-pub const fn simd::generic::i64x8<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str
-pub const fn simd::generic::i64x8<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str
-pub fn simd::generic::i64x8<T>::popcnt(self) -> Self [also: simd::generic::i16x32<T>, simd::generic::i32x16<T>, simd::generic::i8x64<T>, simd::generic::u16x32<T>, simd::generic::u32x16<T>, simd::generic::u64x8<T>, simd::generic::u8x64<T>]
-pub const fn simd::generic::i8x64<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str
-pub const fn simd::generic::i8x64<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str
-pub const fn simd::generic::u16x32<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str
-pub const fn simd::generic::u16x32<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str
-pub const fn simd::generic::u32x16<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str
-pub const fn simd::generic::u32x16<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str
-pub const fn simd::generic::u64x8<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str
-pub const fn simd::generic::u64x8<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str
-pub const fn simd::generic::u8x64<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str
-pub const fn simd::generic::u8x64<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str
 pub type simd::v4::Token = archmage::tokens::generated::x86::X64V4Token
-pub type simd::v4::f32x16 = simd::generic::f32x16<archmage::tokens::generated::x86::X64V4Token>
-pub type simd::v4::f32xN = simd::generic::f32x16<archmage::tokens::generated::x86::X64V4Token>
-pub type simd::v4::f64x8 = simd::generic::f64x8<archmage::tokens::generated::x86::X64V4Token>
-pub type simd::v4::f64xN = simd::generic::f64x8<archmage::tokens::generated::x86::X64V4Token>
-pub type simd::v4::i16x32 = simd::generic::i16x32<archmage::tokens::generated::x86::X64V4Token>
-pub type simd::v4::i16xN = simd::generic::i16x32<archmage::tokens::generated::x86::X64V4Token>
-pub type simd::v4::i32x16 = simd::generic::i32x16<archmage::tokens::generated::x86::X64V4Token>
-pub type simd::v4::i32xN = simd::generic::i32x16<archmage::tokens::generated::x86::X64V4Token>
-pub type simd::v4::i64x8 = simd::generic::i64x8<archmage::tokens::generated::x86::X64V4Token>
-pub type simd::v4::i64xN = simd::generic::i64x8<archmage::tokens::generated::x86::X64V4Token>
-pub type simd::v4::i8x64 = simd::generic::i8x64<archmage::tokens::generated::x86::X64V4Token>
-pub type simd::v4::i8xN = simd::generic::i8x64<archmage::tokens::generated::x86::X64V4Token>
-pub type simd::v4::u16x32 = simd::generic::u16x32<archmage::tokens::generated::x86::X64V4Token>
-pub type simd::v4::u16xN = simd::generic::u16x32<archmage::tokens::generated::x86::X64V4Token>
-pub type simd::v4::u32x16 = simd::generic::u32x16<archmage::tokens::generated::x86::X64V4Token>
-pub type simd::v4::u32xN = simd::generic::u32x16<archmage::tokens::generated::x86::X64V4Token>
-pub type simd::v4::u64x8 = simd::generic::u64x8<archmage::tokens::generated::x86::X64V4Token>
-pub type simd::v4::u64xN = simd::generic::u64x8<archmage::tokens::generated::x86::X64V4Token>
-pub type simd::v4::u8x64 = simd::generic::u8x64<archmage::tokens::generated::x86::X64V4Token>
-pub type simd::v4::u8xN = simd::generic::u8x64<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::f32x16 = prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::f32xN = prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::f64x8 = prelude::f64x8<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::f64xN = prelude::f64x8<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::i16x32 = prelude::i16x32<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::i16xN = prelude::i16x32<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::i32x16 = prelude::i32x16<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::i32xN = prelude::i32x16<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::i64x8 = prelude::i64x8<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::i64xN = prelude::i64x8<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::i8x64 = prelude::i8x64<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::i8xN = prelude::i8x64<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::u16x32 = prelude::u16x32<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::u16xN = prelude::u16x32<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::u32x16 = prelude::u32x16<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::u32xN = prelude::u32x16<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::u64x8 = prelude::u64x8<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::u64xN = prelude::u64x8<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::u8x64 = prelude::u8x64<archmage::tokens::generated::x86::X64V4Token>
+pub type simd::v4::u8xN = prelude::u8x64<archmage::tokens::generated::x86::X64V4Token>
 pub type simd::v4x::Token = archmage::tokens::generated::x86::X64V4xToken
-pub type simd::v4x::f32x16 = simd::generic::f32x16<archmage::tokens::generated::x86::X64V4xToken>
-pub type simd::v4x::f32xN = simd::generic::f32x16<archmage::tokens::generated::x86::X64V4xToken>
-pub type simd::v4x::f64x8 = simd::generic::f64x8<archmage::tokens::generated::x86::X64V4xToken>
-pub type simd::v4x::f64xN = simd::generic::f64x8<archmage::tokens::generated::x86::X64V4xToken>
-pub type simd::v4x::i16x32 = simd::generic::i16x32<archmage::tokens::generated::x86::X64V4xToken>
-pub type simd::v4x::i16xN = simd::generic::i16x32<archmage::tokens::generated::x86::X64V4xToken>
-pub type simd::v4x::i32x16 = simd::generic::i32x16<archmage::tokens::generated::x86::X64V4xToken>
-pub type simd::v4x::i32xN = simd::generic::i32x16<archmage::tokens::generated::x86::X64V4xToken>
-pub type simd::v4x::i64x8 = simd::generic::i64x8<archmage::tokens::generated::x86::X64V4xToken>
-pub type simd::v4x::i64xN = simd::generic::i64x8<archmage::tokens::generated::x86::X64V4xToken>
-pub type simd::v4x::i8x64 = simd::generic::i8x64<archmage::tokens::generated::x86::X64V4xToken>
-pub type simd::v4x::i8xN = simd::generic::i8x64<archmage::tokens::generated::x86::X64V4xToken>
-pub type simd::v4x::u16x32 = simd::generic::u16x32<archmage::tokens::generated::x86::X64V4xToken>
-pub type simd::v4x::u16xN = simd::generic::u16x32<archmage::tokens::generated::x86::X64V4xToken>
-pub type simd::v4x::u32x16 = simd::generic::u32x16<archmage::tokens::generated::x86::X64V4xToken>
-pub type simd::v4x::u32xN = simd::generic::u32x16<archmage::tokens::generated::x86::X64V4xToken>
-pub type simd::v4x::u64x8 = simd::generic::u64x8<archmage::tokens::generated::x86::X64V4xToken>
-pub type simd::v4x::u64xN = simd::generic::u64x8<archmage::tokens::generated::x86::X64V4xToken>
-pub type simd::v4x::u8x64 = simd::generic::u8x64<archmage::tokens::generated::x86::X64V4xToken>
-pub type simd::v4x::u8xN = simd::generic::u8x64<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::f32x16 = prelude::f32x16<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::f32xN = prelude::f32x16<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::f64x8 = prelude::f64x8<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::f64xN = prelude::f64x8<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::i16x32 = prelude::i16x32<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::i16xN = prelude::i16x32<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::i32x16 = prelude::i32x16<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::i32xN = prelude::i32x16<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::i64x8 = prelude::i64x8<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::i64xN = prelude::i64x8<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::i8x64 = prelude::i8x64<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::i8xN = prelude::i8x64<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::u16x32 = prelude::u16x32<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::u16xN = prelude::u16x32<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::u32x16 = prelude::u32x16<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::u32xN = prelude::u32x16<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::u64x8 = prelude::u64x8<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::u64xN = prelude::u64x8<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::u8x64 = prelude::u8x64<archmage::tokens::generated::x86::X64V4xToken>
+pub type simd::v4x::u8xN = prelude::u8x64<archmage::tokens::generated::x86::X64V4xToken>
 
 ## trait impls (3 types)
 
-archmage::tokens::generated::x86::Avx512Fp16Token: simd::backends::F32x4Backend, simd::backends::F32x8Backend, simd::generic::F32x8FromHalves
-archmage::tokens::generated::x86::X64V4Token: SimdTypes, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x8Backend, simd::backends::F64x8Backend, simd::backends::I16x32Backend, simd::backends::I32x16Backend, simd::backends::I64x8Backend, simd::backends::I8x64Backend, simd::backends::U16x32Backend, simd::backends::U32x16Backend, simd::backends::U64x8Backend, simd::backends::U8x64Backend, simd::generic::F32x16FromHalves, simd::generic::F32x8FromHalves
-archmage::tokens::generated::x86::X64V4xToken: SimdTypes, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x8Backend, simd::backends::F64x8Backend, simd::backends::I16x32Backend, simd::backends::I32x16Backend, simd::backends::I64x8Backend, simd::backends::I8x64Backend, simd::backends::U16x32Backend, simd::backends::U32x16Backend, simd::backends::U64x8Backend, simd::backends::U8x64Backend, simd::backends::i16x32PopcntBackend, simd::backends::i32x16PopcntBackend, simd::backends::i64x8PopcntBackend, simd::backends::i8x64PopcntBackend, simd::backends::u16x32PopcntBackend, simd::backends::u32x16PopcntBackend, simd::backends::u64x8PopcntBackend, simd::backends::u8x64PopcntBackend, simd::generic::F32x16FromHalves, simd::generic::F32x8FromHalves
+archmage::tokens::generated::x86::Avx512Fp16Token: prelude::F32x8FromHalves, simd::backends::F32x4Backend, simd::backends::F32x8Backend
+archmage::tokens::generated::x86::X64V4Token: SimdTypes, prelude::F32x16FromHalves, prelude::F32x8FromHalves, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x8Backend, simd::backends::F64x8Backend, simd::backends::I16x32Backend, simd::backends::I32x16Backend, simd::backends::I64x8Backend, simd::backends::I8x64Backend, simd::backends::U16x32Backend, simd::backends::U32x16Backend, simd::backends::U64x8Backend, simd::backends::U8x64Backend
+archmage::tokens::generated::x86::X64V4xToken: SimdTypes, prelude::F32x16FromHalves, prelude::F32x8FromHalves, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x8Backend, simd::backends::F64x8Backend, simd::backends::I16x32Backend, simd::backends::I32x16Backend, simd::backends::I64x8Backend, simd::backends::I8x64Backend, simd::backends::U16x32Backend, simd::backends::U32x16Backend, simd::backends::U64x8Backend, simd::backends::U8x64Backend, simd::backends::i16x32PopcntBackend, simd::backends::i32x16PopcntBackend, simd::backends::i64x8PopcntBackend, simd::backends::i8x64PopcntBackend, simd::backends::u16x32PopcntBackend, simd::backends::u32x16PopcntBackend, simd::backends::u64x8PopcntBackend, simd::backends::u8x64PopcntBackend
 
-## removed by features (50 lines)
+## removed by features (40 lines)
 
-pub type prelude::F32Vec = simd::generic::f32x8<archmage::tokens::generated::x86::X64V3Token>
-pub type prelude::F64Vec = simd::generic::f64x4<archmage::tokens::generated::x86::X64V3Token>
-pub type prelude::I16Vec = simd::generic::i16x16<archmage::tokens::generated::x86::X64V3Token>
-pub type prelude::I32Vec = simd::generic::i32x8<archmage::tokens::generated::x86::X64V3Token>
-pub type prelude::I64Vec = simd::generic::i64x4<archmage::tokens::generated::x86::X64V3Token>
-pub type prelude::I8Vec = simd::generic::i8x32<archmage::tokens::generated::x86::X64V3Token>
-pub type prelude::U16Vec = simd::generic::u16x16<archmage::tokens::generated::x86::X64V3Token>
-pub type prelude::U32Vec = simd::generic::u32x8<archmage::tokens::generated::x86::X64V3Token>
-pub type prelude::U64Vec = simd::generic::u64x4<archmage::tokens::generated::x86::X64V3Token>
-pub type prelude::U8Vec = simd::generic::u8x32<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4::f32x16 = simd::generic::f32x16<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4::f32xN = simd::generic::f32x16<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4::f64x8 = simd::generic::f64x8<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4::f64xN = simd::generic::f64x8<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4::i16x32 = simd::generic::i16x32<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4::i16xN = simd::generic::i16x32<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4::i32x16 = simd::generic::i32x16<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4::i32xN = simd::generic::i32x16<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4::i64x8 = simd::generic::i64x8<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4::i64xN = simd::generic::i64x8<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4::i8x64 = simd::generic::i8x64<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4::i8xN = simd::generic::i8x64<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4::u16x32 = simd::generic::u16x32<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4::u16xN = simd::generic::u16x32<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4::u32x16 = simd::generic::u32x16<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4::u32xN = simd::generic::u32x16<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4::u64x8 = simd::generic::u64x8<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4::u64xN = simd::generic::u64x8<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4::u8x64 = simd::generic::u8x64<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4::u8xN = simd::generic::u8x64<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4x::f32x16 = simd::generic::f32x16<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4x::f32xN = simd::generic::f32x16<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4x::f64x8 = simd::generic::f64x8<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4x::f64xN = simd::generic::f64x8<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4x::i16x32 = simd::generic::i16x32<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4x::i16xN = simd::generic::i16x32<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4x::i32x16 = simd::generic::i32x16<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4x::i32xN = simd::generic::i32x16<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4x::i64x8 = simd::generic::i64x8<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4x::i64xN = simd::generic::i64x8<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4x::i8x64 = simd::generic::i8x64<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4x::i8xN = simd::generic::i8x64<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4x::u16x32 = simd::generic::u16x32<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4x::u16xN = simd::generic::u16x32<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4x::u32x16 = simd::generic::u32x16<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4x::u32xN = simd::generic::u32x16<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4x::u64x8 = simd::generic::u64x8<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4x::u64xN = simd::generic::u64x8<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4x::u8x64 = simd::generic::u8x64<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v4x::u8xN = simd::generic::u8x64<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::f32x16 = prelude::f32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::f32xN = prelude::f32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::f64x8 = prelude::f64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::f64xN = prelude::f64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::i16x32 = prelude::i16x32<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::i16xN = prelude::i16x32<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::i32x16 = prelude::i32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::i32xN = prelude::i32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::i64x8 = prelude::i64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::i64xN = prelude::i64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::i8x64 = prelude::i8x64<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::i8xN = prelude::i8x64<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::u16x32 = prelude::u16x32<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::u16xN = prelude::u16x32<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::u32x16 = prelude::u32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::u32xN = prelude::u32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::u64x8 = prelude::u64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::u64xN = prelude::u64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::u8x64 = prelude::u8x64<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4::u8xN = prelude::u8x64<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::f32x16 = prelude::f32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::f32xN = prelude::f32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::f64x8 = prelude::f64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::f64xN = prelude::f64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::i16x32 = prelude::i16x32<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::i16xN = prelude::i16x32<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::i32x16 = prelude::i32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::i32xN = prelude::i32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::i64x8 = prelude::i64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::i64xN = prelude::i64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::i8x64 = prelude::i8x64<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::i8xN = prelude::i8x64<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::u16x32 = prelude::u16x32<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::u16xN = prelude::u16x32<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::u32x16 = prelude::u32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::u32xN = prelude::u32x16<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::u64x8 = prelude::u64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::u64xN = prelude::u64x8<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::u8x64 = prelude::u8x64<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v4x::u8xN = prelude::u8x64<archmage::tokens::generated::x86::X64V3Token>

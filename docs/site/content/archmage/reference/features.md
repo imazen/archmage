@@ -13,14 +13,14 @@ Enables standard library support.
 
 ```toml
 [dependencies]
-archmage = "0.8"  # std enabled by default
+archmage = "0.9"  # std enabled by default
 ```
 
 Disable for `no_std`:
 
 ```toml
 [dependencies]
-archmage = { version = "0.8", default-features = false }
+archmage = { version = "0.9", default-features = false }
 ```
 
 ### `avx512`
@@ -28,7 +28,7 @@ archmage = { version = "0.8", default-features = false }
 Enables AVX-512 tokens and 512-bit types.
 
 ```toml
-archmage = { version = "0.8", features = ["avx512"] }
+archmage = { version = "0.9", features = ["avx512"] }
 ```
 
 **Unlocks**:
@@ -50,7 +50,7 @@ Standard library support.
 Enables 512-bit types.
 
 ```toml
-magetypes = { version = "0.8", features = ["avx512"] }
+magetypes = { version = "0.9", features = ["avx512"] }
 ```
 
 **Unlocks** 512-bit generic types (e.g., `f32x16::<T>`, `f64x8::<T>`, `i32x16::<T>`, etc.) and their backend traits (`F32x16Backend`, `F64x8Backend`, etc.).
@@ -61,24 +61,24 @@ magetypes = { version = "0.8", features = ["avx512"] }
 
 ```toml
 [dependencies]
-archmage = { version = "0.8", features = ["avx512"] }
-magetypes = { version = "0.8", features = ["avx512"] }
+archmage = { version = "0.9", features = ["avx512"] }
+magetypes = { version = "0.9", features = ["avx512"] }
 ```
 
 ### Minimal no_std
 
 ```toml
 [dependencies]
-archmage = { version = "0.8", default-features = false }
-magetypes = { version = "0.8", default-features = false }
+archmage = { version = "0.9", default-features = false }
+magetypes = { version = "0.9", default-features = false }
 ```
 
 ### Cross-Platform Library
 
 ```toml
 [dependencies]
-archmage = "0.8"
-magetypes = "0.8"
+archmage = "0.9"
+magetypes = "0.9"
 
 [features]
 default = ["std"]
