@@ -625,6 +625,75 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
     let lanes = ty.lanes;
     let array = ty.array_type();
 
+    // Pixel-pack default (f32 only): round-to-nearest + saturate each lane to u8.
+    // Scalar fallback; x86/ARM backends override with native cvt+pack. Restores the
+    // native codegen the retired concrete types had (see issue #60).
+    let to_u8_trait = if elem == "f32" {
+        formatdoc! {r#"
+
+            // ====== Pixel pack (f32 only) ======
+
+            /// Round-to-nearest-even then saturate each lane to `u8` (0..=255).
+            ///
+            /// Default body is scalar; `x86`/`aarch64` backends override with a
+            /// native `cvt`+saturating-`pack` sequence.
+            #[inline(always)]
+            fn to_u8_bytes(self, a: Self::Repr) -> [u8; {lanes}] {{
+                let arr = <Self as {trait_name}>::to_array(self, a);
+                core::array::from_fn(|i| crate::nostd_math::roundevenf(arr[i]).clamp(0.0, 255.0) as u8)
+            }}
+
+            /// Round/clamp 4 planar channels and interleave into RGBA bytes
+            /// ({lanes} pixels = {rgba_bytes} bytes). Each channel converts via
+            /// the native `to_u8_bytes` (so x86/aarch64 get cvt+pack, not scalar
+            /// `roundevenf`); the byte interleave is left to LLVM, which recovers
+            /// it to native shuffles. A backend may still override for a tighter
+            /// fused sequence.
+            #[inline(always)]
+            fn store_rgba_bytes(self, r: Self::Repr, g: Self::Repr, b: Self::Repr, a: Self::Repr) -> [u8; {rgba_bytes}] {{
+                let rb = <Self as {trait_name}>::to_u8_bytes(self, r);
+                let gb = <Self as {trait_name}>::to_u8_bytes(self, g);
+                let bb = <Self as {trait_name}>::to_u8_bytes(self, b);
+                let ab = <Self as {trait_name}>::to_u8_bytes(self, a);
+                let mut out = [0u8; {rgba_bytes}];
+                let mut i = 0;
+                while i < {lanes} {{
+                    out[i * 4] = rb[i];
+                    out[i * 4 + 1] = gb[i];
+                    out[i * 4 + 2] = bb[i];
+                    out[i * 4 + 3] = ab[i];
+                    i += 1;
+                }}
+                out
+            }}
+        "#, rgba_bytes = lanes * 4}
+    } else {
+        String::new()
+    };
+
+    // 8x8 transpose lives only on f32x8 (8 rows of 8). Default is a scalar
+    // gather (LLVM recovers it to native shuffles on ARM/WASM); x86 overrides
+    // with the AVX2 unpck+shuffle+permute2f128 network, since the gather bloats
+    // to ~60 cross-lane ops (vbroadcastss/vblendps) on AVX2.
+    let transpose_trait = if elem == "f32" && lanes == 8 {
+        formatdoc! {r#"
+
+            // ====== 8x8 transpose (f32x8 only) ======
+
+            /// Transpose 8 row vectors of an 8x8 f32 matrix.
+            #[inline(always)]
+            fn transpose_8x8_repr(self, rows: [Self::Repr; 8]) -> [Self::Repr; 8] {{
+                let r: [[f32; 8]; 8] =
+                    core::array::from_fn(|i| <Self as {trait_name}>::to_array(self, rows[i]));
+                core::array::from_fn(|i| {{
+                    <Self as {trait_name}>::from_array(self, core::array::from_fn(|j| r[j][i]))
+                }})
+            }}
+        "#}
+    } else {
+        String::new()
+    };
+
     formatdoc! {r#"
         //! Backend trait for `{name}<T>` — {lanes}-lane {elem} SIMD vector.
         //!
@@ -804,6 +873,8 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             /// Precise reciprocal square root — see [`recip`] for rationale.
             #[inline(always)]
             fn rsqrt(self, a: Self::Repr) -> Self::Repr {{ Self::rsqrt_approx(self, a) }}
+            {to_u8_trait}
+            {transpose_trait}
         }}
     "#,
         name = ty.name(),
@@ -1245,6 +1316,123 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
 
     let _ = extract_hi; // Used in reduce_* bodies
 
+    // Native pixel-pack override (f32 only) — round + saturating cvt/pack.
+    // LLVM cannot recover this from the scalar `roundevenf` default (issue #60).
+    let to_u8_x86 = if elem == "f32" && bits == 128 {
+        formatdoc! {r#"
+
+            #[inline(always)]
+            fn to_u8_bytes(self, a: {inner}) -> [u8; 4] {{
+                unsafe {{
+                    let i32s = _mm_cvtps_epi32(a);
+                    let i16s = _mm_packs_epi32(i32s, i32s);
+                    let u8s = _mm_packus_epi16(i16s, i16s);
+                    (_mm_cvtsi128_si32(u8s) as u32).to_ne_bytes()
+                }}
+            }}
+        "#}
+    } else if elem == "f32" && bits == 256 {
+        formatdoc! {r#"
+
+            #[inline(always)]
+            fn to_u8_bytes(self, a: {inner}) -> [u8; 8] {{
+                unsafe {{
+                    let i32s = _mm256_cvtps_epi32(a);
+                    let lo = _mm256_castsi256_si128(i32s);
+                    let hi = _mm256_extracti128_si256::<1>(i32s);
+                    let i16s = _mm_packs_epi32(lo, hi);
+                    let u8s = _mm_packus_epi16(i16s, i16s);
+                    (_mm_cvtsi128_si64(u8s) as u64).to_ne_bytes()
+                }}
+            }}
+        "#}
+    } else {
+        String::new()
+    };
+
+    // Native pixel interleave (overrides the to_u8_bytes-based default, whose
+    // generic byte interleave LLVM expands to ~8 pshufb). All 4 planes packed
+    // together in-register, one pshufb to RGBA order. Round-to-even via cvtps
+    // (MXCSR default); packs/packus saturate to [0,255] (= clamp).
+    let store_rgba_x86 = if elem == "f32" && bits == 128 {
+        formatdoc! {r#"
+
+            #[inline(always)]
+            fn store_rgba_bytes(self, r: {inner}, g: {inner}, b: {inner}, a: {inner}) -> [u8; 16] {{
+                unsafe {{
+                    let rg = _mm_packs_epi32(_mm_cvtps_epi32(r), _mm_cvtps_epi32(g));
+                    let ba = _mm_packs_epi32(_mm_cvtps_epi32(b), _mm_cvtps_epi32(a));
+                    // [R0-3,G0-3,B0-3,A0-3] -> interleaved RGBA pixels 0-3.
+                    let packed = _mm_packus_epi16(rg, ba);
+                    let shuf = _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
+                    core::mem::transmute(_mm_shuffle_epi8(packed, shuf))
+                }}
+            }}
+        "#}
+    } else if elem == "f32" && bits == 256 {
+        formatdoc! {r#"
+
+            #[inline(always)]
+            fn store_rgba_bytes(self, r: {inner}, g: {inner}, b: {inner}, a: {inner}) -> [u8; 32] {{
+                unsafe {{
+                    // AVX2 packs are lane-wise: lane0 holds pixels 0-3, lane1 4-7.
+                    let rg = _mm256_packs_epi32(_mm256_cvtps_epi32(r), _mm256_cvtps_epi32(g));
+                    let ba = _mm256_packs_epi32(_mm256_cvtps_epi32(b), _mm256_cvtps_epi32(a));
+                    let packed = _mm256_packus_epi16(rg, ba);
+                    let shuf = _mm256_setr_epi8(
+                        0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15,
+                        0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15,
+                    );
+                    core::mem::transmute(_mm256_shuffle_epi8(packed, shuf))
+                }}
+            }}
+        "#}
+    } else {
+        String::new()
+    };
+
+    // Native AVX2 8x8 transpose (f32x8): unpck + shuffle_ps + permute2f128
+    // network (24 ops), overriding the scalar gather default which AVX2 expands
+    // to ~60 cross-lane ops.
+    let transpose_8x8_x86 = if elem == "f32" && bits == 256 {
+        formatdoc! {r#"
+
+            #[inline(always)]
+            fn transpose_8x8_repr(self, rows: [{inner}; 8]) -> [{inner}; 8] {{
+                unsafe {{
+                    let t0 = _mm256_unpacklo_ps(rows[0], rows[1]);
+                    let t1 = _mm256_unpackhi_ps(rows[0], rows[1]);
+                    let t2 = _mm256_unpacklo_ps(rows[2], rows[3]);
+                    let t3 = _mm256_unpackhi_ps(rows[2], rows[3]);
+                    let t4 = _mm256_unpacklo_ps(rows[4], rows[5]);
+                    let t5 = _mm256_unpackhi_ps(rows[4], rows[5]);
+                    let t6 = _mm256_unpacklo_ps(rows[6], rows[7]);
+                    let t7 = _mm256_unpackhi_ps(rows[6], rows[7]);
+                    let s0 = _mm256_shuffle_ps::<0x44>(t0, t2);
+                    let s1 = _mm256_shuffle_ps::<0xEE>(t0, t2);
+                    let s2 = _mm256_shuffle_ps::<0x44>(t1, t3);
+                    let s3 = _mm256_shuffle_ps::<0xEE>(t1, t3);
+                    let s4 = _mm256_shuffle_ps::<0x44>(t4, t6);
+                    let s5 = _mm256_shuffle_ps::<0xEE>(t4, t6);
+                    let s6 = _mm256_shuffle_ps::<0x44>(t5, t7);
+                    let s7 = _mm256_shuffle_ps::<0xEE>(t5, t7);
+                    [
+                        _mm256_permute2f128_ps::<0x20>(s0, s4),
+                        _mm256_permute2f128_ps::<0x20>(s1, s5),
+                        _mm256_permute2f128_ps::<0x20>(s2, s6),
+                        _mm256_permute2f128_ps::<0x20>(s3, s7),
+                        _mm256_permute2f128_ps::<0x31>(s0, s4),
+                        _mm256_permute2f128_ps::<0x31>(s1, s5),
+                        _mm256_permute2f128_ps::<0x31>(s2, s6),
+                        _mm256_permute2f128_ps::<0x31>(s3, s7),
+                    ]
+                }}
+            }}
+        "#}
+    } else {
+        String::new()
+    };
+
     formatdoc! {r#"
         impl {trait_name} for archmage::{token} {{
             type Repr = {inner};
@@ -1443,6 +1631,9 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
             fn bitxor(self, a: {inner}, b: {inner}) -> {inner} {{
                 unsafe {{ {p}_xor_{s}(a, b) }}
             }}
+            {to_u8_x86}
+            {store_rgba_x86}
+            {transpose_8x8_x86}
         }}
     "#,
         zero_lit = if elem == "f32" { "0.0f32" } else { "0.0f64" },
@@ -2241,6 +2432,62 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
         body
     };
 
+    // Native pixel pack for the f32x8 polyfill ([float32x4_t; 2] → [u8; 8]):
+    // round-to-even each half via FCVTNS, narrow i32→i16, combine, then one
+    // saturating unsigned narrow i16x8→u8x8. Mirrors the native f32x4 path and
+    // the scalar `roundevenf(x).clamp(0,255) as u8` semantics; overrides the
+    // scalar trait default LLVM does not recover to FCVTNS.
+    let to_u8_arm_poly = if elem == "f32" && lanes == 8 {
+        formatdoc! {r#"
+
+            #[inline(always)]
+            fn to_u8_bytes(self, a: {repr}) -> [u8; {lanes}] {{
+                unsafe {{
+                    let i0 = vqmovn_s32(vcvtnq_s32_f32(a[0]));
+                    let i1 = vqmovn_s32(vcvtnq_s32_f32(a[1]));
+                    let u8s = vqmovun_s16(vcombine_s16(i0, i1));
+                    core::mem::transmute(u8s)
+                }}
+            }}
+        "#}
+    } else {
+        String::new()
+    };
+
+    // Native pixel interleave for the f32x8 polyfill: shift-or pack each half
+    // ([float32x4_t; 2] -> 2x 16 RGBA bytes). Overrides the to_u8_bytes default.
+    let store_rgba_arm_poly = if elem == "f32" && lanes == 8 {
+        formatdoc! {r#"
+
+            #[inline(always)]
+            fn store_rgba_bytes(self, r: {repr}, g: {repr}, b: {repr}, a: {repr}) -> [u8; 32] {{
+                unsafe {{
+                    let lo = vdupq_n_s32(0);
+                    let hi = vdupq_n_s32(255);
+                    let r0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r[0]), lo), hi));
+                    let g0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(g[0]), lo), hi));
+                    let b0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(b[0]), lo), hi));
+                    let a0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(a[0]), lo), hi));
+                    let p0 = vorrq_u32(
+                        vorrq_u32(r0, vshlq_n_u32::<8>(g0)),
+                        vorrq_u32(vshlq_n_u32::<16>(b0), vshlq_n_u32::<24>(a0)),
+                    );
+                    let r1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r[1]), lo), hi));
+                    let g1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(g[1]), lo), hi));
+                    let b1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(b[1]), lo), hi));
+                    let a1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(a[1]), lo), hi));
+                    let p1 = vorrq_u32(
+                        vorrq_u32(r1, vshlq_n_u32::<8>(g1)),
+                        vorrq_u32(vshlq_n_u32::<16>(b1), vshlq_n_u32::<24>(a1)),
+                    );
+                    core::mem::transmute([vreinterpretq_u8_u32(p0), vreinterpretq_u8_u32(p1)])
+                }}
+            }}
+        "#}
+    } else {
+        String::new()
+    };
+
     formatdoc! {r#"
         impl {trait_name} for archmage::NeonToken {{
             type Repr = {repr};
@@ -2465,6 +2712,8 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             fn bitxor(self, a: {repr}, b: {repr}) -> {repr} {{
                 {xor_body}
             }}
+            {to_u8_arm_poly}
+            {store_rgba_arm_poly}
         }}
     "#,
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
@@ -2577,6 +2826,55 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
         body.push_str(&format!("            vgetq_lane_{ns}::<0>(pair)\n"));
         body.push_str("        }");
         body
+    };
+
+    // Native pixel pack (f32x4 only): round-to-nearest-even via FCVTNS, then two
+    // saturating narrows (i32→i16→u8). Mirrors the x86 cvtps+packs+packus path
+    // and the scalar `roundevenf(x).clamp(0,255) as u8` semantics (negatives→0,
+    // >255→255, NaN→0). Overrides the scalar trait default, which LLVM does NOT
+    // recover to FCVTNS from the libm-style roundeven call.
+    let to_u8_arm = if elem == "f32" && lanes == 4 {
+        formatdoc! {r#"
+
+            #[inline(always)]
+            fn to_u8_bytes(self, a: {repr}) -> [u8; 4] {{
+                unsafe {{
+                    let i16s = vqmovn_s32(vcvtnq_s32_f32(a));
+                    let u8s = vqmovun_s16(vcombine_s16(i16s, i16s));
+                    let bytes: [u8; 8] = core::mem::transmute(u8s);
+                    [bytes[0], bytes[1], bytes[2], bytes[3]]
+                }}
+            }}
+        "#}
+    } else {
+        String::new()
+    };
+
+    // Native pixel interleave (f32x4): round-to-even + clamp [0,255] each plane,
+    // then pack R | G<<8 | B<<16 | A<<24 per lane — each clamped byte lands in
+    // its RGBA slot, no shuffle needed. Overrides the to_u8_bytes-based default.
+    let store_rgba_arm = if elem == "f32" && lanes == 4 {
+        formatdoc! {r#"
+
+            #[inline(always)]
+            fn store_rgba_bytes(self, r: {repr}, g: {repr}, b: {repr}, a: {repr}) -> [u8; 16] {{
+                unsafe {{
+                    let lo = vdupq_n_s32(0);
+                    let hi = vdupq_n_s32(255);
+                    let ri = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r), lo), hi));
+                    let gi = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(g), lo), hi));
+                    let bi = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(b), lo), hi));
+                    let ai = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(a), lo), hi));
+                    let pixels = vorrq_u32(
+                        vorrq_u32(ri, vshlq_n_u32::<8>(gi)),
+                        vorrq_u32(vshlq_n_u32::<16>(bi), vshlq_n_u32::<24>(ai)),
+                    );
+                    core::mem::transmute(vreinterpretq_u8_u32(pixels))
+                }}
+            }}
+        "#}
+    } else {
+        String::new()
     };
 
     formatdoc! {r#"
@@ -2744,6 +3042,8 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             fn bitxor(self, a: {repr}, b: {repr}) -> {repr} {{
                 unsafe {{ vreinterpretq_{ns}_u{eb}(veorq_u{eb}(vreinterpretq_u{eb}_{ns}(a), vreinterpretq_u{eb}_{ns}(b))) }}
             }}
+            {to_u8_arm}
+            {store_rgba_arm}
         }}
     "#,
         reduce_add = reduce_pairwise(&format!("vpaddq_{ns}")),

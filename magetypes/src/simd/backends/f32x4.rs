@@ -184,4 +184,46 @@ pub trait F32x4Backend: SimdToken + Sealed + Copy + 'static {
     fn rsqrt(self, a: Self::Repr) -> Self::Repr {
         Self::rsqrt_approx(self, a)
     }
+
+    // ====== Pixel pack (f32 only) ======
+
+    /// Round-to-nearest-even then saturate each lane to `u8` (0..=255).
+    ///
+    /// Default body is scalar; `x86`/`aarch64` backends override with a
+    /// native `cvt`+saturating-`pack` sequence.
+    #[inline(always)]
+    fn to_u8_bytes(self, a: Self::Repr) -> [u8; 4] {
+        let arr = <Self as F32x4Backend>::to_array(self, a);
+        core::array::from_fn(|i| crate::nostd_math::roundevenf(arr[i]).clamp(0.0, 255.0) as u8)
+    }
+
+    /// Round/clamp 4 planar channels and interleave into RGBA bytes
+    /// (4 pixels = 16 bytes). Each channel converts via
+    /// the native `to_u8_bytes` (so x86/aarch64 get cvt+pack, not scalar
+    /// `roundevenf`); the byte interleave is left to LLVM, which recovers
+    /// it to native shuffles. A backend may still override for a tighter
+    /// fused sequence.
+    #[inline(always)]
+    fn store_rgba_bytes(
+        self,
+        r: Self::Repr,
+        g: Self::Repr,
+        b: Self::Repr,
+        a: Self::Repr,
+    ) -> [u8; 16] {
+        let rb = <Self as F32x4Backend>::to_u8_bytes(self, r);
+        let gb = <Self as F32x4Backend>::to_u8_bytes(self, g);
+        let bb = <Self as F32x4Backend>::to_u8_bytes(self, b);
+        let ab = <Self as F32x4Backend>::to_u8_bytes(self, a);
+        let mut out = [0u8; 16];
+        let mut i = 0;
+        while i < 4 {
+            out[i * 4] = rb[i];
+            out[i * 4 + 1] = gb[i];
+            out[i * 4 + 2] = bb[i];
+            out[i * 4 + 3] = ab[i];
+            i += 1;
+        }
+        out
+    }
 }

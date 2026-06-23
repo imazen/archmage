@@ -260,6 +260,28 @@ impl F32x4Backend for archmage::X64V3Token {
     fn bitxor(self, a: __m128, b: __m128) -> __m128 {
         unsafe { _mm_xor_ps(a, b) }
     }
+
+    #[inline(always)]
+    fn to_u8_bytes(self, a: __m128) -> [u8; 4] {
+        unsafe {
+            let i32s = _mm_cvtps_epi32(a);
+            let i16s = _mm_packs_epi32(i32s, i32s);
+            let u8s = _mm_packus_epi16(i16s, i16s);
+            (_mm_cvtsi128_si32(u8s) as u32).to_ne_bytes()
+        }
+    }
+
+    #[inline(always)]
+    fn store_rgba_bytes(self, r: __m128, g: __m128, b: __m128, a: __m128) -> [u8; 16] {
+        unsafe {
+            let rg = _mm_packs_epi32(_mm_cvtps_epi32(r), _mm_cvtps_epi32(g));
+            let ba = _mm_packs_epi32(_mm_cvtps_epi32(b), _mm_cvtps_epi32(a));
+            // [R0-3,G0-3,B0-3,A0-3] -> interleaved RGBA pixels 0-3.
+            let packed = _mm_packus_epi16(rg, ba);
+            let shuf = _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
+            core::mem::transmute(_mm_shuffle_epi8(packed, shuf))
+        }
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -523,6 +545,65 @@ impl F32x8Backend for archmage::X64V3Token {
     #[inline(always)]
     fn bitxor(self, a: __m256, b: __m256) -> __m256 {
         unsafe { _mm256_xor_ps(a, b) }
+    }
+
+    #[inline(always)]
+    fn to_u8_bytes(self, a: __m256) -> [u8; 8] {
+        unsafe {
+            let i32s = _mm256_cvtps_epi32(a);
+            let lo = _mm256_castsi256_si128(i32s);
+            let hi = _mm256_extracti128_si256::<1>(i32s);
+            let i16s = _mm_packs_epi32(lo, hi);
+            let u8s = _mm_packus_epi16(i16s, i16s);
+            (_mm_cvtsi128_si64(u8s) as u64).to_ne_bytes()
+        }
+    }
+
+    #[inline(always)]
+    fn store_rgba_bytes(self, r: __m256, g: __m256, b: __m256, a: __m256) -> [u8; 32] {
+        unsafe {
+            // AVX2 packs are lane-wise: lane0 holds pixels 0-3, lane1 4-7.
+            let rg = _mm256_packs_epi32(_mm256_cvtps_epi32(r), _mm256_cvtps_epi32(g));
+            let ba = _mm256_packs_epi32(_mm256_cvtps_epi32(b), _mm256_cvtps_epi32(a));
+            let packed = _mm256_packus_epi16(rg, ba);
+            let shuf = _mm256_setr_epi8(
+                0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15, 0, 4, 8, 12, 1, 5, 9, 13, 2,
+                6, 10, 14, 3, 7, 11, 15,
+            );
+            core::mem::transmute(_mm256_shuffle_epi8(packed, shuf))
+        }
+    }
+
+    #[inline(always)]
+    fn transpose_8x8_repr(self, rows: [__m256; 8]) -> [__m256; 8] {
+        unsafe {
+            let t0 = _mm256_unpacklo_ps(rows[0], rows[1]);
+            let t1 = _mm256_unpackhi_ps(rows[0], rows[1]);
+            let t2 = _mm256_unpacklo_ps(rows[2], rows[3]);
+            let t3 = _mm256_unpackhi_ps(rows[2], rows[3]);
+            let t4 = _mm256_unpacklo_ps(rows[4], rows[5]);
+            let t5 = _mm256_unpackhi_ps(rows[4], rows[5]);
+            let t6 = _mm256_unpacklo_ps(rows[6], rows[7]);
+            let t7 = _mm256_unpackhi_ps(rows[6], rows[7]);
+            let s0 = _mm256_shuffle_ps::<0x44>(t0, t2);
+            let s1 = _mm256_shuffle_ps::<0xEE>(t0, t2);
+            let s2 = _mm256_shuffle_ps::<0x44>(t1, t3);
+            let s3 = _mm256_shuffle_ps::<0xEE>(t1, t3);
+            let s4 = _mm256_shuffle_ps::<0x44>(t4, t6);
+            let s5 = _mm256_shuffle_ps::<0xEE>(t4, t6);
+            let s6 = _mm256_shuffle_ps::<0x44>(t5, t7);
+            let s7 = _mm256_shuffle_ps::<0xEE>(t5, t7);
+            [
+                _mm256_permute2f128_ps::<0x20>(s0, s4),
+                _mm256_permute2f128_ps::<0x20>(s1, s5),
+                _mm256_permute2f128_ps::<0x20>(s2, s6),
+                _mm256_permute2f128_ps::<0x20>(s3, s7),
+                _mm256_permute2f128_ps::<0x31>(s0, s4),
+                _mm256_permute2f128_ps::<0x31>(s1, s5),
+                _mm256_permute2f128_ps::<0x31>(s2, s6),
+                _mm256_permute2f128_ps::<0x31>(s3, s7),
+            ]
+        }
     }
 }
 

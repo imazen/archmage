@@ -36,6 +36,36 @@ macro_rules! w128_parity_suite {
         }
 
         #[test]
+        fn test_f32x4_to_u8() {
+            if let Some(token) = <$token_ty>::summon() {
+                // Clamp: negatives -> 0, >255 -> 255; in-range rounds to nearest.
+                let v = f32x4::from_array(token, [127.6, 255.0, -5.0, 300.0]);
+                assert_eq!(v.to_u8(), [128, 255, 0, 255]);
+                // Round-half-to-even — the shared semantic of x86 cvtps, ARM
+                // FCVTNS, and the scalar roundevenf default.
+                let v = f32x4::from_array(token, [128.5, 127.5, 0.5, 2.5]);
+                assert_eq!(v.to_u8(), [128, 128, 0, 2]);
+            }
+        }
+
+        #[test]
+        fn test_f32x4_store_4_rgba_u8() {
+            if let Some(token) = <$token_ty>::summon() {
+                let r = f32x4::from_array(token, [0.0, 64.0, 128.0, 255.0]);
+                let g = f32x4::from_array(token, [10.0, 74.0, 138.0, 245.0]);
+                let b = f32x4::from_array(token, [20.0, 84.0, 148.0, 235.0]);
+                let a = f32x4::from_array(token, [255.0, 300.0, -5.0, 128.5]);
+                // Interleaved RGBA with clamp (300->255, -5->0) + round-even (128.5->128).
+                assert_eq!(
+                    f32x4::store_4_rgba_u8(r, g, b, a),
+                    [
+                        0, 10, 20, 255, 64, 74, 84, 255, 128, 138, 148, 0, 255, 245, 235, 128
+                    ]
+                );
+            }
+        }
+
+        #[test]
         fn test_f32x4_splat() {
             if let Some(token) = <$token_ty>::summon() {
                 let v = f32x4::splat(token, 42.5);

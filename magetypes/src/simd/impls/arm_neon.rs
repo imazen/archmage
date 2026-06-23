@@ -231,6 +231,39 @@ impl F32x4Backend for archmage::NeonToken {
             ))
         }
     }
+
+    #[inline(always)]
+    fn to_u8_bytes(self, a: float32x4_t) -> [u8; 4] {
+        unsafe {
+            let i16s = vqmovn_s32(vcvtnq_s32_f32(a));
+            let u8s = vqmovun_s16(vcombine_s16(i16s, i16s));
+            let bytes: [u8; 8] = core::mem::transmute(u8s);
+            [bytes[0], bytes[1], bytes[2], bytes[3]]
+        }
+    }
+
+    #[inline(always)]
+    fn store_rgba_bytes(
+        self,
+        r: float32x4_t,
+        g: float32x4_t,
+        b: float32x4_t,
+        a: float32x4_t,
+    ) -> [u8; 16] {
+        unsafe {
+            let lo = vdupq_n_s32(0);
+            let hi = vdupq_n_s32(255);
+            let ri = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r), lo), hi));
+            let gi = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(g), lo), hi));
+            let bi = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(b), lo), hi));
+            let ai = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(a), lo), hi));
+            let pixels = vorrq_u32(
+                vorrq_u32(ri, vshlq_n_u32::<8>(gi)),
+                vorrq_u32(vshlq_n_u32::<16>(bi), vshlq_n_u32::<24>(ai)),
+            );
+            core::mem::transmute(vreinterpretq_u8_u32(pixels))
+        }
+    }
 }
 
 #[cfg(target_arch = "aarch64")]
@@ -567,6 +600,47 @@ impl F32x8Backend for archmage::NeonToken {
                     vreinterpretq_u32_f32(b[1]),
                 )),
             ]
+        }
+    }
+
+    #[inline(always)]
+    fn to_u8_bytes(self, a: [float32x4_t; 2]) -> [u8; 8] {
+        unsafe {
+            let i0 = vqmovn_s32(vcvtnq_s32_f32(a[0]));
+            let i1 = vqmovn_s32(vcvtnq_s32_f32(a[1]));
+            let u8s = vqmovun_s16(vcombine_s16(i0, i1));
+            core::mem::transmute(u8s)
+        }
+    }
+
+    #[inline(always)]
+    fn store_rgba_bytes(
+        self,
+        r: [float32x4_t; 2],
+        g: [float32x4_t; 2],
+        b: [float32x4_t; 2],
+        a: [float32x4_t; 2],
+    ) -> [u8; 32] {
+        unsafe {
+            let lo = vdupq_n_s32(0);
+            let hi = vdupq_n_s32(255);
+            let r0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r[0]), lo), hi));
+            let g0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(g[0]), lo), hi));
+            let b0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(b[0]), lo), hi));
+            let a0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(a[0]), lo), hi));
+            let p0 = vorrq_u32(
+                vorrq_u32(r0, vshlq_n_u32::<8>(g0)),
+                vorrq_u32(vshlq_n_u32::<16>(b0), vshlq_n_u32::<24>(a0)),
+            );
+            let r1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r[1]), lo), hi));
+            let g1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(g[1]), lo), hi));
+            let b1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(b[1]), lo), hi));
+            let a1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(a[1]), lo), hi));
+            let p1 = vorrq_u32(
+                vorrq_u32(r1, vshlq_n_u32::<8>(g1)),
+                vorrq_u32(vshlq_n_u32::<16>(b1), vshlq_n_u32::<24>(a1)),
+            );
+            core::mem::transmute([vreinterpretq_u8_u32(p0), vreinterpretq_u8_u32(p1)])
         }
     }
 }
