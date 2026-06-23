@@ -19,12 +19,6 @@ jobs:
   semver:
     name: Semver (${{ matrix.crate }})
     runs-on: ubuntu-latest
-    # TEMPORARY for the 0.9.27 release: the concrete-type retirement + prelude
-    # reshape are a deliberate breaking change shipped on the 0.9 chain (narrow
-    # break, 0 consumers). semver-checks correctly flags it against the 0.9.26
-    # baseline, so make the job advisory just for this release. REVERT this line
-    # after 0.9.27 publishes — once the baseline is 0.9.27 the gate passes again.
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
