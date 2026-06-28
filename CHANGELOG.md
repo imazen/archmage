@@ -13,6 +13,10 @@
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 - Make `w512` non-default in magetypes — users who need 512-bit types add `features = ["w512"]`; saves ~25% build time for the majority who don't
 
+### Documentation
+
+- README overhaul for both `archmage` and `magetypes`, conformed to the zen README conventions: badge row now includes `&label=CI`, an MSRV 1.89 badge, and a `license` → `#license` anchor (all badges linked); added a `## Quick start` section (copy-paste `#[arcane]` + `incant!` runtime dispatch for archmage, `#[magetypes]` for magetypes) and made every body link absolute. Split each crate's crates.io README into a generated, badge-free `README.crates.md` (`readme = "README.crates.md"`, `include` updated) so version-pinned crates.io pages no longer show HEAD-reflecting badges, while the GitHub READMEs keep the full row. Replaced the hand-maintained crosslink footer with the canonical registry-rendered footer (repo links), placed last after License.
+
 ## [0.9.27] - 2026-06-23
 
 ### Added

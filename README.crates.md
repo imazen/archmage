@@ -1,4 +1,6 @@
-# archmage [![CI](https://img.shields.io/github/actions/workflow/status/imazen/archmage/ci.yml?style=flat-square&label=CI)](https://github.com/imazen/archmage/actions/workflows/ci.yml) [![crates.io](https://img.shields.io/crates/v/archmage?style=flat-square)](https://crates.io/crates/archmage) [![lib.rs](https://img.shields.io/crates/v/archmage?style=flat-square&label=lib.rs&color=blue)](https://lib.rs/crates/archmage) [![docs.rs](https://img.shields.io/docsrs/archmage?style=flat-square)](https://docs.rs/archmage) [![MSRV](https://img.shields.io/badge/MSRV-1.89-blue?style=flat-square)](https://github.com/imazen/archmage/blob/main/MSRV.md) [![license](https://img.shields.io/crates/l/archmage?style=flat-square)](#license)
+<!-- GENERATED FROM README.md by zenutils gen-readme-crates.sh — DO NOT EDIT. -->
+
+# archmage
 
 **[Browse 12,000+ SIMD Intrinsics →](https://imazen.github.io/archmage/intrinsics/)** · [Docs](https://imazen.github.io/archmage/) · [Magetypes](https://imazen.github.io/archmage/magetypes/) · [API Docs](https://docs.rs/archmage)
 
