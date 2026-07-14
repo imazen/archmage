@@ -128,13 +128,17 @@ fn f64_recip_rsqrt_is_full_precision() {
 
     #[cfg(target_arch = "x86_64")]
     {
-        use archmage::{X64V3Token, X64V4Token};
+        use archmage::X64V3Token;
         let v3 = X64V3Token::summon().expect("x86_64 baseline");
         check_f64_full!(f64x2, v3, X64V3Token, 2, "f64x2<V3>", xs);
         check_f64_full!(f64x4, v3, X64V3Token, 4, "f64x4<V3>", xs);
         check_f64_full!(f64x8, v3, X64V3Token, 8, "f64x8<V3 polyfill>", xs);
-        if let Some(v4) = X64V4Token::summon() {
-            check_f64_full!(f64x8, v4, X64V4Token, 8, "f64x8<V4 native>", xs);
+        // The native f64x8 backend for X64V4Token only exists with the
+        // avx512 feature (impls/x86_v4.rs is cfg-gated on it); without the
+        // gate this test does not even compile under default features.
+        #[cfg(feature = "avx512")]
+        if let Some(v4) = archmage::X64V4Token::summon() {
+            check_f64_full!(f64x8, v4, archmage::X64V4Token, 8, "f64x8<V4 native>", xs);
         }
     }
     #[cfg(target_arch = "aarch64")]
