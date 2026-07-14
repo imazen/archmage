@@ -15,6 +15,7 @@ mod expand_gen;
 mod intrinsics_browser;
 mod registry;
 mod simd_types;
+mod soundness;
 mod token_gen;
 
 use intrinsics_browser::parse_csv_line;
@@ -58,10 +59,13 @@ fn categorize_intrinsic(name: &str) -> &'static str {
 // ============================================================================
 
 /// Entry from the intrinsics CSV database.
-struct IntrinsicEntry {
-    features: String,
+pub(crate) struct IntrinsicEntry {
+    /// Architecture column from the CSV: `x86`, `x86_64`, `arm_shared`,
+    /// `aarch64`, or `wasm32`.
+    pub(crate) arch: String,
+    pub(crate) features: String,
     #[allow(dead_code)]
-    is_unsafe: bool,
+    pub(crate) is_unsafe: bool,
 }
 
 /// Load the intrinsic database from docs/intrinsics/complete_intrinsics.csv.
@@ -71,7 +75,7 @@ struct IntrinsicEntry {
 /// aarch64 specific, and wasm32 — including pub use re-exports.
 ///
 /// Format: arch,name,features,unsafe,stability,file
-fn load_intrinsic_database() -> Result<HashMap<String, IntrinsicEntry>> {
+pub(crate) fn load_intrinsic_database() -> Result<HashMap<String, IntrinsicEntry>> {
     let mut db = HashMap::new();
 
     let csv_path = PathBuf::from("docs/intrinsics/complete_intrinsics.csv");
@@ -84,12 +88,14 @@ fn load_intrinsic_database() -> Result<HashMap<String, IntrinsicEntry>> {
         }
         let fields = parse_csv_line(line);
         if fields.len() >= 4 {
+            let arch = fields[0].clone();
             let name = fields[1].clone();
             let features = fields[2].clone();
             let is_unsafe = fields[3] == "True";
             db.insert(
                 name,
                 IntrinsicEntry {
+                    arch,
                     features,
                     is_unsafe,
                 },
@@ -107,230 +113,11 @@ fn load_intrinsic_database() -> Result<HashMap<String, IntrinsicEntry>> {
 // ============================================================================
 // Magetypes Validation
 // ============================================================================
-
-// File-to-token mappings now come from token-registry.toml [[magetypes_file]] entries.
-
-/// Validate that all intrinsic calls in magetypes generated code are safe
-/// under their gating token.
-///
-/// Every intrinsic found in generated code MUST exist in complete_intrinsics.csv.
-/// If an intrinsic is missing from the CSV, that's an error — the CSV must be
-/// regenerated with `python3 xtask/extract_intrinsics.py`.
-#[allow(dead_code)]
-fn validate_magetypes() -> Result<()> {
-    let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
-    validate_magetypes_with_registry(&reg)
-}
-
-fn validate_magetypes_with_registry(reg: &registry::Registry) -> Result<()> {
-    println!("=== Magetypes Safety Validation ===\n");
-
-    let db = load_intrinsic_database()?;
-    println!("Loaded {} intrinsics from CSV database", db.len());
-
-    // Compile regex patterns for intrinsic extraction
-    // x86: _mm_*, _mm256_*, _mm512_* followed by '(' or '::<' (function call or turbofish)
-    let x86_re = Regex::new(r"\b(_mm(?:256|512)?_\w+)\s*(?:\(|::<)").expect("invalid x86 regex");
-    // ARM NEON: v*q?_* patterns (NEON intrinsics all start with 'v')
-    let arm_re = Regex::new(
-        r"\b(v(?:abs|add|and|bic|bsl|ceq|cge|cgt|cle|clt|cnt|cvt|div|dup|eor|ext|fma|fms|get|hadd|ld[1234]|max|min|ml[as]|mov|mul|mvn|neg|not|orn|orr|padd|pmax|pmin|qadd|qsub|reinterpret|rev|rnd|rsqrte|set|shl|shr|sqrt|st[1234]|sub|tbl|tbx|trn|uzp|zip)\w*)\s*\("
-    ).expect("invalid arm regex");
-    // WASM SIMD128: f32x4_*, i32x4_*, v128_*, u8x16_*, etc.
-    let wasm_re = Regex::new(
-        r"\b((?:f32x4|f64x2|i8x16|i16x8|i32x4|i64x2|u8x16|u16x8|u32x4|u64x2|v128)_\w+)\s*[\(<]",
-    )
-    .expect("invalid wasm regex");
-
-    // Regex to detect function signatures with token parameters
-    let fn_sig_re =
-        Regex::new(r"pub fn \w+[^{]*\b(X64V4Token|Avx512Token|X64V4xToken|Avx512Fp16Token)\b")
-            .expect("invalid fn sig regex");
-
-    let simd_dir = PathBuf::from("magetypes/src/simd");
-    let mut errors: Vec<String> = Vec::new();
-    let mut validated = 0usize;
-
-    for mapping in &reg.magetypes_file {
-        let file_path = simd_dir.join(&mapping.rel_path);
-        if !file_path.exists() {
-            errors.push(format!("File not found: {}", file_path.display()));
-            continue;
-        }
-
-        let content = fs::read_to_string(&file_path)
-            .with_context(|| format!("Failed to read {}", file_path.display()))?;
-
-        let file_token = &mapping.token;
-        let file_features = reg.features_for(file_token).unwrap_or_default();
-        let file_provided: HashSet<&str> = file_features.into_iter().collect();
-
-        // Select regex based on architecture
-        let re = match mapping.arch.as_str() {
-            "x86" => &x86_re,
-            "arm" => &arm_re,
-            "wasm" => &wasm_re,
-            _ => continue,
-        };
-
-        // Extract intrinsics with context-aware token detection
-        // For each intrinsic, find which token gates it (file-level or method-level)
-        let mut intrinsics_with_tokens: BTreeMap<String, String> = BTreeMap::new();
-
-        // Split content into lines for context tracking
-        let lines: Vec<&str> = content.lines().collect();
-        let mut current_fn_token: Option<&str> = None;
-        let mut brace_depth = 0i32;
-
-        for line in &lines {
-            // Track brace depth to know when we exit a function
-            for ch in line.chars() {
-                match ch {
-                    '{' => brace_depth += 1,
-                    '}' => {
-                        brace_depth -= 1;
-                        if brace_depth <= 1 {
-                            // Exited a function, reset to file-level token
-                            current_fn_token = None;
-                        }
-                    }
-                    _ => {}
-                }
-            }
-
-            // Check if this line starts a function with a higher-level token
-            if let Some(cap) = fn_sig_re.captures(line) {
-                current_fn_token = Some(cap.get(1).unwrap().as_str());
-            }
-
-            // Extract intrinsics from this line
-            for cap in re.captures_iter(line) {
-                let intrinsic = cap[1].to_string();
-                let effective_token = current_fn_token.unwrap_or(file_token.as_str());
-                intrinsics_with_tokens
-                    .entry(intrinsic)
-                    .or_insert_with(|| effective_token.to_string());
-            }
-        }
-
-        println!(
-            "{}: {} unique intrinsics, token: {}",
-            mapping.rel_path,
-            intrinsics_with_tokens.len(),
-            file_token
-        );
-
-        for (intrinsic, effective_token) in &intrinsics_with_tokens {
-            // Get features for the effective token (could be method-level or file-level)
-            let provided_features: HashSet<&str> = if effective_token == file_token {
-                file_provided.clone()
-            } else {
-                reg.features_for(effective_token)
-                    .unwrap_or_default()
-                    .into_iter()
-                    .collect()
-            };
-            // 1. Width-prefix validation (x86 only — catches wrong-width intrinsics)
-            if mapping.arch == "x86" {
-                let intrinsic_width = if intrinsic.starts_with("_mm512_") {
-                    3u8
-                } else if intrinsic.starts_with("_mm256_") {
-                    2
-                } else if intrinsic.starts_with("_mm_") {
-                    1
-                } else {
-                    0
-                };
-
-                let file_width = if mapping.rel_path.contains("w512") {
-                    3u8
-                } else if mapping.rel_path.contains("w256") {
-                    2
-                } else if mapping.rel_path.contains("w128") {
-                    1
-                } else {
-                    0
-                };
-
-                if intrinsic_width > 0 && file_width > 0 && intrinsic_width > file_width {
-                    errors.push(format!(
-                        "WIDTH MISMATCH: {} in {} — intrinsic is {}bit but file only provides {}bit",
-                        intrinsic,
-                        mapping.rel_path,
-                        match intrinsic_width {
-                            1 => "128",
-                            2 => "256",
-                            3 => "512",
-                            _ => "?",
-                        },
-                        match file_width {
-                            1 => "128",
-                            2 => "256",
-                            3 => "512",
-                            _ => "?",
-                        }
-                    ));
-                    continue;
-                }
-            }
-
-            // 2. CSV database lookup — REQUIRED for every intrinsic
-            match db.get(intrinsic.as_str()) {
-                Some(entry) => {
-                    let required: HashSet<&str> =
-                        entry.features.split(',').map(|s| s.trim()).collect();
-                    let missing: Vec<&str> = required
-                        .iter()
-                        .copied()
-                        .filter(|f| !provided_features.contains(*f))
-                        .collect();
-
-                    if missing.is_empty() {
-                        validated += 1;
-                    } else {
-                        errors.push(format!(
-                            "FEATURE MISMATCH: {} in {} requires [{}] but {} only provides [{}] — missing: {:?}",
-                            intrinsic,
-                            mapping.rel_path,
-                            entry.features,
-                            effective_token,
-                            provided_features.iter().copied().collect::<BTreeSet<_>>().iter().copied().collect::<Vec<_>>().join(", "),
-                            missing
-                        ));
-                    }
-                }
-                None => {
-                    errors.push(format!(
-                        "UNKNOWN INTRINSIC: {} in {} — not found in complete_intrinsics.csv. \
-                         Regenerate CSV: python3 xtask/extract_intrinsics.py > docs/intrinsics/complete_intrinsics.csv",
-                        intrinsic, mapping.rel_path
-                    ));
-                }
-            }
-        }
-    }
-
-    // Summary
-    println!("\n=== Validation Summary ===");
-    println!(
-        "  Validated: {} intrinsic calls (all CSV-verified)",
-        validated
-    );
-    println!("  Errors:    {}", errors.len());
-
-    if !errors.is_empty() {
-        println!("\n=== ERRORS ===");
-        for e in &errors {
-            println!("  {}", e);
-        }
-    }
-
-    if errors.is_empty() {
-        println!("\nAll validations passed!");
-        Ok(())
-    } else {
-        bail!("Validation failed with {} errors", errors.len())
-    }
-}
+//
+// Intrinsic-vs-token verification lives in `soundness.rs` (structure-aware
+// scanner over impl-for-token blocks, #[target_feature] fns, and token-typed
+// parameters). The former registry-file-mapping-driven validators were removed
+// after the impls refactor emptied their file list, making them pass vacuously.
 
 // ============================================================================
 // summon() / summon() Feature Verification
@@ -986,171 +773,10 @@ fn generate_reference_docs_new() -> Result<()> {
 // Compile-Time Intrinsic Soundness Verification
 // ============================================================================
 
-/// Verify magetypes intrinsic soundness via static analysis.
-///
-/// This performs rigorous verification by:
-/// 1. Extracting all intrinsic calls from magetypes generated code
-/// 2. Looking up each intrinsic's required features in complete_intrinsics.csv
-/// 3. Comparing against the features provided by the gating token
-///
-/// Token gating can be at file-level OR method-level:
-/// - File-level: the token specified in token-registry.toml for that file
-/// - Method-level: if a method takes a higher-level token as parameter (e.g., X64V4Token),
-///   intrinsics inside that method are checked against that token's features
-///
-/// If any intrinsic requires features not provided by its gating token, that's a soundness error.
-/// This is deterministic static analysis - no approximation or guessing.
+/// Verify intrinsic soundness — see `soundness.rs` for the model and rules.
 fn verify_intrinsic_soundness() -> Result<()> {
-    println!("=== Magetypes Intrinsic Soundness Verification ===\n");
-    println!("Method: Static analysis against stdarch intrinsics database\n");
-
     let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
-    let db = load_intrinsic_database()?;
-
-    println!("Loaded {} intrinsics from stdarch database", db.len());
-
-    // Intrinsic extraction regexes
-    let x86_re = Regex::new(r"\b(_mm(?:256|512)?_\w+)\s*(?:\(|::<)").expect("invalid x86 regex");
-    let arm_re = Regex::new(
-        r"\b(v(?:abs|add|and|bic|bsl|ceq|cge|cgt|cle|clt|cnt|cvt|div|dup|eor|ext|fma|fms|get|hadd|ld[1234]|max|min|ml[as]|mov|mul|mvn|neg|not|orn|orr|padd|pmax|pmin|qadd|qsub|reinterpret|rev|rnd|rsqrte|set|shl|shr|sqrt|st[1234]|sub|tbl|tbx|trn|uzp|zip)\w*)\s*\("
-    ).expect("invalid arm regex");
-    let wasm_re = Regex::new(
-        r"\b((?:f32x4|f64x2|i8x16|i16x8|i32x4|i64x2|u8x16|u16x8|u32x4|u64x2|v128)_\w+)\s*[\(<]",
-    )
-    .expect("invalid wasm regex");
-
-    // Regex to detect method-level token parameters (higher-level tokens used as function args)
-    // Handles both `X64V4Token` and `archmage::X64V4Token` patterns
-    let method_token_re = Regex::new(
-        r"pub fn \w+[^{]*(?:archmage::)?(X64V4Token|Avx512Token|X64V4xToken|Avx512Fp16Token|Server64)\b"
-    ).expect("invalid method token regex");
-
-    let simd_dir = PathBuf::from("magetypes/src/simd");
-    let mut errors: Vec<String> = Vec::new();
-    let mut verified_count = 0usize;
-    let mut unknown_count = 0usize;
-
-    for mapping in &reg.magetypes_file {
-        let file_path = simd_dir.join(&mapping.rel_path);
-        if !file_path.exists() {
-            continue;
-        }
-
-        let content = fs::read_to_string(&file_path)?;
-        let file_token_features = reg.features_for(&mapping.token).unwrap_or_default();
-
-        // Select regex based on architecture
-        let re = match mapping.arch.as_str() {
-            "x86" => &x86_re,
-            "arm" => &arm_re,
-            "wasm" => &wasm_re,
-            _ => continue,
-        };
-
-        // Process line by line to track method-level token context
-        let lines: Vec<&str> = content.lines().collect();
-        let mut current_method_token: Option<&str> = None;
-        let mut brace_depth = 0i32;
-        let mut method_start_depth = 0i32;
-
-        for line in &lines {
-            // Check if this line starts a method with a higher-level token parameter
-            // Do this BEFORE processing braces so we capture the depth correctly
-            if let Some(cap) = method_token_re.captures(line) {
-                current_method_token = Some(cap.get(1).unwrap().as_str());
-                // The method body starts after this line's opening brace
-                // Count braces on this line to get the starting depth
-                let line_opens: i32 = line.chars().filter(|&c| c == '{').count() as i32;
-                let line_closes: i32 = line.chars().filter(|&c| c == '}').count() as i32;
-                method_start_depth = brace_depth + line_opens - line_closes;
-            }
-
-            // Track brace depth for this line
-            for ch in line.chars() {
-                match ch {
-                    '{' => brace_depth += 1,
-                    '}' => {
-                        brace_depth -= 1;
-                        // Reset when we exit the method (depth goes below start depth)
-                        if brace_depth < method_start_depth && current_method_token.is_some() {
-                            current_method_token = None;
-                        }
-                    }
-                    _ => {}
-                }
-            }
-
-            // Extract intrinsics from this line
-            for cap in re.captures_iter(line) {
-                let intrinsic = &cap[1];
-
-                // Determine which token's features to use
-                let effective_token = current_method_token.unwrap_or(&mapping.token);
-                let effective_features = if current_method_token.is_some() {
-                    reg.features_for(effective_token).unwrap_or_default()
-                } else {
-                    file_token_features.clone()
-                };
-                let features_set: HashSet<&str> = effective_features.iter().copied().collect();
-
-                // Look up intrinsic in database
-                if let Some(entry) = db.get(intrinsic) {
-                    // Parse the intrinsic's required features
-                    let required: HashSet<&str> = entry
-                        .features
-                        .split(',')
-                        .map(|s| s.trim())
-                        .filter(|s| !s.is_empty())
-                        .collect();
-
-                    // Check if token provides all required features
-                    let missing: Vec<&&str> = required
-                        .iter()
-                        .filter(|f| !features_set.contains(*f))
-                        .collect();
-
-                    if !missing.is_empty() {
-                        errors.push(format!(
-                            "  {} in {} ({}): requires {:?}, MISSING: {:?}",
-                            intrinsic, mapping.rel_path, effective_token, required, missing
-                        ));
-                    } else {
-                        verified_count += 1;
-                    }
-                } else {
-                    unknown_count += 1;
-                }
-            }
-        }
-    }
-
-    println!("\nResults:");
-    println!("  ✓ Verified: {} intrinsic calls", verified_count);
-    if unknown_count > 0 {
-        println!("  ? Unknown: {} (not in stdarch database)", unknown_count);
-    }
-
-    if errors.is_empty() {
-        println!("\n✓ Soundness verification PASSED");
-        println!(
-            "  All {} verified intrinsics are valid for their gating tokens.",
-            verified_count
-        );
-        Ok(())
-    } else {
-        println!("\n✗ Soundness verification FAILED");
-        println!(
-            "  {} intrinsic(s) use features not provided by their gating token:\n",
-            errors.len()
-        );
-        for err in &errors {
-            eprintln!("{}", err);
-        }
-        bail!(
-            "Soundness verification FAILED - {} intrinsics use features beyond their gating token",
-            errors.len()
-        )
-    }
+    soundness::verify(&reg)
 }
 
 /// Run tests under Miri to detect undefined behavior.
@@ -1231,7 +857,7 @@ fn main() -> Result<()> {
         "generate" => generate_all()?,
         "validate" => {
             let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
-            validate_magetypes_with_registry(&reg)?;
+            soundness::verify(&reg)?;
             validate_summon(&reg)?;
         }
         "validate-registry" => validate_registry()?,
@@ -1714,7 +1340,7 @@ pub(crate) use registry::*;
 
     // Run safety validation on generated code (hard failure)
     println!("\n=== Validating Magetypes Safety ===");
-    validate_magetypes_with_registry(&reg)?;
+    soundness::verify(&reg)?;
 
     // Verify summon() implementations match registry
     println!();
@@ -2140,11 +1766,11 @@ fn run_ci() -> Result<()> {
     println!("  ✓ Working tree is clean");
     println!("└─ Worktree check passed ────────────────────────────────────────────┘\n");
 
-    // Step 3-4: Validation (already done in generate_all, but let's be explicit)
-    println!("┌─ Step 3/17: Validating magetypes safety ────────────────────────────┐");
+    // Step 3: Intrinsic soundness verification (structure-aware scanner)
+    println!("┌─ Step 3/17: Verifying intrinsic soundness ─────────────────────────┐");
     let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
-    validate_magetypes_with_registry(&reg)?;
-    println!("└─ Magetypes validation passed ──────────────────────────────────────┘\n");
+    soundness::verify(&reg)?;
+    println!("└─ Soundness verification passed ────────────────────────────────────┘\n");
 
     println!("┌─ Step 4/17: Validating summon() features ──────────────────────────┐");
     validate_summon(&reg)?;
@@ -2155,10 +1781,18 @@ fn run_ci() -> Result<()> {
     check_api_parity(true)?;
     println!("└─ Parity check passed ──────────────────────────────────────────────┘\n");
 
-    // Step 6: Soundness verification
-    println!("┌─ Step 6/17: Verifying intrinsic soundness ─────────────────────────┐");
-    verify_intrinsic_soundness()?;
-    println!("└─ Soundness verification passed ────────────────────────────────────┘\n");
+    // Step 6: xtask self-tests — the soundness scanner's own regression
+    // tests (planted violations must fail, gated code must pass) plus the
+    // registry tests. Without this step a rotted checker passes silently.
+    println!("┌─ Step 6/17: Testing the verifiers (cargo test -p xtask) ───────────┐");
+    let xtask_tests = std::process::Command::new("cargo")
+        .args(["test", "-p", "xtask"])
+        .status()
+        .context("Failed to run xtask self-tests")?;
+    if !xtask_tests.success() {
+        bail!("xtask self-tests failed — the verification tooling itself is broken");
+    }
+    println!("└─ Verifier self-tests passed ───────────────────────────────────────┘\n");
 
     // Step 7: Clippy
     println!("┌─ Step 7/17: Running clippy ────────────────────────────────────────┐");

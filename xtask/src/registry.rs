@@ -20,10 +20,6 @@ pub struct Registry {
     #[serde(rename = "trait")]
     pub traits: Vec<TraitDef>,
     pub width_namespace: Vec<WidthNamespace>,
-    // Empty since the concrete per-platform type files were retired (every type
-    // is now generic, validated by the static `soundness` check instead).
-    #[serde(default)]
-    pub magetypes_file: Vec<MagetypesFile>,
     #[serde(default)]
     pub polyfill_w256: Vec<PolyfillW256>,
     #[serde(default)]
@@ -111,14 +107,6 @@ pub struct WidthNamespace {
     pub cargo_feature: Option<String>,
 }
 
-/// A magetypes file-to-token validation mapping.
-#[derive(Debug, Deserialize)]
-pub struct MagetypesFile {
-    pub rel_path: String,
-    pub token: String,
-    pub arch: String,
-}
-
 /// A polyfill_w256 platform configuration.
 #[derive(Debug, Deserialize)]
 pub struct PolyfillW256 {
@@ -167,6 +155,7 @@ impl Registry {
     ///
     /// For tokens, returns the token's features. For traits, returns the
     /// trait's features (preferring x86_features for x86 width traits).
+    #[allow(dead_code)] // exercised by tests; kept as registry API
     pub fn features_for(&self, name: &str) -> Option<Vec<&str>> {
         // Try tokens first (including aliases)
         if let Some(token) = self.find_token(name) {
@@ -214,7 +203,6 @@ impl Registry {
         self.validate_trait_references()?;
         self.validate_token_trait_features()?;
         self.validate_width_namespace_tokens()?;
-        self.validate_magetypes_file_tokens()?;
         self.validate_polyfill_tokens()?;
         self.validate_token_parents()?;
         Ok(())
@@ -319,19 +307,6 @@ impl Registry {
         Ok(())
     }
 
-    fn validate_magetypes_file_tokens(&self) -> Result<()> {
-        for mf in &self.magetypes_file {
-            if self.find_token(&mf.token).is_none() {
-                bail!(
-                    "Magetypes file '{}' references unknown token: {}",
-                    mf.rel_path,
-                    mf.token
-                );
-            }
-        }
-        Ok(())
-    }
-
     fn validate_polyfill_tokens(&self) -> Result<()> {
         for p in &self.polyfill_w256 {
             if self.find_token(&p.token).is_none() {
@@ -427,7 +402,6 @@ impl std::fmt::Display for Registry {
             writeln!(f, "    {}", t.name)?;
         }
         writeln!(f, "  Width namespaces: {}", self.width_namespace.len())?;
-        writeln!(f, "  Magetypes files: {}", self.magetypes_file.len())?;
         writeln!(
             f,
             "  Polyfill platforms: {} w256 + {} w512",
@@ -963,12 +937,6 @@ mod tests {
             4,
             "Expected 4 width namespaces"
         );
-        assert_eq!(
-            registry.magetypes_file.len(),
-            5,
-            "Expected 5 magetypes file mappings"
-        );
-
         // Spot-check X64V3Token
         let v3 = registry
             .find_token("X64V3Token")
