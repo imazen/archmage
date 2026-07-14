@@ -1,6 +1,28 @@
 //! Backend implementations for NeonToken (AArch64 NEON).
 //!
 //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
+//!
+//! # Safety (audit contract for every `unsafe` block in this file)
+//!
+//! All `unsafe` blocks below are inside `impl ... for NeonToken`
+//! blocks and fall into exactly three shapes:
+//!
+//! 1. **Value-based intrinsic calls** — sound because the receiver
+//!    token is a proof the CPU supports the intrinsic's required
+//!    features (`cargo xtask soundness` statically verifies every
+//!    intrinsic's feature set against the impl's token on every
+//!    generate/CI run; tokens are only obtainable via runtime
+//!    detection).
+//! 2. **Loads/stores through references** (`as_ptr`/`as_mut_ptr` on
+//!    sized arrays) — sound because the reference guarantees a valid,
+//!    correctly-sized allocation, and the unaligned-tolerant
+//!    instructions are used.
+//! 3. **`transmute` between fixed-size arrays and vector types** —
+//!    sound because both sides are plain-old-data of equal size
+//!    (compile-time checked by `transmute` itself).
+//!
+//! Anything outside these shapes must carry its own `// SAFETY:`
+//! comment and be added to the audit notes in `docs/SOUNDNESS.md`.
 
 #[cfg(target_arch = "aarch64")]
 use core::arch::aarch64::*;

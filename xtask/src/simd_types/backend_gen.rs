@@ -707,9 +707,12 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
 
         /// Backend implementation for {lanes}-lane {elem} SIMD vectors.
         ///
-        /// Trait methods are **associated functions** (no `self`/token parameter).
-        /// The implementing type `Self` (a token type) determines which platform
-        /// intrinsics are used. All methods are `#[inline(always)]` in implementations.
+        /// Trait methods take `self` (the token) as receiver — the token value
+        /// is the proof of CPU support, and requiring it as the receiver means
+        /// the methods cannot be invoked via UFCS without holding one. The
+        /// implementing type `Self` (a token type) determines which platform
+        /// intrinsics are used. All methods are `#[inline(always)]` in
+        /// implementations.
         ///
         /// # Sealed
         ///
@@ -1024,6 +1027,39 @@ fn generate_impls_mod() -> String {
 
 /// Generate the x86 V4 (native AVX-512) implementation file.
 ///
+/// The uniform safety contract emitted at the top of every generated
+/// backend-impls file that calls intrinsics. Every `unsafe` block in these
+/// files shares the same one-line justification, so it is stated once per
+/// file instead of ~500 times per file; the block-level obligations that
+/// differ (references for loads/stores, layout for transmutes) are named
+/// here too. `cargo xtask soundness` mechanically re-verifies the
+/// feature-subset claim on every run.
+fn impls_safety_contract(token_desc: &str) -> String {
+    formatdoc! {r#"
+        //! # Safety (audit contract for every `unsafe` block in this file)
+        //!
+        //! All `unsafe` blocks below are inside `impl ... for {token_desc}`
+        //! blocks and fall into exactly three shapes:
+        //!
+        //! 1. **Value-based intrinsic calls** — sound because the receiver
+        //!    token is a proof the CPU supports the intrinsic's required
+        //!    features (`cargo xtask soundness` statically verifies every
+        //!    intrinsic's feature set against the impl's token on every
+        //!    generate/CI run; tokens are only obtainable via runtime
+        //!    detection).
+        //! 2. **Loads/stores through references** (`as_ptr`/`as_mut_ptr` on
+        //!    sized arrays) — sound because the reference guarantees a valid,
+        //!    correctly-sized allocation, and the unaligned-tolerant
+        //!    instructions are used.
+        //! 3. **`transmute` between fixed-size arrays and vector types** —
+        //!    sound because both sides are plain-old-data of equal size
+        //!    (compile-time checked by `transmute` itself).
+        //!
+        //! Anything outside these shapes must carry its own `// SAFETY:`
+        //! comment and be added to the audit notes in `docs/SOUNDNESS.md`.
+    "#}
+}
+
 /// Contains W512 backend impls for both X64V4Token and X64V4xToken,
 /// plus Modern-specific extension impls (popcnt).
 /// W128 and W256 types use X64V3Token (V4 downcasts to V3 for narrower widths).
@@ -1032,6 +1068,7 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
         generate_popcnt_impls, generate_x86_modern_w512_impls, generate_x86_v4_w512_impls,
     };
 
+    let safety = impls_safety_contract("X64V4Token / X64V4xToken");
     let mut code = formatdoc! {r#"
         //! Backend implementations for X64V4Token and X64V4xToken (native AVX-512).
         //!
@@ -1043,7 +1080,8 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
         //! W128 and W256 types use X64V3Token (V4 downcasts to V3 for narrower widths).
         //!
         //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
-
+        //!
+        {safety}
         #[cfg(target_arch = "x86_64")]
         use core::arch::x86_64::*;
 
@@ -1134,11 +1172,13 @@ fn generate_x86_v4_f32x16_convert(token: &str) -> String {
 // ============================================================================
 
 fn generate_x86_impls(types: &[FloatVecType], token: &str, max_width: usize) -> String {
+    let safety = impls_safety_contract(token);
     let mut code = formatdoc! {r#"
         //! Backend implementations for {token} (x86-64).
         //!
         //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
-
+        //!
+        {safety}
         #[cfg(target_arch = "x86_64")]
         use core::arch::x86_64::*;
 
@@ -2284,11 +2324,13 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
 // ============================================================================
 
 fn generate_neon_impls(types: &[FloatVecType]) -> String {
+    let safety = impls_safety_contract("NeonToken");
     let mut code = formatdoc! {r#"
         //! Backend implementations for NeonToken (AArch64 NEON).
         //!
         //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
-
+        //!
+        {safety}
         #[cfg(target_arch = "aarch64")]
         use core::arch::aarch64::*;
 
@@ -3057,11 +3099,13 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
 // ============================================================================
 
 fn generate_wasm_impls(types: &[FloatVecType]) -> String {
+    let safety = impls_safety_contract("Wasm128Token");
     let mut code = formatdoc! {r#"
         //! Backend implementations for Wasm128Token (WebAssembly SIMD).
         //!
         //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
-
+        //!
+        {safety}
         #[cfg(target_arch = "wasm32")]
         use core::arch::wasm32::*;
 
@@ -3533,9 +3577,12 @@ fn generate_i32_backend_trait(ty: &I32VecType) -> String {
 
         /// Backend implementation for {lanes}-lane i32 SIMD vectors.
         ///
-        /// Trait methods are **associated functions** (no `self`/token parameter).
-        /// The implementing type `Self` (a token type) determines which platform
-        /// intrinsics are used. All methods are `#[inline(always)]` in implementations.
+        /// Trait methods take `self` (the token) as receiver — the token value
+        /// is the proof of CPU support, and requiring it as the receiver means
+        /// the methods cannot be invoked via UFCS without holding one. The
+        /// implementing type `Self` (a token type) determines which platform
+        /// intrinsics are used. All methods are `#[inline(always)]` in
+        /// implementations.
         ///
         /// # Sealed
         ///
@@ -5687,9 +5734,12 @@ fn generate_u32_backend_trait(ty: &U32VecType) -> String {
 
         /// Backend implementation for {lanes}-lane u32 SIMD vectors.
         ///
-        /// Trait methods are **associated functions** (no `self`/token parameter).
-        /// The implementing type `Self` (a token type) determines which platform
-        /// intrinsics are used. All methods are `#[inline(always)]` in implementations.
+        /// Trait methods take `self` (the token) as receiver — the token value
+        /// is the proof of CPU support, and requiring it as the receiver means
+        /// the methods cannot be invoked via UFCS without holding one. The
+        /// implementing type `Self` (a token type) determines which platform
+        /// intrinsics are used. All methods are `#[inline(always)]` in
+        /// implementations.
         ///
         /// # Sealed
         ///

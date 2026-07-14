@@ -50,6 +50,11 @@
 //!   (`Default`/serde/bytemuck), or backend-trait methods without a `self`
 //!   receiver (which would allow calling intrinsics via UFCS without
 //!   holding a token).
+//! - **SAFETY-COMMENT DISCIPLINE** — every `unsafe {` block outside the
+//!   generated backend impls must carry an adjacent `// SAFETY:` comment
+//!   (see [`safety_comment_rules`]); the generated impls files must carry
+//!   their file-header audit contract instead (one uniform invariant,
+//!   ~2000 identical blocks).
 //! - **VACUOUS PASS** — the total number of verified calls fell below
 //!   [`MIN_VERIFIED_CALLS`], or a file listed in [`REQUIRED_FILE_FLOORS`]
 //!   produced fewer verified calls than its floor. This guards against the
@@ -320,6 +325,7 @@ impl<'r> Scanner<'r> {
         }
 
         structural_rules(rel, &text, &mut out.errors);
+        safety_comment_rules(rel, raw, &mut out.errors);
         out
     }
 
@@ -414,6 +420,70 @@ impl<'r> Scanner<'r> {
         }
 
         spans
+    }
+}
+
+/// SAFETY-comment discipline, checked on the RAW source (comments intact).
+///
+/// - In handwritten/generated crate sources: every `unsafe {` block must
+///   have a `SAFETY`-bearing comment within the four preceding lines (or
+///   on the same line). This holds today at 100% coverage — archmage
+///   `src/` (81/81 generated forge sites) and magetypes outside `impls/`
+///   (225/225).
+/// - The generated backend impls (`magetypes/src/simd/impls/*.rs`) carry
+///   ~2000 uniform one-line `unsafe { intrinsic }` bodies; a per-block
+///   comment would be pure noise, so the generator emits a single
+///   file-header audit contract instead, and this rule enforces the
+///   header's presence.
+/// - Macro-expansion snapshots (`.expanded.rs`) are exempt: comments
+///   cannot survive tokenization, so proc-macro output structurally cannot
+///   carry them. Snapshots still get full intrinsic-gating verification;
+///   the macros' emitted `unsafe` is documented at its source in
+///   `archmage-macros/src/`.
+fn safety_comment_rules(rel: &str, raw: &str, errors: &mut Vec<String>) {
+    let in_scope = rel.starts_with("src") || rel.starts_with("magetypes/src");
+    if !in_scope {
+        return;
+    }
+
+    let is_backend_impl = rel.starts_with("magetypes/src/simd/impls/");
+    let lines: Vec<&str> = raw.lines().collect();
+
+    if is_backend_impl {
+        let has_unsafe = lines
+            .iter()
+            .any(|l| !l.trim_start().starts_with("//") && l.contains("unsafe"));
+        if has_unsafe && !raw.contains("# Safety (audit contract") {
+            errors.push(format!(
+                "{}: missing the `# Safety (audit contract ...)` file header — \
+                 generated backend impls must state the uniform justification \
+                 for their unsafe blocks (emitted by impls_safety_contract() in \
+                 xtask/src/simd_types/backend_gen.rs).",
+                rel
+            ));
+        }
+        return;
+    }
+
+    for (i, line) in lines.iter().enumerate() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("//") {
+            continue;
+        }
+        if !(line.contains("unsafe {") || line.contains("unsafe{")) {
+            continue;
+        }
+        let window_start = i.saturating_sub(4);
+        let window = &lines[window_start..=i];
+        if !window.iter().any(|l| l.contains("SAFETY")) {
+            errors.push(format!(
+                "{}:{}: `unsafe` block without an adjacent `// SAFETY:` comment — \
+                 every unsafe block outside the generated backend impls must state \
+                 its invariant (within the 4 preceding lines).",
+                rel,
+                i + 1
+            ));
+        }
     }
 }
 
@@ -833,7 +903,10 @@ mod tests {
     }
 
     fn scan(src: &str) -> FileScan {
-        scan_at("magetypes/src/simd/impls/test_input.rs", src)
+        // Fixtures default to a backend-impls path (per-block SAFETY
+        // comments not required there); satisfy the file-header rule.
+        let with_header = format!("//! # Safety (audit contract — test fixture)\n{src}");
+        scan_at("magetypes/src/simd/impls/test_input.rs", &with_header)
     }
 
     fn scan_at(rel: &str, src: &str) -> FileScan {
@@ -1020,7 +1093,8 @@ mod tests {
     fn structural_rule_transmute_allowed_in_backend_impls() {
         let scan = scan_at(
             "magetypes/src/simd/impls/x86_v3.rs",
-            "impl F32x4Backend for archmage::X64V3Token {\n\
+            "//! # Safety (audit contract — test fixture)\n\
+             impl F32x4Backend for archmage::X64V3Token {\n\
              fn from_array(self, arr: [f32; 4]) -> R { unsafe { core::mem::transmute(arr) } }\n\
              }\n",
         );
@@ -1037,6 +1111,46 @@ mod tests {
             scan.errors
                 .iter()
                 .any(|e| e.contains("Default on a SIMD wrapper")),
+            "{:?}",
+            scan.errors
+        );
+    }
+
+    #[test]
+    fn safety_rule_flags_uncommented_unsafe_outside_impls() {
+        let scan = scan_at(
+            "magetypes/src/simd/generic/foo.rs",
+            "fn f(x: u32) -> f32 { unsafe { core::mem::transmute_copy(&x) } }\n",
+        );
+        assert!(
+            scan.errors
+                .iter()
+                .any(|e| e.contains("without an adjacent `// SAFETY:`")),
+            "{:?}",
+            scan.errors
+        );
+        let ok = scan_at(
+            "magetypes/src/simd/generic/foo.rs",
+            "fn f(x: u32) -> f32 {\n\
+             // SAFETY: u32 and f32 are the same size; all bit patterns valid.\n\
+             unsafe { core::mem::transmute_copy(&x) }\n\
+             }\n",
+        );
+        assert!(ok.errors.is_empty(), "{:?}", ok.errors);
+    }
+
+    #[test]
+    fn safety_rule_requires_contract_header_in_backend_impls() {
+        let scan = scan_at(
+            "magetypes/src/simd/impls/x86_v3.rs",
+            "impl F32x4Backend for archmage::X64V3Token {\n\
+             fn add(self, a: R, b: R) -> R { unsafe { _mm_add_ps(a, b) } }\n\
+             }\n",
+        );
+        assert!(
+            scan.errors
+                .iter()
+                .any(|e| e.contains("# Safety (audit contract")),
             "{:?}",
             scan.errors
         );

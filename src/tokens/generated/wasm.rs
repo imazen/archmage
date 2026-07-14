@@ -37,6 +37,9 @@ impl SimdToken for Wasm128Token {
     fn summon() -> Option<Self> {
         #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
         {
+            // SAFETY: the required wasm features are compile-time
+            // enabled; a runtime that validated this module supports
+            // them (wasm has no runtime feature detection).
             Some(unsafe { Self::forge_token_dangerously() })
         }
         #[cfg(not(all(target_arch = "wasm32", target_feature = "simd128")))]
@@ -132,6 +135,9 @@ impl SimdToken for Wasm128RelaxedToken {
             target_feature = "relaxed-simd"
         ))]
         {
+            // SAFETY: the required wasm features are compile-time
+            // enabled; a runtime that validated this module supports
+            // them (wasm has no runtime feature detection).
             Some(unsafe { Self::forge_token_dangerously() })
         }
         #[cfg(not(all(
@@ -188,6 +194,9 @@ impl Wasm128RelaxedToken {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn wasm128(self) -> Wasm128Token {
+        // SAFETY: holding `self` proves this CPU has WASM Relaxed SIMD's
+        // full feature set, a superset of WASM SIMD128's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { Wasm128Token::forge_token_dangerously() }
     }
 }

@@ -54,14 +54,16 @@ fn file_header() -> &'static str {
 fn generate_generated_mod_rs(types: &[SimdType]) -> String {
     let mut code = String::from(file_header());
 
-    // Note: core::ops imports are in submodules where types are defined
-    // Macros are #[macro_export] and expand in those submodules
-
     // Generate comparison traits
     code.push_str(&structure::generate_comparison_traits());
 
-    // Generate macros
-    code.push_str(&structure::generate_macros());
+    // NOTE: the former `generate_macros()` op-impl templates
+    // (impl_arithmetic_ops! etc.) were deleted 2026-07-14: they were
+    // #[macro_export]ed (though #[doc(hidden)]), dead since the concrete
+    // per-platform types were retired, and each expanded to token-less
+    // `unsafe { $intrinsic }` blocks — an unsound-by-construction footgun
+    // for any downstream crate that invoked them. The generic
+    // token-carrying wrappers are the only supported operator path.
 
     // Module declarations and re-exports grouped by width
     code.push_str(

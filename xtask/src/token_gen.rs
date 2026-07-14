@@ -445,12 +445,16 @@ fn gen_summon_x86(token: &TokenDef) -> String {
             {INDENT}fn summon() -> Option<Self> {{
             {INDENT}    #[cfg(not(feature = \"testable_dispatch\"))]
             {INDENT}    {{
+            {INDENT}        // SAFETY: SSE/SSE2 are the x86-64 ABI baseline — every
+            {INDENT}        // x86-64 CPU has them, so this token needs no detection.
             {INDENT}        Some(unsafe {{ Self::forge_token_dangerously() }})
             {INDENT}    }}
             {INDENT}    #[cfg(feature = \"testable_dispatch\")]
             {INDENT}    {{
             {INDENT}        match {cache_name}.load(Ordering::Relaxed) {{
             {INDENT}            1 => None,
+            {INDENT}            // SAFETY: SSE/SSE2 are the x86-64 ABI baseline (the
+            {INDENT}            // cache only simulates unavailability for tests).
             {INDENT}            _ => Some(unsafe {{ Self::forge_token_dangerously() }}),
             {INDENT}        }}
             {INDENT}    }}
@@ -469,6 +473,9 @@ fn gen_summon_x86(token: &TokenDef) -> String {
         {INDENT}    // Compile-time fast path (suppressed by testable_dispatch)
         {INDENT}    #[cfg(all({all_features}{dct_guard}))]
         {INDENT}    {{
+        {INDENT}        // SAFETY: every feature this token asserts is enabled at
+        {INDENT}        // compile time (cfg(target_feature)), so the binary only
+        {INDENT}        // runs on CPUs that have them.
         {INDENT}        Some(unsafe {{ Self::forge_token_dangerously() }})
         {INDENT}    }}
 
@@ -476,6 +483,8 @@ fn gen_summon_x86(token: &TokenDef) -> String {
         {INDENT}    #[cfg(not(all({all_features}{dct_guard})))]
         {INDENT}    {{
         {INDENT}        match {cache_name}.load(Ordering::Relaxed) {{
+        {INDENT}            // SAFETY: 2 is only ever stored by {detect_fn_name}()
+        {INDENT}            // after a positive runtime check of every feature.
         {INDENT}            2 => Some(unsafe {{ Self::forge_token_dangerously() }}),
         {INDENT}            1 => None,
         {INDENT}            _ => {detect_fn_name}(),
@@ -520,6 +529,8 @@ fn gen_summon_cold_x86(token: &TokenDef) -> String {
             let available = {detect_expr};
             {cache_name}.store(if available {{ 2 }} else {{ 1 }}, Ordering::Relaxed);
             if available {{
+                // SAFETY: `available` — runtime detection just confirmed every
+                // feature this token asserts is present on this CPU.
                 Some(unsafe {{ {name}::forge_token_dangerously() }})
             }} else {{
                 None
@@ -546,6 +557,9 @@ fn gen_summon_aarch64(token: &TokenDef) -> String {
         {INDENT}    // Compile-time fast path (suppressed by testable_dispatch)
         {INDENT}    #[cfg(all({all_features}{dct_guard}))]
         {INDENT}    {{
+        {INDENT}        // SAFETY: every feature this token asserts is enabled at
+        {INDENT}        // compile time (cfg(target_feature)), so the binary only
+        {INDENT}        // runs on CPUs that have them.
         {INDENT}        Some(unsafe {{ Self::forge_token_dangerously() }})
         {INDENT}    }}
 
@@ -553,6 +567,8 @@ fn gen_summon_aarch64(token: &TokenDef) -> String {
         {INDENT}    #[cfg(not(all({all_features}{dct_guard})))]
         {INDENT}    {{
         {INDENT}        match {cache_name}.load(Ordering::Relaxed) {{
+        {INDENT}            // SAFETY: 2 is only ever stored by {detect_fn_name}()
+        {INDENT}            // after a positive runtime check of every feature.
         {INDENT}            2 => Some(unsafe {{ Self::forge_token_dangerously() }}),
         {INDENT}            1 => None,
         {INDENT}            _ => {detect_fn_name}(),
@@ -582,6 +598,8 @@ fn gen_summon_cold_aarch64(token: &TokenDef) -> String {
             let available = {detect_expr};
             {cache_name}.store(if available {{ 2 }} else {{ 1 }}, Ordering::Relaxed);
             if available {{
+                // SAFETY: `available` — runtime detection just confirmed every
+                // feature this token asserts is present on this CPU.
                 Some(unsafe {{ {name}::forge_token_dangerously() }})
             }} else {{
                 None
@@ -602,6 +620,9 @@ fn gen_summon_wasm(token: &TokenDef) -> String {
         {INDENT}fn summon() -> Option<Self> {{
         {INDENT}    #[cfg(all(target_arch = \"wasm32\", {all_conditions}))]
         {INDENT}    {{
+        {INDENT}        // SAFETY: the required wasm features are compile-time
+        {INDENT}        // enabled; a runtime that validated this module supports
+        {INDENT}        // them (wasm has no runtime feature detection).
         {INDENT}        Some(unsafe {{ Self::forge_token_dangerously() }})
         {INDENT}    }}
         {INDENT}    #[cfg(not(all(target_arch = \"wasm32\", {all_conditions})))]
@@ -658,6 +679,9 @@ fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
             {INDENT}#[allow(deprecated)]
             {INDENT}#[inline(always)]
             {INDENT}pub fn {short}(self) -> {anc_name} {{
+            {INDENT}    // SAFETY: holding `self` proves this CPU has {token_display}'s
+            {INDENT}    // full feature set, a superset of {anc_display}'s (registry-
+            {INDENT}    // verified hierarchy), so the ancestor token's claim holds.
             {INDENT}    unsafe {{ {anc_name}::forge_token_dangerously() }}
             {INDENT}}}
         "});
@@ -670,6 +694,8 @@ fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
                 {INDENT}#[allow(deprecated)]
                 {INDENT}#[inline(always)]
                 {INDENT}pub fn {alias_name}(self) -> {anc_name} {{
+                {INDENT}    // SAFETY: identical to `.{short}()` — self's feature set is a
+                {INDENT}    // registry-verified superset of {anc_display}'s.
                 {INDENT}    unsafe {{ {anc_name}::forge_token_dangerously() }}
                 {INDENT}}}
             "});

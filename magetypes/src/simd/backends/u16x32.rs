@@ -10,9 +10,12 @@ use archmage::SimdToken;
 
 /// Backend implementation for 32-lane u16 SIMD vectors.
 ///
-/// Trait methods are **associated functions** (no `self`/token parameter).
-/// The implementing type `Self` (a token type) determines which platform
-/// intrinsics are used. All methods are `#[inline(always)]` in implementations.
+/// Trait methods take `self` (the token) as receiver — the token value
+/// is the proof of CPU support, and requiring it as the receiver means
+/// the methods cannot be invoked via UFCS without holding one. The
+/// implementing type `Self` (a token type) determines which platform
+/// intrinsics are used. All methods are `#[inline(always)]` in
+/// implementations.
 ///
 /// # Sealed
 ///

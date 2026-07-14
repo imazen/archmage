@@ -65,12 +65,16 @@ impl SimdToken for X64V1Token {
     fn summon() -> Option<Self> {
         #[cfg(not(feature = "testable_dispatch"))]
         {
+            // SAFETY: SSE/SSE2 are the x86-64 ABI baseline — every
+            // x86-64 CPU has them, so this token needs no detection.
             Some(unsafe { Self::forge_token_dangerously() })
         }
         #[cfg(feature = "testable_dispatch")]
         {
             match X64_V1_CACHE.load(Ordering::Relaxed) {
                 1 => None,
+                // SAFETY: SSE/SSE2 are the x86-64 ABI baseline (the
+                // cache only simulates unavailability for tests).
                 _ => Some(unsafe { Self::forge_token_dangerously() }),
             }
         }
@@ -264,6 +268,9 @@ impl SimdToken for X64V2Token {
             not(feature = "testable_dispatch")
         ))]
         {
+            // SAFETY: every feature this token asserts is enabled at
+            // compile time (cfg(target_feature)), so the binary only
+            // runs on CPUs that have them.
             Some(unsafe { Self::forge_token_dangerously() })
         }
 
@@ -279,6 +286,8 @@ impl SimdToken for X64V2Token {
         )))]
         {
             match X64_V2_CACHE.load(Ordering::Relaxed) {
+                // SAFETY: 2 is only ever stored by x64_v2_detect()
+                // after a positive runtime check of every feature.
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
                 _ => x64_v2_detect(),
@@ -330,6 +339,9 @@ impl X64V2Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
+        // SAFETY: holding `self` proves this CPU has x86-64-v2's
+        // full feature set, a superset of x86-64-v1's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64V1Token::forge_token_dangerously() }
     }
 }
@@ -465,6 +477,8 @@ fn x64_v2_detect() -> Option<X64V2Token> {
         && crate::is_x86_feature_available!("cmpxchg16b");
     X64_V2_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
+        // SAFETY: `available` — runtime detection just confirmed every
+        // feature this token asserts is present on this CPU.
         Some(unsafe { X64V2Token::forge_token_dangerously() })
     } else {
         None
@@ -541,6 +555,9 @@ impl SimdToken for X64CryptoToken {
             not(feature = "testable_dispatch")
         ))]
         {
+            // SAFETY: every feature this token asserts is enabled at
+            // compile time (cfg(target_feature)), so the binary only
+            // runs on CPUs that have them.
             Some(unsafe { Self::forge_token_dangerously() })
         }
 
@@ -558,6 +575,8 @@ impl SimdToken for X64CryptoToken {
         )))]
         {
             match X64_CRYPTO_CACHE.load(Ordering::Relaxed) {
+                // SAFETY: 2 is only ever stored by x64_crypto_detect()
+                // after a positive runtime check of every feature.
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
                 _ => x64_crypto_detect(),
@@ -609,6 +628,9 @@ impl X64CryptoToken {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
+        // SAFETY: holding `self` proves this CPU has x86-64 Crypto's
+        // full feature set, a superset of x86-64-v1's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64V1Token::forge_token_dangerously() }
     }
     /// Extract a X64V2Token — guaranteed because x86-64 Crypto implies x86-64-v2.
@@ -617,6 +639,9 @@ impl X64CryptoToken {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
+        // SAFETY: holding `self` proves this CPU has x86-64 Crypto's
+        // full feature set, a superset of x86-64-v2's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64V2Token::forge_token_dangerously() }
     }
 }
@@ -758,6 +783,8 @@ fn x64_crypto_detect() -> Option<X64CryptoToken> {
         && crate::is_x86_feature_available!("aes");
     X64_CRYPTO_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
+        // SAFETY: `available` — runtime detection just confirmed every
+        // feature this token asserts is present on this CPU.
         Some(unsafe { X64CryptoToken::forge_token_dangerously() })
     } else {
         None
@@ -849,6 +876,9 @@ impl SimdToken for X64V3Token {
             not(feature = "testable_dispatch")
         ))]
         {
+            // SAFETY: every feature this token asserts is enabled at
+            // compile time (cfg(target_feature)), so the binary only
+            // runs on CPUs that have them.
             Some(unsafe { Self::forge_token_dangerously() })
         }
 
@@ -872,6 +902,8 @@ impl SimdToken for X64V3Token {
         )))]
         {
             match X64_V3_CACHE.load(Ordering::Relaxed) {
+                // SAFETY: 2 is only ever stored by x64_v3_detect()
+                // after a positive runtime check of every feature.
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
                 _ => x64_v3_detect(),
@@ -923,6 +955,9 @@ impl X64V3Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
+        // SAFETY: holding `self` proves this CPU has x86-64-v3's
+        // full feature set, a superset of x86-64-v1's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64V1Token::forge_token_dangerously() }
     }
     /// Extract a X64V2Token — guaranteed because x86-64-v3 implies x86-64-v2.
@@ -931,6 +966,9 @@ impl X64V3Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
+        // SAFETY: holding `self` proves this CPU has x86-64-v3's
+        // full feature set, a superset of x86-64-v2's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64V2Token::forge_token_dangerously() }
     }
 }
@@ -1108,6 +1146,8 @@ fn x64_v3_detect() -> Option<X64V3Token> {
         && crate::is_x86_feature_available!("movbe");
     X64_V3_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
+        // SAFETY: `available` — runtime detection just confirmed every
+        // feature this token asserts is present on this CPU.
         Some(unsafe { X64V3Token::forge_token_dangerously() })
     } else {
         None
@@ -1213,6 +1253,9 @@ impl SimdToken for X64V3CryptoToken {
             not(feature = "testable_dispatch")
         ))]
         {
+            // SAFETY: every feature this token asserts is enabled at
+            // compile time (cfg(target_feature)), so the binary only
+            // runs on CPUs that have them.
             Some(unsafe { Self::forge_token_dangerously() })
         }
 
@@ -1240,6 +1283,8 @@ impl SimdToken for X64V3CryptoToken {
         )))]
         {
             match X64_V3_CRYPTO_CACHE.load(Ordering::Relaxed) {
+                // SAFETY: 2 is only ever stored by x64_v3_crypto_detect()
+                // after a positive runtime check of every feature.
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
                 _ => x64_v3_crypto_detect(),
@@ -1291,6 +1336,9 @@ impl X64V3CryptoToken {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn x64_crypto(self) -> X64CryptoToken {
+        // SAFETY: holding `self` proves this CPU has x86-64-v3 Crypto's
+        // full feature set, a superset of x86-64 Crypto's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64CryptoToken::forge_token_dangerously() }
     }
     /// Extract a X64V1Token — guaranteed because x86-64-v3 Crypto implies x86-64-v1.
@@ -1299,6 +1347,9 @@ impl X64V3CryptoToken {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
+        // SAFETY: holding `self` proves this CPU has x86-64-v3 Crypto's
+        // full feature set, a superset of x86-64-v1's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64V1Token::forge_token_dangerously() }
     }
     /// Extract a X64V2Token — guaranteed because x86-64-v3 Crypto implies x86-64-v2.
@@ -1307,6 +1358,9 @@ impl X64V3CryptoToken {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
+        // SAFETY: holding `self` proves this CPU has x86-64-v3 Crypto's
+        // full feature set, a superset of x86-64-v2's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64V2Token::forge_token_dangerously() }
     }
     /// Extract a X64V3Token — guaranteed because x86-64-v3 Crypto implies x86-64-v3.
@@ -1315,6 +1369,9 @@ impl X64V3CryptoToken {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
+        // SAFETY: holding `self` proves this CPU has x86-64-v3 Crypto's
+        // full feature set, a superset of x86-64-v3's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64V3Token::forge_token_dangerously() }
     }
 }
@@ -1507,6 +1564,8 @@ fn x64_v3_crypto_detect() -> Option<X64V3CryptoToken> {
         && crate::is_x86_feature_available!("vaes");
     X64_V3_CRYPTO_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
+        // SAFETY: `available` — runtime detection just confirmed every
+        // feature this token asserts is present on this CPU.
         Some(unsafe { X64V3CryptoToken::forge_token_dangerously() })
     } else {
         None
@@ -1620,6 +1679,9 @@ impl SimdToken for X64V4Token {
             not(feature = "testable_dispatch")
         ))]
         {
+            // SAFETY: every feature this token asserts is enabled at
+            // compile time (cfg(target_feature)), so the binary only
+            // runs on CPUs that have them.
             Some(unsafe { Self::forge_token_dangerously() })
         }
 
@@ -1650,6 +1712,8 @@ impl SimdToken for X64V4Token {
         )))]
         {
             match X64_V4_CACHE.load(Ordering::Relaxed) {
+                // SAFETY: 2 is only ever stored by x64_v4_detect()
+                // after a positive runtime check of every feature.
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
                 _ => x64_v4_detect(),
@@ -1701,6 +1765,9 @@ impl X64V4Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn x64_crypto(self) -> X64CryptoToken {
+        // SAFETY: holding `self` proves this CPU has AVX-512's
+        // full feature set, a superset of x86-64 Crypto's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64CryptoToken::forge_token_dangerously() }
     }
     /// Extract a X64V1Token — guaranteed because AVX-512 implies x86-64-v1.
@@ -1709,6 +1776,9 @@ impl X64V4Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
+        // SAFETY: holding `self` proves this CPU has AVX-512's
+        // full feature set, a superset of x86-64-v1's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64V1Token::forge_token_dangerously() }
     }
     /// Extract a X64V2Token — guaranteed because AVX-512 implies x86-64-v2.
@@ -1717,6 +1787,9 @@ impl X64V4Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
+        // SAFETY: holding `self` proves this CPU has AVX-512's
+        // full feature set, a superset of x86-64-v2's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64V2Token::forge_token_dangerously() }
     }
     /// Extract a X64V3Token — guaranteed because AVX-512 implies x86-64-v3.
@@ -1725,6 +1798,9 @@ impl X64V4Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
+        // SAFETY: holding `self` proves this CPU has AVX-512's
+        // full feature set, a superset of x86-64-v3's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64V3Token::forge_token_dangerously() }
     }
 }
@@ -1938,6 +2014,8 @@ fn x64_v4_detect() -> Option<X64V4Token> {
         && crate::is_x86_feature_available!("avx512vl");
     X64_V4_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
+        // SAFETY: `available` — runtime detection just confirmed every
+        // feature this token asserts is present on this CPU.
         Some(unsafe { X64V4Token::forge_token_dangerously() })
     } else {
         None
@@ -2079,6 +2157,9 @@ impl SimdToken for X64V4xToken {
             not(feature = "testable_dispatch")
         ))]
         {
+            // SAFETY: every feature this token asserts is enabled at
+            // compile time (cfg(target_feature)), so the binary only
+            // runs on CPUs that have them.
             Some(unsafe { Self::forge_token_dangerously() })
         }
 
@@ -2118,6 +2199,8 @@ impl SimdToken for X64V4xToken {
         )))]
         {
             match X64_V4X_CACHE.load(Ordering::Relaxed) {
+                // SAFETY: 2 is only ever stored by x64_v4x_detect()
+                // after a positive runtime check of every feature.
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
                 _ => x64_v4x_detect(),
@@ -2169,6 +2252,9 @@ impl X64V4xToken {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn x64_crypto(self) -> X64CryptoToken {
+        // SAFETY: holding `self` proves this CPU has x86-64-v4x's
+        // full feature set, a superset of x86-64 Crypto's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64CryptoToken::forge_token_dangerously() }
     }
     /// Extract a X64V1Token — guaranteed because x86-64-v4x implies x86-64-v1.
@@ -2177,6 +2263,9 @@ impl X64V4xToken {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
+        // SAFETY: holding `self` proves this CPU has x86-64-v4x's
+        // full feature set, a superset of x86-64-v1's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64V1Token::forge_token_dangerously() }
     }
     /// Extract a X64V2Token — guaranteed because x86-64-v4x implies x86-64-v2.
@@ -2185,6 +2274,9 @@ impl X64V4xToken {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
+        // SAFETY: holding `self` proves this CPU has x86-64-v4x's
+        // full feature set, a superset of x86-64-v2's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64V2Token::forge_token_dangerously() }
     }
     /// Extract a X64V3CryptoToken — guaranteed because x86-64-v4x implies x86-64-v3 Crypto.
@@ -2193,6 +2285,9 @@ impl X64V4xToken {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v3_crypto(self) -> X64V3CryptoToken {
+        // SAFETY: holding `self` proves this CPU has x86-64-v4x's
+        // full feature set, a superset of x86-64-v3 Crypto's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64V3CryptoToken::forge_token_dangerously() }
     }
     /// Extract a X64V3Token — guaranteed because x86-64-v4x implies x86-64-v3.
@@ -2201,6 +2296,9 @@ impl X64V4xToken {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
+        // SAFETY: holding `self` proves this CPU has x86-64-v4x's
+        // full feature set, a superset of x86-64-v3's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64V3Token::forge_token_dangerously() }
     }
     /// Extract a X64V4Token — guaranteed because x86-64-v4x implies AVX-512.
@@ -2209,6 +2307,9 @@ impl X64V4xToken {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v4(self) -> X64V4Token {
+        // SAFETY: holding `self` proves this CPU has x86-64-v4x's
+        // full feature set, a superset of AVX-512's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64V4Token::forge_token_dangerously() }
     }
 
@@ -2216,6 +2317,8 @@ impl X64V4xToken {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn avx512(self) -> X64V4Token {
+        // SAFETY: identical to `.v4()` — self's feature set is a
+        // registry-verified superset of AVX-512's.
         unsafe { X64V4Token::forge_token_dangerously() }
     }
 }
@@ -2475,6 +2578,8 @@ fn x64_v4x_detect() -> Option<X64V4xToken> {
         && crate::is_x86_feature_available!("vaes");
     X64_V4X_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
+        // SAFETY: `available` — runtime detection just confirmed every
+        // feature this token asserts is present on this CPU.
         Some(unsafe { X64V4xToken::forge_token_dangerously() })
     } else {
         None
@@ -2591,6 +2696,9 @@ impl SimdToken for Avx512Fp16Token {
             not(feature = "testable_dispatch")
         ))]
         {
+            // SAFETY: every feature this token asserts is enabled at
+            // compile time (cfg(target_feature)), so the binary only
+            // runs on CPUs that have them.
             Some(unsafe { Self::forge_token_dangerously() })
         }
 
@@ -2622,6 +2730,8 @@ impl SimdToken for Avx512Fp16Token {
         )))]
         {
             match AVX512_FP16_CACHE.load(Ordering::Relaxed) {
+                // SAFETY: 2 is only ever stored by avx512_fp16_detect()
+                // after a positive runtime check of every feature.
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
                 _ => avx512_fp16_detect(),
@@ -2673,6 +2783,9 @@ impl Avx512Fp16Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn x64_crypto(self) -> X64CryptoToken {
+        // SAFETY: holding `self` proves this CPU has AVX-512FP16's
+        // full feature set, a superset of x86-64 Crypto's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64CryptoToken::forge_token_dangerously() }
     }
     /// Extract a X64V1Token — guaranteed because AVX-512FP16 implies x86-64-v1.
@@ -2681,6 +2794,9 @@ impl Avx512Fp16Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v1(self) -> X64V1Token {
+        // SAFETY: holding `self` proves this CPU has AVX-512FP16's
+        // full feature set, a superset of x86-64-v1's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64V1Token::forge_token_dangerously() }
     }
     /// Extract a X64V2Token — guaranteed because AVX-512FP16 implies x86-64-v2.
@@ -2689,6 +2805,9 @@ impl Avx512Fp16Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v2(self) -> X64V2Token {
+        // SAFETY: holding `self` proves this CPU has AVX-512FP16's
+        // full feature set, a superset of x86-64-v2's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64V2Token::forge_token_dangerously() }
     }
     /// Extract a X64V3Token — guaranteed because AVX-512FP16 implies x86-64-v3.
@@ -2697,6 +2816,9 @@ impl Avx512Fp16Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v3(self) -> X64V3Token {
+        // SAFETY: holding `self` proves this CPU has AVX-512FP16's
+        // full feature set, a superset of x86-64-v3's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64V3Token::forge_token_dangerously() }
     }
     /// Extract a X64V4Token — guaranteed because AVX-512FP16 implies AVX-512.
@@ -2705,6 +2827,9 @@ impl Avx512Fp16Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn v4(self) -> X64V4Token {
+        // SAFETY: holding `self` proves this CPU has AVX-512FP16's
+        // full feature set, a superset of AVX-512's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { X64V4Token::forge_token_dangerously() }
     }
 
@@ -2712,6 +2837,8 @@ impl Avx512Fp16Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn avx512(self) -> X64V4Token {
+        // SAFETY: identical to `.v4()` — self's feature set is a
+        // registry-verified superset of AVX-512's.
         unsafe { X64V4Token::forge_token_dangerously() }
     }
 }
@@ -2923,6 +3050,8 @@ fn avx512_fp16_detect() -> Option<Avx512Fp16Token> {
         && crate::is_x86_feature_available!("avx512fp16");
     AVX512_FP16_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
+        // SAFETY: `available` — runtime detection just confirmed every
+        // feature this token asserts is present on this CPU.
         Some(unsafe { Avx512Fp16Token::forge_token_dangerously() })
     } else {
         None

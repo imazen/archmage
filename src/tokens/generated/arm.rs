@@ -58,6 +58,9 @@ impl SimdToken for NeonToken {
         // Compile-time fast path (suppressed by testable_dispatch)
         #[cfg(all(target_feature = "neon", not(feature = "testable_dispatch")))]
         {
+            // SAFETY: every feature this token asserts is enabled at
+            // compile time (cfg(target_feature)), so the binary only
+            // runs on CPUs that have them.
             Some(unsafe { Self::forge_token_dangerously() })
         }
 
@@ -65,6 +68,8 @@ impl SimdToken for NeonToken {
         #[cfg(not(all(target_feature = "neon", not(feature = "testable_dispatch"))))]
         {
             match NEON_CACHE.load(Ordering::Relaxed) {
+                // SAFETY: 2 is only ever stored by neon_detect()
+                // after a positive runtime check of every feature.
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
                 _ => neon_detect(),
@@ -184,6 +189,8 @@ fn neon_detect() -> Option<NeonToken> {
     let available = crate::is_aarch64_feature_available!("neon");
     NEON_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
+        // SAFETY: `available` — runtime detection just confirmed every
+        // feature this token asserts is present on this CPU.
         Some(unsafe { NeonToken::forge_token_dangerously() })
     } else {
         None
@@ -236,6 +243,9 @@ impl SimdToken for NeonAesToken {
             not(feature = "testable_dispatch")
         ))]
         {
+            // SAFETY: every feature this token asserts is enabled at
+            // compile time (cfg(target_feature)), so the binary only
+            // runs on CPUs that have them.
             Some(unsafe { Self::forge_token_dangerously() })
         }
 
@@ -247,6 +257,8 @@ impl SimdToken for NeonAesToken {
         )))]
         {
             match NEON_AES_CACHE.load(Ordering::Relaxed) {
+                // SAFETY: 2 is only ever stored by neon_aes_detect()
+                // after a positive runtime check of every feature.
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
                 _ => neon_aes_detect(),
@@ -298,6 +310,9 @@ impl NeonAesToken {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
+        // SAFETY: holding `self` proves this CPU has NEON+AES's
+        // full feature set, a superset of NEON's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { NeonToken::forge_token_dangerously() }
     }
 }
@@ -381,6 +396,8 @@ fn neon_aes_detect() -> Option<NeonAesToken> {
         crate::is_aarch64_feature_available!("neon") && crate::is_aarch64_feature_available!("aes");
     NEON_AES_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
+        // SAFETY: `available` — runtime detection just confirmed every
+        // feature this token asserts is present on this CPU.
         Some(unsafe { NeonAesToken::forge_token_dangerously() })
     } else {
         None
@@ -433,6 +450,9 @@ impl SimdToken for NeonSha3Token {
             not(feature = "testable_dispatch")
         ))]
         {
+            // SAFETY: every feature this token asserts is enabled at
+            // compile time (cfg(target_feature)), so the binary only
+            // runs on CPUs that have them.
             Some(unsafe { Self::forge_token_dangerously() })
         }
 
@@ -444,6 +464,8 @@ impl SimdToken for NeonSha3Token {
         )))]
         {
             match NEON_SHA3_CACHE.load(Ordering::Relaxed) {
+                // SAFETY: 2 is only ever stored by neon_sha3_detect()
+                // after a positive runtime check of every feature.
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
                 _ => neon_sha3_detect(),
@@ -495,6 +517,9 @@ impl NeonSha3Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
+        // SAFETY: holding `self` proves this CPU has NEON+SHA3's
+        // full feature set, a superset of NEON's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { NeonToken::forge_token_dangerously() }
     }
 }
@@ -578,6 +603,8 @@ fn neon_sha3_detect() -> Option<NeonSha3Token> {
         && crate::is_aarch64_feature_available!("sha3");
     NEON_SHA3_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
+        // SAFETY: `available` — runtime detection just confirmed every
+        // feature this token asserts is present on this CPU.
         Some(unsafe { NeonSha3Token::forge_token_dangerously() })
     } else {
         None
@@ -631,6 +658,9 @@ impl SimdToken for NeonCrcToken {
             not(feature = "testable_dispatch")
         ))]
         {
+            // SAFETY: every feature this token asserts is enabled at
+            // compile time (cfg(target_feature)), so the binary only
+            // runs on CPUs that have them.
             Some(unsafe { Self::forge_token_dangerously() })
         }
 
@@ -642,6 +672,8 @@ impl SimdToken for NeonCrcToken {
         )))]
         {
             match NEON_CRC_CACHE.load(Ordering::Relaxed) {
+                // SAFETY: 2 is only ever stored by neon_crc_detect()
+                // after a positive runtime check of every feature.
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
                 _ => neon_crc_detect(),
@@ -693,6 +725,9 @@ impl NeonCrcToken {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
+        // SAFETY: holding `self` proves this CPU has NEON+CRC's
+        // full feature set, a superset of NEON's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { NeonToken::forge_token_dangerously() }
     }
 }
@@ -776,6 +811,8 @@ fn neon_crc_detect() -> Option<NeonCrcToken> {
         crate::is_aarch64_feature_available!("neon") && crate::is_aarch64_feature_available!("crc");
     NEON_CRC_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
+        // SAFETY: `available` — runtime detection just confirmed every
+        // feature this token asserts is present on this CPU.
         Some(unsafe { NeonCrcToken::forge_token_dangerously() })
     } else {
         None
@@ -848,6 +885,9 @@ impl SimdToken for Arm64V2Token {
             not(feature = "testable_dispatch")
         ))]
         {
+            // SAFETY: every feature this token asserts is enabled at
+            // compile time (cfg(target_feature)), so the binary only
+            // runs on CPUs that have them.
             Some(unsafe { Self::forge_token_dangerously() })
         }
 
@@ -864,6 +904,8 @@ impl SimdToken for Arm64V2Token {
         )))]
         {
             match ARM64_V2_CACHE.load(Ordering::Relaxed) {
+                // SAFETY: 2 is only ever stored by arm64_v2_detect()
+                // after a positive runtime check of every feature.
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
                 _ => arm64_v2_detect(),
@@ -915,6 +957,9 @@ impl Arm64V2Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn neon_aes(self) -> NeonAesToken {
+        // SAFETY: holding `self` proves this CPU has Arm64-v2's
+        // full feature set, a superset of NEON+AES's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { NeonAesToken::forge_token_dangerously() }
     }
     /// Extract a NeonCrcToken — guaranteed because Arm64-v2 implies NEON+CRC.
@@ -923,6 +968,9 @@ impl Arm64V2Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn neon_crc(self) -> NeonCrcToken {
+        // SAFETY: holding `self` proves this CPU has Arm64-v2's
+        // full feature set, a superset of NEON+CRC's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { NeonCrcToken::forge_token_dangerously() }
     }
     /// Extract a NeonToken — guaranteed because Arm64-v2 implies NEON.
@@ -931,6 +979,9 @@ impl Arm64V2Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
+        // SAFETY: holding `self` proves this CPU has Arm64-v2's
+        // full feature set, a superset of NEON's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { NeonToken::forge_token_dangerously() }
     }
 }
@@ -1049,6 +1100,8 @@ fn arm64_v2_detect() -> Option<Arm64V2Token> {
         && crate::is_aarch64_feature_available!("sha2");
     ARM64_V2_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
+        // SAFETY: `available` — runtime detection just confirmed every
+        // feature this token asserts is present on this CPU.
         Some(unsafe { Arm64V2Token::forge_token_dangerously() })
     } else {
         None
@@ -1135,6 +1188,9 @@ impl SimdToken for Arm64V3Token {
             not(feature = "testable_dispatch")
         ))]
         {
+            // SAFETY: every feature this token asserts is enabled at
+            // compile time (cfg(target_feature)), so the binary only
+            // runs on CPUs that have them.
             Some(unsafe { Self::forge_token_dangerously() })
         }
 
@@ -1156,6 +1212,8 @@ impl SimdToken for Arm64V3Token {
         )))]
         {
             match ARM64_V3_CACHE.load(Ordering::Relaxed) {
+                // SAFETY: 2 is only ever stored by arm64_v3_detect()
+                // after a positive runtime check of every feature.
                 2 => Some(unsafe { Self::forge_token_dangerously() }),
                 1 => None,
                 _ => arm64_v3_detect(),
@@ -1207,6 +1265,9 @@ impl Arm64V3Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn arm_v2(self) -> Arm64V2Token {
+        // SAFETY: holding `self` proves this CPU has Arm64-v3's
+        // full feature set, a superset of Arm64-v2's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { Arm64V2Token::forge_token_dangerously() }
     }
     /// Extract a NeonAesToken — guaranteed because Arm64-v3 implies NEON+AES.
@@ -1215,6 +1276,9 @@ impl Arm64V3Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn neon_aes(self) -> NeonAesToken {
+        // SAFETY: holding `self` proves this CPU has Arm64-v3's
+        // full feature set, a superset of NEON+AES's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { NeonAesToken::forge_token_dangerously() }
     }
     /// Extract a NeonCrcToken — guaranteed because Arm64-v3 implies NEON+CRC.
@@ -1223,6 +1287,9 @@ impl Arm64V3Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn neon_crc(self) -> NeonCrcToken {
+        // SAFETY: holding `self` proves this CPU has Arm64-v3's
+        // full feature set, a superset of NEON+CRC's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { NeonCrcToken::forge_token_dangerously() }
     }
     /// Extract a NeonSha3Token — guaranteed because Arm64-v3 implies NEON+SHA3.
@@ -1231,6 +1298,9 @@ impl Arm64V3Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn neon_sha3(self) -> NeonSha3Token {
+        // SAFETY: holding `self` proves this CPU has Arm64-v3's
+        // full feature set, a superset of NEON+SHA3's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { NeonSha3Token::forge_token_dangerously() }
     }
     /// Extract a NeonToken — guaranteed because Arm64-v3 implies NEON.
@@ -1239,6 +1309,9 @@ impl Arm64V3Token {
     #[allow(deprecated)]
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
+        // SAFETY: holding `self` proves this CPU has Arm64-v3's
+        // full feature set, a superset of NEON's (registry-
+        // verified hierarchy), so the ancestor token's claim holds.
         unsafe { NeonToken::forge_token_dangerously() }
     }
 }
@@ -1382,6 +1455,8 @@ fn arm64_v3_detect() -> Option<Arm64V3Token> {
         && crate::is_aarch64_feature_available!("bf16");
     ARM64_V3_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
+        // SAFETY: `available` — runtime detection just confirmed every
+        // feature this token asserts is present on this CPU.
         Some(unsafe { Arm64V3Token::forge_token_dangerously() })
     } else {
         None
