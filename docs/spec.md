@@ -324,8 +324,8 @@ WASM SIMD128 uses compile-time detection only (`#[cfg(target_feature = "simd128"
 NEON is virtually universal on AArch64, but `NeonToken::summon()` performs runtime detection (not a constant `Some`). This is because some AArch64 Linux kernels can disable NEON via `HWCAP` flags, and the detection mechanism is architecture-specific:
 
 - **Linux/Android:** Uses `getauxval(AT_HWCAP)` via `std::arch::is_aarch64_feature_detected!`
-- **macOS:** Uses `sysctlbyname` — with Apple vendor fallback for features in the Apple target spec baseline
-- **Windows:** Uses `IsProcessorFeaturePresent` — limited feature coverage (see Known Platform Detection Issues in CLAUDE.md)
+- **macOS / Mac Catalyst / aarch64 simulators:** Uses `sysctlbyname` — with an Apple Silicon fallback for the ten M1+ baseline features, applied **only** on these provably-M1+ hosts (works around the macOS 15.x std_detect bug). Device iOS/tvOS/watchOS/visionOS targets use genuine runtime detection and otherwise fail closed — their A7–A12-era hardware does not guarantee the list (see `docs/SOUNDNESS.md` incident log and `tests/apple_fallback_guard.rs`).
+- **Windows:** Uses `winarm-cpufeatures` (registry-backed `ID_AA64*_EL1` decoding + `IsProcessorFeaturePresent`) — see Known Platform Detection Issues in CLAUDE.md
 
 ## 5. CI Testing
 
@@ -362,8 +362,11 @@ The registry uses TOML with these table types:
 - `[[token]]` — token definitions with name, arch, aliases, features, traits, cargo_feature, display_name, short_name, parent, extraction_aliases, doc
 - `[[trait]]` — trait definitions with name, features, parents
 - `[[width_namespace]]` — width namespace config for simd type re-exports
-- `[[magetypes_file]]` — file-to-token validation mappings
 - `[[polyfill_w256]]` / `[[polyfill_w512]]` — polyfill platform configs
+
+(The former `[[magetypes_file]]` file-to-token mappings are gone: intrinsic
+gating is now derived from the code structure itself by the soundness
+scanner — see `docs/SOUNDNESS.md`.)
 
 ### 6.2 Validation
 

@@ -150,23 +150,23 @@ pub mod testing;
 // Private module for macro-generated assertions
 // ============================================================================
 
-/// Internal module used by `#[arcane]` macro output. Not part of the public API.
+/// Internal module used by macro output. Not part of the public API.
 ///
-/// The `#[arcane]` macro emits a call to `assert_archmage_token` in every wrapper
-/// function to prevent token shadowing attacks. Without this, a user could create
-/// a local struct with the same name as an archmage token (e.g., `struct X64V3Token;`),
-/// and the macro — which does name-based feature lookup — would generate
-/// `#[target_feature(enable = "avx2,fma,...")]` + `unsafe { ... }` for the impostor,
-/// enabling UB on CPUs that lack those features.
-///
-/// The assertion is zero-cost: it compiles to nothing, but enforces that the
-/// token type implements [`SimdToken`], which requires the sealed `Sealed` trait
-/// that only archmage's own tokens can implement.
+/// Token shadowing/aliasing defense: the macros do name-based feature
+/// lookup, so a user-defined `struct X64V3Token;` (or `use X64V2Token as
+/// X64V3Token`) could otherwise receive `#[target_feature]` + `unsafe`
+/// wrappers for features the impostor never proves. `#[arcane]`'s current
+/// defense is a const assertion on the token's `__ARCHMAGE_TIER_TAG`
+/// (shadow types lack the const → compile error; aliased tokens carry the
+/// wrong tag → compile error), plus the sealed [`SimdToken`] bound for
+/// trait-generic parameters. See `tests/soundness/token_shadowing_exploit.rs`
+/// and `token_aliasing_exploit.rs`.
 #[doc(hidden)]
 pub mod __private {
     /// Compile-time assertion that `T` is a genuine archmage token.
     ///
-    /// Called by macro-generated wrappers. Optimized away entirely — exists
+    /// Kept for older macro-output compatibility (pre-tier-tag expansions
+    /// called this from every wrapper). Optimized away entirely — exists
     /// only to produce a compile error if the token type doesn't implement
     /// [`SimdToken`](crate::SimdToken) (which is sealed).
     #[inline(always)]
