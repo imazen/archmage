@@ -96,6 +96,7 @@ fn device_ios_paths_use_runtime_detection() {
 #[cfg(all(target_vendor = "apple", target_arch = "aarch64", target_os = "macos"))]
 #[test]
 fn macos_apple_silicon_baseline_tokens_summon() {
+    use archmage::SimdToken;
     assert!(
         archmage::Arm64V2Token::summon().is_some(),
         "every Apple Silicon Mac has the full Arm64V2 feature set"
