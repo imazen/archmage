@@ -452,22 +452,24 @@ macro_rules! is_aarch64_feature_available {
 /// Implementation macro for AArch64 feature check with compile-time optimization.
 /// Not intended for direct use.
 ///
-/// For features in the Apple aarch64 target spec baseline (neon, crc, rdm,
-/// dotprod, fp16, aes, sha2, sha3, fhm, fcma), this uses an Apple vendor
-/// fallback when runtime detection fails. This works around two bugs:
+/// For features in the Apple Silicon (M1+) baseline (neon, crc, rdm,
+/// dotprod, fp16, aes, sha2, sha3, fhm, fcma), this uses an Apple Silicon
+/// fallback when compile-time detection fails. This works around two bugs:
 ///
 /// 1. LLVM's `-Ctarget-cpu=native` drops baseline features from compile-time
 ///    detection on macOS (sha2, sha3, etc. show `cfg!(target_feature)` = false)
 /// 2. `std::arch::is_aarch64_feature_detected!` returns false for sha2/sha3
 ///    on macOS 15.x even though all Apple Silicon has these features
 ///
-/// These features are guaranteed by the `aarch64-apple-*` target spec and
-/// are present on ALL Apple Silicon (M1+). The Apple fallback is safe because
-/// Apple controls both hardware and target spec, and has never shipped a chip
-/// without these features.
+/// The fallback applies **only where the hardware is provably Apple Silicon**:
+/// macOS, Mac Catalyst, and the aarch64 simulators (which execute natively on
+/// Apple Silicon Macs). Every M1+ chip has all ten features. Device
+/// iOS/tvOS/watchOS/visionOS targets are excluded — their supported hardware
+/// includes A7–A12 cores that lack most of this list, so they use genuine
+/// runtime detection (see `__impl_aarch64_apple_or_runtime_check!`).
 ///
-/// Features NOT in the Apple baseline (i8mm, bf16, sve, sve2) use standard
-/// runtime-only detection, as they vary by chip generation.
+/// Features NOT in the Apple Silicon baseline (i8mm, bf16, sve, sve2) use
+/// standard runtime-only detection, as they vary by chip generation.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __impl_aarch64_feature_check {
@@ -617,23 +619,48 @@ macro_rules! __impl_aarch64_feature_check {
     }};
 }
 
-/// Apple aarch64 fallback + runtime check.
+/// Apple Silicon fallback + runtime check.
 ///
-/// On Apple Silicon (`target_vendor = "apple"` + `target_arch = "aarch64"`),
-/// returns true unconditionally for features in the Apple target spec baseline.
+/// Returns true unconditionally for features in the Apple Silicon (M1+)
+/// baseline, but **only where the executing hardware is guaranteed to be
+/// Apple Silicon**:
+///
+/// - `target_os = "macos"` — macOS aarch64 runs exclusively on M1+.
+/// - `target_abi = "macabi"` (Mac Catalyst) — runs exclusively on macOS.
+/// - `target_abi = "sim"` (iOS/tvOS/watchOS/visionOS simulators) — aarch64
+///   simulators execute natively on Apple Silicon Macs.
+///
 /// This works around broken `is_aarch64_feature_detected!` on macOS 15.x
-/// and LLVM's `-Ctarget-cpu=native` dropping baseline features.
+/// and LLVM's `-Ctarget-cpu=native` dropping baseline features there.
+///
+/// **Device iOS/tvOS/watchOS/visionOS targets are deliberately excluded**
+/// and use standard runtime detection: their target-spec baselines only
+/// guarantee `{aes, neon, sha2}`, and the device families they support
+/// include pre-M1-era cores (A7–A12) that lack crc/rdm/dotprod/fp16/fhm/
+/// fcma/sha3. Returning `true` there would hand out capability tokens the
+/// CPU doesn't back — undefined behavior (in practice SIGILL) from safe
+/// code. Where runtime detection is unavailable on those devices this
+/// fails closed (`summon()` returns `None`), which costs the fast path,
+/// never soundness.
 ///
 /// On non-Apple targets, falls through to standard runtime detection.
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __impl_aarch64_apple_or_runtime_check {
     ($feature:tt) => {{
-        #[cfg(all(target_vendor = "apple", target_arch = "aarch64"))]
+        #[cfg(all(
+            target_vendor = "apple",
+            target_arch = "aarch64",
+            any(target_os = "macos", target_abi = "macabi", target_abi = "sim")
+        ))]
         {
             true
         }
-        #[cfg(not(all(target_vendor = "apple", target_arch = "aarch64")))]
+        #[cfg(not(all(
+            target_vendor = "apple",
+            target_arch = "aarch64",
+            any(target_os = "macos", target_abi = "macabi", target_abi = "sim")
+        )))]
         {
             $crate::__impl_aarch64_runtime_only_check!($feature)
         }

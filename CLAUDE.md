@@ -1167,9 +1167,13 @@ These are documented semantic differences between architectures. Tests must acco
 - LLVM's target-cpu=native drops sha2/sha3 (and other features) from compile-time on Apple aarch64
 - `std::arch::is_aarch64_feature_detected!("sha2")` returns false on macOS 15.x (works on 14.x)
 - This caused Arm64V2Token::summon() to return None when using target-cpu=native
-- **Fix**: Apple vendor fallback in `__impl_aarch64_apple_or_runtime_check!` — features in the
-  Apple target spec baseline (neon, crc, rdm, dotprod, fp16, aes, sha2, sha3, fhm, fcma) return
-  true unconditionally on `target_vendor = "apple"` when compile-time detection fails
+- **Fix**: Apple Silicon fallback in `__impl_aarch64_apple_or_runtime_check!` — features in the
+  Apple Silicon baseline (neon, crc, rdm, dotprod, fp16, aes, sha2, sha3, fhm, fcma) return
+  true unconditionally when compile-time detection fails, but ONLY on provably-M1+ hosts:
+  `target_os = "macos"`, Mac Catalyst (`target_abi = "macabi"`), and aarch64 simulators
+  (`target_abi = "sim"`). Device iOS/tvOS/watchOS/visionOS use genuine runtime detection —
+  their A7–A12 hardware lacks most of the list, so an unconditional `true` there was a
+  soundness hole (fixed 2026-07-14; guarded by `tests/apple_fallback_guard.rs`)
 - Upstream bugs: LLVM native CPU probe + Rust std_detect on macOS 15.x
 
 **Windows ARM64 — limited runtime detection** (not fixable in archmage):
