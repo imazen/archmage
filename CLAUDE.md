@@ -1124,6 +1124,8 @@ Found by macro expansion snapshot compilation tests (`tests/expand/*.expanded.rs
 
 3. **`#[autoversion]` on trait impl method: variants placed inside trait impl block** — Generated variant methods (`process_v3`, `process_v4`, `process_scalar`) are emitted inside `impl Trait for Type {}`, but they aren't members of the trait. Compile error E0407. (`tests/expand/autoversion_trait_impl.expanded.rs`)
 
+4. **magetypes NEON `shr_arithmetic_const`/`shr_logical_const` reject `N == 0`** — post-monomorphization compile error on aarch64 (`vshrq_n_*` has `static_assert!(N >= 1 ...)`); the identity shift works on scalar/x86/WASM backends. 56 generated forwarding sites in `magetypes/src/simd/impls/arm_neon.rs`; `shl_const` unaffected (`vshlq_n_*` accepts 0). No documented `N` contract — backends also diverge for `N >= lane_bits` (x86 clamps, WASM masks mod lane width, scalar/NEON error). Verified fix: lower via `vshlq_*(a, vdupq_n_*(-N))` (LLVM folds to immediate `sshr`/`ushr`; a const-branch guard does NOT work — the mono collector still instantiates the dead branch). [Issue #63](https://github.com/imazen/archmage/issues/63).
+
 ## Open Questions
 
 - **Rite token forging**: Should tokenless `#[rite(v3)]` functions auto-forge a token at the top of the body? This would let them participate in incant! rewriting (pass token to callees). The forge is provably safe (`#[target_feature]` guarantees features). But: it adds generated `unsafe` to the body, and the soundness argument relies on `#[target_feature]` being the proof — which is a different safety model than "token from summon()". Deferred pending design clarity.
