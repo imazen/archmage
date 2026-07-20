@@ -912,6 +912,7 @@ fn gen_deterministic_reciprocals(ty: &SimdType) -> String {
 }
 
 fn gen_shifts(ty: &SimdType) -> String {
+    let max_sh = ty.elem.size_bytes() * 8 - 1;
     let mut code = formatdoc! {"
         \x20   /// Shift left by constant.
             #[inline(always)]
@@ -924,6 +925,10 @@ fn gen_shifts(ty: &SimdType) -> String {
     if has_shr_arithmetic(ty.elem) {
         code.push_str(&formatdoc! {"
             \x20   /// Arithmetic shift right by constant (sign-extending).
+                ///
+                /// `N` must be in `0..={max_sh}` (`N == 0` is the identity shift). The
+                /// NEON backend rejects out-of-range `N` at compile time; other
+                /// backends' out-of-range behavior is currently backend-specific.
                 #[inline(always)]
                 pub fn shr_arithmetic_const<const N: i32>(self) -> Self {{
                     Self(T::shr_arithmetic_const::<N>(self.1, self.0), self.1)
@@ -934,6 +939,10 @@ fn gen_shifts(ty: &SimdType) -> String {
 
     code.push_str(&formatdoc! {"
         \x20   /// Logical shift right by constant (zero-filling).
+            ///
+            /// `N` must be in `0..={max_sh}` (`N == 0` is the identity shift). The
+            /// NEON backend rejects out-of-range `N` at compile time; other
+            /// backends' out-of-range behavior is currently backend-specific.
             #[inline(always)]
             pub fn shr_logical_const<const N: i32>(self) -> Self {{
                 Self(T::shr_logical_const::<N>(self.1, self.0), self.1)

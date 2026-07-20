@@ -231,9 +231,11 @@ pub(super) fn generate_i64_backend_trait(ty: &I64VecType) -> String {
             fn shl_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
             /// Arithmetic shift right by constant (sign-extending).
+            /// `N` must be in `0..=63`; the NEON backend rejects out-of-range `N` at compile time.
             fn shr_arithmetic_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
             /// Logical shift right by constant (zero-filling).
+            /// `N` must be in `0..=63`; the NEON backend rejects out-of-range `N` at compile time.
             fn shr_logical_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
             // ====== Boolean ======
@@ -1027,12 +1029,14 @@ fn generate_neon_native_i64_impl(ty: &I64VecType) -> String {
 
             #[inline(always)]
             fn shr_arithmetic_const<const N: i32>(self, a: int64x2_t) -> int64x2_t {{
-                unsafe {{ vshrq_n_s64::<N>(a) }}
+                const {{ assert!(N >= 0 && N <= 63) }};
+                unsafe {{ vshlq_s64(a, vdupq_n_s64((-N) as i64)) }}
             }}
 
             #[inline(always)]
             fn shr_logical_const<const N: i32>(self, a: int64x2_t) -> int64x2_t {{
-                unsafe {{ vreinterpretq_s64_u64(vshrq_n_u64::<N>(vreinterpretq_u64_s64(a))) }}
+                const {{ assert!(N >= 0 && N <= 63) }};
+                unsafe {{ vreinterpretq_s64_u64(vshlq_u64(vreinterpretq_u64_s64(a), vdupq_n_s64((-N) as i64))) }}
             }}
 
             #[inline(always)]
@@ -1289,15 +1293,25 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
         },
         shr_arith = {
             let items: Vec<String> = (0..sub_count)
-                .map(|i| format!("vshrq_n_s64::<N>(a[{i}])"))
+                .map(|i| format!("vshlq_s64(a[{i}], vdupq_n_s64((-N) as i64))"))
                 .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
+            format!(
+                "const {{ assert!(N >= 0 && N <= 63) }};\n                unsafe {{ [{}] }}",
+                items.join(", ")
+            )
         },
         shr_logic = {
             let items: Vec<String> = (0..sub_count)
-                .map(|i| format!("vreinterpretq_s64_u64(vshrq_n_u64::<N>(vreinterpretq_u64_s64(a[{i}])))"))
+                .map(|i| {
+                    format!(
+                        "vreinterpretq_s64_u64(vshlq_u64(vreinterpretq_u64_s64(a[{i}]), vdupq_n_s64((-N) as i64)))"
+                    )
+                })
                 .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
+            format!(
+                "const {{ assert!(N >= 0 && N <= 63) }};\n                unsafe {{ [{}] }}",
+                items.join(", ")
+            )
         },
         all_true = {
             let items: Vec<String> = (0..sub_count)

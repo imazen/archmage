@@ -657,9 +657,11 @@ fn generate_int_backend_trait(ty: &W512Type) -> String {
             fn shl_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
             /// Arithmetic shift right by constant (sign-extending).
+            /// `N` must be in `0..=lane_bits-1`.
             fn shr_arithmetic_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
             /// Logical shift right by constant (zero-filling).
+            /// `N` must be in `0..=lane_bits-1`.
             fn shr_logical_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
             // ====== Boolean ======
@@ -2598,8 +2600,13 @@ fn generate_8bit_shift_polyfill(ty: &W512Type) -> String {
                 unsafe {{
                     let count = _mm_cvtsi32_si128(N);
                     let shifted = _mm512_srl_epi16(a, count);
-                    let mask = _mm512_set1_epi8(((0xFFu16 >> N) & 0xFF) as i8);
-                    _mm512_and_si512(shifted, mask)
+                    let byte_mask = _mm512_set1_epi8(((0xFFu16 >> N) & 0xFF) as i8);
+                    let logical = _mm512_and_si512(shifted, byte_mask);
+                    // Sign-extend: fill the high N bits of negative lanes. The u16
+                    // shift keeps the fill mask 0x00 at N == 0 (identity shift).
+                    let sign = _mm512_movm_epi8(_mm512_cmplt_epi8_mask(a, _mm512_setzero_si512()));
+                    let fill = _mm512_set1_epi8(((0xFF00u16 >> N) & 0xFF) as i8);
+                    _mm512_or_si512(logical, _mm512_and_si512(sign, fill))
                 }}
             }}
         "#}

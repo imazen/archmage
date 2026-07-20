@@ -119,9 +119,11 @@ pub trait I32x4Backend: SimdToken + Sealed + Copy + 'static {
     fn shl_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
     /// Arithmetic shift right by constant (sign-extending).
+    /// `N` must be in `0..=31`; the NEON backend rejects out-of-range `N` at compile time.
     fn shr_arithmetic_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
     /// Logical shift right by constant (zero-filling).
+    /// `N` must be in `0..=31`; the NEON backend rejects out-of-range `N` at compile time.
     fn shr_logical_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
     // ====== Boolean ======

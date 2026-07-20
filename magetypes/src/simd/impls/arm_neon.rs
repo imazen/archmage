@@ -1357,12 +1357,14 @@ impl I32x4Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: int32x4_t) -> int32x4_t {
-        unsafe { vshrq_n_s32::<N>(a) }
+        const { assert!(N >= 0 && N <= 31) };
+        unsafe { vshlq_s32(a, vdupq_n_s32(-N)) }
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: int32x4_t) -> int32x4_t {
-        unsafe { vreinterpretq_s32_u32(vshrq_n_u32::<N>(vreinterpretq_u32_s32(a))) }
+        const { assert!(N >= 0 && N <= 31) };
+        unsafe { vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a), vdupq_n_s32(-N))) }
     }
 
     #[inline(always)]
@@ -1573,15 +1575,22 @@ impl I32x8Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [int32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe { [vshrq_n_s32::<N>(a[0]), vshrq_n_s32::<N>(a[1])] }
+        const { assert!(N >= 0 && N <= 31) };
+        unsafe {
+            [
+                vshlq_s32(a[0], vdupq_n_s32(-N)),
+                vshlq_s32(a[1], vdupq_n_s32(-N)),
+            ]
+        }
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [int32x4_t; 2]) -> [int32x4_t; 2] {
+        const { assert!(N >= 0 && N <= 31) };
         unsafe {
             [
-                vreinterpretq_s32_u32(vshrq_n_u32::<N>(vreinterpretq_u32_s32(a[0]))),
-                vreinterpretq_s32_u32(vshrq_n_u32::<N>(vreinterpretq_u32_s32(a[1]))),
+                vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a[0]), vdupq_n_s32(-N))),
+                vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a[1]), vdupq_n_s32(-N))),
             ]
         }
     }
@@ -1737,7 +1746,8 @@ impl U32x4Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: uint32x4_t) -> uint32x4_t {
-        unsafe { vshrq_n_u32::<N>(a) }
+        const { assert!(N >= 0 && N <= 31) };
+        unsafe { vshlq_u32(a, vdupq_n_s32(-N)) }
     }
 
     #[inline(always)]
@@ -1913,7 +1923,13 @@ impl U32x8Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
-        unsafe { [vshrq_n_u32::<N>(a[0]), vshrq_n_u32::<N>(a[1])] }
+        const { assert!(N >= 0 && N <= 31) };
+        unsafe {
+            [
+                vshlq_u32(a[0], vdupq_n_s32(-N)),
+                vshlq_u32(a[1], vdupq_n_s32(-N)),
+            ]
+        }
     }
 
     #[inline(always)]
@@ -2083,12 +2099,19 @@ impl I64x2Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: int64x2_t) -> int64x2_t {
-        unsafe { vshrq_n_s64::<N>(a) }
+        const { assert!(N >= 0 && N <= 63) };
+        unsafe { vshlq_s64(a, vdupq_n_s64((-N) as i64)) }
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: int64x2_t) -> int64x2_t {
-        unsafe { vreinterpretq_s64_u64(vshrq_n_u64::<N>(vreinterpretq_u64_s64(a))) }
+        const { assert!(N >= 0 && N <= 63) };
+        unsafe {
+            vreinterpretq_s64_u64(vshlq_u64(
+                vreinterpretq_u64_s64(a),
+                vdupq_n_s64((-N) as i64),
+            ))
+        }
     }
 
     #[inline(always)]
@@ -2311,15 +2334,28 @@ impl I64x4Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [int64x2_t; 2]) -> [int64x2_t; 2] {
-        unsafe { [vshrq_n_s64::<N>(a[0]), vshrq_n_s64::<N>(a[1])] }
+        const { assert!(N >= 0 && N <= 63) };
+        unsafe {
+            [
+                vshlq_s64(a[0], vdupq_n_s64((-N) as i64)),
+                vshlq_s64(a[1], vdupq_n_s64((-N) as i64)),
+            ]
+        }
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [int64x2_t; 2]) -> [int64x2_t; 2] {
+        const { assert!(N >= 0 && N <= 63) };
         unsafe {
             [
-                vreinterpretq_s64_u64(vshrq_n_u64::<N>(vreinterpretq_u64_s64(a[0]))),
-                vreinterpretq_s64_u64(vshrq_n_u64::<N>(vreinterpretq_u64_s64(a[1]))),
+                vreinterpretq_s64_u64(vshlq_u64(
+                    vreinterpretq_u64_s64(a[0]),
+                    vdupq_n_s64((-N) as i64),
+                )),
+                vreinterpretq_s64_u64(vshlq_u64(
+                    vreinterpretq_u64_s64(a[1]),
+                    vdupq_n_s64((-N) as i64),
+                )),
             ]
         }
     }
@@ -2478,11 +2514,13 @@ impl I8x16Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: int8x16_t) -> int8x16_t {
-        unsafe { vreinterpretq_s8_u8(vshrq_n_u8::<N>(vreinterpretq_u8_s8(a))) }
+        const { assert!(N >= 0 && N <= 7) };
+        unsafe { vreinterpretq_s8_u8(vshlq_u8(vreinterpretq_u8_s8(a), vdupq_n_s8((-N) as i8))) }
     }
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: int8x16_t) -> int8x16_t {
-        unsafe { vshrq_n_s8::<N>(a) }
+        const { assert!(N >= 0 && N <= 7) };
+        unsafe { vshlq_s8(a, vdupq_n_s8((-N) as i8)) }
     }
 
     #[inline(always)]
@@ -2694,16 +2732,23 @@ impl I8x32Backend for archmage::NeonToken {
     }
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [int8x16_t; 2]) -> [int8x16_t; 2] {
+        const { assert!(N >= 0 && N <= 7) };
         unsafe {
             [
-                vreinterpretq_s8_u8(vshrq_n_u8::<N>(vreinterpretq_u8_s8(a[0]))),
-                vreinterpretq_s8_u8(vshrq_n_u8::<N>(vreinterpretq_u8_s8(a[1]))),
+                vreinterpretq_s8_u8(vshlq_u8(vreinterpretq_u8_s8(a[0]), vdupq_n_s8((-N) as i8))),
+                vreinterpretq_s8_u8(vshlq_u8(vreinterpretq_u8_s8(a[1]), vdupq_n_s8((-N) as i8))),
             ]
         }
     }
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [int8x16_t; 2]) -> [int8x16_t; 2] {
-        unsafe { [vshrq_n_s8::<N>(a[0]), vshrq_n_s8::<N>(a[1])] }
+        const { assert!(N >= 0 && N <= 7) };
+        unsafe {
+            [
+                vshlq_s8(a[0], vdupq_n_s8((-N) as i8)),
+                vshlq_s8(a[1], vdupq_n_s8((-N) as i8)),
+            ]
+        }
     }
 
     #[inline(always)]
@@ -2840,7 +2885,8 @@ impl U8x16Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: uint8x16_t) -> uint8x16_t {
-        unsafe { vshrq_n_u8::<N>(a) }
+        const { assert!(N >= 0 && N <= 7) };
+        unsafe { vshlq_u8(a, vdupq_n_s8((-N) as i8)) }
     }
 
     #[inline(always)]
@@ -3019,7 +3065,13 @@ impl U8x32Backend for archmage::NeonToken {
     }
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [uint8x16_t; 2]) -> [uint8x16_t; 2] {
-        unsafe { [vshrq_n_u8::<N>(a[0]), vshrq_n_u8::<N>(a[1])] }
+        const { assert!(N >= 0 && N <= 7) };
+        unsafe {
+            [
+                vshlq_u8(a[0], vdupq_n_s8((-N) as i8)),
+                vshlq_u8(a[1], vdupq_n_s8((-N) as i8)),
+            ]
+        }
     }
 
     #[inline(always)]
@@ -3164,11 +3216,18 @@ impl I16x8Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: int16x8_t) -> int16x8_t {
-        unsafe { vreinterpretq_s16_u16(vshrq_n_u16::<N>(vreinterpretq_u16_s16(a))) }
+        const { assert!(N >= 0 && N <= 15) };
+        unsafe {
+            vreinterpretq_s16_u16(vshlq_u16(
+                vreinterpretq_u16_s16(a),
+                vdupq_n_s16((-N) as i16),
+            ))
+        }
     }
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: int16x8_t) -> int16x8_t {
-        unsafe { vshrq_n_s16::<N>(a) }
+        const { assert!(N >= 0 && N <= 15) };
+        unsafe { vshlq_s16(a, vdupq_n_s16((-N) as i16)) }
     }
 
     #[inline(always)]
@@ -3377,16 +3436,29 @@ impl I16x16Backend for archmage::NeonToken {
     }
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [int16x8_t; 2]) -> [int16x8_t; 2] {
+        const { assert!(N >= 0 && N <= 15) };
         unsafe {
             [
-                vreinterpretq_s16_u16(vshrq_n_u16::<N>(vreinterpretq_u16_s16(a[0]))),
-                vreinterpretq_s16_u16(vshrq_n_u16::<N>(vreinterpretq_u16_s16(a[1]))),
+                vreinterpretq_s16_u16(vshlq_u16(
+                    vreinterpretq_u16_s16(a[0]),
+                    vdupq_n_s16((-N) as i16),
+                )),
+                vreinterpretq_s16_u16(vshlq_u16(
+                    vreinterpretq_u16_s16(a[1]),
+                    vdupq_n_s16((-N) as i16),
+                )),
             ]
         }
     }
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [int16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe { [vshrq_n_s16::<N>(a[0]), vshrq_n_s16::<N>(a[1])] }
+        const { assert!(N >= 0 && N <= 15) };
+        unsafe {
+            [
+                vshlq_s16(a[0], vdupq_n_s16((-N) as i16)),
+                vshlq_s16(a[1], vdupq_n_s16((-N) as i16)),
+            ]
+        }
     }
 
     #[inline(always)]
@@ -3529,7 +3601,8 @@ impl U16x8Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: uint16x8_t) -> uint16x8_t {
-        unsafe { vshrq_n_u16::<N>(a) }
+        const { assert!(N >= 0 && N <= 15) };
+        unsafe { vshlq_u16(a, vdupq_n_s16((-N) as i16)) }
     }
 
     #[inline(always)]
@@ -3705,7 +3778,13 @@ impl U16x16Backend for archmage::NeonToken {
     }
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [uint16x8_t; 2]) -> [uint16x8_t; 2] {
-        unsafe { [vshrq_n_u16::<N>(a[0]), vshrq_n_u16::<N>(a[1])] }
+        const { assert!(N >= 0 && N <= 15) };
+        unsafe {
+            [
+                vshlq_u16(a[0], vdupq_n_s16((-N) as i16)),
+                vshlq_u16(a[1], vdupq_n_s16((-N) as i16)),
+            ]
+        }
     }
 
     #[inline(always)]
@@ -3838,7 +3917,8 @@ impl U64x2Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: uint64x2_t) -> uint64x2_t {
-        unsafe { vshrq_n_u64::<N>(a) }
+        const { assert!(N >= 0 && N <= 63) };
+        unsafe { vshlq_u64(a, vdupq_n_s64((-N) as i64)) }
     }
 
     #[inline(always)]
@@ -4021,7 +4101,13 @@ impl U64x4Backend for archmage::NeonToken {
     }
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [uint64x2_t; 2]) -> [uint64x2_t; 2] {
-        unsafe { [vshrq_n_u64::<N>(a[0]), vshrq_n_u64::<N>(a[1])] }
+        const { assert!(N >= 0 && N <= 63) };
+        unsafe {
+            [
+                vshlq_u64(a[0], vdupq_n_s64((-N) as i64)),
+                vshlq_u64(a[1], vdupq_n_s64((-N) as i64)),
+            ]
+        }
     }
 
     #[inline(always)]

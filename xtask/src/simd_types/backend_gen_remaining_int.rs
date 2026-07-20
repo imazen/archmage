@@ -482,6 +482,7 @@ pub(super) fn generate_int_backend_trait(ty: &IntVecType) -> String {
             fn shl_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
             /// Logical shift right by constant (zero-filling).
+            /// `N` must be in `0..=lane_bits-1`; the NEON backend rejects out-of-range `N` at compile time.
             fn shr_logical_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
     "#});
 
@@ -489,6 +490,7 @@ pub(super) fn generate_int_backend_trait(ty: &IntVecType) -> String {
     if ty.signed {
         methods.push_str(&formatdoc! {r#"
             /// Arithmetic shift right by constant (sign-extending).
+            /// `N` must be in `0..=lane_bits-1`; the NEON backend rejects out-of-range `N` at compile time.
             fn shr_arithmetic_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
         "#});
     }
@@ -929,7 +931,10 @@ fn generate_x86_int_shifts(ty: &IntVecType) -> String {
                     let logical = {p}_and_si{bits}(shifted, byte_mask);
                     let zero = {p}_setzero_si{bits}();
                     let sign = {p}_cmpgt_epi8(zero, a);
-                    let fill = {p}_set1_epi8((0xFFu8.wrapping_shl(8u32.wrapping_sub(N as u32))) as i8);
+                    // High-N-bits fill mask via u16 shift: 0x00 at N == 0 (identity
+                    // shift needs no sign fill). A u8 `0xFF << (8 - N)` would wrap
+                    // the shift amount at N == 0 and corrupt negative lanes.
+                    let fill = {p}_set1_epi8(((0xFF00u16 >> N) & 0xFF) as i8);
                     {p}_or_si{bits}(logical, {p}_and_si{bits}(sign, fill))
                 }}
             }}
@@ -1442,14 +1447,19 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
         not_body
     };
 
+    // Right shifts lower through vshlq with a negated count: vshrq_n_* rejects
+    // N == 0 (immediate encoding has no shift-0 form), while vshlq_* treats a
+    // negative count as a right shift and 0 as the identity. LLVM folds the
+    // constant splat to the immediate sshr/ushr forms.
     let shr_logical = if ty.signed {
         // Signed logical shift right: cast to unsigned, shift, cast back
         let us = &ns[1..]; // "8", "16"
-        format!("vreinterpretq_{ns}_u{us}(vshrq_n_u{us}::<N>(vreinterpretq_u{us}_{ns}(a)))")
-    } else if ty.elem_bits == 64 {
-        format!("vshrq_n_{ns}::<N>(a)")
+        format!(
+            "vreinterpretq_{ns}_u{us}(vshlq_u{us}(vreinterpretq_u{us}_{ns}(a), vdupq_n_s{us}((-N) as i{us})))"
+        )
     } else {
-        format!("vshrq_n_{ns}::<N>(a)")
+        let us = &ns[1..]; // "8", "16", "64"
+        format!("vshlq_{ns}(a, vdupq_n_s{us}((-N) as i{us}))")
     };
 
     let mut body = formatdoc! {r#"
@@ -1612,6 +1622,7 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
     "#});
 
     // Shifts
+    let max_sh = ty.elem_bits - 1;
     body.push_str(&formatdoc! {r#"
             #[inline(always)]
             fn shl_const<const N: i32>(self, a: {nt}) -> {nt} {{
@@ -1620,15 +1631,18 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
 
             #[inline(always)]
             fn shr_logical_const<const N: i32>(self, a: {nt}) -> {nt} {{
+                const {{ assert!(N >= 0 && N <= {max_sh}) }};
                 unsafe {{ {shr_logical} }}
             }}
     "#});
 
     if ty.signed {
+        let us = &ns[1..]; // "8", "16"
         body.push_str(&formatdoc! {r#"
             #[inline(always)]
             fn shr_arithmetic_const<const N: i32>(self, a: {nt}) -> {nt} {{
-                unsafe {{ vshrq_n_{ns}::<N>(a) }}
+                const {{ assert!(N >= 0 && N <= {max_sh}) }};
+                unsafe {{ vshlq_{ns}(a, vdupq_n_s{us}((-N) as i{us})) }}
             }}
         "#});
     }
@@ -1864,17 +1878,21 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
 
     let shr_logical_items: Vec<String> = (0..sub_count)
         .map(|i| {
+            let us = &ns[1..];
             if ty.signed {
-                let us = &ns[1..];
                 format!(
-                    "vreinterpretq_{ns}_u{us}(vshrq_n_u{us}::<N>(vreinterpretq_u{us}_{ns}(a[{i}])))"
+                    "vreinterpretq_{ns}_u{us}(vshlq_u{us}(vreinterpretq_u{us}_{ns}(a[{i}]), vdupq_n_s{us}((-N) as i{us})))"
                 )
             } else {
-                format!("vshrq_n_{ns}::<N>(a[{i}])")
+                format!("vshlq_{ns}(a[{i}], vdupq_n_s{us}((-N) as i{us}))")
             }
         })
         .collect();
-    let shr_logical_body = format!("unsafe {{ [{}] }}", shr_logical_items.join(", "));
+    let shr_logical_body = format!(
+        "const {{ assert!(N >= 0 && N <= {}) }};\n                unsafe {{ [{}] }}",
+        ty.elem_bits - 1,
+        shr_logical_items.join(", ")
+    );
 
     let mut code = formatdoc! {r#"
         impl {trait_name} for archmage::NeonToken {{
@@ -2034,12 +2052,15 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
     });
 
     if ty.signed {
+        let us = &ns[1..];
+        let max_sh = ty.elem_bits - 1;
         let shr_arith_items: Vec<String> = (0..sub_count)
-            .map(|i| format!("vshrq_n_{ns}::<N>(a[{i}])"))
+            .map(|i| format!("vshlq_{ns}(a[{i}], vdupq_n_s{us}((-N) as i{us}))"))
             .collect();
         code.push_str(&formatdoc! {r#"
             #[inline(always)]
             fn shr_arithmetic_const<const N: i32>(self, a: {repr}) -> {repr} {{
+                const {{ assert!(N >= 0 && N <= {max_sh}) }};
                 unsafe {{ [{shr_arith}] }}
             }}
         "#, shr_arith = shr_arith_items.join(", ")});
@@ -2368,7 +2389,9 @@ fn generate_wasm_native_int_impl(ty: &IntVecType) -> String {
             fn shr_logical_const<const N: i32>(self, a: v128) -> v128 {{ {unsigned_shr}(a, N as u32) }}
     "#,
         unsigned_shr = if ty.signed {
-            format!("{wp}_shr") // unsigned shr for logical
+            // Logical shift must use the u-prefixed intrinsic: the i-prefixed
+            // `_shr` is the arithmetic (sign-filling) form in WASM naming.
+            format!("u{}_shr", &signed_wp[1..])
         } else {
             shr_fn.clone()
         },
@@ -2455,7 +2478,9 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
     let shl_body = format!("[{}]", shl_items.join(", "));
 
     let shr_logical_fn = if ty.signed {
-        format!("{wp}_shr") // unsigned shr
+        // Logical shift must use the u-prefixed intrinsic: the i-prefixed
+        // `_shr` is the arithmetic (sign-filling) form in WASM naming.
+        format!("u{}_shr", &signed_wp[1..])
     } else {
         format!("{wp}_shr")
     };

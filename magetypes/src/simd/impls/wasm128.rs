@@ -1848,7 +1848,7 @@ impl I8x16Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: v128) -> v128 {
-        i8x16_shr(a, N as u32)
+        u8x16_shr(a, N as u32)
     }
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: v128) -> v128 {
@@ -2002,7 +2002,7 @@ impl I8x32Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [v128; 2]) -> [v128; 2] {
-        [i8x16_shr(a[0], N as u32), i8x16_shr(a[1], N as u32)]
+        [u8x16_shr(a[0], N as u32), u8x16_shr(a[1], N as u32)]
     }
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [v128; 2]) -> [v128; 2] {
@@ -2430,7 +2430,7 @@ impl I16x8Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: v128) -> v128 {
-        i16x8_shr(a, N as u32)
+        u16x8_shr(a, N as u32)
     }
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: v128) -> v128 {
@@ -2588,7 +2588,7 @@ impl I16x16Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [v128; 2]) -> [v128; 2] {
-        [i16x8_shr(a[0], N as u32), i16x8_shr(a[1], N as u32)]
+        [u16x8_shr(a[0], N as u32), u16x8_shr(a[1], N as u32)]
     }
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [v128; 2]) -> [v128; 2] {

@@ -301,12 +301,20 @@ impl<T: I64x4Backend> i64x4<T> {
     }
 
     /// Arithmetic shift right by constant (sign-extending).
+    ///
+    /// `N` must be in `0..=63` (`N == 0` is the identity shift). The
+    /// NEON backend rejects out-of-range `N` at compile time; other
+    /// backends' out-of-range behavior is currently backend-specific.
     #[inline(always)]
     pub fn shr_arithmetic_const<const N: i32>(self) -> Self {
         Self(T::shr_arithmetic_const::<N>(self.1, self.0), self.1)
     }
 
     /// Logical shift right by constant (zero-filling).
+    ///
+    /// `N` must be in `0..=63` (`N == 0` is the identity shift). The
+    /// NEON backend rejects out-of-range `N` at compile time; other
+    /// backends' out-of-range behavior is currently backend-specific.
     #[inline(always)]
     pub fn shr_logical_const<const N: i32>(self) -> Self {
         Self(T::shr_logical_const::<N>(self.1, self.0), self.1)

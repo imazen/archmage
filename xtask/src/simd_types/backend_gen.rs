@@ -3686,9 +3686,11 @@ fn generate_i32_backend_trait(ty: &I32VecType) -> String {
             fn shl_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
             /// Arithmetic shift right by constant (sign-extending).
+            /// `N` must be in `0..=31`; the NEON backend rejects out-of-range `N` at compile time.
             fn shr_arithmetic_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
             /// Logical shift right by constant (zero-filling).
+            /// `N` must be in `0..=31`; the NEON backend rejects out-of-range `N` at compile time.
             fn shr_logical_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
             // ====== Boolean ======
@@ -4846,12 +4848,14 @@ fn generate_neon_native_i32_impl(ty: &I32VecType) -> String {
 
             #[inline(always)]
             fn shr_arithmetic_const<const N: i32>(self, a: int32x4_t) -> int32x4_t {{
-                unsafe {{ vshrq_n_s32::<N>(a) }}
+                const {{ assert!(N >= 0 && N <= 31) }};
+                unsafe {{ vshlq_s32(a, vdupq_n_s32(-N)) }}
             }}
 
             #[inline(always)]
             fn shr_logical_const<const N: i32>(self, a: int32x4_t) -> int32x4_t {{
-                unsafe {{ vreinterpretq_s32_u32(vshrq_n_u32::<N>(vreinterpretq_u32_s32(a))) }}
+                const {{ assert!(N >= 0 && N <= 31) }};
+                unsafe {{ vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a), vdupq_n_s32(-N))) }}
             }}
 
             #[inline(always)]
@@ -5091,15 +5095,25 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
         },
         shr_arith = {
             let items: Vec<String> = (0..sub_count)
-                .map(|i| format!("vshrq_n_s32::<N>(a[{i}])"))
+                .map(|i| format!("vshlq_s32(a[{i}], vdupq_n_s32(-N))"))
                 .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
+            format!(
+                "const {{ assert!(N >= 0 && N <= 31) }};\n                unsafe {{ [{}] }}",
+                items.join(", ")
+            )
         },
         shr_logic = {
             let items: Vec<String> = (0..sub_count)
-                .map(|i| format!("vreinterpretq_s32_u32(vshrq_n_u32::<N>(vreinterpretq_u32_s32(a[{i}])))"))
+                .map(|i| {
+                    format!(
+                        "vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a[{i}]), vdupq_n_s32(-N)))"
+                    )
+                })
                 .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
+            format!(
+                "const {{ assert!(N >= 0 && N <= 31) }};\n                unsafe {{ [{}] }}",
+                items.join(", ")
+            )
         },
         all_true = {
             let items: Vec<String> = (0..sub_count)
@@ -5838,6 +5852,7 @@ fn generate_u32_backend_trait(ty: &U32VecType) -> String {
             fn shl_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
             /// Logical shift right by constant (zero-filling).
+            /// `N` must be in `0..=31`; the NEON backend rejects out-of-range `N` at compile time.
             fn shr_logical_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
             // ====== Boolean ======
@@ -6529,7 +6544,8 @@ fn generate_neon_native_u32_impl(ty: &U32VecType) -> String {
 
             #[inline(always)]
             fn shr_logical_const<const N: i32>(self, a: uint32x4_t) -> uint32x4_t {{
-                unsafe {{ vshrq_n_u32::<N>(a) }}
+                const {{ assert!(N >= 0 && N <= 31) }};
+                unsafe {{ vshlq_u32(a, vdupq_n_s32(-N)) }}
             }}
 
             #[inline(always)]
@@ -6756,9 +6772,12 @@ fn generate_neon_polyfill_u32_impl(ty: &U32VecType) -> String {
         },
         shr_logic = {
             let items: Vec<String> = (0..sub_count)
-                .map(|i| format!("vshrq_n_u32::<N>(a[{i}])"))
+                .map(|i| format!("vshlq_u32(a[{i}], vdupq_n_s32(-N))"))
                 .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
+            format!(
+                "const {{ assert!(N >= 0 && N <= 31) }};\n                unsafe {{ [{}] }}",
+                items.join(", ")
+            )
         },
         all_true = {
             let items: Vec<String> = (0..sub_count)

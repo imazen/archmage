@@ -2472,7 +2472,10 @@ impl I8x16Backend for archmage::X64V3Token {
             let logical = _mm_and_si128(shifted, byte_mask);
             let zero = _mm_setzero_si128();
             let sign = _mm_cmpgt_epi8(zero, a);
-            let fill = _mm_set1_epi8((0xFFu8.wrapping_shl(8u32.wrapping_sub(N as u32))) as i8);
+            // High-N-bits fill mask via u16 shift: 0x00 at N == 0 (identity
+            // shift needs no sign fill). A u8 `0xFF << (8 - N)` would wrap
+            // the shift amount at N == 0 and corrupt negative lanes.
+            let fill = _mm_set1_epi8(((0xFF00u16 >> N) & 0xFF) as i8);
             _mm_or_si128(logical, _mm_and_si128(sign, fill))
         }
     }
@@ -2669,7 +2672,10 @@ impl I8x32Backend for archmage::X64V3Token {
             let logical = _mm256_and_si256(shifted, byte_mask);
             let zero = _mm256_setzero_si256();
             let sign = _mm256_cmpgt_epi8(zero, a);
-            let fill = _mm256_set1_epi8((0xFFu8.wrapping_shl(8u32.wrapping_sub(N as u32))) as i8);
+            // High-N-bits fill mask via u16 shift: 0x00 at N == 0 (identity
+            // shift needs no sign fill). A u8 `0xFF << (8 - N)` would wrap
+            // the shift amount at N == 0 and corrupt negative lanes.
+            let fill = _mm256_set1_epi8(((0xFF00u16 >> N) & 0xFF) as i8);
             _mm256_or_si256(logical, _mm256_and_si256(sign, fill))
         }
     }

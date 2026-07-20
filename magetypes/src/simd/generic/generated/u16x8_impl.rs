@@ -289,6 +289,10 @@ impl<T: U16x8Backend> u16x8<T> {
     }
 
     /// Logical shift right by constant (zero-filling).
+    ///
+    /// `N` must be in `0..=15` (`N == 0` is the identity shift). The
+    /// NEON backend rejects out-of-range `N` at compile time; other
+    /// backends' out-of-range behavior is currently backend-specific.
     #[inline(always)]
     pub fn shr_logical_const<const N: i32>(self) -> Self {
         Self(T::shr_logical_const::<N>(self.1, self.0), self.1)
