@@ -13,6 +13,8 @@
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 - Make `w512` non-default in magetypes — users who need 512-bit types add `features = ["w512"]`; saves ~25% build time for the majority who don't
 
+## [0.9.28] - 2026-07-20
+
 ### Added
 
 - **Structure-aware intrinsic soundness scanner** (`xtask/src/soundness.rs`, runs in `just soundness` / `validate` / `generate` / `ci`): derives gating contexts from the code itself (impl-for-token blocks, `#[target_feature]` fns, token-typed params — contexts union), detects intrinsics by membership in the 10,884-entry stdarch database instead of prefix whitelists, and hard-fails on feature mismatches, ungated intrinsics (incl. trait default bodies), unknown intrinsic-shaped names, structural-rule breaches (`MaybeUninit`/`mem::zeroed`/forging in magetypes, bare `transmute` outside backend impls, `Default`/serde/bytemuck on SIMD wrappers, backend-trait methods without a `self` receiver), and missing SAFETY discipline. Vacuous-pass guards (global floor 4,000 verified calls + per-file floors; 4,478 measured at introduction) make an empty scan a failure, and the scanner's own unit tests plant every violation class and assert it fires (`cargo test -p xtask`, now CI step 6). (e30bfea, 865ba31)
@@ -38,8 +40,9 @@
 
 ### Documentation
 
+- magetypes: documented all 60 aarch64/wasm32 bare-name type aliases in `simd/mod.rs` — every target now compiles `missing_docs`-clean (previously 30 warnings per ARM/WASM build). (9843557)
 - Every generated `forge_token_dangerously()` call site (81) now carries a site-specific `// SAFETY:` comment, and every intrinsic-bearing generated impls file carries a `# Safety (audit contract)` header stating the uniform justification for its unsafe blocks; both enforced by the soundness scanner so coverage cannot regress. (865ba31)
-- README overhaul for both `archmage` and `magetypes`, conformed to the zen README conventions: badge row now includes `&label=CI`, an MSRV 1.89 badge, and a `license` → `#license` anchor (all badges linked); added a `## Quick start` section (copy-paste `#[arcane]` + `incant!` runtime dispatch for archmage, `#[magetypes]` for magetypes) and made every body link absolute. Split each crate's crates.io README into a generated, badge-free `README.crates.md` (`readme = "README.crates.md"`, `include` updated) so version-pinned crates.io pages no longer show HEAD-reflecting badges, while the GitHub READMEs keep the full row. Replaced the hand-maintained crosslink footer with the canonical registry-rendered footer (repo links), placed last after License.
+- README overhaul for both `archmage` and `magetypes`, conformed to the zen README conventions: badge row now includes `&label=CI`, an MSRV 1.89 badge, and a `license` → `#license` anchor (all badges linked); added a `## Quick start` section (copy-paste `#[arcane]` + `incant!` runtime dispatch for archmage, `#[magetypes]` for magetypes) and made every body link absolute. Split each crate's crates.io README into a generated, badge-free `README.crates.md` (`readme = "README.crates.md"`, `include` updated) so version-pinned crates.io pages no longer show HEAD-reflecting badges, while the GitHub READMEs keep the full row. Replaced the hand-maintained crosslink footer with the canonical registry-rendered footer (repo links), placed last after License. (49023ce)
 
 ## [0.9.27] - 2026-06-23
 
