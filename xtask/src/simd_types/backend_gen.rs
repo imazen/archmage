@@ -3686,11 +3686,11 @@ fn generate_i32_backend_trait(ty: &I32VecType) -> String {
             fn shl_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
             /// Arithmetic shift right by constant (sign-extending).
-            /// `N` must be in `0..=31`; the NEON backend rejects out-of-range `N` at compile time.
+            /// `N` must be in `0..=31`; the generic front-ends reject out-of-range `N` at compile time.
             fn shr_arithmetic_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
             /// Logical shift right by constant (zero-filling).
-            /// `N` must be in `0..=31`; the NEON backend rejects out-of-range `N` at compile time.
+            /// `N` must be in `0..=31`; the generic front-ends reject out-of-range `N` at compile time.
             fn shr_logical_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
             // ====== Boolean ======
@@ -5852,7 +5852,7 @@ fn generate_u32_backend_trait(ty: &U32VecType) -> String {
             fn shl_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
             /// Logical shift right by constant (zero-filling).
-            /// `N` must be in `0..=31`; the NEON backend rejects out-of-range `N` at compile time.
+            /// `N` must be in `0..=31`; the generic front-ends reject out-of-range `N` at compile time.
             fn shr_logical_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
             // ====== Boolean ======

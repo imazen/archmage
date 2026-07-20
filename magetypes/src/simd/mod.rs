@@ -15,6 +15,28 @@
 //!     let c = a + b;
 //! }
 //! ```
+//!
+//! ## Shift-by-constant range enforcement
+//!
+//! `shl_const::<N>`, `shr_arithmetic_const::<N>`, and `shr_logical_const::<N>`
+//! require `N` in `0..=lane_bits-1`. Out-of-range `N` fails to compile — the
+//! same way on every backend (a monomorphization-time const assert):
+//!
+//! ```compile_fail
+//! use archmage::{ScalarToken, SimdToken};
+//! use magetypes::simd::generic::i32x4;
+//! let t = ScalarToken::summon().unwrap();
+//! // 32 is out of range for 32-bit lanes: valid shifts are 0..=31.
+//! let _ = i32x4::<ScalarToken>::splat(t, 1).shr_logical_const::<32>();
+//! ```
+//!
+//! ```compile_fail
+//! use archmage::{ScalarToken, SimdToken};
+//! use magetypes::simd::generic::u8x16;
+//! let t = ScalarToken::summon().unwrap();
+//! // 8 is out of range for 8-bit lanes: valid shifts are 0..=7.
+//! let _ = u8x16::<ScalarToken>::splat(t, 1).shl_const::<8>();
+//! ```
 
 // All generated code lives in the generated/ subfolder.
 // The old per-platform types have been replaced by generic strategy-pattern types.

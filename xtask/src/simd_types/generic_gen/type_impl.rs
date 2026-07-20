@@ -915,8 +915,12 @@ fn gen_shifts(ty: &SimdType) -> String {
     let max_sh = ty.elem.size_bytes() * 8 - 1;
     let mut code = formatdoc! {"
         \x20   /// Shift left by constant.
+            ///
+            /// `N` must be in `0..={max_sh}`; out-of-range `N` fails to compile,
+            /// identically on every backend.
             #[inline(always)]
             pub fn shl_const<const N: i32>(self) -> Self {{
+                const {{ assert!(N >= 0 && N <= {max_sh}, \"shift amount out of range\") }};
                 Self(T::shl_const::<N>(self.1, self.0), self.1)
             }}
 
@@ -926,11 +930,11 @@ fn gen_shifts(ty: &SimdType) -> String {
         code.push_str(&formatdoc! {"
             \x20   /// Arithmetic shift right by constant (sign-extending).
                 ///
-                /// `N` must be in `0..={max_sh}` (`N == 0` is the identity shift). The
-                /// NEON backend rejects out-of-range `N` at compile time; other
-                /// backends' out-of-range behavior is currently backend-specific.
+                /// `N` must be in `0..={max_sh}` (`N == 0` is the identity shift);
+                /// out-of-range `N` fails to compile, identically on every backend.
                 #[inline(always)]
                 pub fn shr_arithmetic_const<const N: i32>(self) -> Self {{
+                    const {{ assert!(N >= 0 && N <= {max_sh}, \"shift amount out of range\") }};
                     Self(T::shr_arithmetic_const::<N>(self.1, self.0), self.1)
                 }}
 
@@ -940,11 +944,11 @@ fn gen_shifts(ty: &SimdType) -> String {
     code.push_str(&formatdoc! {"
         \x20   /// Logical shift right by constant (zero-filling).
             ///
-            /// `N` must be in `0..={max_sh}` (`N == 0` is the identity shift). The
-            /// NEON backend rejects out-of-range `N` at compile time; other
-            /// backends' out-of-range behavior is currently backend-specific.
+            /// `N` must be in `0..={max_sh}` (`N == 0` is the identity shift);
+            /// out-of-range `N` fails to compile, identically on every backend.
             #[inline(always)]
             pub fn shr_logical_const<const N: i32>(self) -> Self {{
+                const {{ assert!(N >= 0 && N <= {max_sh}, \"shift amount out of range\") }};
                 Self(T::shr_logical_const::<N>(self.1, self.0), self.1)
             }}
 

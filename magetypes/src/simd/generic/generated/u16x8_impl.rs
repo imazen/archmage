@@ -283,18 +283,22 @@ impl<T: U16x8Backend> u16x8<T> {
     // ====== Shifts ======
 
     /// Shift left by constant.
+    ///
+    /// `N` must be in `0..=15`; out-of-range `N` fails to compile,
+    /// identically on every backend.
     #[inline(always)]
     pub fn shl_const<const N: i32>(self) -> Self {
+        const { assert!(N >= 0 && N <= 15, "shift amount out of range") };
         Self(T::shl_const::<N>(self.1, self.0), self.1)
     }
 
     /// Logical shift right by constant (zero-filling).
     ///
-    /// `N` must be in `0..=15` (`N == 0` is the identity shift). The
-    /// NEON backend rejects out-of-range `N` at compile time; other
-    /// backends' out-of-range behavior is currently backend-specific.
+    /// `N` must be in `0..=15` (`N == 0` is the identity shift);
+    /// out-of-range `N` fails to compile, identically on every backend.
     #[inline(always)]
     pub fn shr_logical_const<const N: i32>(self) -> Self {
+        const { assert!(N >= 0 && N <= 15, "shift amount out of range") };
         Self(T::shr_logical_const::<N>(self.1, self.0), self.1)
     }
 
