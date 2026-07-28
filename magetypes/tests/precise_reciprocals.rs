@@ -1,4 +1,4 @@
-//! `recip()` is contracted as "precise reciprocal (1/x), full f32 precision".
+//! `recip()` and `rsqrt()` are contracted as full f32 precision.
 //!
 //! This pins that contract. The ARM NEON backend previously implemented it as
 //! `vrecpeq_f32` + two Newton steps, which missed exactness by ~2 ULP *and*
@@ -34,6 +34,24 @@ fn inputs() -> Vec<f32> {
 }
 
 fn check_x4<T: F32x4Convert>(token: T) {
+    // rsqrt is only defined for non-negative input.
+    let pos: Vec<f32> = inputs().iter().map(|x| x.abs() + 1e-6).collect();
+    for chunk in pos.chunks(4) {
+        let mut arr = [1.0f32; 4];
+        arr[..chunk.len()].copy_from_slice(chunk);
+        let got = f32x4::from_array(token, arr).rsqrt().to_array();
+        for (i, (&x, &g)) in arr.iter().zip(got.iter()).enumerate() {
+            let want = 1.0f32 / x.sqrt();
+            assert_eq!(
+                g.to_bits(),
+                want.to_bits(),
+                "f32x4::rsqrt not exact at lane {i}: 1/sqrt({x}) gave {g}, want {want} \
+                 ({} ULP) — a backend has regressed to an estimate; use \
+                 rsqrt_approx if an approximation is intended",
+                (g.to_bits() as i64 - want.to_bits() as i64).abs()
+            );
+        }
+    }
     for chunk in inputs().chunks(4) {
         let mut arr = [1.0f32; 4];
         arr[..chunk.len()].copy_from_slice(chunk);
@@ -71,7 +89,7 @@ fn check_x8<T: F32x8Convert>(token: T) {
 }
 
 #[test]
-fn recip_is_exact_on_every_available_tier() {
+fn recip_and_rsqrt_are_exact_on_every_available_tier() {
     use archmage::SimdToken;
 
     #[cfg(target_arch = "aarch64")]

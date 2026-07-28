@@ -224,11 +224,16 @@ impl F32x4Backend for archmage::NeonToken {
     }
     #[inline(always)]
     fn rsqrt(self, a: float32x4_t) -> float32x4_t {
-        unsafe {
-            let y = vrsqrteq_f32(a);
-            let y = vmulq_f32(vrsqrtsq_f32(vmulq_f32(a, y), y), y);
-            vmulq_f32(vrsqrtsq_f32(vmulq_f32(a, y), y), y)
-        }
+        // Exact 1/sqrt(x), not vrsqrteq + two Newton steps — same defect and
+        // same fix as `recip` above. `rsqrt` is contracted as "precise
+        // reciprocal square root, full f32 precision"; the estimate form
+        // missed it by ~3 ULP AND was slower. Measured on Apple Silicon over
+        // 1 M elements:
+        //   vdivq(1, vsqrtq)    0.177 ms/Melem, exact
+        //   vrsqrte + 2 Newton  0.208 ms/Melem, ~3 ULP   <- was here
+        // `rsqrt_approx` remains the cheap ~16-bit path for callers who want
+        // it, and is untouched.
+        unsafe { vdivq_f32(vdupq_n_f32(1.0), vsqrtq_f32(a)) }
     }
 
     #[inline(always)]
