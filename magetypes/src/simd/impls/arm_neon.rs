@@ -207,11 +207,20 @@ impl F32x4Backend for archmage::NeonToken {
     }
     #[inline(always)]
     fn recip(self, a: float32x4_t) -> float32x4_t {
-        unsafe {
-            let y = vrecpeq_f32(a);
-            let y = vmulq_f32(vrecpsq_f32(a, y), y);
-            vmulq_f32(vrecpsq_f32(a, y), y)
-        }
+        // Exact division, not vrecpeq + two Newton steps.
+        //
+        // `recip` is contracted as "precise reciprocal, full f32 precision".
+        // The estimate-and-refine form missed that by ~2 ULP AND was slower:
+        // measured on Apple Silicon over 1 M elements,
+        //   vdivq_f32           0.107 ms/Melem, exact
+        //   vrecpe + 1 Newton   0.125 ms/Melem, ~135 ULP
+        //   vrecpe + 2 Newton   0.145 ms/Melem, ~2 ULP   <- was here
+        // so the divide is 1.35x faster and exactly rounded. The
+        // estimate-and-refine trick pays off only where hardware divide is
+        // slow relative to the estimate (older ARM, x86); it is not on this
+        // class of core, and `rcp_approx` already exists for callers that
+        // genuinely want the cheap ~16-bit path.
+        unsafe { vdivq_f32(vdupq_n_f32(1.0), a) }
     }
     #[inline(always)]
     fn rsqrt(self, a: float32x4_t) -> float32x4_t {
