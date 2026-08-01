@@ -181,16 +181,34 @@ impl F32x4Backend for archmage::NeonToken {
         }
     }
 
-    // FRECPS (`vrecpsq`) computes `2 - a*y` and FRSQRTS (`vrsqrtsq`)
-    // computes `(3 - a*y*y)/2` as one fused step each — no intermediate
-    // rounding, no 2.0/3.0/0.5 splats, measurably faster than hand-rolled
-    // mul/sub on real silicon (see `benchmarks/rsqrt_arm_neoverse-n1`).
-    // Each step roughly doubles the correct bits (~8 → ~16 → ~24).
+    // ====== Reciprocals: estimate tier vs full-precision tier ======
+    //
     // `_approx` = raw vrecpe/vrsqrte (~8-bit) + one fused FRECPS/FRSQRTS
-    // step (~16-bit): the >=12-bit fast path. `recip`/`rsqrt` refine the
-    // raw estimate directly with 2 (f32) / 3 (f64) fused steps — starting
-    // from the raw estimate, NOT from `_approx`, so its built-in step is
-    // not double-counted. FRECPS/FRSQRTS are baseline NEON.
+    // step (~16-bit): the documented >=12-bit fast path. FRECPS
+    // (`vrecpsq`) computes `2 - a*y` and FRSQRTS (`vrsqrtsq`) computes
+    // `(3 - a*y*y)/2` as one fused step each — no intermediate rounding,
+    // no 2.0/3.0/0.5 splats, measurably faster than hand-rolled mul/sub
+    // on real silicon (see `benchmarks/rsqrt_arm_neoverse-n1`). Each step
+    // roughly doubles the correct bits (~8 -> ~16 -> ~24). FRECPS/FRSQRTS
+    // are baseline NEON.
+    //
+    // `recip`/`rsqrt` are contracted as FULL precision, so they compute
+    // the exact result (FDIV, FDIV+FSQRT) rather than refining the
+    // estimate. Refinement does NOT reach the contract: measured on Apple
+    // Silicon, two fused steps land ~2 ULP (recip) / ~3 ULP (rsqrt) short
+    // of correctly-rounded, because the estimate's own rounding error is
+    // carried through every step. `magetypes/tests/precise_reciprocals.rs`
+    // pins these at 0 ULP on NEON, so the exact form is load-bearing —
+    // do not "optimize" it back into an estimate-and-refine sequence.
+    //
+    // Cost of exactness is core-dependent, in BOTH directions:
+    //   Apple Silicon (M-series): exact is FASTER
+    //     recip 1.35x, rsqrt 1.18x  (commits defbbc2 / 1b36fc7)
+    //   Neoverse-N1 (Ampere Altra): exact is SLOWER
+    //     rcp 1.39x, rsqrt 2.15x
+    //     (benchmarks/rsqrt_arm_neoverse-n1_2026-06-21.md)
+    // Either way `_approx` is the answer when speed matters — that
+    // separation is the whole reason the two tiers exist.
     #[inline(always)]
     fn rcp_approx(self, a: float32x4_t) -> float32x4_t {
         unsafe {
@@ -207,32 +225,10 @@ impl F32x4Backend for archmage::NeonToken {
     }
     #[inline(always)]
     fn recip(self, a: float32x4_t) -> float32x4_t {
-        // Exact division, not vrecpeq + two Newton steps.
-        //
-        // `recip` is contracted as "precise reciprocal, full f32 precision".
-        // The estimate-and-refine form missed that by ~2 ULP AND was slower:
-        // measured on Apple Silicon over 1 M elements,
-        //   vdivq_f32           0.107 ms/Melem, exact
-        //   vrecpe + 1 Newton   0.125 ms/Melem, ~135 ULP
-        //   vrecpe + 2 Newton   0.145 ms/Melem, ~2 ULP   <- was here
-        // so the divide is 1.35x faster and exactly rounded. The
-        // estimate-and-refine trick pays off only where hardware divide is
-        // slow relative to the estimate (older ARM, x86); it is not on this
-        // class of core, and `rcp_approx` already exists for callers that
-        // genuinely want the cheap ~16-bit path.
         unsafe { vdivq_f32(vdupq_n_f32(1.0), a) }
     }
     #[inline(always)]
     fn rsqrt(self, a: float32x4_t) -> float32x4_t {
-        // Exact 1/sqrt(x), not vrsqrteq + two Newton steps — same defect and
-        // same fix as `recip` above. `rsqrt` is contracted as "precise
-        // reciprocal square root, full f32 precision"; the estimate form
-        // missed it by ~3 ULP AND was slower. Measured on Apple Silicon over
-        // 1 M elements:
-        //   vdivq(1, vsqrtq)    0.177 ms/Melem, exact
-        //   vrsqrte + 2 Newton  0.208 ms/Melem, ~3 ULP   <- was here
-        // `rsqrt_approx` remains the cheap ~16-bit path for callers who want
-        // it, and is untouched.
         unsafe { vdivq_f32(vdupq_n_f32(1.0), vsqrtq_f32(a)) }
     }
 
@@ -830,16 +826,34 @@ impl F64x2Backend for archmage::NeonToken {
         }
     }
 
-    // FRECPS (`vrecpsq`) computes `2 - a*y` and FRSQRTS (`vrsqrtsq`)
-    // computes `(3 - a*y*y)/2` as one fused step each — no intermediate
-    // rounding, no 2.0/3.0/0.5 splats, measurably faster than hand-rolled
-    // mul/sub on real silicon (see `benchmarks/rsqrt_arm_neoverse-n1`).
-    // Each step roughly doubles the correct bits (~8 → ~16 → ~24).
+    // ====== Reciprocals: estimate tier vs full-precision tier ======
+    //
     // `_approx` = raw vrecpe/vrsqrte (~8-bit) + one fused FRECPS/FRSQRTS
-    // step (~16-bit): the >=12-bit fast path. `recip`/`rsqrt` refine the
-    // raw estimate directly with 2 (f32) / 3 (f64) fused steps — starting
-    // from the raw estimate, NOT from `_approx`, so its built-in step is
-    // not double-counted. FRECPS/FRSQRTS are baseline NEON.
+    // step (~16-bit): the documented >=12-bit fast path. FRECPS
+    // (`vrecpsq`) computes `2 - a*y` and FRSQRTS (`vrsqrtsq`) computes
+    // `(3 - a*y*y)/2` as one fused step each — no intermediate rounding,
+    // no 2.0/3.0/0.5 splats, measurably faster than hand-rolled mul/sub
+    // on real silicon (see `benchmarks/rsqrt_arm_neoverse-n1`). Each step
+    // roughly doubles the correct bits (~8 -> ~16 -> ~24). FRECPS/FRSQRTS
+    // are baseline NEON.
+    //
+    // `recip`/`rsqrt` are contracted as FULL precision, so they compute
+    // the exact result (FDIV, FDIV+FSQRT) rather than refining the
+    // estimate. Refinement does NOT reach the contract: measured on Apple
+    // Silicon, two fused steps land ~2 ULP (recip) / ~3 ULP (rsqrt) short
+    // of correctly-rounded, because the estimate's own rounding error is
+    // carried through every step. `magetypes/tests/precise_reciprocals.rs`
+    // pins these at 0 ULP on NEON, so the exact form is load-bearing —
+    // do not "optimize" it back into an estimate-and-refine sequence.
+    //
+    // Cost of exactness is core-dependent, in BOTH directions:
+    //   Apple Silicon (M-series): exact is FASTER
+    //     recip 1.35x, rsqrt 1.18x  (commits defbbc2 / 1b36fc7)
+    //   Neoverse-N1 (Ampere Altra): exact is SLOWER
+    //     rcp 1.39x, rsqrt 2.15x
+    //     (benchmarks/rsqrt_arm_neoverse-n1_2026-06-21.md)
+    // Either way `_approx` is the answer when speed matters — that
+    // separation is the whole reason the two tiers exist.
     #[inline(always)]
     fn rcp_approx(self, a: float64x2_t) -> float64x2_t {
         unsafe {
@@ -856,21 +870,11 @@ impl F64x2Backend for archmage::NeonToken {
     }
     #[inline(always)]
     fn recip(self, a: float64x2_t) -> float64x2_t {
-        unsafe {
-            let y = vrecpeq_f64(a);
-            let y = vmulq_f64(vrecpsq_f64(a, y), y);
-            let y = vmulq_f64(vrecpsq_f64(a, y), y);
-            vmulq_f64(vrecpsq_f64(a, y), y)
-        }
+        unsafe { vdivq_f64(vdupq_n_f64(1.0), a) }
     }
     #[inline(always)]
     fn rsqrt(self, a: float64x2_t) -> float64x2_t {
-        unsafe {
-            let y = vrsqrteq_f64(a);
-            let y = vmulq_f64(vrsqrtsq_f64(vmulq_f64(a, y), y), y);
-            let y = vmulq_f64(vrsqrtsq_f64(vmulq_f64(a, y), y), y);
-            vmulq_f64(vrsqrtsq_f64(vmulq_f64(a, y), y), y)
-        }
+        unsafe { vdivq_f64(vdupq_n_f64(1.0), vsqrtq_f64(a)) }
     }
 
     #[inline(always)]

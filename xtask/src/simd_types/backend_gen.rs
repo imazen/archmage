@@ -2832,32 +2832,15 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
         format!("vmvnq_u{eb}(vceqq_{ns}(a, b))")
     };
 
-    // f64 (53-bit mantissa) needs 3 Newton steps from the 8-bit NEON estimate to
-    // reach full precision; f32 (24-bit) needs 2.
-    let n_nr_steps = if elem == "f64" { 3 } else { 2 };
-    // Last step is a tail expression (no `let`, so no clippy::let_and_return).
-    let recip_nr_steps = (0..n_nr_steps)
-        .map(|i| {
-            let step = format!("vmulq_{ns}(vrecpsq_{ns}(a, y), y)");
-            if i + 1 < n_nr_steps {
-                format!("let y = {step};")
-            } else {
-                step
-            }
-        })
-        .collect::<Vec<_>>()
-        .join("\n                    ");
-    let rsqrt_nr_steps = (0..n_nr_steps)
-        .map(|i| {
-            let step = format!("vmulq_{ns}(vrsqrtsq_{ns}(vmulq_{ns}(a, y), y), y)");
-            if i + 1 < n_nr_steps {
-                format!("let y = {step};")
-            } else {
-                step
-            }
-        })
-        .collect::<Vec<_>>()
-        .join("\n                    ");
+    // Full-precision `recip`/`rsqrt` bodies: exact FDIV / FDIV+FSQRT.
+    //
+    // These are NOT Newton refinements of the vrecpe/vrsqrte estimate. See the
+    // doc comment emitted next to them below for the full rationale; the short
+    // version is that the estimate-and-refine form is measurably short of
+    // correctly-rounded and so cannot meet the "full precision" contract, which
+    // `magetypes/tests/precise_reciprocals.rs` pins at 0 ULP on NEON.
+    let recip_exact = format!("vdivq_{ns}(vdupq_n_{ns}(1.0), a)");
+    let rsqrt_exact = format!("vdivq_{ns}(vdupq_n_{ns}(1.0), vsqrtq_{ns}(a))");
 
     // For native types, reduce pattern is different
     let reduce_pairwise = |pairwise: &str| -> String {
@@ -3035,16 +3018,34 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
                 {reduce_max}
             }}
 
-            // FRECPS (`vrecpsq`) computes `2 - a*y` and FRSQRTS (`vrsqrtsq`)
-            // computes `(3 - a*y*y)/2` as one fused step each — no intermediate
-            // rounding, no 2.0/3.0/0.5 splats, measurably faster than hand-rolled
-            // mul/sub on real silicon (see `benchmarks/rsqrt_arm_neoverse-n1`).
-            // Each step roughly doubles the correct bits (~8 → ~16 → ~24).
+            // ====== Reciprocals: estimate tier vs full-precision tier ======
+            //
             // `_approx` = raw vrecpe/vrsqrte (~8-bit) + one fused FRECPS/FRSQRTS
-            // step (~16-bit): the >=12-bit fast path. `recip`/`rsqrt` refine the
-            // raw estimate directly with 2 (f32) / 3 (f64) fused steps — starting
-            // from the raw estimate, NOT from `_approx`, so its built-in step is
-            // not double-counted. FRECPS/FRSQRTS are baseline NEON.
+            // step (~16-bit): the documented >=12-bit fast path. FRECPS
+            // (`vrecpsq`) computes `2 - a*y` and FRSQRTS (`vrsqrtsq`) computes
+            // `(3 - a*y*y)/2` as one fused step each — no intermediate rounding,
+            // no 2.0/3.0/0.5 splats, measurably faster than hand-rolled mul/sub
+            // on real silicon (see `benchmarks/rsqrt_arm_neoverse-n1`). Each step
+            // roughly doubles the correct bits (~8 -> ~16 -> ~24). FRECPS/FRSQRTS
+            // are baseline NEON.
+            //
+            // `recip`/`rsqrt` are contracted as FULL precision, so they compute
+            // the exact result (FDIV, FDIV+FSQRT) rather than refining the
+            // estimate. Refinement does NOT reach the contract: measured on Apple
+            // Silicon, two fused steps land ~2 ULP (recip) / ~3 ULP (rsqrt) short
+            // of correctly-rounded, because the estimate's own rounding error is
+            // carried through every step. `magetypes/tests/precise_reciprocals.rs`
+            // pins these at 0 ULP on NEON, so the exact form is load-bearing —
+            // do not "optimize" it back into an estimate-and-refine sequence.
+            //
+            // Cost of exactness is core-dependent, in BOTH directions:
+            //   Apple Silicon (M-series): exact is FASTER
+            //     recip 1.35x, rsqrt 1.18x  (commits defbbc2 / 1b36fc7)
+            //   Neoverse-N1 (Ampere Altra): exact is SLOWER
+            //     rcp 1.39x, rsqrt 2.15x
+            //     (benchmarks/rsqrt_arm_neoverse-n1_2026-06-21.md)
+            // Either way `_approx` is the answer when speed matters — that
+            // separation is the whole reason the two tiers exist.
             #[inline(always)]
             fn rcp_approx(self, a: {repr}) -> {repr} {{
                 unsafe {{ let y = vrecpeq_{ns}(a); vmulq_{ns}(vrecpsq_{ns}(a, y), y) }}
@@ -3055,17 +3056,11 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             }}
             #[inline(always)]
             fn recip(self, a: {repr}) -> {repr} {{
-                unsafe {{
-                    let y = vrecpeq_{ns}(a);
-                    {recip_nr_steps}
-                }}
+                unsafe {{ {recip_exact} }}
             }}
             #[inline(always)]
             fn rsqrt(self, a: {repr}) -> {repr} {{
-                unsafe {{
-                    let y = vrsqrteq_{ns}(a);
-                    {rsqrt_nr_steps}
-                }}
+                unsafe {{ {rsqrt_exact} }}
             }}
 
             #[inline(always)]
