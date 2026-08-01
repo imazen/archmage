@@ -162,6 +162,38 @@ mod v1_v2_dispatch_tests {
 }
 
 // =============================================================================
+// V3 GFNI Crypto dispatch
+// =============================================================================
+
+mod v3_gfni_crypto_dispatch_tests {
+    use super::*;
+    use archmage::incant;
+
+    fn gfni_available_scalar(_token: ScalarToken) -> bool {
+        false
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    fn gfni_available_v3_gfni_crypto(_token: archmage::X64V3GfniCryptoToken) -> bool {
+        true
+    }
+
+    fn gfni_available_api() -> bool {
+        incant!(gfni_available(), [v3_gfni_crypto, scalar])
+    }
+
+    #[test]
+    fn dispatches_to_v3_gfni_crypto_when_available() {
+        #[cfg(target_arch = "x86_64")]
+        let expected = archmage::X64V3GfniCryptoToken::summon().is_some();
+        #[cfg(not(target_arch = "x86_64"))]
+        let expected = false;
+
+        assert_eq!(gfni_available_api(), expected);
+    }
+}
+
+// =============================================================================
 // Passthrough mode tests
 // =============================================================================
 
