@@ -8,12 +8,12 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
-# Superseded runs only waste runner queue — particularly the macOS
-# jobs, which wait on GitHub's scarcest pool. Only the newest
-# commit's run matters per ref.
+# Cancel superseded PR runs; never cancel a push to main. This is a pass/fail
+# gate, so every commit that lands needs its own verdict — see the longer note
+# in ci.yml for the incident that motivated this.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'push' && github.sha || 'pr' }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
 
 jobs:
   semver:

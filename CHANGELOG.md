@@ -13,6 +13,17 @@
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 - Make `w512` non-default in magetypes — users who need 512-bit types add `features = ["w512"]`; saves ~25% build time for the majority who don't
 
+### Fixed
+
+- **magetypes: the NEON `recip()`/`rsqrt()` precision fixes are now in the generator, not just its output.** `defbbc2`/`1b36fc7` fixed `magetypes/src/simd/impls/arm_neon.rs` — a generated file — while `xtask/src/simd_types/backend_gen.rs` kept emitting the estimate-and-refine form, so any `just generate` silently reverted both fixes and re-broke `magetypes/tests/precise_reciprocals.rs`. The template now emits exact `FDIV` / `FDIV`+`FSQRT`, so regeneration is idempotent. Reported as out-of-scope drift in [#66](https://github.com/imazen/archmage/pull/66).
+- **magetypes: NEON `f64` `recip()`/`rsqrt()` are now bit-exact.** The f64 backend still refined `vrecpeq_f64`/`vrsqrteq_f64` with three Newton steps, landing 1 ULP off its documented "full precision" contract (`1/sqrt(1.000001)` gave `0.9999995000003751`, want `0.999999500000375`; measured on Apple M-series). f32 was fixed in `defbbc2`/`1b36fc7`; f64 was missed because the test only covered f32. x86 already computed f64 exactly, so this also removes a cross-arch divergence. `rcp_approx`/`rsqrt_approx` are unchanged on every backend.
+
+### Changed
+
+- `magetypes/tests/precise_reciprocals.rs` now covers `f64x2`/`f64x4` alongside `f32x4`/`f32x8`, pinned at 0 ULP on NEON, x86, and scalar.
+- CI no longer cancels in-progress runs for pushes to `main` (each commit gets its own concurrency group, keyed by SHA). Cancellation still applies to PR updates. Three commits pushed within three minutes on 2026-07-28 had the first two runs cancelled, which is why the generator drift was never reported against the commit that caused it.
+- New `just check-generated` — hash-based local mirror of CI's `generate-check` that works on a dirty tree (asserts regeneration is a no-op).
+
 ## [0.9.28] - 2026-07-20
 
 ### Added

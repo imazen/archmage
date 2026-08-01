@@ -13,12 +13,23 @@ env:
   # All stable features
   FEATURES: "std avx512"
 
-# Superseded runs only waste runner queue — particularly the macOS
-# jobs, which wait on GitHub's scarcest pool. Only the newest
-# commit's run matters per ref.
+# PR runs supersede each other — only the newest push to a PR branch matters,
+# so cancel the stale one and spare the runner queue (particularly the macOS
+# jobs, GitHub's scarcest pool).
+#
+# Pushes to main are NEVER cancelled, and each commit gets its own concurrency
+# group (keyed by SHA) so they run in parallel instead of queueing behind each
+# other. Every commit that lands on main must get its own verdict.
+#
+# This is not hypothetical: on 2026-07-28 the NEON recip()/rsqrt() fixes landed
+# as three commits pushed within three minutes (defbbc2, 1b36fc7, b9aeef5). The
+# per-ref group cancelled the first two runs, so the generator drift those
+# commits introduced was never reported against the commit that caused it. Only
+# the third run completed — it went red on `generate-check`, and main then sat
+# red for four days until PR #66 tripped over the drift.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'push' && github.sha || 'pr' }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
 
 jobs:
   # ==========================================================================
