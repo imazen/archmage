@@ -181,7 +181,8 @@ use token_discovery::*;
 /// # Supported Tokens
 ///
 /// - **x86_64**: `X64V2Token`, `X64V3Token`/`Desktop64`, `X64V4Token`/`Avx512Token`/`Server64`,
-///   `X64V4xToken`, `Avx512Fp16Token`, `X64CryptoToken`, `X64V3CryptoToken`
+///   `X64V4xToken`, `Avx512Fp16Token`, `X64CryptoToken`, `X64V3CryptoToken`,
+///   `X64V3GfniCryptoToken`
 /// - **ARM**: `NeonToken`/`Arm64`, `Arm64V2Token`, `Arm64V3Token`,
 ///   `NeonAesToken`, `NeonSha3Token`, `NeonCrcToken`
 /// - **WASM**: `Wasm128Token`
@@ -701,8 +702,8 @@ pub fn dispatch_variant(input: TokenStream) -> TokenStream {
 ///
 /// Default tiers: `v4`, `v3`, `neon`, `wasm128`, `scalar`.
 ///
-/// Known tiers: `v1`, `v2`, `v3`, `v3_crypto`, `v4`, `v4x`, `neon`,
-/// `neon_aes`, `neon_sha3`, `neon_crc`, `arm_v2`, `arm_v3`, `wasm128`,
+/// Known tiers: `v1`, `v2`, `v3`, `v3_crypto`, `v3_gfni_crypto`, `v4`, `v4x`,
+/// `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `arm_v2`, `arm_v3`, `wasm128`,
 /// `wasm128_relaxed`, `x64_crypto`, `scalar`.
 ///
 /// # Methods
