@@ -359,8 +359,9 @@ that set and `-scalar`/`-default` drop the auto-appended fallback. All-plain sta
 override (replace defaults). `default` and `scalar` are interchangeable fallback
 slots (`+default` replaces `scalar`).
 
-Known tiers: `v1`, `v2`, `x64_crypto`, `v3`, `v3_crypto`, `v4`, `v4x`, `arm_v2`, `arm_v3`,
-`neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`, `wasm128_relaxed`, `scalar`.
+Known tiers: `v1`, `v2`, `x64_crypto`, `v3`, `v3_crypto`, `v3_gfni_crypto`, `v4`, `v4x`,
+`arm_v2`, `arm_v3`, `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`,
+`wasm128_relaxed`, `scalar`.
 Always include `scalar` in explicit tier lists. Currently auto-appended if omitted; will become a compile error in v1.0.
 
 **Passthrough mode** (already have token):
@@ -442,8 +443,9 @@ fallback). All-plain stays override.
 - `#[autoversion]` generates its own dispatcher. `#[magetypes]` requires separate `incant!`.
 - Use `#[autoversion]` for scalar auto-vectorization. Use `#[magetypes]` + `incant!` for hand-written intrinsics.
 
-Known tiers: `v1`, `v2`, `v3`, `v3_crypto`, `v4`, `v4x`, `neon`, `neon_aes`, `neon_sha3`,
-`neon_crc`, `arm_v2`, `arm_v3`, `wasm128`, `wasm128_relaxed`, `x64_crypto`, `scalar`.
+Known tiers: `v1`, `v2`, `v3`, `v3_crypto`, `v3_gfni_crypto`, `v4`, `v4x`, `neon`,
+`neon_aes`, `neon_sha3`, `neon_crc`, `arm_v2`, `arm_v3`, `wasm128`,
+`wasm128_relaxed`, `x64_crypto`, `scalar`.
 
 ### `ScalarToken`
 
@@ -480,6 +482,7 @@ On ARM, `f32x8` is emulated with two `f32x4` operations. The API is identical.
 | **crypto** | v2 + PCLMULQDQ, AES-NI | `X64CryptoToken` | Use token directly |
 | **v3** | + AVX, AVX2, FMA, BMI1, BMI2, F16C | `X64V3Token` | Use token directly |
 | **v3_crypto** | v3 + VPCLMULQDQ, VAES | `X64V3CryptoToken` | Use token directly |
+| **v3_gfni_crypto** | v3_crypto + GFNI | `X64V3GfniCryptoToken` | Use token directly |
 | **v4** | + AVX512F, AVX512BW, AVX512CD, AVX512DQ, AVX512VL | `X64V4Token` / `Avx512Token` | `HasX64V4` |
 | **V4x** | + VPOPCNTDQ, IFMA, VBMI, VNNI, VBMI2, BITALG, VPCLMULQDQ, GFNI, VAES | `X64V4xToken` | Use token directly |
 | **FP16** | AVX512FP16 (independent) | `Avx512Fp16Token` | Use token directly |
@@ -740,7 +743,7 @@ Every token's feature claims MUST be verified by exercising real intrinsics on t
 
 | Test File | Architecture | What it tests |
 |-----------|-------------|---------------|
-| `tests/x86_crypto_intrinsics.rs` | x86_64 | X64CryptoToken (PCLMULQDQ, AES-NI), X64V3CryptoToken (VPCLMULQDQ, VAES) |
+| `tests/x86_crypto_intrinsics.rs` | x86_64 | X64CryptoToken (PCLMULQDQ, AES-NI), X64V3CryptoToken (VPCLMULQDQ, VAES), X64V3GfniCryptoToken (GFNI) |
 | `tests/avx512_intrinsics_exercise.rs` | x86_64 | X64V4Token, X64V4xToken (AVX-512 F/BW/CD/DQ/VL + extensions) |
 | `tests/avx512fp16_intrinsics.rs` | x86_64 | Avx512Fp16Token (hierarchy only — all 935 intrinsics are nightly) |
 | `tests/arm_feature_intrinsics.rs` | aarch64 | Arm64V2Token (RDM, DotProd, SHA2), NeonAesToken, NeonCrcToken, NeonSha3Token |
@@ -772,6 +775,7 @@ Every token's feature claims MUST be verified by exercising real intrinsics on t
 | avx512fp16 | 438/440 | Stable | 438 stable, 2 unstable (per intrinsics CSV) |
 | pclmulqdq + aes (128-bit) | ~10 | Full | Tested in x86_crypto_intrinsics.rs |
 | vpclmulqdq + vaes (256-bit) | ~8 | Full | Tested in x86_crypto_intrinsics.rs |
+| gfni (128/256-bit unmasked) | 6 | Full | Tested in x86_crypto_intrinsics.rs |
 | simd128 (wasm) | ~100+ | Full | Tested in wasm_intrinsics_exercise.rs |
 
 **Features with zero stable intrinsics** (fhm, bf16, avx512fp16) are documented but cannot have exercise tests on stable Rust. When these stabilize, add tests immediately.

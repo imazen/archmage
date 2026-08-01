@@ -18,6 +18,7 @@ Tokens are the core of archmage's safety model. They're zero-sized proof types t
 | `X64CryptoToken` | — | V2 + PCLMULQDQ, AES-NI | Westmere 2010+ |
 | `X64V3Token` | — | + AVX2, FMA, BMI1, BMI2 | Haswell 2013+, Zen 1+ |
 | `X64V3CryptoToken` | — | V3 + VPCLMULQDQ, VAES | Zen 3+ 2020, Alder Lake 2021+ |
+| `X64V3GfniCryptoToken` | — | V3 Crypto + GFNI | Alder/Raptor/Meteor/Arrow/Lunar Lake, Sierra Forest, Zen 4+ |
 | `X64V4Token` | `Server64`, `Avx512Token` | + AVX-512 F/BW/CD/DQ/VL | Skylake-X 2017+, Zen 4+ |
 | `X64V4xToken` | — | + VNNI, VBMI, etc. | Ice Lake 2019+, Zen 4+ |
 | `Avx512Fp16Token` | — | + AVX-512 FP16 | Sapphire Rapids 2023+ |

@@ -37,6 +37,7 @@ pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
 |-------|---------|----------|------|
 | `X64V2Token` | — | SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT | Nehalem 2008+, Bulldozer 2011+ |
 | `X64V3Token` | — | + AVX, AVX2, FMA, BMI1, BMI2, F16C, MOVBE | Haswell 2013+, Zen 1 2017+ |
+| `X64V3GfniCryptoToken` | — | V3 Crypto + GFNI | Alder/Raptor/Meteor/Arrow/Lunar Lake, Sierra Forest, Zen 4+ |
 | `X64V4Token` | `Server64`, `Avx512Token` | + AVX-512 F/BW/CD/DQ/VL | Skylake-X 2017+, Zen 4 2022+ |
 | `X64V4xToken` | — | + VPOPCNTDQ, IFMA, VBMI, VNNI, BF16, VBMI2, BITALG, VPCLMULQDQ, GFNI, VAES | Ice Lake 2019+, Zen 4 2022+ |
 | `Avx512Fp16Token` | — | AVX-512 FP16 | Sapphire Rapids 2023+ |

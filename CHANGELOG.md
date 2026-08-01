@@ -13,6 +13,10 @@
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 - Make `w512` non-default in magetypes — users who need 512-bit types add `features = ["w512"]`; saves ~25% build time for the majority who don't
 
+### Added
+
+- **`X64V3GfniCryptoToken` and the `v3_gfni_crypto` dispatch tier** ([#65](https://github.com/imazen/archmage/issues/65)): proves the complete `X64V3CryptoToken` feature set plus GFNI, exposing the unmasked 128/256-bit GF(2^8) multiply and affine-transform intrinsics on AVX2-capable CPUs without requiring AVX-512. The token is ungated, descends from `X64V3CryptoToken`, and is an ancestor of `X64V4xToken`; native GFNI behavior, hierarchy/downcasts, macro name mangling, cross-architecture stubs, and permutation disabling are covered by tests.
+
 ## [0.9.28] - 2026-07-20
 
 ### Added

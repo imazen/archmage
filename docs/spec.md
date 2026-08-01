@@ -17,7 +17,7 @@ Tokens are `Copy + Clone + Send + Sync + 'static`. They carry no data — the ty
 
 ### 1.2 Current Token Set
 
-#### x86_64 (8 tokens)
+#### x86_64 (9 tokens)
 
 | Token | Aliases | Features | Hardware |
 |-------|---------|----------|----------|
@@ -26,6 +26,7 @@ Tokens are `Copy + Clone + Send + Sync + 'static`. They carry no data — the ty
 | `X64CryptoToken` | — | v2 + pclmulqdq, aes | Westmere 2010+, Bulldozer 2011+ |
 | `X64V3Token` | — | + avx, avx2, fma, bmi1, bmi2, f16c, lzcnt | Haswell 2013+, Zen 1 2017+ |
 | `X64V3CryptoToken` | — | v3 + vpclmulqdq, vaes | Zen 3+ 2020, Alder Lake 2021+ |
+| `X64V3GfniCryptoToken` | — | v3 crypto + gfni | Alder/Raptor/Meteor/Arrow/Lunar Lake, Sierra Forest, Zen 4+ |
 | `X64V4Token` | `Avx512Token`, `Server64` | + avx512f, avx512bw, avx512cd, avx512dq, avx512vl | Skylake-X 2017+, Zen 4 2022+ |
 | `X64V4xToken` | — | + avx512vpopcntdq, avx512ifma, avx512vbmi, avx512vbmi2, avx512bitalg, avx512vnni, vpclmulqdq, gfni, vaes | Ice Lake 2019+, Zen 4 2022+ |
 | `Avx512Fp16Token` | — | v4 + avx512fp16 | Sapphire Rapids 2023+ |
@@ -67,10 +68,10 @@ Tokens form a subsumption hierarchy. Higher-tier tokens can produce lower-tier t
 ```
 x86_64:
   X64V4xToken → X64V4Token (v4) → X64V3Token (v3) → X64V2Token (v2) → X64V1Token (v1)
+               → X64V3GfniCryptoToken → X64V3CryptoToken → X64V3Token (v3)
+                                                       → X64CryptoToken → X64V2Token (v2)
   Avx512Fp16Token → X64V4Token (v4) → X64V3Token (v3) → X64V2Token (v2) → X64V1Token (v1)
-  X64V3CryptoToken → X64V3Token (v3) → X64V2Token (v2) → X64V1Token (v1)
   X64CryptoToken → X64V2Token (v2) → X64V1Token (v1)
-
 AArch64:
   Arm64V3Token → Arm64V2Token → NeonToken
   NeonAesToken → NeonToken
@@ -78,7 +79,7 @@ AArch64:
   NeonCrcToken → NeonToken
 ```
 
-Extraction methods: `.v1()`, `.v2()`, `.v3()`, `.avx512()`, `.neon()`, `.arm_v2()`. Downcasting is free (zero-cost, same optimization region). Upcasting via `IntoConcreteToken` is safe but creates an LLVM optimization boundary.
+Extraction methods include `.v1()`, `.v2()`, `.v3()`, `.v3_crypto()`, `.v3_gfni_crypto()`, `.avx512()`, `.neon()`, and `.arm_v2()`. Downcasting is free (zero-cost, same optimization region). Upcasting via `IntoConcreteToken` is safe but creates an LLVM optimization boundary.
 
 ### 1.4 Trait Hierarchy
 
@@ -114,6 +115,7 @@ HasArm64V3 → HasNeonSha3
 | X64CryptoToken | x | | | | | | |
 | X64V3Token | x | | | | | | |
 | X64V3CryptoToken | x | | | | | | |
+| X64V3GfniCryptoToken | x | | | | | | |
 | X64V4Token | x | x | | | | | |
 | X64V4xToken | x | x | | | | | |
 | Avx512Fp16Token | x | x | | | | | |

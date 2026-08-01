@@ -76,6 +76,20 @@ if let Some(token) = X64V3CryptoToken::summon() {
 }
 ```
 
+### X64V3GfniCryptoToken
+
+**Features**: All V3 Crypto + GFNI
+
+**CPUs**: Intel Alder/Raptor/Meteor/Arrow/Lunar Lake, Sierra Forest, AMD Zen 4+
+
+```rust
+use archmage::{SimdToken, X64V3GfniCryptoToken};
+
+if let Some(token) = X64V3GfniCryptoToken::summon() {
+    // 128/256-bit GF(2^8) multiplication and affine transforms available
+}
+```
+
 ### X64V4Token / Server64 / Avx512Token
 
 **Features**: All V3 + AVX-512F, AVX-512BW, AVX-512CD, AVX-512DQ, AVX-512VL

@@ -48,7 +48,7 @@ more archmage tokens via `#[target_feature]`.
 | `avx512vbmi2` | 1.89 | V4x | Vector byte manipulation 2 |
 | `avx512bitalg` | 1.89 | V4x | Bit algorithms |
 | `avx512vnni` | 1.89 | V4x | Vector neural network |
-| `gfni` | 1.89 | V4x | Galois field operations |
+| `gfni` | 1.89 | X64V3GfniCryptoToken, V4x | Galois field operations |
 | `avx512fp16` | 1.89 | Avx512Fp16Token | Half-precision arithmetic |
 
 ### AArch64 — full intrinsic support
@@ -228,17 +228,20 @@ Features that exist but we have no plans for.
   all the V4x features but lack BF16. It first appeared on Cooper Lake (Xeon), then Sapphire
   Rapids and Zen 4+. Needs its own token (V4 + bf16) or a higher-tier token.
 
-- **`gfni` is not in any psABI level** and does not require AVX-512 — it only needs SSE2.
-  Some CPUs (Tremont, Alder Lake E-cores) have GFNI without AVX-512. We currently only
-  offer it via V4xToken. A standalone GFNI token at V2 level could be useful but is niche.
+- **`gfni` is not in any psABI level** and does not require AVX-512 — its
+  128-bit forms only need SSE2, and its unmasked 256-bit forms need AVX.
+  `X64V3GfniCryptoToken` exposes the 128/256-bit forms on AVX2-capable GFNI
+  CPUs without AVX-512. Tremont has GFNI without AVX2 and would require a
+  separate V2-level token, which is not currently provided.
 
-- **`vaes` and `vpclmulqdq` don't require AVX-512 either.** They work with AVX2. We have
-  X64V3CryptoToken for exactly this case.
+- **`vaes` and `vpclmulqdq` don't require AVX-512 either.** They work with AVX2.
+  `X64V3CryptoToken` covers those features; `X64V3GfniCryptoToken` extends it
+  with GFNI where the CPU availability sets overlap.
 
 - **No crypto/hash features are in any psABI level.** The psABI explicitly excludes
   "non-general-purpose" extensions: AES, PCLMULQDQ, SHA, RDRAND, and GFNI are all outside
-  the v1-v4 level definitions. Archmage's crypto tokens (X64CryptoToken, X64V3CryptoToken)
-  are leaf tokens off the main hierarchy for this reason.
+  the v1-v4 level definitions. Archmage's crypto branch is X64CryptoToken →
+  X64V3CryptoToken → X64V3GfniCryptoToken.
 
 - **VEX-encoded ML extensions** (`avxvnni`, `avxifma`, `avxneconvert`, `avxvnniint8`,
   `avxvnniint16`) exist for CPUs that dropped AVX-512 (Alder Lake, Sierra Forest). These
