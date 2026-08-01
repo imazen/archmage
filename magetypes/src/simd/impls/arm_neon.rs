@@ -1634,15 +1634,15 @@ impl I32x8Backend for archmage::NeonToken {
         unsafe {
             let mut bits = 0u32;
             let s0 = vshrq_n_u32::<31>(vreinterpretq_u32_s32(a[0]));
-            bits |= vgetq_lane_u32::<0>(s0) << 0;
-            bits |= (vgetq_lane_u32::<1>(s0)) << 1;
-            bits |= (vgetq_lane_u32::<2>(s0)) << 2;
-            bits |= (vgetq_lane_u32::<3>(s0)) << 3;
+            bits |= vgetq_lane_u32::<0>(s0);
+            bits |= vgetq_lane_u32::<1>(s0) << 1;
+            bits |= vgetq_lane_u32::<2>(s0) << 2;
+            bits |= vgetq_lane_u32::<3>(s0) << 3;
             let s1 = vshrq_n_u32::<31>(vreinterpretq_u32_s32(a[1]));
             bits |= vgetq_lane_u32::<0>(s1) << 4;
-            bits |= (vgetq_lane_u32::<1>(s1)) << 5;
-            bits |= (vgetq_lane_u32::<2>(s1)) << 6;
-            bits |= (vgetq_lane_u32::<3>(s1)) << 7;
+            bits |= vgetq_lane_u32::<1>(s1) << 5;
+            bits |= vgetq_lane_u32::<2>(s1) << 6;
+            bits |= vgetq_lane_u32::<3>(s1) << 7;
             bits
         }
     }
@@ -1965,15 +1965,15 @@ impl U32x8Backend for archmage::NeonToken {
         unsafe {
             let mut bits = 0u32;
             let s0 = vshrq_n_u32::<31>(a[0]);
-            bits |= vgetq_lane_u32::<0>(s0) << 0;
-            bits |= (vgetq_lane_u32::<1>(s0)) << 1;
-            bits |= (vgetq_lane_u32::<2>(s0)) << 2;
-            bits |= (vgetq_lane_u32::<3>(s0)) << 3;
+            bits |= vgetq_lane_u32::<0>(s0);
+            bits |= vgetq_lane_u32::<1>(s0) << 1;
+            bits |= vgetq_lane_u32::<2>(s0) << 2;
+            bits |= vgetq_lane_u32::<3>(s0) << 3;
             let s1 = vshrq_n_u32::<31>(a[1]);
             bits |= vgetq_lane_u32::<0>(s1) << 4;
-            bits |= (vgetq_lane_u32::<1>(s1)) << 5;
-            bits |= (vgetq_lane_u32::<2>(s1)) << 6;
-            bits |= (vgetq_lane_u32::<3>(s1)) << 7;
+            bits |= vgetq_lane_u32::<1>(s1) << 5;
+            bits |= vgetq_lane_u32::<2>(s1) << 6;
+            bits |= vgetq_lane_u32::<3>(s1) << 7;
             bits
         }
     }
@@ -2405,7 +2405,7 @@ impl I64x4Backend for archmage::NeonToken {
         unsafe {
             let mut bits = 0u32;
             let s0 = vshrq_n_u64::<63>(vreinterpretq_u64_s64(a[0]));
-            bits |= (vgetq_lane_u64::<0>(s0) as u32) << 0;
+            bits |= vgetq_lane_u64::<0>(s0) as u32;
             bits |= (vgetq_lane_u64::<1>(s0) as u32) << 1;
             let s1 = vshrq_n_u64::<63>(vreinterpretq_u64_s64(a[1]));
             bits |= (vgetq_lane_u64::<0>(s1) as u32) << 2;
@@ -2721,8 +2721,10 @@ impl I8x32Backend for archmage::NeonToken {
     #[inline(always)]
     fn reduce_add(self, a: [int8x16_t; 2]) -> i8 {
         let mut sum = 0i8;
-        for i in 0..2 {
-            sum = sum.wrapping_add(unsafe { vaddvq_s8(a[i]) });
+        // Iterate the array rather than indexing by range
+        // (clippy::needless_range_loop).
+        for v in a {
+            sum = sum.wrapping_add(unsafe { vaddvq_s8(v) });
         }
         sum
     }
@@ -2785,10 +2787,12 @@ impl I8x32Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn bitmask(self, a: [int8x16_t; 2]) -> u32 {
-        // Delegate to NeonToken native bitmask per sub-vector, combine
+        // Delegate to NeonToken native bitmask per sub-vector, combine.
+        // Enumerate the array rather than indexing by range
+        // (clippy::needless_range_loop).
         let mut result = 0u32;
-        for i in 0..2 {
-            result |= (<archmage::NeonToken as I8x16Backend>::bitmask(self, a[i])) << (i * 16);
+        for (i, v) in a.into_iter().enumerate() {
+            result |= <archmage::NeonToken as I8x16Backend>::bitmask(self, v) << (i * 16);
         }
         result
     }
@@ -3054,8 +3058,10 @@ impl U8x32Backend for archmage::NeonToken {
     #[inline(always)]
     fn reduce_add(self, a: [uint8x16_t; 2]) -> u8 {
         let mut sum = 0u8;
-        for i in 0..2 {
-            sum = sum.wrapping_add(unsafe { vaddvq_u8(a[i]) });
+        // Iterate the array rather than indexing by range
+        // (clippy::needless_range_loop).
+        for v in a {
+            sum = sum.wrapping_add(unsafe { vaddvq_u8(v) });
         }
         sum
     }
@@ -3104,10 +3110,12 @@ impl U8x32Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn bitmask(self, a: [uint8x16_t; 2]) -> u32 {
-        // Delegate to NeonToken native bitmask per sub-vector, combine
+        // Delegate to NeonToken native bitmask per sub-vector, combine.
+        // Enumerate the array rather than indexing by range
+        // (clippy::needless_range_loop).
         let mut result = 0u32;
-        for i in 0..2 {
-            result |= (<archmage::NeonToken as U8x16Backend>::bitmask(self, a[i])) << (i * 16);
+        for (i, v) in a.into_iter().enumerate() {
+            result |= <archmage::NeonToken as U8x16Backend>::bitmask(self, v) << (i * 16);
         }
         result
     }
@@ -3425,8 +3433,10 @@ impl I16x16Backend for archmage::NeonToken {
     #[inline(always)]
     fn reduce_add(self, a: [int16x8_t; 2]) -> i16 {
         let mut sum = 0i16;
-        for i in 0..2 {
-            sum = sum.wrapping_add(unsafe { vaddvq_s16(a[i]) });
+        // Iterate the array rather than indexing by range
+        // (clippy::needless_range_loop).
+        for v in a {
+            sum = sum.wrapping_add(unsafe { vaddvq_s16(v) });
         }
         sum
     }
@@ -3497,10 +3507,12 @@ impl I16x16Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn bitmask(self, a: [int16x8_t; 2]) -> u32 {
-        // Delegate to NeonToken native bitmask per sub-vector, combine
+        // Delegate to NeonToken native bitmask per sub-vector, combine.
+        // Enumerate the array rather than indexing by range
+        // (clippy::needless_range_loop).
         let mut result = 0u32;
-        for i in 0..2 {
-            result |= (<archmage::NeonToken as I16x8Backend>::bitmask(self, a[i])) << (i * 8);
+        for (i, v) in a.into_iter().enumerate() {
+            result |= <archmage::NeonToken as I16x8Backend>::bitmask(self, v) << (i * 8);
         }
         result
     }
@@ -3767,8 +3779,10 @@ impl U16x16Backend for archmage::NeonToken {
     #[inline(always)]
     fn reduce_add(self, a: [uint16x8_t; 2]) -> u16 {
         let mut sum = 0u16;
-        for i in 0..2 {
-            sum = sum.wrapping_add(unsafe { vaddvq_u16(a[i]) });
+        // Iterate the array rather than indexing by range
+        // (clippy::needless_range_loop).
+        for v in a {
+            sum = sum.wrapping_add(unsafe { vaddvq_u16(v) });
         }
         sum
     }
@@ -3817,10 +3831,12 @@ impl U16x16Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn bitmask(self, a: [uint16x8_t; 2]) -> u32 {
-        // Delegate to NeonToken native bitmask per sub-vector, combine
+        // Delegate to NeonToken native bitmask per sub-vector, combine.
+        // Enumerate the array rather than indexing by range
+        // (clippy::needless_range_loop).
         let mut result = 0u32;
-        for i in 0..2 {
-            result |= (<archmage::NeonToken as U16x8Backend>::bitmask(self, a[i])) << (i * 8);
+        for (i, v) in a.into_iter().enumerate() {
+            result |= <archmage::NeonToken as U16x8Backend>::bitmask(self, v) << (i * 8);
         }
         result
     }
@@ -4085,8 +4101,10 @@ impl U64x4Backend for archmage::NeonToken {
     #[inline(always)]
     fn reduce_add(self, a: [uint64x2_t; 2]) -> u64 {
         let mut sum = 0u64;
-        for i in 0..2 {
-            sum = sum.wrapping_add(unsafe { vaddvq_u64(a[i]) });
+        // Iterate the array rather than indexing by range
+        // (clippy::needless_range_loop).
+        for v in a {
+            sum = sum.wrapping_add(unsafe { vaddvq_u64(v) });
         }
         sum
     }
@@ -4150,10 +4168,12 @@ impl U64x4Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn bitmask(self, a: [uint64x2_t; 2]) -> u32 {
-        // Delegate to NeonToken native bitmask per sub-vector, combine
+        // Delegate to NeonToken native bitmask per sub-vector, combine.
+        // Enumerate the array rather than indexing by range
+        // (clippy::needless_range_loop).
         let mut result = 0u32;
-        for i in 0..2 {
-            result |= (<archmage::NeonToken as U64x2Backend>::bitmask(self, a[i])) << (i * 2);
+        for (i, v) in a.into_iter().enumerate() {
+            result |= <archmage::NeonToken as U64x2Backend>::bitmask(self, v) << (i * 2);
         }
         result
     }

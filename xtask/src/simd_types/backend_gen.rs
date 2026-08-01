@@ -171,6 +171,19 @@ impl FloatVecType {
 }
 
 /// All float vector types to generate backends for.
+/// Renders ` << n`, or the empty string when `n == 0`.
+///
+/// Emitting a literal `<< 0` is a no-op that trips `clippy::identity_op`, which
+/// is only reachable on aarch64 (CI's Clippy lane is x86-only), so it sat
+/// unnoticed in the generated NEON bitmask bodies.
+fn shift_suffix(n: usize) -> String {
+    if n == 0 {
+        String::new()
+    } else {
+        format!(" << {n}")
+    }
+}
+
 fn all_float_types() -> Vec<FloatVecType> {
     vec![
         FloatVecType {
@@ -5128,10 +5141,12 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
             for i in 0..sub_count {
                 let base = i * 4;
                 body.push_str(&format!("            let s{i} = vshrq_n_u32::<31>(vreinterpretq_u32_s32(a[{i}]));\n"));
-                body.push_str(&format!("            bits |= vgetq_lane_u32::<0>(s{i}) << {base};\n"));
-                body.push_str(&format!("            bits |= (vgetq_lane_u32::<1>(s{i})) << {};\n", base + 1));
-                body.push_str(&format!("            bits |= (vgetq_lane_u32::<2>(s{i})) << {};\n", base + 2));
-                body.push_str(&format!("            bits |= (vgetq_lane_u32::<3>(s{i})) << {};\n", base + 3));
+                for lane in 0..4 {
+                    body.push_str(&format!(
+                        "            bits |= vgetq_lane_u32::<{lane}>(s{i}){};\n",
+                        shift_suffix(base + lane)
+                    ));
+                }
             }
             body.push_str("            bits\n");
             body.push_str("        }");
@@ -6792,10 +6807,12 @@ fn generate_neon_polyfill_u32_impl(ty: &U32VecType) -> String {
             for i in 0..sub_count {
                 let base = i * 4;
                 body.push_str(&format!("            let s{i} = vshrq_n_u32::<31>(a[{i}]);\n"));
-                body.push_str(&format!("            bits |= vgetq_lane_u32::<0>(s{i}) << {base};\n"));
-                body.push_str(&format!("            bits |= (vgetq_lane_u32::<1>(s{i})) << {};\n", base + 1));
-                body.push_str(&format!("            bits |= (vgetq_lane_u32::<2>(s{i})) << {};\n", base + 2));
-                body.push_str(&format!("            bits |= (vgetq_lane_u32::<3>(s{i})) << {};\n", base + 3));
+                for lane in 0..4 {
+                    body.push_str(&format!(
+                        "            bits |= vgetq_lane_u32::<{lane}>(s{i}){};\n",
+                        shift_suffix(base + lane)
+                    ));
+                }
             }
             body.push_str("            bits\n");
             body.push_str("        }");
