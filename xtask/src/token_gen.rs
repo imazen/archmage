@@ -194,22 +194,26 @@ fn gen_real_tokens(
             let cache_name = cache_var_name(&token.name);
             let disabled_name = disabled_var_name(&token.name);
 
-            // Tokens whose features are all baseline for their architecture have
-            // their cache/disabled statics only used when `testable_dispatch`
-            // is enabled. Suppress dead_code warnings for the default case.
-            // - x86: SSE/SSE2 are always available on x86_64
-            // - aarch64: NEON is always available (part of the AArch64 spec)
-            let needs_allow = (arch == "x86" && is_x86_baseline_only(token))
-                || (arch == "aarch64" && is_arm_baseline_only(token));
-            let allow_attr = if needs_allow {
-                "#[allow(dead_code)]\n"
-            } else {
-                ""
-            };
-
+            // These statics are read/written ONLY by the runtime-detection
+            // path, which is `cfg`'d out whenever every feature the token
+            // asserts is already enabled at compile time (and
+            // `testable_dispatch` is off). Whether that happens depends on the
+            // TARGET's default feature set, which is not knowable here — so
+            // every one of them is dead code on some target and live on
+            // another, and `#[allow(dead_code)]` is unconditional.
+            //
+            // This used to be predicted from an architecture-baseline
+            // heuristic (SSE/SSE2 on x86, NEON on aarch64). That was wrong:
+            // `aarch64-apple-darwin` enables aes/sha2/sha3/crc by default, so
+            // NEON_AES_*, NEON_SHA3_*, NEON_CRC_* and ARM64_V2_* were dead
+            // there too and `cargo clippy -D warnings` failed on any Apple
+            // Silicon host. CI never saw it because the Clippy lane runs on
+            // ubuntu-latest (x86), where those cfgs resolve the other way.
             out.push_str(&formatdoc! {"
-                {allow_attr}pub(super) static {cache_name}: AtomicU8 = AtomicU8::new(0);
-                {allow_attr}pub(super) static {disabled_name}: AtomicBool = AtomicBool::new(false);
+                #[allow(dead_code)]
+                pub(super) static {cache_name}: AtomicU8 = AtomicU8::new(0);
+                #[allow(dead_code)]
+                pub(super) static {disabled_name}: AtomicBool = AtomicBool::new(false);
             "});
         }
         out.push('\n');
@@ -1220,16 +1224,6 @@ fn feature_flag_strings(token: &TokenDef) -> (&'static str, String, String, Stri
 
     // We return a &'static str "" placeholder — caller must use the Strings
     ("", target_features, enable, disable)
-}
-
-/// Returns true if an x86 token's features are all baseline (sse/sse2 only).
-/// Such tokens are always available on x86_64 and don't need runtime detection.
-fn is_x86_baseline_only(token: &TokenDef) -> bool {
-    token.features.iter().all(|f| f == "sse" || f == "sse2")
-}
-
-fn is_arm_baseline_only(token: &TokenDef) -> bool {
-    token.features.iter().all(|f| f == "neon")
 }
 
 /// Determine which generated module file a token lives in.
