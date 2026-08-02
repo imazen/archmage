@@ -107,10 +107,93 @@ fn bench_rsqrt(c: &mut Criterion) {
         .recip_portable());
 }
 
+/// f64 `recip`/`rsqrt`: the shipped exact form vs the estimate-and-refine form
+/// it replaced.
+///
+/// The f64 NEON backend used `vrecpeq_f64`/`vrsqrteq_f64` + **three** fused
+/// Newton steps until 2026-08-01. That missed the documented "full precision"
+/// contract by 1 ULP, so it was replaced with exact FDIV / FDIV+FSQRT. The
+/// correctness case is settled; this measures what the exactness costs, because
+/// the f32 answer is famously core-dependent and does NOT transfer:
+/// exact is faster on Apple M-series and slower on Neoverse-N1 (see
+/// `benchmarks/rsqrt_arm_neoverse-n1_2026-06-21.md`). Run it on both.
+#[cfg(target_arch = "aarch64")]
+fn bench_rsqrt_f64(c: &mut Criterion) {
+    use archmage::{NeonToken, SimdToken};
+    use core::arch::aarch64::{vmulq_f64, vrecpeq_f64, vrecpsq_f64, vrsqrteq_f64, vrsqrtsq_f64};
+    use magetypes::simd::generic::f64x2;
+
+    const N: usize = 1024; // 8 KB → L1-resident, matches the f32 group's footprint
+    const REPS: usize = 16;
+
+    let Some(token) = NeonToken::summon() else {
+        return;
+    };
+    let input: Vec<f64> = (0..N).map(|i| 0.1 + (i % 997) as f64 * 0.1).collect();
+    let mut out = vec![0.0f64; N];
+
+    #[inline(always)]
+    fn process<F>(token: NeonToken, input: &[f64], out: &mut [f64], op: F)
+    where
+        F: Fn(f64x2<NeonToken>) -> f64x2<NeonToken>,
+    {
+        for (ci, co) in input.chunks_exact(2).zip(out.chunks_exact_mut(2)) {
+            let v = f64x2::<NeonToken>::from_array(token, ci.try_into().unwrap());
+            op(v).store(co.try_into().unwrap());
+        }
+    }
+
+    // The replaced bodies, reproduced exactly: raw estimate + 3 fused steps.
+    let recip_3step = |v: f64x2<NeonToken>| {
+        let a = v.into_repr();
+        f64x2::from_repr(token, unsafe {
+            let y = vrecpeq_f64(a);
+            let y = vmulq_f64(vrecpsq_f64(a, y), y);
+            let y = vmulq_f64(vrecpsq_f64(a, y), y);
+            vmulq_f64(vrecpsq_f64(a, y), y)
+        })
+    };
+    let rsqrt_3step = |v: f64x2<NeonToken>| {
+        let a = v.into_repr();
+        f64x2::from_repr(token, unsafe {
+            let y = vrsqrteq_f64(a);
+            let y = vmulq_f64(vrsqrtsq_f64(vmulq_f64(a, y), y), y);
+            let y = vmulq_f64(vrsqrtsq_f64(vmulq_f64(a, y), y), y);
+            vmulq_f64(vrsqrtsq_f64(vmulq_f64(a, y), y), y)
+        })
+    };
+
+    macro_rules! bench64 {
+        ($name:expr, $op:expr) => {
+            c.bench_function($name, |b| {
+                b.iter(|| {
+                    for _ in 0..REPS {
+                        process(token, black_box(&input), &mut out, $op);
+                    }
+                    black_box(&out);
+                })
+            });
+        };
+    }
+
+    // 1_* is the form that was replaced, 2_* is what ships now.
+    bench64!("f64_rcp_full/1_vrecpe_3step_1ulp", recip_3step);
+    bench64!("f64_rcp_full/2_exact_fdiv", |v: f64x2<NeonToken>| v.recip());
+    bench64!("f64_rsqrt_full/1_vrsqrte_3step_1ulp", rsqrt_3step);
+    bench64!("f64_rsqrt_full/2_exact_fdiv_fsqrt", |v: f64x2<
+        NeonToken,
+    >| v.rsqrt());
+}
+
 #[cfg(not(target_arch = "aarch64"))]
 fn bench_rsqrt(_c: &mut Criterion) {
     // aarch64-only benchmark; nothing to run on other targets.
 }
 
-criterion_group!(benches, bench_rsqrt);
+#[cfg(not(target_arch = "aarch64"))]
+fn bench_rsqrt_f64(_c: &mut Criterion) {
+    // aarch64-only benchmark; nothing to run on other targets.
+}
+
+criterion_group!(benches, bench_rsqrt, bench_rsqrt_f64);
 criterion_main!(benches);

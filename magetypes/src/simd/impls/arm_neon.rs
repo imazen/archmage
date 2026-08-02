@@ -201,7 +201,8 @@ impl F32x4Backend for archmage::NeonToken {
     // pins these at 0 ULP on NEON, so the exact form is load-bearing —
     // do not "optimize" it back into an estimate-and-refine sequence.
     //
-    // Cost of exactness is core-dependent, in BOTH directions:
+    // Cost of exactness is per-core and does NOT generalize — these
+    // numbers are for f32 specifically:
     //   Apple Silicon (M-series): exact is FASTER
     //     recip 1.35x, rsqrt 1.18x  (commits defbbc2 / 1b36fc7)
     //   Neoverse-N1 (Ampere Altra): exact is SLOWER
@@ -846,12 +847,14 @@ impl F64x2Backend for archmage::NeonToken {
     // pins these at 0 ULP on NEON, so the exact form is load-bearing —
     // do not "optimize" it back into an estimate-and-refine sequence.
     //
-    // Cost of exactness is core-dependent, in BOTH directions:
-    //   Apple Silicon (M-series): exact is FASTER
-    //     recip 1.35x, rsqrt 1.18x  (commits defbbc2 / 1b36fc7)
-    //   Neoverse-N1 (Ampere Altra): exact is SLOWER
-    //     rcp 1.39x, rsqrt 2.15x
-    //     (benchmarks/rsqrt_arm_neoverse-n1_2026-06-21.md)
+    // Cost of exactness is per-core and does NOT generalize — these
+    // numbers are for f64 specifically:
+    //   Apple M4 Pro: exact is FASTER
+    //     rcp 3.2x, rsqrt 1.23x
+    //     (benchmarks/rsqrt_f64_arm_apple-m4-pro_2026-08-02.md)
+    //   Neoverse / server ARM: NOT MEASURED for f64. The f32 form is
+    //     slower there, so treat an f64 regression as plausible until
+    //     someone runs `bench_rsqrt_f64` on that class of core.
     // Either way `_approx` is the answer when speed matters — that
     // separation is the whole reason the two tiers exist.
     #[inline(always)]

@@ -2855,6 +2855,26 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
     let recip_exact = format!("vdivq_{ns}(vdupq_n_{ns}(1.0), a)");
     let rsqrt_exact = format!("vdivq_{ns}(vdupq_n_{ns}(1.0), vsqrtq_{ns}(a))");
 
+    // Measurements are PER ELEMENT TYPE — do not let the f32 numbers leak into
+    // the f64 impl or vice versa. They were taken on different cores and differ
+    // by more than 2x.
+    let recip_perf_note = if elem == "f32" {
+        "\
+            //   Apple Silicon (M-series): exact is FASTER\n            \
+            //     recip 1.35x, rsqrt 1.18x  (commits defbbc2 / 1b36fc7)\n            \
+            //   Neoverse-N1 (Ampere Altra): exact is SLOWER\n            \
+            //     rcp 1.39x, rsqrt 2.15x\n            \
+            //     (benchmarks/rsqrt_arm_neoverse-n1_2026-06-21.md)"
+    } else {
+        "\
+            //   Apple M4 Pro: exact is FASTER\n            \
+            //     rcp 3.2x, rsqrt 1.23x\n            \
+            //     (benchmarks/rsqrt_f64_arm_apple-m4-pro_2026-08-02.md)\n            \
+            //   Neoverse / server ARM: NOT MEASURED for f64. The f32 form is\n            \
+            //     slower there, so treat an f64 regression as plausible until\n            \
+            //     someone runs `bench_rsqrt_f64` on that class of core."
+    };
+
     // For native types, reduce pattern is different
     let reduce_pairwise = |pairwise: &str| -> String {
         let mut body = format!("unsafe {{\n            let pair = {pairwise}(a, a);\n");
@@ -3051,12 +3071,9 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             // pins these at 0 ULP on NEON, so the exact form is load-bearing —
             // do not "optimize" it back into an estimate-and-refine sequence.
             //
-            // Cost of exactness is core-dependent, in BOTH directions:
-            //   Apple Silicon (M-series): exact is FASTER
-            //     recip 1.35x, rsqrt 1.18x  (commits defbbc2 / 1b36fc7)
-            //   Neoverse-N1 (Ampere Altra): exact is SLOWER
-            //     rcp 1.39x, rsqrt 2.15x
-            //     (benchmarks/rsqrt_arm_neoverse-n1_2026-06-21.md)
+            // Cost of exactness is per-core and does NOT generalize — these
+            // numbers are for {elem} specifically:
+{recip_perf_note}
             // Either way `_approx` is the answer when speed matters — that
             // separation is the whole reason the two tiers exist.
             #[inline(always)]
