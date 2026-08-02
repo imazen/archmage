@@ -62,6 +62,36 @@ fuzz:
 generate:
     cargo run -p xtask -- generate
 
+# Verify the working tree agrees with the generator: regeneration must be a
+# no-op. Local mirror of CI's `generate-check` job, but hash-based rather than
+# `git diff`, so it works on a dirty tree — the question is "does the generator
+# emit what's on disk?", not "is the tree clean?".
+#
+# Run this before committing any change under a generated path (see CLAUDE.md,
+# "FIX THE GENERATOR, NOT ITS OUTPUT"). A fix hand-applied to generated output
+# passes tests locally and is then silently reverted by the next
+# `just generate`; this is what catches that.
+check-generated:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    before="$(mktemp)"; after="$(mktemp)"
+    trap 'rm -f "$before" "$after"' EXIT
+    git ls-files -z | xargs -0 shasum -a 256 2>/dev/null | sort > "$before"
+    cargo run -p xtask -- generate || exit 1
+    git ls-files -z | xargs -0 shasum -a 256 2>/dev/null | sort > "$after"
+    if diff -q "$before" "$after" >/dev/null; then
+        echo "OK: generated code matches the generator (regeneration is a no-op)."
+        exit 0
+    fi
+    echo ""
+    echo "ERROR: regeneration changed these files —"
+    diff "$before" "$after" | awk '/^>/ {print "  " $3}' | sort -u
+    echo ""
+    echo "The tree disagrees with the generator. Either you edited generated"
+    echo "output directly, or you changed a template without regenerating."
+    echo "Generator templates live in xtask/src/simd_types/."
+    exit 1
+
 # Validate token-registry.toml (parse + structural checks)
 validate-registry:
     cargo run -p xtask -- validate-registry

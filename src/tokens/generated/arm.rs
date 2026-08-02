@@ -12,15 +12,25 @@ use core::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 pub(super) static NEON_CACHE: AtomicU8 = AtomicU8::new(0);
 #[allow(dead_code)]
 pub(super) static NEON_DISABLED: AtomicBool = AtomicBool::new(false);
+#[allow(dead_code)]
 pub(super) static NEON_AES_CACHE: AtomicU8 = AtomicU8::new(0);
+#[allow(dead_code)]
 pub(super) static NEON_AES_DISABLED: AtomicBool = AtomicBool::new(false);
+#[allow(dead_code)]
 pub(super) static NEON_SHA3_CACHE: AtomicU8 = AtomicU8::new(0);
+#[allow(dead_code)]
 pub(super) static NEON_SHA3_DISABLED: AtomicBool = AtomicBool::new(false);
+#[allow(dead_code)]
 pub(super) static NEON_CRC_CACHE: AtomicU8 = AtomicU8::new(0);
+#[allow(dead_code)]
 pub(super) static NEON_CRC_DISABLED: AtomicBool = AtomicBool::new(false);
+#[allow(dead_code)]
 pub(super) static ARM64_V2_CACHE: AtomicU8 = AtomicU8::new(0);
+#[allow(dead_code)]
 pub(super) static ARM64_V2_DISABLED: AtomicBool = AtomicBool::new(false);
+#[allow(dead_code)]
 pub(super) static ARM64_V3_CACHE: AtomicU8 = AtomicU8::new(0);
+#[allow(dead_code)]
 pub(super) static ARM64_V3_DISABLED: AtomicBool = AtomicBool::new(false);
 
 /// Proof that NEON is available.

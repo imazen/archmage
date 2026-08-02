@@ -13,12 +13,23 @@ env:
   # All stable features
   FEATURES: "std avx512"
 
-# Superseded runs only waste runner queue — particularly the macOS
-# jobs, which wait on GitHub's scarcest pool. Only the newest
-# commit's run matters per ref.
+# PR runs supersede each other — only the newest push to a PR branch matters,
+# so cancel the stale one and spare the runner queue (particularly the macOS
+# jobs, GitHub's scarcest pool).
+#
+# Pushes to main are NEVER cancelled, and each commit gets its own concurrency
+# group (keyed by SHA) so they run in parallel instead of queueing behind each
+# other. Every commit that lands on main must get its own verdict.
+#
+# This is not hypothetical: on 2026-07-28 the NEON recip()/rsqrt() fixes landed
+# as three commits pushed within three minutes (defbbc2, 1b36fc7, b9aeef5). The
+# per-ref group cancelled the first two runs, so the generator drift those
+# commits introduced was never reported against the commit that caused it. Only
+# the third run completed — it went red on `generate-check`, and main then sat
+# red for four days until PR #66 tripped over the drift.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'push' && github.sha || 'pr' }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
 
 jobs:
   # ==========================================================================
@@ -457,6 +468,52 @@ jobs:
 
       - name: Clippy
         run: cargo clippy --features "${{ env.FEATURES }}" -- -D warnings
+
+      # `just ci` lints magetypes at default features too, and CI did not.
+      - name: Clippy (magetypes, default features)
+        run: cargo clippy -p magetypes -- -D warnings
+
+  # ==========================================================================
+  # Clippy on aarch64 — the NEON backend impls are cfg'd out on x86, so
+  # lints inside them were unreachable from the ubuntu-latest lane above.
+  # Three defects hid there until 2026-08-01: dead cache statics in
+  # src/tokens/generated/arm.rs, plus identity_op and needless_range_loop in
+  # the generated NEON bitmask/reduce bodies.
+  #
+  # BOTH runners are load-bearing, they catch different things:
+  #   - ubuntu-24.04-arm (Neoverse): the NEON impl bodies, on a target whose
+  #     default feature set is plain `neon`.
+  #   - macos-latest (Apple Silicon): aarch64-apple-darwin enables
+  #     aes/sha2/sha3/crc BY DEFAULT, so tokens take the compile-time fast
+  #     path and their runtime-detection code is cfg'd out. That is exactly
+  #     what made the cache statics dead, and it is invisible on Neoverse.
+  # ==========================================================================
+  clippy-aarch64:
+    name: Clippy (aarch64 ${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-24.04-arm, name: Linux }
+          - { os: macos-latest, name: macOS }
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Clippy
+        run: cargo clippy --features "${{ env.FEATURES }}" -- -D warnings
+
+      - name: Clippy (magetypes, default features)
+        run: cargo clippy -p magetypes -- -D warnings
 
   # ==========================================================================
   # Format check

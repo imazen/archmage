@@ -12,21 +12,37 @@ use core::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 pub(super) static X64_V1_CACHE: AtomicU8 = AtomicU8::new(0);
 #[allow(dead_code)]
 pub(super) static X64_V1_DISABLED: AtomicBool = AtomicBool::new(false);
+#[allow(dead_code)]
 pub(super) static X64_V2_CACHE: AtomicU8 = AtomicU8::new(0);
+#[allow(dead_code)]
 pub(super) static X64_V2_DISABLED: AtomicBool = AtomicBool::new(false);
+#[allow(dead_code)]
 pub(super) static X64_CRYPTO_CACHE: AtomicU8 = AtomicU8::new(0);
+#[allow(dead_code)]
 pub(super) static X64_CRYPTO_DISABLED: AtomicBool = AtomicBool::new(false);
+#[allow(dead_code)]
 pub(super) static X64_V3_CACHE: AtomicU8 = AtomicU8::new(0);
+#[allow(dead_code)]
 pub(super) static X64_V3_DISABLED: AtomicBool = AtomicBool::new(false);
+#[allow(dead_code)]
 pub(super) static X64_V3_CRYPTO_CACHE: AtomicU8 = AtomicU8::new(0);
+#[allow(dead_code)]
 pub(super) static X64_V3_CRYPTO_DISABLED: AtomicBool = AtomicBool::new(false);
+#[allow(dead_code)]
 pub(super) static X64_V3_GFNI_CRYPTO_CACHE: AtomicU8 = AtomicU8::new(0);
+#[allow(dead_code)]
 pub(super) static X64_V3_GFNI_CRYPTO_DISABLED: AtomicBool = AtomicBool::new(false);
+#[allow(dead_code)]
 pub(super) static X64_V4_CACHE: AtomicU8 = AtomicU8::new(0);
+#[allow(dead_code)]
 pub(super) static X64_V4_DISABLED: AtomicBool = AtomicBool::new(false);
+#[allow(dead_code)]
 pub(super) static X64_V4X_CACHE: AtomicU8 = AtomicU8::new(0);
+#[allow(dead_code)]
 pub(super) static X64_V4X_DISABLED: AtomicBool = AtomicBool::new(false);
+#[allow(dead_code)]
 pub(super) static AVX512_FP16_CACHE: AtomicU8 = AtomicU8::new(0);
+#[allow(dead_code)]
 pub(super) static AVX512_FP16_DISABLED: AtomicBool = AtomicBool::new(false);
 
 /// Proof that SSE + SSE2 are available (x86-64-v1 baseline level).

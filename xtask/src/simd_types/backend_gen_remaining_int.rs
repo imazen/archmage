@@ -2020,8 +2020,10 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
             #[inline(always)]
             fn reduce_add(self, a: {repr}) -> {elem} {{
                 let mut sum = 0{elem};
-                for i in 0..{sub_count} {{
-                    sum = sum.wrapping_add(unsafe {{ vaddvq_{ns}(a[i]) }});
+                // Iterate the array rather than indexing by range
+                // (clippy::needless_range_loop).
+                for v in a {{
+                    sum = sum.wrapping_add(unsafe {{ vaddvq_{ns}(v) }});
                 }}
                 sum
             }}
@@ -2108,10 +2110,12 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
 
             #[inline(always)]
             fn bitmask(self, a: {repr}) -> u32 {{
-                // Delegate to NeonToken native bitmask per sub-vector, combine
+                // Delegate to NeonToken native bitmask per sub-vector, combine.
+                // Enumerate the array rather than indexing by range
+                // (clippy::needless_range_loop).
                 let mut result = 0u32;
-                for i in 0..{sub_count} {{
-                    result |= (<archmage::NeonToken as {native_trait}>::bitmask(self, a[i])) << (i * {lanes_per_128});
+                for (i, v) in a.into_iter().enumerate() {{
+                    result |= <archmage::NeonToken as {native_trait}>::bitmask(self, v) << (i * {lanes_per_128});
                 }}
                 result
             }}
@@ -2754,8 +2758,10 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
             #[inline(always)]
             fn bitmask(self, a: {repr}) -> u32 {{
                 let mut result = 0u32;
-                for i in 0..{sub_count} {{
-                    result |= ({bitmask_fn}(a[i]) as u32) << (i * {lanes_per_128});
+                // Enumerate the array rather than indexing by range
+                // (clippy::needless_range_loop).
+                for (i, v) in a.into_iter().enumerate() {{
+                    result |= ({bitmask_fn}(v) as u32) << (i * {lanes_per_128});
                 }}
                 result
             }}

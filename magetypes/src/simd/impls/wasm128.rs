@@ -2022,8 +2022,10 @@ impl I8x32Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn bitmask(self, a: [v128; 2]) -> u32 {
         let mut result = 0u32;
-        for i in 0..2 {
-            result |= (i8x16_bitmask(a[i]) as u32) << (i * 16);
+        // Enumerate the array rather than indexing by range
+        // (clippy::needless_range_loop).
+        for (i, v) in a.into_iter().enumerate() {
+            result |= (i8x16_bitmask(v) as u32) << (i * 16);
         }
         result
     }
@@ -2299,8 +2301,10 @@ impl U8x32Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn bitmask(self, a: [v128; 2]) -> u32 {
         let mut result = 0u32;
-        for i in 0..2 {
-            result |= (i8x16_bitmask(a[i]) as u32) << (i * 16);
+        // Enumerate the array rather than indexing by range
+        // (clippy::needless_range_loop).
+        for (i, v) in a.into_iter().enumerate() {
+            result |= (i8x16_bitmask(v) as u32) << (i * 16);
         }
         result
     }
@@ -2608,8 +2612,10 @@ impl I16x16Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn bitmask(self, a: [v128; 2]) -> u32 {
         let mut result = 0u32;
-        for i in 0..2 {
-            result |= (i16x8_bitmask(a[i]) as u32) << (i * 8);
+        // Enumerate the array rather than indexing by range
+        // (clippy::needless_range_loop).
+        for (i, v) in a.into_iter().enumerate() {
+            result |= (i16x8_bitmask(v) as u32) << (i * 8);
         }
         result
     }
@@ -2893,8 +2899,10 @@ impl U16x16Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn bitmask(self, a: [v128; 2]) -> u32 {
         let mut result = 0u32;
-        for i in 0..2 {
-            result |= (i16x8_bitmask(a[i]) as u32) << (i * 8);
+        // Enumerate the array rather than indexing by range
+        // (clippy::needless_range_loop).
+        for (i, v) in a.into_iter().enumerate() {
+            result |= (i16x8_bitmask(v) as u32) << (i * 8);
         }
         result
     }
@@ -3195,8 +3203,10 @@ impl U64x4Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn bitmask(self, a: [v128; 2]) -> u32 {
         let mut result = 0u32;
-        for i in 0..2 {
-            result |= (i64x2_bitmask(a[i]) as u32) << (i * 2);
+        // Enumerate the array rather than indexing by range
+        // (clippy::needless_range_loop).
+        for (i, v) in a.into_iter().enumerate() {
+            result |= (i64x2_bitmask(v) as u32) << (i * 2);
         }
         result
     }

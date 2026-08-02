@@ -1335,8 +1335,18 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
             for i in 0..sub_count {
                 let base = i * 2;
                 body.push_str(&format!("            let s{i} = vshrq_n_u64::<63>(vreinterpretq_u64_s64(a[{i}]));\n"));
-                body.push_str(&format!("            bits |= (vgetq_lane_u64::<0>(s{i}) as u32) << {base};\n"));
-                body.push_str(&format!("            bits |= (vgetq_lane_u64::<1>(s{i}) as u32) << {};\n", base + 1));
+                for lane in 0..2 {
+                    // No literal `<< 0` (clippy::identity_op) and no wrapping
+                    // parens when there is no shift (unused_parens).
+                    let shift = base + lane;
+                    let expr = format!("vgetq_lane_u64::<{lane}>(s{i}) as u32");
+                    let rhs = if shift == 0 {
+                        expr
+                    } else {
+                        format!("({expr}) << {shift}")
+                    };
+                    body.push_str(&format!("            bits |= {rhs};\n"));
+                }
             }
             body.push_str("            bits\n");
             body.push_str("        }");
