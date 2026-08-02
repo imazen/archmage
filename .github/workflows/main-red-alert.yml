@@ -1,0 +1,134 @@
+name: Main Red Alert
+
+# Branch protection cannot close this gap on its own.
+#
+# Required status checks are not enforced against admins (enforce_admins is
+# deliberately false, so the documented work-on-main / push-directly workflow in
+# CLAUDE.md keeps working). That means an admin push can still land red on main
+# — which is exactly what happened on 2026-07-28: CI went red on
+# `generate-check` and `Format` and nobody noticed for four days, until PR #66
+# tripped over the NEON generator drift the red run had been reporting all along.
+#
+# So the guard is a loud alarm rather than a gate: whenever CI fails on main,
+# open (or update) a tracking issue assigned to the repo owner. Green runs close
+# it automatically, so a stale issue always means main is red right now.
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  issues: write
+
+# One alert at a time; a burst of pushes must not race on issue creation.
+concurrency:
+  group: main-red-alert
+  cancel-in-progress: false
+
+jobs:
+  alert:
+    name: Alert on red main
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v9
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            const LABEL = 'red-main';
+            const failed = run.conclusion === 'failure';
+
+            // Find an existing open alert. Label may not exist yet, so filter
+            // client-side rather than relying on the labels query.
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: LABEL,
+            });
+            const existing = open[0];
+
+            if (!failed) {
+              // Main is green again — close any outstanding alert.
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  body: `Main is green again as of ${run.head_sha.slice(0, 8)} — ${run.html_url}`,
+                });
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: existing.number,
+                  state: 'closed',
+                });
+                core.notice(`Closed #${existing.number}; main is green.`);
+              }
+              return;
+            }
+
+            // Name the jobs that actually failed, so the issue is actionable
+            // without opening the run.
+            const { data: jobs } = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: run.id,
+              per_page: 100,
+            });
+            const bad = jobs.jobs
+              .filter(j => j.conclusion && j.conclusion !== 'success' && j.conclusion !== 'skipped')
+              .map(j => `- \`${j.name}\` (${j.conclusion})`)
+              .join('\n') || '- (no job-level detail available)';
+
+            const sha = run.head_sha.slice(0, 8);
+            const body = [
+              `**CI is failing on \`main\`** at ${sha}.`,
+              '',
+              `Run: ${run.html_url}`,
+              `Commit: ${run.head_commit?.message?.split('\n')[0] ?? '(unknown)'}`,
+              '',
+              '**Failing jobs:**',
+              bad,
+              '',
+              'This issue closes itself when a run on `main` goes green.',
+            ].join('\n');
+
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body,
+              });
+              core.setFailed(`main is still red — see #${existing.number}`);
+              return;
+            }
+
+            // Ensure the label exists before using it on create.
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: LABEL,
+              });
+            } catch {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: LABEL,
+                color: 'b60205',
+                description: 'CI is failing on main',
+              });
+            }
+
+            const { data: issue } = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `CI is red on main (${sha})`,
+              body,
+              labels: [LABEL],
+              assignees: ['lilith'],
+            });
+            core.setFailed(`main is red — opened #${issue.number}`);
