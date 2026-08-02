@@ -666,6 +666,31 @@ just ci    # or: just all, cargo xtask ci, cargo xtask all
 
 **NEVER run `git push` or `cargo publish` until this passes. No exceptions.**
 
+**Known host caveat:** `just ci` cannot go fully green on an **aarch64 host**.
+Step 14 (Miri) dies on `llvm.aarch64.neon.fcvtns` — Miri cannot emulate that
+NEON intrinsic, so `magetypes/tests/block_ops_f32x8_cross_arch.rs` aborts. This
+is a Miri limitation, not a defect: CI runs Miri on `ubuntu-latest`, where it
+passes. On aarch64, steps 1–13 passing is the real bar. Do **not** "fix" this by
+skipping or `#[ignore]`-ing the test.
+
+### `main` is a protected branch (configured 2026-08-01)
+
+- **Required status checks**: `Generation Check`, `Format`, `Clippy`,
+  `Clippy (aarch64 Linux)`, `Clippy (aarch64 macOS)`, `Soundness Verification`,
+  `Validate Token Safety`, `API Parity Check`, `Test x64 (ubuntu-latest)`,
+  `Test aarch64 (Linux)`. A PR cannot merge until these are green.
+- **Force-pushes and branch deletion are blocked** on `main`.
+- **`enforce_admins` is deliberately OFF**, and pull requests are NOT required.
+  This preserves the work-on-main / push-directly workflow — an admin push to
+  `main` still goes through without waiting on checks. Do not turn
+  `enforce_admins` on without the owner's say-so; it would force every change
+  onto a PR and contradict the no-feature-branches workflow.
+- Because admins bypass the gate, the backstop for a red `main` is the
+  **Main Red Alert** workflow (`.github/workflows/main-red-alert.yml`): any CI
+  failure on `main` opens a `red-main` issue assigned to the owner, and a green
+  run closes it. **An open `red-main` issue means `main` is red right now** —
+  fix it before starting new work.
+
 CI checks (all must pass):
 1. `cargo xtask generate` — regenerate all code
 2. **Clean worktree check** — no uncommitted changes after generation (HARD FAIL)

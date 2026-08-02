@@ -23,6 +23,13 @@
 - `magetypes/tests/precise_reciprocals.rs` now covers `f64x2`/`f64x4` alongside `f32x4`/`f32x8`, pinned at 0 ULP on NEON, x86, and scalar.
 - CI no longer cancels in-progress runs for pushes to `main` (each commit gets its own concurrency group, keyed by SHA). Cancellation still applies to PR updates. Three commits pushed within three minutes on 2026-07-28 had the first two runs cancelled, which is why the generator drift was never reported against the commit that caused it.
 - New `just check-generated` — hash-based local mirror of CI's `generate-check` that works on a dirty tree (asserts regeneration is a no-op).
+- CI now lints on aarch64 (`clippy-aarch64`, over `ubuntu-24.04-arm` **and** `macos-latest`) and lints `magetypes` at default features on every lane. Clippy previously ran only on `ubuntu-latest`, where every NEON backend impl is `cfg`'d out — which is why three aarch64-only defects shipped undetected. The two runners are not interchangeable: `aarch64-apple-darwin` enables aes/sha2/sha3/crc by default and Neoverse does not, and that difference is what made the token cache statics dead on one and live on the other.
+- `main` is now a protected branch: 10 required status checks, force-pushes and deletion blocked. `enforce_admins` is deliberately off so the work-on-main workflow is unaffected; the backstop for an admin push landing red is the new **Main Red Alert** workflow, which opens a `red-main` issue on any CI failure on `main` and closes it when a run goes green.
+
+### Fixed (tooling)
+
+- **`cargo clippy` failed on every Apple Silicon host** with 8 dead-code errors in `src/tokens/generated/arm.rs`. The generator predicted deadness from an architecture baseline (SSE/SSE2, NEON), but these statics are touched only by the runtime-detection path, which is `cfg`'d out when the token's features are enabled at compile time — a property of the *target*, not the architecture. `aarch64-apple-darwin` enables aes/sha2/sha3/crc by default, so those tokens took the fast path and their statics went dead. `#[allow(dead_code)]` is now unconditional.
+- 13 aarch64-only lints in generated NEON bitmask/reduce bodies (`identity_op` from a literal `<< 0`, `unused_parens`, `needless_range_loop`) fixed at their templates. Output is semantically identical; the WASM backend inherits the loop change via the shared template.
 
 ## [0.9.28] - 2026-07-20
 
