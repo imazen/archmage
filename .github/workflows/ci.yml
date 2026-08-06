@@ -797,8 +797,10 @@ jobs:
       - name: Install cargo-expand
         run: cargo install cargo-expand --locked
 
+      # forge-token-api compiles the forged-token tests, the only coverage
+      # for tokens this runner's CPU cannot summon (V3 crypto, GFNI, FP16).
       - name: Generate coverage
-        run: cargo llvm-cov --features "${{ env.FEATURES }}" --lcov --output-path lcov.info
+        run: cargo llvm-cov --features "${{ env.FEATURES }} forge-token-api" --lcov --output-path lcov.info
 
       - name: Upload to Codecov
         uses: codecov/codecov-action@v5
@@ -833,7 +835,7 @@ jobs:
         run: cargo install cargo-expand --locked
 
       - name: Generate coverage
-        run: cargo llvm-cov --features "${{ env.FEATURES }}" --lcov --output-path lcov.info
+        run: cargo llvm-cov --features "${{ env.FEATURES }} forge-token-api" --lcov --output-path lcov.info
 
       - name: Upload to Codecov
         uses: codecov/codecov-action@v5

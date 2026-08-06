@@ -930,7 +930,7 @@ mod tests {
         let registry = Registry::load(&path).expect("Failed to load token-registry.toml");
 
         // Basic counts
-        assert_eq!(registry.token.len(), 16, "Expected 16 tokens");
+        assert_eq!(registry.token.len(), 17, "Expected 17 tokens");
         assert_eq!(registry.traits.len(), 10, "Expected 10 traits");
         assert_eq!(
             registry.width_namespace.len(),
@@ -946,6 +946,16 @@ mod tests {
         assert!(v3.features.contains(&"f16c".to_string()));
         assert!(v3.features.contains(&"lzcnt".to_string()));
         assert_eq!(v3.features.len(), 16); // sse, sse2, + v2 (5+cmpxchg16b) + v3 (avx2, fma, bmi1, bmi2, f16c, lzcnt, movbe, avx)
+
+        let v3_gfni_crypto = registry
+            .find_token("X64V3GfniCryptoToken")
+            .expect("X64V3GfniCryptoToken not found");
+        assert!(v3_gfni_crypto.features.contains(&"gfni".to_string()));
+        assert_eq!(
+            v3_gfni_crypto.parents,
+            vec!["X64V3CryptoToken"],
+            "V3 GFNI Crypto should extend V3 Crypto"
+        );
 
         // Spot-check aliases
         assert!(registry.find_token("Desktop64").is_some());

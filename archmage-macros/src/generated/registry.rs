@@ -70,6 +70,29 @@ pub(crate) fn token_to_features(token_name: &str) -> Option<&'static [&'static s
             "vpclmulqdq",
             "vaes",
         ]),
+        "X64V3GfniCryptoToken" => Some(&[
+            "sse",
+            "sse2",
+            "sse3",
+            "ssse3",
+            "sse4.1",
+            "sse4.2",
+            "popcnt",
+            "cmpxchg16b",
+            "avx",
+            "avx2",
+            "fma",
+            "bmi1",
+            "bmi2",
+            "f16c",
+            "lzcnt",
+            "movbe",
+            "pclmulqdq",
+            "aes",
+            "vpclmulqdq",
+            "vaes",
+            "gfni",
+        ]),
         "X64V4Token" | "Avx512Token" | "Server64" => Some(&[
             "sse",
             "sse2",
@@ -286,6 +309,29 @@ pub(crate) fn trait_to_features(trait_name: &str) -> Option<&'static [&'static s
             "vpclmulqdq",
             "vaes",
         ]),
+        "X64V3GfniCryptoToken" => Some(&[
+            "sse",
+            "sse2",
+            "sse3",
+            "ssse3",
+            "sse4.1",
+            "sse4.2",
+            "popcnt",
+            "cmpxchg16b",
+            "avx",
+            "avx2",
+            "fma",
+            "bmi1",
+            "bmi2",
+            "f16c",
+            "lzcnt",
+            "movbe",
+            "pclmulqdq",
+            "aes",
+            "vpclmulqdq",
+            "vaes",
+            "gfni",
+        ]),
         "X64V4Token" | "Avx512Token" | "Server64" => Some(&[
             "sse",
             "sse2",
@@ -397,6 +443,7 @@ pub(crate) fn token_to_arch(token_name: &str) -> Option<&'static str> {
         "X64CryptoToken" => Some("x86_64"),
         "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some("x86_64"),
         "X64V3CryptoToken" => Some("x86_64"),
+        "X64V3GfniCryptoToken" => Some("x86_64"),
         "X64V4Token" | "Avx512Token" | "Server64" => Some("x86_64"),
         "X64V4xToken" | "Avx512ModernToken" => Some("x86_64"),
         "Avx512Fp16Token" => Some("x86_64"),
@@ -423,6 +470,7 @@ pub(crate) fn token_to_magetypes_namespace(token_name: &str) -> Option<&'static 
         "X64CryptoToken" => Some("v3"),
         "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some("v3"),
         "X64V3CryptoToken" => Some("v3"),
+        "X64V3GfniCryptoToken" => Some("v3"),
         "X64V4Token" | "Avx512Token" | "Server64" => Some("v4"),
         "X64V4xToken" | "Avx512ModernToken" => Some("v4x"),
         "Avx512Fp16Token" => Some("v4"),
@@ -462,6 +510,7 @@ pub(crate) fn trait_to_magetypes_namespace(trait_name: &str) -> Option<&'static 
         "X64CryptoToken" => Some("v3"),
         "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some("v3"),
         "X64V3CryptoToken" => Some("v3"),
+        "X64V3GfniCryptoToken" => Some("v3"),
         "X64V4Token" | "Avx512Token" | "Server64" => Some("v4"),
         "X64V4xToken" | "Avx512ModernToken" => Some("v4x"),
         "Avx512Fp16Token" => Some("v4"),
@@ -501,6 +550,7 @@ pub(crate) fn trait_to_arch(trait_name: &str) -> Option<&'static str> {
         "X64CryptoToken" => Some("x86_64"),
         "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some("x86_64"),
         "X64V3CryptoToken" => Some("x86_64"),
+        "X64V3GfniCryptoToken" => Some("x86_64"),
         "X64V4Token" | "Avx512Token" | "Server64" => Some("x86_64"),
         "X64V4xToken" | "Avx512ModernToken" => Some("x86_64"),
         "Avx512Fp16Token" => Some("x86_64"),
@@ -531,6 +581,7 @@ pub(crate) fn tier_to_canonical_token(tier_name: &str) -> Option<&'static str> {
         "x64_crypto" => Some("X64CryptoToken"),
         "v3" => Some("X64V3Token"),
         "v3_crypto" => Some("X64V3CryptoToken"),
+        "v3_gfni_crypto" => Some("X64V3GfniCryptoToken"),
         "v4" => Some("X64V4Token"),
         "avx512" => Some("X64V4Token"),
         "v4x" => Some("X64V4xToken"),
@@ -559,6 +610,7 @@ pub(crate) fn canonical_token_to_tier_suffix(token_name: &str) -> Option<&'stati
         "X64CryptoToken" => Some("x64_crypto"),
         "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some("v3"),
         "X64V3CryptoToken" => Some("v3_crypto"),
+        "X64V3GfniCryptoToken" => Some("v3_gfni_crypto"),
         "X64V4Token" | "Avx512Token" | "Server64" => Some("v4"),
         "X64V4xToken" | "Avx512ModernToken" => Some("v4x"),
         "Avx512Fp16Token" => Some("fp16"),
@@ -589,10 +641,14 @@ pub(crate) fn can_downgrade_tier(from_suffix: &str, to_suffix: &str) -> bool {
             | ("x64_crypto", "v1" | "v2")
             | ("v3", "v1" | "v2")
             | ("v3_crypto", "v1" | "v2" | "v3" | "x64_crypto")
+            | (
+                "v3_gfni_crypto",
+                "v1" | "v2" | "v3" | "v3_crypto" | "x64_crypto"
+            )
             | ("v4", "v1" | "v2" | "v3" | "x64_crypto")
             | (
                 "v4x",
-                "v1" | "v2" | "v3" | "v3_crypto" | "v4" | "x64_crypto"
+                "v1" | "v2" | "v3" | "v3_crypto" | "v3_gfni_crypto" | "v4" | "x64_crypto"
             )
             | ("fp16", "v1" | "v2" | "v3" | "v4" | "x64_crypto")
             | ("neon_aes", "neon")
@@ -619,6 +675,7 @@ pub(crate) fn expected_tier_tag(token_name: &str) -> Option<u32> {
         "X64CryptoToken" => Some(0xF5F0FBF5),
         "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some(0xF38B284B),
         "X64V3CryptoToken" => Some(0x01EAE708),
+        "X64V3GfniCryptoToken" => Some(0x49A7BE90),
         "X64V4Token" | "Avx512Token" | "Server64" => Some(0xFE1B900C),
         "X64V4xToken" | "Avx512ModernToken" => Some(0x8F63232A),
         "Avx512Fp16Token" => Some(0x2F39FFC0),
@@ -645,6 +702,7 @@ pub(crate) const ALL_CONCRETE_TOKENS: &[&str] = &[
     "Desktop64",
     "Avx2FmaToken",
     "X64V3CryptoToken",
+    "X64V3GfniCryptoToken",
     "X64V4Token",
     "Avx512Token",
     "Server64",

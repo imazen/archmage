@@ -225,10 +225,22 @@ For CPUs that support higher tiers, this shows what you leave unused by choosing
 |---------------|-------------------------------|
 | X64V4xToken *(highest)* | — *(all token-managed features covered)* |
 | X64V4Token | + avx512vpopcntdq, avx512ifma, avx512vbmi, avx512vbmi2, avx512bitalg, avx512vnni, vpclmulqdq, gfni, vaes |
-| X64V3CryptoToken | + avx512f, avx512bw, avx512cd, avx512dq, avx512vl *(but retains aes, pclmulqdq, vaes, vpclmulqdq)* |
-| X64V3Token | + aes, pclmulqdq, vaes, vpclmulqdq + all AVX-512 |
+| X64V3GfniCryptoToken | + avx512f, avx512bw, avx512cd, avx512dq, avx512vl *(but retains aes, pclmulqdq, vaes, vpclmulqdq, gfni)* |
+| X64V3CryptoToken | + gfni + all AVX-512 *(but retains aes, pclmulqdq, vaes, vpclmulqdq)* |
+| X64V3Token | + aes, pclmulqdq, vaes, vpclmulqdq, gfni + all AVX-512 |
 | X64V2Token | + avx, avx2, fma, bmi1, bmi2, f16c, lzcnt, movbe |
 | X64V1Token | + sse3, ssse3, sse4.1, sse4.2, popcnt, cmpxchg16b |
+
+#### AVX2 + GFNI without AVX-512 (max: X64V3GfniCryptoToken)
+
+This includes Alder/Raptor/Meteor/Arrow/Lunar Lake and Sierra Forest.
+
+| If you use... | You leave these features unused |
+|---------------|-------------------------------|
+| X64V3GfniCryptoToken *(highest)* | — *(all token-managed features covered)* |
+| X64V3CryptoToken | + gfni |
+| X64V3Token | + aes, pclmulqdq, vaes, vpclmulqdq, gfni |
+| X64CryptoToken | + avx, avx2, fma, bmi1, bmi2, f16c, lzcnt, movbe, vaes, vpclmulqdq, gfni *(but retains aes, pclmulqdq)* |
 
 #### Zen 3 (max: X64V3CryptoToken)
 

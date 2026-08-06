@@ -135,6 +135,7 @@ The inner `fn` can't have a `self` receiver (Rust doesn't allow that in inner fu
 | `X64CryptoToken` | V2 + pclmulqdq, aes |
 | `X64V3Token` | + avx, avx2, fma, bmi1, bmi2, f16c |
 | `X64V3CryptoToken` | V3 + vpclmulqdq, vaes |
+| `X64V3GfniCryptoToken` | V3 Crypto + gfni |
 | `X64V4Token` / `Server64` | + avx512f, avx512bw, avx512cd, avx512dq, avx512vl |
 | `X64V4xToken` | V4 + vpopcntdq, ifma, vbmi, vnni, vbmi2, bitalg, vpclmulqdq, gfni, vaes |
 | `Avx512Fp16Token` | V4 + avx512fp16 |

@@ -38,6 +38,7 @@ pub trait IntoConcreteToken: SimdToken {
     fn as_x64_crypto(self) -> Option<X64CryptoToken> { None }
     fn as_x64v3(self) -> Option<X64V3Token> { None }
     fn as_x64v3_crypto(self) -> Option<X64V3CryptoToken> { None }
+    fn as_x64v3_gfni_crypto(self) -> Option<X64V3GfniCryptoToken> { None }
     fn as_x64v4(self) -> Option<X64V4Token> { None }
     fn as_x64v4x(self) -> Option<X64V4xToken> { None }
     fn as_avx512_fp16(self) -> Option<Avx512Fp16Token> { None }

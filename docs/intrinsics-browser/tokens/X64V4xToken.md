@@ -3,7 +3,7 @@
 Proof that extended AVX-512 features are available (x86-64-v4x = Ice Lake / Zen 4 level).
 
 **Architecture:** x86_64 | **Features:** sse, sse2, sse3, ssse3, sse4.1, sse4.2, popcnt, cmpxchg16b, avx, avx2, fma, bmi1, bmi2, f16c, lzcnt, movbe, pclmulqdq, aes, avx512f, avx512bw, avx512cd, avx512dq, avx512vl, avx512vpopcntdq, avx512ifma, avx512vbmi, avx512vbmi2, avx512bitalg, avx512vnni, vpclmulqdq, gfni, vaes
-**Total intrinsics:** 308 (290 safe, 18 unsafe, 308 stable, 0 unstable/unknown)
+**Total intrinsics:** 302 (284 safe, 18 unsafe, 302 stable, 0 unstable/unknown)
 
 ## Usage
 
@@ -42,7 +42,7 @@ fn process_chunk(_: X64V4xToken, chunk: &mut [f32; 16]) {
 
 ## All Intrinsics
 
-### Stable, Safe (290 intrinsics)
+### Stable, Safe (284 intrinsics)
 
 | Name | Description | Instruction | Timing (H/Z4) |
 |------|-------------|-------------|---------------|
@@ -51,9 +51,6 @@ fn process_chunk(_: X64V4xToken, chunk: &mut [f32; 16]) {
 | `_mm256_dpbusds_epi32` | Multiply groups of 4 adjacent pairs of unsigned 8-bit intege... | vpdpbusds | — |
 | `_mm256_dpwssd_epi32` | Multiply groups of 2 adjacent pairs of signed 16-bit integer... | vpdpwssd | — |
 | `_mm256_dpwssds_epi32` | Multiply groups of 2 adjacent pairs of signed 16-bit integer... | vpdpwssds | — |
-| `_mm256_gf2p8affine_epi64_epi8` | Performs an affine transformation on the packed bytes in x. ... | vgf2p8affineqb | — |
-| `_mm256_gf2p8affineinv_epi64_epi8` | Performs an affine transformation on the inverted packed byt... | vgf2p8affineinvqb | — |
-| `_mm256_gf2p8mul_epi8` | Performs a multiplication in GF(2^8) on the packed bytes. Th... | vgf2p8mulb | — |
 | `_mm256_madd52hi_epu64` | Multiply packed unsigned 52-bit integers in each 64-bit elem... | vpmadd52huq | — |
 | `_mm256_madd52lo_epu64` | Multiply packed unsigned 52-bit integers in each 64-bit elem... | vpmadd52luq | — |
 | `_mm256_mask2_permutex2var_epi8` | Shuffle 8-bit integers in a and b across lanes using the cor... | vpermi2b | 3/1, 2/1 |
@@ -246,9 +243,6 @@ fn process_chunk(_: X64V4xToken, chunk: &mut [f32; 16]) {
 | `_mm_dpbusds_epi32` | Multiply groups of 4 adjacent pairs of unsigned 8-bit intege... | vpdpbusds | — |
 | `_mm_dpwssd_epi32` | Multiply groups of 2 adjacent pairs of signed 16-bit integer... | vpdpwssd | — |
 | `_mm_dpwssds_epi32` | Multiply groups of 2 adjacent pairs of signed 16-bit integer... | vpdpwssds | — |
-| `_mm_gf2p8affine_epi64_epi8` | Performs an affine transformation on the packed bytes in x. ... | gf2p8affineqb | — |
-| `_mm_gf2p8affineinv_epi64_epi8` | Performs an affine transformation on the inverted packed byt... | gf2p8affineinvqb | — |
-| `_mm_gf2p8mul_epi8` | Performs a multiplication in GF(2^8) on the packed bytes. Th... | gf2p8mulb | — |
 | `_mm_madd52hi_epu64` | Multiply packed unsigned 52-bit integers in each 64-bit elem... | vpmadd52huq | — |
 | `_mm_madd52lo_epu64` | Multiply packed unsigned 52-bit integers in each 64-bit elem... | vpmadd52luq | — |
 | `_mm_mask2_permutex2var_epi8` | Shuffle 8-bit integers in a and b across lanes using the cor... | vpermi2b | 1/1, 1/1 |

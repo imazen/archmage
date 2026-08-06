@@ -359,6 +359,7 @@ The tier name maps to the same features as the corresponding token. All `incant!
 | `wasm128` | `Wasm128Token` | wasm32 | SIMD128 |
 | `x64_crypto` | `X64CryptoToken` | x86_64 | V2 + PCLMULQDQ, AES-NI |
 | `v3_crypto` | `X64V3CryptoToken` | x86_64 | V3 + VPCLMULQDQ, VAES |
+| `v3_gfni_crypto` | `X64V3GfniCryptoToken` | x86_64 | V3 Crypto + GFNI |
 
 These are the same tier names used by `incant!` and `#[autoversion]`.
 

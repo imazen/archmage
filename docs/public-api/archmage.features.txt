@@ -9,15 +9,15 @@
 
 ## summary
 #
-#   enum variants                              51
+#   enum variants                              54
 #   re-exports                                384
 #
 # per-module pub lines:
-#   (root)                           51
+#   (root)                           54
 #   intrinsics                      192
 #   prelude                         192
 
-## items (435 lines)
+## items (438 lines)
 
 pub use intrinsics::x86_64::_mm256_loadu_epi16
 pub use intrinsics::x86_64::_mm256_loadu_epi32
@@ -417,6 +417,7 @@ pub unsafe fn tokens::X64CryptoToken::forge_token_dangerously() -> Self
 pub unsafe fn tokens::X64V1Token::forge_token_dangerously() -> Self
 pub unsafe fn tokens::X64V2Token::forge_token_dangerously() -> Self
 pub unsafe fn tokens::X64V3CryptoToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64V3GfniCryptoToken::forge_token_dangerously() -> Self
 pub unsafe fn tokens::X64V3Token::forge_token_dangerously() -> Self
 pub unsafe fn tokens::X64V4Token::forge_token_dangerously() -> Self
 pub unsafe fn tokens::X64V4xToken::forge_token_dangerously() -> Self
@@ -434,6 +435,7 @@ pub unsafe fn tokens::X64CryptoToken::forge_token_dangerously() -> Self
 pub unsafe fn tokens::X64V1Token::forge_token_dangerously() -> Self
 pub unsafe fn tokens::X64V2Token::forge_token_dangerously() -> Self
 pub unsafe fn tokens::X64V3CryptoToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64V3GfniCryptoToken::forge_token_dangerously() -> Self
 pub unsafe fn tokens::X64V3Token::forge_token_dangerously() -> Self
 pub unsafe fn tokens::X64V4Token::forge_token_dangerously() -> Self
 pub unsafe fn tokens::X64V4xToken::forge_token_dangerously() -> Self
@@ -451,6 +453,7 @@ pub unsafe fn tokens::X64CryptoToken::forge_token_dangerously() -> Self
 pub unsafe fn tokens::X64V1Token::forge_token_dangerously() -> Self
 pub unsafe fn tokens::X64V2Token::forge_token_dangerously() -> Self
 pub unsafe fn tokens::X64V3CryptoToken::forge_token_dangerously() -> Self
+pub unsafe fn tokens::X64V3GfniCryptoToken::forge_token_dangerously() -> Self
 pub unsafe fn tokens::X64V3Token::forge_token_dangerously() -> Self
 pub unsafe fn tokens::X64V4Token::forge_token_dangerously() -> Self
 pub unsafe fn tokens::X64V4xToken::forge_token_dangerously() -> Self

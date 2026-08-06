@@ -104,6 +104,20 @@ mod x86_64_tests {
         }
     }
 
+    /// If X64V3GfniCryptoToken is available, unmasked 256-bit GFNI must work.
+    #[test]
+    fn x64v3_gfni_crypto_instructions_work_when_token_available() {
+        if let Some(_token) = X64V3GfniCryptoToken::summon() {
+            unsafe {
+                use core::arch::x86_64::*;
+                let a = _mm256_set1_epi8(0x57);
+                let b = _mm256_set1_epi8(0x13);
+                let product = _mm256_gf2p8mul_epi8(a, b);
+                std::hint::black_box(product);
+            }
+        }
+    }
+
     /// If X64V4Token is available, AVX-512 instructions must work.
     #[cfg(feature = "avx512")]
     #[test]
@@ -160,6 +174,12 @@ mod x86_64_tests {
             assert!(
                 X64CryptoToken::summon().is_some(),
                 "V3Crypto implies Crypto should be available"
+            );
+        }
+        if X64V3GfniCryptoToken::summon().is_some() {
+            assert!(
+                X64V3CryptoToken::summon().is_some(),
+                "V3 GFNI Crypto implies V3 Crypto should be available"
             );
         }
     }
@@ -493,6 +513,10 @@ fn x64_tokens_are_x86_64_only() {
         assert!(
             X64V3CryptoToken::summon().is_none(),
             "X64V3CryptoToken must be None on non-x86_64"
+        );
+        assert!(
+            X64V3GfniCryptoToken::summon().is_none(),
+            "X64V3GfniCryptoToken must be None on non-x86_64"
         );
     }
 }
