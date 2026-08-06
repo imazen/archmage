@@ -29,6 +29,8 @@ use archmage::{
     // x86 tokens
     X64V1Token,
     X64V2Token,
+    X64V3CryptoToken,
+    X64V3GfniCryptoToken,
     X64V3Token,
 };
 
@@ -1062,4 +1064,73 @@ fn detect_convenience_functions() {
     let _avx2 = archmage::detect::check_avx2_available();
     let _fma = archmage::detect::check_fma_available();
     let _avx512 = archmage::detect::check_avx512f_available();
+}
+
+// ============================================================================
+// Coverage: X64V3GfniCryptoToken disable/manually_disabled/summon
+// ============================================================================
+
+/// Disabling the GFNI crypto token must be observable and must cascade to
+/// `X64V4xToken`, which descends from it.
+#[cfg(target_arch = "x86_64")]
+#[test]
+fn x64v3_gfni_crypto_disable_and_manually_disabled() {
+    let _lock = lock_token_testing();
+
+    if X64V3GfniCryptoToken::compiled_with() == Some(true) {
+        return;
+    }
+    assert!(X64V3GfniCryptoToken::dangerously_disable_token_process_wide(true).is_ok());
+    assert!(X64V3GfniCryptoToken::manually_disabled().unwrap());
+    assert!(
+        X64V3GfniCryptoToken::summon().is_none(),
+        "a disabled token must never summon"
+    );
+    #[cfg(feature = "avx512")]
+    assert!(
+        X64V4xToken::summon().is_none(),
+        "V4x must cascade off X64V3GfniCryptoToken"
+    );
+
+    X64V3GfniCryptoToken::dangerously_disable_token_process_wide(false).unwrap();
+    assert!(
+        !X64V3GfniCryptoToken::manually_disabled().unwrap(),
+        "re-enabling must clear the disabled flag"
+    );
+}
+
+/// Exercises runtime detection and the cached second call, and pins the
+/// hierarchy invariant: GFNI crypto implies plain V3 crypto.
+#[cfg(target_arch = "x86_64")]
+#[test]
+fn x64v3_gfni_crypto_summon_is_stable_and_implies_v3_crypto() {
+    let _lock = lock_token_testing();
+
+    let summoned = X64V3GfniCryptoToken::summon().is_some();
+    assert_eq!(
+        X64V3GfniCryptoToken::summon().is_some(),
+        summoned,
+        "cached summon must agree with the detected result"
+    );
+    if summoned {
+        assert!(
+            X64V3CryptoToken::summon().is_some(),
+            "GFNI crypto implies V3 crypto"
+        );
+    }
+    if X64V3GfniCryptoToken::compiled_with() == Some(true) {
+        assert!(summoned, "a compile-time guaranteed token must summon");
+    }
+}
+
+/// The `IntoConcreteToken` default must reject tokens of another type.
+#[cfg(target_arch = "x86_64")]
+#[test]
+fn other_tokens_are_not_x64v3_gfni_crypto() {
+    let v1 = X64V1Token::summon().expect("X64V1Token is baseline on x86_64");
+    assert!(v1.as_x64v3_gfni_crypto().is_none());
+
+    if let Some(v3) = X64V3Token::summon() {
+        assert!(v3.as_x64v3_gfni_crypto().is_none());
+    }
 }
