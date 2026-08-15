@@ -15,7 +15,7 @@ Target these tokens, in this priority order:
 4. **Arm64V2Token** -- The broad modern ARM tier. M1+, Graviton 2+, Cortex-A55+. Worth it if you use RDM, DotProd, AES, or SHA2.
 5. **Wasm128Token** -- WASM SIMD128. All modern browsers since 2021.
 
-Crypto tokens (`X64CryptoToken`, `X64V3CryptoToken`, `NeonAesToken`, `NeonSha3Token`) are their own story -- target them when you need AES, GHASH, or SHA operations specifically.
+Crypto tokens (`X64CryptoToken`, `X64V3CryptoToken`, `X64V3GfniCryptoToken`, `NeonAesToken`, `NeonSha3Token`) are their own story -- target them when you need AES, GHASH, GF(2^8), or SHA operations specifically.
 
 Everything gets a `ScalarToken` fallback via `incant!`.
 
@@ -94,11 +94,12 @@ The crypto tokens don't fit neatly into the "target in order" model because they
 |-------|-------------|-------------|
 | `X64CryptoToken` | AES-NI, PCLMULQDQ (128-bit) | AES encrypt/decrypt, CRC32C via CLMUL, GHASH |
 | `X64V3CryptoToken` | VAES, VPCLMULQDQ (256-bit) | Same ops but 2x throughput, Zen 3+ / Alder Lake+ |
+| `X64V3GfniCryptoToken` | GFNI (128/256-bit) | GF(2^8) multiply and affine transforms without requiring AVX-512 |
 | `NeonAesToken` | AES rounds + polynomial multiply | ARM AES/GHASH |
 | `NeonSha3Token` | SHA3 instructions | ARM SHA3 |
 | `NeonCrcToken` | CRC32 instructions | ARM CRC32 |
 
-These are leaf tokens -- use them directly when needed, don't try to tier-fallback through them.
+These capability tokens form architecture-specific branches -- use the most specific token your workload needs and provide an appropriate fallback.
 
 ## What about Arm64V3?
 

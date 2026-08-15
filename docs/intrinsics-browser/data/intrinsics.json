@@ -64620,7 +64620,7 @@
       "n": "_mm256_gf2p8mul_epi8",
       "s": true,
       "sig": "fn _mm256_gf2p8mul_epi8(a: __m256i, b: __m256i) -> __m256i",
-      "t": "X64V4xToken",
+      "t": "X64V3GfniCryptoToken",
       "u": false
     },
     {
@@ -64653,7 +64653,7 @@
       "n": "_mm_gf2p8mul_epi8",
       "s": true,
       "sig": "fn _mm_gf2p8mul_epi8(a: __m128i, b: __m128i) -> __m128i",
-      "t": "X64V4xToken",
+      "t": "X64V3GfniCryptoToken",
       "u": false
     },
     {
@@ -64719,7 +64719,7 @@
       "n": "_mm256_gf2p8affine_epi64_epi8",
       "s": true,
       "sig": "fn _mm256_gf2p8affine_epi64_epi8<B: i32>(x: __m256i, a: __m256i) -> __m256i",
-      "t": "X64V4xToken",
+      "t": "X64V3GfniCryptoToken",
       "u": false
     },
     {
@@ -64752,7 +64752,7 @@
       "n": "_mm_gf2p8affine_epi64_epi8",
       "s": true,
       "sig": "fn _mm_gf2p8affine_epi64_epi8<B: i32>(x: __m128i, a: __m128i) -> __m128i",
-      "t": "X64V4xToken",
+      "t": "X64V3GfniCryptoToken",
       "u": false
     },
     {
@@ -64818,7 +64818,7 @@
       "n": "_mm256_gf2p8affineinv_epi64_epi8",
       "s": true,
       "sig": "fn _mm256_gf2p8affineinv_epi64_epi8<B: i32>(x: __m256i, a: __m256i) -> __m256i",
-      "t": "X64V4xToken",
+      "t": "X64V3GfniCryptoToken",
       "u": false
     },
     {
@@ -64851,7 +64851,7 @@
       "n": "_mm_gf2p8affineinv_epi64_epi8",
       "s": true,
       "sig": "fn _mm_gf2p8affineinv_epi64_epi8<B: i32>(x: __m128i, a: __m128i) -> __m128i",
-      "t": "X64V4xToken",
+      "t": "X64V3GfniCryptoToken",
       "u": false
     },
     {
@@ -124006,6 +124006,40 @@
       "tier": "v3_crypto"
     },
     {
+      "aliases": [],
+      "arch": "x86_64",
+      "display": "x86-64-v3 GFNI Crypto",
+      "doc": "Proof that AVX2 + GFNI + VPCLMULQDQ + VAES are available.",
+      "features": [
+        "sse",
+        "sse2",
+        "sse3",
+        "ssse3",
+        "sse4.1",
+        "sse4.2",
+        "popcnt",
+        "cmpxchg16b",
+        "avx",
+        "avx2",
+        "fma",
+        "bmi1",
+        "bmi2",
+        "f16c",
+        "lzcnt",
+        "movbe",
+        "pclmulqdq",
+        "aes",
+        "vpclmulqdq",
+        "vaes",
+        "gfni"
+      ],
+      "name": "X64V3GfniCryptoToken",
+      "parents": [
+        "X64V3CryptoToken"
+      ],
+      "tier": "v3_gfni_crypto"
+    },
+    {
       "aliases": [
         "Avx512Token",
         "Server64"
@@ -124089,7 +124123,7 @@
       "name": "X64V4xToken",
       "parents": [
         "X64V4Token",
-        "X64V3CryptoToken"
+        "X64V3GfniCryptoToken"
       ],
       "tier": "v4x"
     },

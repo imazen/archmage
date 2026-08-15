@@ -97,6 +97,7 @@ fn process_v3(_token: X64V3Token, data: &[f32]) -> f32 { /* hand-written */ }
 | `x64_crypto` | `_x64_crypto` | `process_x64_crypto` |
 | `v3` | `_v3` | `process_v3` |
 | `v3_crypto` | `_v3_crypto` | `process_v3_crypto` |
+| `v3_gfni_crypto` | `_v3_gfni_crypto` | `process_v3_gfni_crypto` |
 | `v4` | `_v4` | `process_v4` |
 | `v4x` | `_v4x` | `process_v4x` |
 | `neon` | `_neon` | `process_neon` |

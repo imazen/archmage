@@ -536,7 +536,7 @@ Gate a tier on a Cargo feature with the `tier(cfg(feature))` syntax: `incant!(su
 
 Use modifiers to tweak the default tier list without restating it: `[+arm_v2]` adds a tier, `[-wasm128]` removes one. Plain tiers may be mixed with `+`/`-` (any `+` ⇒ additive; plain + `-` with no `+` ⇒ override the plain set and drop the named fallback, e.g. `[v3, -scalar]` → just `v3`).
 
-Known tiers: `v1`, `v2`, `x64_crypto`, `v3`, `v3_crypto`, `v4`, `v4x`, `arm_v2`, `arm_v3`, `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`, `scalar`.
+Known tiers: `v1`, `v2`, `x64_crypto`, `v3`, `v3_crypto`, `v3_gfni_crypto`, `v4`, `v4x`, `arm_v2`, `arm_v3`, `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`, `scalar`.
 
 If you already have a token, use `with` to dispatch on its concrete type: `incant!(func(data) with token, [v3, neon, scalar])`. This uses `IntoConcreteToken` for compile-time monomorphized dispatch — no runtime summon.
 
@@ -559,6 +559,7 @@ Inside `#[arcane]`, `#[rite]`, `#[autoversion]`, or `#[magetypes]` bodies, `inca
 | `X64CryptoToken` | | V2 + PCLMULQDQ, AES-NI | Westmere 2010+ |
 | `X64V3Token` | — | + AVX2, FMA, BMI2 | Haswell 2013+, Zen 1+ |
 | `X64V3CryptoToken` | | V3 + VPCLMULQDQ, VAES | Zen 3+ 2020, Alder Lake 2021+ |
+| `X64V3GfniCryptoToken` | | V3 Crypto + GFNI | Alder/Raptor/Meteor/Arrow/Lunar Lake, Sierra Forest, Zen 4+ |
 | `X64V4Token` | `Server64` | + AVX-512 F/BW/CD/DQ/VL (requires `avx512` feature) | Skylake-X 2017+, Zen 4+ |
 | `X64V4xToken` | | V4 + VBMI, VNNI, VBMI2, BITALG, GFNI, VAES, VPCLMULQDQ (requires `avx512`) | Ice Lake 2019+, Zen 4+ |
 | `Avx512Fp16Token` | | + AVX-512 FP16 (requires `avx512`) | Sapphire Rapids 2023+ |

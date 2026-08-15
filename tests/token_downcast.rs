@@ -51,6 +51,17 @@ mod x86_downcast {
         }
     }
 
+    #[test]
+    fn v3_gfni_crypto_extracts_to_v3_crypto_and_ancestors() {
+        if let Some(token) = X64V3GfniCryptoToken::summon() {
+            let _v3_crypto: X64V3CryptoToken = token.v3_crypto();
+            let _v3: X64V3Token = token.v3();
+            let _crypto: X64CryptoToken = token.x64_crypto();
+            let _v2: X64V2Token = token.v2();
+            let _v1: X64V1Token = token.v1();
+        }
+    }
+
     #[cfg(feature = "avx512")]
     #[test]
     fn v4_extracts_to_v3_v2_v1() {
@@ -67,6 +78,7 @@ mod x86_downcast {
         if let Some(token) = X64V4xToken::summon() {
             let _v4: X64V4Token = token.v4();
             let _avx512: X64V4Token = token.avx512();
+            let _v3_gfni_crypto: X64V3GfniCryptoToken = token.v3_gfni_crypto();
             let _v3: X64V3Token = token.v3();
             let _v2: X64V2Token = token.v2();
             let _v1: X64V1Token = token.v1();
@@ -226,6 +238,23 @@ mod into_concrete {
             token.as_x64v3().is_none(),
             "V3Crypto is not V3 (different type)"
         );
+        assert!(token.as_x64_crypto().is_none());
+        assert!(token.as_neon().is_none());
+    }
+
+    #[test]
+    fn x64v3_gfni_crypto_into_concrete() {
+        let token = if let Some(t) = X64V3GfniCryptoToken::summon() {
+            t
+        } else {
+            unsafe { X64V3GfniCryptoToken::forge_token_dangerously() }
+        };
+        assert!(token.as_x64v3_gfni_crypto().is_some());
+        assert!(
+            token.as_x64v3_crypto().is_none(),
+            "V3 GFNI Crypto is not V3 Crypto (different type)"
+        );
+        assert!(token.as_x64v3().is_none());
         assert!(token.as_x64_crypto().is_none());
         assert!(token.as_neon().is_none());
     }
@@ -420,6 +449,18 @@ mod crypto_tokens {
     }
 
     #[test]
+    fn v3_gfni_crypto_features_extend_v3_crypto_with_gfni() {
+        let features = X64V3GfniCryptoToken::TARGET_FEATURES;
+        assert!(features.contains("gfni"));
+        for feature in X64V3CryptoToken::TARGET_FEATURES.split(',') {
+            assert!(
+                features.split(',').any(|candidate| candidate == feature),
+                "V3 GFNI Crypto should inherit {feature}"
+            );
+        }
+    }
+
+    #[test]
     fn crypto_hierarchy_summoning() {
         // If V3Crypto is available, V3 and Crypto should also be
         if X64V3CryptoToken::summon().is_some() {
@@ -427,6 +468,12 @@ mod crypto_tokens {
             assert!(
                 X64CryptoToken::summon().is_some(),
                 "V3Crypto implies Crypto"
+            );
+        }
+        if X64V3GfniCryptoToken::summon().is_some() {
+            assert!(
+                X64V3CryptoToken::summon().is_some(),
+                "V3 GFNI Crypto implies V3 Crypto"
             );
         }
         // If Crypto is available, V2 should also be
@@ -439,6 +486,7 @@ mod crypto_tokens {
     fn crypto_names_are_nonempty() {
         assert!(!X64CryptoToken::NAME.is_empty());
         assert!(!X64V3CryptoToken::NAME.is_empty());
+        assert!(!X64V3GfniCryptoToken::NAME.is_empty());
     }
 }
 

@@ -1,4 +1,4 @@
-//! Comprehensive crypto intrinsic exercise tests for X64CryptoToken and X64V3CryptoToken.
+//! Comprehensive crypto intrinsic exercise tests for x86 crypto tokens.
 //!
 //! X64CryptoToken (SSE4.2 + PCLMULQDQ + AES-NI):
 //!   - Carryless multiplication (PCLMULQDQ)
@@ -8,12 +8,15 @@
 //! X64V3CryptoToken (AVX2 + FMA + VPCLMULQDQ + VAES):
 //!   - 256-bit carryless multiplication (VPCLMULQDQ)
 //!   - 256-bit AES encrypt/decrypt rounds (VAES)
+//!
+//! X64V3GfniCryptoToken (X64V3CryptoToken + GFNI):
+//!   - 128/256-bit GF(2^8) multiplication and affine transforms
 
 #![cfg(target_arch = "x86_64")]
 #![allow(unused_imports, unused_variables, dead_code)]
 #![allow(clippy::eq_op)]
 
-use archmage::{SimdToken, X64CryptoToken, X64V3CryptoToken, arcane};
+use archmage::{SimdToken, X64CryptoToken, X64V3CryptoToken, X64V3GfniCryptoToken, arcane};
 use core::arch::x86_64::*;
 use core::hint::black_box;
 
@@ -194,6 +197,73 @@ fn exercise_vaes_256(token: X64V3CryptoToken) {
     black_box(dec_last);
 }
 
+// =============================================================================
+// X64V3GfniCryptoToken - GFNI (128/256-bit)
+// =============================================================================
+
+/// Run the unmasked GFNI forms that do not require AVX-512.
+#[test]
+fn test_x64v3_gfni_crypto_intrinsics() {
+    if let Some(token) = X64V3GfniCryptoToken::summon() {
+        exercise_gfni(token);
+        println!("All X64V3GfniCryptoToken intrinsic tests passed!");
+    } else {
+        println!("X64V3GfniCryptoToken not available - skipping tests");
+    }
+}
+
+#[arcane]
+fn exercise_gfni(token: X64V3GfniCryptoToken) {
+    // 0x57 * 0x13 = 0xfe in GF(2^8) modulo the AES polynomial 0x11b.
+    let a128 = _mm_set1_epi8(0x57);
+    let b128 = _mm_set1_epi8(0x13);
+    let product128 = _mm_gf2p8mul_epi8(a128, b128);
+    let expected_product128 = _mm_set1_epi8(0xfe_u8 as i8);
+    assert_eq!(
+        _mm_movemask_epi8(_mm_cmpeq_epi8(product128, expected_product128)),
+        0xffff,
+        "128-bit GF2P8MULB must use the AES reduction polynomial"
+    );
+
+    let a256 = _mm256_set1_epi8(0x57);
+    let b256 = _mm256_set1_epi8(0x13);
+    let product256 = _mm256_gf2p8mul_epi8(a256, b256);
+    let expected_product256 = _mm256_set1_epi8(0xfe_u8 as i8);
+    assert_eq!(
+        _mm256_movemask_epi8(_mm256_cmpeq_epi8(product256, expected_product256)),
+        -1,
+        "256-bit GF2P8MULB must use the AES reduction polynomial"
+    );
+
+    // A zero affine matrix discards the input and leaves only the immediate.
+    let zero128 = _mm_setzero_si128();
+    let affine128 = _mm_gf2p8affine_epi64_epi8::<0x63>(a128, zero128);
+    let affineinv128 = _mm_gf2p8affineinv_epi64_epi8::<0xa5>(a128, zero128);
+    assert_eq!(
+        _mm_movemask_epi8(_mm_cmpeq_epi8(affine128, _mm_set1_epi8(0x63))),
+        0xffff
+    );
+    assert_eq!(
+        _mm_movemask_epi8(_mm_cmpeq_epi8(affineinv128, _mm_set1_epi8(0xa5_u8 as i8))),
+        0xffff
+    );
+
+    let zero256 = _mm256_setzero_si256();
+    let affine256 = _mm256_gf2p8affine_epi64_epi8::<0x63>(a256, zero256);
+    let affineinv256 = _mm256_gf2p8affineinv_epi64_epi8::<0xa5>(a256, zero256);
+    assert_eq!(
+        _mm256_movemask_epi8(_mm256_cmpeq_epi8(affine256, _mm256_set1_epi8(0x63))),
+        -1
+    );
+    assert_eq!(
+        _mm256_movemask_epi8(_mm256_cmpeq_epi8(
+            affineinv256,
+            _mm256_set1_epi8(0xa5_u8 as i8)
+        )),
+        -1
+    );
+}
+
 /// Verify that X64V3CryptoToken implies X64CryptoToken and X64V3Token.
 #[test]
 fn test_crypto_token_hierarchy() {
@@ -205,6 +275,12 @@ fn test_crypto_token_hierarchy() {
         assert!(
             archmage::X64V3Token::summon().is_some(),
             "V3Crypto implies V3"
+        );
+    }
+    if X64V3GfniCryptoToken::summon().is_some() {
+        assert!(
+            X64V3CryptoToken::summon().is_some(),
+            "V3 GFNI Crypto implies V3 Crypto"
         );
     }
     if X64CryptoToken::summon().is_some() {

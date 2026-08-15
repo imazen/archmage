@@ -100,6 +100,24 @@ magetypes_namespace = "v3"
 doc = "Proof that AVX2 + VPCLMULQDQ + VAES are available.\n\nVPCLMULQDQ (256-bit carryless multiply) and VAES (256-bit AES) extend\nPCLMULQDQ/AES-NI to 256-bit vectors. Available without AVX-512 on:\nZen 3+ (2020), Alder Lake P-core (2021), Raptor Lake (2022).\n\nUse for 256-bit CRC-32 folding, AES-CTR/GCM, and GF(2) polynomial\narithmetic on CPUs that lack AVX-512."
 
 [[token]]
+name = "X64V3GfniCryptoToken"
+arch = "x86"
+features = [
+    "sse", "sse2",
+    "sse3", "ssse3", "sse4.1", "sse4.2", "popcnt", "cmpxchg16b",
+    "avx", "avx2", "fma", "bmi1", "bmi2", "f16c", "lzcnt", "movbe",
+    "pclmulqdq", "aes",
+    "vpclmulqdq", "vaes",
+    "gfni",
+]
+traits = ["HasX64V2", "Has128BitSimd", "Has256BitSimd"]
+parents = ["X64V3CryptoToken"]
+display_name = "x86-64-v3 GFNI Crypto"
+short_name = "v3_gfni_crypto"
+magetypes_namespace = "v3"
+doc = "Proof that AVX2 + GFNI + VPCLMULQDQ + VAES are available.\n\nGFNI provides GF(2^8) affine transforms and field multiplication over the\nAES/Rijndael polynomial. Its 256-bit VEX forms operate on YMM registers without\nrequiring AVX-512. At the x86-64-v3 level, GFNI-capable CPUs also provide the\nAES, PCLMULQDQ, VAES, and VPCLMULQDQ features inherited from\n`X64V3CryptoToken`.\n\nAvailable without AVX-512 on Intel Alder Lake, Raptor Lake, Meteor Lake, Arrow\nLake, Lunar Lake, Sierra Forest, and later related CPUs. Also available on AMD\nZen 4+.\n\nUse for Reed-Solomon erasure coding, GF(2^8) and binary-tower field arithmetic,\nbit permutation, and byte-wise affine transforms."
+
+[[token]]
 name = "X64V4Token"
 arch = "x86"
 aliases = ["Avx512Token", "Server64"]
@@ -136,7 +154,7 @@ traits = ["HasX64V2", "HasX64V4", "Has128BitSimd", "Has256BitSimd", "Has512BitSi
 display_name = "x86-64-v4x"
 short_name = "v4x"
 magetypes_namespace = "v4x"
-parents = ["X64V4Token", "X64V3CryptoToken"]
+parents = ["X64V4Token", "X64V3GfniCryptoToken"]
 doc = "Proof that extended AVX-512 features are available (x86-64-v4x = Ice Lake / Zen 4 level).\n\nThis includes all of `X64V4Token` (F+CD+VL+DQ+BW) plus:\n- VPOPCNTDQ, IFMA, VBMI, VBMI2, BITALG, VNNI\n- VPCLMULQDQ, GFNI, VAES\n\nAvailable on Intel Ice Lake (2019+), Sapphire Rapids, AMD Zen 4+.\nNOT available on Skylake-X (lacks VBMI2, VNNI, etc.)."
 
 [[token]]

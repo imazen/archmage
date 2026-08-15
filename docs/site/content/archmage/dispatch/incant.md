@@ -116,6 +116,7 @@ Always specify which tiers your function supports. Include `scalar` in the tier 
 | `_x64_crypto` | `X64CryptoToken` | x86-64 V2 + AES-NI |
 | `_v3` | `X64V3Token` | x86-64 AVX2+FMA |
 | `_v3_crypto` | `X64V3CryptoToken` | x86-64 V3 + VAES |
+| `_v3_gfni_crypto` | `X64V3GfniCryptoToken` | x86-64 V3 Crypto + GFNI |
 | `_v4` | `X64V4Token` | x86-64 AVX-512 |
 | `_v4x` | `X64V4xToken` | x86-64 AVX-512 extensions |
 | `_neon` | `NeonToken` | AArch64 NEON |

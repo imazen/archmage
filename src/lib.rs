@@ -221,6 +221,7 @@ pub use tokens::{
     X64V1Token,
     X64V2Token,
     X64V3CryptoToken,
+    X64V3GfniCryptoToken,
     X64V3Token,
 };
 
