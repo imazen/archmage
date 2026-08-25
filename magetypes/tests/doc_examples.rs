@@ -153,6 +153,10 @@ mod overview {
 mod construction {
     use super::*;
 
+    // The `3.14159` literal below is copied verbatim from
+    // `docs/site/content/magetypes/operations/construction.md`; keep it in sync
+    // with the doc rather than swapping in `core::f32::consts::PI`.
+    #[allow(clippy::approx_constant)]
     fn constructors<T: F32x8Backend>(token: T) {
         // from_array
         let data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
