@@ -18,231 +18,249 @@
 //!   cargo asm -p archmage --bench generic_vs_concrete --features "std" generic_noinline_inside_arcane
 //!   cargo asm -p archmage --bench generic_vs_concrete --features "std" generic_inline_always_inside_arcane
 
-#![cfg(target_arch = "x86_64")]
-#![allow(dead_code)]
+// x86-only bench: stub main so the `harness = false` target still links on
+// other architectures (a crate-level `#![cfg]` would leave the bench with no
+// `main` at all).
+#[cfg(not(target_arch = "x86_64"))]
+fn main() {}
 
-use archmage::{SimdToken, X64V3Token, arcane, rite};
+#[cfg(target_arch = "x86_64")]
+mod x86_impl {
+    #![allow(dead_code)]
 
-use magetypes::simd::backends::{F32x8Backend, x64v3};
-use magetypes::simd::generic::f32x8;
+    use archmage::{SimdToken, X64V3Token, arcane, rite};
 
-// ============================================================================
-// Shared generic functions — these are the core of the test.
-// They have NO #[target_feature] — just #[inline(always)] backend methods.
-// ============================================================================
+    use magetypes::simd::backends::{F32x8Backend, x64v3};
+    use magetypes::simd::generic::f32x8;
 
-fn generic_sum<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
-    let v = f32x8::<T>::from_array(token, *data);
-    let doubled = v + v;
-    doubled.reduce_add()
-}
+    // ============================================================================
+    // Shared generic functions — these are the core of the test.
+    // They have NO #[target_feature] — just #[inline(always)] backend methods.
+    // ============================================================================
 
-#[inline(never)]
-fn generic_sum_noinline<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
-    let v = f32x8::<T>::from_array(token, *data);
-    let doubled = v + v;
-    doubled.reduce_add()
-}
+    fn generic_sum<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
+        let v = f32x8::<T>::from_array(token, *data);
+        let doubled = v + v;
+        doubled.reduce_add()
+    }
 
-#[inline(always)]
-fn generic_sum_inline_always<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
-    let v = f32x8::<T>::from_array(token, *data);
-    let doubled = v + v;
-    doubled.reduce_add()
-}
+    #[inline(never)]
+    fn generic_sum_noinline<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
+        let v = f32x8::<T>::from_array(token, *data);
+        let doubled = v + v;
+        doubled.reduce_add()
+    }
 
-fn generic_dot<T: F32x8Backend>(token: T, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    let va = f32x8::<T>::from_array(token, *a);
-    let vb = f32x8::<T>::from_array(token, *b);
-    let product = va * vb;
-    product.reduce_add()
-}
+    #[inline(always)]
+    fn generic_sum_inline_always<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
+        let v = f32x8::<T>::from_array(token, *data);
+        let doubled = v + v;
+        doubled.reduce_add()
+    }
 
-// ============================================================================
-// Pattern 1: Generic, NO #[target_feature] on caller
-// Backend methods use unsafe { intrinsic } but caller has baseline features.
-// ============================================================================
+    fn generic_dot<T: F32x8Backend>(token: T, a: &[f32; 8], b: &[f32; 8]) -> f32 {
+        let va = f32x8::<T>::from_array(token, *a);
+        let vb = f32x8::<T>::from_array(token, *b);
+        let product = va * vb;
+        product.reduce_add()
+    }
 
-#[unsafe(no_mangle)]
-#[inline(never)]
-fn generic_no_target_feature(data: &[f32; 8]) -> f32 {
-    if let Some(token) = X64V3Token::summon() {
+    // ============================================================================
+    // Pattern 1: Generic, NO #[target_feature] on caller
+    // Backend methods use unsafe { intrinsic } but caller has baseline features.
+    // ============================================================================
+
+    #[unsafe(no_mangle)]
+    #[inline(never)]
+    fn generic_no_target_feature(data: &[f32; 8]) -> f32 {
+        if let Some(token) = X64V3Token::summon() {
+            generic_sum(token, data)
+        } else {
+            0.0
+        }
+    }
+
+    // ============================================================================
+    // Pattern 2: Generic called from inside #[arcane]
+    // Caller has #[target_feature(enable = "avx2,fma,...")].
+    // Does the generic callee inline into the target-featured region?
+    // ============================================================================
+
+    #[unsafe(no_mangle)]
+    #[inline(never)]
+    fn generic_inside_arcane(token: X64V3Token, data: &[f32; 8]) -> f32 {
+        generic_inside_arcane_entry(token, data)
+    }
+
+    #[arcane]
+    fn generic_inside_arcane_entry(token: X64V3Token, data: &[f32; 8]) -> f32 {
         generic_sum(token, data)
-    } else {
-        0.0
     }
-}
 
-// ============================================================================
-// Pattern 2: Generic called from inside #[arcane]
-// Caller has #[target_feature(enable = "avx2,fma,...")].
-// Does the generic callee inline into the target-featured region?
-// ============================================================================
+    // ============================================================================
+    // Pattern 3: Concrete f32x8<x64v3> inside #[arcane] — the "ideal" case
+    // No generics, no trait dispatch, everything directly typed.
+    // ============================================================================
 
-#[unsafe(no_mangle)]
-#[inline(never)]
-fn generic_inside_arcane(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    generic_inside_arcane_entry(token, data)
-}
+    #[unsafe(no_mangle)]
+    #[inline(never)]
+    fn concrete_v3_in_arcane(token: X64V3Token, data: &[f32; 8]) -> f32 {
+        concrete_v3_entry(token, data)
+    }
 
-#[arcane]
-fn generic_inside_arcane_entry(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    generic_sum(token, data)
-}
+    #[arcane]
+    fn concrete_v3_entry(token: X64V3Token, data: &[f32; 8]) -> f32 {
+        let v = f32x8::<x64v3>::from_array(token, *data);
+        let doubled = v + v;
+        doubled.reduce_add()
+    }
 
-// ============================================================================
-// Pattern 3: Concrete f32x8<x64v3> inside #[arcane] — the "ideal" case
-// No generics, no trait dispatch, everything directly typed.
-// ============================================================================
+    // ============================================================================
+    // Pattern 4: Concrete inside #[rite] called from #[arcane]
+    // ============================================================================
 
-#[unsafe(no_mangle)]
-#[inline(never)]
-fn concrete_v3_in_arcane(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    concrete_v3_entry(token, data)
-}
+    #[unsafe(no_mangle)]
+    #[inline(never)]
+    fn concrete_v3_via_rite(token: X64V3Token, data: &[f32; 8]) -> f32 {
+        concrete_v3_rite_outer(token, data)
+    }
 
-#[arcane]
-fn concrete_v3_entry(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    let v = f32x8::<x64v3>::from_array(token, *data);
-    let doubled = v + v;
-    doubled.reduce_add()
-}
+    #[arcane]
+    fn concrete_v3_rite_outer(token: X64V3Token, data: &[f32; 8]) -> f32 {
+        concrete_v3_rite_inner(token, data)
+    }
 
-// ============================================================================
-// Pattern 4: Concrete inside #[rite] called from #[arcane]
-// ============================================================================
+    #[rite]
+    fn concrete_v3_rite_inner(token: X64V3Token, data: &[f32; 8]) -> f32 {
+        let v = f32x8::<x64v3>::from_array(token, *data);
+        let doubled = v + v;
+        doubled.reduce_add()
+    }
 
-#[unsafe(no_mangle)]
-#[inline(never)]
-fn concrete_v3_via_rite(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    concrete_v3_rite_outer(token, data)
-}
+    // ============================================================================
+    // Pattern 5: Generic #[inline(never)] called from inside #[arcane]
+    // Forces the generic function NOT to inline — proves the inline requirement.
+    // ============================================================================
 
-#[arcane]
-fn concrete_v3_rite_outer(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    concrete_v3_rite_inner(token, data)
-}
+    #[unsafe(no_mangle)]
+    #[inline(never)]
+    fn generic_noinline_inside_arcane(token: X64V3Token, data: &[f32; 8]) -> f32 {
+        generic_noinline_arcane_entry(token, data)
+    }
 
-#[rite]
-fn concrete_v3_rite_inner(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    let v = f32x8::<x64v3>::from_array(token, *data);
-    let doubled = v + v;
-    doubled.reduce_add()
-}
+    #[arcane]
+    fn generic_noinline_arcane_entry(token: X64V3Token, data: &[f32; 8]) -> f32 {
+        generic_sum_noinline(token, data)
+    }
 
-// ============================================================================
-// Pattern 5: Generic #[inline(never)] called from inside #[arcane]
-// Forces the generic function NOT to inline — proves the inline requirement.
-// ============================================================================
+    // ============================================================================
+    // Pattern 6: Generic #[inline(always)] called from inside #[arcane]
+    // Guaranteed to inline — the correct pattern for cross-crate use.
+    // ============================================================================
 
-#[unsafe(no_mangle)]
-#[inline(never)]
-fn generic_noinline_inside_arcane(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    generic_noinline_arcane_entry(token, data)
-}
+    #[unsafe(no_mangle)]
+    #[inline(never)]
+    fn generic_inline_always_inside_arcane(token: X64V3Token, data: &[f32; 8]) -> f32 {
+        generic_inline_always_arcane_entry(token, data)
+    }
 
-#[arcane]
-fn generic_noinline_arcane_entry(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    generic_sum_noinline(token, data)
-}
+    #[arcane]
+    fn generic_inline_always_arcane_entry(token: X64V3Token, data: &[f32; 8]) -> f32 {
+        generic_sum_inline_always(token, data)
+    }
 
-// ============================================================================
-// Pattern 6: Generic #[inline(always)] called from inside #[arcane]
-// Guaranteed to inline — the correct pattern for cross-crate use.
-// ============================================================================
+    // ============================================================================
+    // Dot product variants — more complex operation
+    // ============================================================================
 
-#[unsafe(no_mangle)]
-#[inline(never)]
-fn generic_inline_always_inside_arcane(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    generic_inline_always_arcane_entry(token, data)
-}
+    #[unsafe(no_mangle)]
+    #[inline(never)]
+    fn dot_generic_no_target(data_a: &[f32; 8], data_b: &[f32; 8]) -> f32 {
+        if let Some(token) = X64V3Token::summon() {
+            generic_dot(token, data_a, data_b)
+        } else {
+            0.0
+        }
+    }
 
-#[arcane]
-fn generic_inline_always_arcane_entry(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    generic_sum_inline_always(token, data)
-}
+    #[unsafe(no_mangle)]
+    #[inline(never)]
+    fn dot_generic_in_arcane(token: X64V3Token, data_a: &[f32; 8], data_b: &[f32; 8]) -> f32 {
+        dot_generic_arcane_entry(token, data_a, data_b)
+    }
 
-// ============================================================================
-// Dot product variants — more complex operation
-// ============================================================================
-
-#[unsafe(no_mangle)]
-#[inline(never)]
-fn dot_generic_no_target(data_a: &[f32; 8], data_b: &[f32; 8]) -> f32 {
-    if let Some(token) = X64V3Token::summon() {
+    #[arcane]
+    fn dot_generic_arcane_entry(token: X64V3Token, data_a: &[f32; 8], data_b: &[f32; 8]) -> f32 {
         generic_dot(token, data_a, data_b)
-    } else {
-        0.0
+    }
+
+    #[unsafe(no_mangle)]
+    #[inline(never)]
+    fn dot_concrete_in_arcane(token: X64V3Token, data_a: &[f32; 8], data_b: &[f32; 8]) -> f32 {
+        dot_concrete_arcane_entry(token, data_a, data_b)
+    }
+
+    #[arcane]
+    fn dot_concrete_arcane_entry(token: X64V3Token, data_a: &[f32; 8], data_b: &[f32; 8]) -> f32 {
+        let va = f32x8::<x64v3>::from_array(token, *data_a);
+        let vb = f32x8::<x64v3>::from_array(token, *data_b);
+        let product = va * vb;
+        product.reduce_add()
+    }
+
+    // ============================================================================
+    // Criterion benchmarks
+    // ============================================================================
+
+    use zenbench::criterion_compat::*;
+    use zenbench::{criterion_group, criterion_main};
+
+    fn bench_patterns(c: &mut Criterion) {
+        let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let data2 = [8.0f32, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0];
+
+        c.bench_function("1_generic_no_target_feature", |b| {
+            b.iter(|| generic_no_target_feature(black_box(&data)))
+        });
+
+        if let Some(token) = X64V3Token::summon() {
+            c.bench_function("2_generic_inside_arcane", |b| {
+                b.iter(|| generic_inside_arcane(token, black_box(&data)))
+            });
+            c.bench_function("3_concrete_v3_in_arcane", |b| {
+                b.iter(|| concrete_v3_in_arcane(token, black_box(&data)))
+            });
+            c.bench_function("4_concrete_v3_via_rite", |b| {
+                b.iter(|| concrete_v3_via_rite(token, black_box(&data)))
+            });
+            c.bench_function("5_generic_noinline_inside_arcane", |b| {
+                b.iter(|| generic_noinline_inside_arcane(token, black_box(&data)))
+            });
+            c.bench_function("6_generic_inline_always_inside_arcane", |b| {
+                b.iter(|| generic_inline_always_inside_arcane(token, black_box(&data)))
+            });
+            c.bench_function("7_dot_generic_no_target", |b| {
+                b.iter(|| dot_generic_no_target(black_box(&data), black_box(&data2)))
+            });
+            c.bench_function("8_dot_generic_in_arcane", |b| {
+                b.iter(|| dot_generic_in_arcane(token, black_box(&data), black_box(&data2)))
+            });
+            c.bench_function("9_dot_concrete_in_arcane", |b| {
+                b.iter(|| dot_concrete_in_arcane(token, black_box(&data), black_box(&data2)))
+            });
+        }
+    }
+
+    criterion_group!(benches, bench_patterns);
+    criterion_main!(benches);
+
+    /// Entry point for the crate-level `main` below.
+    pub fn run() {
+        main()
     }
 }
 
-#[unsafe(no_mangle)]
-#[inline(never)]
-fn dot_generic_in_arcane(token: X64V3Token, data_a: &[f32; 8], data_b: &[f32; 8]) -> f32 {
-    dot_generic_arcane_entry(token, data_a, data_b)
+#[cfg(target_arch = "x86_64")]
+fn main() {
+    x86_impl::run()
 }
-
-#[arcane]
-fn dot_generic_arcane_entry(token: X64V3Token, data_a: &[f32; 8], data_b: &[f32; 8]) -> f32 {
-    generic_dot(token, data_a, data_b)
-}
-
-#[unsafe(no_mangle)]
-#[inline(never)]
-fn dot_concrete_in_arcane(token: X64V3Token, data_a: &[f32; 8], data_b: &[f32; 8]) -> f32 {
-    dot_concrete_arcane_entry(token, data_a, data_b)
-}
-
-#[arcane]
-fn dot_concrete_arcane_entry(token: X64V3Token, data_a: &[f32; 8], data_b: &[f32; 8]) -> f32 {
-    let va = f32x8::<x64v3>::from_array(token, *data_a);
-    let vb = f32x8::<x64v3>::from_array(token, *data_b);
-    let product = va * vb;
-    product.reduce_add()
-}
-
-// ============================================================================
-// Criterion benchmarks
-// ============================================================================
-
-use zenbench::criterion_compat::*;
-use zenbench::{criterion_group, criterion_main};
-
-fn bench_patterns(c: &mut Criterion) {
-    let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-    let data2 = [8.0f32, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0];
-
-    c.bench_function("1_generic_no_target_feature", |b| {
-        b.iter(|| generic_no_target_feature(black_box(&data)))
-    });
-
-    if let Some(token) = X64V3Token::summon() {
-        c.bench_function("2_generic_inside_arcane", |b| {
-            b.iter(|| generic_inside_arcane(token, black_box(&data)))
-        });
-        c.bench_function("3_concrete_v3_in_arcane", |b| {
-            b.iter(|| concrete_v3_in_arcane(token, black_box(&data)))
-        });
-        c.bench_function("4_concrete_v3_via_rite", |b| {
-            b.iter(|| concrete_v3_via_rite(token, black_box(&data)))
-        });
-        c.bench_function("5_generic_noinline_inside_arcane", |b| {
-            b.iter(|| generic_noinline_inside_arcane(token, black_box(&data)))
-        });
-        c.bench_function("6_generic_inline_always_inside_arcane", |b| {
-            b.iter(|| generic_inline_always_inside_arcane(token, black_box(&data)))
-        });
-        c.bench_function("7_dot_generic_no_target", |b| {
-            b.iter(|| dot_generic_no_target(black_box(&data), black_box(&data2)))
-        });
-        c.bench_function("8_dot_generic_in_arcane", |b| {
-            b.iter(|| dot_generic_in_arcane(token, black_box(&data), black_box(&data2)))
-        });
-        c.bench_function("9_dot_concrete_in_arcane", |b| {
-            b.iter(|| dot_concrete_in_arcane(token, black_box(&data), black_box(&data2)))
-        });
-    }
-}
-
-criterion_group!(benches, bench_patterns);
-criterion_main!(benches);

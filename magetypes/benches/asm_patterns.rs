@@ -5,142 +5,160 @@
 //!
 //! Run: cargo asm -p archmage --bench asm_patterns --features "std avx512"
 
-#![cfg(target_arch = "x86_64")]
+// x86-only bench: stub main so the `harness = false` target still links on
+// other architectures (a crate-level `#![cfg]` would leave the bench with no
+// `main` at all).
+#[cfg(not(target_arch = "x86_64"))]
+fn main() {}
 
-use archmage::{Desktop64, SimdToken, arcane};
-use std::arch::x86_64::*;
+#[cfg(target_arch = "x86_64")]
+mod x86_impl {
 
-// ============================================================================
-// 256-bit float loads
-// ============================================================================
+    use archmage::{Desktop64, SimdToken, arcane};
+    use std::arch::x86_64::*;
 
-/// Baseline: load from array reference → vmovups
-#[unsafe(no_mangle)]
-#[arcane(import_intrinsics)]
-fn load_array_ref(_t: Desktop64, data: &[f32; 8]) -> __m256 {
-    _mm256_loadu_ps(data)
-}
+    // ============================================================================
+    // 256-bit float loads
+    // ============================================================================
 
-/// Slice via .first_chunk() → should produce same vmovups
-#[unsafe(no_mangle)]
-#[arcane(import_intrinsics)]
-fn load_first_chunk(_t: Desktop64, data: &[f32]) -> __m256 {
-    let arr: &[f32; 8] = data.first_chunk().unwrap();
-    _mm256_loadu_ps(arr)
-}
+    /// Baseline: load from array reference → vmovups
+    #[unsafe(no_mangle)]
+    #[arcane(import_intrinsics)]
+    fn load_array_ref(_t: Desktop64, data: &[f32; 8]) -> __m256 {
+        _mm256_loadu_ps(data)
+    }
 
-/// Slice via try_into → should produce same vmovups
-#[unsafe(no_mangle)]
-#[arcane(import_intrinsics)]
-fn load_try_into(_t: Desktop64, data: &[f32]) -> __m256 {
-    let arr: &[f32; 8] = data[..8].try_into().unwrap();
-    _mm256_loadu_ps(arr)
-}
+    /// Slice via .first_chunk() → should produce same vmovups
+    #[unsafe(no_mangle)]
+    #[arcane(import_intrinsics)]
+    fn load_first_chunk(_t: Desktop64, data: &[f32]) -> __m256 {
+        let arr: &[f32; 8] = data.first_chunk().unwrap();
+        _mm256_loadu_ps(arr)
+    }
 
-// ============================================================================
-// 256-bit integer load
-// ============================================================================
+    /// Slice via try_into → should produce same vmovups
+    #[unsafe(no_mangle)]
+    #[arcane(import_intrinsics)]
+    fn load_try_into(_t: Desktop64, data: &[f32]) -> __m256 {
+        let arr: &[f32; 8] = data[..8].try_into().unwrap();
+        _mm256_loadu_ps(arr)
+    }
 
-/// Integer load via first_chunk → vmovdqu
-#[unsafe(no_mangle)]
-#[arcane(import_intrinsics)]
-fn load_first_chunk_i(_t: Desktop64, data: &[u8]) -> __m256i {
-    let arr: &[u8; 32] = data.first_chunk().unwrap();
-    _mm256_loadu_si256(arr)
-}
+    // ============================================================================
+    // 256-bit integer load
+    // ============================================================================
 
-// ============================================================================
-// 128-bit float load
-// ============================================================================
+    /// Integer load via first_chunk → vmovdqu
+    #[unsafe(no_mangle)]
+    #[arcane(import_intrinsics)]
+    fn load_first_chunk_i(_t: Desktop64, data: &[u8]) -> __m256i {
+        let arr: &[u8; 32] = data.first_chunk().unwrap();
+        _mm256_loadu_si256(arr)
+    }
 
-/// 128-bit first_chunk → vmovups (128-bit)
-#[unsafe(no_mangle)]
-#[arcane(import_intrinsics)]
-fn load_first_chunk_128(_t: Desktop64, data: &[f32]) -> __m128 {
-    let arr: &[f32; 4] = data.first_chunk().unwrap();
-    _mm_loadu_ps(arr)
-}
+    // ============================================================================
+    // 128-bit float load
+    // ============================================================================
 
-// ============================================================================
-// Store patterns
-// ============================================================================
+    /// 128-bit first_chunk → vmovups (128-bit)
+    #[unsafe(no_mangle)]
+    #[arcane(import_intrinsics)]
+    fn load_first_chunk_128(_t: Desktop64, data: &[f32]) -> __m128 {
+        let arr: &[f32; 4] = data.first_chunk().unwrap();
+        _mm_loadu_ps(arr)
+    }
 
-/// Store via first_chunk_mut → vmovups (store)
-#[unsafe(no_mangle)]
-#[arcane(import_intrinsics)]
-fn store_first_chunk_mut(_t: Desktop64, v: __m256, out: &mut [f32]) {
-    let arr: &mut [f32; 8] = out.first_chunk_mut().unwrap();
-    _mm256_storeu_ps(arr, v);
-}
+    // ============================================================================
+    // Store patterns
+    // ============================================================================
 
-// ============================================================================
-// Magetypes patterns
-// ============================================================================
+    /// Store via first_chunk_mut → vmovups (store)
+    #[unsafe(no_mangle)]
+    #[arcane(import_intrinsics)]
+    fn store_first_chunk_mut(_t: Desktop64, v: __m256, out: &mut [f32]) {
+        let arr: &mut [f32; 8] = out.first_chunk_mut().unwrap();
+        _mm256_storeu_ps(arr, v);
+    }
 
-/// magetypes from_slice → should produce vmovups
-#[unsafe(no_mangle)]
-#[arcane(import_intrinsics)]
-fn load_f32x8_from_slice(_t: Desktop64, data: &[f32]) -> __m256 {
-    use magetypes::simd::f32x8;
-    let v = f32x8::from_slice(_t, data);
-    v.raw()
-}
+    // ============================================================================
+    // Magetypes patterns
+    // ============================================================================
 
-/// magetypes load via first_chunk → should produce vmovups
-#[unsafe(no_mangle)]
-#[arcane(import_intrinsics)]
-fn load_f32x8_first_chunk(_t: Desktop64, data: &[f32]) -> __m256 {
-    use magetypes::simd::f32x8;
-    let arr: &[f32; 8] = data.first_chunk().unwrap();
-    let v = f32x8::load(_t, arr);
-    v.raw()
-}
+    /// magetypes from_slice → should produce vmovups
+    #[unsafe(no_mangle)]
+    #[arcane(import_intrinsics)]
+    fn load_f32x8_from_slice(_t: Desktop64, data: &[f32]) -> __m256 {
+        use magetypes::simd::f32x8;
+        let v = f32x8::from_slice(_t, data);
+        v.raw()
+    }
 
-// ============================================================================
-// Criterion benchmark (required for cargo asm --bench to work)
-// ============================================================================
+    /// magetypes load via first_chunk → should produce vmovups
+    #[unsafe(no_mangle)]
+    #[arcane(import_intrinsics)]
+    fn load_f32x8_first_chunk(_t: Desktop64, data: &[f32]) -> __m256 {
+        use magetypes::simd::f32x8;
+        let arr: &[f32; 8] = data.first_chunk().unwrap();
+        let v = f32x8::load(_t, arr);
+        v.raw()
+    }
 
-use zenbench::criterion_compat::*;
-use zenbench::{criterion_group, criterion_main};
+    // ============================================================================
+    // Criterion benchmark (required for cargo asm --bench to work)
+    // ============================================================================
 
-fn bench_load_patterns(c: &mut Criterion) {
-    let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-    let slice: &[f32] = &data;
-    let bytes = [0u8; 32];
-    let byte_slice: &[u8] = &bytes;
+    use zenbench::criterion_compat::*;
+    use zenbench::{criterion_group, criterion_main};
 
-    if let Some(token) = Desktop64::summon() {
-        c.bench_function("load_array_ref", |b| {
-            b.iter(|| load_array_ref(token, black_box(&data)))
-        });
+    fn bench_load_patterns(c: &mut Criterion) {
+        let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let slice: &[f32] = &data;
+        let bytes = [0u8; 32];
+        let byte_slice: &[u8] = &bytes;
 
-        c.bench_function("load_first_chunk", |b| {
-            b.iter(|| load_first_chunk(token, black_box(slice)))
-        });
+        if let Some(token) = Desktop64::summon() {
+            c.bench_function("load_array_ref", |b| {
+                b.iter(|| load_array_ref(token, black_box(&data)))
+            });
 
-        c.bench_function("load_try_into", |b| {
-            b.iter(|| load_try_into(token, black_box(slice)))
-        });
+            c.bench_function("load_first_chunk", |b| {
+                b.iter(|| load_first_chunk(token, black_box(slice)))
+            });
 
-        c.bench_function("load_first_chunk_i", |b| {
-            b.iter(|| load_first_chunk_i(token, black_box(byte_slice)))
-        });
+            c.bench_function("load_try_into", |b| {
+                b.iter(|| load_try_into(token, black_box(slice)))
+            });
 
-        c.bench_function("load_first_chunk_128", |b| {
-            b.iter(|| load_first_chunk_128(token, black_box(slice)))
-        });
+            c.bench_function("load_first_chunk_i", |b| {
+                b.iter(|| load_first_chunk_i(token, black_box(byte_slice)))
+            });
 
-        c.bench_function("load_f32x8_from_slice", |b| {
-            b.iter(|| load_f32x8_from_slice(token, black_box(slice)))
-        });
+            c.bench_function("load_first_chunk_128", |b| {
+                b.iter(|| load_first_chunk_128(token, black_box(slice)))
+            });
 
-        c.bench_function("load_f32x8_first_chunk", |b| {
-            b.iter(|| load_f32x8_first_chunk(token, black_box(slice)))
-        });
-    } else {
-        eprintln!("Desktop64 not available, skipping benchmarks");
+            c.bench_function("load_f32x8_from_slice", |b| {
+                b.iter(|| load_f32x8_from_slice(token, black_box(slice)))
+            });
+
+            c.bench_function("load_f32x8_first_chunk", |b| {
+                b.iter(|| load_f32x8_first_chunk(token, black_box(slice)))
+            });
+        } else {
+            eprintln!("Desktop64 not available, skipping benchmarks");
+        }
+    }
+
+    criterion_group!(benches, bench_load_patterns);
+    criterion_main!(benches);
+
+    /// Entry point for the crate-level `main` below.
+    pub fn run() {
+        main()
     }
 }
 
-criterion_group!(benches, bench_load_patterns);
-criterion_main!(benches);
+#[cfg(target_arch = "x86_64")]
+fn main() {
+    x86_impl::run()
+}
