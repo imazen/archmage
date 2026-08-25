@@ -75,7 +75,7 @@ pub fn entropy_score(_token: SimdToken, data: &[u8]) -> u32 {
 
 #[autoversion(v3, neon, wasm128)]
 pub fn premul_u8_impl(_token: SimdToken, buf: &mut [u8]) {
-    for chunk in buf.chunks_exact_mut(4) {
+    for chunk in buf.as_chunks_mut::<4>().0 {
         let a = chunk[3] as u16;
         chunk[0] = ((chunk[0] as u16 * a + 127) / 255) as u8;
         chunk[1] = ((chunk[1] as u16 * a + 127) / 255) as u8;
