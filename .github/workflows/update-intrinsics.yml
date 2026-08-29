@@ -54,6 +54,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # A GitHub runner has no git identity, so `git commit` below fails
+          # with "empty ident name ... not allowed" (exit 128). This step could
+          # never have succeeded — it was simply never REACHED, because the job
+          # died earlier at the cargo-cache miss on every scheduled run since at
+          # least 2026-03-01. Fixing that miss is what exposed this.
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
           RUST_VER=$(rustc --version | cut -d' ' -f2)
           BRANCH="update-intrinsics-$(date +%Y%m%d)"
           git checkout -b "$BRANCH"
