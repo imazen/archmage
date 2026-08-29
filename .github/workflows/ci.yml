@@ -255,10 +255,16 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
+      # Pin the version. Unpinned, install.sh resolves "latest" by scraping the
+      # unauthenticated api.github.com releases endpoint, which is rate-limited
+      # on Actions runners; the rate-limit JSON then sed's down to a bare "{" and
+      # the step dies with `Could not download Wasmtime version '{'` (run
+      # 33271901730). Pinning skips that API call entirely.
       - name: Install wasmtime
         run: |
-          curl https://wasmtime.dev/install.sh -sSf | bash
+          curl https://wasmtime.dev/install.sh -sSf | bash -s -- --version v48.0.1
           echo "$HOME/.wasmtime/bin" >> $GITHUB_PATH
+          "$HOME/.wasmtime/bin/wasmtime" --version
 
       - name: Build archmage for WASM
         env:

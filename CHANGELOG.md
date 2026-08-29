@@ -24,6 +24,7 @@
 
 ### Fixed
 
+- **WASM CI could not install wasmtime.** `install.sh` resolves "latest" by scraping the unauthenticated `api.github.com` releases endpoint, which is rate-limited on Actions runners; the rate-limit JSON then `sed`s down to a bare `{` and the step failed with `Could not download Wasmtime version '{'`, taking the whole `Test WASM SIMD128` job with it (run 33271901730). The version is now pinned to v48.0.1, which skips that API call.
 - **`clippy::drain_collect` in `archmage-macros`** — `input_fn.attrs.drain(..).collect()` is now `core::mem::take(&mut input_fn.attrs)`. This lint has failed the `Clippy`, `Clippy (aarch64 Linux)` and `Clippy (aarch64 macOS)` CI jobs on every run since 2026-08-25 (run 32900999692); it fires only on the newer clippy CI installs, not on the 0.1.98 local toolchain. The two forms are equivalent (both empty the vector and yield every element in order) and all 96 macro-expansion snapshots are unchanged, aggregate SHA-256 `b14d10a5c2d66db8cd2b82eb81ed963bb91b51765e84ff91ce1fc8143055b533`.
 
 ### Changed
