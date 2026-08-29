@@ -367,7 +367,7 @@ fn process_chunk(_: X64V3Token, chunk: &mut [f32; 8]) {
 | `_mm256_xor_pd` | Computes the bitwise XOR of packed double-precision (64-bit)... | vxorp | 1/1, 1/1 |
 | `_mm256_xor_ps` | Computes the bitwise XOR of packed single-precision (32-bit)... | vxorps | 1/1, 1/1 |
 | `_mm256_xor_si256` | Computes the bitwise XOR of 256 bits (representing integer d... | vxorps | 1/1, 1/1 |
-| `_mm256_zeroall` | Zeroes the contents of all XMM or YMM registers | vzeroall | — |
+| `_mm256_zeroall` | Zeroes the contents of all XMM or YMM registers.  This opera... | vzeroall | — |
 | `_mm256_zeroupper` | Zeroes the upper 128 bits of all YMM registers; the lower 12... | vzeroupper | — |
 | `_mm256_zextpd128_pd256` | Constructs a 256-bit floating-point vector of ` |  | — |
 | `_mm256_zextps128_ps256` | Constructs a 256-bit floating-point vector of ` |  | — |

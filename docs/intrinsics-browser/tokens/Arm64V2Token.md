@@ -3,7 +3,7 @@
 Proof that the Arm64-v2 feature set is available.
 
 **Architecture:** aarch64 | **Features:** neon, crc, rdm, dotprod, fp16, aes, sha2
-**Total intrinsics:** 375 (365 safe, 10 unsafe, 232 stable, 143 unstable/unknown)
+**Total intrinsics:** 375 (365 safe, 10 unsafe, 244 stable, 131 unstable/unknown)
 
 ## Usage
 
@@ -34,7 +34,7 @@ fn process_chunk(_: Arm64V2Token, chunk: &mut [f32; 4]) {
 
 ## All Intrinsics
 
-### Stable, Safe (232 intrinsics)
+### Stable, Safe (244 intrinsics)
 
 | Name | Description | Instruction | Timing (H/Z4) |
 |------|-------------|-------------|---------------|
@@ -108,6 +108,18 @@ fn process_chunk(_: Arm64V2Token, chunk: &mut [f32; 4]) {
 | `vcvtq_u16_f16` |  |  | — |
 | `vdiv_f16` | Divide | fdiv | — |
 | `vdivq_f16` | Divide | fdiv | — |
+| `vdot_lane_s32` | Dot product arithmetic (indexed) | vsdot | — |
+| `vdot_lane_u32` | Dot product arithmetic (indexed) | vudot | — |
+| `vdot_laneq_s32` | Dot product arithmetic (indexed) | vsdot | — |
+| `vdot_laneq_u32` | Dot product arithmetic (indexed) | vudot | — |
+| `vdot_s32` | Dot product arithmetic (vector) | vsdot | — |
+| `vdot_u32` | Dot product arithmetic (vector) | vudot | — |
+| `vdotq_lane_s32` | Dot product arithmetic (indexed) | vsdot | — |
+| `vdotq_lane_u32` | Dot product arithmetic (indexed) | vudot | — |
+| `vdotq_laneq_s32` | Dot product arithmetic (indexed) | vsdot | — |
+| `vdotq_laneq_u32` | Dot product arithmetic (indexed) | vudot | — |
+| `vdotq_s32` | Dot product arithmetic (vector) | vsdot | — |
+| `vdotq_u32` | Dot product arithmetic (vector) | vudot | — |
 | `vext_f16` |  |  | — |
 | `vextq_f16` |  |  | — |
 | `vfma_f16` |  |  | — |
@@ -271,7 +283,7 @@ fn process_chunk(_: Arm64V2Token, chunk: &mut [f32; 4]) {
 | `vzip_f16` |  |  | — |
 | `vzipq_f16` |  |  | — |
 
-### Unstable/Nightly (143 intrinsics)
+### Unstable/Nightly (131 intrinsics)
 
 | Name | Description | Instruction |
 |------|-------------|-------------|
@@ -329,7 +341,7 @@ fn process_chunk(_: Arm64V2Token, chunk: &mut [f32; 4]) {
 | `vcvtmh_s16_f16` | Floating-point convert to integer, rounding towards minus in... |  |
 | `vcvtmh_s32_f16` | Floating-point convert to integer, rounding towards minus in... |  |
 | `vcvtmh_s64_f16` | Floating-point convert to integer, rounding towards minus in... |  |
-| `vcvtmh_u16_f16` | Floating-point convert to integer, rounding towards minus in... |  |
+| `vcvtmh_u16_f16` | Floating-point convert to unsigned integer, rounding towards... |  |
 | `vcvtmh_u32_f16` | Floating-point convert to unsigned integer, rounding towards... |  |
 | `vcvtmh_u64_f16` | Floating-point convert to unsigned integer, rounding towards... |  |
 | `vcvtnh_s16_f16` | Floating-point convert to integer, rounding to nearest with ... |  |
@@ -345,18 +357,6 @@ fn process_chunk(_: Arm64V2Token, chunk: &mut [f32; 4]) {
 | `vcvtph_u32_f16` | Floating-point convert to unsigned integer, rounding to plus... |  |
 | `vcvtph_u64_f16` | Floating-point convert to unsigned integer, rounding to plus... |  |
 | `vdivh_f16` | Divide | fdiv |
-| `vdot_lane_s32` | Dot product arithmetic (indexed) | vsdot |
-| `vdot_lane_u32` | Dot product arithmetic (indexed) | vudot |
-| `vdot_laneq_s32` | Dot product arithmetic (indexed) | vsdot |
-| `vdot_laneq_u32` | Dot product arithmetic (indexed) | vudot |
-| `vdot_s32` | Dot product arithmetic (vector) | vsdot |
-| `vdot_u32` | Dot product arithmetic (vector) | vudot |
-| `vdotq_lane_s32` | Dot product arithmetic (indexed) | vsdot |
-| `vdotq_lane_u32` | Dot product arithmetic (indexed) | vudot |
-| `vdotq_laneq_s32` | Dot product arithmetic (indexed) | vsdot |
-| `vdotq_laneq_u32` | Dot product arithmetic (indexed) | vudot |
-| `vdotq_s32` | Dot product arithmetic (vector) | vsdot |
-| `vdotq_u32` | Dot product arithmetic (vector) | vudot |
 | `vduph_lane_f16` | Set all vector lanes to the same value |  |
 | `vduph_laneq_f16` | Extract an element from a vector |  |
 | `vfma_n_f16` | Floating-point fused Multiply-Subtract from accumulator | fmla |
