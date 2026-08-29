@@ -402,7 +402,11 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
 
     // If the original function is `unsafe fn`, the dispatcher must also be `unsafe fn`
     // and variant calls must be wrapped in `unsafe {}`.
-    let is_unsafe = input_fn.sig.unsafety.is_some();
+    // syn 3 replaced `Signature::unsafety: Option<Token![unsafe]>` with
+    // `Signature::safety: Safety`. A free `fn` can only parse as `Unsafe` or
+    // `Default` (the `safe` qualifier is only accepted inside `unsafe extern`
+    // blocks), so this matches the old `unsafety.is_some()` exactly.
+    let is_unsafe = matches!(input_fn.sig.safety, syn::Safety::Unsafe(_));
 
     let mut dispatch_arms = Vec::new();
     for (target_arch, group_tiers) in &arch_groups {
@@ -493,7 +497,10 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
     let output = &input_fn.sig.output;
     let generics = &input_fn.sig.generics;
     let where_clause = &generics.where_clause;
-    let unsafety = &input_fn.sig.unsafety;
+    // `Safety`'s ToTokens emits `unsafe` for `Unsafe` and nothing for `Default`,
+    // so interpolating it below produces the same tokens syn 2's
+    // `Option<Token![unsafe]>` did.
+    let unsafety = &input_fn.sig.safety;
 
     // Use the user's span for the dispatcher so dead_code lint fires on the
     // function the user actually wrote, not on invisible generated variants.

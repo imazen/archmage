@@ -708,12 +708,22 @@ pub(crate) fn arcane_impl_nested(
     // Determine self receiver type if present
     let self_receiver_kind: Option<SelfReceiver> = inputs.first().and_then(|arg| match arg {
         FnArg::Receiver(receiver) => {
-            if receiver.reference.is_none() {
-                Some(SelfReceiver::Owned)
-            } else if receiver.mutability.is_some() {
-                Some(SelfReceiver::RefMut)
-            } else {
-                Some(SelfReceiver::Ref)
+            // syn 3 moved the by-reference shape into `Receiver::kind`. In syn 2
+            // this read `reference.is_none()` for owned, then `mutability` for
+            // `&mut`; syn 2 stored the `&mut` mutability in `Receiver::mutability`,
+            // syn 3 stores it in the `Reference` variant's third field. Owned
+            // (`self`/`mut self`) and typed (`self: Box<Self>`) receivers both
+            // took the `reference.is_none()` branch before and still map to
+            // `Owned` here, so the classification is unchanged.
+            match &receiver.kind {
+                syn::ReceiverKind::Reference(_, _, mutability) => {
+                    if mutability.is_some() {
+                        Some(SelfReceiver::RefMut)
+                    } else {
+                        Some(SelfReceiver::Ref)
+                    }
+                }
+                _ => Some(SelfReceiver::Owned),
             }
         }
         _ => None,

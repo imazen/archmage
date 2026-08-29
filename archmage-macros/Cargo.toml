@@ -25,6 +25,6 @@ proc-macro = true
 avx512 = []
 
 [dependencies]
-syn = { version = "2.0", features = ["full", "parsing", "printing"] }
-quote = "1.0"
-proc-macro2 = "1.0"
+syn = { version = "3.0.4", features = ["full", "parsing", "printing"] }
+quote = "1.0.47"
+proc-macro2 = "1.0.107"

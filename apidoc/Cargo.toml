@@ -9,7 +9,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
-zenutils-apidoc = "0.1.0"
+zenutils-apidoc = "0.1.1"
 
 # Standalone workspace root: never attaches to the parent workspace, even
 # without the parent's `exclude` entry.

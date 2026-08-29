@@ -5,7 +5,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
-zensim = "0.2"
+zensim = "0.2.7"
 
 [patch.crates-io]
 archmage = { path = "../../.." }
