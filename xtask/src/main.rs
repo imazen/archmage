@@ -320,6 +320,10 @@ pub(crate) fn find_safe_simd_path_simple() -> Result<PathBuf> {
     let home = std::env::var("HOME").context("HOME not set")?;
     let registry_src = PathBuf::from(&home).join(".cargo/registry/src");
 
+    // Track every safe_unaligned_simd-* the cache DOES hold, so the failure can
+    // tell "nothing fetched" apart from "a different version is present".
+    let mut found_other: Vec<String> = Vec::new();
+
     for entry in fs::read_dir(&registry_src)
         .with_context(|| format!("Failed to read {}", registry_src.display()))?
     {
@@ -329,16 +333,36 @@ pub(crate) fn find_safe_simd_path_simple() -> Result<PathBuf> {
             for crate_entry in fs::read_dir(&index_dir)? {
                 let crate_entry = crate_entry?;
                 let name = crate_entry.file_name().to_string_lossy().to_string();
-                if name.starts_with("safe_unaligned_simd-") && name.contains(SAFE_SIMD_VERSION) {
-                    return Ok(crate_entry.path());
+                if name.starts_with("safe_unaligned_simd-") {
+                    if name.contains(SAFE_SIMD_VERSION) {
+                        return Ok(crate_entry.path());
+                    }
+                    found_other.push(name);
                 }
             }
         }
     }
 
+    // Two very different causes produced the same message before, which is why
+    // the monthly CI job read as "run cargo fetch" for six months while the
+    // workflow had no fetch step to run. Separate them.
+    if found_other.is_empty() {
+        bail!(
+            "No safe_unaligned_simd source in the cargo cache at {}. \
+             Nothing has fetched it: xtask's own dependencies do not include it, \
+             so building xtask never pulls it. Run `cargo fetch` at the workspace root first.",
+            registry_src.display()
+        )
+    }
+
+    found_other.sort();
     bail!(
-        "Could not find safe_unaligned_simd-{} in cargo cache. Run: cargo fetch",
-        SAFE_SIMD_VERSION
+        "safe_unaligned_simd is in the cargo cache, but not at the version xtask wants. \
+         Wanted {} (hardcoded as SAFE_SIMD_VERSION in xtask/src/main.rs); cache holds: {}. \
+         The constant has drifted from Cargo.lock — update it to match the locked version. \
+         `cargo fetch` will NOT fix this.",
+        SAFE_SIMD_VERSION,
+        found_other.join(", ")
     )
 }
 
@@ -1115,6 +1139,18 @@ fn generate_intrinsics_reexport_modules() -> Result<()> {
 
 /// Generate all artifacts: SIMD types, macro registry, and documentation
 fn generate_all() -> Result<()> {
+    // Resolve the ONE external precondition before destroying anything.
+    //
+    // The purge below deletes six directories, and the safe_unaligned_simd
+    // lookup that can fail used to happen AFTER it (inside
+    // generate_intrinsics_reexport_modules). A cache miss therefore left the
+    // repo with every generated file deleted and nothing written back —
+    // measured at 41,561 lines across 64 files on a run where the version
+    // constant did not match the cache. Checking first turns that into a clean
+    // refusal that changes nothing on disk.
+    let _ = find_safe_simd_path_simple()
+        .context("cannot generate: the safe_unaligned_simd source is unavailable")?;
+
     // Purge all generated directories first to handle renamed/removed files
     println!("=== Purging Generated Directories ===");
     let generated_dirs = [
