@@ -222,7 +222,7 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
     let vis = input_fn.vis.clone();
 
     // Move attrs to dispatcher only; variants get no user attrs
-    let fn_attrs: Vec<Attribute> = input_fn.attrs.drain(..).collect();
+    let fn_attrs: Vec<Attribute> = core::mem::take(&mut input_fn.attrs);
 
     // =========================================================================
     // Generate suffixed variants
