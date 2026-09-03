@@ -1,0 +1,330 @@
+   Compiling libc v0.2.189
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.47
+   Compiling serde_core v1.0.229
+   Compiling bitflags v2.13.1
+   Compiling cfg-if v1.0.4
+   Compiling rustix v1.1.4
+   Compiling syn v3.0.4
+   Compiling errno v0.3.14
+   Compiling getrandom v0.3.4
+   Compiling zmij v1.0.23
+   Compiling zerocopy v0.8.56
+   Compiling serde_json v1.0.151
+   Compiling getrandom v0.4.3
+   Compiling memchr v2.8.3
+   Compiling utf8parse v0.2.2
+   Compiling serde v1.0.229
+   Compiling anstyle-parse v1.0.0
+   Compiling rand_core v0.9.5
+   Compiling serde_derive v1.0.229
+   Compiling itoa v1.0.18
+   Compiling anstyle v1.0.14
+   Compiling autocfg v1.5.1
+   Compiling winnow v1.0.4
+   Compiling colorchoice v1.0.5
+   Compiling fastrand v2.5.0
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling anstyle-query v1.1.5
+   Compiling toml_parser v1.1.3+spec-1.1.0
+   Compiling anstream v1.0.0
+   Compiling num-traits v0.2.19
+   Compiling toml_datetime v1.1.1+spec-1.1.0
+   Compiling serde_spanned v1.1.1
+   Compiling objc2-core-foundation v0.3.2
+   Compiling prettyplease v0.2.37
+   Compiling toml_writer v1.1.2+spec-1.1.0
+   Compiling clap_lex v1.1.0
+   Compiling target-triple v1.0.1
+   Compiling strsim v0.11.1
+   Compiling heck v0.5.0
+   Compiling rustversion v1.0.23
+   Compiling once_cell v1.21.4
+   Compiling tempfile v3.27.0
+   Compiling clap_derive v4.6.4
+   Compiling clap_builder v4.6.6
+   Compiling toml v1.1.4+spec-1.1.0
+   Compiling ppv-lite86 v0.2.21
+   Compiling objc2-io-kit v0.3.2
+   Compiling syn v2.0.119
+   Compiling archmage-macros v0.9.28 (/Users/lilith/work/archmage/archmage-macros)
+   Compiling wait-timeout v0.2.1
+   Compiling glob v0.3.4
+   Compiling fnv v1.0.7
+   Compiling bit-vec v0.8.0
+   Compiling quick-error v1.2.3
+   Compiling safe_unaligned_simd v0.2.5
+   Compiling rusty-fork v0.3.1
+   Compiling bit-set v0.8.0
+   Compiling archmage v0.9.28 (/Users/lilith/work/archmage)
+   Compiling rand_chacha v0.9.0
+   Compiling sysinfo v0.36.1
+   Compiling clap v4.6.6
+   Compiling rand v0.9.5
+   Compiling rand_xorshift v0.4.0
+   Compiling fs4 v0.13.1
+   Compiling terminal_size v0.4.4
+   Compiling diff v0.1.13
+   Compiling regex-syntax v0.8.11
+   Compiling unarray v0.1.4
+   Compiling termcolor v1.4.1
+   Compiling proptest v1.11.0
+   Compiling trybuild v1.0.120
+   Compiling zenbench v0.1.7
+   Compiling magetypes v0.9.28 (/Users/lilith/work/archmage/magetypes)
+   Compiling macrotest v1.2.1
+    Finished `bench` profile [optimized] target(s) in 10.32s
+     Running benches/int_uniform_shift.rs (target/release/deps/int_uniform_shift-8f509267559cc593)
+
+  const/scalar/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      3.75 ±0.01ns  [3.74–3.76]ns  
+
+  uniform/scalar/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      2.47 ±0.10ns  [2.43–2.52]ns  
+
+  cdef_const/scalar/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      5.61 ±0.19ns  [5.50–5.71]ns  
+
+  cdef_uniform/scalar/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      3.36 ±0.01ns  [3.31–3.42]ns  
+
+  wrapping_sub/scalar/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      1.25 ±0.01ns  [1.25–1.26]ns  
+
+  saturating_sub/scalar/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      1.25 ±0.00ns  [1.24–1.28]ns  
+
+  const/scalar/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      6.82 ±0.03ns  [6.79–6.87]ns  
+
+  uniform/scalar/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      9.19 ±0.04ns  [9.16–9.21]ns  
+
+  cdef_const/scalar/256  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      33.4 ±0.1ns  [33.3–33.5]ns  
+
+  cdef_uniform/scalar/256  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      33.5 ±0.1ns  [33.4–33.7]ns  
+
+  wrapping_sub/scalar/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      9.33 ±0.18ns  [9.30–9.36]ns  
+
+  saturating_sub/scalar/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      9.44 ±0.01ns  [9.42–9.46]ns  
+
+  const/scalar/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      72.7 ±0.1ns  [71.2–74.2]ns  
+
+  uniform/scalar/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base
+  ╰─ _      138 ±1ns  [138–138]ns  
+
+  cdef_const/scalar/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base
+  ╰─ _      530 ±3ns  [529–531]ns  
+
+  cdef_uniform/scalar/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base
+  ╰─ _      530 ±3ns  [529–531]ns  
+
+  wrapping_sub/scalar/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base
+  ╰─ _      139 ±1ns  [138–140]ns  
+
+  saturating_sub/scalar/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base
+  ╰─ _      138 ±1ns  [138–139]ns  
+
+  const/scalar/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      1.2 ±0.0µs  [1.2–1.2]µs   
+
+  uniform/scalar/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      2.1 ±0.0µs  [2.1–2.1]µs   
+
+  cdef_const/scalar/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      9.1 ±0.0µs  [9.1–9.2]µs   
+
+  cdef_uniform/scalar/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      9.1 ±0.0µs  [9.1–9.1]µs   
+
+  wrapping_sub/scalar/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      2.1 ±0.0µs  [2.1–2.1]µs   
+
+  saturating_sub/scalar/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      2.1 ±0.0µs  [2.1–2.1]µs   
+
+  const/scalar/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      34.6 ±0.0µs  [34.6–34.7]µs   
+
+  uniform/scalar/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      34.5 ±0.1µs  [34.5–34.6]µs   
+
+  cdef_const/scalar/1048576  0 rounds ⚠ only 0 rounds
+             mean ±mad µs  95% CI vs base    
+  ╰─ _      166.0 ±0.9µs  [165.8–166.2]µs   
+
+  cdef_uniform/scalar/1048576  0 rounds ⚠ only 0 rounds
+             mean ±mad µs  95% CI vs base    
+  ╰─ _      166.6 ±0.9µs  [166.4–166.9]µs   
+
+  wrapping_sub/scalar/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      34.7 ±0.1µs  [34.7–34.8]µs   
+
+  saturating_sub/scalar/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      34.6 ±0.1µs  [34.6–34.6]µs   
+
+  const/neon/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      1.08 ±0.01ns  [1.08–1.09]ns  
+
+  uniform/neon/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      1.24 ±0.00ns  [1.24–1.25]ns  
+
+  cdef_const/neon/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      1.31 ±0.01ns  [1.31–1.33]ns  
+
+  cdef_uniform/neon/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      1.48 ±0.01ns  [1.48–1.48]ns  
+
+  wrapping_sub/neon/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      1.17 ±0.01ns  [1.17–1.18]ns  
+
+  saturating_sub/neon/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      1.17 ±0.01ns  [1.16–1.17]ns  
+
+  const/neon/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      6.98 ±0.12ns  [6.86–7.11]ns  
+
+  uniform/neon/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      7.71 ±0.11ns  [7.69–7.74]ns  
+
+  cdef_const/neon/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      9.23 ±0.02ns  [9.21–9.26]ns  
+
+  cdef_uniform/neon/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      9.19 ±0.01ns  [9.18–9.21]ns  
+
+  wrapping_sub/neon/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      7.47 ±0.09ns  [7.43–7.50]ns  
+
+  saturating_sub/neon/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      7.72 ±0.02ns  [7.70–7.74]ns  
+
+  const/neon/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      70.5 ±0.1ns  [70.3–70.8]ns  
+
+  uniform/neon/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      71.8 ±0.1ns  [71.6–71.9]ns  
+
+  cdef_const/neon/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base
+  ╰─ _      138 ±1ns  [137–138]ns  
+
+  cdef_uniform/neon/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base
+  ╰─ _      140 ±2ns  [140–141]ns  
+
+  wrapping_sub/neon/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      71.9 ±0.8ns  [71.7–72.2]ns  
+
+  saturating_sub/neon/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      72.3 ±0.1ns  [72.1–72.6]ns  
+
+  const/neon/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      2.4 ±0.0µs  [2.4–2.4]µs   
+
+  uniform/neon/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      2.4 ±0.0µs  [2.4–2.5]µs   
+
+  cdef_const/neon/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      2.1 ±0.0µs  [2.1–2.1]µs   
+
+  cdef_uniform/neon/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      2.1 ±0.0µs  [2.1–2.1]µs   
+
+  wrapping_sub/neon/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      2.4 ±0.0µs  [2.4–2.5]µs   
+
+  saturating_sub/neon/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      2.5 ±0.0µs  [2.5–2.5]µs   
+
+  const/neon/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      41.1 ±0.2µs  [41.1–41.2]µs   
+
+  uniform/neon/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      41.3 ±0.2µs  [41.2–41.4]µs   
+
+  cdef_const/neon/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      32.6 ±0.1µs  [32.6–32.6]µs   
+
+  cdef_uniform/neon/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      32.6 ±0.1µs  [32.6–32.6]µs   
+
+  wrapping_sub/neon/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      41.1 ±0.1µs  [41.1–41.2]µs   
+
+  saturating_sub/neon/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      41.2 ±0.2µs  [41.1–41.3]µs   
+[zenbench] calibration: int=0.30ns/iter mem_bw=105.6GiB/s mem_lat=8.3ns
+[zenbench] timer resolution: 41ns, loop overhead: 0.24ns/iter, TSC: 1.000 ticks/ns (invariant)
+[zenbench] results → /var/folders/sc/m9jbk0qj0jz4w09h7gg8v3p80000gn/T/zenbench/zenbench-1788474343-16c85.txt
+
+═══════════════════════════════════════════════════════════════
+  zenbench  1788474343-16c85
+  git: b37802da3e78c9cec9edbb2cef4deff377c60d65
+═══════════════════════════════════════════════════════════════
+
+  total: 0.0s
+═══════════════════════════════════════════════════════════════
+  filter: cargo bench -- --group=NAME  format: --format=llm|csv|md|json

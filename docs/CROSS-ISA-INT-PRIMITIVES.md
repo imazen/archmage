@@ -298,16 +298,53 @@ disagree across ISAs on every input above `0x7FFF`.
 | narrowing, unsigned source / truncating | ❌ NEON-only natively | not exposed |
 | rounding narrowing shift | ⚠️ definable, 3–4× cost off NEON | not exposed in this pass |
 
-## 5. What could not be verified locally
+## 5. What the differential tests found
+
+The contract above is not theoretical: writing `magetypes/tests/int_uniform_shift_saturating.rs`
+against it immediately caught a real divergence in the first implementation —
+the **wasm128 width-polyfill** path lowered `shr_logical_uniform` on *signed*
+element types through `i8x16_shr`, which is WASM's *arithmetic* shift. `-128 >> 1`
+came back as `-64` where every other backend produced `64`. (The `u`-prefixed
+form is the logical one on wasm, for signed inputs too; the native 128-bit path
+already had this right, the polyfill did not.) This is the same class of defect
+recorded in this repo's CLAUDE.md "Known Bugs" for the *const* shifts — so it is
+a defect that reappears whenever a new shift family is added, and the test file
+now pins it on every width.
+
+Two mutation checks confirm the tests are load-bearing rather than decorative:
+
+- Removing the NEON count clamp (`vdupq_n_s16(count.min(16))` →
+  `vdupq_n_s16(count)`) fails on `i16x8::shl_uniform(255)` — the low-signed-byte
+  wrap turns a shift-left-by-255 into a shift *right* by 1
+  (`left: [0, 0, 16383, -16384, …]` against the contracted all-zero).
+- The wasm defect above was caught before it was ever committed.
+
+## 6. Measured cost
+
+`benchmarks/int_uniform_shift_apple-m4-pro_2026-09-03.md`. On NEON the uniform
+form costs +13–15 % against the shift-by-constant at N = 16 lanes (where its one
+loop-invariant `min` + `vdupq_n` has nothing to amortise over), +1.8 % at
+N = 4096, and nothing measurable from N = 65536 up; `VQSUB` and `VSUB` are the
+same cost. The scalar fallback is the one place the runtime count is not free
+(+75 % at N = 65536, parity again at N = 1048576 where it is memory-bound),
+because the runtime `count >= bits` guard blocks the constant-folding the const
+form gets.
+
+## 7. What could not be verified locally
 
 This audit was performed on `aarch64-apple-darwin`. Locally *executed*
 verification therefore covers: the scalar backend, the NEON backend (native),
-the wasm128 backend (via `wasmtime`), and SSE-level x86 semantics (via Rosetta,
+the wasm128 backend (executed under `wasmtime -W simd=y` via the repo's
+`.cargo/config.toml` runner), and SSE-level x86 semantics (via Rosetta,
 which reports `sse4.1=true, avx=false, avx2=false`). **AVX2 and AVX-512 arms
 cannot be executed on this machine** — Rosetta 2 and Docker Desktop's amd64
 emulation both report `avx=false`. Those arms are covered by CI
 (`.github/workflows/ci.yml`: `test-x64` on x86 runners for AVX2, and the `sde`
-job under Intel SDE `-hsw`/`-skx`/`-icl` for AVX2 and AVX-512). Every claim
+job under Intel SDE `-nhm`/`-hsw`/`-skx`/`-icl` for AVX2 and AVX-512) — which
+came back green for the implementation described here on
+[PR #71](https://github.com/imazen/archmage/pull/71) (CI run 33813393814): every
+job passed, including `Test x64 (ubuntu-latest)`, `SDE Haswell (AVX2+FMA)`,
+`SDE Skylake-X (AVX-512)` and `SDE Ice Lake (AVX-512 VBMI2)`. Every claim
 about them above is sourced from the vendored `stdarch` implementation — which,
 for the lane-order questions that matter most, is written in portable
 `simd_shuffle!` with explicit indices and is therefore *readable* rather than
