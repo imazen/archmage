@@ -458,6 +458,11 @@ fn gen_methods(ty: &SimdType) -> String {
         code.push_str(&gen_shifts(ty));
     }
 
+    // ====== Uniform variable shifts + saturating arithmetic ======
+    if has_uniform_shifts(ty.elem) {
+        code.push_str(&gen_uniform_shifts_and_saturating(ty));
+    }
+
     // ====== Bitwise ======
     code.push_str("    // ====== Bitwise ======\n\n");
     code.push_str(&formatdoc! {"
@@ -1013,6 +1018,76 @@ fn gen_shifts(ty: &SimdType) -> String {
             }}
 
     "});
+
+    code
+}
+
+fn gen_uniform_shifts_and_saturating(ty: &SimdType) -> String {
+    let bits = ty.elem.size_bytes() * 8;
+    let max_sh = bits - 1;
+    let elem = ty.elem.name();
+
+    let mut code = formatdoc! {"
+        \x20   // ====== Uniform variable shifts ======
+
+            /// Shift left by a runtime `count`, applied identically to every lane.
+            ///
+            /// Unlike [`shl_const`](Self::shl_const), `count` is a runtime value.
+            /// `count >= {bits}` yields all-zero lanes — the same result on every
+            /// backend, by contract (see `docs/CROSS-ISA-INT-PRIMITIVES.md`).
+            ///
+            /// The count is *uniform*: one value for the whole vector. A per-lane
+            /// variable shift is deliberately not offered — at 16-bit it needs
+            /// AVX-512BW+VL, and wasm128 has no per-lane variable shift at all.
+            #[inline(always)]
+            pub fn shl_uniform(self, count: u32) -> Self {{
+                Self(T::shl_uniform(self.1, self.0, count), self.1)
+            }}
+
+            /// Logical (zero-filling) shift right by a runtime `count`, applied
+            /// identically to every lane.
+            ///
+            /// `count >= {bits}` yields all-zero lanes on every backend.
+            #[inline(always)]
+            pub fn shr_logical_uniform(self, count: u32) -> Self {{
+                Self(T::shr_logical_uniform(self.1, self.0, count), self.1)
+            }}
+
+    ", bits = bits};
+
+    if has_shr_arithmetic(ty.elem) {
+        code.push_str(&formatdoc! {"
+            \x20   /// Arithmetic (sign-filling) shift right by a runtime `count`,
+                /// applied identically to every lane.
+                ///
+                /// `count >= {bits}` yields a sign fill (every lane becomes `0` or
+                /// `-1`), equivalent to shifting by {max_sh}, on every backend.
+                #[inline(always)]
+                pub fn shr_arithmetic_uniform(self, count: u32) -> Self {{
+                    Self(T::shr_arithmetic_uniform(self.1, self.0, count), self.1)
+                }}
+
+        ", bits = bits, max_sh = max_sh});
+    }
+
+    code.push_str(&formatdoc! {"
+        \x20   // ====== Saturating arithmetic ======
+
+            /// Lane-wise addition that clamps to the `{elem}` range instead of
+            /// wrapping — `{elem}::saturating_add`, per lane.
+            #[inline(always)]
+            pub fn saturating_add(self, other: Self) -> Self {{
+                Self(T::saturating_add(self.1, self.0, other.0), self.1)
+            }}
+
+            /// Lane-wise subtraction that clamps to the `{elem}` range instead of
+            /// wrapping — `{elem}::saturating_sub`, per lane.
+            #[inline(always)]
+            pub fn saturating_sub(self, other: Self) -> Self {{
+                Self(T::saturating_sub(self.1, self.0, other.0), self.1)
+            }}
+
+    ", elem = elem});
 
     code
 }

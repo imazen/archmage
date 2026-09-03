@@ -336,6 +336,57 @@ impl<T: I16x8Backend> i16x8<T> {
         self.shr_logical_const::<N>()
     }
 
+    // ====== Uniform variable shifts ======
+
+    /// Shift left by a runtime `count`, applied identically to every lane.
+    ///
+    /// Unlike [`shl_const`](Self::shl_const), `count` is a runtime value.
+    /// `count >= 16` yields all-zero lanes — the same result on every
+    /// backend, by contract (see `docs/CROSS-ISA-INT-PRIMITIVES.md`).
+    ///
+    /// The count is *uniform*: one value for the whole vector. A per-lane
+    /// variable shift is deliberately not offered — at 16-bit it needs
+    /// AVX-512BW+VL, and wasm128 has no per-lane variable shift at all.
+    #[inline(always)]
+    pub fn shl_uniform(self, count: u32) -> Self {
+        Self(T::shl_uniform(self.1, self.0, count), self.1)
+    }
+
+    /// Logical (zero-filling) shift right by a runtime `count`, applied
+    /// identically to every lane.
+    ///
+    /// `count >= 16` yields all-zero lanes on every backend.
+    #[inline(always)]
+    pub fn shr_logical_uniform(self, count: u32) -> Self {
+        Self(T::shr_logical_uniform(self.1, self.0, count), self.1)
+    }
+
+    /// Arithmetic (sign-filling) shift right by a runtime `count`,
+    /// applied identically to every lane.
+    ///
+    /// `count >= 16` yields a sign fill (every lane becomes `0` or
+    /// `-1`), equivalent to shifting by 15, on every backend.
+    #[inline(always)]
+    pub fn shr_arithmetic_uniform(self, count: u32) -> Self {
+        Self(T::shr_arithmetic_uniform(self.1, self.0, count), self.1)
+    }
+
+    // ====== Saturating arithmetic ======
+
+    /// Lane-wise addition that clamps to the `i16` range instead of
+    /// wrapping — `i16::saturating_add`, per lane.
+    #[inline(always)]
+    pub fn saturating_add(self, other: Self) -> Self {
+        Self(T::saturating_add(self.1, self.0, other.0), self.1)
+    }
+
+    /// Lane-wise subtraction that clamps to the `i16` range instead of
+    /// wrapping — `i16::saturating_sub`, per lane.
+    #[inline(always)]
+    pub fn saturating_sub(self, other: Self) -> Self {
+        Self(T::saturating_sub(self.1, self.0, other.0), self.1)
+    }
+
     // ====== Bitwise ======
 
     /// Bitwise NOT.

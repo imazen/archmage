@@ -107,6 +107,27 @@ impl IntVecType {
         self.elem_bits == 16 // Only i16/u16 have mullo_epi16
     }
 
+    /// Whether the uniform-variable-shift and saturating-arithmetic families
+    /// are emitted for this element width.
+    ///
+    /// x86 has no `_mm*_adds_epi32`/`_subs_epi32` at any tier and wasm128 has
+    /// no 32/64-bit `*_add_sat`; only NEON does. Exposing the op above 16 bits
+    /// would ship a "primitive" that is one instruction on NEON and a 2-3 op
+    /// emulation everywhere else. See `docs/CROSS-ISA-INT-PRIMITIVES.md`.
+    fn has_saturating(&self) -> bool {
+        self.elem_bits == 8 || self.elem_bits == 16
+    }
+
+    /// The unsigned counterpart of this element type ("u8", "u16", "u64").
+    fn unsigned_elem(&self) -> &'static str {
+        match self.elem_bits {
+            8 => "u8",
+            16 => "u16",
+            64 => "u64",
+            _ => unreachable!(),
+        }
+    }
+
     /// Whether this type is native on NEON (128-bit only)
     fn native_on_neon(&self) -> bool {
         self.width_bits == 128
@@ -495,6 +516,52 @@ pub(super) fn generate_int_backend_trait(ty: &IntVecType) -> String {
         "#});
     }
 
+    // Uniform (runtime-count) shifts. See docs/CROSS-ISA-INT-PRIMITIVES.md for
+    // why the count is uniform rather than per-lane, and why out-of-range
+    // counts are given a defined result instead of being left to the ISA.
+    if ty.has_saturating() {
+        methods.push_str(&formatdoc! {r#"
+
+            // ====== Uniform variable shifts ======
+
+            /// Shift left by a runtime `count` applied identically to every lane.
+            ///
+            /// `count >= {elem_bits}` produces all-zero lanes on every backend.
+            fn shl_uniform(self, a: Self::Repr, count: u32) -> Self::Repr;
+
+            /// Logical (zero-filling) shift right by a runtime `count` applied
+            /// identically to every lane.
+            ///
+            /// `count >= {elem_bits}` produces all-zero lanes on every backend.
+            fn shr_logical_uniform(self, a: Self::Repr, count: u32) -> Self::Repr;
+    "#, elem_bits = ty.elem_bits});
+
+        if ty.signed {
+            methods.push_str(&formatdoc! {r#"
+
+            /// Arithmetic (sign-filling) shift right by a runtime `count`
+            /// applied identically to every lane.
+            ///
+            /// `count >= {elem_bits}` produces a sign fill (every lane becomes
+            /// `0` or `-1`) on every backend.
+            fn shr_arithmetic_uniform(self, a: Self::Repr, count: u32) -> Self::Repr;
+        "#, elem_bits = ty.elem_bits});
+        }
+
+        methods.push_str(&formatdoc! {r#"
+
+            // ====== Saturating arithmetic ======
+
+            /// Lane-wise addition that clamps to the element range instead of
+            /// wrapping (`core`'s `saturating_add`, per lane).
+            fn saturating_add(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+
+            /// Lane-wise subtraction that clamps to the element range instead
+            /// of wrapping (`core`'s `saturating_sub`, per lane).
+            fn saturating_sub(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
+        "#});
+    }
+
     // Boolean
     methods.push_str(&formatdoc! {r#"
 
@@ -869,6 +936,10 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
     // Shifts
     body.push_str(&generate_x86_int_shifts(ty));
 
+    // Uniform variable shifts + saturating arithmetic
+    body.push_str(&generate_x86_int_uniform_shifts(ty));
+    body.push_str(&generate_x86_int_saturating(ty));
+
     // Boolean
     body.push_str(&generate_x86_int_boolean(ty));
 
@@ -985,6 +1056,129 @@ fn generate_x86_int_shifts(ty: &IntVecType) -> String {
             }}
         "#}
     }
+}
+
+/// Uniform (one runtime count for every lane) shifts, x86.
+///
+/// `_mm_cvtsi32_si128` writes the count into lane 0 of an XMM and zeroes the
+/// rest, so the low quadword the PSLLW/PSRLW/PSRAW family reads as its
+/// unsigned 64-bit count is the zero-extended `u32`. That means the hardware
+/// already implements the portable contract for out-of-range counts:
+/// PSLLW/PSRLW give 0 when the count exceeds the lane width, and PSRAW clamps
+/// to a sign fill. No extra clamp is emitted on x86.
+fn generate_x86_int_uniform_shifts(ty: &IntVecType) -> String {
+    if !ty.has_saturating() {
+        return String::new();
+    }
+    let inner = ty.x86_inner_type();
+    let p = ty.x86_prefix();
+    let bits = ty.width_bits;
+
+    if ty.elem_bits == 8 {
+        // x86 has no byte shift at any tier (there is no PSLLB), so this is
+        // the same 16-bit-shift + byte-mask polyfill the `*_const` shifts use,
+        // with the mask computed from the runtime count.
+        let mut code = formatdoc! {r#"
+
+            // ====== Uniform variable shifts (8-bit: polyfill via 16-bit) ======
+
+            #[inline(always)]
+            fn shl_uniform(self, a: {inner}, count: u32) -> {inner} {{
+                unsafe {{
+                    let shifted = {p}_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
+                    // `checked_shl` yields None (-> mask 0) once count >= 8,
+                    // which is the all-zero result the contract requires.
+                    let mask = {p}_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
+                    {p}_and_si{bits}(shifted, mask)
+                }}
+            }}
+
+            #[inline(always)]
+            fn shr_logical_uniform(self, a: {inner}, count: u32) -> {inner} {{
+                unsafe {{
+                    let shifted = {p}_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
+                    let mask = {p}_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
+                    {p}_and_si{bits}(shifted, mask)
+                }}
+            }}
+        "#};
+
+        if ty.signed {
+            code.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn shr_arithmetic_uniform(self, a: {inner}, count: u32) -> {inner} {{
+                unsafe {{
+                    let shifted = {p}_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
+                    let byte_mask = {p}_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
+                    let logical = {p}_and_si{bits}(shifted, byte_mask);
+                    let zero = {p}_setzero_si{bits}();
+                    let sign = {p}_cmpgt_epi8(zero, a);
+                    // High-`count`-bits fill mask. `count.min(8)` saturates the
+                    // fill to the whole byte, which is the sign fill the
+                    // contract requires for out-of-range counts; a plain
+                    // `>> count` would be a u16 overflow at count >= 16.
+                    let fill = {p}_set1_epi8(((0xFF00u16 >> count.min(8)) & 0xFF) as u8 as i8);
+                    {p}_or_si{bits}(logical, {p}_and_si{bits}(sign, fill))
+                }}
+            }}
+            "#});
+        }
+        code
+    } else {
+        let suf = if ty.elem_bits == 16 { "epi16" } else { "epi64" };
+        let mut code = formatdoc! {r#"
+
+            // ====== Uniform variable shifts ======
+
+            #[inline(always)]
+            fn shl_uniform(self, a: {inner}, count: u32) -> {inner} {{
+                unsafe {{ {p}_sll_{suf}(a, _mm_cvtsi32_si128(count as i32)) }}
+            }}
+
+            #[inline(always)]
+            fn shr_logical_uniform(self, a: {inner}, count: u32) -> {inner} {{
+                unsafe {{ {p}_srl_{suf}(a, _mm_cvtsi32_si128(count as i32)) }}
+            }}
+        "#};
+
+        if ty.signed {
+            code.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn shr_arithmetic_uniform(self, a: {inner}, count: u32) -> {inner} {{
+                unsafe {{ {p}_sra_{suf}(a, _mm_cvtsi32_si128(count as i32)) }}
+            }}
+            "#});
+        }
+        code
+    }
+}
+
+/// Saturating add/sub, x86. Emitted only at 8- and 16-bit, where
+/// PADDS/PADDUS/PSUBS/PSUBUS exist at every tier (SSE2 / AVX2 / AVX-512BW).
+fn generate_x86_int_saturating(ty: &IntVecType) -> String {
+    if !ty.has_saturating() {
+        return String::new();
+    }
+    let inner = ty.x86_inner_type();
+    let p = ty.x86_prefix();
+    let suf = ty.x86_minmax_suffix(); // epi8/epu8/epi16/epu16 — same signed/unsigned split
+
+    formatdoc! {r#"
+
+            // ====== Saturating arithmetic ======
+
+            #[inline(always)]
+            fn saturating_add(self, a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ {p}_adds_{suf}(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn saturating_sub(self, a: {inner}, b: {inner}) -> {inner} {{
+                unsafe {{ {p}_subs_{suf}(a, b) }}
+            }}
+    "#}
 }
 
 fn generate_x86_int_boolean(ty: &IntVecType) -> String {
@@ -1356,6 +1550,60 @@ fn generate_scalar_int_impl(ty: &IntVecType) -> String {
         "#, shr_arith = shr_arith_items.join(", ")});
     }
 
+    // Uniform variable shifts. The scalar backend is the reference the
+    // differential tests compare every other backend against, so it spells the
+    // out-of-range contract out literally rather than relying on any
+    // `wrapping_*` behaviour.
+    if ty.has_saturating() {
+        let uelem = ty.unsigned_elem();
+        let eb = ty.elem_bits;
+        let max_sh = eb - 1;
+        body.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn shl_uniform(self, a: {array}, count: u32) -> {array} {{
+                a.map(|x| if count >= {eb} {{ 0 }} else {{ x.wrapping_shl(count) }})
+            }}
+
+            #[inline(always)]
+            fn shr_logical_uniform(self, a: {array}, count: u32) -> {array} {{
+                a.map(|x| {{
+                    if count >= {eb} {{
+                        0
+                    }} else {{
+                        ((x as {uelem}).wrapping_shr(count)) as {elem}
+                    }}
+                }})
+            }}
+        "#});
+
+        if ty.signed {
+            body.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn shr_arithmetic_uniform(self, a: {array}, count: u32) -> {array} {{
+                // Clamping to lane_bits - 1 *is* the sign fill.
+                a.map(|x| x.wrapping_shr(if count > {max_sh} {{ {max_sh} }} else {{ count }}))
+            }}
+            "#});
+        }
+    }
+
+    if ty.has_saturating() {
+        body.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn saturating_add(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| a[i].saturating_add(b[i]))
+            }}
+
+            #[inline(always)]
+            fn saturating_sub(self, a: {array}, b: {array}) -> {array} {{
+                core::array::from_fn(|i| a[i].saturating_sub(b[i]))
+            }}
+        "#});
+    }
+
     body.push_str(&formatdoc! {r#"
 
             #[inline(always)]
@@ -1643,6 +1891,62 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
             fn shr_arithmetic_const<const N: i32>(self, a: {nt}) -> {nt} {{
                 const {{ assert!(N >= 0 && N <= {max_sh}) }};
                 unsafe {{ vshlq_{ns}(a, vdupq_n_s{us}((-N) as i{us})) }}
+            }}
+        "#});
+    }
+
+    // Uniform variable shifts. Same `vshlq_*` + splatted-count lowering the
+    // const forms use; the count is clamped because USHL/SSHL read only the
+    // low 8 bits of each shift-amount lane as a signed byte, so an unclamped
+    // count of 256 would wrap to a no-op instead of the contracted zero.
+    if ty.has_saturating() {
+        let eb = ty.elem_bits;
+        let us = &ns[1..]; // "8", "16"
+        let max_sh = eb - 1;
+        body.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn shl_uniform(self, a: {nt}, count: u32) -> {nt} {{
+                unsafe {{ vshlq_{ns}(a, vdupq_n_s{us}(count.min({eb}) as i{us})) }}
+            }}
+        "#});
+
+        let shr_logical_uniform = if ty.signed {
+            format!(
+                "vreinterpretq_{ns}_u{us}(vshlq_u{us}(vreinterpretq_u{us}_{ns}(a), vdupq_n_s{us}(-(count.min({eb}) as i{us}))))"
+            )
+        } else {
+            format!("vshlq_{ns}(a, vdupq_n_s{us}(-(count.min({eb}) as i{us})))")
+        };
+        body.push_str(&formatdoc! {r#"
+            #[inline(always)]
+            fn shr_logical_uniform(self, a: {nt}, count: u32) -> {nt} {{
+                unsafe {{ {shr_logical_uniform} }}
+            }}
+        "#});
+
+        if ty.signed {
+            body.push_str(&formatdoc! {r#"
+            #[inline(always)]
+            fn shr_arithmetic_uniform(self, a: {nt}, count: u32) -> {nt} {{
+                // Clamping to lane_bits - 1 gives the contracted sign fill.
+                unsafe {{ vshlq_{ns}(a, vdupq_n_s{us}(-(count.min({max_sh}) as i{us}))) }}
+            }}
+            "#});
+        }
+    }
+
+    if ty.has_saturating() {
+        body.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn saturating_add(self, a: {nt}, b: {nt}) -> {nt} {{
+                unsafe {{ vqaddq_{ns}(a, b) }}
+            }}
+
+            #[inline(always)]
+            fn saturating_sub(self, a: {nt}, b: {nt}) -> {nt} {{
+                unsafe {{ vqsubq_{ns}(a, b) }}
             }}
         "#});
     }
@@ -2068,6 +2372,70 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
         "#, shr_arith = shr_arith_items.join(", ")});
     }
 
+    // Uniform variable shifts + saturating arithmetic, applied per 128-bit
+    // sub-vector. Same lowering (and same count clamp) as the native impl.
+    if ty.has_saturating() {
+        let eb = ty.elem_bits;
+        let us = &ns[1..];
+        let max_sh = eb - 1;
+
+        let shl_u: Vec<String> = (0..sub_count)
+            .map(|i| format!("vshlq_{ns}(a[{i}], vdupq_n_s{us}(count.min({eb}) as i{us}))"))
+            .collect();
+        let shr_l_u: Vec<String> = (0..sub_count)
+            .map(|i| {
+                if ty.signed {
+                    format!(
+                        "vreinterpretq_{ns}_u{us}(vshlq_u{us}(vreinterpretq_u{us}_{ns}(a[{i}]), vdupq_n_s{us}(-(count.min({eb}) as i{us}))))"
+                    )
+                } else {
+                    format!("vshlq_{ns}(a[{i}], vdupq_n_s{us}(-(count.min({eb}) as i{us})))")
+                }
+            })
+            .collect();
+
+        code.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn shl_uniform(self, a: {repr}, count: u32) -> {repr} {{
+                unsafe {{ [{shl_u}] }}
+            }}
+
+            #[inline(always)]
+            fn shr_logical_uniform(self, a: {repr}, count: u32) -> {repr} {{
+                unsafe {{ [{shr_l_u}] }}
+            }}
+        "#, shl_u = shl_u.join(", "), shr_l_u = shr_l_u.join(", ")});
+
+        if ty.signed {
+            let shr_a_u: Vec<String> = (0..sub_count)
+                .map(|i| {
+                    format!("vshlq_{ns}(a[{i}], vdupq_n_s{us}(-(count.min({max_sh}) as i{us})))")
+                })
+                .collect();
+            code.push_str(&formatdoc! {r#"
+            #[inline(always)]
+            fn shr_arithmetic_uniform(self, a: {repr}, count: u32) -> {repr} {{
+                unsafe {{ [{shr_a_u}] }}
+            }}
+            "#, shr_a_u = shr_a_u.join(", ")});
+        }
+    }
+
+    if ty.has_saturating() {
+        code.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn saturating_add(self, a: {repr}, b: {repr}) -> {repr} {{ {qadd} }}
+
+            #[inline(always)]
+            fn saturating_sub(self, a: {repr}, b: {repr}) -> {repr} {{ {qsub} }}
+        "#,
+            qadd = binary_op(&format!("vqaddq_{ns}")),
+            qsub = binary_op(&format!("vqsubq_{ns}")),
+        });
+    }
+
     // Boolean: delegate to sub-vector operations
     let all_true_items: Vec<String> = (0..sub_count)
         .map(|i| {
@@ -2408,6 +2776,57 @@ fn generate_wasm_native_int_impl(ty: &IntVecType) -> String {
         "#});
     }
 
+    // Uniform variable shifts. WASM's shift intrinsics take the count modulo
+    // the lane width ("Only the low bits of the shift amount are used if the
+    // shift amount is greater than the lane width" -- core_arch/wasm32), which
+    // is the one backend that disagrees with the portable contract. A splatted
+    // all-ones/all-zero mask restores it; for the arithmetic form clamping the
+    // count to lane_bits - 1 already gives the sign fill.
+    if ty.has_saturating() {
+        let eb = ty.elem_bits;
+        let max_sh = eb - 1;
+        let selem = ty.signed_elem();
+        let unsigned_shr = if ty.signed {
+            format!("u{}_shr", &signed_wp[1..])
+        } else {
+            shr_fn.clone()
+        };
+        body.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn shl_uniform(self, a: v128, count: u32) -> v128 {{
+                let keep: {selem} = if count < {eb} {{ -1 }} else {{ 0 }};
+                v128_and({shl_fn}(a, count), {signed_wp}_splat(keep))
+            }}
+
+            #[inline(always)]
+            fn shr_logical_uniform(self, a: v128, count: u32) -> v128 {{
+                let keep: {selem} = if count < {eb} {{ -1 }} else {{ 0 }};
+                v128_and({unsigned_shr}(a, count), {signed_wp}_splat(keep))
+            }}
+        "#});
+
+        if ty.signed {
+            body.push_str(&formatdoc! {r#"
+            #[inline(always)]
+            fn shr_arithmetic_uniform(self, a: v128, count: u32) -> v128 {{
+                {shr_fn}(a, if count > {max_sh} {{ {max_sh} }} else {{ count }})
+            }}
+            "#});
+        }
+    }
+
+    if ty.has_saturating() {
+        body.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn saturating_add(self, a: v128, b: v128) -> v128 {{ {wp}_add_sat(a, b) }}
+
+            #[inline(always)]
+            fn saturating_sub(self, a: v128, b: v128) -> v128 {{ {wp}_sub_sat(a, b) }}
+        "#});
+    }
+
     // Boolean
     let bitmask_fn = format!("{signed_wp}_bitmask");
     let all_true_fn = format!("{signed_wp}_all_true");
@@ -2730,6 +3149,67 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
                 [{shr_arith}]
             }}
         "#, shr_arith = shr_arith_items.join(", ")});
+    }
+
+    // Uniform variable shifts + saturating arithmetic, per 128-bit sub-vector.
+    if ty.has_saturating() {
+        let eb = ty.elem_bits;
+        let max_sh = eb - 1;
+        let selem = ty.signed_elem();
+        let shl_fn = format!("{signed_wp}_shl");
+        let arith_shr_fn = format!("{signed_wp}_shr");
+        // The `i`-prefixed `_shr` is WASM's ARITHMETIC shift; the logical one
+        // is always the `u`-prefixed form, for signed element types too.
+        let logical_shr_fn = format!("u{}_shr", &signed_wp[1..]);
+
+        let shl_items: Vec<String> = (0..sub_count)
+            .map(|i| format!("v128_and({shl_fn}(a[{i}], count), keep)"))
+            .collect();
+        let shr_l_items: Vec<String> = (0..sub_count)
+            .map(|i| format!("v128_and({logical_shr_fn}(a[{i}], count), keep)"))
+            .collect();
+
+        code.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn shl_uniform(self, a: {repr}, count: u32) -> {repr} {{
+                let keep = {signed_wp}_splat(if count < {eb} {{ -1{selem} }} else {{ 0 }});
+                [{shl_items}]
+            }}
+
+            #[inline(always)]
+            fn shr_logical_uniform(self, a: {repr}, count: u32) -> {repr} {{
+                let keep = {signed_wp}_splat(if count < {eb} {{ -1{selem} }} else {{ 0 }});
+                [{shr_l_items}]
+            }}
+        "#, shl_items = shl_items.join(", "), shr_l_items = shr_l_items.join(", ")});
+
+        if ty.signed {
+            let shr_a_items: Vec<String> = (0..sub_count)
+                .map(|i| format!("{arith_shr_fn}(a[{i}], clamped)"))
+                .collect();
+            code.push_str(&formatdoc! {r#"
+            #[inline(always)]
+            fn shr_arithmetic_uniform(self, a: {repr}, count: u32) -> {repr} {{
+                let clamped = if count > {max_sh} {{ {max_sh} }} else {{ count }};
+                [{shr_a_items}]
+            }}
+            "#, shr_a_items = shr_a_items.join(", ")});
+        }
+    }
+
+    if ty.has_saturating() {
+        code.push_str(&formatdoc! {r#"
+
+            #[inline(always)]
+            fn saturating_add(self, a: {repr}, b: {repr}) -> {repr} {{ {qadd} }}
+
+            #[inline(always)]
+            fn saturating_sub(self, a: {repr}, b: {repr}) -> {repr} {{ {qsub} }}
+        "#,
+            qadd = binary_op(&format!("{wp}_add_sat")),
+            qsub = binary_op(&format!("{wp}_sub_sat")),
+        });
     }
 
     // Boolean
