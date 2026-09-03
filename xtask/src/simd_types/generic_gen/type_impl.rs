@@ -21,6 +21,7 @@ pub(super) fn gen_type_impl(ty: &SimdType) -> String {
     code.push_str(&gen_from_array(ty));
     code.push_str(&gen_debug(ty));
     code.push_str(&gen_cross_type(ty));
+    code.push_str(&conversions::gen_widen_narrow(&ty.name()));
     code.push_str(&gen_platform(ty));
     code.push_str(&gen_popcnt(ty));
     code

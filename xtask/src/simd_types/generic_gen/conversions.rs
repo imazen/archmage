@@ -380,3 +380,101 @@ pub(crate) fn gen_i64_f64_bitcast(
         }}
     "#}
 }
+
+// ============================================================================
+// Widening / saturating narrowing
+// ============================================================================
+
+/// Generate the `widen_low`/`widen_high` and `narrow_saturating_*` impl blocks
+/// that apply to `type_name`, if any.
+///
+/// Both families are typed so that the ISA divergence documented in
+/// `docs/CROSS-ISA-INT-PRIMITIVES.md` §3 cannot be expressed: narrowing exists
+/// only on the signed source types, because x86 and wasm have no
+/// unsigned-source narrowing instruction at all.
+pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
+    use crate::simd_types::backend_gen_widen_narrow::{Half, all_narrow_pairs, all_widen_pairs};
+
+    let mut code = String::new();
+
+    for p in all_widen_pairs().into_iter().filter(|p| p.src == type_name) {
+        let trait_bound = p.trait_name();
+        let (src, dst, de) = (p.src, p.dst, p.dst_elem);
+        let half = p.src_lanes / 2;
+        let extend = if p.signed { "Sign" } else { "Zero" };
+        code.push_str(&formatdoc! {r#"
+            // ============================================================================
+            // Widening ({src} -> {dst})
+            // ============================================================================
+
+            impl<T: crate::simd::backends::{trait_bound}> {src}<T> {{
+                /// {extend}-extend the low half of the lanes to `{dst}`.
+                ///
+                /// Result lane `i` is `self[i] as {de}` for `i` in `0..{half}`.
+                /// One instruction on every backend, in natural lane order —
+                /// see `docs/CROSS-ISA-INT-PRIMITIVES.md`.
+                #[inline(always)]
+                pub fn widen_low(self) -> super::{dst}<T> {{
+                    super::{dst}::from_repr_unchecked(self.1, T::{lo}(self.1, self.0))
+                }}
+
+                /// {extend}-extend the high half of the lanes to `{dst}`.
+                ///
+                /// Result lane `i` is `self[i + {half}] as {de}`.
+                #[inline(always)]
+                pub fn widen_high(self) -> super::{dst}<T> {{
+                    super::{dst}::from_repr_unchecked(self.1, T::{hi}(self.1, self.0))
+                }}
+            }}
+
+        "#, lo = p.method(Half::Low), hi = p.method(Half::High)});
+    }
+
+    for p in all_narrow_pairs()
+        .into_iter()
+        .filter(|p| p.src == type_name)
+    {
+        let trait_bound = p.trait_name();
+        let src = p.src;
+        let n = p.src_lanes;
+        let (sdst, sde, udst, ude, se) = (p.sdst, p.sdst_elem, p.udst, p.udst_elem, p.src_elem);
+        code.push_str(&formatdoc! {r#"
+            // ============================================================================
+            // Saturating narrowing ({src} -> {sdst} / {udst})
+            // ============================================================================
+
+            impl<T: crate::simd::backends::{trait_bound}> {src}<T> {{
+                /// Narrow `self` and `high` to `{sdst}`, clamping each lane to
+                /// the `{sde}` range.
+                ///
+                /// Result lane `i` is `self[i]` clamped for `i < {n}`, and
+                /// `high[i - {n}]` clamped for `i >= {n}` — the same lane order
+                /// on every backend (the AVX2 arm pays one
+                /// `permute4x64` to get there).
+                #[inline(always)]
+                pub fn narrow_saturating_{sde}(self, high: Self) -> super::{sdst}<T> {{
+                    super::{sdst}::from_repr_unchecked(self.1, T::{sm}(self.1, self.0, high.0))
+                }}
+
+                /// Narrow `self` and `high` to `{udst}`, clamping each lane to
+                /// the `{ude}` range.
+                ///
+                /// The source stays `{se}`: this is the only narrowing shape the
+                /// x86 and wasm instruction sets offer, so a `u{srcw}` source
+                /// (which would return `0` on x86/wasm and `{ude}::MAX` on NEON
+                /// above the signed maximum) is not expressible here.
+                #[inline(always)]
+                pub fn narrow_saturating_{ude}(self, high: Self) -> super::{udst}<T> {{
+                    super::{udst}::from_repr_unchecked(self.1, T::{um}(self.1, self.0, high.0))
+                }}
+            }}
+
+        "#,
+            sm = p.method(true),
+            um = p.method(false),
+            srcw = p.width_bits / p.src_lanes,
+        });
+    }
+
+    code
+}

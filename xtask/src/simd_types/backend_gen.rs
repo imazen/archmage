@@ -451,6 +451,11 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
         generate_scalar_w512_impls, generate_w512_backend_trait, generate_wasm_w512_impls,
         generate_x86_v3_w512_impls,
     };
+    use super::backend_gen_widen_narrow::{
+        generate_neon_widen_narrow_impls, generate_scalar_widen_narrow_impls,
+        generate_wasm_widen_narrow_impls, generate_widen_narrow_traits,
+        generate_x86_v3_widen_narrow_impls, generate_x86_v4_widen_narrow_impls,
+    };
 
     let types = all_float_types();
     let i32_types = all_i32_types();
@@ -526,6 +531,13 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
         generate_additional_convert_traits(),
     );
 
+    // 8b. Widening / saturating-narrowing traits (u8<->u16, i8<->i16,
+    //     u16<->u32, i16<->i32). See docs/CROSS-ISA-INT-PRIMITIVES.md.
+    files.insert(
+        "backends/widen_narrow.rs".to_string(),
+        generate_widen_narrow_traits(),
+    );
+
     // 9. backends/mod.rs
     files.insert(
         "backends/mod.rs".to_string(),
@@ -549,6 +561,8 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_x86_int_impls(&remaining_int_types, "X64V3Token", 256)
             + &generate_x86_convert_impls("X64V3Token")
             + &generate_x86_additional_convert_impls("X64V3Token")
+            + &generate_x86_v3_widen_narrow_impls(false)
+            + &gate_w512_impls(generate_x86_v3_widen_narrow_impls(true))
             + &gate_w512_impls(generate_x86_v3_w512_impls(&w512_types)),
     );
     files.insert(
@@ -560,6 +574,8 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_scalar_int_impls(&remaining_int_types)
             + &generate_scalar_convert_impls()
             + &generate_scalar_additional_convert_impls()
+            + &generate_scalar_widen_narrow_impls(false)
+            + &gate_w512_impls(generate_scalar_widen_narrow_impls(true))
             + &gate_w512_impls(generate_scalar_w512_impls(&w512_types)),
     );
     files.insert(
@@ -571,6 +587,8 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_neon_int_impls(&remaining_int_types)
             + &generate_neon_convert_impls()
             + &generate_neon_additional_convert_impls()
+            + &generate_neon_widen_narrow_impls(false)
+            + &gate_w512_impls(generate_neon_widen_narrow_impls(true))
             + &gate_w512_impls(generate_neon_w512_impls(&w512_types)),
     );
     files.insert(
@@ -582,6 +600,8 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_wasm_int_impls(&remaining_int_types)
             + &generate_wasm_convert_impls()
             + &generate_wasm_additional_convert_impls()
+            + &generate_wasm_widen_narrow_impls(false)
+            + &gate_w512_impls(generate_wasm_widen_narrow_impls(true))
             + &gate_w512_impls(generate_wasm_w512_impls(&w512_types)),
     );
 
@@ -591,7 +611,11 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
     // implies `w512` (and we want a single gate scheme).
     files.insert(
         "impls/x86_v4.rs".to_string(),
-        gate_w512_impls(generate_x86_v4_impls_file(&w512_types)),
+        gate_w512_impls(
+            generate_x86_v4_impls_file(&w512_types)
+                + &generate_x86_v4_widen_narrow_impls("X64V4Token")
+                + &generate_x86_v4_widen_narrow_impls("X64V4xToken"),
+        ),
     );
 
     // 11. impls/mod.rs
@@ -988,6 +1012,38 @@ fn generate_backends_mod(
 
     // Additional conversion traits (i8↔u8, i16↔u16, u64↔i64 bitcasts)
     code.push_str("mod convert_int;\npub use convert_int::{I8x16Bitcast, I8x32Bitcast, I16x8Bitcast, I16x16Bitcast, U64x2Bitcast, U64x4Bitcast};\n\n");
+
+    // Widening / saturating-narrowing traits. The 512-bit families are gated
+    // with the rest of the w512 surface.
+    {
+        use super::backend_gen_widen_narrow::{all_narrow_pairs, all_widen_pairs};
+        let named: Vec<(usize, String)> = all_widen_pairs()
+            .iter()
+            .map(|p| (p.width_bits, p.trait_name()))
+            .chain(
+                all_narrow_pairs()
+                    .iter()
+                    .map(|p| (p.width_bits, p.trait_name())),
+            )
+            .collect();
+        let base: Vec<&str> = named
+            .iter()
+            .filter(|(w, _)| *w != 512)
+            .map(|(_, n)| n.as_str())
+            .collect();
+        let w512: Vec<&str> = named
+            .iter()
+            .filter(|(w, _)| *w == 512)
+            .map(|(_, n)| n.as_str())
+            .collect();
+        code.push_str("mod widen_narrow;\n");
+        code.push_str(&format!("pub use widen_narrow::{{{}}};\n", base.join(", ")));
+        code.push_str("#[cfg(feature = \"w512\")]\n");
+        code.push_str(&format!(
+            "pub use widen_narrow::{{{}}};\n\n",
+            w512.join(", ")
+        ));
+    }
 
     // Type aliases for ergonomic use
     for (alias, full, doc) in [

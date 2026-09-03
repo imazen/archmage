@@ -622,6 +622,66 @@ impl<T: crate::simd::backends::I16x8Bitcast> i16x8<T> {
 }
 
 // ============================================================================
+// Widening (i16x8 -> i32x4)
+// ============================================================================
+
+impl<T: crate::simd::backends::I16x8Widen> i16x8<T> {
+    /// Sign-extend the low half of the lanes to `i32x4`.
+    ///
+    /// Result lane `i` is `self[i] as i32` for `i` in `0..4`.
+    /// One instruction on every backend, in natural lane order —
+    /// see `docs/CROSS-ISA-INT-PRIMITIVES.md`.
+    #[inline(always)]
+    pub fn widen_low(self) -> super::i32x4<T> {
+        super::i32x4::from_repr_unchecked(self.1, T::widen_low_i16_to_i32(self.1, self.0))
+    }
+
+    /// Sign-extend the high half of the lanes to `i32x4`.
+    ///
+    /// Result lane `i` is `self[i + 4] as i32`.
+    #[inline(always)]
+    pub fn widen_high(self) -> super::i32x4<T> {
+        super::i32x4::from_repr_unchecked(self.1, T::widen_high_i16_to_i32(self.1, self.0))
+    }
+}
+
+// ============================================================================
+// Saturating narrowing (i16x8 -> i8x16 / u8x16)
+// ============================================================================
+
+impl<T: crate::simd::backends::I16x8Narrow> i16x8<T> {
+    /// Narrow `self` and `high` to `i8x16`, clamping each lane to
+    /// the `i8` range.
+    ///
+    /// Result lane `i` is `self[i]` clamped for `i < 8`, and
+    /// `high[i - 8]` clamped for `i >= 8` — the same lane order
+    /// on every backend (the AVX2 arm pays one
+    /// `permute4x64` to get there).
+    #[inline(always)]
+    pub fn narrow_saturating_i8(self, high: Self) -> super::i8x16<T> {
+        super::i8x16::from_repr_unchecked(
+            self.1,
+            T::narrow_saturating_i16_to_i8(self.1, self.0, high.0),
+        )
+    }
+
+    /// Narrow `self` and `high` to `u8x16`, clamping each lane to
+    /// the `u8` range.
+    ///
+    /// The source stays `i16`: this is the only narrowing shape the
+    /// x86 and wasm instruction sets offer, so a `u16` source
+    /// (which would return `0` on x86/wasm and `u8::MAX` on NEON
+    /// above the signed maximum) is not expressible here.
+    #[inline(always)]
+    pub fn narrow_saturating_u8(self, high: Self) -> super::u8x16<T> {
+        super::u8x16::from_repr_unchecked(
+            self.1,
+            T::narrow_saturating_i16_to_u8(self.1, self.0, high.0),
+        )
+    }
+}
+
+// ============================================================================
 // Platform-specific concrete impls
 // ============================================================================
 

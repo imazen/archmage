@@ -4649,6 +4649,306 @@ impl U64x4Bitcast for archmage::X64V3Token {
         a
     }
 }
+
+#[cfg(target_arch = "x86_64")]
+impl U8x16Widen for archmage::X64V3Token {
+    #[inline(always)]
+    fn widen_low_u8_to_u16(self, a: __m128i) -> __m128i {
+        unsafe { _mm_cvtepu8_epi16(a) }
+    }
+
+    #[inline(always)]
+    fn widen_high_u8_to_u16(self, a: __m128i) -> __m128i {
+        unsafe { _mm_cvtepu8_epi16(_mm_srli_si128::<8>(a)) }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl U16x8Widen for archmage::X64V3Token {
+    #[inline(always)]
+    fn widen_low_u16_to_u32(self, a: __m128i) -> __m128i {
+        unsafe { _mm_cvtepu16_epi32(a) }
+    }
+
+    #[inline(always)]
+    fn widen_high_u16_to_u32(self, a: __m128i) -> __m128i {
+        unsafe { _mm_cvtepu16_epi32(_mm_srli_si128::<8>(a)) }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl I8x16Widen for archmage::X64V3Token {
+    #[inline(always)]
+    fn widen_low_i8_to_i16(self, a: __m128i) -> __m128i {
+        unsafe { _mm_cvtepi8_epi16(a) }
+    }
+
+    #[inline(always)]
+    fn widen_high_i8_to_i16(self, a: __m128i) -> __m128i {
+        unsafe { _mm_cvtepi8_epi16(_mm_srli_si128::<8>(a)) }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl I16x8Widen for archmage::X64V3Token {
+    #[inline(always)]
+    fn widen_low_i16_to_i32(self, a: __m128i) -> __m128i {
+        unsafe { _mm_cvtepi16_epi32(a) }
+    }
+
+    #[inline(always)]
+    fn widen_high_i16_to_i32(self, a: __m128i) -> __m128i {
+        unsafe { _mm_cvtepi16_epi32(_mm_srli_si128::<8>(a)) }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl U8x32Widen for archmage::X64V3Token {
+    #[inline(always)]
+    fn widen_low_u8_to_u16(self, a: __m256i) -> __m256i {
+        unsafe { _mm256_cvtepu8_epi16(_mm256_castsi256_si128(a)) }
+    }
+
+    #[inline(always)]
+    fn widen_high_u8_to_u16(self, a: __m256i) -> __m256i {
+        unsafe { _mm256_cvtepu8_epi16(_mm256_extracti128_si256::<1>(a)) }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl U16x16Widen for archmage::X64V3Token {
+    #[inline(always)]
+    fn widen_low_u16_to_u32(self, a: __m256i) -> __m256i {
+        unsafe { _mm256_cvtepu16_epi32(_mm256_castsi256_si128(a)) }
+    }
+
+    #[inline(always)]
+    fn widen_high_u16_to_u32(self, a: __m256i) -> __m256i {
+        unsafe { _mm256_cvtepu16_epi32(_mm256_extracti128_si256::<1>(a)) }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl I8x32Widen for archmage::X64V3Token {
+    #[inline(always)]
+    fn widen_low_i8_to_i16(self, a: __m256i) -> __m256i {
+        unsafe { _mm256_cvtepi8_epi16(_mm256_castsi256_si128(a)) }
+    }
+
+    #[inline(always)]
+    fn widen_high_i8_to_i16(self, a: __m256i) -> __m256i {
+        unsafe { _mm256_cvtepi8_epi16(_mm256_extracti128_si256::<1>(a)) }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl I16x16Widen for archmage::X64V3Token {
+    #[inline(always)]
+    fn widen_low_i16_to_i32(self, a: __m256i) -> __m256i {
+        unsafe { _mm256_cvtepi16_epi32(_mm256_castsi256_si128(a)) }
+    }
+
+    #[inline(always)]
+    fn widen_high_i16_to_i32(self, a: __m256i) -> __m256i {
+        unsafe { _mm256_cvtepi16_epi32(_mm256_extracti128_si256::<1>(a)) }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl I16x8Narrow for archmage::X64V3Token {
+    #[inline(always)]
+    fn narrow_saturating_i16_to_i8(self, a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_packs_epi16(a, b) }
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i16_to_u8(self, a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_packus_epi16(a, b) }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl I32x4Narrow for archmage::X64V3Token {
+    #[inline(always)]
+    fn narrow_saturating_i32_to_i16(self, a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_packs_epi32(a, b) }
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i32_to_u16(self, a: __m128i, b: __m128i) -> __m128i {
+        unsafe { _mm_packus_epi32(a, b) }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl I16x16Narrow for archmage::X64V3Token {
+    #[inline(always)]
+    fn narrow_saturating_i16_to_i8(self, a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi16(a, b)) }
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i16_to_u8(self, a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi16(a, b)) }
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl I32x8Narrow for archmage::X64V3Token {
+    #[inline(always)]
+    fn narrow_saturating_i32_to_i16(self, a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi32(a, b)) }
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i32_to_u16(self, a: __m256i, b: __m256i) -> __m256i {
+        unsafe { _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi32(a, b)) }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "x86_64")]
+impl U8x64Widen for archmage::X64V3Token {
+    #[inline(always)]
+    fn widen_low_u8_to_u16(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        unsafe {
+            [
+                _mm256_cvtepu8_epi16(_mm256_castsi256_si128(a[0])),
+                _mm256_cvtepu8_epi16(_mm256_extracti128_si256::<1>(a[0])),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn widen_high_u8_to_u16(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        unsafe {
+            [
+                _mm256_cvtepu8_epi16(_mm256_castsi256_si128(a[1])),
+                _mm256_cvtepu8_epi16(_mm256_extracti128_si256::<1>(a[1])),
+            ]
+        }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "x86_64")]
+impl U16x32Widen for archmage::X64V3Token {
+    #[inline(always)]
+    fn widen_low_u16_to_u32(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        unsafe {
+            [
+                _mm256_cvtepu16_epi32(_mm256_castsi256_si128(a[0])),
+                _mm256_cvtepu16_epi32(_mm256_extracti128_si256::<1>(a[0])),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn widen_high_u16_to_u32(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        unsafe {
+            [
+                _mm256_cvtepu16_epi32(_mm256_castsi256_si128(a[1])),
+                _mm256_cvtepu16_epi32(_mm256_extracti128_si256::<1>(a[1])),
+            ]
+        }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "x86_64")]
+impl I8x64Widen for archmage::X64V3Token {
+    #[inline(always)]
+    fn widen_low_i8_to_i16(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        unsafe {
+            [
+                _mm256_cvtepi8_epi16(_mm256_castsi256_si128(a[0])),
+                _mm256_cvtepi8_epi16(_mm256_extracti128_si256::<1>(a[0])),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn widen_high_i8_to_i16(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        unsafe {
+            [
+                _mm256_cvtepi8_epi16(_mm256_castsi256_si128(a[1])),
+                _mm256_cvtepi8_epi16(_mm256_extracti128_si256::<1>(a[1])),
+            ]
+        }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "x86_64")]
+impl I16x32Widen for archmage::X64V3Token {
+    #[inline(always)]
+    fn widen_low_i16_to_i32(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        unsafe {
+            [
+                _mm256_cvtepi16_epi32(_mm256_castsi256_si128(a[0])),
+                _mm256_cvtepi16_epi32(_mm256_extracti128_si256::<1>(a[0])),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn widen_high_i16_to_i32(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        unsafe {
+            [
+                _mm256_cvtepi16_epi32(_mm256_castsi256_si128(a[1])),
+                _mm256_cvtepi16_epi32(_mm256_extracti128_si256::<1>(a[1])),
+            ]
+        }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "x86_64")]
+impl I16x32Narrow for archmage::X64V3Token {
+    #[inline(always)]
+    fn narrow_saturating_i16_to_i8(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+        unsafe {
+            [
+                _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi16(a[0], a[1])),
+                _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi16(b[0], b[1])),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i16_to_u8(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+        unsafe {
+            [
+                _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi16(a[0], a[1])),
+                _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi16(b[0], b[1])),
+            ]
+        }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "x86_64")]
+impl I32x16Narrow for archmage::X64V3Token {
+    #[inline(always)]
+    fn narrow_saturating_i32_to_i16(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+        unsafe {
+            [
+                _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi32(a[0], a[1])),
+                _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi32(b[0], b[1])),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i32_to_u16(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+        unsafe {
+            [
+                _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi32(a[0], a[1])),
+                _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi32(b[0], b[1])),
+            ]
+        }
+    }
+}
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl F32x16Backend for archmage::X64V3Token {
