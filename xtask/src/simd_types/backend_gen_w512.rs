@@ -419,10 +419,15 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
             /// Round to nearest integer.
             fn round(self, a: Self::Repr) -> Self::Repr;
 
-            /// Fused multiply-add: a * b + c.
+            /// Multiply-add: `a * b + c`.
+            ///
+            /// Fused with a single rounding on backends with hardware FMA
+            /// (x86 v3/v4, NEON); unfused `mul` + `add` (two roundings) on
+            /// the scalar and WASM backends — lanes can differ by 1 ULP.
             fn mul_add(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
 
-            /// Fused multiply-sub: a * b - c.
+            /// Multiply-sub: `a * b - c`. Same fusion contract as
+            /// [`mul_add`](Self::mul_add).
             fn mul_sub(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
 
             // ====== Comparisons ======

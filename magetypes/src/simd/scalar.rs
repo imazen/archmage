@@ -119,13 +119,18 @@ impl f32x1 {
         Self(crate::nostd_math::roundevenf(self.0))
     }
 
-    /// Fused multiply-add: `self * b + c`.
+    /// Multiply-add: `self * b + c`, computed unfused (two roundings).
+    ///
+    /// The scalar fallback has no hardware FMA; results can differ from
+    /// fused backends (x86 v3/v4, NEON) by 1 ULP.
     #[inline(always)]
     pub fn mul_add(self, b: Self, c: Self) -> Self {
         Self(crate::nostd_math::fmaf(self.0, b.0, c.0))
     }
 
-    /// Fused multiply-subtract: `self * b - c`.
+    /// Multiply-subtract: `self * b - c`, computed unfused (two roundings).
+    ///
+    /// Same contract as [`mul_add`](Self::mul_add).
     #[inline(always)]
     pub fn mul_sub(self, b: Self, c: Self) -> Self {
         Self(crate::nostd_math::fmaf(self.0, b.0, -c.0))
@@ -235,7 +240,10 @@ impl f64x1 {
         Self(f64::from_bits(self.0.to_bits() & 0x7FFF_FFFF_FFFF_FFFF))
     }
 
-    /// Fused multiply-add: `self * b + c`.
+    /// Multiply-add: `self * b + c`, computed unfused (two roundings).
+    ///
+    /// The scalar fallback has no hardware FMA; results can differ from
+    /// fused backends (x86 v3/v4, NEON) by 1 ULP.
     #[inline(always)]
     pub fn mul_add(self, b: Self, c: Self) -> Self {
         Self(crate::nostd_math::fma(self.0, b.0, c.0))

@@ -633,13 +633,21 @@ fn gen_float_math() -> String {
                 Self(T::round(self.1, self.0), self.1)
             }}
 
-            /// Fused multiply-add: `self * a + b`.
+            /// Multiply-add: `self * a + b`.
+            ///
+            /// Fused with a single rounding on backends with hardware FMA
+            /// (x86 v3/v4, NEON). The scalar and WASM backends compute an
+            /// unfused `mul` + `add` (two roundings), so lanes can differ
+            /// from the fused backends by 1 ULP.
             #[inline(always)]
             pub fn mul_add(self, a: Self, b: Self) -> Self {{
                 Self(T::mul_add(self.1, self.0, a.0, b.0), self.1)
             }}
 
-            /// Fused multiply-sub: `self * a - b`.
+            /// Multiply-sub: `self * a - b`.
+            ///
+            /// Same fusion contract as [`mul_add`](Self::mul_add): fused on
+            /// x86 v3/v4 and NEON, unfused (two roundings) on scalar and WASM.
             #[inline(always)]
             pub fn mul_sub(self, a: Self, b: Self) -> Self {{
                 Self(T::mul_sub(self.1, self.0, a.0, b.0), self.1)
