@@ -93,6 +93,10 @@ harness = false
 name = "int_uniform_shift"
 harness = false
 
+[[bench]]
+name = "int_widen_narrow"
+harness = false
+
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]

@@ -211,6 +211,12 @@ call, which is the uniform form.
 | v4/v4x, 512 | `_mm512_cvtepu8_epi16` (`avx512bw`), `_mm512_cvtepu16_epi32` (`avx512f`) | ditto | natural | `x86/avx512bw.rs`, `avx512f.rs` |
 | neon | `vmovl_u8` / `vmovl_high_u8` (and `_s8`) | `vmovl_u16`/`vmovl_high_u16` | natural | `core_arch/aarch64` |
 | wasm128 | `u16x8_extend_low_u8x16` / `…_high_…`, `i16x8_extend_low_i8x16` | `u32x4_extend_low_u16x8`, `i32x4_extend_low_i16x8` | natural | `wasm32/simd128.rs` |
+
+Minor correction to the wasm row: the `u`-prefixed names above are `pub use`
+aliases, not primary definitions — `u16x8_extend_low_u8x16` is
+`pub use i16x8_extend_low_u8x16 as u16x8_extend_low_u8x16`
+(`wasm32/simd128.rs`:2716) and `u32x4_extend_low_u16x8` likewise (`:3172`). They
+are usable exactly as written; the note matters only if you grep for `pub fn`.
 | scalar | `as` casts | `as` casts | natural | — |
 
 **The user's mirrored-hazard hypothesis for widening does not fire.** The reason
@@ -243,11 +249,27 @@ const IDXS: [u32; 32] = [
 i.e. the result is `[a.lo, b.lo, a.hi, b.hi]` in 64-bit groups. The 128-bit form
 `_mm_packus_epi16` *is* natural (`IDXS = [0,2,…,14, 16,18,…,30]`,
 `x86/sse2.rs`:1558), and AVX-512's `vpmovwb` family (`_mm512_cvtepi16_epi8`,
-`_mm512_cvtusepi16_epi8`) is natural too. So **only AVX2** is out of order, and
-correcting it costs one `_mm256_permute4x64_epi64::<0xD8>` (`avx2`) — a
-lane-crossing shuffle with 3-cycle latency. A generic narrow that skipped that
-fixup would be *silently wrong on exactly one tier* — the worst possible outcome
-for a byte-exact port, and precisely what the consumer must not ship.
+`_mm512_cvtusepi16_epi8`) is natural too. Correcting AVX2 costs one
+`_mm256_permute4x64_epi64::<0xD8>` (`avx2`) — a lane-crossing shuffle with
+3-cycle latency, `dst = src` lanes `[0, 2, 1, 3]`. A generic narrow that skipped
+that fixup would be *silently wrong on exactly one tier* — the worst possible
+outcome for a byte-exact port, and precisely what the consumer must not ship.
+
+> **Correction (2026-09-03, from the implementation pass).** The sentence "so
+> **only AVX2** is out of order" was in this document and is only true if you
+> stay away from `_mm512_pack*`, which is the instruction an implementer
+> naturally reaches for at 512-bit. `_mm512_packus_epi16` interleaves across
+> **all four** 128-bit lanes — `[a0, b0, a1, b1, a2, b2, a3, b3]` in 64-bit
+> groups (`x86/avx512bw.rs`:6950) — a worse scramble than AVX2's, needing a full
+> `permutexvar` rather than a `permute4x64`. The claim about the `vpmov*`
+> family was correct, so the fix is to *use* it: the shipped AVX-512 arm narrows
+> each register with `_mm512_cvtsepi16_epi8` / `_mm512_cvtsepi32_epi16` (natural
+> by construction, `__m512i -> __m256i`) and concatenates the halves with
+> `_mm512_inserti64x4::<1>`, never touching `pack*`. The unsigned-destination
+> form has no signed-source instruction — `_mm512_cvtusepi16_epi8` reads its
+> source as unsigned — so the source is clamped at zero first with
+> `_mm512_max_epi16`; above that clamp the signed and unsigned readings coincide
+> and `VPMOVUSWB`'s saturation is exactly `packus`'s.
 
 **(ii) Source signedness — an unflagged hazard, and the bigger one.** x86 and
 wasm only offer narrowing that reads the source as **signed**:
@@ -293,10 +315,34 @@ disagree across ISAs on every input above `0x7FFF`.
 | `saturating_add` / `saturating_sub` | ✅ at 8/16-bit; ❌ at 32/64-bit (x86 + wasm lack it entirely) | `i8xN`, `u8xN`, `i16xN`, `u16xN` |
 | uniform variable shift (`shl_uniform`, `shr_logical_uniform`, `shr_arithmetic_uniform`) | ✅ every tier, every width, with a strict out-of-range contract | same widths as the existing `*_const` shifts |
 | per-lane variable shift | ❌ (16-bit needs AVX-512BW+VL; wasm has none at any width) | not exposed |
-| `widen_low` / `widen_high` | ✅ | u8↔u16, i8↔i16, u16↔u32, i16↔i32 |
-| narrowing, signed source, saturating | ✅ with an AVX2 `permute4x64` fixup | i16→u8, i16→i8 (and 32→16) |
-| narrowing, unsigned source / truncating | ❌ NEON-only natively | not exposed |
+| `widen_low` / `widen_high` | ✅ | u8↔u16, i8↔i16, u16↔u32, i16↔i32 — **shipped** |
+| narrowing, signed source, saturating | ✅ with an AVX2 `permute4x64` fixup **and an AVX-512 `pack*` avoidance** | i16→u8, i16→i8, i32→u16, i32→i16 — **shipped** |
+| narrowing, unsigned source / truncating | ❌ NEON-only natively | not exposed — and the signed-source typing makes it unrepresentable, not merely undocumented |
 | rounding narrowing shift | ⚠️ definable, 3–4× cost off NEON | not exposed in this pass |
+| widening u32→u64 / i32→i64 | ✅ (`_mm_cvtepu32_epi64` sse4.1, `vmovl_u32`, `u64x2_extend_low_u32x4`) | **not implemented** — same shape as the shipped pairs, no consumer asked for it yet |
+
+### Implementation status
+
+Widening and the signed-source saturating narrowing were implemented on
+2026-09-03. Generator: `xtask/src/simd_types/backend_gen_widen_narrow.rs`
+(traits + all six backends) plus
+`generic_gen::conversions::gen_widen_narrow` (the `widen_low` / `widen_high` /
+`narrow_saturating_*` front-end methods). Tests:
+`magetypes/tests/int_widen_narrow.rs`. Cost:
+`benchmarks/int_widen_narrow_apple-m4-pro_2026-09-03.md`.
+
+Per-tier semantics of what shipped — identical on every row by contract, which
+is the point:
+
+| Op | v3 (AVX2) | v4 / v4x (AVX-512) | neon | wasm128 | scalar |
+|---|---|---|---|---|---|
+| `widen_low` (128-bit) | `_mm_cvtep{u,i}8_epi16` / `…16_epi32` | via `.v3()` | `vmovl_{u8,s8,u16,s16}(vget_low_…)` | `{u16x8,i16x8,u32x4,i32x4}_extend_low_…` | `a[i] as T` |
+| `widen_high` (128-bit) | same on `_mm_srli_si128::<8>(a)` | via `.v3()` | `vmovl_high_…` | `…_extend_high_…` | `a[i + n/2] as T` |
+| `widen_*` (256-bit) | `_mm256_cvtep*` on `castsi256_si128` / `extracti128::<1>` | via `.v3()` | per 128-bit sub-vector | per 128-bit sub-vector | array |
+| `widen_*` (512-bit) | polyfill over `[__m256i; 2]` | `_mm512_cvtep*` on `castsi512_si256` / `extracti64x4::<1>` | per sub-vector | per sub-vector | array |
+| `narrow_saturating_*` (128-bit) | `_mm_pack{s,us}_epi{16,32}` | via `.v3()` | `vcombine_*(vqmov{,u}n_s*(a), …(b))` | `{i8x16,u8x16,i16x8,u16x8}_narrow_…` | clamp + cast |
+| `narrow_saturating_*` (256-bit) | `permute4x64::<0xD8>(pack*)` | via `.v3()` | per sub-vector | per sub-vector | array |
+| `narrow_saturating_*` (512-bit) | polyfill over `[__m256i; 2]`, fixup per half | `cvtsepi*` (+ `max_epi*` for the unsigned form) then `inserti64x4::<1>` | per sub-vector | per sub-vector | array |
 
 ## 5. What the differential tests found
 
