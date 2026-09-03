@@ -322,6 +322,30 @@ pub(super) fn gen_transcendentals(
                 self.exp_midp()
             }}
 
+            /// Mid-precision logistic sigmoid: `1 / (1 + exp(-x))`, in `[0, 1]`.
+            ///
+            /// Rail-safe by construction (issue #64): [`recip`](Self::recip) is
+            /// exact IEEE division, so the saturated exponential behaves — for
+            /// `x` ≲ -88, `exp_midp(-x)` overflows to `inf` and the result is
+            /// `1/inf = 0`; for large positive `x` it underflows to `0` and the
+            /// result is exactly `1`. Conv pre-activations at ±100 produce clean
+            /// 0/1 lanes, not NaN.
+            #[inline(always)]
+            pub fn sigmoid_midp(self) -> Self {{
+                let one = splat_f32::<T>(self.1,1.0);
+                ((-self).exp_midp() + one).recip()
+            }}
+
+            /// Mid-precision SiLU / swish: `x * sigmoid(x)` = `x / (1 + exp(-x))`.
+            ///
+            /// Same rails as [`sigmoid_midp`](Self::sigmoid_midp): for `x` ≲ -88
+            /// the result is `x * 0 = -0.0`, and for large positive `x` it is
+            /// exactly `x`.
+            #[inline(always)]
+            pub fn silu_midp(self) -> Self {{
+                self * self.sigmoid_midp()
+            }}
+
             /// Mid-precision base-10 logarithm.
             #[inline(always)]
             pub fn log10_midp(self) -> Self {{
