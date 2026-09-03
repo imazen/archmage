@@ -396,9 +396,19 @@ macro_rules! run_all_512 {
 
 /// Floors for the "did the arm actually run" assertions. Deliberately close to
 /// the real counts so a macro that expands to fewer cases trips them.
+///
+/// The real counts are deterministic: `run_all!` makes 17_524 comparisons
+/// (4 signed types x 38 + 4 unsigned x 27 + the two exhaustive 8-bit sweeps)
+/// and `run_all_512!` makes exactly 130 (2 x 38 signed + 2 x 27 unsigned).
+/// The W512 floor was first shipped as a guessed 250 — the v4/v4x arms are
+/// the only ones that assert it in isolation, and they had never executed
+/// anywhere (the author's box had no AVX-512, the PR's x64 CI runner didn't
+/// summon V4, and the SDE job neither built magetypes tests nor propagated
+/// failures). First native run on real AVX-512 silicon: all 130 comparisons
+/// pass; only the floor was wrong.
 const MIN_CASES_W128: usize = 17_000;
 #[cfg(feature = "w512")]
-const MIN_CASES_W512: usize = 250;
+const MIN_CASES_W512: usize = 125;
 #[cfg(not(feature = "w512"))]
 const MIN_CASES_W512: usize = 0;
 
