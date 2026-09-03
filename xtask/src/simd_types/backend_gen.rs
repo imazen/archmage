@@ -3779,6 +3779,26 @@ fn generate_i32_backend_trait(ty: &I32VecType) -> String {
             /// `N` must be in `0..=31`; the generic front-ends reject out-of-range `N` at compile time.
             fn shr_logical_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
+            // ====== Uniform variable shifts ======
+
+            /// Shift left by a runtime `count` applied identically to every lane.
+            ///
+            /// `count >= 32` produces all-zero lanes on every backend.
+            fn shl_uniform(self, a: Self::Repr, count: u32) -> Self::Repr;
+
+            /// Logical (zero-filling) shift right by a runtime `count` applied
+            /// identically to every lane.
+            ///
+            /// `count >= 32` produces all-zero lanes on every backend.
+            fn shr_logical_uniform(self, a: Self::Repr, count: u32) -> Self::Repr;
+
+            /// Arithmetic (sign-filling) shift right by a runtime `count`
+            /// applied identically to every lane.
+            ///
+            /// `count >= 32` produces a sign fill (every lane becomes `0` or
+            /// `-1`) on every backend.
+            fn shr_arithmetic_uniform(self, a: Self::Repr, count: u32) -> Self::Repr;
+
             // ====== Boolean ======
 
             /// True if all lanes have their sign bit set (all-1s mask).
@@ -4134,6 +4154,27 @@ fn generate_x86_i32_impl(ty: &I32VecType, token: &str) -> String {
             #[inline(always)]
             fn shr_logical_const<const N: i32>(self, a: {inner}) -> {inner} {{
                 unsafe {{ {p}_srli_epi32::<N>(a) }}
+            }}
+
+            // ====== Uniform variable shifts ======
+            // PSLLD/PSRLD give 0 once the count reaches 32 and PSRAD clamps to
+            // a sign fill — the portable contract is the hardware behaviour.
+            // _mm_cvtsi32_si128 zero-extends, so u32::MAX is just a large
+            // out-of-range count, not a negative one.
+
+            #[inline(always)]
+            fn shl_uniform(self, a: {inner}, count: u32) -> {inner} {{
+                unsafe {{ {p}_sll_epi32(a, _mm_cvtsi32_si128(count as i32)) }}
+            }}
+
+            #[inline(always)]
+            fn shr_logical_uniform(self, a: {inner}, count: u32) -> {inner} {{
+                unsafe {{ {p}_srl_epi32(a, _mm_cvtsi32_si128(count as i32)) }}
+            }}
+
+            #[inline(always)]
+            fn shr_arithmetic_uniform(self, a: {inner}, count: u32) -> {inner} {{
+                unsafe {{ {p}_sra_epi32(a, _mm_cvtsi32_si128(count as i32)) }}
             }}
 
             // ====== Boolean ======
@@ -4621,6 +4662,24 @@ fn generate_scalar_i32_impl(ty: &I32VecType) -> String {
                 {shr_logical}
             }}
 
+            // ====== Uniform variable shifts ======
+
+            #[inline(always)]
+            fn shl_uniform(self, a: {array}, count: u32) -> {array} {{
+                a.map(|x| if count >= 32 {{ 0 }} else {{ x.wrapping_shl(count) }})
+            }}
+
+            #[inline(always)]
+            fn shr_logical_uniform(self, a: {array}, count: u32) -> {array} {{
+                a.map(|x| if count >= 32 {{ 0 }} else {{ ((x as u32).wrapping_shr(count)) as i32 }})
+            }}
+
+            #[inline(always)]
+            fn shr_arithmetic_uniform(self, a: {array}, count: u32) -> {array} {{
+                let c = if count > 31 {{ 31 }} else {{ count }};
+                a.map(|x| x.wrapping_shr(c))
+            }}
+
             // ====== Boolean ======
 
             #[inline(always)]
@@ -4944,6 +5003,33 @@ fn generate_neon_native_i32_impl(ty: &I32VecType) -> String {
                 unsafe {{ vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a), vdupq_n_s32(-N))) }}
             }}
 
+            // ====== Uniform variable shifts ======
+            // Same vshlq lowering as the const forms; the count is clamped
+            // because USHL/SSHL read only the low byte of each amount lane as
+            // a signed value, so an unclamped 256 would wrap to a no-op
+            // instead of the contracted zero.
+
+            #[inline(always)]
+            fn shl_uniform(self, a: int32x4_t, count: u32) -> int32x4_t {{
+                unsafe {{ vshlq_s32(a, vdupq_n_s32(count.min(32) as i32)) }}
+            }}
+
+            #[inline(always)]
+            fn shr_logical_uniform(self, a: int32x4_t, count: u32) -> int32x4_t {{
+                unsafe {{
+                    vreinterpretq_s32_u32(vshlq_u32(
+                        vreinterpretq_u32_s32(a),
+                        vdupq_n_s32(-(count.min(32) as i32)),
+                    ))
+                }}
+            }}
+
+            #[inline(always)]
+            fn shr_arithmetic_uniform(self, a: int32x4_t, count: u32) -> int32x4_t {{
+                // Clamping to 31 gives the contracted sign fill.
+                unsafe {{ vshlq_s32(a, vdupq_n_s32(-(count.min(31) as i32))) }}
+            }}
+
             #[inline(always)]
             fn all_true(self, a: int32x4_t) -> bool {{
                 unsafe {{ vminvq_u32(vreinterpretq_u32_s32(a)) != 0 }}
@@ -5114,6 +5200,38 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
             #[inline(always)]
             fn shr_logical_const<const N: i32>(self, a: {repr}) -> {repr} {{
                 {shr_logic}
+            }}
+
+            // ====== Uniform variable shifts ======
+            // Splat the clamped count once, apply to both halves — same
+            // clamp rationale as the 128-bit impl (USHL/SSHL read the low
+            // byte of each amount lane).
+
+            #[inline(always)]
+            fn shl_uniform(self, a: {repr}, count: u32) -> {repr} {{
+                unsafe {{
+                    let c = vdupq_n_s32(count.min(32) as i32);
+                    [vshlq_s32(a[0], c), vshlq_s32(a[1], c)]
+                }}
+            }}
+
+            #[inline(always)]
+            fn shr_logical_uniform(self, a: {repr}, count: u32) -> {repr} {{
+                unsafe {{
+                    let c = vdupq_n_s32(-(count.min(32) as i32));
+                    [
+                        vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a[0]), c)),
+                        vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a[1]), c)),
+                    ]
+                }}
+            }}
+
+            #[inline(always)]
+            fn shr_arithmetic_uniform(self, a: {repr}, count: u32) -> {repr} {{
+                unsafe {{
+                    let c = vdupq_n_s32(-(count.min(31) as i32));
+                    [vshlq_s32(a[0], c), vshlq_s32(a[1], c)]
+                }}
             }}
 
             #[inline(always)]
@@ -5480,6 +5598,28 @@ fn generate_wasm_native_i32_impl(ty: &I32VecType) -> String {
             #[inline(always)]
             fn shr_logical_const<const N: i32>(self, a: v128) -> v128 {{ u32x4_shr(a, N as u32) }}
 
+            // ====== Uniform variable shifts ======
+            // wasm takes the count modulo the lane width; the keep mask
+            // restores the contracted zero at count >= 32, and clamping
+            // gives the arithmetic sign fill.
+
+            #[inline(always)]
+            fn shl_uniform(self, a: v128, count: u32) -> v128 {{
+                let keep: i32 = if count < 32 {{ -1 }} else {{ 0 }};
+                v128_and(i32x4_shl(a, count), i32x4_splat(keep))
+            }}
+
+            #[inline(always)]
+            fn shr_logical_uniform(self, a: v128, count: u32) -> v128 {{
+                let keep: i32 = if count < 32 {{ -1 }} else {{ 0 }};
+                v128_and(u32x4_shr(a, count), i32x4_splat(keep))
+            }}
+
+            #[inline(always)]
+            fn shr_arithmetic_uniform(self, a: v128, count: u32) -> v128 {{
+                i32x4_shr(a, if count > 31 {{ 31 }} else {{ count }})
+            }}
+
             #[inline(always)]
             fn all_true(self, a: v128) -> bool {{ i32x4_all_true(a) }}
             #[inline(always)]
@@ -5618,6 +5758,35 @@ fn generate_wasm_polyfill_i32_impl(ty: &I32VecType) -> String {
             #[inline(always)]
             fn shr_logical_const<const N: i32>(self, a: {repr}) -> {repr} {{
                 [{shr_logic_lanes}]
+            }}
+
+            // ====== Uniform variable shifts ======
+            // wasm takes the count modulo the lane width; the keep mask
+            // restores the contracted zero at count >= 32, and clamping
+            // gives the arithmetic sign fill.
+
+            #[inline(always)]
+            fn shl_uniform(self, a: {repr}, count: u32) -> {repr} {{
+                let keep = i32x4_splat(if count < 32 {{ -1 }} else {{ 0 }});
+                [
+                    v128_and(i32x4_shl(a[0], count), keep),
+                    v128_and(i32x4_shl(a[1], count), keep),
+                ]
+            }}
+
+            #[inline(always)]
+            fn shr_logical_uniform(self, a: {repr}, count: u32) -> {repr} {{
+                let keep = i32x4_splat(if count < 32 {{ -1 }} else {{ 0 }});
+                [
+                    v128_and(u32x4_shr(a[0], count), keep),
+                    v128_and(u32x4_shr(a[1], count), keep),
+                ]
+            }}
+
+            #[inline(always)]
+            fn shr_arithmetic_uniform(self, a: {repr}, count: u32) -> {repr} {{
+                let c = if count > 31 {{ 31 }} else {{ count }};
+                [i32x4_shr(a[0], c), i32x4_shr(a[1], c)]
             }}
 
             #[inline(always)]
@@ -5943,6 +6112,19 @@ fn generate_u32_backend_trait(ty: &U32VecType) -> String {
             /// `N` must be in `0..=31`; the generic front-ends reject out-of-range `N` at compile time.
             fn shr_logical_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
+            // ====== Uniform variable shifts ======
+
+            /// Shift left by a runtime `count` applied identically to every lane.
+            ///
+            /// `count >= 32` produces all-zero lanes on every backend.
+            fn shl_uniform(self, a: Self::Repr, count: u32) -> Self::Repr;
+
+            /// Logical (zero-filling) shift right by a runtime `count` applied
+            /// identically to every lane.
+            ///
+            /// `count >= 32` produces all-zero lanes on every backend.
+            fn shr_logical_uniform(self, a: Self::Repr, count: u32) -> Self::Repr;
+
             // ====== Boolean ======
 
             /// True if all lanes have their sign bit set (all-1s mask).
@@ -6156,6 +6338,21 @@ fn generate_x86_u32_impl(ty: &U32VecType, token: &str) -> String {
             #[inline(always)]
             fn shr_logical_const<const N: i32>(self, a: {inner}) -> {inner} {{
                 unsafe {{ {p}_srli_epi32::<N>(a) }}
+            }}
+
+            // ====== Uniform variable shifts ======
+            // PSLLD/PSRLD give 0 once the count reaches 32 — the portable
+            // contract is the hardware behaviour. _mm_cvtsi32_si128
+            // zero-extends, so u32::MAX is just a large out-of-range count.
+
+            #[inline(always)]
+            fn shl_uniform(self, a: {inner}, count: u32) -> {inner} {{
+                unsafe {{ {p}_sll_epi32(a, _mm_cvtsi32_si128(count as i32)) }}
+            }}
+
+            #[inline(always)]
+            fn shr_logical_uniform(self, a: {inner}, count: u32) -> {inner} {{
+                unsafe {{ {p}_srl_epi32(a, _mm_cvtsi32_si128(count as i32)) }}
             }}
 
             // ====== Boolean ======
@@ -6462,6 +6659,18 @@ fn generate_scalar_u32_impl(ty: &U32VecType) -> String {
                 {shr_logical}
             }}
 
+            // ====== Uniform variable shifts ======
+
+            #[inline(always)]
+            fn shl_uniform(self, a: {array}, count: u32) -> {array} {{
+                a.map(|x| if count >= 32 {{ 0 }} else {{ x.wrapping_shl(count) }})
+            }}
+
+            #[inline(always)]
+            fn shr_logical_uniform(self, a: {array}, count: u32) -> {array} {{
+                a.map(|x| if count >= 32 {{ 0 }} else {{ x.wrapping_shr(count) }})
+            }}
+
             // ====== Boolean ======
 
             #[inline(always)]
@@ -6636,6 +6845,22 @@ fn generate_neon_native_u32_impl(ty: &U32VecType) -> String {
                 unsafe {{ vshlq_u32(a, vdupq_n_s32(-N)) }}
             }}
 
+            // ====== Uniform variable shifts ======
+            // Same vshlq lowering as the const forms; the count is clamped
+            // because USHL reads only the low byte of each amount lane as a
+            // signed value, so an unclamped 256 would wrap to a no-op instead
+            // of the contracted zero.
+
+            #[inline(always)]
+            fn shl_uniform(self, a: uint32x4_t, count: u32) -> uint32x4_t {{
+                unsafe {{ vshlq_u32(a, vdupq_n_s32(count.min(32) as i32)) }}
+            }}
+
+            #[inline(always)]
+            fn shr_logical_uniform(self, a: uint32x4_t, count: u32) -> uint32x4_t {{
+                unsafe {{ vshlq_u32(a, vdupq_n_s32(-(count.min(32) as i32))) }}
+            }}
+
             #[inline(always)]
             fn all_true(self, a: uint32x4_t) -> bool {{
                 unsafe {{ vminvq_u32(a) == u32::MAX }}
@@ -6795,6 +7020,27 @@ fn generate_neon_polyfill_u32_impl(ty: &U32VecType) -> String {
             #[inline(always)]
             fn shr_logical_const<const N: i32>(self, a: {repr}) -> {repr} {{
                 {shr_logic}
+            }}
+
+            // ====== Uniform variable shifts ======
+            // Splat the clamped count once, apply to both halves — same
+            // clamp rationale as the 128-bit impl (USHL reads the low byte
+            // of each amount lane).
+
+            #[inline(always)]
+            fn shl_uniform(self, a: {repr}, count: u32) -> {repr} {{
+                unsafe {{
+                    let c = vdupq_n_s32(count.min(32) as i32);
+                    [vshlq_u32(a[0], c), vshlq_u32(a[1], c)]
+                }}
+            }}
+
+            #[inline(always)]
+            fn shr_logical_uniform(self, a: {repr}, count: u32) -> {repr} {{
+                unsafe {{
+                    let c = vdupq_n_s32(-(count.min(32) as i32));
+                    [vshlq_u32(a[0], c), vshlq_u32(a[1], c)]
+                }}
             }}
 
             #[inline(always)]
@@ -6996,6 +7242,22 @@ fn generate_wasm_native_u32_impl(ty: &U32VecType) -> String {
             #[inline(always)]
             fn shr_logical_const<const N: i32>(self, a: v128) -> v128 {{ u32x4_shr(a, N as u32) }}
 
+            // ====== Uniform variable shifts ======
+            // wasm takes the count modulo the lane width; the keep mask
+            // restores the contracted zero at count >= 32.
+
+            #[inline(always)]
+            fn shl_uniform(self, a: v128, count: u32) -> v128 {{
+                let keep: i32 = if count < 32 {{ -1 }} else {{ 0 }};
+                v128_and(u32x4_shl(a, count), i32x4_splat(keep))
+            }}
+
+            #[inline(always)]
+            fn shr_logical_uniform(self, a: v128, count: u32) -> v128 {{
+                let keep: i32 = if count < 32 {{ -1 }} else {{ 0 }};
+                v128_and(u32x4_shr(a, count), i32x4_splat(keep))
+            }}
+
             #[inline(always)]
             fn all_true(self, a: v128) -> bool {{ i32x4_all_true(a) }}
             #[inline(always)]
@@ -7125,6 +7387,28 @@ fn generate_wasm_polyfill_u32_impl(ty: &U32VecType) -> String {
             #[inline(always)]
             fn shr_logical_const<const N: i32>(self, a: {repr}) -> {repr} {{
                 [{shr_logic_lanes}]
+            }}
+
+            // ====== Uniform variable shifts ======
+            // wasm takes the count modulo the lane width; the keep mask
+            // restores the contracted zero at count >= 32.
+
+            #[inline(always)]
+            fn shl_uniform(self, a: {repr}, count: u32) -> {repr} {{
+                let keep = i32x4_splat(if count < 32 {{ -1 }} else {{ 0 }});
+                [
+                    v128_and(u32x4_shl(a[0], count), keep),
+                    v128_and(u32x4_shl(a[1], count), keep),
+                ]
+            }}
+
+            #[inline(always)]
+            fn shr_logical_uniform(self, a: {repr}, count: u32) -> {repr} {{
+                let keep = i32x4_splat(if count < 32 {{ -1 }} else {{ 0 }});
+                [
+                    v128_and(u32x4_shr(a[0], count), keep),
+                    v128_and(u32x4_shr(a[1], count), keep),
+                ]
             }}
 
             #[inline(always)]

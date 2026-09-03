@@ -23,7 +23,7 @@
 //! the slice grows. The tiny sizes are where it is visible at all.
 
 use archmage::SimdToken;
-use magetypes::simd::generic::u16x8;
+use magetypes::simd::generic::{u16x8, u32x4};
 use zenbench::criterion_compat::*;
 use zenbench::{criterion_group, criterion_main};
 
@@ -110,6 +110,55 @@ where
     }
 }
 
+/// 32-bit twins of the const/uniform pair — the width added as the follow-up
+/// (dequant-style kernels shift 32-bit accumulators by a runtime scale).
+fn shr_const_slice_u32<T>(t: T, src: &[u32], dst: &mut [u32])
+where
+    T: magetypes::simd::backends::U32x4Backend,
+{
+    for (s, d) in src.chunks_exact(4).zip(dst.chunks_exact_mut(4)) {
+        let arr: [u32; 4] = s.try_into().unwrap();
+        let v = u32x4::<T>::from_array(t, arr);
+        d.copy_from_slice(&v.shr_logical_const::<3>().to_array());
+    }
+}
+
+fn shr_uniform_slice_u32<T>(t: T, src: &[u32], dst: &mut [u32], count: u32)
+where
+    T: magetypes::simd::backends::U32x4Backend,
+{
+    for (s, d) in src.chunks_exact(4).zip(dst.chunks_exact_mut(4)) {
+        let arr: [u32; 4] = s.try_into().unwrap();
+        let v = u32x4::<T>::from_array(t, arr);
+        d.copy_from_slice(&v.shr_logical_uniform(count).to_array());
+    }
+}
+
+macro_rules! bench_backend_u32 {
+    ($c:expr, $label:literal, $Tok:ty, $t:expr) => {{
+        let t = $t;
+        for &n in SIZES {
+            let src: Vec<u32> = (0..n)
+                .map(|i| i.wrapping_mul(2_654_435_761) as u32)
+                .collect();
+            let mut dst = vec![0u32; n];
+            $c.bench_function(&format!("const_u32/{}/{n}", $label), |b| {
+                b.iter(|| shr_const_slice_u32::<$Tok>(t, black_box(&src), black_box(&mut dst)))
+            });
+            $c.bench_function(&format!("uniform_u32/{}/{n}", $label), |b| {
+                b.iter(|| {
+                    shr_uniform_slice_u32::<$Tok>(
+                        t,
+                        black_box(&src),
+                        black_box(&mut dst),
+                        black_box(3u32),
+                    )
+                })
+            });
+        }
+    }};
+}
+
 macro_rules! bench_backend {
     ($c:expr, $label:literal, $Tok:ty, $t:expr) => {{
         let t = $t;
@@ -176,15 +225,23 @@ fn bench_all(c: &mut Criterion) {
         archmage::ScalarToken,
         archmage::ScalarToken::summon().unwrap()
     );
+    bench_backend_u32!(
+        c,
+        "scalar",
+        archmage::ScalarToken,
+        archmage::ScalarToken::summon().unwrap()
+    );
 
     #[cfg(target_arch = "aarch64")]
     if let Some(t) = archmage::NeonToken::summon() {
         bench_backend!(c, "neon", archmage::NeonToken, t);
+        bench_backend_u32!(c, "neon", archmage::NeonToken, t);
     }
 
     #[cfg(target_arch = "x86_64")]
     if let Some(t) = archmage::X64V3Token::summon() {
         bench_backend!(c, "v3", archmage::X64V3Token, t);
+        bench_backend_u32!(c, "v3", archmage::X64V3Token, t);
     }
 }
 

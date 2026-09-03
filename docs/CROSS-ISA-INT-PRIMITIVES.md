@@ -198,6 +198,15 @@ so it introduces no new emulation class.
 it. CDEF does not need it — `max(damping − msb(strength), 0)` is one scalar per
 call, which is the uniform form.
 
+**Shipped surface (updated as follow-ups land):** the 8/16-bit family shipped
+first; the 32-bit family (`i32xN`/`u32xN` at every width, shifts only — no
+saturating arithmetic exists at 32-bit, §1) shipped as the first follow-up,
+measured in `benchmarks/int_uniform_shift_zen5-9950x3d_2026-09-04.md`.
+**64-bit stays out deliberately**: `sll/srl_epi64` exist from SSE2 up, but
+`_mm_sra_epi64`/`_mm256_sra_epi64` require AVX-512F+VL, so the arithmetic
+flavor would need a sign-decompose polyfill on v3 — that goes in only with a
+use case and a measured benchmark attached, not for table completeness.
+
 ---
 
 ## 3. Integer widening / narrowing
@@ -313,7 +322,7 @@ disagree across ISAs on every input above `0x7FFF`.
 | Primitive | Universal? | Exposed surface |
 |---|---|---|
 | `saturating_add` / `saturating_sub` | ✅ at 8/16-bit; ❌ at 32/64-bit (x86 + wasm lack it entirely) | `i8xN`, `u8xN`, `i16xN`, `u16xN` |
-| uniform variable shift (`shl_uniform`, `shr_logical_uniform`, `shr_arithmetic_uniform`) | ✅ every tier, every width, with a strict out-of-range contract | same widths as the existing `*_const` shifts |
+| uniform variable shift (`shl_uniform`, `shr_logical_uniform`, `shr_arithmetic_uniform`) | ✅ every tier, every width, with a strict out-of-range contract | 8/16-bit (first pass) + 32-bit (follow-up); 64-bit deliberately out (`sra_epi64` needs AVX-512) |
 | per-lane variable shift | ❌ (16-bit needs AVX-512BW+VL; wasm has none at any width) | not exposed |
 | `widen_low` / `widen_high` | ✅ | u8↔u16, i8↔i16, u16↔u32, i16↔i32 — **shipped** |
 | narrowing, signed source, saturating | ✅ with an AVX2 `permute4x64` fixup **and an AVX-512 `pack*` avoidance** | i16→u8, i16→i8, i32→u16, i32→i16 — **shipped** |

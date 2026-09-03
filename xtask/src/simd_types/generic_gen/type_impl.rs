@@ -461,7 +461,10 @@ fn gen_methods(ty: &SimdType) -> String {
 
     // ====== Uniform variable shifts + saturating arithmetic ======
     if has_uniform_shifts(ty.elem) {
-        code.push_str(&gen_uniform_shifts_and_saturating(ty));
+        code.push_str(&gen_uniform_shifts(ty));
+    }
+    if has_saturating_arith(ty.elem) {
+        code.push_str(&gen_saturating_arith(ty));
     }
 
     // ====== Bitwise ======
@@ -1023,10 +1026,9 @@ fn gen_shifts(ty: &SimdType) -> String {
     code
 }
 
-fn gen_uniform_shifts_and_saturating(ty: &SimdType) -> String {
+fn gen_uniform_shifts(ty: &SimdType) -> String {
     let bits = ty.elem.size_bytes() * 8;
     let max_sh = bits - 1;
-    let elem = ty.elem.name();
 
     let mut code = formatdoc! {"
         \x20   // ====== Uniform variable shifts ======
@@ -1071,7 +1073,13 @@ fn gen_uniform_shifts_and_saturating(ty: &SimdType) -> String {
         ", bits = bits, max_sh = max_sh});
     }
 
-    code.push_str(&formatdoc! {"
+    code
+}
+
+fn gen_saturating_arith(ty: &SimdType) -> String {
+    let elem = ty.elem.name();
+
+    formatdoc! {"
         \x20   // ====== Saturating arithmetic ======
 
             /// Lane-wise addition that clamps to the `{elem}` range instead of
@@ -1088,9 +1096,7 @@ fn gen_uniform_shifts_and_saturating(ty: &SimdType) -> String {
                 Self(T::saturating_sub(self.1, self.0, other.0), self.1)
             }}
 
-    ", elem = elem});
-
-    code
+    ", elem = elem}
 }
 
 fn gen_partition_slice(ty: &SimdType) -> String {
