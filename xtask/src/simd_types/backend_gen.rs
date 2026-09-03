@@ -886,12 +886,17 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             }}
 
             /// Precise reciprocal — defaults to delegating to [`rcp_approx`]
-            /// (which itself defaults to identity). Backends override with
-            /// Newton-Raphson refinement using a native splat for the constant.
+            /// (which itself defaults to identity). Every shipped backend
+            /// overrides this with exact IEEE division (`1.0 / a`): correctly
+            /// rounded, and the rails hold — `recip(±0) = ±inf`,
+            /// `recip(±inf) = ±0` (issue #64). New backends MUST override
+            /// with exact division, not estimate-and-refine.
             #[inline(always)]
             fn recip(self, a: Self::Repr) -> Self::Repr {{ Self::rcp_approx(self, a) }}
 
             /// Precise reciprocal square root — see [`recip`] for rationale.
+            /// Overridden by every shipped backend as `1.0 / sqrt(a)` via exact
+            /// IEEE division and sqrt.
             #[inline(always)]
             fn rsqrt(self, a: Self::Repr) -> Self::Repr {{ Self::rsqrt_approx(self, a) }}
             {to_u8_trait}
@@ -1284,19 +1289,6 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
     };
 
     let approx_section = if !rcp_fn.is_empty() {
-        // The hardware estimate is ~12-14 bit and each Newton step doubles the
-        // correct bits, so f32 (24-bit mantissa) needs 1 step but f64 (53-bit)
-        // needs 2 to reach full precision.
-        let n_steps = if elem == "f64" { 2 } else { 1 };
-        // Last step is a tail expression (no `let`, so no clippy::let_and_return).
-        let recip_steps = (0..n_steps).map(|i| {
-            let step = format!("<Self as {trait_name}>::mul(self, r, <Self as {trait_name}>::sub(self, two, <Self as {trait_name}>::mul(self, a, r)))");
-            if i + 1 < n_steps { format!("let r = {step};") } else { step }
-        }).collect::<Vec<_>>().join("\n");
-        let rsqrt_steps = (0..n_steps).map(|i| {
-            let step = format!("<Self as {trait_name}>::mul(self, <Self as {trait_name}>::mul(self, half, y), <Self as {trait_name}>::sub(self, three, <Self as {trait_name}>::mul(self, a, <Self as {trait_name}>::mul(self, y, y))))");
-            if i + 1 < n_steps { format!("let y = {step};") } else { step }
-        }).collect::<Vec<_>>().join("\n");
         formatdoc! {r#"
             #[inline(always)]
             fn rcp_approx(self, a: {inner}) -> {inner} {{
@@ -1308,21 +1300,29 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
                 unsafe {{ {p}_{rsqrt_fn}_{s}(a) }}
             }}
 
-            // Newton-Raphson refinement to full precision ({n_steps} step(s)).
-            // Constants via value-based splat (impl block is target-feature gated).
+            // Exact IEEE division / sqrt, NOT Newton refinement of the hardware
+            // estimate. The refine form falls short of the correctly-rounded
+            // "full precision" contract precise_reciprocals.rs pins at 0 ULP,
+            // and it turns the IEEE rails into NaN: refining r ~= 1/a computes
+            // a*r, which is inf*0 = NaN at a = ±0 / ±inf, where exact division
+            // returns ±inf / ±0 (issue #64). Estimate-and-refine is what
+            // `rcp_approx`/`rsqrt_approx` are for.
+            //
+            // Measured cost of exactness on x86 f32 (Zen 5 9950X3D, L1-resident
+            // f32x8 throughput, benchmarks/recip_x86_zen5-9950x3d_2026-09-03.md):
+            //   exact div ~1.9x slower than the removed rcpps+Newton for recip,
+            //   ~3.6x for rsqrt. Correctness wins in the full-precision tier;
+            //   the estimate tier is unchanged for callers who want throughput.
             #[inline(always)]
             fn recip(self, a: {inner}) -> {inner} {{
-                let two = unsafe {{ {p}_set1_{s}(2.0) }};
-                let r = <Self as {trait_name}>::rcp_approx(self, a);
-                {recip_steps}
+                let one = unsafe {{ {p}_set1_{s}(1.0) }};
+                <Self as {trait_name}>::div(self, one, a)
             }}
 
             #[inline(always)]
             fn rsqrt(self, a: {inner}) -> {inner} {{
-                let half = unsafe {{ {p}_set1_{s}(0.5) }};
-                let three = unsafe {{ {p}_set1_{s}(3.0) }};
-                let y = <Self as {trait_name}>::rsqrt_approx(self, a);
-                {rsqrt_steps}
+                let one = unsafe {{ {p}_set1_{s}(1.0) }};
+                <Self as {trait_name}>::div(self, one, <Self as {trait_name}>::sqrt(self, a))
             }}
         "#}
     } else if elem == "f64" {

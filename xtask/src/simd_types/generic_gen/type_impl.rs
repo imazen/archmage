@@ -762,6 +762,12 @@ fn gen_approximations(ty: &SimdType) -> String {
                 /// no hardware estimate exists to undercut it). For the same bits on
                 /// *every* machine use [`rcp_approx_portable`](Self::rcp_approx_portable);
                 /// for full precision use [`recip`](Self::recip).
+                ///
+                /// Rail behavior is per-backend: ARM's fused refine step turns
+                /// `±0`/`±inf` lanes into NaN, while the raw x86 estimate and the
+                /// WASM/scalar division return the IEEE `±inf`/`±0`. If inputs can
+                /// hit the rails, use [`recip`](Self::recip), which is exact
+                /// everywhere.
                 #[inline(always)]
                 pub fn rcp_approx(self) -> Self {{
                     // Each backend owns its >=12-bit estimate (x86 raw rcpps; ARM
@@ -769,7 +775,11 @@ fn gen_approximations(ty: &SimdType) -> String {
                     Self(T::rcp_approx(self.1, self.0), self.1)
                 }}
 
-                /// Precise reciprocal (1/x), full f32 precision (Newton-Raphson refined).
+                /// Precise reciprocal (1/x): exact IEEE division on every backend.
+                ///
+                /// Correctly rounded (0 ULP vs `1.0 / x`), including the rails:
+                /// `recip(±0) = ±inf` and `recip(±inf) = ±0` — no NaN surprises
+                /// after saturating ops like `exp_midp` (issue #64).
                 #[inline(always)]
                 pub fn recip(self) -> Self {{
                     Self(T::recip(self.1, self.0), self.1)
@@ -777,6 +787,10 @@ fn gen_approximations(ty: &SimdType) -> String {
 
                 /// Fast reciprocal square root (1/sqrt(x)), ≥~12-bit floor — see
                 /// [`rcp_approx`](Self::rcp_approx) for the per-platform strategy.
+                ///
+                /// Same per-backend rail caveat as [`rcp_approx`](Self::rcp_approx):
+                /// ARM's fused refine step yields NaN at `+0`/`+inf`; use
+                /// [`rsqrt`](Self::rsqrt) when inputs can hit the rails.
                 #[inline(always)]
                 pub fn rsqrt_approx(self) -> Self {{
                     // ARM uses raw vrsqrte + 1 fused FRSQRTS; WASM/scalar a bit-hack
@@ -784,7 +798,12 @@ fn gen_approximations(ty: &SimdType) -> String {
                     Self(T::rsqrt_approx(self.1, self.0), self.1)
                 }}
 
-                /// Precise reciprocal square root, full f32 precision (Newton-Raphson refined).
+                /// Precise reciprocal square root (1/sqrt(x)): exact IEEE division
+                /// and square root on every backend.
+                ///
+                /// Bit-exact vs scalar `1.0 / x.sqrt()`, including the rails:
+                /// `rsqrt(+0) = +inf`, `rsqrt(-0) = -inf`, `rsqrt(+inf) = +0`,
+                /// negative inputs give NaN.
                 #[inline(always)]
                 pub fn rsqrt(self) -> Self {{
                     Self(T::rsqrt(self.1, self.0), self.1)
@@ -799,19 +818,26 @@ fn gen_approximations(ty: &SimdType) -> String {
                     Self(T::rcp_approx(self.1, self.0), self.1)
                 }}
 
-                /// Precise reciprocal (1/x), full precision (Newton-Raphson refined).
+                /// Precise reciprocal (1/x): exact IEEE division on every backend.
+                ///
+                /// Correctly rounded (0 ULP vs `1.0 / x`), including the rails:
+                /// `recip(±0) = ±inf` and `recip(±inf) = ±0` (issue #64).
                 #[inline(always)]
                 pub fn recip(self) -> Self {{
                     Self(T::recip(self.1, self.0), self.1)
                 }}
 
-                /// Fast reciprocal square root approximation: the backend's native estimate.
+                /// Fast reciprocal square root approximation: the backend's native
+                /// estimate. `±0`/`±inf` lanes can come back NaN on estimate-refine
+                /// backends — use [`rsqrt`](Self::rsqrt) when inputs can hit the rails.
                 #[inline(always)]
                 pub fn rsqrt_approx(self) -> Self {{
                     Self(T::rsqrt_approx(self.1, self.0), self.1)
                 }}
 
-                /// Precise reciprocal square root, full precision (Newton-Raphson refined).
+                /// Precise reciprocal square root (1/sqrt(x)): exact IEEE division
+                /// and square root on every backend. Bit-exact vs scalar
+                /// `1.0 / x.sqrt()`, rails included.
                 #[inline(always)]
                 pub fn rsqrt(self) -> Self {{
                     Self(T::rsqrt(self.1, self.0), self.1)

@@ -180,14 +180,19 @@ pub trait F64x4Backend: SimdToken + Sealed + Copy + 'static {
     }
 
     /// Precise reciprocal — defaults to delegating to [`rcp_approx`]
-    /// (which itself defaults to identity). Backends override with
-    /// Newton-Raphson refinement using a native splat for the constant.
+    /// (which itself defaults to identity). Every shipped backend
+    /// overrides this with exact IEEE division (`1.0 / a`): correctly
+    /// rounded, and the rails hold — `recip(±0) = ±inf`,
+    /// `recip(±inf) = ±0` (issue #64). New backends MUST override
+    /// with exact division, not estimate-and-refine.
     #[inline(always)]
     fn recip(self, a: Self::Repr) -> Self::Repr {
         Self::rcp_approx(self, a)
     }
 
     /// Precise reciprocal square root — see [`recip`] for rationale.
+    /// Overridden by every shipped backend as `1.0 / sqrt(a)` via exact
+    /// IEEE division and sqrt.
     #[inline(always)]
     fn rsqrt(self, a: Self::Repr) -> Self::Repr {
         Self::rsqrt_approx(self, a)

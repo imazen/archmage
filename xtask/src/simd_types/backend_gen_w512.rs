@@ -2026,34 +2026,6 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
     } else {
         "0x7FFF_FFFF_FFFF_FFFFu64 as i64"
     };
-    // Full-precision Newton steps from the 14-bit rcp14/rsqrt14 estimate:
-    // f64 (53-bit) needs 2 (14→28→56), f32 (24-bit) needs 1 (14→28).
-    let n_full_steps = if elem == "f64" { 2 } else { 1 };
-    // Each step refines `r`/`y`; the last is a tail expression (no `let`, so no
-    // clippy::let_and_return).
-    let recip_full_steps = (0..n_full_steps)
-        .map(|i| {
-            let step = format!("_mm512_mul_{s}(r, _mm512_sub_{s}(two, _mm512_mul_{s}(a, r)))");
-            if i + 1 < n_full_steps {
-                format!("let r = {step};")
-            } else {
-                step
-            }
-        })
-        .collect::<Vec<_>>()
-        .join("\n                    ");
-    let rsqrt_full_steps = (0..n_full_steps)
-        .map(|i| {
-            let step = format!("_mm512_mul_{s}(_mm512_mul_{s}(half, y), _mm512_sub_{s}(three, _mm512_mul_{s}(a, _mm512_mul_{s}(y, y))))");
-            if i + 1 < n_full_steps {
-                format!("let y = {step};")
-            } else {
-                step
-            }
-        })
-        .collect::<Vec<_>>()
-        .join("\n                    ");
-
     formatdoc! {r#"
         #[cfg(target_arch = "x86_64")]
         impl {trait_name} for archmage::{token} {{
@@ -2245,24 +2217,20 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
                 unsafe {{ _mm512_rsqrt14_{s}(a) }}
             }}
 
-            // Newton-Raphson to full precision ({n_full_steps} step(s) from rcp14/rsqrt14).
+            // Exact IEEE division / sqrt, NOT Newton refinement of rcp14/rsqrt14 —
+            // same rationale as the 128/256-bit x86 and NEON backends: refinement
+            // falls short of the 0 ULP precise_reciprocals.rs contract and turns
+            // the IEEE rails into NaN (a*r is inf*0 = NaN at a = ±0 / ±inf), where
+            // exact division returns ±inf / ±0 (issue #64). rcp14/rsqrt14 remain
+            // the estimate tier.
             #[inline(always)]
             fn recip(self, a: {inner}) -> {inner} {{
-                unsafe {{
-                    let two = _mm512_set1_{s}(2.0);
-                    let r = _mm512_rcp14_{s}(a);
-                    {recip_full_steps}
-                }}
+                unsafe {{ _mm512_div_{s}(_mm512_set1_{s}(1.0), a) }}
             }}
 
             #[inline(always)]
             fn rsqrt(self, a: {inner}) -> {inner} {{
-                unsafe {{
-                    let half = _mm512_set1_{s}(0.5);
-                    let three = _mm512_set1_{s}(3.0);
-                    let y = _mm512_rsqrt14_{s}(a);
-                    {rsqrt_full_steps}
-                }}
+                unsafe {{ _mm512_div_{s}(_mm512_set1_{s}(1.0), _mm512_sqrt_{s}(a)) }}
             }}
 
             #[inline(always)]

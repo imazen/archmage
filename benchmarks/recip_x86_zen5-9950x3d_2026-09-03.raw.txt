@@ -1,0 +1,80 @@
+=== run 1 (cargo bench, full log) ===
+[1m[92m    Finished[0m `bench` profile [optimized] target(s) in 0.02s
+[1m[92m     Running[0m benches/recip_x86.rs (target/release/deps/recip_x86-0acc7e87df38c6fa)
+
+  f32x8_rcp_full/1_rcpps_newton1  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      1.0 ±0.0µs  [1.0–1.0]µs   
+
+  f32x8_rcp_full/2_exact_div  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      1.9 ±0.0µs  [1.9–1.9]µs   
+
+  f32x8_rcp/3_rcp_approx_raw  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base
+  ╰─ _      832 ±2ns  [831–832]ns  
+
+  f32x8_rsqrt_full/1_rsqrtps_newton1  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      1.6 ±0.0µs  [1.6–1.6]µs   
+
+  f32x8_rsqrt_full/2_exact_div_sqrt  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      5.6 ±0.1µs  [5.5–5.6]µs   
+
+  f32x8_rsqrt/3_rsqrt_approx_raw  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base
+  ╰─ _      830 ±2ns  [830–831]ns  
+[zenbench] calibration: int=0.19ns/iter mem_bw=104.1GiB/s mem_lat=9.4ns
+[zenbench] timer resolution: 10ns, loop overhead: 0.19ns/iter, TSC: 4.300 ticks/ns (invariant)
+[zenbench] results → /tmp/zenbench/zenbench-1788474750-3d8f00.txt
+
+═══════════════════════════════════════════════════════════════
+  zenbench  1788474750-3d8f00
+  git: 6b5c0665bf503d3dbaab07099bca6da23343adfb
+═══════════════════════════════════════════════════════════════
+
+  total: 0.0s
+═══════════════════════════════════════════════════════════════
+  filter: cargo bench -- --group=NAME  format: --format=llm|csv|md|json
+
+=== run 3 (direct binary, full log) ===
+
+  f32x8_rcp_full/1_rcpps_newton1  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      1.0 ±0.0µs  [1.0–1.0]µs   
+
+  f32x8_rcp_full/2_exact_div  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      1.9 ±0.0µs  [1.9–1.9]µs   
+
+  f32x8_rcp/3_rcp_approx_raw  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base
+  ╰─ _      830 ±1ns  [830–831]ns  
+
+  f32x8_rsqrt_full/1_rsqrtps_newton1  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      1.6 ±0.0µs  [1.6–1.6]µs   
+
+  f32x8_rsqrt_full/2_exact_div_sqrt  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      5.8 ±0.3µs  [5.7–5.8]µs   
+
+  f32x8_rsqrt/3_rsqrt_approx_raw  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base
+  ╰─ _      830 ±1ns  [830–831]ns  
+[zenbench] calibration: int=0.19ns/iter mem_bw=99.1GiB/s mem_lat=9.5ns
+[zenbench] timer resolution: 10ns, loop overhead: 0.19ns/iter, TSC: 4.300 ticks/ns (invariant)
+[zenbench] results → /tmp/zenbench/zenbench-1788474800-3d9c17.txt
+
+═══════════════════════════════════════════════════════════════
+  zenbench  1788474800-3d9c17
+  git: 6b5c0665bf503d3dbaab07099bca6da23343adfb
+═══════════════════════════════════════════════════════════════
+
+  total: 0.0s
+═══════════════════════════════════════════════════════════════
+  filter: cargo bench -- --group=NAME  format: --format=llm|csv|md|json
+
+=== run 2 (direct binary, captured excerpt) ===
+rcp newton1 1.1µs / exact 1.9µs / approx 848ns; rsqrt newton1 1.6µs / exact 6.0µs (full log not captured — invoked with --help which zenbench ignores)

@@ -82,6 +82,10 @@ name = "rsqrt_arm"
 harness = false
 
 [[bench]]
+name = "recip_x86"
+harness = false
+
+[[bench]]
 name = "nostd_math_perf"
 harness = false
 

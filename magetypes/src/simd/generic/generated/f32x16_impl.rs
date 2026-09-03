@@ -387,19 +387,26 @@ impl<T: F32x16Backend> f32x16<T> {
         Self(T::rcp_approx(self.1, self.0), self.1)
     }
 
-    /// Precise reciprocal (1/x), full precision (Newton-Raphson refined).
+    /// Precise reciprocal (1/x): exact IEEE division on every backend.
+    ///
+    /// Correctly rounded (0 ULP vs `1.0 / x`), including the rails:
+    /// `recip(±0) = ±inf` and `recip(±inf) = ±0` (issue #64).
     #[inline(always)]
     pub fn recip(self) -> Self {
         Self(T::recip(self.1, self.0), self.1)
     }
 
-    /// Fast reciprocal square root approximation: the backend's native estimate.
+    /// Fast reciprocal square root approximation: the backend's native
+    /// estimate. `±0`/`±inf` lanes can come back NaN on estimate-refine
+    /// backends — use [`rsqrt`](Self::rsqrt) when inputs can hit the rails.
     #[inline(always)]
     pub fn rsqrt_approx(self) -> Self {
         Self(T::rsqrt_approx(self.1, self.0), self.1)
     }
 
-    /// Precise reciprocal square root, full precision (Newton-Raphson refined).
+    /// Precise reciprocal square root (1/sqrt(x)): exact IEEE division
+    /// and square root on every backend. Bit-exact vs scalar
+    /// `1.0 / x.sqrt()`, rails included.
     #[inline(always)]
     pub fn rsqrt(self) -> Self {
         Self(T::rsqrt(self.1, self.0), self.1)

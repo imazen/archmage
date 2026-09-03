@@ -228,33 +228,29 @@ impl F32x4Backend for archmage::X64V3Token {
         unsafe { _mm_rsqrt_ps(a) }
     }
 
-    // Newton-Raphson refinement to full precision (1 step(s)).
-    // Constants via value-based splat (impl block is target-feature gated).
+    // Exact IEEE division / sqrt, NOT Newton refinement of the hardware
+    // estimate. The refine form falls short of the correctly-rounded
+    // "full precision" contract precise_reciprocals.rs pins at 0 ULP,
+    // and it turns the IEEE rails into NaN: refining r ~= 1/a computes
+    // a*r, which is inf*0 = NaN at a = ±0 / ±inf, where exact division
+    // returns ±inf / ±0 (issue #64). Estimate-and-refine is what
+    // `rcp_approx`/`rsqrt_approx` are for.
+    //
+    // Measured cost of exactness on x86 f32 (Zen 5 9950X3D, L1-resident
+    // f32x8 throughput, benchmarks/recip_x86_zen5-9950x3d_2026-09-03.md):
+    //   exact div ~1.9x slower than the removed rcpps+Newton for recip,
+    //   ~3.6x for rsqrt. Correctness wins in the full-precision tier;
+    //   the estimate tier is unchanged for callers who want throughput.
     #[inline(always)]
     fn recip(self, a: __m128) -> __m128 {
-        let two = unsafe { _mm_set1_ps(2.0) };
-        let r = <Self as F32x4Backend>::rcp_approx(self, a);
-        <Self as F32x4Backend>::mul(
-            self,
-            r,
-            <Self as F32x4Backend>::sub(self, two, <Self as F32x4Backend>::mul(self, a, r)),
-        )
+        let one = unsafe { _mm_set1_ps(1.0) };
+        <Self as F32x4Backend>::div(self, one, a)
     }
 
     #[inline(always)]
     fn rsqrt(self, a: __m128) -> __m128 {
-        let half = unsafe { _mm_set1_ps(0.5) };
-        let three = unsafe { _mm_set1_ps(3.0) };
-        let y = <Self as F32x4Backend>::rsqrt_approx(self, a);
-        <Self as F32x4Backend>::mul(
-            self,
-            <Self as F32x4Backend>::mul(self, half, y),
-            <Self as F32x4Backend>::sub(
-                self,
-                three,
-                <Self as F32x4Backend>::mul(self, a, <Self as F32x4Backend>::mul(self, y, y)),
-            ),
-        )
+        let one = unsafe { _mm_set1_ps(1.0) };
+        <Self as F32x4Backend>::div(self, one, <Self as F32x4Backend>::sqrt(self, a))
     }
 
     // ====== Bitwise ======
@@ -514,33 +510,29 @@ impl F32x8Backend for archmage::X64V3Token {
         unsafe { _mm256_rsqrt_ps(a) }
     }
 
-    // Newton-Raphson refinement to full precision (1 step(s)).
-    // Constants via value-based splat (impl block is target-feature gated).
+    // Exact IEEE division / sqrt, NOT Newton refinement of the hardware
+    // estimate. The refine form falls short of the correctly-rounded
+    // "full precision" contract precise_reciprocals.rs pins at 0 ULP,
+    // and it turns the IEEE rails into NaN: refining r ~= 1/a computes
+    // a*r, which is inf*0 = NaN at a = ±0 / ±inf, where exact division
+    // returns ±inf / ±0 (issue #64). Estimate-and-refine is what
+    // `rcp_approx`/`rsqrt_approx` are for.
+    //
+    // Measured cost of exactness on x86 f32 (Zen 5 9950X3D, L1-resident
+    // f32x8 throughput, benchmarks/recip_x86_zen5-9950x3d_2026-09-03.md):
+    //   exact div ~1.9x slower than the removed rcpps+Newton for recip,
+    //   ~3.6x for rsqrt. Correctness wins in the full-precision tier;
+    //   the estimate tier is unchanged for callers who want throughput.
     #[inline(always)]
     fn recip(self, a: __m256) -> __m256 {
-        let two = unsafe { _mm256_set1_ps(2.0) };
-        let r = <Self as F32x8Backend>::rcp_approx(self, a);
-        <Self as F32x8Backend>::mul(
-            self,
-            r,
-            <Self as F32x8Backend>::sub(self, two, <Self as F32x8Backend>::mul(self, a, r)),
-        )
+        let one = unsafe { _mm256_set1_ps(1.0) };
+        <Self as F32x8Backend>::div(self, one, a)
     }
 
     #[inline(always)]
     fn rsqrt(self, a: __m256) -> __m256 {
-        let half = unsafe { _mm256_set1_ps(0.5) };
-        let three = unsafe { _mm256_set1_ps(3.0) };
-        let y = <Self as F32x8Backend>::rsqrt_approx(self, a);
-        <Self as F32x8Backend>::mul(
-            self,
-            <Self as F32x8Backend>::mul(self, half, y),
-            <Self as F32x8Backend>::sub(
-                self,
-                three,
-                <Self as F32x8Backend>::mul(self, a, <Self as F32x8Backend>::mul(self, y, y)),
-            ),
-        )
+        let one = unsafe { _mm256_set1_ps(1.0) };
+        <Self as F32x8Backend>::div(self, one, <Self as F32x8Backend>::sqrt(self, a))
     }
 
     // ====== Bitwise ======

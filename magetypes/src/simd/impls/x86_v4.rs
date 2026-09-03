@@ -232,27 +232,20 @@ impl F32x16Backend for archmage::X64V4Token {
         unsafe { _mm512_rsqrt14_ps(a) }
     }
 
-    // Newton-Raphson to full precision (1 step(s) from rcp14/rsqrt14).
+    // Exact IEEE division / sqrt, NOT Newton refinement of rcp14/rsqrt14 —
+    // same rationale as the 128/256-bit x86 and NEON backends: refinement
+    // falls short of the 0 ULP precise_reciprocals.rs contract and turns
+    // the IEEE rails into NaN (a*r is inf*0 = NaN at a = ±0 / ±inf), where
+    // exact division returns ±inf / ±0 (issue #64). rcp14/rsqrt14 remain
+    // the estimate tier.
     #[inline(always)]
     fn recip(self, a: __m512) -> __m512 {
-        unsafe {
-            let two = _mm512_set1_ps(2.0);
-            let r = _mm512_rcp14_ps(a);
-            _mm512_mul_ps(r, _mm512_sub_ps(two, _mm512_mul_ps(a, r)))
-        }
+        unsafe { _mm512_div_ps(_mm512_set1_ps(1.0), a) }
     }
 
     #[inline(always)]
     fn rsqrt(self, a: __m512) -> __m512 {
-        unsafe {
-            let half = _mm512_set1_ps(0.5);
-            let three = _mm512_set1_ps(3.0);
-            let y = _mm512_rsqrt14_ps(a);
-            _mm512_mul_ps(
-                _mm512_mul_ps(half, y),
-                _mm512_sub_ps(three, _mm512_mul_ps(a, _mm512_mul_ps(y, y))),
-            )
-        }
+        unsafe { _mm512_div_ps(_mm512_set1_ps(1.0), _mm512_sqrt_ps(a)) }
     }
 
     #[inline(always)]
@@ -470,32 +463,20 @@ impl F64x8Backend for archmage::X64V4Token {
         unsafe { _mm512_rsqrt14_pd(a) }
     }
 
-    // Newton-Raphson to full precision (2 step(s) from rcp14/rsqrt14).
+    // Exact IEEE division / sqrt, NOT Newton refinement of rcp14/rsqrt14 —
+    // same rationale as the 128/256-bit x86 and NEON backends: refinement
+    // falls short of the 0 ULP precise_reciprocals.rs contract and turns
+    // the IEEE rails into NaN (a*r is inf*0 = NaN at a = ±0 / ±inf), where
+    // exact division returns ±inf / ±0 (issue #64). rcp14/rsqrt14 remain
+    // the estimate tier.
     #[inline(always)]
     fn recip(self, a: __m512d) -> __m512d {
-        unsafe {
-            let two = _mm512_set1_pd(2.0);
-            let r = _mm512_rcp14_pd(a);
-            let r = _mm512_mul_pd(r, _mm512_sub_pd(two, _mm512_mul_pd(a, r)));
-            _mm512_mul_pd(r, _mm512_sub_pd(two, _mm512_mul_pd(a, r)))
-        }
+        unsafe { _mm512_div_pd(_mm512_set1_pd(1.0), a) }
     }
 
     #[inline(always)]
     fn rsqrt(self, a: __m512d) -> __m512d {
-        unsafe {
-            let half = _mm512_set1_pd(0.5);
-            let three = _mm512_set1_pd(3.0);
-            let y = _mm512_rsqrt14_pd(a);
-            let y = _mm512_mul_pd(
-                _mm512_mul_pd(half, y),
-                _mm512_sub_pd(three, _mm512_mul_pd(a, _mm512_mul_pd(y, y))),
-            );
-            _mm512_mul_pd(
-                _mm512_mul_pd(half, y),
-                _mm512_sub_pd(three, _mm512_mul_pd(a, _mm512_mul_pd(y, y))),
-            )
-        }
+        unsafe { _mm512_div_pd(_mm512_set1_pd(1.0), _mm512_sqrt_pd(a)) }
     }
 
     #[inline(always)]
@@ -2306,27 +2287,20 @@ impl F32x16Backend for archmage::X64V4xToken {
         unsafe { _mm512_rsqrt14_ps(a) }
     }
 
-    // Newton-Raphson to full precision (1 step(s) from rcp14/rsqrt14).
+    // Exact IEEE division / sqrt, NOT Newton refinement of rcp14/rsqrt14 —
+    // same rationale as the 128/256-bit x86 and NEON backends: refinement
+    // falls short of the 0 ULP precise_reciprocals.rs contract and turns
+    // the IEEE rails into NaN (a*r is inf*0 = NaN at a = ±0 / ±inf), where
+    // exact division returns ±inf / ±0 (issue #64). rcp14/rsqrt14 remain
+    // the estimate tier.
     #[inline(always)]
     fn recip(self, a: __m512) -> __m512 {
-        unsafe {
-            let two = _mm512_set1_ps(2.0);
-            let r = _mm512_rcp14_ps(a);
-            _mm512_mul_ps(r, _mm512_sub_ps(two, _mm512_mul_ps(a, r)))
-        }
+        unsafe { _mm512_div_ps(_mm512_set1_ps(1.0), a) }
     }
 
     #[inline(always)]
     fn rsqrt(self, a: __m512) -> __m512 {
-        unsafe {
-            let half = _mm512_set1_ps(0.5);
-            let three = _mm512_set1_ps(3.0);
-            let y = _mm512_rsqrt14_ps(a);
-            _mm512_mul_ps(
-                _mm512_mul_ps(half, y),
-                _mm512_sub_ps(three, _mm512_mul_ps(a, _mm512_mul_ps(y, y))),
-            )
-        }
+        unsafe { _mm512_div_ps(_mm512_set1_ps(1.0), _mm512_sqrt_ps(a)) }
     }
 
     #[inline(always)]
@@ -2544,32 +2518,20 @@ impl F64x8Backend for archmage::X64V4xToken {
         unsafe { _mm512_rsqrt14_pd(a) }
     }
 
-    // Newton-Raphson to full precision (2 step(s) from rcp14/rsqrt14).
+    // Exact IEEE division / sqrt, NOT Newton refinement of rcp14/rsqrt14 —
+    // same rationale as the 128/256-bit x86 and NEON backends: refinement
+    // falls short of the 0 ULP precise_reciprocals.rs contract and turns
+    // the IEEE rails into NaN (a*r is inf*0 = NaN at a = ±0 / ±inf), where
+    // exact division returns ±inf / ±0 (issue #64). rcp14/rsqrt14 remain
+    // the estimate tier.
     #[inline(always)]
     fn recip(self, a: __m512d) -> __m512d {
-        unsafe {
-            let two = _mm512_set1_pd(2.0);
-            let r = _mm512_rcp14_pd(a);
-            let r = _mm512_mul_pd(r, _mm512_sub_pd(two, _mm512_mul_pd(a, r)));
-            _mm512_mul_pd(r, _mm512_sub_pd(two, _mm512_mul_pd(a, r)))
-        }
+        unsafe { _mm512_div_pd(_mm512_set1_pd(1.0), a) }
     }
 
     #[inline(always)]
     fn rsqrt(self, a: __m512d) -> __m512d {
-        unsafe {
-            let half = _mm512_set1_pd(0.5);
-            let three = _mm512_set1_pd(3.0);
-            let y = _mm512_rsqrt14_pd(a);
-            let y = _mm512_mul_pd(
-                _mm512_mul_pd(half, y),
-                _mm512_sub_pd(three, _mm512_mul_pd(a, _mm512_mul_pd(y, y))),
-            );
-            _mm512_mul_pd(
-                _mm512_mul_pd(half, y),
-                _mm512_sub_pd(three, _mm512_mul_pd(a, _mm512_mul_pd(y, y))),
-            )
-        }
+        unsafe { _mm512_div_pd(_mm512_set1_pd(1.0), _mm512_sqrt_pd(a)) }
     }
 
     #[inline(always)]
