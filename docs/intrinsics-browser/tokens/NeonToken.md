@@ -3,7 +3,7 @@
 Proof that NEON is available.
 
 **Architecture:** aarch64 | **Features:** neon
-**Total intrinsics:** 3408 (2828 safe, 580 unsafe, 3332 stable, 76 unstable/unknown)
+**Total intrinsics:** 3450 (2870 safe, 580 unsafe, 3374 stable, 76 unstable/unknown)
 
 ## Usage
 
@@ -34,7 +34,7 @@ fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
 
 ## All Intrinsics
 
-### Stable, Safe (2810 intrinsics)
+### Stable, Safe (2852 intrinsics)
 
 | Name | Description | Instruction | Timing (H/Z4) |
 |------|-------------|-------------|---------------|
@@ -525,7 +525,7 @@ fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
 | `vcntq_u8` | Population count per byte | vcnt | — |
 | `vcombine_f16` | Join two smaller vectors into a single larger vector | nop | — |
 | `vcombine_f32` | Join two smaller vectors into a single larger vector | nop | — |
-| `vcombine_f64` | Vector combine | mov | — |
+| `vcombine_f64` | Join two smaller vectors into a single larger vector | mov | — |
 | `vcombine_p16` | Join two smaller vectors into a single larger vector | nop | — |
 | `vcombine_p64` | Join two smaller vectors into a single larger vector | nop | — |
 | `vcombine_p8` | Join two smaller vectors into a single larger vector | nop | — |
@@ -538,30 +538,30 @@ fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
 | `vcombine_u64` | Join two smaller vectors into a single larger vector | nop | — |
 | `vcombine_u8` | Join two smaller vectors into a single larger vector | nop | — |
 | `vcopy_lane_f32` | Insert vector element from another vector element | mov | — |
-| `vcopy_lane_f64` | Duplicate vector element to vector or scalar | nop | — |
+| `vcopy_lane_f64` | Insert vector element from another vector element | nop | — |
 | `vcopy_lane_p16` | Insert vector element from another vector element | mov | — |
-| `vcopy_lane_p64` | Duplicate vector element to vector or scalar | nop | — |
+| `vcopy_lane_p64` | Insert vector element from another vector element | nop | — |
 | `vcopy_lane_p8` | Insert vector element from another vector element | mov | — |
 | `vcopy_lane_s16` | Insert vector element from another vector element | mov | — |
 | `vcopy_lane_s32` | Insert vector element from another vector element | mov | — |
-| `vcopy_lane_s64` | Duplicate vector element to vector or scalar | nop | — |
+| `vcopy_lane_s64` | Insert vector element from another vector element | nop | — |
 | `vcopy_lane_s8` | Insert vector element from another vector element | mov | — |
 | `vcopy_lane_u16` | Insert vector element from another vector element | mov | — |
 | `vcopy_lane_u32` | Insert vector element from another vector element | mov | — |
-| `vcopy_lane_u64` | Duplicate vector element to vector or scalar | nop | — |
+| `vcopy_lane_u64` | Insert vector element from another vector element | nop | — |
 | `vcopy_lane_u8` | Insert vector element from another vector element | mov | — |
 | `vcopy_laneq_f32` | Insert vector element from another vector element | mov | — |
-| `vcopy_laneq_f64` | Duplicate vector element to vector or scalar | nop | — |
+| `vcopy_laneq_f64` | Insert vector element from another vector element | nop | — |
 | `vcopy_laneq_p16` | Insert vector element from another vector element | mov | — |
-| `vcopy_laneq_p64` | Duplicate vector element to vector or scalar | nop | — |
+| `vcopy_laneq_p64` | Insert vector element from another vector element | nop | — |
 | `vcopy_laneq_p8` | Insert vector element from another vector element | mov | — |
 | `vcopy_laneq_s16` | Insert vector element from another vector element | mov | — |
 | `vcopy_laneq_s32` | Insert vector element from another vector element | mov | — |
-| `vcopy_laneq_s64` | Duplicate vector element to vector or scalar | nop | — |
+| `vcopy_laneq_s64` | Insert vector element from another vector element | nop | — |
 | `vcopy_laneq_s8` | Insert vector element from another vector element | mov | — |
 | `vcopy_laneq_u16` | Insert vector element from another vector element | mov | — |
 | `vcopy_laneq_u32` | Insert vector element from another vector element | mov | — |
-| `vcopy_laneq_u64` | Duplicate vector element to vector or scalar | nop | — |
+| `vcopy_laneq_u64` | Insert vector element from another vector element | nop | — |
 | `vcopy_laneq_u8` | Insert vector element from another vector element | mov | — |
 | `vcopyq_lane_f32` | Insert vector element from another vector element | mov | — |
 | `vcopyq_lane_f64` | Insert vector element from another vector element | mov | — |
@@ -895,7 +895,7 @@ fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
 | `vget_high_f32` | Duplicate vector element to vector or scalar | "vmov" | — |
 | `vget_high_f64` | Duplicate vector element to vector or scalar | nop | — |
 | `vget_high_p16` | Duplicate vector element to vector or scalar | "vmov" | — |
-| `vget_high_p64` | Duplicate vector element to vector or scalar | ext | — |
+| `vget_high_p64` | Duplicate vector element to vector or scalar | "vmov" | — |
 | `vget_high_p8` | Duplicate vector element to vector or scalar | "vmov" | — |
 | `vget_high_s16` | Duplicate vector element to vector or scalar | "vmov" | — |
 | `vget_high_s32` | Duplicate vector element to vector or scalar | "vmov" | — |
@@ -1966,6 +1966,7 @@ fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
 | `vreinterpret_p16_f16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_p16_f32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_p16_f64` | Vector reinterpret cast operation | nop | — |
+| `vreinterpret_p16_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_p16_p8` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_p16_s16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_p16_s32` | Vector reinterpret cast operation | nop | — |
@@ -1978,12 +1979,21 @@ fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
 | `vreinterpret_p64_f16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_p64_f32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_p64_f64` | Vector reinterpret cast operation | nop | — |
+| `vreinterpret_p64_p16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpret_p64_p8` | Vector reinterpret cast operation | nop | — |
+| `vreinterpret_p64_s16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpret_p64_s32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_p64_s64` | Vector reinterpret cast operation | nop | — |
+| `vreinterpret_p64_s8` | Vector reinterpret cast operation | nop | — |
+| `vreinterpret_p64_u16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpret_p64_u32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_p64_u64` | Vector reinterpret cast operation | nop | — |
+| `vreinterpret_p64_u8` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_p8_f16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_p8_f32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_p8_f64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_p8_p16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpret_p8_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_p8_s16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_p8_s32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_p8_s64` | Vector reinterpret cast operation | nop | — |
@@ -1996,6 +2006,7 @@ fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
 | `vreinterpret_s16_f32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_s16_f64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_s16_p16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpret_s16_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_s16_p8` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_s16_s32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_s16_s64` | Vector reinterpret cast operation | nop | — |
@@ -2008,6 +2019,7 @@ fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
 | `vreinterpret_s32_f32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_s32_f64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_s32_p16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpret_s32_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_s32_p8` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_s32_s16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_s32_s64` | Vector reinterpret cast operation | nop | — |
@@ -2033,6 +2045,7 @@ fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
 | `vreinterpret_s8_f32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_s8_f64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_s8_p16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpret_s8_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_s8_p8` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_s8_s16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_s8_s32` | Vector reinterpret cast operation | nop | — |
@@ -2045,6 +2058,7 @@ fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
 | `vreinterpret_u16_f32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_u16_f64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_u16_p16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpret_u16_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_u16_p8` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_u16_s16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_u16_s32` | Vector reinterpret cast operation | nop | — |
@@ -2057,6 +2071,7 @@ fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
 | `vreinterpret_u32_f32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_u32_f64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_u32_p16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpret_u32_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_u32_p8` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_u32_s16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_u32_s32` | Vector reinterpret cast operation | nop | — |
@@ -2082,6 +2097,7 @@ fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
 | `vreinterpret_u8_f32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_u8_f64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_u8_p16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpret_u8_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_u8_p8` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_u8_s16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpret_u8_s32` | Vector reinterpret cast operation | nop | — |
@@ -2135,9 +2151,20 @@ fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
 | `vreinterpretq_p128_f16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p128_f32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p128_f64` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_p128_p16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_p128_p8` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_p128_s16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_p128_s32` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_p128_s64` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_p128_s8` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_p128_u16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_p128_u32` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_p128_u64` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_p128_u8` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p16_f16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p16_f32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p16_f64` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_p16_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p16_p8` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p16_s16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p16_s32` | Vector reinterpret cast operation | nop | — |
@@ -2150,12 +2177,21 @@ fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
 | `vreinterpretq_p64_f16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p64_f32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p64_f64` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_p64_p16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_p64_p8` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_p64_s16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_p64_s32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p64_s64` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_p64_s8` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_p64_u16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_p64_u32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p64_u64` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_p64_u8` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p8_f16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p8_f32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p8_f64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p8_p16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_p8_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p8_s16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p8_s32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p8_s64` | Vector reinterpret cast operation | nop | — |
@@ -2168,6 +2204,7 @@ fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
 | `vreinterpretq_s16_f32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_s16_f64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_s16_p16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_s16_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_s16_p8` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_s16_s32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_s16_s64` | Vector reinterpret cast operation | nop | — |
@@ -2180,6 +2217,7 @@ fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
 | `vreinterpretq_s32_f32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_s32_f64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_s32_p16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_s32_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_s32_p8` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_s32_s16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_s32_s64` | Vector reinterpret cast operation | nop | — |
@@ -2205,6 +2243,7 @@ fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
 | `vreinterpretq_s8_f32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_s8_f64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_s8_p16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_s8_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_s8_p8` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_s8_s16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_s8_s32` | Vector reinterpret cast operation | nop | — |
@@ -2217,6 +2256,7 @@ fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
 | `vreinterpretq_u16_f32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_u16_f64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_u16_p16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_u16_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_u16_p8` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_u16_s16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_u16_s32` | Vector reinterpret cast operation | nop | — |
@@ -2229,6 +2269,7 @@ fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
 | `vreinterpretq_u32_f32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_u32_f64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_u32_p16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_u32_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_u32_p8` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_u32_s16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_u32_s32` | Vector reinterpret cast operation | nop | — |
@@ -2254,6 +2295,7 @@ fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
 | `vreinterpretq_u8_f32` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_u8_f64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_u8_p16` | Vector reinterpret cast operation | nop | — |
+| `vreinterpretq_u8_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_u8_p8` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_u8_s16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_u8_s32` | Vector reinterpret cast operation | nop | — |

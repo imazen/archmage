@@ -3,7 +3,7 @@
 Proof that NEON + AES is available.
 
 **Architecture:** aarch64 | **Features:** neon, aes
-**Total intrinsics:** 117 (67 safe, 50 unsafe, 108 stable, 9 unstable/unknown)
+**Total intrinsics:** 75 (25 safe, 50 unsafe, 66 stable, 9 unstable/unknown)
 
 ## Usage
 
@@ -34,7 +34,7 @@ fn process_chunk(_: NeonAesToken, chunk: &mut [f32; 4]) {
 
 ## All Intrinsics
 
-### Stable, Safe (67 intrinsics)
+### Stable, Safe (25 intrinsics)
 
 | Name | Description | Instruction | Timing (H/Z4) |
 |------|-------------|-------------|---------------|
@@ -45,60 +45,18 @@ fn process_chunk(_: NeonAesToken, chunk: &mut [f32; 4]) {
 | `vcreate_p64` | Insert vector element from another vector element | nop | — |
 | `vmull_high_p64` | Polynomial multiply long | pmull2 | — |
 | `vmull_p64` | Polynomial multiply long | pmull | — |
-| `vreinterpret_p16_p64` | Vector reinterpret cast operation | nop | — |
-| `vreinterpret_p64_p16` | Vector reinterpret cast operation | nop | — |
-| `vreinterpret_p64_p8` | Vector reinterpret cast operation | nop | — |
-| `vreinterpret_p64_s16` | Vector reinterpret cast operation | nop | — |
-| `vreinterpret_p64_s32` | Vector reinterpret cast operation | nop | — |
-| `vreinterpret_p64_s8` | Vector reinterpret cast operation | nop | — |
-| `vreinterpret_p64_u16` | Vector reinterpret cast operation | nop | — |
-| `vreinterpret_p64_u32` | Vector reinterpret cast operation | nop | — |
-| `vreinterpret_p64_u8` | Vector reinterpret cast operation | nop | — |
-| `vreinterpret_p8_p64` | Vector reinterpret cast operation | nop | — |
-| `vreinterpret_s16_p64` | Vector reinterpret cast operation | nop | — |
-| `vreinterpret_s32_p64` | Vector reinterpret cast operation | nop | — |
-| `vreinterpret_s8_p64` | Vector reinterpret cast operation | nop | — |
-| `vreinterpret_u16_p64` | Vector reinterpret cast operation | nop | — |
-| `vreinterpret_u32_p64` | Vector reinterpret cast operation | nop | — |
-| `vreinterpret_u8_p64` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_p128_p16` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p128_p64` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_p128_p8` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_p128_s16` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_p128_s32` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_p128_s64` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_p128_s8` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_p128_u16` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_p128_u32` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_p128_u64` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_p128_u8` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p16_p128` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_p16_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p64_p128` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_p64_p16` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_p64_p8` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_p64_s16` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_p64_s32` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_p64_s8` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_p64_u16` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_p64_u32` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_p64_u8` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_p8_p128` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_p8_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_s16_p128` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_s16_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_s32_p128` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_s32_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_s64_p128` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_s8_p128` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_s8_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_u16_p128` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_u16_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_u32_p128` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_u32_p64` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_u64_p128` | Vector reinterpret cast operation | nop | — |
 | `vreinterpretq_u8_p128` | Vector reinterpret cast operation | nop | — |
-| `vreinterpretq_u8_p64` | Vector reinterpret cast operation | nop | — |
 | `vset_lane_p64` | Insert vector element from another vector element | nop | — |
 | `vsetq_lane_p64` | Insert vector element from another vector element | nop | — |
 | `vsli_n_p64` | Shift Left and Insert (immediate) | sli | — |
