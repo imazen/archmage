@@ -3,7 +3,7 @@
 Auto-generated reference mapping stdarch intrinsics to archmage tokens.
 Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 
-## NeonAesToken (115 intrinsics)
+## NeonAesToken (73 intrinsics)
 
 ### Load
 
@@ -43,60 +43,18 @@ Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 - `vcreate_p64`
 - `vmull_high_p64`
 - `vmull_p64`
-- `vreinterpret_p16_p64`
-- `vreinterpret_p64_p16`
-- `vreinterpret_p64_p8`
-- `vreinterpret_p64_s16`
-- `vreinterpret_p64_s32`
-- `vreinterpret_p64_s8`
-- `vreinterpret_p64_u16`
-- `vreinterpret_p64_u32`
-- `vreinterpret_p64_u8`
-- `vreinterpret_p8_p64`
-- `vreinterpret_s16_p64`
-- `vreinterpret_s32_p64`
-- `vreinterpret_s8_p64`
-- `vreinterpret_u16_p64`
-- `vreinterpret_u32_p64`
-- `vreinterpret_u8_p64`
-- `vreinterpretq_p128_p16`
 - `vreinterpretq_p128_p64`
-- `vreinterpretq_p128_p8`
-- `vreinterpretq_p128_s16`
-- `vreinterpretq_p128_s32`
-- `vreinterpretq_p128_s64`
-- `vreinterpretq_p128_s8`
-- `vreinterpretq_p128_u16`
-- `vreinterpretq_p128_u32`
-- `vreinterpretq_p128_u64`
-- `vreinterpretq_p128_u8`
 - `vreinterpretq_p16_p128`
-- `vreinterpretq_p16_p64`
 - `vreinterpretq_p64_p128`
-- `vreinterpretq_p64_p16`
-- `vreinterpretq_p64_p8`
-- `vreinterpretq_p64_s16`
-- `vreinterpretq_p64_s32`
-- `vreinterpretq_p64_s8`
-- `vreinterpretq_p64_u16`
-- `vreinterpretq_p64_u32`
-- `vreinterpretq_p64_u8`
 - `vreinterpretq_p8_p128`
-- `vreinterpretq_p8_p64`
 - `vreinterpretq_s16_p128`
-- `vreinterpretq_s16_p64`
 - `vreinterpretq_s32_p128`
-- `vreinterpretq_s32_p64`
 - `vreinterpretq_s64_p128`
 - `vreinterpretq_s8_p128`
-- `vreinterpretq_s8_p64`
 - `vreinterpretq_u16_p128`
-- `vreinterpretq_u16_p64`
 - `vreinterpretq_u32_p128`
-- `vreinterpretq_u32_p64`
 - `vreinterpretq_u64_p128`
 - `vreinterpretq_u8_p128`
-- `vreinterpretq_u8_p64`
 - `vset_lane_p64`
 - `vsetq_lane_p64`
 - `vsli_n_p64`
@@ -156,7 +114,7 @@ Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 - `vsha512su1q_u64`
 - `vxarq_u64`
 
-## NeonToken / Arm64 (4084 intrinsics)
+## NeonToken / Arm64 (4126 intrinsics)
 
 ### Load
 
@@ -2907,6 +2865,7 @@ Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpret_p16_f16`
 - `vreinterpret_p16_f32`
 - `vreinterpret_p16_f64`
+- `vreinterpret_p16_p64`
 - `vreinterpret_p16_p8`
 - `vreinterpret_p16_s16`
 - `vreinterpret_p16_s32`
@@ -2919,12 +2878,21 @@ Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpret_p64_f16`
 - `vreinterpret_p64_f32`
 - `vreinterpret_p64_f64`
+- `vreinterpret_p64_p16`
+- `vreinterpret_p64_p8`
+- `vreinterpret_p64_s16`
+- `vreinterpret_p64_s32`
 - `vreinterpret_p64_s64`
+- `vreinterpret_p64_s8`
+- `vreinterpret_p64_u16`
+- `vreinterpret_p64_u32`
 - `vreinterpret_p64_u64`
+- `vreinterpret_p64_u8`
 - `vreinterpret_p8_f16`
 - `vreinterpret_p8_f32`
 - `vreinterpret_p8_f64`
 - `vreinterpret_p8_p16`
+- `vreinterpret_p8_p64`
 - `vreinterpret_p8_s16`
 - `vreinterpret_p8_s32`
 - `vreinterpret_p8_s64`
@@ -2937,6 +2905,7 @@ Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpret_s16_f32`
 - `vreinterpret_s16_f64`
 - `vreinterpret_s16_p16`
+- `vreinterpret_s16_p64`
 - `vreinterpret_s16_p8`
 - `vreinterpret_s16_s32`
 - `vreinterpret_s16_s64`
@@ -2949,6 +2918,7 @@ Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpret_s32_f32`
 - `vreinterpret_s32_f64`
 - `vreinterpret_s32_p16`
+- `vreinterpret_s32_p64`
 - `vreinterpret_s32_p8`
 - `vreinterpret_s32_s16`
 - `vreinterpret_s32_s64`
@@ -2974,6 +2944,7 @@ Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpret_s8_f32`
 - `vreinterpret_s8_f64`
 - `vreinterpret_s8_p16`
+- `vreinterpret_s8_p64`
 - `vreinterpret_s8_p8`
 - `vreinterpret_s8_s16`
 - `vreinterpret_s8_s32`
@@ -2986,6 +2957,7 @@ Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpret_u16_f32`
 - `vreinterpret_u16_f64`
 - `vreinterpret_u16_p16`
+- `vreinterpret_u16_p64`
 - `vreinterpret_u16_p8`
 - `vreinterpret_u16_s16`
 - `vreinterpret_u16_s32`
@@ -2998,6 +2970,7 @@ Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpret_u32_f32`
 - `vreinterpret_u32_f64`
 - `vreinterpret_u32_p16`
+- `vreinterpret_u32_p64`
 - `vreinterpret_u32_p8`
 - `vreinterpret_u32_s16`
 - `vreinterpret_u32_s32`
@@ -3023,6 +2996,7 @@ Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpret_u8_f32`
 - `vreinterpret_u8_f64`
 - `vreinterpret_u8_p16`
+- `vreinterpret_u8_p64`
 - `vreinterpret_u8_p8`
 - `vreinterpret_u8_s16`
 - `vreinterpret_u8_s32`
@@ -3076,9 +3050,20 @@ Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpretq_p128_f16`
 - `vreinterpretq_p128_f32`
 - `vreinterpretq_p128_f64`
+- `vreinterpretq_p128_p16`
+- `vreinterpretq_p128_p8`
+- `vreinterpretq_p128_s16`
+- `vreinterpretq_p128_s32`
+- `vreinterpretq_p128_s64`
+- `vreinterpretq_p128_s8`
+- `vreinterpretq_p128_u16`
+- `vreinterpretq_p128_u32`
+- `vreinterpretq_p128_u64`
+- `vreinterpretq_p128_u8`
 - `vreinterpretq_p16_f16`
 - `vreinterpretq_p16_f32`
 - `vreinterpretq_p16_f64`
+- `vreinterpretq_p16_p64`
 - `vreinterpretq_p16_p8`
 - `vreinterpretq_p16_s16`
 - `vreinterpretq_p16_s32`
@@ -3091,12 +3076,21 @@ Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpretq_p64_f16`
 - `vreinterpretq_p64_f32`
 - `vreinterpretq_p64_f64`
+- `vreinterpretq_p64_p16`
+- `vreinterpretq_p64_p8`
+- `vreinterpretq_p64_s16`
+- `vreinterpretq_p64_s32`
 - `vreinterpretq_p64_s64`
+- `vreinterpretq_p64_s8`
+- `vreinterpretq_p64_u16`
+- `vreinterpretq_p64_u32`
 - `vreinterpretq_p64_u64`
+- `vreinterpretq_p64_u8`
 - `vreinterpretq_p8_f16`
 - `vreinterpretq_p8_f32`
 - `vreinterpretq_p8_f64`
 - `vreinterpretq_p8_p16`
+- `vreinterpretq_p8_p64`
 - `vreinterpretq_p8_s16`
 - `vreinterpretq_p8_s32`
 - `vreinterpretq_p8_s64`
@@ -3109,6 +3103,7 @@ Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpretq_s16_f32`
 - `vreinterpretq_s16_f64`
 - `vreinterpretq_s16_p16`
+- `vreinterpretq_s16_p64`
 - `vreinterpretq_s16_p8`
 - `vreinterpretq_s16_s32`
 - `vreinterpretq_s16_s64`
@@ -3121,6 +3116,7 @@ Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpretq_s32_f32`
 - `vreinterpretq_s32_f64`
 - `vreinterpretq_s32_p16`
+- `vreinterpretq_s32_p64`
 - `vreinterpretq_s32_p8`
 - `vreinterpretq_s32_s16`
 - `vreinterpretq_s32_s64`
@@ -3146,6 +3142,7 @@ Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpretq_s8_f32`
 - `vreinterpretq_s8_f64`
 - `vreinterpretq_s8_p16`
+- `vreinterpretq_s8_p64`
 - `vreinterpretq_s8_p8`
 - `vreinterpretq_s8_s16`
 - `vreinterpretq_s8_s32`
@@ -3158,6 +3155,7 @@ Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpretq_u16_f32`
 - `vreinterpretq_u16_f64`
 - `vreinterpretq_u16_p16`
+- `vreinterpretq_u16_p64`
 - `vreinterpretq_u16_p8`
 - `vreinterpretq_u16_s16`
 - `vreinterpretq_u16_s32`
@@ -3170,6 +3168,7 @@ Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpretq_u32_f32`
 - `vreinterpretq_u32_f64`
 - `vreinterpretq_u32_p16`
+- `vreinterpretq_u32_p64`
 - `vreinterpretq_u32_p8`
 - `vreinterpretq_u32_s16`
 - `vreinterpretq_u32_s32`
@@ -3195,6 +3194,7 @@ Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 - `vreinterpretq_u8_f32`
 - `vreinterpretq_u8_f64`
 - `vreinterpretq_u8_p16`
+- `vreinterpretq_u8_p64`
 - `vreinterpretq_u8_p8`
 - `vreinterpretq_u8_s16`
 - `vreinterpretq_u8_s32`
@@ -4241,13 +4241,13 @@ Based on Rust 1.96 stdarch. Regenerate: `cargo xtask generate`
 - `vst4q_u32` (unsafe)
 - `vst4q_u64` (unsafe)
 - `vst4q_u8` (unsafe)
-- `vstl1_lane_f64`
-- `vstl1_lane_p64`
-- `vstl1_lane_s64`
-- `vstl1_lane_u64`
-- `vstl1q_lane_f64`
-- `vstl1q_lane_p64`
-- `vstl1q_lane_s64`
-- `vstl1q_lane_u64`
+- `vstl1_lane_f64` (unsafe)
+- `vstl1_lane_p64` (unsafe)
+- `vstl1_lane_s64` (unsafe)
+- `vstl1_lane_u64` (unsafe)
+- `vstl1q_lane_f64` (unsafe)
+- `vstl1q_lane_p64` (unsafe)
+- `vstl1q_lane_s64` (unsafe)
+- `vstl1q_lane_u64` (unsafe)
 - `vstrq_p128` (unsafe)
 
