@@ -21,6 +21,7 @@
 
 - **magetypes: the NEON `recip()`/`rsqrt()` precision fixes are now in the generator, not just its output.** `defbbc2`/`1b36fc7` fixed `magetypes/src/simd/impls/arm_neon.rs` — a generated file — while `xtask/src/simd_types/backend_gen.rs` kept emitting the estimate-and-refine form, so any `just generate` silently reverted both fixes and re-broke `magetypes/tests/precise_reciprocals.rs`. The template now emits exact `FDIV` / `FDIV`+`FSQRT`, so regeneration is idempotent. Reported as out-of-scope drift in [#66](https://github.com/imazen/archmage/pull/66).
 - **magetypes: NEON `f64` `recip()`/`rsqrt()` are now bit-exact.** The f64 backend still refined `vrecpeq_f64`/`vrsqrteq_f64` with three Newton steps, landing 1 ULP off its documented "full precision" contract (`1/sqrt(1.000001)` gave `0.9999995000003751`, want `0.999999500000375`; measured on Apple M-series). f32 was fixed in `defbbc2`/`1b36fc7`; f64 was missed because the test only covered f32. x86 already computed f64 exactly, so this also removes a cross-arch divergence. `rcp_approx`/`rsqrt_approx` are unchanged on every backend.
+- **magetypes docs: `mul_add`/`mul_sub` no longer claim fusion on every backend.** The generic front-end, backend-trait, and `f32x1`/`f64x1` doc comments called every implementation "Fused multiply-add"; the scalar and WASM backends actually compute an unfused `mul` + `add` (two roundings) and can differ from the hardware-FMA backends (x86 v3/v4, NEON) by 1 ULP per lane. Doc-only — no behavior change. (4546c43)
 
 ### Fixed
 
