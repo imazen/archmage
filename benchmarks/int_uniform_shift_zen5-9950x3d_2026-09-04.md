@@ -33,16 +33,21 @@ with the 32-bit family added as the PR #71 follow-up. Same bench
 |---|---|---|---|
 | 16 | 1.45–1.50 ns | 1.49–1.51 ns | parity |
 | 256 | 10.4 ns | 10.2–10.3 ns | parity |
-| 4096 | 105–106 ns | 141–149 ns | **+34–40%, reproducible** |
+| 4096 | 105–106 ns | 141–149 ns | **+34–40% as originally sampled — see correction below** |
 | 65536 | 2.1 µs | 2.3 µs | +9% |
 | 1M | 59.9–69.7 µs | 66.5–67.1 µs | noise-level (runs disagree on sign) |
 
-The 4096-element u32 gap is real across runs but NOT explained by the obvious
-suspect: disassembly shows the count already hoisted to a register
-(`psrld %xmm1, %xmmN`, no in-loop `movd`, loop 2x unrolled), so the
-per-iteration difference is only the register-count vs immediate-count PSRLD
-form plus whatever loop-shaping LLVM chose differently. Cause not isolated —
-recorded rather than hidden. At the sizes the motivating kernels run
+**CORRECTION (post-hoc root cause, `anomaly-u32-shift-4096-INVESTIGATION.md`):**
+the 4096 gap is NOT a property of the uniform shift. A dedicated investigation
+(PMU counters + a two-binary layout experiment) showed a code-placement-keyed
+bistable dispatch state on Zen 5 — AGU scheduler-token exhaustion in the
+L1-resident streaming loop — that afflicts either kernel depending on where
+the code lands: shifting the binary by 208 bytes INVERTED which form was slow
+on identical machine code. Interleaved sampling shows the true cost of the
+register-count form is 0–20% and unstable at 4096, parity at 65536/1M (this
+table's sequential "+9% at 64K" also did not reproduce under interleaving),
+and the 256-bit lowering is robustly fast in every layout. The original
+sequential sampling here drew one stable unlucky layout. At the sizes the motivating kernels run
 (dequant rows, thousands of lanes and up, usually memory-adjacent), the
 worst measured cost of one generic body over per-N monomorphisation is the
 +9% at 64K lanes; parity below 1K lanes and at streaming sizes.
