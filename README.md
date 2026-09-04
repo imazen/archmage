@@ -413,6 +413,8 @@ For inherent methods, `self` works naturally — no special parameters needed. F
 
 `magetypes` provides ergonomic SIMD vector types (`f32x8`, `i32x4`, etc.) with natural Rust operators. It's an exploratory companion crate — the API may change between releases.
 
+One generic body runs on x86, NEON, WASM, and scalar — ISAs that quietly disagree on corner cases (shift-count overflow, reciprocal rails, narrowing lane order, NaN in min/max). [docs/CROSS-ISA-DIVERGENCES.md](docs/CROSS-ISA-DIVERGENCES.md) is the canonical inventory of every known case: which ones magetypes fixes up to identical semantics (and what the fixup costs), which the API makes unrepresentable, and which stay per-backend by documented contract.
+
 ```toml
 [dependencies]
 archmage = "0.9.27"

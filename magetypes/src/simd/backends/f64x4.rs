@@ -179,20 +179,20 @@ pub trait F64x4Backend: SimdToken + Sealed + Copy + 'static {
         <Self as F64x4Backend>::min(self, <Self as F64x4Backend>::max(self, a, lo), hi)
     }
 
-    /// Precise reciprocal — defaults to delegating to [`rcp_approx`]
-    /// (which itself defaults to identity). Every shipped backend
-    /// overrides this with exact IEEE division (`1.0 / a`): correctly
-    /// rounded, and the rails hold — `recip(±0) = ±inf`,
-    /// `recip(±inf) = ±0` (issue #64). New backends MUST override
-    /// with exact division, not estimate-and-refine.
+    /// Working-tier reciprocal — defaults to delegating to
+    /// [`rcp_approx`] (which itself defaults to identity), so every
+    /// backend MUST override. Contract: <= 4 ULP by the backend's
+    /// fastest conforming path (estimate + Newton on x86/NEON f32,
+    /// exact division elsewhere); rails are per-backend and may be
+    /// NaN at `±0`/`±inf` where an estimate is refined. The 0 ULP +
+    /// IEEE-rails tier is the generic `recip_portable` (issue #64).
     #[inline(always)]
     fn recip(self, a: Self::Repr) -> Self::Repr {
         Self::rcp_approx(self, a)
     }
 
-    /// Precise reciprocal square root — see [`recip`] for rationale.
-    /// Overridden by every shipped backend as `1.0 / sqrt(a)` via exact
-    /// IEEE division and sqrt.
+    /// Working-tier reciprocal square root — see [`recip`] for the
+    /// contract shape.
     #[inline(always)]
     fn rsqrt(self, a: Self::Repr) -> Self::Repr {
         Self::rsqrt_approx(self, a)

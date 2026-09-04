@@ -387,10 +387,12 @@ impl<T: F32x16Backend> f32x16<T> {
         Self(T::rcp_approx(self.1, self.0), self.1)
     }
 
-    /// Precise reciprocal (1/x): exact IEEE division on every backend.
-    ///
-    /// Correctly rounded (0 ULP vs `1.0 / x`), including the rails:
-    /// `recip(±0) = ±inf` and `recip(±inf) = ±0` (issue #64).
+    /// Reciprocal (1/x), the working tier: ≤4 ULP **with exact IEEE
+    /// rails** on every backend (native AVX-512 uses rcp14 + Newton +
+    /// a one-instruction VFIXUPIMM rail patch; polyfill widths
+    /// inherit their sub-vector's rescue). Subnormal inputs
+    /// unspecified; [`recip_portable`](Self::recip_portable) for
+    /// 0 ULP + subnormals + bit-identical.
     #[inline(always)]
     pub fn recip(self) -> Self {
         Self(T::recip(self.1, self.0), self.1)
@@ -398,15 +400,16 @@ impl<T: F32x16Backend> f32x16<T> {
 
     /// Fast reciprocal square root approximation: the backend's native
     /// estimate. `±0`/`±inf` lanes can come back NaN on estimate-refine
-    /// backends — use [`rsqrt`](Self::rsqrt) when inputs can hit the rails.
+    /// backends.
     #[inline(always)]
     pub fn rsqrt_approx(self) -> Self {
         Self(T::rsqrt_approx(self.1, self.0), self.1)
     }
 
-    /// Precise reciprocal square root (1/sqrt(x)): exact IEEE division
-    /// and square root on every backend. Bit-exact vs scalar
-    /// `1.0 / x.sqrt()`, rails included.
+    /// Reciprocal square root (1/sqrt(x)), the working tier: ≤4 ULP
+    /// with exact IEEE rails — see [`recip`](Self::recip) for the
+    /// contract shape; [`rsqrt_portable`](Self::rsqrt_portable) adds
+    /// 0 ULP + subnormals + bit-identical.
     #[inline(always)]
     pub fn rsqrt(self) -> Self {
         Self(T::rsqrt(self.1, self.0), self.1)
@@ -459,8 +462,11 @@ impl<T: F32x16Backend> f32x16<T> {
         self * (three_halves - half * x * self * self)
     }
 
-    /// Deterministic full-precision `1/sqrt(x)` via IEEE sqrt + division.
-    /// Correctly-rounded, so bit-identical and ~24-bit on every platform.
+    /// Precise reciprocal square root: exact IEEE sqrt + division —
+    /// **the 0 ULP tier**, with IEEE rails (`rsqrt(+0) = +inf`,
+    /// `rsqrt(+inf) = +0`, negatives give NaN) and bit-identical on
+    /// every arch. Costs ~3.6x the working-tier [`rsqrt`](Self::rsqrt)
+    /// on Zen-class x86 (and is the faster form on Apple Silicon).
     #[inline(always)]
     pub fn rsqrt_portable(self) -> Self {
         Self::splat(self.1, 1.0) / self.sqrt()
@@ -492,8 +498,15 @@ impl<T: F32x16Backend> f32x16<T> {
         self * (two - x * self)
     }
 
-    /// Deterministic full-precision `1/x` via IEEE division. Correctly-rounded,
-    /// so bit-identical and ~24-bit on every platform.
+    /// Precise reciprocal: exact IEEE division — **the 0 ULP tier**.
+    ///
+    /// Correctly rounded on every backend, with the IEEE rails
+    /// (`recip(±0) = ±inf`, `recip(±inf) = ±0` — no NaN after a
+    /// saturating `exp_midp`, issue #64) and, because correctly-rounded
+    /// division is uniquely defined, bit-identical on every arch — the
+    /// portable property is free. Costs ~1.9x the working-tier
+    /// [`recip`](Self::recip) on Zen-class x86 (and is the FASTER form
+    /// on Apple Silicon).
     #[inline(always)]
     pub fn recip_portable(self) -> Self {
         Self::splat(self.1, 1.0) / self

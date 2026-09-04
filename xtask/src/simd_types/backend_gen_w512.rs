@@ -535,13 +535,14 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
             }}
 
             /// Precise reciprocal — defaults to delegating to rcp_approx.
-            /// Backends override with Newton-Raphson refinement.
+            /// Every shipped backend overrides with exact IEEE division.
             #[inline(always)]
             fn recip(self, a: Self::Repr) -> Self::Repr {{ Self::rcp_approx(self, a) }}
 
             /// Precise reciprocal square root — see [`recip`].
             #[inline(always)]
             fn rsqrt(self, a: Self::Repr) -> Self::Repr {{ Self::rsqrt_approx(self, a) }}
+
         }}
     "#,
         name = ty.name(),
@@ -2326,6 +2327,65 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
     } else {
         "0x7FFF_FFFF_FFFF_FFFFu64 as i64"
     };
+    // Working-tier recip/rsqrt, chosen per element type. f32: rcp14/rsqrt14
+    // (14-bit) + one Newton step ≈ 24 bits — inside the <= 4 ULP bare-name
+    // contract and the published 0.9.28 lowering (rails per-backend: the
+    // refine step computes a*r, so ±0/±inf lanes yield NaN — the 0 ULP +
+    // IEEE-rails tier is the generic `recip_portable`, issue #64). f64:
+    // exact division — one step from 14 bits is ~28 bits, far short of the
+    // contract, and the two-step form was never measured against
+    // _mm512_div_pd.
+    let working_recip_512 = if elem == "f32" {
+        // rcp14/rsqrt14 + one FMA-Newton step + VFIXUPIMM rail patch. The
+        // fixup tables classify the ORIGINAL input and overwrite exactly the
+        // rail lanes with the IEEE values (recip: ±0 -> signed inf,
+        // +inf -> +0, -inf -> -0; rsqrt: ±0 -> signed inf, +inf -> +0,
+        // -inf and negatives -> NaN; NaN propagates quietened) — this is the
+        // instruction's designed use, one op vs the 2-op cmp+blend rescue the
+        // 128/256-bit v3 impls need (VFIXUPIMM needs AVX-512). Tables
+        // probe-verified on Zen 5 silicon 2026-09-04; measured rails premium
+        // +11.7% over plain Newton vs +181% for exact division. Deep
+        // subnormals unspecified at this tier (rcp14/rsqrt14 DO handle most
+        // denormals, better than legacy rcpps).
+        formatdoc! {r#"
+            #[inline(always)]
+            fn recip(self, a: {inner}) -> {inner} {{
+                // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->7 +INF->8 NEG->0 POS->0
+                const RECIP_FIXUP_TBL: i32 = 0x0087_0622u32 as i32;
+                unsafe {{
+                    let r = _mm512_rcp14_{s}(a);
+                    let e = _mm512_fnmadd_{s}(a, r, _mm512_set1_{s}(1.0));
+                    let refined = _mm512_fmadd_{s}(r, e, r);
+                    _mm512_fixupimm_{s}::<0>(refined, a, _mm512_set1_epi32(RECIP_FIXUP_TBL))
+                }}
+            }}
+
+            #[inline(always)]
+            fn rsqrt(self, a: {inner}) -> {inner} {{
+                // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->3 +INF->8 NEG->3 POS->0
+                const RSQRT_FIXUP_TBL: i32 = 0x0383_0622u32 as i32;
+                unsafe {{
+                    let y = _mm512_rsqrt14_{s}(a);
+                    let t = _mm512_mul_{s}(a, _mm512_mul_{s}(y, y));
+                    let refined =
+                        _mm512_mul_{s}(y, _mm512_fnmadd_{s}(_mm512_set1_{s}(0.5), t, _mm512_set1_{s}(1.5)));
+                    _mm512_fixupimm_{s}::<0>(refined, a, _mm512_set1_epi32(RSQRT_FIXUP_TBL))
+                }}
+            }}
+        "#}
+    } else {
+        formatdoc! {r#"
+            #[inline(always)]
+            fn recip(self, a: {inner}) -> {inner} {{
+                unsafe {{ _mm512_div_{s}(_mm512_set1_{s}(1.0), a) }}
+            }}
+
+            #[inline(always)]
+            fn rsqrt(self, a: {inner}) -> {inner} {{
+                unsafe {{ _mm512_div_{s}(_mm512_set1_{s}(1.0), _mm512_sqrt_{s}(a)) }}
+            }}
+        "#}
+    };
     formatdoc! {r#"
         #[cfg(target_arch = "x86_64")]
         impl {trait_name} for archmage::{token} {{
@@ -2517,21 +2577,7 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
                 unsafe {{ _mm512_rsqrt14_{s}(a) }}
             }}
 
-            // Exact IEEE division / sqrt, NOT Newton refinement of rcp14/rsqrt14 —
-            // same rationale as the 128/256-bit x86 and NEON backends: refinement
-            // falls short of the 0 ULP precise_reciprocals.rs contract and turns
-            // the IEEE rails into NaN (a*r is inf*0 = NaN at a = ±0 / ±inf), where
-            // exact division returns ±inf / ±0 (issue #64). rcp14/rsqrt14 remain
-            // the estimate tier.
-            #[inline(always)]
-            fn recip(self, a: {inner}) -> {inner} {{
-                unsafe {{ _mm512_div_{s}(_mm512_set1_{s}(1.0), a) }}
-            }}
-
-            #[inline(always)]
-            fn rsqrt(self, a: {inner}) -> {inner} {{
-                unsafe {{ _mm512_div_{s}(_mm512_set1_{s}(1.0), _mm512_sqrt_{s}(a)) }}
-            }}
+            {working_recip_512}
 
             #[inline(always)]
             fn not(self, a: {inner}) -> {inner} {{

@@ -228,29 +228,41 @@ impl F32x4Backend for archmage::X64V3Token {
         unsafe { _mm_rsqrt_ps(a) }
     }
 
-    // Exact IEEE division / sqrt, NOT Newton refinement of the hardware
-    // estimate. The refine form falls short of the correctly-rounded
-    // "full precision" contract precise_reciprocals.rs pins at 0 ULP,
-    // and it turns the IEEE rails into NaN: refining r ~= 1/a computes
-    // a*r, which is inf*0 = NaN at a = ±0 / ±inf, where exact division
-    // returns ±inf / ±0 (issue #64). Estimate-and-refine is what
-    // `rcp_approx`/`rsqrt_approx` are for.
-    //
-    // Measured cost of exactness on x86 f32 (Zen 5 9950X3D, L1-resident
-    // f32x8 throughput, benchmarks/recip_x86_zen5-9950x3d_2026-09-03.md):
-    //   exact div ~1.9x slower than the removed rcpps+Newton for recip,
-    //   ~3.6x for rsqrt. Correctness wins in the full-precision tier;
-    //   the estimate tier is unchanged for callers who want throughput.
+    // Estimate + one FMA-Newton step + a branchless rail rescue: the
+    // fastest form meeting the bare-name contract (<= 4 ULP AND exact
+    // IEEE rails at ±0/±inf/NaN). The Newton error term `e = 1 - a*r`
+    // is NaN exactly on rail lanes (inf*0), so an unordered self-
+    // compare selects them and blendv rescues those lanes to the raw
+    // estimate — which is rail-EXACT on x86 (rcpps(±0) = ±inf,
+    // rcpps(±inf) = ±0, signed; likewise rsqrtps). Measured cost of
+    // the rescue vs the plain Newton form on Zen 5: recip +2.6%,
+    // rsqrt +20% — vs +21%/+232% for exact division
+    // (benchmarks/recip_x86_zen5-9950x3d_2026-09-03.md). Subnormal
+    // inputs remain unspecified at this tier (rcpps flushes them);
+    // `recip_portable`/`rsqrt_portable` divide: 0 ULP + subnormals.
     #[inline(always)]
     fn recip(self, a: __m128) -> __m128 {
         let one = unsafe { _mm_set1_ps(1.0) };
-        <Self as F32x4Backend>::div(self, one, a)
+        let r = <Self as F32x4Backend>::rcp_approx(self, a);
+        unsafe {
+            let e = _mm_fnmadd_ps(a, r, one);
+            let refined = _mm_fmadd_ps(r, e, r);
+            let bad = _mm_cmp_ps::<_CMP_UNORD_Q>(e, e);
+            _mm_blendv_ps(refined, r, bad)
+        }
     }
 
     #[inline(always)]
     fn rsqrt(self, a: __m128) -> __m128 {
-        let one = unsafe { _mm_set1_ps(1.0) };
-        <Self as F32x4Backend>::div(self, one, <Self as F32x4Backend>::sqrt(self, a))
+        let half = unsafe { _mm_set1_ps(0.5) };
+        let three_halves = unsafe { _mm_set1_ps(1.5) };
+        let y = <Self as F32x4Backend>::rsqrt_approx(self, a);
+        unsafe {
+            let t = _mm_mul_ps(a, _mm_mul_ps(y, y));
+            let refined = _mm_mul_ps(y, _mm_fnmadd_ps(half, t, three_halves));
+            let bad = _mm_cmp_ps::<_CMP_UNORD_Q>(t, t);
+            _mm_blendv_ps(refined, y, bad)
+        }
     }
 
     // ====== Bitwise ======
@@ -510,29 +522,41 @@ impl F32x8Backend for archmage::X64V3Token {
         unsafe { _mm256_rsqrt_ps(a) }
     }
 
-    // Exact IEEE division / sqrt, NOT Newton refinement of the hardware
-    // estimate. The refine form falls short of the correctly-rounded
-    // "full precision" contract precise_reciprocals.rs pins at 0 ULP,
-    // and it turns the IEEE rails into NaN: refining r ~= 1/a computes
-    // a*r, which is inf*0 = NaN at a = ±0 / ±inf, where exact division
-    // returns ±inf / ±0 (issue #64). Estimate-and-refine is what
-    // `rcp_approx`/`rsqrt_approx` are for.
-    //
-    // Measured cost of exactness on x86 f32 (Zen 5 9950X3D, L1-resident
-    // f32x8 throughput, benchmarks/recip_x86_zen5-9950x3d_2026-09-03.md):
-    //   exact div ~1.9x slower than the removed rcpps+Newton for recip,
-    //   ~3.6x for rsqrt. Correctness wins in the full-precision tier;
-    //   the estimate tier is unchanged for callers who want throughput.
+    // Estimate + one FMA-Newton step + a branchless rail rescue: the
+    // fastest form meeting the bare-name contract (<= 4 ULP AND exact
+    // IEEE rails at ±0/±inf/NaN). The Newton error term `e = 1 - a*r`
+    // is NaN exactly on rail lanes (inf*0), so an unordered self-
+    // compare selects them and blendv rescues those lanes to the raw
+    // estimate — which is rail-EXACT on x86 (rcpps(±0) = ±inf,
+    // rcpps(±inf) = ±0, signed; likewise rsqrtps). Measured cost of
+    // the rescue vs the plain Newton form on Zen 5: recip +2.6%,
+    // rsqrt +20% — vs +21%/+232% for exact division
+    // (benchmarks/recip_x86_zen5-9950x3d_2026-09-03.md). Subnormal
+    // inputs remain unspecified at this tier (rcpps flushes them);
+    // `recip_portable`/`rsqrt_portable` divide: 0 ULP + subnormals.
     #[inline(always)]
     fn recip(self, a: __m256) -> __m256 {
         let one = unsafe { _mm256_set1_ps(1.0) };
-        <Self as F32x8Backend>::div(self, one, a)
+        let r = <Self as F32x8Backend>::rcp_approx(self, a);
+        unsafe {
+            let e = _mm256_fnmadd_ps(a, r, one);
+            let refined = _mm256_fmadd_ps(r, e, r);
+            let bad = _mm256_cmp_ps::<_CMP_UNORD_Q>(e, e);
+            _mm256_blendv_ps(refined, r, bad)
+        }
     }
 
     #[inline(always)]
     fn rsqrt(self, a: __m256) -> __m256 {
-        let one = unsafe { _mm256_set1_ps(1.0) };
-        <Self as F32x8Backend>::div(self, one, <Self as F32x8Backend>::sqrt(self, a))
+        let half = unsafe { _mm256_set1_ps(0.5) };
+        let three_halves = unsafe { _mm256_set1_ps(1.5) };
+        let y = <Self as F32x8Backend>::rsqrt_approx(self, a);
+        unsafe {
+            let t = _mm256_mul_ps(a, _mm256_mul_ps(y, y));
+            let refined = _mm256_mul_ps(y, _mm256_fnmadd_ps(half, t, three_halves));
+            let bad = _mm256_cmp_ps::<_CMP_UNORD_Q>(t, t);
+            _mm256_blendv_ps(refined, y, bad)
+        }
     }
 
     // ====== Bitwise ======

@@ -172,7 +172,7 @@ pub trait F32x16Backend: SimdToken + Sealed + Copy + 'static {
     }
 
     /// Precise reciprocal — defaults to delegating to rcp_approx.
-    /// Backends override with Newton-Raphson refinement.
+    /// Every shipped backend overrides with exact IEEE division.
     #[inline(always)]
     fn recip(self, a: Self::Repr) -> Self::Repr {
         Self::rcp_approx(self, a)

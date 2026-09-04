@@ -909,18 +909,18 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
                 <Self as {trait_name}>::min(self, <Self as {trait_name}>::max(self, a, lo), hi)
             }}
 
-            /// Precise reciprocal — defaults to delegating to [`rcp_approx`]
-            /// (which itself defaults to identity). Every shipped backend
-            /// overrides this with exact IEEE division (`1.0 / a`): correctly
-            /// rounded, and the rails hold — `recip(±0) = ±inf`,
-            /// `recip(±inf) = ±0` (issue #64). New backends MUST override
-            /// with exact division, not estimate-and-refine.
+            /// Working-tier reciprocal — defaults to delegating to
+            /// [`rcp_approx`] (which itself defaults to identity), so every
+            /// backend MUST override. Contract: <= 4 ULP by the backend's
+            /// fastest conforming path (estimate + Newton on x86/NEON f32,
+            /// exact division elsewhere); rails are per-backend and may be
+            /// NaN at `±0`/`±inf` where an estimate is refined. The 0 ULP +
+            /// IEEE-rails tier is the generic `recip_portable` (issue #64).
             #[inline(always)]
             fn recip(self, a: Self::Repr) -> Self::Repr {{ Self::rcp_approx(self, a) }}
 
-            /// Precise reciprocal square root — see [`recip`] for rationale.
-            /// Overridden by every shipped backend as `1.0 / sqrt(a)` via exact
-            /// IEEE division and sqrt.
+            /// Working-tier reciprocal square root — see [`recip`] for the
+            /// contract shape.
             #[inline(always)]
             fn rsqrt(self, a: Self::Repr) -> Self::Repr {{ Self::rsqrt_approx(self, a) }}
             {to_u8_trait}
@@ -1356,29 +1356,41 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
                 unsafe {{ {p}_{rsqrt_fn}_{s}(a) }}
             }}
 
-            // Exact IEEE division / sqrt, NOT Newton refinement of the hardware
-            // estimate. The refine form falls short of the correctly-rounded
-            // "full precision" contract precise_reciprocals.rs pins at 0 ULP,
-            // and it turns the IEEE rails into NaN: refining r ~= 1/a computes
-            // a*r, which is inf*0 = NaN at a = ±0 / ±inf, where exact division
-            // returns ±inf / ±0 (issue #64). Estimate-and-refine is what
-            // `rcp_approx`/`rsqrt_approx` are for.
-            //
-            // Measured cost of exactness on x86 f32 (Zen 5 9950X3D, L1-resident
-            // f32x8 throughput, benchmarks/recip_x86_zen5-9950x3d_2026-09-03.md):
-            //   exact div ~1.9x slower than the removed rcpps+Newton for recip,
-            //   ~3.6x for rsqrt. Correctness wins in the full-precision tier;
-            //   the estimate tier is unchanged for callers who want throughput.
+            // Estimate + one FMA-Newton step + a branchless rail rescue: the
+            // fastest form meeting the bare-name contract (<= 4 ULP AND exact
+            // IEEE rails at ±0/±inf/NaN). The Newton error term `e = 1 - a*r`
+            // is NaN exactly on rail lanes (inf*0), so an unordered self-
+            // compare selects them and blendv rescues those lanes to the raw
+            // estimate — which is rail-EXACT on x86 (rcpps(±0) = ±inf,
+            // rcpps(±inf) = ±0, signed; likewise rsqrtps). Measured cost of
+            // the rescue vs the plain Newton form on Zen 5: recip +2.6%,
+            // rsqrt +20% — vs +21%/+232% for exact division
+            // (benchmarks/recip_x86_zen5-9950x3d_2026-09-03.md). Subnormal
+            // inputs remain unspecified at this tier (rcpps flushes them);
+            // `recip_portable`/`rsqrt_portable` divide: 0 ULP + subnormals.
             #[inline(always)]
             fn recip(self, a: {inner}) -> {inner} {{
                 let one = unsafe {{ {p}_set1_{s}(1.0) }};
-                <Self as {trait_name}>::div(self, one, a)
+                let r = <Self as {trait_name}>::rcp_approx(self, a);
+                unsafe {{
+                    let e = {p}_fnmadd_{s}(a, r, one);
+                    let refined = {p}_fmadd_{s}(r, e, r);
+                    let bad = {p}_cmp_{s}::<_CMP_UNORD_Q>(e, e);
+                    {p}_blendv_{s}(refined, r, bad)
+                }}
             }}
 
             #[inline(always)]
             fn rsqrt(self, a: {inner}) -> {inner} {{
-                let one = unsafe {{ {p}_set1_{s}(1.0) }};
-                <Self as {trait_name}>::div(self, one, <Self as {trait_name}>::sqrt(self, a))
+                let half = unsafe {{ {p}_set1_{s}(0.5) }};
+                let three_halves = unsafe {{ {p}_set1_{s}(1.5) }};
+                let y = <Self as {trait_name}>::rsqrt_approx(self, a);
+                unsafe {{
+                    let t = {p}_mul_{s}(a, {p}_mul_{s}(y, y));
+                    let refined = {p}_mul_{s}(y, {p}_fnmadd_{s}(half, t, three_halves));
+                    let bad = {p}_cmp_{s}::<_CMP_UNORD_Q>(t, t);
+                    {p}_blendv_{s}(refined, y, bad)
+                }}
             }}
         "#}
     } else if elem == "f64" {
@@ -2906,15 +2918,36 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
         format!("vmvnq_u{eb}(vceqq_{ns}(a, b))")
     };
 
-    // Full-precision `recip`/`rsqrt` bodies: exact FDIV / FDIV+FSQRT.
+    // Working-tier `recip`/`rsqrt` bodies, chosen per element type:
     //
-    // These are NOT Newton refinements of the vrecpe/vrsqrte estimate. See the
-    // doc comment emitted next to them below for the full rationale; the short
-    // version is that the estimate-and-refine form is measurably short of
-    // correctly-rounded and so cannot meet the "full precision" contract, which
-    // `magetypes/tests/precise_reciprocals.rs` pins at 0 ULP on NEON.
-    let recip_exact = format!("vdivq_{ns}(vdupq_n_{ns}(1.0), a)");
-    let rsqrt_exact = format!("vdivq_{ns}(vdupq_n_{ns}(1.0), vsqrtq_{ns}(a))");
+    // - f32: estimate + one more fused FRECPS/FRSQRTS step than `_approx`
+    //   (~2-3 ULP, inside the <= 4 ULP bare-name contract) — the published
+    //   0.9.28 lowering, faster than FDIV on Neoverse-class cores (see the
+    //   perf note below; on Apple exact division is the faster form, and
+    //   Apple callers wanting both speed and 0 ULP use `recip_portable`).
+    //   Rails: the refine step computes a*y, so ±0/±inf lanes yield NaN —
+    //   documented per-backend behavior at this tier (issue #64's footgun
+    //   lives in the 0 ULP tier, `recip_portable`, which divides).
+    // - f64: exact FDIV / FDIV+FSQRT. No f64 estimate is worth refining —
+    //   division is BOTH more precise and measured faster on Apple (rcp
+    //   3.2x, benchmarks/rsqrt_f64_arm_apple-m4-pro_2026-08-02.md).
+    let (recip_body, rsqrt_body) = if elem == "f32" {
+        (
+            format!(
+                "let y = <Self as {trait_name}>::rcp_approx(self, a); vmulq_{ns}(vrecpsq_{ns}(a, y), y)"
+            ),
+            format!(
+                "let y = <Self as {trait_name}>::rsqrt_approx(self, a); vmulq_{ns}(y, vrsqrtsq_{ns}(a, vmulq_{ns}(y, y)))"
+            ),
+        )
+    } else {
+        (
+            format!("vdivq_{ns}(vdupq_n_{ns}(1.0), a)"),
+            format!("vdivq_{ns}(vdupq_n_{ns}(1.0), vsqrtq_{ns}(a))"),
+        )
+    };
+    let recip_exact = recip_body;
+    let rsqrt_exact = rsqrt_body;
 
     // Measurements are PER ELEMENT TYPE — do not let the f32 numbers leak into
     // the f64 impl or vice versa. They were taken on different cores and differ
@@ -3112,7 +3145,7 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
                 {reduce_max}
             }}
 
-            // ====== Reciprocals: estimate tier vs full-precision tier ======
+            // ====== Reciprocals: estimate tier vs working tier ======
             //
             // `_approx` = raw vrecpe/vrsqrte (~8-bit) + one fused FRECPS/FRSQRTS
             // step (~16-bit): the documented >=12-bit fast path. FRECPS
@@ -3123,27 +3156,33 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             // roughly doubles the correct bits (~8 -> ~16 -> ~24). FRECPS/FRSQRTS
             // are baseline NEON.
             //
-            // `recip`/`rsqrt` are contracted as FULL precision, so they compute
-            // the exact result (FDIV, FDIV+FSQRT) rather than refining the
-            // estimate. Refinement does NOT reach the contract: measured on Apple
-            // Silicon, two fused steps land ~2 ULP (recip) / ~3 ULP (rsqrt) short
-            // of correctly-rounded, because the estimate's own rounding error is
-            // carried through every step. `magetypes/tests/precise_reciprocals.rs`
-            // pins these at 0 ULP on NEON, so the exact form is load-bearing —
-            // do not "optimize" it back into an estimate-and-refine sequence.
+            // `recip`/`rsqrt` carry the working-tier contract (<= 4 ULP AND
+            // exact IEEE rails at ±0/±inf/NaN), filled by the fastest
+            // conforming lowering per element type. f32 adds one more fused
+            // step to `_approx` (~2-3 ULP; faster than FDIV on Neoverse-class
+            // cores, the published 0.9.28 behavior). Rails come free from the
+            // hardware: FRECPS/FRSQRTS special-case inf*0 to 2.0/1.5 BY
+            // DESIGN so Newton iterations pass rails through — PROVIDED the
+            // dangerous product is formed INSIDE the fused op. recip does
+            // this naturally (FRECPS(a, y)); rsqrt is therefore written
+            // y*FRSQRTS(a, y*y), NOT y*FRSQRTS(a*y, y): a plain a*y mul is
+            // NaN at the rails and was exactly how the pre-fix NaN leaked
+            // (probe-verified under qemu, 2026-09-04). Cost: identical
+            // instruction count. Tradeoff: y*y overflows f32 for a below
+            // ~3e-39, so deep-subnormal inputs are unspecified at this tier.
+            // f64 divides (no worthwhile f64 estimate exists, and FDIV is
+            // both exact and measured faster on Apple).
             //
             // Cost of exactness is per-core and does NOT generalize — these
             // numbers are for {elem} specifically:
 {recip_perf_note}
-            // Either way `_approx` is the answer when speed matters — that
-            // separation is the whole reason the two tiers exist.
             #[inline(always)]
             fn rcp_approx(self, a: {repr}) -> {repr} {{
                 unsafe {{ let y = vrecpeq_{ns}(a); vmulq_{ns}(vrecpsq_{ns}(a, y), y) }}
             }}
             #[inline(always)]
             fn rsqrt_approx(self, a: {repr}) -> {repr} {{
-                unsafe {{ let y = vrsqrteq_{ns}(a); vmulq_{ns}(vrsqrtsq_{ns}(vmulq_{ns}(a, y), y), y) }}
+                unsafe {{ let y = vrsqrteq_{ns}(a); vmulq_{ns}(y, vrsqrtsq_{ns}(a, vmulq_{ns}(y, y))) }}
             }}
             #[inline(always)]
             fn recip(self, a: {repr}) -> {repr} {{

@@ -311,16 +311,22 @@ impl<T: F32x8Convert> f32x8<T> {
 
     /// Mid-precision logistic sigmoid: `1 / (1 + exp(-x))`, in `[0, 1]`.
     ///
-    /// Rail-safe by construction (issue #64): [`recip`](Self::recip) is
-    /// exact IEEE division, so the saturated exponential behaves — for
-    /// `x` ≲ -88, `exp_midp(-x)` overflows to `inf` and the result is
-    /// `1/inf = 0`; for large positive `x` it underflows to `0` and the
-    /// result is exactly `1`. Conv pre-activations at ±100 produce clean
-    /// 0/1 lanes, not NaN.
+    /// Rail-safe by construction (issue #64): the division is exact
+    /// IEEE, so the saturated exponential behaves — for `x` ≲ -88,
+    /// `exp_midp(-x)` overflows to `inf` and the result is `1/inf = 0`;
+    /// for large positive `x` it underflows to `0` and the result is
+    /// exactly `1`. Conv pre-activations at ±100 produce clean 0/1
+    /// lanes, not NaN.
     #[inline(always)]
     pub fn sigmoid_midp(self) -> Self {
         let one = splat_f32::<T>(self.1, 1.0);
-        ((-self).exp_midp() + one).recip()
+        // Exact IEEE division, deliberately NOT `.recip()`. recip()'s
+        // working tier now carries exact rails too, but its <= 4 ULP
+        // slack breaks a pinned nicety: recip(1.0) lands ~1 ULP under
+        // 1.0, so saturated sigmoid would return 0.9999999 instead of
+        // exactly 1.0 (sigmoid_silu.rs pins the exact 0/1 rails).
+        // Division costs ~nothing here — exp_midp dominates.
+        one / ((-self).exp_midp() + one)
     }
 
     /// Mid-precision SiLU / swish: `x * sigmoid(x)` = `x / (1 + exp(-x))`.

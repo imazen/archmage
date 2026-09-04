@@ -344,7 +344,8 @@ impl<T: F64x2Backend> f64x2<T> {
 
     // ====== Approximations ======
 
-    /// Fast reciprocal approximation (1/x): the backend's native estimate.
+    /// Fast reciprocal approximation (1/x): the backend's native estimate
+    /// (exact division on f64 — no hardware estimate exists).
     #[inline(always)]
     pub fn rcp_approx(self) -> Self {
         Self(T::rcp_approx(self.1, self.0), self.1)
@@ -353,15 +354,15 @@ impl<T: F64x2Backend> f64x2<T> {
     /// Precise reciprocal (1/x): exact IEEE division on every backend.
     ///
     /// Correctly rounded (0 ULP vs `1.0 / x`), including the rails:
-    /// `recip(±0) = ±inf` and `recip(±inf) = ±0` (issue #64).
+    /// `recip(±0) = ±inf` and `recip(±inf) = ±0` (issue #64). On f64
+    /// the working tier and the exact tier coincide.
     #[inline(always)]
     pub fn recip(self) -> Self {
         Self(T::recip(self.1, self.0), self.1)
     }
 
-    /// Fast reciprocal square root approximation: the backend's native
-    /// estimate. `±0`/`±inf` lanes can come back NaN on estimate-refine
-    /// backends — use [`rsqrt`](Self::rsqrt) when inputs can hit the rails.
+    /// Fast reciprocal square root approximation (exact division +
+    /// sqrt on f64 — no hardware estimate exists).
     #[inline(always)]
     pub fn rsqrt_approx(self) -> Self {
         Self(T::rsqrt_approx(self.1, self.0), self.1)

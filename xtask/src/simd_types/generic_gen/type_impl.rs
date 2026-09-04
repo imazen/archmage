@@ -759,10 +759,6 @@ fn gen_comparisons(signedness: &str) -> String {
 
 fn gen_approximations(ty: &SimdType) -> String {
     let lanes = ty.lanes();
-    // Both branches just forward to the backend — each backend owns its own
-    // ≥12-bit per-platform `_approx` and correctly-rounded full path. The only
-    // difference is documentation: f32 at 128/256-bit also has the deterministic
-    // `_portable` family, so its docs cross-link to `rcp_approx_portable`.
     if ty.elem == ElementType::F32 && lanes <= 8 {
         formatdoc! {"
             \x20   /// Fast reciprocal (1/x), ≥~12-bit floor by the cheapest path per
@@ -770,13 +766,12 @@ fn gen_approximations(ty: &SimdType) -> String {
                 /// (estimate + one Newton step), WASM/scalar ~24-bit (exact division —
                 /// no hardware estimate exists to undercut it). For the same bits on
                 /// *every* machine use [`rcp_approx_portable`](Self::rcp_approx_portable);
-                /// for full precision use [`recip`](Self::recip).
+                /// for ≤4 ULP use [`recip`](Self::recip); for 0 ULP + IEEE rails
+                /// use [`recip_portable`](Self::recip_portable).
                 ///
-                /// Rail behavior is per-backend: ARM's fused refine step turns
-                /// `±0`/`±inf` lanes into NaN, while the raw x86 estimate and the
-                /// WASM/scalar division return the IEEE `±inf`/`±0`. If inputs can
-                /// hit the rails, use [`recip`](Self::recip), which is exact
-                /// everywhere.
+                /// Rails are UNSPECIFIED at this tier (the current lowerings
+                /// happen to return IEEE values on x86/NEON/WASM, but only
+                /// [`recip`](Self::recip) and up contract it).
                 #[inline(always)]
                 pub fn rcp_approx(self) -> Self {{
                     // Each backend owns its >=12-bit estimate (x86 raw rcpps; ARM
@@ -784,11 +779,22 @@ fn gen_approximations(ty: &SimdType) -> String {
                     Self(T::rcp_approx(self.1, self.0), self.1)
                 }}
 
-                /// Precise reciprocal (1/x): exact IEEE division on every backend.
+                /// Reciprocal (1/x), the working tier: at least ~22 correct bits
+                /// (≤4 ULP) **with exact IEEE rails** — `recip(±0) = ±inf`,
+                /// `recip(±inf) = ±0` (signed), NaN propagates — on every backend.
                 ///
-                /// Correctly rounded (0 ULP vs `1.0 / x`), including the rails:
-                /// `recip(±0) = ±inf` and `recip(±inf) = ±0` — no NaN surprises
-                /// after saturating ops like `exp_midp` (issue #64).
+                /// Fastest conforming path per backend: estimate + Newton + a
+                /// branchless rail rescue on x86 (+2.6% over the raw Newton form,
+                /// vs +21% for exact division); NEON's FRECPS special-cases
+                /// `inf·0` in hardware so its refinement passes rails through for
+                /// free; WASM/scalar divide (0 ULP there). The #64 footgun
+                /// (`(exp_midp() + one).recip()` NaN'ing on saturated lanes)
+                /// cannot occur at this tier.
+                ///
+                /// **Subnormal inputs are the one unspecified case** — for 0 ULP
+                /// everywhere including subnormals, plus bit-identical
+                /// cross-arch results, use
+                /// [`recip_portable`](Self::recip_portable).
                 #[inline(always)]
                 pub fn recip(self) -> Self {{
                     Self(T::recip(self.1, self.0), self.1)
@@ -797,9 +803,9 @@ fn gen_approximations(ty: &SimdType) -> String {
                 /// Fast reciprocal square root (1/sqrt(x)), ≥~12-bit floor — see
                 /// [`rcp_approx`](Self::rcp_approx) for the per-platform strategy.
                 ///
-                /// Same per-backend rail caveat as [`rcp_approx`](Self::rcp_approx):
-                /// ARM's fused refine step yields NaN at `+0`/`+inf`; use
-                /// [`rsqrt`](Self::rsqrt) when inputs can hit the rails.
+                /// Rails are UNSPECIFIED at this tier (the scalar bit-hack in
+                /// particular returns garbage at `±0`); [`rsqrt`](Self::rsqrt)
+                /// and up contract them.
                 #[inline(always)]
                 pub fn rsqrt_approx(self) -> Self {{
                     // ARM uses raw vrsqrte + 1 fused FRSQRTS; WASM/scalar a bit-hack
@@ -807,12 +813,54 @@ fn gen_approximations(ty: &SimdType) -> String {
                     Self(T::rsqrt_approx(self.1, self.0), self.1)
                 }}
 
-                /// Precise reciprocal square root (1/sqrt(x)): exact IEEE division
-                /// and square root on every backend.
-                ///
-                /// Bit-exact vs scalar `1.0 / x.sqrt()`, including the rails:
-                /// `rsqrt(+0) = +inf`, `rsqrt(-0) = -inf`, `rsqrt(+inf) = +0`,
-                /// negative inputs give NaN.
+                /// Reciprocal square root (1/sqrt(x)), the working tier: ≤4 ULP
+                /// **with exact IEEE rails** (`rsqrt(±0) = ±inf`,
+                /// `rsqrt(+inf) = +0`, negatives and NaN give NaN) on every
+                /// backend — estimate + Newton + rail rescue on x86 (still ~2.8x
+                /// faster than exact), hardware-special-cased FRSQRTS on NEON
+                /// (free), division on WASM/scalar. Deep-subnormal inputs
+                /// unspecified; use [`rsqrt_portable`](Self::rsqrt_portable) for
+                /// 0 ULP + subnormals + bit-identical.
+                #[inline(always)]
+                pub fn rsqrt(self) -> Self {{
+                    Self(T::rsqrt(self.1, self.0), self.1)
+                }}
+
+        "}
+    } else if ty.elem == ElementType::F32 {
+        // f32x16: same working-tier contract as the narrower f32 types
+        // (estimate + Newton on x86 native 512-bit and on the delegated
+        // polyfills; exact division on WASM/scalar).
+        formatdoc! {"
+            \x20   /// Fast reciprocal approximation (1/x): the backend's native estimate.
+                #[inline(always)]
+                pub fn rcp_approx(self) -> Self {{
+                    Self(T::rcp_approx(self.1, self.0), self.1)
+                }}
+
+                /// Reciprocal (1/x), the working tier: ≤4 ULP **with exact IEEE
+                /// rails** on every backend (native AVX-512 uses rcp14 + Newton +
+                /// a one-instruction VFIXUPIMM rail patch; polyfill widths
+                /// inherit their sub-vector's rescue). Subnormal inputs
+                /// unspecified; [`recip_portable`](Self::recip_portable) for
+                /// 0 ULP + subnormals + bit-identical.
+                #[inline(always)]
+                pub fn recip(self) -> Self {{
+                    Self(T::recip(self.1, self.0), self.1)
+                }}
+
+                /// Fast reciprocal square root approximation: the backend's native
+                /// estimate. `±0`/`±inf` lanes can come back NaN on estimate-refine
+                /// backends.
+                #[inline(always)]
+                pub fn rsqrt_approx(self) -> Self {{
+                    Self(T::rsqrt_approx(self.1, self.0), self.1)
+                }}
+
+                /// Reciprocal square root (1/sqrt(x)), the working tier: ≤4 ULP
+                /// with exact IEEE rails — see [`recip`](Self::recip) for the
+                /// contract shape; [`rsqrt_portable`](Self::rsqrt_portable) adds
+                /// 0 ULP + subnormals + bit-identical.
                 #[inline(always)]
                 pub fn rsqrt(self) -> Self {{
                     Self(T::rsqrt(self.1, self.0), self.1)
@@ -820,8 +868,11 @@ fn gen_approximations(ty: &SimdType) -> String {
 
         "}
     } else {
+        // f64: no estimate hardware worth refining exists at any width, so the
+        // bare names are exact division everywhere — 0 ULP with IEEE rails.
         formatdoc! {"
-            \x20   /// Fast reciprocal approximation (1/x): the backend's native estimate.
+            \x20   /// Fast reciprocal approximation (1/x): the backend's native estimate
+                /// (exact division on f64 — no hardware estimate exists).
                 #[inline(always)]
                 pub fn rcp_approx(self) -> Self {{
                     Self(T::rcp_approx(self.1, self.0), self.1)
@@ -830,15 +881,15 @@ fn gen_approximations(ty: &SimdType) -> String {
                 /// Precise reciprocal (1/x): exact IEEE division on every backend.
                 ///
                 /// Correctly rounded (0 ULP vs `1.0 / x`), including the rails:
-                /// `recip(±0) = ±inf` and `recip(±inf) = ±0` (issue #64).
+                /// `recip(±0) = ±inf` and `recip(±inf) = ±0` (issue #64). On f64
+                /// the working tier and the exact tier coincide.
                 #[inline(always)]
                 pub fn recip(self) -> Self {{
                     Self(T::recip(self.1, self.0), self.1)
                 }}
 
-                /// Fast reciprocal square root approximation: the backend's native
-                /// estimate. `±0`/`±inf` lanes can come back NaN on estimate-refine
-                /// backends — use [`rsqrt`](Self::rsqrt) when inputs can hit the rails.
+                /// Fast reciprocal square root approximation (exact division +
+                /// sqrt on f64 — no hardware estimate exists).
                 #[inline(always)]
                 pub fn rsqrt_approx(self) -> Self {{
                     Self(T::rsqrt_approx(self.1, self.0), self.1)
@@ -908,8 +959,11 @@ fn gen_deterministic_reciprocals(ty: &SimdType) -> String {
                 self * (three_halves - half * x * self * self)
             }}
 
-            /// Deterministic full-precision `1/sqrt(x)` via IEEE sqrt + division.
-            /// Correctly-rounded, so bit-identical and ~24-bit on every platform.
+            /// Precise reciprocal square root: exact IEEE sqrt + division —
+            /// **the 0 ULP tier**, with IEEE rails (`rsqrt(+0) = +inf`,
+            /// `rsqrt(+inf) = +0`, negatives give NaN) and bit-identical on
+            /// every arch. Costs ~3.6x the working-tier [`rsqrt`](Self::rsqrt)
+            /// on Zen-class x86 (and is the faster form on Apple Silicon).
             #[inline(always)]
             pub fn rsqrt_portable(self) -> Self {{
                 Self::splat(self.1, 1.0) / self.sqrt()
@@ -944,8 +998,15 @@ fn gen_deterministic_reciprocals(ty: &SimdType) -> String {
                 self * (two - x * self)
             }}
 
-            /// Deterministic full-precision `1/x` via IEEE division. Correctly-rounded,
-            /// so bit-identical and ~24-bit on every platform.
+            /// Precise reciprocal: exact IEEE division — **the 0 ULP tier**.
+            ///
+            /// Correctly rounded on every backend, with the IEEE rails
+            /// (`recip(±0) = ±inf`, `recip(±inf) = ±0` — no NaN after a
+            /// saturating `exp_midp`, issue #64) and, because correctly-rounded
+            /// division is uniquely defined, bit-identical on every arch — the
+            /// portable property is free. Costs ~1.9x the working-tier
+            /// [`recip`](Self::recip) on Zen-class x86 (and is the FASTER form
+            /// on Apple Silicon).
             #[inline(always)]
             pub fn recip_portable(self) -> Self {{
                 Self::splat(self.1, 1.0) / self

@@ -232,20 +232,31 @@ impl F32x16Backend for archmage::X64V4Token {
         unsafe { _mm512_rsqrt14_ps(a) }
     }
 
-    // Exact IEEE division / sqrt, NOT Newton refinement of rcp14/rsqrt14 —
-    // same rationale as the 128/256-bit x86 and NEON backends: refinement
-    // falls short of the 0 ULP precise_reciprocals.rs contract and turns
-    // the IEEE rails into NaN (a*r is inf*0 = NaN at a = ±0 / ±inf), where
-    // exact division returns ±inf / ±0 (issue #64). rcp14/rsqrt14 remain
-    // the estimate tier.
     #[inline(always)]
     fn recip(self, a: __m512) -> __m512 {
-        unsafe { _mm512_div_ps(_mm512_set1_ps(1.0), a) }
+        // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->7 +INF->8 NEG->0 POS->0
+        const RECIP_FIXUP_TBL: i32 = 0x0087_0622u32 as i32;
+        unsafe {
+            let r = _mm512_rcp14_ps(a);
+            let e = _mm512_fnmadd_ps(a, r, _mm512_set1_ps(1.0));
+            let refined = _mm512_fmadd_ps(r, e, r);
+            _mm512_fixupimm_ps::<0>(refined, a, _mm512_set1_epi32(RECIP_FIXUP_TBL))
+        }
     }
 
     #[inline(always)]
     fn rsqrt(self, a: __m512) -> __m512 {
-        unsafe { _mm512_div_ps(_mm512_set1_ps(1.0), _mm512_sqrt_ps(a)) }
+        // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->3 +INF->8 NEG->3 POS->0
+        const RSQRT_FIXUP_TBL: i32 = 0x0383_0622u32 as i32;
+        unsafe {
+            let y = _mm512_rsqrt14_ps(a);
+            let t = _mm512_mul_ps(a, _mm512_mul_ps(y, y));
+            let refined = _mm512_mul_ps(
+                y,
+                _mm512_fnmadd_ps(_mm512_set1_ps(0.5), t, _mm512_set1_ps(1.5)),
+            );
+            _mm512_fixupimm_ps::<0>(refined, a, _mm512_set1_epi32(RSQRT_FIXUP_TBL))
+        }
     }
 
     #[inline(always)]
@@ -463,12 +474,6 @@ impl F64x8Backend for archmage::X64V4Token {
         unsafe { _mm512_rsqrt14_pd(a) }
     }
 
-    // Exact IEEE division / sqrt, NOT Newton refinement of rcp14/rsqrt14 —
-    // same rationale as the 128/256-bit x86 and NEON backends: refinement
-    // falls short of the 0 ULP precise_reciprocals.rs contract and turns
-    // the IEEE rails into NaN (a*r is inf*0 = NaN at a = ±0 / ±inf), where
-    // exact division returns ±inf / ±0 (issue #64). rcp14/rsqrt14 remain
-    // the estimate tier.
     #[inline(always)]
     fn recip(self, a: __m512d) -> __m512d {
         unsafe { _mm512_div_pd(_mm512_set1_pd(1.0), a) }
@@ -2446,20 +2451,31 @@ impl F32x16Backend for archmage::X64V4xToken {
         unsafe { _mm512_rsqrt14_ps(a) }
     }
 
-    // Exact IEEE division / sqrt, NOT Newton refinement of rcp14/rsqrt14 —
-    // same rationale as the 128/256-bit x86 and NEON backends: refinement
-    // falls short of the 0 ULP precise_reciprocals.rs contract and turns
-    // the IEEE rails into NaN (a*r is inf*0 = NaN at a = ±0 / ±inf), where
-    // exact division returns ±inf / ±0 (issue #64). rcp14/rsqrt14 remain
-    // the estimate tier.
     #[inline(always)]
     fn recip(self, a: __m512) -> __m512 {
-        unsafe { _mm512_div_ps(_mm512_set1_ps(1.0), a) }
+        // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->7 +INF->8 NEG->0 POS->0
+        const RECIP_FIXUP_TBL: i32 = 0x0087_0622u32 as i32;
+        unsafe {
+            let r = _mm512_rcp14_ps(a);
+            let e = _mm512_fnmadd_ps(a, r, _mm512_set1_ps(1.0));
+            let refined = _mm512_fmadd_ps(r, e, r);
+            _mm512_fixupimm_ps::<0>(refined, a, _mm512_set1_epi32(RECIP_FIXUP_TBL))
+        }
     }
 
     #[inline(always)]
     fn rsqrt(self, a: __m512) -> __m512 {
-        unsafe { _mm512_div_ps(_mm512_set1_ps(1.0), _mm512_sqrt_ps(a)) }
+        // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->3 +INF->8 NEG->3 POS->0
+        const RSQRT_FIXUP_TBL: i32 = 0x0383_0622u32 as i32;
+        unsafe {
+            let y = _mm512_rsqrt14_ps(a);
+            let t = _mm512_mul_ps(a, _mm512_mul_ps(y, y));
+            let refined = _mm512_mul_ps(
+                y,
+                _mm512_fnmadd_ps(_mm512_set1_ps(0.5), t, _mm512_set1_ps(1.5)),
+            );
+            _mm512_fixupimm_ps::<0>(refined, a, _mm512_set1_epi32(RSQRT_FIXUP_TBL))
+        }
     }
 
     #[inline(always)]
@@ -2677,12 +2693,6 @@ impl F64x8Backend for archmage::X64V4xToken {
         unsafe { _mm512_rsqrt14_pd(a) }
     }
 
-    // Exact IEEE division / sqrt, NOT Newton refinement of rcp14/rsqrt14 —
-    // same rationale as the 128/256-bit x86 and NEON backends: refinement
-    // falls short of the 0 ULP precise_reciprocals.rs contract and turns
-    // the IEEE rails into NaN (a*r is inf*0 = NaN at a = ±0 / ±inf), where
-    // exact division returns ±inf / ±0 (issue #64). rcp14/rsqrt14 remain
-    // the estimate tier.
     #[inline(always)]
     fn recip(self, a: __m512d) -> __m512d {
         unsafe { _mm512_div_pd(_mm512_set1_pd(1.0), a) }

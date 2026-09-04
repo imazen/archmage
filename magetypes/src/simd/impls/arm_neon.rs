@@ -181,7 +181,7 @@ impl F32x4Backend for archmage::NeonToken {
         }
     }
 
-    // ====== Reciprocals: estimate tier vs full-precision tier ======
+    // ====== Reciprocals: estimate tier vs working tier ======
     //
     // `_approx` = raw vrecpe/vrsqrte (~8-bit) + one fused FRECPS/FRSQRTS
     // step (~16-bit): the documented >=12-bit fast path. FRECPS
@@ -192,14 +192,22 @@ impl F32x4Backend for archmage::NeonToken {
     // roughly doubles the correct bits (~8 -> ~16 -> ~24). FRECPS/FRSQRTS
     // are baseline NEON.
     //
-    // `recip`/`rsqrt` are contracted as FULL precision, so they compute
-    // the exact result (FDIV, FDIV+FSQRT) rather than refining the
-    // estimate. Refinement does NOT reach the contract: measured on Apple
-    // Silicon, two fused steps land ~2 ULP (recip) / ~3 ULP (rsqrt) short
-    // of correctly-rounded, because the estimate's own rounding error is
-    // carried through every step. `magetypes/tests/precise_reciprocals.rs`
-    // pins these at 0 ULP on NEON, so the exact form is load-bearing —
-    // do not "optimize" it back into an estimate-and-refine sequence.
+    // `recip`/`rsqrt` carry the working-tier contract (<= 4 ULP AND
+    // exact IEEE rails at ±0/±inf/NaN), filled by the fastest
+    // conforming lowering per element type. f32 adds one more fused
+    // step to `_approx` (~2-3 ULP; faster than FDIV on Neoverse-class
+    // cores, the published 0.9.28 behavior). Rails come free from the
+    // hardware: FRECPS/FRSQRTS special-case inf*0 to 2.0/1.5 BY
+    // DESIGN so Newton iterations pass rails through — PROVIDED the
+    // dangerous product is formed INSIDE the fused op. recip does
+    // this naturally (FRECPS(a, y)); rsqrt is therefore written
+    // y*FRSQRTS(a, y*y), NOT y*FRSQRTS(a*y, y): a plain a*y mul is
+    // NaN at the rails and was exactly how the pre-fix NaN leaked
+    // (probe-verified under qemu, 2026-09-04). Cost: identical
+    // instruction count. Tradeoff: y*y overflows f32 for a below
+    // ~3e-39, so deep-subnormal inputs are unspecified at this tier.
+    // f64 divides (no worthwhile f64 estimate exists, and FDIV is
+    // both exact and measured faster on Apple).
     //
     // Cost of exactness is per-core and does NOT generalize — these
     // numbers are for f32 specifically:
@@ -208,8 +216,6 @@ impl F32x4Backend for archmage::NeonToken {
     //   Neoverse-N1 (Ampere Altra): exact is SLOWER
     //     rcp 1.39x, rsqrt 2.15x
     //     (benchmarks/rsqrt_arm_neoverse-n1_2026-06-21.md)
-    // Either way `_approx` is the answer when speed matters — that
-    // separation is the whole reason the two tiers exist.
     #[inline(always)]
     fn rcp_approx(self, a: float32x4_t) -> float32x4_t {
         unsafe {
@@ -221,16 +227,22 @@ impl F32x4Backend for archmage::NeonToken {
     fn rsqrt_approx(self, a: float32x4_t) -> float32x4_t {
         unsafe {
             let y = vrsqrteq_f32(a);
-            vmulq_f32(vrsqrtsq_f32(vmulq_f32(a, y), y), y)
+            vmulq_f32(y, vrsqrtsq_f32(a, vmulq_f32(y, y)))
         }
     }
     #[inline(always)]
     fn recip(self, a: float32x4_t) -> float32x4_t {
-        unsafe { vdivq_f32(vdupq_n_f32(1.0), a) }
+        unsafe {
+            let y = <Self as F32x4Backend>::rcp_approx(self, a);
+            vmulq_f32(vrecpsq_f32(a, y), y)
+        }
     }
     #[inline(always)]
     fn rsqrt(self, a: float32x4_t) -> float32x4_t {
-        unsafe { vdivq_f32(vdupq_n_f32(1.0), vsqrtq_f32(a)) }
+        unsafe {
+            let y = <Self as F32x4Backend>::rsqrt_approx(self, a);
+            vmulq_f32(y, vrsqrtsq_f32(a, vmulq_f32(y, y)))
+        }
     }
 
     #[inline(always)]
@@ -827,7 +839,7 @@ impl F64x2Backend for archmage::NeonToken {
         }
     }
 
-    // ====== Reciprocals: estimate tier vs full-precision tier ======
+    // ====== Reciprocals: estimate tier vs working tier ======
     //
     // `_approx` = raw vrecpe/vrsqrte (~8-bit) + one fused FRECPS/FRSQRTS
     // step (~16-bit): the documented >=12-bit fast path. FRECPS
@@ -838,14 +850,22 @@ impl F64x2Backend for archmage::NeonToken {
     // roughly doubles the correct bits (~8 -> ~16 -> ~24). FRECPS/FRSQRTS
     // are baseline NEON.
     //
-    // `recip`/`rsqrt` are contracted as FULL precision, so they compute
-    // the exact result (FDIV, FDIV+FSQRT) rather than refining the
-    // estimate. Refinement does NOT reach the contract: measured on Apple
-    // Silicon, two fused steps land ~2 ULP (recip) / ~3 ULP (rsqrt) short
-    // of correctly-rounded, because the estimate's own rounding error is
-    // carried through every step. `magetypes/tests/precise_reciprocals.rs`
-    // pins these at 0 ULP on NEON, so the exact form is load-bearing —
-    // do not "optimize" it back into an estimate-and-refine sequence.
+    // `recip`/`rsqrt` carry the working-tier contract (<= 4 ULP AND
+    // exact IEEE rails at ±0/±inf/NaN), filled by the fastest
+    // conforming lowering per element type. f32 adds one more fused
+    // step to `_approx` (~2-3 ULP; faster than FDIV on Neoverse-class
+    // cores, the published 0.9.28 behavior). Rails come free from the
+    // hardware: FRECPS/FRSQRTS special-case inf*0 to 2.0/1.5 BY
+    // DESIGN so Newton iterations pass rails through — PROVIDED the
+    // dangerous product is formed INSIDE the fused op. recip does
+    // this naturally (FRECPS(a, y)); rsqrt is therefore written
+    // y*FRSQRTS(a, y*y), NOT y*FRSQRTS(a*y, y): a plain a*y mul is
+    // NaN at the rails and was exactly how the pre-fix NaN leaked
+    // (probe-verified under qemu, 2026-09-04). Cost: identical
+    // instruction count. Tradeoff: y*y overflows f32 for a below
+    // ~3e-39, so deep-subnormal inputs are unspecified at this tier.
+    // f64 divides (no worthwhile f64 estimate exists, and FDIV is
+    // both exact and measured faster on Apple).
     //
     // Cost of exactness is per-core and does NOT generalize — these
     // numbers are for f64 specifically:
@@ -855,8 +875,6 @@ impl F64x2Backend for archmage::NeonToken {
     //   Neoverse / server ARM: NOT MEASURED for f64. The f32 form is
     //     slower there, so treat an f64 regression as plausible until
     //     someone runs `bench_rsqrt_f64` on that class of core.
-    // Either way `_approx` is the answer when speed matters — that
-    // separation is the whole reason the two tiers exist.
     #[inline(always)]
     fn rcp_approx(self, a: float64x2_t) -> float64x2_t {
         unsafe {
@@ -868,7 +886,7 @@ impl F64x2Backend for archmage::NeonToken {
     fn rsqrt_approx(self, a: float64x2_t) -> float64x2_t {
         unsafe {
             let y = vrsqrteq_f64(a);
-            vmulq_f64(vrsqrtsq_f64(vmulq_f64(a, y), y), y)
+            vmulq_f64(y, vrsqrtsq_f64(a, vmulq_f64(y, y)))
         }
     }
     #[inline(always)]

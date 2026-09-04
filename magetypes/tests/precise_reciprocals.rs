@@ -1,27 +1,31 @@
-//! `recip()` and `rsqrt()` are contracted as full precision, f32 *and* f64.
+//! Contract pins for the reciprocal tier grid.
 //!
-//! This pins that contract. The ARM NEON backend previously implemented it as
-//! `vrecpeq` + Newton steps, which missed exactness *and* was slower than the
-//! hardware divide on Apple Silicon:
+//! Three tiers, three contracts (see the generic type docs):
 //!
-//! - f32, measured over 1 M elements: vdivq 0.107 ms/Melem exact,
-//!   vrecpe+2N 0.145 ms/Melem ~2 ULP (`recip`); rsqrt likewise ~3 ULP.
-//! - f64, measured by reverting this file's backend: `vrecpeq_f64`/`vrsqrteq_f64`
-//!   + three Newton steps lands 1 ULP off (`1/sqrt(1.000001)` →
-//!   `0.9999995000003751`, want `0.999999500000375`).
+//! - `rcp_approx`/`rsqrt_approx` — raw-estimate tier, >= ~12-bit floor
+//!   (pinned by `reciprocal_precision.rs`, not here).
+//! - `recip()`/`rsqrt()` — the WORKING tier: <= 4 ULP AND exact IEEE rails
+//!   at ±0/±inf/NaN, by the backend's fastest conforming path. x86 f32:
+//!   estimate + FMA-Newton + a branchless blendv rescue to the (rail-exact)
+//!   raw estimate; native AVX-512 512-bit: rcp14/rsqrt14 + Newton + a
+//!   VFIXUPIMM patch (tables probe-verified on Zen 5 silicon); NEON f32:
+//!   FRECPS/FRSQRTS whose hardware inf*0 special case passes rails through
+//!   (rsqrt formed as y*FRSQRTS(a, y*y) — a plain a*y mul would NaN);
+//!   WASM/scalar and ALL f64: exact division, so those ULP pins are 0.
+//!   SUBNORMAL inputs are the one unspecified case at this tier.
+//! - `recip_portable()`/`rsqrt_portable()` — the PRECISE tier: exact IEEE
+//!   division, 0 ULP, IEEE rails (`recip(±inf) = ±0`, issue #64), and
+//!   bit-identical cross-arch for free. The rails checks below run against
+//!   bit-identical cross-arch for free.
 //!
-//! The estimate-and-refine form is what `rcp_approx()` is for — it documents a
-//! >=12-bit floor and is free to be inexact. `recip()` is not.
-//!
-//! If a backend regresses to an estimate, this test fails on the first input
-//! whose reciprocal is not bit-exact.
+//! Rails are pinned below on BOTH tiers (bare names and `_portable`).
 //!
 //! **This test is the runtime half of a two-part guard.** The other half is
-//! CI's `generate-check`: these NEON bodies are GENERATED, so a fix applied to
-//! `magetypes/src/simd/impls/arm_neon.rs` alone is reverted by the next
-//! `just generate`. The fix belongs in
-//! `xtask/src/simd_types/backend_gen.rs`, and `just check-generated` catches
-//! the mistake locally. See CLAUDE.md, "FIX THE GENERATOR, NOT ITS OUTPUT".
+//! CI's `generate-check`: the backend bodies are GENERATED, so a fix applied
+//! to `magetypes/src/simd/impls/*.rs` alone is reverted by the next
+//! `just generate`. Fixes belong in `xtask/src/simd_types/backend_gen*.rs`;
+//! `just check-generated` catches the mistake locally. See CLAUDE.md,
+//! "FIX THE GENERATOR, NOT ITS OUTPUT".
 
 use magetypes::simd::backends::{F32x4Convert, F32x8Convert, F64x2Backend, F64x4Backend};
 use magetypes::simd::generic::{f32x4, f32x8, f64x2, f64x4};
@@ -242,13 +246,13 @@ fn check_f64x8<T: F64x8Backend>(token: T, max_ulp: i64, tier: &str) {
 /// wrong: refining `r ≈ 1/a` computes `a*r = inf*0 = NaN` at the rails, which
 /// is how `((-v).exp_midp() + one).recip()` NaN'd 97% of a sigmoid tensor.
 macro_rules! rails_checker {
-    ($fname:ident, $ty:ident, $elem:ty, $lanes:expr, $Trait:ident $(, $cfg:meta)?) => {
+    ($fname:ident, $ty:ident, $elem:ty, $lanes:expr, $Trait:ident, $recip:ident, $rsqrt:ident $(, $cfg:meta)?) => {
         $(#[$cfg])?
         fn $fname<T: $Trait>(token: T, tier: &str) {
             let recip_in: [$elem; $lanes] = core::array::from_fn(|i| {
                 [0.0, -0.0, <$elem>::INFINITY, <$elem>::NEG_INFINITY][i % 4]
             });
-            let got = $ty::from_array(token, recip_in).recip().to_array();
+            let got = $ty::from_array(token, recip_in).$recip().to_array();
             for (i, (&x, &g)) in recip_in.iter().zip(got.iter()).enumerate() {
                 let want = (1.0 as $elem) / x;
                 assert!(
@@ -261,7 +265,7 @@ macro_rules! rails_checker {
             let rsqrt_in: [$elem; $lanes] = core::array::from_fn(|i| {
                 [0.0, -0.0, <$elem>::INFINITY, -1.0][i % 4]
             });
-            let got = $ty::from_array(token, rsqrt_in).rsqrt().to_array();
+            let got = $ty::from_array(token, rsqrt_in).$rsqrt().to_array();
             for (i, (&x, &g)) in rsqrt_in.iter().zip(got.iter()).enumerate() {
                 let want = (1.0 as $elem) / x.sqrt();
                 if want.is_nan() {
@@ -283,16 +287,46 @@ macro_rules! rails_checker {
     };
 }
 
-rails_checker!(rails_f32x4, f32x4, f32, 4, F32x4Convert);
-rails_checker!(rails_f32x8, f32x8, f32, 8, F32x8Convert);
-rails_checker!(rails_f64x2, f64x2, f64, 2, F64x2Backend);
-rails_checker!(rails_f64x4, f64x4, f64, 4, F64x4Backend);
+rails_checker!(
+    rails_f32x4,
+    f32x4,
+    f32,
+    4,
+    F32x4Convert,
+    recip_portable,
+    rsqrt_portable
+);
+rails_checker!(
+    rails_f32x8,
+    f32x8,
+    f32,
+    8,
+    F32x8Convert,
+    recip_portable,
+    rsqrt_portable
+);
+rails_checker!(rails_bare_f32x4, f32x4, f32, 4, F32x4Convert, recip, rsqrt);
+rails_checker!(rails_bare_f32x8, f32x8, f32, 8, F32x8Convert, recip, rsqrt);
+rails_checker!(rails_f64x2, f64x2, f64, 2, F64x2Backend, recip, rsqrt);
+rails_checker!(rails_f64x4, f64x4, f64, 4, F64x4Backend, recip, rsqrt);
 rails_checker!(
     rails_f32x16,
     f32x16,
     f32,
     16,
     F32x16Backend,
+    recip_portable,
+    rsqrt_portable,
+    cfg(feature = "w512")
+);
+rails_checker!(
+    rails_bare_f32x16,
+    f32x16,
+    f32,
+    16,
+    F32x16Backend,
+    recip,
+    rsqrt,
     cfg(feature = "w512")
 );
 rails_checker!(
@@ -301,81 +335,88 @@ rails_checker!(
     f64,
     8,
     F64x8Backend,
+    recip,
+    rsqrt,
     cfg(feature = "w512")
 );
 
-/// Every width on one token: full-precision sweep at `max_ulp` + exact rails.
+/// Every width on one token: working-tier sweep (f32 at `$f32_ulp`, f64 at
+/// `$f64_ulp`) + rails on the precise tier (f32 `_portable`, f64 bare).
 macro_rules! check_all_widths {
-    ($t:expr, $max_ulp:expr, $tier:expr) => {{
-        let (t, ulp, tier) = ($t, $max_ulp, $tier);
-        check_x4(t, ulp, tier);
-        check_x8(t, ulp, tier);
-        check_f64x2(t, ulp, tier);
-        check_f64x4(t, ulp, tier);
+    ($t:expr, $f32_ulp:expr, $f64_ulp:expr, $tier:expr) => {{
+        let (t, f32_ulp, f64_ulp, tier) = ($t, $f32_ulp, $f64_ulp, $tier);
+        check_x4(t, f32_ulp, tier);
+        check_x8(t, f32_ulp, tier);
+        check_f64x2(t, f64_ulp, tier);
+        check_f64x4(t, f64_ulp, tier);
         rails_f32x4(t, tier);
         rails_f32x8(t, tier);
+        rails_bare_f32x4(t, tier);
+        rails_bare_f32x8(t, tier);
         rails_f64x2(t, tier);
         rails_f64x4(t, tier);
         #[cfg(feature = "w512")]
         {
-            check_f32x16(t, ulp, tier);
-            check_f64x8(t, ulp, tier);
+            check_f32x16(t, f32_ulp, tier);
+            check_f64x8(t, f64_ulp, tier);
             rails_f32x16(t, tier);
+            rails_bare_f32x16(t, tier);
             rails_f64x8(t, tier);
         }
     }};
 }
 
-/// Exactness is asserted on every backend: `recip`/`rsqrt` are contracted as
-/// exact IEEE division (and sqrt), 0 ULP against the scalar reference, rails
-/// included.
-///
-/// History: NEON shipped exact division first (justified by aarch64
-/// measurements showing exact is also FASTER there), while x86 f32 stayed on
-/// `rcp_approx` + one Newton step with a pinned 4 ULP bound and "the decision
-/// left to an x86 run" — the divide/estimate tradeoff was unmeasurable from
-/// that machine. That run exists now
-/// (`benchmarks/recip_x86_zen5-9950x3d_2026-09-03.md`, Zen 5): exact division
-/// costs ~1.9x (recip) / ~3.6x (rsqrt) in an L1 throughput microbench, and it
-/// ships anyway — the 0 ULP contract, the IEEE rails (issue #64), and
-/// cross-backend consistency win in the full-precision tier. The estimate
-/// tier (`rcp_approx`/`rsqrt_approx`) keeps the throughput path.
+/// The working-tier pins: f32 bare names at <= 4 ULP where the backend
+/// refines an estimate (x86, NEON — the published 0.9.28 lowerings, kept
+/// because they are the FAST forms there), 0 ULP where it divides
+/// (WASM/scalar f32, all f64). Rails are pinned on the precise tier
+/// (`_portable` for f32, bare names for f64). History: the bare names were
+/// briefly flipped to exact division everywhere post-0.9.28, which fixed
+/// the #64 rails under the default name but cost a measured ~1.9x/~3.6x on
+/// Zen-class x86 with no fast escape hatch — the tier split restores the
+/// published speed and gives the rails an explicit home.
 #[test]
 fn recip_and_rsqrt_meet_their_precision_contract() {
     use archmage::SimdToken;
 
     #[cfg(target_arch = "aarch64")]
     if let Some(t) = archmage::NeonToken::summon() {
-        check_all_widths!(t, 0, "neon");
+        // f32: vrecpe/vrsqrte + fused refine steps, ~2-3 ULP measured.
+        check_all_widths!(t, 4, 0, "neon");
     }
 
     #[cfg(target_arch = "x86_64")]
     if let Some(t) = archmage::X64V3Token::summon() {
-        check_all_widths!(t, 0, "x86_v3");
+        // f32: rcpps/rsqrtps + one Newton step — 4 ULP is the snug bound the
+        // pre-flip pin used. f64 divides (no _mm_rcp_pd exists).
+        check_all_widths!(t, 4, 0, "x86_v3");
     }
 
     // Native AVX-512 512-bit impls (128/256-bit go through .v3() downcast).
+    // f32x16: rcp14/rsqrt14 + one Newton step (14 -> ~28 bits, inside 4 ULP).
     #[cfg(all(target_arch = "x86_64", feature = "avx512", feature = "w512"))]
     if let Some(t) = archmage::X64V4Token::summon() {
-        check_f32x16(t, 0, "x86_v4");
+        check_f32x16(t, 4, "x86_v4");
         check_f64x8(t, 0, "x86_v4");
         rails_f32x16(t, "x86_v4");
+        rails_bare_f32x16(t, "x86_v4");
         rails_f64x8(t, "x86_v4");
     }
     #[cfg(all(target_arch = "x86_64", feature = "avx512", feature = "w512"))]
     if let Some(t) = archmage::X64V4xToken::summon() {
-        check_f32x16(t, 0, "x86_v4x");
+        check_f32x16(t, 4, "x86_v4x");
         check_f64x8(t, 0, "x86_v4x");
         rails_f32x16(t, "x86_v4x");
+        rails_bare_f32x16(t, "x86_v4x");
         rails_f64x8(t, "x86_v4x");
     }
 
     #[cfg(target_arch = "wasm32")]
     if let Some(t) = archmage::Wasm128Token::summon() {
-        check_all_widths!(t, 0, "wasm128");
+        check_all_widths!(t, 0, 0, "wasm128");
     }
 
     // Scalar computes 1.0 / x directly.
     let t = archmage::ScalarToken::summon().expect("scalar tier always available");
-    check_all_widths!(t, 0, "scalar");
+    check_all_widths!(t, 0, 0, "scalar");
 }
