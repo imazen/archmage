@@ -1366,6 +1366,23 @@ pub(crate) use registry::*;
     }
     println!("  Formatted {} generated files", fmt_paths.len());
 
+    // Post-fmt pass: rewrite the native backend impls into the
+    // nested-#[target_feature] form (compiler-verified intrinsic safety —
+    // see simd_types/tf_inner.rs). Runs on fmt-normalized text so the
+    // method parser sees canonical indentation, then re-formats.
+    for rel in ["impls/x86_v3.rs", "impls/x86_v4.rs", "impls/arm_neon.rs"] {
+        let path = simd_dir.join(rel);
+        let text = fs::read_to_string(&path)?;
+        let transformed = simd_types::tf_inner::apply(&text);
+        fs::write(&path, &transformed)?;
+        let _ = std::process::Command::new("rustfmt")
+            .arg("--edition")
+            .arg("2024")
+            .arg(&path)
+            .status();
+    }
+    println!("  Applied nested-target_feature pass to 3 backend impl files");
+
     // Generate reference documentation
     println!("\n=== Generating Reference Documentation ===");
     generate_reference_docs_new()?;
