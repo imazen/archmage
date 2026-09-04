@@ -553,6 +553,20 @@ fn impl_header(trait_name: &str, token: &str, arch: Option<&str>) -> String {
 /// Scalar widen/narrow impls. This backend is the reference the differential
 /// tests compare every other backend against, so both families are written as
 /// literal per-lane arithmetic rather than delegating to anything clever.
+///
+/// **Widening reads all source lanes, then selects the half** (issue #77).
+/// The obvious body — `from_fn(|i| a[i] as D)` over half the lanes — reads
+/// only an 8-byte slice of the by-value source array, which LLVM's SROA
+/// promotes to an `i64`; the lane reads become shift/truncate extracts that
+/// the SLP vectorizer reassembles as scalar-to-vector inserts instead of one
+/// vector load + extend (measured 4.6x slower on Zen 5, 1.8x on Apple M4).
+/// Widening the *full* array first keeps the source as a memory-resident
+/// aggregate, so each half auto-vectorizes to a plain
+/// `load <N x i8>` + `zext`; the unused half is dead-code-eliminated, making
+/// each method byte-identical to the casts written inline at the call site.
+/// Extracting the half as a sub-array first (`split_at`/`as_chunks` + `map`)
+/// is WORSE — the 8-byte half copy itself gets integer-promoted and both
+/// halves degrade.
 pub(super) fn generate_scalar_widen_narrow_impls(w512: bool) -> String {
     let mut code = String::new();
 
@@ -564,16 +578,23 @@ pub(super) fn generate_scalar_widen_narrow_impls(w512: bool) -> String {
         let dst_repr = scalar_repr(p.dst_elem, p.dst_lanes());
         let de = p.dst_elem;
         let half = p.dst_lanes();
+        let full_repr = scalar_repr(p.dst_elem, p.src_lanes);
         code.push_str(&impl_header(&p.trait_name(), "ScalarToken", None));
         code.push_str(&formatdoc! {r#"
                 #[inline(always)]
                 fn {lo}(self, a: {src_repr}) -> {dst_repr} {{
-                    core::array::from_fn(|i| a[i] as {de})
+                    // Widen all lanes, keep the low half: dodges SROA integer
+                    // promotion of a half-array read (#77); the high half is DCE'd.
+                    let f: {full_repr} = core::array::from_fn(|i| a[i] as {de});
+                    core::array::from_fn(|i| f[i])
                 }}
 
                 #[inline(always)]
                 fn {hi}(self, a: {src_repr}) -> {dst_repr} {{
-                    core::array::from_fn(|i| a[i + {half}] as {de})
+                    // Widen all lanes, keep the high half: dodges SROA integer
+                    // promotion of a half-array read (#77); the low half is DCE'd.
+                    let f: {full_repr} = core::array::from_fn(|i| a[i] as {de});
+                    core::array::from_fn(|i| f[i + {half}])
                 }}
         "#, lo = p.method(Half::Low), hi = p.method(Half::High)});
         code.push_str("}\n");
