@@ -24,6 +24,7 @@ pub mod generic_gen;
 pub mod parity_tests;
 pub mod scalar_parity_gen;
 mod structure;
+pub mod tf_inner;
 pub mod types;
 pub mod width_dispatch;
 

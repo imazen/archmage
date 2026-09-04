@@ -48,238 +48,585 @@ impl F32x16Backend for archmage::X64V4Token {
 
     #[inline(always)]
     fn splat(self, v: f32) -> __m512 {
-        unsafe { _mm512_set1_ps(v) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, v: f32) -> __m512 {
+            _mm512_set1_ps(v)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, v) }
     }
 
     #[inline(always)]
     fn zero(self) -> __m512 {
-        unsafe { _mm512_setzero_ps() }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token) -> __m512 {
+            _mm512_setzero_ps()
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self) }
     }
 
     #[inline(always)]
     fn load(self, data: &[f32; 16]) -> __m512 {
-        unsafe { _mm512_loadu_ps(data.as_ptr()) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, data: &[f32; 16]) -> __m512 {
+            unsafe { _mm512_loadu_ps(data.as_ptr()) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, data) }
     }
 
     #[inline(always)]
     fn from_array(self, arr: [f32; 16]) -> __m512 {
-        unsafe { core::mem::transmute(arr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, arr: [f32; 16]) -> __m512 {
+            unsafe { core::mem::transmute(arr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, arr) }
     }
 
     #[inline(always)]
     fn store(self, repr: __m512, out: &mut [f32; 16]) {
-        unsafe { _mm512_storeu_ps(out.as_mut_ptr(), repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, repr: __m512, out: &mut [f32; 16]) {
+            unsafe { _mm512_storeu_ps(out.as_mut_ptr(), repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr, out) }
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512) -> [f32; 16] {
-        unsafe { core::mem::transmute(repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, repr: __m512) -> [f32; 16] {
+            unsafe { core::mem::transmute(repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr) }
     }
 
     #[inline(always)]
     fn add(self, a: __m512, b: __m512) -> __m512 {
-        unsafe { _mm512_add_ps(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512, b: __m512) -> __m512 {
+            _mm512_add_ps(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sub(self, a: __m512, b: __m512) -> __m512 {
-        unsafe { _mm512_sub_ps(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512, b: __m512) -> __m512 {
+            _mm512_sub_ps(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn mul(self, a: __m512, b: __m512) -> __m512 {
-        unsafe { _mm512_mul_ps(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512, b: __m512) -> __m512 {
+            _mm512_mul_ps(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn div(self, a: __m512, b: __m512) -> __m512 {
-        unsafe { _mm512_div_ps(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512, b: __m512) -> __m512 {
+            _mm512_div_ps(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn neg(self, a: __m512) -> __m512 {
-        unsafe { _mm512_sub_ps(_mm512_setzero_ps(), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512) -> __m512 {
+            _mm512_sub_ps(_mm512_setzero_ps(), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn min(self, a: __m512, b: __m512) -> __m512 {
-        unsafe { _mm512_min_ps(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512, b: __m512) -> __m512 {
+            _mm512_min_ps(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn max(self, a: __m512, b: __m512) -> __m512 {
-        unsafe { _mm512_max_ps(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512, b: __m512) -> __m512 {
+            _mm512_max_ps(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sqrt(self, a: __m512) -> __m512 {
-        unsafe { _mm512_sqrt_ps(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512) -> __m512 {
+            _mm512_sqrt_ps(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn abs(self, a: __m512) -> __m512 {
-        unsafe {
-            let mask = _mm512_castsi512_ps(_mm512_set1_epi32(0x7FFF_FFFFu32 as i32));
-            _mm512_and_ps(a, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512) -> __m512 {
+            {
+                let mask = _mm512_castsi512_ps(_mm512_set1_epi32(0x7FFF_FFFFu32 as i32));
+                _mm512_and_ps(a, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn floor(self, a: __m512) -> __m512 {
-        unsafe { _mm512_roundscale_ps::<0x01>(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512) -> __m512 {
+            _mm512_roundscale_ps::<0x01>(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn ceil(self, a: __m512) -> __m512 {
-        unsafe { _mm512_roundscale_ps::<0x02>(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512) -> __m512 {
+            _mm512_roundscale_ps::<0x02>(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn round(self, a: __m512) -> __m512 {
-        unsafe { _mm512_roundscale_ps::<0x00>(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512) -> __m512 {
+            _mm512_roundscale_ps::<0x00>(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn mul_add(self, a: __m512, b: __m512, c: __m512) -> __m512 {
-        unsafe { _mm512_fmadd_ps(a, b, c) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512, b: __m512, c: __m512) -> __m512 {
+            _mm512_fmadd_ps(a, b, c)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b, c) }
     }
 
     #[inline(always)]
     fn mul_sub(self, a: __m512, b: __m512, c: __m512) -> __m512 {
-        unsafe { _mm512_fmsub_ps(a, b, c) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512, b: __m512, c: __m512) -> __m512 {
+            _mm512_fmsub_ps(a, b, c)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b, c) }
     }
 
     #[inline(always)]
     fn simd_eq(self, a: __m512, b: __m512) -> __m512 {
-        unsafe {
-            let mask = _mm512_cmp_ps_mask::<_CMP_EQ_OQ>(a, b);
-            _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512, b: __m512) -> __m512 {
+            {
+                let mask = _mm512_cmp_ps_mask::<_CMP_EQ_OQ>(a, b);
+                _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ne(self, a: __m512, b: __m512) -> __m512 {
-        unsafe {
-            let mask = _mm512_cmp_ps_mask::<_CMP_NEQ_UQ>(a, b);
-            _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512, b: __m512) -> __m512 {
+            {
+                let mask = _mm512_cmp_ps_mask::<_CMP_NEQ_UQ>(a, b);
+                _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_lt(self, a: __m512, b: __m512) -> __m512 {
-        unsafe {
-            let mask = _mm512_cmp_ps_mask::<_CMP_LT_OQ>(a, b);
-            _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512, b: __m512) -> __m512 {
+            {
+                let mask = _mm512_cmp_ps_mask::<_CMP_LT_OQ>(a, b);
+                _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_le(self, a: __m512, b: __m512) -> __m512 {
-        unsafe {
-            let mask = _mm512_cmp_ps_mask::<_CMP_LE_OQ>(a, b);
-            _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512, b: __m512) -> __m512 {
+            {
+                let mask = _mm512_cmp_ps_mask::<_CMP_LE_OQ>(a, b);
+                _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_gt(self, a: __m512, b: __m512) -> __m512 {
-        unsafe {
-            let mask = _mm512_cmp_ps_mask::<_CMP_GT_OQ>(a, b);
-            _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512, b: __m512) -> __m512 {
+            {
+                let mask = _mm512_cmp_ps_mask::<_CMP_GT_OQ>(a, b);
+                _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ge(self, a: __m512, b: __m512) -> __m512 {
-        unsafe {
-            let mask = _mm512_cmp_ps_mask::<_CMP_GE_OQ>(a, b);
-            _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512, b: __m512) -> __m512 {
+            {
+                let mask = _mm512_cmp_ps_mask::<_CMP_GE_OQ>(a, b);
+                _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn blend(self, mask: __m512, if_true: __m512, if_false: __m512) -> __m512 {
-        unsafe {
-            let mask_i = _mm512_castps_si512(mask);
-            let k = _mm512_cmpneq_epi32_mask(mask_i, _mm512_setzero_si512());
-            _mm512_mask_blend_ps(k, if_false, if_true)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(
+            _this: archmage::X64V4Token,
+            mask: __m512,
+            if_true: __m512,
+            if_false: __m512,
+        ) -> __m512 {
+            {
+                let mask_i = _mm512_castps_si512(mask);
+                let k = _mm512_cmpneq_epi32_mask(mask_i, _mm512_setzero_si512());
+                _mm512_mask_blend_ps(k, if_false, if_true)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, mask, if_true, if_false) }
     }
 
     #[inline(always)]
     fn reduce_add(self, a: __m512) -> f32 {
-        unsafe { _mm512_reduce_add_ps(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512) -> f32 {
+            _mm512_reduce_add_ps(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn reduce_min(self, a: __m512) -> f32 {
-        unsafe { _mm512_reduce_min_ps(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512) -> f32 {
+            _mm512_reduce_min_ps(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn reduce_max(self, a: __m512) -> f32 {
-        unsafe { _mm512_reduce_max_ps(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512) -> f32 {
+            _mm512_reduce_max_ps(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     // Raw 14-bit hardware estimate — the cheapest >=12-bit path on AVX-512.
     #[inline(always)]
     fn rcp_approx(self, a: __m512) -> __m512 {
-        unsafe { _mm512_rcp14_ps(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512) -> __m512 {
+            _mm512_rcp14_ps(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn rsqrt_approx(self, a: __m512) -> __m512 {
-        unsafe { _mm512_rsqrt14_ps(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512) -> __m512 {
+            _mm512_rsqrt14_ps(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn recip(self, a: __m512) -> __m512 {
-        // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->7 +INF->8 NEG->0 POS->0
-        const RECIP_FIXUP_TBL: i32 = 0x0087_0622u32 as i32;
-        unsafe {
-            let r = _mm512_rcp14_ps(a);
-            let e = _mm512_fnmadd_ps(a, r, _mm512_set1_ps(1.0));
-            let refined = _mm512_fmadd_ps(r, e, r);
-            _mm512_fixupimm_ps::<0>(refined, a, _mm512_set1_epi32(RECIP_FIXUP_TBL))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512) -> __m512 {
+            // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->7 +INF->8 NEG->0 POS->0
+            const RECIP_FIXUP_TBL: i32 = 0x0087_0622u32 as i32;
+            {
+                let r = _mm512_rcp14_ps(a);
+                let e = _mm512_fnmadd_ps(a, r, _mm512_set1_ps(1.0));
+                let refined = _mm512_fmadd_ps(r, e, r);
+                _mm512_fixupimm_ps::<0>(refined, a, _mm512_set1_epi32(RECIP_FIXUP_TBL))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn rsqrt(self, a: __m512) -> __m512 {
-        // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->3 +INF->8 NEG->3 POS->0
-        const RSQRT_FIXUP_TBL: i32 = 0x0383_0622u32 as i32;
-        unsafe {
-            let y = _mm512_rsqrt14_ps(a);
-            let t = _mm512_mul_ps(a, _mm512_mul_ps(y, y));
-            let refined = _mm512_mul_ps(
-                y,
-                _mm512_fnmadd_ps(_mm512_set1_ps(0.5), t, _mm512_set1_ps(1.5)),
-            );
-            _mm512_fixupimm_ps::<0>(refined, a, _mm512_set1_epi32(RSQRT_FIXUP_TBL))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512) -> __m512 {
+            // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->3 +INF->8 NEG->3 POS->0
+            const RSQRT_FIXUP_TBL: i32 = 0x0383_0622u32 as i32;
+            {
+                let y = _mm512_rsqrt14_ps(a);
+                let t = _mm512_mul_ps(a, _mm512_mul_ps(y, y));
+                let refined = _mm512_mul_ps(
+                    y,
+                    _mm512_fnmadd_ps(_mm512_set1_ps(0.5), t, _mm512_set1_ps(1.5)),
+                );
+                _mm512_fixupimm_ps::<0>(refined, a, _mm512_set1_epi32(RSQRT_FIXUP_TBL))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn not(self, a: __m512) -> __m512 {
-        unsafe {
-            let all_ones = _mm512_castsi512_ps(_mm512_set1_epi32(-1));
-            _mm512_xor_ps(a, all_ones)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512) -> __m512 {
+            {
+                let all_ones = _mm512_castsi512_ps(_mm512_set1_epi32(-1));
+                _mm512_xor_ps(a, all_ones)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitand(self, a: __m512, b: __m512) -> __m512 {
-        unsafe { _mm512_and_ps(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512, b: __m512) -> __m512 {
+            _mm512_and_ps(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitor(self, a: __m512, b: __m512) -> __m512 {
-        unsafe { _mm512_or_ps(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512, b: __m512) -> __m512 {
+            _mm512_or_ps(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitxor(self, a: __m512, b: __m512) -> __m512 {
-        unsafe { _mm512_xor_ps(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512, b: __m512) -> __m512 {
+            _mm512_xor_ps(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 }
 
@@ -290,221 +637,568 @@ impl F64x8Backend for archmage::X64V4Token {
 
     #[inline(always)]
     fn splat(self, v: f64) -> __m512d {
-        unsafe { _mm512_set1_pd(v) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, v: f64) -> __m512d {
+            _mm512_set1_pd(v)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, v) }
     }
 
     #[inline(always)]
     fn zero(self) -> __m512d {
-        unsafe { _mm512_setzero_pd() }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token) -> __m512d {
+            _mm512_setzero_pd()
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self) }
     }
 
     #[inline(always)]
     fn load(self, data: &[f64; 8]) -> __m512d {
-        unsafe { _mm512_loadu_pd(data.as_ptr()) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, data: &[f64; 8]) -> __m512d {
+            unsafe { _mm512_loadu_pd(data.as_ptr()) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, data) }
     }
 
     #[inline(always)]
     fn from_array(self, arr: [f64; 8]) -> __m512d {
-        unsafe { core::mem::transmute(arr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, arr: [f64; 8]) -> __m512d {
+            unsafe { core::mem::transmute(arr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, arr) }
     }
 
     #[inline(always)]
     fn store(self, repr: __m512d, out: &mut [f64; 8]) {
-        unsafe { _mm512_storeu_pd(out.as_mut_ptr(), repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, repr: __m512d, out: &mut [f64; 8]) {
+            unsafe { _mm512_storeu_pd(out.as_mut_ptr(), repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr, out) }
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512d) -> [f64; 8] {
-        unsafe { core::mem::transmute(repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, repr: __m512d) -> [f64; 8] {
+            unsafe { core::mem::transmute(repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr) }
     }
 
     #[inline(always)]
     fn add(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe { _mm512_add_pd(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d, b: __m512d) -> __m512d {
+            _mm512_add_pd(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sub(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe { _mm512_sub_pd(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d, b: __m512d) -> __m512d {
+            _mm512_sub_pd(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn mul(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe { _mm512_mul_pd(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d, b: __m512d) -> __m512d {
+            _mm512_mul_pd(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn div(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe { _mm512_div_pd(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d, b: __m512d) -> __m512d {
+            _mm512_div_pd(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn neg(self, a: __m512d) -> __m512d {
-        unsafe { _mm512_sub_pd(_mm512_setzero_pd(), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d) -> __m512d {
+            _mm512_sub_pd(_mm512_setzero_pd(), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn min(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe { _mm512_min_pd(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d, b: __m512d) -> __m512d {
+            _mm512_min_pd(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn max(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe { _mm512_max_pd(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d, b: __m512d) -> __m512d {
+            _mm512_max_pd(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sqrt(self, a: __m512d) -> __m512d {
-        unsafe { _mm512_sqrt_pd(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d) -> __m512d {
+            _mm512_sqrt_pd(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn abs(self, a: __m512d) -> __m512d {
-        unsafe {
-            let mask = _mm512_castsi512_pd(_mm512_set1_epi64(0x7FFF_FFFF_FFFF_FFFFu64 as i64));
-            _mm512_and_pd(a, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d) -> __m512d {
+            {
+                let mask = _mm512_castsi512_pd(_mm512_set1_epi64(0x7FFF_FFFF_FFFF_FFFFu64 as i64));
+                _mm512_and_pd(a, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn floor(self, a: __m512d) -> __m512d {
-        unsafe { _mm512_roundscale_pd::<0x01>(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d) -> __m512d {
+            _mm512_roundscale_pd::<0x01>(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn ceil(self, a: __m512d) -> __m512d {
-        unsafe { _mm512_roundscale_pd::<0x02>(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d) -> __m512d {
+            _mm512_roundscale_pd::<0x02>(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn round(self, a: __m512d) -> __m512d {
-        unsafe { _mm512_roundscale_pd::<0x00>(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d) -> __m512d {
+            _mm512_roundscale_pd::<0x00>(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn mul_add(self, a: __m512d, b: __m512d, c: __m512d) -> __m512d {
-        unsafe { _mm512_fmadd_pd(a, b, c) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d, b: __m512d, c: __m512d) -> __m512d {
+            _mm512_fmadd_pd(a, b, c)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b, c) }
     }
 
     #[inline(always)]
     fn mul_sub(self, a: __m512d, b: __m512d, c: __m512d) -> __m512d {
-        unsafe { _mm512_fmsub_pd(a, b, c) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d, b: __m512d, c: __m512d) -> __m512d {
+            _mm512_fmsub_pd(a, b, c)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b, c) }
     }
 
     #[inline(always)]
     fn simd_eq(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe {
-            let mask = _mm512_cmp_pd_mask::<_CMP_EQ_OQ>(a, b);
-            _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d, b: __m512d) -> __m512d {
+            {
+                let mask = _mm512_cmp_pd_mask::<_CMP_EQ_OQ>(a, b);
+                _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ne(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe {
-            let mask = _mm512_cmp_pd_mask::<_CMP_NEQ_UQ>(a, b);
-            _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d, b: __m512d) -> __m512d {
+            {
+                let mask = _mm512_cmp_pd_mask::<_CMP_NEQ_UQ>(a, b);
+                _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_lt(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe {
-            let mask = _mm512_cmp_pd_mask::<_CMP_LT_OQ>(a, b);
-            _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d, b: __m512d) -> __m512d {
+            {
+                let mask = _mm512_cmp_pd_mask::<_CMP_LT_OQ>(a, b);
+                _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_le(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe {
-            let mask = _mm512_cmp_pd_mask::<_CMP_LE_OQ>(a, b);
-            _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d, b: __m512d) -> __m512d {
+            {
+                let mask = _mm512_cmp_pd_mask::<_CMP_LE_OQ>(a, b);
+                _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_gt(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe {
-            let mask = _mm512_cmp_pd_mask::<_CMP_GT_OQ>(a, b);
-            _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d, b: __m512d) -> __m512d {
+            {
+                let mask = _mm512_cmp_pd_mask::<_CMP_GT_OQ>(a, b);
+                _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ge(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe {
-            let mask = _mm512_cmp_pd_mask::<_CMP_GE_OQ>(a, b);
-            _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d, b: __m512d) -> __m512d {
+            {
+                let mask = _mm512_cmp_pd_mask::<_CMP_GE_OQ>(a, b);
+                _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn blend(self, mask: __m512d, if_true: __m512d, if_false: __m512d) -> __m512d {
-        unsafe {
-            let mask_i = _mm512_castpd_si512(mask);
-            let k = _mm512_cmpneq_epi64_mask(mask_i, _mm512_setzero_si512());
-            _mm512_mask_blend_pd(k, if_false, if_true)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(
+            _this: archmage::X64V4Token,
+            mask: __m512d,
+            if_true: __m512d,
+            if_false: __m512d,
+        ) -> __m512d {
+            {
+                let mask_i = _mm512_castpd_si512(mask);
+                let k = _mm512_cmpneq_epi64_mask(mask_i, _mm512_setzero_si512());
+                _mm512_mask_blend_pd(k, if_false, if_true)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, mask, if_true, if_false) }
     }
 
     #[inline(always)]
     fn reduce_add(self, a: __m512d) -> f64 {
-        unsafe { _mm512_reduce_add_pd(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d) -> f64 {
+            _mm512_reduce_add_pd(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn reduce_min(self, a: __m512d) -> f64 {
-        unsafe { _mm512_reduce_min_pd(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d) -> f64 {
+            _mm512_reduce_min_pd(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn reduce_max(self, a: __m512d) -> f64 {
-        unsafe { _mm512_reduce_max_pd(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d) -> f64 {
+            _mm512_reduce_max_pd(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     // Raw 14-bit hardware estimate — the cheapest >=12-bit path on AVX-512.
     #[inline(always)]
     fn rcp_approx(self, a: __m512d) -> __m512d {
-        unsafe { _mm512_rcp14_pd(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d) -> __m512d {
+            _mm512_rcp14_pd(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn rsqrt_approx(self, a: __m512d) -> __m512d {
-        unsafe { _mm512_rsqrt14_pd(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d) -> __m512d {
+            _mm512_rsqrt14_pd(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn recip(self, a: __m512d) -> __m512d {
-        unsafe { _mm512_div_pd(_mm512_set1_pd(1.0), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d) -> __m512d {
+            _mm512_div_pd(_mm512_set1_pd(1.0), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn rsqrt(self, a: __m512d) -> __m512d {
-        unsafe { _mm512_div_pd(_mm512_set1_pd(1.0), _mm512_sqrt_pd(a)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d) -> __m512d {
+            _mm512_div_pd(_mm512_set1_pd(1.0), _mm512_sqrt_pd(a))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn not(self, a: __m512d) -> __m512d {
-        unsafe {
-            let all_ones = _mm512_castsi512_pd(_mm512_set1_epi64(-1));
-            _mm512_xor_pd(a, all_ones)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d) -> __m512d {
+            {
+                let all_ones = _mm512_castsi512_pd(_mm512_set1_epi64(-1));
+                _mm512_xor_pd(a, all_ones)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitand(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe { _mm512_and_pd(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d, b: __m512d) -> __m512d {
+            _mm512_and_pd(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitor(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe { _mm512_or_pd(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d, b: __m512d) -> __m512d {
+            _mm512_or_pd(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitxor(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe { _mm512_xor_pd(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512d, b: __m512d) -> __m512d {
+            _mm512_xor_pd(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 }
 
@@ -515,251 +1209,573 @@ impl I8x64Backend for archmage::X64V4Token {
 
     #[inline(always)]
     fn splat(self, v: i8) -> __m512i {
-        unsafe { _mm512_set1_epi8(v as _) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, v: i8) -> __m512i {
+            _mm512_set1_epi8(v as _)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, v) }
     }
 
     #[inline(always)]
     fn zero(self) -> __m512i {
-        unsafe { _mm512_setzero_si512() }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token) -> __m512i {
+            _mm512_setzero_si512()
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self) }
     }
 
     #[inline(always)]
     fn load(self, data: &[i8; 64]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, data: &[i8; 64]) -> __m512i {
+            unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, data) }
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i8; 64]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, arr: [i8; 64]) -> __m512i {
+            unsafe { core::mem::transmute(arr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, arr) }
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [i8; 64]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, repr: __m512i, out: &mut [i8; 64]) {
+            unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr, out) }
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [i8; 64] {
-        unsafe { core::mem::transmute(repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, repr: __m512i) -> [i8; 64] {
+            unsafe { core::mem::transmute(repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr) }
     }
 
     #[inline(always)]
     fn add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_add_epi8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_add_epi8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_sub_epi8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn neg(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi8(_mm512_setzero_si512(), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_sub_epi8(_mm512_setzero_si512(), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn min(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_min_epi8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_min_epi8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn max(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_max_epi8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_max_epi8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn abs(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_abs_epi8(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_abs_epi8(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn simd_eq(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpeq_epi8_mask(a, b);
-            _mm512_maskz_set1_epi8(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpeq_epi8_mask(a, b);
+                _mm512_maskz_set1_epi8(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ne(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpneq_epi8_mask(a, b);
-            _mm512_maskz_set1_epi8(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpneq_epi8_mask(a, b);
+                _mm512_maskz_set1_epi8(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_lt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmplt_epi8_mask(a, b);
-            _mm512_maskz_set1_epi8(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmplt_epi8_mask(a, b);
+                _mm512_maskz_set1_epi8(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_le(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmple_epi8_mask(a, b);
-            _mm512_maskz_set1_epi8(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmple_epi8_mask(a, b);
+                _mm512_maskz_set1_epi8(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_gt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GT = LT with swapped args
-            let mask = _mm512_cmplt_epi8_mask(b, a);
-            _mm512_maskz_set1_epi8(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GT = LT with swapped args
+                let mask = _mm512_cmplt_epi8_mask(b, a);
+                _mm512_maskz_set1_epi8(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ge(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GE = LE with swapped args
-            let mask = _mm512_cmple_epi8_mask(b, a);
-            _mm512_maskz_set1_epi8(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GE = LE with swapped args
+                let mask = _mm512_cmple_epi8_mask(b, a);
+                _mm512_maskz_set1_epi8(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn blend(self, mask: __m512i, if_true: __m512i, if_false: __m512i) -> __m512i {
-        unsafe {
-            let k = _mm512_cmpneq_epi8_mask(mask, _mm512_setzero_si512());
-            _mm512_mask_blend_epi8(k, if_false, if_true)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(
+            _this: archmage::X64V4Token,
+            mask: __m512i,
+            if_true: __m512i,
+            if_false: __m512i,
+        ) -> __m512i {
+            {
+                let k = _mm512_cmpneq_epi8_mask(mask, _mm512_setzero_si512());
+                _mm512_mask_blend_epi8(k, if_false, if_true)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, mask, if_true, if_false) }
     }
 
     #[inline(always)]
     fn reduce_add(self, a: __m512i) -> i8 {
-        // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [i8; 64] = unsafe { core::mem::transmute(a) };
-        arr.iter().copied().fold(0i8, i8::wrapping_add)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> i8 {
+            // No native integer reduce_add in AVX-512; use transmute to array
+            let arr: [i8; 64] = unsafe { core::mem::transmute(a) };
+            arr.iter().copied().fold(0i8, i8::wrapping_add)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn not(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, _mm512_set1_epi8(-1)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_xor_si512(a, _mm512_set1_epi8(-1))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitand(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_and_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_and_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_or_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_or_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitxor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_xor_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe {
-            let count = _mm_cvtsi32_si128(N);
-            let shifted = _mm512_sll_epi16(a, count);
-            let mask = _mm512_set1_epi8(((0xFFu16 << N) & 0xFF) as i8);
-            _mm512_and_si512(shifted, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            {
+                let count = _mm_cvtsi32_si128(N);
+                let shifted = _mm512_sll_epi16(a, count);
+                let mask = _mm512_set1_epi8(((0xFFu16 << N) & 0xFF) as i8);
+                _mm512_and_si512(shifted, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe {
-            let count = _mm_cvtsi32_si128(N);
-            // Sign-extend bytes to 16-bit, shift, mask back to 8-bit
-            let lo = _mm512_sra_epi16(_mm512_slli_epi16::<8>(a), count);
-            let hi = _mm512_sra_epi16(a, count);
-            // Combine: take low byte from lo, high byte from hi
-            let mask = _mm512_set1_epi16(0x00FFu16 as i16);
-            _mm512_or_si512(
-                _mm512_and_si512(_mm512_srli_epi16::<8>(lo), mask),
-                _mm512_andnot_si512(mask, hi),
-            )
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            {
+                let count = _mm_cvtsi32_si128(N);
+                // Sign-extend bytes to 16-bit, shift, mask back to 8-bit
+                let lo = _mm512_sra_epi16(_mm512_slli_epi16::<8>(a), count);
+                let hi = _mm512_sra_epi16(a, count);
+                // Combine: take low byte from lo, high byte from hi
+                let mask = _mm512_set1_epi16(0x00FFu16 as i16);
+                _mm512_or_si512(
+                    _mm512_and_si512(_mm512_srli_epi16::<8>(lo), mask),
+                    _mm512_andnot_si512(mask, hi),
+                )
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe {
-            let count = _mm_cvtsi32_si128(N);
-            let shifted = _mm512_srl_epi16(a, count);
-            let mask = _mm512_set1_epi8(((0xFFu16 >> N) & 0xFF) as i8);
-            _mm512_and_si512(shifted, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            {
+                let count = _mm_cvtsi32_si128(N);
+                let shifted = _mm512_srl_epi16(a, count);
+                let mask = _mm512_set1_epi8(((0xFFu16 >> N) & 0xFF) as i8);
+                _mm512_and_si512(shifted, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe {
-            let shifted = _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
-            let mask = _mm512_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
-            _mm512_and_si512(shifted, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, count: u32) -> __m512i {
+            {
+                let shifted = _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
+                let mask = _mm512_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
+                _mm512_and_si512(shifted, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe {
-            let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-            let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-            _mm512_and_si512(shifted, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, count: u32) -> __m512i {
+            {
+                let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
+                let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
+                _mm512_and_si512(shifted, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe {
-            let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-            let byte_mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-            let logical = _mm512_and_si512(shifted, byte_mask);
-            let sign = _mm512_movm_epi8(_mm512_cmplt_epi8_mask(a, _mm512_setzero_si512()));
-            // `count.min(8)` saturates the fill to the whole byte, which
-            // is the contracted sign fill for out-of-range counts.
-            let fill = _mm512_set1_epi8(((0xFF00u16 >> count.min(8)) & 0xFF) as u8 as i8);
-            _mm512_or_si512(logical, _mm512_and_si512(sign, fill))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, count: u32) -> __m512i {
+            {
+                let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
+                let byte_mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
+                let logical = _mm512_and_si512(shifted, byte_mask);
+                let sign = _mm512_movm_epi8(_mm512_cmplt_epi8_mask(a, _mm512_setzero_si512()));
+                // `count.min(8)` saturates the fill to the whole byte, which
+                // is the contracted sign fill for out-of-range counts.
+                let fill = _mm512_set1_epi8(((0xFF00u16 >> count.min(8)) & 0xFF) as u8 as i8);
+                _mm512_or_si512(logical, _mm512_and_si512(sign, fill))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_adds_epi8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_adds_epi8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn saturating_sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_subs_epi8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_subs_epi8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-            mask as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
+                mask as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn any_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-            mask as u64 != 0
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
+                mask as u64 != 0
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitmask(self, a: __m512i) -> u64 {
-        unsafe {
-            // Extract high bit of each lane: compare < 0 for signed interpretation
-            let zero = _mm512_setzero_si512();
-            _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero)
-                as u64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> u64 {
+            {
+                // Extract high bit of each lane: compare < 0 for signed interpretation
+                let zero = _mm512_setzero_si512();
+                _mm512_cmpneq_epi8_mask(
+                    _mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))),
+                    zero,
+                ) as u64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -770,240 +1786,553 @@ impl U8x64Backend for archmage::X64V4Token {
 
     #[inline(always)]
     fn splat(self, v: u8) -> __m512i {
-        unsafe { _mm512_set1_epi8(v as _) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, v: u8) -> __m512i {
+            _mm512_set1_epi8(v as _)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, v) }
     }
 
     #[inline(always)]
     fn zero(self) -> __m512i {
-        unsafe { _mm512_setzero_si512() }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token) -> __m512i {
+            _mm512_setzero_si512()
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self) }
     }
 
     #[inline(always)]
     fn load(self, data: &[u8; 64]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, data: &[u8; 64]) -> __m512i {
+            unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, data) }
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u8; 64]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, arr: [u8; 64]) -> __m512i {
+            unsafe { core::mem::transmute(arr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, arr) }
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [u8; 64]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, repr: __m512i, out: &mut [u8; 64]) {
+            unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr, out) }
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [u8; 64] {
-        unsafe { core::mem::transmute(repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, repr: __m512i) -> [u8; 64] {
+            unsafe { core::mem::transmute(repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr) }
     }
 
     #[inline(always)]
     fn add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_add_epi8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_add_epi8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_sub_epi8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn neg(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi8(_mm512_setzero_si512(), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_sub_epi8(_mm512_setzero_si512(), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn min(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_min_epu8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_min_epu8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn max(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_max_epu8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_max_epu8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_eq(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpeq_epu8_mask(a, b);
-            _mm512_maskz_set1_epi8(mask, -1i8)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpeq_epu8_mask(a, b);
+                _mm512_maskz_set1_epi8(mask, -1i8)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ne(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpneq_epu8_mask(a, b);
-            _mm512_maskz_set1_epi8(mask, -1i8)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpneq_epu8_mask(a, b);
+                _mm512_maskz_set1_epi8(mask, -1i8)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_lt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmplt_epu8_mask(a, b);
-            _mm512_maskz_set1_epi8(mask, -1i8)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmplt_epu8_mask(a, b);
+                _mm512_maskz_set1_epi8(mask, -1i8)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_le(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmple_epu8_mask(a, b);
-            _mm512_maskz_set1_epi8(mask, -1i8)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmple_epu8_mask(a, b);
+                _mm512_maskz_set1_epi8(mask, -1i8)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_gt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GT = LT with swapped args
-            let mask = _mm512_cmplt_epu8_mask(b, a);
-            _mm512_maskz_set1_epi8(mask, -1i8)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GT = LT with swapped args
+                let mask = _mm512_cmplt_epu8_mask(b, a);
+                _mm512_maskz_set1_epi8(mask, -1i8)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ge(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GE = LE with swapped args
-            let mask = _mm512_cmple_epu8_mask(b, a);
-            _mm512_maskz_set1_epi8(mask, -1i8)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GE = LE with swapped args
+                let mask = _mm512_cmple_epu8_mask(b, a);
+                _mm512_maskz_set1_epi8(mask, -1i8)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn blend(self, mask: __m512i, if_true: __m512i, if_false: __m512i) -> __m512i {
-        unsafe {
-            let k = _mm512_cmpneq_epi8_mask(mask, _mm512_setzero_si512());
-            _mm512_mask_blend_epi8(k, if_false, if_true)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(
+            _this: archmage::X64V4Token,
+            mask: __m512i,
+            if_true: __m512i,
+            if_false: __m512i,
+        ) -> __m512i {
+            {
+                let k = _mm512_cmpneq_epi8_mask(mask, _mm512_setzero_si512());
+                _mm512_mask_blend_epi8(k, if_false, if_true)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, mask, if_true, if_false) }
     }
 
     #[inline(always)]
     fn reduce_add(self, a: __m512i) -> u8 {
-        // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [u8; 64] = unsafe { core::mem::transmute(a) };
-        arr.iter().copied().fold(0u8, u8::wrapping_add)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> u8 {
+            // No native integer reduce_add in AVX-512; use transmute to array
+            let arr: [u8; 64] = unsafe { core::mem::transmute(a) };
+            arr.iter().copied().fold(0u8, u8::wrapping_add)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn not(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, _mm512_set1_epi8(-1i8)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_xor_si512(a, _mm512_set1_epi8(-1i8))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitand(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_and_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_and_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_or_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_or_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitxor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_xor_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe {
-            let count = _mm_cvtsi32_si128(N);
-            let shifted = _mm512_sll_epi16(a, count);
-            let mask = _mm512_set1_epi8(((0xFFu16 << N) & 0xFF) as i8);
-            _mm512_and_si512(shifted, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            {
+                let count = _mm_cvtsi32_si128(N);
+                let shifted = _mm512_sll_epi16(a, count);
+                let mask = _mm512_set1_epi8(((0xFFu16 << N) & 0xFF) as i8);
+                _mm512_and_si512(shifted, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe {
-            let count = _mm_cvtsi32_si128(N);
-            let shifted = _mm512_srl_epi16(a, count);
-            let byte_mask = _mm512_set1_epi8(((0xFFu16 >> N) & 0xFF) as i8);
-            let logical = _mm512_and_si512(shifted, byte_mask);
-            // Sign-extend: fill the high N bits of negative lanes. The u16
-            // shift keeps the fill mask 0x00 at N == 0 (identity shift).
-            let sign = _mm512_movm_epi8(_mm512_cmplt_epi8_mask(a, _mm512_setzero_si512()));
-            let fill = _mm512_set1_epi8(((0xFF00u16 >> N) & 0xFF) as i8);
-            _mm512_or_si512(logical, _mm512_and_si512(sign, fill))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            {
+                let count = _mm_cvtsi32_si128(N);
+                let shifted = _mm512_srl_epi16(a, count);
+                let byte_mask = _mm512_set1_epi8(((0xFFu16 >> N) & 0xFF) as i8);
+                let logical = _mm512_and_si512(shifted, byte_mask);
+                // Sign-extend: fill the high N bits of negative lanes. The u16
+                // shift keeps the fill mask 0x00 at N == 0 (identity shift).
+                let sign = _mm512_movm_epi8(_mm512_cmplt_epi8_mask(a, _mm512_setzero_si512()));
+                let fill = _mm512_set1_epi8(((0xFF00u16 >> N) & 0xFF) as i8);
+                _mm512_or_si512(logical, _mm512_and_si512(sign, fill))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe {
-            let count = _mm_cvtsi32_si128(N);
-            let shifted = _mm512_srl_epi16(a, count);
-            let mask = _mm512_set1_epi8(((0xFFu16 >> N) & 0xFF) as i8);
-            _mm512_and_si512(shifted, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            {
+                let count = _mm_cvtsi32_si128(N);
+                let shifted = _mm512_srl_epi16(a, count);
+                let mask = _mm512_set1_epi8(((0xFFu16 >> N) & 0xFF) as i8);
+                _mm512_and_si512(shifted, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe {
-            let shifted = _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
-            let mask = _mm512_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
-            _mm512_and_si512(shifted, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, count: u32) -> __m512i {
+            {
+                let shifted = _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
+                let mask = _mm512_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
+                _mm512_and_si512(shifted, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe {
-            let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-            let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-            _mm512_and_si512(shifted, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, count: u32) -> __m512i {
+            {
+                let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
+                let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
+                _mm512_and_si512(shifted, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe {
-            let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-            let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-            _mm512_and_si512(shifted, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, count: u32) -> __m512i {
+            {
+                let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
+                let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
+                _mm512_and_si512(shifted, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_adds_epu8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_adds_epu8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn saturating_sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_subs_epu8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_subs_epu8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-            mask as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
+                mask as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn any_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-            mask as u64 != 0
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
+                mask as u64 != 0
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitmask(self, a: __m512i) -> u64 {
-        unsafe {
-            // Extract high bit of each lane: compare < 0 for signed interpretation
-            let zero = _mm512_setzero_si512();
-            _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero)
-                as u64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> u64 {
+            {
+                // Extract high bit of each lane: compare < 0 for signed interpretation
+                let zero = _mm512_setzero_si512();
+                _mm512_cmpneq_epi8_mask(
+                    _mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))),
+                    zero,
+                ) as u64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -1014,220 +2343,549 @@ impl I16x32Backend for archmage::X64V4Token {
 
     #[inline(always)]
     fn splat(self, v: i16) -> __m512i {
-        unsafe { _mm512_set1_epi16(v as _) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, v: i16) -> __m512i {
+            _mm512_set1_epi16(v as _)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, v) }
     }
 
     #[inline(always)]
     fn zero(self) -> __m512i {
-        unsafe { _mm512_setzero_si512() }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token) -> __m512i {
+            _mm512_setzero_si512()
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self) }
     }
 
     #[inline(always)]
     fn load(self, data: &[i16; 32]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, data: &[i16; 32]) -> __m512i {
+            unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, data) }
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i16; 32]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, arr: [i16; 32]) -> __m512i {
+            unsafe { core::mem::transmute(arr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, arr) }
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [i16; 32]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, repr: __m512i, out: &mut [i16; 32]) {
+            unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr, out) }
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [i16; 32] {
-        unsafe { core::mem::transmute(repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, repr: __m512i) -> [i16; 32] {
+            unsafe { core::mem::transmute(repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr) }
     }
 
     #[inline(always)]
     fn add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_add_epi16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_add_epi16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_sub_epi16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn mul(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_mullo_epi16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_mullo_epi16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn neg(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi16(_mm512_setzero_si512(), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_sub_epi16(_mm512_setzero_si512(), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn min(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_min_epi16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_min_epi16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn max(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_max_epi16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_max_epi16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn abs(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_abs_epi16(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_abs_epi16(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn simd_eq(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpeq_epi16_mask(a, b);
-            _mm512_maskz_set1_epi16(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpeq_epi16_mask(a, b);
+                _mm512_maskz_set1_epi16(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ne(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpneq_epi16_mask(a, b);
-            _mm512_maskz_set1_epi16(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpneq_epi16_mask(a, b);
+                _mm512_maskz_set1_epi16(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_lt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmplt_epi16_mask(a, b);
-            _mm512_maskz_set1_epi16(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmplt_epi16_mask(a, b);
+                _mm512_maskz_set1_epi16(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_le(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmple_epi16_mask(a, b);
-            _mm512_maskz_set1_epi16(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmple_epi16_mask(a, b);
+                _mm512_maskz_set1_epi16(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_gt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GT = LT with swapped args
-            let mask = _mm512_cmplt_epi16_mask(b, a);
-            _mm512_maskz_set1_epi16(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GT = LT with swapped args
+                let mask = _mm512_cmplt_epi16_mask(b, a);
+                _mm512_maskz_set1_epi16(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ge(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GE = LE with swapped args
-            let mask = _mm512_cmple_epi16_mask(b, a);
-            _mm512_maskz_set1_epi16(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GE = LE with swapped args
+                let mask = _mm512_cmple_epi16_mask(b, a);
+                _mm512_maskz_set1_epi16(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn blend(self, mask: __m512i, if_true: __m512i, if_false: __m512i) -> __m512i {
-        unsafe {
-            let k = _mm512_cmpneq_epi16_mask(mask, _mm512_setzero_si512());
-            _mm512_mask_blend_epi16(k, if_false, if_true)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(
+            _this: archmage::X64V4Token,
+            mask: __m512i,
+            if_true: __m512i,
+            if_false: __m512i,
+        ) -> __m512i {
+            {
+                let k = _mm512_cmpneq_epi16_mask(mask, _mm512_setzero_si512());
+                _mm512_mask_blend_epi16(k, if_false, if_true)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, mask, if_true, if_false) }
     }
 
     #[inline(always)]
     fn reduce_add(self, a: __m512i) -> i16 {
-        // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [i16; 32] = unsafe { core::mem::transmute(a) };
-        arr.iter().copied().fold(0i16, i16::wrapping_add)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> i16 {
+            // No native integer reduce_add in AVX-512; use transmute to array
+            let arr: [i16; 32] = unsafe { core::mem::transmute(a) };
+            arr.iter().copied().fold(0i16, i16::wrapping_add)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn not(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, _mm512_set1_epi16(-1)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_xor_si512(a, _mm512_set1_epi16(-1))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitand(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_and_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_and_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_or_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_or_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitxor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_xor_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sll_epi16(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_sll_epi16(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sra_epi16(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_sra_epi16(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_srl_epi16(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_srl_epi16(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, count: u32) -> __m512i {
+            _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, count: u32) -> __m512i {
+            _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_sra_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, count: u32) -> __m512i {
+            _mm512_sra_epi16(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_adds_epi16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_adds_epi16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn saturating_sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_subs_epi16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_subs_epi16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-            mask as u64 == 0xFFFF_FFFFu64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
+                mask as u64 == 0xFFFF_FFFFu64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn any_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-            mask as u64 != 0
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
+                mask as u64 != 0
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitmask(self, a: __m512i) -> u64 {
-        unsafe {
-            // Extract high bit of each lane: compare < 0 for signed interpretation
-            let zero = _mm512_setzero_si512();
-            _mm512_cmpneq_epi16_mask(
-                _mm512_and_si512(a, _mm512_set1_epi16(1_i16 << (16 - 1))),
-                zero,
-            ) as u64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> u64 {
+            {
+                // Extract high bit of each lane: compare < 0 for signed interpretation
+                let zero = _mm512_setzero_si512();
+                _mm512_cmpneq_epi16_mask(
+                    _mm512_and_si512(a, _mm512_set1_epi16(1_i16 << (16 - 1))),
+                    zero,
+                ) as u64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -1238,215 +2896,535 @@ impl U16x32Backend for archmage::X64V4Token {
 
     #[inline(always)]
     fn splat(self, v: u16) -> __m512i {
-        unsafe { _mm512_set1_epi16(v as _) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, v: u16) -> __m512i {
+            _mm512_set1_epi16(v as _)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, v) }
     }
 
     #[inline(always)]
     fn zero(self) -> __m512i {
-        unsafe { _mm512_setzero_si512() }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token) -> __m512i {
+            _mm512_setzero_si512()
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self) }
     }
 
     #[inline(always)]
     fn load(self, data: &[u16; 32]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, data: &[u16; 32]) -> __m512i {
+            unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, data) }
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u16; 32]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, arr: [u16; 32]) -> __m512i {
+            unsafe { core::mem::transmute(arr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, arr) }
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [u16; 32]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, repr: __m512i, out: &mut [u16; 32]) {
+            unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr, out) }
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [u16; 32] {
-        unsafe { core::mem::transmute(repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, repr: __m512i) -> [u16; 32] {
+            unsafe { core::mem::transmute(repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr) }
     }
 
     #[inline(always)]
     fn add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_add_epi16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_add_epi16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_sub_epi16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn mul(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_mullo_epi16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_mullo_epi16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn neg(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi16(_mm512_setzero_si512(), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_sub_epi16(_mm512_setzero_si512(), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn min(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_min_epu16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_min_epu16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn max(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_max_epu16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_max_epu16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_eq(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpeq_epu16_mask(a, b);
-            _mm512_maskz_set1_epi16(mask, -1i16)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpeq_epu16_mask(a, b);
+                _mm512_maskz_set1_epi16(mask, -1i16)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ne(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpneq_epu16_mask(a, b);
-            _mm512_maskz_set1_epi16(mask, -1i16)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpneq_epu16_mask(a, b);
+                _mm512_maskz_set1_epi16(mask, -1i16)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_lt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmplt_epu16_mask(a, b);
-            _mm512_maskz_set1_epi16(mask, -1i16)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmplt_epu16_mask(a, b);
+                _mm512_maskz_set1_epi16(mask, -1i16)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_le(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmple_epu16_mask(a, b);
-            _mm512_maskz_set1_epi16(mask, -1i16)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmple_epu16_mask(a, b);
+                _mm512_maskz_set1_epi16(mask, -1i16)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_gt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GT = LT with swapped args
-            let mask = _mm512_cmplt_epu16_mask(b, a);
-            _mm512_maskz_set1_epi16(mask, -1i16)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GT = LT with swapped args
+                let mask = _mm512_cmplt_epu16_mask(b, a);
+                _mm512_maskz_set1_epi16(mask, -1i16)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ge(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GE = LE with swapped args
-            let mask = _mm512_cmple_epu16_mask(b, a);
-            _mm512_maskz_set1_epi16(mask, -1i16)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GE = LE with swapped args
+                let mask = _mm512_cmple_epu16_mask(b, a);
+                _mm512_maskz_set1_epi16(mask, -1i16)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn blend(self, mask: __m512i, if_true: __m512i, if_false: __m512i) -> __m512i {
-        unsafe {
-            let k = _mm512_cmpneq_epi16_mask(mask, _mm512_setzero_si512());
-            _mm512_mask_blend_epi16(k, if_false, if_true)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(
+            _this: archmage::X64V4Token,
+            mask: __m512i,
+            if_true: __m512i,
+            if_false: __m512i,
+        ) -> __m512i {
+            {
+                let k = _mm512_cmpneq_epi16_mask(mask, _mm512_setzero_si512());
+                _mm512_mask_blend_epi16(k, if_false, if_true)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, mask, if_true, if_false) }
     }
 
     #[inline(always)]
     fn reduce_add(self, a: __m512i) -> u16 {
-        // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [u16; 32] = unsafe { core::mem::transmute(a) };
-        arr.iter().copied().fold(0u16, u16::wrapping_add)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> u16 {
+            // No native integer reduce_add in AVX-512; use transmute to array
+            let arr: [u16; 32] = unsafe { core::mem::transmute(a) };
+            arr.iter().copied().fold(0u16, u16::wrapping_add)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn not(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, _mm512_set1_epi16(-1i16)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_xor_si512(a, _mm512_set1_epi16(-1i16))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitand(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_and_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_and_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_or_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_or_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitxor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_xor_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sll_epi16(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_sll_epi16(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_srl_epi16(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_srl_epi16(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_srl_epi16(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_srl_epi16(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, count: u32) -> __m512i {
+            _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, count: u32) -> __m512i {
+            _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, count: u32) -> __m512i {
+            _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_adds_epu16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_adds_epu16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn saturating_sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_subs_epu16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_subs_epu16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-            mask as u64 == 0xFFFF_FFFFu64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
+                mask as u64 == 0xFFFF_FFFFu64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn any_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-            mask as u64 != 0
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
+                mask as u64 != 0
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitmask(self, a: __m512i) -> u64 {
-        unsafe {
-            // Extract high bit of each lane: compare < 0 for signed interpretation
-            let zero = _mm512_setzero_si512();
-            _mm512_cmpneq_epi16_mask(
-                _mm512_and_si512(a, _mm512_set1_epi16(1_i16 << (16 - 1))),
-                zero,
-            ) as u64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> u64 {
+            {
+                // Extract high bit of each lane: compare < 0 for signed interpretation
+                let zero = _mm512_setzero_si512();
+                _mm512_cmpneq_epi16_mask(
+                    _mm512_and_si512(a, _mm512_set1_epi16(1_i16 << (16 - 1))),
+                    zero,
+                ) as u64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -1457,210 +3435,521 @@ impl I32x16Backend for archmage::X64V4Token {
 
     #[inline(always)]
     fn splat(self, v: i32) -> __m512i {
-        unsafe { _mm512_set1_epi32(v as _) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, v: i32) -> __m512i {
+            _mm512_set1_epi32(v as _)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, v) }
     }
 
     #[inline(always)]
     fn zero(self) -> __m512i {
-        unsafe { _mm512_setzero_si512() }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token) -> __m512i {
+            _mm512_setzero_si512()
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self) }
     }
 
     #[inline(always)]
     fn load(self, data: &[i32; 16]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, data: &[i32; 16]) -> __m512i {
+            unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, data) }
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i32; 16]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, arr: [i32; 16]) -> __m512i {
+            unsafe { core::mem::transmute(arr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, arr) }
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [i32; 16]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, repr: __m512i, out: &mut [i32; 16]) {
+            unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr, out) }
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [i32; 16] {
-        unsafe { core::mem::transmute(repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, repr: __m512i) -> [i32; 16] {
+            unsafe { core::mem::transmute(repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr) }
     }
 
     #[inline(always)]
     fn add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_add_epi32(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_add_epi32(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi32(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_sub_epi32(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn mul(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_mullo_epi32(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_mullo_epi32(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn neg(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi32(_mm512_setzero_si512(), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_sub_epi32(_mm512_setzero_si512(), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn min(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_min_epi32(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_min_epi32(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn max(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_max_epi32(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_max_epi32(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn abs(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_abs_epi32(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_abs_epi32(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn simd_eq(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpeq_epi32_mask(a, b);
-            _mm512_maskz_set1_epi32(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpeq_epi32_mask(a, b);
+                _mm512_maskz_set1_epi32(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ne(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpneq_epi32_mask(a, b);
-            _mm512_maskz_set1_epi32(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpneq_epi32_mask(a, b);
+                _mm512_maskz_set1_epi32(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_lt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmplt_epi32_mask(a, b);
-            _mm512_maskz_set1_epi32(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmplt_epi32_mask(a, b);
+                _mm512_maskz_set1_epi32(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_le(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmple_epi32_mask(a, b);
-            _mm512_maskz_set1_epi32(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmple_epi32_mask(a, b);
+                _mm512_maskz_set1_epi32(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_gt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GT = LT with swapped args
-            let mask = _mm512_cmplt_epi32_mask(b, a);
-            _mm512_maskz_set1_epi32(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GT = LT with swapped args
+                let mask = _mm512_cmplt_epi32_mask(b, a);
+                _mm512_maskz_set1_epi32(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ge(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GE = LE with swapped args
-            let mask = _mm512_cmple_epi32_mask(b, a);
-            _mm512_maskz_set1_epi32(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GE = LE with swapped args
+                let mask = _mm512_cmple_epi32_mask(b, a);
+                _mm512_maskz_set1_epi32(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn blend(self, mask: __m512i, if_true: __m512i, if_false: __m512i) -> __m512i {
-        unsafe {
-            let k = _mm512_cmpneq_epi32_mask(mask, _mm512_setzero_si512());
-            _mm512_mask_blend_epi32(k, if_false, if_true)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(
+            _this: archmage::X64V4Token,
+            mask: __m512i,
+            if_true: __m512i,
+            if_false: __m512i,
+        ) -> __m512i {
+            {
+                let k = _mm512_cmpneq_epi32_mask(mask, _mm512_setzero_si512());
+                _mm512_mask_blend_epi32(k, if_false, if_true)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, mask, if_true, if_false) }
     }
 
     #[inline(always)]
     fn reduce_add(self, a: __m512i) -> i32 {
-        // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [i32; 16] = unsafe { core::mem::transmute(a) };
-        arr.iter().copied().fold(0i32, i32::wrapping_add)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> i32 {
+            // No native integer reduce_add in AVX-512; use transmute to array
+            let arr: [i32; 16] = unsafe { core::mem::transmute(a) };
+            arr.iter().copied().fold(0i32, i32::wrapping_add)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn not(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, _mm512_set1_epi32(-1)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_xor_si512(a, _mm512_set1_epi32(-1))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitand(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_and_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_and_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_or_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_or_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitxor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_xor_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sll_epi32(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_sll_epi32(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sra_epi32(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_sra_epi32(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_srl_epi32(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_srl_epi32(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_sll_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, count: u32) -> __m512i {
+            _mm512_sll_epi32(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_srl_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, count: u32) -> __m512i {
+            _mm512_srl_epi32(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_sra_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, count: u32) -> __m512i {
+            _mm512_sra_epi32(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-            mask as u64 == 0xFFFFu64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
+                mask as u64 == 0xFFFFu64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn any_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-            mask as u64 != 0
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
+                mask as u64 != 0
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitmask(self, a: __m512i) -> u64 {
-        unsafe {
-            // Extract high bit of each lane: compare < 0 for signed interpretation
-            let zero = _mm512_setzero_si512();
-            _mm512_cmpneq_epi32_mask(
-                _mm512_and_si512(a, _mm512_set1_epi32(1_i32 << (32 - 1))),
-                zero,
-            ) as u64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> u64 {
+            {
+                // Extract high bit of each lane: compare < 0 for signed interpretation
+                let zero = _mm512_setzero_si512();
+                _mm512_cmpneq_epi32_mask(
+                    _mm512_and_si512(a, _mm512_set1_epi32(1_i32 << (32 - 1))),
+                    zero,
+                ) as u64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -1671,205 +3960,507 @@ impl U32x16Backend for archmage::X64V4Token {
 
     #[inline(always)]
     fn splat(self, v: u32) -> __m512i {
-        unsafe { _mm512_set1_epi32(v as _) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, v: u32) -> __m512i {
+            _mm512_set1_epi32(v as _)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, v) }
     }
 
     #[inline(always)]
     fn zero(self) -> __m512i {
-        unsafe { _mm512_setzero_si512() }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token) -> __m512i {
+            _mm512_setzero_si512()
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self) }
     }
 
     #[inline(always)]
     fn load(self, data: &[u32; 16]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, data: &[u32; 16]) -> __m512i {
+            unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, data) }
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u32; 16]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, arr: [u32; 16]) -> __m512i {
+            unsafe { core::mem::transmute(arr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, arr) }
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [u32; 16]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, repr: __m512i, out: &mut [u32; 16]) {
+            unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr, out) }
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [u32; 16] {
-        unsafe { core::mem::transmute(repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, repr: __m512i) -> [u32; 16] {
+            unsafe { core::mem::transmute(repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr) }
     }
 
     #[inline(always)]
     fn add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_add_epi32(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_add_epi32(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi32(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_sub_epi32(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn mul(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_mullo_epi32(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_mullo_epi32(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn neg(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi32(_mm512_setzero_si512(), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_sub_epi32(_mm512_setzero_si512(), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn min(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_min_epu32(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_min_epu32(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn max(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_max_epu32(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_max_epu32(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_eq(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpeq_epu32_mask(a, b);
-            _mm512_maskz_set1_epi32(mask, -1i32)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpeq_epu32_mask(a, b);
+                _mm512_maskz_set1_epi32(mask, -1i32)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ne(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpneq_epu32_mask(a, b);
-            _mm512_maskz_set1_epi32(mask, -1i32)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpneq_epu32_mask(a, b);
+                _mm512_maskz_set1_epi32(mask, -1i32)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_lt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmplt_epu32_mask(a, b);
-            _mm512_maskz_set1_epi32(mask, -1i32)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmplt_epu32_mask(a, b);
+                _mm512_maskz_set1_epi32(mask, -1i32)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_le(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmple_epu32_mask(a, b);
-            _mm512_maskz_set1_epi32(mask, -1i32)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmple_epu32_mask(a, b);
+                _mm512_maskz_set1_epi32(mask, -1i32)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_gt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GT = LT with swapped args
-            let mask = _mm512_cmplt_epu32_mask(b, a);
-            _mm512_maskz_set1_epi32(mask, -1i32)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GT = LT with swapped args
+                let mask = _mm512_cmplt_epu32_mask(b, a);
+                _mm512_maskz_set1_epi32(mask, -1i32)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ge(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GE = LE with swapped args
-            let mask = _mm512_cmple_epu32_mask(b, a);
-            _mm512_maskz_set1_epi32(mask, -1i32)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GE = LE with swapped args
+                let mask = _mm512_cmple_epu32_mask(b, a);
+                _mm512_maskz_set1_epi32(mask, -1i32)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn blend(self, mask: __m512i, if_true: __m512i, if_false: __m512i) -> __m512i {
-        unsafe {
-            let k = _mm512_cmpneq_epi32_mask(mask, _mm512_setzero_si512());
-            _mm512_mask_blend_epi32(k, if_false, if_true)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(
+            _this: archmage::X64V4Token,
+            mask: __m512i,
+            if_true: __m512i,
+            if_false: __m512i,
+        ) -> __m512i {
+            {
+                let k = _mm512_cmpneq_epi32_mask(mask, _mm512_setzero_si512());
+                _mm512_mask_blend_epi32(k, if_false, if_true)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, mask, if_true, if_false) }
     }
 
     #[inline(always)]
     fn reduce_add(self, a: __m512i) -> u32 {
-        // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [u32; 16] = unsafe { core::mem::transmute(a) };
-        arr.iter().copied().fold(0u32, u32::wrapping_add)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> u32 {
+            // No native integer reduce_add in AVX-512; use transmute to array
+            let arr: [u32; 16] = unsafe { core::mem::transmute(a) };
+            arr.iter().copied().fold(0u32, u32::wrapping_add)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn not(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, _mm512_set1_epi32(-1i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_xor_si512(a, _mm512_set1_epi32(-1i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitand(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_and_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_and_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_or_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_or_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitxor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_xor_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sll_epi32(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_sll_epi32(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_srl_epi32(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_srl_epi32(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_srl_epi32(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_srl_epi32(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_sll_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, count: u32) -> __m512i {
+            _mm512_sll_epi32(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_srl_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, count: u32) -> __m512i {
+            _mm512_srl_epi32(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_srl_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, count: u32) -> __m512i {
+            _mm512_srl_epi32(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-            mask as u64 == 0xFFFFu64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
+                mask as u64 == 0xFFFFu64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn any_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-            mask as u64 != 0
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
+                mask as u64 != 0
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitmask(self, a: __m512i) -> u64 {
-        unsafe {
-            // Extract high bit of each lane: compare < 0 for signed interpretation
-            let zero = _mm512_setzero_si512();
-            _mm512_cmpneq_epi32_mask(
-                _mm512_and_si512(a, _mm512_set1_epi32(1_i32 << (32 - 1))),
-                zero,
-            ) as u64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> u64 {
+            {
+                // Extract high bit of each lane: compare < 0 for signed interpretation
+                let zero = _mm512_setzero_si512();
+                _mm512_cmpneq_epi32_mask(
+                    _mm512_and_si512(a, _mm512_set1_epi32(1_i32 << (32 - 1))),
+                    zero,
+                ) as u64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -1880,190 +4471,465 @@ impl I64x8Backend for archmage::X64V4Token {
 
     #[inline(always)]
     fn splat(self, v: i64) -> __m512i {
-        unsafe { _mm512_set1_epi64(v as _) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, v: i64) -> __m512i {
+            _mm512_set1_epi64(v as _)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, v) }
     }
 
     #[inline(always)]
     fn zero(self) -> __m512i {
-        unsafe { _mm512_setzero_si512() }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token) -> __m512i {
+            _mm512_setzero_si512()
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self) }
     }
 
     #[inline(always)]
     fn load(self, data: &[i64; 8]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, data: &[i64; 8]) -> __m512i {
+            unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, data) }
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i64; 8]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, arr: [i64; 8]) -> __m512i {
+            unsafe { core::mem::transmute(arr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, arr) }
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [i64; 8]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, repr: __m512i, out: &mut [i64; 8]) {
+            unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr, out) }
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [i64; 8] {
-        unsafe { core::mem::transmute(repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, repr: __m512i) -> [i64; 8] {
+            unsafe { core::mem::transmute(repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr) }
     }
 
     #[inline(always)]
     fn add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_add_epi64(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_add_epi64(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi64(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_sub_epi64(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn neg(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi64(_mm512_setzero_si512(), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_sub_epi64(_mm512_setzero_si512(), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn min(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_min_epi64(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_min_epi64(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn max(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_max_epi64(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_max_epi64(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn abs(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_abs_epi64(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_abs_epi64(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn simd_eq(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpeq_epi64_mask(a, b);
-            _mm512_maskz_set1_epi64(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpeq_epi64_mask(a, b);
+                _mm512_maskz_set1_epi64(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ne(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpneq_epi64_mask(a, b);
-            _mm512_maskz_set1_epi64(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpneq_epi64_mask(a, b);
+                _mm512_maskz_set1_epi64(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_lt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmplt_epi64_mask(a, b);
-            _mm512_maskz_set1_epi64(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmplt_epi64_mask(a, b);
+                _mm512_maskz_set1_epi64(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_le(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmple_epi64_mask(a, b);
-            _mm512_maskz_set1_epi64(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmple_epi64_mask(a, b);
+                _mm512_maskz_set1_epi64(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_gt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GT = LT with swapped args
-            let mask = _mm512_cmplt_epi64_mask(b, a);
-            _mm512_maskz_set1_epi64(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GT = LT with swapped args
+                let mask = _mm512_cmplt_epi64_mask(b, a);
+                _mm512_maskz_set1_epi64(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ge(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GE = LE with swapped args
-            let mask = _mm512_cmple_epi64_mask(b, a);
-            _mm512_maskz_set1_epi64(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GE = LE with swapped args
+                let mask = _mm512_cmple_epi64_mask(b, a);
+                _mm512_maskz_set1_epi64(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn blend(self, mask: __m512i, if_true: __m512i, if_false: __m512i) -> __m512i {
-        unsafe {
-            let k = _mm512_cmpneq_epi64_mask(mask, _mm512_setzero_si512());
-            _mm512_mask_blend_epi64(k, if_false, if_true)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(
+            _this: archmage::X64V4Token,
+            mask: __m512i,
+            if_true: __m512i,
+            if_false: __m512i,
+        ) -> __m512i {
+            {
+                let k = _mm512_cmpneq_epi64_mask(mask, _mm512_setzero_si512());
+                _mm512_mask_blend_epi64(k, if_false, if_true)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, mask, if_true, if_false) }
     }
 
     #[inline(always)]
     fn reduce_add(self, a: __m512i) -> i64 {
-        // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [i64; 8] = unsafe { core::mem::transmute(a) };
-        arr.iter().copied().fold(0i64, i64::wrapping_add)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> i64 {
+            // No native integer reduce_add in AVX-512; use transmute to array
+            let arr: [i64; 8] = unsafe { core::mem::transmute(a) };
+            arr.iter().copied().fold(0i64, i64::wrapping_add)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn not(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, _mm512_set1_epi64(-1)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_xor_si512(a, _mm512_set1_epi64(-1))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitand(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_and_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_and_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_or_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_or_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitxor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_xor_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sll_epi64(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_sll_epi64(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sra_epi64(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_sra_epi64(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_srl_epi64(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_srl_epi64(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-            mask as u64 == 0xFFu64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
+                mask as u64 == 0xFFu64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn any_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-            mask as u64 != 0
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
+                mask as u64 != 0
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitmask(self, a: __m512i) -> u64 {
-        unsafe {
-            // Extract high bit of each lane: compare < 0 for signed interpretation
-            let zero = _mm512_setzero_si512();
-            _mm512_cmpneq_epi64_mask(
-                _mm512_and_si512(a, _mm512_set1_epi64(1_i64 << (64 - 1))),
-                zero,
-            ) as u64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> u64 {
+            {
+                // Extract high bit of each lane: compare < 0 for signed interpretation
+                let zero = _mm512_setzero_si512();
+                _mm512_cmpneq_epi64_mask(
+                    _mm512_and_si512(a, _mm512_set1_epi64(1_i64 << (64 - 1))),
+                    zero,
+                ) as u64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -2074,185 +4940,451 @@ impl U64x8Backend for archmage::X64V4Token {
 
     #[inline(always)]
     fn splat(self, v: u64) -> __m512i {
-        unsafe { _mm512_set1_epi64(v as _) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, v: u64) -> __m512i {
+            _mm512_set1_epi64(v as _)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, v) }
     }
 
     #[inline(always)]
     fn zero(self) -> __m512i {
-        unsafe { _mm512_setzero_si512() }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token) -> __m512i {
+            _mm512_setzero_si512()
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self) }
     }
 
     #[inline(always)]
     fn load(self, data: &[u64; 8]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, data: &[u64; 8]) -> __m512i {
+            unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, data) }
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u64; 8]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, arr: [u64; 8]) -> __m512i {
+            unsafe { core::mem::transmute(arr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, arr) }
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [u64; 8]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, repr: __m512i, out: &mut [u64; 8]) {
+            unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr, out) }
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [u64; 8] {
-        unsafe { core::mem::transmute(repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, repr: __m512i) -> [u64; 8] {
+            unsafe { core::mem::transmute(repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr) }
     }
 
     #[inline(always)]
     fn add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_add_epi64(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_add_epi64(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi64(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_sub_epi64(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn neg(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi64(_mm512_setzero_si512(), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_sub_epi64(_mm512_setzero_si512(), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn min(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_min_epu64(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_min_epu64(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn max(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_max_epu64(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_max_epu64(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_eq(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpeq_epu64_mask(a, b);
-            _mm512_maskz_set1_epi64(mask, -1i64)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpeq_epu64_mask(a, b);
+                _mm512_maskz_set1_epi64(mask, -1i64)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ne(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpneq_epu64_mask(a, b);
-            _mm512_maskz_set1_epi64(mask, -1i64)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpneq_epu64_mask(a, b);
+                _mm512_maskz_set1_epi64(mask, -1i64)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_lt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmplt_epu64_mask(a, b);
-            _mm512_maskz_set1_epi64(mask, -1i64)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmplt_epu64_mask(a, b);
+                _mm512_maskz_set1_epi64(mask, -1i64)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_le(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmple_epu64_mask(a, b);
-            _mm512_maskz_set1_epi64(mask, -1i64)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmple_epu64_mask(a, b);
+                _mm512_maskz_set1_epi64(mask, -1i64)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_gt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GT = LT with swapped args
-            let mask = _mm512_cmplt_epu64_mask(b, a);
-            _mm512_maskz_set1_epi64(mask, -1i64)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GT = LT with swapped args
+                let mask = _mm512_cmplt_epu64_mask(b, a);
+                _mm512_maskz_set1_epi64(mask, -1i64)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ge(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GE = LE with swapped args
-            let mask = _mm512_cmple_epu64_mask(b, a);
-            _mm512_maskz_set1_epi64(mask, -1i64)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GE = LE with swapped args
+                let mask = _mm512_cmple_epu64_mask(b, a);
+                _mm512_maskz_set1_epi64(mask, -1i64)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn blend(self, mask: __m512i, if_true: __m512i, if_false: __m512i) -> __m512i {
-        unsafe {
-            let k = _mm512_cmpneq_epi64_mask(mask, _mm512_setzero_si512());
-            _mm512_mask_blend_epi64(k, if_false, if_true)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(
+            _this: archmage::X64V4Token,
+            mask: __m512i,
+            if_true: __m512i,
+            if_false: __m512i,
+        ) -> __m512i {
+            {
+                let k = _mm512_cmpneq_epi64_mask(mask, _mm512_setzero_si512());
+                _mm512_mask_blend_epi64(k, if_false, if_true)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, mask, if_true, if_false) }
     }
 
     #[inline(always)]
     fn reduce_add(self, a: __m512i) -> u64 {
-        // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [u64; 8] = unsafe { core::mem::transmute(a) };
-        arr.iter().copied().fold(0u64, u64::wrapping_add)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> u64 {
+            // No native integer reduce_add in AVX-512; use transmute to array
+            let arr: [u64; 8] = unsafe { core::mem::transmute(a) };
+            arr.iter().copied().fold(0u64, u64::wrapping_add)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn not(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, _mm512_set1_epi64(-1i64)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_xor_si512(a, _mm512_set1_epi64(-1i64))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitand(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_and_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_and_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_or_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_or_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitxor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_xor_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sll_epi64(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_sll_epi64(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_srl_epi64(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_srl_epi64(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_srl_epi64(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_srl_epi64(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-            mask as u64 == 0xFFu64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
+                mask as u64 == 0xFFu64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn any_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-            mask as u64 != 0
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
+                mask as u64 != 0
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitmask(self, a: __m512i) -> u64 {
-        unsafe {
-            // Extract high bit of each lane: compare < 0 for signed interpretation
-            let zero = _mm512_setzero_si512();
-            _mm512_cmpneq_epi64_mask(
-                _mm512_and_si512(a, _mm512_set1_epi64(1_i64 << (64 - 1))),
-                zero,
-            ) as u64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> u64 {
+            {
+                // Extract high bit of each lane: compare < 0 for signed interpretation
+                let zero = _mm512_setzero_si512();
+                _mm512_cmpneq_epi64_mask(
+                    _mm512_and_si512(a, _mm512_set1_epi64(1_i64 << (64 - 1))),
+                    zero,
+                ) as u64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -2267,238 +5399,585 @@ impl F32x16Backend for archmage::X64V4xToken {
 
     #[inline(always)]
     fn splat(self, v: f32) -> __m512 {
-        unsafe { _mm512_set1_ps(v) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, v: f32) -> __m512 {
+            _mm512_set1_ps(v)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, v) }
     }
 
     #[inline(always)]
     fn zero(self) -> __m512 {
-        unsafe { _mm512_setzero_ps() }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken) -> __m512 {
+            _mm512_setzero_ps()
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self) }
     }
 
     #[inline(always)]
     fn load(self, data: &[f32; 16]) -> __m512 {
-        unsafe { _mm512_loadu_ps(data.as_ptr()) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, data: &[f32; 16]) -> __m512 {
+            unsafe { _mm512_loadu_ps(data.as_ptr()) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, data) }
     }
 
     #[inline(always)]
     fn from_array(self, arr: [f32; 16]) -> __m512 {
-        unsafe { core::mem::transmute(arr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, arr: [f32; 16]) -> __m512 {
+            unsafe { core::mem::transmute(arr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, arr) }
     }
 
     #[inline(always)]
     fn store(self, repr: __m512, out: &mut [f32; 16]) {
-        unsafe { _mm512_storeu_ps(out.as_mut_ptr(), repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, repr: __m512, out: &mut [f32; 16]) {
+            unsafe { _mm512_storeu_ps(out.as_mut_ptr(), repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr, out) }
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512) -> [f32; 16] {
-        unsafe { core::mem::transmute(repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, repr: __m512) -> [f32; 16] {
+            unsafe { core::mem::transmute(repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr) }
     }
 
     #[inline(always)]
     fn add(self, a: __m512, b: __m512) -> __m512 {
-        unsafe { _mm512_add_ps(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512, b: __m512) -> __m512 {
+            _mm512_add_ps(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sub(self, a: __m512, b: __m512) -> __m512 {
-        unsafe { _mm512_sub_ps(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512, b: __m512) -> __m512 {
+            _mm512_sub_ps(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn mul(self, a: __m512, b: __m512) -> __m512 {
-        unsafe { _mm512_mul_ps(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512, b: __m512) -> __m512 {
+            _mm512_mul_ps(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn div(self, a: __m512, b: __m512) -> __m512 {
-        unsafe { _mm512_div_ps(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512, b: __m512) -> __m512 {
+            _mm512_div_ps(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn neg(self, a: __m512) -> __m512 {
-        unsafe { _mm512_sub_ps(_mm512_setzero_ps(), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512) -> __m512 {
+            _mm512_sub_ps(_mm512_setzero_ps(), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn min(self, a: __m512, b: __m512) -> __m512 {
-        unsafe { _mm512_min_ps(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512, b: __m512) -> __m512 {
+            _mm512_min_ps(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn max(self, a: __m512, b: __m512) -> __m512 {
-        unsafe { _mm512_max_ps(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512, b: __m512) -> __m512 {
+            _mm512_max_ps(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sqrt(self, a: __m512) -> __m512 {
-        unsafe { _mm512_sqrt_ps(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512) -> __m512 {
+            _mm512_sqrt_ps(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn abs(self, a: __m512) -> __m512 {
-        unsafe {
-            let mask = _mm512_castsi512_ps(_mm512_set1_epi32(0x7FFF_FFFFu32 as i32));
-            _mm512_and_ps(a, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512) -> __m512 {
+            {
+                let mask = _mm512_castsi512_ps(_mm512_set1_epi32(0x7FFF_FFFFu32 as i32));
+                _mm512_and_ps(a, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn floor(self, a: __m512) -> __m512 {
-        unsafe { _mm512_roundscale_ps::<0x01>(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512) -> __m512 {
+            _mm512_roundscale_ps::<0x01>(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn ceil(self, a: __m512) -> __m512 {
-        unsafe { _mm512_roundscale_ps::<0x02>(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512) -> __m512 {
+            _mm512_roundscale_ps::<0x02>(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn round(self, a: __m512) -> __m512 {
-        unsafe { _mm512_roundscale_ps::<0x00>(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512) -> __m512 {
+            _mm512_roundscale_ps::<0x00>(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn mul_add(self, a: __m512, b: __m512, c: __m512) -> __m512 {
-        unsafe { _mm512_fmadd_ps(a, b, c) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512, b: __m512, c: __m512) -> __m512 {
+            _mm512_fmadd_ps(a, b, c)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b, c) }
     }
 
     #[inline(always)]
     fn mul_sub(self, a: __m512, b: __m512, c: __m512) -> __m512 {
-        unsafe { _mm512_fmsub_ps(a, b, c) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512, b: __m512, c: __m512) -> __m512 {
+            _mm512_fmsub_ps(a, b, c)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b, c) }
     }
 
     #[inline(always)]
     fn simd_eq(self, a: __m512, b: __m512) -> __m512 {
-        unsafe {
-            let mask = _mm512_cmp_ps_mask::<_CMP_EQ_OQ>(a, b);
-            _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512, b: __m512) -> __m512 {
+            {
+                let mask = _mm512_cmp_ps_mask::<_CMP_EQ_OQ>(a, b);
+                _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ne(self, a: __m512, b: __m512) -> __m512 {
-        unsafe {
-            let mask = _mm512_cmp_ps_mask::<_CMP_NEQ_UQ>(a, b);
-            _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512, b: __m512) -> __m512 {
+            {
+                let mask = _mm512_cmp_ps_mask::<_CMP_NEQ_UQ>(a, b);
+                _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_lt(self, a: __m512, b: __m512) -> __m512 {
-        unsafe {
-            let mask = _mm512_cmp_ps_mask::<_CMP_LT_OQ>(a, b);
-            _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512, b: __m512) -> __m512 {
+            {
+                let mask = _mm512_cmp_ps_mask::<_CMP_LT_OQ>(a, b);
+                _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_le(self, a: __m512, b: __m512) -> __m512 {
-        unsafe {
-            let mask = _mm512_cmp_ps_mask::<_CMP_LE_OQ>(a, b);
-            _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512, b: __m512) -> __m512 {
+            {
+                let mask = _mm512_cmp_ps_mask::<_CMP_LE_OQ>(a, b);
+                _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_gt(self, a: __m512, b: __m512) -> __m512 {
-        unsafe {
-            let mask = _mm512_cmp_ps_mask::<_CMP_GT_OQ>(a, b);
-            _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512, b: __m512) -> __m512 {
+            {
+                let mask = _mm512_cmp_ps_mask::<_CMP_GT_OQ>(a, b);
+                _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ge(self, a: __m512, b: __m512) -> __m512 {
-        unsafe {
-            let mask = _mm512_cmp_ps_mask::<_CMP_GE_OQ>(a, b);
-            _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512, b: __m512) -> __m512 {
+            {
+                let mask = _mm512_cmp_ps_mask::<_CMP_GE_OQ>(a, b);
+                _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn blend(self, mask: __m512, if_true: __m512, if_false: __m512) -> __m512 {
-        unsafe {
-            let mask_i = _mm512_castps_si512(mask);
-            let k = _mm512_cmpneq_epi32_mask(mask_i, _mm512_setzero_si512());
-            _mm512_mask_blend_ps(k, if_false, if_true)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(
+            _this: archmage::X64V4xToken,
+            mask: __m512,
+            if_true: __m512,
+            if_false: __m512,
+        ) -> __m512 {
+            {
+                let mask_i = _mm512_castps_si512(mask);
+                let k = _mm512_cmpneq_epi32_mask(mask_i, _mm512_setzero_si512());
+                _mm512_mask_blend_ps(k, if_false, if_true)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, mask, if_true, if_false) }
     }
 
     #[inline(always)]
     fn reduce_add(self, a: __m512) -> f32 {
-        unsafe { _mm512_reduce_add_ps(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512) -> f32 {
+            _mm512_reduce_add_ps(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn reduce_min(self, a: __m512) -> f32 {
-        unsafe { _mm512_reduce_min_ps(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512) -> f32 {
+            _mm512_reduce_min_ps(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn reduce_max(self, a: __m512) -> f32 {
-        unsafe { _mm512_reduce_max_ps(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512) -> f32 {
+            _mm512_reduce_max_ps(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     // Raw 14-bit hardware estimate — the cheapest >=12-bit path on AVX-512.
     #[inline(always)]
     fn rcp_approx(self, a: __m512) -> __m512 {
-        unsafe { _mm512_rcp14_ps(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512) -> __m512 {
+            _mm512_rcp14_ps(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn rsqrt_approx(self, a: __m512) -> __m512 {
-        unsafe { _mm512_rsqrt14_ps(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512) -> __m512 {
+            _mm512_rsqrt14_ps(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn recip(self, a: __m512) -> __m512 {
-        // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->7 +INF->8 NEG->0 POS->0
-        const RECIP_FIXUP_TBL: i32 = 0x0087_0622u32 as i32;
-        unsafe {
-            let r = _mm512_rcp14_ps(a);
-            let e = _mm512_fnmadd_ps(a, r, _mm512_set1_ps(1.0));
-            let refined = _mm512_fmadd_ps(r, e, r);
-            _mm512_fixupimm_ps::<0>(refined, a, _mm512_set1_epi32(RECIP_FIXUP_TBL))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512) -> __m512 {
+            // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->7 +INF->8 NEG->0 POS->0
+            const RECIP_FIXUP_TBL: i32 = 0x0087_0622u32 as i32;
+            {
+                let r = _mm512_rcp14_ps(a);
+                let e = _mm512_fnmadd_ps(a, r, _mm512_set1_ps(1.0));
+                let refined = _mm512_fmadd_ps(r, e, r);
+                _mm512_fixupimm_ps::<0>(refined, a, _mm512_set1_epi32(RECIP_FIXUP_TBL))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn rsqrt(self, a: __m512) -> __m512 {
-        // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->3 +INF->8 NEG->3 POS->0
-        const RSQRT_FIXUP_TBL: i32 = 0x0383_0622u32 as i32;
-        unsafe {
-            let y = _mm512_rsqrt14_ps(a);
-            let t = _mm512_mul_ps(a, _mm512_mul_ps(y, y));
-            let refined = _mm512_mul_ps(
-                y,
-                _mm512_fnmadd_ps(_mm512_set1_ps(0.5), t, _mm512_set1_ps(1.5)),
-            );
-            _mm512_fixupimm_ps::<0>(refined, a, _mm512_set1_epi32(RSQRT_FIXUP_TBL))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512) -> __m512 {
+            // token nibbles: QNAN->2 SNAN->2 ZERO->6 ONE->0 -INF->3 +INF->8 NEG->3 POS->0
+            const RSQRT_FIXUP_TBL: i32 = 0x0383_0622u32 as i32;
+            {
+                let y = _mm512_rsqrt14_ps(a);
+                let t = _mm512_mul_ps(a, _mm512_mul_ps(y, y));
+                let refined = _mm512_mul_ps(
+                    y,
+                    _mm512_fnmadd_ps(_mm512_set1_ps(0.5), t, _mm512_set1_ps(1.5)),
+                );
+                _mm512_fixupimm_ps::<0>(refined, a, _mm512_set1_epi32(RSQRT_FIXUP_TBL))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn not(self, a: __m512) -> __m512 {
-        unsafe {
-            let all_ones = _mm512_castsi512_ps(_mm512_set1_epi32(-1));
-            _mm512_xor_ps(a, all_ones)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512) -> __m512 {
+            {
+                let all_ones = _mm512_castsi512_ps(_mm512_set1_epi32(-1));
+                _mm512_xor_ps(a, all_ones)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitand(self, a: __m512, b: __m512) -> __m512 {
-        unsafe { _mm512_and_ps(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512, b: __m512) -> __m512 {
+            _mm512_and_ps(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitor(self, a: __m512, b: __m512) -> __m512 {
-        unsafe { _mm512_or_ps(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512, b: __m512) -> __m512 {
+            _mm512_or_ps(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitxor(self, a: __m512, b: __m512) -> __m512 {
-        unsafe { _mm512_xor_ps(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512, b: __m512) -> __m512 {
+            _mm512_xor_ps(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 }
 
@@ -2509,221 +5988,568 @@ impl F64x8Backend for archmage::X64V4xToken {
 
     #[inline(always)]
     fn splat(self, v: f64) -> __m512d {
-        unsafe { _mm512_set1_pd(v) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, v: f64) -> __m512d {
+            _mm512_set1_pd(v)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, v) }
     }
 
     #[inline(always)]
     fn zero(self) -> __m512d {
-        unsafe { _mm512_setzero_pd() }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken) -> __m512d {
+            _mm512_setzero_pd()
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self) }
     }
 
     #[inline(always)]
     fn load(self, data: &[f64; 8]) -> __m512d {
-        unsafe { _mm512_loadu_pd(data.as_ptr()) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, data: &[f64; 8]) -> __m512d {
+            unsafe { _mm512_loadu_pd(data.as_ptr()) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, data) }
     }
 
     #[inline(always)]
     fn from_array(self, arr: [f64; 8]) -> __m512d {
-        unsafe { core::mem::transmute(arr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, arr: [f64; 8]) -> __m512d {
+            unsafe { core::mem::transmute(arr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, arr) }
     }
 
     #[inline(always)]
     fn store(self, repr: __m512d, out: &mut [f64; 8]) {
-        unsafe { _mm512_storeu_pd(out.as_mut_ptr(), repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, repr: __m512d, out: &mut [f64; 8]) {
+            unsafe { _mm512_storeu_pd(out.as_mut_ptr(), repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr, out) }
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512d) -> [f64; 8] {
-        unsafe { core::mem::transmute(repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, repr: __m512d) -> [f64; 8] {
+            unsafe { core::mem::transmute(repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr) }
     }
 
     #[inline(always)]
     fn add(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe { _mm512_add_pd(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d, b: __m512d) -> __m512d {
+            _mm512_add_pd(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sub(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe { _mm512_sub_pd(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d, b: __m512d) -> __m512d {
+            _mm512_sub_pd(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn mul(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe { _mm512_mul_pd(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d, b: __m512d) -> __m512d {
+            _mm512_mul_pd(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn div(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe { _mm512_div_pd(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d, b: __m512d) -> __m512d {
+            _mm512_div_pd(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn neg(self, a: __m512d) -> __m512d {
-        unsafe { _mm512_sub_pd(_mm512_setzero_pd(), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d) -> __m512d {
+            _mm512_sub_pd(_mm512_setzero_pd(), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn min(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe { _mm512_min_pd(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d, b: __m512d) -> __m512d {
+            _mm512_min_pd(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn max(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe { _mm512_max_pd(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d, b: __m512d) -> __m512d {
+            _mm512_max_pd(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sqrt(self, a: __m512d) -> __m512d {
-        unsafe { _mm512_sqrt_pd(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d) -> __m512d {
+            _mm512_sqrt_pd(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn abs(self, a: __m512d) -> __m512d {
-        unsafe {
-            let mask = _mm512_castsi512_pd(_mm512_set1_epi64(0x7FFF_FFFF_FFFF_FFFFu64 as i64));
-            _mm512_and_pd(a, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d) -> __m512d {
+            {
+                let mask = _mm512_castsi512_pd(_mm512_set1_epi64(0x7FFF_FFFF_FFFF_FFFFu64 as i64));
+                _mm512_and_pd(a, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn floor(self, a: __m512d) -> __m512d {
-        unsafe { _mm512_roundscale_pd::<0x01>(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d) -> __m512d {
+            _mm512_roundscale_pd::<0x01>(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn ceil(self, a: __m512d) -> __m512d {
-        unsafe { _mm512_roundscale_pd::<0x02>(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d) -> __m512d {
+            _mm512_roundscale_pd::<0x02>(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn round(self, a: __m512d) -> __m512d {
-        unsafe { _mm512_roundscale_pd::<0x00>(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d) -> __m512d {
+            _mm512_roundscale_pd::<0x00>(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn mul_add(self, a: __m512d, b: __m512d, c: __m512d) -> __m512d {
-        unsafe { _mm512_fmadd_pd(a, b, c) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d, b: __m512d, c: __m512d) -> __m512d {
+            _mm512_fmadd_pd(a, b, c)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b, c) }
     }
 
     #[inline(always)]
     fn mul_sub(self, a: __m512d, b: __m512d, c: __m512d) -> __m512d {
-        unsafe { _mm512_fmsub_pd(a, b, c) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d, b: __m512d, c: __m512d) -> __m512d {
+            _mm512_fmsub_pd(a, b, c)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b, c) }
     }
 
     #[inline(always)]
     fn simd_eq(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe {
-            let mask = _mm512_cmp_pd_mask::<_CMP_EQ_OQ>(a, b);
-            _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d, b: __m512d) -> __m512d {
+            {
+                let mask = _mm512_cmp_pd_mask::<_CMP_EQ_OQ>(a, b);
+                _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ne(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe {
-            let mask = _mm512_cmp_pd_mask::<_CMP_NEQ_UQ>(a, b);
-            _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d, b: __m512d) -> __m512d {
+            {
+                let mask = _mm512_cmp_pd_mask::<_CMP_NEQ_UQ>(a, b);
+                _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_lt(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe {
-            let mask = _mm512_cmp_pd_mask::<_CMP_LT_OQ>(a, b);
-            _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d, b: __m512d) -> __m512d {
+            {
+                let mask = _mm512_cmp_pd_mask::<_CMP_LT_OQ>(a, b);
+                _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_le(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe {
-            let mask = _mm512_cmp_pd_mask::<_CMP_LE_OQ>(a, b);
-            _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d, b: __m512d) -> __m512d {
+            {
+                let mask = _mm512_cmp_pd_mask::<_CMP_LE_OQ>(a, b);
+                _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_gt(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe {
-            let mask = _mm512_cmp_pd_mask::<_CMP_GT_OQ>(a, b);
-            _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d, b: __m512d) -> __m512d {
+            {
+                let mask = _mm512_cmp_pd_mask::<_CMP_GT_OQ>(a, b);
+                _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ge(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe {
-            let mask = _mm512_cmp_pd_mask::<_CMP_GE_OQ>(a, b);
-            _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d, b: __m512d) -> __m512d {
+            {
+                let mask = _mm512_cmp_pd_mask::<_CMP_GE_OQ>(a, b);
+                _mm512_castsi512_pd(_mm512_maskz_set1_epi64(mask, -1))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn blend(self, mask: __m512d, if_true: __m512d, if_false: __m512d) -> __m512d {
-        unsafe {
-            let mask_i = _mm512_castpd_si512(mask);
-            let k = _mm512_cmpneq_epi64_mask(mask_i, _mm512_setzero_si512());
-            _mm512_mask_blend_pd(k, if_false, if_true)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(
+            _this: archmage::X64V4xToken,
+            mask: __m512d,
+            if_true: __m512d,
+            if_false: __m512d,
+        ) -> __m512d {
+            {
+                let mask_i = _mm512_castpd_si512(mask);
+                let k = _mm512_cmpneq_epi64_mask(mask_i, _mm512_setzero_si512());
+                _mm512_mask_blend_pd(k, if_false, if_true)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, mask, if_true, if_false) }
     }
 
     #[inline(always)]
     fn reduce_add(self, a: __m512d) -> f64 {
-        unsafe { _mm512_reduce_add_pd(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d) -> f64 {
+            _mm512_reduce_add_pd(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn reduce_min(self, a: __m512d) -> f64 {
-        unsafe { _mm512_reduce_min_pd(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d) -> f64 {
+            _mm512_reduce_min_pd(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn reduce_max(self, a: __m512d) -> f64 {
-        unsafe { _mm512_reduce_max_pd(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d) -> f64 {
+            _mm512_reduce_max_pd(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     // Raw 14-bit hardware estimate — the cheapest >=12-bit path on AVX-512.
     #[inline(always)]
     fn rcp_approx(self, a: __m512d) -> __m512d {
-        unsafe { _mm512_rcp14_pd(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d) -> __m512d {
+            _mm512_rcp14_pd(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn rsqrt_approx(self, a: __m512d) -> __m512d {
-        unsafe { _mm512_rsqrt14_pd(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d) -> __m512d {
+            _mm512_rsqrt14_pd(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn recip(self, a: __m512d) -> __m512d {
-        unsafe { _mm512_div_pd(_mm512_set1_pd(1.0), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d) -> __m512d {
+            _mm512_div_pd(_mm512_set1_pd(1.0), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn rsqrt(self, a: __m512d) -> __m512d {
-        unsafe { _mm512_div_pd(_mm512_set1_pd(1.0), _mm512_sqrt_pd(a)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d) -> __m512d {
+            _mm512_div_pd(_mm512_set1_pd(1.0), _mm512_sqrt_pd(a))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn not(self, a: __m512d) -> __m512d {
-        unsafe {
-            let all_ones = _mm512_castsi512_pd(_mm512_set1_epi64(-1));
-            _mm512_xor_pd(a, all_ones)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d) -> __m512d {
+            {
+                let all_ones = _mm512_castsi512_pd(_mm512_set1_epi64(-1));
+                _mm512_xor_pd(a, all_ones)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitand(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe { _mm512_and_pd(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d, b: __m512d) -> __m512d {
+            _mm512_and_pd(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitor(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe { _mm512_or_pd(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d, b: __m512d) -> __m512d {
+            _mm512_or_pd(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitxor(self, a: __m512d, b: __m512d) -> __m512d {
-        unsafe { _mm512_xor_pd(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512d, b: __m512d) -> __m512d {
+            _mm512_xor_pd(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 }
 
@@ -2734,251 +6560,573 @@ impl I8x64Backend for archmage::X64V4xToken {
 
     #[inline(always)]
     fn splat(self, v: i8) -> __m512i {
-        unsafe { _mm512_set1_epi8(v as _) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, v: i8) -> __m512i {
+            _mm512_set1_epi8(v as _)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, v) }
     }
 
     #[inline(always)]
     fn zero(self) -> __m512i {
-        unsafe { _mm512_setzero_si512() }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken) -> __m512i {
+            _mm512_setzero_si512()
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self) }
     }
 
     #[inline(always)]
     fn load(self, data: &[i8; 64]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, data: &[i8; 64]) -> __m512i {
+            unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, data) }
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i8; 64]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, arr: [i8; 64]) -> __m512i {
+            unsafe { core::mem::transmute(arr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, arr) }
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [i8; 64]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, repr: __m512i, out: &mut [i8; 64]) {
+            unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr, out) }
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [i8; 64] {
-        unsafe { core::mem::transmute(repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, repr: __m512i) -> [i8; 64] {
+            unsafe { core::mem::transmute(repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr) }
     }
 
     #[inline(always)]
     fn add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_add_epi8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_add_epi8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_sub_epi8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn neg(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi8(_mm512_setzero_si512(), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_sub_epi8(_mm512_setzero_si512(), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn min(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_min_epi8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_min_epi8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn max(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_max_epi8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_max_epi8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn abs(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_abs_epi8(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_abs_epi8(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn simd_eq(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpeq_epi8_mask(a, b);
-            _mm512_maskz_set1_epi8(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpeq_epi8_mask(a, b);
+                _mm512_maskz_set1_epi8(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ne(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpneq_epi8_mask(a, b);
-            _mm512_maskz_set1_epi8(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpneq_epi8_mask(a, b);
+                _mm512_maskz_set1_epi8(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_lt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmplt_epi8_mask(a, b);
-            _mm512_maskz_set1_epi8(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmplt_epi8_mask(a, b);
+                _mm512_maskz_set1_epi8(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_le(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmple_epi8_mask(a, b);
-            _mm512_maskz_set1_epi8(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmple_epi8_mask(a, b);
+                _mm512_maskz_set1_epi8(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_gt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GT = LT with swapped args
-            let mask = _mm512_cmplt_epi8_mask(b, a);
-            _mm512_maskz_set1_epi8(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GT = LT with swapped args
+                let mask = _mm512_cmplt_epi8_mask(b, a);
+                _mm512_maskz_set1_epi8(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ge(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GE = LE with swapped args
-            let mask = _mm512_cmple_epi8_mask(b, a);
-            _mm512_maskz_set1_epi8(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GE = LE with swapped args
+                let mask = _mm512_cmple_epi8_mask(b, a);
+                _mm512_maskz_set1_epi8(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn blend(self, mask: __m512i, if_true: __m512i, if_false: __m512i) -> __m512i {
-        unsafe {
-            let k = _mm512_cmpneq_epi8_mask(mask, _mm512_setzero_si512());
-            _mm512_mask_blend_epi8(k, if_false, if_true)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(
+            _this: archmage::X64V4xToken,
+            mask: __m512i,
+            if_true: __m512i,
+            if_false: __m512i,
+        ) -> __m512i {
+            {
+                let k = _mm512_cmpneq_epi8_mask(mask, _mm512_setzero_si512());
+                _mm512_mask_blend_epi8(k, if_false, if_true)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, mask, if_true, if_false) }
     }
 
     #[inline(always)]
     fn reduce_add(self, a: __m512i) -> i8 {
-        // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [i8; 64] = unsafe { core::mem::transmute(a) };
-        arr.iter().copied().fold(0i8, i8::wrapping_add)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> i8 {
+            // No native integer reduce_add in AVX-512; use transmute to array
+            let arr: [i8; 64] = unsafe { core::mem::transmute(a) };
+            arr.iter().copied().fold(0i8, i8::wrapping_add)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn not(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, _mm512_set1_epi8(-1)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_xor_si512(a, _mm512_set1_epi8(-1))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitand(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_and_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_and_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_or_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_or_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitxor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_xor_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe {
-            let count = _mm_cvtsi32_si128(N);
-            let shifted = _mm512_sll_epi16(a, count);
-            let mask = _mm512_set1_epi8(((0xFFu16 << N) & 0xFF) as i8);
-            _mm512_and_si512(shifted, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            {
+                let count = _mm_cvtsi32_si128(N);
+                let shifted = _mm512_sll_epi16(a, count);
+                let mask = _mm512_set1_epi8(((0xFFu16 << N) & 0xFF) as i8);
+                _mm512_and_si512(shifted, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe {
-            let count = _mm_cvtsi32_si128(N);
-            // Sign-extend bytes to 16-bit, shift, mask back to 8-bit
-            let lo = _mm512_sra_epi16(_mm512_slli_epi16::<8>(a), count);
-            let hi = _mm512_sra_epi16(a, count);
-            // Combine: take low byte from lo, high byte from hi
-            let mask = _mm512_set1_epi16(0x00FFu16 as i16);
-            _mm512_or_si512(
-                _mm512_and_si512(_mm512_srli_epi16::<8>(lo), mask),
-                _mm512_andnot_si512(mask, hi),
-            )
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            {
+                let count = _mm_cvtsi32_si128(N);
+                // Sign-extend bytes to 16-bit, shift, mask back to 8-bit
+                let lo = _mm512_sra_epi16(_mm512_slli_epi16::<8>(a), count);
+                let hi = _mm512_sra_epi16(a, count);
+                // Combine: take low byte from lo, high byte from hi
+                let mask = _mm512_set1_epi16(0x00FFu16 as i16);
+                _mm512_or_si512(
+                    _mm512_and_si512(_mm512_srli_epi16::<8>(lo), mask),
+                    _mm512_andnot_si512(mask, hi),
+                )
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe {
-            let count = _mm_cvtsi32_si128(N);
-            let shifted = _mm512_srl_epi16(a, count);
-            let mask = _mm512_set1_epi8(((0xFFu16 >> N) & 0xFF) as i8);
-            _mm512_and_si512(shifted, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            {
+                let count = _mm_cvtsi32_si128(N);
+                let shifted = _mm512_srl_epi16(a, count);
+                let mask = _mm512_set1_epi8(((0xFFu16 >> N) & 0xFF) as i8);
+                _mm512_and_si512(shifted, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe {
-            let shifted = _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
-            let mask = _mm512_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
-            _mm512_and_si512(shifted, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, count: u32) -> __m512i {
+            {
+                let shifted = _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
+                let mask = _mm512_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
+                _mm512_and_si512(shifted, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe {
-            let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-            let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-            _mm512_and_si512(shifted, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, count: u32) -> __m512i {
+            {
+                let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
+                let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
+                _mm512_and_si512(shifted, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe {
-            let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-            let byte_mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-            let logical = _mm512_and_si512(shifted, byte_mask);
-            let sign = _mm512_movm_epi8(_mm512_cmplt_epi8_mask(a, _mm512_setzero_si512()));
-            // `count.min(8)` saturates the fill to the whole byte, which
-            // is the contracted sign fill for out-of-range counts.
-            let fill = _mm512_set1_epi8(((0xFF00u16 >> count.min(8)) & 0xFF) as u8 as i8);
-            _mm512_or_si512(logical, _mm512_and_si512(sign, fill))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, count: u32) -> __m512i {
+            {
+                let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
+                let byte_mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
+                let logical = _mm512_and_si512(shifted, byte_mask);
+                let sign = _mm512_movm_epi8(_mm512_cmplt_epi8_mask(a, _mm512_setzero_si512()));
+                // `count.min(8)` saturates the fill to the whole byte, which
+                // is the contracted sign fill for out-of-range counts.
+                let fill = _mm512_set1_epi8(((0xFF00u16 >> count.min(8)) & 0xFF) as u8 as i8);
+                _mm512_or_si512(logical, _mm512_and_si512(sign, fill))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_adds_epi8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_adds_epi8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn saturating_sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_subs_epi8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_subs_epi8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-            mask as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
+                mask as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn any_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-            mask as u64 != 0
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
+                mask as u64 != 0
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitmask(self, a: __m512i) -> u64 {
-        unsafe {
-            // Extract high bit of each lane: compare < 0 for signed interpretation
-            let zero = _mm512_setzero_si512();
-            _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero)
-                as u64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> u64 {
+            {
+                // Extract high bit of each lane: compare < 0 for signed interpretation
+                let zero = _mm512_setzero_si512();
+                _mm512_cmpneq_epi8_mask(
+                    _mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))),
+                    zero,
+                ) as u64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -2989,240 +7137,553 @@ impl U8x64Backend for archmage::X64V4xToken {
 
     #[inline(always)]
     fn splat(self, v: u8) -> __m512i {
-        unsafe { _mm512_set1_epi8(v as _) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, v: u8) -> __m512i {
+            _mm512_set1_epi8(v as _)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, v) }
     }
 
     #[inline(always)]
     fn zero(self) -> __m512i {
-        unsafe { _mm512_setzero_si512() }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken) -> __m512i {
+            _mm512_setzero_si512()
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self) }
     }
 
     #[inline(always)]
     fn load(self, data: &[u8; 64]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, data: &[u8; 64]) -> __m512i {
+            unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, data) }
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u8; 64]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, arr: [u8; 64]) -> __m512i {
+            unsafe { core::mem::transmute(arr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, arr) }
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [u8; 64]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, repr: __m512i, out: &mut [u8; 64]) {
+            unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr, out) }
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [u8; 64] {
-        unsafe { core::mem::transmute(repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, repr: __m512i) -> [u8; 64] {
+            unsafe { core::mem::transmute(repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr) }
     }
 
     #[inline(always)]
     fn add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_add_epi8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_add_epi8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_sub_epi8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn neg(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi8(_mm512_setzero_si512(), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_sub_epi8(_mm512_setzero_si512(), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn min(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_min_epu8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_min_epu8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn max(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_max_epu8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_max_epu8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_eq(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpeq_epu8_mask(a, b);
-            _mm512_maskz_set1_epi8(mask, -1i8)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpeq_epu8_mask(a, b);
+                _mm512_maskz_set1_epi8(mask, -1i8)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ne(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpneq_epu8_mask(a, b);
-            _mm512_maskz_set1_epi8(mask, -1i8)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpneq_epu8_mask(a, b);
+                _mm512_maskz_set1_epi8(mask, -1i8)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_lt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmplt_epu8_mask(a, b);
-            _mm512_maskz_set1_epi8(mask, -1i8)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmplt_epu8_mask(a, b);
+                _mm512_maskz_set1_epi8(mask, -1i8)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_le(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmple_epu8_mask(a, b);
-            _mm512_maskz_set1_epi8(mask, -1i8)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmple_epu8_mask(a, b);
+                _mm512_maskz_set1_epi8(mask, -1i8)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_gt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GT = LT with swapped args
-            let mask = _mm512_cmplt_epu8_mask(b, a);
-            _mm512_maskz_set1_epi8(mask, -1i8)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GT = LT with swapped args
+                let mask = _mm512_cmplt_epu8_mask(b, a);
+                _mm512_maskz_set1_epi8(mask, -1i8)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ge(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GE = LE with swapped args
-            let mask = _mm512_cmple_epu8_mask(b, a);
-            _mm512_maskz_set1_epi8(mask, -1i8)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GE = LE with swapped args
+                let mask = _mm512_cmple_epu8_mask(b, a);
+                _mm512_maskz_set1_epi8(mask, -1i8)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn blend(self, mask: __m512i, if_true: __m512i, if_false: __m512i) -> __m512i {
-        unsafe {
-            let k = _mm512_cmpneq_epi8_mask(mask, _mm512_setzero_si512());
-            _mm512_mask_blend_epi8(k, if_false, if_true)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(
+            _this: archmage::X64V4xToken,
+            mask: __m512i,
+            if_true: __m512i,
+            if_false: __m512i,
+        ) -> __m512i {
+            {
+                let k = _mm512_cmpneq_epi8_mask(mask, _mm512_setzero_si512());
+                _mm512_mask_blend_epi8(k, if_false, if_true)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, mask, if_true, if_false) }
     }
 
     #[inline(always)]
     fn reduce_add(self, a: __m512i) -> u8 {
-        // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [u8; 64] = unsafe { core::mem::transmute(a) };
-        arr.iter().copied().fold(0u8, u8::wrapping_add)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> u8 {
+            // No native integer reduce_add in AVX-512; use transmute to array
+            let arr: [u8; 64] = unsafe { core::mem::transmute(a) };
+            arr.iter().copied().fold(0u8, u8::wrapping_add)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn not(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, _mm512_set1_epi8(-1i8)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_xor_si512(a, _mm512_set1_epi8(-1i8))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitand(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_and_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_and_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_or_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_or_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitxor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_xor_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe {
-            let count = _mm_cvtsi32_si128(N);
-            let shifted = _mm512_sll_epi16(a, count);
-            let mask = _mm512_set1_epi8(((0xFFu16 << N) & 0xFF) as i8);
-            _mm512_and_si512(shifted, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            {
+                let count = _mm_cvtsi32_si128(N);
+                let shifted = _mm512_sll_epi16(a, count);
+                let mask = _mm512_set1_epi8(((0xFFu16 << N) & 0xFF) as i8);
+                _mm512_and_si512(shifted, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe {
-            let count = _mm_cvtsi32_si128(N);
-            let shifted = _mm512_srl_epi16(a, count);
-            let byte_mask = _mm512_set1_epi8(((0xFFu16 >> N) & 0xFF) as i8);
-            let logical = _mm512_and_si512(shifted, byte_mask);
-            // Sign-extend: fill the high N bits of negative lanes. The u16
-            // shift keeps the fill mask 0x00 at N == 0 (identity shift).
-            let sign = _mm512_movm_epi8(_mm512_cmplt_epi8_mask(a, _mm512_setzero_si512()));
-            let fill = _mm512_set1_epi8(((0xFF00u16 >> N) & 0xFF) as i8);
-            _mm512_or_si512(logical, _mm512_and_si512(sign, fill))
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            {
+                let count = _mm_cvtsi32_si128(N);
+                let shifted = _mm512_srl_epi16(a, count);
+                let byte_mask = _mm512_set1_epi8(((0xFFu16 >> N) & 0xFF) as i8);
+                let logical = _mm512_and_si512(shifted, byte_mask);
+                // Sign-extend: fill the high N bits of negative lanes. The u16
+                // shift keeps the fill mask 0x00 at N == 0 (identity shift).
+                let sign = _mm512_movm_epi8(_mm512_cmplt_epi8_mask(a, _mm512_setzero_si512()));
+                let fill = _mm512_set1_epi8(((0xFF00u16 >> N) & 0xFF) as i8);
+                _mm512_or_si512(logical, _mm512_and_si512(sign, fill))
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe {
-            let count = _mm_cvtsi32_si128(N);
-            let shifted = _mm512_srl_epi16(a, count);
-            let mask = _mm512_set1_epi8(((0xFFu16 >> N) & 0xFF) as i8);
-            _mm512_and_si512(shifted, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            {
+                let count = _mm_cvtsi32_si128(N);
+                let shifted = _mm512_srl_epi16(a, count);
+                let mask = _mm512_set1_epi8(((0xFFu16 >> N) & 0xFF) as i8);
+                _mm512_and_si512(shifted, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe {
-            let shifted = _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
-            let mask = _mm512_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
-            _mm512_and_si512(shifted, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, count: u32) -> __m512i {
+            {
+                let shifted = _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
+                let mask = _mm512_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
+                _mm512_and_si512(shifted, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe {
-            let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-            let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-            _mm512_and_si512(shifted, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, count: u32) -> __m512i {
+            {
+                let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
+                let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
+                _mm512_and_si512(shifted, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe {
-            let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-            let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-            _mm512_and_si512(shifted, mask)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, count: u32) -> __m512i {
+            {
+                let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
+                let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
+                _mm512_and_si512(shifted, mask)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_adds_epu8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_adds_epu8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn saturating_sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_subs_epu8(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_subs_epu8(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-            mask as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
+                mask as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn any_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-            mask as u64 != 0
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
+                mask as u64 != 0
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitmask(self, a: __m512i) -> u64 {
-        unsafe {
-            // Extract high bit of each lane: compare < 0 for signed interpretation
-            let zero = _mm512_setzero_si512();
-            _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero)
-                as u64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> u64 {
+            {
+                // Extract high bit of each lane: compare < 0 for signed interpretation
+                let zero = _mm512_setzero_si512();
+                _mm512_cmpneq_epi8_mask(
+                    _mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))),
+                    zero,
+                ) as u64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -3233,220 +7694,549 @@ impl I16x32Backend for archmage::X64V4xToken {
 
     #[inline(always)]
     fn splat(self, v: i16) -> __m512i {
-        unsafe { _mm512_set1_epi16(v as _) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, v: i16) -> __m512i {
+            _mm512_set1_epi16(v as _)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, v) }
     }
 
     #[inline(always)]
     fn zero(self) -> __m512i {
-        unsafe { _mm512_setzero_si512() }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken) -> __m512i {
+            _mm512_setzero_si512()
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self) }
     }
 
     #[inline(always)]
     fn load(self, data: &[i16; 32]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, data: &[i16; 32]) -> __m512i {
+            unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, data) }
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i16; 32]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, arr: [i16; 32]) -> __m512i {
+            unsafe { core::mem::transmute(arr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, arr) }
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [i16; 32]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, repr: __m512i, out: &mut [i16; 32]) {
+            unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr, out) }
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [i16; 32] {
-        unsafe { core::mem::transmute(repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, repr: __m512i) -> [i16; 32] {
+            unsafe { core::mem::transmute(repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr) }
     }
 
     #[inline(always)]
     fn add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_add_epi16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_add_epi16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_sub_epi16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn mul(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_mullo_epi16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_mullo_epi16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn neg(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi16(_mm512_setzero_si512(), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_sub_epi16(_mm512_setzero_si512(), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn min(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_min_epi16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_min_epi16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn max(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_max_epi16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_max_epi16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn abs(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_abs_epi16(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_abs_epi16(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn simd_eq(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpeq_epi16_mask(a, b);
-            _mm512_maskz_set1_epi16(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpeq_epi16_mask(a, b);
+                _mm512_maskz_set1_epi16(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ne(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpneq_epi16_mask(a, b);
-            _mm512_maskz_set1_epi16(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpneq_epi16_mask(a, b);
+                _mm512_maskz_set1_epi16(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_lt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmplt_epi16_mask(a, b);
-            _mm512_maskz_set1_epi16(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmplt_epi16_mask(a, b);
+                _mm512_maskz_set1_epi16(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_le(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmple_epi16_mask(a, b);
-            _mm512_maskz_set1_epi16(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmple_epi16_mask(a, b);
+                _mm512_maskz_set1_epi16(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_gt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GT = LT with swapped args
-            let mask = _mm512_cmplt_epi16_mask(b, a);
-            _mm512_maskz_set1_epi16(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GT = LT with swapped args
+                let mask = _mm512_cmplt_epi16_mask(b, a);
+                _mm512_maskz_set1_epi16(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ge(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GE = LE with swapped args
-            let mask = _mm512_cmple_epi16_mask(b, a);
-            _mm512_maskz_set1_epi16(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GE = LE with swapped args
+                let mask = _mm512_cmple_epi16_mask(b, a);
+                _mm512_maskz_set1_epi16(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn blend(self, mask: __m512i, if_true: __m512i, if_false: __m512i) -> __m512i {
-        unsafe {
-            let k = _mm512_cmpneq_epi16_mask(mask, _mm512_setzero_si512());
-            _mm512_mask_blend_epi16(k, if_false, if_true)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(
+            _this: archmage::X64V4xToken,
+            mask: __m512i,
+            if_true: __m512i,
+            if_false: __m512i,
+        ) -> __m512i {
+            {
+                let k = _mm512_cmpneq_epi16_mask(mask, _mm512_setzero_si512());
+                _mm512_mask_blend_epi16(k, if_false, if_true)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, mask, if_true, if_false) }
     }
 
     #[inline(always)]
     fn reduce_add(self, a: __m512i) -> i16 {
-        // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [i16; 32] = unsafe { core::mem::transmute(a) };
-        arr.iter().copied().fold(0i16, i16::wrapping_add)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> i16 {
+            // No native integer reduce_add in AVX-512; use transmute to array
+            let arr: [i16; 32] = unsafe { core::mem::transmute(a) };
+            arr.iter().copied().fold(0i16, i16::wrapping_add)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn not(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, _mm512_set1_epi16(-1)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_xor_si512(a, _mm512_set1_epi16(-1))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitand(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_and_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_and_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_or_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_or_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitxor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_xor_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sll_epi16(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_sll_epi16(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sra_epi16(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_sra_epi16(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_srl_epi16(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_srl_epi16(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, count: u32) -> __m512i {
+            _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, count: u32) -> __m512i {
+            _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_sra_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, count: u32) -> __m512i {
+            _mm512_sra_epi16(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_adds_epi16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_adds_epi16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn saturating_sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_subs_epi16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_subs_epi16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-            mask as u64 == 0xFFFF_FFFFu64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
+                mask as u64 == 0xFFFF_FFFFu64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn any_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-            mask as u64 != 0
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
+                mask as u64 != 0
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitmask(self, a: __m512i) -> u64 {
-        unsafe {
-            // Extract high bit of each lane: compare < 0 for signed interpretation
-            let zero = _mm512_setzero_si512();
-            _mm512_cmpneq_epi16_mask(
-                _mm512_and_si512(a, _mm512_set1_epi16(1_i16 << (16 - 1))),
-                zero,
-            ) as u64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> u64 {
+            {
+                // Extract high bit of each lane: compare < 0 for signed interpretation
+                let zero = _mm512_setzero_si512();
+                _mm512_cmpneq_epi16_mask(
+                    _mm512_and_si512(a, _mm512_set1_epi16(1_i16 << (16 - 1))),
+                    zero,
+                ) as u64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -3457,215 +8247,535 @@ impl U16x32Backend for archmage::X64V4xToken {
 
     #[inline(always)]
     fn splat(self, v: u16) -> __m512i {
-        unsafe { _mm512_set1_epi16(v as _) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, v: u16) -> __m512i {
+            _mm512_set1_epi16(v as _)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, v) }
     }
 
     #[inline(always)]
     fn zero(self) -> __m512i {
-        unsafe { _mm512_setzero_si512() }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken) -> __m512i {
+            _mm512_setzero_si512()
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self) }
     }
 
     #[inline(always)]
     fn load(self, data: &[u16; 32]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, data: &[u16; 32]) -> __m512i {
+            unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, data) }
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u16; 32]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, arr: [u16; 32]) -> __m512i {
+            unsafe { core::mem::transmute(arr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, arr) }
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [u16; 32]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, repr: __m512i, out: &mut [u16; 32]) {
+            unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr, out) }
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [u16; 32] {
-        unsafe { core::mem::transmute(repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, repr: __m512i) -> [u16; 32] {
+            unsafe { core::mem::transmute(repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr) }
     }
 
     #[inline(always)]
     fn add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_add_epi16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_add_epi16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_sub_epi16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn mul(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_mullo_epi16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_mullo_epi16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn neg(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi16(_mm512_setzero_si512(), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_sub_epi16(_mm512_setzero_si512(), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn min(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_min_epu16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_min_epu16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn max(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_max_epu16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_max_epu16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_eq(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpeq_epu16_mask(a, b);
-            _mm512_maskz_set1_epi16(mask, -1i16)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpeq_epu16_mask(a, b);
+                _mm512_maskz_set1_epi16(mask, -1i16)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ne(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpneq_epu16_mask(a, b);
-            _mm512_maskz_set1_epi16(mask, -1i16)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpneq_epu16_mask(a, b);
+                _mm512_maskz_set1_epi16(mask, -1i16)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_lt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmplt_epu16_mask(a, b);
-            _mm512_maskz_set1_epi16(mask, -1i16)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmplt_epu16_mask(a, b);
+                _mm512_maskz_set1_epi16(mask, -1i16)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_le(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmple_epu16_mask(a, b);
-            _mm512_maskz_set1_epi16(mask, -1i16)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmple_epu16_mask(a, b);
+                _mm512_maskz_set1_epi16(mask, -1i16)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_gt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GT = LT with swapped args
-            let mask = _mm512_cmplt_epu16_mask(b, a);
-            _mm512_maskz_set1_epi16(mask, -1i16)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GT = LT with swapped args
+                let mask = _mm512_cmplt_epu16_mask(b, a);
+                _mm512_maskz_set1_epi16(mask, -1i16)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ge(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GE = LE with swapped args
-            let mask = _mm512_cmple_epu16_mask(b, a);
-            _mm512_maskz_set1_epi16(mask, -1i16)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GE = LE with swapped args
+                let mask = _mm512_cmple_epu16_mask(b, a);
+                _mm512_maskz_set1_epi16(mask, -1i16)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn blend(self, mask: __m512i, if_true: __m512i, if_false: __m512i) -> __m512i {
-        unsafe {
-            let k = _mm512_cmpneq_epi16_mask(mask, _mm512_setzero_si512());
-            _mm512_mask_blend_epi16(k, if_false, if_true)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(
+            _this: archmage::X64V4xToken,
+            mask: __m512i,
+            if_true: __m512i,
+            if_false: __m512i,
+        ) -> __m512i {
+            {
+                let k = _mm512_cmpneq_epi16_mask(mask, _mm512_setzero_si512());
+                _mm512_mask_blend_epi16(k, if_false, if_true)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, mask, if_true, if_false) }
     }
 
     #[inline(always)]
     fn reduce_add(self, a: __m512i) -> u16 {
-        // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [u16; 32] = unsafe { core::mem::transmute(a) };
-        arr.iter().copied().fold(0u16, u16::wrapping_add)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> u16 {
+            // No native integer reduce_add in AVX-512; use transmute to array
+            let arr: [u16; 32] = unsafe { core::mem::transmute(a) };
+            arr.iter().copied().fold(0u16, u16::wrapping_add)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn not(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, _mm512_set1_epi16(-1i16)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_xor_si512(a, _mm512_set1_epi16(-1i16))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitand(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_and_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_and_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_or_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_or_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitxor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_xor_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sll_epi16(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_sll_epi16(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_srl_epi16(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_srl_epi16(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_srl_epi16(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_srl_epi16(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, count: u32) -> __m512i {
+            _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, count: u32) -> __m512i {
+            _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, count: u32) -> __m512i {
+            _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_adds_epu16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_adds_epu16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn saturating_sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_subs_epu16(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_subs_epu16(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-            mask as u64 == 0xFFFF_FFFFu64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
+                mask as u64 == 0xFFFF_FFFFu64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn any_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-            mask as u64 != 0
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
+                mask as u64 != 0
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitmask(self, a: __m512i) -> u64 {
-        unsafe {
-            // Extract high bit of each lane: compare < 0 for signed interpretation
-            let zero = _mm512_setzero_si512();
-            _mm512_cmpneq_epi16_mask(
-                _mm512_and_si512(a, _mm512_set1_epi16(1_i16 << (16 - 1))),
-                zero,
-            ) as u64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> u64 {
+            {
+                // Extract high bit of each lane: compare < 0 for signed interpretation
+                let zero = _mm512_setzero_si512();
+                _mm512_cmpneq_epi16_mask(
+                    _mm512_and_si512(a, _mm512_set1_epi16(1_i16 << (16 - 1))),
+                    zero,
+                ) as u64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -3676,210 +8786,521 @@ impl I32x16Backend for archmage::X64V4xToken {
 
     #[inline(always)]
     fn splat(self, v: i32) -> __m512i {
-        unsafe { _mm512_set1_epi32(v as _) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, v: i32) -> __m512i {
+            _mm512_set1_epi32(v as _)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, v) }
     }
 
     #[inline(always)]
     fn zero(self) -> __m512i {
-        unsafe { _mm512_setzero_si512() }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken) -> __m512i {
+            _mm512_setzero_si512()
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self) }
     }
 
     #[inline(always)]
     fn load(self, data: &[i32; 16]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, data: &[i32; 16]) -> __m512i {
+            unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, data) }
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i32; 16]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, arr: [i32; 16]) -> __m512i {
+            unsafe { core::mem::transmute(arr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, arr) }
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [i32; 16]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, repr: __m512i, out: &mut [i32; 16]) {
+            unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr, out) }
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [i32; 16] {
-        unsafe { core::mem::transmute(repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, repr: __m512i) -> [i32; 16] {
+            unsafe { core::mem::transmute(repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr) }
     }
 
     #[inline(always)]
     fn add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_add_epi32(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_add_epi32(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi32(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_sub_epi32(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn mul(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_mullo_epi32(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_mullo_epi32(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn neg(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi32(_mm512_setzero_si512(), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_sub_epi32(_mm512_setzero_si512(), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn min(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_min_epi32(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_min_epi32(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn max(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_max_epi32(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_max_epi32(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn abs(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_abs_epi32(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_abs_epi32(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn simd_eq(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpeq_epi32_mask(a, b);
-            _mm512_maskz_set1_epi32(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpeq_epi32_mask(a, b);
+                _mm512_maskz_set1_epi32(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ne(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpneq_epi32_mask(a, b);
-            _mm512_maskz_set1_epi32(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpneq_epi32_mask(a, b);
+                _mm512_maskz_set1_epi32(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_lt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmplt_epi32_mask(a, b);
-            _mm512_maskz_set1_epi32(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmplt_epi32_mask(a, b);
+                _mm512_maskz_set1_epi32(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_le(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmple_epi32_mask(a, b);
-            _mm512_maskz_set1_epi32(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmple_epi32_mask(a, b);
+                _mm512_maskz_set1_epi32(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_gt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GT = LT with swapped args
-            let mask = _mm512_cmplt_epi32_mask(b, a);
-            _mm512_maskz_set1_epi32(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GT = LT with swapped args
+                let mask = _mm512_cmplt_epi32_mask(b, a);
+                _mm512_maskz_set1_epi32(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ge(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GE = LE with swapped args
-            let mask = _mm512_cmple_epi32_mask(b, a);
-            _mm512_maskz_set1_epi32(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GE = LE with swapped args
+                let mask = _mm512_cmple_epi32_mask(b, a);
+                _mm512_maskz_set1_epi32(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn blend(self, mask: __m512i, if_true: __m512i, if_false: __m512i) -> __m512i {
-        unsafe {
-            let k = _mm512_cmpneq_epi32_mask(mask, _mm512_setzero_si512());
-            _mm512_mask_blend_epi32(k, if_false, if_true)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(
+            _this: archmage::X64V4xToken,
+            mask: __m512i,
+            if_true: __m512i,
+            if_false: __m512i,
+        ) -> __m512i {
+            {
+                let k = _mm512_cmpneq_epi32_mask(mask, _mm512_setzero_si512());
+                _mm512_mask_blend_epi32(k, if_false, if_true)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, mask, if_true, if_false) }
     }
 
     #[inline(always)]
     fn reduce_add(self, a: __m512i) -> i32 {
-        // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [i32; 16] = unsafe { core::mem::transmute(a) };
-        arr.iter().copied().fold(0i32, i32::wrapping_add)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> i32 {
+            // No native integer reduce_add in AVX-512; use transmute to array
+            let arr: [i32; 16] = unsafe { core::mem::transmute(a) };
+            arr.iter().copied().fold(0i32, i32::wrapping_add)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn not(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, _mm512_set1_epi32(-1)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_xor_si512(a, _mm512_set1_epi32(-1))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitand(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_and_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_and_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_or_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_or_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitxor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_xor_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sll_epi32(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_sll_epi32(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sra_epi32(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_sra_epi32(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_srl_epi32(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_srl_epi32(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_sll_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, count: u32) -> __m512i {
+            _mm512_sll_epi32(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_srl_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, count: u32) -> __m512i {
+            _mm512_srl_epi32(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_sra_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, count: u32) -> __m512i {
+            _mm512_sra_epi32(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-            mask as u64 == 0xFFFFu64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
+                mask as u64 == 0xFFFFu64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn any_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-            mask as u64 != 0
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
+                mask as u64 != 0
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitmask(self, a: __m512i) -> u64 {
-        unsafe {
-            // Extract high bit of each lane: compare < 0 for signed interpretation
-            let zero = _mm512_setzero_si512();
-            _mm512_cmpneq_epi32_mask(
-                _mm512_and_si512(a, _mm512_set1_epi32(1_i32 << (32 - 1))),
-                zero,
-            ) as u64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> u64 {
+            {
+                // Extract high bit of each lane: compare < 0 for signed interpretation
+                let zero = _mm512_setzero_si512();
+                _mm512_cmpneq_epi32_mask(
+                    _mm512_and_si512(a, _mm512_set1_epi32(1_i32 << (32 - 1))),
+                    zero,
+                ) as u64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -3890,205 +9311,507 @@ impl U32x16Backend for archmage::X64V4xToken {
 
     #[inline(always)]
     fn splat(self, v: u32) -> __m512i {
-        unsafe { _mm512_set1_epi32(v as _) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, v: u32) -> __m512i {
+            _mm512_set1_epi32(v as _)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, v) }
     }
 
     #[inline(always)]
     fn zero(self) -> __m512i {
-        unsafe { _mm512_setzero_si512() }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken) -> __m512i {
+            _mm512_setzero_si512()
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self) }
     }
 
     #[inline(always)]
     fn load(self, data: &[u32; 16]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, data: &[u32; 16]) -> __m512i {
+            unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, data) }
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u32; 16]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, arr: [u32; 16]) -> __m512i {
+            unsafe { core::mem::transmute(arr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, arr) }
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [u32; 16]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, repr: __m512i, out: &mut [u32; 16]) {
+            unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr, out) }
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [u32; 16] {
-        unsafe { core::mem::transmute(repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, repr: __m512i) -> [u32; 16] {
+            unsafe { core::mem::transmute(repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr) }
     }
 
     #[inline(always)]
     fn add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_add_epi32(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_add_epi32(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi32(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_sub_epi32(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn mul(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_mullo_epi32(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_mullo_epi32(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn neg(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi32(_mm512_setzero_si512(), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_sub_epi32(_mm512_setzero_si512(), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn min(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_min_epu32(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_min_epu32(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn max(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_max_epu32(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_max_epu32(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_eq(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpeq_epu32_mask(a, b);
-            _mm512_maskz_set1_epi32(mask, -1i32)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpeq_epu32_mask(a, b);
+                _mm512_maskz_set1_epi32(mask, -1i32)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ne(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpneq_epu32_mask(a, b);
-            _mm512_maskz_set1_epi32(mask, -1i32)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpneq_epu32_mask(a, b);
+                _mm512_maskz_set1_epi32(mask, -1i32)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_lt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmplt_epu32_mask(a, b);
-            _mm512_maskz_set1_epi32(mask, -1i32)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmplt_epu32_mask(a, b);
+                _mm512_maskz_set1_epi32(mask, -1i32)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_le(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmple_epu32_mask(a, b);
-            _mm512_maskz_set1_epi32(mask, -1i32)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmple_epu32_mask(a, b);
+                _mm512_maskz_set1_epi32(mask, -1i32)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_gt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GT = LT with swapped args
-            let mask = _mm512_cmplt_epu32_mask(b, a);
-            _mm512_maskz_set1_epi32(mask, -1i32)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GT = LT with swapped args
+                let mask = _mm512_cmplt_epu32_mask(b, a);
+                _mm512_maskz_set1_epi32(mask, -1i32)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ge(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GE = LE with swapped args
-            let mask = _mm512_cmple_epu32_mask(b, a);
-            _mm512_maskz_set1_epi32(mask, -1i32)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GE = LE with swapped args
+                let mask = _mm512_cmple_epu32_mask(b, a);
+                _mm512_maskz_set1_epi32(mask, -1i32)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn blend(self, mask: __m512i, if_true: __m512i, if_false: __m512i) -> __m512i {
-        unsafe {
-            let k = _mm512_cmpneq_epi32_mask(mask, _mm512_setzero_si512());
-            _mm512_mask_blend_epi32(k, if_false, if_true)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(
+            _this: archmage::X64V4xToken,
+            mask: __m512i,
+            if_true: __m512i,
+            if_false: __m512i,
+        ) -> __m512i {
+            {
+                let k = _mm512_cmpneq_epi32_mask(mask, _mm512_setzero_si512());
+                _mm512_mask_blend_epi32(k, if_false, if_true)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, mask, if_true, if_false) }
     }
 
     #[inline(always)]
     fn reduce_add(self, a: __m512i) -> u32 {
-        // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [u32; 16] = unsafe { core::mem::transmute(a) };
-        arr.iter().copied().fold(0u32, u32::wrapping_add)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> u32 {
+            // No native integer reduce_add in AVX-512; use transmute to array
+            let arr: [u32; 16] = unsafe { core::mem::transmute(a) };
+            arr.iter().copied().fold(0u32, u32::wrapping_add)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn not(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, _mm512_set1_epi32(-1i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_xor_si512(a, _mm512_set1_epi32(-1i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitand(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_and_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_and_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_or_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_or_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitxor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_xor_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sll_epi32(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_sll_epi32(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_srl_epi32(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_srl_epi32(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_srl_epi32(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_srl_epi32(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_sll_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, count: u32) -> __m512i {
+            _mm512_sll_epi32(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_srl_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, count: u32) -> __m512i {
+            _mm512_srl_epi32(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
-        unsafe { _mm512_srl_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, count: u32) -> __m512i {
+            _mm512_srl_epi32(a, _mm_cvtsi32_si128(count as i32))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, count) }
     }
 
     #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-            mask as u64 == 0xFFFFu64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
+                mask as u64 == 0xFFFFu64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn any_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-            mask as u64 != 0
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
+                mask as u64 != 0
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitmask(self, a: __m512i) -> u64 {
-        unsafe {
-            // Extract high bit of each lane: compare < 0 for signed interpretation
-            let zero = _mm512_setzero_si512();
-            _mm512_cmpneq_epi32_mask(
-                _mm512_and_si512(a, _mm512_set1_epi32(1_i32 << (32 - 1))),
-                zero,
-            ) as u64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> u64 {
+            {
+                // Extract high bit of each lane: compare < 0 for signed interpretation
+                let zero = _mm512_setzero_si512();
+                _mm512_cmpneq_epi32_mask(
+                    _mm512_and_si512(a, _mm512_set1_epi32(1_i32 << (32 - 1))),
+                    zero,
+                ) as u64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -4099,190 +9822,465 @@ impl I64x8Backend for archmage::X64V4xToken {
 
     #[inline(always)]
     fn splat(self, v: i64) -> __m512i {
-        unsafe { _mm512_set1_epi64(v as _) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, v: i64) -> __m512i {
+            _mm512_set1_epi64(v as _)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, v) }
     }
 
     #[inline(always)]
     fn zero(self) -> __m512i {
-        unsafe { _mm512_setzero_si512() }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken) -> __m512i {
+            _mm512_setzero_si512()
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self) }
     }
 
     #[inline(always)]
     fn load(self, data: &[i64; 8]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, data: &[i64; 8]) -> __m512i {
+            unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, data) }
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i64; 8]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, arr: [i64; 8]) -> __m512i {
+            unsafe { core::mem::transmute(arr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, arr) }
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [i64; 8]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, repr: __m512i, out: &mut [i64; 8]) {
+            unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr, out) }
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [i64; 8] {
-        unsafe { core::mem::transmute(repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, repr: __m512i) -> [i64; 8] {
+            unsafe { core::mem::transmute(repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr) }
     }
 
     #[inline(always)]
     fn add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_add_epi64(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_add_epi64(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi64(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_sub_epi64(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn neg(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi64(_mm512_setzero_si512(), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_sub_epi64(_mm512_setzero_si512(), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn min(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_min_epi64(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_min_epi64(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn max(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_max_epi64(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_max_epi64(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn abs(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_abs_epi64(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_abs_epi64(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn simd_eq(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpeq_epi64_mask(a, b);
-            _mm512_maskz_set1_epi64(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpeq_epi64_mask(a, b);
+                _mm512_maskz_set1_epi64(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ne(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpneq_epi64_mask(a, b);
-            _mm512_maskz_set1_epi64(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpneq_epi64_mask(a, b);
+                _mm512_maskz_set1_epi64(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_lt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmplt_epi64_mask(a, b);
-            _mm512_maskz_set1_epi64(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmplt_epi64_mask(a, b);
+                _mm512_maskz_set1_epi64(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_le(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmple_epi64_mask(a, b);
-            _mm512_maskz_set1_epi64(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmple_epi64_mask(a, b);
+                _mm512_maskz_set1_epi64(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_gt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GT = LT with swapped args
-            let mask = _mm512_cmplt_epi64_mask(b, a);
-            _mm512_maskz_set1_epi64(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GT = LT with swapped args
+                let mask = _mm512_cmplt_epi64_mask(b, a);
+                _mm512_maskz_set1_epi64(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ge(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GE = LE with swapped args
-            let mask = _mm512_cmple_epi64_mask(b, a);
-            _mm512_maskz_set1_epi64(mask, -1)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GE = LE with swapped args
+                let mask = _mm512_cmple_epi64_mask(b, a);
+                _mm512_maskz_set1_epi64(mask, -1)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn blend(self, mask: __m512i, if_true: __m512i, if_false: __m512i) -> __m512i {
-        unsafe {
-            let k = _mm512_cmpneq_epi64_mask(mask, _mm512_setzero_si512());
-            _mm512_mask_blend_epi64(k, if_false, if_true)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(
+            _this: archmage::X64V4xToken,
+            mask: __m512i,
+            if_true: __m512i,
+            if_false: __m512i,
+        ) -> __m512i {
+            {
+                let k = _mm512_cmpneq_epi64_mask(mask, _mm512_setzero_si512());
+                _mm512_mask_blend_epi64(k, if_false, if_true)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, mask, if_true, if_false) }
     }
 
     #[inline(always)]
     fn reduce_add(self, a: __m512i) -> i64 {
-        // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [i64; 8] = unsafe { core::mem::transmute(a) };
-        arr.iter().copied().fold(0i64, i64::wrapping_add)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> i64 {
+            // No native integer reduce_add in AVX-512; use transmute to array
+            let arr: [i64; 8] = unsafe { core::mem::transmute(a) };
+            arr.iter().copied().fold(0i64, i64::wrapping_add)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn not(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, _mm512_set1_epi64(-1)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_xor_si512(a, _mm512_set1_epi64(-1))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitand(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_and_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_and_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_or_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_or_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitxor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_xor_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sll_epi64(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_sll_epi64(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sra_epi64(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_sra_epi64(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_srl_epi64(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_srl_epi64(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-            mask as u64 == 0xFFu64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
+                mask as u64 == 0xFFu64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn any_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-            mask as u64 != 0
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
+                mask as u64 != 0
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitmask(self, a: __m512i) -> u64 {
-        unsafe {
-            // Extract high bit of each lane: compare < 0 for signed interpretation
-            let zero = _mm512_setzero_si512();
-            _mm512_cmpneq_epi64_mask(
-                _mm512_and_si512(a, _mm512_set1_epi64(1_i64 << (64 - 1))),
-                zero,
-            ) as u64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> u64 {
+            {
+                // Extract high bit of each lane: compare < 0 for signed interpretation
+                let zero = _mm512_setzero_si512();
+                _mm512_cmpneq_epi64_mask(
+                    _mm512_and_si512(a, _mm512_set1_epi64(1_i64 << (64 - 1))),
+                    zero,
+                ) as u64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -4293,185 +10291,451 @@ impl U64x8Backend for archmage::X64V4xToken {
 
     #[inline(always)]
     fn splat(self, v: u64) -> __m512i {
-        unsafe { _mm512_set1_epi64(v as _) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, v: u64) -> __m512i {
+            _mm512_set1_epi64(v as _)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, v) }
     }
 
     #[inline(always)]
     fn zero(self) -> __m512i {
-        unsafe { _mm512_setzero_si512() }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken) -> __m512i {
+            _mm512_setzero_si512()
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self) }
     }
 
     #[inline(always)]
     fn load(self, data: &[u64; 8]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, data: &[u64; 8]) -> __m512i {
+            unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, data) }
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u64; 8]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, arr: [u64; 8]) -> __m512i {
+            unsafe { core::mem::transmute(arr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, arr) }
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [u64; 8]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, repr: __m512i, out: &mut [u64; 8]) {
+            unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr, out) }
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [u64; 8] {
-        unsafe { core::mem::transmute(repr) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, repr: __m512i) -> [u64; 8] {
+            unsafe { core::mem::transmute(repr) }
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, repr) }
     }
 
     #[inline(always)]
     fn add(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_add_epi64(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_add_epi64(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn sub(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi64(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_sub_epi64(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn neg(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sub_epi64(_mm512_setzero_si512(), a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_sub_epi64(_mm512_setzero_si512(), a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn min(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_min_epu64(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_min_epu64(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn max(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_max_epu64(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_max_epu64(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_eq(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpeq_epu64_mask(a, b);
-            _mm512_maskz_set1_epi64(mask, -1i64)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpeq_epu64_mask(a, b);
+                _mm512_maskz_set1_epi64(mask, -1i64)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ne(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmpneq_epu64_mask(a, b);
-            _mm512_maskz_set1_epi64(mask, -1i64)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmpneq_epu64_mask(a, b);
+                _mm512_maskz_set1_epi64(mask, -1i64)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_lt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmplt_epu64_mask(a, b);
-            _mm512_maskz_set1_epi64(mask, -1i64)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmplt_epu64_mask(a, b);
+                _mm512_maskz_set1_epi64(mask, -1i64)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_le(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            let mask = _mm512_cmple_epu64_mask(a, b);
-            _mm512_maskz_set1_epi64(mask, -1i64)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                let mask = _mm512_cmple_epu64_mask(a, b);
+                _mm512_maskz_set1_epi64(mask, -1i64)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_gt(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GT = LT with swapped args
-            let mask = _mm512_cmplt_epu64_mask(b, a);
-            _mm512_maskz_set1_epi64(mask, -1i64)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GT = LT with swapped args
+                let mask = _mm512_cmplt_epu64_mask(b, a);
+                _mm512_maskz_set1_epi64(mask, -1i64)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn simd_ge(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // GE = LE with swapped args
-            let mask = _mm512_cmple_epu64_mask(b, a);
-            _mm512_maskz_set1_epi64(mask, -1i64)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // GE = LE with swapped args
+                let mask = _mm512_cmple_epu64_mask(b, a);
+                _mm512_maskz_set1_epi64(mask, -1i64)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn blend(self, mask: __m512i, if_true: __m512i, if_false: __m512i) -> __m512i {
-        unsafe {
-            let k = _mm512_cmpneq_epi64_mask(mask, _mm512_setzero_si512());
-            _mm512_mask_blend_epi64(k, if_false, if_true)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(
+            _this: archmage::X64V4xToken,
+            mask: __m512i,
+            if_true: __m512i,
+            if_false: __m512i,
+        ) -> __m512i {
+            {
+                let k = _mm512_cmpneq_epi64_mask(mask, _mm512_setzero_si512());
+                _mm512_mask_blend_epi64(k, if_false, if_true)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, mask, if_true, if_false) }
     }
 
     #[inline(always)]
     fn reduce_add(self, a: __m512i) -> u64 {
-        // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [u64; 8] = unsafe { core::mem::transmute(a) };
-        arr.iter().copied().fold(0u64, u64::wrapping_add)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> u64 {
+            // No native integer reduce_add in AVX-512; use transmute to array
+            let arr: [u64; 8] = unsafe { core::mem::transmute(a) };
+            arr.iter().copied().fold(0u64, u64::wrapping_add)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn not(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, _mm512_set1_epi64(-1i64)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_xor_si512(a, _mm512_set1_epi64(-1i64))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitand(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_and_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_and_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_or_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_or_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn bitxor(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe { _mm512_xor_si512(a, b) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            _mm512_xor_si512(a, b)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_sll_epi64(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_sll_epi64(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_srl_epi64(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_srl_epi64(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_srl_epi64(a, _mm_cvtsi32_si128(N)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf<const N: i32>(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_srl_epi64(a, _mm_cvtsi32_si128(N))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf::<N>(self, a) }
     }
 
     #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-            mask as u64 == 0xFFu64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
+                mask as u64 == 0xFFu64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn any_true(self, a: __m512i) -> bool {
-        unsafe {
-            let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-            mask as u64 != 0
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> bool {
+            {
+                let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
+                mask as u64 != 0
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitmask(self, a: __m512i) -> u64 {
-        unsafe {
-            // Extract high bit of each lane: compare < 0 for signed interpretation
-            let zero = _mm512_setzero_si512();
-            _mm512_cmpneq_epi64_mask(
-                _mm512_and_si512(a, _mm512_set1_epi64(1_i64 << (64 - 1))),
-                zero,
-            ) as u64
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> u64 {
+            {
+                // Extract high bit of each lane: compare < 0 for signed interpretation
+                let zero = _mm512_setzero_si512();
+                _mm512_cmpneq_epi64_mask(
+                    _mm512_and_si512(a, _mm512_set1_epi64(1_i64 << (64 - 1))),
+                    zero,
+                ) as u64
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -4484,7 +10748,16 @@ impl U64x8Backend for archmage::X64V4xToken {
 impl i8x64PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
     fn popcnt(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_popcnt_epi8(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_popcnt_epi8(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -4493,7 +10766,16 @@ impl i8x64PopcntBackend for archmage::X64V4xToken {
 impl u8x64PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
     fn popcnt(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_popcnt_epi8(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_popcnt_epi8(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -4502,7 +10784,16 @@ impl u8x64PopcntBackend for archmage::X64V4xToken {
 impl i16x32PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
     fn popcnt(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_popcnt_epi16(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_popcnt_epi16(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -4511,7 +10802,16 @@ impl i16x32PopcntBackend for archmage::X64V4xToken {
 impl u16x32PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
     fn popcnt(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_popcnt_epi16(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_popcnt_epi16(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -4520,7 +10820,16 @@ impl u16x32PopcntBackend for archmage::X64V4xToken {
 impl i32x16PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
     fn popcnt(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_popcnt_epi32(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_popcnt_epi32(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -4529,7 +10838,16 @@ impl i32x16PopcntBackend for archmage::X64V4xToken {
 impl u32x16PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
     fn popcnt(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_popcnt_epi32(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_popcnt_epi32(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -4538,7 +10856,16 @@ impl u32x16PopcntBackend for archmage::X64V4xToken {
 impl i64x8PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
     fn popcnt(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_popcnt_epi64(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_popcnt_epi64(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -4547,7 +10874,16 @@ impl i64x8PopcntBackend for archmage::X64V4xToken {
 impl u64x8PopcntBackend for archmage::X64V4xToken {
     #[inline(always)]
     fn popcnt(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_popcnt_epi64(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_popcnt_epi64(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -4560,39 +10896,93 @@ impl u64x8PopcntBackend for archmage::X64V4xToken {
 impl F32x16Convert for archmage::X64V4Token {
     #[inline(always)]
     fn bitcast_f32_to_i32(self, a: __m512) -> __m512i {
-        unsafe { _mm512_castps_si512(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512) -> __m512i {
+            _mm512_castps_si512(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitcast_i32_to_f32(self, a: __m512i) -> __m512 {
-        unsafe { _mm512_castsi512_ps(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512 {
+            _mm512_castsi512_ps(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn convert_f32_to_i32(self, a: __m512) -> __m512i {
-        unsafe { _mm512_cvttps_epi32(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512) -> __m512i {
+            _mm512_cvttps_epi32(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     // Issue #80 fixup, mask-register form.
     #[inline(always)]
     fn convert_f32_to_i32_saturating(self, a: __m512) -> __m512i {
-        unsafe {
-            let t = _mm512_cvttps_epi32(a);
-            let big = _mm512_cmp_ps_mask::<_CMP_GE_OQ>(a, _mm512_set1_ps(2_147_483_648.0));
-            let t = _mm512_mask_mov_epi32(t, big, _mm512_set1_epi32(i32::MAX));
-            let not_nan = _mm512_cmp_ps_mask::<_CMP_ORD_Q>(a, a);
-            _mm512_maskz_mov_epi32(not_nan, t)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512) -> __m512i {
+            {
+                let t = _mm512_cvttps_epi32(a);
+                let big = _mm512_cmp_ps_mask::<_CMP_GE_OQ>(a, _mm512_set1_ps(2_147_483_648.0));
+                let t = _mm512_mask_mov_epi32(t, big, _mm512_set1_epi32(i32::MAX));
+                let not_nan = _mm512_cmp_ps_mask::<_CMP_ORD_Q>(a, a);
+                _mm512_maskz_mov_epi32(not_nan, t)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn convert_f32_to_i32_round(self, a: __m512) -> __m512i {
-        unsafe { _mm512_cvtps_epi32(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512) -> __m512i {
+            _mm512_cvtps_epi32(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn convert_i32_to_f32(self, a: __m512i) -> __m512 {
-        unsafe { _mm512_cvtepi32_ps(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512 {
+            _mm512_cvtepi32_ps(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -4601,39 +10991,93 @@ impl F32x16Convert for archmage::X64V4Token {
 impl F32x16Convert for archmage::X64V4xToken {
     #[inline(always)]
     fn bitcast_f32_to_i32(self, a: __m512) -> __m512i {
-        unsafe { _mm512_castps_si512(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512) -> __m512i {
+            _mm512_castps_si512(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn bitcast_i32_to_f32(self, a: __m512i) -> __m512 {
-        unsafe { _mm512_castsi512_ps(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512 {
+            _mm512_castsi512_ps(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn convert_f32_to_i32(self, a: __m512) -> __m512i {
-        unsafe { _mm512_cvttps_epi32(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512) -> __m512i {
+            _mm512_cvttps_epi32(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     // Issue #80 fixup, mask-register form.
     #[inline(always)]
     fn convert_f32_to_i32_saturating(self, a: __m512) -> __m512i {
-        unsafe {
-            let t = _mm512_cvttps_epi32(a);
-            let big = _mm512_cmp_ps_mask::<_CMP_GE_OQ>(a, _mm512_set1_ps(2_147_483_648.0));
-            let t = _mm512_mask_mov_epi32(t, big, _mm512_set1_epi32(i32::MAX));
-            let not_nan = _mm512_cmp_ps_mask::<_CMP_ORD_Q>(a, a);
-            _mm512_maskz_mov_epi32(not_nan, t)
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512) -> __m512i {
+            {
+                let t = _mm512_cvttps_epi32(a);
+                let big = _mm512_cmp_ps_mask::<_CMP_GE_OQ>(a, _mm512_set1_ps(2_147_483_648.0));
+                let t = _mm512_mask_mov_epi32(t, big, _mm512_set1_epi32(i32::MAX));
+                let not_nan = _mm512_cmp_ps_mask::<_CMP_ORD_Q>(a, a);
+                _mm512_maskz_mov_epi32(not_nan, t)
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn convert_f32_to_i32_round(self, a: __m512) -> __m512i {
-        unsafe { _mm512_cvtps_epi32(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512) -> __m512i {
+            _mm512_cvtps_epi32(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn convert_i32_to_f32(self, a: __m512i) -> __m512 {
-        unsafe { _mm512_cvtepi32_ps(a) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512 {
+            _mm512_cvtepi32_ps(a)
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -4642,12 +11086,30 @@ impl F32x16Convert for archmage::X64V4xToken {
 impl U8x64Widen for archmage::X64V4Token {
     #[inline(always)]
     fn widen_low_u8_to_u16(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_cvtepu8_epi16(_mm512_castsi512_si256(a)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_cvtepu8_epi16(_mm512_castsi512_si256(a))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn widen_high_u8_to_u16(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64::<1>(a)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64::<1>(a))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -4656,12 +11118,30 @@ impl U8x64Widen for archmage::X64V4Token {
 impl U16x32Widen for archmage::X64V4Token {
     #[inline(always)]
     fn widen_low_u16_to_u32(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_cvtepu16_epi32(_mm512_castsi512_si256(a)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_cvtepu16_epi32(_mm512_castsi512_si256(a))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn widen_high_u16_to_u32(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_cvtepu16_epi32(_mm512_extracti64x4_epi64::<1>(a)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_cvtepu16_epi32(_mm512_extracti64x4_epi64::<1>(a))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -4670,12 +11150,30 @@ impl U16x32Widen for archmage::X64V4Token {
 impl I8x64Widen for archmage::X64V4Token {
     #[inline(always)]
     fn widen_low_i8_to_i16(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_cvtepi8_epi16(_mm512_castsi512_si256(a)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_cvtepi8_epi16(_mm512_castsi512_si256(a))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn widen_high_i8_to_i16(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_cvtepi8_epi16(_mm512_extracti64x4_epi64::<1>(a)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_cvtepi8_epi16(_mm512_extracti64x4_epi64::<1>(a))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -4684,12 +11182,30 @@ impl I8x64Widen for archmage::X64V4Token {
 impl I16x32Widen for archmage::X64V4Token {
     #[inline(always)]
     fn widen_low_i16_to_i32(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_cvtepi16_epi32(_mm512_castsi512_si256(a)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_cvtepi16_epi32(_mm512_castsi512_si256(a))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn widen_high_i16_to_i32(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_cvtepi16_epi32(_mm512_extracti64x4_epi64::<1>(a)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i) -> __m512i {
+            _mm512_cvtepi16_epi32(_mm512_extracti64x4_epi64::<1>(a))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -4698,26 +11214,42 @@ impl I16x32Widen for archmage::X64V4Token {
 impl I16x32Narrow for archmage::X64V4Token {
     #[inline(always)]
     fn narrow_saturating_i16_to_i8(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
             _mm512_inserti64x4::<1>(
                 _mm512_castsi256_si512(_mm512_cvtsepi16_epi8(a)),
                 _mm512_cvtsepi16_epi8(b),
             )
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn narrow_saturating_i16_to_u8(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // Clamp at zero so the unsigned-source instruction sees
-            // the same value the signed source held; above the
-            // clamp both readings agree.
-            let zero = _mm512_setzero_si512();
-            _mm512_inserti64x4::<1>(
-                _mm512_castsi256_si512(_mm512_cvtusepi16_epi8(_mm512_max_epi16(a, zero))),
-                _mm512_cvtusepi16_epi8(_mm512_max_epi16(b, zero)),
-            )
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // Clamp at zero so the unsigned-source instruction sees
+                // the same value the signed source held; above the
+                // clamp both readings agree.
+                let zero = _mm512_setzero_si512();
+                _mm512_inserti64x4::<1>(
+                    _mm512_castsi256_si512(_mm512_cvtusepi16_epi8(_mm512_max_epi16(a, zero))),
+                    _mm512_cvtusepi16_epi8(_mm512_max_epi16(b, zero)),
+                )
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 }
 
@@ -4726,26 +11258,42 @@ impl I16x32Narrow for archmage::X64V4Token {
 impl I32x16Narrow for archmage::X64V4Token {
     #[inline(always)]
     fn narrow_saturating_i32_to_i16(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
             _mm512_inserti64x4::<1>(
                 _mm512_castsi256_si512(_mm512_cvtsepi32_epi16(a)),
                 _mm512_cvtsepi32_epi16(b),
             )
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn narrow_saturating_i32_to_u16(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // Clamp at zero so the unsigned-source instruction sees
-            // the same value the signed source held; above the
-            // clamp both readings agree.
-            let zero = _mm512_setzero_si512();
-            _mm512_inserti64x4::<1>(
-                _mm512_castsi256_si512(_mm512_cvtusepi32_epi16(_mm512_max_epi32(a, zero))),
-                _mm512_cvtusepi32_epi16(_mm512_max_epi32(b, zero)),
-            )
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4Token, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // Clamp at zero so the unsigned-source instruction sees
+                // the same value the signed source held; above the
+                // clamp both readings agree.
+                let zero = _mm512_setzero_si512();
+                _mm512_inserti64x4::<1>(
+                    _mm512_castsi256_si512(_mm512_cvtusepi32_epi16(_mm512_max_epi32(a, zero))),
+                    _mm512_cvtusepi32_epi16(_mm512_max_epi32(b, zero)),
+                )
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 }
 
@@ -4754,12 +11302,30 @@ impl I32x16Narrow for archmage::X64V4Token {
 impl U8x64Widen for archmage::X64V4xToken {
     #[inline(always)]
     fn widen_low_u8_to_u16(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_cvtepu8_epi16(_mm512_castsi512_si256(a)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_cvtepu8_epi16(_mm512_castsi512_si256(a))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn widen_high_u8_to_u16(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64::<1>(a)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64::<1>(a))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -4768,12 +11334,30 @@ impl U8x64Widen for archmage::X64V4xToken {
 impl U16x32Widen for archmage::X64V4xToken {
     #[inline(always)]
     fn widen_low_u16_to_u32(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_cvtepu16_epi32(_mm512_castsi512_si256(a)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_cvtepu16_epi32(_mm512_castsi512_si256(a))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn widen_high_u16_to_u32(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_cvtepu16_epi32(_mm512_extracti64x4_epi64::<1>(a)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_cvtepu16_epi32(_mm512_extracti64x4_epi64::<1>(a))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -4782,12 +11366,30 @@ impl U16x32Widen for archmage::X64V4xToken {
 impl I8x64Widen for archmage::X64V4xToken {
     #[inline(always)]
     fn widen_low_i8_to_i16(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_cvtepi8_epi16(_mm512_castsi512_si256(a)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_cvtepi8_epi16(_mm512_castsi512_si256(a))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn widen_high_i8_to_i16(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_cvtepi8_epi16(_mm512_extracti64x4_epi64::<1>(a)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_cvtepi8_epi16(_mm512_extracti64x4_epi64::<1>(a))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -4796,12 +11398,30 @@ impl I8x64Widen for archmage::X64V4xToken {
 impl I16x32Widen for archmage::X64V4xToken {
     #[inline(always)]
     fn widen_low_i16_to_i32(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_cvtepi16_epi32(_mm512_castsi512_si256(a)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_cvtepi16_epi32(_mm512_castsi512_si256(a))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 
     #[inline(always)]
     fn widen_high_i16_to_i32(self, a: __m512i) -> __m512i {
-        unsafe { _mm512_cvtepi16_epi32(_mm512_extracti64x4_epi64::<1>(a)) }
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i) -> __m512i {
+            _mm512_cvtepi16_epi32(_mm512_extracti64x4_epi64::<1>(a))
+        }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a) }
     }
 }
 
@@ -4810,26 +11430,42 @@ impl I16x32Widen for archmage::X64V4xToken {
 impl I16x32Narrow for archmage::X64V4xToken {
     #[inline(always)]
     fn narrow_saturating_i16_to_i8(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
             _mm512_inserti64x4::<1>(
                 _mm512_castsi256_si512(_mm512_cvtsepi16_epi8(a)),
                 _mm512_cvtsepi16_epi8(b),
             )
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn narrow_saturating_i16_to_u8(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // Clamp at zero so the unsigned-source instruction sees
-            // the same value the signed source held; above the
-            // clamp both readings agree.
-            let zero = _mm512_setzero_si512();
-            _mm512_inserti64x4::<1>(
-                _mm512_castsi256_si512(_mm512_cvtusepi16_epi8(_mm512_max_epi16(a, zero))),
-                _mm512_cvtusepi16_epi8(_mm512_max_epi16(b, zero)),
-            )
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // Clamp at zero so the unsigned-source instruction sees
+                // the same value the signed source held; above the
+                // clamp both readings agree.
+                let zero = _mm512_setzero_si512();
+                _mm512_inserti64x4::<1>(
+                    _mm512_castsi256_si512(_mm512_cvtusepi16_epi8(_mm512_max_epi16(a, zero))),
+                    _mm512_cvtusepi16_epi8(_mm512_max_epi16(b, zero)),
+                )
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 }
 
@@ -4838,25 +11474,41 @@ impl I16x32Narrow for archmage::X64V4xToken {
 impl I32x16Narrow for archmage::X64V4xToken {
     #[inline(always)]
     fn narrow_saturating_i32_to_i16(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
             _mm512_inserti64x4::<1>(
                 _mm512_castsi256_si512(_mm512_cvtsepi32_epi16(a)),
                 _mm512_cvtsepi32_epi16(b),
             )
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 
     #[inline(always)]
     fn narrow_saturating_i32_to_u16(self, a: __m512i, b: __m512i) -> __m512i {
-        unsafe {
-            // Clamp at zero so the unsigned-source instruction sees
-            // the same value the signed source held; above the
-            // clamp both readings agree.
-            let zero = _mm512_setzero_si512();
-            _mm512_inserti64x4::<1>(
-                _mm512_castsi256_si512(_mm512_cvtusepi32_epi16(_mm512_max_epi32(a, zero))),
-                _mm512_cvtusepi32_epi16(_mm512_max_epi32(b, zero)),
-            )
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+        )]
+        #[inline]
+        fn __tf(_this: archmage::X64V4xToken, a: __m512i, b: __m512i) -> __m512i {
+            {
+                // Clamp at zero so the unsigned-source instruction sees
+                // the same value the signed source held; above the
+                // clamp both readings agree.
+                let zero = _mm512_setzero_si512();
+                _mm512_inserti64x4::<1>(
+                    _mm512_castsi256_si512(_mm512_cvtusepi32_epi16(_mm512_max_epi32(a, zero))),
+                    _mm512_cvtusepi32_epi16(_mm512_max_epi32(b, zero)),
+                )
+            }
         }
+        // SAFETY: `self` is a runtime-detection token proving the enabled
+        // target features (compiler-verified intrinsic/feature matching).
+        unsafe { __tf(self, a, b) }
     }
 }
