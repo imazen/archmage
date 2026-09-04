@@ -31,6 +31,17 @@ neither Rosetta 2 nor Docker Desktop's amd64 emulation reports AVX
 lane-order correctness of that arm is covered by CI, and its cost is one
 3-cycle-latency lane-crossing shuffle per narrowed vector by construction.
 
+> **x86 counterpart: `int_widen_narrow_zen5-9950x3d_2026-09-04.md`.** It
+> measures the AVX2 arms this file could not, and it changes one conclusion:
+> at 256-bit — the width that carries the `permute4x64::<0xD8>` fixup — the
+> primitive is **1.3–1.9× faster** than the array round trip at every
+> compute-relevant size, so the fixup costs less than the alternative it
+> replaces. It also documents an x86-only measurement trap this file's shape
+> would otherwise have walked into: `widen_low` lowers to `_mm_cvtepu8_epi16`
+> (SSE4.1, *not* the x86-64 baseline), so outside a `#[target_feature]` region
+> every widen is an outlined call — 395 ns vs 54.3 ns for the same work inside
+> one. NEON is the aarch64 baseline, which is why this file never saw it.
+
 ## Cases
 
 | Case | What it does |
