@@ -126,6 +126,26 @@ pub trait I32x4Backend: SimdToken + Sealed + Copy + 'static {
     /// `N` must be in `0..=31`; the generic front-ends reject out-of-range `N` at compile time.
     fn shr_logical_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
+    // ====== Uniform variable shifts ======
+
+    /// Shift left by a runtime `count` applied identically to every lane.
+    ///
+    /// `count >= 32` produces all-zero lanes on every backend.
+    fn shl_uniform(self, a: Self::Repr, count: u32) -> Self::Repr;
+
+    /// Logical (zero-filling) shift right by a runtime `count` applied
+    /// identically to every lane.
+    ///
+    /// `count >= 32` produces all-zero lanes on every backend.
+    fn shr_logical_uniform(self, a: Self::Repr, count: u32) -> Self::Repr;
+
+    /// Arithmetic (sign-filling) shift right by a runtime `count`
+    /// applied identically to every lane.
+    ///
+    /// `count >= 32` produces a sign fill (every lane becomes `0` or
+    /// `-1`) on every backend.
+    fn shr_arithmetic_uniform(self, a: Self::Repr, count: u32) -> Self::Repr;
+
     // ====== Boolean ======
 
     /// True if all lanes have their sign bit set (all-1s mask).

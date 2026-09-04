@@ -1616,6 +1616,21 @@ impl I32x16Backend for archmage::X64V4Token {
     }
 
     #[inline(always)]
+    fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_sll_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_srl_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_sra_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
         unsafe {
             let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
@@ -1807,6 +1822,21 @@ impl U32x16Backend for archmage::X64V4Token {
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {
         unsafe { _mm512_srl_epi32(a, _mm_cvtsi32_si128(N)) }
+    }
+
+    #[inline(always)]
+    fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_sll_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_srl_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_srl_epi32(a, _mm_cvtsi32_si128(count as i32)) }
     }
 
     #[inline(always)]
@@ -3800,6 +3830,21 @@ impl I32x16Backend for archmage::X64V4xToken {
     }
 
     #[inline(always)]
+    fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_sll_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_srl_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_sra_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
         unsafe {
             let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
@@ -3991,6 +4036,21 @@ impl U32x16Backend for archmage::X64V4xToken {
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {
         unsafe { _mm512_srl_epi32(a, _mm_cvtsi32_si128(N)) }
+    }
+
+    #[inline(always)]
+    fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_sll_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_srl_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_srl_epi32(a, _mm_cvtsi32_si128(count as i32)) }
     }
 
     #[inline(always)]

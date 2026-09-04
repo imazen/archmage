@@ -1274,6 +1274,27 @@ impl I32x4Backend for archmage::X64V3Token {
         unsafe { _mm_srli_epi32::<N>(a) }
     }
 
+    // ====== Uniform variable shifts ======
+    // PSLLD/PSRLD give 0 once the count reaches 32 and PSRAD clamps to
+    // a sign fill — the portable contract is the hardware behaviour.
+    // _mm_cvtsi32_si128 zero-extends, so u32::MAX is just a large
+    // out-of-range count, not a negative one.
+
+    #[inline(always)]
+    fn shl_uniform(self, a: __m128i, count: u32) -> __m128i {
+        unsafe { _mm_sll_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: __m128i, count: u32) -> __m128i {
+        unsafe { _mm_srl_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: __m128i, count: u32) -> __m128i {
+        unsafe { _mm_sra_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
     // ====== Boolean ======
 
     #[inline(always)]
@@ -1471,6 +1492,27 @@ impl I32x8Backend for archmage::X64V3Token {
         unsafe { _mm256_srli_epi32::<N>(a) }
     }
 
+    // ====== Uniform variable shifts ======
+    // PSLLD/PSRLD give 0 once the count reaches 32 and PSRAD clamps to
+    // a sign fill — the portable contract is the hardware behaviour.
+    // _mm_cvtsi32_si128 zero-extends, so u32::MAX is just a large
+    // out-of-range count, not a negative one.
+
+    #[inline(always)]
+    fn shl_uniform(self, a: __m256i, count: u32) -> __m256i {
+        unsafe { _mm256_sll_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: __m256i, count: u32) -> __m256i {
+        unsafe { _mm256_srl_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: __m256i, count: u32) -> __m256i {
+        unsafe { _mm256_sra_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
     // ====== Boolean ======
 
     #[inline(always)]
@@ -1655,6 +1697,21 @@ impl U32x4Backend for archmage::X64V3Token {
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m128i) -> __m128i {
         unsafe { _mm_srli_epi32::<N>(a) }
+    }
+
+    // ====== Uniform variable shifts ======
+    // PSLLD/PSRLD give 0 once the count reaches 32 — the portable
+    // contract is the hardware behaviour. _mm_cvtsi32_si128
+    // zero-extends, so u32::MAX is just a large out-of-range count.
+
+    #[inline(always)]
+    fn shl_uniform(self, a: __m128i, count: u32) -> __m128i {
+        unsafe { _mm_sll_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: __m128i, count: u32) -> __m128i {
+        unsafe { _mm_srl_epi32(a, _mm_cvtsi32_si128(count as i32)) }
     }
 
     // ====== Boolean ======
@@ -1844,6 +1901,21 @@ impl U32x8Backend for archmage::X64V3Token {
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m256i) -> __m256i {
         unsafe { _mm256_srli_epi32::<N>(a) }
+    }
+
+    // ====== Uniform variable shifts ======
+    // PSLLD/PSRLD give 0 once the count reaches 32 — the portable
+    // contract is the hardware behaviour. _mm_cvtsi32_si128
+    // zero-extends, so u32::MAX is just a large out-of-range count.
+
+    #[inline(always)]
+    fn shl_uniform(self, a: __m256i, count: u32) -> __m256i {
+        unsafe { _mm256_sll_epi32(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: __m256i, count: u32) -> __m256i {
+        unsafe { _mm256_srl_epi32(a, _mm_cvtsi32_si128(count as i32)) }
     }
 
     // ====== Boolean ======
@@ -6843,6 +6915,27 @@ impl I32x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
+    fn shl_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
+        core::array::from_fn(|i| {
+            <archmage::X64V3Token as I32x8Backend>::shl_uniform(self, a[i], count)
+        })
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
+        core::array::from_fn(|i| {
+            <archmage::X64V3Token as I32x8Backend>::shr_logical_uniform(self, a[i], count)
+        })
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
+        core::array::from_fn(|i| {
+            <archmage::X64V3Token as I32x8Backend>::shr_arithmetic_uniform(self, a[i], count)
+        })
+    }
+
+    #[inline(always)]
     fn all_true(self, a: [__m256i; 2]) -> bool {
         <archmage::X64V3Token as I32x8Backend>::all_true(self, a[0])
             && <archmage::X64V3Token as I32x8Backend>::all_true(self, a[1])
@@ -7088,6 +7181,27 @@ impl U32x16Backend for archmage::X64V3Token {
             <archmage::X64V3Token as U32x8Backend>::shr_logical_const::<N>(self, a[0]),
             <archmage::X64V3Token as U32x8Backend>::shr_logical_const::<N>(self, a[1]),
         ]
+    }
+
+    #[inline(always)]
+    fn shl_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
+        core::array::from_fn(|i| {
+            <archmage::X64V3Token as U32x8Backend>::shl_uniform(self, a[i], count)
+        })
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
+        core::array::from_fn(|i| {
+            <archmage::X64V3Token as U32x8Backend>::shr_logical_uniform(self, a[i], count)
+        })
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
+        core::array::from_fn(|i| {
+            <archmage::X64V3Token as U32x8Backend>::shr_logical_uniform(self, a[i], count)
+        })
     }
 
     #[inline(always)]

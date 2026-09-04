@@ -62,15 +62,35 @@ pub(crate) fn has_shr_arithmetic(elem: ElementType) -> bool {
     )
 }
 
-/// Whether the type carries the uniform-variable-shift and
-/// saturating-arithmetic families.
+/// Whether the type carries the uniform-variable-shift family.
+///
+/// 8/16/32-bit integers. The audit (`docs/CROSS-ISA-INT-PRIMITIVES.md` §2a)
+/// proves the uniform form universal at every one of these widths on every
+/// tier: SSE2/AVX2/AVX-512BW `PSLL/PSRL/PSRA` with the count in an XMM,
+/// NEON `vshlq_*` with a splatted (clamped) count, wasm's `u32` count plus
+/// a keep mask, scalar guards. 64-bit is deliberately excluded: x86 has no
+/// `sra_epi64` below AVX-512, so the arithmetic flavor would need a
+/// sign-decompose polyfill on v3 — that goes in only with a measured
+/// benchmark attached.
+pub(crate) fn has_uniform_shifts(elem: ElementType) -> bool {
+    matches!(
+        elem,
+        ElementType::I8
+            | ElementType::U8
+            | ElementType::I16
+            | ElementType::U16
+            | ElementType::I32
+            | ElementType::U32
+    )
+}
+
+/// Whether the type carries saturating add/sub.
 ///
 /// 8- and 16-bit integers only. Saturating add/sub has no 32/64-bit form on
 /// x86 (`_mm*_adds_epi32` does not exist at any tier) or on wasm128, so
-/// exposing it above 16 bits would be a portability lie; the uniform shifts
-/// ship on the same type set so the two families stay reviewable together.
-/// See `docs/CROSS-ISA-INT-PRIMITIVES.md`.
-pub(crate) fn has_uniform_shifts(elem: ElementType) -> bool {
+/// exposing it above 16 bits would be a portability lie.
+/// See `docs/CROSS-ISA-INT-PRIMITIVES.md` §1.
+pub(crate) fn has_saturating_arith(elem: ElementType) -> bool {
     matches!(
         elem,
         ElementType::I8 | ElementType::U8 | ElementType::I16 | ElementType::U16
