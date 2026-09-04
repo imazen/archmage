@@ -738,6 +738,11 @@ jobs:
   sde:
     name: SDE ${{ matrix.cpu.name }}
     runs-on: ubuntu-latest
+    # Emulation runs the full magetypes suite in ~2.5 min per lane; anything
+    # dramatically slower means a subprocess-spawning binary slipped past the
+    # skip list (soundness_exploits once burned 19 emulated minutes on one
+    # trybuild rustc). Fail fast instead of eating a 6-hour default.
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
