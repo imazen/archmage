@@ -55,6 +55,7 @@ fn i16_input(n: usize) -> Vec<i16> {
 // ============================================================================
 
 /// `widen_low` + `widen_high` over the slice — one instruction per half.
+#[inline(always)]
 fn widen_slice<T: U8x16Widen>(t: T, src: &[u8], dst: &mut [u16]) {
     for (s, d) in src.chunks_exact(16).zip(dst.chunks_exact_mut(16)) {
         let arr: [u8; 16] = s.try_into().unwrap();
@@ -65,6 +66,7 @@ fn widen_slice<T: U8x16Widen>(t: T, src: &[u8], dst: &mut [u16]) {
 }
 
 /// The array round trip a portable body needs without the primitive.
+#[inline(always)]
 fn widen_via_array_slice<T: U8x16Widen>(t: T, src: &[u8], dst: &mut [u16]) {
     for (s, d) in src.chunks_exact(16).zip(dst.chunks_exact_mut(16)) {
         let arr: [u8; 16] = s.try_into().unwrap();
@@ -78,6 +80,7 @@ fn widen_via_array_slice<T: U8x16Widen>(t: T, src: &[u8], dst: &mut [u16]) {
 }
 
 /// `u8 -> u16 -> u32` accumulate: both widening pairs in one chain.
+#[inline(always)]
 fn widen_chain_slice<T>(t: T, src: &[u8]) -> u32
 where
     T: U8x16Widen + U16x8Widen + U32x4Backend,
@@ -94,6 +97,7 @@ where
 }
 
 /// The same chain without the primitive: every widening step through arrays.
+#[inline(always)]
 fn widen_chain_via_array_slice<T>(t: T, src: &[u8]) -> u32
 where
     T: U8x16Widen + U16x8Widen + U32x4Backend,
@@ -118,6 +122,7 @@ where
 // ============================================================================
 
 /// `narrow_saturating_u8` over the slice — one call per 16 output bytes.
+#[inline(always)]
 fn narrow_slice<T: I16x8Narrow>(t: T, src: &[i16], dst: &mut [u8]) {
     for (s, d) in src.chunks_exact(16).zip(dst.chunks_exact_mut(16)) {
         let lo = i16x8::<T>::from_array(t, s[..8].try_into().unwrap());
@@ -127,6 +132,7 @@ fn narrow_slice<T: I16x8Narrow>(t: T, src: &[i16], dst: &mut [u8]) {
 }
 
 /// The array round trip with an explicit clamp.
+#[inline(always)]
 fn narrow_via_array_slice<T: I16x8Narrow>(t: T, src: &[i16], dst: &mut [u8]) {
     for (s, d) in src.chunks_exact(16).zip(dst.chunks_exact_mut(16)) {
         let lo = i16x8::<T>::from_array(t, s[..8].try_into().unwrap());
@@ -138,6 +144,131 @@ fn narrow_via_array_slice<T: I16x8Narrow>(t: T, src: &[i16], dst: &mut [u8]) {
         });
         d.copy_from_slice(&u8x16::<T>::from_array(t, out).to_array());
     }
+}
+
+/// x86 `#[arcane]` arm: the same six generic kernels, called inside one
+/// AVX2 `#[target_feature]` region — the way a real `#[magetypes]`/`#[arcane]`
+/// consumer runs them. Necessary for a fair x86 measurement: `widen_low`
+/// lowers to `_mm_cvtepu8_epi16`, which is SSE4.1 — NOT in the x86-64
+/// baseline — so outside a target-feature region every widen is an outlined
+/// `#[target_feature]` call while the `via_array` casts inline and
+/// auto-vectorize at SSE2. The bare-generic `v3` label measures that call
+/// boundary (widen 4-5x slower than via_array on Zen 5); this label measures
+/// the op.
+#[cfg(target_arch = "x86_64")]
+mod v3_arcane {
+    use super::*;
+    use archmage::{X64V3Token, arcane};
+    use magetypes::simd::backends::I16x16Narrow;
+    use magetypes::simd::generic::i16x16;
+
+    /// 256-bit narrow — the width that carries the `permute4x64::<0xD8>`
+    /// lane-order fixup. This is the case whose cost the 128-bit kernels
+    /// cannot show.
+    #[inline(always)]
+    fn narrow256_slice<T: I16x16Narrow>(t: T, src: &[i16], dst: &mut [u8]) {
+        for (s, d) in src.chunks_exact(32).zip(dst.chunks_exact_mut(32)) {
+            let lo = i16x16::<T>::from_array(t, s[..16].try_into().unwrap());
+            let hi = i16x16::<T>::from_array(t, s[16..].try_into().unwrap());
+            d.copy_from_slice(&lo.narrow_saturating_u8(hi).to_array());
+        }
+    }
+
+    #[inline(always)]
+    fn narrow256_via_array_slice<T: I16x16Narrow>(t: T, src: &[i16], dst: &mut [u8]) {
+        for (s, d) in src.chunks_exact(32).zip(dst.chunks_exact_mut(32)) {
+            let lo = i16x16::<T>::from_array(t, s[..16].try_into().unwrap());
+            let hi = i16x16::<T>::from_array(t, s[16..].try_into().unwrap());
+            let (a, b) = (lo.to_array(), hi.to_array());
+            let out: [u8; 32] = core::array::from_fn(|i| {
+                let x = if i < 16 { a[i] } else { b[i - 16] };
+                x.clamp(0, 255) as u8
+            });
+            d.copy_from_slice(&out);
+        }
+    }
+
+    #[arcane]
+    pub fn narrow256_slice_a(t: X64V3Token, src: &[i16], dst: &mut [u8]) {
+        narrow256_slice::<X64V3Token>(t, src, dst)
+    }
+    #[arcane]
+    pub fn narrow256_via_array_slice_a(t: X64V3Token, src: &[i16], dst: &mut [u8]) {
+        narrow256_via_array_slice::<X64V3Token>(t, src, dst)
+    }
+
+    #[arcane]
+    pub fn widen_slice_a(t: X64V3Token, src: &[u8], dst: &mut [u16]) {
+        widen_slice::<X64V3Token>(t, src, dst)
+    }
+    #[arcane]
+    pub fn widen_via_array_slice_a(t: X64V3Token, src: &[u8], dst: &mut [u16]) {
+        widen_via_array_slice::<X64V3Token>(t, src, dst)
+    }
+    #[arcane]
+    pub fn widen_chain_slice_a(t: X64V3Token, src: &[u8]) -> u32 {
+        widen_chain_slice::<X64V3Token>(t, src)
+    }
+    #[arcane]
+    pub fn widen_chain_via_array_slice_a(t: X64V3Token, src: &[u8]) -> u32 {
+        widen_chain_via_array_slice::<X64V3Token>(t, src)
+    }
+    #[arcane]
+    pub fn narrow_slice_a(t: X64V3Token, src: &[i16], dst: &mut [u8]) {
+        narrow_slice::<X64V3Token>(t, src, dst)
+    }
+    #[arcane]
+    pub fn narrow_via_array_slice_a(t: X64V3Token, src: &[i16], dst: &mut [u8]) {
+        narrow_via_array_slice::<X64V3Token>(t, src, dst)
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+macro_rules! bench_backend_v3_arcane {
+    ($c:expr, $t:expr) => {{
+        let t = $t;
+        for &n in SIZES {
+            let src8 = u8_input(n);
+            let src16 = i16_input(n);
+            let mut dst16 = vec![0u16; n];
+            let mut dst8 = vec![0u8; n];
+
+            $c.bench_function(&format!("widen/v3_arcane/{n}"), |b| {
+                b.iter(|| v3_arcane::widen_slice_a(t, black_box(&src8), black_box(&mut dst16)))
+            });
+            $c.bench_function(&format!("widen_via_array/v3_arcane/{n}"), |b| {
+                b.iter(|| {
+                    v3_arcane::widen_via_array_slice_a(t, black_box(&src8), black_box(&mut dst16))
+                })
+            });
+            $c.bench_function(&format!("widen_chain/v3_arcane/{n}"), |b| {
+                b.iter(|| v3_arcane::widen_chain_slice_a(t, black_box(&src8)))
+            });
+            $c.bench_function(&format!("widen_chain_via_array/v3_arcane/{n}"), |b| {
+                b.iter(|| v3_arcane::widen_chain_via_array_slice_a(t, black_box(&src8)))
+            });
+            $c.bench_function(&format!("narrow/v3_arcane/{n}"), |b| {
+                b.iter(|| v3_arcane::narrow_slice_a(t, black_box(&src16), black_box(&mut dst8)))
+            });
+            $c.bench_function(&format!("narrow_via_array/v3_arcane/{n}"), |b| {
+                b.iter(|| {
+                    v3_arcane::narrow_via_array_slice_a(t, black_box(&src16), black_box(&mut dst8))
+                })
+            });
+            $c.bench_function(&format!("narrow256/v3_arcane/{n}"), |b| {
+                b.iter(|| v3_arcane::narrow256_slice_a(t, black_box(&src16), black_box(&mut dst8)))
+            });
+            $c.bench_function(&format!("narrow256_via_array/v3_arcane/{n}"), |b| {
+                b.iter(|| {
+                    v3_arcane::narrow256_via_array_slice_a(
+                        t,
+                        black_box(&src16),
+                        black_box(&mut dst8),
+                    )
+                })
+            });
+        }
+    }};
 }
 
 macro_rules! bench_backend {
@@ -189,6 +320,7 @@ fn bench_all(c: &mut Criterion) {
     #[cfg(target_arch = "x86_64")]
     if let Some(t) = archmage::X64V3Token::summon() {
         bench_backend!(c, "v3", archmage::X64V3Token, t);
+        bench_backend_v3_arcane!(c, t);
     }
 }
 
