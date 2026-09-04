@@ -524,6 +524,7 @@ fn scalar_backend() {
 #[test]
 fn x64v3_backend() {
     // X64V3Token is the x86-64-v3 level: AVX2 is the discriminating feature.
+    #[cfg(feature = "std")]
     let host_has_v3 = std::arch::is_x86_feature_detected!("avx2")
         && std::arch::is_x86_feature_detected!("fma")
         && std::arch::is_x86_feature_detected!("sse4.2");
@@ -532,11 +533,14 @@ fn x64v3_backend() {
             let n = run_all!(archmage::X64V3Token, t) + run_all_512!(archmage::X64V3Token, t);
             assert!(n >= MIN_CASES_W128, "v3 arm ran only {n} comparisons");
         }
-        None => assert!(
-            !host_has_v3,
-            "the host reports AVX2+FMA+SSE4.2 but X64V3Token did not summon — \
+        None => {
+            #[cfg(feature = "std")]
+            assert!(
+                !host_has_v3,
+                "the host reports AVX2+FMA+SSE4.2 but X64V3Token did not summon — \
              the v3 arm would have been silently skipped"
-        ),
+            );
+        }
     }
 }
 
@@ -545,6 +549,7 @@ fn x64v3_backend() {
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[test]
 fn x64v4_backend() {
+    #[cfg(feature = "std")]
     let host_has_v4 = std::arch::is_x86_feature_detected!("avx512f")
         && std::arch::is_x86_feature_detected!("avx512bw")
         && std::arch::is_x86_feature_detected!("avx512vl")
@@ -555,11 +560,14 @@ fn x64v4_backend() {
             let n = run_all_512!(archmage::X64V4Token, t);
             assert!(n >= MIN_CASES_W512, "v4 arm ran only {n} comparisons");
         }
-        None => assert!(
-            !host_has_v4,
-            "the host reports the AVX-512 F/BW/VL/DQ/CD set but X64V4Token did \
+        None => {
+            #[cfg(feature = "std")]
+            assert!(
+                !host_has_v4,
+                "the host reports the AVX-512 F/BW/VL/DQ/CD set but X64V4Token did \
              not summon — the v4 arm would have been silently skipped"
-        ),
+            );
+        }
     }
 }
 
@@ -600,10 +608,13 @@ fn wasm128_backend() {
             let n = run_all!(archmage::Wasm128Token, t) + run_all_512!(archmage::Wasm128Token, t);
             assert!(n >= MIN_CASES_W128, "wasm128 arm ran only {n} comparisons");
         }
-        None => assert!(
-            !built_with_simd128,
-            "built with target-feature=+simd128 but Wasm128Token did not summon \
+        None => {
+            #[cfg(feature = "std")]
+            assert!(
+                !built_with_simd128,
+                "built with target-feature=+simd128 but Wasm128Token did not summon \
              — the wasm arm would have been silently skipped"
-        ),
+            );
+        }
     }
 }

@@ -139,10 +139,13 @@ fn f64_recip_rsqrt_is_full_precision() {
                 check_f64_full!(f64x4, v3, X64V3Token, 4, "f64x4<V3>", xs);
                 check_f64_full!(f64x8, v3, X64V3Token, 8, "f64x8<V3 polyfill>", xs);
             }
-            None => assert!(
-                !std::arch::is_x86_feature_detected!("avx2"),
-                "host reports AVX2 but X64V3Token did not summon"
-            ),
+            None => {
+                #[cfg(feature = "std")]
+                assert!(
+                    !std::arch::is_x86_feature_detected!("avx2"),
+                    "host reports AVX2 but X64V3Token did not summon"
+                );
+            }
         }
         // The native f64x8 backend for X64V4Token only exists with the
         // avx512 feature (impls/x86_v4.rs is cfg-gated on it); without the
@@ -194,10 +197,13 @@ fn f32_approx_holds_floor() {
                 check_f32_approx!(f32x4, v3, X64V3Token, 4, "f32x4<V3>", xs);
                 check_f32_approx!(f32x8, v3, X64V3Token, 8, "f32x8<V3>", xs);
             }
-            None => assert!(
-                !std::arch::is_x86_feature_detected!("avx2"),
-                "host reports AVX2 but X64V3Token did not summon"
-            ),
+            None => {
+                #[cfg(feature = "std")]
+                assert!(
+                    !std::arch::is_x86_feature_detected!("avx2"),
+                    "host reports AVX2 but X64V3Token did not summon"
+                );
+            }
         }
     }
     #[cfg(target_arch = "aarch64")]
