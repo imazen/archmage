@@ -1232,6 +1232,18 @@ fn generate_x86_v4_f32x16_convert(token: &str) -> String {
                 unsafe {{ _mm512_cvttps_epi32(a) }}
             }}
 
+            // Issue #80 fixup, mask-register form.
+            #[inline(always)]
+            fn convert_f32_to_i32_saturating(self, a: __m512) -> __m512i {{
+                unsafe {{
+                    let t = _mm512_cvttps_epi32(a);
+                    let big = _mm512_cmp_ps_mask::<_CMP_GE_OQ>(a, _mm512_set1_ps(2_147_483_648.0));
+                    let t = _mm512_mask_mov_epi32(t, big, _mm512_set1_epi32(i32::MAX));
+                    let not_nan = _mm512_cmp_ps_mask::<_CMP_ORD_Q>(a, a);
+                    _mm512_maskz_mov_epi32(not_nan, t)
+                }}
+            }}
+
             #[inline(always)]
             fn convert_f32_to_i32_round(self, a: __m512) -> __m512i {{
                 unsafe {{ _mm512_cvtps_epi32(a) }}
@@ -3902,6 +3914,19 @@ fn generate_convert_traits() -> String {
             /// Convert f32x4 to i32x4 with truncation toward zero.
             fn convert_f32_to_i32(self, a: <Self as F32x4Backend>::Repr) -> <Self as I32x4Backend>::Repr;
 
+            /// Convert with truncation and UNIFORM saturation: out-of-range
+            /// lanes clamp to `i32::MIN`/`i32::MAX`, NaN lanes become 0 —
+            /// identical on every backend (Rust `as` / NEON FCVTZS / WASM
+            /// trunc_sat semantics). Default delegates to
+            /// [`convert_f32_to_i32`] (already conformant on NEON/WASM/
+            /// scalar); x86 overrides with a cvttps + compare/blend fixup
+            /// (the bare op yields the `i32::MIN` sentinel for overflow AND
+            /// NaN there — issue #80).
+            #[inline(always)]
+            fn convert_f32_to_i32_saturating(self, a: <Self as F32x4Backend>::Repr) -> <Self as I32x4Backend>::Repr {{
+                <Self as F32x4Convert>::convert_f32_to_i32(self, a)
+            }}
+
             /// Convert f32x4 to i32x4 with rounding to nearest.
             fn convert_f32_to_i32_round(self, a: <Self as F32x4Backend>::Repr) -> <Self as I32x4Backend>::Repr;
 
@@ -3921,6 +3946,19 @@ fn generate_convert_traits() -> String {
 
             /// Convert f32x8 to i32x8 with truncation toward zero.
             fn convert_f32_to_i32(self, a: <Self as F32x8Backend>::Repr) -> <Self as I32x8Backend>::Repr;
+
+            /// Convert with truncation and UNIFORM saturation: out-of-range
+            /// lanes clamp to `i32::MIN`/`i32::MAX`, NaN lanes become 0 —
+            /// identical on every backend (Rust `as` / NEON FCVTZS / WASM
+            /// trunc_sat semantics). Default delegates to
+            /// [`convert_f32_to_i32`] (already conformant on NEON/WASM/
+            /// scalar); x86 overrides with a cvttps + compare/blend fixup
+            /// (the bare op yields the `i32::MIN` sentinel for overflow AND
+            /// NaN there — issue #80).
+            #[inline(always)]
+            fn convert_f32_to_i32_saturating(self, a: <Self as F32x8Backend>::Repr) -> <Self as I32x8Backend>::Repr {{
+                <Self as F32x8Convert>::convert_f32_to_i32(self, a)
+            }}
 
             /// Convert f32x8 to i32x8 with rounding to nearest.
             fn convert_f32_to_i32_round(self, a: <Self as F32x8Backend>::Repr) -> <Self as I32x8Backend>::Repr;
@@ -3942,6 +3980,19 @@ fn generate_convert_traits() -> String {
 
             /// Convert f32x16 to i32x16 with truncation toward zero.
             fn convert_f32_to_i32(self, a: <Self as F32x16Backend>::Repr) -> <Self as I32x16Backend>::Repr;
+
+            /// Convert with truncation and UNIFORM saturation: out-of-range
+            /// lanes clamp to `i32::MIN`/`i32::MAX`, NaN lanes become 0 —
+            /// identical on every backend (Rust `as` / NEON FCVTZS / WASM
+            /// trunc_sat semantics). Default delegates to
+            /// [`convert_f32_to_i32`] (already conformant on NEON/WASM/
+            /// scalar); x86 overrides with a cvttps + compare/blend fixup
+            /// (the bare op yields the `i32::MIN` sentinel for overflow AND
+            /// NaN there — issue #80).
+            #[inline(always)]
+            fn convert_f32_to_i32_saturating(self, a: <Self as F32x16Backend>::Repr) -> <Self as I32x16Backend>::Repr {{
+                <Self as F32x16Convert>::convert_f32_to_i32(self, a)
+            }}
 
             /// Convert f32x16 to i32x16 with rounding to nearest.
             fn convert_f32_to_i32_round(self, a: <Self as F32x16Backend>::Repr) -> <Self as I32x16Backend>::Repr;
@@ -4287,6 +4338,19 @@ fn generate_x86_convert_impls(token: &str) -> String {
                 unsafe {{ _mm_cvttps_epi32(a) }}
             }}
 
+            // Issue #80 fixup: cvttps yields the i32::MIN sentinel for +overflow
+            // and NaN; patch those two classes (-overflow already saturates to MIN).
+            #[inline(always)]
+            fn convert_f32_to_i32_saturating(self, a: __m128) -> __m128i {{
+                unsafe {{
+                    let t = _mm_cvttps_epi32(a);
+                    let big = _mm_cmp_ps::<_CMP_GE_OQ>(a, _mm_set1_ps(2_147_483_648.0));
+                    let t = _mm_blendv_epi8(t, _mm_set1_epi32(i32::MAX), _mm_castps_si128(big));
+                    let nan = _mm_cmp_ps::<_CMP_UNORD_Q>(a, a);
+                    _mm_andnot_si128(_mm_castps_si128(nan), t)
+                }}
+            }}
+
             #[inline(always)]
             fn convert_f32_to_i32_round(self, a: __m128) -> __m128i {{
                 unsafe {{ _mm_cvtps_epi32(a) }}
@@ -4315,6 +4379,18 @@ fn generate_x86_convert_impls(token: &str) -> String {
                 unsafe {{ _mm256_cvttps_epi32(a) }}
             }}
 
+            // Issue #80 fixup — see the 128-bit impl.
+            #[inline(always)]
+            fn convert_f32_to_i32_saturating(self, a: __m256) -> __m256i {{
+                unsafe {{
+                    let t = _mm256_cvttps_epi32(a);
+                    let big = _mm256_cmp_ps::<_CMP_GE_OQ>(a, _mm256_set1_ps(2_147_483_648.0));
+                    let t = _mm256_blendv_epi8(t, _mm256_set1_epi32(i32::MAX), _mm256_castps_si256(big));
+                    let nan = _mm256_cmp_ps::<_CMP_UNORD_Q>(a, a);
+                    _mm256_andnot_si256(_mm256_castps_si256(nan), t)
+                }}
+            }}
+
             #[inline(always)]
             fn convert_f32_to_i32_round(self, a: __m256) -> __m256i {{
                 unsafe {{ _mm256_cvtps_epi32(a) }}
@@ -4341,6 +4417,19 @@ fn generate_x86_convert_impls(token: &str) -> String {
             #[inline(always)]
             fn convert_f32_to_i32(self, a: [__m256; 2]) -> [__m256i; 2] {{
                 unsafe {{ [_mm256_cvttps_epi32(a[0]), _mm256_cvttps_epi32(a[1])] }}
+            }}
+
+            #[inline(always)]
+            fn convert_f32_to_i32_saturating(self, a: [__m256; 2]) -> [__m256i; 2] {{
+                core::array::from_fn(|i| {{
+                    unsafe {{
+                        let t = _mm256_cvttps_epi32(a[i]);
+                        let big = _mm256_cmp_ps::<_CMP_GE_OQ>(a[i], _mm256_set1_ps(2_147_483_648.0));
+                        let t = _mm256_blendv_epi8(t, _mm256_set1_epi32(i32::MAX), _mm256_castps_si256(big));
+                        let nan = _mm256_cmp_ps::<_CMP_UNORD_Q>(a[i], a[i]);
+                        _mm256_andnot_si256(_mm256_castps_si256(nan), t)
+                    }}
+                }})
             }}
 
             #[inline(always)]

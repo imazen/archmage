@@ -4573,6 +4573,18 @@ impl F32x16Convert for archmage::X64V4Token {
         unsafe { _mm512_cvttps_epi32(a) }
     }
 
+    // Issue #80 fixup, mask-register form.
+    #[inline(always)]
+    fn convert_f32_to_i32_saturating(self, a: __m512) -> __m512i {
+        unsafe {
+            let t = _mm512_cvttps_epi32(a);
+            let big = _mm512_cmp_ps_mask::<_CMP_GE_OQ>(a, _mm512_set1_ps(2_147_483_648.0));
+            let t = _mm512_mask_mov_epi32(t, big, _mm512_set1_epi32(i32::MAX));
+            let not_nan = _mm512_cmp_ps_mask::<_CMP_ORD_Q>(a, a);
+            _mm512_maskz_mov_epi32(not_nan, t)
+        }
+    }
+
     #[inline(always)]
     fn convert_f32_to_i32_round(self, a: __m512) -> __m512i {
         unsafe { _mm512_cvtps_epi32(a) }
@@ -4600,6 +4612,18 @@ impl F32x16Convert for archmage::X64V4xToken {
     #[inline(always)]
     fn convert_f32_to_i32(self, a: __m512) -> __m512i {
         unsafe { _mm512_cvttps_epi32(a) }
+    }
+
+    // Issue #80 fixup, mask-register form.
+    #[inline(always)]
+    fn convert_f32_to_i32_saturating(self, a: __m512) -> __m512i {
+        unsafe {
+            let t = _mm512_cvttps_epi32(a);
+            let big = _mm512_cmp_ps_mask::<_CMP_GE_OQ>(a, _mm512_set1_ps(2_147_483_648.0));
+            let t = _mm512_mask_mov_epi32(t, big, _mm512_set1_epi32(i32::MAX));
+            let not_nan = _mm512_cmp_ps_mask::<_CMP_ORD_Q>(a, a);
+            _mm512_maskz_mov_epi32(not_nan, t)
+        }
     }
 
     #[inline(always)]

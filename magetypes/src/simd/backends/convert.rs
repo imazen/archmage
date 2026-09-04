@@ -32,6 +32,22 @@ pub trait F32x4Convert: F32x4Backend + I32x4Backend + SimdToken + Sealed + Copy 
     /// Convert f32x4 to i32x4 with truncation toward zero.
     fn convert_f32_to_i32(self, a: <Self as F32x4Backend>::Repr) -> <Self as I32x4Backend>::Repr;
 
+    /// Convert with truncation and UNIFORM saturation: out-of-range
+    /// lanes clamp to `i32::MIN`/`i32::MAX`, NaN lanes become 0 —
+    /// identical on every backend (Rust `as` / NEON FCVTZS / WASM
+    /// trunc_sat semantics). Default delegates to
+    /// [`convert_f32_to_i32`] (already conformant on NEON/WASM/
+    /// scalar); x86 overrides with a cvttps + compare/blend fixup
+    /// (the bare op yields the `i32::MIN` sentinel for overflow AND
+    /// NaN there — issue #80).
+    #[inline(always)]
+    fn convert_f32_to_i32_saturating(
+        self,
+        a: <Self as F32x4Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr {
+        <Self as F32x4Convert>::convert_f32_to_i32(self, a)
+    }
+
     /// Convert f32x4 to i32x4 with rounding to nearest.
     fn convert_f32_to_i32_round(
         self,
@@ -54,6 +70,22 @@ pub trait F32x8Convert: F32x8Backend + I32x8Backend + SimdToken + Sealed + Copy 
 
     /// Convert f32x8 to i32x8 with truncation toward zero.
     fn convert_f32_to_i32(self, a: <Self as F32x8Backend>::Repr) -> <Self as I32x8Backend>::Repr;
+
+    /// Convert with truncation and UNIFORM saturation: out-of-range
+    /// lanes clamp to `i32::MIN`/`i32::MAX`, NaN lanes become 0 —
+    /// identical on every backend (Rust `as` / NEON FCVTZS / WASM
+    /// trunc_sat semantics). Default delegates to
+    /// [`convert_f32_to_i32`] (already conformant on NEON/WASM/
+    /// scalar); x86 overrides with a cvttps + compare/blend fixup
+    /// (the bare op yields the `i32::MIN` sentinel for overflow AND
+    /// NaN there — issue #80).
+    #[inline(always)]
+    fn convert_f32_to_i32_saturating(
+        self,
+        a: <Self as F32x8Backend>::Repr,
+    ) -> <Self as I32x8Backend>::Repr {
+        <Self as F32x8Convert>::convert_f32_to_i32(self, a)
+    }
 
     /// Convert f32x8 to i32x8 with rounding to nearest.
     fn convert_f32_to_i32_round(
@@ -80,6 +112,22 @@ pub trait F32x16Convert:
 
     /// Convert f32x16 to i32x16 with truncation toward zero.
     fn convert_f32_to_i32(self, a: <Self as F32x16Backend>::Repr) -> <Self as I32x16Backend>::Repr;
+
+    /// Convert with truncation and UNIFORM saturation: out-of-range
+    /// lanes clamp to `i32::MIN`/`i32::MAX`, NaN lanes become 0 —
+    /// identical on every backend (Rust `as` / NEON FCVTZS / WASM
+    /// trunc_sat semantics). Default delegates to
+    /// [`convert_f32_to_i32`] (already conformant on NEON/WASM/
+    /// scalar); x86 overrides with a cvttps + compare/blend fixup
+    /// (the bare op yields the `i32::MIN` sentinel for overflow AND
+    /// NaN there — issue #80).
+    #[inline(always)]
+    fn convert_f32_to_i32_saturating(
+        self,
+        a: <Self as F32x16Backend>::Repr,
+    ) -> <Self as I32x16Backend>::Repr {
+        <Self as F32x16Convert>::convert_f32_to_i32(self, a)
+    }
 
     /// Convert f32x16 to i32x16 with rounding to nearest.
     fn convert_f32_to_i32_round(

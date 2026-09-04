@@ -46,7 +46,7 @@ Related deep-dives: [`CROSS-ISA-INT-PRIMITIVES.md`](CROSS-ISA-INT-PRIMITIVES.md)
 | Case | x86 | NEON | WASM | scalar | Guidance |
 |---|---|---|---|---|---|
 | `mul_add`/`mul_sub` rounding | fused, 1 rounding | fused, 1 rounding | mul+add, 2 roundings | 2 roundings | ≤1 ULP cross-backend; avoid near-zero cancellation. |
-| `to_i32` on out-of-range/NaN lanes | `i32::MIN` sentinel (`CVTTPS2DQ`) | saturates, NaN→0 (`FCVTZS`) | saturates, NaN→0 (`trunc_sat`) | saturates, NaN→0 (`as`) | **Open, [#80](https://github.com/imazen/archmage/issues/80)** — `3e9_f32` gives −2³¹ on x86, +2³¹−1 elsewhere. Keep lanes in range until the saturating variant lands. |
+| `to_i32` on out-of-range/NaN lanes | `i32::MIN` sentinel (`CVTTPS2DQ`) | saturates, NaN→0 (`FCVTZS`) | saturates, NaN→0 (`trunc_sat`) | saturates, NaN→0 (`as`) | Bare op stays natural (single instruction; `3e9_f32` gives −2³¹ on x86, +2³¹−1 elsewhere — documented on the method). **`to_i32_saturating` is the uniform fixed-up form** ([#80](https://github.com/imazen/archmage/issues/80)): Rust-`as` semantics everywhere, native on NEON/WASM/scalar, a 4-op compare/blend fixup over `cvttps` on x86 (mask-register form at 512-bit). |
 | `min`/`max` NaN propagation | returns 2nd operand when 1st is NaN | returns the non-NaN operand | returns the non-NaN operand | Rust semantics | Filter NaN first, or compare+blend. |
 | `simd_ne` NaN semantics | unordered (NaN≠x → true) | ordered on some impls | ordered | ordered | Use `simd_eq` + `not` for portable unordered-NE. |
 | `neg(0.0)` | `sub(0,x)` → `+0.0` | `vneg` → `−0.0` | `−0.0` | `−0.0` | XOR the sign mask if zero's sign matters. |
@@ -73,7 +73,5 @@ These bite people porting scalar code:
 
 ## 5. Open items
 
-- [#80](https://github.com/imazen/archmage/issues/80) — `to_i32` divergence
-  (§3): document + a uniformly saturating variant.
 - [#81](https://github.com/imazen/archmage/issues/81) — adoption list from the
   fearless_simd review (swizzle_dyn, token materialization, formulation wins).

@@ -4555,6 +4555,19 @@ impl F32x4Convert for archmage::X64V3Token {
         unsafe { _mm_cvttps_epi32(a) }
     }
 
+    // Issue #80 fixup: cvttps yields the i32::MIN sentinel for +overflow
+    // and NaN; patch those two classes (-overflow already saturates to MIN).
+    #[inline(always)]
+    fn convert_f32_to_i32_saturating(self, a: __m128) -> __m128i {
+        unsafe {
+            let t = _mm_cvttps_epi32(a);
+            let big = _mm_cmp_ps::<_CMP_GE_OQ>(a, _mm_set1_ps(2_147_483_648.0));
+            let t = _mm_blendv_epi8(t, _mm_set1_epi32(i32::MAX), _mm_castps_si128(big));
+            let nan = _mm_cmp_ps::<_CMP_UNORD_Q>(a, a);
+            _mm_andnot_si128(_mm_castps_si128(nan), t)
+        }
+    }
+
     #[inline(always)]
     fn convert_f32_to_i32_round(self, a: __m128) -> __m128i {
         unsafe { _mm_cvtps_epi32(a) }
@@ -4583,6 +4596,18 @@ impl F32x8Convert for archmage::X64V3Token {
         unsafe { _mm256_cvttps_epi32(a) }
     }
 
+    // Issue #80 fixup — see the 128-bit impl.
+    #[inline(always)]
+    fn convert_f32_to_i32_saturating(self, a: __m256) -> __m256i {
+        unsafe {
+            let t = _mm256_cvttps_epi32(a);
+            let big = _mm256_cmp_ps::<_CMP_GE_OQ>(a, _mm256_set1_ps(2_147_483_648.0));
+            let t = _mm256_blendv_epi8(t, _mm256_set1_epi32(i32::MAX), _mm256_castps_si256(big));
+            let nan = _mm256_cmp_ps::<_CMP_UNORD_Q>(a, a);
+            _mm256_andnot_si256(_mm256_castps_si256(nan), t)
+        }
+    }
+
     #[inline(always)]
     fn convert_f32_to_i32_round(self, a: __m256) -> __m256i {
         unsafe { _mm256_cvtps_epi32(a) }
@@ -4609,6 +4634,17 @@ impl F32x16Convert for archmage::X64V3Token {
     #[inline(always)]
     fn convert_f32_to_i32(self, a: [__m256; 2]) -> [__m256i; 2] {
         unsafe { [_mm256_cvttps_epi32(a[0]), _mm256_cvttps_epi32(a[1])] }
+    }
+
+    #[inline(always)]
+    fn convert_f32_to_i32_saturating(self, a: [__m256; 2]) -> [__m256i; 2] {
+        core::array::from_fn(|i| unsafe {
+            let t = _mm256_cvttps_epi32(a[i]);
+            let big = _mm256_cmp_ps::<_CMP_GE_OQ>(a[i], _mm256_set1_ps(2_147_483_648.0));
+            let t = _mm256_blendv_epi8(t, _mm256_set1_epi32(i32::MAX), _mm256_castps_si256(big));
+            let nan = _mm256_cmp_ps::<_CMP_UNORD_Q>(a[i], a[i]);
+            _mm256_andnot_si256(_mm256_castps_si256(nan), t)
+        })
     }
 
     #[inline(always)]

@@ -735,9 +735,28 @@ impl<T: crate::simd::backends::F32x4Convert> f32x4<T> {
     }
 
     /// Convert to i32x4 with truncation toward zero.
+    ///
+    /// **Out-of-range and NaN lanes DIVERGE per backend** (issue #80,
+    /// `docs/CROSS-ISA-DIVERGENCES.md` §3): x86's `cvttps` yields the
+    /// `i32::MIN` integer-indefinite sentinel for overflow in BOTH
+    /// directions and for NaN, while NEON/WASM/scalar saturate with
+    /// NaN→0 — `3e9_f32` converts to −2147483648 on x86 and
+    /// +2147483647 everywhere else. Keep lanes in range, or use
+    /// [`to_i32_saturating`](Self::to_i32_saturating) for uniform
+    /// semantics.
     #[inline(always)]
     pub fn to_i32(self) -> super::i32x4<T> {
         super::i32x4::from_repr_unchecked(self.1, T::convert_f32_to_i32(self.1, self.0))
+    }
+
+    /// Convert to i32x4 with truncation and UNIFORM saturation:
+    /// out-of-range lanes clamp to `i32::MIN`/`i32::MAX` and NaN
+    /// lanes become 0, identically on every backend — the semantics
+    /// of Rust scalar `as`. Native on NEON/WASM/scalar; on x86 a
+    /// 4-op compare/blend fixup over `cvttps` (issue #80).
+    #[inline(always)]
+    pub fn to_i32_saturating(self) -> super::i32x4<T> {
+        super::i32x4::from_repr_unchecked(self.1, T::convert_f32_to_i32_saturating(self.1, self.0))
     }
 
     /// Convert to i32x4 with rounding to nearest.
