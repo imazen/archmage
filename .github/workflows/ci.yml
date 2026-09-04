@@ -770,9 +770,13 @@ jobs:
               name=$(basename "$test")
               # Skip macro_expand — it spawns cargo-expand subprocesses (not CPU-specific)
               # Skip compile_fail — trybuild spawns rustc (not CPU-specific)
+              # Skip soundness_exploits — trybuild too; under sde64 the spawned
+              #   toolchain runs emulated (19 min for the binary) and compile-fail
+              #   verdicts diverge from the native ones (an environment artifact —
+              #   the same binary passes natively in Test x64)
               # Skip lib*.so — proc-macro dylibs are not test binaries
               case "$name" in
-                macro_expand-*|compile_fail-*|lib*.so) echo "Skipping: $name (not CPU-specific)"; continue ;;
+                macro_expand-*|compile_fail-*|soundness_exploits-*|lib*.so) echo "Skipping: $name (not CPU-specific)"; continue ;;
               esac
               echo "Running: $test"
               sde64 ${{ matrix.cpu.flag }} -- "$test" || fails="$fails $name"
