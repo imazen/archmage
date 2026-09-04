@@ -355,6 +355,33 @@ jobs:
           echo "All generated code matches committed code"
 
   # ==========================================================================
+  # Public-API snapshot check — the committed docs/public-api/<arch>/ files
+  # must match a fresh per-target regeneration (issue #75). The runner pins
+  # --target per snapshot, so this single x64 job verifies the x86_64,
+  # aarch64, AND wasm32 surfaces; it auto-installs the nightly toolchain and
+  # target stdlibs it needs via rustup. Regenerate locally with `just api-doc`
+  # and commit the diff.
+  # ==========================================================================
+  api-doc-check:
+    name: Public API Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            apidoc -> target
+
+      - name: Check public-API snapshots
+        run: ZEN_API_DOC=check cargo test --manifest-path apidoc/Cargo.toml -- --nocapture
+
+  # ==========================================================================
   # Safety validation - ensure token bounds provide required features
   # ==========================================================================
   validate-safety:
