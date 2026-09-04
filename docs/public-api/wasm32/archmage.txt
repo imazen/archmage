@@ -1,0 +1,366 @@
+# archmage public API — supported surface (default features)
+# (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
+# Encodings: crate-name prefix stripped; auto traits collapse to a
+# count + exceptions; trait impls collapse to one roster line per
+# type (method signatures live at the trait definition); blanket
+# impls omitted; re-export duplicates annotated `[also: path]`.
+# DO NOT EDIT BY HAND — commit regenerated changes with the code.
+#
+# files: archmage.txt 327 lines (supported surface) | archmage.features.txt 54 added (features: avx512,forge-token-api,macros,safe_unaligned_simd,std,testable_dispatch) | archmage.internal.txt 64 lines (64 hidden + 0 excluded-feature)
+
+## summary
+#
+#   pub modules                                 6
+#   pub types (struct/enum/trait/alias)       114
+#   pub consts/statics                         12
+#   free functions                              4
+#   inherent methods                          168
+#   struct fields                              12
+#   enum variants                               3
+#   re-exports                                 54
+#   trait roster entries (type × trait)       164
+#   auto-trait-complete types                  23
+#   auto-trait exceptions                       1
+#
+# per-module pub lines:
+#   (root)                           84
+#   intrinsics                       19
+#   prelude                          87
+#   testing                          13
+#   tokens                          170
+
+## items (301 lines)
+
+pub mod archmage
+pub use arcane
+pub use autoversion
+pub use dispatch_variant
+pub use incant
+pub use magetypes
+pub use rite
+pub use simd_route
+pub use token_target_features
+pub use token_target_features_boundary
+pub mod intrinsics
+pub mod intrinsics::wasm32
+pub use intrinsics::wasm32::<<core::arch::wasm32::*>>
+pub use intrinsics::wasm32::i16x8_load_extend_i8x8
+pub use intrinsics::wasm32::i16x8_load_extend_u8x8
+pub use intrinsics::wasm32::i32x4_load_extend_i16x4
+pub use intrinsics::wasm32::i32x4_load_extend_u16x4
+pub use intrinsics::wasm32::i64x2_load_extend_i32x2
+pub use intrinsics::wasm32::i64x2_load_extend_u32x2
+pub use intrinsics::wasm32::u16x8_load_extend_u8x8
+pub use intrinsics::wasm32::u32x4_load_extend_u16x4
+pub use intrinsics::wasm32::u64x2_load_extend_u32x2
+pub use intrinsics::wasm32::v128_load
+pub use intrinsics::wasm32::v128_load16_splat
+pub use intrinsics::wasm32::v128_load32_splat
+pub use intrinsics::wasm32::v128_load32_zero
+pub use intrinsics::wasm32::v128_load64_splat
+pub use intrinsics::wasm32::v128_load64_zero
+pub use intrinsics::wasm32::v128_load8_splat
+pub use intrinsics::wasm32::v128_store
+pub mod prelude
+pub use prelude::<<core::arch::wasm32::*>>
+pub use prelude::arcane
+pub use prelude::autoversion
+pub use prelude::dispatch_variant
+pub use prelude::i16x8_load_extend_i8x8
+pub use prelude::i16x8_load_extend_u8x8
+pub use prelude::i32x4_load_extend_i16x4
+pub use prelude::i32x4_load_extend_u16x4
+pub use prelude::i64x2_load_extend_i32x2
+pub use prelude::i64x2_load_extend_u32x2
+pub use prelude::incant
+pub use prelude::magetypes
+pub use prelude::rite
+pub use prelude::simd_route
+pub use prelude::token_target_features
+pub use prelude::token_target_features_boundary
+pub use prelude::u16x8_load_extend_u8x8
+pub use prelude::u32x4_load_extend_u16x4
+pub use prelude::u64x2_load_extend_u32x2
+pub use prelude::v128_load
+pub use prelude::v128_load16_splat
+pub use prelude::v128_load32_splat
+pub use prelude::v128_load32_zero
+pub use prelude::v128_load64_splat
+pub use prelude::v128_load64_zero
+pub use prelude::v128_load8_splat
+pub use prelude::v128_store
+pub fn tokens::Arm64V2Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Arm64V2Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::Arm64V3Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Arm64V3Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::Avx512Fp16Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Avx512Fp16Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::NeonAesToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::NeonAesToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::NeonCrcToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::NeonCrcToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::NeonSha3Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::NeonSha3Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::NeonToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::NeonToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::ScalarToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::ScalarToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128RelaxedToken::wasm128(self) -> tokens::Wasm128Token
+pub fn tokens::X64CryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64CryptoToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V1Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V1Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V2Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V2Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V3CryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V3CryptoToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V3GfniCryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V3GfniCryptoToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V3Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V3Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V4Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V4Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V4xToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V4xToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn prelude::IntoConcreteToken::as_arm_v2(self) -> core::option::Option<tokens::Arm64V2Token>
+pub fn prelude::IntoConcreteToken::as_arm_v3(self) -> core::option::Option<tokens::Arm64V3Token>
+pub fn prelude::IntoConcreteToken::as_avx512_fp16(self) -> core::option::Option<tokens::Avx512Fp16Token>
+pub fn prelude::IntoConcreteToken::as_neon(self) -> core::option::Option<tokens::NeonToken>
+pub fn prelude::IntoConcreteToken::as_neon_aes(self) -> core::option::Option<tokens::NeonAesToken>
+pub fn prelude::IntoConcreteToken::as_neon_crc(self) -> core::option::Option<tokens::NeonCrcToken>
+pub fn prelude::IntoConcreteToken::as_neon_sha3(self) -> core::option::Option<tokens::NeonSha3Token>
+pub fn prelude::IntoConcreteToken::as_scalar(self) -> core::option::Option<tokens::ScalarToken>
+pub fn prelude::IntoConcreteToken::as_wasm128(self) -> core::option::Option<tokens::Wasm128Token>
+pub fn prelude::IntoConcreteToken::as_wasm128_relaxed(self) -> core::option::Option<tokens::Wasm128RelaxedToken>
+pub fn prelude::IntoConcreteToken::as_x64_crypto(self) -> core::option::Option<tokens::X64CryptoToken>
+pub fn prelude::IntoConcreteToken::as_x64v1(self) -> core::option::Option<tokens::X64V1Token>
+pub fn prelude::IntoConcreteToken::as_x64v2(self) -> core::option::Option<tokens::X64V2Token>
+pub fn prelude::IntoConcreteToken::as_x64v3(self) -> core::option::Option<tokens::X64V3Token>
+pub fn prelude::IntoConcreteToken::as_x64v3_crypto(self) -> core::option::Option<tokens::X64V3CryptoToken>
+pub fn prelude::IntoConcreteToken::as_x64v3_gfni_crypto(self) -> core::option::Option<tokens::X64V3GfniCryptoToken>
+pub fn prelude::IntoConcreteToken::as_x64v4(self) -> core::option::Option<tokens::X64V4Token>
+pub fn prelude::IntoConcreteToken::as_x64v4x(self) -> core::option::Option<tokens::X64V4xToken>
+pub const prelude::SimdToken::DISABLE_TARGET_FEATURES: &'static str
+pub const prelude::SimdToken::ENABLE_TARGET_FEATURES: &'static str
+pub const prelude::SimdToken::NAME: &'static str
+pub const prelude::SimdToken::TARGET_FEATURES: &'static str
+pub fn prelude::SimdToken::attempt() -> core::option::Option<Self>
+pub fn prelude::SimdToken::compiled_with() -> core::option::Option<bool>
+pub fn prelude::SimdToken::guaranteed() -> core::option::Option<bool>
+pub fn prelude::SimdToken::name(&self) -> &'static str
+pub fn prelude::SimdToken::summon() -> core::option::Option<Self>
+pub mod testing
+pub enum testing::CompileTimePolicy
+pub testing::CompileTimePolicy::Fail
+pub testing::CompileTimePolicy::Warn
+pub testing::CompileTimePolicy::WarnStderr
+pub struct testing::PermutationReport
+pub testing::PermutationReport::permutations_run: usize
+pub testing::PermutationReport::warnings: alloc::vec::Vec<alloc::string::String>
+pub struct testing::TokenPermutation
+pub testing::TokenPermutation::disabled: alloc::vec::Vec<&'static str>
+pub testing::TokenPermutation::label: alloc::string::String
+pub struct testing::TokenTestGuard
+pub fn testing::for_each_token_permutation(testing::CompileTimePolicy, impl core::ops::function::FnMut(&testing::TokenPermutation)) -> testing::PermutationReport
+pub fn testing::lock_token_testing() -> testing::TokenTestGuard
+pub mod tokens
+pub fn tokens::Arm64V2Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Arm64V2Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::Arm64V3Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Arm64V3Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::Avx512Fp16Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Avx512Fp16Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub tokens::CompileTimeGuaranteedError::disable_flags: &'static str
+pub tokens::CompileTimeGuaranteedError::target_features: &'static str
+pub tokens::CompileTimeGuaranteedError::token_name: &'static str
+pub tokens::DisableAllSimdError::errors: alloc::vec::Vec<tokens::CompileTimeGuaranteedError>
+pub fn tokens::NeonAesToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::NeonAesToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::NeonCrcToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::NeonCrcToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::NeonSha3Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::NeonSha3Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::NeonToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::NeonToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::ScalarToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::ScalarToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::Wasm128RelaxedToken::wasm128(self) -> tokens::Wasm128Token
+pub fn tokens::X64CryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64CryptoToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V1Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V1Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V2Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V2Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V3CryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V3CryptoToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V3GfniCryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V3GfniCryptoToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V3Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V3Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V4Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V4Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V4xToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V4xToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::IntoConcreteToken::as_arm_v2(self) -> core::option::Option<tokens::Arm64V2Token>
+pub fn tokens::IntoConcreteToken::as_arm_v3(self) -> core::option::Option<tokens::Arm64V3Token>
+pub fn tokens::IntoConcreteToken::as_avx512_fp16(self) -> core::option::Option<tokens::Avx512Fp16Token>
+pub fn tokens::IntoConcreteToken::as_neon(self) -> core::option::Option<tokens::NeonToken>
+pub fn tokens::IntoConcreteToken::as_neon_aes(self) -> core::option::Option<tokens::NeonAesToken>
+pub fn tokens::IntoConcreteToken::as_neon_crc(self) -> core::option::Option<tokens::NeonCrcToken>
+pub fn tokens::IntoConcreteToken::as_neon_sha3(self) -> core::option::Option<tokens::NeonSha3Token>
+pub fn tokens::IntoConcreteToken::as_scalar(self) -> core::option::Option<tokens::ScalarToken>
+pub fn tokens::IntoConcreteToken::as_wasm128(self) -> core::option::Option<tokens::Wasm128Token>
+pub fn tokens::IntoConcreteToken::as_wasm128_relaxed(self) -> core::option::Option<tokens::Wasm128RelaxedToken>
+pub fn tokens::IntoConcreteToken::as_x64_crypto(self) -> core::option::Option<tokens::X64CryptoToken>
+pub fn tokens::IntoConcreteToken::as_x64v1(self) -> core::option::Option<tokens::X64V1Token>
+pub fn tokens::IntoConcreteToken::as_x64v2(self) -> core::option::Option<tokens::X64V2Token>
+pub fn tokens::IntoConcreteToken::as_x64v3(self) -> core::option::Option<tokens::X64V3Token>
+pub fn tokens::IntoConcreteToken::as_x64v3_crypto(self) -> core::option::Option<tokens::X64V3CryptoToken>
+pub fn tokens::IntoConcreteToken::as_x64v3_gfni_crypto(self) -> core::option::Option<tokens::X64V3GfniCryptoToken>
+pub fn tokens::IntoConcreteToken::as_x64v4(self) -> core::option::Option<tokens::X64V4Token>
+pub fn tokens::IntoConcreteToken::as_x64v4x(self) -> core::option::Option<tokens::X64V4xToken>
+pub const tokens::SimdToken::DISABLE_TARGET_FEATURES: &'static str
+pub const tokens::SimdToken::ENABLE_TARGET_FEATURES: &'static str
+pub const tokens::SimdToken::NAME: &'static str
+pub const tokens::SimdToken::TARGET_FEATURES: &'static str
+pub fn tokens::SimdToken::attempt() -> core::option::Option<Self>
+pub fn tokens::SimdToken::compiled_with() -> core::option::Option<bool>
+pub fn tokens::SimdToken::guaranteed() -> core::option::Option<bool>
+pub fn tokens::SimdToken::name(&self) -> &'static str
+pub fn tokens::SimdToken::summon() -> core::option::Option<Self>
+pub type tokens::Avx512ModernToken = tokens::X64V4xToken
+pub struct Arm64V2Token [also: prelude, tokens]
+pub fn tokens::Arm64V2Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Arm64V2Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub struct Arm64V3Token [also: prelude, tokens]
+pub fn tokens::Arm64V3Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Arm64V3Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub struct Avx512Fp16Token [also: prelude, tokens]
+pub fn tokens::Avx512Fp16Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::Avx512Fp16Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub struct CompileTimeGuaranteedError [also: tokens]
+pub CompileTimeGuaranteedError::disable_flags: &'static str
+pub CompileTimeGuaranteedError::target_features: &'static str
+pub CompileTimeGuaranteedError::token_name: &'static str
+pub struct DisableAllSimdError [also: tokens]
+pub DisableAllSimdError::errors: alloc::vec::Vec<tokens::CompileTimeGuaranteedError>
+pub struct NeonAesToken [also: prelude, tokens]
+pub fn tokens::NeonAesToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::NeonAesToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub struct NeonCrcToken [also: prelude, tokens]
+pub fn tokens::NeonCrcToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::NeonCrcToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub struct NeonSha3Token [also: prelude, tokens]
+pub fn tokens::NeonSha3Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::NeonSha3Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub struct NeonToken [also: prelude, tokens]
+pub fn tokens::NeonToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::NeonToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub struct ScalarToken [also: prelude, tokens]
+pub fn tokens::ScalarToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::ScalarToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub struct Wasm128RelaxedToken [also: prelude, tokens]
+pub fn tokens::Wasm128RelaxedToken::wasm128(self) -> tokens::Wasm128Token
+pub struct Wasm128Token [also: prelude, tokens]
+pub struct X64CryptoToken [also: prelude, tokens]
+pub fn tokens::X64CryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64CryptoToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub struct X64V1Token [also: prelude, tokens]
+pub fn tokens::X64V1Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V1Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub struct X64V2Token [also: prelude, tokens]
+pub fn tokens::X64V2Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V2Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub struct X64V3CryptoToken [also: prelude, tokens]
+pub fn tokens::X64V3CryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V3CryptoToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub struct X64V3GfniCryptoToken [also: prelude, tokens]
+pub fn tokens::X64V3GfniCryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V3GfniCryptoToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub struct X64V3Token [also: prelude, tokens]
+pub fn tokens::X64V3Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V3Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub struct X64V4Token [also: prelude, tokens]
+pub fn tokens::X64V4Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V4Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub struct X64V4xToken [also: prelude, tokens]
+pub fn tokens::X64V4xToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
+pub fn tokens::X64V4xToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub trait Has128BitSimd: tokens::SimdToken [also: tokens]
+pub trait Has256BitSimd: tokens::Has128BitSimd [also: tokens]
+pub trait Has512BitSimd: tokens::Has256BitSimd [also: tokens]
+pub trait HasArm64V2: tokens::HasNeon + tokens::HasNeonAes [also: prelude, tokens]
+pub trait HasArm64V3: tokens::HasArm64V2 + tokens::HasNeonSha3 [also: prelude, tokens]
+pub trait HasNeon: tokens::SimdToken [also: prelude, tokens]
+pub trait HasNeonAes: tokens::HasNeon [also: prelude, tokens]
+pub trait HasNeonSha3: tokens::HasNeon [also: prelude, tokens]
+pub trait HasX64V2: tokens::SimdToken [also: prelude, tokens]
+pub trait HasX64V4: tokens::HasX64V2 [also: prelude, tokens]
+pub trait IntoConcreteToken: tokens::SimdToken + core::marker::Sized [also: prelude, tokens]
+pub fn IntoConcreteToken::as_arm_v2(self) -> core::option::Option<tokens::Arm64V2Token>
+pub fn IntoConcreteToken::as_arm_v3(self) -> core::option::Option<tokens::Arm64V3Token>
+pub fn IntoConcreteToken::as_avx512_fp16(self) -> core::option::Option<tokens::Avx512Fp16Token>
+pub fn IntoConcreteToken::as_neon(self) -> core::option::Option<tokens::NeonToken>
+pub fn IntoConcreteToken::as_neon_aes(self) -> core::option::Option<tokens::NeonAesToken>
+pub fn IntoConcreteToken::as_neon_crc(self) -> core::option::Option<tokens::NeonCrcToken>
+pub fn IntoConcreteToken::as_neon_sha3(self) -> core::option::Option<tokens::NeonSha3Token>
+pub fn IntoConcreteToken::as_scalar(self) -> core::option::Option<tokens::ScalarToken>
+pub fn IntoConcreteToken::as_wasm128(self) -> core::option::Option<tokens::Wasm128Token>
+pub fn IntoConcreteToken::as_wasm128_relaxed(self) -> core::option::Option<tokens::Wasm128RelaxedToken>
+pub fn IntoConcreteToken::as_x64_crypto(self) -> core::option::Option<tokens::X64CryptoToken>
+pub fn IntoConcreteToken::as_x64v1(self) -> core::option::Option<tokens::X64V1Token>
+pub fn IntoConcreteToken::as_x64v2(self) -> core::option::Option<tokens::X64V2Token>
+pub fn IntoConcreteToken::as_x64v3(self) -> core::option::Option<tokens::X64V3Token>
+pub fn IntoConcreteToken::as_x64v3_crypto(self) -> core::option::Option<tokens::X64V3CryptoToken>
+pub fn IntoConcreteToken::as_x64v3_gfni_crypto(self) -> core::option::Option<tokens::X64V3GfniCryptoToken>
+pub fn IntoConcreteToken::as_x64v4(self) -> core::option::Option<tokens::X64V4Token>
+pub fn IntoConcreteToken::as_x64v4x(self) -> core::option::Option<tokens::X64V4xToken>
+pub trait SimdToken: tokens::sealed::Sealed + core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + 'static [also: prelude, tokens]
+pub const SimdToken::DISABLE_TARGET_FEATURES: &'static str
+pub const SimdToken::ENABLE_TARGET_FEATURES: &'static str
+pub const SimdToken::NAME: &'static str
+pub const SimdToken::TARGET_FEATURES: &'static str
+pub fn SimdToken::attempt() -> core::option::Option<Self>
+pub fn SimdToken::compiled_with() -> core::option::Option<bool>
+pub fn SimdToken::guaranteed() -> core::option::Option<bool>
+pub fn SimdToken::name(&self) -> &'static str
+pub fn SimdToken::summon() -> core::option::Option<Self>
+pub fn dangerously_disable_tokens_except_wasm(bool) -> core::result::Result<(), tokens::DisableAllSimdError> [also: tokens]
+pub type Arm64 = tokens::NeonToken [also: prelude, tokens]
+pub type Avx2FmaToken = tokens::X64V3Token [also: prelude, tokens]
+pub type Avx512Token = tokens::X64V4Token [also: prelude, tokens]
+pub type Desktop64 = tokens::X64V3Token [also: prelude, tokens]
+pub type Server64 = tokens::X64V4Token [also: prelude, tokens]
+pub type Sse2Token = tokens::X64V1Token [also: prelude, tokens]
+
+## trait impls (24 types)
+
+testing::CompileTimePolicy: Clone, Copy, Debug, Eq, PartialEq
+testing::PermutationReport: Clone, Debug, Display
+testing::TokenPermutation: Clone, Debug, Display
+testing::TokenTestGuard: Drop
+tokens::Arm64V2Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasArm64V2, tokens::HasNeon, tokens::HasNeonAes, tokens::IntoConcreteToken, tokens::SimdToken
+tokens::Arm64V3Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasArm64V2, tokens::HasArm64V3, tokens::HasNeon, tokens::HasNeonAes, tokens::HasNeonSha3, tokens::IntoConcreteToken, tokens::SimdToken
+tokens::Avx512Fp16Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::Has512BitSimd, tokens::HasX64V2, tokens::HasX64V4, tokens::IntoConcreteToken, tokens::SimdToken
+tokens::CompileTimeGuaranteedError: Clone, Debug, Display, Error
+tokens::DisableAllSimdError: Clone, Debug, Display, Error
+tokens::NeonAesToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasNeon, tokens::HasNeonAes, tokens::IntoConcreteToken, tokens::SimdToken
+tokens::NeonCrcToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasNeon, tokens::IntoConcreteToken, tokens::SimdToken
+tokens::NeonSha3Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasNeon, tokens::HasNeonSha3, tokens::IntoConcreteToken, tokens::SimdToken
+tokens::NeonToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasNeon, tokens::IntoConcreteToken, tokens::SimdToken
+tokens::ScalarToken: Clone, Copy, Debug, Eq, Hash, PartialEq, tokens::IntoConcreteToken, tokens::SimdToken
+tokens::Wasm128RelaxedToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::IntoConcreteToken, tokens::SimdToken
+tokens::Wasm128Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::IntoConcreteToken, tokens::SimdToken
+tokens::X64CryptoToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasX64V2, tokens::IntoConcreteToken, tokens::SimdToken
+tokens::X64V1Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::IntoConcreteToken, tokens::SimdToken
+tokens::X64V2Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasX64V2, tokens::IntoConcreteToken, tokens::SimdToken
+tokens::X64V3CryptoToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::HasX64V2, tokens::IntoConcreteToken, tokens::SimdToken
+tokens::X64V3GfniCryptoToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::HasX64V2, tokens::IntoConcreteToken, tokens::SimdToken
+tokens::X64V3Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::HasX64V2, tokens::IntoConcreteToken, tokens::SimdToken
+tokens::X64V4Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::Has512BitSimd, tokens::HasX64V2, tokens::HasX64V4, tokens::IntoConcreteToken, tokens::SimdToken
+tokens::X64V4xToken: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::Has512BitSimd, tokens::HasX64V2, tokens::HasX64V4, tokens::IntoConcreteToken, tokens::SimdToken
+
+## auto traits
+
+23 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
+testing::TokenTestGuard: !Send
