@@ -2,7 +2,8 @@
 
 **Date:** 2026-06-11
 **Snapshot commit:** `36300c94` (regenerated on each `cargo test` run)
-**Snapshot file:** `docs/public-api/archmage.txt`
+**Snapshot file:** `docs/public-api/archmage.txt` (since the #75 per-target
+split: `docs/public-api/x86_64/archmage.txt` — this report predates it)
 **Method:** Read snapshot + source; org-wide grep for every candidate item, excluding
 the archmage repo dir itself, `target/`, `.jj/`, `docs/public-api/`, `downloaded-crates/`,
 and `archmage-artisan/`. Docs-site content also checked as "documented = KEEP."

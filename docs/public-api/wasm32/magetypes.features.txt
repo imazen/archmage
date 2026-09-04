@@ -1,0 +1,32 @@
+# magetypes public API — additions from non-default features
+# features: avx512,std,w512
+# (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
+# Encodings: crate-name prefix stripped; auto traits collapse to a
+# count + exceptions; trait impls collapse to one roster line per
+# type (method signatures live at the trait definition); blanket
+# impls omitted; re-export duplicates annotated `[also: path]`.
+# DO NOT EDIT BY HAND — commit regenerated changes with the code.
+
+## summary
+#
+#   pub types (struct/enum/trait/alias)        10
+#   free functions                             24
+#
+# per-module pub lines:
+#   prelude                          16
+#   simd                             18
+
+## items (12 lines)
+
+pub fn prelude::i64x8<T>::popcnt(self) -> Self [also: prelude::i16x32<T>, prelude::i32x16<T>, prelude::i64x8<T>, prelude::i8x64<T>, prelude::u16x32<T>, prelude::u32x16<T>, prelude::u64x8<T>, prelude::u8x64<T>]
+pub trait simd::backends::i16x32PopcntBackend: simd::backends::I16x32Backend
+pub trait simd::backends::i32x16PopcntBackend: simd::backends::I32x16Backend
+pub trait simd::backends::i64x8PopcntBackend: simd::backends::I64x8Backend
+pub fn simd::backends::i64x8PopcntBackend::popcnt(self, Self::Repr) -> Self::Repr [also: simd::backends::i16x32PopcntBackend, simd::backends::i32x16PopcntBackend, simd::backends::i8x64PopcntBackend, simd::backends::u16x32PopcntBackend, simd::backends::u32x16PopcntBackend, simd::backends::u64x8PopcntBackend, simd::backends::u8x64PopcntBackend]
+pub trait simd::backends::i8x64PopcntBackend: simd::backends::I8x64Backend
+pub trait simd::backends::u16x32PopcntBackend: simd::backends::U16x32Backend
+pub trait simd::backends::u32x16PopcntBackend: simd::backends::U32x16Backend
+pub trait simd::backends::u64x8PopcntBackend: simd::backends::U64x8Backend
+pub trait simd::backends::u8x64PopcntBackend: simd::backends::U8x64Backend
+pub type simd::v4::Token = archmage::tokens::generated::x86_stubs::X64V4Token
+pub type simd::v4x::Token = archmage::tokens::generated::x86_stubs::X64V4xToken

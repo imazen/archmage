@@ -6,18 +6,18 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2241 lines (supported surface) | magetypes.features.txt 75 added (features: avx512,std,w512) | magetypes.internal.txt 42 lines (49 hidden + 0 excluded-feature)
+# files: magetypes.txt 2388 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 34 lines (41 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                12
-#   pub types (struct/enum/trait/alias)       377
+#   pub types (struct/enum/trait/alias)       305
 #   pub consts/statics                        228
-#   free functions                           2832
-#   inherent methods                         1123
+#   free functions                           2974
+#   inherent methods                         1231
 #   enum variants                               1
 #   re-exports                                  2
-#   trait roster entries (type × trait)       742
+#   trait roster entries (type × trait)       776
 #   conditional trait impls (verbatim)        120
 #   auto-trait-complete types                  10
 #   auto-trait exceptions                      30
@@ -25,10 +25,10 @@
 # per-module pub lines:
 #   (root)                          321
 #   cast                              3
-#   prelude                        2750
-#   simd                           1501
+#   prelude                        2892
+#   simd                           1537
 
-## items (2017 lines)
+## items (2164 lines)
 
 pub mod magetypes
 pub use archmage
@@ -41,7 +41,7 @@ pub mod prelude
 pub use prelude::SimdToken
 #[repr(C)] pub struct prelude::f32x16<T: simd::backends::F32x16Backend>(_, _) [also: simd::generic]
 pub const fn prelude::f32x16<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::f32x16<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::f32x16<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::f32x16<T>::from_halves(T, prelude::f32x8<T>, prelude::f32x8<T>) -> Self [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::high(self) -> prelude::f32x8<T> [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::low(self) -> prelude::f32x8<T> [also: prelude::f32x16<T>]
@@ -68,9 +68,7 @@ pub fn prelude::f32x16<T>::to_i32x16_round(self) -> prelude::i32x16<T> [also: pr
 pub fn [f32; 16]::from(prelude::f32x16<T>) -> [f32; 16] [also: (root)]
 #[repr(C)] pub struct prelude::f32x4<T: simd::backends::F32x4Backend>(_, _) [also: simd::generic]
 pub const fn prelude::f32x4<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub fn prelude::f32x4<archmage::tokens::generated::x86::X64V3Token>::from_m128(archmage::tokens::generated::x86::X64V3Token, core::core_arch::x86::__m128) -> Self [also: prelude::f32x4<archmage::tokens::generated::x86::X64V3Token>]
-pub const fn prelude::f32x4<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
-pub fn prelude::f32x4<archmage::tokens::generated::x86::X64V3Token>::raw(self) -> core::core_arch::x86::__m128 [also: prelude::f32x4<archmage::tokens::generated::x86::X64V3Token>]
+pub const fn prelude::f32x4<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::f32x4<T>::blend(Self, Self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
 pub fn prelude::f32x4<T>::from_array(T, [f32; 4]) -> Self [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::from_repr(T, <T as simd::backends::F32x4Backend>::Repr) -> Self [also: prelude::f32x4<T>]
@@ -165,13 +163,13 @@ pub fn prelude::f32x4<T>::pow_lowp_unchecked(self, f32) -> Self [also: prelude::
 pub fn prelude::f32x4<T>::pow_midp(self, f32) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::pow_midp_precise(self, f32) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::pow_midp_unchecked(self, f32) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
+pub fn prelude::f32x4<T>::sigmoid_midp(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
+pub fn prelude::f32x4<T>::silu_midp(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::to_f16(self) -> prelude::i32x4<T> [also: prelude::f32x4<T>]
 pub fn [f32; 4]::from(prelude::f32x4<T>) -> [f32; 4] [also: (root)]
 #[repr(C)] pub struct prelude::f32x8<T: simd::backends::F32x8Backend>(_, _) [also: simd::generic]
 pub const fn prelude::f32x8<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub fn prelude::f32x8<archmage::tokens::generated::x86::X64V3Token>::from_m256(archmage::tokens::generated::x86::X64V3Token, core::core_arch::x86::__m256) -> Self [also: prelude::f32x8<archmage::tokens::generated::x86::X64V3Token>]
-pub const fn prelude::f32x8<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
-pub fn prelude::f32x8<archmage::tokens::generated::x86::X64V3Token>::raw(self) -> core::core_arch::x86::__m256 [also: prelude::f32x8<archmage::tokens::generated::x86::X64V3Token>]
+pub const fn prelude::f32x8<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::f32x8<T>::from_halves(T, prelude::f32x4<T>, prelude::f32x4<T>) -> Self [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::high(self) -> prelude::f32x4<T> [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::low(self) -> prelude::f32x4<T> [also: prelude::f32x8<T>]
@@ -216,9 +214,7 @@ pub fn prelude::f32x8<T>::bitcast_ref_i32(&self) -> &prelude::i32x8<T> [also: pr
 pub fn [f32; 8]::from(prelude::f32x8<T>) -> [f32; 8] [also: (root)]
 #[repr(C)] pub struct prelude::f64x2<T: simd::backends::F64x2Backend>(_, _) [also: simd::generic]
 pub const fn prelude::f64x2<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub fn prelude::f64x2<archmage::tokens::generated::x86::X64V3Token>::from_m128d(archmage::tokens::generated::x86::X64V3Token, core::core_arch::x86::__m128d) -> Self [also: prelude::f64x2<archmage::tokens::generated::x86::X64V3Token>]
-pub const fn prelude::f64x2<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
-pub fn prelude::f64x2<archmage::tokens::generated::x86::X64V3Token>::raw(self) -> core::core_arch::x86::__m128d [also: prelude::f64x2<archmage::tokens::generated::x86::X64V3Token>]
+pub const fn prelude::f64x2<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::f64x2<T>::from_array(T, [f64; 2]) -> Self [also: prelude::f64x2<T>]
 pub fn prelude::f64x2<T>::from_repr(T, <T as simd::backends::F64x2Backend>::Repr) -> Self [also: prelude::f64x2<T>]
 pub fn prelude::f64x2<T>::from_slice(T, &[f64]) -> Self [also: prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>]
@@ -238,9 +234,7 @@ pub fn prelude::f64x2<T>::cast_slice_mut(T, &mut [f64]) -> core::option::Option<
 pub fn [f64; 2]::from(prelude::f64x2<T>) -> [f64; 2] [also: (root)]
 #[repr(C)] pub struct prelude::f64x4<T: simd::backends::F64x4Backend>(_, _) [also: simd::generic]
 pub const fn prelude::f64x4<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub fn prelude::f64x4<archmage::tokens::generated::x86::X64V3Token>::from_m256d(archmage::tokens::generated::x86::X64V3Token, core::core_arch::x86::__m256d) -> Self [also: prelude::f64x4<archmage::tokens::generated::x86::X64V3Token>]
-pub const fn prelude::f64x4<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
-pub fn prelude::f64x4<archmage::tokens::generated::x86::X64V3Token>::raw(self) -> core::core_arch::x86::__m256d [also: prelude::f64x4<archmage::tokens::generated::x86::X64V3Token>]
+pub const fn prelude::f64x4<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::f64x4<T>::from_array(T, [f64; 4]) -> Self [also: prelude::f64x4<T>]
 pub fn prelude::f64x4<T>::from_repr(T, <T as simd::backends::F64x4Backend>::Repr) -> Self [also: prelude::f64x4<T>]
 pub fn prelude::f64x4<T>::into_repr(self) -> <T as simd::backends::F64x4Backend>::Repr [also: prelude::f64x4<T>]
@@ -254,7 +248,7 @@ pub fn prelude::f64x4<T>::as_array_mut(&mut self) -> &mut [f64; 4] [also: prelud
 pub fn [f64; 4]::from(prelude::f64x4<T>) -> [f64; 4] [also: (root)]
 #[repr(C)] pub struct prelude::f64x8<T: simd::backends::F64x8Backend>(_, _) [also: simd::generic]
 pub const fn prelude::f64x8<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::f64x8<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::f64x8<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::f64x8<T>::from_array(T, [f64; 8]) -> Self [also: prelude::f64x8<T>]
 pub fn prelude::f64x8<T>::from_repr(T, <T as simd::backends::F64x8Backend>::Repr) -> Self [also: prelude::f64x8<T>]
 pub fn prelude::f64x8<T>::into_repr(self) -> <T as simd::backends::F64x8Backend>::Repr [also: prelude::f64x8<T>]
@@ -266,7 +260,7 @@ pub fn prelude::f64x8<T>::to_array(self) -> [f64; 8] [also: prelude::f64x8<T>]
 pub fn [f64; 8]::from(prelude::f64x8<T>) -> [f64; 8] [also: (root)]
 #[repr(C)] pub struct prelude::i16x16<T: simd::backends::I16x16Backend>(_, _) [also: simd::generic]
 pub const fn prelude::i16x16<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::i16x16<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::i16x16<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::i16x16<T>::from_array(T, [i16; 16]) -> Self [also: prelude::i16x16<T>]
 pub fn prelude::i16x16<T>::from_repr(T, <T as simd::backends::I16x16Backend>::Repr) -> Self [also: prelude::i16x16<T>]
 pub fn prelude::i16x16<T>::into_repr(self) -> <T as simd::backends::I16x16Backend>::Repr [also: prelude::i16x16<T>]
@@ -278,10 +272,14 @@ pub fn prelude::i16x16<T>::to_array(self) -> [i16; 16] [also: prelude::i16x16<T>
 pub fn prelude::i16x16<T>::bitcast_mut_u16x16(&mut self) -> &mut prelude::u16x16<T> [also: prelude::i16x16<T>]
 pub fn prelude::i16x16<T>::bitcast_ref_u16x16(&self) -> &prelude::u16x16<T> [also: prelude::i16x16<T>]
 pub fn prelude::i16x16<T>::bitcast_u16x16(self) -> prelude::u16x16<T> [also: prelude::i16x16<T>]
+pub fn prelude::i16x16<T>::narrow_saturating_i8(self, Self) -> prelude::i8x32<T> [also: prelude::i16x16<T>]
+pub fn prelude::i16x16<T>::narrow_saturating_u8(self, Self) -> prelude::u8x32<T> [also: prelude::i16x16<T>]
+pub fn prelude::i16x16<T>::widen_high(self) -> prelude::i32x8<T> [also: prelude::i16x16<T>]
+pub fn prelude::i16x16<T>::widen_low(self) -> prelude::i32x8<T> [also: prelude::i16x16<T>]
 pub fn [i16; 16]::from(prelude::i16x16<T>) -> [i16; 16] [also: (root)]
 #[repr(C)] pub struct prelude::i16x32<T: simd::backends::I16x32Backend>(_, _) [also: simd::generic]
 pub const fn prelude::i16x32<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::i16x32<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::i16x32<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::i16x32<T>::from_array(T, [i16; 32]) -> Self [also: prelude::i16x32<T>]
 pub fn prelude::i16x32<T>::from_repr(T, <T as simd::backends::I16x32Backend>::Repr) -> Self [also: prelude::i16x32<T>]
 pub fn prelude::i16x32<T>::into_repr(self) -> <T as simd::backends::I16x32Backend>::Repr [also: prelude::i16x32<T>]
@@ -290,12 +288,14 @@ pub fn prelude::i16x32<T>::partition_slice(T, &[i16]) -> (&[[i16; 32]], &[i16]) 
 pub fn prelude::i16x32<T>::partition_slice_mut(T, &mut [i16]) -> (&mut [[i16; 32]], &mut [i16]) [also: prelude::i16x32<T>]
 pub fn prelude::i16x32<T>::store(self, &mut [i16; 32]) [also: prelude::i16x32<T>]
 pub fn prelude::i16x32<T>::to_array(self) -> [i16; 32] [also: prelude::i16x32<T>]
+pub fn prelude::i16x32<T>::narrow_saturating_i8(self, Self) -> prelude::i8x64<T> [also: prelude::i16x32<T>]
+pub fn prelude::i16x32<T>::narrow_saturating_u8(self, Self) -> prelude::u8x64<T> [also: prelude::i16x32<T>]
+pub fn prelude::i16x32<T>::widen_high(self) -> prelude::i32x16<T> [also: prelude::i16x32<T>]
+pub fn prelude::i16x32<T>::widen_low(self) -> prelude::i32x16<T> [also: prelude::i16x32<T>]
 pub fn [i16; 32]::from(prelude::i16x32<T>) -> [i16; 32] [also: (root)]
 #[repr(C)] pub struct prelude::i16x8<T: simd::backends::I16x8Backend>(_, _) [also: simd::generic]
 pub const fn prelude::i16x8<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub fn prelude::i16x8<archmage::tokens::generated::x86::X64V3Token>::from_m128i(archmage::tokens::generated::x86::X64V3Token, core::core_arch::x86::__m128i) -> Self [also: prelude::i16x8<archmage::tokens::generated::x86::X64V3Token>, prelude::i32x4<archmage::tokens::generated::x86::X64V3Token>, prelude::i64x2<archmage::tokens::generated::x86::X64V3Token>, prelude::i8x16<archmage::tokens::generated::x86::X64V3Token>, prelude::u16x8<archmage::tokens::generated::x86::X64V3Token>, prelude::u32x4<archmage::tokens::generated::x86::X64V3Token>, prelude::u64x2<archmage::tokens::generated::x86::X64V3Token>, prelude::u8x16<archmage::tokens::generated::x86::X64V3Token>]
-pub const fn prelude::i16x8<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
-pub fn prelude::i16x8<archmage::tokens::generated::x86::X64V3Token>::raw(self) -> core::core_arch::x86::__m128i [also: prelude::i16x8<archmage::tokens::generated::x86::X64V3Token>, prelude::i32x4<archmage::tokens::generated::x86::X64V3Token>, prelude::i64x2<archmage::tokens::generated::x86::X64V3Token>, prelude::i8x16<archmage::tokens::generated::x86::X64V3Token>, prelude::u16x8<archmage::tokens::generated::x86::X64V3Token>, prelude::u32x4<archmage::tokens::generated::x86::X64V3Token>, prelude::u64x2<archmage::tokens::generated::x86::X64V3Token>, prelude::u8x16<archmage::tokens::generated::x86::X64V3Token>]
+pub const fn prelude::i16x8<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::i16x8<T>::all_true(self) -> bool [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
 pub fn prelude::i16x8<T>::any_true(self) -> bool [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
 pub fn prelude::i16x8<T>::bitmask(self) -> u32 [also: prelude::i16x16<T>, prelude::i16x8<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::u16x16<T>, prelude::u16x8<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u8x16<T>, prelude::u8x32<T>]
@@ -307,22 +307,31 @@ pub fn prelude::i16x8<T>::load(T, &[i16; 8]) -> Self [also: prelude::i16x8<T>]
 pub fn prelude::i16x8<T>::partition_slice(T, &[i16]) -> (&[[i16; 8]], &[i16]) [also: prelude::i16x8<T>]
 pub fn prelude::i16x8<T>::partition_slice_mut(T, &mut [i16]) -> (&mut [[i16; 8]], &mut [i16]) [also: prelude::i16x8<T>]
 pub fn prelude::i16x8<T>::reduce_add(self) -> i16 [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>]
+pub fn prelude::i16x8<T>::saturating_add(self, Self) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
+pub fn prelude::i16x8<T>::saturating_sub(self, Self) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
 pub fn prelude::i16x8<T>::shl<const N: i32>(self) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
 pub fn prelude::i16x8<T>::shl_const<const N: i32>(self) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
+pub fn prelude::i16x8<T>::shl_uniform(self, u32) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
 pub fn prelude::i16x8<T>::shr_arithmetic<const N: i32>(self) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>]
 pub fn prelude::i16x8<T>::shr_arithmetic_const<const N: i32>(self) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>]
+pub fn prelude::i16x8<T>::shr_arithmetic_uniform(self, u32) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>]
 pub fn prelude::i16x8<T>::shr_logical<const N: i32>(self) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
 pub fn prelude::i16x8<T>::shr_logical_const<const N: i32>(self) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
+pub fn prelude::i16x8<T>::shr_logical_uniform(self, u32) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
 pub fn prelude::i16x8<T>::splat(T, i16) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>]
 pub fn prelude::i16x8<T>::store(self, &mut [i16; 8]) [also: prelude::i16x8<T>]
 pub fn prelude::i16x8<T>::to_array(self) -> [i16; 8] [also: prelude::i16x8<T>]
 pub fn prelude::i16x8<T>::bitcast_mut_u16x8(&mut self) -> &mut prelude::u16x8<T> [also: prelude::i16x8<T>]
 pub fn prelude::i16x8<T>::bitcast_ref_u16x8(&self) -> &prelude::u16x8<T> [also: prelude::i16x8<T>]
 pub fn prelude::i16x8<T>::bitcast_u16x8(self) -> prelude::u16x8<T> [also: prelude::i16x8<T>]
+pub fn prelude::i16x8<T>::narrow_saturating_i8(self, Self) -> prelude::i8x16<T> [also: prelude::i16x8<T>]
+pub fn prelude::i16x8<T>::narrow_saturating_u8(self, Self) -> prelude::u8x16<T> [also: prelude::i16x8<T>]
+pub fn prelude::i16x8<T>::widen_high(self) -> prelude::i32x4<T> [also: prelude::i16x8<T>]
+pub fn prelude::i16x8<T>::widen_low(self) -> prelude::i32x4<T> [also: prelude::i16x8<T>]
 pub fn [i16; 8]::from(prelude::i16x8<T>) -> [i16; 8] [also: (root)]
 #[repr(C)] pub struct prelude::i32x16<T: simd::backends::I32x16Backend>(_, _) [also: simd::generic]
 pub const fn prelude::i32x16<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::i32x16<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::i32x16<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::i32x16<T>::bitcast_f32x16(self) -> prelude::f32x16<T> [also: prelude::i32x16<T>]
 pub fn prelude::i32x16<T>::bitcast_to_f32(self) -> prelude::f32x16<T> [also: prelude::i32x16<T>]
 pub fn prelude::i32x16<T>::to_f32(self) -> prelude::f32x16<T> [also: prelude::i32x16<T>]
@@ -335,10 +344,12 @@ pub fn prelude::i32x16<T>::partition_slice(T, &[i32]) -> (&[[i32; 16]], &[i32]) 
 pub fn prelude::i32x16<T>::partition_slice_mut(T, &mut [i32]) -> (&mut [[i32; 16]], &mut [i32]) [also: prelude::i32x16<T>]
 pub fn prelude::i32x16<T>::store(self, &mut [i32; 16]) [also: prelude::i32x16<T>]
 pub fn prelude::i32x16<T>::to_array(self) -> [i32; 16] [also: prelude::i32x16<T>]
+pub fn prelude::i32x16<T>::narrow_saturating_i16(self, Self) -> prelude::i16x32<T> [also: prelude::i32x16<T>]
+pub fn prelude::i32x16<T>::narrow_saturating_u16(self, Self) -> prelude::u16x32<T> [also: prelude::i32x16<T>]
 pub fn [i32; 16]::from(prelude::i32x16<T>) -> [i32; 16] [also: (root)]
 #[repr(C)] pub struct prelude::i32x4<T: simd::backends::I32x4Backend>(_, _) [also: simd::generic]
 pub const fn prelude::i32x4<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::i32x4<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::i32x4<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::i32x4<T>::bitcast_f32x4(self) -> prelude::f32x4<T> [also: prelude::i32x4<T>, prelude::u32x4<T>]
 pub fn prelude::i32x4<T>::bitcast_to_f32(self) -> prelude::f32x4<T> [also: prelude::i32x4<T>]
 pub fn prelude::i32x4<T>::to_f32(self) -> prelude::f32x4<T> [also: prelude::i32x4<T>]
@@ -358,12 +369,12 @@ pub fn prelude::i32x4<T>::as_array(&self) -> &[i32; 4] [also: prelude::i32x4<T>]
 pub fn prelude::i32x4<T>::as_array_mut(&mut self) -> &mut [i32; 4] [also: prelude::i32x4<T>]
 pub fn prelude::i32x4<T>::cast_slice(T, &[i32]) -> core::option::Option<&[Self]> [also: prelude::i32x4<T>, prelude::i32x8<T>]
 pub fn prelude::i32x4<T>::cast_slice_mut(T, &mut [i32]) -> core::option::Option<&mut [Self]> [also: prelude::i32x4<T>, prelude::i32x8<T>]
+pub fn prelude::i32x4<T>::narrow_saturating_i16(self, Self) -> prelude::i16x8<T> [also: prelude::i32x4<T>]
+pub fn prelude::i32x4<T>::narrow_saturating_u16(self, Self) -> prelude::u16x8<T> [also: prelude::i32x4<T>]
 pub fn [i32; 4]::from(prelude::i32x4<T>) -> [i32; 4] [also: (root)]
 #[repr(C)] pub struct prelude::i32x8<T: simd::backends::I32x8Backend>(_, _) [also: simd::generic]
 pub const fn prelude::i32x8<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub fn prelude::i32x8<archmage::tokens::generated::x86::X64V3Token>::from_m256i(archmage::tokens::generated::x86::X64V3Token, core::core_arch::x86::__m256i) -> Self [also: prelude::i16x16<archmage::tokens::generated::x86::X64V3Token>, prelude::i32x8<archmage::tokens::generated::x86::X64V3Token>, prelude::i64x4<archmage::tokens::generated::x86::X64V3Token>, prelude::i8x32<archmage::tokens::generated::x86::X64V3Token>, prelude::u16x16<archmage::tokens::generated::x86::X64V3Token>, prelude::u32x8<archmage::tokens::generated::x86::X64V3Token>, prelude::u64x4<archmage::tokens::generated::x86::X64V3Token>, prelude::u8x32<archmage::tokens::generated::x86::X64V3Token>]
-pub const fn prelude::i32x8<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
-pub fn prelude::i32x8<archmage::tokens::generated::x86::X64V3Token>::raw(self) -> core::core_arch::x86::__m256i [also: prelude::i16x16<archmage::tokens::generated::x86::X64V3Token>, prelude::i32x8<archmage::tokens::generated::x86::X64V3Token>, prelude::i64x4<archmage::tokens::generated::x86::X64V3Token>, prelude::i8x32<archmage::tokens::generated::x86::X64V3Token>, prelude::u16x16<archmage::tokens::generated::x86::X64V3Token>, prelude::u32x8<archmage::tokens::generated::x86::X64V3Token>, prelude::u64x4<archmage::tokens::generated::x86::X64V3Token>, prelude::u8x32<archmage::tokens::generated::x86::X64V3Token>]
+pub const fn prelude::i32x8<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::i32x8<T>::bitcast_f32x8(self) -> prelude::f32x8<T> [also: prelude::i32x8<T>]
 pub fn prelude::i32x8<T>::bitcast_to_f32(self) -> prelude::f32x8<T> [also: prelude::i32x8<T>]
 pub fn prelude::i32x8<T>::to_f32(self) -> prelude::f32x8<T> [also: prelude::i32x8<T>]
@@ -378,10 +389,12 @@ pub fn prelude::i32x8<T>::store(self, &mut [i32; 8]) [also: prelude::i32x8<T>]
 pub fn prelude::i32x8<T>::to_array(self) -> [i32; 8] [also: prelude::i32x8<T>]
 pub fn prelude::i32x8<T>::as_array(&self) -> &[i32; 8] [also: prelude::i32x8<T>]
 pub fn prelude::i32x8<T>::as_array_mut(&mut self) -> &mut [i32; 8] [also: prelude::i32x8<T>]
+pub fn prelude::i32x8<T>::narrow_saturating_i16(self, Self) -> prelude::i16x16<T> [also: prelude::i32x8<T>]
+pub fn prelude::i32x8<T>::narrow_saturating_u16(self, Self) -> prelude::u16x16<T> [also: prelude::i32x8<T>]
 pub fn [i32; 8]::from(prelude::i32x8<T>) -> [i32; 8] [also: (root)]
 #[repr(C)] pub struct prelude::i64x2<T: simd::backends::I64x2Backend>(_, _) [also: simd::generic]
 pub const fn prelude::i64x2<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::i64x2<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::i64x2<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::i64x2<T>::from_array(T, [i64; 2]) -> Self [also: prelude::i64x2<T>]
 pub fn prelude::i64x2<T>::from_repr(T, <T as simd::backends::I64x2Backend>::Repr) -> Self [also: prelude::i64x2<T>]
 pub fn prelude::i64x2<T>::from_slice(T, &[i64]) -> Self [also: prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>]
@@ -400,7 +413,7 @@ pub fn prelude::i64x2<T>::bitcast_to_f64(self) -> prelude::f64x2<T> [also: prelu
 pub fn [i64; 2]::from(prelude::i64x2<T>) -> [i64; 2] [also: (root)]
 #[repr(C)] pub struct prelude::i64x4<T: simd::backends::I64x4Backend>(_, _) [also: simd::generic]
 pub const fn prelude::i64x4<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::i64x4<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::i64x4<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::i64x4<T>::from_array(T, [i64; 4]) -> Self [also: prelude::i64x4<T>]
 pub fn prelude::i64x4<T>::from_repr(T, <T as simd::backends::I64x4Backend>::Repr) -> Self [also: prelude::i64x4<T>]
 pub fn prelude::i64x4<T>::into_repr(self) -> <T as simd::backends::I64x4Backend>::Repr [also: prelude::i64x4<T>]
@@ -416,7 +429,7 @@ pub fn prelude::i64x4<T>::bitcast_to_f64(self) -> prelude::f64x4<T> [also: prelu
 pub fn [i64; 4]::from(prelude::i64x4<T>) -> [i64; 4] [also: (root)]
 #[repr(C)] pub struct prelude::i64x8<T: simd::backends::I64x8Backend>(_, _) [also: simd::generic]
 pub const fn prelude::i64x8<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::i64x8<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::i64x8<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::i64x8<T>::bitmask(self) -> u64 [also: prelude::i16x32<T>, prelude::i32x16<T>, prelude::i64x8<T>, prelude::i8x64<T>, prelude::u16x32<T>, prelude::u32x16<T>, prelude::u64x8<T>, prelude::u8x64<T>]
 pub fn prelude::i64x8<T>::from_array(T, [i64; 8]) -> Self [also: prelude::i64x8<T>]
 pub fn prelude::i64x8<T>::from_repr(T, <T as simd::backends::I64x8Backend>::Repr) -> Self [also: prelude::i64x8<T>]
@@ -429,7 +442,7 @@ pub fn prelude::i64x8<T>::to_array(self) -> [i64; 8] [also: prelude::i64x8<T>]
 pub fn [i64; 8]::from(prelude::i64x8<T>) -> [i64; 8] [also: (root)]
 #[repr(C)] pub struct prelude::i8x16<T: simd::backends::I8x16Backend>(_, _) [also: simd::generic]
 pub const fn prelude::i8x16<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::i8x16<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::i8x16<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::i8x16<T>::from_array(T, [i8; 16]) -> Self [also: prelude::i8x16<T>]
 pub fn prelude::i8x16<T>::from_repr(T, <T as simd::backends::I8x16Backend>::Repr) -> Self [also: prelude::i8x16<T>]
 pub fn prelude::i8x16<T>::from_slice(T, &[i8]) -> Self [also: prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>]
@@ -448,10 +461,12 @@ pub fn prelude::i8x16<T>::cast_slice_mut(T, &mut [i8]) -> core::option::Option<&
 pub fn prelude::i8x16<T>::bitcast_mut_u8x16(&mut self) -> &mut prelude::u8x16<T> [also: prelude::i8x16<T>]
 pub fn prelude::i8x16<T>::bitcast_ref_u8x16(&self) -> &prelude::u8x16<T> [also: prelude::i8x16<T>]
 pub fn prelude::i8x16<T>::bitcast_u8x16(self) -> prelude::u8x16<T> [also: prelude::i8x16<T>]
+pub fn prelude::i8x16<T>::widen_high(self) -> prelude::i16x8<T> [also: prelude::i8x16<T>]
+pub fn prelude::i8x16<T>::widen_low(self) -> prelude::i16x8<T> [also: prelude::i8x16<T>]
 pub fn [i8; 16]::from(prelude::i8x16<T>) -> [i8; 16] [also: (root)]
 #[repr(C)] pub struct prelude::i8x32<T: simd::backends::I8x32Backend>(_, _) [also: simd::generic]
 pub const fn prelude::i8x32<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::i8x32<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::i8x32<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::i8x32<T>::from_array(T, [i8; 32]) -> Self [also: prelude::i8x32<T>]
 pub fn prelude::i8x32<T>::from_repr(T, <T as simd::backends::I8x32Backend>::Repr) -> Self [also: prelude::i8x32<T>]
 pub fn prelude::i8x32<T>::into_repr(self) -> <T as simd::backends::I8x32Backend>::Repr [also: prelude::i8x32<T>]
@@ -463,10 +478,12 @@ pub fn prelude::i8x32<T>::to_array(self) -> [i8; 32] [also: prelude::i8x32<T>]
 pub fn prelude::i8x32<T>::bitcast_mut_u8x32(&mut self) -> &mut prelude::u8x32<T> [also: prelude::i8x32<T>]
 pub fn prelude::i8x32<T>::bitcast_ref_u8x32(&self) -> &prelude::u8x32<T> [also: prelude::i8x32<T>]
 pub fn prelude::i8x32<T>::bitcast_u8x32(self) -> prelude::u8x32<T> [also: prelude::i8x32<T>]
+pub fn prelude::i8x32<T>::widen_high(self) -> prelude::i16x16<T> [also: prelude::i8x32<T>]
+pub fn prelude::i8x32<T>::widen_low(self) -> prelude::i16x16<T> [also: prelude::i8x32<T>]
 pub fn [i8; 32]::from(prelude::i8x32<T>) -> [i8; 32] [also: (root)]
 #[repr(C)] pub struct prelude::i8x64<T: simd::backends::I8x64Backend>(_, _) [also: simd::generic]
 pub const fn prelude::i8x64<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::i8x64<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::i8x64<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::i8x64<T>::from_array(T, [i8; 64]) -> Self [also: prelude::i8x64<T>]
 pub fn prelude::i8x64<T>::from_repr(T, <T as simd::backends::I8x64Backend>::Repr) -> Self [also: prelude::i8x64<T>]
 pub fn prelude::i8x64<T>::into_repr(self) -> <T as simd::backends::I8x64Backend>::Repr [also: prelude::i8x64<T>]
@@ -475,10 +492,12 @@ pub fn prelude::i8x64<T>::partition_slice(T, &[i8]) -> (&[[i8; 64]], &[i8]) [als
 pub fn prelude::i8x64<T>::partition_slice_mut(T, &mut [i8]) -> (&mut [[i8; 64]], &mut [i8]) [also: prelude::i8x64<T>]
 pub fn prelude::i8x64<T>::store(self, &mut [i8; 64]) [also: prelude::i8x64<T>]
 pub fn prelude::i8x64<T>::to_array(self) -> [i8; 64] [also: prelude::i8x64<T>]
+pub fn prelude::i8x64<T>::widen_high(self) -> prelude::i16x32<T> [also: prelude::i8x64<T>]
+pub fn prelude::i8x64<T>::widen_low(self) -> prelude::i16x32<T> [also: prelude::i8x64<T>]
 pub fn [i8; 64]::from(prelude::i8x64<T>) -> [i8; 64] [also: (root)]
 #[repr(C)] pub struct prelude::u16x16<T: simd::backends::U16x16Backend>(_, _) [also: simd::generic]
 pub const fn prelude::u16x16<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::u16x16<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::u16x16<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::u16x16<T>::bitcast_i16x16(self) -> prelude::i16x16<T> [also: prelude::u16x16<T>]
 pub fn prelude::u16x16<T>::bitcast_mut_i16x16(&mut self) -> &mut prelude::i16x16<T> [also: prelude::u16x16<T>]
 pub fn prelude::u16x16<T>::bitcast_ref_i16x16(&self) -> &prelude::i16x16<T> [also: prelude::u16x16<T>]
@@ -490,10 +509,12 @@ pub fn prelude::u16x16<T>::partition_slice(T, &[u16]) -> (&[[u16; 16]], &[u16]) 
 pub fn prelude::u16x16<T>::partition_slice_mut(T, &mut [u16]) -> (&mut [[u16; 16]], &mut [u16]) [also: prelude::u16x16<T>]
 pub fn prelude::u16x16<T>::store(self, &mut [u16; 16]) [also: prelude::u16x16<T>]
 pub fn prelude::u16x16<T>::to_array(self) -> [u16; 16] [also: prelude::u16x16<T>]
+pub fn prelude::u16x16<T>::widen_high(self) -> prelude::u32x8<T> [also: prelude::u16x16<T>]
+pub fn prelude::u16x16<T>::widen_low(self) -> prelude::u32x8<T> [also: prelude::u16x16<T>]
 pub fn [u16; 16]::from(prelude::u16x16<T>) -> [u16; 16] [also: (root)]
 #[repr(C)] pub struct prelude::u16x32<T: simd::backends::U16x32Backend>(_, _) [also: simd::generic]
 pub const fn prelude::u16x32<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::u16x32<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::u16x32<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::u16x32<T>::from_array(T, [u16; 32]) -> Self [also: prelude::u16x32<T>]
 pub fn prelude::u16x32<T>::from_repr(T, <T as simd::backends::U16x32Backend>::Repr) -> Self [also: prelude::u16x32<T>]
 pub fn prelude::u16x32<T>::into_repr(self) -> <T as simd::backends::U16x32Backend>::Repr [also: prelude::u16x32<T>]
@@ -502,10 +523,12 @@ pub fn prelude::u16x32<T>::partition_slice(T, &[u16]) -> (&[[u16; 32]], &[u16]) 
 pub fn prelude::u16x32<T>::partition_slice_mut(T, &mut [u16]) -> (&mut [[u16; 32]], &mut [u16]) [also: prelude::u16x32<T>]
 pub fn prelude::u16x32<T>::store(self, &mut [u16; 32]) [also: prelude::u16x32<T>]
 pub fn prelude::u16x32<T>::to_array(self) -> [u16; 32] [also: prelude::u16x32<T>]
+pub fn prelude::u16x32<T>::widen_high(self) -> prelude::u32x16<T> [also: prelude::u16x32<T>]
+pub fn prelude::u16x32<T>::widen_low(self) -> prelude::u32x16<T> [also: prelude::u16x32<T>]
 pub fn [u16; 32]::from(prelude::u16x32<T>) -> [u16; 32] [also: (root)]
 #[repr(C)] pub struct prelude::u16x8<T: simd::backends::U16x8Backend>(_, _) [also: simd::generic]
 pub const fn prelude::u16x8<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::u16x8<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::u16x8<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::u16x8<T>::bitcast_i16x8(self) -> prelude::i16x8<T> [also: prelude::u16x8<T>]
 pub fn prelude::u16x8<T>::bitcast_mut_i16x8(&mut self) -> &mut prelude::i16x8<T> [also: prelude::u16x8<T>]
 pub fn prelude::u16x8<T>::bitcast_ref_i16x8(&self) -> &prelude::i16x8<T> [also: prelude::u16x8<T>]
@@ -520,10 +543,12 @@ pub fn prelude::u16x8<T>::reduce_add(self) -> u16 [also: prelude::u16x16<T>, pre
 pub fn prelude::u16x8<T>::splat(T, u16) -> Self [also: prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>]
 pub fn prelude::u16x8<T>::store(self, &mut [u16; 8]) [also: prelude::u16x8<T>]
 pub fn prelude::u16x8<T>::to_array(self) -> [u16; 8] [also: prelude::u16x8<T>]
+pub fn prelude::u16x8<T>::widen_high(self) -> prelude::u32x4<T> [also: prelude::u16x8<T>]
+pub fn prelude::u16x8<T>::widen_low(self) -> prelude::u32x4<T> [also: prelude::u16x8<T>]
 pub fn [u16; 8]::from(prelude::u16x8<T>) -> [u16; 8] [also: (root)]
 #[repr(C)] pub struct prelude::u32x16<T: simd::backends::U32x16Backend>(_, _) [also: simd::generic]
 pub const fn prelude::u32x16<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::u32x16<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::u32x16<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::u32x16<T>::from_array(T, [u32; 16]) -> Self [also: prelude::u32x16<T>]
 pub fn prelude::u32x16<T>::from_repr(T, <T as simd::backends::U32x16Backend>::Repr) -> Self [also: prelude::u32x16<T>]
 pub fn prelude::u32x16<T>::into_repr(self) -> <T as simd::backends::U32x16Backend>::Repr [also: prelude::u32x16<T>]
@@ -535,7 +560,7 @@ pub fn prelude::u32x16<T>::to_array(self) -> [u32; 16] [also: prelude::u32x16<T>
 pub fn [u32; 16]::from(prelude::u32x16<T>) -> [u32; 16] [also: (root)]
 #[repr(C)] pub struct prelude::u32x4<T: simd::backends::U32x4Backend>(_, _) [also: simd::generic]
 pub const fn prelude::u32x4<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::u32x4<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::u32x4<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::u32x4<T>::bitcast_mut_f32x4(&mut self) -> &mut prelude::f32x4<T> [also: prelude::u32x4<T>]
 pub fn prelude::u32x4<T>::bitcast_ref_f32x4(&self) -> &prelude::f32x4<T> [also: prelude::u32x4<T>]
 pub fn prelude::u32x4<T>::from_array(T, [u32; 4]) -> Self [also: prelude::u32x4<T>]
@@ -555,7 +580,7 @@ pub fn prelude::u32x4<T>::cast_slice_mut(T, &mut [u32]) -> core::option::Option<
 pub fn [u32; 4]::from(prelude::u32x4<T>) -> [u32; 4] [also: (root)]
 #[repr(C)] pub struct prelude::u32x8<T: simd::backends::U32x8Backend>(_, _) [also: simd::generic]
 pub const fn prelude::u32x8<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::u32x8<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::u32x8<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::u32x8<T>::from_array(T, [u32; 8]) -> Self [also: prelude::u32x8<T>]
 pub fn prelude::u32x8<T>::from_repr(T, <T as simd::backends::U32x8Backend>::Repr) -> Self [also: prelude::u32x8<T>]
 pub fn prelude::u32x8<T>::into_repr(self) -> <T as simd::backends::U32x8Backend>::Repr [also: prelude::u32x8<T>]
@@ -567,7 +592,7 @@ pub fn prelude::u32x8<T>::to_array(self) -> [u32; 8] [also: prelude::u32x8<T>]
 pub fn [u32; 8]::from(prelude::u32x8<T>) -> [u32; 8] [also: (root)]
 #[repr(C)] pub struct prelude::u64x2<T: simd::backends::U64x2Backend>(_, _) [also: simd::generic]
 pub const fn prelude::u64x2<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::u64x2<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::u64x2<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::u64x2<T>::from_array(T, [u64; 2]) -> Self [also: prelude::u64x2<T>]
 pub fn prelude::u64x2<T>::from_repr(T, <T as simd::backends::U64x2Backend>::Repr) -> Self [also: prelude::u64x2<T>]
 pub fn prelude::u64x2<T>::from_slice(T, &[u64]) -> Self [also: prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>]
@@ -585,7 +610,7 @@ pub fn prelude::u64x2<T>::bitcast_ref_i64x2(&self) -> &prelude::i64x2<T> [also: 
 pub fn [u64; 2]::from(prelude::u64x2<T>) -> [u64; 2] [also: (root)]
 #[repr(C)] pub struct prelude::u64x4<T: simd::backends::U64x4Backend>(_, _) [also: simd::generic]
 pub const fn prelude::u64x4<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::u64x4<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::u64x4<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::u64x4<T>::from_array(T, [u64; 4]) -> Self [also: prelude::u64x4<T>]
 pub fn prelude::u64x4<T>::from_repr(T, <T as simd::backends::U64x4Backend>::Repr) -> Self [also: prelude::u64x4<T>]
 pub fn prelude::u64x4<T>::into_repr(self) -> <T as simd::backends::U64x4Backend>::Repr [also: prelude::u64x4<T>]
@@ -600,7 +625,7 @@ pub fn prelude::u64x4<T>::bitcast_ref_i64x4(&self) -> &prelude::i64x4<T> [also: 
 pub fn [u64; 4]::from(prelude::u64x4<T>) -> [u64; 4] [also: (root)]
 #[repr(C)] pub struct prelude::u64x8<T: simd::backends::U64x8Backend>(_, _) [also: simd::generic]
 pub const fn prelude::u64x8<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::u64x8<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::u64x8<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::u64x8<T>::from_array(T, [u64; 8]) -> Self [also: prelude::u64x8<T>]
 pub fn prelude::u64x8<T>::from_repr(T, <T as simd::backends::U64x8Backend>::Repr) -> Self [also: prelude::u64x8<T>]
 pub fn prelude::u64x8<T>::into_repr(self) -> <T as simd::backends::U64x8Backend>::Repr [also: prelude::u64x8<T>]
@@ -612,7 +637,7 @@ pub fn prelude::u64x8<T>::to_array(self) -> [u64; 8] [also: prelude::u64x8<T>]
 pub fn [u64; 8]::from(prelude::u64x8<T>) -> [u64; 8] [also: (root)]
 #[repr(C)] pub struct prelude::u8x16<T: simd::backends::U8x16Backend>(_, _) [also: simd::generic]
 pub const fn prelude::u8x16<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::u8x16<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::u8x16<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::u8x16<T>::bitcast_i8x16(self) -> prelude::i8x16<T> [also: prelude::u8x16<T>]
 pub fn prelude::u8x16<T>::bitcast_mut_i8x16(&mut self) -> &mut prelude::i8x16<T> [also: prelude::u8x16<T>]
 pub fn prelude::u8x16<T>::bitcast_ref_i8x16(&self) -> &prelude::i8x16<T> [also: prelude::u8x16<T>]
@@ -627,10 +652,12 @@ pub fn prelude::u8x16<T>::reduce_add(self) -> u8 [also: prelude::u8x16<T>, prelu
 pub fn prelude::u8x16<T>::splat(T, u8) -> Self [also: prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
 pub fn prelude::u8x16<T>::store(self, &mut [u8; 16]) [also: prelude::u8x16<T>]
 pub fn prelude::u8x16<T>::to_array(self) -> [u8; 16] [also: prelude::u8x16<T>]
+pub fn prelude::u8x16<T>::widen_high(self) -> prelude::u16x8<T> [also: prelude::u8x16<T>]
+pub fn prelude::u8x16<T>::widen_low(self) -> prelude::u16x8<T> [also: prelude::u8x16<T>]
 pub fn [u8; 16]::from(prelude::u8x16<T>) -> [u8; 16] [also: (root)]
 #[repr(C)] pub struct prelude::u8x32<T: simd::backends::U8x32Backend>(_, _) [also: simd::generic]
 pub const fn prelude::u8x32<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::u8x32<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::u8x32<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::u8x32<T>::bitcast_i8x32(self) -> prelude::i8x32<T> [also: prelude::u8x32<T>]
 pub fn prelude::u8x32<T>::bitcast_mut_i8x32(&mut self) -> &mut prelude::i8x32<T> [also: prelude::u8x32<T>]
 pub fn prelude::u8x32<T>::bitcast_ref_i8x32(&self) -> &prelude::i8x32<T> [also: prelude::u8x32<T>]
@@ -642,10 +669,12 @@ pub fn prelude::u8x32<T>::partition_slice(T, &[u8]) -> (&[[u8; 32]], &[u8]) [als
 pub fn prelude::u8x32<T>::partition_slice_mut(T, &mut [u8]) -> (&mut [[u8; 32]], &mut [u8]) [also: prelude::u8x32<T>]
 pub fn prelude::u8x32<T>::store(self, &mut [u8; 32]) [also: prelude::u8x32<T>]
 pub fn prelude::u8x32<T>::to_array(self) -> [u8; 32] [also: prelude::u8x32<T>]
+pub fn prelude::u8x32<T>::widen_high(self) -> prelude::u16x16<T> [also: prelude::u8x32<T>]
+pub fn prelude::u8x32<T>::widen_low(self) -> prelude::u16x16<T> [also: prelude::u8x32<T>]
 pub fn [u8; 32]::from(prelude::u8x32<T>) -> [u8; 32] [also: (root)]
 #[repr(C)] pub struct prelude::u8x64<T: simd::backends::U8x64Backend>(_, _) [also: simd::generic]
 pub const fn prelude::u8x64<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
-pub const fn prelude::u8x64<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub const fn prelude::u8x64<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::u8x64<T>::from_array(T, [u8; 64]) -> Self [also: prelude::u8x64<T>]
 pub fn prelude::u8x64<T>::from_repr(T, <T as simd::backends::U8x64Backend>::Repr) -> Self [also: prelude::u8x64<T>]
 pub fn prelude::u8x64<T>::into_repr(self) -> <T as simd::backends::U8x64Backend>::Repr [also: prelude::u8x64<T>]
@@ -654,6 +683,8 @@ pub fn prelude::u8x64<T>::partition_slice(T, &[u8]) -> (&[[u8; 64]], &[u8]) [als
 pub fn prelude::u8x64<T>::partition_slice_mut(T, &mut [u8]) -> (&mut [[u8; 64]], &mut [u8]) [also: prelude::u8x64<T>]
 pub fn prelude::u8x64<T>::store(self, &mut [u8; 64]) [also: prelude::u8x64<T>]
 pub fn prelude::u8x64<T>::to_array(self) -> [u8; 64] [also: prelude::u8x64<T>]
+pub fn prelude::u8x64<T>::widen_high(self) -> prelude::u16x32<T> [also: prelude::u8x64<T>]
+pub fn prelude::u8x64<T>::widen_low(self) -> prelude::u16x32<T> [also: prelude::u8x64<T>]
 pub fn [u8; 64]::from(prelude::u8x64<T>) -> [u8; 64] [also: (root)]
 pub fn prelude::F16Convert::f16_to_f32_into(self, &[u16], &mut [f32])
 pub fn prelude::F16Convert::f16_to_f32_slice(self, &[u16], &mut [f32])
@@ -958,9 +989,14 @@ pub fn simd::backends::I16x16Backend::mul(self, Self::Repr, Self::Repr) -> Self:
 pub fn simd::backends::I16x16Backend::neg(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x16Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x16Backend::reduce_add(self, Self::Repr) -> i16
+pub fn simd::backends::I16x16Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::I16x16Backend::saturating_sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x16Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I16x16Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I16x16Backend::shr_arithmetic_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I16x16Backend::shr_arithmetic_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I16x16Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I16x16Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I16x16Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x16Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x16Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -975,6 +1011,12 @@ pub fn simd::backends::I16x16Backend::zero(self) -> Self::Repr
 pub trait simd::backends::I16x16Bitcast: simd::backends::I16x16Backend + simd::backends::U16x16Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub fn simd::backends::I16x16Bitcast::bitcast_i16_to_u16(self, <Self as simd::backends::I16x16Backend>::Repr) -> <Self as simd::backends::U16x16Backend>::Repr
 pub fn simd::backends::I16x16Bitcast::bitcast_u16_to_i16(self, <Self as simd::backends::U16x16Backend>::Repr) -> <Self as simd::backends::I16x16Backend>::Repr
+pub trait simd::backends::I16x16Narrow: simd::backends::I16x16Backend + simd::backends::I8x32Backend + simd::backends::U8x32Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
+pub fn simd::backends::I16x16Narrow::narrow_saturating_i16_to_i8(self, <Self as simd::backends::I16x16Backend>::Repr, <Self as simd::backends::I16x16Backend>::Repr) -> <Self as simd::backends::I8x32Backend>::Repr
+pub fn simd::backends::I16x16Narrow::narrow_saturating_i16_to_u8(self, <Self as simd::backends::I16x16Backend>::Repr, <Self as simd::backends::I16x16Backend>::Repr) -> <Self as simd::backends::U8x32Backend>::Repr
+pub trait simd::backends::I16x16Widen: simd::backends::I16x16Backend + simd::backends::I32x8Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
+pub fn simd::backends::I16x16Widen::widen_high_i16_to_i32(self, <Self as simd::backends::I16x16Backend>::Repr) -> <Self as simd::backends::I32x8Backend>::Repr
+pub fn simd::backends::I16x16Widen::widen_low_i16_to_i32(self, <Self as simd::backends::I16x16Backend>::Repr) -> <Self as simd::backends::I32x8Backend>::Repr
 pub trait simd::backends::I16x32Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::I16x32Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
 pub fn simd::backends::I16x32Backend::abs(self, Self::Repr) -> Self::Repr
@@ -995,9 +1037,14 @@ pub fn simd::backends::I16x32Backend::mul(self, Self::Repr, Self::Repr) -> Self:
 pub fn simd::backends::I16x32Backend::neg(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x32Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x32Backend::reduce_add(self, Self::Repr) -> i16
+pub fn simd::backends::I16x32Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::I16x32Backend::saturating_sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x32Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I16x32Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I16x32Backend::shr_arithmetic_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I16x32Backend::shr_arithmetic_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I16x32Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I16x32Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I16x32Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x32Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x32Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1009,6 +1056,12 @@ pub fn simd::backends::I16x32Backend::store(self, Self::Repr, &mut [i16; 32])
 pub fn simd::backends::I16x32Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x32Backend::to_array(self, Self::Repr) -> [i16; 32]
 pub fn simd::backends::I16x32Backend::zero(self) -> Self::Repr
+pub trait simd::backends::I16x32Narrow: simd::backends::I16x32Backend + simd::backends::I8x64Backend + simd::backends::U8x64Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
+pub fn simd::backends::I16x32Narrow::narrow_saturating_i16_to_i8(self, <Self as simd::backends::I16x32Backend>::Repr, <Self as simd::backends::I16x32Backend>::Repr) -> <Self as simd::backends::I8x64Backend>::Repr
+pub fn simd::backends::I16x32Narrow::narrow_saturating_i16_to_u8(self, <Self as simd::backends::I16x32Backend>::Repr, <Self as simd::backends::I16x32Backend>::Repr) -> <Self as simd::backends::U8x64Backend>::Repr
+pub trait simd::backends::I16x32Widen: simd::backends::I16x32Backend + simd::backends::I32x16Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
+pub fn simd::backends::I16x32Widen::widen_high_i16_to_i32(self, <Self as simd::backends::I16x32Backend>::Repr) -> <Self as simd::backends::I32x16Backend>::Repr
+pub fn simd::backends::I16x32Widen::widen_low_i16_to_i32(self, <Self as simd::backends::I16x32Backend>::Repr) -> <Self as simd::backends::I32x16Backend>::Repr
 pub trait simd::backends::I16x8Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::I16x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
 pub fn simd::backends::I16x8Backend::abs(self, Self::Repr) -> Self::Repr
@@ -1029,9 +1082,14 @@ pub fn simd::backends::I16x8Backend::mul(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::I16x8Backend::neg(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x8Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x8Backend::reduce_add(self, Self::Repr) -> i16
+pub fn simd::backends::I16x8Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::I16x8Backend::saturating_sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x8Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I16x8Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I16x8Backend::shr_arithmetic_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I16x8Backend::shr_arithmetic_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I16x8Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I16x8Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I16x8Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x8Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x8Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1046,6 +1104,12 @@ pub fn simd::backends::I16x8Backend::zero(self) -> Self::Repr
 pub trait simd::backends::I16x8Bitcast: simd::backends::I16x8Backend + simd::backends::U16x8Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub fn simd::backends::I16x8Bitcast::bitcast_i16_to_u16(self, <Self as simd::backends::I16x8Backend>::Repr) -> <Self as simd::backends::U16x8Backend>::Repr
 pub fn simd::backends::I16x8Bitcast::bitcast_u16_to_i16(self, <Self as simd::backends::U16x8Backend>::Repr) -> <Self as simd::backends::I16x8Backend>::Repr
+pub trait simd::backends::I16x8Narrow: simd::backends::I16x8Backend + simd::backends::I8x16Backend + simd::backends::U8x16Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
+pub fn simd::backends::I16x8Narrow::narrow_saturating_i16_to_i8(self, <Self as simd::backends::I16x8Backend>::Repr, <Self as simd::backends::I16x8Backend>::Repr) -> <Self as simd::backends::I8x16Backend>::Repr
+pub fn simd::backends::I16x8Narrow::narrow_saturating_i16_to_u8(self, <Self as simd::backends::I16x8Backend>::Repr, <Self as simd::backends::I16x8Backend>::Repr) -> <Self as simd::backends::U8x16Backend>::Repr
+pub trait simd::backends::I16x8Widen: simd::backends::I16x8Backend + simd::backends::I32x4Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
+pub fn simd::backends::I16x8Widen::widen_high_i16_to_i32(self, <Self as simd::backends::I16x8Backend>::Repr) -> <Self as simd::backends::I32x4Backend>::Repr
+pub fn simd::backends::I16x8Widen::widen_low_i16_to_i32(self, <Self as simd::backends::I16x8Backend>::Repr) -> <Self as simd::backends::I32x4Backend>::Repr
 pub trait simd::backends::I32x16Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::I32x16Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
 pub fn simd::backends::I32x16Backend::abs(self, Self::Repr) -> Self::Repr
@@ -1067,8 +1131,11 @@ pub fn simd::backends::I32x16Backend::neg(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x16Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x16Backend::reduce_add(self, Self::Repr) -> i32
 pub fn simd::backends::I32x16Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I32x16Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I32x16Backend::shr_arithmetic_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I32x16Backend::shr_arithmetic_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I32x16Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I32x16Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I32x16Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x16Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x16Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1080,6 +1147,9 @@ pub fn simd::backends::I32x16Backend::store(self, Self::Repr, &mut [i32; 16])
 pub fn simd::backends::I32x16Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x16Backend::to_array(self, Self::Repr) -> [i32; 16]
 pub fn simd::backends::I32x16Backend::zero(self) -> Self::Repr
+pub trait simd::backends::I32x16Narrow: simd::backends::I32x16Backend + simd::backends::I16x32Backend + simd::backends::U16x32Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
+pub fn simd::backends::I32x16Narrow::narrow_saturating_i32_to_i16(self, <Self as simd::backends::I32x16Backend>::Repr, <Self as simd::backends::I32x16Backend>::Repr) -> <Self as simd::backends::I16x32Backend>::Repr
+pub fn simd::backends::I32x16Narrow::narrow_saturating_i32_to_u16(self, <Self as simd::backends::I32x16Backend>::Repr, <Self as simd::backends::I32x16Backend>::Repr) -> <Self as simd::backends::U16x32Backend>::Repr
 pub trait simd::backends::I32x4Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::I32x4Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
 pub fn simd::backends::I32x4Backend::abs(self, Self::Repr) -> Self::Repr
@@ -1101,8 +1171,11 @@ pub fn simd::backends::I32x4Backend::neg(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x4Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x4Backend::reduce_add(self, Self::Repr) -> i32
 pub fn simd::backends::I32x4Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I32x4Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I32x4Backend::shr_arithmetic_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I32x4Backend::shr_arithmetic_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I32x4Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I32x4Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I32x4Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x4Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x4Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1114,6 +1187,9 @@ pub fn simd::backends::I32x4Backend::store(self, Self::Repr, &mut [i32; 4])
 pub fn simd::backends::I32x4Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x4Backend::to_array(self, Self::Repr) -> [i32; 4]
 pub fn simd::backends::I32x4Backend::zero(self) -> Self::Repr
+pub trait simd::backends::I32x4Narrow: simd::backends::I32x4Backend + simd::backends::I16x8Backend + simd::backends::U16x8Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
+pub fn simd::backends::I32x4Narrow::narrow_saturating_i32_to_i16(self, <Self as simd::backends::I32x4Backend>::Repr, <Self as simd::backends::I32x4Backend>::Repr) -> <Self as simd::backends::I16x8Backend>::Repr
+pub fn simd::backends::I32x4Narrow::narrow_saturating_i32_to_u16(self, <Self as simd::backends::I32x4Backend>::Repr, <Self as simd::backends::I32x4Backend>::Repr) -> <Self as simd::backends::U16x8Backend>::Repr
 pub trait simd::backends::I32x8Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::I32x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
 pub fn simd::backends::I32x8Backend::abs(self, Self::Repr) -> Self::Repr
@@ -1135,8 +1211,11 @@ pub fn simd::backends::I32x8Backend::neg(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x8Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x8Backend::reduce_add(self, Self::Repr) -> i32
 pub fn simd::backends::I32x8Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I32x8Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I32x8Backend::shr_arithmetic_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I32x8Backend::shr_arithmetic_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I32x8Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I32x8Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I32x8Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x8Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x8Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1148,6 +1227,9 @@ pub fn simd::backends::I32x8Backend::store(self, Self::Repr, &mut [i32; 8])
 pub fn simd::backends::I32x8Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x8Backend::to_array(self, Self::Repr) -> [i32; 8]
 pub fn simd::backends::I32x8Backend::zero(self) -> Self::Repr
+pub trait simd::backends::I32x8Narrow: simd::backends::I32x8Backend + simd::backends::I16x16Backend + simd::backends::U16x16Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
+pub fn simd::backends::I32x8Narrow::narrow_saturating_i32_to_i16(self, <Self as simd::backends::I32x8Backend>::Repr, <Self as simd::backends::I32x8Backend>::Repr) -> <Self as simd::backends::I16x16Backend>::Repr
+pub fn simd::backends::I32x8Narrow::narrow_saturating_i32_to_u16(self, <Self as simd::backends::I32x8Backend>::Repr, <Self as simd::backends::I32x8Backend>::Repr) -> <Self as simd::backends::U16x16Backend>::Repr
 pub trait simd::backends::I64x2Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::I64x2Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
 pub fn simd::backends::I64x2Backend::abs(self, Self::Repr) -> Self::Repr
@@ -1272,9 +1354,14 @@ pub fn simd::backends::I8x16Backend::min(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::I8x16Backend::neg(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x16Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x16Backend::reduce_add(self, Self::Repr) -> i8
+pub fn simd::backends::I8x16Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::I8x16Backend::saturating_sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x16Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I8x16Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I8x16Backend::shr_arithmetic_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I8x16Backend::shr_arithmetic_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I8x16Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I8x16Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I8x16Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x16Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x16Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1289,6 +1376,9 @@ pub fn simd::backends::I8x16Backend::zero(self) -> Self::Repr
 pub trait simd::backends::I8x16Bitcast: simd::backends::I8x16Backend + simd::backends::U8x16Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub fn simd::backends::I8x16Bitcast::bitcast_i8_to_u8(self, <Self as simd::backends::I8x16Backend>::Repr) -> <Self as simd::backends::U8x16Backend>::Repr
 pub fn simd::backends::I8x16Bitcast::bitcast_u8_to_i8(self, <Self as simd::backends::U8x16Backend>::Repr) -> <Self as simd::backends::I8x16Backend>::Repr
+pub trait simd::backends::I8x16Widen: simd::backends::I8x16Backend + simd::backends::I16x8Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
+pub fn simd::backends::I8x16Widen::widen_high_i8_to_i16(self, <Self as simd::backends::I8x16Backend>::Repr) -> <Self as simd::backends::I16x8Backend>::Repr
+pub fn simd::backends::I8x16Widen::widen_low_i8_to_i16(self, <Self as simd::backends::I8x16Backend>::Repr) -> <Self as simd::backends::I16x8Backend>::Repr
 pub trait simd::backends::I8x32Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::I8x32Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
 pub fn simd::backends::I8x32Backend::abs(self, Self::Repr) -> Self::Repr
@@ -1308,9 +1398,14 @@ pub fn simd::backends::I8x32Backend::min(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::I8x32Backend::neg(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x32Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x32Backend::reduce_add(self, Self::Repr) -> i8
+pub fn simd::backends::I8x32Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::I8x32Backend::saturating_sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x32Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I8x32Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I8x32Backend::shr_arithmetic_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I8x32Backend::shr_arithmetic_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I8x32Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I8x32Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I8x32Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x32Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x32Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1325,6 +1420,9 @@ pub fn simd::backends::I8x32Backend::zero(self) -> Self::Repr
 pub trait simd::backends::I8x32Bitcast: simd::backends::I8x32Backend + simd::backends::U8x32Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub fn simd::backends::I8x32Bitcast::bitcast_i8_to_u8(self, <Self as simd::backends::I8x32Backend>::Repr) -> <Self as simd::backends::U8x32Backend>::Repr
 pub fn simd::backends::I8x32Bitcast::bitcast_u8_to_i8(self, <Self as simd::backends::U8x32Backend>::Repr) -> <Self as simd::backends::I8x32Backend>::Repr
+pub trait simd::backends::I8x32Widen: simd::backends::I8x32Backend + simd::backends::I16x16Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
+pub fn simd::backends::I8x32Widen::widen_high_i8_to_i16(self, <Self as simd::backends::I8x32Backend>::Repr) -> <Self as simd::backends::I16x16Backend>::Repr
+pub fn simd::backends::I8x32Widen::widen_low_i8_to_i16(self, <Self as simd::backends::I8x32Backend>::Repr) -> <Self as simd::backends::I16x16Backend>::Repr
 pub trait simd::backends::I8x64Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::I8x64Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
 pub fn simd::backends::I8x64Backend::abs(self, Self::Repr) -> Self::Repr
@@ -1344,9 +1442,14 @@ pub fn simd::backends::I8x64Backend::min(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::I8x64Backend::neg(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x64Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x64Backend::reduce_add(self, Self::Repr) -> i8
+pub fn simd::backends::I8x64Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::I8x64Backend::saturating_sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x64Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I8x64Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I8x64Backend::shr_arithmetic_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I8x64Backend::shr_arithmetic_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I8x64Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::I8x64Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I8x64Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x64Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x64Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1358,6 +1461,9 @@ pub fn simd::backends::I8x64Backend::store(self, Self::Repr, &mut [i8; 64])
 pub fn simd::backends::I8x64Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x64Backend::to_array(self, Self::Repr) -> [i8; 64]
 pub fn simd::backends::I8x64Backend::zero(self) -> Self::Repr
+pub trait simd::backends::I8x64Widen: simd::backends::I8x64Backend + simd::backends::I16x32Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
+pub fn simd::backends::I8x64Widen::widen_high_i8_to_i16(self, <Self as simd::backends::I8x64Backend>::Repr) -> <Self as simd::backends::I16x32Backend>::Repr
+pub fn simd::backends::I8x64Widen::widen_low_i8_to_i16(self, <Self as simd::backends::I8x64Backend>::Repr) -> <Self as simd::backends::I16x32Backend>::Repr
 pub trait simd::backends::U16x16Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::U16x16Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
 pub fn simd::backends::U16x16Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1376,8 +1482,12 @@ pub fn simd::backends::U16x16Backend::min(self, Self::Repr, Self::Repr) -> Self:
 pub fn simd::backends::U16x16Backend::mul(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x16Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x16Backend::reduce_add(self, Self::Repr) -> u16
+pub fn simd::backends::U16x16Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::U16x16Backend::saturating_sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x16Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U16x16Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U16x16Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U16x16Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U16x16Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x16Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x16Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1389,6 +1499,9 @@ pub fn simd::backends::U16x16Backend::store(self, Self::Repr, &mut [u16; 16])
 pub fn simd::backends::U16x16Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x16Backend::to_array(self, Self::Repr) -> [u16; 16]
 pub fn simd::backends::U16x16Backend::zero(self) -> Self::Repr
+pub trait simd::backends::U16x16Widen: simd::backends::U16x16Backend + simd::backends::U32x8Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
+pub fn simd::backends::U16x16Widen::widen_high_u16_to_u32(self, <Self as simd::backends::U16x16Backend>::Repr) -> <Self as simd::backends::U32x8Backend>::Repr
+pub fn simd::backends::U16x16Widen::widen_low_u16_to_u32(self, <Self as simd::backends::U16x16Backend>::Repr) -> <Self as simd::backends::U32x8Backend>::Repr
 pub trait simd::backends::U16x32Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::U16x32Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
 pub fn simd::backends::U16x32Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1408,9 +1521,14 @@ pub fn simd::backends::U16x32Backend::mul(self, Self::Repr, Self::Repr) -> Self:
 pub fn simd::backends::U16x32Backend::neg(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x32Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x32Backend::reduce_add(self, Self::Repr) -> u16
+pub fn simd::backends::U16x32Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::U16x32Backend::saturating_sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x32Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U16x32Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U16x32Backend::shr_arithmetic_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U16x32Backend::shr_arithmetic_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U16x32Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U16x32Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U16x32Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x32Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x32Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1422,6 +1540,9 @@ pub fn simd::backends::U16x32Backend::store(self, Self::Repr, &mut [u16; 32])
 pub fn simd::backends::U16x32Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x32Backend::to_array(self, Self::Repr) -> [u16; 32]
 pub fn simd::backends::U16x32Backend::zero(self) -> Self::Repr
+pub trait simd::backends::U16x32Widen: simd::backends::U16x32Backend + simd::backends::U32x16Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
+pub fn simd::backends::U16x32Widen::widen_high_u16_to_u32(self, <Self as simd::backends::U16x32Backend>::Repr) -> <Self as simd::backends::U32x16Backend>::Repr
+pub fn simd::backends::U16x32Widen::widen_low_u16_to_u32(self, <Self as simd::backends::U16x32Backend>::Repr) -> <Self as simd::backends::U32x16Backend>::Repr
 pub trait simd::backends::U16x8Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::U16x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
 pub fn simd::backends::U16x8Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1440,8 +1561,12 @@ pub fn simd::backends::U16x8Backend::min(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::U16x8Backend::mul(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x8Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x8Backend::reduce_add(self, Self::Repr) -> u16
+pub fn simd::backends::U16x8Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::U16x8Backend::saturating_sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x8Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U16x8Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U16x8Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U16x8Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U16x8Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x8Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x8Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1453,6 +1578,9 @@ pub fn simd::backends::U16x8Backend::store(self, Self::Repr, &mut [u16; 8])
 pub fn simd::backends::U16x8Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x8Backend::to_array(self, Self::Repr) -> [u16; 8]
 pub fn simd::backends::U16x8Backend::zero(self) -> Self::Repr
+pub trait simd::backends::U16x8Widen: simd::backends::U16x8Backend + simd::backends::U32x4Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
+pub fn simd::backends::U16x8Widen::widen_high_u16_to_u32(self, <Self as simd::backends::U16x8Backend>::Repr) -> <Self as simd::backends::U32x4Backend>::Repr
+pub fn simd::backends::U16x8Widen::widen_low_u16_to_u32(self, <Self as simd::backends::U16x8Backend>::Repr) -> <Self as simd::backends::U32x4Backend>::Repr
 pub trait simd::backends::U32x16Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::U32x16Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
 pub fn simd::backends::U32x16Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1473,8 +1601,11 @@ pub fn simd::backends::U32x16Backend::neg(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x16Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x16Backend::reduce_add(self, Self::Repr) -> u32
 pub fn simd::backends::U32x16Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U32x16Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U32x16Backend::shr_arithmetic_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U32x16Backend::shr_arithmetic_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U32x16Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U32x16Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U32x16Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x16Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x16Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1505,7 +1636,9 @@ pub fn simd::backends::U32x4Backend::mul(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::U32x4Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x4Backend::reduce_add(self, Self::Repr) -> u32
 pub fn simd::backends::U32x4Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U32x4Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U32x4Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U32x4Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U32x4Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x4Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x4Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1539,7 +1672,9 @@ pub fn simd::backends::U32x8Backend::mul(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::U32x8Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x8Backend::reduce_add(self, Self::Repr) -> u32
 pub fn simd::backends::U32x8Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U32x8Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U32x8Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U32x8Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U32x8Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x8Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x8Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1669,8 +1804,12 @@ pub fn simd::backends::U8x16Backend::max(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::U8x16Backend::min(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x16Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x16Backend::reduce_add(self, Self::Repr) -> u8
+pub fn simd::backends::U8x16Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::U8x16Backend::saturating_sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x16Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U8x16Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U8x16Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U8x16Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U8x16Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x16Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x16Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1682,6 +1821,9 @@ pub fn simd::backends::U8x16Backend::store(self, Self::Repr, &mut [u8; 16])
 pub fn simd::backends::U8x16Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x16Backend::to_array(self, Self::Repr) -> [u8; 16]
 pub fn simd::backends::U8x16Backend::zero(self) -> Self::Repr
+pub trait simd::backends::U8x16Widen: simd::backends::U8x16Backend + simd::backends::U16x8Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
+pub fn simd::backends::U8x16Widen::widen_high_u8_to_u16(self, <Self as simd::backends::U8x16Backend>::Repr) -> <Self as simd::backends::U16x8Backend>::Repr
+pub fn simd::backends::U8x16Widen::widen_low_u8_to_u16(self, <Self as simd::backends::U8x16Backend>::Repr) -> <Self as simd::backends::U16x8Backend>::Repr
 pub trait simd::backends::U8x32Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::U8x32Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
 pub fn simd::backends::U8x32Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1699,8 +1841,12 @@ pub fn simd::backends::U8x32Backend::max(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::U8x32Backend::min(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x32Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x32Backend::reduce_add(self, Self::Repr) -> u8
+pub fn simd::backends::U8x32Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::U8x32Backend::saturating_sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x32Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U8x32Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U8x32Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U8x32Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U8x32Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x32Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x32Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1712,6 +1858,9 @@ pub fn simd::backends::U8x32Backend::store(self, Self::Repr, &mut [u8; 32])
 pub fn simd::backends::U8x32Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x32Backend::to_array(self, Self::Repr) -> [u8; 32]
 pub fn simd::backends::U8x32Backend::zero(self) -> Self::Repr
+pub trait simd::backends::U8x32Widen: simd::backends::U8x32Backend + simd::backends::U16x16Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
+pub fn simd::backends::U8x32Widen::widen_high_u8_to_u16(self, <Self as simd::backends::U8x32Backend>::Repr) -> <Self as simd::backends::U16x16Backend>::Repr
+pub fn simd::backends::U8x32Widen::widen_low_u8_to_u16(self, <Self as simd::backends::U8x32Backend>::Repr) -> <Self as simd::backends::U16x16Backend>::Repr
 pub trait simd::backends::U8x64Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::U8x64Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
 pub fn simd::backends::U8x64Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1730,9 +1879,14 @@ pub fn simd::backends::U8x64Backend::min(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::U8x64Backend::neg(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x64Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x64Backend::reduce_add(self, Self::Repr) -> u8
+pub fn simd::backends::U8x64Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::U8x64Backend::saturating_sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x64Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U8x64Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U8x64Backend::shr_arithmetic_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U8x64Backend::shr_arithmetic_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U8x64Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U8x64Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U8x64Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x64Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x64Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1744,14 +1898,17 @@ pub fn simd::backends::U8x64Backend::store(self, Self::Repr, &mut [u8; 64])
 pub fn simd::backends::U8x64Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x64Backend::to_array(self, Self::Repr) -> [u8; 64]
 pub fn simd::backends::U8x64Backend::zero(self) -> Self::Repr
+pub trait simd::backends::U8x64Widen: simd::backends::U8x64Backend + simd::backends::U16x32Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
+pub fn simd::backends::U8x64Widen::widen_high_u8_to_u16(self, <Self as simd::backends::U8x64Backend>::Repr) -> <Self as simd::backends::U16x32Backend>::Repr
+pub fn simd::backends::U8x64Widen::widen_low_u8_to_u16(self, <Self as simd::backends::U8x64Backend>::Repr) -> <Self as simd::backends::U16x32Backend>::Repr
 pub type simd::backends::neon = archmage::tokens::generated::arm_stubs::NeonToken
 pub type simd::backends::scalar = archmage::tokens::ScalarToken
-pub type simd::backends::wasm128 = archmage::tokens::generated::wasm_stubs::Wasm128Token
-pub type simd::backends::x64v1 = archmage::tokens::generated::x86::X64V1Token
-pub type simd::backends::x64v2 = archmage::tokens::generated::x86::X64V2Token
-pub type simd::backends::x64v3 = archmage::tokens::generated::x86::X64V3Token
-pub type simd::backends::x64v4 = archmage::tokens::generated::x86::X64V4Token
-pub type simd::backends::x86_v4x = archmage::tokens::generated::x86::X64V4xToken
+pub type simd::backends::wasm128 = archmage::tokens::generated::wasm::Wasm128Token
+pub type simd::backends::x64v1 = archmage::tokens::generated::x86_stubs::X64V1Token
+pub type simd::backends::x64v2 = archmage::tokens::generated::x86_stubs::X64V2Token
+pub type simd::backends::x64v3 = archmage::tokens::generated::x86_stubs::X64V3Token
+pub type simd::backends::x64v4 = archmage::tokens::generated::x86_stubs::X64V4Token
+pub type simd::backends::x86_v4x = archmage::tokens::generated::x86_stubs::X64V4xToken
 pub mod simd::generic
 pub fn simd::generic::F16Convert::f16_to_f32_into(self, &[u16], &mut [f32])
 pub fn simd::generic::F16Convert::f16_to_f32_slice(self, &[u16], &mut [f32])
@@ -1824,31 +1981,21 @@ pub const simd::v3::LANES_32: usize [also: simd::neon, simd::v4, simd::v4x, simd
 pub const simd::v3::LANES_8: usize [also: simd::neon, simd::v4, simd::v4x, simd::wasm128]
 pub const simd::v3::LANES_F32: usize [also: simd::neon, simd::v4, simd::v4x, simd::wasm128]
 pub const simd::v3::LANES_F64: usize [also: simd::neon, simd::v4, simd::v4x, simd::wasm128]
-pub type simd::v3::Token = archmage::tokens::generated::x86::X64V3Token
-pub type simd::v3::f32xN = prelude::f32x8<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v3::f64xN = prelude::f64x4<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v3::i16xN = prelude::i16x16<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v3::i32xN = prelude::i32x8<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v3::i64xN = prelude::i64x4<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v3::i8xN = prelude::i8x32<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v3::u16xN = prelude::u16x16<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v3::u32xN = prelude::u32x8<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v3::u64xN = prelude::u64x4<archmage::tokens::generated::x86::X64V3Token>
-pub type simd::v3::u8xN = prelude::u8x32<archmage::tokens::generated::x86::X64V3Token>
+pub type simd::v3::Token = archmage::tokens::generated::x86_stubs::X64V3Token
 pub mod simd::v4
-pub type simd::v4::f32xN = prelude::f32x16<archmage::tokens::generated::x86::X64V3Token> [also: simd::v4x]
-pub type simd::v4::f64xN = prelude::f64x8<archmage::tokens::generated::x86::X64V3Token> [also: simd::v4x]
-pub type simd::v4::i16xN = prelude::i16x32<archmage::tokens::generated::x86::X64V3Token> [also: simd::v4x]
-pub type simd::v4::i32xN = prelude::i32x16<archmage::tokens::generated::x86::X64V3Token> [also: simd::v4x]
-pub type simd::v4::i64xN = prelude::i64x8<archmage::tokens::generated::x86::X64V3Token> [also: simd::v4x]
-pub type simd::v4::i8xN = prelude::i8x64<archmage::tokens::generated::x86::X64V3Token> [also: simd::v4x]
-pub type simd::v4::u16xN = prelude::u16x32<archmage::tokens::generated::x86::X64V3Token> [also: simd::v4x]
-pub type simd::v4::u32xN = prelude::u32x16<archmage::tokens::generated::x86::X64V3Token> [also: simd::v4x]
-pub type simd::v4::u64xN = prelude::u64x8<archmage::tokens::generated::x86::X64V3Token> [also: simd::v4x]
-pub type simd::v4::u8xN = prelude::u8x64<archmage::tokens::generated::x86::X64V3Token> [also: simd::v4x]
 pub mod simd::v4x
 pub mod simd::wasm128
-pub type simd::wasm128::Token = archmage::tokens::generated::wasm_stubs::Wasm128Token
+pub type simd::wasm128::Token = archmage::tokens::generated::wasm::Wasm128Token
+pub type simd::wasm128::f32xN = prelude::f32x4<archmage::tokens::generated::wasm::Wasm128Token>
+pub type simd::wasm128::f64xN = prelude::f64x2<archmage::tokens::generated::wasm::Wasm128Token>
+pub type simd::wasm128::i16xN = prelude::i16x8<archmage::tokens::generated::wasm::Wasm128Token>
+pub type simd::wasm128::i32xN = prelude::i32x4<archmage::tokens::generated::wasm::Wasm128Token>
+pub type simd::wasm128::i64xN = prelude::i64x2<archmage::tokens::generated::wasm::Wasm128Token>
+pub type simd::wasm128::i8xN = prelude::i8x16<archmage::tokens::generated::wasm::Wasm128Token>
+pub type simd::wasm128::u16xN = prelude::u16x8<archmage::tokens::generated::wasm::Wasm128Token>
+pub type simd::wasm128::u32xN = prelude::u32x4<archmage::tokens::generated::wasm::Wasm128Token>
+pub type simd::wasm128::u64xN = prelude::u64x2<archmage::tokens::generated::wasm::Wasm128Token>
+pub type simd::wasm128::u8xN = prelude::u8x16<archmage::tokens::generated::wasm::Wasm128Token>
 #[repr(transparent)] pub struct simd::f32x1(pub f32) [also: simd::scalar]
 #[repr(transparent)] pub struct simd::f64x1(pub f64) [also: simd::scalar]
 #[repr(transparent)] pub struct simd::i16x1(pub i16) [also: simd::scalar]
@@ -1882,36 +2029,36 @@ pub fn simd::SimdLt::simd_lt(self, Rhs) -> Self::Output
 pub trait simd::SimdNe<Rhs>
 pub type simd::SimdNe::Output
 pub fn simd::SimdNe::simd_ne(self, Rhs) -> Self::Output
-pub type simd::f32x16 = prelude::f32x16<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::f32x4 = prelude::f32x4<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::f32x8 = prelude::f32x8<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::f64x2 = prelude::f64x2<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::f64x4 = prelude::f64x4<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::f64x8 = prelude::f64x8<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::i16x16 = prelude::i16x16<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::i16x32 = prelude::i16x32<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::i16x8 = prelude::i16x8<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::i32x16 = prelude::i32x16<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::i32x4 = prelude::i32x4<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::i32x8 = prelude::i32x8<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::i64x2 = prelude::i64x2<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::i64x4 = prelude::i64x4<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::i64x8 = prelude::i64x8<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::i8x16 = prelude::i8x16<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::i8x32 = prelude::i8x32<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::i8x64 = prelude::i8x64<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::u16x16 = prelude::u16x16<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::u16x32 = prelude::u16x32<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::u16x8 = prelude::u16x8<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::u32x16 = prelude::u32x16<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::u32x4 = prelude::u32x4<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::u32x8 = prelude::u32x8<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::u64x2 = prelude::u64x2<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::u64x4 = prelude::u64x4<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::u64x8 = prelude::u64x8<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::u8x16 = prelude::u8x16<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::u8x32 = prelude::u8x32<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
-pub type simd::u8x64 = prelude::u8x64<archmage::tokens::generated::x86::X64V3Token> [also: simd::v3, simd::v4, simd::v4x]
+pub type simd::f32x16 = prelude::f32x16<archmage::tokens::generated::wasm::Wasm128Token>
+pub type simd::f32x4 = prelude::f32x4<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
+pub type simd::f32x8 = prelude::f32x8<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
+pub type simd::f64x2 = prelude::f64x2<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
+pub type simd::f64x4 = prelude::f64x4<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
+pub type simd::f64x8 = prelude::f64x8<archmage::tokens::generated::wasm::Wasm128Token>
+pub type simd::i16x16 = prelude::i16x16<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
+pub type simd::i16x32 = prelude::i16x32<archmage::tokens::generated::wasm::Wasm128Token>
+pub type simd::i16x8 = prelude::i16x8<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
+pub type simd::i32x16 = prelude::i32x16<archmage::tokens::generated::wasm::Wasm128Token>
+pub type simd::i32x4 = prelude::i32x4<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
+pub type simd::i32x8 = prelude::i32x8<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
+pub type simd::i64x2 = prelude::i64x2<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
+pub type simd::i64x4 = prelude::i64x4<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
+pub type simd::i64x8 = prelude::i64x8<archmage::tokens::generated::wasm::Wasm128Token>
+pub type simd::i8x16 = prelude::i8x16<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
+pub type simd::i8x32 = prelude::i8x32<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
+pub type simd::i8x64 = prelude::i8x64<archmage::tokens::generated::wasm::Wasm128Token>
+pub type simd::u16x16 = prelude::u16x16<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
+pub type simd::u16x32 = prelude::u16x32<archmage::tokens::generated::wasm::Wasm128Token>
+pub type simd::u16x8 = prelude::u16x8<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
+pub type simd::u32x16 = prelude::u32x16<archmage::tokens::generated::wasm::Wasm128Token>
+pub type simd::u32x4 = prelude::u32x4<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
+pub type simd::u32x8 = prelude::u32x8<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
+pub type simd::u64x2 = prelude::u64x2<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
+pub type simd::u64x4 = prelude::u64x4<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
+pub type simd::u64x8 = prelude::u64x8<archmage::tokens::generated::wasm::Wasm128Token>
+pub type simd::u8x16 = prelude::u8x16<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
+pub type simd::u8x32 = prelude::u8x32<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
+pub type simd::u8x64 = prelude::u8x64<archmage::tokens::generated::wasm::Wasm128Token>
 pub trait SimdTypes: archmage::tokens::SimdToken
 pub type SimdTypes::F32
 pub type SimdTypes::F64
@@ -2050,6 +2197,7 @@ pub fn WidthDispatch::u8x64_zero(self) -> Self::U8x64
 
 ## trait impls (73 types)
 
+T: prelude::F16Convert
 [f32; 16]: From<prelude::f32x16<T>>
 [f32; 4]: From<prelude::f32x4<T>>
 [f32; 8]: From<prelude::f32x8<T>>
@@ -2080,9 +2228,8 @@ pub fn WidthDispatch::u8x64_zero(self) -> Self::U8x64
 [u8; 16]: From<prelude::u8x16<T>>
 [u8; 32]: From<prelude::u8x32<T>>
 [u8; 64]: From<prelude::u8x64<T>>
-archmage::tokens::ScalarToken: SimdTypes, prelude::F16Convert, prelude::F32x16FromHalves, prelude::F32x8FromHalves, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x4Convert, simd::backends::F32x8Backend, simd::backends::F32x8Convert, simd::backends::F64x2Backend, simd::backends::F64x4Backend, simd::backends::F64x8Backend, simd::backends::I16x16Backend, simd::backends::I16x16Bitcast, simd::backends::I16x32Backend, simd::backends::I16x8Backend, simd::backends::I16x8Bitcast, simd::backends::I32x16Backend, simd::backends::I32x4Backend, simd::backends::I32x8Backend, simd::backends::I64x2Backend, simd::backends::I64x2Bitcast, simd::backends::I64x4Backend, simd::backends::I64x4Bitcast, simd::backends::I64x8Backend, simd::backends::I8x16Backend, simd::backends::I8x16Bitcast, simd::backends::I8x32Backend, simd::backends::I8x32Bitcast, simd::backends::I8x64Backend, simd::backends::U16x16Backend, simd::backends::U16x32Backend, simd::backends::U16x8Backend, simd::backends::U32x16Backend, simd::backends::U32x4Backend, simd::backends::U32x4Bitcast, simd::backends::U32x8Backend, simd::backends::U32x8Bitcast, simd::backends::U64x2Backend, simd::backends::U64x2Bitcast, simd::backends::U64x4Backend, simd::backends::U64x4Bitcast, simd::backends::U64x8Backend, simd::backends::U8x16Backend, simd::backends::U8x32Backend, simd::backends::U8x64Backend
-archmage::tokens::generated::x86::X64V2Token: SimdTypes
-archmage::tokens::generated::x86::X64V3Token: SimdTypes, WidthDispatch, prelude::F16Convert, prelude::F32x16FromHalves, prelude::F32x8FromHalves, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x4Convert, simd::backends::F32x8Backend, simd::backends::F32x8Convert, simd::backends::F64x2Backend, simd::backends::F64x4Backend, simd::backends::F64x8Backend, simd::backends::I16x16Backend, simd::backends::I16x16Bitcast, simd::backends::I16x32Backend, simd::backends::I16x8Backend, simd::backends::I16x8Bitcast, simd::backends::I32x16Backend, simd::backends::I32x4Backend, simd::backends::I32x8Backend, simd::backends::I64x2Backend, simd::backends::I64x2Bitcast, simd::backends::I64x4Backend, simd::backends::I64x4Bitcast, simd::backends::I64x8Backend, simd::backends::I8x16Backend, simd::backends::I8x16Bitcast, simd::backends::I8x32Backend, simd::backends::I8x32Bitcast, simd::backends::I8x64Backend, simd::backends::U16x16Backend, simd::backends::U16x32Backend, simd::backends::U16x8Backend, simd::backends::U32x16Backend, simd::backends::U32x4Backend, simd::backends::U32x4Bitcast, simd::backends::U32x8Backend, simd::backends::U32x8Bitcast, simd::backends::U64x2Backend, simd::backends::U64x2Bitcast, simd::backends::U64x4Backend, simd::backends::U64x4Bitcast, simd::backends::U64x8Backend, simd::backends::U8x16Backend, simd::backends::U8x32Backend, simd::backends::U8x64Backend
+archmage::tokens::ScalarToken: SimdTypes, prelude::F32x16FromHalves, prelude::F32x8FromHalves, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x4Convert, simd::backends::F32x8Backend, simd::backends::F32x8Convert, simd::backends::F64x2Backend, simd::backends::F64x4Backend, simd::backends::F64x8Backend, simd::backends::I16x16Backend, simd::backends::I16x16Bitcast, simd::backends::I16x16Narrow, simd::backends::I16x16Widen, simd::backends::I16x32Backend, simd::backends::I16x32Narrow, simd::backends::I16x32Widen, simd::backends::I16x8Backend, simd::backends::I16x8Bitcast, simd::backends::I16x8Narrow, simd::backends::I16x8Widen, simd::backends::I32x16Backend, simd::backends::I32x16Narrow, simd::backends::I32x4Backend, simd::backends::I32x4Narrow, simd::backends::I32x8Backend, simd::backends::I32x8Narrow, simd::backends::I64x2Backend, simd::backends::I64x2Bitcast, simd::backends::I64x4Backend, simd::backends::I64x4Bitcast, simd::backends::I64x8Backend, simd::backends::I8x16Backend, simd::backends::I8x16Bitcast, simd::backends::I8x16Widen, simd::backends::I8x32Backend, simd::backends::I8x32Bitcast, simd::backends::I8x32Widen, simd::backends::I8x64Backend, simd::backends::I8x64Widen, simd::backends::U16x16Backend, simd::backends::U16x16Widen, simd::backends::U16x32Backend, simd::backends::U16x32Widen, simd::backends::U16x8Backend, simd::backends::U16x8Widen, simd::backends::U32x16Backend, simd::backends::U32x4Backend, simd::backends::U32x4Bitcast, simd::backends::U32x8Backend, simd::backends::U32x8Bitcast, simd::backends::U64x2Backend, simd::backends::U64x2Bitcast, simd::backends::U64x4Backend, simd::backends::U64x4Bitcast, simd::backends::U64x8Backend, simd::backends::U8x16Backend, simd::backends::U8x16Widen, simd::backends::U8x32Backend, simd::backends::U8x32Widen, simd::backends::U8x64Backend, simd::backends::U8x64Widen
+archmage::tokens::generated::wasm::Wasm128Token: SimdTypes, WidthDispatch, prelude::F32x16FromHalves, prelude::F32x8FromHalves, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x4Convert, simd::backends::F32x8Backend, simd::backends::F32x8Convert, simd::backends::F64x2Backend, simd::backends::F64x4Backend, simd::backends::F64x8Backend, simd::backends::I16x16Backend, simd::backends::I16x16Bitcast, simd::backends::I16x16Narrow, simd::backends::I16x16Widen, simd::backends::I16x32Backend, simd::backends::I16x32Narrow, simd::backends::I16x32Widen, simd::backends::I16x8Backend, simd::backends::I16x8Bitcast, simd::backends::I16x8Narrow, simd::backends::I16x8Widen, simd::backends::I32x16Backend, simd::backends::I32x16Narrow, simd::backends::I32x4Backend, simd::backends::I32x4Narrow, simd::backends::I32x8Backend, simd::backends::I32x8Narrow, simd::backends::I64x2Backend, simd::backends::I64x2Bitcast, simd::backends::I64x4Backend, simd::backends::I64x4Bitcast, simd::backends::I64x8Backend, simd::backends::I8x16Backend, simd::backends::I8x16Bitcast, simd::backends::I8x16Widen, simd::backends::I8x32Backend, simd::backends::I8x32Bitcast, simd::backends::I8x32Widen, simd::backends::I8x64Backend, simd::backends::I8x64Widen, simd::backends::U16x16Backend, simd::backends::U16x16Widen, simd::backends::U16x32Backend, simd::backends::U16x32Widen, simd::backends::U16x8Backend, simd::backends::U16x8Widen, simd::backends::U32x16Backend, simd::backends::U32x4Backend, simd::backends::U32x4Bitcast, simd::backends::U32x8Backend, simd::backends::U32x8Bitcast, simd::backends::U64x2Backend, simd::backends::U64x2Bitcast, simd::backends::U64x4Backend, simd::backends::U64x4Bitcast, simd::backends::U64x8Backend, simd::backends::U8x16Backend, simd::backends::U8x16Widen, simd::backends::U8x32Backend, simd::backends::U8x32Widen, simd::backends::U8x64Backend, simd::backends::U8x64Widen
 prelude::f32x16<T>: Add, Add<f32>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Debug, Div, Div<f32>, DivAssign, Index<usize>, IndexMut<usize>, Mul, Mul<f32>, MulAssign, Neg, Sub, Sub<f32>, SubAssign
 prelude::f32x4<T>: Add, Add<f32>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Debug, Div, Div<f32>, DivAssign, Index<usize>, IndexMut<usize>, Mul, Mul<f32>, MulAssign, Neg, Sub, Sub<f32>, SubAssign
 prelude::f32x8<T>: Add, Add<f32>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Debug, Div, Div<f32>, DivAssign, Index<usize>, IndexMut<usize>, Mul, Mul<f32>, MulAssign, Neg, Sub, Sub<f32>, SubAssign
@@ -2247,33 +2394,33 @@ impl<T: core::marker::Copy + simd::backends::U8x64Backend> core::marker::Copy fo
 ## auto traits
 
 10 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
-prelude::f32x16<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::f32x4<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::f32x8<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::f64x2<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::f64x4<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::f64x8<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::i16x16<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::i16x32<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::i16x8<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::i32x16<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::i32x4<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::i32x8<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::i64x2<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::i64x4<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::i64x8<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::i8x16<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::i8x32<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::i8x64<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::u16x16<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::u16x32<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::u16x8<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::u32x16<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::u32x4<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::u32x8<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::u64x2<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::u64x4<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::u64x8<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::u8x16<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::u8x32<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
-prelude::u8x64<T>: !Freeze !RefUnwindSafe !Unpin !UnwindSafe
+prelude::f32x16<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::f32x4<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::f32x8<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::f64x2<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::f64x4<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::f64x8<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::i16x16<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::i16x32<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::i16x8<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::i32x16<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::i32x4<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::i32x8<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::i64x2<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::i64x4<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::i64x8<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::i8x16<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::i8x32<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::i8x64<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::u16x16<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::u16x32<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::u16x8<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::u32x16<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::u32x4<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::u32x8<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::u64x2<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::u64x4<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::u64x8<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::u8x16<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::u8x32<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe
+prelude::u8x64<T>: !Freeze !RefUnwindSafe !Send !Sync !Unpin !UnwindSafe

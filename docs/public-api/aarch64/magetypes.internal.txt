@@ -11,17 +11,16 @@
 #
 #   pub modules                                 2
 #   pub types (struct/enum/trait/alias)         1
-#   pub macros                                  8
 #   free functions                             28
 #   trait roster entries (type × trait)        10
 #
 # per-module pub lines:
-#   (root)                           10
+#   (root)                            2
 #   bypass_adversarial                1
 #   nostd_math                       20
 #   simd                              8
 
-## items (32 lines)
+## items (24 lines)
 
 pub fn nostd_math::cbrt_lowp_f32(f32) -> f32
 pub fn nostd_math::cbrt_midp_f32(f32) -> f32
@@ -44,14 +43,6 @@ pub fn nostd_math::roundf(f32) -> f32
 pub fn nostd_math::sqrt(f64) -> f64
 pub fn nostd_math::sqrtf(f32) -> f32
 pub fn simd::i8x1::assert_fields_are_eq(&self) [also: simd::i16x1, simd::i32x1, simd::i64x1, simd::u16x1, simd::u32x1, simd::u64x1, simd::u8x1]
-pub macro impl_arithmetic_ops!
-pub macro impl_assign_ops!
-pub macro impl_bitwise_ops!
-pub macro impl_float_assign_ops!
-pub macro impl_index!
-pub macro impl_int_arithmetic_ops!
-pub macro impl_int_mul_op!
-pub macro impl_neg!
 pub mod bypass_adversarial
 pub mod nostd_math
 pub struct bypass_adversarial::BypassAdversarialProofs

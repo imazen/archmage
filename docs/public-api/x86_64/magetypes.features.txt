@@ -12,7 +12,7 @@
 #   pub types (struct/enum/trait/alias)        50
 #   pub consts/statics                         40
 #   free functions                             24
-#   trait roster entries (type × trait)        43
+#   trait roster entries (type × trait)        55
 #
 # per-module pub lines:
 #   (root)                           40
@@ -97,8 +97,8 @@ pub type simd::v4x::u8xN = prelude::u8x64<archmage::tokens::generated::x86::X64V
 ## trait impls (3 types)
 
 archmage::tokens::generated::x86::Avx512Fp16Token: prelude::F32x8FromHalves, simd::backends::F32x4Backend, simd::backends::F32x8Backend
-archmage::tokens::generated::x86::X64V4Token: SimdTypes, prelude::F32x16FromHalves, prelude::F32x8FromHalves, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x8Backend, simd::backends::F64x8Backend, simd::backends::I16x32Backend, simd::backends::I32x16Backend, simd::backends::I64x8Backend, simd::backends::I8x64Backend, simd::backends::U16x32Backend, simd::backends::U32x16Backend, simd::backends::U64x8Backend, simd::backends::U8x64Backend
-archmage::tokens::generated::x86::X64V4xToken: SimdTypes, prelude::F32x16FromHalves, prelude::F32x8FromHalves, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x8Backend, simd::backends::F64x8Backend, simd::backends::I16x32Backend, simd::backends::I32x16Backend, simd::backends::I64x8Backend, simd::backends::I8x64Backend, simd::backends::U16x32Backend, simd::backends::U32x16Backend, simd::backends::U64x8Backend, simd::backends::U8x64Backend, simd::backends::i16x32PopcntBackend, simd::backends::i32x16PopcntBackend, simd::backends::i64x8PopcntBackend, simd::backends::i8x64PopcntBackend, simd::backends::u16x32PopcntBackend, simd::backends::u32x16PopcntBackend, simd::backends::u64x8PopcntBackend, simd::backends::u8x64PopcntBackend
+archmage::tokens::generated::x86::X64V4Token: SimdTypes, prelude::F32x16FromHalves, prelude::F32x8FromHalves, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x8Backend, simd::backends::F64x8Backend, simd::backends::I16x32Backend, simd::backends::I16x32Narrow, simd::backends::I16x32Widen, simd::backends::I32x16Backend, simd::backends::I32x16Narrow, simd::backends::I64x8Backend, simd::backends::I8x64Backend, simd::backends::I8x64Widen, simd::backends::U16x32Backend, simd::backends::U16x32Widen, simd::backends::U32x16Backend, simd::backends::U64x8Backend, simd::backends::U8x64Backend, simd::backends::U8x64Widen
+archmage::tokens::generated::x86::X64V4xToken: SimdTypes, prelude::F32x16FromHalves, prelude::F32x8FromHalves, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x8Backend, simd::backends::F64x8Backend, simd::backends::I16x32Backend, simd::backends::I16x32Narrow, simd::backends::I16x32Widen, simd::backends::I32x16Backend, simd::backends::I32x16Narrow, simd::backends::I64x8Backend, simd::backends::I8x64Backend, simd::backends::I8x64Widen, simd::backends::U16x32Backend, simd::backends::U16x32Widen, simd::backends::U32x16Backend, simd::backends::U64x8Backend, simd::backends::U8x64Backend, simd::backends::U8x64Widen, simd::backends::i16x32PopcntBackend, simd::backends::i32x16PopcntBackend, simd::backends::i64x8PopcntBackend, simd::backends::i8x64PopcntBackend, simd::backends::u16x32PopcntBackend, simd::backends::u32x16PopcntBackend, simd::backends::u64x8PopcntBackend, simd::backends::u8x64PopcntBackend
 
 ## removed by features (40 lines)
 

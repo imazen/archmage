@@ -11,20 +11,19 @@
 #
 #   pub modules                                 1
 #   pub consts/statics                         18
-#   pub macros                                  5
 #   free functions                              1
 #   inherent methods                           23
 #   re-exports                                  2
 #   trait roster entries (type × trait)        19
 #
 # per-module pub lines:
-#   (root)                            8
+#   (root)                            3
 #   __private                         1
 #   prelude                           2
 #   testing                           1
 #   tokens                           38
 
-## items (50 lines)
+## items (45 lines)
 
 pub const tokens::Arm64V2Token::__ARCHMAGE_TIER_TAG: u32
 pub const tokens::Arm64V3Token::__ARCHMAGE_TIER_TAG: u32
@@ -47,7 +46,7 @@ pub const tokens::X64V4xToken::__ARCHMAGE_TIER_TAG: u32
 pub fn SimdToken::try_new() -> core::option::Option<Self>
 pub fn __private::assert_archmage_token<T: tokens::SimdToken>(&T)
 pub fn prelude::SimdToken::try_new() -> core::option::Option<Self>
-pub fn testing::CompileTimePolicy::assert_receiver_is_total_eq(&self)
+pub fn testing::CompileTimePolicy::assert_fields_are_eq(&self)
 pub fn tokens::Arm64V2Token::try_new() -> core::option::Option<Self>
 pub fn tokens::Arm64V3Token::try_new() -> core::option::Option<Self>
 pub fn tokens::Avx512Fp16Token::try_new() -> core::option::Option<Self>
@@ -55,7 +54,7 @@ pub fn tokens::NeonAesToken::try_new() -> core::option::Option<Self>
 pub fn tokens::NeonCrcToken::try_new() -> core::option::Option<Self>
 pub fn tokens::NeonSha3Token::try_new() -> core::option::Option<Self>
 pub fn tokens::NeonToken::try_new() -> core::option::Option<Self>
-pub fn tokens::ScalarToken::assert_receiver_is_total_eq(&self)
+pub fn tokens::ScalarToken::assert_fields_are_eq(&self)
 pub fn tokens::ScalarToken::try_new() -> core::option::Option<Self>
 pub fn tokens::SimdToken::try_new() -> core::option::Option<Self>
 pub fn tokens::Wasm128RelaxedToken::try_new() -> core::option::Option<Self>
@@ -68,11 +67,6 @@ pub fn tokens::X64V3GfniCryptoToken::try_new() -> core::option::Option<Self>
 pub fn tokens::X64V3Token::try_new() -> core::option::Option<Self>
 pub fn tokens::X64V4Token::try_new() -> core::option::Option<Self>
 pub fn tokens::X64V4xToken::try_new() -> core::option::Option<Self>
-pub macro __impl_aarch64_apple_or_runtime_check!
-pub macro __impl_aarch64_feature_check!
-pub macro __impl_aarch64_runtime_only_check!
-pub macro __impl_feature_check!
-pub macro __impl_runtime_only_check!
 pub mod __private
 pub use prelude::simd_fn
 pub use simd_fn
