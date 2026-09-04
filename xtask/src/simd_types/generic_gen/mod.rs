@@ -62,6 +62,21 @@ pub(crate) fn has_shr_arithmetic(elem: ElementType) -> bool {
     )
 }
 
+/// Whether the type carries the uniform-variable-shift and
+/// saturating-arithmetic families.
+///
+/// 8- and 16-bit integers only. Saturating add/sub has no 32/64-bit form on
+/// x86 (`_mm*_adds_epi32` does not exist at any tier) or on wasm128, so
+/// exposing it above 16 bits would be a portability lie; the uniform shifts
+/// ship on the same type set so the two families stay reviewable together.
+/// See `docs/CROSS-ISA-INT-PRIMITIVES.md`.
+pub(crate) fn has_uniform_shifts(elem: ElementType) -> bool {
+    matches!(
+        elem,
+        ElementType::I8 | ElementType::U8 | ElementType::I16 | ElementType::U16
+    )
+}
+
 /// Whether the type has all_true/any_true/bitmask (int only).
 pub(crate) fn has_boolean(elem: ElementType) -> bool {
     !elem.is_float()

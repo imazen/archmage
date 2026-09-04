@@ -89,6 +89,10 @@ harness = false
 name = "nostd_math_perf"
 harness = false
 
+[[bench]]
+name = "int_uniform_shift"
+harness = false
+
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]

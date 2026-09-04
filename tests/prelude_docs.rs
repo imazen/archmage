@@ -163,8 +163,13 @@ mod platform_intrinsic_tests {
 
     #[test]
     fn m256_type_accessible() {
-        // __m256 comes from core::arch::x86_64 via prelude
-        let _: __m256 = unsafe { _mm256_setzero_ps() };
+        // __m256 comes from core::arch::x86_64 via the prelude. Name the type
+        // only — the old unconditional `_mm256_setzero_ps()` executed an AVX
+        // `vxorps` on every x86_64, which is a SIGILL on pre-AVX hardware
+        // (caught by the SDE -nhm lane the moment it started propagating
+        // failures). Executing intrinsics belongs behind `summon()`.
+        fn _takes_m256(_: __m256) {}
+        assert_eq!(core::mem::size_of::<__m256>(), 32);
     }
 
     #[arcane]

@@ -129,10 +129,21 @@ fn f64_recip_rsqrt_is_full_precision() {
     #[cfg(target_arch = "x86_64")]
     {
         use archmage::X64V3Token;
-        let v3 = X64V3Token::summon().expect("x86_64 baseline");
-        check_f64_full!(f64x2, v3, X64V3Token, 2, "f64x2<V3>", xs);
-        check_f64_full!(f64x4, v3, X64V3Token, 4, "f64x4<V3>", xs);
-        check_f64_full!(f64x8, v3, X64V3Token, 8, "f64x8<V3 polyfill>", xs);
+        // V3 is AVX2+FMA (Haswell+), NOT the x86_64 baseline — the old
+        // `.expect("x86_64 baseline")` here panicked on SSE-only hosts
+        // (SDE -nhm). Skip honestly when the features are genuinely absent,
+        // fail loudly if summon() lies about a capable host.
+        match X64V3Token::summon() {
+            Some(v3) => {
+                check_f64_full!(f64x2, v3, X64V3Token, 2, "f64x2<V3>", xs);
+                check_f64_full!(f64x4, v3, X64V3Token, 4, "f64x4<V3>", xs);
+                check_f64_full!(f64x8, v3, X64V3Token, 8, "f64x8<V3 polyfill>", xs);
+            }
+            None => assert!(
+                !std::arch::is_x86_feature_detected!("avx2"),
+                "host reports AVX2 but X64V3Token did not summon"
+            ),
+        }
         // The native f64x8 backend for X64V4Token only exists with the
         // avx512 feature (impls/x86_v4.rs is cfg-gated on it); without the
         // gate this test does not even compile under default features.
@@ -177,9 +188,17 @@ fn f32_approx_holds_floor() {
     #[cfg(target_arch = "x86_64")]
     {
         use archmage::X64V3Token;
-        let v3 = X64V3Token::summon().expect("x86_64 baseline");
-        check_f32_approx!(f32x4, v3, X64V3Token, 4, "f32x4<V3>", xs);
-        check_f32_approx!(f32x8, v3, X64V3Token, 8, "f32x8<V3>", xs);
+        // Same as above: V3 is AVX2+FMA, not the x86_64 baseline.
+        match X64V3Token::summon() {
+            Some(v3) => {
+                check_f32_approx!(f32x4, v3, X64V3Token, 4, "f32x4<V3>", xs);
+                check_f32_approx!(f32x8, v3, X64V3Token, 8, "f32x8<V3>", xs);
+            }
+            None => assert!(
+                !std::arch::is_x86_feature_detected!("avx2"),
+                "host reports AVX2 but X64V3Token did not summon"
+            ),
+        }
     }
     #[cfg(target_arch = "aarch64")]
     {

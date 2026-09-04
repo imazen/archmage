@@ -690,6 +690,48 @@ impl I8x64Backend for archmage::X64V4Token {
     }
 
     #[inline(always)]
+    fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe {
+            let shifted = _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
+            let mask = _mm512_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
+            _mm512_and_si512(shifted, mask)
+        }
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe {
+            let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
+            let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
+            _mm512_and_si512(shifted, mask)
+        }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe {
+            let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
+            let byte_mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
+            let logical = _mm512_and_si512(shifted, byte_mask);
+            let sign = _mm512_movm_epi8(_mm512_cmplt_epi8_mask(a, _mm512_setzero_si512()));
+            // `count.min(8)` saturates the fill to the whole byte, which
+            // is the contracted sign fill for out-of-range counts.
+            let fill = _mm512_set1_epi8(((0xFF00u16 >> count.min(8)) & 0xFF) as u8 as i8);
+            _mm512_or_si512(logical, _mm512_and_si512(sign, fill))
+        }
+    }
+
+    #[inline(always)]
+    fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe { _mm512_adds_epi8(a, b) }
+    }
+
+    #[inline(always)]
+    fn saturating_sub(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe { _mm512_subs_epi8(a, b) }
+    }
+
+    #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
         unsafe {
             let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
@@ -897,6 +939,43 @@ impl U8x64Backend for archmage::X64V4Token {
     }
 
     #[inline(always)]
+    fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe {
+            let shifted = _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
+            let mask = _mm512_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
+            _mm512_and_si512(shifted, mask)
+        }
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe {
+            let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
+            let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
+            _mm512_and_si512(shifted, mask)
+        }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe {
+            let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
+            let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
+            _mm512_and_si512(shifted, mask)
+        }
+    }
+
+    #[inline(always)]
+    fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe { _mm512_adds_epu8(a, b) }
+    }
+
+    #[inline(always)]
+    fn saturating_sub(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe { _mm512_subs_epu8(a, b) }
+    }
+
+    #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
         unsafe {
             let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
@@ -1094,6 +1173,31 @@ impl I16x32Backend for archmage::X64V4Token {
     }
 
     #[inline(always)]
+    fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_sra_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe { _mm512_adds_epi16(a, b) }
+    }
+
+    #[inline(always)]
+    fn saturating_sub(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe { _mm512_subs_epi16(a, b) }
+    }
+
+    #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
         unsafe {
             let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
@@ -1285,6 +1389,31 @@ impl U16x32Backend for archmage::X64V4Token {
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {
         unsafe { _mm512_srl_epi16(a, _mm_cvtsi32_si128(N)) }
+    }
+
+    #[inline(always)]
+    fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe { _mm512_adds_epu16(a, b) }
+    }
+
+    #[inline(always)]
+    fn saturating_sub(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe { _mm512_subs_epu16(a, b) }
     }
 
     #[inline(always)]
@@ -2745,6 +2874,48 @@ impl I8x64Backend for archmage::X64V4xToken {
     }
 
     #[inline(always)]
+    fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe {
+            let shifted = _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
+            let mask = _mm512_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
+            _mm512_and_si512(shifted, mask)
+        }
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe {
+            let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
+            let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
+            _mm512_and_si512(shifted, mask)
+        }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe {
+            let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
+            let byte_mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
+            let logical = _mm512_and_si512(shifted, byte_mask);
+            let sign = _mm512_movm_epi8(_mm512_cmplt_epi8_mask(a, _mm512_setzero_si512()));
+            // `count.min(8)` saturates the fill to the whole byte, which
+            // is the contracted sign fill for out-of-range counts.
+            let fill = _mm512_set1_epi8(((0xFF00u16 >> count.min(8)) & 0xFF) as u8 as i8);
+            _mm512_or_si512(logical, _mm512_and_si512(sign, fill))
+        }
+    }
+
+    #[inline(always)]
+    fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe { _mm512_adds_epi8(a, b) }
+    }
+
+    #[inline(always)]
+    fn saturating_sub(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe { _mm512_subs_epi8(a, b) }
+    }
+
+    #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
         unsafe {
             let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
@@ -2952,6 +3123,43 @@ impl U8x64Backend for archmage::X64V4xToken {
     }
 
     #[inline(always)]
+    fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe {
+            let shifted = _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
+            let mask = _mm512_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
+            _mm512_and_si512(shifted, mask)
+        }
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe {
+            let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
+            let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
+            _mm512_and_si512(shifted, mask)
+        }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe {
+            let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
+            let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
+            _mm512_and_si512(shifted, mask)
+        }
+    }
+
+    #[inline(always)]
+    fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe { _mm512_adds_epu8(a, b) }
+    }
+
+    #[inline(always)]
+    fn saturating_sub(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe { _mm512_subs_epu8(a, b) }
+    }
+
+    #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
         unsafe {
             let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
@@ -3149,6 +3357,31 @@ impl I16x32Backend for archmage::X64V4xToken {
     }
 
     #[inline(always)]
+    fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_sra_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe { _mm512_adds_epi16(a, b) }
+    }
+
+    #[inline(always)]
+    fn saturating_sub(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe { _mm512_subs_epi16(a, b) }
+    }
+
+    #[inline(always)]
     fn all_true(self, a: __m512i) -> bool {
         unsafe {
             let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
@@ -3340,6 +3573,31 @@ impl U16x32Backend for archmage::X64V4xToken {
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: __m512i) -> __m512i {
         unsafe { _mm512_srl_epi16(a, _mm_cvtsi32_si128(N)) }
+    }
+
+    #[inline(always)]
+    fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
+        unsafe { _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32)) }
+    }
+
+    #[inline(always)]
+    fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe { _mm512_adds_epu16(a, b) }
+    }
+
+    #[inline(always)]
+    fn saturating_sub(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe { _mm512_subs_epu16(a, b) }
     }
 
     #[inline(always)]

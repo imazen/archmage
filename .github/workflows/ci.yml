@@ -743,7 +743,12 @@ jobs:
         run: echo "$SDE_PATH" >> $GITHUB_PATH
 
       - name: Build tests
-        run: cargo test --features "${{ env.FEATURES }}" --no-run
+        # The bare form builds only the root crate's tests — magetypes (where
+        # the SIMD types and their backend-arm tests live) must be built
+        # explicitly or the emulated tiers never exercise it at all.
+        run: |
+          cargo test --features "${{ env.FEATURES }}" --no-run
+          cargo test -p magetypes --features "std avx512" --no-run
 
       - name: Run tests under SDE (${{ matrix.cpu.name }})
         run: |
@@ -753,19 +758,30 @@ jobs:
           sde64 ${{ matrix.cpu.flag }} -- $TEST_BIN
 
       - name: Run integration tests under SDE
+        # Failures MUST propagate. This loop ran with `|| true` from its
+        # introduction, which turned the whole job into a smoke test: a
+        # failing binary under -skx/-icl kept the check green. The floor
+        # miscalibration in int_uniform_shift_saturating's v4 arm sailed
+        # through exactly this hole.
         run: |
+          fails=""
           for test in target/debug/deps/*-*; do
             if [ -x "$test" ] && [ -f "$test" ]; then
               name=$(basename "$test")
               # Skip macro_expand — it spawns cargo-expand subprocesses (not CPU-specific)
               # Skip compile_fail — trybuild spawns rustc (not CPU-specific)
+              # Skip lib*.so — proc-macro dylibs are not test binaries
               case "$name" in
-                macro_expand-*|compile_fail-*) echo "Skipping: $name (not CPU-specific)"; continue ;;
+                macro_expand-*|compile_fail-*|lib*.so) echo "Skipping: $name (not CPU-specific)"; continue ;;
               esac
               echo "Running: $test"
-              sde64 ${{ matrix.cpu.flag }} -- "$test" || true
+              sde64 ${{ matrix.cpu.flag }} -- "$test" || fails="$fails $name"
             fi
           done
+          if [ -n "$fails" ]; then
+            echo "::error::Tests failed under SDE ${{ matrix.cpu.flag }}:$fails"
+            exit 1
+          fi
 
       - name: CPU survey
         if: always()
