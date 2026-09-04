@@ -4542,3 +4542,227 @@ impl F32x16Convert for archmage::X64V4xToken {
         unsafe { _mm512_cvtepi32_ps(a) }
     }
 }
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "x86_64")]
+impl U8x64Widen for archmage::X64V4Token {
+    #[inline(always)]
+    fn widen_low_u8_to_u16(self, a: __m512i) -> __m512i {
+        unsafe { _mm512_cvtepu8_epi16(_mm512_castsi512_si256(a)) }
+    }
+
+    #[inline(always)]
+    fn widen_high_u8_to_u16(self, a: __m512i) -> __m512i {
+        unsafe { _mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64::<1>(a)) }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "x86_64")]
+impl U16x32Widen for archmage::X64V4Token {
+    #[inline(always)]
+    fn widen_low_u16_to_u32(self, a: __m512i) -> __m512i {
+        unsafe { _mm512_cvtepu16_epi32(_mm512_castsi512_si256(a)) }
+    }
+
+    #[inline(always)]
+    fn widen_high_u16_to_u32(self, a: __m512i) -> __m512i {
+        unsafe { _mm512_cvtepu16_epi32(_mm512_extracti64x4_epi64::<1>(a)) }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "x86_64")]
+impl I8x64Widen for archmage::X64V4Token {
+    #[inline(always)]
+    fn widen_low_i8_to_i16(self, a: __m512i) -> __m512i {
+        unsafe { _mm512_cvtepi8_epi16(_mm512_castsi512_si256(a)) }
+    }
+
+    #[inline(always)]
+    fn widen_high_i8_to_i16(self, a: __m512i) -> __m512i {
+        unsafe { _mm512_cvtepi8_epi16(_mm512_extracti64x4_epi64::<1>(a)) }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "x86_64")]
+impl I16x32Widen for archmage::X64V4Token {
+    #[inline(always)]
+    fn widen_low_i16_to_i32(self, a: __m512i) -> __m512i {
+        unsafe { _mm512_cvtepi16_epi32(_mm512_castsi512_si256(a)) }
+    }
+
+    #[inline(always)]
+    fn widen_high_i16_to_i32(self, a: __m512i) -> __m512i {
+        unsafe { _mm512_cvtepi16_epi32(_mm512_extracti64x4_epi64::<1>(a)) }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "x86_64")]
+impl I16x32Narrow for archmage::X64V4Token {
+    #[inline(always)]
+    fn narrow_saturating_i16_to_i8(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe {
+            _mm512_inserti64x4::<1>(
+                _mm512_castsi256_si512(_mm512_cvtsepi16_epi8(a)),
+                _mm512_cvtsepi16_epi8(b),
+            )
+        }
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i16_to_u8(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe {
+            // Clamp at zero so the unsigned-source instruction sees
+            // the same value the signed source held; above the
+            // clamp both readings agree.
+            let zero = _mm512_setzero_si512();
+            _mm512_inserti64x4::<1>(
+                _mm512_castsi256_si512(_mm512_cvtusepi16_epi8(_mm512_max_epi16(a, zero))),
+                _mm512_cvtusepi16_epi8(_mm512_max_epi16(b, zero)),
+            )
+        }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "x86_64")]
+impl I32x16Narrow for archmage::X64V4Token {
+    #[inline(always)]
+    fn narrow_saturating_i32_to_i16(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe {
+            _mm512_inserti64x4::<1>(
+                _mm512_castsi256_si512(_mm512_cvtsepi32_epi16(a)),
+                _mm512_cvtsepi32_epi16(b),
+            )
+        }
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i32_to_u16(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe {
+            // Clamp at zero so the unsigned-source instruction sees
+            // the same value the signed source held; above the
+            // clamp both readings agree.
+            let zero = _mm512_setzero_si512();
+            _mm512_inserti64x4::<1>(
+                _mm512_castsi256_si512(_mm512_cvtusepi32_epi16(_mm512_max_epi32(a, zero))),
+                _mm512_cvtusepi32_epi16(_mm512_max_epi32(b, zero)),
+            )
+        }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "x86_64")]
+impl U8x64Widen for archmage::X64V4xToken {
+    #[inline(always)]
+    fn widen_low_u8_to_u16(self, a: __m512i) -> __m512i {
+        unsafe { _mm512_cvtepu8_epi16(_mm512_castsi512_si256(a)) }
+    }
+
+    #[inline(always)]
+    fn widen_high_u8_to_u16(self, a: __m512i) -> __m512i {
+        unsafe { _mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64::<1>(a)) }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "x86_64")]
+impl U16x32Widen for archmage::X64V4xToken {
+    #[inline(always)]
+    fn widen_low_u16_to_u32(self, a: __m512i) -> __m512i {
+        unsafe { _mm512_cvtepu16_epi32(_mm512_castsi512_si256(a)) }
+    }
+
+    #[inline(always)]
+    fn widen_high_u16_to_u32(self, a: __m512i) -> __m512i {
+        unsafe { _mm512_cvtepu16_epi32(_mm512_extracti64x4_epi64::<1>(a)) }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "x86_64")]
+impl I8x64Widen for archmage::X64V4xToken {
+    #[inline(always)]
+    fn widen_low_i8_to_i16(self, a: __m512i) -> __m512i {
+        unsafe { _mm512_cvtepi8_epi16(_mm512_castsi512_si256(a)) }
+    }
+
+    #[inline(always)]
+    fn widen_high_i8_to_i16(self, a: __m512i) -> __m512i {
+        unsafe { _mm512_cvtepi8_epi16(_mm512_extracti64x4_epi64::<1>(a)) }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "x86_64")]
+impl I16x32Widen for archmage::X64V4xToken {
+    #[inline(always)]
+    fn widen_low_i16_to_i32(self, a: __m512i) -> __m512i {
+        unsafe { _mm512_cvtepi16_epi32(_mm512_castsi512_si256(a)) }
+    }
+
+    #[inline(always)]
+    fn widen_high_i16_to_i32(self, a: __m512i) -> __m512i {
+        unsafe { _mm512_cvtepi16_epi32(_mm512_extracti64x4_epi64::<1>(a)) }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "x86_64")]
+impl I16x32Narrow for archmage::X64V4xToken {
+    #[inline(always)]
+    fn narrow_saturating_i16_to_i8(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe {
+            _mm512_inserti64x4::<1>(
+                _mm512_castsi256_si512(_mm512_cvtsepi16_epi8(a)),
+                _mm512_cvtsepi16_epi8(b),
+            )
+        }
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i16_to_u8(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe {
+            // Clamp at zero so the unsigned-source instruction sees
+            // the same value the signed source held; above the
+            // clamp both readings agree.
+            let zero = _mm512_setzero_si512();
+            _mm512_inserti64x4::<1>(
+                _mm512_castsi256_si512(_mm512_cvtusepi16_epi8(_mm512_max_epi16(a, zero))),
+                _mm512_cvtusepi16_epi8(_mm512_max_epi16(b, zero)),
+            )
+        }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "x86_64")]
+impl I32x16Narrow for archmage::X64V4xToken {
+    #[inline(always)]
+    fn narrow_saturating_i32_to_i16(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe {
+            _mm512_inserti64x4::<1>(
+                _mm512_castsi256_si512(_mm512_cvtsepi32_epi16(a)),
+                _mm512_cvtsepi32_epi16(b),
+            )
+        }
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i32_to_u16(self, a: __m512i, b: __m512i) -> __m512i {
+        unsafe {
+            // Clamp at zero so the unsigned-source instruction sees
+            // the same value the signed source held; above the
+            // clamp both readings agree.
+            let zero = _mm512_setzero_si512();
+            _mm512_inserti64x4::<1>(
+                _mm512_castsi256_si512(_mm512_cvtusepi32_epi16(_mm512_max_epi32(a, zero))),
+                _mm512_cvtusepi32_epi16(_mm512_max_epi32(b, zero)),
+            )
+        }
+    }
+}

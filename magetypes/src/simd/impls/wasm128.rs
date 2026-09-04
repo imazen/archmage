@@ -3655,6 +3655,318 @@ impl U64x4Bitcast for archmage::Wasm128Token {
         a
     }
 }
+
+#[cfg(target_arch = "wasm32")]
+impl U8x16Widen for archmage::Wasm128Token {
+    #[inline(always)]
+    fn widen_low_u8_to_u16(self, a: v128) -> v128 {
+        u16x8_extend_low_u8x16(a)
+    }
+
+    #[inline(always)]
+    fn widen_high_u8_to_u16(self, a: v128) -> v128 {
+        u16x8_extend_high_u8x16(a)
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl U16x8Widen for archmage::Wasm128Token {
+    #[inline(always)]
+    fn widen_low_u16_to_u32(self, a: v128) -> v128 {
+        u32x4_extend_low_u16x8(a)
+    }
+
+    #[inline(always)]
+    fn widen_high_u16_to_u32(self, a: v128) -> v128 {
+        u32x4_extend_high_u16x8(a)
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl I8x16Widen for archmage::Wasm128Token {
+    #[inline(always)]
+    fn widen_low_i8_to_i16(self, a: v128) -> v128 {
+        i16x8_extend_low_i8x16(a)
+    }
+
+    #[inline(always)]
+    fn widen_high_i8_to_i16(self, a: v128) -> v128 {
+        i16x8_extend_high_i8x16(a)
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl I16x8Widen for archmage::Wasm128Token {
+    #[inline(always)]
+    fn widen_low_i16_to_i32(self, a: v128) -> v128 {
+        i32x4_extend_low_i16x8(a)
+    }
+
+    #[inline(always)]
+    fn widen_high_i16_to_i32(self, a: v128) -> v128 {
+        i32x4_extend_high_i16x8(a)
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl U8x32Widen for archmage::Wasm128Token {
+    #[inline(always)]
+    fn widen_low_u8_to_u16(self, a: [v128; 2]) -> [v128; 2] {
+        [u16x8_extend_low_u8x16(a[0]), u16x8_extend_high_u8x16(a[0])]
+    }
+
+    #[inline(always)]
+    fn widen_high_u8_to_u16(self, a: [v128; 2]) -> [v128; 2] {
+        [u16x8_extend_low_u8x16(a[1]), u16x8_extend_high_u8x16(a[1])]
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl U16x16Widen for archmage::Wasm128Token {
+    #[inline(always)]
+    fn widen_low_u16_to_u32(self, a: [v128; 2]) -> [v128; 2] {
+        [u32x4_extend_low_u16x8(a[0]), u32x4_extend_high_u16x8(a[0])]
+    }
+
+    #[inline(always)]
+    fn widen_high_u16_to_u32(self, a: [v128; 2]) -> [v128; 2] {
+        [u32x4_extend_low_u16x8(a[1]), u32x4_extend_high_u16x8(a[1])]
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl I8x32Widen for archmage::Wasm128Token {
+    #[inline(always)]
+    fn widen_low_i8_to_i16(self, a: [v128; 2]) -> [v128; 2] {
+        [i16x8_extend_low_i8x16(a[0]), i16x8_extend_high_i8x16(a[0])]
+    }
+
+    #[inline(always)]
+    fn widen_high_i8_to_i16(self, a: [v128; 2]) -> [v128; 2] {
+        [i16x8_extend_low_i8x16(a[1]), i16x8_extend_high_i8x16(a[1])]
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl I16x16Widen for archmage::Wasm128Token {
+    #[inline(always)]
+    fn widen_low_i16_to_i32(self, a: [v128; 2]) -> [v128; 2] {
+        [i32x4_extend_low_i16x8(a[0]), i32x4_extend_high_i16x8(a[0])]
+    }
+
+    #[inline(always)]
+    fn widen_high_i16_to_i32(self, a: [v128; 2]) -> [v128; 2] {
+        [i32x4_extend_low_i16x8(a[1]), i32x4_extend_high_i16x8(a[1])]
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl I16x8Narrow for archmage::Wasm128Token {
+    #[inline(always)]
+    fn narrow_saturating_i16_to_i8(self, a: v128, b: v128) -> v128 {
+        i8x16_narrow_i16x8(a, b)
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i16_to_u8(self, a: v128, b: v128) -> v128 {
+        u8x16_narrow_i16x8(a, b)
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl I32x4Narrow for archmage::Wasm128Token {
+    #[inline(always)]
+    fn narrow_saturating_i32_to_i16(self, a: v128, b: v128) -> v128 {
+        i16x8_narrow_i32x4(a, b)
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i32_to_u16(self, a: v128, b: v128) -> v128 {
+        u16x8_narrow_i32x4(a, b)
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl I16x16Narrow for archmage::Wasm128Token {
+    #[inline(always)]
+    fn narrow_saturating_i16_to_i8(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            i8x16_narrow_i16x8(a[0], a[1]),
+            i8x16_narrow_i16x8(b[0], b[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i16_to_u8(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            u8x16_narrow_i16x8(a[0], a[1]),
+            u8x16_narrow_i16x8(b[0], b[1]),
+        ]
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl I32x8Narrow for archmage::Wasm128Token {
+    #[inline(always)]
+    fn narrow_saturating_i32_to_i16(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            i16x8_narrow_i32x4(a[0], a[1]),
+            i16x8_narrow_i32x4(b[0], b[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i32_to_u16(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            u16x8_narrow_i32x4(a[0], a[1]),
+            u16x8_narrow_i32x4(b[0], b[1]),
+        ]
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "wasm32")]
+impl U8x64Widen for archmage::Wasm128Token {
+    #[inline(always)]
+    fn widen_low_u8_to_u16(self, a: [v128; 4]) -> [v128; 4] {
+        [
+            u16x8_extend_low_u8x16(a[0]),
+            u16x8_extend_high_u8x16(a[0]),
+            u16x8_extend_low_u8x16(a[1]),
+            u16x8_extend_high_u8x16(a[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn widen_high_u8_to_u16(self, a: [v128; 4]) -> [v128; 4] {
+        [
+            u16x8_extend_low_u8x16(a[2]),
+            u16x8_extend_high_u8x16(a[2]),
+            u16x8_extend_low_u8x16(a[3]),
+            u16x8_extend_high_u8x16(a[3]),
+        ]
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "wasm32")]
+impl U16x32Widen for archmage::Wasm128Token {
+    #[inline(always)]
+    fn widen_low_u16_to_u32(self, a: [v128; 4]) -> [v128; 4] {
+        [
+            u32x4_extend_low_u16x8(a[0]),
+            u32x4_extend_high_u16x8(a[0]),
+            u32x4_extend_low_u16x8(a[1]),
+            u32x4_extend_high_u16x8(a[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn widen_high_u16_to_u32(self, a: [v128; 4]) -> [v128; 4] {
+        [
+            u32x4_extend_low_u16x8(a[2]),
+            u32x4_extend_high_u16x8(a[2]),
+            u32x4_extend_low_u16x8(a[3]),
+            u32x4_extend_high_u16x8(a[3]),
+        ]
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "wasm32")]
+impl I8x64Widen for archmage::Wasm128Token {
+    #[inline(always)]
+    fn widen_low_i8_to_i16(self, a: [v128; 4]) -> [v128; 4] {
+        [
+            i16x8_extend_low_i8x16(a[0]),
+            i16x8_extend_high_i8x16(a[0]),
+            i16x8_extend_low_i8x16(a[1]),
+            i16x8_extend_high_i8x16(a[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn widen_high_i8_to_i16(self, a: [v128; 4]) -> [v128; 4] {
+        [
+            i16x8_extend_low_i8x16(a[2]),
+            i16x8_extend_high_i8x16(a[2]),
+            i16x8_extend_low_i8x16(a[3]),
+            i16x8_extend_high_i8x16(a[3]),
+        ]
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "wasm32")]
+impl I16x32Widen for archmage::Wasm128Token {
+    #[inline(always)]
+    fn widen_low_i16_to_i32(self, a: [v128; 4]) -> [v128; 4] {
+        [
+            i32x4_extend_low_i16x8(a[0]),
+            i32x4_extend_high_i16x8(a[0]),
+            i32x4_extend_low_i16x8(a[1]),
+            i32x4_extend_high_i16x8(a[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn widen_high_i16_to_i32(self, a: [v128; 4]) -> [v128; 4] {
+        [
+            i32x4_extend_low_i16x8(a[2]),
+            i32x4_extend_high_i16x8(a[2]),
+            i32x4_extend_low_i16x8(a[3]),
+            i32x4_extend_high_i16x8(a[3]),
+        ]
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "wasm32")]
+impl I16x32Narrow for archmage::Wasm128Token {
+    #[inline(always)]
+    fn narrow_saturating_i16_to_i8(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        [
+            i8x16_narrow_i16x8(a[0], a[1]),
+            i8x16_narrow_i16x8(a[2], a[3]),
+            i8x16_narrow_i16x8(b[0], b[1]),
+            i8x16_narrow_i16x8(b[2], b[3]),
+        ]
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i16_to_u8(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        [
+            u8x16_narrow_i16x8(a[0], a[1]),
+            u8x16_narrow_i16x8(a[2], a[3]),
+            u8x16_narrow_i16x8(b[0], b[1]),
+            u8x16_narrow_i16x8(b[2], b[3]),
+        ]
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "wasm32")]
+impl I32x16Narrow for archmage::Wasm128Token {
+    #[inline(always)]
+    fn narrow_saturating_i32_to_i16(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        [
+            i16x8_narrow_i32x4(a[0], a[1]),
+            i16x8_narrow_i32x4(a[2], a[3]),
+            i16x8_narrow_i32x4(b[0], b[1]),
+            i16x8_narrow_i32x4(b[2], b[3]),
+        ]
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i32_to_u16(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        [
+            u16x8_narrow_i32x4(a[0], a[1]),
+            u16x8_narrow_i32x4(a[2], a[3]),
+            u16x8_narrow_i32x4(b[0], b[1]),
+            u16x8_narrow_i32x4(b[2], b[3]),
+        ]
+    }
+}
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "wasm32")]
 impl F32x16Backend for archmage::Wasm128Token {

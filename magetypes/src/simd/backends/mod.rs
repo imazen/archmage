@@ -133,6 +133,16 @@ pub use convert_int::{
     I8x16Bitcast, I8x32Bitcast, I16x8Bitcast, I16x16Bitcast, U64x2Bitcast, U64x4Bitcast,
 };
 
+mod widen_narrow;
+pub use widen_narrow::{
+    I8x16Widen, I8x32Widen, I16x8Narrow, I16x8Widen, I16x16Narrow, I16x16Widen, I32x4Narrow,
+    I32x8Narrow, U8x16Widen, U8x32Widen, U16x8Widen, U16x16Widen,
+};
+#[cfg(feature = "w512")]
+pub use widen_narrow::{
+    I8x64Widen, I16x32Narrow, I16x32Widen, I32x16Narrow, U8x64Widen, U16x32Widen,
+};
+
 /// x86-64 baseline (SSE2).
 pub type x64v1 = archmage::X64V1Token;
 /// x86-64 v2 (SSE4.2 + POPCNT).

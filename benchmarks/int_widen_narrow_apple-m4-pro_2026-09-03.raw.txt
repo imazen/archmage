@@ -1,0 +1,516 @@
+# int_widen_narrow — Apple M4 Pro — 2026-09-03
+# rustc 1.98.0 (88d9e12ae 2026-08-18), aarch64-apple-darwin
+# commit: 7c4a88f6 (measured at dfff95e0; rebased twice since, content identical)
+# command: cargo bench -p magetypes --bench int_widen_narrow
+# Two full runs, back to back, so the run-to-run spread of the
+# bandwidth-bound 1048576 row is visible rather than implied.
+
+################ RUN 1 ################
+
+  widen/scalar/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      1.28 ±0.00ns  [1.28–1.28]ns  
+
+  widen_via_array/scalar/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      1.28 ±0.00ns  [1.28–1.28]ns  
+
+  widen_chain/scalar/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      1.40 ±0.01ns  [1.40–1.41]ns  
+
+  widen_chain_via_array/scalar/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      0.72 ±0.00ns  [0.71–0.72]ns  
+
+  narrow/scalar/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      0.78 ±0.01ns  [0.78–0.78]ns  
+
+  narrow_via_array/scalar/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      0.79 ±0.02ns  [0.78–0.79]ns  
+
+  widen/scalar/256  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      10.3 ±0.0ns  [10.2–10.3]ns  
+
+  widen_via_array/scalar/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      6.80 ±0.01ns  [6.79–6.81]ns  
+
+  widen_chain/scalar/256  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      17.4 ±0.0ns  [17.4–17.5]ns  
+
+  widen_chain_via_array/scalar/256  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      11.9 ±0.0ns  [11.8–11.9]ns  
+
+  narrow/scalar/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      5.32 ±0.01ns  [5.30–5.35]ns  
+
+  narrow_via_array/scalar/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      5.28 ±0.10ns  [5.25–5.31]ns  
+
+  widen/scalar/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base
+  ╰─ _      165 ±0ns  [164–165]ns  
+
+  widen_via_array/scalar/4096  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      93.2 ±16.2ns  [90.0–96.6]ns  
+
+  widen_chain/scalar/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base
+  ╰─ _      365 ±4ns  [364–366]ns  
+
+  widen_chain_via_array/scalar/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base
+  ╰─ _      467 ±0ns  [467–467]ns  
+
+  narrow/scalar/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      76.1 ±0.1ns  [75.8–76.3]ns  
+
+  narrow_via_array/scalar/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      76.0 ±0.0ns  [76.0–76.1]ns  
+
+  widen/scalar/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      2.6 ±0.0µs  [2.6–2.6]µs   
+
+  widen_via_array/scalar/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      1.1 ±0.1µs  [1.1–1.1]µs   
+
+  widen_chain/scalar/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      5.9 ±0.0µs  [5.9–6.0]µs   
+
+  widen_chain_via_array/scalar/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      8.3 ±0.0µs  [8.3–8.3]µs   
+
+  narrow/scalar/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      1.1 ±0.0µs  [1.1–1.1]µs   
+
+  narrow_via_array/scalar/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      1.1 ±0.0µs  [1.1–1.1]µs   
+
+  widen/scalar/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      42.0 ±0.4µs  [41.8–42.1]µs   
+
+  widen_via_array/scalar/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      21.2 ±0.4µs  [21.1–21.3]µs   
+
+  widen_chain/scalar/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      95.9 ±0.2µs  [95.6–96.3]µs   
+
+  widen_chain_via_array/scalar/1048576  0 rounds ⚠ only 0 rounds
+             mean ±mad µs  95% CI vs base    
+  ╰─ _      133.1 ±0.6µs  [132.9–133.4]µs   
+
+  narrow/scalar/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      27.1 ±0.2µs  [27.0–27.1]µs   
+
+  narrow_via_array/scalar/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      27.3 ±0.0µs  [27.3–27.4]µs   
+
+  widen/neon/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      0.91 ±0.03ns  [0.90–0.92]ns  
+
+  widen_via_array/neon/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      1.05 ±0.01ns  [1.05–1.05]ns  
+
+  widen_chain/neon/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      0.56 ±0.00ns  [0.56–0.57]ns  
+
+  widen_chain_via_array/neon/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      1.67 ±0.00ns  [1.67–1.67]ns  
+
+  narrow/neon/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      0.94 ±0.01ns  [0.88–1.00]ns   [1]
+  [1] CV=34%
+
+  narrow_via_array/neon/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      0.81 ±0.05ns  [0.80–0.82]ns  
+
+  widen/neon/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      6.25 ±0.03ns  [6.16–6.33]ns  
+
+  widen_via_array/neon/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      6.66 ±0.01ns  [6.65–6.67]ns  
+
+  widen_chain/neon/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      8.98 ±0.04ns  [8.94–9.04]ns  
+
+  widen_chain_via_array/neon/256  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      22.7 ±0.0ns  [22.5–22.9]ns  
+
+  narrow/neon/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      4.98 ±0.38ns  [4.93–5.03]ns  
+
+  narrow_via_array/neon/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      5.20 ±0.01ns  [5.18–5.23]ns  
+
+  widen/neon/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      93.1 ±6.4ns  [89.1–97.4]ns   [1]
+  [1] CV=23%
+
+  widen_via_array/neon/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      86.3 ±2.0ns  [84.6–88.4]ns  
+
+  widen_chain/neon/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base
+  ╰─ _      442 ±5ns  [440–444]ns  
+
+  widen_chain_via_array/neon/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base
+  ╰─ _      505 ±0ns  [505–505]ns  
+
+  narrow/neon/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      75.7 ±0.0ns  [75.5–75.8]ns  
+
+  narrow_via_array/neon/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      76.2 ±0.0ns  [76.1–76.4]ns  
+
+  widen/neon/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      1.2 ±0.2µs  [1.2–1.2]µs   
+
+  widen_via_array/neon/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      1.2 ±0.1µs  [1.1–1.2]µs   
+
+  widen_chain/neon/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      8.3 ±0.0µs  [8.2–8.3]µs   
+
+  widen_chain_via_array/neon/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      8.3 ±0.0µs  [8.3–8.4]µs   
+
+  narrow/neon/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      1.1 ±0.0µs  [1.1–1.1]µs   
+
+  narrow_via_array/neon/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      1.1 ±0.0µs  [1.1–1.1]µs   
+
+  widen/neon/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      27.7 ±0.2µs  [27.6–27.7]µs   
+
+  widen_via_array/neon/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      27.6 ±0.2µs  [27.5–27.6]µs   
+
+  widen_chain/neon/1048576  0 rounds ⚠ only 0 rounds
+             mean ±mad µs  95% CI vs base    
+  ╰─ _      133.4 ±0.5µs  [133.1–133.6]µs   
+
+  widen_chain_via_array/neon/1048576  0 rounds ⚠ only 0 rounds
+             mean ±mad µs  95% CI vs base    
+  ╰─ _      133.9 ±0.5µs  [133.7–134.2]µs   
+
+  narrow/neon/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      26.7 ±0.1µs  [26.2–27.1]µs   
+
+  narrow_via_array/neon/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      21.4 ±1.3µs  [21.2–21.7]µs   
+[zenbench] calibration: int=0.31ns/iter mem_bw=104.2GiB/s mem_lat=8.4ns
+[zenbench] timer resolution: 41ns, loop overhead: 0.25ns/iter, TSC: 1.000 ticks/ns (invariant)
+[zenbench] results → /var/folders/sc/m9jbk0qj0jz4w09h7gg8v3p80000gn/T/zenbench/zenbench-1788479315-126b.txt
+
+═══════════════════════════════════════════════════════════════
+  zenbench  1788479315-126b
+  git: dfff95e089f714ad70aa8396b0353cf4de3e7570
+═══════════════════════════════════════════════════════════════
+
+  total: 0.0s
+═══════════════════════════════════════════════════════════════
+  filter: cargo bench -- --group=NAME  format: --format=llm|csv|md|json
+
+################ RUN 2 ################
+
+  widen/scalar/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      1.28 ±0.00ns  [1.28–1.28]ns  
+
+  widen_via_array/scalar/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      1.32 ±0.01ns  [1.29–1.35]ns  
+
+  widen_chain/scalar/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      1.42 ±0.00ns  [1.41–1.45]ns  
+
+  widen_chain_via_array/scalar/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      0.71 ±0.00ns  [0.71–0.71]ns  
+
+  narrow/scalar/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      0.78 ±0.02ns  [0.78–0.79]ns  
+
+  narrow_via_array/scalar/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      0.78 ±0.01ns  [0.78–0.79]ns  
+
+  widen/scalar/256  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      10.3 ±0.0ns  [10.3–10.3]ns  
+
+  widen_via_array/scalar/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      6.79 ±0.02ns  [6.78–6.80]ns  
+
+  widen_chain/scalar/256  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      17.5 ±0.0ns  [17.4–17.5]ns  
+
+  widen_chain_via_array/scalar/256  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      11.7 ±0.0ns  [11.7–11.8]ns  
+
+  narrow/scalar/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      5.35 ±0.23ns  [5.31–5.39]ns  
+
+  narrow_via_array/scalar/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      5.08 ±0.01ns  [5.03–5.15]ns  
+
+  widen/scalar/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base
+  ╰─ _      164 ±0ns  [164–165]ns  
+
+  widen_via_array/scalar/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      83.8 ±2.9ns  [82.0–85.8]ns  
+
+  widen_chain/scalar/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base
+  ╰─ _      365 ±0ns  [365–366]ns  
+
+  widen_chain_via_array/scalar/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base
+  ╰─ _      466 ±2ns  [465–467]ns  
+
+  narrow/scalar/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      77.0 ±0.8ns  [76.6–77.5]ns  
+
+  narrow_via_array/scalar/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      76.9 ±0.0ns  [76.3–77.6]ns  
+
+  widen/scalar/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      2.6 ±0.0µs  [2.6–2.6]µs   
+
+  widen_via_array/scalar/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      1.2 ±0.1µs  [1.2–1.2]µs   
+
+  widen_chain/scalar/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      5.9 ±0.0µs  [5.9–5.9]µs   
+
+  widen_chain_via_array/scalar/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      8.4 ±0.0µs  [8.4–8.5]µs   
+
+  narrow/scalar/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      1.1 ±0.0µs  [1.1–1.1]µs   
+
+  narrow_via_array/scalar/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      1.1 ±0.0µs  [1.1–1.1]µs   
+
+  widen/scalar/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      42.1 ±0.1µs  [42.0–42.1]µs   
+
+  widen_via_array/scalar/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      21.4 ±0.4µs  [21.3–21.6]µs   
+
+  widen_chain/scalar/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      95.3 ±0.2µs  [95.1–95.4]µs   
+
+  widen_chain_via_array/scalar/1048576  0 rounds ⚠ only 0 rounds
+             mean ±mad µs  95% CI vs base    
+  ╰─ _      133.6 ±0.0µs  [133.5–133.7]µs   
+
+  narrow/scalar/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      27.5 ±0.2µs  [27.5–27.6]µs   
+
+  narrow_via_array/scalar/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      21.8 ±0.3µs  [21.1–22.5]µs   
+
+  widen/neon/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      0.90 ±0.02ns  [0.89–0.92]ns  
+
+  widen_via_array/neon/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      0.99 ±0.05ns  [0.98–0.99]ns  
+
+  widen_chain/neon/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      0.56 ±0.00ns  [0.55–0.56]ns  
+
+  widen_chain_via_array/neon/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      1.65 ±0.01ns  [1.64–1.65]ns  
+
+  narrow/neon/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      0.78 ±0.00ns  [0.78–0.79]ns  
+
+  narrow_via_array/neon/16  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      0.81 ±0.04ns  [0.80–0.82]ns  
+
+  widen/neon/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      6.27 ±0.08ns  [6.18–6.35]ns  
+
+  widen_via_array/neon/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      6.65 ±0.01ns  [6.65–6.66]ns  
+
+  widen_chain/neon/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      8.82 ±0.02ns  [8.78–8.87]ns  
+
+  widen_chain_via_array/neon/256  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      22.7 ±0.1ns  [22.6–22.8]ns  
+
+  narrow/neon/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      4.97 ±0.16ns  [4.95–5.00]ns  
+
+  narrow_via_array/neon/256  0 rounds ⚠ only 0 rounds
+            mean ±mad ns  95% CI vs base 
+  ╰─ _      5.39 ±0.00ns  [5.37–5.40]ns  
+
+  widen/neon/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      80.5 ±2.2ns  [79.3–81.8]ns  
+
+  widen_via_array/neon/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      84.6 ±4.9ns  [83.5–85.9]ns  
+
+  widen_chain/neon/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base
+  ╰─ _      442 ±1ns  [442–443]ns  
+
+  widen_chain_via_array/neon/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base
+  ╰─ _      500 ±2ns  [499–502]ns  
+
+  narrow/neon/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      79.4 ±0.1ns  [78.4–80.4]ns  
+
+  narrow_via_array/neon/4096  0 rounds ⚠ only 0 rounds
+           mean ±mad ns  95% CI vs base 
+  ╰─ _      76.0 ±0.0ns  [75.9–76.0]ns  
+
+  widen/neon/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      1.2 ±0.2µs  [1.2–1.2]µs   
+
+  widen_via_array/neon/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      1.2 ±0.1µs  [1.2–1.2]µs   
+
+  widen_chain/neon/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      8.4 ±0.0µs  [8.3–8.4]µs   
+
+  widen_chain_via_array/neon/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      8.3 ±0.0µs  [8.3–8.3]µs   
+
+  narrow/neon/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      1.1 ±0.0µs  [1.1–1.1]µs   
+
+  narrow_via_array/neon/65536  0 rounds ⚠ only 0 rounds
+           mean ±mad µs  95% CI vs base
+  ╰─ _      1.1 ±0.0µs  [1.1–1.1]µs   
+
+  widen/neon/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      23.6 ±1.1µs  [23.0–24.1]µs   
+
+  widen_via_array/neon/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      21.3 ±0.1µs  [21.3–21.4]µs   
+
+  widen_chain/neon/1048576  0 rounds ⚠ only 0 rounds
+             mean ±mad µs  95% CI vs base    
+  ╰─ _      133.1 ±1.1µs  [132.7–133.4]µs   
+
+  widen_chain_via_array/neon/1048576  0 rounds ⚠ only 0 rounds
+             mean ±mad µs  95% CI vs base    
+  ╰─ _      136.2 ±2.7µs  [135.5–136.8]µs   
+
+  narrow/neon/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      21.1 ±0.0µs  [20.7–21.6]µs   
+
+  narrow_via_array/neon/1048576  0 rounds ⚠ only 0 rounds
+            mean ±mad µs  95% CI vs base  
+  ╰─ _      20.0 ±0.6µs  [19.9–20.2]µs   
+[zenbench] calibration: int=0.31ns/iter mem_bw=101.5GiB/s mem_lat=8.4ns
+[zenbench] timer resolution: 41ns, loop overhead: 0.25ns/iter, TSC: 1.000 ticks/ns (invariant)
+[zenbench] results → /var/folders/sc/m9jbk0qj0jz4w09h7gg8v3p80000gn/T/zenbench/zenbench-1788479319-138d.txt
+
+═══════════════════════════════════════════════════════════════
+  zenbench  1788479319-138d
+  git: dfff95e089f714ad70aa8396b0353cf4de3e7570
+═══════════════════════════════════════════════════════════════
+
+  total: 0.0s
+═══════════════════════════════════════════════════════════════
+  filter: cargo bench -- --group=NAME  format: --format=llm|csv|md|json

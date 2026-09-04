@@ -559,6 +559,30 @@ impl<T: crate::simd::backends::I8x16Bitcast> u8x16<T> {
 }
 
 // ============================================================================
+// Widening (u8x16 -> u16x8)
+// ============================================================================
+
+impl<T: crate::simd::backends::U8x16Widen> u8x16<T> {
+    /// Zero-extend the low half of the lanes to `u16x8`.
+    ///
+    /// Result lane `i` is `self[i] as u16` for `i` in `0..8`.
+    /// One instruction on every backend, in natural lane order —
+    /// see `docs/CROSS-ISA-INT-PRIMITIVES.md`.
+    #[inline(always)]
+    pub fn widen_low(self) -> super::u16x8<T> {
+        super::u16x8::from_repr_unchecked(self.1, T::widen_low_u8_to_u16(self.1, self.0))
+    }
+
+    /// Zero-extend the high half of the lanes to `u16x8`.
+    ///
+    /// Result lane `i` is `self[i + 8] as u16`.
+    #[inline(always)]
+    pub fn widen_high(self) -> super::u16x8<T> {
+        super::u16x8::from_repr_unchecked(self.1, T::widen_high_u8_to_u16(self.1, self.0))
+    }
+}
+
+// ============================================================================
 // Platform-specific concrete impls
 // ============================================================================
 

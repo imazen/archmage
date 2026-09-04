@@ -4670,6 +4670,350 @@ impl U64x4Bitcast for archmage::NeonToken {
         unsafe { [vreinterpretq_u64_s64(a[0]), vreinterpretq_u64_s64(a[1])] }
     }
 }
+
+#[cfg(target_arch = "aarch64")]
+impl U8x16Widen for archmage::NeonToken {
+    #[inline(always)]
+    fn widen_low_u8_to_u16(self, a: uint8x16_t) -> uint16x8_t {
+        unsafe { vmovl_u8(vget_low_u8(a)) }
+    }
+
+    #[inline(always)]
+    fn widen_high_u8_to_u16(self, a: uint8x16_t) -> uint16x8_t {
+        unsafe { vmovl_high_u8(a) }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl U16x8Widen for archmage::NeonToken {
+    #[inline(always)]
+    fn widen_low_u16_to_u32(self, a: uint16x8_t) -> uint32x4_t {
+        unsafe { vmovl_u16(vget_low_u16(a)) }
+    }
+
+    #[inline(always)]
+    fn widen_high_u16_to_u32(self, a: uint16x8_t) -> uint32x4_t {
+        unsafe { vmovl_high_u16(a) }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl I8x16Widen for archmage::NeonToken {
+    #[inline(always)]
+    fn widen_low_i8_to_i16(self, a: int8x16_t) -> int16x8_t {
+        unsafe { vmovl_s8(vget_low_s8(a)) }
+    }
+
+    #[inline(always)]
+    fn widen_high_i8_to_i16(self, a: int8x16_t) -> int16x8_t {
+        unsafe { vmovl_high_s8(a) }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl I16x8Widen for archmage::NeonToken {
+    #[inline(always)]
+    fn widen_low_i16_to_i32(self, a: int16x8_t) -> int32x4_t {
+        unsafe { vmovl_s16(vget_low_s16(a)) }
+    }
+
+    #[inline(always)]
+    fn widen_high_i16_to_i32(self, a: int16x8_t) -> int32x4_t {
+        unsafe { vmovl_high_s16(a) }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl U8x32Widen for archmage::NeonToken {
+    #[inline(always)]
+    fn widen_low_u8_to_u16(self, a: [uint8x16_t; 2]) -> [uint16x8_t; 2] {
+        unsafe { [vmovl_u8(vget_low_u8(a[0])), vmovl_high_u8(a[0])] }
+    }
+
+    #[inline(always)]
+    fn widen_high_u8_to_u16(self, a: [uint8x16_t; 2]) -> [uint16x8_t; 2] {
+        unsafe { [vmovl_u8(vget_low_u8(a[1])), vmovl_high_u8(a[1])] }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl U16x16Widen for archmage::NeonToken {
+    #[inline(always)]
+    fn widen_low_u16_to_u32(self, a: [uint16x8_t; 2]) -> [uint32x4_t; 2] {
+        unsafe { [vmovl_u16(vget_low_u16(a[0])), vmovl_high_u16(a[0])] }
+    }
+
+    #[inline(always)]
+    fn widen_high_u16_to_u32(self, a: [uint16x8_t; 2]) -> [uint32x4_t; 2] {
+        unsafe { [vmovl_u16(vget_low_u16(a[1])), vmovl_high_u16(a[1])] }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl I8x32Widen for archmage::NeonToken {
+    #[inline(always)]
+    fn widen_low_i8_to_i16(self, a: [int8x16_t; 2]) -> [int16x8_t; 2] {
+        unsafe { [vmovl_s8(vget_low_s8(a[0])), vmovl_high_s8(a[0])] }
+    }
+
+    #[inline(always)]
+    fn widen_high_i8_to_i16(self, a: [int8x16_t; 2]) -> [int16x8_t; 2] {
+        unsafe { [vmovl_s8(vget_low_s8(a[1])), vmovl_high_s8(a[1])] }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl I16x16Widen for archmage::NeonToken {
+    #[inline(always)]
+    fn widen_low_i16_to_i32(self, a: [int16x8_t; 2]) -> [int32x4_t; 2] {
+        unsafe { [vmovl_s16(vget_low_s16(a[0])), vmovl_high_s16(a[0])] }
+    }
+
+    #[inline(always)]
+    fn widen_high_i16_to_i32(self, a: [int16x8_t; 2]) -> [int32x4_t; 2] {
+        unsafe { [vmovl_s16(vget_low_s16(a[1])), vmovl_high_s16(a[1])] }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl I16x8Narrow for archmage::NeonToken {
+    #[inline(always)]
+    fn narrow_saturating_i16_to_i8(self, a: int16x8_t, b: int16x8_t) -> int8x16_t {
+        unsafe { vcombine_s8(vqmovn_s16(a), vqmovn_s16(b)) }
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i16_to_u8(self, a: int16x8_t, b: int16x8_t) -> uint8x16_t {
+        unsafe { vcombine_u8(vqmovun_s16(a), vqmovun_s16(b)) }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl I32x4Narrow for archmage::NeonToken {
+    #[inline(always)]
+    fn narrow_saturating_i32_to_i16(self, a: int32x4_t, b: int32x4_t) -> int16x8_t {
+        unsafe { vcombine_s16(vqmovn_s32(a), vqmovn_s32(b)) }
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i32_to_u16(self, a: int32x4_t, b: int32x4_t) -> uint16x8_t {
+        unsafe { vcombine_u16(vqmovun_s32(a), vqmovun_s32(b)) }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl I16x16Narrow for archmage::NeonToken {
+    #[inline(always)]
+    fn narrow_saturating_i16_to_i8(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int8x16_t; 2] {
+        unsafe {
+            [
+                vcombine_s8(vqmovn_s16(a[0]), vqmovn_s16(a[1])),
+                vcombine_s8(vqmovn_s16(b[0]), vqmovn_s16(b[1])),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i16_to_u8(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [uint8x16_t; 2] {
+        unsafe {
+            [
+                vcombine_u8(vqmovun_s16(a[0]), vqmovun_s16(a[1])),
+                vcombine_u8(vqmovun_s16(b[0]), vqmovun_s16(b[1])),
+            ]
+        }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl I32x8Narrow for archmage::NeonToken {
+    #[inline(always)]
+    fn narrow_saturating_i32_to_i16(self, a: [int32x4_t; 2], b: [int32x4_t; 2]) -> [int16x8_t; 2] {
+        unsafe {
+            [
+                vcombine_s16(vqmovn_s32(a[0]), vqmovn_s32(a[1])),
+                vcombine_s16(vqmovn_s32(b[0]), vqmovn_s32(b[1])),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i32_to_u16(self, a: [int32x4_t; 2], b: [int32x4_t; 2]) -> [uint16x8_t; 2] {
+        unsafe {
+            [
+                vcombine_u16(vqmovun_s32(a[0]), vqmovun_s32(a[1])),
+                vcombine_u16(vqmovun_s32(b[0]), vqmovun_s32(b[1])),
+            ]
+        }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "aarch64")]
+impl U8x64Widen for archmage::NeonToken {
+    #[inline(always)]
+    fn widen_low_u8_to_u16(self, a: [uint8x16_t; 4]) -> [uint16x8_t; 4] {
+        unsafe {
+            [
+                vmovl_u8(vget_low_u8(a[0])),
+                vmovl_high_u8(a[0]),
+                vmovl_u8(vget_low_u8(a[1])),
+                vmovl_high_u8(a[1]),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn widen_high_u8_to_u16(self, a: [uint8x16_t; 4]) -> [uint16x8_t; 4] {
+        unsafe {
+            [
+                vmovl_u8(vget_low_u8(a[2])),
+                vmovl_high_u8(a[2]),
+                vmovl_u8(vget_low_u8(a[3])),
+                vmovl_high_u8(a[3]),
+            ]
+        }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "aarch64")]
+impl U16x32Widen for archmage::NeonToken {
+    #[inline(always)]
+    fn widen_low_u16_to_u32(self, a: [uint16x8_t; 4]) -> [uint32x4_t; 4] {
+        unsafe {
+            [
+                vmovl_u16(vget_low_u16(a[0])),
+                vmovl_high_u16(a[0]),
+                vmovl_u16(vget_low_u16(a[1])),
+                vmovl_high_u16(a[1]),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn widen_high_u16_to_u32(self, a: [uint16x8_t; 4]) -> [uint32x4_t; 4] {
+        unsafe {
+            [
+                vmovl_u16(vget_low_u16(a[2])),
+                vmovl_high_u16(a[2]),
+                vmovl_u16(vget_low_u16(a[3])),
+                vmovl_high_u16(a[3]),
+            ]
+        }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "aarch64")]
+impl I8x64Widen for archmage::NeonToken {
+    #[inline(always)]
+    fn widen_low_i8_to_i16(self, a: [int8x16_t; 4]) -> [int16x8_t; 4] {
+        unsafe {
+            [
+                vmovl_s8(vget_low_s8(a[0])),
+                vmovl_high_s8(a[0]),
+                vmovl_s8(vget_low_s8(a[1])),
+                vmovl_high_s8(a[1]),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn widen_high_i8_to_i16(self, a: [int8x16_t; 4]) -> [int16x8_t; 4] {
+        unsafe {
+            [
+                vmovl_s8(vget_low_s8(a[2])),
+                vmovl_high_s8(a[2]),
+                vmovl_s8(vget_low_s8(a[3])),
+                vmovl_high_s8(a[3]),
+            ]
+        }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "aarch64")]
+impl I16x32Widen for archmage::NeonToken {
+    #[inline(always)]
+    fn widen_low_i16_to_i32(self, a: [int16x8_t; 4]) -> [int32x4_t; 4] {
+        unsafe {
+            [
+                vmovl_s16(vget_low_s16(a[0])),
+                vmovl_high_s16(a[0]),
+                vmovl_s16(vget_low_s16(a[1])),
+                vmovl_high_s16(a[1]),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn widen_high_i16_to_i32(self, a: [int16x8_t; 4]) -> [int32x4_t; 4] {
+        unsafe {
+            [
+                vmovl_s16(vget_low_s16(a[2])),
+                vmovl_high_s16(a[2]),
+                vmovl_s16(vget_low_s16(a[3])),
+                vmovl_high_s16(a[3]),
+            ]
+        }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "aarch64")]
+impl I16x32Narrow for archmage::NeonToken {
+    #[inline(always)]
+    fn narrow_saturating_i16_to_i8(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int8x16_t; 4] {
+        unsafe {
+            [
+                vcombine_s8(vqmovn_s16(a[0]), vqmovn_s16(a[1])),
+                vcombine_s8(vqmovn_s16(a[2]), vqmovn_s16(a[3])),
+                vcombine_s8(vqmovn_s16(b[0]), vqmovn_s16(b[1])),
+                vcombine_s8(vqmovn_s16(b[2]), vqmovn_s16(b[3])),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i16_to_u8(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [uint8x16_t; 4] {
+        unsafe {
+            [
+                vcombine_u8(vqmovun_s16(a[0]), vqmovun_s16(a[1])),
+                vcombine_u8(vqmovun_s16(a[2]), vqmovun_s16(a[3])),
+                vcombine_u8(vqmovun_s16(b[0]), vqmovun_s16(b[1])),
+                vcombine_u8(vqmovun_s16(b[2]), vqmovun_s16(b[3])),
+            ]
+        }
+    }
+}
+
+#[cfg(feature = "w512")]
+#[cfg(target_arch = "aarch64")]
+impl I32x16Narrow for archmage::NeonToken {
+    #[inline(always)]
+    fn narrow_saturating_i32_to_i16(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int16x8_t; 4] {
+        unsafe {
+            [
+                vcombine_s16(vqmovn_s32(a[0]), vqmovn_s32(a[1])),
+                vcombine_s16(vqmovn_s32(a[2]), vqmovn_s32(a[3])),
+                vcombine_s16(vqmovn_s32(b[0]), vqmovn_s32(b[1])),
+                vcombine_s16(vqmovn_s32(b[2]), vqmovn_s32(b[3])),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i32_to_u16(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [uint16x8_t; 4] {
+        unsafe {
+            [
+                vcombine_u16(vqmovun_s32(a[0]), vqmovun_s32(a[1])),
+                vcombine_u16(vqmovun_s32(a[2]), vqmovun_s32(a[3])),
+                vcombine_u16(vqmovun_s32(b[0]), vqmovun_s32(b[1])),
+                vcombine_u16(vqmovun_s32(b[2]), vqmovun_s32(b[3])),
+            ]
+        }
+    }
+}
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
 impl F32x16Backend for archmage::NeonToken {
