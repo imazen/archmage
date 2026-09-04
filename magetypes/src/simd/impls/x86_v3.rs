@@ -5871,16 +5871,19 @@ impl I8x64Backend for archmage::X64V3Token {
         })
     }
 
+    // AND/OR the halves first, then one reduction — one vector op +
+    // one movemask instead of two movemasks + a scalar short-circuit
+    // (fearless_simd's polyfill lesson; branchless, fewer ops).
     #[inline(always)]
     fn all_true(self, a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as I8x32Backend>::all_true(self, a[0])
-            && <archmage::X64V3Token as I8x32Backend>::all_true(self, a[1])
+        let combined = <archmage::X64V3Token as I8x32Backend>::bitand(self, a[0], a[1]);
+        <archmage::X64V3Token as I8x32Backend>::all_true(self, combined)
     }
 
     #[inline(always)]
     fn any_true(self, a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as I8x32Backend>::any_true(self, a[0])
-            || <archmage::X64V3Token as I8x32Backend>::any_true(self, a[1])
+        let combined = <archmage::X64V3Token as I8x32Backend>::bitor(self, a[0], a[1]);
+        <archmage::X64V3Token as I8x32Backend>::any_true(self, combined)
     }
 
     #[inline(always)]
@@ -6146,16 +6149,19 @@ impl U8x64Backend for archmage::X64V3Token {
         })
     }
 
+    // AND/OR the halves first, then one reduction — one vector op +
+    // one movemask instead of two movemasks + a scalar short-circuit
+    // (fearless_simd's polyfill lesson; branchless, fewer ops).
     #[inline(always)]
     fn all_true(self, a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as U8x32Backend>::all_true(self, a[0])
-            && <archmage::X64V3Token as U8x32Backend>::all_true(self, a[1])
+        let combined = <archmage::X64V3Token as U8x32Backend>::bitand(self, a[0], a[1]);
+        <archmage::X64V3Token as U8x32Backend>::all_true(self, combined)
     }
 
     #[inline(always)]
     fn any_true(self, a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as U8x32Backend>::any_true(self, a[0])
-            || <archmage::X64V3Token as U8x32Backend>::any_true(self, a[1])
+        let combined = <archmage::X64V3Token as U8x32Backend>::bitor(self, a[0], a[1]);
+        <archmage::X64V3Token as U8x32Backend>::any_true(self, combined)
     }
 
     #[inline(always)]
@@ -6436,16 +6442,19 @@ impl I16x32Backend for archmage::X64V3Token {
         })
     }
 
+    // AND/OR the halves first, then one reduction — one vector op +
+    // one movemask instead of two movemasks + a scalar short-circuit
+    // (fearless_simd's polyfill lesson; branchless, fewer ops).
     #[inline(always)]
     fn all_true(self, a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as I16x16Backend>::all_true(self, a[0])
-            && <archmage::X64V3Token as I16x16Backend>::all_true(self, a[1])
+        let combined = <archmage::X64V3Token as I16x16Backend>::bitand(self, a[0], a[1]);
+        <archmage::X64V3Token as I16x16Backend>::all_true(self, combined)
     }
 
     #[inline(always)]
     fn any_true(self, a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as I16x16Backend>::any_true(self, a[0])
-            || <archmage::X64V3Token as I16x16Backend>::any_true(self, a[1])
+        let combined = <archmage::X64V3Token as I16x16Backend>::bitor(self, a[0], a[1]);
+        <archmage::X64V3Token as I16x16Backend>::any_true(self, combined)
     }
 
     #[inline(always)]
@@ -6719,16 +6728,19 @@ impl U16x32Backend for archmage::X64V3Token {
         })
     }
 
+    // AND/OR the halves first, then one reduction — one vector op +
+    // one movemask instead of two movemasks + a scalar short-circuit
+    // (fearless_simd's polyfill lesson; branchless, fewer ops).
     #[inline(always)]
     fn all_true(self, a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as U16x16Backend>::all_true(self, a[0])
-            && <archmage::X64V3Token as U16x16Backend>::all_true(self, a[1])
+        let combined = <archmage::X64V3Token as U16x16Backend>::bitand(self, a[0], a[1]);
+        <archmage::X64V3Token as U16x16Backend>::all_true(self, combined)
     }
 
     #[inline(always)]
     fn any_true(self, a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as U16x16Backend>::any_true(self, a[0])
-            || <archmage::X64V3Token as U16x16Backend>::any_true(self, a[1])
+        let combined = <archmage::X64V3Token as U16x16Backend>::bitor(self, a[0], a[1]);
+        <archmage::X64V3Token as U16x16Backend>::any_true(self, combined)
     }
 
     #[inline(always)]
@@ -6995,16 +7007,19 @@ impl I32x16Backend for archmage::X64V3Token {
         })
     }
 
+    // AND/OR the halves first, then one reduction — one vector op +
+    // one movemask instead of two movemasks + a scalar short-circuit
+    // (fearless_simd's polyfill lesson; branchless, fewer ops).
     #[inline(always)]
     fn all_true(self, a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as I32x8Backend>::all_true(self, a[0])
-            && <archmage::X64V3Token as I32x8Backend>::all_true(self, a[1])
+        let combined = <archmage::X64V3Token as I32x8Backend>::bitand(self, a[0], a[1]);
+        <archmage::X64V3Token as I32x8Backend>::all_true(self, combined)
     }
 
     #[inline(always)]
     fn any_true(self, a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as I32x8Backend>::any_true(self, a[0])
-            || <archmage::X64V3Token as I32x8Backend>::any_true(self, a[1])
+        let combined = <archmage::X64V3Token as I32x8Backend>::bitor(self, a[0], a[1]);
+        <archmage::X64V3Token as I32x8Backend>::any_true(self, combined)
     }
 
     #[inline(always)]
@@ -7264,16 +7279,19 @@ impl U32x16Backend for archmage::X64V3Token {
         })
     }
 
+    // AND/OR the halves first, then one reduction — one vector op +
+    // one movemask instead of two movemasks + a scalar short-circuit
+    // (fearless_simd's polyfill lesson; branchless, fewer ops).
     #[inline(always)]
     fn all_true(self, a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as U32x8Backend>::all_true(self, a[0])
-            && <archmage::X64V3Token as U32x8Backend>::all_true(self, a[1])
+        let combined = <archmage::X64V3Token as U32x8Backend>::bitand(self, a[0], a[1]);
+        <archmage::X64V3Token as U32x8Backend>::all_true(self, combined)
     }
 
     #[inline(always)]
     fn any_true(self, a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as U32x8Backend>::any_true(self, a[0])
-            || <archmage::X64V3Token as U32x8Backend>::any_true(self, a[1])
+        let combined = <archmage::X64V3Token as U32x8Backend>::bitor(self, a[0], a[1]);
+        <archmage::X64V3Token as U32x8Backend>::any_true(self, combined)
     }
 
     #[inline(always)]
@@ -7511,16 +7529,19 @@ impl I64x8Backend for archmage::X64V3Token {
         ]
     }
 
+    // AND/OR the halves first, then one reduction — one vector op +
+    // one movemask instead of two movemasks + a scalar short-circuit
+    // (fearless_simd's polyfill lesson; branchless, fewer ops).
     #[inline(always)]
     fn all_true(self, a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as I64x4Backend>::all_true(self, a[0])
-            && <archmage::X64V3Token as I64x4Backend>::all_true(self, a[1])
+        let combined = <archmage::X64V3Token as I64x4Backend>::bitand(self, a[0], a[1]);
+        <archmage::X64V3Token as I64x4Backend>::all_true(self, combined)
     }
 
     #[inline(always)]
     fn any_true(self, a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as I64x4Backend>::any_true(self, a[0])
-            || <archmage::X64V3Token as I64x4Backend>::any_true(self, a[1])
+        let combined = <archmage::X64V3Token as I64x4Backend>::bitor(self, a[0], a[1]);
+        <archmage::X64V3Token as I64x4Backend>::any_true(self, combined)
     }
 
     #[inline(always)]
@@ -7751,16 +7772,19 @@ impl U64x8Backend for archmage::X64V3Token {
         ]
     }
 
+    // AND/OR the halves first, then one reduction — one vector op +
+    // one movemask instead of two movemasks + a scalar short-circuit
+    // (fearless_simd's polyfill lesson; branchless, fewer ops).
     #[inline(always)]
     fn all_true(self, a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as U64x4Backend>::all_true(self, a[0])
-            && <archmage::X64V3Token as U64x4Backend>::all_true(self, a[1])
+        let combined = <archmage::X64V3Token as U64x4Backend>::bitand(self, a[0], a[1]);
+        <archmage::X64V3Token as U64x4Backend>::all_true(self, combined)
     }
 
     #[inline(always)]
     fn any_true(self, a: [__m256i; 2]) -> bool {
-        <archmage::X64V3Token as U64x4Backend>::any_true(self, a[0])
-            || <archmage::X64V3Token as U64x4Backend>::any_true(self, a[1])
+        let combined = <archmage::X64V3Token as U64x4Backend>::bitor(self, a[0], a[1]);
+        <archmage::X64V3Token as U64x4Backend>::any_true(self, combined)
     }
 
     #[inline(always)]

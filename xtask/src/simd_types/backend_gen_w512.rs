@@ -1733,16 +1733,19 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
 
         {new_ops}
 
+            // AND/OR the halves first, then one reduction — one vector op +
+            // one movemask instead of two movemasks + a scalar short-circuit
+            // (fearless_simd's polyfill lesson; branchless, fewer ops).
             #[inline(always)]
             fn all_true(self, a: {v3_repr}) -> bool {{
-                <archmage::X64V3Token as {half_trait}>::all_true(self, a[0])
-                    && <archmage::X64V3Token as {half_trait}>::all_true(self, a[1])
+                let combined = <archmage::X64V3Token as {half_trait}>::bitand(self, a[0], a[1]);
+                <archmage::X64V3Token as {half_trait}>::all_true(self, combined)
             }}
 
             #[inline(always)]
             fn any_true(self, a: {v3_repr}) -> bool {{
-                <archmage::X64V3Token as {half_trait}>::any_true(self, a[0])
-                    || <archmage::X64V3Token as {half_trait}>::any_true(self, a[1])
+                let combined = <archmage::X64V3Token as {half_trait}>::bitor(self, a[0], a[1]);
+                <archmage::X64V3Token as {half_trait}>::any_true(self, combined)
             }}
 
             #[inline(always)]
@@ -2196,20 +2199,22 @@ fn generate_4way_polyfill_impl(
 
         {new_ops}
 
+            // Reduce the quarters with vector AND/OR first, then ONE lane
+            // reduction (fearless_simd's polyfill lesson; branchless).
             #[inline(always)]
             fn all_true(self, a: {repr}) -> bool {{
-                <archmage::{token} as {quarter_trait}>::all_true(self, a[0])
-                    && <archmage::{token} as {quarter_trait}>::all_true(self, a[1])
-                    && <archmage::{token} as {quarter_trait}>::all_true(self, a[2])
-                    && <archmage::{token} as {quarter_trait}>::all_true(self, a[3])
+                let c01 = <archmage::{token} as {quarter_trait}>::bitand(self, a[0], a[1]);
+                let c23 = <archmage::{token} as {quarter_trait}>::bitand(self, a[2], a[3]);
+                let c = <archmage::{token} as {quarter_trait}>::bitand(self, c01, c23);
+                <archmage::{token} as {quarter_trait}>::all_true(self, c)
             }}
 
             #[inline(always)]
             fn any_true(self, a: {repr}) -> bool {{
-                <archmage::{token} as {quarter_trait}>::any_true(self, a[0])
-                    || <archmage::{token} as {quarter_trait}>::any_true(self, a[1])
-                    || <archmage::{token} as {quarter_trait}>::any_true(self, a[2])
-                    || <archmage::{token} as {quarter_trait}>::any_true(self, a[3])
+                let c01 = <archmage::{token} as {quarter_trait}>::bitor(self, a[0], a[1]);
+                let c23 = <archmage::{token} as {quarter_trait}>::bitor(self, a[2], a[3]);
+                let c = <archmage::{token} as {quarter_trait}>::bitor(self, c01, c23);
+                <archmage::{token} as {quarter_trait}>::any_true(self, c)
             }}
 
             #[inline(always)]

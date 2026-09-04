@@ -4776,20 +4776,22 @@ impl I8x64Backend for archmage::Wasm128Token {
         })
     }
 
+    // Reduce the quarters with vector AND/OR first, then ONE lane
+    // reduction (fearless_simd's polyfill lesson; branchless).
     #[inline(always)]
     fn all_true(self, a: [v128; 4]) -> bool {
-        <archmage::Wasm128Token as I8x16Backend>::all_true(self, a[0])
-            && <archmage::Wasm128Token as I8x16Backend>::all_true(self, a[1])
-            && <archmage::Wasm128Token as I8x16Backend>::all_true(self, a[2])
-            && <archmage::Wasm128Token as I8x16Backend>::all_true(self, a[3])
+        let c01 = <archmage::Wasm128Token as I8x16Backend>::bitand(self, a[0], a[1]);
+        let c23 = <archmage::Wasm128Token as I8x16Backend>::bitand(self, a[2], a[3]);
+        let c = <archmage::Wasm128Token as I8x16Backend>::bitand(self, c01, c23);
+        <archmage::Wasm128Token as I8x16Backend>::all_true(self, c)
     }
 
     #[inline(always)]
     fn any_true(self, a: [v128; 4]) -> bool {
-        <archmage::Wasm128Token as I8x16Backend>::any_true(self, a[0])
-            || <archmage::Wasm128Token as I8x16Backend>::any_true(self, a[1])
-            || <archmage::Wasm128Token as I8x16Backend>::any_true(self, a[2])
-            || <archmage::Wasm128Token as I8x16Backend>::any_true(self, a[3])
+        let c01 = <archmage::Wasm128Token as I8x16Backend>::bitor(self, a[0], a[1]);
+        let c23 = <archmage::Wasm128Token as I8x16Backend>::bitor(self, a[2], a[3]);
+        let c = <archmage::Wasm128Token as I8x16Backend>::bitor(self, c01, c23);
+        <archmage::Wasm128Token as I8x16Backend>::any_true(self, c)
     }
 
     #[inline(always)]
@@ -5037,20 +5039,22 @@ impl U8x64Backend for archmage::Wasm128Token {
         })
     }
 
+    // Reduce the quarters with vector AND/OR first, then ONE lane
+    // reduction (fearless_simd's polyfill lesson; branchless).
     #[inline(always)]
     fn all_true(self, a: [v128; 4]) -> bool {
-        <archmage::Wasm128Token as U8x16Backend>::all_true(self, a[0])
-            && <archmage::Wasm128Token as U8x16Backend>::all_true(self, a[1])
-            && <archmage::Wasm128Token as U8x16Backend>::all_true(self, a[2])
-            && <archmage::Wasm128Token as U8x16Backend>::all_true(self, a[3])
+        let c01 = <archmage::Wasm128Token as U8x16Backend>::bitand(self, a[0], a[1]);
+        let c23 = <archmage::Wasm128Token as U8x16Backend>::bitand(self, a[2], a[3]);
+        let c = <archmage::Wasm128Token as U8x16Backend>::bitand(self, c01, c23);
+        <archmage::Wasm128Token as U8x16Backend>::all_true(self, c)
     }
 
     #[inline(always)]
     fn any_true(self, a: [v128; 4]) -> bool {
-        <archmage::Wasm128Token as U8x16Backend>::any_true(self, a[0])
-            || <archmage::Wasm128Token as U8x16Backend>::any_true(self, a[1])
-            || <archmage::Wasm128Token as U8x16Backend>::any_true(self, a[2])
-            || <archmage::Wasm128Token as U8x16Backend>::any_true(self, a[3])
+        let c01 = <archmage::Wasm128Token as U8x16Backend>::bitor(self, a[0], a[1]);
+        let c23 = <archmage::Wasm128Token as U8x16Backend>::bitor(self, a[2], a[3]);
+        let c = <archmage::Wasm128Token as U8x16Backend>::bitor(self, c01, c23);
+        <archmage::Wasm128Token as U8x16Backend>::any_true(self, c)
     }
 
     #[inline(always)]
@@ -5307,20 +5311,22 @@ impl I16x32Backend for archmage::Wasm128Token {
         })
     }
 
+    // Reduce the quarters with vector AND/OR first, then ONE lane
+    // reduction (fearless_simd's polyfill lesson; branchless).
     #[inline(always)]
     fn all_true(self, a: [v128; 4]) -> bool {
-        <archmage::Wasm128Token as I16x8Backend>::all_true(self, a[0])
-            && <archmage::Wasm128Token as I16x8Backend>::all_true(self, a[1])
-            && <archmage::Wasm128Token as I16x8Backend>::all_true(self, a[2])
-            && <archmage::Wasm128Token as I16x8Backend>::all_true(self, a[3])
+        let c01 = <archmage::Wasm128Token as I16x8Backend>::bitand(self, a[0], a[1]);
+        let c23 = <archmage::Wasm128Token as I16x8Backend>::bitand(self, a[2], a[3]);
+        let c = <archmage::Wasm128Token as I16x8Backend>::bitand(self, c01, c23);
+        <archmage::Wasm128Token as I16x8Backend>::all_true(self, c)
     }
 
     #[inline(always)]
     fn any_true(self, a: [v128; 4]) -> bool {
-        <archmage::Wasm128Token as I16x8Backend>::any_true(self, a[0])
-            || <archmage::Wasm128Token as I16x8Backend>::any_true(self, a[1])
-            || <archmage::Wasm128Token as I16x8Backend>::any_true(self, a[2])
-            || <archmage::Wasm128Token as I16x8Backend>::any_true(self, a[3])
+        let c01 = <archmage::Wasm128Token as I16x8Backend>::bitor(self, a[0], a[1]);
+        let c23 = <archmage::Wasm128Token as I16x8Backend>::bitor(self, a[2], a[3]);
+        let c = <archmage::Wasm128Token as I16x8Backend>::bitor(self, c01, c23);
+        <archmage::Wasm128Token as I16x8Backend>::any_true(self, c)
     }
 
     #[inline(always)]
@@ -5573,20 +5579,22 @@ impl U16x32Backend for archmage::Wasm128Token {
         })
     }
 
+    // Reduce the quarters with vector AND/OR first, then ONE lane
+    // reduction (fearless_simd's polyfill lesson; branchless).
     #[inline(always)]
     fn all_true(self, a: [v128; 4]) -> bool {
-        <archmage::Wasm128Token as U16x8Backend>::all_true(self, a[0])
-            && <archmage::Wasm128Token as U16x8Backend>::all_true(self, a[1])
-            && <archmage::Wasm128Token as U16x8Backend>::all_true(self, a[2])
-            && <archmage::Wasm128Token as U16x8Backend>::all_true(self, a[3])
+        let c01 = <archmage::Wasm128Token as U16x8Backend>::bitand(self, a[0], a[1]);
+        let c23 = <archmage::Wasm128Token as U16x8Backend>::bitand(self, a[2], a[3]);
+        let c = <archmage::Wasm128Token as U16x8Backend>::bitand(self, c01, c23);
+        <archmage::Wasm128Token as U16x8Backend>::all_true(self, c)
     }
 
     #[inline(always)]
     fn any_true(self, a: [v128; 4]) -> bool {
-        <archmage::Wasm128Token as U16x8Backend>::any_true(self, a[0])
-            || <archmage::Wasm128Token as U16x8Backend>::any_true(self, a[1])
-            || <archmage::Wasm128Token as U16x8Backend>::any_true(self, a[2])
-            || <archmage::Wasm128Token as U16x8Backend>::any_true(self, a[3])
+        let c01 = <archmage::Wasm128Token as U16x8Backend>::bitor(self, a[0], a[1]);
+        let c23 = <archmage::Wasm128Token as U16x8Backend>::bitor(self, a[2], a[3]);
+        let c = <archmage::Wasm128Token as U16x8Backend>::bitor(self, c01, c23);
+        <archmage::Wasm128Token as U16x8Backend>::any_true(self, c)
     }
 
     #[inline(always)]
@@ -5829,20 +5837,22 @@ impl I32x16Backend for archmage::Wasm128Token {
         })
     }
 
+    // Reduce the quarters with vector AND/OR first, then ONE lane
+    // reduction (fearless_simd's polyfill lesson; branchless).
     #[inline(always)]
     fn all_true(self, a: [v128; 4]) -> bool {
-        <archmage::Wasm128Token as I32x4Backend>::all_true(self, a[0])
-            && <archmage::Wasm128Token as I32x4Backend>::all_true(self, a[1])
-            && <archmage::Wasm128Token as I32x4Backend>::all_true(self, a[2])
-            && <archmage::Wasm128Token as I32x4Backend>::all_true(self, a[3])
+        let c01 = <archmage::Wasm128Token as I32x4Backend>::bitand(self, a[0], a[1]);
+        let c23 = <archmage::Wasm128Token as I32x4Backend>::bitand(self, a[2], a[3]);
+        let c = <archmage::Wasm128Token as I32x4Backend>::bitand(self, c01, c23);
+        <archmage::Wasm128Token as I32x4Backend>::all_true(self, c)
     }
 
     #[inline(always)]
     fn any_true(self, a: [v128; 4]) -> bool {
-        <archmage::Wasm128Token as I32x4Backend>::any_true(self, a[0])
-            || <archmage::Wasm128Token as I32x4Backend>::any_true(self, a[1])
-            || <archmage::Wasm128Token as I32x4Backend>::any_true(self, a[2])
-            || <archmage::Wasm128Token as I32x4Backend>::any_true(self, a[3])
+        let c01 = <archmage::Wasm128Token as I32x4Backend>::bitor(self, a[0], a[1]);
+        let c23 = <archmage::Wasm128Token as I32x4Backend>::bitor(self, a[2], a[3]);
+        let c = <archmage::Wasm128Token as I32x4Backend>::bitor(self, c01, c23);
+        <archmage::Wasm128Token as I32x4Backend>::any_true(self, c)
     }
 
     #[inline(always)]
@@ -6081,20 +6091,22 @@ impl U32x16Backend for archmage::Wasm128Token {
         })
     }
 
+    // Reduce the quarters with vector AND/OR first, then ONE lane
+    // reduction (fearless_simd's polyfill lesson; branchless).
     #[inline(always)]
     fn all_true(self, a: [v128; 4]) -> bool {
-        <archmage::Wasm128Token as U32x4Backend>::all_true(self, a[0])
-            && <archmage::Wasm128Token as U32x4Backend>::all_true(self, a[1])
-            && <archmage::Wasm128Token as U32x4Backend>::all_true(self, a[2])
-            && <archmage::Wasm128Token as U32x4Backend>::all_true(self, a[3])
+        let c01 = <archmage::Wasm128Token as U32x4Backend>::bitand(self, a[0], a[1]);
+        let c23 = <archmage::Wasm128Token as U32x4Backend>::bitand(self, a[2], a[3]);
+        let c = <archmage::Wasm128Token as U32x4Backend>::bitand(self, c01, c23);
+        <archmage::Wasm128Token as U32x4Backend>::all_true(self, c)
     }
 
     #[inline(always)]
     fn any_true(self, a: [v128; 4]) -> bool {
-        <archmage::Wasm128Token as U32x4Backend>::any_true(self, a[0])
-            || <archmage::Wasm128Token as U32x4Backend>::any_true(self, a[1])
-            || <archmage::Wasm128Token as U32x4Backend>::any_true(self, a[2])
-            || <archmage::Wasm128Token as U32x4Backend>::any_true(self, a[3])
+        let c01 = <archmage::Wasm128Token as U32x4Backend>::bitor(self, a[0], a[1]);
+        let c23 = <archmage::Wasm128Token as U32x4Backend>::bitor(self, a[2], a[3]);
+        let c = <archmage::Wasm128Token as U32x4Backend>::bitor(self, c01, c23);
+        <archmage::Wasm128Token as U32x4Backend>::any_true(self, c)
     }
 
     #[inline(always)]
@@ -6311,20 +6323,22 @@ impl I64x8Backend for archmage::Wasm128Token {
         })
     }
 
+    // Reduce the quarters with vector AND/OR first, then ONE lane
+    // reduction (fearless_simd's polyfill lesson; branchless).
     #[inline(always)]
     fn all_true(self, a: [v128; 4]) -> bool {
-        <archmage::Wasm128Token as I64x2Backend>::all_true(self, a[0])
-            && <archmage::Wasm128Token as I64x2Backend>::all_true(self, a[1])
-            && <archmage::Wasm128Token as I64x2Backend>::all_true(self, a[2])
-            && <archmage::Wasm128Token as I64x2Backend>::all_true(self, a[3])
+        let c01 = <archmage::Wasm128Token as I64x2Backend>::bitand(self, a[0], a[1]);
+        let c23 = <archmage::Wasm128Token as I64x2Backend>::bitand(self, a[2], a[3]);
+        let c = <archmage::Wasm128Token as I64x2Backend>::bitand(self, c01, c23);
+        <archmage::Wasm128Token as I64x2Backend>::all_true(self, c)
     }
 
     #[inline(always)]
     fn any_true(self, a: [v128; 4]) -> bool {
-        <archmage::Wasm128Token as I64x2Backend>::any_true(self, a[0])
-            || <archmage::Wasm128Token as I64x2Backend>::any_true(self, a[1])
-            || <archmage::Wasm128Token as I64x2Backend>::any_true(self, a[2])
-            || <archmage::Wasm128Token as I64x2Backend>::any_true(self, a[3])
+        let c01 = <archmage::Wasm128Token as I64x2Backend>::bitor(self, a[0], a[1]);
+        let c23 = <archmage::Wasm128Token as I64x2Backend>::bitor(self, a[2], a[3]);
+        let c = <archmage::Wasm128Token as I64x2Backend>::bitor(self, c01, c23);
+        <archmage::Wasm128Token as I64x2Backend>::any_true(self, c)
     }
 
     #[inline(always)]
@@ -6537,20 +6551,22 @@ impl U64x8Backend for archmage::Wasm128Token {
         })
     }
 
+    // Reduce the quarters with vector AND/OR first, then ONE lane
+    // reduction (fearless_simd's polyfill lesson; branchless).
     #[inline(always)]
     fn all_true(self, a: [v128; 4]) -> bool {
-        <archmage::Wasm128Token as U64x2Backend>::all_true(self, a[0])
-            && <archmage::Wasm128Token as U64x2Backend>::all_true(self, a[1])
-            && <archmage::Wasm128Token as U64x2Backend>::all_true(self, a[2])
-            && <archmage::Wasm128Token as U64x2Backend>::all_true(self, a[3])
+        let c01 = <archmage::Wasm128Token as U64x2Backend>::bitand(self, a[0], a[1]);
+        let c23 = <archmage::Wasm128Token as U64x2Backend>::bitand(self, a[2], a[3]);
+        let c = <archmage::Wasm128Token as U64x2Backend>::bitand(self, c01, c23);
+        <archmage::Wasm128Token as U64x2Backend>::all_true(self, c)
     }
 
     #[inline(always)]
     fn any_true(self, a: [v128; 4]) -> bool {
-        <archmage::Wasm128Token as U64x2Backend>::any_true(self, a[0])
-            || <archmage::Wasm128Token as U64x2Backend>::any_true(self, a[1])
-            || <archmage::Wasm128Token as U64x2Backend>::any_true(self, a[2])
-            || <archmage::Wasm128Token as U64x2Backend>::any_true(self, a[3])
+        let c01 = <archmage::Wasm128Token as U64x2Backend>::bitor(self, a[0], a[1]);
+        let c23 = <archmage::Wasm128Token as U64x2Backend>::bitor(self, a[2], a[3]);
+        let c = <archmage::Wasm128Token as U64x2Backend>::bitor(self, c01, c23);
+        <archmage::Wasm128Token as U64x2Backend>::any_true(self, c)
     }
 
     #[inline(always)]
