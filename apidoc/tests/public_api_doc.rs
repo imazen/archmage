@@ -64,10 +64,18 @@ const SUFFIXES: [&str; 3] = [".txt", ".features.txt", ".internal.txt"];
 /// generated per-target directories.
 const EXTRA_COMMITTED: [&str; 3] = ["README.md", "ABLATION-archmage.md", "ABLATION-magetypes.md"];
 
-/// Same default as zenutils-apidoc: `ZEN_API_DOC_TOOLCHAIN` env override, or
-/// the tracking `nightly`.
+/// The pinned nightly BOTH local regeneration and CI use. rustdoc's rendered
+/// output changes across nightlies, so defaulting to the tracking `nightly`
+/// makes the committed snapshots toolchain-dependent — the exact
+/// host-dependence this runner exists to remove (the gate's first CI run
+/// failed on a 2026-06 local nightly vs the runner's 2026-09 one producing
+/// different bytes for identical code). Bumping this pin is a deliberate
+/// act: change it here, regenerate, and commit the snapshot diff alongside.
+const PINNED_TOOLCHAIN: &str = "nightly-2026-09-02";
+
+/// `ZEN_API_DOC_TOOLCHAIN` env override, else the pin above.
 fn toolchain() -> String {
-    env::var("ZEN_API_DOC_TOOLCHAIN").unwrap_or_else(|_| "nightly".to_owned())
+    env::var("ZEN_API_DOC_TOOLCHAIN").unwrap_or_else(|_| PINNED_TOOLCHAIN.to_owned())
 }
 
 /// Mirror of zenutils-apidoc's mode gate, so the parent skips the rustup /
@@ -134,6 +142,9 @@ fn public_api_surface_docs_are_current() {
             .env("APIDOC_TARGET", sub)
             .env("CARGO_BUILD_TARGET", triple)
             .env("CARGO_TARGET_DIR", &target_dir)
+            // Pin the inner zenutils-apidoc run too — its own default is the
+            // tracking `nightly`, which would reintroduce toolchain drift.
+            .env("ZEN_API_DOC_TOOLCHAIN", &toolchain)
             .status()
             .expect("failed to re-exec the test binary for a per-target run");
         assert!(
