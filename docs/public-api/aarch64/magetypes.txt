@@ -6,15 +6,15 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2387 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 34 lines (41 hidden + 0 excluded-feature)
+# files: magetypes.txt 2393 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 34 lines (41 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                12
 #   pub types (struct/enum/trait/alias)       305
 #   pub consts/statics                        228
-#   free functions                           2974
-#   inherent methods                         1231
+#   free functions                           2980
+#   inherent methods                         1234
 #   enum variants                               1
 #   re-exports                                  2
 #   trait roster entries (type × trait)       777
@@ -25,10 +25,10 @@
 # per-module pub lines:
 #   (root)                          321
 #   cast                              3
-#   prelude                        2892
-#   simd                           1537
+#   prelude                        2898
+#   simd                           1540
 
-## items (2164 lines)
+## items (2170 lines)
 
 pub mod magetypes
 pub use archmage
@@ -63,6 +63,7 @@ pub fn prelude::f32x16<T>::from_i32_bitcast(T, prelude::i32x16<T>) -> Self [also
 pub fn prelude::f32x16<T>::from_i32x16(T, prelude::i32x16<T>) -> Self [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::to_i32(self) -> prelude::i32x16<T> [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::to_i32_round(self) -> prelude::i32x16<T> [also: prelude::f32x16<T>]
+pub fn prelude::f32x16<T>::to_i32_saturating(self) -> prelude::i32x16<T> [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::to_i32x16(self) -> prelude::i32x16<T> [also: prelude::f32x16<T>]
 pub fn prelude::f32x16<T>::to_i32x16_round(self) -> prelude::i32x16<T> [also: prelude::f32x16<T>]
 pub fn [f32; 16]::from(prelude::f32x16<T>) -> [f32; 16] [also: (root)]
@@ -126,6 +127,7 @@ pub fn prelude::f32x4<T>::from_i32_bitcast(T, prelude::i32x4<T>) -> Self [also: 
 pub fn prelude::f32x4<T>::from_i32x4(T, prelude::i32x4<T>) -> Self [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::to_i32(self) -> prelude::i32x4<T> [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::to_i32_round(self) -> prelude::i32x4<T> [also: prelude::f32x4<T>]
+pub fn prelude::f32x4<T>::to_i32_saturating(self) -> prelude::i32x4<T> [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::to_i32x4(self) -> prelude::i32x4<T> [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::to_i32x4_round(self) -> prelude::i32x4<T> [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::bitcast_mut_i32(&mut self) -> &mut prelude::i32x4<T> [also: prelude::f32x4<T>]
@@ -207,6 +209,7 @@ pub fn prelude::f32x8<T>::from_i32_bitcast(T, prelude::i32x8<T>) -> Self [also: 
 pub fn prelude::f32x8<T>::from_i32x8(T, prelude::i32x8<T>) -> Self [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::to_i32(self) -> prelude::i32x8<T> [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::to_i32_round(self) -> prelude::i32x8<T> [also: prelude::f32x8<T>]
+pub fn prelude::f32x8<T>::to_i32_saturating(self) -> prelude::i32x8<T> [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::to_i32x8(self) -> prelude::i32x8<T> [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::to_i32x8_round(self) -> prelude::i32x8<T> [also: prelude::f32x8<T>]
 pub fn prelude::f32x8<T>::bitcast_mut_i32(&mut self) -> &mut prelude::i32x8<T> [also: prelude::f32x8<T>]
@@ -746,6 +749,7 @@ pub fn simd::backends::F32x16Convert::bitcast_f32_to_i32(self, <Self as simd::ba
 pub fn simd::backends::F32x16Convert::bitcast_i32_to_f32(self, <Self as simd::backends::I32x16Backend>::Repr) -> <Self as simd::backends::F32x16Backend>::Repr
 pub fn simd::backends::F32x16Convert::convert_f32_to_i32(self, <Self as simd::backends::F32x16Backend>::Repr) -> <Self as simd::backends::I32x16Backend>::Repr
 pub fn simd::backends::F32x16Convert::convert_f32_to_i32_round(self, <Self as simd::backends::F32x16Backend>::Repr) -> <Self as simd::backends::I32x16Backend>::Repr
+pub fn simd::backends::F32x16Convert::convert_f32_to_i32_saturating(self, <Self as simd::backends::F32x16Backend>::Repr) -> <Self as simd::backends::I32x16Backend>::Repr
 pub fn simd::backends::F32x16Convert::convert_i32_to_f32(self, <Self as simd::backends::I32x16Backend>::Repr) -> <Self as simd::backends::F32x16Backend>::Repr
 pub trait simd::backends::F32x4Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::F32x4Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
@@ -795,6 +799,7 @@ pub fn simd::backends::F32x4Convert::bitcast_f32_to_i32(self, <Self as simd::bac
 pub fn simd::backends::F32x4Convert::bitcast_i32_to_f32(self, <Self as simd::backends::I32x4Backend>::Repr) -> <Self as simd::backends::F32x4Backend>::Repr
 pub fn simd::backends::F32x4Convert::convert_f32_to_i32(self, <Self as simd::backends::F32x4Backend>::Repr) -> <Self as simd::backends::I32x4Backend>::Repr
 pub fn simd::backends::F32x4Convert::convert_f32_to_i32_round(self, <Self as simd::backends::F32x4Backend>::Repr) -> <Self as simd::backends::I32x4Backend>::Repr
+pub fn simd::backends::F32x4Convert::convert_f32_to_i32_saturating(self, <Self as simd::backends::F32x4Backend>::Repr) -> <Self as simd::backends::I32x4Backend>::Repr
 pub fn simd::backends::F32x4Convert::convert_i32_to_f32(self, <Self as simd::backends::I32x4Backend>::Repr) -> <Self as simd::backends::F32x4Backend>::Repr
 pub trait simd::backends::F32x8Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::F32x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
@@ -845,6 +850,7 @@ pub fn simd::backends::F32x8Convert::bitcast_f32_to_i32(self, <Self as simd::bac
 pub fn simd::backends::F32x8Convert::bitcast_i32_to_f32(self, <Self as simd::backends::I32x8Backend>::Repr) -> <Self as simd::backends::F32x8Backend>::Repr
 pub fn simd::backends::F32x8Convert::convert_f32_to_i32(self, <Self as simd::backends::F32x8Backend>::Repr) -> <Self as simd::backends::I32x8Backend>::Repr
 pub fn simd::backends::F32x8Convert::convert_f32_to_i32_round(self, <Self as simd::backends::F32x8Backend>::Repr) -> <Self as simd::backends::I32x8Backend>::Repr
+pub fn simd::backends::F32x8Convert::convert_f32_to_i32_saturating(self, <Self as simd::backends::F32x8Backend>::Repr) -> <Self as simd::backends::I32x8Backend>::Repr
 pub fn simd::backends::F32x8Convert::convert_i32_to_f32(self, <Self as simd::backends::I32x8Backend>::Repr) -> <Self as simd::backends::F32x8Backend>::Repr
 pub trait simd::backends::F64x2Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub type simd::backends::F64x2Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync

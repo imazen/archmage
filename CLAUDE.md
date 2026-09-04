@@ -670,7 +670,7 @@ just ci    # or: just all, cargo xtask ci, cargo xtask all
 **NEVER run `git push` or `cargo publish` until this passes. No exceptions.**
 
 **Known host caveat:** `just ci` cannot go fully green on an **aarch64 host**.
-Step 14 (Miri) dies on `llvm.aarch64.neon.fcvtns` — Miri cannot emulate that
+Step 15 (Miri) dies on `llvm.aarch64.neon.fcvtns` — Miri cannot emulate that
 NEON intrinsic, so `magetypes/tests/block_ops_f32x8_cross_arch.rs` aborts. This
 is a Miri limitation, not a defect: CI runs Miri on `ubuntu-latest`, where it
 passes. On aarch64, steps 1–13 passing is the real bar. Do **not** "fix" this by
@@ -706,15 +706,16 @@ CI checks (all must pass):
 9. **no_std compilation + tests** — archmage and magetypes build and test without `std`
 10. **No-features integration test** — `archmage-no-features-test` crate (zero features, `deny(warnings)`)
 11. `cargo fmt --check` — code is formatted
-12. `cargo doc --features "std avx512" --no-deps` with `RUSTDOCFLAGS=-Dwarnings` — no broken doc links
-13. Miri UB detection (skipped if not installed)
-14. **ARM64 cross-compilation + tests** (requires `cross` + Docker)
-15. **WASM cross-compilation + tests** (requires `wasmtime` + `wasm32-wasip1` target)
-16. **ARM64 clippy** (requires `cross` + Docker)
+12. **Public-API snapshot check** — `ZEN_API_DOC=check` on the apidoc runner; if a public-API change makes `docs/public-api/` stale, run `just api-doc` and commit the regenerated snapshots
+13. `cargo doc --features "std avx512" --no-deps` with `RUSTDOCFLAGS=-Dwarnings` — no broken doc links
+14. Miri UB detection (skipped if not installed)
+15. **ARM64 cross-compilation + tests** (requires `cross` + Docker)
+16. **WASM cross-compilation + tests** (requires `wasmtime` + `wasm32-wasip1` target)
+17. **ARM64 clippy** (requires `cross` + Docker)
 
 **Note:** Parity check reports 0 issues. All W128 types have identical APIs across x86/ARM/WASM.
 
-**Note:** Steps 12-14 require cross-compilation tooling. If `cross`/Docker/`wasmtime` are unavailable, they are skipped with warnings. For full coverage before publish, install the tooling:
+**Note:** Steps 15-18 require cross-compilation tooling. If `cross`/Docker/`wasmtime` are unavailable, they are skipped with warnings. For full coverage before publish, install the tooling:
 ```bash
 cargo install cross --git https://github.com/cross-rs/cross  # ARM64 testing
 curl https://wasmtime.dev/install.sh -sSf | bash              # WASM testing
