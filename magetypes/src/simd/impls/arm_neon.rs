@@ -1388,6 +1388,33 @@ impl I32x4Backend for archmage::NeonToken {
         unsafe { vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a), vdupq_n_s32(-N))) }
     }
 
+    // ====== Uniform variable shifts ======
+    // Same vshlq lowering as the const forms; the count is clamped
+    // because USHL/SSHL read only the low byte of each amount lane as
+    // a signed value, so an unclamped 256 would wrap to a no-op
+    // instead of the contracted zero.
+
+    #[inline(always)]
+    fn shl_uniform(self, a: int32x4_t, count: u32) -> int32x4_t {
+        unsafe { vshlq_s32(a, vdupq_n_s32(count.min(32) as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: int32x4_t, count: u32) -> int32x4_t {
+        unsafe {
+            vreinterpretq_s32_u32(vshlq_u32(
+                vreinterpretq_u32_s32(a),
+                vdupq_n_s32(-(count.min(32) as i32)),
+            ))
+        }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: int32x4_t, count: u32) -> int32x4_t {
+        // Clamping to 31 gives the contracted sign fill.
+        unsafe { vshlq_s32(a, vdupq_n_s32(-(count.min(31) as i32))) }
+    }
+
     #[inline(always)]
     fn all_true(self, a: int32x4_t) -> bool {
         unsafe { vminvq_u32(vreinterpretq_u32_s32(a)) != 0 }
@@ -1616,6 +1643,38 @@ impl I32x8Backend for archmage::NeonToken {
         }
     }
 
+    // ====== Uniform variable shifts ======
+    // Splat the clamped count once, apply to both halves — same
+    // clamp rationale as the 128-bit impl (USHL/SSHL read the low
+    // byte of each amount lane).
+
+    #[inline(always)]
+    fn shl_uniform(self, a: [int32x4_t; 2], count: u32) -> [int32x4_t; 2] {
+        unsafe {
+            let c = vdupq_n_s32(count.min(32) as i32);
+            [vshlq_s32(a[0], c), vshlq_s32(a[1], c)]
+        }
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: [int32x4_t; 2], count: u32) -> [int32x4_t; 2] {
+        unsafe {
+            let c = vdupq_n_s32(-(count.min(32) as i32));
+            [
+                vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a[0]), c)),
+                vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a[1]), c)),
+            ]
+        }
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: [int32x4_t; 2], count: u32) -> [int32x4_t; 2] {
+        unsafe {
+            let c = vdupq_n_s32(-(count.min(31) as i32));
+            [vshlq_s32(a[0], c), vshlq_s32(a[1], c)]
+        }
+    }
+
     #[inline(always)]
     fn all_true(self, a: [int32x4_t; 2]) -> bool {
         unsafe {
@@ -1769,6 +1828,22 @@ impl U32x4Backend for archmage::NeonToken {
     fn shr_logical_const<const N: i32>(self, a: uint32x4_t) -> uint32x4_t {
         const { assert!(N >= 0 && N <= 31) };
         unsafe { vshlq_u32(a, vdupq_n_s32(-N)) }
+    }
+
+    // ====== Uniform variable shifts ======
+    // Same vshlq lowering as the const forms; the count is clamped
+    // because USHL reads only the low byte of each amount lane as a
+    // signed value, so an unclamped 256 would wrap to a no-op instead
+    // of the contracted zero.
+
+    #[inline(always)]
+    fn shl_uniform(self, a: uint32x4_t, count: u32) -> uint32x4_t {
+        unsafe { vshlq_u32(a, vdupq_n_s32(count.min(32) as i32)) }
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: uint32x4_t, count: u32) -> uint32x4_t {
+        unsafe { vshlq_u32(a, vdupq_n_s32(-(count.min(32) as i32))) }
     }
 
     #[inline(always)]
@@ -1950,6 +2025,27 @@ impl U32x8Backend for archmage::NeonToken {
                 vshlq_u32(a[0], vdupq_n_s32(-N)),
                 vshlq_u32(a[1], vdupq_n_s32(-N)),
             ]
+        }
+    }
+
+    // ====== Uniform variable shifts ======
+    // Splat the clamped count once, apply to both halves — same
+    // clamp rationale as the 128-bit impl (USHL reads the low byte
+    // of each amount lane).
+
+    #[inline(always)]
+    fn shl_uniform(self, a: [uint32x4_t; 2], count: u32) -> [uint32x4_t; 2] {
+        unsafe {
+            let c = vdupq_n_s32(count.min(32) as i32);
+            [vshlq_u32(a[0], c), vshlq_u32(a[1], c)]
+        }
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: [uint32x4_t; 2], count: u32) -> [uint32x4_t; 2] {
+        unsafe {
+            let c = vdupq_n_s32(-(count.min(32) as i32));
+            [vshlq_u32(a[0], c), vshlq_u32(a[1], c)]
         }
     }
 
@@ -6735,6 +6831,27 @@ impl I32x16Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
+    fn shl_uniform(self, a: [int32x4_t; 4], count: u32) -> [int32x4_t; 4] {
+        core::array::from_fn(|i| {
+            <archmage::NeonToken as I32x4Backend>::shl_uniform(self, a[i], count)
+        })
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: [int32x4_t; 4], count: u32) -> [int32x4_t; 4] {
+        core::array::from_fn(|i| {
+            <archmage::NeonToken as I32x4Backend>::shr_logical_uniform(self, a[i], count)
+        })
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: [int32x4_t; 4], count: u32) -> [int32x4_t; 4] {
+        core::array::from_fn(|i| {
+            <archmage::NeonToken as I32x4Backend>::shr_arithmetic_uniform(self, a[i], count)
+        })
+    }
+
+    #[inline(always)]
     fn all_true(self, a: [int32x4_t; 4]) -> bool {
         <archmage::NeonToken as I32x4Backend>::all_true(self, a[0])
             && <archmage::NeonToken as I32x4Backend>::all_true(self, a[1])
@@ -6953,6 +7070,27 @@ impl U32x16Backend for archmage::NeonToken {
     fn shr_logical_const<const N: i32>(self, a: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
         core::array::from_fn(|i| {
             <archmage::NeonToken as U32x4Backend>::shr_logical_const::<N>(self, a[i])
+        })
+    }
+
+    #[inline(always)]
+    fn shl_uniform(self, a: [uint32x4_t; 4], count: u32) -> [uint32x4_t; 4] {
+        core::array::from_fn(|i| {
+            <archmage::NeonToken as U32x4Backend>::shl_uniform(self, a[i], count)
+        })
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: [uint32x4_t; 4], count: u32) -> [uint32x4_t; 4] {
+        core::array::from_fn(|i| {
+            <archmage::NeonToken as U32x4Backend>::shr_logical_uniform(self, a[i], count)
+        })
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: [uint32x4_t; 4], count: u32) -> [uint32x4_t; 4] {
+        core::array::from_fn(|i| {
+            <archmage::NeonToken as U32x4Backend>::shr_logical_uniform(self, a[i], count)
         })
     }
 

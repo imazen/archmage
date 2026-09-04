@@ -27,9 +27,11 @@
 //!    returned `None` on a capable CPU, fails instead of passing green.
 
 use archmage::{ScalarToken, SimdToken};
-use magetypes::simd::generic::{i8x16, i8x32, i16x8, i16x16, u8x16, u8x32, u16x8, u16x16};
+use magetypes::simd::generic::{
+    i8x16, i8x32, i16x8, i16x16, i32x4, i32x8, u8x16, u8x32, u16x8, u16x16, u32x4, u32x8,
+};
 #[cfg(feature = "w512")]
-use magetypes::simd::generic::{i8x64, i16x32, u8x64, u16x32};
+use magetypes::simd::generic::{i8x64, i16x32, i32x16, u8x64, u16x32, u32x16};
 
 /// Shift counts covering in-range, exactly-at-width, and the two
 /// wrap-the-count traps described in the module docs.
@@ -209,6 +211,118 @@ macro_rules! check_unsigned {
     }};
 }
 
+/// Signed 32-bit: all three shift flavours; no saturating arithmetic exists
+/// at this width on x86/wasm, so none is exposed (audit §1) — the check set
+/// is shifts + shift-only lane order.
+macro_rules! check_signed_shifts {
+    ($Tok:ty, $t:expr, $ty:ident, $elem:ty, $uelem:ty, $bits:literal, $n:expr) => {{
+        let t = $t;
+        let mut cases = 0usize;
+
+        let a: [$elem; $n] = pattern_a!($elem);
+        let va = $ty::<$Tok>::from_array(t, a);
+
+        for count in counts($bits) {
+            let want_shl: [$elem; $n] = a.map(|x| {
+                if count >= $bits {
+                    0
+                } else {
+                    (((x as $uelem) << count) as $elem)
+                }
+            });
+            assert_eq!(
+                va.shl_uniform(count).to_array(),
+                want_shl,
+                "{}::shl_uniform({count})",
+                stringify!($ty)
+            );
+
+            let want_shr_l: [$elem; $n] = a.map(|x| {
+                if count >= $bits {
+                    0
+                } else {
+                    (((x as $uelem) >> count) as $elem)
+                }
+            });
+            assert_eq!(
+                va.shr_logical_uniform(count).to_array(),
+                want_shr_l,
+                "{}::shr_logical_uniform({count})",
+                stringify!($ty)
+            );
+
+            let clamped = if count > $bits - 1 { $bits - 1 } else { count };
+            let want_shr_a: [$elem; $n] = a.map(|x| x >> clamped);
+            assert_eq!(
+                va.shr_arithmetic_uniform(count).to_array(),
+                want_shr_a,
+                "{}::shr_arithmetic_uniform({count})",
+                stringify!($ty)
+            );
+            cases += 3;
+        }
+
+        cases += lane_order_shifts!($Tok, t, $ty, $elem, $n);
+        cases
+    }};
+}
+
+/// Unsigned 32-bit: `shl_uniform` and `shr_logical_uniform` only.
+macro_rules! check_unsigned_shifts {
+    ($Tok:ty, $t:expr, $ty:ident, $elem:ty, $bits:literal, $n:expr) => {{
+        let t = $t;
+        let mut cases = 0usize;
+
+        let a: [$elem; $n] = pattern_a!($elem);
+        let va = $ty::<$Tok>::from_array(t, a);
+
+        for count in counts($bits) {
+            let want_shl: [$elem; $n] = a.map(|x| if count >= $bits { 0 } else { x << count });
+            assert_eq!(
+                va.shl_uniform(count).to_array(),
+                want_shl,
+                "{}::shl_uniform({count})",
+                stringify!($ty)
+            );
+
+            let want_shr: [$elem; $n] = a.map(|x| if count >= $bits { 0 } else { x >> count });
+            assert_eq!(
+                va.shr_logical_uniform(count).to_array(),
+                want_shr,
+                "{}::shr_logical_uniform({count})",
+                stringify!($ty)
+            );
+            cases += 2;
+        }
+
+        cases += lane_order_shifts!($Tok, t, $ty, $elem, $n);
+        cases
+    }};
+}
+
+/// Shift-only lane-order pin for types without saturating arithmetic.
+macro_rules! lane_order_shifts {
+    ($Tok:ty, $t:expr, $ty:ident, $elem:ty, $n:expr) => {{
+        let t = $t;
+        let a: [$elem; $n] = core::array::from_fn(|i| (i as $elem).wrapping_mul(3).wrapping_add(1));
+        let va = $ty::<$Tok>::from_array(t, a);
+
+        assert_eq!(
+            va.shl_uniform(0).to_array(),
+            a,
+            "{} lane order: shl_uniform(0) is not the identity",
+            stringify!($ty)
+        );
+        assert_eq!(
+            va.shr_logical_uniform(0).to_array(),
+            a,
+            "{} lane order: shr_logical_uniform(0) is not the identity",
+            stringify!($ty)
+        );
+        2usize
+    }};
+}
+
 /// Lane-order pin: every lane of both operands holds a distinct value, so any
 /// permutation of the result (an AVX2-style in-lane pack, a swapped polyfill
 /// half, a reversed array impl) fails the element-wise comparison.
@@ -365,6 +479,10 @@ macro_rules! run_all {
         n += check_unsigned!($Tok, t, u8x32, u8, 8, 32);
         n += check_unsigned!($Tok, t, u16x8, u16, 16, 8);
         n += check_unsigned!($Tok, t, u16x16, u16, 16, 16);
+        n += check_signed_shifts!($Tok, t, i32x4, i32, u32, 32, 4);
+        n += check_signed_shifts!($Tok, t, i32x8, i32, u32, 32, 8);
+        n += check_unsigned_shifts!($Tok, t, u32x4, u32, 32, 4);
+        n += check_unsigned_shifts!($Tok, t, u32x8, u32, 32, 8);
         n += exhaustive_u8!($Tok, t);
         n += exhaustive_i8!($Tok, t);
         n
@@ -382,6 +500,8 @@ macro_rules! run_all_512 {
         n += check_signed!($Tok, t, i16x32, i16, u16, 16, 32);
         n += check_unsigned!($Tok, t, u8x64, u8, 8, 64);
         n += check_unsigned!($Tok, t, u16x32, u16, 16, 32);
+        n += check_signed_shifts!($Tok, t, i32x16, i32, u32, 32, 16);
+        n += check_unsigned_shifts!($Tok, t, u32x16, u32, 32, 16);
         n
     }};
 }
@@ -397,18 +517,20 @@ macro_rules! run_all_512 {
 /// Floors for the "did the arm actually run" assertions. Deliberately close to
 /// the real counts so a macro that expands to fewer cases trips them.
 ///
-/// The real counts are deterministic: `run_all!` makes 17_524 comparisons
-/// (4 signed types x 38 + 4 unsigned x 27 + the two exhaustive 8-bit sweeps)
-/// and `run_all_512!` makes exactly 130 (2 x 38 signed + 2 x 27 unsigned).
+/// The real counts are deterministic: `run_all!` makes 17_642 comparisons
+/// (4 signed 8/16-bit types x 38 + 4 unsigned x 27 + 2 signed 32-bit
+/// shift-only x 35 + 2 unsigned x 24 + the two exhaustive 8-bit sweeps at
+/// 8_544 and 8_720) and `run_all_512!` makes exactly 189 (38 + 38 signed,
+/// 27 + 27 unsigned, 35 + 24 for the 32-bit shift-only types).
 /// The W512 floor was first shipped as a guessed 250 — the v4/v4x arms are
 /// the only ones that assert it in isolation, and they had never executed
 /// anywhere (the author's box had no AVX-512, the PR's x64 CI runner didn't
 /// summon V4, and the SDE job neither built magetypes tests nor propagated
-/// failures). First native run on real AVX-512 silicon: all 130 comparisons
+/// failures). First native run on real AVX-512 silicon: all comparisons
 /// pass; only the floor was wrong.
-const MIN_CASES_W128: usize = 17_000;
+const MIN_CASES_W128: usize = 17_600;
 #[cfg(feature = "w512")]
-const MIN_CASES_W512: usize = 125;
+const MIN_CASES_W512: usize = 185;
 #[cfg(not(feature = "w512"))]
 const MIN_CASES_W512: usize = 0;
 

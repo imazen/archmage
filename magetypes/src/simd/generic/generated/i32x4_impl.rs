@@ -336,6 +336,41 @@ impl<T: I32x4Backend> i32x4<T> {
         self.shr_logical_const::<N>()
     }
 
+    // ====== Uniform variable shifts ======
+
+    /// Shift left by a runtime `count`, applied identically to every lane.
+    ///
+    /// Unlike [`shl_const`](Self::shl_const), `count` is a runtime value.
+    /// `count >= 32` yields all-zero lanes — the same result on every
+    /// backend, by contract (see `docs/CROSS-ISA-INT-PRIMITIVES.md`).
+    ///
+    /// The count is *uniform*: one value for the whole vector. A per-lane
+    /// variable shift is deliberately not offered — at 16-bit it needs
+    /// AVX-512BW+VL, and wasm128 has no per-lane variable shift at all.
+    #[inline(always)]
+    pub fn shl_uniform(self, count: u32) -> Self {
+        Self(T::shl_uniform(self.1, self.0, count), self.1)
+    }
+
+    /// Logical (zero-filling) shift right by a runtime `count`, applied
+    /// identically to every lane.
+    ///
+    /// `count >= 32` yields all-zero lanes on every backend.
+    #[inline(always)]
+    pub fn shr_logical_uniform(self, count: u32) -> Self {
+        Self(T::shr_logical_uniform(self.1, self.0, count), self.1)
+    }
+
+    /// Arithmetic (sign-filling) shift right by a runtime `count`,
+    /// applied identically to every lane.
+    ///
+    /// `count >= 32` yields a sign fill (every lane becomes `0` or
+    /// `-1`), equivalent to shifting by 31, on every backend.
+    #[inline(always)]
+    pub fn shr_arithmetic_uniform(self, count: u32) -> Self {
+        Self(T::shr_arithmetic_uniform(self.1, self.0, count), self.1)
+    }
+
     // ====== Bitwise ======
 
     /// Bitwise NOT.

@@ -243,6 +243,17 @@ impl W512Type {
         !self.is_float() && (self.elem_bits == 8 || self.elem_bits == 16)
     }
 
+    /// Whether this type carries the uniform-variable-shift family. Wider
+    /// than `has_new_int_ops`: 32-bit uniform shifts are universal
+    /// (`_mm512_sll_epi32` is AVX512F; the 128/256-bit sub-traits carry the
+    /// clamped NEON/WASM/scalar forms), but 32-bit saturating add/sub does
+    /// not exist on x86 or wasm at any tier, so the families gate separately.
+    /// 64-bit stays out: x86 has no `sra_epi64` below AVX-512, so the
+    /// arithmetic flavor is not universal at v3.
+    fn has_uniform_shift_ops(&self) -> bool {
+        !self.is_float() && matches!(self.elem_bits, 8 | 16 | 32)
+    }
+
     /// The unsigned counterpart of this element type.
     fn unsigned_elem(&self) -> &'static str {
         match self.elem_bits {
@@ -718,11 +729,10 @@ fn generate_int_backend_trait(ty: &W512Type) -> String {
 /// Trait declarations for the uniform-variable-shift and saturating-arithmetic
 /// families on the 512-bit integer types (8/16-bit only).
 fn w512_new_ops_trait_decls(ty: &W512Type) -> String {
-    if !ty.has_new_int_ops() {
-        return String::new();
-    }
-    let elem_bits = ty.elem_bits;
-    formatdoc! {r#"
+    let mut code = String::new();
+    if ty.has_uniform_shift_ops() {
+        let elem_bits = ty.elem_bits;
+        code.push_str(&formatdoc! {r#"
             // ====== Uniform variable shifts ======
 
             /// Shift left by a runtime `count` applied identically to every lane.
@@ -743,6 +753,10 @@ fn w512_new_ops_trait_decls(ty: &W512Type) -> String {
             /// `count >= {elem_bits}` produces a sign fill on every backend.
             fn shr_arithmetic_uniform(self, a: Self::Repr, count: u32) -> Self::Repr;
 
+        "#});
+    }
+    if ty.has_new_int_ops() {
+        code.push_str(&formatdoc! {r#"
             // ====== Saturating arithmetic ======
 
             /// Lane-wise addition that clamps to the element range instead of
@@ -753,31 +767,32 @@ fn w512_new_ops_trait_decls(ty: &W512Type) -> String {
             /// of wrapping (`core`'s `saturating_sub`, per lane).
             fn saturating_sub(self, a: Self::Repr, b: Self::Repr) -> Self::Repr;
 
-    "#}
+        "#});
+    }
+    code
 }
 
 /// Scalar bodies for the new families (also the differential-test reference).
 fn w512_new_ops_scalar(ty: &W512Type) -> String {
-    if !ty.has_new_int_ops() {
-        return String::new();
-    }
-    let array = ty.array_type();
-    let elem = ty.elem;
-    let uelem = ty.unsigned_elem();
-    let eb = ty.elem_bits;
-    let max_sh = eb - 1;
+    let mut code = String::new();
+    if ty.has_uniform_shift_ops() {
+        let array = ty.array_type();
+        let elem = ty.elem;
+        let uelem = ty.unsigned_elem();
+        let eb = ty.elem_bits;
+        let max_sh = eb - 1;
 
-    let shr_arith = if ty.is_signed() {
-        format!(
-            "core::array::from_fn(|i| a[i].wrapping_shr(if count > {max_sh} {{ {max_sh} }} else {{ count }}))"
-        )
-    } else {
-        format!(
-            "core::array::from_fn(|i| if count >= {eb} {{ 0 }} else {{ a[i].wrapping_shr(count) }})"
-        )
-    };
+        let shr_arith = if ty.is_signed() {
+            format!(
+                "core::array::from_fn(|i| a[i].wrapping_shr(if count > {max_sh} {{ {max_sh} }} else {{ count }}))"
+            )
+        } else {
+            format!(
+                "core::array::from_fn(|i| if count >= {eb} {{ 0 }} else {{ a[i].wrapping_shr(count) }})"
+            )
+        };
 
-    formatdoc! {r#"
+        code.push_str(&formatdoc! {r#"
             #[inline(always)]
             fn shl_uniform(self, a: {array}, count: u32) -> {array} {{
                 core::array::from_fn(|i| if count >= {eb} {{ 0 }} else {{ (a[i] as {uelem}).wrapping_shl(count) as {elem} }})
@@ -790,6 +805,11 @@ fn w512_new_ops_scalar(ty: &W512Type) -> String {
 
             #[inline(always)]
             fn shr_arithmetic_uniform(self, a: {array}, count: u32) -> {array} {{ {shr_arith} }}
+        "#});
+    }
+    if ty.has_new_int_ops() {
+        let array = ty.array_type();
+        code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
             fn saturating_add(self, a: {array}, b: {array}) -> {array} {{
@@ -800,22 +820,23 @@ fn w512_new_ops_scalar(ty: &W512Type) -> String {
             fn saturating_sub(self, a: {array}, b: {array}) -> {array} {{
                 core::array::from_fn(|i| a[i].saturating_sub(b[i]))
             }}
-    "#}
+    "#});
+    }
+    code
 }
 
 /// Delegating bodies for the width polyfills (2x256 on V3, 4x128 on NEON/WASM).
 fn w512_new_ops_delegate(ty: &W512Type, token: &str, sub_trait: &str, repr: &str) -> String {
-    if !ty.has_new_int_ops() {
-        return String::new();
-    }
-    // The narrower traits only declare `shr_arithmetic_uniform` for signed
-    // element types; for unsigned ones the arithmetic form is the logical one.
-    let arith_delegate = if ty.is_signed() {
-        "shr_arithmetic_uniform"
-    } else {
-        "shr_logical_uniform"
-    };
-    formatdoc! {r#"
+    let mut code = String::new();
+    if ty.has_uniform_shift_ops() {
+        // The narrower traits only declare `shr_arithmetic_uniform` for signed
+        // element types; for unsigned ones the arithmetic form is the logical one.
+        let arith_delegate = if ty.is_signed() {
+            "shr_arithmetic_uniform"
+        } else {
+            "shr_logical_uniform"
+        };
+        code.push_str(&formatdoc! {r#"
             #[inline(always)]
             fn shl_uniform(self, a: {repr}, count: u32) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {sub_trait}>::shl_uniform(self, a[i], count))
@@ -830,6 +851,10 @@ fn w512_new_ops_delegate(ty: &W512Type, token: &str, sub_trait: &str, repr: &str
             fn shr_arithmetic_uniform(self, a: {repr}, count: u32) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {sub_trait}>::{arith_delegate}(self, a[i], count))
             }}
+        "#});
+    }
+    if ty.has_new_int_ops() {
+        code.push_str(&formatdoc! {r#"
 
             #[inline(always)]
             fn saturating_add(self, a: {repr}, b: {repr}) -> {repr} {{
@@ -840,15 +865,16 @@ fn w512_new_ops_delegate(ty: &W512Type, token: &str, sub_trait: &str, repr: &str
             fn saturating_sub(self, a: {repr}, b: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {sub_trait}>::saturating_sub(self, a[i], b[i]))
             }}
-    "#}
+    "#});
+    }
+    code
 }
 
 /// Native AVX-512 bodies for the new families.
 fn w512_new_ops_v4(ty: &W512Type) -> String {
-    if !ty.has_new_int_ops() {
+    if !ty.has_uniform_shift_ops() {
         return String::new();
     }
-    let sat_suffix = ty.x86_minmax_suffix(); // epi8/epu8/epi16/epu16
 
     let shifts = if ty.elem_bits == 8 {
         // No byte shift exists on x86; same 16-bit + byte-mask polyfill the
@@ -903,26 +929,32 @@ fn w512_new_ops_v4(ty: &W512Type) -> String {
             {shr_arith}
         "#}
     } else {
+        // 16-bit: _mm512_{sll,srl,sra}_epi16 (avx512bw); 32-bit: the epi32
+        // forms (avx512f). Hardware gives 0 / sign fill at count >= width,
+        // and _mm_cvtsi32_si128 zero-extends, so no clamp is needed.
+        let eb = ty.elem_bits;
         let arith = if ty.is_signed() { "sra" } else { "srl" };
         formatdoc! {r#"
             #[inline(always)]
             fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {{
-                unsafe {{ _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32)) }}
+                unsafe {{ _mm512_sll_epi{eb}(a, _mm_cvtsi32_si128(count as i32)) }}
             }}
 
             #[inline(always)]
             fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {{
-                unsafe {{ _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32)) }}
+                unsafe {{ _mm512_srl_epi{eb}(a, _mm_cvtsi32_si128(count as i32)) }}
             }}
 
             #[inline(always)]
             fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {{
-                unsafe {{ _mm512_{arith}_epi16(a, _mm_cvtsi32_si128(count as i32)) }}
+                unsafe {{ _mm512_{arith}_epi{eb}(a, _mm_cvtsi32_si128(count as i32)) }}
             }}
         "#}
     };
 
-    formatdoc! {r#"
+    if ty.has_new_int_ops() {
+        let sat_suffix = ty.x86_minmax_suffix(); // epi8/epu8/epi16/epu16
+        formatdoc! {r#"
             {shifts}
             #[inline(always)]
             fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {{
@@ -934,6 +966,9 @@ fn w512_new_ops_v4(ty: &W512Type) -> String {
                 unsafe {{ _mm512_subs_{sat_suffix}(a, b) }}
             }}
     "#}
+    } else {
+        shifts
+    }
 }
 
 /// Generate backend trait definition for any W512 type.

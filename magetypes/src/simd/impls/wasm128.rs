@@ -921,6 +921,28 @@ impl I32x4Backend for archmage::Wasm128Token {
         u32x4_shr(a, N as u32)
     }
 
+    // ====== Uniform variable shifts ======
+    // wasm takes the count modulo the lane width; the keep mask
+    // restores the contracted zero at count >= 32, and clamping
+    // gives the arithmetic sign fill.
+
+    #[inline(always)]
+    fn shl_uniform(self, a: v128, count: u32) -> v128 {
+        let keep: i32 = if count < 32 { -1 } else { 0 };
+        v128_and(i32x4_shl(a, count), i32x4_splat(keep))
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: v128, count: u32) -> v128 {
+        let keep: i32 = if count < 32 { -1 } else { 0 };
+        v128_and(u32x4_shr(a, count), i32x4_splat(keep))
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: v128, count: u32) -> v128 {
+        i32x4_shr(a, if count > 31 { 31 } else { count })
+    }
+
     #[inline(always)]
     fn all_true(self, a: v128) -> bool {
         i32x4_all_true(a)
@@ -1086,6 +1108,35 @@ impl I32x8Backend for archmage::Wasm128Token {
         [u32x4_shr(a[0], N as u32), u32x4_shr(a[1], N as u32)]
     }
 
+    // ====== Uniform variable shifts ======
+    // wasm takes the count modulo the lane width; the keep mask
+    // restores the contracted zero at count >= 32, and clamping
+    // gives the arithmetic sign fill.
+
+    #[inline(always)]
+    fn shl_uniform(self, a: [v128; 2], count: u32) -> [v128; 2] {
+        let keep = i32x4_splat(if count < 32 { -1 } else { 0 });
+        [
+            v128_and(i32x4_shl(a[0], count), keep),
+            v128_and(i32x4_shl(a[1], count), keep),
+        ]
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: [v128; 2], count: u32) -> [v128; 2] {
+        let keep = i32x4_splat(if count < 32 { -1 } else { 0 });
+        [
+            v128_and(u32x4_shr(a[0], count), keep),
+            v128_and(u32x4_shr(a[1], count), keep),
+        ]
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: [v128; 2], count: u32) -> [v128; 2] {
+        let c = if count > 31 { 31 } else { count };
+        [i32x4_shr(a[0], c), i32x4_shr(a[1], c)]
+    }
+
     #[inline(always)]
     fn all_true(self, a: [v128; 2]) -> bool {
         i32x4_all_true(a[0]) && i32x4_all_true(a[1])
@@ -1217,6 +1268,22 @@ impl U32x4Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: v128) -> v128 {
         u32x4_shr(a, N as u32)
+    }
+
+    // ====== Uniform variable shifts ======
+    // wasm takes the count modulo the lane width; the keep mask
+    // restores the contracted zero at count >= 32.
+
+    #[inline(always)]
+    fn shl_uniform(self, a: v128, count: u32) -> v128 {
+        let keep: i32 = if count < 32 { -1 } else { 0 };
+        v128_and(u32x4_shl(a, count), i32x4_splat(keep))
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: v128, count: u32) -> v128 {
+        let keep: i32 = if count < 32 { -1 } else { 0 };
+        v128_and(u32x4_shr(a, count), i32x4_splat(keep))
     }
 
     #[inline(always)]
@@ -1375,6 +1442,28 @@ impl U32x8Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [v128; 2]) -> [v128; 2] {
         [u32x4_shr(a[0], N as u32), u32x4_shr(a[1], N as u32)]
+    }
+
+    // ====== Uniform variable shifts ======
+    // wasm takes the count modulo the lane width; the keep mask
+    // restores the contracted zero at count >= 32.
+
+    #[inline(always)]
+    fn shl_uniform(self, a: [v128; 2], count: u32) -> [v128; 2] {
+        let keep = i32x4_splat(if count < 32 { -1 } else { 0 });
+        [
+            v128_and(u32x4_shl(a[0], count), keep),
+            v128_and(u32x4_shl(a[1], count), keep),
+        ]
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: [v128; 2], count: u32) -> [v128; 2] {
+        let keep = i32x4_splat(if count < 32 { -1 } else { 0 });
+        [
+            v128_and(u32x4_shr(a[0], count), keep),
+            v128_and(u32x4_shr(a[1], count), keep),
+        ]
     }
 
     #[inline(always)]
@@ -5720,6 +5809,27 @@ impl I32x16Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
+    fn shl_uniform(self, a: [v128; 4], count: u32) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as I32x4Backend>::shl_uniform(self, a[i], count)
+        })
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: [v128; 4], count: u32) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as I32x4Backend>::shr_logical_uniform(self, a[i], count)
+        })
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: [v128; 4], count: u32) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as I32x4Backend>::shr_arithmetic_uniform(self, a[i], count)
+        })
+    }
+
+    #[inline(always)]
     fn all_true(self, a: [v128; 4]) -> bool {
         <archmage::Wasm128Token as I32x4Backend>::all_true(self, a[0])
             && <archmage::Wasm128Token as I32x4Backend>::all_true(self, a[1])
@@ -5947,6 +6057,27 @@ impl U32x16Backend for archmage::Wasm128Token {
     fn shr_logical_const<const N: i32>(self, a: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| {
             <archmage::Wasm128Token as U32x4Backend>::shr_logical_const::<N>(self, a[i])
+        })
+    }
+
+    #[inline(always)]
+    fn shl_uniform(self, a: [v128; 4], count: u32) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as U32x4Backend>::shl_uniform(self, a[i], count)
+        })
+    }
+
+    #[inline(always)]
+    fn shr_logical_uniform(self, a: [v128; 4], count: u32) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as U32x4Backend>::shr_logical_uniform(self, a[i], count)
+        })
+    }
+
+    #[inline(always)]
+    fn shr_arithmetic_uniform(self, a: [v128; 4], count: u32) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as U32x4Backend>::shr_logical_uniform(self, a[i], count)
         })
     }
 
