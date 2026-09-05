@@ -575,3 +575,36 @@ mod w512_tests {
         }
     }
 }
+
+#[test]
+fn scalar_index_bounds_and_mutation() {
+    use archmage::ScalarToken;
+    use magetypes::simd::generic::{u32x4, u32x8};
+    macro_rules! check {
+        ($ty:ident, $n:expr) => {{
+            let mut v = $ty::from_array(ScalarToken, core::array::from_fn(|i| i as u32));
+            for i in 0..$n {
+                assert_eq!(v[i], i as u32);
+                v[i] += 17;
+            }
+            let before = v.to_array();
+            for i in [$n, $n + 1, usize::MAX] {
+                assert!(std::panic::catch_unwind(|| v[i]).is_err());
+                assert!(
+                    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        v[i] = 123;
+                    }))
+                    .is_err()
+                );
+                assert_eq!(v.to_array(), before);
+            }
+        }};
+    }
+    check!(u32x4, 4);
+    check!(u32x8, 8);
+    #[cfg(feature = "w512")]
+    {
+        use magetypes::simd::generic::u32x16;
+        check!(u32x16, 16);
+    }
+}
