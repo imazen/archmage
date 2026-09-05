@@ -338,7 +338,7 @@ def partition_dataflow(body, target):
     return stores, get("%rax") if target.startswith("x86") else None
 
 
-def direct_storage_copy(body, target, name):
+def direct_storage_copy(body, target, name, *, vector_to_vector=False):
     """Prove a call-free replacement copies exactly the API's lane bytes."""
     m = re.fullmatch(
         r"\w+_([fiu])(\d+)x(\d+)_(load|store|to_array|from_array)_plain", name
@@ -357,6 +357,8 @@ def direct_storage_copy(body, target, name):
         dest_align = (
             vector_align if operation in ("load", "from_array") else int(bits) // 8
         )
+        if vector_to_vector:
+            source_align = dest_align = vector_align
         registers = {}
         for line in body:
             if line in ("retq", "vzeroupper", "movq\t%rdi, %rax"):
@@ -590,13 +592,455 @@ def self_test():
     assert not x86_halves_dataflow(
         [line.replace("(%rdx)", "(%rsi)") for line in halves], 32
     )
+    for target, first, alternate, address, end in (
+        (
+            "x86",
+            ["cmpq $4, %rsi", "jae BLOCK_0"],
+            ["cmpq $3, %rsi", "ja BLOCK_0"],
+            ["leaq (%rdi,%rsi,4), %rax"],
+            "retq",
+        ),
+        (
+            "aarch64",
+            ["cmp x1, #4", "b.hs BLOCK_0"],
+            ["cmp x1, #3", "b.hi BLOCK_0"],
+            ["add x0, x0, x1, lsl #2"],
+            "ret",
+        ),
+    ):
+        tail = address + [end, "LABEL BLOCK_0", "call panic_bounds_check"]
+        canonical = dynamic_access_shape(first + tail, target, 4, 32)
+        assert canonical is not None
+        assert canonical == dynamic_access_shape(alternate + tail, target, 4, 32)
+        assert canonical != dynamic_access_shape(
+            [line.replace("3", "4") for line in alternate] + tail, target, 4, 32
+        )
+        assert canonical != dynamic_access_shape(
+            first + ["call extra"] + tail, target, 4, 32
+        )
+        assert canonical != dynamic_access_shape(
+            first
+            + [line.replace("lsl #2", "lsl #3").replace(",4)", ",8)") for line in tail],
+            target,
+            4,
+            32,
+        )
+        assert (
+            dynamic_access_shape(
+                [line.replace("jae", "jge").replace("b.hs", "b.ge") for line in first]
+                + tail,
+                target,
+                4,
+                32,
+            )
+            is None
+        )
+    address = ["local.get 0", "local.get 1", "i32.const 2", "i32.shl", "i32.add"]
+    cold = [
+        "local.get 1",
+        "i32.const 4",
+        "i32.const DATA_abcdef",
+        "call panic_bounds_check",
+        "unreachable",
+    ]
+    end = ["LABEL BLOCK_0", "end_block"]
+    valid = (
+        ["block", "local.get 1", "i32.const 4", "i32.lt_u", "br_if 0"]
+        + cold
+        + end
+        + address
+    )
+    invalid = (
+        ["block", "local.get 1", "i32.const 3", "i32.gt_u", "br_if 0"]
+        + address
+        + ["return"]
+        + end
+        + cold
+    )
+    assert dynamic_access_shape(valid, "wasm", 4, 32) == dynamic_access_shape(
+        invalid, "wasm", 4, 32
+    )
+    for old, new in (
+        ("i32.const 3", "i32.const 4"),
+        ("i32.const 2", "i32.const 3"),
+        ("i32.gt_u", "i32.gt_s"),
+        ("br_if 0", "br_if 1"),
+    ):
+        assert (
+            dynamic_access_shape(
+                [line.replace(old, new) for line in invalid], "wasm", 4, 32
+            )
+            is None
+        )
     print("codegen adversarial self-tests passed")
+
+
+def dynamic_access_shape(body, target, lanes, bits):
+    """Normalize only verified unsigned bounds predicates and cold locations.
+
+    All other instructions, operands, and control flow remain significant.
+    WASM's two structured layouts are checked against complete templates.
+    """
+    body = [re.sub(r"\s+", " ", line) for line in body]
+    if sum("panic_bounds_check" in line for line in body) != 1:
+        return None
+    if target.startswith("wasm"):
+        address = ["local.get 0", "local.get 1"]
+        if bits != 8:
+            address += [f"i32.const {(bits // 8).bit_length() - 1}", "i32.shl"]
+        address += ["i32.add"]
+        call = next(line for line in body if "panic_bounds_check" in line)
+        if not call.startswith("call "):
+            return None
+        cold = [
+            "local.get 1",
+            f"i32.const {lanes}",
+            "i32.const LOCATION",
+            call,
+            "unreachable",
+        ]
+        clean = [
+            re.sub(r"^i32.const DATA_[a-f0-9]+$", "i32.const LOCATION", line)
+            for line in body
+        ]
+        prefix = ["block", "local.get 1"]
+        end = ["LABEL BLOCK_0", "end_block"]
+        valid_branch = (
+            prefix
+            + [f"i32.const {lanes}", "i32.lt_u", "br_if 0"]
+            + cold
+            + end
+            + address
+        )
+        invalid_branch = (
+            prefix
+            + [f"i32.const {lanes - 1}", "i32.gt_u", "br_if 0"]
+            + address
+            + ["return"]
+            + end
+            + cold
+        )
+        if clean in (valid_branch, invalid_branch):
+            return ("checked-address", lanes, bits, call)
+        return None
+    if target.startswith("x86"):
+        variants = [
+            [f"cmpq ${lanes}, %rsi", "jae BLOCK_0"],
+            [f"cmpq ${lanes - 1}, %rsi", "ja BLOCK_0"],
+        ]
+        ret = "retq"
+        location = r"^leaq DATA_[a-f0-9]+\(%rip\), %rdx$"
+    else:
+        variants = [
+            [f"cmp x1, #{lanes}", "b.hs BLOCK_0"],
+            [f"cmp x1, #{lanes - 1}", "b.hi BLOCK_0"],
+        ]
+        ret = "ret"
+        location = r"^(?:adrp x2, DATA_[a-f0-9]+|add x2, x2, :lo12:DATA_[a-f0-9]+)$"
+    if body[:2] not in variants or ret not in body:
+        return None
+    boundary = body.index(ret)
+    if body[boundary + 1 : boundary + 2] != ["LABEL BLOCK_0"]:
+        return None
+    body[:2] = variants[0]
+    # Source-location constants are ignored only in the cold bounds-panic
+    # block, and only in the ABI register passed as its location argument.
+    return body[: boundary + 2] + [
+        re.sub(location, "PANIC_LOCATION", line) for line in body[boundary + 2 :]
+    ]
+
+
+def storage_access_equivalent(api, hand, target, name):
+    ty = re.search(r"_([fiu](\d+)x(\d+))_", name)
+    if name.endswith(("_dynamic", "_dynamic_mut")):
+        a = dynamic_access_shape(api, target, int(ty[3]), int(ty[2]))
+        b = dynamic_access_shape(hand, target, int(ty[3]), int(ty[2]))
+        return a is not None and a == b
+    if any("panic" in line or "unwrap_failed" in line for line in api):
+        return False
+    if api == hand:
+        return True
+    if name.endswith("_bytes_roundtrip") and target.startswith("x86"):
+        copy_name = name.split("_")[0] + "_" + ty[1] + "_to_array_plain"
+        return len(api) == len(hand) and all(
+            direct_storage_copy(body, target, copy_name, vector_to_vector=True)
+            for body in (api, hand)
+        )
+    return False
+
+
+def storage_access_probes():
+    """Check storage access against direct array/pointer operations.
+
+    Reference casts use the same vector argument, preserving its actual
+    alignment. They borrow initialized numeric storage at offset zero with
+    unchanged size/lifetime and never create a token. Reference mutation only
+    writes valid numeric bits; the trailing token is a 1-ZST.
+    """
+    import tomllib
+
+    repository = pathlib.Path(__file__).resolve().parent.parent
+    (pathlib.Path.home() / "tmp").mkdir(parents=True, exist_ok=True)
+    root = pathlib.Path(
+        tempfile.mkdtemp(
+            prefix="archmage-storage-access-", dir=pathlib.Path.home() / "tmp"
+        )
+    )
+    print("Storage access artifacts:", root, flush=True)
+    (root / "src").mkdir()
+    (root / "Cargo.toml").write_text(
+        f'[package]\nname="access_probe"\nversion="0.0.0"\nedition="2024"\n[dependencies]\narchmage={{path="{repository}",features=["avx512"]}}\nmagetypes={{path="{repository}/magetypes",features=["avx512"]}}\n[workspace]\n'
+    )
+    features = {
+        t["name"]: ",".join(t["features"])
+        for t in tomllib.loads((repository / "token-registry.toml").read_text())[
+            "token"
+        ]
+    }
+    targets = {
+        "x86_64-unknown-linux-gnu": [
+            ("scalar", "ScalarToken", [128, 256, 512]),
+            ("v3", "X64V3Token", [128, 256, 512]),
+            ("v4", "X64V4Token", [512]),
+            ("v4x", "X64V4xToken", [512]),
+        ],
+        "aarch64-unknown-linux-gnu": [("neon", "NeonToken", [128, 256, 512])],
+        "wasm32-unknown-unknown": [("wasm", "Wasm128Token", [128, 256, 512])],
+    }
+    env = dict(
+        os.environ, TMPDIR=str(pathlib.Path.home() / "tmp"), CARGO_INCREMENTAL="0"
+    )
+    for key in (
+        "RUSTFLAGS",
+        "CARGO_ENCODED_RUSTFLAGS",
+        "CARGO_TARGET_DIR",
+        "CARGO_BUILD_TARGET",
+        "RUSTC_WRAPPER",
+        "RUSTC_WORKSPACE_WRAPPER",
+    ):
+        env.pop(key, None)
+    result = {}
+    failures = []
+    for target, tiers in targets.items():
+        source = [
+            "#![allow(unused_variables)]\nuse archmage::*;\nuse magetypes::simd::generic::*;"
+        ]
+        names = []
+        for tier, token, widths in tiers:
+            for elem, bits in [
+                ("f32", 32),
+                ("f64", 64),
+                ("i8", 8),
+                ("u8", 8),
+                ("i16", 16),
+                ("u16", 16),
+                ("i32", 32),
+                ("u32", 32),
+                ("i64", 64),
+                ("u64", 64),
+            ]:
+                for width in widths:
+                    n = width // bits
+                    ty = f"{elem}x{n}"
+                    vec = f"{ty}<{token}>"
+                    arr = f"[{elem};{n}]"
+                    for context in (
+                        ["plain"] if tier == "scalar" else ["plain", "features"]
+                    ):
+                        attr = (
+                            f'#[target_feature(enable="{features[token]}")]'
+                            if context == "features"
+                            else ""
+                        )
+                        cases = [
+                            (
+                                "read_last",
+                                False,
+                                "",
+                                elem,
+                                f"value[{n - 1}]",
+                                f"lanes[{n - 1}]",
+                            ),
+                            (
+                                "write_last",
+                                True,
+                                f", x: {elem}",
+                                "()",
+                                f"value[{n - 1}]=x",
+                                f"lanes[{n - 1}]=x",
+                            ),
+                            (
+                                "copy_loop",
+                                False,
+                                "",
+                                arr,
+                                f"let mut out = [0 as {elem};{n}]; for i in 0..{n} {{out[i]=value[i];}} out",
+                                f"let mut out = [0 as {elem};{n}]; for i in 0..{n} {{out[i]=lanes[i];}} out",
+                            ),
+                            (
+                                "write_loop",
+                                True,
+                                f", data: &{arr}",
+                                "()",
+                                f"for i in 0..{n} {{value[i]=data[i];}}",
+                                f"for i in 0..{n} {{lanes[i]=data[i];}}",
+                            ),
+                            (
+                                "guarded",
+                                False,
+                                ", i: usize",
+                                f"Option<{elem}>",
+                                f"if i < {n} {{Some(value[i])}} else {{None}}",
+                                f"if i < {n} {{Some(lanes[i])}} else {{None}}",
+                            ),
+                            (
+                                "dynamic",
+                                False,
+                                ", i: usize",
+                                f"&{elem}",
+                                "&value[i]",
+                                "&lanes[i]",
+                            ),
+                            (
+                                "dynamic_mut",
+                                True,
+                                ", i: usize",
+                                f"&mut {elem}",
+                                "&mut value[i]",
+                                "&mut lanes[i]",
+                            ),
+                        ]
+                        if ty in [
+                            "f32x4",
+                            "f32x8",
+                            "f64x2",
+                            "f64x4",
+                            "i32x4",
+                            "i32x8",
+                            "i8x16",
+                            "u32x4",
+                        ]:
+                            cases += [
+                                (
+                                    "byte_last",
+                                    False,
+                                    "",
+                                    "u8",
+                                    f"value.as_bytes()[{width // 8 - 1}]",
+                                    f"unsafe {{core::ptr::from_ref(value).cast::<u8>().add({width // 8 - 1}).read()}}",
+                                ),
+                                (
+                                    "byte_write",
+                                    True,
+                                    ", x: u8",
+                                    "()",
+                                    f"value.as_bytes_mut()[{width // 8 - 1}]=x",
+                                    f"unsafe {{core::ptr::from_mut(value).cast::<u8>().add({width // 8 - 1}).write(x)}}",
+                                ),
+                                (
+                                    "byte_pointer",
+                                    False,
+                                    "",
+                                    "*const u8",
+                                    "value.as_bytes().as_ptr()",
+                                    "core::ptr::from_ref(value).cast::<u8>()",
+                                ),
+                                (
+                                    "bytes_roundtrip",
+                                    False,
+                                    "",
+                                    vec,
+                                    f"{ty}::<{token}>::from_bytes(token,value.as_bytes())",
+                                    "*value",
+                                ),
+                                (
+                                    "cast_known",
+                                    False,
+                                    "",
+                                    elem,
+                                    f"{ty}::<{token}>::cast_slice(token,value.as_array()).unwrap()[0][{n - 1}]",
+                                    f"lanes[{n - 1}]",
+                                ),
+                            ]
+                        for op, mutable, extra, ret, api, hand in cases:
+                            name = f"{tier}_{ty}_{context}_{op}"
+                            names.append(name)
+                            borrow = "&mut " if mutable else "&"
+                            raw = (
+                                f"let lanes: {borrow}{arr} = unsafe {{ {borrow}*core::ptr::from_{'mut' if mutable else 'ref'}(value).cast::<{arr}>() }};"
+                                if "lanes" in hand
+                                else ""
+                            )
+                            for kind, body in [("api", api), ("hand", raw + hand)]:
+                                source.append(
+                                    f"#[unsafe(no_mangle)]\n{attr}\n#[inline(never)]\npub fn {kind}_{name}(token: {token}, value: {borrow}{vec}{extra}) -> {ret} {{ {body} }}"
+                                )
+        code = "\n".join(source)
+        (root / "src/lib.rs").write_text(code)
+        (root / f"{target}.rs").write_text(code)
+        completed = subprocess.run(
+            [
+                "cargo",
+                "+stable",
+                "rustc",
+                "--manifest-path",
+                str(root / "Cargo.toml"),
+                "--release",
+                "--lib",
+                "--target",
+                target,
+                "--",
+                "--emit=asm",
+            ],
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        (root / f"{target}.log").write_text(completed.stdout + completed.stderr)
+        if completed.returncode:
+            raise RuntimeError(completed.stderr)
+        files = list(
+            (root / "target" / target / "release/deps").glob("access_probe-*.s")
+        )
+        assert len(files) == 1
+        assembly = files[0].read_text()
+        (root / f"{target}.s").write_text(assembly)
+        functions = parse(assembly)
+        assert {n for n in functions if n.startswith(("api_", "hand_"))} == {
+            f"{kind}_{name}" for kind in ("api", "hand") for name in names
+        }
+        rows = []
+        for name in names:
+            api, hand = (
+                expand("api_" + name, functions),
+                expand("hand_" + name, functions),
+            )
+            equal = storage_access_equivalent(api, hand, target, name)
+            if not equal:
+                failures.append((target, name, api, hand))
+            rows.append(
+                {"name": name, "matches_direct_access": equal, "api": api, "hand": hand}
+            )
+        result[target] = rows
+        print(
+            target,
+            sum(r["matches_direct_access"] for r in rows),
+            "/",
+            len(rows),
+            "match direct access; proven-in-bounds cases have no panic paths",
+            flush=True,
+        )
+    (root / "results.json").write_text(json.dumps(result, indent=2))
+    assert not failures, failures[:12]
 
 
 def main():
     if not __debug__:
         raise RuntimeError("Run without Python -O: assertions must be enabled")
     self_test()
+    if sys.argv[1:] == ["--storage-access"]:
+        storage_access_probes()
+        return
     if sys.argv[1:] == ["--self-test"]:
         return
     if not __debug__:
@@ -735,18 +1179,21 @@ def main():
                                 f"{ty}::<{token}>::partition_slice_mut(token,data)",
                             ),
                         ]
+                        # The direct-access mode separately checks unguarded indexing
+                        # and its cold panic. Here compare proven-valid callers across
+                        # revisions without coupling to panic formatting or locations.
                         funcs += [
                             (
-                                "index",
+                                "index_guarded",
                                 f"value: &{simd}, i: usize",
                                 f"&{elem}",
-                                "&value[i]",
+                                f"if i < {n} {{ &value[i] }} else {{ &value[0] }}",
                             ),
                             (
-                                "index_mut",
+                                "index_mut_guarded",
                                 f"value: &mut {simd}, i: usize",
                                 f"&mut {elem}",
-                                "&mut value[i]",
+                                f"if i < {n} {{ &mut value[i] }} else {{ &mut value[0] }}",
                             ),
                         ]
                         if ty in [
