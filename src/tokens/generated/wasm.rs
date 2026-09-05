@@ -204,11 +204,19 @@ impl Wasm128RelaxedToken {
 impl Wasm128Token {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0x1E0DF26B;
+
+    #[doc(hidden)]
+    pub const __ARCHMAGE_ASSERT_TIER_1E0DF26B: () =
+        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x1E0DF26B) as usize];
 }
 
 impl Wasm128RelaxedToken {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0x821D5452;
+
+    #[doc(hidden)]
+    pub const __ARCHMAGE_ASSERT_TIER_821D5452: () =
+        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x821D5452) as usize];
 }
 
 #[allow(deprecated)]

@@ -156,10 +156,11 @@ pub mod testing;
 /// lookup, so a user-defined `struct X64V3Token;` (or `use X64V2Token as
 /// X64V3Token`) could otherwise receive `#[target_feature]` + `unsafe`
 /// wrappers for features the impostor never proves. `#[arcane]`'s current
-/// defense is a const assertion on the token's `__ARCHMAGE_TIER_TAG`
-/// (shadow types lack the const → compile error; aliased tokens carry the
-/// wrong tag → compile error), plus the sealed [`SimdToken`] bound for
-/// trait-generic parameters. See `tests/soundness/token_shadowing_exploit.rs`
+/// defense for concrete tokens is a shared associated constant named for the
+/// expected tier (shadow types and weaker aliases lack it), plus the sealed
+/// [`SimdToken`] bound for trait-generic parameters. Public constants do not
+/// prevent deliberate forgery.
+/// See `tests/soundness/token_shadowing_exploit.rs`
 /// and `token_aliasing_exploit.rs`.
 #[doc(hidden)]
 pub mod __private {

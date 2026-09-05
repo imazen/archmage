@@ -199,6 +199,11 @@ use token_discovery::*;
 ///     // Inner function will use #[inline(always)]
 /// }
 /// ```
+///
+/// Concrete tokens are checked through a shared, tier-specific associated constant.
+/// This rejects accidental token-name aliases without reevaluating a tag comparison
+/// in every expansion. The matching archmage release pins this macro crate exactly.
+/// Public constants do not prevent deliberate forgery.
 #[proc_macro_attribute]
 pub fn arcane(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as ArcaneArgs);

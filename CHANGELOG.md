@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Make arcane's concrete-token check a shared tier-constant lookup by default,
+  and pin archmage-macros exactly to the matching 0.9.29 release.
+  This internal protocol requires matching token and macro crates; the new pin
+  cannot retroactively constrain older published archmage dependency ranges.
+
 ## [Unreleased]
 
 ### QUEUED BREAKING CHANGES

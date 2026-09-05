@@ -13,23 +13,13 @@ use syn::{
 use crate::common::*;
 use crate::token_discovery::*;
 
-/// Generate a compile-time assertion that the token parameter is a genuine
-/// archmage token of the expected type.
+/// Validate a concrete token using the tier-specific constant supplied by archmage.
 ///
-/// For **concrete tokens** (e.g., `X64V3Token`): emits a `const` assertion
-/// comparing `<Type>::__ARCHMAGE_TIER_TAG` against the expected tag value.
-/// The `Type` is the full path from the function signature (not just the
-/// last segment), so it resolves through re-exports without requiring
-/// `::archmage::` in the consumer's extern prelude.
-///
-/// This catches:
-/// - **Shadowing:** local `struct X64V3Token` has no `__ARCHMAGE_TIER_TAG` const.
-/// - **Aliasing:** `use archmage::X64V2Token as X64V3Token` has the wrong tag.
-///
-/// For **trait/generic bounds** (e.g., `impl HasX64V2`, `T: HasNeon`): no
-/// assertion needed — the sealed `SimdToken` trait already prevents forgery.
-///
-/// Both forms are zero-cost: `const` assertions vanish from the binary.
+/// The signature's full type path preserves renamed dependencies and re-exports.
+/// A weaker tier lacks the expected constant, so accidental aliasing is rejected.
+/// The initializer is checked once in archmage; each expansion only references it.
+/// This public constant is an accidental-misuse check, not an anti-forgery boundary.
+/// The exact archmage-macros dependency pin keeps this internal protocol in sync.
 fn gen_token_assertion(
     token_type_name: &Option<String>,
     token_type: &Option<Type>,
@@ -37,20 +27,9 @@ fn gen_token_assertion(
     if let (Some(name), Some(ty)) = (token_type_name, token_type)
         && let Some(expected_tag) = crate::generated::expected_tier_tag(name)
     {
-        // Array-indexing trick for const assertion: can't use assert!() because
-        // cargo-expand desugars it to ::core::panicking::panic_fmt (unstable),
-        // breaking expanded-output compilation tests. Can't use an archmage:: path
-        // because downstream crates may rename the dependency (#30).
-        //
-        // The descriptive const name appears in the error message:
-        //   evaluation of `fn_name::_ARCHMAGE_TOKEN_MISMATCH` failed here
-        return quote! {
-            const _ARCHMAGE_TOKEN_MISMATCH: () =
-                [()][!(<#ty>::__ARCHMAGE_TIER_TAG == #expected_tag) as usize];
-        };
+        let assertion = format_ident!("__ARCHMAGE_ASSERT_TIER_{:08X}", expected_tag);
+        return quote! { let _: () = <#ty>::#assertion; };
     }
-    // Trait/generic bound or unknown token: the sealed SimdToken trait
-    // prevents forgery. No path-based assertion needed.
     quote! {}
 }
 
@@ -876,4 +855,26 @@ pub(crate) fn arcane_impl_nested(
     };
 
     expanded.into()
+}
+
+#[cfg(test)]
+mod assertion_tests {
+    use super::*;
+
+    #[test]
+    fn concrete_checks_are_a_single_shared_lookup() {
+        let ty = Some(parse_quote!(renamed::X64V3Token));
+        let check = gen_token_assertion(&Some("X64V3Token".into()), &ty);
+        assert_eq!(
+            check.to_string(),
+            quote!(let _: () = <renamed::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;).to_string()
+        );
+        // No fresh const initializer, comparison, indexing, or branch per call.
+        assert!(gen_token_assertion(&None, &None).is_empty());
+    }
+
+    #[test]
+    fn no_shared_opt_in() {
+        assert!(syn::parse_str::<ArcaneArgs>("shared").is_err());
+    }
 }
