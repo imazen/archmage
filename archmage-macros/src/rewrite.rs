@@ -39,6 +39,9 @@ pub(crate) struct CallerContext {
 ///
 /// Returns a new TokenStream with incant! calls replaced by direct tier calls.
 pub(crate) fn rewrite_incant_in_body(body: TokenStream, ctx: &CallerContext) -> TokenStream {
+    if !crate::common::contains_ident(&body, "incant") {
+        return body;
+    }
     let tokens: Vec<TokenTree> = body.into_iter().collect();
     let mut result = Vec::new();
     let mut i = 0;

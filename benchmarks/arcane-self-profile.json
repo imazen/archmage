@@ -1,0 +1,343 @@
+{
+  "rustc": "rustc 1.100.0-nightly (5db7f4be8 2026-09-01)\nbinary: rustc\ncommit-hash: 5db7f4be8a36c1b8ae19299469e2be2b0f052c21\ncommit-date: 2026-09-01\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0-nightly\nLLVM version: 23.1.0\n",
+  "command": [
+    "cargo",
+    "+nightly-2026-09-02",
+    "rustc",
+    "--locked",
+    "-p",
+    "magetypes",
+    "--features",
+    "avx512",
+    "--lib"
+  ],
+  "baseline_commit": "44622b913b9814a2100a16eb254af49dc882fa95",
+  "candidate_base_commit": "44622b913b9814a2100a16eb254af49dc882fa95",
+  "candidate_diff": "diff --git a/archmage-macros/src/common.rs b/archmage-macros/src/common.rs\nindex 63399d8..0d4b605 100644\n--- a/archmage-macros/src/common.rs\n+++ b/archmage-macros/src/common.rs\n@@ -110,6 +110,15 @@ pub(crate) fn build_turbofish(generics: &syn::Generics) -> proc_macro2::TokenStr\n     }\n }\n \n+/// Check identifier tokens recursively without rebuilding groups or stringifying bodies.\n+pub(crate) fn contains_ident(tokens: &proc_macro2::TokenStream, target: &str) -> bool {\n+    tokens.clone().into_iter().any(|token| match token {\n+        proc_macro2::TokenTree::Ident(ident) => ident == target,\n+        proc_macro2::TokenTree::Group(group) => contains_ident(&group.stream(), target),\n+        _ => false,\n+    })\n+}\n+\n /// Replace all occurrences of a named identifier in a token stream.\n ///\n /// Recurses into groups (braces, parens, brackets). Each matching `Ident` is\n@@ -145,6 +154,9 @@ pub(crate) fn replace_self_in_tokens(\n     tokens: proc_macro2::TokenStream,\n     replacement: &Type,\n ) -> proc_macro2::TokenStream {\n+    if !contains_ident(&tokens, \"Self\") {\n+        return tokens;\n+    }\n     replace_ident_in_tokens(tokens, \"Self\", &replacement.to_token_stream())\n }\n \ndiff --git a/archmage-macros/src/rewrite.rs b/archmage-macros/src/rewrite.rs\nindex c747d5a..53caba6 100644\n--- a/archmage-macros/src/rewrite.rs\n+++ b/archmage-macros/src/rewrite.rs\n@@ -39,6 +39,9 @@ pub(crate) struct CallerContext {\n ///\n /// Returns a new TokenStream with incant! calls replaced by direct tier calls.\n pub(crate) fn rewrite_incant_in_body(body: TokenStream, ctx: &CallerContext) -> TokenStream {\n+    if !crate::common::contains_ident(&body, \"incant\") {\n+        return body;\n+    }\n     let tokens: Vec<TokenTree> = body.into_iter().collect();\n     let mut result = Vec::new();\n     let mut i = 0;\n",
+  "runs": [
+    {
+      "variant": "baseline",
+      "trial": 1,
+      "wall_seconds": 1.596558053046465,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.096433517,
+          "inclusive_seconds": 0.096433517,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.084673682,
+          "inclusive_seconds": 0.184817534,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.272781571,
+          "inclusive_seconds": 0.312228722,
+          "count": 13809
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.126608783,
+          "inclusive_seconds": 0.210385849,
+          "count": 8666
+        }
+      }
+    },
+    {
+      "variant": "candidate",
+      "trial": 1,
+      "wall_seconds": 1.57552923518233,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.092009947,
+          "inclusive_seconds": 0.092009947,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.086333468,
+          "inclusive_seconds": 0.182216142,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.271475954,
+          "inclusive_seconds": 0.310832279,
+          "count": 13809
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.125715353,
+          "inclusive_seconds": 0.208789218,
+          "count": 8666
+        }
+      }
+    },
+    {
+      "variant": "candidate",
+      "trial": 2,
+      "wall_seconds": 1.5809525500517339,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.093421392,
+          "inclusive_seconds": 0.093421392,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.085149302,
+          "inclusive_seconds": 0.182337962,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.272446572,
+          "inclusive_seconds": 0.311666357,
+          "count": 13809
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.126205958,
+          "inclusive_seconds": 0.209591919,
+          "count": 8666
+        }
+      }
+    },
+    {
+      "variant": "baseline",
+      "trial": 2,
+      "wall_seconds": 1.5714727360755205,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.094807914,
+          "inclusive_seconds": 0.094807914,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.087057951,
+          "inclusive_seconds": 0.185959499,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.268629254,
+          "inclusive_seconds": 0.307483575,
+          "count": 13809
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.124094354,
+          "inclusive_seconds": 0.206753496,
+          "count": 8666
+        }
+      }
+    },
+    {
+      "variant": "baseline",
+      "trial": 3,
+      "wall_seconds": 1.579245172906667,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.095229668,
+          "inclusive_seconds": 0.095229668,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.085113715,
+          "inclusive_seconds": 0.184026031,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.273614852,
+          "inclusive_seconds": 0.312887363,
+          "count": 13809
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.125237657,
+          "inclusive_seconds": 0.208027221,
+          "count": 8666
+        }
+      }
+    },
+    {
+      "variant": "candidate",
+      "trial": 3,
+      "wall_seconds": 1.568796843988821,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.091229507,
+          "inclusive_seconds": 0.091229507,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.082932978,
+          "inclusive_seconds": 0.177864211,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.272993407,
+          "inclusive_seconds": 0.312226521,
+          "count": 13809
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.125225058,
+          "inclusive_seconds": 0.207945492,
+          "count": 8666
+        }
+      }
+    },
+    {
+      "variant": "candidate",
+      "trial": 4,
+      "wall_seconds": 1.557114478899166,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.088952125,
+          "inclusive_seconds": 0.088952125,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.084357737,
+          "inclusive_seconds": 0.17753521,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.268576588,
+          "inclusive_seconds": 0.307229443,
+          "count": 13809
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.123761798,
+          "inclusive_seconds": 0.206111266,
+          "count": 8666
+        }
+      }
+    },
+    {
+      "variant": "baseline",
+      "trial": 4,
+      "wall_seconds": 1.5434683950152248,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.098495996,
+          "inclusive_seconds": 0.098495996,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.079311138,
+          "inclusive_seconds": 0.181346318,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.272029744,
+          "inclusive_seconds": 0.310942057,
+          "count": 13809
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.126192114,
+          "inclusive_seconds": 0.209391134,
+          "count": 8666
+        }
+      }
+    },
+    {
+      "variant": "baseline",
+      "trial": 5,
+      "wall_seconds": 1.5746382109355181,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.095575922,
+          "inclusive_seconds": 0.095575922,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.086744051,
+          "inclusive_seconds": 0.186650623,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.270792428,
+          "inclusive_seconds": 0.309760714,
+          "count": 13809
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.126055482,
+          "inclusive_seconds": 0.209760956,
+          "count": 8666
+        }
+      }
+    },
+    {
+      "variant": "candidate",
+      "trial": 5,
+      "wall_seconds": 1.5750596129801124,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.093156032,
+          "inclusive_seconds": 0.093156032,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.082895794,
+          "inclusive_seconds": 0.179761911,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.273174118,
+          "inclusive_seconds": 0.312209423,
+          "count": 13809
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.126657749,
+          "inclusive_seconds": 0.210062626,
+          "count": 8666
+        }
+      }
+    },
+    {
+      "variant": "candidate",
+      "trial": 6,
+      "wall_seconds": 1.5086833820678294,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.092703978,
+          "inclusive_seconds": 0.092703978,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.079717178,
+          "inclusive_seconds": 0.175940852,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.270200392,
+          "inclusive_seconds": 0.308940663,
+          "count": 13809
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.126837057,
+          "inclusive_seconds": 0.210387392,
+          "count": 8666
+        }
+      }
+    },
+    {
+      "variant": "baseline",
+      "trial": 6,
+      "wall_seconds": 1.5792260221205652,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.095425964,
+          "inclusive_seconds": 0.095425964,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.086355571,
+          "inclusive_seconds": 0.18627349,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.27150666,
+          "inclusive_seconds": 0.310785018,
+          "count": 13809
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.126322697,
+          "inclusive_seconds": 0.210248575,
+          "count": 8666
+        }
+      }
+    }
+  ]
+}

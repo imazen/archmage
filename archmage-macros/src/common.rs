@@ -110,6 +110,15 @@ pub(crate) fn build_turbofish(generics: &syn::Generics) -> proc_macro2::TokenStr
     }
 }
 
+/// Check identifier tokens recursively without rebuilding groups or stringifying bodies.
+pub(crate) fn contains_ident(tokens: &proc_macro2::TokenStream, target: &str) -> bool {
+    tokens.clone().into_iter().any(|token| match token {
+        proc_macro2::TokenTree::Ident(ident) => ident == target,
+        proc_macro2::TokenTree::Group(group) => contains_ident(&group.stream(), target),
+        _ => false,
+    })
+}
+
 /// Replace all occurrences of a named identifier in a token stream.
 ///
 /// Recurses into groups (braces, parens, brackets). Each matching `Ident` is
@@ -145,6 +154,9 @@ pub(crate) fn replace_self_in_tokens(
     tokens: proc_macro2::TokenStream,
     replacement: &Type,
 ) -> proc_macro2::TokenStream {
+    if !contains_ident(&tokens, "Self") {
+        return tokens;
+    }
     replace_ident_in_tokens(tokens, "Self", &replacement.to_token_stream())
 }
 
@@ -300,4 +312,39 @@ pub(crate) fn suffix_path(path: &syn::Path, suffix: &str) -> syn::Path {
         last.ident = quote::format_ident!("{}_{}", last.ident, suffix);
     }
     suffixed
+}
+
+#[cfg(test)]
+mod token_scan_tests {
+    use super::*;
+
+    #[test]
+    fn finds_identifiers_inside_all_group_delimiters() {
+        assert!(contains_ident(&quote!({ ([Self::new()]) }), "Self"));
+        assert!(contains_ident(&quote!({ || [incant!(work())] }), "incant"));
+        assert!(!contains_ident(
+            &quote!("Self incant" Selfish incantation),
+            "Self"
+        ));
+        assert!(!contains_ident(&quote!("incant" incantation), "incant"));
+    }
+
+    #[test]
+    fn self_fast_path_matches_recursive_rewrite() {
+        let replacement: Type = syn::parse_quote!(archmage::X64V3Token);
+        for input in [
+            quote!({
+                call([1, 2], "Self");
+            }),
+            quote!({
+                Self::new([Self::VALUE]);
+            }),
+        ] {
+            let expected = replace_ident_in_tokens(input.clone(), "Self", &quote!(#replacement));
+            assert_eq!(
+                replace_self_in_tokens(input, &replacement).to_string(),
+                expected.to_string()
+            );
+        }
+    }
 }
