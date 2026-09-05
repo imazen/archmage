@@ -13,7 +13,7 @@
 
 use std::collections::BTreeMap;
 
-use indoc::formatdoc;
+use indoc::{formatdoc, indoc};
 
 // ============================================================================
 // Data Model
@@ -1114,6 +1114,18 @@ fn generate_impls_mod() -> String {
 /// here too. `cargo xtask soundness` mechanically re-verifies the
 /// feature-subset claim on every run.
 fn impls_safety_contract(token_desc: &str) -> String {
+    if !token_desc.contains("Wasm") {
+        return indoc! {"
+            //! # Safety (audit contract for remaining storage operations)
+            //!
+            //! `#[arcane]` checks value intrinsics against the receiver token's features.
+            //! Raw storage operations retain their explicit unsafe blocks;
+            //! array references provide valid extents for unaligned loads/stores.
+            //! Transmutes copy initialized numeric/vector bits; rustc checks size.
+            //! These operations never manufacture a token.
+        "}
+        .to_string();
+    }
     formatdoc! {r#"
         //! # Safety (audit contract for every `unsafe` block in this file)
         //!
@@ -1163,6 +1175,9 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
         {safety}
         #[cfg(target_arch = "x86_64")]
         use core::arch::x86_64::*;
+
+        #[cfg(target_arch = "x86_64")]
+        use archmage::{{arcane, X64V4Token, X64V4xToken}};
 
         use crate::simd::backends::*;
 
@@ -1214,44 +1229,43 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
 }
 
 fn generate_x86_v4_f32x16_convert(token: &str) -> String {
+    let arcane = super::backend_syntax::arcane(token);
     formatdoc! {r#"
         #[cfg(all(target_arch = "x86_64", feature = "w512"))]
         impl F32x16Convert for archmage::{token} {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_f32_to_i32(self, a: __m512) -> __m512i {{
-                unsafe {{ _mm512_castps_si512(a) }}
+                _mm512_castps_si512(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitcast_i32_to_f32(self, a: __m512i) -> __m512 {{
-                unsafe {{ _mm512_castsi512_ps(a) }}
+                _mm512_castsi512_ps(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_f32_to_i32(self, a: __m512) -> __m512i {{
-                unsafe {{ _mm512_cvttps_epi32(a) }}
+                _mm512_cvttps_epi32(a)
             }}
 
             // Issue #80 fixup, mask-register form.
-            #[inline(always)]
+            {arcane}
             fn convert_f32_to_i32_saturating(self, a: __m512) -> __m512i {{
-                unsafe {{
-                    let t = _mm512_cvttps_epi32(a);
-                    let big = _mm512_cmp_ps_mask::<_CMP_GE_OQ>(a, _mm512_set1_ps(2_147_483_648.0));
-                    let t = _mm512_mask_mov_epi32(t, big, _mm512_set1_epi32(i32::MAX));
-                    let not_nan = _mm512_cmp_ps_mask::<_CMP_ORD_Q>(a, a);
-                    _mm512_maskz_mov_epi32(not_nan, t)
-                }}
+                let t = _mm512_cvttps_epi32(a);
+                let big = _mm512_cmp_ps_mask::<_CMP_GE_OQ>(a, _mm512_set1_ps(2_147_483_648.0));
+                let t = _mm512_mask_mov_epi32(t, big, _mm512_set1_epi32(i32::MAX));
+                let not_nan = _mm512_cmp_ps_mask::<_CMP_ORD_Q>(a, a);
+                _mm512_maskz_mov_epi32(not_nan, t)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_f32_to_i32_round(self, a: __m512) -> __m512i {{
-                unsafe {{ _mm512_cvtps_epi32(a) }}
+                _mm512_cvtps_epi32(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_i32_to_f32(self, a: __m512i) -> __m512 {{
-                unsafe {{ _mm512_cvtepi32_ps(a) }}
+                _mm512_cvtepi32_ps(a)
             }}
         }}
 
@@ -1263,6 +1277,7 @@ fn generate_x86_v4_f32x16_convert(token: &str) -> String {
 // ============================================================================
 
 fn generate_x86_impls(types: &[FloatVecType], token: &str, max_width: usize) -> String {
+    let sse2_boundary = super::backend_syntax::SSE2_BOUNDARY;
     let safety = impls_safety_contract(token);
     let mut code = formatdoc! {r#"
         //! Backend implementations for {token} (x86-64).
@@ -1273,7 +1288,12 @@ fn generate_x86_impls(types: &[FloatVecType], token: &str, max_width: usize) -> 
         #[cfg(target_arch = "x86_64")]
         use core::arch::x86_64::*;
 
+        #[cfg(target_arch = "x86_64")]
+        use archmage::{{arcane, {token}}};
+
         use crate::simd::backends::*;
+
+        {sse2_boundary}
 
     "#};
 
@@ -1290,6 +1310,10 @@ fn generate_x86_impls(types: &[FloatVecType], token: &str, max_width: usize) -> 
 }
 
 fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
+    let lanes = ty.lanes;
+    let arcane = super::backend_syntax::arcane(token);
+    let baseline = super::backend_syntax::sse2_or_arcane(token, ty.width_bits);
+    let baseline_end = if ty.width_bits == 128 { "}" } else { "" };
     let trait_name = ty.trait_name();
     let inner = ty.x86_inner_type();
     let p = ty.x86_prefix();
@@ -1297,7 +1321,6 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
     let bits = ty.width_bits;
     let array = ty.array_type();
     let elem = ty.elem;
-    let lanes = ty.lanes;
 
     // set1 intrinsic: _mm256_set1_ps, _mm_set1_pd, etc.
     let set1 = format!("{p}_set1_{s}");
@@ -1358,20 +1381,20 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
 
     let approx_section = if !rcp_fn.is_empty() {
         formatdoc! {r#"
-            #[inline(always)]
+            {arcane}
             fn rcp_approx(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_{rcp_fn}_{s}(a) }}
+                {p}_{rcp_fn}_{s}(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn rsqrt_approx(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_{rsqrt_fn}_{s}(a) }}
+                {p}_{rsqrt_fn}_{s}(a)
             }}
 
             // Estimate + one FMA-Newton step + a branchless rail rescue: the
             // fastest form meeting the bare-name contract (<= 4 ULP AND exact
             // IEEE rails at ±0/±inf/NaN). The Newton error term `e = 1 - a*r`
-            // is NaN exactly on rail lanes (inf*0), so an unordered self-
+            // is NaN exactly on rail lanes (inf*0), so an unordered _self-
             // compare selects them and blendv rescues those lanes to the raw
             // estimate — which is rail-EXACT on x86 (rcpps(±0) = ±inf,
             // rcpps(±inf) = ±0, signed; likewise rsqrtps). Measured cost of
@@ -1380,11 +1403,11 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
             // (benchmarks/recip_x86_zen5-9950x3d_2026-09-03.md). Subnormal
             // inputs remain unspecified at this tier (rcpps flushes them);
             // `recip_portable`/`rsqrt_portable` divide: 0 ULP + subnormals.
-            #[inline(always)]
+            {arcane}
             fn recip(self, a: {inner}) -> {inner} {{
-                let one = unsafe {{ {p}_set1_{s}(1.0) }};
-                let r = <Self as {trait_name}>::rcp_approx(self, a);
-                unsafe {{
+                let one = {{ {p}_set1_{s}(1.0) }};
+                let r = <Self as {trait_name}>::rcp_approx(_self, a);
+                {{
                     let e = {p}_fnmadd_{s}(a, r, one);
                     let refined = {p}_fmadd_{s}(r, e, r);
                     let bad = {p}_cmp_{s}::<_CMP_UNORD_Q>(e, e);
@@ -1392,12 +1415,12 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
                 }}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn rsqrt(self, a: {inner}) -> {inner} {{
-                let half = unsafe {{ {p}_set1_{s}(0.5) }};
-                let three_halves = unsafe {{ {p}_set1_{s}(1.5) }};
-                let y = <Self as {trait_name}>::rsqrt_approx(self, a);
-                unsafe {{
+                let half = {{ {p}_set1_{s}(0.5) }};
+                let three_halves = {{ {p}_set1_{s}(1.5) }};
+                let y = <Self as {trait_name}>::rsqrt_approx(_self, a);
+                {{
                     let t = {p}_mul_{s}(a, {p}_mul_{s}(y, y));
                     let refined = {p}_mul_{s}(y, {p}_fnmadd_{s}(half, t, three_halves));
                     let bad = {p}_cmp_{s}::<_CMP_UNORD_Q>(t, t);
@@ -1412,28 +1435,28 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
         // overrides the trait default (which is identity) so f64x2/f64x4 are
         // correct rather than returning the input unchanged.
         formatdoc! {r#"
-            #[inline(always)]
+            {arcane}
             fn rcp_approx(self, a: {inner}) -> {inner} {{
-                let one = unsafe {{ {p}_set1_{s}(1.0) }};
-                <Self as {trait_name}>::div(self, one, a)
+                let one = {{ {p}_set1_{s}(1.0) }};
+                <Self as {trait_name}>::div(_self, one, a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn rsqrt_approx(self, a: {inner}) -> {inner} {{
-                let one = unsafe {{ {p}_set1_{s}(1.0) }};
-                <Self as {trait_name}>::div(self, one, <Self as {trait_name}>::sqrt(self, a))
+                let one = {{ {p}_set1_{s}(1.0) }};
+                <Self as {trait_name}>::div(_self, one, <Self as {trait_name}>::sqrt(_self, a))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn recip(self, a: {inner}) -> {inner} {{
-                let one = unsafe {{ {p}_set1_{s}(1.0) }};
-                <Self as {trait_name}>::div(self, one, a)
+                let one = {{ {p}_set1_{s}(1.0) }};
+                <Self as {trait_name}>::div(_self, one, a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn rsqrt(self, a: {inner}) -> {inner} {{
-                let one = unsafe {{ {p}_set1_{s}(1.0) }};
-                <Self as {trait_name}>::div(self, one, <Self as {trait_name}>::sqrt(self, a))
+                let one = {{ {p}_set1_{s}(1.0) }};
+                <Self as {trait_name}>::div(_self, one, <Self as {trait_name}>::sqrt(_self, a))
             }}
         "#}
     } else {
@@ -1459,29 +1482,25 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
     let to_u8_x86 = if elem == "f32" && bits == 128 {
         formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn to_u8_bytes(self, a: {inner}) -> [u8; 4] {{
-                unsafe {{
-                    let i32s = _mm_cvtps_epi32(a);
-                    let i16s = _mm_packs_epi32(i32s, i32s);
-                    let u8s = _mm_packus_epi16(i16s, i16s);
-                    (_mm_cvtsi128_si32(u8s) as u32).to_ne_bytes()
-                }}
+                let i32s = _mm_cvtps_epi32(a);
+                let i16s = _mm_packs_epi32(i32s, i32s);
+                let u8s = _mm_packus_epi16(i16s, i16s);
+                (_mm_cvtsi128_si32(u8s) as u32).to_ne_bytes()
             }}
         "#}
     } else if elem == "f32" && bits == 256 {
         formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn to_u8_bytes(self, a: {inner}) -> [u8; 8] {{
-                unsafe {{
-                    let i32s = _mm256_cvtps_epi32(a);
-                    let lo = _mm256_castsi256_si128(i32s);
-                    let hi = _mm256_extracti128_si256::<1>(i32s);
-                    let i16s = _mm_packs_epi32(lo, hi);
-                    let u8s = _mm_packus_epi16(i16s, i16s);
-                    (_mm_cvtsi128_si64(u8s) as u64).to_ne_bytes()
-                }}
+                let i32s = _mm256_cvtps_epi32(a);
+                let lo = _mm256_castsi256_si128(i32s);
+                let hi = _mm256_extracti128_si256::<1>(i32s);
+                let i16s = _mm_packs_epi32(lo, hi);
+                let u8s = _mm_packus_epi16(i16s, i16s);
+                (_mm_cvtsi128_si64(u8s) as u64).to_ne_bytes()
             }}
         "#}
     } else {
@@ -1495,7 +1514,7 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
     let store_rgba_x86 = if elem == "f32" && bits == 128 {
         formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn store_rgba_bytes(self, r: {inner}, g: {inner}, b: {inner}, a: {inner}) -> [u8; 16] {{
                 unsafe {{
                     let rg = _mm_packs_epi32(_mm_cvtps_epi32(r), _mm_cvtps_epi32(g));
@@ -1510,7 +1529,7 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
     } else if elem == "f32" && bits == 256 {
         formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn store_rgba_bytes(self, r: {inner}, g: {inner}, b: {inner}, a: {inner}) -> [u8; 32] {{
                 unsafe {{
                     // AVX2 packs are lane-wise: lane0 holds pixels 0-3, lane1 4-7.
@@ -1535,36 +1554,34 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
     let transpose_8x8_x86 = if elem == "f32" && bits == 256 {
         formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn transpose_8x8_repr(self, rows: [{inner}; 8]) -> [{inner}; 8] {{
-                unsafe {{
-                    let t0 = _mm256_unpacklo_ps(rows[0], rows[1]);
-                    let t1 = _mm256_unpackhi_ps(rows[0], rows[1]);
-                    let t2 = _mm256_unpacklo_ps(rows[2], rows[3]);
-                    let t3 = _mm256_unpackhi_ps(rows[2], rows[3]);
-                    let t4 = _mm256_unpacklo_ps(rows[4], rows[5]);
-                    let t5 = _mm256_unpackhi_ps(rows[4], rows[5]);
-                    let t6 = _mm256_unpacklo_ps(rows[6], rows[7]);
-                    let t7 = _mm256_unpackhi_ps(rows[6], rows[7]);
-                    let s0 = _mm256_shuffle_ps::<0x44>(t0, t2);
-                    let s1 = _mm256_shuffle_ps::<0xEE>(t0, t2);
-                    let s2 = _mm256_shuffle_ps::<0x44>(t1, t3);
-                    let s3 = _mm256_shuffle_ps::<0xEE>(t1, t3);
-                    let s4 = _mm256_shuffle_ps::<0x44>(t4, t6);
-                    let s5 = _mm256_shuffle_ps::<0xEE>(t4, t6);
-                    let s6 = _mm256_shuffle_ps::<0x44>(t5, t7);
-                    let s7 = _mm256_shuffle_ps::<0xEE>(t5, t7);
-                    [
-                        _mm256_permute2f128_ps::<0x20>(s0, s4),
-                        _mm256_permute2f128_ps::<0x20>(s1, s5),
-                        _mm256_permute2f128_ps::<0x20>(s2, s6),
-                        _mm256_permute2f128_ps::<0x20>(s3, s7),
-                        _mm256_permute2f128_ps::<0x31>(s0, s4),
-                        _mm256_permute2f128_ps::<0x31>(s1, s5),
-                        _mm256_permute2f128_ps::<0x31>(s2, s6),
-                        _mm256_permute2f128_ps::<0x31>(s3, s7),
-                    ]
-                }}
+                let t0 = _mm256_unpacklo_ps(rows[0], rows[1]);
+                let t1 = _mm256_unpackhi_ps(rows[0], rows[1]);
+                let t2 = _mm256_unpacklo_ps(rows[2], rows[3]);
+                let t3 = _mm256_unpackhi_ps(rows[2], rows[3]);
+                let t4 = _mm256_unpacklo_ps(rows[4], rows[5]);
+                let t5 = _mm256_unpackhi_ps(rows[4], rows[5]);
+                let t6 = _mm256_unpacklo_ps(rows[6], rows[7]);
+                let t7 = _mm256_unpackhi_ps(rows[6], rows[7]);
+                let s0 = _mm256_shuffle_ps::<0x44>(t0, t2);
+                let s1 = _mm256_shuffle_ps::<0xEE>(t0, t2);
+                let s2 = _mm256_shuffle_ps::<0x44>(t1, t3);
+                let s3 = _mm256_shuffle_ps::<0xEE>(t1, t3);
+                let s4 = _mm256_shuffle_ps::<0x44>(t4, t6);
+                let s5 = _mm256_shuffle_ps::<0xEE>(t4, t6);
+                let s6 = _mm256_shuffle_ps::<0x44>(t5, t7);
+                let s7 = _mm256_shuffle_ps::<0xEE>(t5, t7);
+                [
+                    _mm256_permute2f128_ps::<0x20>(s0, s4),
+                    _mm256_permute2f128_ps::<0x20>(s1, s5),
+                    _mm256_permute2f128_ps::<0x20>(s2, s6),
+                    _mm256_permute2f128_ps::<0x20>(s3, s7),
+                    _mm256_permute2f128_ps::<0x31>(s0, s4),
+                    _mm256_permute2f128_ps::<0x31>(s1, s5),
+                    _mm256_permute2f128_ps::<0x31>(s2, s6),
+                    _mm256_permute2f128_ps::<0x31>(s3, s7),
+                ]
             }}
         "#}
     } else {
@@ -1577,14 +1594,14 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
 
             // ====== Construction ======
 
-            #[inline(always)]
+            {arcane}
             fn splat(self, v: {elem}) -> {inner} {{
-                unsafe {{ {set1}(v) }}
+                {set1}(v)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn zero(self) -> {inner} {{
-                unsafe {{ {setzero}() }}
+                {setzero}()
             }}
 
             #[inline(always)]
@@ -1612,131 +1629,132 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
 
             // ====== Arithmetic ======
 
-            #[inline(always)]
+            {baseline}
             fn add(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_add_{s}(a, b) }}
+                {p}_add_{s}(a, b)
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {baseline}
             fn sub(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_sub_{s}(a, b) }}
+                {p}_sub_{s}(a, b)
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {arcane}
             fn mul(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_mul_{s}(a, b) }}
+                {p}_mul_{s}(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn div(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_div_{s}(a, b) }}
+                {p}_div_{s}(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn neg(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_sub_{s}({setzero}(), a) }}
+                {p}_sub_{s}({setzero}(), a)
             }}
 
             // ====== Math ======
 
-            #[inline(always)]
+            {arcane}
             fn min(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_min_{s}(a, b) }}
+                {p}_min_{s}(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn max(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_max_{s}(a, b) }}
+                {p}_max_{s}(a, b)
             }}
 
-            #[inline(always)]
+            {baseline}
             fn sqrt(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_sqrt_{s}(a) }}
+                {p}_sqrt_{s}(a)
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {arcane}
             fn abs(self, a: {inner}) -> {inner} {{
-                unsafe {{
-                    let mask = {cast_int_to_float}({p}_set1_{set1_int}({abs_mask}));
-                    {p}_and_{s}(a, mask)
-                }}
+                let mask = {cast_int_to_float}({p}_set1_{set1_int}({abs_mask}));
+                {p}_and_{s}(a, mask)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn floor(self, a: {inner}) -> {inner} {{
-                unsafe {{ {floor_intr}(a) }}
+                {floor_intr}(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn ceil(self, a: {inner}) -> {inner} {{
-                unsafe {{ {ceil_intr}(a) }}
+                {ceil_intr}(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn round(self, a: {inner}) -> {inner} {{
-                unsafe {{ {round_intr}(a) }}
+                {round_intr}(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn mul_add(self, a: {inner}, b: {inner}, c: {inner}) -> {inner} {{
-                unsafe {{ {p}_fmadd_{s}(a, b, c) }}
+                {p}_fmadd_{s}(a, b, c)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn mul_sub(self, a: {inner}, b: {inner}, c: {inner}) -> {inner} {{
-                unsafe {{ {p}_fmsub_{s}(a, b, c) }}
+                {p}_fmsub_{s}(a, b, c)
             }}
 
             // ====== Comparisons ======
 
-            #[inline(always)]
+            {arcane}
             fn simd_eq(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {cmp}::<_CMP_EQ_OQ>(a, b) }}
+                {cmp}::<_CMP_EQ_OQ>(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_ne(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {cmp}::<_CMP_NEQ_OQ>(a, b) }}
+                {cmp}::<_CMP_NEQ_OQ>(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_lt(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {cmp}::<_CMP_LT_OQ>(a, b) }}
+                {cmp}::<_CMP_LT_OQ>(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_le(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {cmp}::<_CMP_LE_OQ>(a, b) }}
+                {cmp}::<_CMP_LE_OQ>(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_gt(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {cmp}::<_CMP_GT_OQ>(a, b) }}
+                {cmp}::<_CMP_GT_OQ>(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_ge(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {cmp}::<_CMP_GE_OQ>(a, b) }}
+                {cmp}::<_CMP_GE_OQ>(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn blend(self, mask: {inner}, if_true: {inner}, if_false: {inner}) -> {inner} {{
-                unsafe {{ {p}_blendv_{s}(if_false, if_true, mask) }}
+                {p}_blendv_{s}(if_false, if_true, mask)
             }}
 
             // ====== Reductions ======
 
-            #[inline(always)]
+            {arcane}
             fn reduce_add(self, a: {inner}) -> {elem} {{
         {reduce_add_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn reduce_min(self, a: {inner}) -> {elem} {{
         {reduce_min_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn reduce_max(self, a: {inner}) -> {elem} {{
         {reduce_max_body}
             }}
@@ -1746,34 +1764,37 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
         {approx_section}
             // ====== Bitwise ======
 
-            #[inline(always)]
+            {baseline}
             fn not(self, a: {inner}) -> {inner} {{
-                unsafe {{
-                    let ones = {p}_set1_{set1_int}(-1);
-                    let as_int = {cast_float_to_int}(a);
-                    {cast_int_to_float}({p}_xor_si{bits}(as_int, ones))
-                }}
+                let ones = {p}_set1_{set1_int}(-1);
+                let as_int = {cast_float_to_int}(a);
+                {cast_int_to_float}({p}_xor_si{bits}(as_int, ones))
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {baseline}
             fn bitand(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_and_{s}(a, b) }}
+                {p}_and_{s}(a, b)
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {baseline}
             fn bitor(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_or_{s}(a, b) }}
+                {p}_or_{s}(a, b)
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {baseline}
             fn bitxor(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_xor_{s}(a, b) }}
+                {p}_xor_{s}(a, b)
             }}
+            {baseline_end}
             {to_u8_x86}
             {store_rgba_x86}
             {transpose_8x8_x86}
         }}
     "#,
+
         zero_lit = if elem == "f32" { "0.0f32" } else { "0.0f64" },
     }
 }
@@ -1797,19 +1818,19 @@ fn generate_x86_reduce_add(ty: &FloatVecType) -> String {
     // f64 keeps _mm_hadd_pd — benchmarks show no difference at 2 f64 lanes.
     match (ty.elem, ty.width_bits) {
         ("f32", 128) => formatdoc! {"
-                unsafe {{
+                {{
                     let shuf = _mm_shuffle_ps::<0b10_11_00_01>(a, a);
                     let s1 = _mm_add_ps(a, shuf);
                     let s2 = _mm_add_ps(s1, _mm_movehl_ps(s1, s1));
                     {cvt}(s2)
                 }}"},
         ("f64", 128) => formatdoc! {"
-                unsafe {{
+                {{
                     let h = {hadd}(a, a);
                     {cvt}(h)
                 }}"},
         ("f32", 256) => formatdoc! {"
-                unsafe {{
+                {{
                     let hi = {p}_extractf128_{s}::<1>(a);
                     let lo = {p}_cast{s}256_{s}128(a);
                     let sum = _mm_add_ps(lo, hi);
@@ -1819,15 +1840,15 @@ fn generate_x86_reduce_add(ty: &FloatVecType) -> String {
                     {cvt}(s2)
                 }}"},
         ("f64", 256) => formatdoc! {"
-                unsafe {{
+                {{
                     let hi = {p}_extractf128_{s}::<1>(a);
                     let lo = {p}_cast{s}256_{s}128(a);
                     let sum = _mm_add_{s}(lo, hi);
                     let h = {hadd}(sum, sum);
                     {cvt}(h)
                 }}"},
-        ("f32", 512) => "        unsafe { _mm512_reduce_add_ps(a) }".to_string(),
-        ("f64", 512) => "        unsafe { _mm512_reduce_add_pd(a) }".to_string(),
+        ("f32", 512) => "        { _mm512_reduce_add_ps(a) }".to_string(),
+        ("f64", 512) => "        { _mm512_reduce_add_pd(a) }".to_string(),
         _ => unreachable!(),
     }
 }
@@ -1843,7 +1864,7 @@ fn generate_x86_reduce_min(ty: &FloatVecType) -> String {
 
     match (ty.elem, ty.width_bits) {
         ("f32", 128) => formatdoc! {"
-                unsafe {{
+                {{
                     let shuf = _mm_shuffle_ps::<0b10_11_00_01>(a, a);
                     let m1 = _mm_min_ps(a, shuf);
                     let shuf2 = _mm_shuffle_ps::<0b00_00_10_10>(m1, m1);
@@ -1851,13 +1872,13 @@ fn generate_x86_reduce_min(ty: &FloatVecType) -> String {
                     {cvt}(m2)
                 }}"},
         ("f64", 128) => formatdoc! {"
-                unsafe {{
+                {{
                     let shuf = _mm_shuffle_pd::<0b01>(a, a);
                     let m = _mm_min_pd(a, shuf);
                     {cvt}(m)
                 }}"},
         ("f32", 256) => formatdoc! {"
-                unsafe {{
+                {{
                     let hi = {p}_extractf128_{s}::<1>(a);
                     let lo = {p}_cast{s}256_{s}128(a);
                     let m = _mm_min_{s}(lo, hi);
@@ -1868,7 +1889,7 @@ fn generate_x86_reduce_min(ty: &FloatVecType) -> String {
                     {cvt}(m2)
                 }}"},
         ("f64", 256) => formatdoc! {"
-                unsafe {{
+                {{
                     let hi = {p}_extractf128_{s}::<1>(a);
                     let lo = {p}_cast{s}256_{s}128(a);
                     let m = _mm_min_{s}(lo, hi);
@@ -1876,8 +1897,8 @@ fn generate_x86_reduce_min(ty: &FloatVecType) -> String {
                     let m2 = _mm_min_pd(m, shuf);
                     {cvt}(m2)
                 }}"},
-        ("f32", 512) => "        unsafe { _mm512_reduce_min_ps(a) }".to_string(),
-        ("f64", 512) => "        unsafe { _mm512_reduce_min_pd(a) }".to_string(),
+        ("f32", 512) => "        { _mm512_reduce_min_ps(a) }".to_string(),
+        ("f64", 512) => "        { _mm512_reduce_min_pd(a) }".to_string(),
         _ => unreachable!(),
     }
 }
@@ -1893,7 +1914,7 @@ fn generate_x86_reduce_max(ty: &FloatVecType) -> String {
 
     match (ty.elem, ty.width_bits) {
         ("f32", 128) => formatdoc! {"
-                unsafe {{
+                {{
                     let shuf = _mm_shuffle_ps::<0b10_11_00_01>(a, a);
                     let m1 = _mm_max_ps(a, shuf);
                     let shuf2 = _mm_shuffle_ps::<0b00_00_10_10>(m1, m1);
@@ -1901,13 +1922,13 @@ fn generate_x86_reduce_max(ty: &FloatVecType) -> String {
                     {cvt}(m2)
                 }}"},
         ("f64", 128) => formatdoc! {"
-                unsafe {{
+                {{
                     let shuf = _mm_shuffle_pd::<0b01>(a, a);
                     let m = _mm_max_pd(a, shuf);
                     {cvt}(m)
                 }}"},
         ("f32", 256) => formatdoc! {"
-                unsafe {{
+                {{
                     let hi = {p}_extractf128_{s}::<1>(a);
                     let lo = {p}_cast{s}256_{s}128(a);
                     let m = _mm_max_{s}(lo, hi);
@@ -1918,7 +1939,7 @@ fn generate_x86_reduce_max(ty: &FloatVecType) -> String {
                     {cvt}(m2)
                 }}"},
         ("f64", 256) => formatdoc! {"
-                unsafe {{
+                {{
                     let hi = {p}_extractf128_{s}::<1>(a);
                     let lo = {p}_cast{s}256_{s}128(a);
                     let m = _mm_max_{s}(lo, hi);
@@ -1926,8 +1947,8 @@ fn generate_x86_reduce_max(ty: &FloatVecType) -> String {
                     let m2 = _mm_max_pd(m, shuf);
                     {cvt}(m2)
                 }}"},
-        ("f32", 512) => "        unsafe { _mm512_reduce_max_ps(a) }".to_string(),
-        ("f64", 512) => "        unsafe { _mm512_reduce_max_pd(a) }".to_string(),
+        ("f32", 512) => "        { _mm512_reduce_max_ps(a) }".to_string(),
+        ("f64", 512) => "        { _mm512_reduce_max_pd(a) }".to_string(),
         _ => unreachable!(),
     }
 }
@@ -2432,6 +2453,9 @@ fn generate_neon_impls(types: &[FloatVecType]) -> String {
         #[cfg(target_arch = "aarch64")]
         use core::arch::aarch64::*;
 
+        #[cfg(target_arch = "aarch64")]
+        use archmage::{{arcane, NeonToken}};
+
         use crate::simd::backends::*;
 
     "#};
@@ -2446,13 +2470,14 @@ fn generate_neon_impls(types: &[FloatVecType]) -> String {
 }
 
 fn generate_neon_float_impl(ty: &FloatVecType) -> String {
+    let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let repr = ty.neon_repr();
     let elem = ty.elem;
+    let zero_lit = if elem == "f32" { "0.0f32" } else { "0.0f64" };
     let lanes = ty.lanes;
     let array = ty.array_type();
     let ns = ty.neon_suffix();
-    let zero_lit = if elem == "f32" { "0.0f32" } else { "0.0f64" };
     let sub_count = ty.sub_count();
 
     // NEON native type names
@@ -2473,14 +2498,14 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
         let items: Vec<String> = (0..sub_count)
             .map(|i| format!("{intrinsic}(a[{i}], b[{i}])"))
             .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
+        format!("[{}]", items.join(", "))
     };
 
     let unary_op = |intrinsic: &str| -> String {
         let items: Vec<String> = (0..sub_count)
             .map(|i| format!("{intrinsic}(a[{i}])"))
             .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
+        format!("[{}]", items.join(", "))
     };
 
     let cmp_op = |intrinsic: &str| -> String {
@@ -2492,7 +2517,7 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
                 )
             })
             .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
+        format!("[{}]", items.join(", "))
     };
 
     let ne_op = || -> String {
@@ -2513,7 +2538,7 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
                 }
             })
             .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
+        format!("[{}]", items.join(", "))
     };
 
     let blend_op = || -> String {
@@ -2525,7 +2550,7 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
                 )
             })
             .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
+        format!("[{}]", items.join(", "))
     };
 
     let bitwise_not_op = || -> String {
@@ -2540,7 +2565,7 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
                 }
             })
             .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
+        format!("[{}]", items.join(", "))
     };
 
     let bitwise_binary_op = |neon_op: &str| -> String {
@@ -2548,12 +2573,12 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
         let items: Vec<String> = (0..sub_count)
             .map(|i| format!("vreinterpretq_{ns}_u{eb}({neon_op}(vreinterpretq_u{eb}_{ns}(a[{i}]), vreinterpretq_u{eb}_{ns}(b[{i}])))"))
             .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
+        format!("[{}]", items.join(", "))
     };
 
     // Reduction: combine halves then reduce
     let reduce_combine = |combine_intrinsic: &str, pairwise: &str| -> String {
-        let mut body = String::from("unsafe {\n");
+        let mut body = String::from("{\n");
         body.push_str(&format!(
             "            let m = {combine_intrinsic}(a[0], a[1]);\n"
         ));
@@ -2580,7 +2605,7 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
     let to_u8_arm_poly = if elem == "f32" && lanes == 8 {
         formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn to_u8_bytes(self, a: {repr}) -> [u8; {lanes}] {{
                 unsafe {{
                     let i0 = vqmovn_s32(vcvtnq_s32_f32(a[0]));
@@ -2599,7 +2624,7 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
     let store_rgba_arm_poly = if elem == "f32" && lanes == 8 {
         formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn store_rgba_bytes(self, r: {repr}, g: {repr}, b: {repr}, a: {repr}) -> [u8; 32] {{
                 unsafe {{
                     let lo = vdupq_n_s32(0);
@@ -2634,20 +2659,16 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
 
             // ====== Construction ======
 
-            #[inline(always)]
+            {arcane}
             fn splat(self, v: {elem}) -> {repr} {{
-                unsafe {{
-                    let v4 = vdupq_n_{ns}(v);
-                    [{v4_copies}]
-                }}
+                let v4 = vdupq_n_{ns}(v);
+                [{v4_copies}]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn zero(self) -> {repr} {{
-                unsafe {{
-                    let z = vdupq_n_{ns}(0.0);
-                    [{z_copies}]
-                }}
+                let z = vdupq_n_{ns}(0.0);
+                [{z_copies}]
             }}
 
             #[inline(always)]
@@ -2678,75 +2699,75 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
 
             // ====== Arithmetic ======
 
-            #[inline(always)]
+            {arcane}
             fn add(self, a: {repr}, b: {repr}) -> {repr} {{
                 {add_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn sub(self, a: {repr}, b: {repr}) -> {repr} {{
                 {sub_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn mul(self, a: {repr}, b: {repr}) -> {repr} {{
                 {mul_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn div(self, a: {repr}, b: {repr}) -> {repr} {{
                 {div_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn neg(self, a: {repr}) -> {repr} {{
                 {neg_body}
             }}
 
             // ====== Math ======
 
-            #[inline(always)]
+            {arcane}
             fn min(self, a: {repr}, b: {repr}) -> {repr} {{
                 {min_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn max(self, a: {repr}, b: {repr}) -> {repr} {{
                 {max_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn sqrt(self, a: {repr}) -> {repr} {{
                 {sqrt_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn abs(self, a: {repr}) -> {repr} {{
                 {abs_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn floor(self, a: {repr}) -> {repr} {{
                 {floor_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn ceil(self, a: {repr}) -> {repr} {{
                 {ceil_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn round(self, a: {repr}) -> {repr} {{
                 {round_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn mul_add(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
                 // vfmaq = acc + x*y, so mul_add(a, b, c) = a*b + c => vfmaq(c, a, b)
                 {mul_add_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn mul_sub(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
                 // a*b - c => vfmaq(-c, a, b) = -c + a*b
                 {mul_sub_body}
@@ -2754,54 +2775,54 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
 
             // ====== Comparisons ======
 
-            #[inline(always)]
+            {arcane}
             fn simd_eq(self, a: {repr}, b: {repr}) -> {repr} {{
                 {eq_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_ne(self, a: {repr}, b: {repr}) -> {repr} {{
                 {ne_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_lt(self, a: {repr}, b: {repr}) -> {repr} {{
                 {lt_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_le(self, a: {repr}, b: {repr}) -> {repr} {{
                 {le_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_gt(self, a: {repr}, b: {repr}) -> {repr} {{
                 {gt_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_ge(self, a: {repr}, b: {repr}) -> {repr} {{
                 {ge_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn blend(self, mask: {repr}, if_true: {repr}, if_false: {repr}) -> {repr} {{
                 {blend_body}
             }}
 
             // ====== Reductions ======
 
-            #[inline(always)]
+            {arcane}
             fn reduce_add(self, a: {repr}) -> {elem} {{
                 {reduce_add_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn reduce_min(self, a: {repr}) -> {elem} {{
                 {reduce_min_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn reduce_max(self, a: {repr}) -> {elem} {{
                 {reduce_max_body}
             }}
@@ -2811,44 +2832,44 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             // Delegate to the native f32x4/f64x2 backend so the polyfill inherits
             // its >=12-bit fused `_approx` (raw vrecpe + 1 FRECPS) and exact full
             // methods — one source of truth for the estimate.
-            #[inline(always)]
+            {arcane}
             fn rcp_approx(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <Self as {sub_trait}>::rcp_approx(self, a[i]))
+                core::array::from_fn(|i| <Self as {sub_trait}>::rcp_approx(_self, a[i]))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn rsqrt_approx(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <Self as {sub_trait}>::rsqrt_approx(self, a[i]))
+                core::array::from_fn(|i| <Self as {sub_trait}>::rsqrt_approx(_self, a[i]))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn recip(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <Self as {sub_trait}>::recip(self, a[i]))
+                core::array::from_fn(|i| <Self as {sub_trait}>::recip(_self, a[i]))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn rsqrt(self, a: {repr}) -> {repr} {{
-                core::array::from_fn(|i| <Self as {sub_trait}>::rsqrt(self, a[i]))
+                core::array::from_fn(|i| <Self as {sub_trait}>::rsqrt(_self, a[i]))
             }}
 
             // ====== Bitwise ======
 
-            #[inline(always)]
+            {arcane}
             fn not(self, a: {repr}) -> {repr} {{
                 {not_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitand(self, a: {repr}, b: {repr}) -> {repr} {{
                 {and_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitor(self, a: {repr}, b: {repr}) -> {repr} {{
                 {or_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitxor(self, a: {repr}, b: {repr}) -> {repr} {{
                 {xor_body}
             }}
@@ -2856,14 +2877,16 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             {store_rgba_arm_poly}
         }}
     "#,
-        v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
-        z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
-        load_lanes = (0..sub_count)
-            .map(|i| format!("vld1q_{ns}(data.as_ptr().add({}))", i * native_lanes))
-            .collect::<Vec<_>>().join(", "),
+
         store_lanes = (0..sub_count)
             .map(|i| format!("vst1q_{ns}(out.as_mut_ptr().add({}), repr[{i}]);", i * native_lanes))
             .collect::<Vec<_>>().join("\n            "),
+
+        load_lanes = (0..sub_count)
+            .map(|i| format!("vld1q_{ns}(data.as_ptr().add({}))", i * native_lanes))
+            .collect::<Vec<_>>().join(", "),
+        v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
+        z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
         add_body = binary_op(&format!("vaddq_{ns}")),
         sub_body = binary_op(&format!("vsubq_{ns}")),
         mul_body = binary_op(&format!("vmulq_{ns}")),
@@ -2880,13 +2903,13 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!("vfmaq_{ns}(c[{i}], a[{i}], b[{i}])"))
                 .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
+            format!("[{}]", items.join(", "))
         },
         mul_sub_body = {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!("vfmaq_{ns}(vnegq_{ns}(c[{i}]), a[{i}], b[{i}])"))
                 .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
+            format!("[{}]", items.join(", "))
         },
         eq_body = cmp_op(&format!("vceqq_{ns}")),
         ne_body = ne_op(),
@@ -2908,13 +2931,14 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
 
 /// Generate NEON impl for a type that's native 128-bit (f32x4, f64x2).
 fn generate_neon_native_impl(ty: &FloatVecType) -> String {
+    let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let repr = ty.neon_repr();
     let elem = ty.elem;
+    let zero_lit = if elem == "f32" { "0.0f32" } else { "0.0f64" };
     let lanes = ty.lanes;
     let array = ty.array_type();
     let ns = ty.neon_suffix();
-    let zero_lit = if elem == "f32" { "0.0f32" } else { "0.0f64" };
     let eb = if elem == "f32" { 32 } else { 64 };
     let native_lanes = if elem == "f32" { 4 } else { 2 };
 
@@ -2946,10 +2970,10 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
     let (recip_body, rsqrt_body) = if elem == "f32" {
         (
             format!(
-                "let y = <Self as {trait_name}>::rcp_approx(self, a); vmulq_{ns}(vrecpsq_{ns}(a, y), y)"
+                "let y = <Self as {trait_name}>::rcp_approx(_self, a); vmulq_{ns}(vrecpsq_{ns}(a, y), y)"
             ),
             format!(
-                "let y = <Self as {trait_name}>::rsqrt_approx(self, a); vmulq_{ns}(y, vrsqrtsq_{ns}(a, vmulq_{ns}(y, y)))"
+                "let y = <Self as {trait_name}>::rsqrt_approx(_self, a); vmulq_{ns}(y, vrsqrtsq_{ns}(a, vmulq_{ns}(y, y)))"
             ),
         )
     } else {
@@ -2983,7 +3007,7 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
 
     // For native types, reduce pattern is different
     let reduce_pairwise = |pairwise: &str| -> String {
-        let mut body = format!("unsafe {{\n            let pair = {pairwise}(a, a);\n");
+        let mut body = format!("{{\n            let pair = {pairwise}(a, a);\n");
         if native_lanes > 2 {
             body.push_str(&format!("            let pair = {pairwise}(pair, pair);\n"));
         }
@@ -3000,7 +3024,7 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
     let to_u8_arm = if elem == "f32" && lanes == 4 {
         formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn to_u8_bytes(self, a: {repr}) -> [u8; 4] {{
                 unsafe {{
                     let i16s = vqmovn_s32(vcvtnq_s32_f32(a));
@@ -3020,7 +3044,7 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
     let store_rgba_arm = if elem == "f32" && lanes == 4 {
         formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn store_rgba_bytes(self, r: {repr}, g: {repr}, b: {repr}, a: {repr}) -> [u8; 16] {{
                 unsafe {{
                     let lo = vdupq_n_s32(0);
@@ -3045,14 +3069,14 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
         impl {trait_name} for archmage::NeonToken {{
             type Repr = {repr};
 
-            #[inline(always)]
+            {arcane}
             fn splat(self, v: {elem}) -> {repr} {{
-                unsafe {{ vdupq_n_{ns}(v) }}
+                vdupq_n_{ns}(v)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn zero(self) -> {repr} {{
-                unsafe {{ vdupq_n_{ns}(0.0) }}
+                vdupq_n_{ns}(0.0)
             }}
 
             #[inline(always)]
@@ -3077,82 +3101,82 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
                 out
             }}
 
-            #[inline(always)]
-            fn add(self, a: {repr}, b: {repr}) -> {repr} {{ unsafe {{ vaddq_{ns}(a, b) }} }}
-            #[inline(always)]
-            fn sub(self, a: {repr}, b: {repr}) -> {repr} {{ unsafe {{ vsubq_{ns}(a, b) }} }}
-            #[inline(always)]
-            fn mul(self, a: {repr}, b: {repr}) -> {repr} {{ unsafe {{ vmulq_{ns}(a, b) }} }}
-            #[inline(always)]
-            fn div(self, a: {repr}, b: {repr}) -> {repr} {{ unsafe {{ vdivq_{ns}(a, b) }} }}
-            #[inline(always)]
-            fn neg(self, a: {repr}) -> {repr} {{ unsafe {{ vnegq_{ns}(a) }} }}
-            #[inline(always)]
-            fn min(self, a: {repr}, b: {repr}) -> {repr} {{ unsafe {{ vminq_{ns}(a, b) }} }}
-            #[inline(always)]
-            fn max(self, a: {repr}, b: {repr}) -> {repr} {{ unsafe {{ vmaxq_{ns}(a, b) }} }}
-            #[inline(always)]
-            fn sqrt(self, a: {repr}) -> {repr} {{ unsafe {{ vsqrtq_{ns}(a) }} }}
-            #[inline(always)]
-            fn abs(self, a: {repr}) -> {repr} {{ unsafe {{ vabsq_{ns}(a) }} }}
-            #[inline(always)]
-            fn floor(self, a: {repr}) -> {repr} {{ unsafe {{ vrndmq_{ns}(a) }} }}
-            #[inline(always)]
-            fn ceil(self, a: {repr}) -> {repr} {{ unsafe {{ vrndpq_{ns}(a) }} }}
-            #[inline(always)]
-            fn round(self, a: {repr}) -> {repr} {{ unsafe {{ vrndnq_{ns}(a) }} }}
+            {arcane}
+            fn add(self, a: {repr}, b: {repr}) -> {repr} {{ vaddq_{ns}(a, b) }}
+            {arcane}
+            fn sub(self, a: {repr}, b: {repr}) -> {repr} {{ vsubq_{ns}(a, b) }}
+            {arcane}
+            fn mul(self, a: {repr}, b: {repr}) -> {repr} {{ vmulq_{ns}(a, b) }}
+            {arcane}
+            fn div(self, a: {repr}, b: {repr}) -> {repr} {{ vdivq_{ns}(a, b) }}
+            {arcane}
+            fn neg(self, a: {repr}) -> {repr} {{ vnegq_{ns}(a) }}
+            {arcane}
+            fn min(self, a: {repr}, b: {repr}) -> {repr} {{ vminq_{ns}(a, b) }}
+            {arcane}
+            fn max(self, a: {repr}, b: {repr}) -> {repr} {{ vmaxq_{ns}(a, b) }}
+            {arcane}
+            fn sqrt(self, a: {repr}) -> {repr} {{ vsqrtq_{ns}(a) }}
+            {arcane}
+            fn abs(self, a: {repr}) -> {repr} {{ vabsq_{ns}(a) }}
+            {arcane}
+            fn floor(self, a: {repr}) -> {repr} {{ vrndmq_{ns}(a) }}
+            {arcane}
+            fn ceil(self, a: {repr}) -> {repr} {{ vrndpq_{ns}(a) }}
+            {arcane}
+            fn round(self, a: {repr}) -> {repr} {{ vrndnq_{ns}(a) }}
 
-            #[inline(always)]
+            {arcane}
             fn mul_add(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
-                unsafe {{ vfmaq_{ns}(c, a, b) }}
+                vfmaq_{ns}(c, a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn mul_sub(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
-                unsafe {{ vfmaq_{ns}(vnegq_{ns}(c), a, b) }}
+                vfmaq_{ns}(vnegq_{ns}(c), a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_eq(self, a: {repr}, b: {repr}) -> {repr} {{
-                unsafe {{ vreinterpretq_{ns}_u{eb}(vceqq_{ns}(a, b)) }}
+                vreinterpretq_{ns}_u{eb}(vceqq_{ns}(a, b))
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_ne(self, a: {repr}, b: {repr}) -> {repr} {{
-                unsafe {{ vreinterpretq_{ns}_u{eb}({ne_inner}) }}
+                vreinterpretq_{ns}_u{eb}({ne_inner})
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_lt(self, a: {repr}, b: {repr}) -> {repr} {{
-                unsafe {{ vreinterpretq_{ns}_u{eb}(vcltq_{ns}(a, b)) }}
+                vreinterpretq_{ns}_u{eb}(vcltq_{ns}(a, b))
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_le(self, a: {repr}, b: {repr}) -> {repr} {{
-                unsafe {{ vreinterpretq_{ns}_u{eb}(vcleq_{ns}(a, b)) }}
+                vreinterpretq_{ns}_u{eb}(vcleq_{ns}(a, b))
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_gt(self, a: {repr}, b: {repr}) -> {repr} {{
-                unsafe {{ vreinterpretq_{ns}_u{eb}(vcgtq_{ns}(a, b)) }}
+                vreinterpretq_{ns}_u{eb}(vcgtq_{ns}(a, b))
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_ge(self, a: {repr}, b: {repr}) -> {repr} {{
-                unsafe {{ vreinterpretq_{ns}_u{eb}(vcgeq_{ns}(a, b)) }}
+                vreinterpretq_{ns}_u{eb}(vcgeq_{ns}(a, b))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn blend(self, mask: {repr}, if_true: {repr}, if_false: {repr}) -> {repr} {{
-                unsafe {{ vbslq_{ns}(vreinterpretq_u{eb}_{ns}(mask), if_true, if_false) }}
+                vbslq_{ns}(vreinterpretq_u{eb}_{ns}(mask), if_true, if_false)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn reduce_add(self, a: {repr}) -> {elem} {{
                 {reduce_add}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn reduce_min(self, a: {repr}) -> {elem} {{
                 {reduce_min}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn reduce_max(self, a: {repr}) -> {elem} {{
                 {reduce_max}
             }}
@@ -3188,38 +3212,38 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             // Cost of exactness is per-core and does NOT generalize — these
             // numbers are for {elem} specifically:
 {recip_perf_note}
-            #[inline(always)]
+            {arcane}
             fn rcp_approx(self, a: {repr}) -> {repr} {{
-                unsafe {{ let y = vrecpeq_{ns}(a); vmulq_{ns}(vrecpsq_{ns}(a, y), y) }}
+                let y = vrecpeq_{ns}(a); vmulq_{ns}(vrecpsq_{ns}(a, y), y)
             }}
-            #[inline(always)]
+            {arcane}
             fn rsqrt_approx(self, a: {repr}) -> {repr} {{
-                unsafe {{ let y = vrsqrteq_{ns}(a); vmulq_{ns}(y, vrsqrtsq_{ns}(a, vmulq_{ns}(y, y))) }}
+                let y = vrsqrteq_{ns}(a); vmulq_{ns}(y, vrsqrtsq_{ns}(a, vmulq_{ns}(y, y)))
             }}
-            #[inline(always)]
+            {arcane}
             fn recip(self, a: {repr}) -> {repr} {{
-                unsafe {{ {recip_exact} }}
+                {recip_exact}
             }}
-            #[inline(always)]
+            {arcane}
             fn rsqrt(self, a: {repr}) -> {repr} {{
-                unsafe {{ {rsqrt_exact} }}
+                {rsqrt_exact}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn not(self, a: {repr}) -> {repr} {{
-                unsafe {{ vreinterpretq_{ns}_u{eb}({not_inner}) }}
+                vreinterpretq_{ns}_u{eb}({not_inner})
             }}
-            #[inline(always)]
+            {arcane}
             fn bitand(self, a: {repr}, b: {repr}) -> {repr} {{
-                unsafe {{ vreinterpretq_{ns}_u{eb}(vandq_u{eb}(vreinterpretq_u{eb}_{ns}(a), vreinterpretq_u{eb}_{ns}(b))) }}
+                vreinterpretq_{ns}_u{eb}(vandq_u{eb}(vreinterpretq_u{eb}_{ns}(a), vreinterpretq_u{eb}_{ns}(b)))
             }}
-            #[inline(always)]
+            {arcane}
             fn bitor(self, a: {repr}, b: {repr}) -> {repr} {{
-                unsafe {{ vreinterpretq_{ns}_u{eb}(vorrq_u{eb}(vreinterpretq_u{eb}_{ns}(a), vreinterpretq_u{eb}_{ns}(b))) }}
+                vreinterpretq_{ns}_u{eb}(vorrq_u{eb}(vreinterpretq_u{eb}_{ns}(a), vreinterpretq_u{eb}_{ns}(b)))
             }}
-            #[inline(always)]
+            {arcane}
             fn bitxor(self, a: {repr}, b: {repr}) -> {repr} {{
-                unsafe {{ vreinterpretq_{ns}_u{eb}(veorq_u{eb}(vreinterpretq_u{eb}_{ns}(a), vreinterpretq_u{eb}_{ns}(b))) }}
+                vreinterpretq_{ns}_u{eb}(veorq_u{eb}(vreinterpretq_u{eb}_{ns}(a), vreinterpretq_u{eb}_{ns}(b)))
             }}
             {to_u8_arm}
             {store_rgba_arm}
@@ -4067,6 +4091,9 @@ fn generate_x86_i32_impls(types: &[I32VecType], token: &str, max_width: usize) -
 }
 
 fn generate_x86_i32_impl(ty: &I32VecType, token: &str) -> String {
+    let arcane = super::backend_syntax::arcane(token);
+    let baseline = super::backend_syntax::sse2_or_arcane(token, ty.width_bits);
+    let baseline_end = if ty.width_bits == 128 { "}" } else { "" };
     let trait_name = ty.trait_name();
     let inner = ty.x86_inner_type();
     let p = ty.x86_prefix();
@@ -4082,14 +4109,14 @@ fn generate_x86_i32_impl(ty: &I32VecType, token: &str) -> String {
 
             // ====== Construction ======
 
-            #[inline(always)]
+            {arcane}
             fn splat(self, v: i32) -> {inner} {{
-                unsafe {{ {p}_set1_epi32(v) }}
+                {p}_set1_epi32(v)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn zero(self) -> {inner} {{
-                unsafe {{ {p}_setzero_si{bits}() }}
+                {p}_setzero_si{bits}()
             }}
 
             #[inline(always)]
@@ -4117,133 +4144,133 @@ fn generate_x86_i32_impl(ty: &I32VecType, token: &str) -> String {
 
             // ====== Arithmetic ======
 
-            #[inline(always)]
+            {baseline}
             fn add(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_add_epi32(a, b) }}
+                {p}_add_epi32(a, b)
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {baseline}
             fn sub(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_sub_epi32(a, b) }}
+                {p}_sub_epi32(a, b)
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {arcane}
             fn mul(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_mullo_epi32(a, b) }}
+                {p}_mullo_epi32(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn neg(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_sub_epi32({p}_setzero_si{bits}(), a) }}
+                {p}_sub_epi32({p}_setzero_si{bits}(), a)
             }}
 
             // ====== Math ======
 
-            #[inline(always)]
+            {arcane}
             fn min(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_min_epi32(a, b) }}
+                {p}_min_epi32(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn max(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_max_epi32(a, b) }}
+                {p}_max_epi32(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn abs(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_abs_epi32(a) }}
+                {p}_abs_epi32(a)
             }}
 
             // ====== Comparisons ======
 
-            #[inline(always)]
+            {arcane}
             fn simd_eq(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_cmpeq_epi32(a, b) }}
+                {p}_cmpeq_epi32(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_ne(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{
-                    let eq = {p}_cmpeq_epi32(a, b);
-                    {p}_andnot_si{bits}(eq, {p}_set1_epi32(-1))
-                }}
+                let eq = {p}_cmpeq_epi32(a, b);
+                {p}_andnot_si{bits}(eq, {p}_set1_epi32(-1))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_lt(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_cmpgt_epi32(b, a) }}
+                {p}_cmpgt_epi32(b, a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_le(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{
-                    let gt = {p}_cmpgt_epi32(a, b);
-                    {p}_andnot_si{bits}(gt, {p}_set1_epi32(-1))
-                }}
+                let gt = {p}_cmpgt_epi32(a, b);
+                {p}_andnot_si{bits}(gt, {p}_set1_epi32(-1))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_gt(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_cmpgt_epi32(a, b) }}
+                {p}_cmpgt_epi32(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_ge(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{
-                    let lt = {p}_cmpgt_epi32(b, a);
-                    {p}_andnot_si{bits}(lt, {p}_set1_epi32(-1))
-                }}
+                let lt = {p}_cmpgt_epi32(b, a);
+                {p}_andnot_si{bits}(lt, {p}_set1_epi32(-1))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn blend(self, mask: {inner}, if_true: {inner}, if_false: {inner}) -> {inner} {{
-                unsafe {{ {p}_blendv_epi8(if_false, if_true, mask) }}
+                {p}_blendv_epi8(if_false, if_true, mask)
             }}
 
             // ====== Reductions ======
 
-            #[inline(always)]
+            {arcane}
             fn reduce_add(self, a: {inner}) -> i32 {{
         {reduce_add_body}
             }}
 
             // ====== Bitwise ======
 
-            #[inline(always)]
+            {baseline}
             fn not(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_andnot_si{bits}(a, {p}_set1_epi32(-1)) }}
+                {p}_andnot_si{bits}(a, {p}_set1_epi32(-1))
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {baseline}
             fn bitand(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_and_si{bits}(a, b) }}
+                {p}_and_si{bits}(a, b)
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {baseline}
             fn bitor(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_or_si{bits}(a, b) }}
+                {p}_or_si{bits}(a, b)
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {baseline}
             fn bitxor(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_xor_si{bits}(a, b) }}
+                {p}_xor_si{bits}(a, b)
             }}
+            {baseline_end}
 
             // ====== Shifts ======
 
-            #[inline(always)]
+            {arcane}
             fn shl_const<const N: i32>(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_slli_epi32::<N>(a) }}
+                {p}_slli_epi32::<N>(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_arithmetic_const<const N: i32>(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_srai_epi32::<N>(a) }}
+                {p}_srai_epi32::<N>(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_const<const N: i32>(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_srli_epi32::<N>(a) }}
+                {p}_srli_epi32::<N>(a)
             }}
 
             // ====== Uniform variable shifts ======
@@ -4252,36 +4279,36 @@ fn generate_x86_i32_impl(ty: &I32VecType, token: &str) -> String {
             // _mm_cvtsi32_si128 zero-extends, so u32::MAX is just a large
             // out-of-range count, not a negative one.
 
-            #[inline(always)]
+            {arcane}
             fn shl_uniform(self, a: {inner}, count: u32) -> {inner} {{
-                unsafe {{ {p}_sll_epi32(a, _mm_cvtsi32_si128(count as i32)) }}
+                {p}_sll_epi32(a, _mm_cvtsi32_si128(count as i32))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_uniform(self, a: {inner}, count: u32) -> {inner} {{
-                unsafe {{ {p}_srl_epi32(a, _mm_cvtsi32_si128(count as i32)) }}
+                {p}_srl_epi32(a, _mm_cvtsi32_si128(count as i32))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_arithmetic_uniform(self, a: {inner}, count: u32) -> {inner} {{
-                unsafe {{ {p}_sra_epi32(a, _mm_cvtsi32_si128(count as i32)) }}
+                {p}_sra_epi32(a, _mm_cvtsi32_si128(count as i32))
             }}
 
             // ====== Boolean ======
 
-            #[inline(always)]
+            {arcane}
             fn all_true(self, a: {inner}) -> bool {{
-                unsafe {{ {p}_movemask_ps({p}_castsi{bits}_ps(a)) == {all_mask} }}
+                {p}_movemask_ps({p}_castsi{bits}_ps(a)) == {all_mask}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn any_true(self, a: {inner}) -> bool {{
-                unsafe {{ {p}_movemask_ps({p}_castsi{bits}_ps(a)) != 0 }}
+                {p}_movemask_ps({p}_castsi{bits}_ps(a)) != 0
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitmask(self, a: {inner}) -> u32 {{
-                unsafe {{ {p}_movemask_ps({p}_castsi{bits}_ps(a)) as u32 }}
+                {p}_movemask_ps({p}_castsi{bits}_ps(a)) as u32
             }}
         }}
     "#,
@@ -4292,7 +4319,7 @@ fn generate_x86_i32_impl(ty: &I32VecType, token: &str) -> String {
 fn generate_x86_i32_reduce_add(ty: &I32VecType) -> String {
     match ty.width_bits {
         128 => formatdoc! {"
-                unsafe {{
+                {{
                     let hi = _mm_shuffle_epi32::<0b01_00_11_10>(a);
                     let sum = _mm_add_epi32(a, hi);
                     let hi2 = _mm_shuffle_epi32::<0b00_00_00_01>(sum);
@@ -4300,7 +4327,7 @@ fn generate_x86_i32_reduce_add(ty: &I32VecType) -> String {
                     _mm_cvtsi128_si32(sum2)
                 }}"},
         256 => formatdoc! {"
-                unsafe {{
+                {{
                     let lo = _mm256_castsi256_si128(a);
                     let hi = _mm256_extracti128_si256::<1>(a);
                     let sum = _mm_add_epi32(lo, hi);
@@ -4319,110 +4346,107 @@ fn generate_x86_i32_reduce_add(ty: &I32VecType) -> String {
 // ============================================================================
 
 fn generate_x86_convert_impls(token: &str) -> String {
+    let arcane = super::backend_syntax::arcane(token);
     formatdoc! {r#"
 
         #[cfg(target_arch = "x86_64")]
         impl F32x4Convert for archmage::{token} {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_f32_to_i32(self, a: __m128) -> __m128i {{
-                unsafe {{ _mm_castps_si128(a) }}
+                _mm_castps_si128(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitcast_i32_to_f32(self, a: __m128i) -> __m128 {{
-                unsafe {{ _mm_castsi128_ps(a) }}
+                _mm_castsi128_ps(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_f32_to_i32(self, a: __m128) -> __m128i {{
-                unsafe {{ _mm_cvttps_epi32(a) }}
+                _mm_cvttps_epi32(a)
             }}
 
             // Issue #80 fixup: cvttps yields the i32::MIN sentinel for +overflow
             // and NaN; patch those two classes (-overflow already saturates to MIN).
-            #[inline(always)]
+            {arcane}
             fn convert_f32_to_i32_saturating(self, a: __m128) -> __m128i {{
-                unsafe {{
-                    let t = _mm_cvttps_epi32(a);
-                    let big = _mm_cmp_ps::<_CMP_GE_OQ>(a, _mm_set1_ps(2_147_483_648.0));
-                    let t = _mm_blendv_epi8(t, _mm_set1_epi32(i32::MAX), _mm_castps_si128(big));
-                    let nan = _mm_cmp_ps::<_CMP_UNORD_Q>(a, a);
-                    _mm_andnot_si128(_mm_castps_si128(nan), t)
-                }}
+                let t = _mm_cvttps_epi32(a);
+                let big = _mm_cmp_ps::<_CMP_GE_OQ>(a, _mm_set1_ps(2_147_483_648.0));
+                let t = _mm_blendv_epi8(t, _mm_set1_epi32(i32::MAX), _mm_castps_si128(big));
+                let nan = _mm_cmp_ps::<_CMP_UNORD_Q>(a, a);
+                _mm_andnot_si128(_mm_castps_si128(nan), t)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_f32_to_i32_round(self, a: __m128) -> __m128i {{
-                unsafe {{ _mm_cvtps_epi32(a) }}
+                _mm_cvtps_epi32(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_i32_to_f32(self, a: __m128i) -> __m128 {{
-                unsafe {{ _mm_cvtepi32_ps(a) }}
+                _mm_cvtepi32_ps(a)
             }}
         }}
 
         #[cfg(target_arch = "x86_64")]
         impl F32x8Convert for archmage::{token} {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_f32_to_i32(self, a: __m256) -> __m256i {{
-                unsafe {{ _mm256_castps_si256(a) }}
+                _mm256_castps_si256(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitcast_i32_to_f32(self, a: __m256i) -> __m256 {{
-                unsafe {{ _mm256_castsi256_ps(a) }}
+                _mm256_castsi256_ps(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_f32_to_i32(self, a: __m256) -> __m256i {{
-                unsafe {{ _mm256_cvttps_epi32(a) }}
+                _mm256_cvttps_epi32(a)
             }}
 
             // Issue #80 fixup — see the 128-bit impl.
-            #[inline(always)]
+            {arcane}
             fn convert_f32_to_i32_saturating(self, a: __m256) -> __m256i {{
-                unsafe {{
-                    let t = _mm256_cvttps_epi32(a);
-                    let big = _mm256_cmp_ps::<_CMP_GE_OQ>(a, _mm256_set1_ps(2_147_483_648.0));
-                    let t = _mm256_blendv_epi8(t, _mm256_set1_epi32(i32::MAX), _mm256_castps_si256(big));
-                    let nan = _mm256_cmp_ps::<_CMP_UNORD_Q>(a, a);
-                    _mm256_andnot_si256(_mm256_castps_si256(nan), t)
-                }}
+                let t = _mm256_cvttps_epi32(a);
+                let big = _mm256_cmp_ps::<_CMP_GE_OQ>(a, _mm256_set1_ps(2_147_483_648.0));
+                let t = _mm256_blendv_epi8(t, _mm256_set1_epi32(i32::MAX), _mm256_castps_si256(big));
+                let nan = _mm256_cmp_ps::<_CMP_UNORD_Q>(a, a);
+                _mm256_andnot_si256(_mm256_castps_si256(nan), t)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_f32_to_i32_round(self, a: __m256) -> __m256i {{
-                unsafe {{ _mm256_cvtps_epi32(a) }}
+                _mm256_cvtps_epi32(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_i32_to_f32(self, a: __m256i) -> __m256 {{
-                unsafe {{ _mm256_cvtepi32_ps(a) }}
+                _mm256_cvtepi32_ps(a)
             }}
         }}
 
         #[cfg(all(target_arch = "x86_64", feature = "w512"))]
         impl F32x16Convert for archmage::{token} {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_f32_to_i32(self, a: [__m256; 2]) -> [__m256i; 2] {{
-                unsafe {{ [_mm256_castps_si256(a[0]), _mm256_castps_si256(a[1])] }}
+                [_mm256_castps_si256(a[0]), _mm256_castps_si256(a[1])]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitcast_i32_to_f32(self, a: [__m256i; 2]) -> [__m256; 2] {{
-                unsafe {{ [_mm256_castsi256_ps(a[0]), _mm256_castsi256_ps(a[1])] }}
+                [_mm256_castsi256_ps(a[0]), _mm256_castsi256_ps(a[1])]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_f32_to_i32(self, a: [__m256; 2]) -> [__m256i; 2] {{
-                unsafe {{ [_mm256_cvttps_epi32(a[0]), _mm256_cvttps_epi32(a[1])] }}
+                [_mm256_cvttps_epi32(a[0]), _mm256_cvttps_epi32(a[1])]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_f32_to_i32_saturating(self, a: [__m256; 2]) -> [__m256i; 2] {{
                 core::array::from_fn(|i| {{
-                    unsafe {{
+                    {{
                         let t = _mm256_cvttps_epi32(a[i]);
                         let big = _mm256_cmp_ps::<_CMP_GE_OQ>(a[i], _mm256_set1_ps(2_147_483_648.0));
                         let t = _mm256_blendv_epi8(t, _mm256_set1_epi32(i32::MAX), _mm256_castps_si256(big));
@@ -4432,25 +4456,25 @@ fn generate_x86_convert_impls(token: &str) -> String {
                 }})
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_f32_to_i32_round(self, a: [__m256; 2]) -> [__m256i; 2] {{
-                unsafe {{ [_mm256_cvtps_epi32(a[0]), _mm256_cvtps_epi32(a[1])] }}
+                [_mm256_cvtps_epi32(a[0]), _mm256_cvtps_epi32(a[1])]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_i32_to_f32(self, a: [__m256i; 2]) -> [__m256; 2] {{
-                unsafe {{ [_mm256_cvtepi32_ps(a[0]), _mm256_cvtepi32_ps(a[1])] }}
+                [_mm256_cvtepi32_ps(a[0]), _mm256_cvtepi32_ps(a[1])]
             }}
         }}
 
         #[cfg(target_arch = "x86_64")]
         impl U32x4Bitcast for archmage::{token} {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_u32_to_i32(self, a: __m128i) -> __m128i {{
                 a
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitcast_i32_to_u32(self, a: __m128i) -> __m128i {{
                 a
             }}
@@ -4458,12 +4482,12 @@ fn generate_x86_convert_impls(token: &str) -> String {
 
         #[cfg(target_arch = "x86_64")]
         impl U32x8Bitcast for archmage::{token} {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_u32_to_i32(self, a: __m256i) -> __m256i {{
                 a
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitcast_i32_to_u32(self, a: __m256i) -> __m256i {{
                 a
             }}
@@ -4471,27 +4495,27 @@ fn generate_x86_convert_impls(token: &str) -> String {
 
         #[cfg(target_arch = "x86_64")]
         impl I64x2Bitcast for archmage::{token} {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_i64_to_f64(self, a: __m128i) -> __m128d {{
-                unsafe {{ _mm_castsi128_pd(a) }}
+                _mm_castsi128_pd(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitcast_f64_to_i64(self, a: __m128d) -> __m128i {{
-                unsafe {{ _mm_castpd_si128(a) }}
+                _mm_castpd_si128(a)
             }}
         }}
 
         #[cfg(target_arch = "x86_64")]
         impl I64x4Bitcast for archmage::{token} {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_i64_to_f64(self, a: __m256i) -> __m256d {{
-                unsafe {{ _mm256_castsi256_pd(a) }}
+                _mm256_castsi256_pd(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitcast_f64_to_i64(self, a: __m256d) -> __m256i {{
-                unsafe {{ _mm256_castpd_si256(a) }}
+                _mm256_castpd_si256(a)
             }}
         }}
     "#}
@@ -5007,22 +5031,23 @@ fn generate_neon_i32_impls(types: &[I32VecType]) -> String {
 }
 
 fn generate_neon_native_i32_impl(ty: &I32VecType) -> String {
+    let lanes = ty.lanes;
+    let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let array = ty.array_type();
-    let lanes = ty.lanes;
 
     formatdoc! {r#"
         impl {trait_name} for archmage::NeonToken {{
             type Repr = int32x4_t;
 
-            #[inline(always)]
+            {arcane}
             fn splat(self, v: i32) -> int32x4_t {{
-                unsafe {{ vdupq_n_s32(v) }}
+                vdupq_n_s32(v)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn zero(self) -> int32x4_t {{
-                unsafe {{ vdupq_n_s32(0) }}
+                vdupq_n_s32(0)
             }}
 
             #[inline(always)]
@@ -5047,88 +5072,88 @@ fn generate_neon_native_i32_impl(ty: &I32VecType) -> String {
                 out
             }}
 
-            #[inline(always)]
-            fn add(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {{ unsafe {{ vaddq_s32(a, b) }} }}
-            #[inline(always)]
-            fn sub(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {{ unsafe {{ vsubq_s32(a, b) }} }}
-            #[inline(always)]
-            fn mul(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {{ unsafe {{ vmulq_s32(a, b) }} }}
-            #[inline(always)]
-            fn neg(self, a: int32x4_t) -> int32x4_t {{ unsafe {{ vnegq_s32(a) }} }}
-            #[inline(always)]
-            fn min(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {{ unsafe {{ vminq_s32(a, b) }} }}
-            #[inline(always)]
-            fn max(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {{ unsafe {{ vmaxq_s32(a, b) }} }}
-            #[inline(always)]
-            fn abs(self, a: int32x4_t) -> int32x4_t {{ unsafe {{ vabsq_s32(a) }} }}
+            {arcane}
+            fn add(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {{ vaddq_s32(a, b) }}
+            {arcane}
+            fn sub(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {{ vsubq_s32(a, b) }}
+            {arcane}
+            fn mul(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {{ vmulq_s32(a, b) }}
+            {arcane}
+            fn neg(self, a: int32x4_t) -> int32x4_t {{ vnegq_s32(a) }}
+            {arcane}
+            fn min(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {{ vminq_s32(a, b) }}
+            {arcane}
+            fn max(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {{ vmaxq_s32(a, b) }}
+            {arcane}
+            fn abs(self, a: int32x4_t) -> int32x4_t {{ vabsq_s32(a) }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_eq(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {{
-                unsafe {{ vreinterpretq_s32_u32(vceqq_s32(a, b)) }}
+                vreinterpretq_s32_u32(vceqq_s32(a, b))
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_ne(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {{
-                unsafe {{ vreinterpretq_s32_u32(vmvnq_u32(vceqq_s32(a, b))) }}
+                vreinterpretq_s32_u32(vmvnq_u32(vceqq_s32(a, b)))
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_lt(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {{
-                unsafe {{ vreinterpretq_s32_u32(vcltq_s32(a, b)) }}
+                vreinterpretq_s32_u32(vcltq_s32(a, b))
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_le(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {{
-                unsafe {{ vreinterpretq_s32_u32(vcleq_s32(a, b)) }}
+                vreinterpretq_s32_u32(vcleq_s32(a, b))
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_gt(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {{
-                unsafe {{ vreinterpretq_s32_u32(vcgtq_s32(a, b)) }}
+                vreinterpretq_s32_u32(vcgtq_s32(a, b))
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_ge(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {{
-                unsafe {{ vreinterpretq_s32_u32(vcgeq_s32(a, b)) }}
+                vreinterpretq_s32_u32(vcgeq_s32(a, b))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn blend(self, mask: int32x4_t, if_true: int32x4_t, if_false: int32x4_t) -> int32x4_t {{
-                unsafe {{ vbslq_s32(vreinterpretq_u32_s32(mask), if_true, if_false) }}
+                vbslq_s32(vreinterpretq_u32_s32(mask), if_true, if_false)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn reduce_add(self, a: int32x4_t) -> i32 {{
-                unsafe {{ vaddvq_s32(a) }}
+                vaddvq_s32(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn not(self, a: int32x4_t) -> int32x4_t {{
-                unsafe {{ vmvnq_s32(a) }}
+                vmvnq_s32(a)
             }}
-            #[inline(always)]
+            {arcane}
             fn bitand(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {{
-                unsafe {{ vandq_s32(a, b) }}
+                vandq_s32(a, b)
             }}
-            #[inline(always)]
+            {arcane}
             fn bitor(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {{
-                unsafe {{ vorrq_s32(a, b) }}
+                vorrq_s32(a, b)
             }}
-            #[inline(always)]
+            {arcane}
             fn bitxor(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {{
-                unsafe {{ veorq_s32(a, b) }}
+                veorq_s32(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shl_const<const N: i32>(self, a: int32x4_t) -> int32x4_t {{
-                unsafe {{ vshlq_n_s32::<N>(a) }}
+                vshlq_n_s32::<N>(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_arithmetic_const<const N: i32>(self, a: int32x4_t) -> int32x4_t {{
                 const {{ assert!(N >= 0 && N <= 31) }};
-                unsafe {{ vshlq_s32(a, vdupq_n_s32(-N)) }}
+                vshlq_s32(a, vdupq_n_s32(-N))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_const<const N: i32>(self, a: int32x4_t) -> int32x4_t {{
                 const {{ assert!(N >= 0 && N <= 31) }};
-                unsafe {{ vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a), vdupq_n_s32(-N))) }}
+                vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a), vdupq_n_s32(-N)))
             }}
 
             // ====== Uniform variable shifts ======
@@ -5137,109 +5162,102 @@ fn generate_neon_native_i32_impl(ty: &I32VecType) -> String {
             // a signed value, so an unclamped 256 would wrap to a no-op
             // instead of the contracted zero.
 
-            #[inline(always)]
+            {arcane}
             fn shl_uniform(self, a: int32x4_t, count: u32) -> int32x4_t {{
-                unsafe {{ vshlq_s32(a, vdupq_n_s32(count.min(32) as i32)) }}
+                vshlq_s32(a, vdupq_n_s32(count.min(32) as i32))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_uniform(self, a: int32x4_t, count: u32) -> int32x4_t {{
-                unsafe {{
-                    vreinterpretq_s32_u32(vshlq_u32(
-                        vreinterpretq_u32_s32(a),
-                        vdupq_n_s32(-(count.min(32) as i32)),
-                    ))
-                }}
+                vreinterpretq_s32_u32(vshlq_u32(
+                    vreinterpretq_u32_s32(a),
+                    vdupq_n_s32(-(count.min(32) as i32)),
+                ))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_arithmetic_uniform(self, a: int32x4_t, count: u32) -> int32x4_t {{
                 // Clamping to 31 gives the contracted sign fill.
-                unsafe {{ vshlq_s32(a, vdupq_n_s32(-(count.min(31) as i32))) }}
+                vshlq_s32(a, vdupq_n_s32(-(count.min(31) as i32)))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn all_true(self, a: int32x4_t) -> bool {{
-                unsafe {{ vminvq_u32(vreinterpretq_u32_s32(a)) != 0 }}
+                vminvq_u32(vreinterpretq_u32_s32(a)) != 0
             }}
 
-            #[inline(always)]
+            {arcane}
             fn any_true(self, a: int32x4_t) -> bool {{
-                unsafe {{ vmaxvq_u32(vreinterpretq_u32_s32(a)) != 0 }}
+                vmaxvq_u32(vreinterpretq_u32_s32(a)) != 0
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitmask(self, a: int32x4_t) -> u32 {{
-                unsafe {{
-                    // Extract sign bit of each 32-bit lane as 0/1 (LOGICAL shift on
-                    // the u32 view — an arithmetic s32 shift would sign-extend to
-                    // 0xFFFF_FFFF and corrupt the packed mask).
-                    let shift = vshrq_n_u32::<31>(vreinterpretq_u32_s32(a));
-                    // Pack: lane0 | (lane1<<1) | (lane2<<2) | (lane3<<3)
-                    let lane0 = vgetq_lane_u32::<0>(shift);
-                    let lane1 = vgetq_lane_u32::<1>(shift);
-                    let lane2 = vgetq_lane_u32::<2>(shift);
-                    let lane3 = vgetq_lane_u32::<3>(shift);
-                    lane0 | (lane1 << 1) | (lane2 << 2) | (lane3 << 3)
-                }}
+                // Extract sign bit of each 32-bit lane as 0/1 (LOGICAL shift on
+                // the u32 view — an arithmetic s32 shift would sign-extend to
+                // 0xFFFF_FFFF and corrupt the packed mask).
+                let shift = vshrq_n_u32::<31>(vreinterpretq_u32_s32(a));
+                // Pack: lane0 | (lane1<<1) | (lane2<<2) | (lane3<<3)
+                let lane0 = vgetq_lane_u32::<0>(shift);
+                let lane1 = vgetq_lane_u32::<1>(shift);
+                let lane2 = vgetq_lane_u32::<2>(shift);
+                let lane3 = vgetq_lane_u32::<3>(shift);
+                lane0 | (lane1 << 1) | (lane2 << 2) | (lane3 << 3)
             }}
         }}
     "#}
 }
 
 fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
+    let lanes = ty.lanes;
+    let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let repr = ty.neon_repr();
     let array = ty.array_type();
-    let lanes = ty.lanes;
     let sub_count = ty.sub_count();
 
     let binary_op = |intrinsic: &str| -> String {
         let items: Vec<String> = (0..sub_count)
             .map(|i| format!("{intrinsic}(a[{i}], b[{i}])"))
             .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
+        format!("[{}]", items.join(", "))
     };
 
     let unary_op = |intrinsic: &str| -> String {
         let items: Vec<String> = (0..sub_count)
             .map(|i| format!("{intrinsic}(a[{i}])"))
             .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
+        format!("[{}]", items.join(", "))
     };
 
     let cmp_op = |intrinsic: &str| -> String {
         let items: Vec<String> = (0..sub_count)
             .map(|i| format!("vreinterpretq_s32_u32({intrinsic}(a[{i}], b[{i}]))"))
             .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
+        format!("[{}]", items.join(", "))
     };
 
     let ne_op = || -> String {
         let items: Vec<String> = (0..sub_count)
             .map(|i| format!("vreinterpretq_s32_u32(vmvnq_u32(vceqq_s32(a[{i}], b[{i}])))"))
             .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
+        format!("[{}]", items.join(", "))
     };
 
     formatdoc! {r#"
         impl {trait_name} for archmage::NeonToken {{
             type Repr = {repr};
 
-            #[inline(always)]
+            {arcane}
             fn splat(self, v: i32) -> {repr} {{
-                unsafe {{
-                    let v4 = vdupq_n_s32(v);
-                    [{v4_copies}]
-                }}
+                let v4 = vdupq_n_s32(v);
+                [{v4_copies}]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn zero(self) -> {repr} {{
-                unsafe {{
-                    let z = vdupq_n_s32(0);
-                    [{z_copies}]
-                }}
+                let z = vdupq_n_s32(0);
+                [{z_copies}]
             }}
 
             #[inline(always)]
@@ -5268,64 +5286,64 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
                 out
             }}
 
-            #[inline(always)]
+            {arcane}
             fn add(self, a: {repr}, b: {repr}) -> {repr} {{ {add} }}
-            #[inline(always)]
+            {arcane}
             fn sub(self, a: {repr}, b: {repr}) -> {repr} {{ {sub} }}
-            #[inline(always)]
+            {arcane}
             fn mul(self, a: {repr}, b: {repr}) -> {repr} {{ {mul} }}
-            #[inline(always)]
+            {arcane}
             fn neg(self, a: {repr}) -> {repr} {{ {neg} }}
-            #[inline(always)]
+            {arcane}
             fn min(self, a: {repr}, b: {repr}) -> {repr} {{ {min} }}
-            #[inline(always)]
+            {arcane}
             fn max(self, a: {repr}, b: {repr}) -> {repr} {{ {max} }}
-            #[inline(always)]
+            {arcane}
             fn abs(self, a: {repr}) -> {repr} {{ {abs} }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_eq(self, a: {repr}, b: {repr}) -> {repr} {{ {eq} }}
-            #[inline(always)]
+            {arcane}
             fn simd_ne(self, a: {repr}, b: {repr}) -> {repr} {{ {ne} }}
-            #[inline(always)]
+            {arcane}
             fn simd_lt(self, a: {repr}, b: {repr}) -> {repr} {{ {lt} }}
-            #[inline(always)]
+            {arcane}
             fn simd_le(self, a: {repr}, b: {repr}) -> {repr} {{ {le} }}
-            #[inline(always)]
+            {arcane}
             fn simd_gt(self, a: {repr}, b: {repr}) -> {repr} {{ {gt} }}
-            #[inline(always)]
+            {arcane}
             fn simd_ge(self, a: {repr}, b: {repr}) -> {repr} {{ {ge} }}
 
-            #[inline(always)]
+            {arcane}
             fn blend(self, mask: {repr}, if_true: {repr}, if_false: {repr}) -> {repr} {{
                 {blend}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn reduce_add(self, a: {repr}) -> i32 {{
                 {reduce_add}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn not(self, a: {repr}) -> {repr} {{ {not} }}
-            #[inline(always)]
+            {arcane}
             fn bitand(self, a: {repr}, b: {repr}) -> {repr} {{ {bitand} }}
-            #[inline(always)]
+            {arcane}
             fn bitor(self, a: {repr}, b: {repr}) -> {repr} {{ {bitor} }}
-            #[inline(always)]
+            {arcane}
             fn bitxor(self, a: {repr}, b: {repr}) -> {repr} {{ {bitxor} }}
 
-            #[inline(always)]
+            {arcane}
             fn shl_const<const N: i32>(self, a: {repr}) -> {repr} {{
                 {shl}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_arithmetic_const<const N: i32>(self, a: {repr}) -> {repr} {{
                 {shr_arith}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_const<const N: i32>(self, a: {repr}) -> {repr} {{
                 {shr_logic}
             }}
@@ -5335,57 +5353,53 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
             // clamp rationale as the 128-bit impl (USHL/SSHL read the low
             // byte of each amount lane).
 
-            #[inline(always)]
+            {arcane}
             fn shl_uniform(self, a: {repr}, count: u32) -> {repr} {{
-                unsafe {{
-                    let c = vdupq_n_s32(count.min(32) as i32);
-                    [vshlq_s32(a[0], c), vshlq_s32(a[1], c)]
-                }}
+                let c = vdupq_n_s32(count.min(32) as i32);
+                [vshlq_s32(a[0], c), vshlq_s32(a[1], c)]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_uniform(self, a: {repr}, count: u32) -> {repr} {{
-                unsafe {{
-                    let c = vdupq_n_s32(-(count.min(32) as i32));
-                    [
-                        vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a[0]), c)),
-                        vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a[1]), c)),
-                    ]
-                }}
+                let c = vdupq_n_s32(-(count.min(32) as i32));
+                [
+                    vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a[0]), c)),
+                    vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a[1]), c)),
+                ]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_arithmetic_uniform(self, a: {repr}, count: u32) -> {repr} {{
-                unsafe {{
-                    let c = vdupq_n_s32(-(count.min(31) as i32));
-                    [vshlq_s32(a[0], c), vshlq_s32(a[1], c)]
-                }}
+                let c = vdupq_n_s32(-(count.min(31) as i32));
+                [vshlq_s32(a[0], c), vshlq_s32(a[1], c)]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn all_true(self, a: {repr}) -> bool {{
                 {all_true}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn any_true(self, a: {repr}) -> bool {{
                 {any_true}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitmask(self, a: {repr}) -> u32 {{
                 {bitmask}
             }}
         }}
     "#,
-        v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
-        z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
-        load_lanes = (0..sub_count)
-            .map(|i| format!("vld1q_s32(data.as_ptr().add({}))", i * 4))
-            .collect::<Vec<_>>().join(", "),
+
         store_lanes = (0..sub_count)
             .map(|i| format!("vst1q_s32(out.as_mut_ptr().add({}), repr[{i}]);", i * 4))
             .collect::<Vec<_>>().join("\n            "),
+
+        load_lanes = (0..sub_count)
+            .map(|i| format!("vld1q_s32(data.as_ptr().add({}))", i * 4))
+            .collect::<Vec<_>>().join(", "),
+        v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
+        z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
         add = binary_op("vaddq_s32"),
         sub = binary_op("vsubq_s32"),
         mul = binary_op("vmulq_s32"),
@@ -5403,10 +5417,10 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!("vbslq_s32(vreinterpretq_u32_s32(mask[{i}]), if_true[{i}], if_false[{i}])"))
                 .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
+            format!("[{}]", items.join(", "))
         },
         reduce_add = {
-            let mut body = "unsafe {\n".to_string();
+            let mut body = "{\n".to_string();
             body.push_str("            let m = vaddq_s32(a[0], a[1]);\n");
             for i in 2..sub_count {
                 body.push_str(&format!("            let m = vaddq_s32(m, a[{i}]);\n"));
@@ -5423,14 +5437,14 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!("vshlq_n_s32::<N>(a[{i}])"))
                 .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
+            format!("[{}]", items.join(", "))
         },
         shr_arith = {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!("vshlq_s32(a[{i}], vdupq_n_s32(-N))"))
                 .collect();
             format!(
-                "const {{ assert!(N >= 0 && N <= 31) }};\n                unsafe {{ [{}] }}",
+                "const {{ assert!(N >= 0 && N <= 31) }};\n                [{}]",
                 items.join(", ")
             )
         },
@@ -5443,7 +5457,7 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
                 })
                 .collect();
             format!(
-                "const {{ assert!(N >= 0 && N <= 31) }};\n                unsafe {{ [{}] }}",
+                "const {{ assert!(N >= 0 && N <= 31) }};\n                [{}]",
                 items.join(", ")
             )
         },
@@ -5451,16 +5465,16 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!("vminvq_u32(vreinterpretq_u32_s32(a[{i}])) != 0"))
                 .collect();
-            format!("unsafe {{ {} }}", items.join(" && "))
+            items.join(" && ")
         },
         any_true = {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!("vmaxvq_u32(vreinterpretq_u32_s32(a[{i}])) != 0"))
                 .collect();
-            format!("unsafe {{ {} }}", items.join(" || "))
+            items.join(" || ")
         },
         bitmask = {
-            let mut body = "unsafe {\n".to_string();
+            let mut body = "{\n".to_string();
             body.push_str("            let mut bits = 0u32;\n");
             for i in 0..sub_count {
                 let base = i * 4;
@@ -5484,141 +5498,142 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
 // ============================================================================
 
 fn generate_neon_convert_impls() -> String {
+    let arcane = super::backend_syntax::arcane("NeonToken");
     formatdoc! {r#"
 
         #[cfg(target_arch = "aarch64")]
         impl F32x4Convert for archmage::NeonToken {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_f32_to_i32(self, a: float32x4_t) -> int32x4_t {{
-                unsafe {{ vreinterpretq_s32_f32(a) }}
+                vreinterpretq_s32_f32(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitcast_i32_to_f32(self, a: int32x4_t) -> float32x4_t {{
-                unsafe {{ vreinterpretq_f32_s32(a) }}
+                vreinterpretq_f32_s32(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_f32_to_i32(self, a: float32x4_t) -> int32x4_t {{
-                unsafe {{ vcvtq_s32_f32(a) }}
+                vcvtq_s32_f32(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_f32_to_i32_round(self, a: float32x4_t) -> int32x4_t {{
-                unsafe {{ vcvtnq_s32_f32(a) }}
+                vcvtnq_s32_f32(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_i32_to_f32(self, a: int32x4_t) -> float32x4_t {{
-                unsafe {{ vcvtq_f32_s32(a) }}
+                vcvtq_f32_s32(a)
             }}
         }}
 
         #[cfg(target_arch = "aarch64")]
         impl F32x8Convert for archmage::NeonToken {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_f32_to_i32(self, a: [float32x4_t; 2]) -> [int32x4_t; 2] {{
-                unsafe {{ [vreinterpretq_s32_f32(a[0]), vreinterpretq_s32_f32(a[1])] }}
+                [vreinterpretq_s32_f32(a[0]), vreinterpretq_s32_f32(a[1])]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitcast_i32_to_f32(self, a: [int32x4_t; 2]) -> [float32x4_t; 2] {{
-                unsafe {{ [vreinterpretq_f32_s32(a[0]), vreinterpretq_f32_s32(a[1])] }}
+                [vreinterpretq_f32_s32(a[0]), vreinterpretq_f32_s32(a[1])]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_f32_to_i32(self, a: [float32x4_t; 2]) -> [int32x4_t; 2] {{
-                unsafe {{ [vcvtq_s32_f32(a[0]), vcvtq_s32_f32(a[1])] }}
+                [vcvtq_s32_f32(a[0]), vcvtq_s32_f32(a[1])]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_f32_to_i32_round(self, a: [float32x4_t; 2]) -> [int32x4_t; 2] {{
-                unsafe {{ [vcvtnq_s32_f32(a[0]), vcvtnq_s32_f32(a[1])] }}
+                [vcvtnq_s32_f32(a[0]), vcvtnq_s32_f32(a[1])]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_i32_to_f32(self, a: [int32x4_t; 2]) -> [float32x4_t; 2] {{
-                unsafe {{ [vcvtq_f32_s32(a[0]), vcvtq_f32_s32(a[1])] }}
+                [vcvtq_f32_s32(a[0]), vcvtq_f32_s32(a[1])]
             }}
         }}
 
         #[cfg(all(target_arch = "aarch64", feature = "w512"))]
         impl F32x16Convert for archmage::NeonToken {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_f32_to_i32(self, a: [float32x4_t; 4]) -> [int32x4_t; 4] {{
-                unsafe {{ [vreinterpretq_s32_f32(a[0]), vreinterpretq_s32_f32(a[1]), vreinterpretq_s32_f32(a[2]), vreinterpretq_s32_f32(a[3])] }}
+                [vreinterpretq_s32_f32(a[0]), vreinterpretq_s32_f32(a[1]), vreinterpretq_s32_f32(a[2]), vreinterpretq_s32_f32(a[3])]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitcast_i32_to_f32(self, a: [int32x4_t; 4]) -> [float32x4_t; 4] {{
-                unsafe {{ [vreinterpretq_f32_s32(a[0]), vreinterpretq_f32_s32(a[1]), vreinterpretq_f32_s32(a[2]), vreinterpretq_f32_s32(a[3])] }}
+                [vreinterpretq_f32_s32(a[0]), vreinterpretq_f32_s32(a[1]), vreinterpretq_f32_s32(a[2]), vreinterpretq_f32_s32(a[3])]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_f32_to_i32(self, a: [float32x4_t; 4]) -> [int32x4_t; 4] {{
-                unsafe {{ [vcvtq_s32_f32(a[0]), vcvtq_s32_f32(a[1]), vcvtq_s32_f32(a[2]), vcvtq_s32_f32(a[3])] }}
+                [vcvtq_s32_f32(a[0]), vcvtq_s32_f32(a[1]), vcvtq_s32_f32(a[2]), vcvtq_s32_f32(a[3])]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_f32_to_i32_round(self, a: [float32x4_t; 4]) -> [int32x4_t; 4] {{
-                unsafe {{ [vcvtnq_s32_f32(a[0]), vcvtnq_s32_f32(a[1]), vcvtnq_s32_f32(a[2]), vcvtnq_s32_f32(a[3])] }}
+                [vcvtnq_s32_f32(a[0]), vcvtnq_s32_f32(a[1]), vcvtnq_s32_f32(a[2]), vcvtnq_s32_f32(a[3])]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn convert_i32_to_f32(self, a: [int32x4_t; 4]) -> [float32x4_t; 4] {{
-                unsafe {{ [vcvtq_f32_s32(a[0]), vcvtq_f32_s32(a[1]), vcvtq_f32_s32(a[2]), vcvtq_f32_s32(a[3])] }}
+                [vcvtq_f32_s32(a[0]), vcvtq_f32_s32(a[1]), vcvtq_f32_s32(a[2]), vcvtq_f32_s32(a[3])]
             }}
         }}
 
         #[cfg(target_arch = "aarch64")]
         impl U32x4Bitcast for archmage::NeonToken {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_u32_to_i32(self, a: uint32x4_t) -> int32x4_t {{
-                unsafe {{ vreinterpretq_s32_u32(a) }}
+                vreinterpretq_s32_u32(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitcast_i32_to_u32(self, a: int32x4_t) -> uint32x4_t {{
-                unsafe {{ vreinterpretq_u32_s32(a) }}
+                vreinterpretq_u32_s32(a)
             }}
         }}
 
         #[cfg(target_arch = "aarch64")]
         impl U32x8Bitcast for archmage::NeonToken {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_u32_to_i32(self, a: [uint32x4_t; 2]) -> [int32x4_t; 2] {{
-                unsafe {{ [vreinterpretq_s32_u32(a[0]), vreinterpretq_s32_u32(a[1])] }}
+                [vreinterpretq_s32_u32(a[0]), vreinterpretq_s32_u32(a[1])]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitcast_i32_to_u32(self, a: [int32x4_t; 2]) -> [uint32x4_t; 2] {{
-                unsafe {{ [vreinterpretq_u32_s32(a[0]), vreinterpretq_u32_s32(a[1])] }}
+                [vreinterpretq_u32_s32(a[0]), vreinterpretq_u32_s32(a[1])]
             }}
         }}
 
         #[cfg(target_arch = "aarch64")]
         impl I64x2Bitcast for archmage::NeonToken {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_i64_to_f64(self, a: int64x2_t) -> float64x2_t {{
-                unsafe {{ vreinterpretq_f64_s64(a) }}
+                vreinterpretq_f64_s64(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitcast_f64_to_i64(self, a: float64x2_t) -> int64x2_t {{
-                unsafe {{ vreinterpretq_s64_f64(a) }}
+                vreinterpretq_s64_f64(a)
             }}
         }}
 
         #[cfg(target_arch = "aarch64")]
         impl I64x4Bitcast for archmage::NeonToken {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_i64_to_f64(self, a: [int64x2_t; 2]) -> [float64x2_t; 2] {{
-                unsafe {{ [vreinterpretq_f64_s64(a[0]), vreinterpretq_f64_s64(a[1])] }}
+                [vreinterpretq_f64_s64(a[0]), vreinterpretq_f64_s64(a[1])]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitcast_f64_to_i64(self, a: [float64x2_t; 2]) -> [int64x2_t; 2] {{
-                unsafe {{ [vreinterpretq_s64_f64(a[0]), vreinterpretq_s64_f64(a[1])] }}
+                [vreinterpretq_s64_f64(a[0]), vreinterpretq_s64_f64(a[1])]
             }}
         }}
     "#}
@@ -6297,6 +6312,9 @@ fn generate_x86_u32_impls(types: &[U32VecType], token: &str, max_width: usize) -
 }
 
 fn generate_x86_u32_impl(ty: &U32VecType, token: &str) -> String {
+    let arcane = super::backend_syntax::arcane(token);
+    let baseline = super::backend_syntax::sse2_or_arcane(token, ty.width_bits);
+    let baseline_end = if ty.width_bits == 128 { "}" } else { "" };
     let trait_name = ty.trait_name();
     let inner = ty.x86_inner_type();
     let p = ty.x86_prefix();
@@ -6312,14 +6330,14 @@ fn generate_x86_u32_impl(ty: &U32VecType, token: &str) -> String {
 
             // ====== Construction ======
 
-            #[inline(always)]
+            {arcane}
             fn splat(self, v: u32) -> {inner} {{
-                unsafe {{ {p}_set1_epi32(v as i32) }}
+                {p}_set1_epi32(v as i32)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn zero(self) -> {inner} {{
-                unsafe {{ {p}_setzero_si{bits}() }}
+                {p}_setzero_si{bits}()
             }}
 
             #[inline(always)]
@@ -6347,53 +6365,53 @@ fn generate_x86_u32_impl(ty: &U32VecType, token: &str) -> String {
 
             // ====== Arithmetic ======
 
-            #[inline(always)]
+            {baseline}
             fn add(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_add_epi32(a, b) }}
+                {p}_add_epi32(a, b)
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {baseline}
             fn sub(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_sub_epi32(a, b) }}
+                {p}_sub_epi32(a, b)
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {arcane}
             fn mul(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_mullo_epi32(a, b) }}
+                {p}_mullo_epi32(a, b)
             }}
 
             // ====== Math ======
 
-            #[inline(always)]
+            {arcane}
             fn min(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_min_epu32(a, b) }}
+                {p}_min_epu32(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn max(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_max_epu32(a, b) }}
+                {p}_max_epu32(a, b)
             }}
 
             // ====== Comparisons ======
 
-            #[inline(always)]
+            {arcane}
             fn simd_eq(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_cmpeq_epi32(a, b) }}
+                {p}_cmpeq_epi32(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_ne(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{
-                    let eq = {p}_cmpeq_epi32(a, b);
-                    {p}_andnot_si{bits}(eq, {p}_set1_epi32(-1))
-                }}
+                let eq = {p}_cmpeq_epi32(a, b);
+                {p}_andnot_si{bits}(eq, {p}_set1_epi32(-1))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_gt(self, a: {inner}, b: {inner}) -> {inner} {{
                 // Unsigned comparison via bias trick: XOR both with 0x80000000
                 // to convert to signed range, then use signed cmpgt.
-                unsafe {{
+                {{
                     let bias = {p}_set1_epi32(i32::MIN);
                     let sa = {p}_xor_si{bits}(a, bias);
                     let sb = {p}_xor_si{bits}(b, bias);
@@ -6401,71 +6419,71 @@ fn generate_x86_u32_impl(ty: &U32VecType, token: &str) -> String {
                 }}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_lt(self, a: {inner}, b: {inner}) -> {inner} {{
-                <Self as {trait_name}>::simd_gt(self, b, a)
+                <Self as {trait_name}>::simd_gt(_self, b, a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_le(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{
-                    let gt = <Self as {trait_name}>::simd_gt(self, a, b);
-                    {p}_andnot_si{bits}(gt, {p}_set1_epi32(-1))
-                }}
+                let gt = <Self as {trait_name}>::simd_gt(_self, a, b);
+                {p}_andnot_si{bits}(gt, {p}_set1_epi32(-1))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_ge(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{
-                    let lt = <Self as {trait_name}>::simd_gt(self, b, a);
-                    {p}_andnot_si{bits}(lt, {p}_set1_epi32(-1))
-                }}
+                let lt = <Self as {trait_name}>::simd_gt(_self, b, a);
+                {p}_andnot_si{bits}(lt, {p}_set1_epi32(-1))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn blend(self, mask: {inner}, if_true: {inner}, if_false: {inner}) -> {inner} {{
-                unsafe {{ {p}_blendv_epi8(if_false, if_true, mask) }}
+                {p}_blendv_epi8(if_false, if_true, mask)
             }}
 
             // ====== Reductions ======
 
-            #[inline(always)]
+            {arcane}
             fn reduce_add(self, a: {inner}) -> u32 {{
         {reduce_add_body}
             }}
 
             // ====== Bitwise ======
 
-            #[inline(always)]
+            {baseline}
             fn not(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_andnot_si{bits}(a, {p}_set1_epi32(-1)) }}
+                {p}_andnot_si{bits}(a, {p}_set1_epi32(-1))
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {baseline}
             fn bitand(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_and_si{bits}(a, b) }}
+                {p}_and_si{bits}(a, b)
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {baseline}
             fn bitor(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_or_si{bits}(a, b) }}
+                {p}_or_si{bits}(a, b)
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {baseline}
             fn bitxor(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_xor_si{bits}(a, b) }}
+                {p}_xor_si{bits}(a, b)
             }}
+            {baseline_end}
 
             // ====== Shifts ======
 
-            #[inline(always)]
+            {arcane}
             fn shl_const<const N: i32>(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_slli_epi32::<N>(a) }}
+                {p}_slli_epi32::<N>(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_const<const N: i32>(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_srli_epi32::<N>(a) }}
+                {p}_srli_epi32::<N>(a)
             }}
 
             // ====== Uniform variable shifts ======
@@ -6473,31 +6491,31 @@ fn generate_x86_u32_impl(ty: &U32VecType, token: &str) -> String {
             // contract is the hardware behaviour. _mm_cvtsi32_si128
             // zero-extends, so u32::MAX is just a large out-of-range count.
 
-            #[inline(always)]
+            {arcane}
             fn shl_uniform(self, a: {inner}, count: u32) -> {inner} {{
-                unsafe {{ {p}_sll_epi32(a, _mm_cvtsi32_si128(count as i32)) }}
+                {p}_sll_epi32(a, _mm_cvtsi32_si128(count as i32))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_uniform(self, a: {inner}, count: u32) -> {inner} {{
-                unsafe {{ {p}_srl_epi32(a, _mm_cvtsi32_si128(count as i32)) }}
+                {p}_srl_epi32(a, _mm_cvtsi32_si128(count as i32))
             }}
 
             // ====== Boolean ======
 
-            #[inline(always)]
+            {arcane}
             fn all_true(self, a: {inner}) -> bool {{
-                unsafe {{ {p}_movemask_ps({p}_castsi{bits}_ps(a)) == {all_mask} }}
+                {p}_movemask_ps({p}_castsi{bits}_ps(a)) == {all_mask}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn any_true(self, a: {inner}) -> bool {{
-                unsafe {{ {p}_movemask_ps({p}_castsi{bits}_ps(a)) != 0 }}
+                {p}_movemask_ps({p}_castsi{bits}_ps(a)) != 0
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitmask(self, a: {inner}) -> u32 {{
-                unsafe {{ {p}_movemask_ps({p}_castsi{bits}_ps(a)) as u32 }}
+                {p}_movemask_ps({p}_castsi{bits}_ps(a)) as u32
             }}
         }}
     "#,
@@ -6508,7 +6526,7 @@ fn generate_x86_u32_impl(ty: &U32VecType, token: &str) -> String {
 fn generate_x86_u32_reduce_add(ty: &U32VecType) -> String {
     match ty.width_bits {
         128 => formatdoc! {"
-                unsafe {{
+                {{
                     let hi = _mm_shuffle_epi32::<0b01_00_11_10>(a);
                     let sum = _mm_add_epi32(a, hi);
                     let hi2 = _mm_shuffle_epi32::<0b00_00_00_01>(sum);
@@ -6516,7 +6534,7 @@ fn generate_x86_u32_reduce_add(ty: &U32VecType) -> String {
                     _mm_cvtsi128_si32(sum2) as u32
                 }}"},
         256 => formatdoc! {"
-                unsafe {{
+                {{
                     let lo = _mm256_castsi256_si128(a);
                     let hi = _mm256_extracti128_si256::<1>(a);
                     let sum = _mm_add_epi32(lo, hi);
@@ -6859,22 +6877,23 @@ fn generate_neon_u32_impls(types: &[U32VecType]) -> String {
 }
 
 fn generate_neon_native_u32_impl(ty: &U32VecType) -> String {
+    let lanes = ty.lanes;
+    let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let array = ty.array_type();
-    let lanes = ty.lanes;
 
     formatdoc! {r#"
         impl {trait_name} for archmage::NeonToken {{
             type Repr = uint32x4_t;
 
-            #[inline(always)]
+            {arcane}
             fn splat(self, v: u32) -> uint32x4_t {{
-                unsafe {{ vdupq_n_u32(v) }}
+                vdupq_n_u32(v)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn zero(self) -> uint32x4_t {{
-                unsafe {{ vdupq_n_u32(0) }}
+                vdupq_n_u32(0)
             }}
 
             #[inline(always)]
@@ -6899,78 +6918,78 @@ fn generate_neon_native_u32_impl(ty: &U32VecType) -> String {
                 out
             }}
 
-            #[inline(always)]
-            fn add(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {{ unsafe {{ vaddq_u32(a, b) }} }}
-            #[inline(always)]
-            fn sub(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {{ unsafe {{ vsubq_u32(a, b) }} }}
-            #[inline(always)]
-            fn mul(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {{ unsafe {{ vmulq_u32(a, b) }} }}
-            #[inline(always)]
-            fn min(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {{ unsafe {{ vminq_u32(a, b) }} }}
-            #[inline(always)]
-            fn max(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {{ unsafe {{ vmaxq_u32(a, b) }} }}
+            {arcane}
+            fn add(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {{ vaddq_u32(a, b) }}
+            {arcane}
+            fn sub(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {{ vsubq_u32(a, b) }}
+            {arcane}
+            fn mul(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {{ vmulq_u32(a, b) }}
+            {arcane}
+            fn min(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {{ vminq_u32(a, b) }}
+            {arcane}
+            fn max(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {{ vmaxq_u32(a, b) }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_eq(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {{
-                unsafe {{ vceqq_u32(a, b) }}
+                vceqq_u32(a, b)
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_ne(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {{
-                unsafe {{ vmvnq_u32(vceqq_u32(a, b)) }}
+                vmvnq_u32(vceqq_u32(a, b))
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_lt(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {{
-                unsafe {{ vcltq_u32(a, b) }}
+                vcltq_u32(a, b)
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_le(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {{
-                unsafe {{ vcleq_u32(a, b) }}
+                vcleq_u32(a, b)
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_gt(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {{
-                unsafe {{ vcgtq_u32(a, b) }}
+                vcgtq_u32(a, b)
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_ge(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {{
-                unsafe {{ vcgeq_u32(a, b) }}
+                vcgeq_u32(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn blend(self, mask: uint32x4_t, if_true: uint32x4_t, if_false: uint32x4_t) -> uint32x4_t {{
-                unsafe {{ vbslq_u32(mask, if_true, if_false) }}
+                vbslq_u32(mask, if_true, if_false)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn reduce_add(self, a: uint32x4_t) -> u32 {{
-                unsafe {{ vaddvq_u32(a) }}
+                vaddvq_u32(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn not(self, a: uint32x4_t) -> uint32x4_t {{
-                unsafe {{ vmvnq_u32(a) }}
+                vmvnq_u32(a)
             }}
-            #[inline(always)]
+            {arcane}
             fn bitand(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {{
-                unsafe {{ vandq_u32(a, b) }}
+                vandq_u32(a, b)
             }}
-            #[inline(always)]
+            {arcane}
             fn bitor(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {{
-                unsafe {{ vorrq_u32(a, b) }}
+                vorrq_u32(a, b)
             }}
-            #[inline(always)]
+            {arcane}
             fn bitxor(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {{
-                unsafe {{ veorq_u32(a, b) }}
+                veorq_u32(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shl_const<const N: i32>(self, a: uint32x4_t) -> uint32x4_t {{
-                unsafe {{ vshlq_n_u32::<N>(a) }}
+                vshlq_n_u32::<N>(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_const<const N: i32>(self, a: uint32x4_t) -> uint32x4_t {{
                 const {{ assert!(N >= 0 && N <= 31) }};
-                unsafe {{ vshlq_u32(a, vdupq_n_s32(-N)) }}
+                vshlq_u32(a, vdupq_n_s32(-N))
             }}
 
             // ====== Uniform variable shifts ======
@@ -6979,96 +6998,91 @@ fn generate_neon_native_u32_impl(ty: &U32VecType) -> String {
             // signed value, so an unclamped 256 would wrap to a no-op instead
             // of the contracted zero.
 
-            #[inline(always)]
+            {arcane}
             fn shl_uniform(self, a: uint32x4_t, count: u32) -> uint32x4_t {{
-                unsafe {{ vshlq_u32(a, vdupq_n_s32(count.min(32) as i32)) }}
+                vshlq_u32(a, vdupq_n_s32(count.min(32) as i32))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_uniform(self, a: uint32x4_t, count: u32) -> uint32x4_t {{
-                unsafe {{ vshlq_u32(a, vdupq_n_s32(-(count.min(32) as i32))) }}
+                vshlq_u32(a, vdupq_n_s32(-(count.min(32) as i32)))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn all_true(self, a: uint32x4_t) -> bool {{
-                unsafe {{ vminvq_u32(a) == u32::MAX }}
+                vminvq_u32(a) == u32::MAX
             }}
 
-            #[inline(always)]
+            {arcane}
             fn any_true(self, a: uint32x4_t) -> bool {{
-                unsafe {{ vmaxvq_u32(a) != 0 }}
+                vmaxvq_u32(a) != 0
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitmask(self, a: uint32x4_t) -> u32 {{
-                unsafe {{
-                    // Extract sign bit of each 32-bit lane
-                    let shift = vshrq_n_u32::<31>(a);
-                    // Pack: lane0 | (lane1<<1) | (lane2<<2) | (lane3<<3)
-                    let lane0 = vgetq_lane_u32::<0>(shift);
-                    let lane1 = vgetq_lane_u32::<1>(shift);
-                    let lane2 = vgetq_lane_u32::<2>(shift);
-                    let lane3 = vgetq_lane_u32::<3>(shift);
-                    lane0 | (lane1 << 1) | (lane2 << 2) | (lane3 << 3)
-                }}
+                // Extract sign bit of each 32-bit lane
+                let shift = vshrq_n_u32::<31>(a);
+                // Pack: lane0 | (lane1<<1) | (lane2<<2) | (lane3<<3)
+                let lane0 = vgetq_lane_u32::<0>(shift);
+                let lane1 = vgetq_lane_u32::<1>(shift);
+                let lane2 = vgetq_lane_u32::<2>(shift);
+                let lane3 = vgetq_lane_u32::<3>(shift);
+                lane0 | (lane1 << 1) | (lane2 << 2) | (lane3 << 3)
             }}
         }}
     "#}
 }
 
 fn generate_neon_polyfill_u32_impl(ty: &U32VecType) -> String {
+    let lanes = ty.lanes;
+    let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let repr = ty.neon_repr();
     let array = ty.array_type();
-    let lanes = ty.lanes;
     let sub_count = ty.sub_count();
 
     let binary_op = |intrinsic: &str| -> String {
         let items: Vec<String> = (0..sub_count)
             .map(|i| format!("{intrinsic}(a[{i}], b[{i}])"))
             .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
+        format!("[{}]", items.join(", "))
     };
 
     let unary_op = |intrinsic: &str| -> String {
         let items: Vec<String> = (0..sub_count)
             .map(|i| format!("{intrinsic}(a[{i}])"))
             .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
+        format!("[{}]", items.join(", "))
     };
 
     let cmp_op = |intrinsic: &str| -> String {
         let items: Vec<String> = (0..sub_count)
             .map(|i| format!("{intrinsic}(a[{i}], b[{i}])"))
             .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
+        format!("[{}]", items.join(", "))
     };
 
     let ne_op = || -> String {
         let items: Vec<String> = (0..sub_count)
             .map(|i| format!("vmvnq_u32(vceqq_u32(a[{i}], b[{i}]))"))
             .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
+        format!("[{}]", items.join(", "))
     };
 
     formatdoc! {r#"
         impl {trait_name} for archmage::NeonToken {{
             type Repr = {repr};
 
-            #[inline(always)]
+            {arcane}
             fn splat(self, v: u32) -> {repr} {{
-                unsafe {{
-                    let v4 = vdupq_n_u32(v);
-                    [{v4_copies}]
-                }}
+                let v4 = vdupq_n_u32(v);
+                [{v4_copies}]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn zero(self) -> {repr} {{
-                unsafe {{
-                    let z = vdupq_n_u32(0);
-                    [{z_copies}]
-                }}
+                let z = vdupq_n_u32(0);
+                [{z_copies}]
             }}
 
             #[inline(always)]
@@ -7097,55 +7111,55 @@ fn generate_neon_polyfill_u32_impl(ty: &U32VecType) -> String {
                 out
             }}
 
-            #[inline(always)]
+            {arcane}
             fn add(self, a: {repr}, b: {repr}) -> {repr} {{ {add} }}
-            #[inline(always)]
+            {arcane}
             fn sub(self, a: {repr}, b: {repr}) -> {repr} {{ {sub} }}
-            #[inline(always)]
+            {arcane}
             fn mul(self, a: {repr}, b: {repr}) -> {repr} {{ {mul} }}
-            #[inline(always)]
+            {arcane}
             fn min(self, a: {repr}, b: {repr}) -> {repr} {{ {min} }}
-            #[inline(always)]
+            {arcane}
             fn max(self, a: {repr}, b: {repr}) -> {repr} {{ {max} }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_eq(self, a: {repr}, b: {repr}) -> {repr} {{ {eq} }}
-            #[inline(always)]
+            {arcane}
             fn simd_ne(self, a: {repr}, b: {repr}) -> {repr} {{ {ne} }}
-            #[inline(always)]
+            {arcane}
             fn simd_lt(self, a: {repr}, b: {repr}) -> {repr} {{ {lt} }}
-            #[inline(always)]
+            {arcane}
             fn simd_le(self, a: {repr}, b: {repr}) -> {repr} {{ {le} }}
-            #[inline(always)]
+            {arcane}
             fn simd_gt(self, a: {repr}, b: {repr}) -> {repr} {{ {gt} }}
-            #[inline(always)]
+            {arcane}
             fn simd_ge(self, a: {repr}, b: {repr}) -> {repr} {{ {ge} }}
 
-            #[inline(always)]
+            {arcane}
             fn blend(self, mask: {repr}, if_true: {repr}, if_false: {repr}) -> {repr} {{
                 {blend}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn reduce_add(self, a: {repr}) -> u32 {{
                 {reduce_add}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn not(self, a: {repr}) -> {repr} {{ {not} }}
-            #[inline(always)]
+            {arcane}
             fn bitand(self, a: {repr}, b: {repr}) -> {repr} {{ {bitand} }}
-            #[inline(always)]
+            {arcane}
             fn bitor(self, a: {repr}, b: {repr}) -> {repr} {{ {bitor} }}
-            #[inline(always)]
+            {arcane}
             fn bitxor(self, a: {repr}, b: {repr}) -> {repr} {{ {bitxor} }}
 
-            #[inline(always)]
+            {arcane}
             fn shl_const<const N: i32>(self, a: {repr}) -> {repr} {{
                 {shl}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_const<const N: i32>(self, a: {repr}) -> {repr} {{
                 {shr_logic}
             }}
@@ -7155,46 +7169,44 @@ fn generate_neon_polyfill_u32_impl(ty: &U32VecType) -> String {
             // clamp rationale as the 128-bit impl (USHL reads the low byte
             // of each amount lane).
 
-            #[inline(always)]
+            {arcane}
             fn shl_uniform(self, a: {repr}, count: u32) -> {repr} {{
-                unsafe {{
-                    let c = vdupq_n_s32(count.min(32) as i32);
-                    [vshlq_u32(a[0], c), vshlq_u32(a[1], c)]
-                }}
+                let c = vdupq_n_s32(count.min(32) as i32);
+                [vshlq_u32(a[0], c), vshlq_u32(a[1], c)]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_uniform(self, a: {repr}, count: u32) -> {repr} {{
-                unsafe {{
-                    let c = vdupq_n_s32(-(count.min(32) as i32));
-                    [vshlq_u32(a[0], c), vshlq_u32(a[1], c)]
-                }}
+                let c = vdupq_n_s32(-(count.min(32) as i32));
+                [vshlq_u32(a[0], c), vshlq_u32(a[1], c)]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn all_true(self, a: {repr}) -> bool {{
                 {all_true}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn any_true(self, a: {repr}) -> bool {{
                 {any_true}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitmask(self, a: {repr}) -> u32 {{
                 {bitmask}
             }}
         }}
     "#,
-        v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
-        z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
-        load_lanes = (0..sub_count)
-            .map(|i| format!("vld1q_u32(data.as_ptr().add({}))", i * 4))
-            .collect::<Vec<_>>().join(", "),
+
         store_lanes = (0..sub_count)
             .map(|i| format!("vst1q_u32(out.as_mut_ptr().add({}), repr[{i}]);", i * 4))
             .collect::<Vec<_>>().join("\n            "),
+
+        load_lanes = (0..sub_count)
+            .map(|i| format!("vld1q_u32(data.as_ptr().add({}))", i * 4))
+            .collect::<Vec<_>>().join(", "),
+        v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
+        z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
         add = binary_op("vaddq_u32"),
         sub = binary_op("vsubq_u32"),
         mul = binary_op("vmulq_u32"),
@@ -7210,10 +7222,10 @@ fn generate_neon_polyfill_u32_impl(ty: &U32VecType) -> String {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!("vbslq_u32(mask[{i}], if_true[{i}], if_false[{i}])"))
                 .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
+            format!("[{}]", items.join(", "))
         },
         reduce_add = {
-            let mut body = "unsafe {\n".to_string();
+            let mut body = "{\n".to_string();
             body.push_str("            let m = vaddq_u32(a[0], a[1]);\n");
             for i in 2..sub_count {
                 body.push_str(&format!("            let m = vaddq_u32(m, a[{i}]);\n"));
@@ -7230,14 +7242,14 @@ fn generate_neon_polyfill_u32_impl(ty: &U32VecType) -> String {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!("vshlq_n_u32::<N>(a[{i}])"))
                 .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
+            format!("[{}]", items.join(", "))
         },
         shr_logic = {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!("vshlq_u32(a[{i}], vdupq_n_s32(-N))"))
                 .collect();
             format!(
-                "const {{ assert!(N >= 0 && N <= 31) }};\n                unsafe {{ [{}] }}",
+                "const {{ assert!(N >= 0 && N <= 31) }};\n                [{}]",
                 items.join(", ")
             )
         },
@@ -7245,16 +7257,16 @@ fn generate_neon_polyfill_u32_impl(ty: &U32VecType) -> String {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!("vminvq_u32(a[{i}]) == u32::MAX"))
                 .collect();
-            format!("unsafe {{ {} }}", items.join(" && "))
+            items.join(" && ")
         },
         any_true = {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!("vmaxvq_u32(a[{i}]) != 0"))
                 .collect();
-            format!("unsafe {{ {} }}", items.join(" || "))
+            items.join(" || ")
         },
         bitmask = {
-            let mut body = "unsafe {\n".to_string();
+            let mut body = "{\n".to_string();
             body.push_str("            let mut bits = 0u32;\n");
             for i in 0..sub_count {
                 let base = i * 4;

@@ -3,8 +3,8 @@ name: CI
 on:
   push:
     branches: [main]
+  # Stacked PRs target prior PR branches, so test every PR base.
   pull_request:
-    branches: [main]
   workflow_dispatch:
 
 env:
@@ -32,6 +32,23 @@ concurrency:
   cancel-in-progress: ${{ github.event_name != 'push' }}
 
 jobs:
+  storage-codegen:
+    name: SIMD codegen against PR base
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu,wasm32-unknown-unknown
+      - name: Compare optimized consumer code on each ISA
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 xtask/codegen.py "$BASE_SHA" "$HEAD_SHA"
+
   # ==========================================================================
   # Primary: Native x64 testing (stable only - MSRV tested separately)
   # ==========================================================================
@@ -910,7 +927,8 @@ jobs:
     name: Compare Architecture Results
     runs-on: ubuntu-latest
     needs: [test-x64, test-aarch64, test-wasm]
-    if: always()
+    # Superseded runs can be cancelled before producing any artifacts.
+    if: ${{ !cancelled() }}
     steps:
       - uses: actions/checkout@v6
 
