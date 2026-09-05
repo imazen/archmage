@@ -43,10 +43,16 @@ use crate::simd::backends::U64x2Backend;
 #[derive(Clone, Copy)]
 #[repr(C)]
 pub struct u64x2<T: U64x2Backend>(pub(crate) T::Repr, pub(crate) T);
+// SAFETY: repr(C) pair of Pod storage and a sealed 1-ZST token.
+// A supplied T proves CPU support; the wrapper adds no bit invariants.
+// Helpers additionally check token size/alignment at monomorphization.
+unsafe impl<T: U64x2Backend> crate::simd_storage::TokenStorage for u64x2<T> {
+    type Token = T;
+}
 
 // Layout invariant: struct is `#[repr(C)]` with a trailing ZST `T`
 // field, so `sizeof/alignof(u64x2<T>) == sizeof/alignof(T::Repr)`
-// iff `T` is a 1-ZST. Every archmage token currently satisfies this;
+// when `T` is a 1-ZST. Every archmage token currently satisfies this;
 // if a future refactor adds a non-ZST field to a token, this const
 // assert fires at compile time.
 const _: () = {
@@ -497,15 +503,13 @@ impl<T: crate::simd::backends::U64x2Bitcast> u64x2<T> {
     /// Bitcast to i64x2 by reference (zero-cost).
     #[inline(always)]
     pub fn bitcast_ref_i64x2(&self) -> &super::i64x2<T> {
-        // SAFETY: u64x2 and i64x2 share the same repr (__m128i / [u64;2] / etc.)
-        unsafe { &*(core::ptr::from_ref(self).cast()) }
+        crate::simd_storage::vector_view(self.1, &self.0)
     }
 
     /// Bitcast to i64x2 by mutable reference (zero-cost).
     #[inline(always)]
     pub fn bitcast_mut_i64x2(&mut self) -> &mut super::i64x2<T> {
-        // SAFETY: u64x2 and i64x2 share the same repr
-        unsafe { &mut *(core::ptr::from_mut(self).cast()) }
+        crate::simd_storage::vector_view_mut(self.1, &mut self.0)
     }
 }
 
