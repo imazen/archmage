@@ -413,31 +413,55 @@ pub type Arm64 = NeonToken;
 impl NeonToken {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0x72CB52B2;
+
+    #[doc(hidden)]
+    pub const __ARCHMAGE_ASSERT_TIER_72CB52B2: () =
+        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x72CB52B2) as usize];
 }
 
 impl NeonAesToken {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0x8C16863D;
+
+    #[doc(hidden)]
+    pub const __ARCHMAGE_ASSERT_TIER_8C16863D: () =
+        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x8C16863D) as usize];
 }
 
 impl NeonSha3Token {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0x8215198F;
+
+    #[doc(hidden)]
+    pub const __ARCHMAGE_ASSERT_TIER_8215198F: () =
+        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x8215198F) as usize];
 }
 
 impl NeonCrcToken {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0x5C2B1B4E;
+
+    #[doc(hidden)]
+    pub const __ARCHMAGE_ASSERT_TIER_5C2B1B4E: () =
+        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x5C2B1B4E) as usize];
 }
 
 impl Arm64V2Token {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0xB0231590;
+
+    #[doc(hidden)]
+    pub const __ARCHMAGE_ASSERT_TIER_B0231590: () =
+        [()][!(Self::__ARCHMAGE_TIER_TAG == 0xB0231590) as usize];
 }
 
 impl Arm64V3Token {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0xB2F6E2D5;
+
+    #[doc(hidden)]
+    pub const __ARCHMAGE_ASSERT_TIER_B2F6E2D5: () =
+        [()][!(Self::__ARCHMAGE_TIER_TAG == 0xB2F6E2D5) as usize];
 }
 
 #[allow(deprecated)]
