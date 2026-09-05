@@ -1,0 +1,5 @@
+error[E0599]: no associated function or constant named `from_context` found for struct `NeonToken` in the current scope
+ --> tests/compile_fail/from_context_wrong_arch.rs:2:34
+  |
+2 |     let _ = archmage::NeonToken::from_context();
+  |                                  ^^^^^^^^^^^^ associated function or constant not found in `NeonToken`
