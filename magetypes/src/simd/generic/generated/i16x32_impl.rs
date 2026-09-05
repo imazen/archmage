@@ -165,17 +165,11 @@ impl<T: I16x32Backend> i16x32<T> {
 
     /// Split a slice into SIMD-width chunks and a scalar remainder.
     ///
-    /// Returns `(&[[i16; 32]], &[i16])` — the bulk portion reinterpreted
-    /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
+    /// Returns `(&[[i16; 32]], &[i16])` — fixed-size arrays suitable
+    /// for [`load`](Self::load), plus any leftover elements.
     #[inline(always)]
     pub fn partition_slice(_: T, data: &[i16]) -> (&[[i16; 32]], &[i16]) {
-        let bulk = data.len() / 32;
-        let (head, tail) = data.split_at(bulk * 32);
-        // SAFETY: head.len() is bulk * 32, so it's exactly `bulk` chunks of [i16; 32].
-        // The pointer cast is valid because [i16] and [[i16; 32]] have the same alignment.
-        let chunks =
-            unsafe { core::slice::from_raw_parts(head.as_ptr().cast::<[i16; 32]>(), bulk) };
-        (chunks, tail)
+        data.as_chunks::<32>()
     }
 
     /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
@@ -184,13 +178,7 @@ impl<T: I16x32Backend> i16x32<T> {
     /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
     #[inline(always)]
     pub fn partition_slice_mut(_: T, data: &mut [i16]) -> (&mut [[i16; 32]], &mut [i16]) {
-        let bulk = data.len() / 32;
-        let (head, tail) = data.split_at_mut(bulk * 32);
-        // SAFETY: head.len() is bulk * 32, so it's exactly `bulk` chunks of [i16; 32].
-        // The pointer cast is valid because [i16] and [[i16; 32]] have the same alignment.
-        let chunks =
-            unsafe { core::slice::from_raw_parts_mut(head.as_mut_ptr().cast::<[i16; 32]>(), bulk) };
-        (chunks, tail)
+        data.as_chunks_mut::<32>()
     }
 
     // ====== Accessors ======

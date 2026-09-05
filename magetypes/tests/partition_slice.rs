@@ -118,3 +118,29 @@ mod x86_tests {
         }
     }
 }
+
+#[test]
+fn scalar_partitions_preserve_extents_and_mutation() {
+    // Exercise empty input, exact multiples, and every possible remainder.
+    macro_rules! check {
+        ($ty:ident, $lanes:expr) => {{
+            use magetypes::simd::generic::$ty;
+            for len in 0..=2 * $lanes + 1 {
+                let mut data: Vec<f32> = (0..len).map(|i| i as f32).collect();
+                let (chunks, tail) = $ty::partition_slice(archmage::ScalarToken, &data);
+                assert_eq!(chunks.as_flattened().len() + tail.len(), len);
+                assert!(tail.len() < $lanes);
+                assert_eq!([chunks.as_flattened(), tail].concat(), data);
+                let (chunks, tail) = $ty::partition_slice_mut(archmage::ScalarToken, &mut data);
+                let bulk_len = chunks.len() * $lanes;
+                chunks.as_flattened_mut().fill(-1.0);
+                assert_eq!(tail, (bulk_len..len).map(|i| i as f32).collect::<Vec<_>>());
+                assert!(data[..bulk_len].iter().all(|&v| v == -1.0));
+            }
+        }};
+    }
+    check!(f32x4, 4);
+    check!(f32x8, 8);
+    #[cfg(feature = "w512")]
+    check!(f32x16, 16);
+}
