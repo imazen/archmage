@@ -17,15 +17,22 @@ A *proof* is one of:
 1. **A token value.** Token types (`X64V3Token`, `NeonToken`, …) are
    zero-sized and unforgeable from safe code: private field, sealed
    `SimdToken` supertrait, no `Default`/`new`. The only constructors are
-   `summon()` (runtime CPU detection), the compile-time
-   `cfg(target_feature)` fast path (the binary only runs where the features
-   exist), and `forge_token_dangerously()` (`unsafe`, caller asserts the
-   claim). Holding a token therefore implies the CPU has that tier's
+   `summon()` (runtime CPU detection), `from_context()` (a safe
+   target-feature function requiring a matching native caller context), the
+   compile-time `cfg(target_feature)` fast path (the binary only runs where
+   the features exist), and `forge_token_dangerously()` (`unsafe`, caller
+   asserts the claim). Holding a token therefore implies the CPU has that tier's
    features.
 2. **A `#[target_feature(enable = …)]` region.** Reaching such a function
    means the caller discharged the feature obligation — via a token-gated
    `#[arcane]` wrapper, a matching-feature safe call (Rust 1.86+), or an
    explicit `unsafe` call that took on the obligation.
+
+`from_context()` performs no runtime detection and bypasses token disabling:
+its native caller has already proved the complete tier feature set. It is
+not generated for foreign-architecture stubs. Scalar needs no features.
+WASM is Rust's explicit exception: safe target-feature functions are callable
+from any WASM context; the engine validates required instructions at load time.
 
 Proofs union: a method taking `X64V4Token` inside an
 `impl … for X64V3Token` block may use V3 ∪ V4 features.

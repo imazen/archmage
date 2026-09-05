@@ -186,3 +186,32 @@ Available traits:
 - `HasNeonAes`, `HasNeonSha3` — NEON extensions
 - `HasArm64V2` — Modern ARM compute tier
 - `HasArm64V3` — Full modern ARM feature set
+
+## Constructing from an existing feature context
+
+Use `Token::from_context()` when the current function already enables the
+required target features. It returns the token directly, without detection:
+
+```rust
+#[cfg(target_arch = "x86_64")]
+#[target_feature(enable = "sse,sse2")]
+fn already_sse2() {
+    let token = archmage::X64V1Token::from_context();
+    // Pass token to token-gated SIMD operations.
+}
+```
+
+On native targets, the caller must enable every feature in the token's tier;
+a stronger tier can construct weaker tokens too. Rust rejects an ordinary
+safe call from a context missing any required features, and rejects coercing
+the constructor to a safe function pointer. The method only exists on the
+token's native architecture. `ScalarToken::from_context()` is always safe.
+
+This constructor bypasses runtime token disabling, including
+`testable_dispatch`, because the feature context is already the proof.
+Use `summon()` for runtime detection and dispatch.
+
+Rust treats WASM differently: safe target-feature functions can be called
+from any WASM context. WASM constructors still carry their tier's feature
+attributes, but do not enforce a native-style caller-context restriction.
+The engine validates required instructions when loading the module.

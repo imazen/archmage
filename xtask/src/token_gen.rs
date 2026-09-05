@@ -332,6 +332,9 @@ fn gen_real_token_struct(
         }}
     "});
 
+    // Construct a proof from the caller's statically enabled feature context.
+    out.push_str(&gen_from_context(token));
+
     // Extraction methods
     gen_extraction_methods(out, reg, token);
 
@@ -339,6 +342,42 @@ fn gen_real_token_struct(
     if arch != "wasm" {
         gen_disable_methods(out, reg, token, all_tokens_in_file);
     }
+}
+
+/// A safe target-feature function requires the caller to prove the same features.
+/// Only real tokens get this constructor: foreign-architecture stubs cannot
+/// attach these attributes and must not manufacture a feature proof.
+fn gen_from_context(token: &TokenDef) -> String {
+    let name = &token.name;
+    let features = token.features.join(",");
+    let context_docs = if token.arch == "wasm" {
+        "/// Rust permits safe calls to target-feature functions from any WASM context.\n        /// The WASM engine validates required instructions when loading the module."
+    } else {
+        "/// A safe call requires a caller whose `#[target_feature]` context enables\n        /// every feature of this tier (a superset is sufficient). Outside that\n        /// context, Rust requires an unsafe block at the call site."
+    };
+    let safety_docs = if token.arch == "wasm" {
+        ""
+    } else {
+        "///\n            /// # Safety\n            ///\n            /// When using an unsafe call or an unsafe function pointer, the caller\n            /// must ensure every CPU feature in this tier is available. Safe calls\n            /// have this obligation checked by the compiler."
+    };
+    formatdoc! {r#"
+        impl {name} {{
+            /// Create a token from a statically proven CPU-feature context.
+            ///
+            {context_docs}
+            ///
+            /// No runtime detection is performed. This bypasses process-wide token
+            /// disabling, including `testable_dispatch`: the feature context is
+            /// already the proof. Use `summon()` when runtime detection is needed.
+            /// Available only on this token's native architecture.
+            {safety_docs}
+            #[inline]
+            #[target_feature(enable = "{features}")]
+            pub fn from_context() -> Self {{
+                Self {{ _private: () }}
+            }}
+        }}
+    "#}
 }
 
 /// Generate the `compiled_with()` method for a real token.
@@ -1310,6 +1349,28 @@ mod tests {
             .unwrap()
             .join("token-registry.toml");
         Registry::load(&path).expect("Failed to load token-registry.toml")
+    }
+
+    #[test]
+    fn from_context_uses_every_feature_and_is_absent_from_stubs() {
+        let reg = load_test_registry();
+        for token in reg.token.iter().filter(|token| token.arch != "any") {
+            let code = gen_from_context(token);
+            assert!(
+                code.contains(&format!(
+                    "#[target_feature(enable = \"{}\")]",
+                    token.features.join(",")
+                )),
+                "{} must retain its complete feature list",
+                token.name
+            );
+            assert!(code.contains("pub fn from_context() -> Self"));
+            assert!(!code.contains("pub unsafe fn from_context"));
+            assert!(!code.contains("#[inline(always)]"));
+            let mut stub = String::new();
+            gen_stub_token_struct(&mut stub, token);
+            assert!(!stub.contains("from_context"), "{} stub", token.name);
+        }
     }
 
     #[test]

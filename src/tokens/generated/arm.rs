@@ -123,6 +123,29 @@ impl NeonToken {
         Self { _private: () }
     }
 }
+impl NeonToken {
+    /// Create a token from a statically proven CPU-feature context.
+    ///
+    /// A safe call requires a caller whose `#[target_feature]` context enables
+    /// every feature of this tier (a superset is sufficient). Outside that
+    /// context, Rust requires an unsafe block at the call site.
+    ///
+    /// No runtime detection is performed. This bypasses process-wide token
+    /// disabling, including `testable_dispatch`: the feature context is
+    /// already the proof. Use `summon()` when runtime detection is needed.
+    /// Available only on this token's native architecture.
+    ///
+    /// # Safety
+    ///
+    /// When using an unsafe call or an unsafe function pointer, the caller
+    /// must ensure every CPU feature in this tier is available. Safe calls
+    /// have this obligation checked by the compiler.
+    #[inline]
+    #[target_feature(enable = "neon")]
+    pub fn from_context() -> Self {
+        Self { _private: () }
+    }
+}
 
 impl NeonToken {
     /// Disable this token process-wide for testing and benchmarking.
@@ -309,6 +332,29 @@ impl NeonAesToken {
     )]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+impl NeonAesToken {
+    /// Create a token from a statically proven CPU-feature context.
+    ///
+    /// A safe call requires a caller whose `#[target_feature]` context enables
+    /// every feature of this tier (a superset is sufficient). Outside that
+    /// context, Rust requires an unsafe block at the call site.
+    ///
+    /// No runtime detection is performed. This bypasses process-wide token
+    /// disabling, including `testable_dispatch`: the feature context is
+    /// already the proof. Use `summon()` when runtime detection is needed.
+    /// Available only on this token's native architecture.
+    ///
+    /// # Safety
+    ///
+    /// When using an unsafe call or an unsafe function pointer, the caller
+    /// must ensure every CPU feature in this tier is available. Safe calls
+    /// have this obligation checked by the compiler.
+    #[inline]
+    #[target_feature(enable = "neon,aes")]
+    pub fn from_context() -> Self {
         Self { _private: () }
     }
 }
@@ -519,6 +565,29 @@ impl NeonSha3Token {
         Self { _private: () }
     }
 }
+impl NeonSha3Token {
+    /// Create a token from a statically proven CPU-feature context.
+    ///
+    /// A safe call requires a caller whose `#[target_feature]` context enables
+    /// every feature of this tier (a superset is sufficient). Outside that
+    /// context, Rust requires an unsafe block at the call site.
+    ///
+    /// No runtime detection is performed. This bypasses process-wide token
+    /// disabling, including `testable_dispatch`: the feature context is
+    /// already the proof. Use `summon()` when runtime detection is needed.
+    /// Available only on this token's native architecture.
+    ///
+    /// # Safety
+    ///
+    /// When using an unsafe call or an unsafe function pointer, the caller
+    /// must ensure every CPU feature in this tier is available. Safe calls
+    /// have this obligation checked by the compiler.
+    #[inline]
+    #[target_feature(enable = "neon,sha3")]
+    pub fn from_context() -> Self {
+        Self { _private: () }
+    }
+}
 
 impl NeonSha3Token {
     /// Extract a NeonToken — guaranteed because NEON+SHA3 implies NEON.
@@ -724,6 +793,29 @@ impl NeonCrcToken {
     )]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+impl NeonCrcToken {
+    /// Create a token from a statically proven CPU-feature context.
+    ///
+    /// A safe call requires a caller whose `#[target_feature]` context enables
+    /// every feature of this tier (a superset is sufficient). Outside that
+    /// context, Rust requires an unsafe block at the call site.
+    ///
+    /// No runtime detection is performed. This bypasses process-wide token
+    /// disabling, including `testable_dispatch`: the feature context is
+    /// already the proof. Use `summon()` when runtime detection is needed.
+    /// Available only on this token's native architecture.
+    ///
+    /// # Safety
+    ///
+    /// When using an unsafe call or an unsafe function pointer, the caller
+    /// must ensure every CPU feature in this tier is available. Safe calls
+    /// have this obligation checked by the compiler.
+    #[inline]
+    #[target_feature(enable = "neon,crc")]
+    pub fn from_context() -> Self {
         Self { _private: () }
     }
 }
@@ -956,6 +1048,29 @@ impl Arm64V2Token {
     )]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+impl Arm64V2Token {
+    /// Create a token from a statically proven CPU-feature context.
+    ///
+    /// A safe call requires a caller whose `#[target_feature]` context enables
+    /// every feature of this tier (a superset is sufficient). Outside that
+    /// context, Rust requires an unsafe block at the call site.
+    ///
+    /// No runtime detection is performed. This bypasses process-wide token
+    /// disabling, including `testable_dispatch`: the feature context is
+    /// already the proof. Use `summon()` when runtime detection is needed.
+    /// Available only on this token's native architecture.
+    ///
+    /// # Safety
+    ///
+    /// When using an unsafe call or an unsafe function pointer, the caller
+    /// must ensure every CPU feature in this tier is available. Safe calls
+    /// have this obligation checked by the compiler.
+    #[inline]
+    #[target_feature(enable = "neon,crc,rdm,dotprod,fp16,aes,sha2")]
+    pub fn from_context() -> Self {
         Self { _private: () }
     }
 }
@@ -1264,6 +1379,29 @@ impl Arm64V3Token {
     )]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+impl Arm64V3Token {
+    /// Create a token from a statically proven CPU-feature context.
+    ///
+    /// A safe call requires a caller whose `#[target_feature]` context enables
+    /// every feature of this tier (a superset is sufficient). Outside that
+    /// context, Rust requires an unsafe block at the call site.
+    ///
+    /// No runtime detection is performed. This bypasses process-wide token
+    /// disabling, including `testable_dispatch`: the feature context is
+    /// already the proof. Use `summon()` when runtime detection is needed.
+    /// Available only on this token's native architecture.
+    ///
+    /// # Safety
+    ///
+    /// When using an unsafe call or an unsafe function pointer, the caller
+    /// must ensure every CPU feature in this tier is available. Safe calls
+    /// have this obligation checked by the compiler.
+    #[inline]
+    #[target_feature(enable = "neon,crc,rdm,dotprod,fp16,aes,sha2,fhm,fcma,sha3,i8mm,bf16")]
+    pub fn from_context() -> Self {
         Self { _private: () }
     }
 }

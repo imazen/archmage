@@ -84,6 +84,23 @@ impl Wasm128Token {
         Self { _private: () }
     }
 }
+impl Wasm128Token {
+    /// Create a token from a statically proven CPU-feature context.
+    ///
+    /// Rust permits safe calls to target-feature functions from any WASM context.
+    /// The WASM engine validates required instructions when loading the module.
+    ///
+    /// No runtime detection is performed. This bypasses process-wide token
+    /// disabling, including `testable_dispatch`: the feature context is
+    /// already the proof. Use `summon()` when runtime detection is needed.
+    /// Available only on this token's native architecture.
+
+    #[inline]
+    #[target_feature(enable = "simd128")]
+    pub fn from_context() -> Self {
+        Self { _private: () }
+    }
+}
 
 /// Proof that WASM Relaxed SIMD is available.
 ///
@@ -183,6 +200,23 @@ impl Wasm128RelaxedToken {
     )]
     #[inline(always)]
     pub(crate) unsafe fn forge_token_dangerously() -> Self {
+        Self { _private: () }
+    }
+}
+impl Wasm128RelaxedToken {
+    /// Create a token from a statically proven CPU-feature context.
+    ///
+    /// Rust permits safe calls to target-feature functions from any WASM context.
+    /// The WASM engine validates required instructions when loading the module.
+    ///
+    /// No runtime detection is performed. This bypasses process-wide token
+    /// disabling, including `testable_dispatch`: the feature context is
+    /// already the proof. Use `summon()` when runtime detection is needed.
+    /// Available only on this token's native architecture.
+
+    #[inline]
+    #[target_feature(enable = "simd128,relaxed-simd")]
+    pub fn from_context() -> Self {
         Self { _private: () }
     }
 }

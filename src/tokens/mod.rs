@@ -217,6 +217,14 @@ impl SimdToken for ScalarToken {
     }
 }
 
+impl ScalarToken {
+    /// Create a scalar token from any context; no CPU features are required.
+    #[inline]
+    pub fn from_context() -> Self {
+        Self
+    }
+}
+
 #[cfg(feature = "forge-token-api")]
 impl ScalarToken {
     /// Create a token without any checks.
