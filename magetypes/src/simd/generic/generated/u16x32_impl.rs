@@ -565,6 +565,26 @@ impl<T: U16x32Backend> core::fmt::Debug for u16x32<T> {
     }
 }
 
+impl<T: crate::simd::backends::I16x32Backend + crate::simd::backends::U16x32Backend> u16x32<T> {
+    /// Reinterpret all 32 lanes as i16x32, preserving every bit.
+    #[inline(always)]
+    pub fn bitcast_i16x32(self) -> super::i16x32<T> {
+        super::i16x32::from_repr_unchecked(self.1, crate::simd_storage::cast(self.0))
+    }
+
+    /// Borrow the same storage as i16x32, preserving the token and lifetime.
+    #[inline(always)]
+    pub fn bitcast_ref_i16x32(&self) -> &super::i16x32<T> {
+        crate::simd_storage::vector_view(self.1, &self.0)
+    }
+
+    /// Exclusively borrow the same storage as i16x32; all lane bits remain valid.
+    #[inline(always)]
+    pub fn bitcast_mut_i16x32(&mut self) -> &mut super::i16x32<T> {
+        crate::simd_storage::vector_view_mut(self.1, &mut self.0)
+    }
+}
+
 // ============================================================================
 // Widening (u16x32 -> u32x16)
 // ============================================================================
