@@ -509,7 +509,6 @@ impl<T: U8x64Backend> Index<usize> for u8x64<T> {
     type Output = u8;
     #[inline(always)]
     fn index(&self, i: usize) -> &u8 {
-        assert!(i < 64, "u8x64 index out of bounds: {i}");
         &crate::simd_storage::view::<_, [u8; 64]>(&self.0)[i]
     }
 }
@@ -517,7 +516,6 @@ impl<T: U8x64Backend> Index<usize> for u8x64<T> {
 impl<T: U8x64Backend> IndexMut<usize> for u8x64<T> {
     #[inline(always)]
     fn index_mut(&mut self, i: usize) -> &mut u8 {
-        assert!(i < 64, "u8x64 index out of bounds: {i}");
         &mut crate::simd_storage::view_mut::<_, [u8; 64]>(&mut self.0)[i]
     }
 }

@@ -48,6 +48,8 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: python3 xtask/codegen.py "$BASE_SHA" "$HEAD_SHA"
+      - name: Verify storage, pointer, and bounds-check elimination
+        run: python3 xtask/codegen.py --storage-access
 
   # ==========================================================================
   # Primary: Native x64 testing (stable only - MSRV tested separately)

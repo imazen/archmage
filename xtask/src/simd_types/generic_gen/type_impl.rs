@@ -1376,6 +1376,8 @@ fn gen_scalar_op(name: &str, backend: &str, elem: &str, trait_name: &str, method
     "}
 }
 
+// Array indexing supplies the sole bounds check. A separate formatted assert
+// can put panic-formatting temporaries onto the valid dynamic-index path.
 fn gen_index(ty: &SimdType) -> String {
     let name = ty.name();
     let elem = ty.elem.name();
@@ -1391,7 +1393,6 @@ fn gen_index(ty: &SimdType) -> String {
             type Output = {elem};
             #[inline(always)]
             fn index(&self, i: usize) -> &{elem} {{
-                assert!(i < {lanes}, \"{name} index out of bounds: {{i}}\");
                 &crate::simd_storage::view::<_, [{elem}; {lanes}]>(&self.0)[i]
             }}
         }}
@@ -1399,7 +1400,6 @@ fn gen_index(ty: &SimdType) -> String {
         impl<T: {backend}> IndexMut<usize> for {name}<T> {{
             #[inline(always)]
             fn index_mut(&mut self, i: usize) -> &mut {elem} {{
-                assert!(i < {lanes}, \"{name} index out of bounds: {{i}}\");
                 &mut crate::simd_storage::view_mut::<_, [{elem}; {lanes}]>(&mut self.0)[i]
             }}
         }}

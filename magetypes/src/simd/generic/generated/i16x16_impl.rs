@@ -553,7 +553,6 @@ impl<T: I16x16Backend> Index<usize> for i16x16<T> {
     type Output = i16;
     #[inline(always)]
     fn index(&self, i: usize) -> &i16 {
-        assert!(i < 16, "i16x16 index out of bounds: {i}");
         &crate::simd_storage::view::<_, [i16; 16]>(&self.0)[i]
     }
 }
@@ -561,7 +560,6 @@ impl<T: I16x16Backend> Index<usize> for i16x16<T> {
 impl<T: I16x16Backend> IndexMut<usize> for i16x16<T> {
     #[inline(always)]
     fn index_mut(&mut self, i: usize) -> &mut i16 {
-        assert!(i < 16, "i16x16 index out of bounds: {i}");
         &mut crate::simd_storage::view_mut::<_, [i16; 16]>(&mut self.0)[i]
     }
 }
