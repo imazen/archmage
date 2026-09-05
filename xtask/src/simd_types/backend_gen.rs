@@ -1026,6 +1026,7 @@ fn generate_backends_mod(
                     .iter()
                     .map(|p| (p.width_bits, p.trait_name())),
             )
+            .chain(super::backend_gen_integer_ops::trait_names())
             .collect();
         let base: Vec<&str> = named
             .iter()

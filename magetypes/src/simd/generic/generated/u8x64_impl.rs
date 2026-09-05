@@ -566,6 +566,28 @@ impl<T: crate::simd::backends::U8x64Widen> u8x64<T> {
     }
 }
 
+impl<T: crate::simd::backends::U8x64AbsDiff> u8x64<T> {
+    /// Exact lane-wise absolute difference, without saturation or wrapping.
+    #[inline(always)]
+    pub fn abs_diff(self, rhs: Self) -> super::u8x64<T> {
+        super::u8x64::from_repr_unchecked(self.1, T::abs_diff(self.1, self.0, rhs.0))
+    }
+}
+impl<T: crate::simd::backends::U8x64AbsDiff> u8x64<T> {
+    /// Sum all lanes exactly into u32 (unlike wrapping reduce_add).
+    #[inline(always)]
+    pub fn reduce_add_u32(self) -> u32 {
+        T::reduce_add_u32(self.1, self.0)
+    }
+
+    /// Exact sum of absolute byte differences (SAD).
+    /// Prefer this fused operation when only the sum is needed:
+    /// x86 can use psadbw directly instead of materializing abs_diff.
+    #[inline(always)]
+    pub fn sum_abs_diff(self, rhs: Self) -> u32 {
+        T::sum_abs_diff(self.1, self.0, rhs.0)
+    }
+}
 // ============================================================================
 // Platform-specific concrete impls
 // ============================================================================

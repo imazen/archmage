@@ -135,12 +135,14 @@ pub use convert_int::{
 
 mod widen_narrow;
 pub use widen_narrow::{
-    I8x16Widen, I8x32Widen, I16x8Narrow, I16x8Widen, I16x16Narrow, I16x16Widen, I32x4Narrow,
-    I32x8Narrow, U8x16Widen, U8x32Widen, U16x8Widen, U16x16Widen,
+    I8x16Widen, I8x32Widen, I16x8AbsDiff, I16x8Narrow, I16x8Pairwise, I16x8Widen, I16x16AbsDiff,
+    I16x16Narrow, I16x16Pairwise, I16x16Widen, I32x4Narrow, I32x8Narrow, U8x16AbsDiff, U8x16Widen,
+    U8x32AbsDiff, U8x32Widen, U16x8Widen, U16x16Widen,
 };
 #[cfg(feature = "w512")]
 pub use widen_narrow::{
-    I8x64Widen, I16x32Narrow, I16x32Widen, I32x16Narrow, U8x64Widen, U16x32Widen,
+    I8x64Widen, I16x32AbsDiff, I16x32Narrow, I16x32Pairwise, I16x32Widen, I32x16Narrow,
+    U8x64AbsDiff, U8x64Widen, U16x32Widen,
 };
 
 /// x86-64 baseline (SSE2).
