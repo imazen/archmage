@@ -138,39 +138,16 @@ fn gen_basic_block_ops(
             ///
             /// Returns `None` if length is not a multiple of {lanes} or alignment is wrong.
             #[inline(always)]
-            pub fn cast_slice(_: T, slice: &[{elem}]) -> Option<&[Self]> {{
-                const {{ assert!(core::mem::size_of::<Self>() == core::mem::size_of::<[{elem}; {lanes}]>()) }};
-                if !slice.len().is_multiple_of({lanes}) {{
-                    return None;
-                }}
-                let ptr = slice.as_ptr();
-                if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {{
-                    return None;
-                }}
-                let len = slice.len() / {lanes};
-                // SAFETY: element size asserted above, alignment and length
-                // checked at runtime, so the reinterpreted slice covers
-                // exactly the same bytes.
-                Some(unsafe {{ core::slice::from_raw_parts(ptr.cast::<Self>(), len) }})
+            pub fn cast_slice(token: T, slice: &[{elem}]) -> Option<&[Self]> {{
+                crate::simd_storage::vector_slice::<_, Self, {lanes}>(token, slice)
             }}
 
             /// Reinterpret a mutable scalar slice as a SIMD vector slice (token-gated).
             ///
             /// Returns `None` if length is not a multiple of {lanes} or alignment is wrong.
             #[inline(always)]
-            pub fn cast_slice_mut(_: T, slice: &mut [{elem}]) -> Option<&mut [Self]> {{
-                const {{ assert!(core::mem::size_of::<Self>() == core::mem::size_of::<[{elem}; {lanes}]>()) }};
-                if !slice.len().is_multiple_of({lanes}) {{
-                    return None;
-                }}
-                let ptr = slice.as_mut_ptr();
-                if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {{
-                    return None;
-                }}
-                let len = slice.len() / {lanes};
-                // SAFETY: element size asserted above, alignment and length
-                // checked at runtime; exclusive borrow carries over.
-                Some(unsafe {{ core::slice::from_raw_parts_mut(ptr.cast::<Self>(), len) }})
+            pub fn cast_slice_mut(token: T, slice: &mut [{elem}]) -> Option<&mut [Self]> {{
+                crate::simd_storage::vector_slice_mut::<_, Self, {lanes}>(token, slice)
             }}
     "#}
 }
@@ -538,20 +515,13 @@ fn gen_f32_bitcast_ref_i32(name: &str, lanes: usize) -> String {
             /// Reinterpret bits as `&{int_type}<T>` (zero-cost pointer cast).
             #[inline(always)]
             pub fn bitcast_ref_i32(&self) -> &super::{int_type}<T> {{
-                const {{ assert!(core::mem::size_of::<Self>() == core::mem::size_of::<super::{int_type}<T>>()) }};
-                // SAFETY: sizes asserted equal above; both are #[repr(C)]
-                // (Repr, token-ZST) wrappers of same-width lane vectors, and
-                // integer lanes accept all bit patterns.
-                unsafe {{ &*core::ptr::from_ref(self).cast::<super::{int_type}<T>>() }}
+                crate::simd_storage::vector_view(self.1, &self.0)
             }}
 
             /// Reinterpret bits as `&mut {int_type}<T>` (zero-cost pointer cast).
             #[inline(always)]
             pub fn bitcast_mut_i32(&mut self) -> &mut super::{int_type}<T> {{
-                const {{ assert!(core::mem::size_of::<Self>() == core::mem::size_of::<super::{int_type}<T>>()) }};
-                // SAFETY: as bitcast_ref_i32; float lanes likewise accept
-                // all bit patterns written back through the view.
-                unsafe {{ &mut *core::ptr::from_mut(self).cast::<super::{int_type}<T>>() }}
+                crate::simd_storage::vector_view_mut(self.1, &mut self.0)
             }}
         }}
     "#}
@@ -575,20 +545,13 @@ fn gen_u32x4_bitcast_f32() -> String {
             /// Bitcast to f32x4 by reference (zero-cost pointer cast).
             #[inline(always)]
             pub fn bitcast_ref_f32x4(&self) -> &super::f32x4<T> {{
-                const {{ assert!(core::mem::size_of::<Self>() == core::mem::size_of::<super::f32x4<T>>()) }};
-                // SAFETY: sizes asserted equal above; both are #[repr(C)]
-                // (Repr, token-ZST) wrappers and f32 lanes accept all bit
-                // patterns.
-                unsafe {{ &*core::ptr::from_ref(self).cast::<super::f32x4<T>>() }}
+                crate::simd_storage::vector_view(self.1, &self.0)
             }}
 
             /// Bitcast to f32x4 by mutable reference (zero-cost pointer cast).
             #[inline(always)]
             pub fn bitcast_mut_f32x4(&mut self) -> &mut super::f32x4<T> {{
-                const {{ assert!(core::mem::size_of::<Self>() == core::mem::size_of::<super::f32x4<T>>()) }};
-                // SAFETY: as bitcast_ref_f32x4; u32 lanes likewise accept
-                // all bit patterns written back.
-                unsafe {{ &mut *core::ptr::from_mut(self).cast::<super::f32x4<T>>() }}
+                crate::simd_storage::vector_view_mut(self.1, &mut self.0)
             }}
         }}
     "#}

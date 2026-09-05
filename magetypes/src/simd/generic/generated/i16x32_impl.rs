@@ -38,10 +38,16 @@ use crate::simd::backends::I16x32Backend;
 #[derive(Clone, Copy)]
 #[repr(C)]
 pub struct i16x32<T: I16x32Backend>(pub(crate) T::Repr, pub(crate) T);
+// SAFETY: repr(C) pair of Pod storage and a sealed 1-ZST token.
+// A supplied T proves CPU support; the wrapper adds no bit invariants.
+// Helpers additionally check token size/alignment at monomorphization.
+unsafe impl<T: I16x32Backend> crate::simd_storage::TokenStorage for i16x32<T> {
+    type Token = T;
+}
 
 // Layout invariant: struct is `#[repr(C)]` with a trailing ZST `T`
 // field, so `sizeof/alignof(i16x32<T>) == sizeof/alignof(T::Repr)`
-// iff `T` is a 1-ZST. Every archmage token currently satisfies this;
+// when `T` is a 1-ZST. Every archmage token currently satisfies this;
 // if a future refactor adds a non-ZST field to a token, this const
 // assert fires at compile time.
 const _: () = {

@@ -37,6 +37,21 @@ macro_rules! sse2_baseline {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn generic_storage_uses_checked_helpers_before_formatting() {
+        for (file, source) in super::super::generic_gen::generate_generic_files() {
+            for line in source
+                .lines()
+                .filter(|line| !line.trim_start().starts_with("//"))
+            {
+                assert!(!line.contains("unsafe {"), "{file}: {line}");
+                assert!(!line.contains("core::ptr::"), "{file}: {line}");
+                assert!(!line.contains("core::mem::transmute"), "{file}: {line}");
+                assert!(!line.contains("from_raw_parts"), "{file}: {line}");
+            }
+        }
+    }
+
+    #[test]
     fn pure_native_methods_use_arcane() {
         let files = super::super::backend_gen::generate_backend_files();
         for file in ["impls/x86_v3.rs", "impls/x86_v4.rs", "impls/arm_neon.rs"] {

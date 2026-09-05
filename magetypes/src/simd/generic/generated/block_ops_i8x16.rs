@@ -53,38 +53,15 @@ impl<T: I8x16Backend> i8x16<T> {
     ///
     /// Returns `None` if length is not a multiple of 16 or alignment is wrong.
     #[inline(always)]
-    pub fn cast_slice(_: T, slice: &[i8]) -> Option<&[Self]> {
-        const { assert!(core::mem::size_of::<Self>() == core::mem::size_of::<[i8; 16]>()) };
-        if !slice.len().is_multiple_of(16) {
-            return None;
-        }
-        let ptr = slice.as_ptr();
-        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
-            return None;
-        }
-        let len = slice.len() / 16;
-        // SAFETY: element size asserted above, alignment and length
-        // checked at runtime, so the reinterpreted slice covers
-        // exactly the same bytes.
-        Some(unsafe { core::slice::from_raw_parts(ptr.cast::<Self>(), len) })
+    pub fn cast_slice(token: T, slice: &[i8]) -> Option<&[Self]> {
+        crate::simd_storage::vector_slice::<_, Self, 16>(token, slice)
     }
 
     /// Reinterpret a mutable scalar slice as a SIMD vector slice (token-gated).
     ///
     /// Returns `None` if length is not a multiple of 16 or alignment is wrong.
     #[inline(always)]
-    pub fn cast_slice_mut(_: T, slice: &mut [i8]) -> Option<&mut [Self]> {
-        const { assert!(core::mem::size_of::<Self>() == core::mem::size_of::<[i8; 16]>()) };
-        if !slice.len().is_multiple_of(16) {
-            return None;
-        }
-        let ptr = slice.as_mut_ptr();
-        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
-            return None;
-        }
-        let len = slice.len() / 16;
-        // SAFETY: element size asserted above, alignment and length
-        // checked at runtime; exclusive borrow carries over.
-        Some(unsafe { core::slice::from_raw_parts_mut(ptr.cast::<Self>(), len) })
+    pub fn cast_slice_mut(token: T, slice: &mut [i8]) -> Option<&mut [Self]> {
+        crate::simd_storage::vector_slice_mut::<_, Self, 16>(token, slice)
     }
 }

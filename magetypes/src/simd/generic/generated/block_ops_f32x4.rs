@@ -54,39 +54,16 @@ impl<T: F32x4Backend> f32x4<T> {
     ///
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[inline(always)]
-    pub fn cast_slice(_: T, slice: &[f32]) -> Option<&[Self]> {
-        const { assert!(core::mem::size_of::<Self>() == core::mem::size_of::<[f32; 4]>()) };
-        if !slice.len().is_multiple_of(4) {
-            return None;
-        }
-        let ptr = slice.as_ptr();
-        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
-            return None;
-        }
-        let len = slice.len() / 4;
-        // SAFETY: element size asserted above, alignment and length
-        // checked at runtime, so the reinterpreted slice covers
-        // exactly the same bytes.
-        Some(unsafe { core::slice::from_raw_parts(ptr.cast::<Self>(), len) })
+    pub fn cast_slice(token: T, slice: &[f32]) -> Option<&[Self]> {
+        crate::simd_storage::vector_slice::<_, Self, 4>(token, slice)
     }
 
     /// Reinterpret a mutable scalar slice as a SIMD vector slice (token-gated).
     ///
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[inline(always)]
-    pub fn cast_slice_mut(_: T, slice: &mut [f32]) -> Option<&mut [Self]> {
-        const { assert!(core::mem::size_of::<Self>() == core::mem::size_of::<[f32; 4]>()) };
-        if !slice.len().is_multiple_of(4) {
-            return None;
-        }
-        let ptr = slice.as_mut_ptr();
-        if ptr.align_offset(core::mem::align_of::<Self>()) != 0 {
-            return None;
-        }
-        let len = slice.len() / 4;
-        // SAFETY: element size asserted above, alignment and length
-        // checked at runtime; exclusive borrow carries over.
-        Some(unsafe { core::slice::from_raw_parts_mut(ptr.cast::<Self>(), len) })
+    pub fn cast_slice_mut(token: T, slice: &mut [f32]) -> Option<&mut [Self]> {
+        crate::simd_storage::vector_slice_mut::<_, Self, 4>(token, slice)
     }
 
     // ====== u8 Conversions ======
@@ -238,19 +215,12 @@ impl<T: crate::simd::backends::F32x4Convert> f32x4<T> {
     /// Reinterpret bits as `&i32x4<T>` (zero-cost pointer cast).
     #[inline(always)]
     pub fn bitcast_ref_i32(&self) -> &super::i32x4<T> {
-        const { assert!(core::mem::size_of::<Self>() == core::mem::size_of::<super::i32x4<T>>()) };
-        // SAFETY: sizes asserted equal above; both are #[repr(C)]
-        // (Repr, token-ZST) wrappers of same-width lane vectors, and
-        // integer lanes accept all bit patterns.
-        unsafe { &*core::ptr::from_ref(self).cast::<super::i32x4<T>>() }
+        crate::simd_storage::vector_view(self.1, &self.0)
     }
 
     /// Reinterpret bits as `&mut i32x4<T>` (zero-cost pointer cast).
     #[inline(always)]
     pub fn bitcast_mut_i32(&mut self) -> &mut super::i32x4<T> {
-        const { assert!(core::mem::size_of::<Self>() == core::mem::size_of::<super::i32x4<T>>()) };
-        // SAFETY: as bitcast_ref_i32; float lanes likewise accept
-        // all bit patterns written back through the view.
-        unsafe { &mut *core::ptr::from_mut(self).cast::<super::i32x4<T>>() }
+        crate::simd_storage::vector_view_mut(self.1, &mut self.0)
     }
 }

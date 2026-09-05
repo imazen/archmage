@@ -196,25 +196,6 @@ pub(crate) fn lane_count(type_name: &str) -> &str {
     type_name.split('x').nth(1).unwrap_or("0")
 }
 
-/// x86 integer type hint for a SIMD type name (e.g., "i8x16" -> "__m128i", "i16x16" -> "__m256i").
-pub(crate) fn x86_int_type_for_name(type_name: &str) -> &'static str {
-    let elem = elem_prefix(type_name);
-    let lanes: usize = lane_count(type_name).parse().unwrap_or(0);
-    let elem_bytes = match elem {
-        "i8" | "u8" => 1,
-        "i16" | "u16" => 2,
-        "i32" | "u32" | "f32" => 4,
-        "i64" | "u64" | "f64" => 8,
-        _ => 4,
-    };
-    match lanes * elem_bytes {
-        16 => "__m128i",
-        32 => "__m256i",
-        64 => "__m512i",
-        _ => "__m128i",
-    }
-}
-
 // ============================================================================
 // Conversion table
 // ============================================================================

@@ -25,7 +25,7 @@
 //!         `avx, avx2, fma, bmi1, bmi2, f16c, lzcnt, movbe}`
 //!
 //! Therefore `V3 ⊊ V4` (strict subset). Any instruction encoding safe to
-//! execute on a CPU presenting V4's features is also safe under V3's
+//! execute on a CPU presenting V3's features is also safe under V4's
 //! features — the V4 platform is a strict superset of V3 capabilities.
 //!
 //! [`F32x4Backend`] / [`F32x8Backend`] for `X64V3Token` use intrinsics

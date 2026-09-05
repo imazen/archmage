@@ -2,7 +2,7 @@
 
 use indoc::formatdoc;
 
-use super::{elem_prefix, lane_count, uppercase_first, x86_int_type_for_name};
+use super::{elem_prefix, lane_count, uppercase_first};
 
 // ============================================================================
 // f32 <-> i32 conversions (full numeric + bitcast)
@@ -177,8 +177,6 @@ pub(crate) fn gen_signed_unsigned_bitcast(
     let trait_bound = format!("{}Bitcast", uppercase_first(src));
     let src_elem = elem_prefix(src);
     let target_elem = elem_prefix(target);
-    let src_lanes = lane_count(src);
-    let x86_int = x86_int_type_for_name(src);
 
     formatdoc! {r#"
         // ============================================================================
@@ -195,15 +193,13 @@ pub(crate) fn gen_signed_unsigned_bitcast(
             /// Bitcast to {target} by reference (zero-cost).
             #[inline(always)]
             pub fn bitcast_ref_{target}(&self) -> &super::{target}<T> {{
-                // SAFETY: {src} and {target} share the same repr ({x86_int} / [{src_elem};{src_lanes}] / etc.)
-                unsafe {{ &*(core::ptr::from_ref(self).cast()) }}
+                crate::simd_storage::vector_view(self.1, &self.0)
             }}
 
             /// Bitcast to {target} by mutable reference (zero-cost).
             #[inline(always)]
             pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T> {{
-                // SAFETY: {src} and {target} share the same repr
-                unsafe {{ &mut *(core::ptr::from_mut(self).cast()) }}
+                crate::simd_storage::vector_view_mut(self.1, &mut self.0)
             }}
         }}
     "#}
@@ -219,8 +215,6 @@ pub(crate) fn gen_unsigned_signed_bitcast(
     let trait_bound = format!("{}Bitcast", uppercase_first(target));
     let src_elem = elem_prefix(src);
     let target_elem = elem_prefix(target);
-    let src_lanes = lane_count(src);
-    let x86_int = x86_int_type_for_name(src);
 
     formatdoc! {r#"
         // ============================================================================
@@ -237,15 +231,13 @@ pub(crate) fn gen_unsigned_signed_bitcast(
             /// Bitcast to {target} by reference (zero-cost).
             #[inline(always)]
             pub fn bitcast_ref_{target}(&self) -> &super::{target}<T> {{
-                // SAFETY: {src} and {target} share the same repr ({x86_int} / [{src_elem};{src_lanes}] / etc.)
-                unsafe {{ &*(core::ptr::from_ref(self).cast()) }}
+                crate::simd_storage::vector_view(self.1, &self.0)
             }}
 
             /// Bitcast to {target} by mutable reference (zero-cost).
             #[inline(always)]
             pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T> {{
-                // SAFETY: {src} and {target} share the same repr
-                unsafe {{ &mut *(core::ptr::from_mut(self).cast()) }}
+                crate::simd_storage::vector_view_mut(self.1, &mut self.0)
             }}
         }}
     "#}
@@ -260,8 +252,6 @@ pub(crate) fn gen_u32_i32_bitcast(src: &str, target: &str, method: &str) -> Stri
     let trait_bound = format!("{}Bitcast", uppercase_first(src));
     let src_elem = elem_prefix(src);
     let target_elem = elem_prefix(target);
-    let src_lanes = lane_count(src);
-    let x86_int = x86_int_type_for_name(src);
 
     formatdoc! {r#"
         // ============================================================================
@@ -278,15 +268,13 @@ pub(crate) fn gen_u32_i32_bitcast(src: &str, target: &str, method: &str) -> Stri
             /// Bitcast to {target} by reference (zero-cost).
             #[inline(always)]
             pub fn bitcast_ref_{target}(&self) -> &super::{target}<T> {{
-                // SAFETY: {src} and {target} share the same repr ({x86_int} / [{src_elem};{src_lanes}] / etc.)
-                unsafe {{ &*(core::ptr::from_ref(self).cast()) }}
+                crate::simd_storage::vector_view(self.1, &self.0)
             }}
 
             /// Bitcast to {target} by mutable reference (zero-cost).
             #[inline(always)]
             pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T> {{
-                // SAFETY: {src} and {target} share the same repr
-                unsafe {{ &mut *(core::ptr::from_mut(self).cast()) }}
+                crate::simd_storage::vector_view_mut(self.1, &mut self.0)
             }}
 
             // ====== Backward-compatible aliases ======
@@ -309,8 +297,6 @@ pub(crate) fn gen_u64_i64_bitcast(src: &str, target: &str, method: &str) -> Stri
     let trait_bound = format!("{}Bitcast", uppercase_first(src));
     let src_elem = elem_prefix(src);
     let target_elem = elem_prefix(target);
-    let src_lanes = lane_count(src);
-    let x86_int = x86_int_type_for_name(src);
 
     formatdoc! {r#"
         // ============================================================================
@@ -327,15 +313,13 @@ pub(crate) fn gen_u64_i64_bitcast(src: &str, target: &str, method: &str) -> Stri
             /// Bitcast to {target} by reference (zero-cost).
             #[inline(always)]
             pub fn bitcast_ref_{target}(&self) -> &super::{target}<T> {{
-                // SAFETY: {src} and {target} share the same repr ({x86_int} / [{src_elem};{src_lanes}] / etc.)
-                unsafe {{ &*(core::ptr::from_ref(self).cast()) }}
+                crate::simd_storage::vector_view(self.1, &self.0)
             }}
 
             /// Bitcast to {target} by mutable reference (zero-cost).
             #[inline(always)]
             pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T> {{
-                // SAFETY: {src} and {target} share the same repr
-                unsafe {{ &mut *(core::ptr::from_mut(self).cast()) }}
+                crate::simd_storage::vector_view_mut(self.1, &mut self.0)
             }}
         }}
     "#}
@@ -355,13 +339,6 @@ pub(crate) fn gen_i64_f64_bitcast(
     let trait_bound = format!("{}Bitcast", uppercase_first(src));
     let src_elem = elem_prefix(src);
     let target_elem = elem_prefix(target);
-    let src_lanes = lane_count(src);
-
-    let repr_hint = if src_lanes == "2" {
-        format!("__m128i/__m128d / [{src_elem};2] / etc.")
-    } else {
-        format!("__m256i/__m256d / [{src_elem};{src_lanes}] / etc.")
-    };
 
     formatdoc! {r#"
         // ============================================================================
@@ -378,15 +355,13 @@ pub(crate) fn gen_i64_f64_bitcast(
             /// Bitcast to {target} by reference (zero-cost).
             #[inline(always)]
             pub fn bitcast_ref_{target}(&self) -> &super::{target}<T> {{
-                // SAFETY: {src} and {target} share the same repr ({repr_hint})
-                unsafe {{ &*(core::ptr::from_ref(self).cast()) }}
+                crate::simd_storage::vector_view(self.1, &self.0)
             }}
 
             /// Bitcast to {target} by mutable reference (zero-cost).
             #[inline(always)]
             pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T> {{
-                // SAFETY: {src} and {target} share the same repr
-                unsafe {{ &mut *(core::ptr::from_mut(self).cast()) }}
+                crate::simd_storage::vector_view_mut(self.1, &mut self.0)
             }}
 
             // ====== Backward-compatible aliases ======
