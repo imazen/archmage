@@ -23,7 +23,8 @@ use archmage::SimdToken;
 /// The token proves CPU support was verified via `summon()`.
 pub trait I16x16Backend: SimdToken + Sealed + Copy + 'static {
     /// Platform-native SIMD representation.
-    type Repr: Copy + Clone + Send + Sync;
+    #[allow(private_bounds)]
+    type Repr: Copy + Clone + Send + Sync + crate::simd_storage::Pod;
 
     // ====== Construction ======
 

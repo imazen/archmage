@@ -1386,8 +1386,7 @@ fn gen_index(ty: &SimdType) -> String {
             #[inline(always)]
             fn index(&self, i: usize) -> &{elem} {{
                 assert!(i < {lanes}, \"{name} index out of bounds: {{i}}\");
-                // SAFETY: {name}'s repr is layout-compatible with [{elem}; {lanes}], and i < {lanes}.
-                unsafe {{ &*(core::ptr::from_ref(self).cast::<{elem}>()).add(i) }}
+                &crate::simd_storage::view::<_, [{elem}; {lanes}]>(&self.0)[i]
             }}
         }}
 
@@ -1395,8 +1394,7 @@ fn gen_index(ty: &SimdType) -> String {
             #[inline(always)]
             fn index_mut(&mut self, i: usize) -> &mut {elem} {{
                 assert!(i < {lanes}, \"{name} index out of bounds: {{i}}\");
-                // SAFETY: {name}'s repr is layout-compatible with [{elem}; {lanes}], and i < {lanes}.
-                unsafe {{ &mut *(core::ptr::from_mut(self).cast::<{elem}>()).add(i) }}
+                &mut crate::simd_storage::view_mut::<_, [{elem}; {lanes}]>(&mut self.0)[i]
             }}
         }}
 

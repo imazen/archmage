@@ -385,7 +385,8 @@ pub(super) fn generate_int_backend_trait(ty: &IntVecType) -> String {
     // Construction
     methods.push_str(&formatdoc! {r#"
             /// Platform-native SIMD representation.
-            type Repr: Copy + Clone + Send + Sync;
+            #[allow(private_bounds)]
+            type Repr: Copy + Clone + Send + Sync + crate::simd_storage::Pod;
 
             // ====== Construction ======
 
