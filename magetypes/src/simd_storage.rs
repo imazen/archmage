@@ -1,4 +1,4 @@
-//! Checked bit copies for backend storage, inspired by fearless_simd's transmute module:
+//! Checked copies and views for backend storage, inspired by fearless_simd's transmute module:
 //! https://github.com/linebender/fearless_simd/blob/main/fearless_simd/src/transmute.rs
 //!
 //! Only raw scalar/vector storage implements Pod. Never implement it for tokens
@@ -67,6 +67,101 @@ const _: () = {
     // contains no pointers. Arrays of v128 have no inter-element padding.
     impl_pod!(core::arch::wasm32::v128);
 };
+
+/// Storage whose arbitrary bits are valid only in the presence of a token.
+/// This is deliberately separate from Pod: wrappers must never manufacture tokens.
+///
+/// # Safety
+/// Self must be a repr(C) pair of a Pod representation followed by Token, a
+/// zero-sized, alignment-one token. Given a valid Token, every representation
+/// bit pattern must be valid as Self. Self must have no additional invariants,
+/// padding, pointers, interior mutability, or drop behavior. Mutable writes to
+/// Self must preserve arbitrary-bit validity of its storage. Implement only for
+/// the generated SIMD wrappers over sealed backend implementations.
+pub(crate) unsafe trait TokenStorage: Copy {
+    type Token: archmage::SimdToken;
+}
+
+#[inline(always)]
+fn check_token_layout<Dst: TokenStorage>() {
+    const {
+        assert!(size_of::<Dst::Token>() == 0);
+        assert!(align_of::<Dst::Token>() == 1);
+    }
+}
+
+/// Borrow raw storage as a vector, carrying an existing feature proof.
+#[inline(always)]
+pub(crate) fn vector_view<Src: Pod, Dst: TokenStorage>(_: Dst::Token, src: &Src) -> &Dst {
+    check_token_layout::<Dst>();
+    const {
+        assert!(size_of::<Src>() == size_of::<Dst>());
+        assert!(align_of::<Src>() >= align_of::<Dst>());
+    }
+    // SAFETY: checked layout, initialized Pod bytes, and the supplied token
+    // satisfy TokenStorage's validity contract. The borrow retains its lifetime.
+    unsafe { &*core::ptr::from_ref(src).cast::<Dst>() }
+}
+
+/// Exclusively borrow raw storage as a vector with an existing feature proof.
+#[inline(always)]
+pub(crate) fn vector_view_mut<Src: Pod, Dst: TokenStorage>(
+    _: Dst::Token,
+    src: &mut Src,
+) -> &mut Dst {
+    check_token_layout::<Dst>();
+    const {
+        assert!(size_of::<Src>() == size_of::<Dst>());
+        assert!(align_of::<Src>() >= align_of::<Dst>());
+    }
+    // SAFETY: as vector_view, with exclusive access. TokenStorage writes leave
+    // initialized storage, and Pod accepts all resulting bits when reborrow ends.
+    unsafe { &mut *core::ptr::from_mut(src).cast::<Dst>() }
+}
+
+/// Borrow whole vectors from scalar storage; retain the API's length/alignment checks.
+#[inline(always)]
+pub(crate) fn vector_slice<Src: Pod, Dst: TokenStorage, const N: usize>(
+    _: Dst::Token,
+    slice: &[Src],
+) -> Option<&[Dst]> {
+    check_token_layout::<Dst>();
+    const {
+        assert!(N > 0 && size_of::<Dst>() == size_of::<[Src; N]>());
+    }
+    if !slice.len().is_multiple_of(N) {
+        return None;
+    }
+    let ptr = slice.as_ptr();
+    if ptr.align_offset(align_of::<Dst>()) != 0 {
+        return None;
+    }
+    // SAFETY: same byte extent, checked alignment, and TokenStorage validity
+    // provided by initialized Pod elements and the supplied token. Same lifetime.
+    Some(unsafe { core::slice::from_raw_parts(ptr.cast::<Dst>(), slice.len() / N) })
+}
+
+/// Mutable counterpart of vector_slice, preserving exclusive access.
+#[inline(always)]
+pub(crate) fn vector_slice_mut<Src: Pod, Dst: TokenStorage, const N: usize>(
+    _: Dst::Token,
+    slice: &mut [Src],
+) -> Option<&mut [Dst]> {
+    check_token_layout::<Dst>();
+    const {
+        assert!(N > 0 && size_of::<Dst>() == size_of::<[Src; N]>());
+    }
+    if !slice.len().is_multiple_of(N) {
+        return None;
+    }
+    let ptr = slice.as_mut_ptr();
+    if ptr.align_offset(align_of::<Dst>()) != 0 {
+        return None;
+    }
+    // SAFETY: as vector_slice, with exclusive access. Every vector write leaves
+    // initialized bytes valid as the original Pod elements.
+    Some(unsafe { core::slice::from_raw_parts_mut(ptr.cast::<Dst>(), slice.len() / N) })
+}
 
 /// Copy same-sized storage without requiring the source's alignment to match Dst.
 #[inline(always)]
@@ -146,6 +241,48 @@ mod tests {
         assert_eq!(bits[1], 0xffff_ffff);
         view_mut::<_, [u8; 8]>(&mut bits).fill(0xa5);
         assert_eq!(bits, [0xa5a5_a5a5; 2]);
+    }
+
+    #[test]
+    fn token_views_and_slices_preserve_proofs_bits_and_exclusivity() {
+        use crate::simd::generic::{f32x4, u32x4, u64x2};
+        use archmage::ScalarToken;
+        let token = ScalarToken;
+        let mut source = u32x4::from_array(token, [0x7fc0_1234, 0, u32::MAX, 1]);
+        assert_eq!(source.bitcast_ref_f32x4()[0].to_bits(), 0x7fc0_1234);
+        source.bitcast_mut_f32x4()[1] = -0.0;
+        assert_eq!(source[1], 0x8000_0000);
+        let bytes = source.as_bytes();
+        assert_eq!(f32x4::from_bytes(token, bytes).as_bytes(), bytes);
+        assert_eq!(f32x4::from_bytes_owned(token, *bytes).as_bytes(), bytes);
+
+        #[repr(align(8))]
+        struct Bytes([u8; 33]);
+        let mut bytes = Bytes([0xa5; 33]);
+        assert!(vector_slice::<_, u64x2<ScalarToken>, 16>(token, &bytes.0[1..33]).is_none());
+        assert!(vector_slice::<_, u64x2<ScalarToken>, 16>(token, &bytes.0[..31]).is_none());
+        assert!(
+            vector_slice_mut::<_, u64x2<ScalarToken>, 16>(token, &mut bytes.0[1..33]).is_none()
+        );
+        assert!(vector_slice_mut::<_, u64x2<ScalarToken>, 16>(token, &mut bytes.0[..31]).is_none());
+        let vectors =
+            vector_slice_mut::<_, u64x2<ScalarToken>, 16>(token, &mut bytes.0[..32]).unwrap();
+        vectors[0][1] = 0;
+        vectors[1] = u64x2::from_array(token, [u64::MAX; 2]);
+        assert_eq!(&bytes.0[8..16], &[0; 8]);
+        assert_eq!(&bytes.0[16..32], &[255; 16]);
+        assert_eq!(bytes.0[32], 0xa5);
+        assert_eq!(
+            vector_slice::<_, u64x2<ScalarToken>, 16>(token, &bytes.0[..32])
+                .unwrap()
+                .len(),
+            2
+        );
+        assert!(
+            vector_slice_mut::<_, u64x2<ScalarToken>, 16>(token, &mut bytes.0[..0])
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[test]

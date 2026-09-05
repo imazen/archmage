@@ -230,6 +230,12 @@ fn gen_struct(ty: &SimdType) -> String {
         {note_section}#[derive(Clone, Copy)]
         #[repr(C)]
         pub struct {name}<T: {backend}>(pub(crate) T::Repr, pub(crate) T);
+        // SAFETY: repr(C) pair of Pod storage and a sealed 1-ZST token.
+        // A supplied T proves CPU support; the wrapper adds no bit invariants.
+        // Helpers additionally check token size/alignment at monomorphization.
+        unsafe impl<T: {backend}> crate::simd_storage::TokenStorage for {name}<T> {{
+            type Token = T;
+        }}
         {phantom_comment}{layout_asserts}
     "}
 }
@@ -238,7 +244,7 @@ fn gen_struct(ty: &SimdType) -> String {
 // Compile-time layout assertions
 //
 // Under `#[repr(C)]` with a trailing ZST token field, the struct has the same
-// size and alignment as `T::Repr` *if and only if* `T` is a 1-ZST (zero size,
+// size and alignment as `T::Repr` *when* `T` is a 1-ZST (zero size,
 // alignment of 1). All archmage tokens are currently 1-ZSTs, but that could
 // change if a future refactor adds a non-ZST field to a token (e.g. by accident
 // during a code cleanup). These asserts catch that regression at compile time.
@@ -257,7 +263,7 @@ fn gen_layout_asserts(ty: &SimdType) -> String {
 
         // Layout invariant: struct is `#[repr(C)]` with a trailing ZST `T`
         // field, so `sizeof/alignof({name}<T>) == sizeof/alignof(T::Repr)`
-        // iff `T` is a 1-ZST. Every archmage token currently satisfies this;
+        // when `T` is a 1-ZST. Every archmage token currently satisfies this;
         // if a future refactor adds a non-ZST field to a token, this const
         // assert fires at compile time.
         const _: () = {{
