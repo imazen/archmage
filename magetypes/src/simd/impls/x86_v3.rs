@@ -23,151 +23,151 @@ impl F32x4Backend for archmage::X64V3Token {
 
     // ====== Construction ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn splat(self, v: f32) -> __m128 {
         _mm_set1_ps(v)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn zero(self) -> __m128 {
         _mm_setzero_ps()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn load(self, data: &[f32; 4]) -> __m128 {
         crate::simd_storage::copy(data)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn from_array(self, arr: [f32; 4]) -> __m128 {
         crate::simd_storage::cast(arr)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store(self, repr: __m128, out: &mut [f32; 4]) {
         crate::simd_storage::store(repr, out);
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_array(self, repr: __m128) -> [f32; 4] {
         crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn add(self, a: __m128, b: __m128) -> __m128 {
         _mm_add_ps(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sub(self, a: __m128, b: __m128) -> __m128 {
         _mm_sub_ps(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn mul(self, a: __m128, b: __m128) -> __m128 {
         _mm_mul_ps(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn div(self, a: __m128, b: __m128) -> __m128 {
         _mm_div_ps(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn neg(self, a: __m128) -> __m128 {
         _mm_sub_ps(_mm_setzero_ps(), a)
     }
 
     // ====== Math ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn min(self, a: __m128, b: __m128) -> __m128 {
         _mm_min_ps(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn max(self, a: __m128, b: __m128) -> __m128 {
         _mm_max_ps(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sqrt(self, a: __m128) -> __m128 {
         _mm_sqrt_ps(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn abs(self, a: __m128) -> __m128 {
         let mask = _mm_castsi128_ps(_mm_set1_epi32(0x7FFF_FFFFi32));
         _mm_and_ps(a, mask)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn floor(self, a: __m128) -> __m128 {
         _mm_floor_ps(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn ceil(self, a: __m128) -> __m128 {
         _mm_ceil_ps(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn round(self, a: __m128) -> __m128 {
         _mm_round_ps::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn mul_add(self, a: __m128, b: __m128, c: __m128) -> __m128 {
         _mm_fmadd_ps(a, b, c)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn mul_sub(self, a: __m128, b: __m128, c: __m128) -> __m128 {
         _mm_fmsub_ps(a, b, c)
     }
 
     // ====== Comparisons ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_eq(self, a: __m128, b: __m128) -> __m128 {
         _mm_cmp_ps::<_CMP_EQ_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ne(self, a: __m128, b: __m128) -> __m128 {
         _mm_cmp_ps::<_CMP_NEQ_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_lt(self, a: __m128, b: __m128) -> __m128 {
         _mm_cmp_ps::<_CMP_LT_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_le(self, a: __m128, b: __m128) -> __m128 {
         _mm_cmp_ps::<_CMP_LE_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_gt(self, a: __m128, b: __m128) -> __m128 {
         _mm_cmp_ps::<_CMP_GT_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ge(self, a: __m128, b: __m128) -> __m128 {
         _mm_cmp_ps::<_CMP_GE_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn blend(self, mask: __m128, if_true: __m128, if_false: __m128) -> __m128 {
         _mm_blendv_ps(if_false, if_true, mask)
     }
 
     // ====== Reductions ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_add(self, a: __m128) -> f32 {
         {
             let shuf = _mm_shuffle_ps::<0b10_11_00_01>(a, a);
@@ -177,7 +177,7 @@ impl F32x4Backend for archmage::X64V3Token {
         }
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_min(self, a: __m128) -> f32 {
         {
             let shuf = _mm_shuffle_ps::<0b10_11_00_01>(a, a);
@@ -188,7 +188,7 @@ impl F32x4Backend for archmage::X64V3Token {
         }
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_max(self, a: __m128) -> f32 {
         {
             let shuf = _mm_shuffle_ps::<0b10_11_00_01>(a, a);
@@ -201,12 +201,12 @@ impl F32x4Backend for archmage::X64V3Token {
 
     // ====== Approximations ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn rcp_approx(self, a: __m128) -> __m128 {
         _mm_rcp_ps(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn rsqrt_approx(self, a: __m128) -> __m128 {
         _mm_rsqrt_ps(a)
     }
@@ -223,7 +223,7 @@ impl F32x4Backend for archmage::X64V3Token {
     // (benchmarks/recip_x86_zen5-9950x3d_2026-09-03.md). Subnormal
     // inputs remain unspecified at this tier (rcpps flushes them);
     // `recip_portable`/`rsqrt_portable` divide: 0 ULP + subnormals.
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn recip(self, a: __m128) -> __m128 {
         let one = { _mm_set1_ps(1.0) };
         let r = <Self as F32x4Backend>::rcp_approx(_self, a);
@@ -235,7 +235,7 @@ impl F32x4Backend for archmage::X64V3Token {
         }
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn rsqrt(self, a: __m128) -> __m128 {
         let half = { _mm_set1_ps(0.5) };
         let three_halves = { _mm_set1_ps(1.5) };
@@ -250,29 +250,29 @@ impl F32x4Backend for archmage::X64V3Token {
 
     // ====== Bitwise ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn not(self, a: __m128) -> __m128 {
         let ones = _mm_set1_epi32(-1);
         let as_int = _mm_castps_si128(a);
         _mm_castsi128_ps(_mm_xor_si128(as_int, ones))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitand(self, a: __m128, b: __m128) -> __m128 {
         _mm_and_ps(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitor(self, a: __m128, b: __m128) -> __m128 {
         _mm_or_ps(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitxor(self, a: __m128, b: __m128) -> __m128 {
         _mm_xor_ps(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_u8_bytes(self, a: __m128) -> [u8; 4] {
         let i32s = _mm_cvtps_epi32(a);
         let i16s = _mm_packs_epi32(i32s, i32s);
@@ -280,7 +280,7 @@ impl F32x4Backend for archmage::X64V3Token {
         (_mm_cvtsi128_si32(u8s) as u32).to_ne_bytes()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store_rgba_bytes(self, r: __m128, g: __m128, b: __m128, a: __m128) -> [u8; 16] {
         let rg = _mm_packs_epi32(_mm_cvtps_epi32(r), _mm_cvtps_epi32(g));
         let ba = _mm_packs_epi32(_mm_cvtps_epi32(b), _mm_cvtps_epi32(a));
@@ -297,151 +297,151 @@ impl F32x8Backend for archmage::X64V3Token {
 
     // ====== Construction ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn splat(self, v: f32) -> __m256 {
         _mm256_set1_ps(v)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn zero(self) -> __m256 {
         _mm256_setzero_ps()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn load(self, data: &[f32; 8]) -> __m256 {
         crate::simd_storage::copy(data)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn from_array(self, arr: [f32; 8]) -> __m256 {
         crate::simd_storage::cast(arr)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store(self, repr: __m256, out: &mut [f32; 8]) {
         crate::simd_storage::store(repr, out);
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_array(self, repr: __m256) -> [f32; 8] {
         crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn add(self, a: __m256, b: __m256) -> __m256 {
         _mm256_add_ps(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sub(self, a: __m256, b: __m256) -> __m256 {
         _mm256_sub_ps(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn mul(self, a: __m256, b: __m256) -> __m256 {
         _mm256_mul_ps(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn div(self, a: __m256, b: __m256) -> __m256 {
         _mm256_div_ps(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn neg(self, a: __m256) -> __m256 {
         _mm256_sub_ps(_mm256_setzero_ps(), a)
     }
 
     // ====== Math ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn min(self, a: __m256, b: __m256) -> __m256 {
         _mm256_min_ps(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn max(self, a: __m256, b: __m256) -> __m256 {
         _mm256_max_ps(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sqrt(self, a: __m256) -> __m256 {
         _mm256_sqrt_ps(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn abs(self, a: __m256) -> __m256 {
         let mask = _mm256_castsi256_ps(_mm256_set1_epi32(0x7FFF_FFFFi32));
         _mm256_and_ps(a, mask)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn floor(self, a: __m256) -> __m256 {
         _mm256_floor_ps(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn ceil(self, a: __m256) -> __m256 {
         _mm256_ceil_ps(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn round(self, a: __m256) -> __m256 {
         _mm256_round_ps::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn mul_add(self, a: __m256, b: __m256, c: __m256) -> __m256 {
         _mm256_fmadd_ps(a, b, c)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn mul_sub(self, a: __m256, b: __m256, c: __m256) -> __m256 {
         _mm256_fmsub_ps(a, b, c)
     }
 
     // ====== Comparisons ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_eq(self, a: __m256, b: __m256) -> __m256 {
         _mm256_cmp_ps::<_CMP_EQ_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ne(self, a: __m256, b: __m256) -> __m256 {
         _mm256_cmp_ps::<_CMP_NEQ_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_lt(self, a: __m256, b: __m256) -> __m256 {
         _mm256_cmp_ps::<_CMP_LT_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_le(self, a: __m256, b: __m256) -> __m256 {
         _mm256_cmp_ps::<_CMP_LE_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_gt(self, a: __m256, b: __m256) -> __m256 {
         _mm256_cmp_ps::<_CMP_GT_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ge(self, a: __m256, b: __m256) -> __m256 {
         _mm256_cmp_ps::<_CMP_GE_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn blend(self, mask: __m256, if_true: __m256, if_false: __m256) -> __m256 {
         _mm256_blendv_ps(if_false, if_true, mask)
     }
 
     // ====== Reductions ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_add(self, a: __m256) -> f32 {
         {
             let hi = _mm256_extractf128_ps::<1>(a);
@@ -454,7 +454,7 @@ impl F32x8Backend for archmage::X64V3Token {
         }
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_min(self, a: __m256) -> f32 {
         {
             let hi = _mm256_extractf128_ps::<1>(a);
@@ -468,7 +468,7 @@ impl F32x8Backend for archmage::X64V3Token {
         }
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_max(self, a: __m256) -> f32 {
         {
             let hi = _mm256_extractf128_ps::<1>(a);
@@ -484,12 +484,12 @@ impl F32x8Backend for archmage::X64V3Token {
 
     // ====== Approximations ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn rcp_approx(self, a: __m256) -> __m256 {
         _mm256_rcp_ps(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn rsqrt_approx(self, a: __m256) -> __m256 {
         _mm256_rsqrt_ps(a)
     }
@@ -506,7 +506,7 @@ impl F32x8Backend for archmage::X64V3Token {
     // (benchmarks/recip_x86_zen5-9950x3d_2026-09-03.md). Subnormal
     // inputs remain unspecified at this tier (rcpps flushes them);
     // `recip_portable`/`rsqrt_portable` divide: 0 ULP + subnormals.
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn recip(self, a: __m256) -> __m256 {
         let one = { _mm256_set1_ps(1.0) };
         let r = <Self as F32x8Backend>::rcp_approx(_self, a);
@@ -518,7 +518,7 @@ impl F32x8Backend for archmage::X64V3Token {
         }
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn rsqrt(self, a: __m256) -> __m256 {
         let half = { _mm256_set1_ps(0.5) };
         let three_halves = { _mm256_set1_ps(1.5) };
@@ -533,29 +533,29 @@ impl F32x8Backend for archmage::X64V3Token {
 
     // ====== Bitwise ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn not(self, a: __m256) -> __m256 {
         let ones = _mm256_set1_epi32(-1);
         let as_int = _mm256_castps_si256(a);
         _mm256_castsi256_ps(_mm256_xor_si256(as_int, ones))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitand(self, a: __m256, b: __m256) -> __m256 {
         _mm256_and_ps(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitor(self, a: __m256, b: __m256) -> __m256 {
         _mm256_or_ps(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitxor(self, a: __m256, b: __m256) -> __m256 {
         _mm256_xor_ps(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_u8_bytes(self, a: __m256) -> [u8; 8] {
         let i32s = _mm256_cvtps_epi32(a);
         let lo = _mm256_castsi256_si128(i32s);
@@ -565,7 +565,7 @@ impl F32x8Backend for archmage::X64V3Token {
         (_mm_cvtsi128_si64(u8s) as u64).to_ne_bytes()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store_rgba_bytes(self, r: __m256, g: __m256, b: __m256, a: __m256) -> [u8; 32] {
         // AVX2 packs are lane-wise: lane0 holds pixels 0-3, lane1 4-7.
         let rg = _mm256_packs_epi32(_mm256_cvtps_epi32(r), _mm256_cvtps_epi32(g));
@@ -578,7 +578,7 @@ impl F32x8Backend for archmage::X64V3Token {
         crate::simd_storage::cast(_mm256_shuffle_epi8(packed, shuf))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn transpose_8x8_repr(self, rows: [__m256; 8]) -> [__m256; 8] {
         let t0 = _mm256_unpacklo_ps(rows[0], rows[1]);
         let t1 = _mm256_unpackhi_ps(rows[0], rows[1]);
@@ -615,151 +615,151 @@ impl F64x2Backend for archmage::X64V3Token {
 
     // ====== Construction ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn splat(self, v: f64) -> __m128d {
         _mm_set1_pd(v)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn zero(self) -> __m128d {
         _mm_setzero_pd()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn load(self, data: &[f64; 2]) -> __m128d {
         crate::simd_storage::copy(data)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn from_array(self, arr: [f64; 2]) -> __m128d {
         crate::simd_storage::cast(arr)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store(self, repr: __m128d, out: &mut [f64; 2]) {
         crate::simd_storage::store(repr, out);
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_array(self, repr: __m128d) -> [f64; 2] {
         crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn add(self, a: __m128d, b: __m128d) -> __m128d {
         _mm_add_pd(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sub(self, a: __m128d, b: __m128d) -> __m128d {
         _mm_sub_pd(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn mul(self, a: __m128d, b: __m128d) -> __m128d {
         _mm_mul_pd(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn div(self, a: __m128d, b: __m128d) -> __m128d {
         _mm_div_pd(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn neg(self, a: __m128d) -> __m128d {
         _mm_sub_pd(_mm_setzero_pd(), a)
     }
 
     // ====== Math ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn min(self, a: __m128d, b: __m128d) -> __m128d {
         _mm_min_pd(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn max(self, a: __m128d, b: __m128d) -> __m128d {
         _mm_max_pd(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sqrt(self, a: __m128d) -> __m128d {
         _mm_sqrt_pd(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn abs(self, a: __m128d) -> __m128d {
         let mask = _mm_castsi128_pd(_mm_set1_epi64x(0x7FFF_FFFF_FFFF_FFFFi64));
         _mm_and_pd(a, mask)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn floor(self, a: __m128d) -> __m128d {
         _mm_floor_pd(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn ceil(self, a: __m128d) -> __m128d {
         _mm_ceil_pd(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn round(self, a: __m128d) -> __m128d {
         _mm_round_pd::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn mul_add(self, a: __m128d, b: __m128d, c: __m128d) -> __m128d {
         _mm_fmadd_pd(a, b, c)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn mul_sub(self, a: __m128d, b: __m128d, c: __m128d) -> __m128d {
         _mm_fmsub_pd(a, b, c)
     }
 
     // ====== Comparisons ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_eq(self, a: __m128d, b: __m128d) -> __m128d {
         _mm_cmp_pd::<_CMP_EQ_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ne(self, a: __m128d, b: __m128d) -> __m128d {
         _mm_cmp_pd::<_CMP_NEQ_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_lt(self, a: __m128d, b: __m128d) -> __m128d {
         _mm_cmp_pd::<_CMP_LT_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_le(self, a: __m128d, b: __m128d) -> __m128d {
         _mm_cmp_pd::<_CMP_LE_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_gt(self, a: __m128d, b: __m128d) -> __m128d {
         _mm_cmp_pd::<_CMP_GT_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ge(self, a: __m128d, b: __m128d) -> __m128d {
         _mm_cmp_pd::<_CMP_GE_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn blend(self, mask: __m128d, if_true: __m128d, if_false: __m128d) -> __m128d {
         _mm_blendv_pd(if_false, if_true, mask)
     }
 
     // ====== Reductions ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_add(self, a: __m128d) -> f64 {
         {
             let h = _mm_hadd_pd(a, a);
@@ -767,7 +767,7 @@ impl F64x2Backend for archmage::X64V3Token {
         }
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_min(self, a: __m128d) -> f64 {
         {
             let shuf = _mm_shuffle_pd::<0b01>(a, a);
@@ -776,7 +776,7 @@ impl F64x2Backend for archmage::X64V3Token {
         }
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_max(self, a: __m128d) -> f64 {
         {
             let shuf = _mm_shuffle_pd::<0b01>(a, a);
@@ -787,25 +787,25 @@ impl F64x2Backend for archmage::X64V3Token {
 
     // ====== Approximations ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn rcp_approx(self, a: __m128d) -> __m128d {
         let one = { _mm_set1_pd(1.0) };
         <Self as F64x2Backend>::div(_self, one, a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn rsqrt_approx(self, a: __m128d) -> __m128d {
         let one = { _mm_set1_pd(1.0) };
         <Self as F64x2Backend>::div(_self, one, <Self as F64x2Backend>::sqrt(_self, a))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn recip(self, a: __m128d) -> __m128d {
         let one = { _mm_set1_pd(1.0) };
         <Self as F64x2Backend>::div(_self, one, a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn rsqrt(self, a: __m128d) -> __m128d {
         let one = { _mm_set1_pd(1.0) };
         <Self as F64x2Backend>::div(_self, one, <Self as F64x2Backend>::sqrt(_self, a))
@@ -813,24 +813,24 @@ impl F64x2Backend for archmage::X64V3Token {
 
     // ====== Bitwise ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn not(self, a: __m128d) -> __m128d {
         let ones = _mm_set1_epi64x(-1);
         let as_int = _mm_castpd_si128(a);
         _mm_castsi128_pd(_mm_xor_si128(as_int, ones))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitand(self, a: __m128d, b: __m128d) -> __m128d {
         _mm_and_pd(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitor(self, a: __m128d, b: __m128d) -> __m128d {
         _mm_or_pd(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitxor(self, a: __m128d, b: __m128d) -> __m128d {
         _mm_xor_pd(a, b)
     }
@@ -842,151 +842,151 @@ impl F64x4Backend for archmage::X64V3Token {
 
     // ====== Construction ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn splat(self, v: f64) -> __m256d {
         _mm256_set1_pd(v)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn zero(self) -> __m256d {
         _mm256_setzero_pd()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn load(self, data: &[f64; 4]) -> __m256d {
         crate::simd_storage::copy(data)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn from_array(self, arr: [f64; 4]) -> __m256d {
         crate::simd_storage::cast(arr)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store(self, repr: __m256d, out: &mut [f64; 4]) {
         crate::simd_storage::store(repr, out);
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_array(self, repr: __m256d) -> [f64; 4] {
         crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn add(self, a: __m256d, b: __m256d) -> __m256d {
         _mm256_add_pd(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sub(self, a: __m256d, b: __m256d) -> __m256d {
         _mm256_sub_pd(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn mul(self, a: __m256d, b: __m256d) -> __m256d {
         _mm256_mul_pd(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn div(self, a: __m256d, b: __m256d) -> __m256d {
         _mm256_div_pd(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn neg(self, a: __m256d) -> __m256d {
         _mm256_sub_pd(_mm256_setzero_pd(), a)
     }
 
     // ====== Math ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn min(self, a: __m256d, b: __m256d) -> __m256d {
         _mm256_min_pd(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn max(self, a: __m256d, b: __m256d) -> __m256d {
         _mm256_max_pd(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sqrt(self, a: __m256d) -> __m256d {
         _mm256_sqrt_pd(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn abs(self, a: __m256d) -> __m256d {
         let mask = _mm256_castsi256_pd(_mm256_set1_epi64x(0x7FFF_FFFF_FFFF_FFFFi64));
         _mm256_and_pd(a, mask)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn floor(self, a: __m256d) -> __m256d {
         _mm256_floor_pd(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn ceil(self, a: __m256d) -> __m256d {
         _mm256_ceil_pd(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn round(self, a: __m256d) -> __m256d {
         _mm256_round_pd::<{ _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC }>(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn mul_add(self, a: __m256d, b: __m256d, c: __m256d) -> __m256d {
         _mm256_fmadd_pd(a, b, c)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn mul_sub(self, a: __m256d, b: __m256d, c: __m256d) -> __m256d {
         _mm256_fmsub_pd(a, b, c)
     }
 
     // ====== Comparisons ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_eq(self, a: __m256d, b: __m256d) -> __m256d {
         _mm256_cmp_pd::<_CMP_EQ_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ne(self, a: __m256d, b: __m256d) -> __m256d {
         _mm256_cmp_pd::<_CMP_NEQ_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_lt(self, a: __m256d, b: __m256d) -> __m256d {
         _mm256_cmp_pd::<_CMP_LT_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_le(self, a: __m256d, b: __m256d) -> __m256d {
         _mm256_cmp_pd::<_CMP_LE_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_gt(self, a: __m256d, b: __m256d) -> __m256d {
         _mm256_cmp_pd::<_CMP_GT_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ge(self, a: __m256d, b: __m256d) -> __m256d {
         _mm256_cmp_pd::<_CMP_GE_OQ>(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn blend(self, mask: __m256d, if_true: __m256d, if_false: __m256d) -> __m256d {
         _mm256_blendv_pd(if_false, if_true, mask)
     }
 
     // ====== Reductions ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_add(self, a: __m256d) -> f64 {
         {
             let hi = _mm256_extractf128_pd::<1>(a);
@@ -997,7 +997,7 @@ impl F64x4Backend for archmage::X64V3Token {
         }
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_min(self, a: __m256d) -> f64 {
         {
             let hi = _mm256_extractf128_pd::<1>(a);
@@ -1009,7 +1009,7 @@ impl F64x4Backend for archmage::X64V3Token {
         }
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_max(self, a: __m256d) -> f64 {
         {
             let hi = _mm256_extractf128_pd::<1>(a);
@@ -1023,25 +1023,25 @@ impl F64x4Backend for archmage::X64V3Token {
 
     // ====== Approximations ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn rcp_approx(self, a: __m256d) -> __m256d {
         let one = { _mm256_set1_pd(1.0) };
         <Self as F64x4Backend>::div(_self, one, a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn rsqrt_approx(self, a: __m256d) -> __m256d {
         let one = { _mm256_set1_pd(1.0) };
         <Self as F64x4Backend>::div(_self, one, <Self as F64x4Backend>::sqrt(_self, a))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn recip(self, a: __m256d) -> __m256d {
         let one = { _mm256_set1_pd(1.0) };
         <Self as F64x4Backend>::div(_self, one, a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn rsqrt(self, a: __m256d) -> __m256d {
         let one = { _mm256_set1_pd(1.0) };
         <Self as F64x4Backend>::div(_self, one, <Self as F64x4Backend>::sqrt(_self, a))
@@ -1049,24 +1049,24 @@ impl F64x4Backend for archmage::X64V3Token {
 
     // ====== Bitwise ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn not(self, a: __m256d) -> __m256d {
         let ones = _mm256_set1_epi64x(-1);
         let as_int = _mm256_castpd_si256(a);
         _mm256_castsi256_pd(_mm256_xor_si256(as_int, ones))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitand(self, a: __m256d, b: __m256d) -> __m256d {
         _mm256_and_pd(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitor(self, a: __m256d, b: __m256d) -> __m256d {
         _mm256_or_pd(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitxor(self, a: __m256d, b: __m256d) -> __m256d {
         _mm256_xor_pd(a, b)
     }
@@ -1078,118 +1078,118 @@ impl I32x4Backend for archmage::X64V3Token {
 
     // ====== Construction ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn splat(self, v: i32) -> __m128i {
         _mm_set1_epi32(v)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn zero(self) -> __m128i {
         _mm_setzero_si128()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn load(self, data: &[i32; 4]) -> __m128i {
         crate::simd_storage::copy(data)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn from_array(self, arr: [i32; 4]) -> __m128i {
         crate::simd_storage::cast(arr)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store(self, repr: __m128i, out: &mut [i32; 4]) {
         crate::simd_storage::store(repr, out);
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_array(self, repr: __m128i) -> [i32; 4] {
         crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn add(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_add_epi32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sub(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_sub_epi32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn mul(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_mullo_epi32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn neg(self, a: __m128i) -> __m128i {
         _mm_sub_epi32(_mm_setzero_si128(), a)
     }
 
     // ====== Math ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn min(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_min_epi32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn max(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_max_epi32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn abs(self, a: __m128i) -> __m128i {
         _mm_abs_epi32(a)
     }
 
     // ====== Comparisons ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_eq(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_cmpeq_epi32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ne(self, a: __m128i, b: __m128i) -> __m128i {
         let eq = _mm_cmpeq_epi32(a, b);
         _mm_andnot_si128(eq, _mm_set1_epi32(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_lt(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_cmpgt_epi32(b, a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_le(self, a: __m128i, b: __m128i) -> __m128i {
         let gt = _mm_cmpgt_epi32(a, b);
         _mm_andnot_si128(gt, _mm_set1_epi32(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_gt(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_cmpgt_epi32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ge(self, a: __m128i, b: __m128i) -> __m128i {
         let lt = _mm_cmpgt_epi32(b, a);
         _mm_andnot_si128(lt, _mm_set1_epi32(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn blend(self, mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
         _mm_blendv_epi8(if_false, if_true, mask)
     }
 
     // ====== Reductions ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_add(self, a: __m128i) -> i32 {
         {
             let hi = _mm_shuffle_epi32::<0b01_00_11_10>(a);
@@ -1202,39 +1202,39 @@ impl I32x4Backend for archmage::X64V3Token {
 
     // ====== Bitwise ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn not(self, a: __m128i) -> __m128i {
         _mm_andnot_si128(a, _mm_set1_epi32(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitand(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_and_si128(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitor(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_or_si128(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitxor(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_xor_si128(a, b)
     }
 
     // ====== Shifts ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_const<const N: i32>(self, a: __m128i) -> __m128i {
         _mm_slli_epi32::<N>(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m128i) -> __m128i {
         _mm_srai_epi32::<N>(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_const<const N: i32>(self, a: __m128i) -> __m128i {
         _mm_srli_epi32::<N>(a)
     }
@@ -1245,34 +1245,34 @@ impl I32x4Backend for archmage::X64V3Token {
     // _mm_cvtsi32_si128 zero-extends, so u32::MAX is just a large
     // out-of-range count, not a negative one.
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_uniform(self, a: __m128i, count: u32) -> __m128i {
         _mm_sll_epi32(a, _mm_cvtsi32_si128(count as i32))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_uniform(self, a: __m128i, count: u32) -> __m128i {
         _mm_srl_epi32(a, _mm_cvtsi32_si128(count as i32))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_arithmetic_uniform(self, a: __m128i, count: u32) -> __m128i {
         _mm_sra_epi32(a, _mm_cvtsi32_si128(count as i32))
     }
 
     // ====== Boolean ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn all_true(self, a: __m128i) -> bool {
         _mm_movemask_ps(_mm_castsi128_ps(a)) == 0xF
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn any_true(self, a: __m128i) -> bool {
         _mm_movemask_ps(_mm_castsi128_ps(a)) != 0
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitmask(self, a: __m128i) -> u32 {
         _mm_movemask_ps(_mm_castsi128_ps(a)) as u32
     }
@@ -1284,118 +1284,118 @@ impl I32x8Backend for archmage::X64V3Token {
 
     // ====== Construction ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn splat(self, v: i32) -> __m256i {
         _mm256_set1_epi32(v)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn zero(self) -> __m256i {
         _mm256_setzero_si256()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn load(self, data: &[i32; 8]) -> __m256i {
         crate::simd_storage::copy(data)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn from_array(self, arr: [i32; 8]) -> __m256i {
         crate::simd_storage::cast(arr)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store(self, repr: __m256i, out: &mut [i32; 8]) {
         crate::simd_storage::store(repr, out);
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_array(self, repr: __m256i) -> [i32; 8] {
         crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn add(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_add_epi32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sub(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_sub_epi32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn mul(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_mullo_epi32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn neg(self, a: __m256i) -> __m256i {
         _mm256_sub_epi32(_mm256_setzero_si256(), a)
     }
 
     // ====== Math ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn min(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_min_epi32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn max(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_max_epi32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn abs(self, a: __m256i) -> __m256i {
         _mm256_abs_epi32(a)
     }
 
     // ====== Comparisons ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_eq(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_cmpeq_epi32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ne(self, a: __m256i, b: __m256i) -> __m256i {
         let eq = _mm256_cmpeq_epi32(a, b);
         _mm256_andnot_si256(eq, _mm256_set1_epi32(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_lt(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_cmpgt_epi32(b, a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_le(self, a: __m256i, b: __m256i) -> __m256i {
         let gt = _mm256_cmpgt_epi32(a, b);
         _mm256_andnot_si256(gt, _mm256_set1_epi32(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_gt(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_cmpgt_epi32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ge(self, a: __m256i, b: __m256i) -> __m256i {
         let lt = _mm256_cmpgt_epi32(b, a);
         _mm256_andnot_si256(lt, _mm256_set1_epi32(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn blend(self, mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
         _mm256_blendv_epi8(if_false, if_true, mask)
     }
 
     // ====== Reductions ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_add(self, a: __m256i) -> i32 {
         {
             let lo = _mm256_castsi256_si128(a);
@@ -1411,39 +1411,39 @@ impl I32x8Backend for archmage::X64V3Token {
 
     // ====== Bitwise ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn not(self, a: __m256i) -> __m256i {
         _mm256_andnot_si256(a, _mm256_set1_epi32(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitand(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_and_si256(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitor(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_or_si256(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitxor(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_xor_si256(a, b)
     }
 
     // ====== Shifts ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_const<const N: i32>(self, a: __m256i) -> __m256i {
         _mm256_slli_epi32::<N>(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m256i) -> __m256i {
         _mm256_srai_epi32::<N>(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_const<const N: i32>(self, a: __m256i) -> __m256i {
         _mm256_srli_epi32::<N>(a)
     }
@@ -1454,34 +1454,34 @@ impl I32x8Backend for archmage::X64V3Token {
     // _mm_cvtsi32_si128 zero-extends, so u32::MAX is just a large
     // out-of-range count, not a negative one.
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_uniform(self, a: __m256i, count: u32) -> __m256i {
         _mm256_sll_epi32(a, _mm_cvtsi32_si128(count as i32))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_uniform(self, a: __m256i, count: u32) -> __m256i {
         _mm256_srl_epi32(a, _mm_cvtsi32_si128(count as i32))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_arithmetic_uniform(self, a: __m256i, count: u32) -> __m256i {
         _mm256_sra_epi32(a, _mm_cvtsi32_si128(count as i32))
     }
 
     // ====== Boolean ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn all_true(self, a: __m256i) -> bool {
         _mm256_movemask_ps(_mm256_castsi256_ps(a)) == 0xFF
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn any_true(self, a: __m256i) -> bool {
         _mm256_movemask_ps(_mm256_castsi256_ps(a)) != 0
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitmask(self, a: __m256i) -> u32 {
         _mm256_movemask_ps(_mm256_castsi256_ps(a)) as u32
     }
@@ -1493,79 +1493,79 @@ impl U32x4Backend for archmage::X64V3Token {
 
     // ====== Construction ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn splat(self, v: u32) -> __m128i {
         _mm_set1_epi32(v as i32)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn zero(self) -> __m128i {
         _mm_setzero_si128()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn load(self, data: &[u32; 4]) -> __m128i {
         crate::simd_storage::copy(data)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn from_array(self, arr: [u32; 4]) -> __m128i {
         crate::simd_storage::cast(arr)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store(self, repr: __m128i, out: &mut [u32; 4]) {
         crate::simd_storage::store(repr, out);
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_array(self, repr: __m128i) -> [u32; 4] {
         crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn add(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_add_epi32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sub(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_sub_epi32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn mul(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_mullo_epi32(a, b)
     }
 
     // ====== Math ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn min(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_min_epu32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn max(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_max_epu32(a, b)
     }
 
     // ====== Comparisons ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_eq(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_cmpeq_epi32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ne(self, a: __m128i, b: __m128i) -> __m128i {
         let eq = _mm_cmpeq_epi32(a, b);
         _mm_andnot_si128(eq, _mm_set1_epi32(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_gt(self, a: __m128i, b: __m128i) -> __m128i {
         // Unsigned comparison via bias trick: XOR both with 0x80000000
         // to convert to signed range, then use signed cmpgt.
@@ -1577,31 +1577,31 @@ impl U32x4Backend for archmage::X64V3Token {
         }
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_lt(self, a: __m128i, b: __m128i) -> __m128i {
         <Self as U32x4Backend>::simd_gt(_self, b, a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_le(self, a: __m128i, b: __m128i) -> __m128i {
         let gt = <Self as U32x4Backend>::simd_gt(_self, a, b);
         _mm_andnot_si128(gt, _mm_set1_epi32(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ge(self, a: __m128i, b: __m128i) -> __m128i {
         let lt = <Self as U32x4Backend>::simd_gt(_self, b, a);
         _mm_andnot_si128(lt, _mm_set1_epi32(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn blend(self, mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
         _mm_blendv_epi8(if_false, if_true, mask)
     }
 
     // ====== Reductions ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_add(self, a: __m128i) -> u32 {
         {
             let hi = _mm_shuffle_epi32::<0b01_00_11_10>(a);
@@ -1614,34 +1614,34 @@ impl U32x4Backend for archmage::X64V3Token {
 
     // ====== Bitwise ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn not(self, a: __m128i) -> __m128i {
         _mm_andnot_si128(a, _mm_set1_epi32(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitand(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_and_si128(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitor(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_or_si128(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitxor(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_xor_si128(a, b)
     }
 
     // ====== Shifts ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_const<const N: i32>(self, a: __m128i) -> __m128i {
         _mm_slli_epi32::<N>(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_const<const N: i32>(self, a: __m128i) -> __m128i {
         _mm_srli_epi32::<N>(a)
     }
@@ -1651,29 +1651,29 @@ impl U32x4Backend for archmage::X64V3Token {
     // contract is the hardware behaviour. _mm_cvtsi32_si128
     // zero-extends, so u32::MAX is just a large out-of-range count.
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_uniform(self, a: __m128i, count: u32) -> __m128i {
         _mm_sll_epi32(a, _mm_cvtsi32_si128(count as i32))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_uniform(self, a: __m128i, count: u32) -> __m128i {
         _mm_srl_epi32(a, _mm_cvtsi32_si128(count as i32))
     }
 
     // ====== Boolean ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn all_true(self, a: __m128i) -> bool {
         _mm_movemask_ps(_mm_castsi128_ps(a)) == 0xF
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn any_true(self, a: __m128i) -> bool {
         _mm_movemask_ps(_mm_castsi128_ps(a)) != 0
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitmask(self, a: __m128i) -> u32 {
         _mm_movemask_ps(_mm_castsi128_ps(a)) as u32
     }
@@ -1685,79 +1685,79 @@ impl U32x8Backend for archmage::X64V3Token {
 
     // ====== Construction ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn splat(self, v: u32) -> __m256i {
         _mm256_set1_epi32(v as i32)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn zero(self) -> __m256i {
         _mm256_setzero_si256()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn load(self, data: &[u32; 8]) -> __m256i {
         crate::simd_storage::copy(data)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn from_array(self, arr: [u32; 8]) -> __m256i {
         crate::simd_storage::cast(arr)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store(self, repr: __m256i, out: &mut [u32; 8]) {
         crate::simd_storage::store(repr, out);
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_array(self, repr: __m256i) -> [u32; 8] {
         crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn add(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_add_epi32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sub(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_sub_epi32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn mul(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_mullo_epi32(a, b)
     }
 
     // ====== Math ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn min(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_min_epu32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn max(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_max_epu32(a, b)
     }
 
     // ====== Comparisons ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_eq(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_cmpeq_epi32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ne(self, a: __m256i, b: __m256i) -> __m256i {
         let eq = _mm256_cmpeq_epi32(a, b);
         _mm256_andnot_si256(eq, _mm256_set1_epi32(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_gt(self, a: __m256i, b: __m256i) -> __m256i {
         // Unsigned comparison via bias trick: XOR both with 0x80000000
         // to convert to signed range, then use signed cmpgt.
@@ -1769,31 +1769,31 @@ impl U32x8Backend for archmage::X64V3Token {
         }
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_lt(self, a: __m256i, b: __m256i) -> __m256i {
         <Self as U32x8Backend>::simd_gt(_self, b, a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_le(self, a: __m256i, b: __m256i) -> __m256i {
         let gt = <Self as U32x8Backend>::simd_gt(_self, a, b);
         _mm256_andnot_si256(gt, _mm256_set1_epi32(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ge(self, a: __m256i, b: __m256i) -> __m256i {
         let lt = <Self as U32x8Backend>::simd_gt(_self, b, a);
         _mm256_andnot_si256(lt, _mm256_set1_epi32(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn blend(self, mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
         _mm256_blendv_epi8(if_false, if_true, mask)
     }
 
     // ====== Reductions ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_add(self, a: __m256i) -> u32 {
         {
             let lo = _mm256_castsi256_si128(a);
@@ -1809,34 +1809,34 @@ impl U32x8Backend for archmage::X64V3Token {
 
     // ====== Bitwise ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn not(self, a: __m256i) -> __m256i {
         _mm256_andnot_si256(a, _mm256_set1_epi32(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitand(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_and_si256(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitor(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_or_si256(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitxor(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_xor_si256(a, b)
     }
 
     // ====== Shifts ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_const<const N: i32>(self, a: __m256i) -> __m256i {
         _mm256_slli_epi32::<N>(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_const<const N: i32>(self, a: __m256i) -> __m256i {
         _mm256_srli_epi32::<N>(a)
     }
@@ -1846,29 +1846,29 @@ impl U32x8Backend for archmage::X64V3Token {
     // contract is the hardware behaviour. _mm_cvtsi32_si128
     // zero-extends, so u32::MAX is just a large out-of-range count.
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_uniform(self, a: __m256i, count: u32) -> __m256i {
         _mm256_sll_epi32(a, _mm_cvtsi32_si128(count as i32))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_uniform(self, a: __m256i, count: u32) -> __m256i {
         _mm256_srl_epi32(a, _mm_cvtsi32_si128(count as i32))
     }
 
     // ====== Boolean ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn all_true(self, a: __m256i) -> bool {
         _mm256_movemask_ps(_mm256_castsi256_ps(a)) == 0xFF
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn any_true(self, a: __m256i) -> bool {
         _mm256_movemask_ps(_mm256_castsi256_ps(a)) != 0
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitmask(self, a: __m256i) -> u32 {
         _mm256_movemask_ps(_mm256_castsi256_ps(a)) as u32
     }
@@ -1880,56 +1880,56 @@ impl I64x2Backend for archmage::X64V3Token {
 
     // ====== Construction ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn splat(self, v: i64) -> __m128i {
         _mm_set1_epi64x(v)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn zero(self) -> __m128i {
         _mm_setzero_si128()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn load(self, data: &[i64; 2]) -> __m128i {
         crate::simd_storage::copy(data)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn from_array(self, arr: [i64; 2]) -> __m128i {
         crate::simd_storage::cast(arr)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store(self, repr: __m128i, out: &mut [i64; 2]) {
         crate::simd_storage::store(repr, out);
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_array(self, repr: __m128i) -> [i64; 2] {
         crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn add(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_add_epi64(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sub(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_sub_epi64(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn neg(self, a: __m128i) -> __m128i {
         _mm_sub_epi64(_mm_setzero_si128(), a)
     }
 
     // ====== Math ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn min(self, a: __m128i, b: __m128i) -> __m128i {
         // Polyfill: compare+select (no native i64 min on AVX2)
         {
@@ -1938,7 +1938,7 @@ impl I64x2Backend for archmage::X64V3Token {
         }
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn max(self, a: __m128i, b: __m128i) -> __m128i {
         // Polyfill: compare+select (no native i64 max on AVX2)
         {
@@ -1947,7 +1947,7 @@ impl I64x2Backend for archmage::X64V3Token {
         }
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn abs(self, a: __m128i) -> __m128i {
         // Polyfill: (a ^ sign) - sign (two's complement trick)
         {
@@ -1959,47 +1959,47 @@ impl I64x2Backend for archmage::X64V3Token {
 
     // ====== Comparisons ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_eq(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_cmpeq_epi64(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ne(self, a: __m128i, b: __m128i) -> __m128i {
         let eq = _mm_cmpeq_epi64(a, b);
         _mm_xor_si128(eq, _mm_set1_epi64x(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_lt(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_cmpgt_epi64(b, a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_le(self, a: __m128i, b: __m128i) -> __m128i {
         let gt = _mm_cmpgt_epi64(a, b);
         _mm_xor_si128(gt, _mm_set1_epi64x(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_gt(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_cmpgt_epi64(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ge(self, a: __m128i, b: __m128i) -> __m128i {
         let lt = _mm_cmpgt_epi64(b, a);
         _mm_xor_si128(lt, _mm_set1_epi64x(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn blend(self, mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
         _mm_blendv_epi8(if_false, if_true, mask)
     }
 
     // ====== Reductions ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_add(self, a: __m128i) -> i64 {
         {
             let hi = _mm_unpackhi_epi64(a, a);
@@ -2011,34 +2011,34 @@ impl I64x2Backend for archmage::X64V3Token {
 
     // ====== Bitwise ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn not(self, a: __m128i) -> __m128i {
         _mm_xor_si128(a, _mm_set1_epi64x(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitand(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_and_si128(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitor(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_or_si128(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitxor(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_xor_si128(a, b)
     }
 
     // ====== Shifts ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_const<const N: i32>(self, a: __m128i) -> __m128i {
         _mm_slli_epi64::<N>(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m128i) -> __m128i {
         // Polyfill: no native _srai_epi64 on AVX2.
         // Use logical shift + sign extension.
@@ -2054,24 +2054,24 @@ impl I64x2Backend for archmage::X64V3Token {
         }
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_const<const N: i32>(self, a: __m128i) -> __m128i {
         _mm_srli_epi64::<N>(a)
     }
 
     // ====== Boolean ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn all_true(self, a: __m128i) -> bool {
         _mm_movemask_pd(_mm_castsi128_pd(a)) == 0x3
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn any_true(self, a: __m128i) -> bool {
         _mm_movemask_pd(_mm_castsi128_pd(a)) != 0
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitmask(self, a: __m128i) -> u32 {
         _mm_movemask_pd(_mm_castsi128_pd(a)) as u32
     }
@@ -2083,56 +2083,56 @@ impl I64x4Backend for archmage::X64V3Token {
 
     // ====== Construction ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn splat(self, v: i64) -> __m256i {
         _mm256_set1_epi64x(v)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn zero(self) -> __m256i {
         _mm256_setzero_si256()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn load(self, data: &[i64; 4]) -> __m256i {
         crate::simd_storage::copy(data)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn from_array(self, arr: [i64; 4]) -> __m256i {
         crate::simd_storage::cast(arr)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store(self, repr: __m256i, out: &mut [i64; 4]) {
         crate::simd_storage::store(repr, out);
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_array(self, repr: __m256i) -> [i64; 4] {
         crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn add(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_add_epi64(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sub(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_sub_epi64(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn neg(self, a: __m256i) -> __m256i {
         _mm256_sub_epi64(_mm256_setzero_si256(), a)
     }
 
     // ====== Math ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn min(self, a: __m256i, b: __m256i) -> __m256i {
         // Polyfill: compare+select (no native i64 min on AVX2)
         {
@@ -2141,7 +2141,7 @@ impl I64x4Backend for archmage::X64V3Token {
         }
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn max(self, a: __m256i, b: __m256i) -> __m256i {
         // Polyfill: compare+select (no native i64 max on AVX2)
         {
@@ -2150,7 +2150,7 @@ impl I64x4Backend for archmage::X64V3Token {
         }
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn abs(self, a: __m256i) -> __m256i {
         // Polyfill: (a ^ sign) - sign (two's complement trick)
         {
@@ -2162,47 +2162,47 @@ impl I64x4Backend for archmage::X64V3Token {
 
     // ====== Comparisons ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_eq(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_cmpeq_epi64(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ne(self, a: __m256i, b: __m256i) -> __m256i {
         let eq = _mm256_cmpeq_epi64(a, b);
         _mm256_xor_si256(eq, _mm256_set1_epi64x(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_lt(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_cmpgt_epi64(b, a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_le(self, a: __m256i, b: __m256i) -> __m256i {
         let gt = _mm256_cmpgt_epi64(a, b);
         _mm256_xor_si256(gt, _mm256_set1_epi64x(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_gt(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_cmpgt_epi64(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ge(self, a: __m256i, b: __m256i) -> __m256i {
         let lt = _mm256_cmpgt_epi64(b, a);
         _mm256_xor_si256(lt, _mm256_set1_epi64x(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn blend(self, mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
         _mm256_blendv_epi8(if_false, if_true, mask)
     }
 
     // ====== Reductions ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_add(self, a: __m256i) -> i64 {
         {
             let lo = _mm256_castsi256_si128(a);
@@ -2216,34 +2216,34 @@ impl I64x4Backend for archmage::X64V3Token {
 
     // ====== Bitwise ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn not(self, a: __m256i) -> __m256i {
         _mm256_xor_si256(a, _mm256_set1_epi64x(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitand(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_and_si256(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitor(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_or_si256(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitxor(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_xor_si256(a, b)
     }
 
     // ====== Shifts ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_const<const N: i32>(self, a: __m256i) -> __m256i {
         _mm256_slli_epi64::<N>(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m256i) -> __m256i {
         // Polyfill: no native _srai_epi64 on AVX2.
         // Use logical shift + sign extension.
@@ -2259,24 +2259,24 @@ impl I64x4Backend for archmage::X64V3Token {
         }
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_const<const N: i32>(self, a: __m256i) -> __m256i {
         _mm256_srli_epi64::<N>(a)
     }
 
     // ====== Boolean ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn all_true(self, a: __m256i) -> bool {
         _mm256_movemask_pd(_mm256_castsi256_pd(a)) == 0xF
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn any_true(self, a: __m256i) -> bool {
         _mm256_movemask_pd(_mm256_castsi256_pd(a)) != 0
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitmask(self, a: __m256i) -> u32 {
         _mm256_movemask_pd(_mm256_castsi256_pd(a)) as u32
     }
@@ -2288,111 +2288,111 @@ impl I8x16Backend for archmage::X64V3Token {
 
     // ====== Construction ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn splat(self, v: i8) -> __m128i {
         _mm_set1_epi8(v)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn zero(self) -> __m128i {
         _mm_setzero_si128()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn load(self, data: &[i8; 16]) -> __m128i {
         crate::simd_storage::copy(data)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn from_array(self, arr: [i8; 16]) -> __m128i {
         crate::simd_storage::cast(arr)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store(self, repr: __m128i, out: &mut [i8; 16]) {
         crate::simd_storage::store(repr, out);
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_array(self, repr: __m128i) -> [i8; 16] {
         crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn add(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_add_epi8(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sub(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_sub_epi8(a, b)
     }
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn neg(self, a: __m128i) -> __m128i {
         _mm_sub_epi8(_mm_setzero_si128(), a)
     }
 
     // ====== Math ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn min(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_min_epi8(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn max(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_max_epi8(a, b)
     }
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn abs(self, a: __m128i) -> __m128i {
         _mm_abs_epi8(a)
     }
 
     // ====== Comparisons ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_eq(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_cmpeq_epi8(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ne(self, a: __m128i, b: __m128i) -> __m128i {
         let eq = _mm_cmpeq_epi8(a, b);
         _mm_andnot_si128(eq, _mm_set1_epi8(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_lt(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_cmpgt_epi8(b, a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_le(self, a: __m128i, b: __m128i) -> __m128i {
         let gt = _mm_cmpgt_epi8(a, b);
         _mm_andnot_si128(gt, _mm_set1_epi8(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_gt(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_cmpgt_epi8(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ge(self, a: __m128i, b: __m128i) -> __m128i {
         let lt = _mm_cmpgt_epi8(b, a);
         _mm_andnot_si128(lt, _mm_set1_epi8(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn blend(self, mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
         _mm_blendv_epi8(if_false, if_true, mask)
     }
 
     // ====== Reductions ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_add(self, a: __m128i) -> i8 {
         let arr = <Self as I8x16Backend>::to_array(_self, a);
         arr.iter().copied().fold(0i8, i8::wrapping_add)
@@ -2400,43 +2400,43 @@ impl I8x16Backend for archmage::X64V3Token {
 
     // ====== Bitwise ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn not(self, a: __m128i) -> __m128i {
         _mm_andnot_si128(a, _mm_set1_epi8(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitand(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_and_si128(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitor(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_or_si128(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitxor(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_xor_si128(a, b)
     }
 
     // ====== Shifts (polyfill via 16-bit) ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_const<const N: i32>(self, a: __m128i) -> __m128i {
         let shifted = _mm_slli_epi16::<N>(a);
         let mask = _mm_set1_epi8((0xFFu8.wrapping_shl(N as u32)) as i8);
         _mm_and_si128(shifted, mask)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_const<const N: i32>(self, a: __m128i) -> __m128i {
         let shifted = _mm_srli_epi16::<N>(a);
         let mask = _mm_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
         _mm_and_si128(shifted, mask)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m128i) -> __m128i {
         let shifted = _mm_srli_epi16::<N>(a);
         let byte_mask = _mm_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
@@ -2452,7 +2452,7 @@ impl I8x16Backend for archmage::X64V3Token {
 
     // ====== Uniform variable shifts (8-bit: polyfill via 16-bit) ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_uniform(self, a: __m128i, count: u32) -> __m128i {
         let shifted = _mm_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
         // `checked_shl` yields None (-> mask 0) once count >= 8,
@@ -2461,14 +2461,14 @@ impl I8x16Backend for archmage::X64V3Token {
         _mm_and_si128(shifted, mask)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_uniform(self, a: __m128i, count: u32) -> __m128i {
         let shifted = _mm_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
         let mask = _mm_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
         _mm_and_si128(shifted, mask)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_arithmetic_uniform(self, a: __m128i, count: u32) -> __m128i {
         let shifted = _mm_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
         let byte_mask = _mm_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
@@ -2485,29 +2485,29 @@ impl I8x16Backend for archmage::X64V3Token {
 
     // ====== Saturating arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn saturating_add(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_adds_epi8(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn saturating_sub(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_subs_epi8(a, b)
     }
 
     // ====== Boolean ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn all_true(self, a: __m128i) -> bool {
         _mm_movemask_epi8(a) == 0xFFFF_u32 as i32
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn any_true(self, a: __m128i) -> bool {
         _mm_movemask_epi8(a) != 0
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitmask(self, a: __m128i) -> u32 {
         _mm_movemask_epi8(a) as u32
     }
@@ -2519,111 +2519,111 @@ impl I8x32Backend for archmage::X64V3Token {
 
     // ====== Construction ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn splat(self, v: i8) -> __m256i {
         _mm256_set1_epi8(v)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn zero(self) -> __m256i {
         _mm256_setzero_si256()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn load(self, data: &[i8; 32]) -> __m256i {
         crate::simd_storage::copy(data)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn from_array(self, arr: [i8; 32]) -> __m256i {
         crate::simd_storage::cast(arr)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store(self, repr: __m256i, out: &mut [i8; 32]) {
         crate::simd_storage::store(repr, out);
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_array(self, repr: __m256i) -> [i8; 32] {
         crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn add(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_add_epi8(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sub(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_sub_epi8(a, b)
     }
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn neg(self, a: __m256i) -> __m256i {
         _mm256_sub_epi8(_mm256_setzero_si256(), a)
     }
 
     // ====== Math ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn min(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_min_epi8(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn max(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_max_epi8(a, b)
     }
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn abs(self, a: __m256i) -> __m256i {
         _mm256_abs_epi8(a)
     }
 
     // ====== Comparisons ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_eq(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_cmpeq_epi8(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ne(self, a: __m256i, b: __m256i) -> __m256i {
         let eq = _mm256_cmpeq_epi8(a, b);
         _mm256_andnot_si256(eq, _mm256_set1_epi8(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_lt(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_cmpgt_epi8(b, a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_le(self, a: __m256i, b: __m256i) -> __m256i {
         let gt = _mm256_cmpgt_epi8(a, b);
         _mm256_andnot_si256(gt, _mm256_set1_epi8(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_gt(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_cmpgt_epi8(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ge(self, a: __m256i, b: __m256i) -> __m256i {
         let lt = _mm256_cmpgt_epi8(b, a);
         _mm256_andnot_si256(lt, _mm256_set1_epi8(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn blend(self, mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
         _mm256_blendv_epi8(if_false, if_true, mask)
     }
 
     // ====== Reductions ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_add(self, a: __m256i) -> i8 {
         let arr = <Self as I8x32Backend>::to_array(_self, a);
         arr.iter().copied().fold(0i8, i8::wrapping_add)
@@ -2631,43 +2631,43 @@ impl I8x32Backend for archmage::X64V3Token {
 
     // ====== Bitwise ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn not(self, a: __m256i) -> __m256i {
         _mm256_andnot_si256(a, _mm256_set1_epi8(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitand(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_and_si256(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitor(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_or_si256(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitxor(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_xor_si256(a, b)
     }
 
     // ====== Shifts (polyfill via 16-bit) ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_const<const N: i32>(self, a: __m256i) -> __m256i {
         let shifted = _mm256_slli_epi16::<N>(a);
         let mask = _mm256_set1_epi8((0xFFu8.wrapping_shl(N as u32)) as i8);
         _mm256_and_si256(shifted, mask)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_const<const N: i32>(self, a: __m256i) -> __m256i {
         let shifted = _mm256_srli_epi16::<N>(a);
         let mask = _mm256_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
         _mm256_and_si256(shifted, mask)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m256i) -> __m256i {
         let shifted = _mm256_srli_epi16::<N>(a);
         let byte_mask = _mm256_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
@@ -2683,7 +2683,7 @@ impl I8x32Backend for archmage::X64V3Token {
 
     // ====== Uniform variable shifts (8-bit: polyfill via 16-bit) ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_uniform(self, a: __m256i, count: u32) -> __m256i {
         let shifted = _mm256_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
         // `checked_shl` yields None (-> mask 0) once count >= 8,
@@ -2692,14 +2692,14 @@ impl I8x32Backend for archmage::X64V3Token {
         _mm256_and_si256(shifted, mask)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_uniform(self, a: __m256i, count: u32) -> __m256i {
         let shifted = _mm256_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
         let mask = _mm256_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
         _mm256_and_si256(shifted, mask)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_arithmetic_uniform(self, a: __m256i, count: u32) -> __m256i {
         let shifted = _mm256_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
         let byte_mask = _mm256_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
@@ -2716,29 +2716,29 @@ impl I8x32Backend for archmage::X64V3Token {
 
     // ====== Saturating arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn saturating_add(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_adds_epi8(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn saturating_sub(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_subs_epi8(a, b)
     }
 
     // ====== Boolean ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn all_true(self, a: __m256i) -> bool {
         _mm256_movemask_epi8(a) == -1_i32
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn any_true(self, a: __m256i) -> bool {
         _mm256_movemask_epi8(a) != 0
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitmask(self, a: __m256i) -> u32 {
         _mm256_movemask_epi8(a) as u32
     }
@@ -2750,74 +2750,74 @@ impl U8x16Backend for archmage::X64V3Token {
 
     // ====== Construction ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn splat(self, v: u8) -> __m128i {
         _mm_set1_epi8(v as i8)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn zero(self) -> __m128i {
         _mm_setzero_si128()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn load(self, data: &[u8; 16]) -> __m128i {
         crate::simd_storage::copy(data)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn from_array(self, arr: [u8; 16]) -> __m128i {
         crate::simd_storage::cast(arr)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store(self, repr: __m128i, out: &mut [u8; 16]) {
         crate::simd_storage::store(repr, out);
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_array(self, repr: __m128i) -> [u8; 16] {
         crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn add(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_add_epi8(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sub(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_sub_epi8(a, b)
     }
 
     // ====== Math ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn min(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_min_epu8(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn max(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_max_epu8(a, b)
     }
 
     // ====== Comparisons ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_eq(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_cmpeq_epi8(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ne(self, a: __m128i, b: __m128i) -> __m128i {
         let eq = _mm_cmpeq_epi8(a, b);
         _mm_andnot_si128(eq, _mm_set1_epi8(-1_i8))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_gt(self, a: __m128i, b: __m128i) -> __m128i {
         let bias = _mm_set1_epi8(i8::MIN);
         let sa = _mm_xor_si128(a, bias);
@@ -2825,31 +2825,31 @@ impl U8x16Backend for archmage::X64V3Token {
         _mm_cmpgt_epi8(sa, sb)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_lt(self, a: __m128i, b: __m128i) -> __m128i {
         <Self as U8x16Backend>::simd_gt(_self, b, a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_le(self, a: __m128i, b: __m128i) -> __m128i {
         let gt = <Self as U8x16Backend>::simd_gt(_self, a, b);
         _mm_andnot_si128(gt, _mm_set1_epi8(-1_i8))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ge(self, a: __m128i, b: __m128i) -> __m128i {
         let lt = <Self as U8x16Backend>::simd_gt(_self, b, a);
         _mm_andnot_si128(lt, _mm_set1_epi8(-1_i8))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn blend(self, mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
         _mm_blendv_epi8(if_false, if_true, mask)
     }
 
     // ====== Reductions ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_add(self, a: __m128i) -> u8 {
         let arr = <Self as U8x16Backend>::to_array(_self, a);
         arr.iter().copied().fold(0u8, u8::wrapping_add)
@@ -2857,36 +2857,36 @@ impl U8x16Backend for archmage::X64V3Token {
 
     // ====== Bitwise ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn not(self, a: __m128i) -> __m128i {
         _mm_andnot_si128(a, _mm_set1_epi8(-1_i8))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitand(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_and_si128(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitor(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_or_si128(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitxor(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_xor_si128(a, b)
     }
 
     // ====== Shifts (polyfill via 16-bit) ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_const<const N: i32>(self, a: __m128i) -> __m128i {
         let shifted = _mm_slli_epi16::<N>(a);
         let mask = _mm_set1_epi8((0xFFu8.wrapping_shl(N as u32)) as i8);
         _mm_and_si128(shifted, mask)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_const<const N: i32>(self, a: __m128i) -> __m128i {
         let shifted = _mm_srli_epi16::<N>(a);
         let mask = _mm_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
@@ -2895,7 +2895,7 @@ impl U8x16Backend for archmage::X64V3Token {
 
     // ====== Uniform variable shifts (8-bit: polyfill via 16-bit) ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_uniform(self, a: __m128i, count: u32) -> __m128i {
         let shifted = _mm_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
         // `checked_shl` yields None (-> mask 0) once count >= 8,
@@ -2904,7 +2904,7 @@ impl U8x16Backend for archmage::X64V3Token {
         _mm_and_si128(shifted, mask)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_uniform(self, a: __m128i, count: u32) -> __m128i {
         let shifted = _mm_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
         let mask = _mm_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
@@ -2913,29 +2913,29 @@ impl U8x16Backend for archmage::X64V3Token {
 
     // ====== Saturating arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn saturating_add(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_adds_epu8(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn saturating_sub(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_subs_epu8(a, b)
     }
 
     // ====== Boolean ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn all_true(self, a: __m128i) -> bool {
         _mm_movemask_epi8(a) == 0xFFFF_u32 as i32
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn any_true(self, a: __m128i) -> bool {
         _mm_movemask_epi8(a) != 0
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitmask(self, a: __m128i) -> u32 {
         _mm_movemask_epi8(a) as u32
     }
@@ -2947,74 +2947,74 @@ impl U8x32Backend for archmage::X64V3Token {
 
     // ====== Construction ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn splat(self, v: u8) -> __m256i {
         _mm256_set1_epi8(v as i8)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn zero(self) -> __m256i {
         _mm256_setzero_si256()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn load(self, data: &[u8; 32]) -> __m256i {
         crate::simd_storage::copy(data)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn from_array(self, arr: [u8; 32]) -> __m256i {
         crate::simd_storage::cast(arr)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store(self, repr: __m256i, out: &mut [u8; 32]) {
         crate::simd_storage::store(repr, out);
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_array(self, repr: __m256i) -> [u8; 32] {
         crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn add(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_add_epi8(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sub(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_sub_epi8(a, b)
     }
 
     // ====== Math ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn min(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_min_epu8(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn max(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_max_epu8(a, b)
     }
 
     // ====== Comparisons ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_eq(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_cmpeq_epi8(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ne(self, a: __m256i, b: __m256i) -> __m256i {
         let eq = _mm256_cmpeq_epi8(a, b);
         _mm256_andnot_si256(eq, _mm256_set1_epi8(-1_i8))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_gt(self, a: __m256i, b: __m256i) -> __m256i {
         let bias = _mm256_set1_epi8(i8::MIN);
         let sa = _mm256_xor_si256(a, bias);
@@ -3022,31 +3022,31 @@ impl U8x32Backend for archmage::X64V3Token {
         _mm256_cmpgt_epi8(sa, sb)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_lt(self, a: __m256i, b: __m256i) -> __m256i {
         <Self as U8x32Backend>::simd_gt(_self, b, a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_le(self, a: __m256i, b: __m256i) -> __m256i {
         let gt = <Self as U8x32Backend>::simd_gt(_self, a, b);
         _mm256_andnot_si256(gt, _mm256_set1_epi8(-1_i8))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ge(self, a: __m256i, b: __m256i) -> __m256i {
         let lt = <Self as U8x32Backend>::simd_gt(_self, b, a);
         _mm256_andnot_si256(lt, _mm256_set1_epi8(-1_i8))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn blend(self, mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
         _mm256_blendv_epi8(if_false, if_true, mask)
     }
 
     // ====== Reductions ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_add(self, a: __m256i) -> u8 {
         let arr = <Self as U8x32Backend>::to_array(_self, a);
         arr.iter().copied().fold(0u8, u8::wrapping_add)
@@ -3054,36 +3054,36 @@ impl U8x32Backend for archmage::X64V3Token {
 
     // ====== Bitwise ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn not(self, a: __m256i) -> __m256i {
         _mm256_andnot_si256(a, _mm256_set1_epi8(-1_i8))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitand(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_and_si256(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitor(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_or_si256(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitxor(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_xor_si256(a, b)
     }
 
     // ====== Shifts (polyfill via 16-bit) ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_const<const N: i32>(self, a: __m256i) -> __m256i {
         let shifted = _mm256_slli_epi16::<N>(a);
         let mask = _mm256_set1_epi8((0xFFu8.wrapping_shl(N as u32)) as i8);
         _mm256_and_si256(shifted, mask)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_const<const N: i32>(self, a: __m256i) -> __m256i {
         let shifted = _mm256_srli_epi16::<N>(a);
         let mask = _mm256_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
@@ -3092,7 +3092,7 @@ impl U8x32Backend for archmage::X64V3Token {
 
     // ====== Uniform variable shifts (8-bit: polyfill via 16-bit) ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_uniform(self, a: __m256i, count: u32) -> __m256i {
         let shifted = _mm256_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
         // `checked_shl` yields None (-> mask 0) once count >= 8,
@@ -3101,7 +3101,7 @@ impl U8x32Backend for archmage::X64V3Token {
         _mm256_and_si256(shifted, mask)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_uniform(self, a: __m256i, count: u32) -> __m256i {
         let shifted = _mm256_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
         let mask = _mm256_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
@@ -3110,29 +3110,29 @@ impl U8x32Backend for archmage::X64V3Token {
 
     // ====== Saturating arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn saturating_add(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_adds_epu8(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn saturating_sub(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_subs_epu8(a, b)
     }
 
     // ====== Boolean ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn all_true(self, a: __m256i) -> bool {
         _mm256_movemask_epi8(a) == -1_i32
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn any_true(self, a: __m256i) -> bool {
         _mm256_movemask_epi8(a) != 0
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitmask(self, a: __m256i) -> u32 {
         _mm256_movemask_epi8(a) as u32
     }
@@ -3144,115 +3144,115 @@ impl I16x8Backend for archmage::X64V3Token {
 
     // ====== Construction ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn splat(self, v: i16) -> __m128i {
         _mm_set1_epi16(v)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn zero(self) -> __m128i {
         _mm_setzero_si128()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn load(self, data: &[i16; 8]) -> __m128i {
         crate::simd_storage::copy(data)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn from_array(self, arr: [i16; 8]) -> __m128i {
         crate::simd_storage::cast(arr)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store(self, repr: __m128i, out: &mut [i16; 8]) {
         crate::simd_storage::store(repr, out);
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_array(self, repr: __m128i) -> [i16; 8] {
         crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn add(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_add_epi16(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sub(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_sub_epi16(a, b)
     }
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn mul(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_mullo_epi16(a, b)
     }
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn neg(self, a: __m128i) -> __m128i {
         _mm_sub_epi16(_mm_setzero_si128(), a)
     }
 
     // ====== Math ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn min(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_min_epi16(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn max(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_max_epi16(a, b)
     }
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn abs(self, a: __m128i) -> __m128i {
         _mm_abs_epi16(a)
     }
 
     // ====== Comparisons ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_eq(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_cmpeq_epi16(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ne(self, a: __m128i, b: __m128i) -> __m128i {
         let eq = _mm_cmpeq_epi16(a, b);
         _mm_andnot_si128(eq, _mm_set1_epi16(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_lt(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_cmpgt_epi16(b, a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_le(self, a: __m128i, b: __m128i) -> __m128i {
         let gt = _mm_cmpgt_epi16(a, b);
         _mm_andnot_si128(gt, _mm_set1_epi16(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_gt(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_cmpgt_epi16(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ge(self, a: __m128i, b: __m128i) -> __m128i {
         let lt = _mm_cmpgt_epi16(b, a);
         _mm_andnot_si128(lt, _mm_set1_epi16(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn blend(self, mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
         _mm_blendv_epi8(if_false, if_true, mask)
     }
 
     // ====== Reductions ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_add(self, a: __m128i) -> i16 {
         let arr = <Self as I16x8Backend>::to_array(_self, a);
         arr.iter().copied().fold(0i16, i16::wrapping_add)
@@ -3260,85 +3260,85 @@ impl I16x8Backend for archmage::X64V3Token {
 
     // ====== Bitwise ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn not(self, a: __m128i) -> __m128i {
         _mm_andnot_si128(a, _mm_set1_epi16(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitand(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_and_si128(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitor(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_or_si128(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitxor(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_xor_si128(a, b)
     }
 
     // ====== Shifts ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_const<const N: i32>(self, a: __m128i) -> __m128i {
         _mm_slli_epi16::<N>(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_const<const N: i32>(self, a: __m128i) -> __m128i {
         _mm_srli_epi16::<N>(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m128i) -> __m128i {
         _mm_srai_epi16::<N>(a)
     }
 
     // ====== Uniform variable shifts ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_uniform(self, a: __m128i, count: u32) -> __m128i {
         _mm_sll_epi16(a, _mm_cvtsi32_si128(count as i32))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_uniform(self, a: __m128i, count: u32) -> __m128i {
         _mm_srl_epi16(a, _mm_cvtsi32_si128(count as i32))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_arithmetic_uniform(self, a: __m128i, count: u32) -> __m128i {
         _mm_sra_epi16(a, _mm_cvtsi32_si128(count as i32))
     }
 
     // ====== Saturating arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn saturating_add(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_adds_epi16(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn saturating_sub(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_subs_epi16(a, b)
     }
 
     // ====== Boolean ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn all_true(self, a: __m128i) -> bool {
         _mm_movemask_epi8(a) == 0xFFFF_u32 as i32
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn any_true(self, a: __m128i) -> bool {
         _mm_movemask_epi8(a) != 0
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitmask(self, a: __m128i) -> u32 {
         let shifted = _mm_srai_epi16::<15>(a);
         let packed = _mm_packs_epi16(shifted, shifted);
@@ -3352,115 +3352,115 @@ impl I16x16Backend for archmage::X64V3Token {
 
     // ====== Construction ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn splat(self, v: i16) -> __m256i {
         _mm256_set1_epi16(v)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn zero(self) -> __m256i {
         _mm256_setzero_si256()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn load(self, data: &[i16; 16]) -> __m256i {
         crate::simd_storage::copy(data)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn from_array(self, arr: [i16; 16]) -> __m256i {
         crate::simd_storage::cast(arr)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store(self, repr: __m256i, out: &mut [i16; 16]) {
         crate::simd_storage::store(repr, out);
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_array(self, repr: __m256i) -> [i16; 16] {
         crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn add(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_add_epi16(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sub(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_sub_epi16(a, b)
     }
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn mul(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_mullo_epi16(a, b)
     }
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn neg(self, a: __m256i) -> __m256i {
         _mm256_sub_epi16(_mm256_setzero_si256(), a)
     }
 
     // ====== Math ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn min(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_min_epi16(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn max(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_max_epi16(a, b)
     }
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn abs(self, a: __m256i) -> __m256i {
         _mm256_abs_epi16(a)
     }
 
     // ====== Comparisons ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_eq(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_cmpeq_epi16(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ne(self, a: __m256i, b: __m256i) -> __m256i {
         let eq = _mm256_cmpeq_epi16(a, b);
         _mm256_andnot_si256(eq, _mm256_set1_epi16(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_lt(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_cmpgt_epi16(b, a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_le(self, a: __m256i, b: __m256i) -> __m256i {
         let gt = _mm256_cmpgt_epi16(a, b);
         _mm256_andnot_si256(gt, _mm256_set1_epi16(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_gt(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_cmpgt_epi16(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ge(self, a: __m256i, b: __m256i) -> __m256i {
         let lt = _mm256_cmpgt_epi16(b, a);
         _mm256_andnot_si256(lt, _mm256_set1_epi16(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn blend(self, mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
         _mm256_blendv_epi8(if_false, if_true, mask)
     }
 
     // ====== Reductions ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_add(self, a: __m256i) -> i16 {
         let arr = <Self as I16x16Backend>::to_array(_self, a);
         arr.iter().copied().fold(0i16, i16::wrapping_add)
@@ -3468,85 +3468,85 @@ impl I16x16Backend for archmage::X64V3Token {
 
     // ====== Bitwise ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn not(self, a: __m256i) -> __m256i {
         _mm256_andnot_si256(a, _mm256_set1_epi16(-1))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitand(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_and_si256(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitor(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_or_si256(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitxor(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_xor_si256(a, b)
     }
 
     // ====== Shifts ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_const<const N: i32>(self, a: __m256i) -> __m256i {
         _mm256_slli_epi16::<N>(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_const<const N: i32>(self, a: __m256i) -> __m256i {
         _mm256_srli_epi16::<N>(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_arithmetic_const<const N: i32>(self, a: __m256i) -> __m256i {
         _mm256_srai_epi16::<N>(a)
     }
 
     // ====== Uniform variable shifts ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_uniform(self, a: __m256i, count: u32) -> __m256i {
         _mm256_sll_epi16(a, _mm_cvtsi32_si128(count as i32))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_uniform(self, a: __m256i, count: u32) -> __m256i {
         _mm256_srl_epi16(a, _mm_cvtsi32_si128(count as i32))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_arithmetic_uniform(self, a: __m256i, count: u32) -> __m256i {
         _mm256_sra_epi16(a, _mm_cvtsi32_si128(count as i32))
     }
 
     // ====== Saturating arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn saturating_add(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_adds_epi16(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn saturating_sub(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_subs_epi16(a, b)
     }
 
     // ====== Boolean ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn all_true(self, a: __m256i) -> bool {
         _mm256_movemask_epi8(a) == -1_i32
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn any_true(self, a: __m256i) -> bool {
         _mm256_movemask_epi8(a) != 0
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitmask(self, a: __m256i) -> u32 {
         let shifted = _mm256_srai_epi16::<15>(a);
         let lo = _mm256_castsi256_si128(shifted);
@@ -3562,78 +3562,78 @@ impl U16x8Backend for archmage::X64V3Token {
 
     // ====== Construction ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn splat(self, v: u16) -> __m128i {
         _mm_set1_epi16(v as i16)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn zero(self) -> __m128i {
         _mm_setzero_si128()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn load(self, data: &[u16; 8]) -> __m128i {
         crate::simd_storage::copy(data)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn from_array(self, arr: [u16; 8]) -> __m128i {
         crate::simd_storage::cast(arr)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store(self, repr: __m128i, out: &mut [u16; 8]) {
         crate::simd_storage::store(repr, out);
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_array(self, repr: __m128i) -> [u16; 8] {
         crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn add(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_add_epi16(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sub(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_sub_epi16(a, b)
     }
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn mul(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_mullo_epi16(a, b)
     }
 
     // ====== Math ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn min(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_min_epu16(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn max(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_max_epu16(a, b)
     }
 
     // ====== Comparisons ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_eq(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_cmpeq_epi16(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ne(self, a: __m128i, b: __m128i) -> __m128i {
         let eq = _mm_cmpeq_epi16(a, b);
         _mm_andnot_si128(eq, _mm_set1_epi16(-1_i16))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_gt(self, a: __m128i, b: __m128i) -> __m128i {
         let bias = _mm_set1_epi16(i16::MIN);
         let sa = _mm_xor_si128(a, bias);
@@ -3641,31 +3641,31 @@ impl U16x8Backend for archmage::X64V3Token {
         _mm_cmpgt_epi16(sa, sb)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_lt(self, a: __m128i, b: __m128i) -> __m128i {
         <Self as U16x8Backend>::simd_gt(_self, b, a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_le(self, a: __m128i, b: __m128i) -> __m128i {
         let gt = <Self as U16x8Backend>::simd_gt(_self, a, b);
         _mm_andnot_si128(gt, _mm_set1_epi16(-1_i16))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ge(self, a: __m128i, b: __m128i) -> __m128i {
         let lt = <Self as U16x8Backend>::simd_gt(_self, b, a);
         _mm_andnot_si128(lt, _mm_set1_epi16(-1_i16))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn blend(self, mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
         _mm_blendv_epi8(if_false, if_true, mask)
     }
 
     // ====== Reductions ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_add(self, a: __m128i) -> u16 {
         let arr = <Self as U16x8Backend>::to_array(_self, a);
         arr.iter().copied().fold(0u16, u16::wrapping_add)
@@ -3673,75 +3673,75 @@ impl U16x8Backend for archmage::X64V3Token {
 
     // ====== Bitwise ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn not(self, a: __m128i) -> __m128i {
         _mm_andnot_si128(a, _mm_set1_epi16(-1_i16))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitand(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_and_si128(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitor(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_or_si128(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitxor(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_xor_si128(a, b)
     }
 
     // ====== Shifts ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_const<const N: i32>(self, a: __m128i) -> __m128i {
         _mm_slli_epi16::<N>(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_const<const N: i32>(self, a: __m128i) -> __m128i {
         _mm_srli_epi16::<N>(a)
     }
 
     // ====== Uniform variable shifts ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_uniform(self, a: __m128i, count: u32) -> __m128i {
         _mm_sll_epi16(a, _mm_cvtsi32_si128(count as i32))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_uniform(self, a: __m128i, count: u32) -> __m128i {
         _mm_srl_epi16(a, _mm_cvtsi32_si128(count as i32))
     }
 
     // ====== Saturating arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn saturating_add(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_adds_epu16(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn saturating_sub(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_subs_epu16(a, b)
     }
 
     // ====== Boolean ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn all_true(self, a: __m128i) -> bool {
         _mm_movemask_epi8(a) == 0xFFFF_u32 as i32
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn any_true(self, a: __m128i) -> bool {
         _mm_movemask_epi8(a) != 0
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitmask(self, a: __m128i) -> u32 {
         let shifted = _mm_srai_epi16::<15>(a);
         let packed = _mm_packs_epi16(shifted, shifted);
@@ -3755,78 +3755,78 @@ impl U16x16Backend for archmage::X64V3Token {
 
     // ====== Construction ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn splat(self, v: u16) -> __m256i {
         _mm256_set1_epi16(v as i16)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn zero(self) -> __m256i {
         _mm256_setzero_si256()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn load(self, data: &[u16; 16]) -> __m256i {
         crate::simd_storage::copy(data)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn from_array(self, arr: [u16; 16]) -> __m256i {
         crate::simd_storage::cast(arr)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store(self, repr: __m256i, out: &mut [u16; 16]) {
         crate::simd_storage::store(repr, out);
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_array(self, repr: __m256i) -> [u16; 16] {
         crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn add(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_add_epi16(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sub(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_sub_epi16(a, b)
     }
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn mul(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_mullo_epi16(a, b)
     }
 
     // ====== Math ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn min(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_min_epu16(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn max(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_max_epu16(a, b)
     }
 
     // ====== Comparisons ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_eq(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_cmpeq_epi16(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ne(self, a: __m256i, b: __m256i) -> __m256i {
         let eq = _mm256_cmpeq_epi16(a, b);
         _mm256_andnot_si256(eq, _mm256_set1_epi16(-1_i16))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_gt(self, a: __m256i, b: __m256i) -> __m256i {
         let bias = _mm256_set1_epi16(i16::MIN);
         let sa = _mm256_xor_si256(a, bias);
@@ -3834,31 +3834,31 @@ impl U16x16Backend for archmage::X64V3Token {
         _mm256_cmpgt_epi16(sa, sb)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_lt(self, a: __m256i, b: __m256i) -> __m256i {
         <Self as U16x16Backend>::simd_gt(_self, b, a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_le(self, a: __m256i, b: __m256i) -> __m256i {
         let gt = <Self as U16x16Backend>::simd_gt(_self, a, b);
         _mm256_andnot_si256(gt, _mm256_set1_epi16(-1_i16))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ge(self, a: __m256i, b: __m256i) -> __m256i {
         let lt = <Self as U16x16Backend>::simd_gt(_self, b, a);
         _mm256_andnot_si256(lt, _mm256_set1_epi16(-1_i16))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn blend(self, mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
         _mm256_blendv_epi8(if_false, if_true, mask)
     }
 
     // ====== Reductions ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_add(self, a: __m256i) -> u16 {
         let arr = <Self as U16x16Backend>::to_array(_self, a);
         arr.iter().copied().fold(0u16, u16::wrapping_add)
@@ -3866,75 +3866,75 @@ impl U16x16Backend for archmage::X64V3Token {
 
     // ====== Bitwise ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn not(self, a: __m256i) -> __m256i {
         _mm256_andnot_si256(a, _mm256_set1_epi16(-1_i16))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitand(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_and_si256(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitor(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_or_si256(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitxor(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_xor_si256(a, b)
     }
 
     // ====== Shifts ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_const<const N: i32>(self, a: __m256i) -> __m256i {
         _mm256_slli_epi16::<N>(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_const<const N: i32>(self, a: __m256i) -> __m256i {
         _mm256_srli_epi16::<N>(a)
     }
 
     // ====== Uniform variable shifts ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_uniform(self, a: __m256i, count: u32) -> __m256i {
         _mm256_sll_epi16(a, _mm_cvtsi32_si128(count as i32))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_uniform(self, a: __m256i, count: u32) -> __m256i {
         _mm256_srl_epi16(a, _mm_cvtsi32_si128(count as i32))
     }
 
     // ====== Saturating arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn saturating_add(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_adds_epu16(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn saturating_sub(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_subs_epu16(a, b)
     }
 
     // ====== Boolean ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn all_true(self, a: __m256i) -> bool {
         _mm256_movemask_epi8(a) == -1_i32
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn any_true(self, a: __m256i) -> bool {
         _mm256_movemask_epi8(a) != 0
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitmask(self, a: __m256i) -> u32 {
         let shifted = _mm256_srai_epi16::<15>(a);
         let lo = _mm256_castsi256_si128(shifted);
@@ -3950,51 +3950,51 @@ impl U64x2Backend for archmage::X64V3Token {
 
     // ====== Construction ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn splat(self, v: u64) -> __m128i {
         _mm_set1_epi64x(v as i64)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn zero(self) -> __m128i {
         _mm_setzero_si128()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn load(self, data: &[u64; 2]) -> __m128i {
         crate::simd_storage::copy(data)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn from_array(self, arr: [u64; 2]) -> __m128i {
         crate::simd_storage::cast(arr)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store(self, repr: __m128i, out: &mut [u64; 2]) {
         crate::simd_storage::store(repr, out);
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_array(self, repr: __m128i) -> [u64; 2] {
         crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn add(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_add_epi64(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sub(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_sub_epi64(a, b)
     }
 
     // ====== Math ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn min(self, a: __m128i, b: __m128i) -> __m128i {
         let bias = _mm_set1_epi64x(i64::MIN);
         let a_biased = _mm_xor_si128(a, bias);
@@ -4003,7 +4003,7 @@ impl U64x2Backend for archmage::X64V3Token {
         _mm_blendv_epi8(a, b, mask)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn max(self, a: __m128i, b: __m128i) -> __m128i {
         let bias = _mm_set1_epi64x(i64::MIN);
         let a_biased = _mm_xor_si128(a, bias);
@@ -4014,18 +4014,18 @@ impl U64x2Backend for archmage::X64V3Token {
 
     // ====== Comparisons ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_eq(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_cmpeq_epi64(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ne(self, a: __m128i, b: __m128i) -> __m128i {
         let eq = _mm_cmpeq_epi64(a, b);
         _mm_andnot_si128(eq, _mm_set1_epi64x(-1_i64))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_gt(self, a: __m128i, b: __m128i) -> __m128i {
         let bias = _mm_set1_epi64x(i64::MIN);
         let sa = _mm_xor_si128(a, bias);
@@ -4033,31 +4033,31 @@ impl U64x2Backend for archmage::X64V3Token {
         _mm_cmpgt_epi64(sa, sb)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_lt(self, a: __m128i, b: __m128i) -> __m128i {
         <Self as U64x2Backend>::simd_gt(_self, b, a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_le(self, a: __m128i, b: __m128i) -> __m128i {
         let gt = <Self as U64x2Backend>::simd_gt(_self, a, b);
         _mm_andnot_si128(gt, _mm_set1_epi64x(-1_i64))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ge(self, a: __m128i, b: __m128i) -> __m128i {
         let lt = <Self as U64x2Backend>::simd_gt(_self, b, a);
         _mm_andnot_si128(lt, _mm_set1_epi64x(-1_i64))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn blend(self, mask: __m128i, if_true: __m128i, if_false: __m128i) -> __m128i {
         _mm_blendv_epi8(if_false, if_true, mask)
     }
 
     // ====== Reductions ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_add(self, a: __m128i) -> u64 {
         let arr = <Self as U64x2Backend>::to_array(_self, a);
         arr.iter().copied().fold(0u64, u64::wrapping_add)
@@ -4065,51 +4065,51 @@ impl U64x2Backend for archmage::X64V3Token {
 
     // ====== Bitwise ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn not(self, a: __m128i) -> __m128i {
         _mm_andnot_si128(a, _mm_set1_epi64x(-1_i64))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitand(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_and_si128(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitor(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_or_si128(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitxor(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_xor_si128(a, b)
     }
 
     // ====== Shifts ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_const<const N: i32>(self, a: __m128i) -> __m128i {
         _mm_slli_epi64::<N>(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_const<const N: i32>(self, a: __m128i) -> __m128i {
         _mm_srli_epi64::<N>(a)
     }
 
     // ====== Boolean ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn all_true(self, a: __m128i) -> bool {
         _mm_movemask_pd(_mm_castsi128_pd(a)) == 0x3
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn any_true(self, a: __m128i) -> bool {
         _mm_movemask_pd(_mm_castsi128_pd(a)) != 0
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitmask(self, a: __m128i) -> u32 {
         _mm_movemask_pd(_mm_castsi128_pd(a)) as u32
     }
@@ -4121,51 +4121,51 @@ impl U64x4Backend for archmage::X64V3Token {
 
     // ====== Construction ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn splat(self, v: u64) -> __m256i {
         _mm256_set1_epi64x(v as i64)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn zero(self) -> __m256i {
         _mm256_setzero_si256()
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn load(self, data: &[u64; 4]) -> __m256i {
         crate::simd_storage::copy(data)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn from_array(self, arr: [u64; 4]) -> __m256i {
         crate::simd_storage::cast(arr)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn store(self, repr: __m256i, out: &mut [u64; 4]) {
         crate::simd_storage::store(repr, out);
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn to_array(self, repr: __m256i) -> [u64; 4] {
         crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn add(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_add_epi64(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn sub(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_sub_epi64(a, b)
     }
 
     // ====== Math ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn min(self, a: __m256i, b: __m256i) -> __m256i {
         let bias = _mm256_set1_epi64x(i64::MIN);
         let a_biased = _mm256_xor_si256(a, bias);
@@ -4174,7 +4174,7 @@ impl U64x4Backend for archmage::X64V3Token {
         _mm256_blendv_epi8(a, b, mask)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn max(self, a: __m256i, b: __m256i) -> __m256i {
         let bias = _mm256_set1_epi64x(i64::MIN);
         let a_biased = _mm256_xor_si256(a, bias);
@@ -4185,18 +4185,18 @@ impl U64x4Backend for archmage::X64V3Token {
 
     // ====== Comparisons ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_eq(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_cmpeq_epi64(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ne(self, a: __m256i, b: __m256i) -> __m256i {
         let eq = _mm256_cmpeq_epi64(a, b);
         _mm256_andnot_si256(eq, _mm256_set1_epi64x(-1_i64))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_gt(self, a: __m256i, b: __m256i) -> __m256i {
         let bias = _mm256_set1_epi64x(i64::MIN);
         let sa = _mm256_xor_si256(a, bias);
@@ -4204,31 +4204,31 @@ impl U64x4Backend for archmage::X64V3Token {
         _mm256_cmpgt_epi64(sa, sb)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_lt(self, a: __m256i, b: __m256i) -> __m256i {
         <Self as U64x4Backend>::simd_gt(_self, b, a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_le(self, a: __m256i, b: __m256i) -> __m256i {
         let gt = <Self as U64x4Backend>::simd_gt(_self, a, b);
         _mm256_andnot_si256(gt, _mm256_set1_epi64x(-1_i64))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn simd_ge(self, a: __m256i, b: __m256i) -> __m256i {
         let lt = <Self as U64x4Backend>::simd_gt(_self, b, a);
         _mm256_andnot_si256(lt, _mm256_set1_epi64x(-1_i64))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn blend(self, mask: __m256i, if_true: __m256i, if_false: __m256i) -> __m256i {
         _mm256_blendv_epi8(if_false, if_true, mask)
     }
 
     // ====== Reductions ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn reduce_add(self, a: __m256i) -> u64 {
         let arr = <Self as U64x4Backend>::to_array(_self, a);
         arr.iter().copied().fold(0u64, u64::wrapping_add)
@@ -4236,51 +4236,51 @@ impl U64x4Backend for archmage::X64V3Token {
 
     // ====== Bitwise ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn not(self, a: __m256i) -> __m256i {
         _mm256_andnot_si256(a, _mm256_set1_epi64x(-1_i64))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitand(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_and_si256(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitor(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_or_si256(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitxor(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_xor_si256(a, b)
     }
 
     // ====== Shifts ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shl_const<const N: i32>(self, a: __m256i) -> __m256i {
         _mm256_slli_epi64::<N>(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn shr_logical_const<const N: i32>(self, a: __m256i) -> __m256i {
         _mm256_srli_epi64::<N>(a)
     }
 
     // ====== Boolean ======
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn all_true(self, a: __m256i) -> bool {
         _mm256_movemask_pd(_mm256_castsi256_pd(a)) == 0xF
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn any_true(self, a: __m256i) -> bool {
         _mm256_movemask_pd(_mm256_castsi256_pd(a)) != 0
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitmask(self, a: __m256i) -> u32 {
         _mm256_movemask_pd(_mm256_castsi256_pd(a)) as u32
     }
@@ -4288,24 +4288,24 @@ impl U64x4Backend for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl F32x4Convert for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_f32_to_i32(self, a: __m128) -> __m128i {
         _mm_castps_si128(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_i32_to_f32(self, a: __m128i) -> __m128 {
         _mm_castsi128_ps(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn convert_f32_to_i32(self, a: __m128) -> __m128i {
         _mm_cvttps_epi32(a)
     }
 
     // Issue #80 fixup: cvttps yields the i32::MIN sentinel for +overflow
     // and NaN; patch those two classes (-overflow already saturates to MIN).
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn convert_f32_to_i32_saturating(self, a: __m128) -> __m128i {
         let t = _mm_cvttps_epi32(a);
         let big = _mm_cmp_ps::<_CMP_GE_OQ>(a, _mm_set1_ps(2_147_483_648.0));
@@ -4314,12 +4314,12 @@ impl F32x4Convert for archmage::X64V3Token {
         _mm_andnot_si128(_mm_castps_si128(nan), t)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn convert_f32_to_i32_round(self, a: __m128) -> __m128i {
         _mm_cvtps_epi32(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn convert_i32_to_f32(self, a: __m128i) -> __m128 {
         _mm_cvtepi32_ps(a)
     }
@@ -4327,23 +4327,23 @@ impl F32x4Convert for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl F32x8Convert for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_f32_to_i32(self, a: __m256) -> __m256i {
         _mm256_castps_si256(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_i32_to_f32(self, a: __m256i) -> __m256 {
         _mm256_castsi256_ps(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn convert_f32_to_i32(self, a: __m256) -> __m256i {
         _mm256_cvttps_epi32(a)
     }
 
     // Issue #80 fixup — see the 128-bit impl.
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn convert_f32_to_i32_saturating(self, a: __m256) -> __m256i {
         let t = _mm256_cvttps_epi32(a);
         let big = _mm256_cmp_ps::<_CMP_GE_OQ>(a, _mm256_set1_ps(2_147_483_648.0));
@@ -4352,12 +4352,12 @@ impl F32x8Convert for archmage::X64V3Token {
         _mm256_andnot_si256(_mm256_castps_si256(nan), t)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn convert_f32_to_i32_round(self, a: __m256) -> __m256i {
         _mm256_cvtps_epi32(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn convert_i32_to_f32(self, a: __m256i) -> __m256 {
         _mm256_cvtepi32_ps(a)
     }
@@ -4365,22 +4365,22 @@ impl F32x8Convert for archmage::X64V3Token {
 
 #[cfg(all(target_arch = "x86_64", feature = "w512"))]
 impl F32x16Convert for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_f32_to_i32(self, a: [__m256; 2]) -> [__m256i; 2] {
         [_mm256_castps_si256(a[0]), _mm256_castps_si256(a[1])]
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_i32_to_f32(self, a: [__m256i; 2]) -> [__m256; 2] {
         [_mm256_castsi256_ps(a[0]), _mm256_castsi256_ps(a[1])]
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn convert_f32_to_i32(self, a: [__m256; 2]) -> [__m256i; 2] {
         [_mm256_cvttps_epi32(a[0]), _mm256_cvttps_epi32(a[1])]
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn convert_f32_to_i32_saturating(self, a: [__m256; 2]) -> [__m256i; 2] {
         core::array::from_fn(|i| {
             let t = _mm256_cvttps_epi32(a[i]);
@@ -4391,12 +4391,12 @@ impl F32x16Convert for archmage::X64V3Token {
         })
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn convert_f32_to_i32_round(self, a: [__m256; 2]) -> [__m256i; 2] {
         [_mm256_cvtps_epi32(a[0]), _mm256_cvtps_epi32(a[1])]
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn convert_i32_to_f32(self, a: [__m256i; 2]) -> [__m256; 2] {
         [_mm256_cvtepi32_ps(a[0]), _mm256_cvtepi32_ps(a[1])]
     }
@@ -4404,12 +4404,12 @@ impl F32x16Convert for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl U32x4Bitcast for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_u32_to_i32(self, a: __m128i) -> __m128i {
         a
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_i32_to_u32(self, a: __m128i) -> __m128i {
         a
     }
@@ -4417,12 +4417,12 @@ impl U32x4Bitcast for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl U32x8Bitcast for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_u32_to_i32(self, a: __m256i) -> __m256i {
         a
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_i32_to_u32(self, a: __m256i) -> __m256i {
         a
     }
@@ -4430,12 +4430,12 @@ impl U32x8Bitcast for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl I64x2Bitcast for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_i64_to_f64(self, a: __m128i) -> __m128d {
         _mm_castsi128_pd(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_f64_to_i64(self, a: __m128d) -> __m128i {
         _mm_castpd_si128(a)
     }
@@ -4443,12 +4443,12 @@ impl I64x2Bitcast for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl I64x4Bitcast for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_i64_to_f64(self, a: __m256i) -> __m256d {
         _mm256_castsi256_pd(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_f64_to_i64(self, a: __m256d) -> __m256i {
         _mm256_castpd_si256(a)
     }
@@ -4456,11 +4456,11 @@ impl I64x4Bitcast for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl I8x16Bitcast for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_i8_to_u8(self, a: __m128i) -> __m128i {
         a
     }
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_u8_to_i8(self, a: __m128i) -> __m128i {
         a
     }
@@ -4468,11 +4468,11 @@ impl I8x16Bitcast for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl I8x32Bitcast for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_i8_to_u8(self, a: __m256i) -> __m256i {
         a
     }
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_u8_to_i8(self, a: __m256i) -> __m256i {
         a
     }
@@ -4480,11 +4480,11 @@ impl I8x32Bitcast for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl I16x8Bitcast for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_i16_to_u16(self, a: __m128i) -> __m128i {
         a
     }
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_u16_to_i16(self, a: __m128i) -> __m128i {
         a
     }
@@ -4492,11 +4492,11 @@ impl I16x8Bitcast for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl I16x16Bitcast for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_i16_to_u16(self, a: __m256i) -> __m256i {
         a
     }
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_u16_to_i16(self, a: __m256i) -> __m256i {
         a
     }
@@ -4504,11 +4504,11 @@ impl I16x16Bitcast for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl U64x2Bitcast for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_u64_to_i64(self, a: __m128i) -> __m128i {
         a
     }
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_i64_to_u64(self, a: __m128i) -> __m128i {
         a
     }
@@ -4516,11 +4516,11 @@ impl U64x2Bitcast for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl U64x4Bitcast for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_u64_to_i64(self, a: __m256i) -> __m256i {
         a
     }
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn bitcast_i64_to_u64(self, a: __m256i) -> __m256i {
         a
     }
@@ -4528,12 +4528,12 @@ impl U64x4Bitcast for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl U8x16Widen for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_low_u8_to_u16(self, a: __m128i) -> __m128i {
         _mm_cvtepu8_epi16(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_high_u8_to_u16(self, a: __m128i) -> __m128i {
         _mm_cvtepu8_epi16(_mm_srli_si128::<8>(a))
     }
@@ -4541,12 +4541,12 @@ impl U8x16Widen for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl U16x8Widen for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_low_u16_to_u32(self, a: __m128i) -> __m128i {
         _mm_cvtepu16_epi32(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_high_u16_to_u32(self, a: __m128i) -> __m128i {
         _mm_cvtepu16_epi32(_mm_srli_si128::<8>(a))
     }
@@ -4554,12 +4554,12 @@ impl U16x8Widen for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl I8x16Widen for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_low_i8_to_i16(self, a: __m128i) -> __m128i {
         _mm_cvtepi8_epi16(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_high_i8_to_i16(self, a: __m128i) -> __m128i {
         _mm_cvtepi8_epi16(_mm_srli_si128::<8>(a))
     }
@@ -4567,12 +4567,12 @@ impl I8x16Widen for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl I16x8Widen for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_low_i16_to_i32(self, a: __m128i) -> __m128i {
         _mm_cvtepi16_epi32(a)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_high_i16_to_i32(self, a: __m128i) -> __m128i {
         _mm_cvtepi16_epi32(_mm_srli_si128::<8>(a))
     }
@@ -4580,12 +4580,12 @@ impl I16x8Widen for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl U8x32Widen for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_low_u8_to_u16(self, a: __m256i) -> __m256i {
         _mm256_cvtepu8_epi16(_mm256_castsi256_si128(a))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_high_u8_to_u16(self, a: __m256i) -> __m256i {
         _mm256_cvtepu8_epi16(_mm256_extracti128_si256::<1>(a))
     }
@@ -4593,12 +4593,12 @@ impl U8x32Widen for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl U16x16Widen for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_low_u16_to_u32(self, a: __m256i) -> __m256i {
         _mm256_cvtepu16_epi32(_mm256_castsi256_si128(a))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_high_u16_to_u32(self, a: __m256i) -> __m256i {
         _mm256_cvtepu16_epi32(_mm256_extracti128_si256::<1>(a))
     }
@@ -4606,12 +4606,12 @@ impl U16x16Widen for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl I8x32Widen for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_low_i8_to_i16(self, a: __m256i) -> __m256i {
         _mm256_cvtepi8_epi16(_mm256_castsi256_si128(a))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_high_i8_to_i16(self, a: __m256i) -> __m256i {
         _mm256_cvtepi8_epi16(_mm256_extracti128_si256::<1>(a))
     }
@@ -4619,12 +4619,12 @@ impl I8x32Widen for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl I16x16Widen for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_low_i16_to_i32(self, a: __m256i) -> __m256i {
         _mm256_cvtepi16_epi32(_mm256_castsi256_si128(a))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_high_i16_to_i32(self, a: __m256i) -> __m256i {
         _mm256_cvtepi16_epi32(_mm256_extracti128_si256::<1>(a))
     }
@@ -4632,12 +4632,12 @@ impl I16x16Widen for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl I16x8Narrow for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn narrow_saturating_i16_to_i8(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_packs_epi16(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn narrow_saturating_i16_to_u8(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_packus_epi16(a, b)
     }
@@ -4645,12 +4645,12 @@ impl I16x8Narrow for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl I32x4Narrow for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn narrow_saturating_i32_to_i16(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_packs_epi32(a, b)
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn narrow_saturating_i32_to_u16(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_packus_epi32(a, b)
     }
@@ -4658,12 +4658,12 @@ impl I32x4Narrow for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl I16x16Narrow for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn narrow_saturating_i16_to_i8(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi16(a, b))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn narrow_saturating_i16_to_u8(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi16(a, b))
     }
@@ -4671,12 +4671,12 @@ impl I16x16Narrow for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl I32x8Narrow for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn narrow_saturating_i32_to_i16(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi32(a, b))
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn narrow_saturating_i32_to_u16(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi32(a, b))
     }
@@ -4685,7 +4685,7 @@ impl I32x8Narrow for archmage::X64V3Token {
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl U8x64Widen for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_low_u8_to_u16(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
             _mm256_cvtepu8_epi16(_mm256_castsi256_si128(a[0])),
@@ -4693,7 +4693,7 @@ impl U8x64Widen for archmage::X64V3Token {
         ]
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_high_u8_to_u16(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
             _mm256_cvtepu8_epi16(_mm256_castsi256_si128(a[1])),
@@ -4705,7 +4705,7 @@ impl U8x64Widen for archmage::X64V3Token {
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl U16x32Widen for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_low_u16_to_u32(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
             _mm256_cvtepu16_epi32(_mm256_castsi256_si128(a[0])),
@@ -4713,7 +4713,7 @@ impl U16x32Widen for archmage::X64V3Token {
         ]
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_high_u16_to_u32(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
             _mm256_cvtepu16_epi32(_mm256_castsi256_si128(a[1])),
@@ -4725,7 +4725,7 @@ impl U16x32Widen for archmage::X64V3Token {
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl I8x64Widen for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_low_i8_to_i16(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
             _mm256_cvtepi8_epi16(_mm256_castsi256_si128(a[0])),
@@ -4733,7 +4733,7 @@ impl I8x64Widen for archmage::X64V3Token {
         ]
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_high_i8_to_i16(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
             _mm256_cvtepi8_epi16(_mm256_castsi256_si128(a[1])),
@@ -4745,7 +4745,7 @@ impl I8x64Widen for archmage::X64V3Token {
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl I16x32Widen for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_low_i16_to_i32(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
             _mm256_cvtepi16_epi32(_mm256_castsi256_si128(a[0])),
@@ -4753,7 +4753,7 @@ impl I16x32Widen for archmage::X64V3Token {
         ]
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn widen_high_i16_to_i32(self, a: [__m256i; 2]) -> [__m256i; 2] {
         [
             _mm256_cvtepi16_epi32(_mm256_castsi256_si128(a[1])),
@@ -4765,7 +4765,7 @@ impl I16x32Widen for archmage::X64V3Token {
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl I16x32Narrow for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn narrow_saturating_i16_to_i8(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
             _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi16(a[0], a[1])),
@@ -4773,7 +4773,7 @@ impl I16x32Narrow for archmage::X64V3Token {
         ]
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn narrow_saturating_i16_to_u8(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
             _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi16(a[0], a[1])),
@@ -4785,7 +4785,7 @@ impl I16x32Narrow for archmage::X64V3Token {
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
 impl I32x16Narrow for archmage::X64V3Token {
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn narrow_saturating_i32_to_i16(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
             _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi32(a[0], a[1])),
@@ -4793,7 +4793,7 @@ impl I32x16Narrow for archmage::X64V3Token {
         ]
     }
 
-    #[arcane(_self = X64V3Token)]
+    #[arcane(shared, _self = X64V3Token)]
     fn narrow_saturating_i32_to_u16(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         [
             _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi32(a[0], a[1])),

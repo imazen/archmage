@@ -3576,46 +3576,82 @@ pub type Avx512ModernToken = X64V4xToken;
 impl X64V1Token {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0x510E0DCD;
+
+    #[doc(hidden)]
+    pub const __ARCHMAGE_ASSERT_TIER_510E0DCD: () =
+        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x510E0DCD) as usize];
 }
 
 impl X64V2Token {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0x8CCD97C6;
+
+    #[doc(hidden)]
+    pub const __ARCHMAGE_ASSERT_TIER_8CCD97C6: () =
+        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x8CCD97C6) as usize];
 }
 
 impl X64CryptoToken {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0xF5F0FBF5;
+
+    #[doc(hidden)]
+    pub const __ARCHMAGE_ASSERT_TIER_F5F0FBF5: () =
+        [()][!(Self::__ARCHMAGE_TIER_TAG == 0xF5F0FBF5) as usize];
 }
 
 impl X64V3Token {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0xF38B284B;
+
+    #[doc(hidden)]
+    pub const __ARCHMAGE_ASSERT_TIER_F38B284B: () =
+        [()][!(Self::__ARCHMAGE_TIER_TAG == 0xF38B284B) as usize];
 }
 
 impl X64V3CryptoToken {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0x01EAE708;
+
+    #[doc(hidden)]
+    pub const __ARCHMAGE_ASSERT_TIER_01EAE708: () =
+        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x01EAE708) as usize];
 }
 
 impl X64V3GfniCryptoToken {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0x49A7BE90;
+
+    #[doc(hidden)]
+    pub const __ARCHMAGE_ASSERT_TIER_49A7BE90: () =
+        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x49A7BE90) as usize];
 }
 
 impl X64V4Token {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0xFE1B900C;
+
+    #[doc(hidden)]
+    pub const __ARCHMAGE_ASSERT_TIER_FE1B900C: () =
+        [()][!(Self::__ARCHMAGE_TIER_TAG == 0xFE1B900C) as usize];
 }
 
 impl X64V4xToken {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0x8F63232A;
+
+    #[doc(hidden)]
+    pub const __ARCHMAGE_ASSERT_TIER_8F63232A: () =
+        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x8F63232A) as usize];
 }
 
 impl Avx512Fp16Token {
     #[doc(hidden)]
     pub const __ARCHMAGE_TIER_TAG: u32 = 0x2F39FFC0;
+
+    #[doc(hidden)]
+    pub const __ARCHMAGE_ASSERT_TIER_2F39FFC0: () =
+        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x2F39FFC0) as usize];
 }
 
 #[allow(deprecated)]

@@ -5,7 +5,7 @@
 //! emit safe intrinsics/storage helpers directly. No generated-text rewriting.
 
 pub(super) fn arcane(token: &str) -> String {
-    format!("#[arcane(_self = {token})]")
+    format!("#[arcane(shared, _self = {token})]")
 }
 
 #[cfg(test)]
@@ -15,7 +15,7 @@ mod tests {
         let files = super::super::backend_gen::generate_backend_files();
         for file in ["impls/x86_v3.rs", "impls/x86_v4.rs", "impls/arm_neon.rs"] {
             let source = &files[file];
-            assert!(source.contains("#[arcane(_self = "), "{file}");
+            assert!(source.contains("#[arcane(shared, _self = "), "{file}");
             for line in source
                 .lines()
                 .filter(|line| !line.trim_start().starts_with("//"))

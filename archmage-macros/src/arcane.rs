@@ -13,40 +13,35 @@ use syn::{
 use crate::common::*;
 use crate::token_discovery::*;
 
-/// Generate a compile-time assertion that the token parameter is a genuine
-/// archmage token of the expected type.
+/// Reference a shared check for the expected concrete token tier.
 ///
-/// For **concrete tokens** (e.g., `X64V3Token`): emits a `const` assertion
-/// comparing `<Type>::__ARCHMAGE_TIER_TAG` against the expected tag value.
-/// The `Type` is the full path from the function signature (not just the
-/// last segment), so it resolves through re-exports without requiring
-/// `::archmage::` in the consumer's extern prelude.
-///
-/// This catches:
-/// - **Shadowing:** local `struct X64V3Token` has no `__ARCHMAGE_TIER_TAG` const.
-/// - **Aliasing:** `use archmage::X64V2Token as X64V3Token` has the wrong tag.
-///
-/// For **trait/generic bounds** (e.g., `impl HasX64V2`, `T: HasNeon`): no
-/// assertion needed — the sealed `SimdToken` trait already prevents forgery.
-///
-/// Both forms are zero-cost: `const` assertions vanish from the binary.
+/// The full type path comes from the signature, preserving renamed dependencies
+/// and re-exports. The expected tier tag is encoded in the associated constant's
+/// name, so aliasing a weaker token to a stronger token's name fails to compile.
+/// The assertion initializer lives in the token crate, once per concrete token.
+/// Like the original public tag check, this does not prevent deliberate forgery.
+/// Trait/generic bounds keep their existing handling.
 fn gen_token_assertion(
     token_type_name: &Option<String>,
     token_type: &Option<Type>,
+    shared: bool,
 ) -> proc_macro2::TokenStream {
     if let (Some(name), Some(ty)) = (token_type_name, token_type)
         && let Some(expected_tag) = crate::generated::expected_tier_tag(name)
     {
-        // Array-indexing trick for const assertion: can't use assert!() because
-        // cargo-expand desugars it to ::core::panicking::panic_fmt (unstable),
-        // breaking expanded-output compilation tests. Can't use an archmage:: path
-        // because downstream crates may rename the dependency (#30).
-        //
-        // The descriptive const name appears in the error message:
-        //   evaluation of `fn_name::_ARCHMAGE_TOKEN_MISMATCH` failed here
+        if !shared {
+            // Preserve compatibility with older token crates lacking shared constants.
+            return quote! {
+                const _ARCHMAGE_TOKEN_MISMATCH: () =
+                    [()][!(<#ty>::__ARCHMAGE_TIER_TAG == #expected_tag) as usize];
+            };
+        }
+        // The expected tag is part of the constant's name, so a weaker token
+        // alias cannot satisfy this lookup. Its initializer is checked once in
+        // the token crate rather than in every expanded method.
+        let assertion = format_ident!("__ARCHMAGE_ASSERT_TIER_{:08X}", expected_tag);
         return quote! {
-            const _ARCHMAGE_TOKEN_MISMATCH: () =
-                [()][!(<#ty>::__ARCHMAGE_TIER_TAG == #expected_tag) as usize];
+            let _: () = <#ty>::#assertion;
         };
     }
     // Trait/generic bound or unknown token: the sealed SimdToken trait
@@ -56,6 +51,9 @@ fn gen_token_assertion(
 
 #[derive(Default)]
 pub(crate) struct ArcaneArgs {
+    /// Opt into shared tier assertions (requires archmage 0.9.29 or later).
+    /// Default expansion remains compatible with older token crates.
+    shared: bool,
     /// Use `#[inline(always)]` instead of `#[inline]` for the inner function.
     /// Requires nightly Rust with `#![feature(target_feature_inline_always)]`.
     inline_always: bool,
@@ -91,6 +89,7 @@ impl Parse for ArcaneArgs {
             let ident: Ident = input.parse()?;
             match ident.to_string().as_str() {
                 "inline_always" => args.inline_always = true,
+                "shared" => args.shared = true,
                 "stub" => {
                     return Err(syn::Error::new(
                         ident.span(),
@@ -606,7 +605,7 @@ pub(crate) fn arcane_impl_sibling(
         // Wrapper function: fn original_name(...) { unsafe { sibling_call } }
         // The unsafe block is needed because the sibling has #[target_feature] and
         // the wrapper doesn't — calling across this boundary requires unsafe.
-        let token_assertion = gen_token_assertion(&token_type_name, &token_type);
+        let token_assertion = gen_token_assertion(&token_type_name, &token_type, args.shared);
         let wrapper_fn = quote! {
             #cfg_guard
             #(#attrs)*
@@ -846,7 +845,7 @@ pub(crate) fn arcane_impl_nested(
             quote! {}
         };
 
-        let token_assertion = gen_token_assertion(&token_type_name, &token_type);
+        let token_assertion = gen_token_assertion(&token_type_name, &token_type, args.shared);
         quote! {
             // Real implementation for the correct architecture
             #cfg_guard
@@ -869,7 +868,7 @@ pub(crate) fn arcane_impl_nested(
         }
     } else {
         // No specific arch (trait bounds or generic) - generate without cfg guards
-        let token_assertion = gen_token_assertion(&token_type_name, &token_type);
+        let token_assertion = gen_token_assertion(&token_type_name, &token_type, args.shared);
         quote! {
             #(#attrs)*
             #[inline(always)]

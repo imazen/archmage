@@ -1044,11 +1044,10 @@ fn gen_trait_impls(out: &mut String, tokens: &[&TokenDef], deprecated_trait_name
 // Tier tags — compile-time assertion constants
 // ============================================================================
 
-/// Generate `__ARCHMAGE_TIER_TAG` inherent const impl blocks for each token struct.
+/// Generate tier tags and shared tier assertion constants for each token.
 ///
-/// These are used by `#[arcane]` to emit `const _: () = assert!(...)` checks
-/// that verify the token type is genuinely the expected archmage type, without
-/// requiring `::archmage::` in the expanded code.
+/// The expected tag is encoded in the assertion constant's name. Arcane refers
+/// to it through the type in the signature, without requiring an archmage path.
 fn gen_tier_tags(out: &mut String, tokens: &[&TokenDef], major_version: u32) {
     out.push('\n');
     for token in tokens {
@@ -1058,6 +1057,10 @@ fn gen_tier_tags(out: &mut String, tokens: &[&TokenDef], major_version: u32) {
             impl {name} {{
                 #[doc(hidden)]
                 pub const __ARCHMAGE_TIER_TAG: u32 = 0x{tag:08X};
+
+                #[doc(hidden)]
+                pub const __ARCHMAGE_ASSERT_TIER_{tag:08X}: () =
+                    [()][!(Self::__ARCHMAGE_TIER_TAG == 0x{tag:08X}) as usize];
             }}
 
         "});
