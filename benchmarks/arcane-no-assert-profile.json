@@ -1,0 +1,343 @@
+{
+  "rustc": "rustc 1.100.0-nightly (5db7f4be8 2026-09-01)\nbinary: rustc\ncommit-hash: 5db7f4be8a36c1b8ae19299469e2be2b0f052c21\ncommit-date: 2026-09-01\nhost: x86_64-unknown-linux-gnu\nrelease: 1.100.0-nightly\nLLVM version: 23.1.0\n",
+  "command": [
+    "cargo",
+    "+nightly-2026-09-02",
+    "rustc",
+    "--locked",
+    "-p",
+    "magetypes",
+    "--features",
+    "avx512",
+    "--lib"
+  ],
+  "baseline_commit": "15f77a33036cc53b0cd59d5272b9a2a0fc603337",
+  "candidate_base_commit": "15f77a33036cc53b0cd59d5272b9a2a0fc603337",
+  "candidate_diff": "diff --git a/archmage-macros/src/arcane.rs b/archmage-macros/src/arcane.rs\nindex a580111..3cb7e89 100644\n--- a/archmage-macros/src/arcane.rs\n+++ b/archmage-macros/src/arcane.rs\n@@ -34,23 +34,7 @@ fn gen_token_assertion(\n     token_type_name: &Option<String>,\n     token_type: &Option<Type>,\n ) -> proc_macro2::TokenStream {\n-    if let (Some(name), Some(ty)) = (token_type_name, token_type)\n-        && let Some(expected_tag) = crate::generated::expected_tier_tag(name)\n-    {\n-        // Array-indexing trick for const assertion: can't use assert!() because\n-        // cargo-expand desugars it to ::core::panicking::panic_fmt (unstable),\n-        // breaking expanded-output compilation tests. Can't use an archmage:: path\n-        // because downstream crates may rename the dependency (#30).\n-        //\n-        // The descriptive const name appears in the error message:\n-        //   evaluation of `fn_name::_ARCHMAGE_TOKEN_MISMATCH` failed here\n-        return quote! {\n-            const _ARCHMAGE_TOKEN_MISMATCH: () =\n-                [()][!(<#ty>::__ARCHMAGE_TIER_TAG == #expected_tag) as usize];\n-        };\n-    }\n-    // Trait/generic bound or unknown token: the sealed SimdToken trait\n-    // prevents forgery. No path-based assertion needed.\n+    let _ = (token_type_name, token_type);\n     quote! {}\n }\n \n",
+  "runs": [
+    {
+      "variant": "baseline",
+      "trial": 1,
+      "wall_seconds": 1.5670003399718553,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.089427077,
+          "inclusive_seconds": 0.089427077,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.083895588,
+          "inclusive_seconds": 0.177515105,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.266530532,
+          "inclusive_seconds": 0.304917337,
+          "count": 13809
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.123452805,
+          "inclusive_seconds": 0.205424299,
+          "count": 8666
+        }
+      }
+    },
+    {
+      "variant": "candidate",
+      "trial": 1,
+      "wall_seconds": 1.408272807020694,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.080129188,
+          "inclusive_seconds": 0.080129188,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.07730783,
+          "inclusive_seconds": 0.161666336,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.241684588,
+          "inclusive_seconds": 0.278174288,
+          "count": 12336
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.112922634,
+          "inclusive_seconds": 0.186685197,
+          "count": 7193
+        }
+      }
+    },
+    {
+      "variant": "candidate",
+      "trial": 2,
+      "wall_seconds": 1.4390402908902615,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.0820843,
+          "inclusive_seconds": 0.0820843,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.079458597,
+          "inclusive_seconds": 0.165326972,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.243606325,
+          "inclusive_seconds": 0.28052663,
+          "count": 12336
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.116720764,
+          "inclusive_seconds": 0.192585964,
+          "count": 7193
+        }
+      }
+    },
+    {
+      "variant": "baseline",
+      "trial": 2,
+      "wall_seconds": 1.5774766760878265,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.091350611,
+          "inclusive_seconds": 0.091350611,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.08725213,
+          "inclusive_seconds": 0.182774008,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.272244751,
+          "inclusive_seconds": 0.311561318,
+          "count": 13809
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.126705631,
+          "inclusive_seconds": 0.210868194,
+          "count": 8666
+        }
+      }
+    },
+    {
+      "variant": "baseline",
+      "trial": 3,
+      "wall_seconds": 1.5661036970559508,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.090482499,
+          "inclusive_seconds": 0.090482499,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.084701696,
+          "inclusive_seconds": 0.179439334,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.27124116,
+          "inclusive_seconds": 0.3106724,
+          "count": 13809
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.125069201,
+          "inclusive_seconds": 0.208504504,
+          "count": 8666
+        }
+      }
+    },
+    {
+      "variant": "candidate",
+      "trial": 3,
+      "wall_seconds": 1.4392150919884443,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.082602274,
+          "inclusive_seconds": 0.082602274,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.078577988,
+          "inclusive_seconds": 0.16491055,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.243957237,
+          "inclusive_seconds": 0.28098424,
+          "count": 12336
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.116445099,
+          "inclusive_seconds": 0.192118551,
+          "count": 7193
+        }
+      }
+    },
+    {
+      "variant": "candidate",
+      "trial": 4,
+      "wall_seconds": 1.443164189113304,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.082214917,
+          "inclusive_seconds": 0.082214917,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.077241279,
+          "inclusive_seconds": 0.163165222,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.244527974,
+          "inclusive_seconds": 0.281666119,
+          "count": 12336
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.116224529,
+          "inclusive_seconds": 0.19213033,
+          "count": 7193
+        }
+      }
+    },
+    {
+      "variant": "baseline",
+      "trial": 4,
+      "wall_seconds": 1.5127231730148196,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.091500162,
+          "inclusive_seconds": 0.091500162,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.086374545,
+          "inclusive_seconds": 0.182150035,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.269440103,
+          "inclusive_seconds": 0.308237901,
+          "count": 13809
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.124313419,
+          "inclusive_seconds": 0.206883395,
+          "count": 8666
+        }
+      }
+    },
+    {
+      "variant": "baseline",
+      "trial": 5,
+      "wall_seconds": 1.5588232951704413,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.090318235,
+          "inclusive_seconds": 0.090318235,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.083663784,
+          "inclusive_seconds": 0.178172817,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.267727737,
+          "inclusive_seconds": 0.306307541,
+          "count": 13809
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.125103009,
+          "inclusive_seconds": 0.208187621,
+          "count": 8666
+        }
+      }
+    },
+    {
+      "variant": "candidate",
+      "trial": 5,
+      "wall_seconds": 1.4128164879512042,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.084531641,
+          "inclusive_seconds": 0.084531641,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.078786131,
+          "inclusive_seconds": 0.167091629,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.250702097,
+          "inclusive_seconds": 0.288270332,
+          "count": 12336
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.116636133,
+          "inclusive_seconds": 0.193042992,
+          "count": 7193
+        }
+      }
+    },
+    {
+      "variant": "candidate",
+      "trial": 6,
+      "wall_seconds": 1.429668070981279,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.083380475,
+          "inclusive_seconds": 0.083380475,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.079491177,
+          "inclusive_seconds": 0.167051939,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.2470633,
+          "inclusive_seconds": 0.28434385,
+          "count": 12336
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.117191989,
+          "inclusive_seconds": 0.194189832,
+          "count": 7193
+        }
+      }
+    },
+    {
+      "variant": "baseline",
+      "trial": 6,
+      "wall_seconds": 1.5341973970644176,
+      "events": {
+        "expand_proc_macro": {
+          "self_seconds": 0.094028748,
+          "inclusive_seconds": 0.094028748,
+          "count": 1473
+        },
+        "expand_crate": {
+          "self_seconds": 0.08023787,
+          "inclusive_seconds": 0.178112857,
+          "count": 1
+        },
+        "typeck_root": {
+          "self_seconds": 0.272809129,
+          "inclusive_seconds": 0.312071726,
+          "count": 13809
+        },
+        "mir_borrowck": {
+          "self_seconds": 0.126072172,
+          "inclusive_seconds": 0.208958452,
+          "count": 8666
+        }
+      }
+    }
+  ]
+}

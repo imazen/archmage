@@ -1,0 +1,42 @@
+[
+  {
+    "variant": "shared",
+    "probe": "valid",
+    "accepted": true
+  },
+  {
+    "variant": "shared",
+    "probe": "weaker",
+    "accepted": false
+  },
+  {
+    "variant": "shared",
+    "probe": "weaker_receiver",
+    "accepted": false
+  },
+  {
+    "variant": "shared",
+    "probe": "copied_tag",
+    "accepted": false
+  },
+  {
+    "variant": "no",
+    "probe": "valid",
+    "accepted": true
+  },
+  {
+    "variant": "no",
+    "probe": "weaker",
+    "accepted": true
+  },
+  {
+    "variant": "no",
+    "probe": "weaker_receiver",
+    "accepted": true
+  },
+  {
+    "variant": "no",
+    "probe": "copied_tag",
+    "accepted": true
+  }
+]

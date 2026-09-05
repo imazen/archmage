@@ -1,0 +1,29 @@
+diff --git a/archmage-macros/src/arcane.rs b/archmage-macros/src/arcane.rs
+index a580111..3cb7e89 100644
+--- a/archmage-macros/src/arcane.rs
++++ b/archmage-macros/src/arcane.rs
+@@ -34,23 +34,7 @@ fn gen_token_assertion(
+     token_type_name: &Option<String>,
+     token_type: &Option<Type>,
+ ) -> proc_macro2::TokenStream {
+-    if let (Some(name), Some(ty)) = (token_type_name, token_type)
+-        && let Some(expected_tag) = crate::generated::expected_tier_tag(name)
+-    {
+-        // Array-indexing trick for const assertion: can't use assert!() because
+-        // cargo-expand desugars it to ::core::panicking::panic_fmt (unstable),
+-        // breaking expanded-output compilation tests. Can't use an archmage:: path
+-        // because downstream crates may rename the dependency (#30).
+-        //
+-        // The descriptive const name appears in the error message:
+-        //   evaluation of `fn_name::_ARCHMAGE_TOKEN_MISMATCH` failed here
+-        return quote! {
+-            const _ARCHMAGE_TOKEN_MISMATCH: () =
+-                [()][!(<#ty>::__ARCHMAGE_TIER_TAG == #expected_tag) as usize];
+-        };
+-    }
+-    // Trait/generic bound or unknown token: the sealed SimdToken trait
+-    // prevents forgery. No path-based assertion needed.
++    let _ = (token_type_name, token_type);
+     quote! {}
+ }
+ 

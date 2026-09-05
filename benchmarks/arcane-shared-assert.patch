@@ -1,0 +1,429 @@
+diff --git a/archmage-macros/src/arcane.rs b/archmage-macros/src/arcane.rs
+index a580111..2352b95 100644
+--- a/archmage-macros/src/arcane.rs
++++ b/archmage-macros/src/arcane.rs
+@@ -13,23 +13,14 @@ use syn::{
+ use crate::common::*;
+ use crate::token_discovery::*;
+ 
+-/// Generate a compile-time assertion that the token parameter is a genuine
+-/// archmage token of the expected type.
++/// Reference a shared check for the expected concrete token tier.
+ ///
+-/// For **concrete tokens** (e.g., `X64V3Token`): emits a `const` assertion
+-/// comparing `<Type>::__ARCHMAGE_TIER_TAG` against the expected tag value.
+-/// The `Type` is the full path from the function signature (not just the
+-/// last segment), so it resolves through re-exports without requiring
+-/// `::archmage::` in the consumer's extern prelude.
+-///
+-/// This catches:
+-/// - **Shadowing:** local `struct X64V3Token` has no `__ARCHMAGE_TIER_TAG` const.
+-/// - **Aliasing:** `use archmage::X64V2Token as X64V3Token` has the wrong tag.
+-///
+-/// For **trait/generic bounds** (e.g., `impl HasX64V2`, `T: HasNeon`): no
+-/// assertion needed — the sealed `SimdToken` trait already prevents forgery.
+-///
+-/// Both forms are zero-cost: `const` assertions vanish from the binary.
++/// The full type path comes from the signature, preserving renamed dependencies
++/// and re-exports. The expected tier tag is encoded in the associated constant's
++/// name, so aliasing a weaker token to a stronger token's name fails to compile.
++/// The assertion initializer lives in the token crate, once per concrete token.
++/// Like the original public tag check, this does not prevent deliberate forgery.
++/// Trait/generic bounds keep their existing handling.
+ fn gen_token_assertion(
+     token_type_name: &Option<String>,
+     token_type: &Option<Type>,
+@@ -37,16 +28,12 @@ fn gen_token_assertion(
+     if let (Some(name), Some(ty)) = (token_type_name, token_type)
+         && let Some(expected_tag) = crate::generated::expected_tier_tag(name)
+     {
+-        // Array-indexing trick for const assertion: can't use assert!() because
+-        // cargo-expand desugars it to ::core::panicking::panic_fmt (unstable),
+-        // breaking expanded-output compilation tests. Can't use an archmage:: path
+-        // because downstream crates may rename the dependency (#30).
+-        //
+-        // The descriptive const name appears in the error message:
+-        //   evaluation of `fn_name::_ARCHMAGE_TOKEN_MISMATCH` failed here
++        // The expected tag is part of the constant's name, so a weaker token
++        // alias cannot satisfy this lookup. Its initializer is checked once in
++        // the token crate rather than in every expanded method.
++        let assertion = format_ident!("__ARCHMAGE_ASSERT_TIER_{:08X}", expected_tag);
+         return quote! {
+-            const _ARCHMAGE_TOKEN_MISMATCH: () =
+-                [()][!(<#ty>::__ARCHMAGE_TIER_TAG == #expected_tag) as usize];
++            let _: () = <#ty>::#assertion;
+         };
+     }
+     // Trait/generic bound or unknown token: the sealed SimdToken trait
+diff --git a/src/tokens/generated/arm.rs b/src/tokens/generated/arm.rs
+index 905a876..fbdb39b 100644
+--- a/src/tokens/generated/arm.rs
++++ b/src/tokens/generated/arm.rs
+@@ -1479,31 +1479,55 @@ pub type Arm64 = NeonToken;
+ impl NeonToken {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x72CB52B2;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_72CB52B2: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x72CB52B2) as usize];
+ }
+ 
+ impl NeonAesToken {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x8C16863D;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_8C16863D: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x8C16863D) as usize];
+ }
+ 
+ impl NeonSha3Token {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x8215198F;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_8215198F: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x8215198F) as usize];
+ }
+ 
+ impl NeonCrcToken {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x5C2B1B4E;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_5C2B1B4E: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x5C2B1B4E) as usize];
+ }
+ 
+ impl Arm64V2Token {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0xB0231590;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_B0231590: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0xB0231590) as usize];
+ }
+ 
+ impl Arm64V3Token {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0xB2F6E2D5;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_B2F6E2D5: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0xB2F6E2D5) as usize];
+ }
+ 
+ #[allow(deprecated)]
+diff --git a/src/tokens/generated/arm_stubs.rs b/src/tokens/generated/arm_stubs.rs
+index cc29d85..03d6717 100644
+--- a/src/tokens/generated/arm_stubs.rs
++++ b/src/tokens/generated/arm_stubs.rs
+@@ -413,31 +413,55 @@ pub type Arm64 = NeonToken;
+ impl NeonToken {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x72CB52B2;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_72CB52B2: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x72CB52B2) as usize];
+ }
+ 
+ impl NeonAesToken {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x8C16863D;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_8C16863D: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x8C16863D) as usize];
+ }
+ 
+ impl NeonSha3Token {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x8215198F;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_8215198F: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x8215198F) as usize];
+ }
+ 
+ impl NeonCrcToken {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x5C2B1B4E;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_5C2B1B4E: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x5C2B1B4E) as usize];
+ }
+ 
+ impl Arm64V2Token {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0xB0231590;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_B0231590: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0xB0231590) as usize];
+ }
+ 
+ impl Arm64V3Token {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0xB2F6E2D5;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_B2F6E2D5: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0xB2F6E2D5) as usize];
+ }
+ 
+ #[allow(deprecated)]
+diff --git a/src/tokens/generated/wasm.rs b/src/tokens/generated/wasm.rs
+index 901ccf4..33975d4 100644
+--- a/src/tokens/generated/wasm.rs
++++ b/src/tokens/generated/wasm.rs
+@@ -204,11 +204,19 @@ impl Wasm128RelaxedToken {
+ impl Wasm128Token {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x1E0DF26B;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_1E0DF26B: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x1E0DF26B) as usize];
+ }
+ 
+ impl Wasm128RelaxedToken {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x821D5452;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_821D5452: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x821D5452) as usize];
+ }
+ 
+ #[allow(deprecated)]
+diff --git a/src/tokens/generated/wasm_stubs.rs b/src/tokens/generated/wasm_stubs.rs
+index 9a3e780..285819e 100644
+--- a/src/tokens/generated/wasm_stubs.rs
++++ b/src/tokens/generated/wasm_stubs.rs
+@@ -141,11 +141,19 @@ impl Wasm128RelaxedToken {
+ impl Wasm128Token {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x1E0DF26B;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_1E0DF26B: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x1E0DF26B) as usize];
+ }
+ 
+ impl Wasm128RelaxedToken {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x821D5452;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_821D5452: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x821D5452) as usize];
+ }
+ 
+ #[allow(deprecated)]
+diff --git a/src/tokens/generated/x86.rs b/src/tokens/generated/x86.rs
+index dc28f20..ccb7ef5 100644
+--- a/src/tokens/generated/x86.rs
++++ b/src/tokens/generated/x86.rs
+@@ -3576,46 +3576,82 @@ pub type Avx512ModernToken = X64V4xToken;
+ impl X64V1Token {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x510E0DCD;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_510E0DCD: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x510E0DCD) as usize];
+ }
+ 
+ impl X64V2Token {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x8CCD97C6;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_8CCD97C6: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x8CCD97C6) as usize];
+ }
+ 
+ impl X64CryptoToken {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0xF5F0FBF5;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_F5F0FBF5: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0xF5F0FBF5) as usize];
+ }
+ 
+ impl X64V3Token {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0xF38B284B;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_F38B284B: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0xF38B284B) as usize];
+ }
+ 
+ impl X64V3CryptoToken {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x01EAE708;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_01EAE708: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x01EAE708) as usize];
+ }
+ 
+ impl X64V3GfniCryptoToken {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x49A7BE90;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_49A7BE90: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x49A7BE90) as usize];
+ }
+ 
+ impl X64V4Token {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0xFE1B900C;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_FE1B900C: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0xFE1B900C) as usize];
+ }
+ 
+ impl X64V4xToken {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x8F63232A;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_8F63232A: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x8F63232A) as usize];
+ }
+ 
+ impl Avx512Fp16Token {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x2F39FFC0;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_2F39FFC0: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x2F39FFC0) as usize];
+ }
+ 
+ #[allow(deprecated)]
+diff --git a/src/tokens/generated/x86_stubs.rs b/src/tokens/generated/x86_stubs.rs
+index 8eda3dd..3045ed3 100644
+--- a/src/tokens/generated/x86_stubs.rs
++++ b/src/tokens/generated/x86_stubs.rs
+@@ -632,46 +632,82 @@ pub type Avx512ModernToken = X64V4xToken;
+ impl X64V1Token {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x510E0DCD;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_510E0DCD: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x510E0DCD) as usize];
+ }
+ 
+ impl X64V2Token {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x8CCD97C6;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_8CCD97C6: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x8CCD97C6) as usize];
+ }
+ 
+ impl X64CryptoToken {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0xF5F0FBF5;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_F5F0FBF5: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0xF5F0FBF5) as usize];
+ }
+ 
+ impl X64V3Token {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0xF38B284B;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_F38B284B: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0xF38B284B) as usize];
+ }
+ 
+ impl X64V3CryptoToken {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x01EAE708;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_01EAE708: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x01EAE708) as usize];
+ }
+ 
+ impl X64V3GfniCryptoToken {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x49A7BE90;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_49A7BE90: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x49A7BE90) as usize];
+ }
+ 
+ impl X64V4Token {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0xFE1B900C;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_FE1B900C: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0xFE1B900C) as usize];
+ }
+ 
+ impl X64V4xToken {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x8F63232A;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_8F63232A: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x8F63232A) as usize];
+ }
+ 
+ impl Avx512Fp16Token {
+     #[doc(hidden)]
+     pub const __ARCHMAGE_TIER_TAG: u32 = 0x2F39FFC0;
++
++    #[doc(hidden)]
++    pub const __ARCHMAGE_ASSERT_TIER_2F39FFC0: () =
++        [()][!(Self::__ARCHMAGE_TIER_TAG == 0x2F39FFC0) as usize];
+ }
+ 
+ #[allow(deprecated)]
+diff --git a/xtask/src/token_gen.rs b/xtask/src/token_gen.rs
+index 16ce213..1c5ef0f 100644
+--- a/xtask/src/token_gen.rs
++++ b/xtask/src/token_gen.rs
+@@ -1044,11 +1044,10 @@ fn gen_trait_impls(out: &mut String, tokens: &[&TokenDef], deprecated_trait_name
+ // Tier tags — compile-time assertion constants
+ // ============================================================================
+ 
+-/// Generate `__ARCHMAGE_TIER_TAG` inherent const impl blocks for each token struct.
++/// Generate tier tags and shared tier assertion constants for each token.
+ ///
+-/// These are used by `#[arcane]` to emit `const _: () = assert!(...)` checks
+-/// that verify the token type is genuinely the expected archmage type, without
+-/// requiring `::archmage::` in the expanded code.
++/// The expected tag is encoded in the assertion constant's name. Arcane refers
++/// to it through the type in the signature, without requiring an archmage path.
+ fn gen_tier_tags(out: &mut String, tokens: &[&TokenDef], major_version: u32) {
+     out.push('\n');
+     for token in tokens {
+@@ -1058,6 +1057,10 @@ fn gen_tier_tags(out: &mut String, tokens: &[&TokenDef], major_version: u32) {
+             impl {name} {{
+                 #[doc(hidden)]
+                 pub const __ARCHMAGE_TIER_TAG: u32 = 0x{tag:08X};
++
++                #[doc(hidden)]
++                pub const __ARCHMAGE_ASSERT_TIER_{tag:08X}: () =
++                    [()][!(Self::__ARCHMAGE_TIER_TAG == 0x{tag:08X}) as usize];
+             }}
+ 
+         "});
