@@ -669,3 +669,71 @@ fn generic_distance_cross_backend() {
         assert!((scalar - simd).abs() < 1e-4, "scalar={scalar} simd={simd}");
     }
 }
+
+#[cfg(target_arch = "wasm32")]
+mod wasm_storage {
+    use archmage::{SimdToken, Wasm128Token};
+    use magetypes::simd::generic::*;
+    macro_rules! storage {
+        ($name:ident, $ty:ident, $elem:ty, $lanes:expr) => {
+            #[test]
+            fn $name() {
+                let token = Wasm128Token::summon().expect("SIMD128 enabled for this test");
+                let input: [$elem; $lanes] = core::array::from_fn(|i| (i * 3 + 1) as $elem);
+                let loaded = $ty::<Wasm128Token>::load(token, &input);
+                assert_eq!(loaded.to_array(), input);
+                let mut output = [0 as $elem; $lanes];
+                $ty::<Wasm128Token>::from_array(token, input).store(&mut output);
+                assert_eq!(output, input);
+                let mut slice = [0 as $elem; $lanes + 1];
+                let (chunks, tail) = $ty::<Wasm128Token>::partition_slice_mut(token, &mut slice);
+                assert_eq!(chunks.len(), 1);
+                assert_eq!(tail.len(), 1);
+                loaded.store(&mut chunks[0]);
+                tail[0] = 7 as $elem;
+                assert_eq!(slice[..$lanes], input);
+                assert_eq!(slice[$lanes], 7 as $elem);
+            }
+        };
+    }
+    storage!(f32x4_storage, f32x4, f32, 4);
+    storage!(f32x8_storage, f32x8, f32, 8);
+    #[cfg(feature = "w512")]
+    storage!(f32x16_storage, f32x16, f32, 16);
+    storage!(f64x2_storage, f64x2, f64, 2);
+    storage!(f64x4_storage, f64x4, f64, 4);
+    #[cfg(feature = "w512")]
+    storage!(f64x8_storage, f64x8, f64, 8);
+    storage!(i8x16_storage, i8x16, i8, 16);
+    storage!(i8x32_storage, i8x32, i8, 32);
+    #[cfg(feature = "w512")]
+    storage!(i8x64_storage, i8x64, i8, 64);
+    storage!(u8x16_storage, u8x16, u8, 16);
+    storage!(u8x32_storage, u8x32, u8, 32);
+    #[cfg(feature = "w512")]
+    storage!(u8x64_storage, u8x64, u8, 64);
+    storage!(i16x8_storage, i16x8, i16, 8);
+    storage!(i16x16_storage, i16x16, i16, 16);
+    #[cfg(feature = "w512")]
+    storage!(i16x32_storage, i16x32, i16, 32);
+    storage!(u16x8_storage, u16x8, u16, 8);
+    storage!(u16x16_storage, u16x16, u16, 16);
+    #[cfg(feature = "w512")]
+    storage!(u16x32_storage, u16x32, u16, 32);
+    storage!(i32x4_storage, i32x4, i32, 4);
+    storage!(i32x8_storage, i32x8, i32, 8);
+    #[cfg(feature = "w512")]
+    storage!(i32x16_storage, i32x16, i32, 16);
+    storage!(u32x4_storage, u32x4, u32, 4);
+    storage!(u32x8_storage, u32x8, u32, 8);
+    #[cfg(feature = "w512")]
+    storage!(u32x16_storage, u32x16, u32, 16);
+    storage!(i64x2_storage, i64x2, i64, 2);
+    storage!(i64x4_storage, i64x4, i64, 4);
+    #[cfg(feature = "w512")]
+    storage!(i64x8_storage, i64x8, i64, 8);
+    storage!(u64x2_storage, u64x2, u64, 2);
+    storage!(u64x4_storage, u64x4, u64, 4);
+    #[cfg(feature = "w512")]
+    storage!(u64x8_storage, u64x8, u64, 8);
+}
