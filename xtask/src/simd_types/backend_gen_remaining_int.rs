@@ -2504,23 +2504,23 @@ fn generate_wasm_native_int_impl(ty: &IntVecType) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> v128 {{
-                unsafe {{ v128_load(data.as_ptr().cast()) }}
+                crate::simd_storage::copy(data)
             }}
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> v128 {{
-                unsafe {{ v128_load(arr.as_ptr().cast()) }}
+                crate::simd_storage::cast(arr)
             }}
 
             #[inline(always)]
             fn store(self, repr: v128, out: &mut {array}) {{
-                unsafe {{ v128_store(out.as_mut_ptr().cast(), repr) }};
+                crate::simd_storage::store(repr, out);
             }}
 
             #[inline(always)]
             fn to_array(self, repr: v128) -> {array} {{
                 let mut out = [0{elem}; {lanes}];
-                unsafe {{ v128_store(out.as_mut_ptr().cast(), repr) }};
+                crate::simd_storage::store(repr, &mut out);
                 out
             }}
 
@@ -2819,21 +2819,19 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
     let v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", ");
     let z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", ");
 
-    let load_lanes: Vec<String> = (0..sub_count)
-        .map(|i| {
-            let offset = i * lanes_per_128 * ty.elem_bits / 8;
-            format!("v128_load(data.as_ptr().cast::<u8>().add({offset}).cast())")
-        })
-        .collect();
-    let load_body = format!("unsafe {{ [{}] }}", load_lanes.join(", "));
-
-    let store_lines: Vec<String> = (0..sub_count)
-        .map(|i| {
-            let offset = i * lanes_per_128 * ty.elem_bits / 8;
-            format!("v128_store(out.as_mut_ptr().cast::<u8>().add({offset}).cast(), repr[{i}]);")
-        })
-        .collect();
-    let store_body = store_lines.join("\n                    ");
+    // Keep vector-sized copies so LLVM retains each v128's alignment facts.
+    let load_body = format!(
+        "[{}]",
+        (0..sub_count)
+            .map(|i| format!(
+                "crate::simd_storage::copy(&data.as_chunks::<{lanes_per_128}>().0[{i}])"
+            ))
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
+    let store_body = (0..sub_count)
+        .map(|i| format!("crate::simd_storage::store(repr[{i}], &mut out.as_chunks_mut::<{lanes_per_128}>().0[{i}]);"))
+        .collect::<Vec<_>>().join("\n");
 
     let blend_items: Vec<String> = (0..sub_count)
         .map(|i| format!("v128_bitselect(if_true[{i}], if_false[{i}], mask[{i}])"))
@@ -2936,9 +2934,7 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
 
             #[inline(always)]
             fn store(self, repr: {repr}, out: &mut {array}) {{
-                unsafe {{
-                    {store_body}
-                }}
+                {store_body}
             }}
 
             #[inline(always)]
