@@ -343,25 +343,22 @@ fn generate_x86_i64_impl(ty: &I64VecType, token: &str) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> {inner} {{
-                unsafe {{ {p}_loadu_si{bits}(data.as_ptr().cast()) }}
+                crate::simd_storage::copy(data)
             }}
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {inner} {{
-                // SAFETY: {array} and {inner} have identical size and layout.
-                unsafe {{ core::mem::transmute(arr) }}
+                crate::simd_storage::cast(arr)
             }}
 
             #[inline(always)]
             fn store(self, repr: {inner}, out: &mut {array}) {{
-                unsafe {{ {p}_storeu_si{bits}(out.as_mut_ptr().cast(), repr) }};
+                crate::simd_storage::store(repr, out);
             }}
 
             #[inline(always)]
             fn to_array(self, repr: {inner}) -> {array} {{
-                let mut out = [0i64; {lanes}];
-                unsafe {{ {p}_storeu_si{bits}(out.as_mut_ptr().cast(), repr) }};
-                out
+                crate::simd_storage::cast(repr)
             }}
 
             // ====== Arithmetic ======
@@ -528,20 +525,20 @@ fn generate_x86_i64_impl(ty: &I64VecType, token: &str) -> String {
 fn generate_x86_i64_reduce_add(ty: &I64VecType) -> String {
     match ty.width_bits {
         128 => formatdoc! {"
-                unsafe {{
+                {{
                     let hi = _mm_unpackhi_epi64(a, a);
                     let sum = _mm_add_epi64(a, hi);
                     // Extract low 64-bit lane
-                    core::mem::transmute::<__m128i, [i64; 2]>(sum)[0]
+                    crate::simd_storage::cast::<__m128i, [i64; 2]>(sum)[0]
                 }}"},
         256 => formatdoc! {"
-                unsafe {{
+                {{
                     let lo = _mm256_castsi256_si128(a);
                     let hi = _mm256_extracti128_si256::<1>(a);
                     let sum = _mm_add_epi64(lo, hi);
                     let hi2 = _mm_unpackhi_epi64(sum, sum);
                     let sum2 = _mm_add_epi64(sum, hi2);
-                    core::mem::transmute::<__m128i, [i64; 2]>(sum2)[0]
+                    crate::simd_storage::cast::<__m128i, [i64; 2]>(sum2)[0]
                 }}"},
         _ => unreachable!(),
     }
@@ -898,7 +895,6 @@ pub(super) fn generate_neon_i64_impls(types: &[I64VecType]) -> String {
 }
 
 fn generate_neon_native_i64_impl(ty: &I64VecType) -> String {
-    let lanes = ty.lanes;
     let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let array = ty.array_type();
@@ -919,24 +915,22 @@ fn generate_neon_native_i64_impl(ty: &I64VecType) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> int64x2_t {{
-                unsafe {{ vld1q_s64(data.as_ptr()) }}
+                crate::simd_storage::copy(data)
             }}
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> int64x2_t {{
-                unsafe {{ vld1q_s64(arr.as_ptr()) }}
+                crate::simd_storage::cast(arr)
             }}
 
             #[inline(always)]
             fn store(self, repr: int64x2_t, out: &mut {array}) {{
-                unsafe {{ vst1q_s64(out.as_mut_ptr(), repr) }};
+                crate::simd_storage::store(repr, out);
             }}
 
             #[inline(always)]
             fn to_array(self, repr: int64x2_t) -> {array} {{
-                let mut out = [0i64; {lanes}];
-                unsafe {{ vst1q_s64(out.as_mut_ptr(), repr) }};
-                out
+                crate::simd_storage::cast(repr)
             }}
 
             {arcane}
@@ -1059,7 +1053,6 @@ fn generate_neon_native_i64_impl(ty: &I64VecType) -> String {
 }
 
 fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
-    let lanes = ty.lanes;
     let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let repr = ty.neon_repr();
@@ -1112,28 +1105,22 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> {repr} {{
-                unsafe {{
-                    [{load_lanes}]
-                }}
+                crate::simd_storage::copy(data)
             }}
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {repr} {{
-                <Self as {trait_name}>::load(self, &arr)
+                crate::simd_storage::cast(arr)
             }}
 
             #[inline(always)]
             fn store(self, repr: {repr}, out: &mut {array}) {{
-                unsafe {{
-                    {store_lanes}
-                }}
+                crate::simd_storage::store(repr, out);
             }}
 
             #[inline(always)]
             fn to_array(self, repr: {repr}) -> {array} {{
-                let mut out = [0i64; {lanes}];
-                <Self as {trait_name}>::store(self, repr, &mut out);
-                out
+                crate::simd_storage::cast(repr)
             }}
 
             {arcane}
@@ -1218,14 +1205,6 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
             }}
         }}
     "#,
-
-        store_lanes = (0..sub_count)
-            .map(|i| format!("vst1q_s64(out.as_mut_ptr().add({}), repr[{i}]);", i * 2))
-            .collect::<Vec<_>>().join("\n            "),
-
-        load_lanes = (0..sub_count)
-            .map(|i| format!("vld1q_s64(data.as_ptr().add({}))", i * 2))
-            .collect::<Vec<_>>().join(", "),
         v2_copies = (0..sub_count).map(|_| "v2").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
         add = binary_op("vaddq_s64"),

@@ -2,13 +2,13 @@
 //!
 //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 //!
-//! # Safety (audit contract for remaining storage operations)
+//! # Safety (audit contract — checked backend boundaries)
 //!
 //! `#[arcane]` checks value intrinsics against the receiver token's features.
-//! Raw storage operations retain their explicit unsafe blocks;
-//! array references provide valid extents for unaligned loads/stores.
-//! Transmutes copy initialized numeric/vector bits; rustc checks size.
-//! These operations never manufacture a token.
+//! SSE2-only arithmetic uses the checked x86-64 baseline boundary.
+//! Whole-array loads/stores and bit casts use `crate::simd_storage` helpers,
+//! which require POD storage and enforce equal sizes at compile time.
+//! Token-bearing wrappers never implement the storage POD trait.
 
 #[cfg(target_arch = "aarch64")]
 use core::arch::aarch64::*;
@@ -34,24 +34,22 @@ impl F32x4Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[f32; 4]) -> float32x4_t {
-        unsafe { vld1q_f32(data.as_ptr()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [f32; 4]) -> float32x4_t {
-        <Self as F32x4Backend>::load(self, &arr)
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: float32x4_t, out: &mut [f32; 4]) {
-        unsafe { vst1q_f32(out.as_mut_ptr(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: float32x4_t) -> [f32; 4] {
-        let mut out = [0.0f32; 4];
-        <Self as F32x4Backend>::store(self, repr, &mut out);
-        out
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -254,12 +252,10 @@ impl F32x4Backend for archmage::NeonToken {
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn to_u8_bytes(self, a: float32x4_t) -> [u8; 4] {
-        unsafe {
-            let i16s = vqmovn_s32(vcvtnq_s32_f32(a));
-            let u8s = vqmovun_s16(vcombine_s16(i16s, i16s));
-            let bytes: [u8; 8] = core::mem::transmute(u8s);
-            [bytes[0], bytes[1], bytes[2], bytes[3]]
-        }
+        let i16s = vqmovn_s32(vcvtnq_s32_f32(a));
+        let u8s = vqmovun_s16(vcombine_s16(i16s, i16s));
+        let bytes: [u8; 8] = crate::simd_storage::cast(u8s);
+        [bytes[0], bytes[1], bytes[2], bytes[3]]
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -270,19 +266,17 @@ impl F32x4Backend for archmage::NeonToken {
         b: float32x4_t,
         a: float32x4_t,
     ) -> [u8; 16] {
-        unsafe {
-            let lo = vdupq_n_s32(0);
-            let hi = vdupq_n_s32(255);
-            let ri = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r), lo), hi));
-            let gi = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(g), lo), hi));
-            let bi = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(b), lo), hi));
-            let ai = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(a), lo), hi));
-            let pixels = vorrq_u32(
-                vorrq_u32(ri, vshlq_n_u32::<8>(gi)),
-                vorrq_u32(vshlq_n_u32::<16>(bi), vshlq_n_u32::<24>(ai)),
-            );
-            core::mem::transmute(vreinterpretq_u8_u32(pixels))
-        }
+        let lo = vdupq_n_s32(0);
+        let hi = vdupq_n_s32(255);
+        let ri = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r), lo), hi));
+        let gi = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(g), lo), hi));
+        let bi = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(b), lo), hi));
+        let ai = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(a), lo), hi));
+        let pixels = vorrq_u32(
+            vorrq_u32(ri, vshlq_n_u32::<8>(gi)),
+            vorrq_u32(vshlq_n_u32::<16>(bi), vshlq_n_u32::<24>(ai)),
+        );
+        crate::simd_storage::cast(vreinterpretq_u8_u32(pixels))
     }
 }
 
@@ -306,32 +300,22 @@ impl F32x8Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[f32; 8]) -> [float32x4_t; 2] {
-        unsafe {
-            [
-                vld1q_f32(data.as_ptr().add(0)),
-                vld1q_f32(data.as_ptr().add(4)),
-            ]
-        }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [f32; 8]) -> [float32x4_t; 2] {
-        <Self as F32x8Backend>::load(self, &arr)
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: [float32x4_t; 2], out: &mut [f32; 8]) {
-        unsafe {
-            vst1q_f32(out.as_mut_ptr().add(0), repr[0]);
-            vst1q_f32(out.as_mut_ptr().add(4), repr[1]);
-        }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: [float32x4_t; 2]) -> [f32; 8] {
-        let mut out = [0.0f32; 8];
-        <Self as F32x8Backend>::store(self, repr, &mut out);
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -597,12 +581,10 @@ impl F32x8Backend for archmage::NeonToken {
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn to_u8_bytes(self, a: [float32x4_t; 2]) -> [u8; 8] {
-        unsafe {
-            let i0 = vqmovn_s32(vcvtnq_s32_f32(a[0]));
-            let i1 = vqmovn_s32(vcvtnq_s32_f32(a[1]));
-            let u8s = vqmovun_s16(vcombine_s16(i0, i1));
-            core::mem::transmute(u8s)
-        }
+        let i0 = vqmovn_s32(vcvtnq_s32_f32(a[0]));
+        let i1 = vqmovn_s32(vcvtnq_s32_f32(a[1]));
+        let u8s = vqmovun_s16(vcombine_s16(i0, i1));
+        crate::simd_storage::cast(u8s)
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -613,27 +595,25 @@ impl F32x8Backend for archmage::NeonToken {
         b: [float32x4_t; 2],
         a: [float32x4_t; 2],
     ) -> [u8; 32] {
-        unsafe {
-            let lo = vdupq_n_s32(0);
-            let hi = vdupq_n_s32(255);
-            let r0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r[0]), lo), hi));
-            let g0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(g[0]), lo), hi));
-            let b0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(b[0]), lo), hi));
-            let a0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(a[0]), lo), hi));
-            let p0 = vorrq_u32(
-                vorrq_u32(r0, vshlq_n_u32::<8>(g0)),
-                vorrq_u32(vshlq_n_u32::<16>(b0), vshlq_n_u32::<24>(a0)),
-            );
-            let r1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r[1]), lo), hi));
-            let g1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(g[1]), lo), hi));
-            let b1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(b[1]), lo), hi));
-            let a1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(a[1]), lo), hi));
-            let p1 = vorrq_u32(
-                vorrq_u32(r1, vshlq_n_u32::<8>(g1)),
-                vorrq_u32(vshlq_n_u32::<16>(b1), vshlq_n_u32::<24>(a1)),
-            );
-            core::mem::transmute([vreinterpretq_u8_u32(p0), vreinterpretq_u8_u32(p1)])
-        }
+        let lo = vdupq_n_s32(0);
+        let hi = vdupq_n_s32(255);
+        let r0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r[0]), lo), hi));
+        let g0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(g[0]), lo), hi));
+        let b0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(b[0]), lo), hi));
+        let a0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(a[0]), lo), hi));
+        let p0 = vorrq_u32(
+            vorrq_u32(r0, vshlq_n_u32::<8>(g0)),
+            vorrq_u32(vshlq_n_u32::<16>(b0), vshlq_n_u32::<24>(a0)),
+        );
+        let r1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r[1]), lo), hi));
+        let g1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(g[1]), lo), hi));
+        let b1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(b[1]), lo), hi));
+        let a1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(a[1]), lo), hi));
+        let p1 = vorrq_u32(
+            vorrq_u32(r1, vshlq_n_u32::<8>(g1)),
+            vorrq_u32(vshlq_n_u32::<16>(b1), vshlq_n_u32::<24>(a1)),
+        );
+        crate::simd_storage::cast([vreinterpretq_u8_u32(p0), vreinterpretq_u8_u32(p1)])
     }
 }
 
@@ -653,24 +633,22 @@ impl F64x2Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[f64; 2]) -> float64x2_t {
-        unsafe { vld1q_f64(data.as_ptr()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [f64; 2]) -> float64x2_t {
-        <Self as F64x2Backend>::load(self, &arr)
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: float64x2_t, out: &mut [f64; 2]) {
-        unsafe { vst1q_f64(out.as_mut_ptr(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: float64x2_t) -> [f64; 2] {
-        let mut out = [0.0f64; 2];
-        <Self as F64x2Backend>::store(self, repr, &mut out);
-        out
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -888,32 +866,22 @@ impl F64x4Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[f64; 4]) -> [float64x2_t; 2] {
-        unsafe {
-            [
-                vld1q_f64(data.as_ptr().add(0)),
-                vld1q_f64(data.as_ptr().add(2)),
-            ]
-        }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [f64; 4]) -> [float64x2_t; 2] {
-        <Self as F64x4Backend>::load(self, &arr)
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: [float64x2_t; 2], out: &mut [f64; 4]) {
-        unsafe {
-            vst1q_f64(out.as_mut_ptr().add(0), repr[0]);
-            vst1q_f64(out.as_mut_ptr().add(2), repr[1]);
-        }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: [float64x2_t; 2]) -> [f64; 4] {
-        let mut out = [0.0f64; 4];
-        <Self as F64x4Backend>::store(self, repr, &mut out);
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -1197,24 +1165,22 @@ impl I32x4Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[i32; 4]) -> int32x4_t {
-        unsafe { vld1q_s32(data.as_ptr()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i32; 4]) -> int32x4_t {
-        unsafe { vld1q_s32(arr.as_ptr()) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: int32x4_t, out: &mut [i32; 4]) {
-        unsafe { vst1q_s32(out.as_mut_ptr(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: int32x4_t) -> [i32; 4] {
-        let mut out = [0i32; 4];
-        unsafe { vst1q_s32(out.as_mut_ptr(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -1383,32 +1349,22 @@ impl I32x8Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[i32; 8]) -> [int32x4_t; 2] {
-        unsafe {
-            [
-                vld1q_s32(data.as_ptr().add(0)),
-                vld1q_s32(data.as_ptr().add(4)),
-            ]
-        }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i32; 8]) -> [int32x4_t; 2] {
-        <Self as I32x8Backend>::load(self, &arr)
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: [int32x4_t; 2], out: &mut [i32; 8]) {
-        unsafe {
-            vst1q_s32(out.as_mut_ptr().add(0), repr[0]);
-            vst1q_s32(out.as_mut_ptr().add(4), repr[1]);
-        }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: [int32x4_t; 2]) -> [i32; 8] {
-        let mut out = [0i32; 8];
-        <Self as I32x8Backend>::store(self, repr, &mut out);
-        out
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -1615,24 +1571,22 @@ impl U32x4Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[u32; 4]) -> uint32x4_t {
-        unsafe { vld1q_u32(data.as_ptr()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u32; 4]) -> uint32x4_t {
-        unsafe { vld1q_u32(arr.as_ptr()) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: uint32x4_t, out: &mut [u32; 4]) {
-        unsafe { vst1q_u32(out.as_mut_ptr(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: uint32x4_t) -> [u32; 4] {
-        let mut out = [0u32; 4];
-        unsafe { vst1q_u32(out.as_mut_ptr(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -1776,32 +1730,22 @@ impl U32x8Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[u32; 8]) -> [uint32x4_t; 2] {
-        unsafe {
-            [
-                vld1q_u32(data.as_ptr().add(0)),
-                vld1q_u32(data.as_ptr().add(4)),
-            ]
-        }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u32; 8]) -> [uint32x4_t; 2] {
-        <Self as U32x8Backend>::load(self, &arr)
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: [uint32x4_t; 2], out: &mut [u32; 8]) {
-        unsafe {
-            vst1q_u32(out.as_mut_ptr().add(0), repr[0]);
-            vst1q_u32(out.as_mut_ptr().add(4), repr[1]);
-        }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: [uint32x4_t; 2]) -> [u32; 8] {
-        let mut out = [0u32; 8];
-        <Self as U32x8Backend>::store(self, repr, &mut out);
-        out
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -1967,24 +1911,22 @@ impl I64x2Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[i64; 2]) -> int64x2_t {
-        unsafe { vld1q_s64(data.as_ptr()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i64; 2]) -> int64x2_t {
-        unsafe { vld1q_s64(arr.as_ptr()) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: int64x2_t, out: &mut [i64; 2]) {
-        unsafe { vst1q_s64(out.as_mut_ptr(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: int64x2_t) -> [i64; 2] {
-        let mut out = [0i64; 2];
-        unsafe { vst1q_s64(out.as_mut_ptr(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -2133,32 +2075,22 @@ impl I64x4Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[i64; 4]) -> [int64x2_t; 2] {
-        unsafe {
-            [
-                vld1q_s64(data.as_ptr().add(0)),
-                vld1q_s64(data.as_ptr().add(2)),
-            ]
-        }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i64; 4]) -> [int64x2_t; 2] {
-        <Self as I64x4Backend>::load(self, &arr)
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: [int64x2_t; 2], out: &mut [i64; 4]) {
-        unsafe {
-            vst1q_s64(out.as_mut_ptr().add(0), repr[0]);
-            vst1q_s64(out.as_mut_ptr().add(2), repr[1]);
-        }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: [int64x2_t; 2]) -> [i64; 4] {
-        let mut out = [0i64; 4];
-        <Self as I64x4Backend>::store(self, repr, &mut out);
-        out
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -2357,24 +2289,22 @@ impl I8x16Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[i8; 16]) -> int8x16_t {
-        unsafe { vld1q_s8(data.as_ptr()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i8; 16]) -> int8x16_t {
-        unsafe { vld1q_s8(arr.as_ptr()) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: int8x16_t, out: &mut [i8; 16]) {
-        unsafe { vst1q_s8(out.as_mut_ptr(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: int8x16_t) -> [i8; 16] {
-        let mut out = [0i8; 16];
-        unsafe { vst1q_s8(out.as_mut_ptr(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -2506,13 +2436,13 @@ impl I8x16Backend for archmage::NeonToken {
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: int8x16_t) -> u32 {
-        unsafe {
+        {
             // Shift each byte right by 7 to isolate sign bit
             let bits = vshrq_n_s8::<7>(a);
             // Use polynomial evaluation to pack bits
             // Each byte is now 0 or 1, multiply by position powers of 2
             let powers: [u8; 16] = [1, 2, 4, 8, 16, 32, 64, 128, 1, 2, 4, 8, 16, 32, 64, 128];
-            let pow_vec = vld1q_u8(powers.as_ptr());
+            let pow_vec = crate::simd_storage::copy(&powers);
             let weighted = vmulq_u8(vreinterpretq_u8_s8(bits), pow_vec);
             // Sum pairs: add adjacent bytes
             let pair_sum = vpaddlq_u8(weighted);
@@ -2544,32 +2474,22 @@ impl I8x32Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[i8; 32]) -> [int8x16_t; 2] {
-        unsafe {
-            [
-                vld1q_s8(data.as_ptr().add(0)),
-                vld1q_s8(data.as_ptr().add(16)),
-            ]
-        }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i8; 32]) -> [int8x16_t; 2] {
-        <Self as I8x32Backend>::load(self, &arr)
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: [int8x16_t; 2], out: &mut [i8; 32]) {
-        unsafe {
-            vst1q_s8(out.as_mut_ptr().add(0), repr[0]);
-            vst1q_s8(out.as_mut_ptr().add(16), repr[1]);
-        }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: [int8x16_t; 2]) -> [i8; 32] {
-        let mut out = [0i8; 32];
-        <Self as I8x32Backend>::store(self, repr, &mut out);
-        out
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -2780,24 +2700,22 @@ impl U8x16Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[u8; 16]) -> uint8x16_t {
-        unsafe { vld1q_u8(data.as_ptr()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u8; 16]) -> uint8x16_t {
-        unsafe { vld1q_u8(arr.as_ptr()) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: uint8x16_t, out: &mut [u8; 16]) {
-        unsafe { vst1q_u8(out.as_mut_ptr(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: uint8x16_t) -> [u8; 16] {
-        let mut out = [0u8; 16];
-        unsafe { vst1q_u8(out.as_mut_ptr(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -2908,13 +2826,13 @@ impl U8x16Backend for archmage::NeonToken {
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: uint8x16_t) -> u32 {
-        unsafe {
+        {
             // Shift each byte right by 7 to isolate sign bit
             let bits = vshrq_n_u8::<7>(a);
             // Use polynomial evaluation to pack bits
             // Each byte is now 0 or 1, multiply by position powers of 2
             let powers: [u8; 16] = [1, 2, 4, 8, 16, 32, 64, 128, 1, 2, 4, 8, 16, 32, 64, 128];
-            let pow_vec = vld1q_u8(powers.as_ptr());
+            let pow_vec = crate::simd_storage::copy(&powers);
             let weighted = vmulq_u8(bits, pow_vec);
             // Sum pairs: add adjacent bytes
             let pair_sum = vpaddlq_u8(weighted);
@@ -2946,32 +2864,22 @@ impl U8x32Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[u8; 32]) -> [uint8x16_t; 2] {
-        unsafe {
-            [
-                vld1q_u8(data.as_ptr().add(0)),
-                vld1q_u8(data.as_ptr().add(16)),
-            ]
-        }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u8; 32]) -> [uint8x16_t; 2] {
-        <Self as U8x32Backend>::load(self, &arr)
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: [uint8x16_t; 2], out: &mut [u8; 32]) {
-        unsafe {
-            vst1q_u8(out.as_mut_ptr().add(0), repr[0]);
-            vst1q_u8(out.as_mut_ptr().add(16), repr[1]);
-        }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: [uint8x16_t; 2]) -> [u8; 32] {
-        let mut out = [0u8; 32];
-        <Self as U8x32Backend>::store(self, repr, &mut out);
-        out
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -3138,24 +3046,22 @@ impl I16x8Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[i16; 8]) -> int16x8_t {
-        unsafe { vld1q_s16(data.as_ptr()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i16; 8]) -> int16x8_t {
-        unsafe { vld1q_s16(arr.as_ptr()) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: int16x8_t, out: &mut [i16; 8]) {
-        unsafe { vst1q_s16(out.as_mut_ptr(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: int16x8_t) -> [i16; 8] {
-        let mut out = [0i16; 8];
-        unsafe { vst1q_s16(out.as_mut_ptr(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -3323,32 +3229,22 @@ impl I16x16Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[i16; 16]) -> [int16x8_t; 2] {
-        unsafe {
-            [
-                vld1q_s16(data.as_ptr().add(0)),
-                vld1q_s16(data.as_ptr().add(8)),
-            ]
-        }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i16; 16]) -> [int16x8_t; 2] {
-        <Self as I16x16Backend>::load(self, &arr)
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: [int16x8_t; 2], out: &mut [i16; 16]) {
-        unsafe {
-            vst1q_s16(out.as_mut_ptr().add(0), repr[0]);
-            vst1q_s16(out.as_mut_ptr().add(8), repr[1]);
-        }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: [int16x8_t; 2]) -> [i16; 16] {
-        let mut out = [0i16; 16];
-        <Self as I16x16Backend>::store(self, repr, &mut out);
-        out
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -3569,24 +3465,22 @@ impl U16x8Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[u16; 8]) -> uint16x8_t {
-        unsafe { vld1q_u16(data.as_ptr()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u16; 8]) -> uint16x8_t {
-        unsafe { vld1q_u16(arr.as_ptr()) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: uint16x8_t, out: &mut [u16; 8]) {
-        unsafe { vst1q_u16(out.as_mut_ptr(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: uint16x8_t) -> [u16; 8] {
-        let mut out = [0u16; 8];
-        unsafe { vst1q_u16(out.as_mut_ptr(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -3730,32 +3624,22 @@ impl U16x16Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[u16; 16]) -> [uint16x8_t; 2] {
-        unsafe {
-            [
-                vld1q_u16(data.as_ptr().add(0)),
-                vld1q_u16(data.as_ptr().add(8)),
-            ]
-        }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u16; 16]) -> [uint16x8_t; 2] {
-        <Self as U16x16Backend>::load(self, &arr)
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: [uint16x8_t; 2], out: &mut [u16; 16]) {
-        unsafe {
-            vst1q_u16(out.as_mut_ptr().add(0), repr[0]);
-            vst1q_u16(out.as_mut_ptr().add(8), repr[1]);
-        }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: [uint16x8_t; 2]) -> [u16; 16] {
-        let mut out = [0u16; 16];
-        <Self as U16x16Backend>::store(self, repr, &mut out);
-        out
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -3926,24 +3810,22 @@ impl U64x2Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[u64; 2]) -> uint64x2_t {
-        unsafe { vld1q_u64(data.as_ptr()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u64; 2]) -> uint64x2_t {
-        unsafe { vld1q_u64(arr.as_ptr()) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: uint64x2_t, out: &mut [u64; 2]) {
-        unsafe { vst1q_u64(out.as_mut_ptr(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: uint64x2_t) -> [u64; 2] {
-        let mut out = [0u64; 2];
-        unsafe { vst1q_u64(out.as_mut_ptr(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -4060,32 +3942,22 @@ impl U64x4Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn load(self, data: &[u64; 4]) -> [uint64x2_t; 2] {
-        unsafe {
-            [
-                vld1q_u64(data.as_ptr().add(0)),
-                vld1q_u64(data.as_ptr().add(2)),
-            ]
-        }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u64; 4]) -> [uint64x2_t; 2] {
-        <Self as U64x4Backend>::load(self, &arr)
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: [uint64x2_t; 2], out: &mut [u64; 4]) {
-        unsafe {
-            vst1q_u64(out.as_mut_ptr().add(0), repr[0]);
-            vst1q_u64(out.as_mut_ptr().add(2), repr[1]);
-        }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: [uint64x2_t; 2]) -> [u64; 4] {
-        let mut out = [0u64; 4];
-        <Self as U64x4Backend>::store(self, repr, &mut out);
-        out
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -4388,73 +4260,73 @@ impl I64x4Bitcast for archmage::NeonToken {
 
 #[cfg(target_arch = "aarch64")]
 impl I8x16Bitcast for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_i8_to_u8(self, a: int8x16_t) -> uint8x16_t {
-        unsafe { vreinterpretq_u8_s8(a) }
+        vreinterpretq_u8_s8(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_u8_to_i8(self, a: uint8x16_t) -> int8x16_t {
-        unsafe { vreinterpretq_s8_u8(a) }
+        vreinterpretq_s8_u8(a)
     }
 }
 
 #[cfg(target_arch = "aarch64")]
 impl I8x32Bitcast for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_i8_to_u8(self, a: [int8x16_t; 2]) -> [uint8x16_t; 2] {
-        unsafe { [vreinterpretq_u8_s8(a[0]), vreinterpretq_u8_s8(a[1])] }
+        [vreinterpretq_u8_s8(a[0]), vreinterpretq_u8_s8(a[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_u8_to_i8(self, a: [uint8x16_t; 2]) -> [int8x16_t; 2] {
-        unsafe { [vreinterpretq_s8_u8(a[0]), vreinterpretq_s8_u8(a[1])] }
+        [vreinterpretq_s8_u8(a[0]), vreinterpretq_s8_u8(a[1])]
     }
 }
 
 #[cfg(target_arch = "aarch64")]
 impl I16x8Bitcast for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_i16_to_u16(self, a: int16x8_t) -> uint16x8_t {
-        unsafe { vreinterpretq_u16_s16(a) }
+        vreinterpretq_u16_s16(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_u16_to_i16(self, a: uint16x8_t) -> int16x8_t {
-        unsafe { vreinterpretq_s16_u16(a) }
+        vreinterpretq_s16_u16(a)
     }
 }
 
 #[cfg(target_arch = "aarch64")]
 impl I16x16Bitcast for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_i16_to_u16(self, a: [int16x8_t; 2]) -> [uint16x8_t; 2] {
-        unsafe { [vreinterpretq_u16_s16(a[0]), vreinterpretq_u16_s16(a[1])] }
+        [vreinterpretq_u16_s16(a[0]), vreinterpretq_u16_s16(a[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_u16_to_i16(self, a: [uint16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe { [vreinterpretq_s16_u16(a[0]), vreinterpretq_s16_u16(a[1])] }
+        [vreinterpretq_s16_u16(a[0]), vreinterpretq_s16_u16(a[1])]
     }
 }
 
 #[cfg(target_arch = "aarch64")]
 impl U64x2Bitcast for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_u64_to_i64(self, a: uint64x2_t) -> int64x2_t {
-        unsafe { vreinterpretq_s64_u64(a) }
+        vreinterpretq_s64_u64(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_i64_to_u64(self, a: int64x2_t) -> uint64x2_t {
-        unsafe { vreinterpretq_u64_s64(a) }
+        vreinterpretq_u64_s64(a)
     }
 }
 
 #[cfg(target_arch = "aarch64")]
 impl U64x4Bitcast for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_u64_to_i64(self, a: [uint64x2_t; 2]) -> [int64x2_t; 2] {
-        unsafe { [vreinterpretq_s64_u64(a[0]), vreinterpretq_s64_u64(a[1])] }
+        [vreinterpretq_s64_u64(a[0]), vreinterpretq_s64_u64(a[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_i64_to_u64(self, a: [int64x2_t; 2]) -> [uint64x2_t; 2] {
-        unsafe { [vreinterpretq_u64_s64(a[0]), vreinterpretq_u64_s64(a[1])] }
+        [vreinterpretq_u64_s64(a[0]), vreinterpretq_u64_s64(a[1])]
     }
 }
 

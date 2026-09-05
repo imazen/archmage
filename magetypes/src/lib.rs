@@ -55,6 +55,8 @@ pub use archmage;
 pub mod nostd_math;
 
 // SimdTypes trait - associates SIMD types with tokens
+#[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+mod simd_storage;
 mod types;
 pub use types::SimdTypes;
 

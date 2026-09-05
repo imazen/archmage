@@ -2,13 +2,13 @@
 //!
 //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 //!
-//! # Safety (audit contract for remaining storage operations)
+//! # Safety (audit contract — checked backend boundaries)
 //!
 //! `#[arcane]` checks value intrinsics against the receiver token's features.
-//! Raw storage operations retain their explicit unsafe blocks;
-//! array references provide valid extents for unaligned loads/stores.
-//! Transmutes copy initialized numeric/vector bits; rustc checks size.
-//! These operations never manufacture a token.
+//! SSE2-only arithmetic uses the checked x86-64 baseline boundary.
+//! Whole-array loads/stores and bit casts use `crate::simd_storage` helpers,
+//! which require POD storage and enforce equal sizes at compile time.
+//! Token-bearing wrappers never implement the storage POD trait.
 
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::*;
@@ -50,25 +50,22 @@ impl F32x4Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn load(self, data: &[f32; 4]) -> __m128 {
-        unsafe { _mm_loadu_ps(data.as_ptr()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [f32; 4]) -> __m128 {
-        // SAFETY: [f32; 4] and __m128 have identical size and layout.
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m128, out: &mut [f32; 4]) {
-        unsafe { _mm_storeu_ps(out.as_mut_ptr(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m128) -> [f32; 4] {
-        let mut out = [0.0f32; 4];
-        unsafe { _mm_storeu_ps(out.as_mut_ptr(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -307,14 +304,12 @@ impl F32x4Backend for archmage::X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn store_rgba_bytes(self, r: __m128, g: __m128, b: __m128, a: __m128) -> [u8; 16] {
-        unsafe {
-            let rg = _mm_packs_epi32(_mm_cvtps_epi32(r), _mm_cvtps_epi32(g));
-            let ba = _mm_packs_epi32(_mm_cvtps_epi32(b), _mm_cvtps_epi32(a));
-            // [R0-3,G0-3,B0-3,A0-3] -> interleaved RGBA pixels 0-3.
-            let packed = _mm_packus_epi16(rg, ba);
-            let shuf = _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
-            core::mem::transmute(_mm_shuffle_epi8(packed, shuf))
-        }
+        let rg = _mm_packs_epi32(_mm_cvtps_epi32(r), _mm_cvtps_epi32(g));
+        let ba = _mm_packs_epi32(_mm_cvtps_epi32(b), _mm_cvtps_epi32(a));
+        // [R0-3,G0-3,B0-3,A0-3] -> interleaved RGBA pixels 0-3.
+        let packed = _mm_packus_epi16(rg, ba);
+        let shuf = _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
+        crate::simd_storage::cast(_mm_shuffle_epi8(packed, shuf))
     }
 }
 
@@ -336,25 +331,22 @@ impl F32x8Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn load(self, data: &[f32; 8]) -> __m256 {
-        unsafe { _mm256_loadu_ps(data.as_ptr()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [f32; 8]) -> __m256 {
-        // SAFETY: [f32; 8] and __m256 have identical size and layout.
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m256, out: &mut [f32; 8]) {
-        unsafe { _mm256_storeu_ps(out.as_mut_ptr(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m256) -> [f32; 8] {
-        let mut out = [0.0f32; 8];
-        unsafe { _mm256_storeu_ps(out.as_mut_ptr(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -597,17 +589,15 @@ impl F32x8Backend for archmage::X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn store_rgba_bytes(self, r: __m256, g: __m256, b: __m256, a: __m256) -> [u8; 32] {
-        unsafe {
-            // AVX2 packs are lane-wise: lane0 holds pixels 0-3, lane1 4-7.
-            let rg = _mm256_packs_epi32(_mm256_cvtps_epi32(r), _mm256_cvtps_epi32(g));
-            let ba = _mm256_packs_epi32(_mm256_cvtps_epi32(b), _mm256_cvtps_epi32(a));
-            let packed = _mm256_packus_epi16(rg, ba);
-            let shuf = _mm256_setr_epi8(
-                0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15, 0, 4, 8, 12, 1, 5, 9, 13, 2,
-                6, 10, 14, 3, 7, 11, 15,
-            );
-            core::mem::transmute(_mm256_shuffle_epi8(packed, shuf))
-        }
+        // AVX2 packs are lane-wise: lane0 holds pixels 0-3, lane1 4-7.
+        let rg = _mm256_packs_epi32(_mm256_cvtps_epi32(r), _mm256_cvtps_epi32(g));
+        let ba = _mm256_packs_epi32(_mm256_cvtps_epi32(b), _mm256_cvtps_epi32(a));
+        let packed = _mm256_packus_epi16(rg, ba);
+        let shuf = _mm256_setr_epi8(
+            0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15, 0, 4, 8, 12, 1, 5, 9, 13, 2, 6,
+            10, 14, 3, 7, 11, 15,
+        );
+        crate::simd_storage::cast(_mm256_shuffle_epi8(packed, shuf))
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -659,25 +649,22 @@ impl F64x2Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn load(self, data: &[f64; 2]) -> __m128d {
-        unsafe { _mm_loadu_pd(data.as_ptr()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [f64; 2]) -> __m128d {
-        // SAFETY: [f64; 2] and __m128d have identical size and layout.
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m128d, out: &mut [f64; 2]) {
-        unsafe { _mm_storeu_pd(out.as_mut_ptr(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m128d) -> [f64; 2] {
-        let mut out = [0.0f64; 2];
-        unsafe { _mm_storeu_pd(out.as_mut_ptr(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -896,25 +883,22 @@ impl F64x4Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn load(self, data: &[f64; 4]) -> __m256d {
-        unsafe { _mm256_loadu_pd(data.as_ptr()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [f64; 4]) -> __m256d {
-        // SAFETY: [f64; 4] and __m256d have identical size and layout.
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m256d, out: &mut [f64; 4]) {
-        unsafe { _mm256_storeu_pd(out.as_mut_ptr(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m256d) -> [f64; 4] {
-        let mut out = [0.0f64; 4];
-        unsafe { _mm256_storeu_pd(out.as_mut_ptr(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -1135,25 +1119,22 @@ impl I32x4Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn load(self, data: &[i32; 4]) -> __m128i {
-        unsafe { _mm_loadu_si128(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i32; 4]) -> __m128i {
-        // SAFETY: [i32; 4] and __m128i have identical size and layout.
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m128i, out: &mut [i32; 4]) {
-        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m128i) -> [i32; 4] {
-        let mut out = [0i32; 4];
-        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -1350,25 +1331,22 @@ impl I32x8Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn load(self, data: &[i32; 8]) -> __m256i {
-        unsafe { _mm256_loadu_si256(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i32; 8]) -> __m256i {
-        // SAFETY: [i32; 8] and __m256i have identical size and layout.
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m256i, out: &mut [i32; 8]) {
-        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m256i) -> [i32; 8] {
-        let mut out = [0i32; 8];
-        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -1562,25 +1540,22 @@ impl U32x4Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn load(self, data: &[u32; 4]) -> __m128i {
-        unsafe { _mm_loadu_si128(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u32; 4]) -> __m128i {
-        // SAFETY: [u32; 4] and __m128i have identical size and layout.
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m128i, out: &mut [u32; 4]) {
-        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m128i) -> [u32; 4] {
-        let mut out = [0u32; 4];
-        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -1763,25 +1738,22 @@ impl U32x8Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn load(self, data: &[u32; 8]) -> __m256i {
-        unsafe { _mm256_loadu_si256(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u32; 8]) -> __m256i {
-        // SAFETY: [u32; 8] and __m256i have identical size and layout.
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m256i, out: &mut [u32; 8]) {
-        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m256i) -> [u32; 8] {
-        let mut out = [0u32; 8];
-        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -1961,25 +1933,22 @@ impl I64x2Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn load(self, data: &[i64; 2]) -> __m128i {
-        unsafe { _mm_loadu_si128(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i64; 2]) -> __m128i {
-        // SAFETY: [i64; 2] and __m128i have identical size and layout.
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m128i, out: &mut [i64; 2]) {
-        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m128i) -> [i64; 2] {
-        let mut out = [0i64; 2];
-        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -2075,11 +2044,11 @@ impl I64x2Backend for archmage::X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn reduce_add(self, a: __m128i) -> i64 {
-        unsafe {
+        {
             let hi = _mm_unpackhi_epi64(a, a);
             let sum = _mm_add_epi64(a, hi);
             // Extract low 64-bit lane
-            core::mem::transmute::<__m128i, [i64; 2]>(sum)[0]
+            crate::simd_storage::cast::<__m128i, [i64; 2]>(sum)[0]
         }
     }
 
@@ -2173,25 +2142,22 @@ impl I64x4Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn load(self, data: &[i64; 4]) -> __m256i {
-        unsafe { _mm256_loadu_si256(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i64; 4]) -> __m256i {
-        // SAFETY: [i64; 4] and __m256i have identical size and layout.
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m256i, out: &mut [i64; 4]) {
-        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m256i) -> [i64; 4] {
-        let mut out = [0i64; 4];
-        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -2285,13 +2251,13 @@ impl I64x4Backend for archmage::X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn reduce_add(self, a: __m256i) -> i64 {
-        unsafe {
+        {
             let lo = _mm256_castsi256_si128(a);
             let hi = _mm256_extracti128_si256::<1>(a);
             let sum = _mm_add_epi64(lo, hi);
             let hi2 = _mm_unpackhi_epi64(sum, sum);
             let sum2 = _mm_add_epi64(sum, hi2);
-            core::mem::transmute::<__m128i, [i64; 2]>(sum2)[0]
+            crate::simd_storage::cast::<__m128i, [i64; 2]>(sum2)[0]
         }
     }
 
@@ -2381,24 +2347,22 @@ impl I8x16Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn load(self, data: &[i8; 16]) -> __m128i {
-        unsafe { _mm_loadu_si128(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i8; 16]) -> __m128i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m128i, out: &mut [i8; 16]) {
-        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m128i) -> [i8; 16] {
-        let mut out = [0i8; 16];
-        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -2620,24 +2584,22 @@ impl I8x32Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn load(self, data: &[i8; 32]) -> __m256i {
-        unsafe { _mm256_loadu_si256(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i8; 32]) -> __m256i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m256i, out: &mut [i8; 32]) {
-        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m256i) -> [i8; 32] {
-        let mut out = [0i8; 32];
-        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -2854,24 +2816,22 @@ impl U8x16Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn load(self, data: &[u8; 16]) -> __m128i {
-        unsafe { _mm_loadu_si128(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u8; 16]) -> __m128i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m128i, out: &mut [u8; 16]) {
-        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m128i) -> [u8; 16] {
-        let mut out = [0u8; 16];
-        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -3059,24 +3019,22 @@ impl U8x32Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn load(self, data: &[u8; 32]) -> __m256i {
-        unsafe { _mm256_loadu_si256(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u8; 32]) -> __m256i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m256i, out: &mut [u8; 32]) {
-        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m256i) -> [u8; 32] {
-        let mut out = [0u8; 32];
-        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -3258,24 +3216,22 @@ impl I16x8Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn load(self, data: &[i16; 8]) -> __m128i {
-        unsafe { _mm_loadu_si128(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i16; 8]) -> __m128i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m128i, out: &mut [i16; 8]) {
-        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m128i) -> [i16; 8] {
-        let mut out = [0i16; 8];
-        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -3474,24 +3430,22 @@ impl I16x16Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn load(self, data: &[i16; 16]) -> __m256i {
-        unsafe { _mm256_loadu_si256(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i16; 16]) -> __m256i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m256i, out: &mut [i16; 16]) {
-        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m256i) -> [i16; 16] {
-        let mut out = [0i16; 16];
-        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -3687,24 +3641,22 @@ impl U16x8Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn load(self, data: &[u16; 8]) -> __m128i {
-        unsafe { _mm_loadu_si128(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u16; 8]) -> __m128i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m128i, out: &mut [u16; 8]) {
-        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m128i) -> [u16; 8] {
-        let mut out = [0u16; 8];
-        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -3888,24 +3840,22 @@ impl U16x16Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn load(self, data: &[u16; 16]) -> __m256i {
-        unsafe { _mm256_loadu_si256(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u16; 16]) -> __m256i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m256i, out: &mut [u16; 16]) {
-        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m256i) -> [u16; 16] {
-        let mut out = [0u16; 16];
-        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -4086,24 +4036,22 @@ impl U64x2Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn load(self, data: &[u64; 2]) -> __m128i {
-        unsafe { _mm_loadu_si128(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u64; 2]) -> __m128i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m128i, out: &mut [u64; 2]) {
-        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m128i) -> [u64; 2] {
-        let mut out = [0u64; 2];
-        unsafe { _mm_storeu_si128(out.as_mut_ptr().cast(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -4265,24 +4213,22 @@ impl U64x4Backend for archmage::X64V3Token {
 
     #[inline(always)]
     fn load(self, data: &[u64; 4]) -> __m256i {
-        unsafe { _mm256_loadu_si256(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u64; 4]) -> __m256i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m256i, out: &mut [u64; 4]) {
-        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m256i) -> [u64; 4] {
-        let mut out = [0u64; 4];
-        unsafe { _mm256_storeu_si256(out.as_mut_ptr().cast(), repr) };
-        out
+        crate::simd_storage::cast(repr)
     }
 
     // ====== Arithmetic ======
@@ -4590,11 +4536,11 @@ impl I64x4Bitcast for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl I8x16Bitcast for archmage::X64V3Token {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_i8_to_u8(self, a: __m128i) -> __m128i {
         a
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_u8_to_i8(self, a: __m128i) -> __m128i {
         a
     }
@@ -4602,11 +4548,11 @@ impl I8x16Bitcast for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl I8x32Bitcast for archmage::X64V3Token {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_i8_to_u8(self, a: __m256i) -> __m256i {
         a
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_u8_to_i8(self, a: __m256i) -> __m256i {
         a
     }
@@ -4614,11 +4560,11 @@ impl I8x32Bitcast for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl I16x8Bitcast for archmage::X64V3Token {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_i16_to_u16(self, a: __m128i) -> __m128i {
         a
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_u16_to_i16(self, a: __m128i) -> __m128i {
         a
     }
@@ -4626,11 +4572,11 @@ impl I16x8Bitcast for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl I16x16Bitcast for archmage::X64V3Token {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_i16_to_u16(self, a: __m256i) -> __m256i {
         a
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_u16_to_i16(self, a: __m256i) -> __m256i {
         a
     }
@@ -4638,11 +4584,11 @@ impl I16x16Bitcast for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl U64x2Bitcast for archmage::X64V3Token {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_u64_to_i64(self, a: __m128i) -> __m128i {
         a
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_i64_to_u64(self, a: __m128i) -> __m128i {
         a
     }
@@ -4650,11 +4596,11 @@ impl U64x2Bitcast for archmage::X64V3Token {
 
 #[cfg(target_arch = "x86_64")]
 impl U64x4Bitcast for archmage::X64V3Token {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_u64_to_i64(self, a: __m256i) -> __m256i {
         a
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_i64_to_u64(self, a: __m256i) -> __m256i {
         a
     }

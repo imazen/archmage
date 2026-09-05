@@ -2402,22 +2402,22 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> {inner} {{
-                unsafe {{ _mm512_loadu_{s}(data.as_ptr()) }}
+                crate::simd_storage::copy(data)
             }}
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {inner} {{
-                unsafe {{ core::mem::transmute(arr) }}
+                crate::simd_storage::cast(arr)
             }}
 
             #[inline(always)]
             fn store(self, repr: {inner}, out: &mut {array}) {{
-                unsafe {{ _mm512_storeu_{s}(out.as_mut_ptr(), repr) }}
+                crate::simd_storage::store(repr, out);
             }}
 
             #[inline(always)]
             fn to_array(self, repr: {inner}) -> {array} {{
-                unsafe {{ core::mem::transmute(repr) }}
+                crate::simd_storage::cast(repr)
             }}
 
             {arcane}
@@ -2726,22 +2726,22 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> __m512i {{
-                unsafe {{ _mm512_loadu_si512(data.as_ptr().cast()) }}
+                crate::simd_storage::copy(data)
             }}
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> __m512i {{
-                unsafe {{ core::mem::transmute(arr) }}
+                crate::simd_storage::cast(arr)
             }}
 
             #[inline(always)]
             fn store(self, repr: __m512i, out: &mut {array}) {{
-                unsafe {{ _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }}
+                crate::simd_storage::store(repr, out);
             }}
 
             #[inline(always)]
             fn to_array(self, repr: __m512i) -> {array} {{
-                unsafe {{ core::mem::transmute(repr) }}
+                crate::simd_storage::cast(repr)
             }}
 
             {arcane}
@@ -2812,7 +2812,7 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
             {arcane}
             fn reduce_add(self, a: __m512i) -> {elem} {{
                 // No native integer reduce_add in AVX-512; use transmute to array
-                let arr: {array} = unsafe {{ core::mem::transmute(a) }};
+                let arr: {array} = crate::simd_storage::cast(a);
                 arr.iter().copied().fold(0{elem}, {elem}::wrapping_add)
             }}
 

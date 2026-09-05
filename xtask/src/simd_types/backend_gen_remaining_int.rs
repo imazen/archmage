@@ -638,7 +638,6 @@ pub(super) fn generate_x86_int_impls(
 }
 
 fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
-    let lanes = ty.lanes;
     let arcane = super::backend_syntax::arcane(token);
     let baseline = super::backend_syntax::sse2_or_arcane(token, ty.width_bits);
     let baseline_end = if ty.width_bits == 128 { "}" } else { "" };
@@ -673,24 +672,22 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> {inner} {{
-                unsafe {{ {p}_loadu_si{bits}(data.as_ptr().cast()) }}
+                crate::simd_storage::copy(data)
             }}
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {inner} {{
-                unsafe {{ core::mem::transmute(arr) }}
+                crate::simd_storage::cast(arr)
             }}
 
             #[inline(always)]
             fn store(self, repr: {inner}, out: &mut {array}) {{
-                unsafe {{ {p}_storeu_si{bits}(out.as_mut_ptr().cast(), repr) }};
+                crate::simd_storage::store(repr, out);
             }}
 
             #[inline(always)]
             fn to_array(self, repr: {inner}) -> {array} {{
-                let mut out = [0{elem}; {lanes}];
-                unsafe {{ {p}_storeu_si{bits}(out.as_mut_ptr().cast(), repr) }};
-                out
+                crate::simd_storage::cast(repr)
             }}
 
             // ====== Arithmetic ======
@@ -1620,7 +1617,6 @@ pub(super) fn generate_neon_int_impls(types: &[IntVecType]) -> String {
 }
 
 fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
-    let lanes = ty.lanes;
     let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let array = ty.array_type();
@@ -1708,24 +1704,22 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> {nt} {{
-                unsafe {{ vld1q_{ns}(data.as_ptr()) }}
+                crate::simd_storage::copy(data)
             }}
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {nt} {{
-                unsafe {{ vld1q_{ns}(arr.as_ptr()) }}
+                crate::simd_storage::cast(arr)
             }}
 
             #[inline(always)]
             fn store(self, repr: {nt}, out: &mut {array}) {{
-                unsafe {{ vst1q_{ns}(out.as_mut_ptr(), repr) }};
+                crate::simd_storage::store(repr, out);
             }}
 
             #[inline(always)]
             fn to_array(self, repr: {nt}) -> {array} {{
-                let mut out = [0{elem}; {lanes}];
-                unsafe {{ vst1q_{ns}(out.as_mut_ptr(), repr) }};
-                out
+                crate::simd_storage::cast(repr)
             }}
 
             {arcane}
@@ -2003,13 +1997,13 @@ fn generate_neon_bitmask(ty: &IntVecType) -> String {
             // For NEON, we use a scalar-ish approach: shift right by 7, then
             // pack down and extract.
             formatdoc! {r#"
-                unsafe {{
+                {{
                     // Shift each byte right by 7 to isolate sign bit
                     let bits = vshrq_n_{ns}::<7>(a);
                     // Use polynomial evaluation to pack bits
                     // Each byte is now 0 or 1, multiply by position powers of 2
                     let powers: [u8; 16] = [1,2,4,8,16,32,64,128, 1,2,4,8,16,32,64,128];
-                    let pow_vec = vld1q_u8(powers.as_ptr());
+                    let pow_vec = crate::simd_storage::copy(&powers);
                     let weighted = vmulq_u8({reinterpret}bits{rparen}, pow_vec);
                     // Sum pairs: add adjacent bytes
                     let pair_sum = vpaddlq_u8(weighted);
@@ -2044,7 +2038,6 @@ fn generate_neon_bitmask(ty: &IntVecType) -> String {
 }
 
 fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
-    let lanes = ty.lanes;
     let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let repr = ty.neon_repr();
@@ -2054,21 +2047,6 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
     let _nt = ty.neon_native_type();
     let sub_count = ty.sub_count();
     let lanes_per_128 = ty.lanes_per_128();
-    let load_lanes: Vec<String> = (0..sub_count)
-        .map(|i| {
-            let offset = i * lanes_per_128;
-            format!("vld1q_{ns}(data.as_ptr().add({offset}))")
-        })
-        .collect();
-    let load_body = load_lanes.join(", ");
-
-    let store_lines: Vec<String> = (0..sub_count)
-        .map(|i| {
-            let offset = i * lanes_per_128;
-            format!("vst1q_{ns}(out.as_mut_ptr().add({offset}), repr[{i}]);")
-        })
-        .collect();
-    let store_body = store_lines.join("\n                    ");
 
     let binary_op = |intrinsic: &str| -> String {
         let items: Vec<String> = (0..sub_count)
@@ -2191,26 +2169,22 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> {repr} {{
-                unsafe {{ [{load_body}] }}
+                crate::simd_storage::copy(data)
             }}
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {repr} {{
-                <Self as {trait_name}>::load(self, &arr)
+                crate::simd_storage::cast(arr)
             }}
 
             #[inline(always)]
             fn store(self, repr: {repr}, out: &mut {array}) {{
-                unsafe {{
-                    {store_body}
-                }}
+                crate::simd_storage::store(repr, out);
             }}
 
             #[inline(always)]
             fn to_array(self, repr: {repr}) -> {array} {{
-                let mut out = [0{elem}; {lanes}];
-                <Self as {trait_name}>::store(self, repr, &mut out);
-                out
+                crate::simd_storage::cast(repr)
             }}
 
             {arcane}
@@ -3291,53 +3265,54 @@ pub(super) fn generate_additional_convert_traits() -> String {
 
 /// Generate x86 conversion impls for the new types.
 pub(super) fn generate_x86_additional_convert_impls(token: &str) -> String {
+    let arcane = super::backend_syntax::arcane(token);
     formatdoc! {r#"
 
         #[cfg(target_arch = "x86_64")]
         impl I8x16Bitcast for archmage::{token} {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_i8_to_u8(self, a: __m128i) -> __m128i {{ a }}
-            #[inline(always)]
+            {arcane}
             fn bitcast_u8_to_i8(self, a: __m128i) -> __m128i {{ a }}
         }}
 
         #[cfg(target_arch = "x86_64")]
         impl I8x32Bitcast for archmage::{token} {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_i8_to_u8(self, a: __m256i) -> __m256i {{ a }}
-            #[inline(always)]
+            {arcane}
             fn bitcast_u8_to_i8(self, a: __m256i) -> __m256i {{ a }}
         }}
 
         #[cfg(target_arch = "x86_64")]
         impl I16x8Bitcast for archmage::{token} {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_i16_to_u16(self, a: __m128i) -> __m128i {{ a }}
-            #[inline(always)]
+            {arcane}
             fn bitcast_u16_to_i16(self, a: __m128i) -> __m128i {{ a }}
         }}
 
         #[cfg(target_arch = "x86_64")]
         impl I16x16Bitcast for archmage::{token} {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_i16_to_u16(self, a: __m256i) -> __m256i {{ a }}
-            #[inline(always)]
+            {arcane}
             fn bitcast_u16_to_i16(self, a: __m256i) -> __m256i {{ a }}
         }}
 
         #[cfg(target_arch = "x86_64")]
         impl U64x2Bitcast for archmage::{token} {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_u64_to_i64(self, a: __m128i) -> __m128i {{ a }}
-            #[inline(always)]
+            {arcane}
             fn bitcast_i64_to_u64(self, a: __m128i) -> __m128i {{ a }}
         }}
 
         #[cfg(target_arch = "x86_64")]
         impl U64x4Bitcast for archmage::{token} {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_u64_to_i64(self, a: __m256i) -> __m256i {{ a }}
-            #[inline(always)]
+            {arcane}
             fn bitcast_i64_to_u64(self, a: __m256i) -> __m256i {{ a }}
         }}
     "#}
@@ -3441,77 +3416,78 @@ pub(super) fn generate_scalar_additional_convert_impls() -> String {
 
 /// Generate NEON conversion impls for the new types.
 pub(super) fn generate_neon_additional_convert_impls() -> String {
+    let arcane = super::backend_syntax::arcane("NeonToken");
     formatdoc! {r#"
 
         #[cfg(target_arch = "aarch64")]
         impl I8x16Bitcast for archmage::NeonToken {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_i8_to_u8(self, a: int8x16_t) -> uint8x16_t {{
-                unsafe {{ vreinterpretq_u8_s8(a) }}
+                vreinterpretq_u8_s8(a)
             }}
-            #[inline(always)]
+            {arcane}
             fn bitcast_u8_to_i8(self, a: uint8x16_t) -> int8x16_t {{
-                unsafe {{ vreinterpretq_s8_u8(a) }}
+                vreinterpretq_s8_u8(a)
             }}
         }}
 
         #[cfg(target_arch = "aarch64")]
         impl I8x32Bitcast for archmage::NeonToken {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_i8_to_u8(self, a: [int8x16_t; 2]) -> [uint8x16_t; 2] {{
-                unsafe {{ [vreinterpretq_u8_s8(a[0]), vreinterpretq_u8_s8(a[1])] }}
+                [vreinterpretq_u8_s8(a[0]), vreinterpretq_u8_s8(a[1])]
             }}
-            #[inline(always)]
+            {arcane}
             fn bitcast_u8_to_i8(self, a: [uint8x16_t; 2]) -> [int8x16_t; 2] {{
-                unsafe {{ [vreinterpretq_s8_u8(a[0]), vreinterpretq_s8_u8(a[1])] }}
+                [vreinterpretq_s8_u8(a[0]), vreinterpretq_s8_u8(a[1])]
             }}
         }}
 
         #[cfg(target_arch = "aarch64")]
         impl I16x8Bitcast for archmage::NeonToken {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_i16_to_u16(self, a: int16x8_t) -> uint16x8_t {{
-                unsafe {{ vreinterpretq_u16_s16(a) }}
+                vreinterpretq_u16_s16(a)
             }}
-            #[inline(always)]
+            {arcane}
             fn bitcast_u16_to_i16(self, a: uint16x8_t) -> int16x8_t {{
-                unsafe {{ vreinterpretq_s16_u16(a) }}
+                vreinterpretq_s16_u16(a)
             }}
         }}
 
         #[cfg(target_arch = "aarch64")]
         impl I16x16Bitcast for archmage::NeonToken {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_i16_to_u16(self, a: [int16x8_t; 2]) -> [uint16x8_t; 2] {{
-                unsafe {{ [vreinterpretq_u16_s16(a[0]), vreinterpretq_u16_s16(a[1])] }}
+                [vreinterpretq_u16_s16(a[0]), vreinterpretq_u16_s16(a[1])]
             }}
-            #[inline(always)]
+            {arcane}
             fn bitcast_u16_to_i16(self, a: [uint16x8_t; 2]) -> [int16x8_t; 2] {{
-                unsafe {{ [vreinterpretq_s16_u16(a[0]), vreinterpretq_s16_u16(a[1])] }}
+                [vreinterpretq_s16_u16(a[0]), vreinterpretq_s16_u16(a[1])]
             }}
         }}
 
         #[cfg(target_arch = "aarch64")]
         impl U64x2Bitcast for archmage::NeonToken {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_u64_to_i64(self, a: uint64x2_t) -> int64x2_t {{
-                unsafe {{ vreinterpretq_s64_u64(a) }}
+                vreinterpretq_s64_u64(a)
             }}
-            #[inline(always)]
+            {arcane}
             fn bitcast_i64_to_u64(self, a: int64x2_t) -> uint64x2_t {{
-                unsafe {{ vreinterpretq_u64_s64(a) }}
+                vreinterpretq_u64_s64(a)
             }}
         }}
 
         #[cfg(target_arch = "aarch64")]
         impl U64x4Bitcast for archmage::NeonToken {{
-            #[inline(always)]
+            {arcane}
             fn bitcast_u64_to_i64(self, a: [uint64x2_t; 2]) -> [int64x2_t; 2] {{
-                unsafe {{ [vreinterpretq_s64_u64(a[0]), vreinterpretq_s64_u64(a[1])] }}
+                [vreinterpretq_s64_u64(a[0]), vreinterpretq_s64_u64(a[1])]
             }}
-            #[inline(always)]
+            {arcane}
             fn bitcast_i64_to_u64(self, a: [int64x2_t; 2]) -> [uint64x2_t; 2] {{
-                unsafe {{ [vreinterpretq_u64_s64(a[0]), vreinterpretq_u64_s64(a[1])] }}
+                [vreinterpretq_u64_s64(a[0]), vreinterpretq_u64_s64(a[1])]
             }}
         }}
     "#}
