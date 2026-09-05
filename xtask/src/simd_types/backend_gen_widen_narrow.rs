@@ -434,6 +434,7 @@ pub(super) fn generate_widen_narrow_traits() -> String {
         });
     }
 
+    code.push_str(&super::backend_gen_integer_ops::traits());
     code
 }
 
@@ -630,6 +631,11 @@ pub(super) fn generate_scalar_widen_narrow_impls(w512: bool) -> String {
         code.push_str("}\n");
     }
 
+    code.push_str(&super::backend_gen_integer_ops::impls(
+        "scalar",
+        "ScalarToken",
+        w512,
+    ));
     code
 }
 
@@ -745,6 +751,11 @@ pub(super) fn generate_x86_v3_widen_narrow_impls(w512: bool) -> String {
         code.push_str("}\n");
     }
 
+    code.push_str(&super::backend_gen_integer_ops::impls(
+        "x86",
+        "X64V3Token",
+        w512,
+    ));
     code
 }
 
@@ -831,6 +842,7 @@ pub(super) fn generate_x86_v4_widen_narrow_impls(token: &str) -> String {
         code.push_str("}\n");
     }
 
+    code.push_str(&super::backend_gen_integer_ops::impls("v4", token, true));
     code
 }
 
@@ -927,6 +939,11 @@ pub(super) fn generate_neon_widen_narrow_impls(w512: bool) -> String {
         code.push_str("}\n");
     }
 
+    code.push_str(&super::backend_gen_integer_ops::impls(
+        "neon",
+        "NeonToken",
+        w512,
+    ));
     code
 }
 
@@ -1016,5 +1033,10 @@ pub(super) fn generate_wasm_widen_narrow_impls(w512: bool) -> String {
         code.push_str("}\n");
     }
 
+    code.push_str(&super::backend_gen_integer_ops::impls(
+        "wasm",
+        "Wasm128Token",
+        w512,
+    ));
     code
 }

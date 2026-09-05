@@ -670,6 +670,32 @@ impl<T: crate::simd::backends::I16x16Narrow> i16x16<T> {
     }
 }
 
+impl<T: crate::simd::backends::I16x16AbsDiff> i16x16<T> {
+    /// MIN.abs_diff(MAX) is u16::MAX.
+    /// Exact lane-wise absolute difference, without saturation or wrapping.
+    #[inline(always)]
+    pub fn abs_diff(self, rhs: Self) -> super::u16x16<T> {
+        super::u16x16::from_repr_unchecked(self.1, T::abs_diff(self.1, self.0, rhs.0))
+    }
+}
+impl<T: crate::simd::backends::I16x16Pairwise> i16x16<T> {
+    /// Multiply signed lanes, then sum adjacent pairs into i32 lanes.
+    /// Lane k uses exactly input lanes 2k and 2k+1, in that order.
+    /// The sum wraps modulo 2^32: two MIN*MIN products yield i32::MIN.
+    /// Neither this operation nor the WASM dot instruction saturates.
+    #[inline(always)]
+    pub fn madd_adjacent(self, rhs: Self) -> super::i32x8<T> {
+        super::i32x8::from_repr_unchecked(self.1, T::madd_adjacent(self.1, self.0, rhs.0))
+    }
+
+    /// Subtract the adjacent pairwise dot product from accumulator.
+    /// Each i32 lane wraps modulo 2^32. This is the accumulator form
+    /// used by Wiener statistics, not a difference between products.
+    #[inline(always)]
+    pub fn msub_adjacent(self, rhs: Self, accumulator: super::i32x8<T>) -> super::i32x8<T> {
+        accumulator - self.madd_adjacent(rhs)
+    }
+}
 // ============================================================================
 // Platform-specific concrete impls
 // ============================================================================

@@ -3857,6 +3857,113 @@ impl I32x8Narrow for archmage::Wasm128Token {
         ]
     }
 }
+impl I16x8Pairwise for archmage::Wasm128Token {
+    #[inline(always)]
+    fn madd_adjacent(self, a: v128, b: v128) -> v128 {
+        i32x4_dot_i16x8(a, b)
+    }
+}
+impl I16x8AbsDiff for archmage::Wasm128Token {
+    #[inline(always)]
+    fn abs_diff(self, a: v128, b: v128) -> v128 {
+        i16x8_sub(i16x8_max(a, b), i16x8_min(a, b))
+    }
+}
+impl U8x16AbsDiff for archmage::Wasm128Token {
+    #[inline(always)]
+    fn abs_diff(self, a: v128, b: v128) -> v128 {
+        u8x16_sub(u8x16_max(a, b), u8x16_min(a, b))
+    }
+
+    #[inline(always)]
+    fn reduce_add_u32(self, a: v128) -> u32 {
+        {
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(a));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        }
+    }
+
+    #[inline(always)]
+    fn sum_abs_diff(self, a: v128, b: v128) -> u32 {
+        {
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(u8x16_sub(
+                u8x16_max(a, b),
+                u8x16_min(a, b),
+            )));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        }
+    }
+}
+impl I16x16Pairwise for archmage::Wasm128Token {
+    #[inline(always)]
+    fn madd_adjacent(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [i32x4_dot_i16x8(a[0], b[0]), i32x4_dot_i16x8(a[1], b[1])]
+    }
+}
+impl I16x16AbsDiff for archmage::Wasm128Token {
+    #[inline(always)]
+    fn abs_diff(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            i16x8_sub(i16x8_max(a[0], b[0]), i16x8_min(a[0], b[0])),
+            i16x8_sub(i16x8_max(a[1], b[1]), i16x8_min(a[1], b[1])),
+        ]
+    }
+}
+impl U8x32AbsDiff for archmage::Wasm128Token {
+    #[inline(always)]
+    fn abs_diff(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            u8x16_sub(u8x16_max(a[0], b[0]), u8x16_min(a[0], b[0])),
+            u8x16_sub(u8x16_max(a[1], b[1]), u8x16_min(a[1], b[1])),
+        ]
+    }
+
+    #[inline(always)]
+    fn reduce_add_u32(self, a: [v128; 2]) -> u32 {
+        ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(a[0]));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        }) + ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(a[1]));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        })
+    }
+
+    #[inline(always)]
+    fn sum_abs_diff(self, a: [v128; 2], b: [v128; 2]) -> u32 {
+        ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(u8x16_sub(
+                u8x16_max(a[0], b[0]),
+                u8x16_min(a[0], b[0]),
+            )));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        }) + ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(u8x16_sub(
+                u8x16_max(a[1], b[1]),
+                u8x16_min(a[1], b[1]),
+            )));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        })
+    }
+}
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "wasm32")]
@@ -3999,6 +4106,112 @@ impl I32x16Narrow for archmage::Wasm128Token {
             u16x8_narrow_i32x4(b[0], b[1]),
             u16x8_narrow_i32x4(b[2], b[3]),
         ]
+    }
+}
+#[cfg(feature = "w512")]
+impl I16x32Pairwise for archmage::Wasm128Token {
+    #[inline(always)]
+    fn madd_adjacent(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        [
+            i32x4_dot_i16x8(a[0], b[0]),
+            i32x4_dot_i16x8(a[1], b[1]),
+            i32x4_dot_i16x8(a[2], b[2]),
+            i32x4_dot_i16x8(a[3], b[3]),
+        ]
+    }
+}
+#[cfg(feature = "w512")]
+impl I16x32AbsDiff for archmage::Wasm128Token {
+    #[inline(always)]
+    fn abs_diff(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        [
+            i16x8_sub(i16x8_max(a[0], b[0]), i16x8_min(a[0], b[0])),
+            i16x8_sub(i16x8_max(a[1], b[1]), i16x8_min(a[1], b[1])),
+            i16x8_sub(i16x8_max(a[2], b[2]), i16x8_min(a[2], b[2])),
+            i16x8_sub(i16x8_max(a[3], b[3]), i16x8_min(a[3], b[3])),
+        ]
+    }
+}
+#[cfg(feature = "w512")]
+impl U8x64AbsDiff for archmage::Wasm128Token {
+    #[inline(always)]
+    fn abs_diff(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        [
+            u8x16_sub(u8x16_max(a[0], b[0]), u8x16_min(a[0], b[0])),
+            u8x16_sub(u8x16_max(a[1], b[1]), u8x16_min(a[1], b[1])),
+            u8x16_sub(u8x16_max(a[2], b[2]), u8x16_min(a[2], b[2])),
+            u8x16_sub(u8x16_max(a[3], b[3]), u8x16_min(a[3], b[3])),
+        ]
+    }
+
+    #[inline(always)]
+    fn reduce_add_u32(self, a: [v128; 4]) -> u32 {
+        ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(a[0]));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        }) + ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(a[1]));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        }) + ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(a[2]));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        }) + ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(a[3]));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        })
+    }
+
+    #[inline(always)]
+    fn sum_abs_diff(self, a: [v128; 4], b: [v128; 4]) -> u32 {
+        ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(u8x16_sub(
+                u8x16_max(a[0], b[0]),
+                u8x16_min(a[0], b[0]),
+            )));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        }) + ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(u8x16_sub(
+                u8x16_max(a[1], b[1]),
+                u8x16_min(a[1], b[1]),
+            )));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        }) + ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(u8x16_sub(
+                u8x16_max(a[2], b[2]),
+                u8x16_min(a[2], b[2]),
+            )));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        }) + ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(u8x16_sub(
+                u8x16_max(a[3], b[3]),
+                u8x16_min(a[3], b[3]),
+            )));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        })
     }
 }
 #[cfg(feature = "w512")]
