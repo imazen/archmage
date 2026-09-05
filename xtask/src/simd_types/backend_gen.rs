@@ -1116,13 +1116,13 @@ fn generate_impls_mod() -> String {
 fn impls_safety_contract(token_desc: &str) -> String {
     if !token_desc.contains("Wasm") {
         return indoc! {"
-            //! # Safety (audit contract for remaining storage operations)
+            //! # Safety (audit contract — checked backend boundaries)
             //!
             //! `#[arcane]` checks value intrinsics against the receiver token's features.
-            //! Raw storage operations retain their explicit unsafe blocks;
-            //! array references provide valid extents for unaligned loads/stores.
-            //! Transmutes copy initialized numeric/vector bits; rustc checks size.
-            //! These operations never manufacture a token.
+            //! SSE2-only arithmetic uses the checked x86-64 baseline boundary.
+            //! Whole-array loads/stores and bit casts use `crate::simd_storage` helpers,
+            //! which require POD storage and enforce equal sizes at compile time.
+            //! Token-bearing wrappers never implement the storage POD trait.
         "}
         .to_string();
     }
@@ -1310,7 +1310,6 @@ fn generate_x86_impls(types: &[FloatVecType], token: &str, max_width: usize) -> 
 }
 
 fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
-    let lanes = ty.lanes;
     let arcane = super::backend_syntax::arcane(token);
     let baseline = super::backend_syntax::sse2_or_arcane(token, ty.width_bits);
     let baseline_end = if ty.width_bits == 128 { "}" } else { "" };
@@ -1516,14 +1515,12 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
 
             {arcane}
             fn store_rgba_bytes(self, r: {inner}, g: {inner}, b: {inner}, a: {inner}) -> [u8; 16] {{
-                unsafe {{
-                    let rg = _mm_packs_epi32(_mm_cvtps_epi32(r), _mm_cvtps_epi32(g));
-                    let ba = _mm_packs_epi32(_mm_cvtps_epi32(b), _mm_cvtps_epi32(a));
-                    // [R0-3,G0-3,B0-3,A0-3] -> interleaved RGBA pixels 0-3.
-                    let packed = _mm_packus_epi16(rg, ba);
-                    let shuf = _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
-                    core::mem::transmute(_mm_shuffle_epi8(packed, shuf))
-                }}
+                let rg = _mm_packs_epi32(_mm_cvtps_epi32(r), _mm_cvtps_epi32(g));
+                let ba = _mm_packs_epi32(_mm_cvtps_epi32(b), _mm_cvtps_epi32(a));
+                // [R0-3,G0-3,B0-3,A0-3] -> interleaved RGBA pixels 0-3.
+                let packed = _mm_packus_epi16(rg, ba);
+                let shuf = _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
+                crate::simd_storage::cast(_mm_shuffle_epi8(packed, shuf))
             }}
         "#}
     } else if elem == "f32" && bits == 256 {
@@ -1531,17 +1528,15 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
 
             {arcane}
             fn store_rgba_bytes(self, r: {inner}, g: {inner}, b: {inner}, a: {inner}) -> [u8; 32] {{
-                unsafe {{
-                    // AVX2 packs are lane-wise: lane0 holds pixels 0-3, lane1 4-7.
-                    let rg = _mm256_packs_epi32(_mm256_cvtps_epi32(r), _mm256_cvtps_epi32(g));
-                    let ba = _mm256_packs_epi32(_mm256_cvtps_epi32(b), _mm256_cvtps_epi32(a));
-                    let packed = _mm256_packus_epi16(rg, ba);
-                    let shuf = _mm256_setr_epi8(
-                        0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15,
-                        0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15,
-                    );
-                    core::mem::transmute(_mm256_shuffle_epi8(packed, shuf))
-                }}
+                // AVX2 packs are lane-wise: lane0 holds pixels 0-3, lane1 4-7.
+                let rg = _mm256_packs_epi32(_mm256_cvtps_epi32(r), _mm256_cvtps_epi32(g));
+                let ba = _mm256_packs_epi32(_mm256_cvtps_epi32(b), _mm256_cvtps_epi32(a));
+                let packed = _mm256_packus_epi16(rg, ba);
+                let shuf = _mm256_setr_epi8(
+                    0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15,
+                    0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15,
+                );
+                crate::simd_storage::cast(_mm256_shuffle_epi8(packed, shuf))
             }}
         "#}
     } else {
@@ -1606,25 +1601,22 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> {inner} {{
-                unsafe {{ {p}_loadu_{s}(data.as_ptr()) }}
+                crate::simd_storage::copy(data)
             }}
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {inner} {{
-                // SAFETY: {array} and {inner} have identical size and layout.
-                unsafe {{ core::mem::transmute(arr) }}
+                crate::simd_storage::cast(arr)
             }}
 
             #[inline(always)]
             fn store(self, repr: {inner}, out: &mut {array}) {{
-                unsafe {{ {p}_storeu_{s}(out.as_mut_ptr(), repr) }};
+                crate::simd_storage::store(repr, out);
             }}
 
             #[inline(always)]
             fn to_array(self, repr: {inner}) -> {array} {{
-                let mut out = [{zero_lit}; {lanes}];
-                unsafe {{ {p}_storeu_{s}(out.as_mut_ptr(), repr) }};
-                out
+                crate::simd_storage::cast(repr)
             }}
 
             // ====== Arithmetic ======
@@ -1794,8 +1786,6 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
             {transpose_8x8_x86}
         }}
     "#,
-
-        zero_lit = if elem == "f32" { "0.0f32" } else { "0.0f64" },
     }
 }
 
@@ -2474,7 +2464,6 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
     let trait_name = ty.trait_name();
     let repr = ty.neon_repr();
     let elem = ty.elem;
-    let zero_lit = if elem == "f32" { "0.0f32" } else { "0.0f64" };
     let lanes = ty.lanes;
     let array = ty.array_type();
     let ns = ty.neon_suffix();
@@ -2607,12 +2596,10 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
 
             {arcane}
             fn to_u8_bytes(self, a: {repr}) -> [u8; {lanes}] {{
-                unsafe {{
-                    let i0 = vqmovn_s32(vcvtnq_s32_f32(a[0]));
-                    let i1 = vqmovn_s32(vcvtnq_s32_f32(a[1]));
-                    let u8s = vqmovun_s16(vcombine_s16(i0, i1));
-                    core::mem::transmute(u8s)
-                }}
+                let i0 = vqmovn_s32(vcvtnq_s32_f32(a[0]));
+                let i1 = vqmovn_s32(vcvtnq_s32_f32(a[1]));
+                let u8s = vqmovun_s16(vcombine_s16(i0, i1));
+                crate::simd_storage::cast(u8s)
             }}
         "#}
     } else {
@@ -2626,27 +2613,25 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
 
             {arcane}
             fn store_rgba_bytes(self, r: {repr}, g: {repr}, b: {repr}, a: {repr}) -> [u8; 32] {{
-                unsafe {{
-                    let lo = vdupq_n_s32(0);
-                    let hi = vdupq_n_s32(255);
-                    let r0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r[0]), lo), hi));
-                    let g0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(g[0]), lo), hi));
-                    let b0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(b[0]), lo), hi));
-                    let a0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(a[0]), lo), hi));
-                    let p0 = vorrq_u32(
-                        vorrq_u32(r0, vshlq_n_u32::<8>(g0)),
-                        vorrq_u32(vshlq_n_u32::<16>(b0), vshlq_n_u32::<24>(a0)),
-                    );
-                    let r1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r[1]), lo), hi));
-                    let g1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(g[1]), lo), hi));
-                    let b1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(b[1]), lo), hi));
-                    let a1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(a[1]), lo), hi));
-                    let p1 = vorrq_u32(
-                        vorrq_u32(r1, vshlq_n_u32::<8>(g1)),
-                        vorrq_u32(vshlq_n_u32::<16>(b1), vshlq_n_u32::<24>(a1)),
-                    );
-                    core::mem::transmute([vreinterpretq_u8_u32(p0), vreinterpretq_u8_u32(p1)])
-                }}
+                let lo = vdupq_n_s32(0);
+                let hi = vdupq_n_s32(255);
+                let r0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r[0]), lo), hi));
+                let g0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(g[0]), lo), hi));
+                let b0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(b[0]), lo), hi));
+                let a0 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(a[0]), lo), hi));
+                let p0 = vorrq_u32(
+                    vorrq_u32(r0, vshlq_n_u32::<8>(g0)),
+                    vorrq_u32(vshlq_n_u32::<16>(b0), vshlq_n_u32::<24>(a0)),
+                );
+                let r1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r[1]), lo), hi));
+                let g1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(g[1]), lo), hi));
+                let b1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(b[1]), lo), hi));
+                let a1 = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(a[1]), lo), hi));
+                let p1 = vorrq_u32(
+                    vorrq_u32(r1, vshlq_n_u32::<8>(g1)),
+                    vorrq_u32(vshlq_n_u32::<16>(b1), vshlq_n_u32::<24>(a1)),
+                );
+                crate::simd_storage::cast([vreinterpretq_u8_u32(p0), vreinterpretq_u8_u32(p1)])
             }}
         "#}
     } else {
@@ -2673,28 +2658,22 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> {repr} {{
-                unsafe {{
-                    [{load_lanes}]
-                }}
+                crate::simd_storage::copy(data)
             }}
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {repr} {{
-                <Self as {trait_name}>::load(self, &arr)
+                crate::simd_storage::cast(arr)
             }}
 
             #[inline(always)]
             fn store(self, repr: {repr}, out: &mut {array}) {{
-                unsafe {{
-                    {store_lanes}
-                }}
+                crate::simd_storage::store(repr, out);
             }}
 
             #[inline(always)]
             fn to_array(self, repr: {repr}) -> {array} {{
-                let mut out = [{zero_lit}; {lanes}];
-                <Self as {trait_name}>::store(self, repr, &mut out);
-                out
+                crate::simd_storage::cast(repr)
             }}
 
             // ====== Arithmetic ======
@@ -2877,14 +2856,6 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             {store_rgba_arm_poly}
         }}
     "#,
-
-        store_lanes = (0..sub_count)
-            .map(|i| format!("vst1q_{ns}(out.as_mut_ptr().add({}), repr[{i}]);", i * native_lanes))
-            .collect::<Vec<_>>().join("\n            "),
-
-        load_lanes = (0..sub_count)
-            .map(|i| format!("vld1q_{ns}(data.as_ptr().add({}))", i * native_lanes))
-            .collect::<Vec<_>>().join(", "),
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
         add_body = binary_op(&format!("vaddq_{ns}")),
@@ -2935,7 +2906,6 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
     let trait_name = ty.trait_name();
     let repr = ty.neon_repr();
     let elem = ty.elem;
-    let zero_lit = if elem == "f32" { "0.0f32" } else { "0.0f64" };
     let lanes = ty.lanes;
     let array = ty.array_type();
     let ns = ty.neon_suffix();
@@ -3026,12 +2996,10 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
 
             {arcane}
             fn to_u8_bytes(self, a: {repr}) -> [u8; 4] {{
-                unsafe {{
-                    let i16s = vqmovn_s32(vcvtnq_s32_f32(a));
-                    let u8s = vqmovun_s16(vcombine_s16(i16s, i16s));
-                    let bytes: [u8; 8] = core::mem::transmute(u8s);
-                    [bytes[0], bytes[1], bytes[2], bytes[3]]
-                }}
+                let i16s = vqmovn_s32(vcvtnq_s32_f32(a));
+                let u8s = vqmovun_s16(vcombine_s16(i16s, i16s));
+                let bytes: [u8; 8] = crate::simd_storage::cast(u8s);
+                [bytes[0], bytes[1], bytes[2], bytes[3]]
             }}
         "#}
     } else {
@@ -3046,19 +3014,17 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
 
             {arcane}
             fn store_rgba_bytes(self, r: {repr}, g: {repr}, b: {repr}, a: {repr}) -> [u8; 16] {{
-                unsafe {{
-                    let lo = vdupq_n_s32(0);
-                    let hi = vdupq_n_s32(255);
-                    let ri = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r), lo), hi));
-                    let gi = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(g), lo), hi));
-                    let bi = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(b), lo), hi));
-                    let ai = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(a), lo), hi));
-                    let pixels = vorrq_u32(
-                        vorrq_u32(ri, vshlq_n_u32::<8>(gi)),
-                        vorrq_u32(vshlq_n_u32::<16>(bi), vshlq_n_u32::<24>(ai)),
-                    );
-                    core::mem::transmute(vreinterpretq_u8_u32(pixels))
-                }}
+                let lo = vdupq_n_s32(0);
+                let hi = vdupq_n_s32(255);
+                let ri = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(r), lo), hi));
+                let gi = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(g), lo), hi));
+                let bi = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(b), lo), hi));
+                let ai = vreinterpretq_u32_s32(vminq_s32(vmaxq_s32(vcvtnq_s32_f32(a), lo), hi));
+                let pixels = vorrq_u32(
+                    vorrq_u32(ri, vshlq_n_u32::<8>(gi)),
+                    vorrq_u32(vshlq_n_u32::<16>(bi), vshlq_n_u32::<24>(ai)),
+                );
+                crate::simd_storage::cast(vreinterpretq_u8_u32(pixels))
             }}
         "#}
     } else {
@@ -3081,24 +3047,22 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> {repr} {{
-                unsafe {{ vld1q_{ns}(data.as_ptr()) }}
+                crate::simd_storage::copy(data)
             }}
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {repr} {{
-                <Self as {trait_name}>::load(self, &arr)
+                crate::simd_storage::cast(arr)
             }}
 
             #[inline(always)]
             fn store(self, repr: {repr}, out: &mut {array}) {{
-                unsafe {{ vst1q_{ns}(out.as_mut_ptr(), repr) }};
+                crate::simd_storage::store(repr, out);
             }}
 
             #[inline(always)]
             fn to_array(self, repr: {repr}) -> {array} {{
-                let mut out = [{zero_lit}; {lanes}];
-                <Self as {trait_name}>::store(self, repr, &mut out);
-                out
+                crate::simd_storage::cast(repr)
             }}
 
             {arcane}
@@ -4121,25 +4085,22 @@ fn generate_x86_i32_impl(ty: &I32VecType, token: &str) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> {inner} {{
-                unsafe {{ {p}_loadu_si{bits}(data.as_ptr().cast()) }}
+                crate::simd_storage::copy(data)
             }}
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {inner} {{
-                // SAFETY: {array} and {inner} have identical size and layout.
-                unsafe {{ core::mem::transmute(arr) }}
+                crate::simd_storage::cast(arr)
             }}
 
             #[inline(always)]
             fn store(self, repr: {inner}, out: &mut {array}) {{
-                unsafe {{ {p}_storeu_si{bits}(out.as_mut_ptr().cast(), repr) }};
+                crate::simd_storage::store(repr, out);
             }}
 
             #[inline(always)]
             fn to_array(self, repr: {inner}) -> {array} {{
-                let mut out = [0i32; {lanes}];
-                unsafe {{ {p}_storeu_si{bits}(out.as_mut_ptr().cast(), repr) }};
-                out
+                crate::simd_storage::cast(repr)
             }}
 
             // ====== Arithmetic ======
@@ -5031,7 +4992,6 @@ fn generate_neon_i32_impls(types: &[I32VecType]) -> String {
 }
 
 fn generate_neon_native_i32_impl(ty: &I32VecType) -> String {
-    let lanes = ty.lanes;
     let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let array = ty.array_type();
@@ -5052,24 +5012,22 @@ fn generate_neon_native_i32_impl(ty: &I32VecType) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> int32x4_t {{
-                unsafe {{ vld1q_s32(data.as_ptr()) }}
+                crate::simd_storage::copy(data)
             }}
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> int32x4_t {{
-                unsafe {{ vld1q_s32(arr.as_ptr()) }}
+                crate::simd_storage::cast(arr)
             }}
 
             #[inline(always)]
             fn store(self, repr: int32x4_t, out: &mut {array}) {{
-                unsafe {{ vst1q_s32(out.as_mut_ptr(), repr) }};
+                crate::simd_storage::store(repr, out);
             }}
 
             #[inline(always)]
             fn to_array(self, repr: int32x4_t) -> {array} {{
-                let mut out = [0i32; {lanes}];
-                unsafe {{ vst1q_s32(out.as_mut_ptr(), repr) }};
-                out
+                crate::simd_storage::cast(repr)
             }}
 
             {arcane}
@@ -5209,7 +5167,6 @@ fn generate_neon_native_i32_impl(ty: &I32VecType) -> String {
 }
 
 fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
-    let lanes = ty.lanes;
     let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let repr = ty.neon_repr();
@@ -5262,28 +5219,22 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> {repr} {{
-                unsafe {{
-                    [{load_lanes}]
-                }}
+                crate::simd_storage::copy(data)
             }}
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {repr} {{
-                <Self as {trait_name}>::load(self, &arr)
+                crate::simd_storage::cast(arr)
             }}
 
             #[inline(always)]
             fn store(self, repr: {repr}, out: &mut {array}) {{
-                unsafe {{
-                    {store_lanes}
-                }}
+                crate::simd_storage::store(repr, out);
             }}
 
             #[inline(always)]
             fn to_array(self, repr: {repr}) -> {array} {{
-                let mut out = [0i32; {lanes}];
-                <Self as {trait_name}>::store(self, repr, &mut out);
-                out
+                crate::simd_storage::cast(repr)
             }}
 
             {arcane}
@@ -5390,14 +5341,6 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
             }}
         }}
     "#,
-
-        store_lanes = (0..sub_count)
-            .map(|i| format!("vst1q_s32(out.as_mut_ptr().add({}), repr[{i}]);", i * 4))
-            .collect::<Vec<_>>().join("\n            "),
-
-        load_lanes = (0..sub_count)
-            .map(|i| format!("vld1q_s32(data.as_ptr().add({}))", i * 4))
-            .collect::<Vec<_>>().join(", "),
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
         add = binary_op("vaddq_s32"),
@@ -6342,25 +6285,22 @@ fn generate_x86_u32_impl(ty: &U32VecType, token: &str) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> {inner} {{
-                unsafe {{ {p}_loadu_si{bits}(data.as_ptr().cast()) }}
+                crate::simd_storage::copy(data)
             }}
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {inner} {{
-                // SAFETY: {array} and {inner} have identical size and layout.
-                unsafe {{ core::mem::transmute(arr) }}
+                crate::simd_storage::cast(arr)
             }}
 
             #[inline(always)]
             fn store(self, repr: {inner}, out: &mut {array}) {{
-                unsafe {{ {p}_storeu_si{bits}(out.as_mut_ptr().cast(), repr) }};
+                crate::simd_storage::store(repr, out);
             }}
 
             #[inline(always)]
             fn to_array(self, repr: {inner}) -> {array} {{
-                let mut out = [0u32; {lanes}];
-                unsafe {{ {p}_storeu_si{bits}(out.as_mut_ptr().cast(), repr) }};
-                out
+                crate::simd_storage::cast(repr)
             }}
 
             // ====== Arithmetic ======
@@ -6877,7 +6817,6 @@ fn generate_neon_u32_impls(types: &[U32VecType]) -> String {
 }
 
 fn generate_neon_native_u32_impl(ty: &U32VecType) -> String {
-    let lanes = ty.lanes;
     let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let array = ty.array_type();
@@ -6898,24 +6837,22 @@ fn generate_neon_native_u32_impl(ty: &U32VecType) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> uint32x4_t {{
-                unsafe {{ vld1q_u32(data.as_ptr()) }}
+                crate::simd_storage::copy(data)
             }}
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> uint32x4_t {{
-                unsafe {{ vld1q_u32(arr.as_ptr()) }}
+                crate::simd_storage::cast(arr)
             }}
 
             #[inline(always)]
             fn store(self, repr: uint32x4_t, out: &mut {array}) {{
-                unsafe {{ vst1q_u32(out.as_mut_ptr(), repr) }};
+                crate::simd_storage::store(repr, out);
             }}
 
             #[inline(always)]
             fn to_array(self, repr: uint32x4_t) -> {array} {{
-                let mut out = [0u32; {lanes}];
-                unsafe {{ vst1q_u32(out.as_mut_ptr(), repr) }};
-                out
+                crate::simd_storage::cast(repr)
             }}
 
             {arcane}
@@ -7034,7 +6971,6 @@ fn generate_neon_native_u32_impl(ty: &U32VecType) -> String {
 }
 
 fn generate_neon_polyfill_u32_impl(ty: &U32VecType) -> String {
-    let lanes = ty.lanes;
     let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let repr = ty.neon_repr();
@@ -7087,28 +7023,22 @@ fn generate_neon_polyfill_u32_impl(ty: &U32VecType) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> {repr} {{
-                unsafe {{
-                    [{load_lanes}]
-                }}
+                crate::simd_storage::copy(data)
             }}
 
             #[inline(always)]
             fn from_array(self, arr: {array}) -> {repr} {{
-                <Self as {trait_name}>::load(self, &arr)
+                crate::simd_storage::cast(arr)
             }}
 
             #[inline(always)]
             fn store(self, repr: {repr}, out: &mut {array}) {{
-                unsafe {{
-                    {store_lanes}
-                }}
+                crate::simd_storage::store(repr, out);
             }}
 
             #[inline(always)]
             fn to_array(self, repr: {repr}) -> {array} {{
-                let mut out = [0u32; {lanes}];
-                <Self as {trait_name}>::store(self, repr, &mut out);
-                out
+                crate::simd_storage::cast(repr)
             }}
 
             {arcane}
@@ -7197,14 +7127,6 @@ fn generate_neon_polyfill_u32_impl(ty: &U32VecType) -> String {
             }}
         }}
     "#,
-
-        store_lanes = (0..sub_count)
-            .map(|i| format!("vst1q_u32(out.as_mut_ptr().add({}), repr[{i}]);", i * 4))
-            .collect::<Vec<_>>().join("\n            "),
-
-        load_lanes = (0..sub_count)
-            .map(|i| format!("vld1q_u32(data.as_ptr().add({}))", i * 4))
-            .collect::<Vec<_>>().join(", "),
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
         add = binary_op("vaddq_u32"),

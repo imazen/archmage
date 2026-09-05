@@ -9,13 +9,13 @@
 //!
 //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 //!
-//! # Safety (audit contract for remaining storage operations)
+//! # Safety (audit contract — checked backend boundaries)
 //!
 //! `#[arcane]` checks value intrinsics against the receiver token's features.
-//! Raw storage operations retain their explicit unsafe blocks;
-//! array references provide valid extents for unaligned loads/stores.
-//! Transmutes copy initialized numeric/vector bits; rustc checks size.
-//! These operations never manufacture a token.
+//! SSE2-only arithmetic uses the checked x86-64 baseline boundary.
+//! Whole-array loads/stores and bit casts use `crate::simd_storage` helpers,
+//! which require POD storage and enforce equal sizes at compile time.
+//! Token-bearing wrappers never implement the storage POD trait.
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
@@ -48,22 +48,22 @@ impl F32x16Backend for archmage::X64V4Token {
 
     #[inline(always)]
     fn load(self, data: &[f32; 16]) -> __m512 {
-        unsafe { _mm512_loadu_ps(data.as_ptr()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [f32; 16]) -> __m512 {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m512, out: &mut [f32; 16]) {
-        unsafe { _mm512_storeu_ps(out.as_mut_ptr(), repr) }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512) -> [f32; 16] {
-        unsafe { core::mem::transmute(repr) }
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -272,22 +272,22 @@ impl F64x8Backend for archmage::X64V4Token {
 
     #[inline(always)]
     fn load(self, data: &[f64; 8]) -> __m512d {
-        unsafe { _mm512_loadu_pd(data.as_ptr()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [f64; 8]) -> __m512d {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m512d, out: &mut [f64; 8]) {
-        unsafe { _mm512_storeu_pd(out.as_mut_ptr(), repr) }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512d) -> [f64; 8] {
-        unsafe { core::mem::transmute(repr) }
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -479,22 +479,22 @@ impl I8x64Backend for archmage::X64V4Token {
 
     #[inline(always)]
     fn load(self, data: &[i8; 64]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i8; 64]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [i8; 64]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [i8; 64] {
-        unsafe { core::mem::transmute(repr) }
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -574,7 +574,7 @@ impl I8x64Backend for archmage::X64V4Token {
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn reduce_add(self, a: __m512i) -> i8 {
         // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [i8; 64] = unsafe { core::mem::transmute(a) };
+        let arr: [i8; 64] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0i8, i8::wrapping_add)
     }
 
@@ -701,22 +701,22 @@ impl U8x64Backend for archmage::X64V4Token {
 
     #[inline(always)]
     fn load(self, data: &[u8; 64]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u8; 64]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [u8; 64]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [u8; 64] {
-        unsafe { core::mem::transmute(repr) }
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -791,7 +791,7 @@ impl U8x64Backend for archmage::X64V4Token {
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn reduce_add(self, a: __m512i) -> u8 {
         // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [u8; 64] = unsafe { core::mem::transmute(a) };
+        let arr: [u8; 64] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0u8, u8::wrapping_add)
     }
 
@@ -912,22 +912,22 @@ impl I16x32Backend for archmage::X64V4Token {
 
     #[inline(always)]
     fn load(self, data: &[i16; 32]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i16; 32]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [i16; 32]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [i16; 32] {
-        unsafe { core::mem::transmute(repr) }
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1012,7 +1012,7 @@ impl I16x32Backend for archmage::X64V4Token {
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn reduce_add(self, a: __m512i) -> i16 {
         // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [i16; 32] = unsafe { core::mem::transmute(a) };
+        let arr: [i16; 32] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0i16, i16::wrapping_add)
     }
 
@@ -1116,22 +1116,22 @@ impl U16x32Backend for archmage::X64V4Token {
 
     #[inline(always)]
     fn load(self, data: &[u16; 32]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u16; 32]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [u16; 32]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [u16; 32] {
-        unsafe { core::mem::transmute(repr) }
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1211,7 +1211,7 @@ impl U16x32Backend for archmage::X64V4Token {
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn reduce_add(self, a: __m512i) -> u16 {
         // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [u16; 32] = unsafe { core::mem::transmute(a) };
+        let arr: [u16; 32] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0u16, u16::wrapping_add)
     }
 
@@ -1315,22 +1315,22 @@ impl I32x16Backend for archmage::X64V4Token {
 
     #[inline(always)]
     fn load(self, data: &[i32; 16]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i32; 16]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [i32; 16]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [i32; 16] {
-        unsafe { core::mem::transmute(repr) }
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1415,7 +1415,7 @@ impl I32x16Backend for archmage::X64V4Token {
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn reduce_add(self, a: __m512i) -> i32 {
         // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [i32; 16] = unsafe { core::mem::transmute(a) };
+        let arr: [i32; 16] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0i32, i32::wrapping_add)
     }
 
@@ -1509,22 +1509,22 @@ impl U32x16Backend for archmage::X64V4Token {
 
     #[inline(always)]
     fn load(self, data: &[u32; 16]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u32; 16]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [u32; 16]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [u32; 16] {
-        unsafe { core::mem::transmute(repr) }
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1604,7 +1604,7 @@ impl U32x16Backend for archmage::X64V4Token {
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn reduce_add(self, a: __m512i) -> u32 {
         // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [u32; 16] = unsafe { core::mem::transmute(a) };
+        let arr: [u32; 16] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0u32, u32::wrapping_add)
     }
 
@@ -1698,22 +1698,22 @@ impl I64x8Backend for archmage::X64V4Token {
 
     #[inline(always)]
     fn load(self, data: &[i64; 8]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i64; 8]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [i64; 8]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [i64; 8] {
-        unsafe { core::mem::transmute(repr) }
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1793,7 +1793,7 @@ impl I64x8Backend for archmage::X64V4Token {
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn reduce_add(self, a: __m512i) -> i64 {
         // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [i64; 8] = unsafe { core::mem::transmute(a) };
+        let arr: [i64; 8] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0i64, i64::wrapping_add)
     }
 
@@ -1872,22 +1872,22 @@ impl U64x8Backend for archmage::X64V4Token {
 
     #[inline(always)]
     fn load(self, data: &[u64; 8]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u64; 8]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [u64; 8]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [u64; 8] {
-        unsafe { core::mem::transmute(repr) }
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1962,7 +1962,7 @@ impl U64x8Backend for archmage::X64V4Token {
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn reduce_add(self, a: __m512i) -> u64 {
         // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [u64; 8] = unsafe { core::mem::transmute(a) };
+        let arr: [u64; 8] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0u64, u64::wrapping_add)
     }
 
@@ -2045,22 +2045,22 @@ impl F32x16Backend for archmage::X64V4xToken {
 
     #[inline(always)]
     fn load(self, data: &[f32; 16]) -> __m512 {
-        unsafe { _mm512_loadu_ps(data.as_ptr()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [f32; 16]) -> __m512 {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m512, out: &mut [f32; 16]) {
-        unsafe { _mm512_storeu_ps(out.as_mut_ptr(), repr) }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512) -> [f32; 16] {
-        unsafe { core::mem::transmute(repr) }
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -2269,22 +2269,22 @@ impl F64x8Backend for archmage::X64V4xToken {
 
     #[inline(always)]
     fn load(self, data: &[f64; 8]) -> __m512d {
-        unsafe { _mm512_loadu_pd(data.as_ptr()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [f64; 8]) -> __m512d {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m512d, out: &mut [f64; 8]) {
-        unsafe { _mm512_storeu_pd(out.as_mut_ptr(), repr) }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512d) -> [f64; 8] {
-        unsafe { core::mem::transmute(repr) }
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -2476,22 +2476,22 @@ impl I8x64Backend for archmage::X64V4xToken {
 
     #[inline(always)]
     fn load(self, data: &[i8; 64]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i8; 64]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [i8; 64]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [i8; 64] {
-        unsafe { core::mem::transmute(repr) }
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -2571,7 +2571,7 @@ impl I8x64Backend for archmage::X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn reduce_add(self, a: __m512i) -> i8 {
         // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [i8; 64] = unsafe { core::mem::transmute(a) };
+        let arr: [i8; 64] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0i8, i8::wrapping_add)
     }
 
@@ -2698,22 +2698,22 @@ impl U8x64Backend for archmage::X64V4xToken {
 
     #[inline(always)]
     fn load(self, data: &[u8; 64]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u8; 64]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [u8; 64]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [u8; 64] {
-        unsafe { core::mem::transmute(repr) }
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -2788,7 +2788,7 @@ impl U8x64Backend for archmage::X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn reduce_add(self, a: __m512i) -> u8 {
         // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [u8; 64] = unsafe { core::mem::transmute(a) };
+        let arr: [u8; 64] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0u8, u8::wrapping_add)
     }
 
@@ -2909,22 +2909,22 @@ impl I16x32Backend for archmage::X64V4xToken {
 
     #[inline(always)]
     fn load(self, data: &[i16; 32]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i16; 32]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [i16; 32]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [i16; 32] {
-        unsafe { core::mem::transmute(repr) }
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3009,7 +3009,7 @@ impl I16x32Backend for archmage::X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn reduce_add(self, a: __m512i) -> i16 {
         // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [i16; 32] = unsafe { core::mem::transmute(a) };
+        let arr: [i16; 32] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0i16, i16::wrapping_add)
     }
 
@@ -3113,22 +3113,22 @@ impl U16x32Backend for archmage::X64V4xToken {
 
     #[inline(always)]
     fn load(self, data: &[u16; 32]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u16; 32]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [u16; 32]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [u16; 32] {
-        unsafe { core::mem::transmute(repr) }
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3208,7 +3208,7 @@ impl U16x32Backend for archmage::X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn reduce_add(self, a: __m512i) -> u16 {
         // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [u16; 32] = unsafe { core::mem::transmute(a) };
+        let arr: [u16; 32] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0u16, u16::wrapping_add)
     }
 
@@ -3312,22 +3312,22 @@ impl I32x16Backend for archmage::X64V4xToken {
 
     #[inline(always)]
     fn load(self, data: &[i32; 16]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i32; 16]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [i32; 16]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [i32; 16] {
-        unsafe { core::mem::transmute(repr) }
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3412,7 +3412,7 @@ impl I32x16Backend for archmage::X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn reduce_add(self, a: __m512i) -> i32 {
         // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [i32; 16] = unsafe { core::mem::transmute(a) };
+        let arr: [i32; 16] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0i32, i32::wrapping_add)
     }
 
@@ -3506,22 +3506,22 @@ impl U32x16Backend for archmage::X64V4xToken {
 
     #[inline(always)]
     fn load(self, data: &[u32; 16]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u32; 16]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [u32; 16]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [u32; 16] {
-        unsafe { core::mem::transmute(repr) }
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3601,7 +3601,7 @@ impl U32x16Backend for archmage::X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn reduce_add(self, a: __m512i) -> u32 {
         // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [u32; 16] = unsafe { core::mem::transmute(a) };
+        let arr: [u32; 16] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0u32, u32::wrapping_add)
     }
 
@@ -3695,22 +3695,22 @@ impl I64x8Backend for archmage::X64V4xToken {
 
     #[inline(always)]
     fn load(self, data: &[i64; 8]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i64; 8]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [i64; 8]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [i64; 8] {
-        unsafe { core::mem::transmute(repr) }
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3790,7 +3790,7 @@ impl I64x8Backend for archmage::X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn reduce_add(self, a: __m512i) -> i64 {
         // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [i64; 8] = unsafe { core::mem::transmute(a) };
+        let arr: [i64; 8] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0i64, i64::wrapping_add)
     }
 
@@ -3869,22 +3869,22 @@ impl U64x8Backend for archmage::X64V4xToken {
 
     #[inline(always)]
     fn load(self, data: &[u64; 8]) -> __m512i {
-        unsafe { _mm512_loadu_si512(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u64; 8]) -> __m512i {
-        unsafe { core::mem::transmute(arr) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: __m512i, out: &mut [u64; 8]) {
-        unsafe { _mm512_storeu_si512(out.as_mut_ptr().cast(), repr) }
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: __m512i) -> [u64; 8] {
-        unsafe { core::mem::transmute(repr) }
+        crate::simd_storage::cast(repr)
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3959,7 +3959,7 @@ impl U64x8Backend for archmage::X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn reduce_add(self, a: __m512i) -> u64 {
         // No native integer reduce_add in AVX-512; use transmute to array
-        let arr: [u64; 8] = unsafe { core::mem::transmute(a) };
+        let arr: [u64; 8] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0u64, u64::wrapping_add)
     }
 
