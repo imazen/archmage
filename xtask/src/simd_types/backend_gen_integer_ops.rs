@@ -37,8 +37,8 @@ pub(super) fn traits() -> String {
             }}
         "#};
         for (elem, n, dst) in [("i16", w / 16, "u16"), ("u8", w / 8, "u8")] {
-            let src = format!("{}{n}", upper(&format!("{elem}x")));
-            let dest = format!("{}{n}", upper(&format!("{dst}x")));
+            let src = format!("{}x{n}", upper(elem));
+            let dest = format!("{}x{n}", upper(dst));
             let sum = if elem == "u8" {
                 format!(
                     "/// Exact widening sum, at most {}.\nfn reduce_add_u32(self, a: <Self as super::{src}Backend>::Repr) -> u32;\n/// Exact sum of absolute byte differences, using a native SAD where available.\nfn sum_abs_diff(self, a: <Self as super::{src}Backend>::Repr, b: <Self as super::{src}Backend>::Repr) -> u32;",
@@ -192,7 +192,7 @@ pub(super) fn impls(arch: &str, token: &str, w512: bool) -> String {
                 _ => "u8",
             };
             let n = w / if elem == "u8" { 8 } else { 16 };
-            let src_name = format!("{}{n}", upper(&format!("{elem}x")));
+            let src_name = format!("{}x{n}", upper(elem));
             let tn = format!(
                 "{src_name}{}",
                 if op == "madd_adjacent" {
@@ -248,65 +248,54 @@ pub(super) fn impls(arch: &str, token: &str, w512: bool) -> String {
                 "impl {tn} for archmage::{token} {{\n{attr}\nfn {method}(self, a: {sr}, b: {sr}) -> {dr} {{ {body} }}\n{close}\n"
             );
             if op == "abs_u8" {
-                let body = if arch == "scalar" {
-                    "a.into_iter().map(u32::from).sum()".into()
-                } else {
-                    let sums: Vec<_> = (0..parts)
-                        .map(|i| {
-                            native_sum(
-                                arch,
-                                native,
-                                &if parts == 1 {
+                for (method, rhs, scalar) in [
+                    (
+                        "reduce_add_u32",
+                        false,
+                        "a.into_iter().map(u32::from).sum()",
+                    ),
+                    (
+                        "sum_abs_diff",
+                        true,
+                        "a.into_iter().zip(b).map(|(a,b)| u32::from(a.abs_diff(b))).sum()",
+                    ),
+                ] {
+                    let body = if arch == "scalar" {
+                        scalar.to_owned()
+                    } else {
+                        let sums: Vec<_> = (0..parts)
+                            .map(|i| {
+                                let a = if parts == 1 {
                                     "a".into()
                                 } else {
                                     format!("a[{i}]")
-                                },
-                                None,
-                            )
-                        })
-                        .collect();
-                    if sums.len() == 1 {
-                        sums[0].clone()
+                                };
+                                let b = if parts == 1 {
+                                    "b".into()
+                                } else {
+                                    format!("b[{i}]")
+                                };
+                                native_sum(arch, native, &a, rhs.then_some(b.as_str()))
+                            })
+                            .collect();
+                        if sums.len() == 1 {
+                            sums[0].clone()
+                        } else {
+                            sums.into_iter()
+                                .map(|sum| format!("({sum})"))
+                                .collect::<Vec<_>>()
+                                .join(" + ")
+                        }
+                    };
+                    let arg = if rhs {
+                        format!(", b: {sr}")
                     } else {
-                        sums.into_iter()
-                            .map(|sum| format!("({sum})"))
-                            .collect::<Vec<_>>()
-                            .join(" + ")
-                    }
-                };
-                out += &format!(
-                    "{attr}\nfn reduce_add_u32(self, a: {sr}) -> u32 {{ {body} }}\n{close}\n"
-                );
-                let sad = if arch == "scalar" {
-                    "a.into_iter().zip(b).map(|(a,b)| u32::from(a.abs_diff(b))).sum()".into()
-                } else {
-                    let sums: Vec<_> = (0..parts)
-                        .map(|i| {
-                            let a = if parts == 1 {
-                                "a".into()
-                            } else {
-                                format!("a[{i}]")
-                            };
-                            let b = if parts == 1 {
-                                "b".into()
-                            } else {
-                                format!("b[{i}]")
-                            };
-                            native_sum(arch, native, &a, Some(&b))
-                        })
-                        .collect();
-                    if sums.len() == 1 {
-                        sums[0].clone()
-                    } else {
-                        sums.into_iter()
-                            .map(|sum| format!("({sum})"))
-                            .collect::<Vec<_>>()
-                            .join(" + ")
-                    }
-                };
-                out += &format!(
-                    "{attr}\nfn sum_abs_diff(self, a: {sr}, b: {sr}) -> u32 {{ {sad} }}\n{close}\n"
-                );
+                        String::new()
+                    };
+                    out += &format!(
+                        "{attr}\nfn {method}(self, a: {sr}{arg}) -> u32 {{ {body} }}\n{close}\n"
+                    );
+                }
             }
             out += "}\n";
         }
@@ -376,12 +365,10 @@ fn native_sum(arch: &str, width: usize, a: &str, b: Option<&str>) -> String {
                 512 => "_mm512_reduce_add_epi64(s) as u32",
                 _ => unreachable!(),
             };
-            {
-                let rhs = b
-                    .map(str::to_owned)
-                    .unwrap_or_else(|| format!("{p}_setzero_si{width}()"));
-                format!("{{ let s = {p}_sad_epu8({a}, {rhs}); {reduction} }}")
-            }
+            let rhs = b
+                .map(str::to_owned)
+                .unwrap_or_else(|| format!("{p}_setzero_si{width}()"));
+            format!("{{ let s = {p}_sad_epu8({a}, {rhs}); {reduction} }}")
         }
         _ => unreachable!(),
     }
