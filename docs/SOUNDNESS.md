@@ -5,7 +5,8 @@ archmage and magetypes are sound. It states the one invariant everything
 rests on, inventories every place `unsafe` lives, lists what each tool
 proves, and gives the audit procedure for reviewing changes.
 
-Last full audit: 2026-07-14 (all counts below measured then).
+Last full audit: 2026-07-14. Native backend/storage entries updated 2026-09-04;
+other counts retain their original audit date.
 
 ## The invariant
 
@@ -32,9 +33,11 @@ Proofs union: a method taking `X64V4Token` inside an
 
 Since Rust 1.87, value-based `core::arch` intrinsics are *safe* inside a
 matching `#[target_feature]` region; everywhere else they require `unsafe`
-with exactly this feature-availability obligation. magetypes' backend impls
-take the second route: `unsafe { intrinsic }` justified by the token
-receiver.
+with exactly this feature-availability obligation. Native magetypes backend
+methods use `#[arcane(_self = ConcreteToken)]`: the receiver is the proof,
+and the compiler checks value intrinsics in the generated target-feature
+function. The xtask templates emit this attribute and safe bodies directly;
+there is no post-processing pass.
 
 ## Where `unsafe` lives (the complete inventory)
 
@@ -42,7 +45,9 @@ receiver.
 |---|---|---|---|
 | `src/tokens/generated/{x86,arm,wasm}.rs` forge call sites | 81 | summon/detect just verified the features, the features are compile-time guaranteed, or the source token's feature set is a registry-verified superset (extraction methods) | per-block `// SAFETY:` comments, generator-emitted, checker-enforced |
 | `src/tokens/mod.rs` (`ScalarToken`, forge definitions) | 2 | `ScalarToken` proves the empty feature set; forge fns are `unsafe` with `# Safety` docs | doc sections |
-| `magetypes/src/simd/impls/{x86_v3,x86_v4,arm_neon,wasm128}.rs` | ~1,960 blocks | uniform: token receiver proves intrinsic features (mechanically re-verified per run); loads/stores go through sized references; transmutes are same-size POD | file-header audit contract (generator-emitted, checker-enforced); per-block comments deliberately omitted as noise |
+| `magetypes/src/simd/impls/{x86_v3,x86_v4,arm_neon}.rs` | 0 explicit blocks | `arcane` uses the concrete token receiver to prove features; fixed-array memory operations use checked storage helpers | compiler feature checking plus pre-format generator regression and soundness scanner |
+| `magetypes/src/simd/impls/wasm128.rs` | 62 blocks | token receiver proves intrinsic features; memory accesses use sized references | existing file-header audit contract |
+| `magetypes/src/simd_storage.rs` | 2 blocks, plus POD trait/impl declarations | POD types have initialized bytes, no pointers/padding, and no invalid bit patterns; inline const assertions require equal sizes; copies/writes tolerate weaker alignment | private module, no token or token-bearing wrapper implementations; Miri tests; per-block safety comments |
 | `magetypes/src` outside `impls/` (byte casts, cross-width, slice reshape) | 225 blocks | size/align-guarded layout casts on all-bit-patterns-valid element types; token-gated construction | per-block `// SAFETY:` comments, checker-enforced |
 | `archmage-macros` emitted code (`#[arcane]` wrappers etc.) | 1 `unsafe` block per wrapper | the token parameter (tier-tag const-asserted) proves the sibling's `#[target_feature]` set | justified in macro source; expansion snapshots under `tests/expand/` are re-verified by the intrinsic scanner (comments cannot survive tokenization, so snapshots carry no SAFETY text) |
 

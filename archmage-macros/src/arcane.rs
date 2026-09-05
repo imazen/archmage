@@ -61,6 +61,8 @@ pub(crate) struct ArcaneArgs {
     inline_always: bool,
     /// The concrete type to use for `self` receiver.
     /// When specified, `self`/`&self`/`&mut self` is transformed to `_self: Type`/`&Type`/`&mut Type`.
+    /// A recognized concrete token type also supplies the feature proof when
+    /// the method has no separate token parameter.
     /// Implies `nested = true`.
     pub(crate) self_type: Option<Type>,
     /// Generate an `unreachable!()` stub on the wrong architecture.
@@ -185,7 +187,18 @@ pub(crate) fn arcane_impl(
         token_type_name,
         magetypes_namespace,
         token_type,
-    } = match find_token_param(&input_fn.sig) {
+    } = match find_token_param(&input_fn.sig).or_else(|| {
+        // A concrete token receiver can itself prove the required features.
+        // Reuse normal discovery so token validation and feature lookup agree.
+        let self_ty = args.self_type.as_ref()?;
+        if !has_self_receiver {
+            return None;
+        }
+        let mut receiver_sig = input_fn.sig.clone();
+        receiver_sig.inputs.clear();
+        receiver_sig.inputs.push(syn::parse_quote!(_self: #self_ty));
+        find_token_param(&receiver_sig)
+    }) {
         Some(result) => result,
         None => {
             // Check for specific misuse: featureless traits like SimdToken

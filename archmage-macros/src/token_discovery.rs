@@ -221,11 +221,8 @@ pub(crate) fn find_token_param(sig: &Signature) -> Option<TokenParamInfo> {
     for arg in &sig.inputs {
         match arg {
             FnArg::Receiver(_) => {
-                // Self receivers (self, &self, &mut self) are not yet supported.
-                // The macro creates an inner function, and Rust's inner functions
-                // cannot have `self` parameters. Supporting this would require
-                // AST rewriting to replace `self` with a regular parameter.
-                // See the module docs for the workaround.
+                // arcane handles token receivers separately using the concrete
+                // type supplied by `_self = Type`.
                 continue;
             }
             FnArg::Typed(PatType { pat, ty, .. }) => {
