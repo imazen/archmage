@@ -33,17 +33,37 @@ impl SimdToken for Wasm128Token {
     }
 }
 
-#[cfg(feature = "forge-token-api")]
 impl Wasm128Token {
-    /// Create a token without any checks.
+    /// Construct the token without any check. Crate-internal.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
+    /// This token's architecture is not the compilation target, so no
+    /// caller can discharge this obligation. Nothing in this crate
+    /// calls it; it exists so the internal constructor has the same
+    /// name on every target.
+    #[allow(dead_code)]
+    #[inline(always)]
+    pub(crate) const unsafe fn new_unchecked() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl Wasm128Token {
+    /// Construct a proof for a foreign architecture. Always `unsafe`.
+    ///
+    /// On this token's native architecture this is a **safe**
+    /// `#[target_feature]` function that rustc checks against the
+    /// caller's feature context. The current compilation target is a
+    /// different architecture, so no `#[target_feature]` context can
+    /// exist to check against and the function stays `unsafe fn`.
+    ///
+    /// # Safety
+    ///
+    /// Unsatisfiable: this token asserts CPU features that the target
+    /// architecture does not have. Any token produced here is a lie,
+    /// and using it to enter a SIMD region is undefined behavior. It
+    /// exists so cross-architecture code compiles, not to be called.
     #[inline(always)]
     pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -99,17 +119,37 @@ impl SimdToken for Wasm128RelaxedToken {
     }
 }
 
-#[cfg(feature = "forge-token-api")]
 impl Wasm128RelaxedToken {
-    /// Create a token without any checks.
+    /// Construct the token without any check. Crate-internal.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
+    /// This token's architecture is not the compilation target, so no
+    /// caller can discharge this obligation. Nothing in this crate
+    /// calls it; it exists so the internal constructor has the same
+    /// name on every target.
+    #[allow(dead_code)]
+    #[inline(always)]
+    pub(crate) const unsafe fn new_unchecked() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl Wasm128RelaxedToken {
+    /// Construct a proof for a foreign architecture. Always `unsafe`.
+    ///
+    /// On this token's native architecture this is a **safe**
+    /// `#[target_feature]` function that rustc checks against the
+    /// caller's feature context. The current compilation target is a
+    /// different architecture, so no `#[target_feature]` context can
+    /// exist to check against and the function stays `unsafe fn`.
+    ///
+    /// # Safety
+    ///
+    /// Unsatisfiable: this token asserts CPU features that the target
+    /// architecture does not have. Any token produced here is a lie,
+    /// and using it to enter a SIMD region is undefined behavior. It
+    /// exists so cross-architecture code compiles, not to be called.
     #[inline(always)]
     pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }

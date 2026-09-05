@@ -62,7 +62,6 @@ impl SimdToken for NeonToken {
         }
     }
 
-    #[allow(deprecated)]
     #[inline(always)]
     fn summon() -> Option<Self> {
         // Compile-time fast path (suppressed by testable_dispatch)
@@ -71,7 +70,7 @@ impl SimdToken for NeonToken {
             // SAFETY: every feature this token asserts is enabled at
             // compile time (cfg(target_feature)), so the binary only
             // runs on CPUs that have them.
-            Some(unsafe { Self::forge_token_dangerously() })
+            Some(unsafe { Self::new_unchecked() })
         }
 
         // Runtime path with caching
@@ -80,7 +79,7 @@ impl SimdToken for NeonToken {
             match NEON_CACHE.load(Ordering::Relaxed) {
                 // SAFETY: 2 is only ever stored by neon_detect()
                 // after a positive runtime check of every feature.
-                2 => Some(unsafe { Self::forge_token_dangerously() }),
+                2 => Some(unsafe { Self::new_unchecked() }),
                 1 => None,
                 _ => neon_detect(),
             }
@@ -88,38 +87,53 @@ impl SimdToken for NeonToken {
     }
 }
 
-#[cfg(feature = "forge-token-api")]
 impl NeonToken {
-    /// Create a token without any checks.
+    /// Construct the token without any check. Crate-internal.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available. Using a forged token
-    /// when the feature is unavailable causes undefined behavior.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
+    /// The caller must have established, by compile-time `cfg`,
+    /// runtime detection, or possession of a superset token, that
+    /// every feature this token asserts is present on this CPU.
+    // Whether this is reachable depends on the target and on which
+    // `cfg(target_feature)` arms of `summon()` survive, so a token at
+    // the edge of the hierarchy can legitimately have no caller.
+    #[allow(dead_code)]
     #[inline(always)]
-    pub unsafe fn forge_token_dangerously() -> Self {
+    pub(crate) const unsafe fn new_unchecked() -> Self {
         Self { _private: () }
     }
 }
 
-#[cfg(not(feature = "forge-token-api"))]
 impl NeonToken {
-    /// Create a token without any checks.
+    /// Construct a NEON proof from the caller's statically proven
+    /// feature context.
+    ///
+    /// A safe call requires a caller whose `#[target_feature]` attribute
+    /// enables every feature of this tier; a superset is sufficient. Outside
+    /// such a context rustc requires an `unsafe` block at the call site.
+    ///
+    /// Features enabled globally (`-C target-feature`, `-C target-cpu`) do
+    /// not satisfy this — rustc requires them on the caller's own attribute.
+    ///
+    /// No runtime detection happens here, so this also bypasses
+    /// process-wide token disabling (including `testable_dispatch`):
+    /// the caller's feature context is already the proof. Use
+    /// [`SimdToken::summon`](crate::SimdToken::summon) when the
+    /// features have to be detected at runtime.
+    ///
+    /// Being a `#[target_feature]` function, this cannot be coerced to
+    /// a function pointer — there would be no call site left for rustc
+    /// to check.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available. Using a forged token
-    /// when the feature is unavailable causes undefined behavior.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
-    #[inline(always)]
-    pub(crate) unsafe fn forge_token_dangerously() -> Self {
+    /// When called through an `unsafe` block, the caller must ensure
+    /// every feature in this tier is available on the executing CPU.
+    /// Safe calls have that obligation discharged by the compiler.
+    #[inline]
+    #[target_feature(enable = "neon")]
+    pub fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -194,14 +208,13 @@ impl NeonToken {
 #[cfg(not(all(target_feature = "neon", not(feature = "testable_dispatch"))))]
 #[cold]
 #[inline(never)]
-#[allow(deprecated)]
 fn neon_detect() -> Option<NeonToken> {
     let available = crate::is_aarch64_feature_available!("neon");
     NEON_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
     if available {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
-        Some(unsafe { NeonToken::forge_token_dangerously() })
+        Some(unsafe { NeonToken::new_unchecked() })
     } else {
         None
     }
@@ -243,7 +256,6 @@ impl SimdToken for NeonAesToken {
         }
     }
 
-    #[allow(deprecated)]
     #[inline(always)]
     fn summon() -> Option<Self> {
         // Compile-time fast path (suppressed by testable_dispatch)
@@ -256,7 +268,7 @@ impl SimdToken for NeonAesToken {
             // SAFETY: every feature this token asserts is enabled at
             // compile time (cfg(target_feature)), so the binary only
             // runs on CPUs that have them.
-            Some(unsafe { Self::forge_token_dangerously() })
+            Some(unsafe { Self::new_unchecked() })
         }
 
         // Runtime path with caching
@@ -269,7 +281,7 @@ impl SimdToken for NeonAesToken {
             match NEON_AES_CACHE.load(Ordering::Relaxed) {
                 // SAFETY: 2 is only ever stored by neon_aes_detect()
                 // after a positive runtime check of every feature.
-                2 => Some(unsafe { Self::forge_token_dangerously() }),
+                2 => Some(unsafe { Self::new_unchecked() }),
                 1 => None,
                 _ => neon_aes_detect(),
             }
@@ -277,38 +289,53 @@ impl SimdToken for NeonAesToken {
     }
 }
 
-#[cfg(feature = "forge-token-api")]
 impl NeonAesToken {
-    /// Create a token without any checks.
+    /// Construct the token without any check. Crate-internal.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available. Using a forged token
-    /// when the feature is unavailable causes undefined behavior.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
+    /// The caller must have established, by compile-time `cfg`,
+    /// runtime detection, or possession of a superset token, that
+    /// every feature this token asserts is present on this CPU.
+    // Whether this is reachable depends on the target and on which
+    // `cfg(target_feature)` arms of `summon()` survive, so a token at
+    // the edge of the hierarchy can legitimately have no caller.
+    #[allow(dead_code)]
     #[inline(always)]
-    pub unsafe fn forge_token_dangerously() -> Self {
+    pub(crate) const unsafe fn new_unchecked() -> Self {
         Self { _private: () }
     }
 }
 
-#[cfg(not(feature = "forge-token-api"))]
 impl NeonAesToken {
-    /// Create a token without any checks.
+    /// Construct a NEON+AES proof from the caller's statically proven
+    /// feature context.
+    ///
+    /// A safe call requires a caller whose `#[target_feature]` attribute
+    /// enables every feature of this tier; a superset is sufficient. Outside
+    /// such a context rustc requires an `unsafe` block at the call site.
+    ///
+    /// Features enabled globally (`-C target-feature`, `-C target-cpu`) do
+    /// not satisfy this — rustc requires them on the caller's own attribute.
+    ///
+    /// No runtime detection happens here, so this also bypasses
+    /// process-wide token disabling (including `testable_dispatch`):
+    /// the caller's feature context is already the proof. Use
+    /// [`SimdToken::summon`](crate::SimdToken::summon) when the
+    /// features have to be detected at runtime.
+    ///
+    /// Being a `#[target_feature]` function, this cannot be coerced to
+    /// a function pointer — there would be no call site left for rustc
+    /// to check.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available. Using a forged token
-    /// when the feature is unavailable causes undefined behavior.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
-    #[inline(always)]
-    pub(crate) unsafe fn forge_token_dangerously() -> Self {
+    /// When called through an `unsafe` block, the caller must ensure
+    /// every feature in this tier is available on the executing CPU.
+    /// Safe calls have that obligation discharged by the compiler.
+    #[inline]
+    #[target_feature(enable = "neon,aes")]
+    pub fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -317,13 +344,12 @@ impl NeonAesToken {
     /// Extract a NeonToken — guaranteed because NEON+AES implies NEON.
     ///
     /// Zero-cost: compiles away entirely.
-    #[allow(deprecated)]
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
         // SAFETY: holding `self` proves this CPU has NEON+AES's
         // full feature set, a superset of NEON's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { NeonToken::forge_token_dangerously() }
+        unsafe { NeonToken::new_unchecked() }
     }
 }
 
@@ -400,7 +426,6 @@ impl NeonAesToken {
 )))]
 #[cold]
 #[inline(never)]
-#[allow(deprecated)]
 fn neon_aes_detect() -> Option<NeonAesToken> {
     let available =
         crate::is_aarch64_feature_available!("neon") && crate::is_aarch64_feature_available!("aes");
@@ -408,7 +433,7 @@ fn neon_aes_detect() -> Option<NeonAesToken> {
     if available {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
-        Some(unsafe { NeonAesToken::forge_token_dangerously() })
+        Some(unsafe { NeonAesToken::new_unchecked() })
     } else {
         None
     }
@@ -450,7 +475,6 @@ impl SimdToken for NeonSha3Token {
         }
     }
 
-    #[allow(deprecated)]
     #[inline(always)]
     fn summon() -> Option<Self> {
         // Compile-time fast path (suppressed by testable_dispatch)
@@ -463,7 +487,7 @@ impl SimdToken for NeonSha3Token {
             // SAFETY: every feature this token asserts is enabled at
             // compile time (cfg(target_feature)), so the binary only
             // runs on CPUs that have them.
-            Some(unsafe { Self::forge_token_dangerously() })
+            Some(unsafe { Self::new_unchecked() })
         }
 
         // Runtime path with caching
@@ -476,7 +500,7 @@ impl SimdToken for NeonSha3Token {
             match NEON_SHA3_CACHE.load(Ordering::Relaxed) {
                 // SAFETY: 2 is only ever stored by neon_sha3_detect()
                 // after a positive runtime check of every feature.
-                2 => Some(unsafe { Self::forge_token_dangerously() }),
+                2 => Some(unsafe { Self::new_unchecked() }),
                 1 => None,
                 _ => neon_sha3_detect(),
             }
@@ -484,38 +508,53 @@ impl SimdToken for NeonSha3Token {
     }
 }
 
-#[cfg(feature = "forge-token-api")]
 impl NeonSha3Token {
-    /// Create a token without any checks.
+    /// Construct the token without any check. Crate-internal.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available. Using a forged token
-    /// when the feature is unavailable causes undefined behavior.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
+    /// The caller must have established, by compile-time `cfg`,
+    /// runtime detection, or possession of a superset token, that
+    /// every feature this token asserts is present on this CPU.
+    // Whether this is reachable depends on the target and on which
+    // `cfg(target_feature)` arms of `summon()` survive, so a token at
+    // the edge of the hierarchy can legitimately have no caller.
+    #[allow(dead_code)]
     #[inline(always)]
-    pub unsafe fn forge_token_dangerously() -> Self {
+    pub(crate) const unsafe fn new_unchecked() -> Self {
         Self { _private: () }
     }
 }
 
-#[cfg(not(feature = "forge-token-api"))]
 impl NeonSha3Token {
-    /// Create a token without any checks.
+    /// Construct a NEON+SHA3 proof from the caller's statically proven
+    /// feature context.
+    ///
+    /// A safe call requires a caller whose `#[target_feature]` attribute
+    /// enables every feature of this tier; a superset is sufficient. Outside
+    /// such a context rustc requires an `unsafe` block at the call site.
+    ///
+    /// Features enabled globally (`-C target-feature`, `-C target-cpu`) do
+    /// not satisfy this — rustc requires them on the caller's own attribute.
+    ///
+    /// No runtime detection happens here, so this also bypasses
+    /// process-wide token disabling (including `testable_dispatch`):
+    /// the caller's feature context is already the proof. Use
+    /// [`SimdToken::summon`](crate::SimdToken::summon) when the
+    /// features have to be detected at runtime.
+    ///
+    /// Being a `#[target_feature]` function, this cannot be coerced to
+    /// a function pointer — there would be no call site left for rustc
+    /// to check.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available. Using a forged token
-    /// when the feature is unavailable causes undefined behavior.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
-    #[inline(always)]
-    pub(crate) unsafe fn forge_token_dangerously() -> Self {
+    /// When called through an `unsafe` block, the caller must ensure
+    /// every feature in this tier is available on the executing CPU.
+    /// Safe calls have that obligation discharged by the compiler.
+    #[inline]
+    #[target_feature(enable = "neon,sha3")]
+    pub fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -524,13 +563,12 @@ impl NeonSha3Token {
     /// Extract a NeonToken — guaranteed because NEON+SHA3 implies NEON.
     ///
     /// Zero-cost: compiles away entirely.
-    #[allow(deprecated)]
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
         // SAFETY: holding `self` proves this CPU has NEON+SHA3's
         // full feature set, a superset of NEON's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { NeonToken::forge_token_dangerously() }
+        unsafe { NeonToken::new_unchecked() }
     }
 }
 
@@ -607,7 +645,6 @@ impl NeonSha3Token {
 )))]
 #[cold]
 #[inline(never)]
-#[allow(deprecated)]
 fn neon_sha3_detect() -> Option<NeonSha3Token> {
     let available = crate::is_aarch64_feature_available!("neon")
         && crate::is_aarch64_feature_available!("sha3");
@@ -615,7 +652,7 @@ fn neon_sha3_detect() -> Option<NeonSha3Token> {
     if available {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
-        Some(unsafe { NeonSha3Token::forge_token_dangerously() })
+        Some(unsafe { NeonSha3Token::new_unchecked() })
     } else {
         None
     }
@@ -658,7 +695,6 @@ impl SimdToken for NeonCrcToken {
         }
     }
 
-    #[allow(deprecated)]
     #[inline(always)]
     fn summon() -> Option<Self> {
         // Compile-time fast path (suppressed by testable_dispatch)
@@ -671,7 +707,7 @@ impl SimdToken for NeonCrcToken {
             // SAFETY: every feature this token asserts is enabled at
             // compile time (cfg(target_feature)), so the binary only
             // runs on CPUs that have them.
-            Some(unsafe { Self::forge_token_dangerously() })
+            Some(unsafe { Self::new_unchecked() })
         }
 
         // Runtime path with caching
@@ -684,7 +720,7 @@ impl SimdToken for NeonCrcToken {
             match NEON_CRC_CACHE.load(Ordering::Relaxed) {
                 // SAFETY: 2 is only ever stored by neon_crc_detect()
                 // after a positive runtime check of every feature.
-                2 => Some(unsafe { Self::forge_token_dangerously() }),
+                2 => Some(unsafe { Self::new_unchecked() }),
                 1 => None,
                 _ => neon_crc_detect(),
             }
@@ -692,38 +728,53 @@ impl SimdToken for NeonCrcToken {
     }
 }
 
-#[cfg(feature = "forge-token-api")]
 impl NeonCrcToken {
-    /// Create a token without any checks.
+    /// Construct the token without any check. Crate-internal.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available. Using a forged token
-    /// when the feature is unavailable causes undefined behavior.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
+    /// The caller must have established, by compile-time `cfg`,
+    /// runtime detection, or possession of a superset token, that
+    /// every feature this token asserts is present on this CPU.
+    // Whether this is reachable depends on the target and on which
+    // `cfg(target_feature)` arms of `summon()` survive, so a token at
+    // the edge of the hierarchy can legitimately have no caller.
+    #[allow(dead_code)]
     #[inline(always)]
-    pub unsafe fn forge_token_dangerously() -> Self {
+    pub(crate) const unsafe fn new_unchecked() -> Self {
         Self { _private: () }
     }
 }
 
-#[cfg(not(feature = "forge-token-api"))]
 impl NeonCrcToken {
-    /// Create a token without any checks.
+    /// Construct a NEON+CRC proof from the caller's statically proven
+    /// feature context.
+    ///
+    /// A safe call requires a caller whose `#[target_feature]` attribute
+    /// enables every feature of this tier; a superset is sufficient. Outside
+    /// such a context rustc requires an `unsafe` block at the call site.
+    ///
+    /// Features enabled globally (`-C target-feature`, `-C target-cpu`) do
+    /// not satisfy this — rustc requires them on the caller's own attribute.
+    ///
+    /// No runtime detection happens here, so this also bypasses
+    /// process-wide token disabling (including `testable_dispatch`):
+    /// the caller's feature context is already the proof. Use
+    /// [`SimdToken::summon`](crate::SimdToken::summon) when the
+    /// features have to be detected at runtime.
+    ///
+    /// Being a `#[target_feature]` function, this cannot be coerced to
+    /// a function pointer — there would be no call site left for rustc
+    /// to check.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available. Using a forged token
-    /// when the feature is unavailable causes undefined behavior.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
-    #[inline(always)]
-    pub(crate) unsafe fn forge_token_dangerously() -> Self {
+    /// When called through an `unsafe` block, the caller must ensure
+    /// every feature in this tier is available on the executing CPU.
+    /// Safe calls have that obligation discharged by the compiler.
+    #[inline]
+    #[target_feature(enable = "neon,crc")]
+    pub fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -732,13 +783,12 @@ impl NeonCrcToken {
     /// Extract a NeonToken — guaranteed because NEON+CRC implies NEON.
     ///
     /// Zero-cost: compiles away entirely.
-    #[allow(deprecated)]
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
         // SAFETY: holding `self` proves this CPU has NEON+CRC's
         // full feature set, a superset of NEON's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { NeonToken::forge_token_dangerously() }
+        unsafe { NeonToken::new_unchecked() }
     }
 }
 
@@ -815,7 +865,6 @@ impl NeonCrcToken {
 )))]
 #[cold]
 #[inline(never)]
-#[allow(deprecated)]
 fn neon_crc_detect() -> Option<NeonCrcToken> {
     let available =
         crate::is_aarch64_feature_available!("neon") && crate::is_aarch64_feature_available!("crc");
@@ -823,7 +872,7 @@ fn neon_crc_detect() -> Option<NeonCrcToken> {
     if available {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
-        Some(unsafe { NeonCrcToken::forge_token_dangerously() })
+        Some(unsafe { NeonCrcToken::new_unchecked() })
     } else {
         None
     }
@@ -880,7 +929,6 @@ impl SimdToken for Arm64V2Token {
         }
     }
 
-    #[allow(deprecated)]
     #[inline(always)]
     fn summon() -> Option<Self> {
         // Compile-time fast path (suppressed by testable_dispatch)
@@ -898,7 +946,7 @@ impl SimdToken for Arm64V2Token {
             // SAFETY: every feature this token asserts is enabled at
             // compile time (cfg(target_feature)), so the binary only
             // runs on CPUs that have them.
-            Some(unsafe { Self::forge_token_dangerously() })
+            Some(unsafe { Self::new_unchecked() })
         }
 
         // Runtime path with caching
@@ -916,7 +964,7 @@ impl SimdToken for Arm64V2Token {
             match ARM64_V2_CACHE.load(Ordering::Relaxed) {
                 // SAFETY: 2 is only ever stored by arm64_v2_detect()
                 // after a positive runtime check of every feature.
-                2 => Some(unsafe { Self::forge_token_dangerously() }),
+                2 => Some(unsafe { Self::new_unchecked() }),
                 1 => None,
                 _ => arm64_v2_detect(),
             }
@@ -924,38 +972,53 @@ impl SimdToken for Arm64V2Token {
     }
 }
 
-#[cfg(feature = "forge-token-api")]
 impl Arm64V2Token {
-    /// Create a token without any checks.
+    /// Construct the token without any check. Crate-internal.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available. Using a forged token
-    /// when the feature is unavailable causes undefined behavior.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
+    /// The caller must have established, by compile-time `cfg`,
+    /// runtime detection, or possession of a superset token, that
+    /// every feature this token asserts is present on this CPU.
+    // Whether this is reachable depends on the target and on which
+    // `cfg(target_feature)` arms of `summon()` survive, so a token at
+    // the edge of the hierarchy can legitimately have no caller.
+    #[allow(dead_code)]
     #[inline(always)]
-    pub unsafe fn forge_token_dangerously() -> Self {
+    pub(crate) const unsafe fn new_unchecked() -> Self {
         Self { _private: () }
     }
 }
 
-#[cfg(not(feature = "forge-token-api"))]
 impl Arm64V2Token {
-    /// Create a token without any checks.
+    /// Construct a Arm64-v2 proof from the caller's statically proven
+    /// feature context.
+    ///
+    /// A safe call requires a caller whose `#[target_feature]` attribute
+    /// enables every feature of this tier; a superset is sufficient. Outside
+    /// such a context rustc requires an `unsafe` block at the call site.
+    ///
+    /// Features enabled globally (`-C target-feature`, `-C target-cpu`) do
+    /// not satisfy this — rustc requires them on the caller's own attribute.
+    ///
+    /// No runtime detection happens here, so this also bypasses
+    /// process-wide token disabling (including `testable_dispatch`):
+    /// the caller's feature context is already the proof. Use
+    /// [`SimdToken::summon`](crate::SimdToken::summon) when the
+    /// features have to be detected at runtime.
+    ///
+    /// Being a `#[target_feature]` function, this cannot be coerced to
+    /// a function pointer — there would be no call site left for rustc
+    /// to check.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available. Using a forged token
-    /// when the feature is unavailable causes undefined behavior.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
-    #[inline(always)]
-    pub(crate) unsafe fn forge_token_dangerously() -> Self {
+    /// When called through an `unsafe` block, the caller must ensure
+    /// every feature in this tier is available on the executing CPU.
+    /// Safe calls have that obligation discharged by the compiler.
+    #[inline]
+    #[target_feature(enable = "neon,crc,rdm,dotprod,fp16,aes,sha2")]
+    pub fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -964,35 +1027,32 @@ impl Arm64V2Token {
     /// Extract a NeonAesToken — guaranteed because Arm64-v2 implies NEON+AES.
     ///
     /// Zero-cost: compiles away entirely.
-    #[allow(deprecated)]
     #[inline(always)]
     pub fn neon_aes(self) -> NeonAesToken {
         // SAFETY: holding `self` proves this CPU has Arm64-v2's
         // full feature set, a superset of NEON+AES's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { NeonAesToken::forge_token_dangerously() }
+        unsafe { NeonAesToken::new_unchecked() }
     }
     /// Extract a NeonCrcToken — guaranteed because Arm64-v2 implies NEON+CRC.
     ///
     /// Zero-cost: compiles away entirely.
-    #[allow(deprecated)]
     #[inline(always)]
     pub fn neon_crc(self) -> NeonCrcToken {
         // SAFETY: holding `self` proves this CPU has Arm64-v2's
         // full feature set, a superset of NEON+CRC's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { NeonCrcToken::forge_token_dangerously() }
+        unsafe { NeonCrcToken::new_unchecked() }
     }
     /// Extract a NeonToken — guaranteed because Arm64-v2 implies NEON.
     ///
     /// Zero-cost: compiles away entirely.
-    #[allow(deprecated)]
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
         // SAFETY: holding `self` proves this CPU has Arm64-v2's
         // full feature set, a superset of NEON's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { NeonToken::forge_token_dangerously() }
+        unsafe { NeonToken::new_unchecked() }
     }
 }
 
@@ -1099,7 +1159,6 @@ impl Arm64V2Token {
 )))]
 #[cold]
 #[inline(never)]
-#[allow(deprecated)]
 fn arm64_v2_detect() -> Option<Arm64V2Token> {
     let available = crate::is_aarch64_feature_available!("neon")
         && crate::is_aarch64_feature_available!("crc")
@@ -1112,7 +1171,7 @@ fn arm64_v2_detect() -> Option<Arm64V2Token> {
     if available {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
-        Some(unsafe { Arm64V2Token::forge_token_dangerously() })
+        Some(unsafe { Arm64V2Token::new_unchecked() })
     } else {
         None
     }
@@ -1178,7 +1237,6 @@ impl SimdToken for Arm64V3Token {
         }
     }
 
-    #[allow(deprecated)]
     #[inline(always)]
     fn summon() -> Option<Self> {
         // Compile-time fast path (suppressed by testable_dispatch)
@@ -1201,7 +1259,7 @@ impl SimdToken for Arm64V3Token {
             // SAFETY: every feature this token asserts is enabled at
             // compile time (cfg(target_feature)), so the binary only
             // runs on CPUs that have them.
-            Some(unsafe { Self::forge_token_dangerously() })
+            Some(unsafe { Self::new_unchecked() })
         }
 
         // Runtime path with caching
@@ -1224,7 +1282,7 @@ impl SimdToken for Arm64V3Token {
             match ARM64_V3_CACHE.load(Ordering::Relaxed) {
                 // SAFETY: 2 is only ever stored by arm64_v3_detect()
                 // after a positive runtime check of every feature.
-                2 => Some(unsafe { Self::forge_token_dangerously() }),
+                2 => Some(unsafe { Self::new_unchecked() }),
                 1 => None,
                 _ => arm64_v3_detect(),
             }
@@ -1232,38 +1290,53 @@ impl SimdToken for Arm64V3Token {
     }
 }
 
-#[cfg(feature = "forge-token-api")]
 impl Arm64V3Token {
-    /// Create a token without any checks.
+    /// Construct the token without any check. Crate-internal.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available. Using a forged token
-    /// when the feature is unavailable causes undefined behavior.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
+    /// The caller must have established, by compile-time `cfg`,
+    /// runtime detection, or possession of a superset token, that
+    /// every feature this token asserts is present on this CPU.
+    // Whether this is reachable depends on the target and on which
+    // `cfg(target_feature)` arms of `summon()` survive, so a token at
+    // the edge of the hierarchy can legitimately have no caller.
+    #[allow(dead_code)]
     #[inline(always)]
-    pub unsafe fn forge_token_dangerously() -> Self {
+    pub(crate) const unsafe fn new_unchecked() -> Self {
         Self { _private: () }
     }
 }
 
-#[cfg(not(feature = "forge-token-api"))]
 impl Arm64V3Token {
-    /// Create a token without any checks.
+    /// Construct a Arm64-v3 proof from the caller's statically proven
+    /// feature context.
+    ///
+    /// A safe call requires a caller whose `#[target_feature]` attribute
+    /// enables every feature of this tier; a superset is sufficient. Outside
+    /// such a context rustc requires an `unsafe` block at the call site.
+    ///
+    /// Features enabled globally (`-C target-feature`, `-C target-cpu`) do
+    /// not satisfy this — rustc requires them on the caller's own attribute.
+    ///
+    /// No runtime detection happens here, so this also bypasses
+    /// process-wide token disabling (including `testable_dispatch`):
+    /// the caller's feature context is already the proof. Use
+    /// [`SimdToken::summon`](crate::SimdToken::summon) when the
+    /// features have to be detected at runtime.
+    ///
+    /// Being a `#[target_feature]` function, this cannot be coerced to
+    /// a function pointer — there would be no call site left for rustc
+    /// to check.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available. Using a forged token
-    /// when the feature is unavailable causes undefined behavior.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
-    #[inline(always)]
-    pub(crate) unsafe fn forge_token_dangerously() -> Self {
+    /// When called through an `unsafe` block, the caller must ensure
+    /// every feature in this tier is available on the executing CPU.
+    /// Safe calls have that obligation discharged by the compiler.
+    #[inline]
+    #[target_feature(enable = "neon,crc,rdm,dotprod,fp16,aes,sha2,fhm,fcma,sha3,i8mm,bf16")]
+    pub fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -1272,57 +1345,52 @@ impl Arm64V3Token {
     /// Extract a Arm64V2Token — guaranteed because Arm64-v3 implies Arm64-v2.
     ///
     /// Zero-cost: compiles away entirely.
-    #[allow(deprecated)]
     #[inline(always)]
     pub fn arm_v2(self) -> Arm64V2Token {
         // SAFETY: holding `self` proves this CPU has Arm64-v3's
         // full feature set, a superset of Arm64-v2's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { Arm64V2Token::forge_token_dangerously() }
+        unsafe { Arm64V2Token::new_unchecked() }
     }
     /// Extract a NeonAesToken — guaranteed because Arm64-v3 implies NEON+AES.
     ///
     /// Zero-cost: compiles away entirely.
-    #[allow(deprecated)]
     #[inline(always)]
     pub fn neon_aes(self) -> NeonAesToken {
         // SAFETY: holding `self` proves this CPU has Arm64-v3's
         // full feature set, a superset of NEON+AES's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { NeonAesToken::forge_token_dangerously() }
+        unsafe { NeonAesToken::new_unchecked() }
     }
     /// Extract a NeonCrcToken — guaranteed because Arm64-v3 implies NEON+CRC.
     ///
     /// Zero-cost: compiles away entirely.
-    #[allow(deprecated)]
     #[inline(always)]
     pub fn neon_crc(self) -> NeonCrcToken {
         // SAFETY: holding `self` proves this CPU has Arm64-v3's
         // full feature set, a superset of NEON+CRC's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { NeonCrcToken::forge_token_dangerously() }
+        unsafe { NeonCrcToken::new_unchecked() }
     }
     /// Extract a NeonSha3Token — guaranteed because Arm64-v3 implies NEON+SHA3.
     ///
     /// Zero-cost: compiles away entirely.
-    #[allow(deprecated)]
     #[inline(always)]
     pub fn neon_sha3(self) -> NeonSha3Token {
         // SAFETY: holding `self` proves this CPU has Arm64-v3's
         // full feature set, a superset of NEON+SHA3's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { NeonSha3Token::forge_token_dangerously() }
+        unsafe { NeonSha3Token::new_unchecked() }
     }
     /// Extract a NeonToken — guaranteed because Arm64-v3 implies NEON.
     ///
     /// Zero-cost: compiles away entirely.
-    #[allow(deprecated)]
     #[inline(always)]
     pub fn neon(self) -> NeonToken {
         // SAFETY: holding `self` proves this CPU has Arm64-v3's
         // full feature set, a superset of NEON's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { NeonToken::forge_token_dangerously() }
+        unsafe { NeonToken::new_unchecked() }
     }
 }
 
@@ -1449,7 +1517,6 @@ impl Arm64V3Token {
 )))]
 #[cold]
 #[inline(never)]
-#[allow(deprecated)]
 fn arm64_v3_detect() -> Option<Arm64V3Token> {
     let available = crate::is_aarch64_feature_available!("neon")
         && crate::is_aarch64_feature_available!("crc")
@@ -1467,7 +1534,7 @@ fn arm64_v3_detect() -> Option<Arm64V3Token> {
     if available {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
-        Some(unsafe { Arm64V3Token::forge_token_dangerously() })
+        Some(unsafe { Arm64V3Token::new_unchecked() })
     } else {
         None
     }

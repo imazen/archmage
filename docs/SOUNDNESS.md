@@ -5,7 +5,7 @@ archmage and magetypes are sound. It states the one invariant everything
 rests on, inventories every place `unsafe` lives, lists what each tool
 proves, and gives the audit procedure for reviewing changes.
 
-Last full audit: 2026-07-14 (all counts below measured then).
+Last full audit: 2026-07-14. The inventory below was re-measured 2026-09-05.
 
 ## The invariant
 
@@ -16,12 +16,12 @@ A *proof* is one of:
 
 1. **A token value.** Token types (`X64V3Token`, `NeonToken`, …) are
    zero-sized and unforgeable from safe code: private field, sealed
-   `SimdToken` supertrait, no `Default`/`new`. The only constructors are
-   `summon()` (runtime CPU detection), the compile-time
-   `cfg(target_feature)` fast path (the binary only runs where the features
-   exist), and `forge_token_dangerously()` (`unsafe`, caller asserts the
-   claim). Holding a token therefore implies the CPU has that tier's
-   features.
+   `SimdToken` supertrait, no `Default`/`new`. The constructors are
+   `summon()` (runtime CPU detection, including the compile-time
+   `cfg(target_feature)` fast path — the binary only runs where the features
+   exist), `forge_token_dangerously()` (see below), and the crate-internal
+   `new_unchecked()` that both are built from. Holding a token therefore
+   implies the CPU has that tier's features.
 2. **A `#[target_feature(enable = …)]` region.** Reaching such a function
    means the caller discharged the feature obligation — via a token-gated
    `#[arcane]` wrapper, a matching-feature safe call (Rust 1.86+), or an
@@ -29,6 +29,59 @@ A *proof* is one of:
 
 Proofs union: a method taking `X64V4Token` inside an
 `impl … for X64V3Token` block may use V3 ∪ V4 features.
+
+### Converting proof 2 back into proof 1
+
+`forge_token_dangerously()` is a **safe** `#[target_feature]` function
+carrying its tier's complete feature list, which makes rustc the arbiter of
+each call site:
+
+* From a caller whose own `#[target_feature]` attribute enables the tier's
+  features or a superset — an `#[arcane]` / `#[rite]` / `#[magetypes]` body —
+  the call needs no `unsafe`. The caller's attribute *is* proof 2, and the
+  compiler checks the subset relation; the result is proof 1. This is the
+  only way to move from a feature region back to a token without either a
+  redundant runtime check or a hand-written obligation.
+* From every other caller the call is `unsafe` and the caller carries the
+  obligation by hand, exactly as before this became a safe function.
+
+Three properties are load-bearing and pinned by tests:
+
+* Features enabled *globally* (`-C target-feature=+avx2`, `-C
+  target-cpu=native`) do **not** make the call safe — rustc requires them on
+  the caller's own attribute (`tests/compile_fail/forge_missing_context.rs`).
+* A weaker context cannot forge a stronger token
+  (`tests/compile_fail/forge_weaker_context.rs`).
+* The function cannot be coerced to a safe function pointer — there would be
+  no call site left to check (`tests/compile_fail/forge_fn_pointer.rs`).
+
+On a **foreign architecture** the stub constructor stays `unsafe fn`: no
+`#[target_feature]` context for those features can exist on that target, so
+there is nothing for rustc to check and no safe path should exist
+(`tests/compile_fail/forge_wrong_arch.rs`). On **WASM**, Rust permits safe
+calls to `#[target_feature]` functions from any context; the engine validates
+the required instructions when the module is loaded, so a module that runs at
+all has the features. `ScalarToken` asserts the empty feature set, so its
+constructor carries no gate.
+
+Forging performs no runtime detection, so it also bypasses process-wide token
+disabling (including `testable_dispatch`). That is intentional: the caller's
+feature context is already the proof, and there is no way to make a
+`#[target_feature]` region stop having its features. Use `summon()` when
+dispatch must respond to runtime state.
+
+The whole safe path is pinned by `tests/forge_from_context.rs`, which is
+`#![forbid(unsafe_code)]` — it compiles only if the safe route is genuinely
+safe.
+
+`new_unchecked()` is `pub(crate)`, carries no `#[target_feature]`, and is
+what every generated internal call site (`summon()`, the cold detect
+functions, the extraction methods, `IntoConcreteToken`) uses. Keeping it
+feature-free is deliberate: a `#[target_feature]` constructor cannot be
+`#[inline(always)]` and would put an LLVM optimization boundary in the middle
+of `summon()`, whose compile-time-guaranteed path must vanish entirely. The
+soundness scanner's structural rules ban both `forge_token_dangerously` and
+`new_unchecked` from magetypes.
 
 Since Rust 1.87, value-based `core::arch` intrinsics are *safe* inside a
 matching `#[target_feature]` region; everywhere else they require `unsafe`
@@ -40,14 +93,16 @@ receiver.
 
 | Surface | Count | Invariant | Discipline |
 |---|---|---|---|
-| `src/tokens/generated/{x86,arm,wasm}.rs` forge call sites | 81 | summon/detect just verified the features, the features are compile-time guaranteed, or the source token's feature set is a registry-verified superset (extraction methods) | per-block `// SAFETY:` comments, generator-emitted, checker-enforced |
-| `src/tokens/mod.rs` (`ScalarToken`, forge definitions) | 2 | `ScalarToken` proves the empty feature set; forge fns are `unsafe` with `# Safety` docs | doc sections |
-| `magetypes/src/simd/impls/{x86_v3,x86_v4,arm_neon,wasm128}.rs` | ~1,960 blocks | uniform: token receiver proves intrinsic features (mechanically re-verified per run); loads/stores go through sized references; transmutes are same-size POD | file-header audit contract (generator-emitted, checker-enforced); per-block comments deliberately omitted as noise |
-| `magetypes/src` outside `impls/` (byte casts, cross-width, slice reshape) | 225 blocks | size/align-guarded layout casts on all-bit-patterns-valid element types; token-gated construction | per-block `// SAFETY:` comments, checker-enforced |
+| `src/tokens/generated/{x86,arm,wasm}.rs` `new_unchecked()` call sites | 90 (58 x86 + 29 arm + 3 wasm) | summon/detect just verified the features, the features are compile-time guaranteed, or the source token's feature set is a registry-verified superset (extraction methods) | per-block `// SAFETY:` comments, generator-emitted, checker-enforced |
+| `src/tokens/mod.rs` (`ScalarToken` constructors) | 1 `unsafe fn`, 0 blocks | `ScalarToken` proves the empty feature set, so `new_unchecked()` is trivially satisfiable and `forge_token_dangerously()` is an ungated safe `fn` | doc sections |
+| `src/tokens/generated/{x86,arm,wasm}_stubs.rs` forge definitions | 17 total (9 x86 + 6 arm + 2 wasm); 8–15 visible per target | foreign-architecture constructors: `unsafe fn` with an *unsatisfiable* `# Safety` contract — they exist so cross-architecture code compiles, not to be called | doc sections; `tests/compile_fail/forge_wrong_arch.rs` |
+| `magetypes/src/simd/impls/{x86_v3,x86_v4,arm_neon,wasm128}.rs` | **1 block** (was ~1,960) | per-method `#[arcane(_self = Token)]` turns each body into a `#[target_feature]` region, so the 5,142 value intrinsics in these files need no `unsafe` at all; the one remaining block is `x86_v3.rs`'s `sse2_baseline!` macro, which calls a *narrower* SSE2-only inner fn from the AVX tier | file-header audit contract (generator-emitted, checker-enforced); every intrinsic re-verified against the registry per run |
+| `magetypes/src` outside `impls/` | **8 blocks, all in `simd_storage.rs`** (was 225) | size/align-guarded layout casts over `Pod` (all-bit-patterns-valid) storage; the four token-taking helpers additionally require a token value and const-assert the token is a 1-ZST | per-block `// SAFETY:` comments, checker-enforced; `unsafe impl Pod` is banned outside this file and every `TokenStorage` type must be `#[repr(C)]` |
 | `archmage-macros` emitted code (`#[arcane]` wrappers etc.) | 1 `unsafe` block per wrapper | the token parameter (tier-tag const-asserted) proves the sibling's `#[target_feature]` set | justified in macro source; expansion snapshots under `tests/expand/` are re-verified by the intrinsic scanner (comments cannot survive tokenization, so snapshots carry no SAFETY text) |
 
 Notable absences, enforced by structural rules: no `MaybeUninit`, no
-`mem::zeroed`, no forging, no bare `transmute` outside the backend impls,
+`mem::zeroed`, no forging (neither `forge_token_dangerously` nor
+`new_unchecked`), no bare `transmute` outside the backend impls,
 no `Default`/serde/bytemuck construction of SIMD wrappers anywhere in
 magetypes.
 

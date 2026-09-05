@@ -186,3 +186,60 @@ Available traits:
 - `HasNeonAes`, `HasNeonSha3` — NEON extensions
 - `HasArm64V2` — Modern ARM compute tier
 - `HasArm64V3` — Full modern ARM feature set
+
+## Constructing a token from an existing feature context
+
+Inside a `#[target_feature]` region you have already proved the features — the
+attribute is the proof. `forge_token_dangerously()` converts that proof back
+into a token, and rustc checks the conversion:
+
+```rust
+use archmage::{X64V3Token, arcane, rite};
+
+// Tier-based #[rite] takes no token, but its body is an AVX2+FMA region.
+#[rite(v3)]
+fn needs_a_token(data: &[f32; 8]) -> f32 {
+    let token = X64V3Token::forge_token_dangerously();  // safe — no `unsafe`
+    consume(token, data)
+}
+
+#[rite(import_intrinsics)]
+fn consume(_token: X64V3Token, data: &[f32; 8]) -> f32 {
+    let v = _mm256_loadu_ps(data);
+    let mut out = [0.0f32; 8];
+    _mm256_storeu_ps(&mut out, _mm256_add_ps(v, v));
+    out.iter().sum()
+}
+
+#[arcane]
+fn entry(_token: X64V3Token, data: &[f32; 8]) -> f32 {
+    needs_a_token(data)
+}
+```
+
+The call is safe only when the caller's own `#[target_feature]` attribute
+enables every feature of the tier; a stronger tier can forge weaker tokens.
+Anywhere else — a plain function, a weaker tier — rustc demands an `unsafe`
+block and the obligation is yours. Note that features enabled *globally*
+(`-C target-feature=+avx2`, `-C target-cpu=native`) do not count: rustc
+requires them on the caller's own attribute.
+
+Three things are deliberately impossible: forging a stronger token from a
+weaker context, forging from no context at all without `unsafe`, and coercing
+the constructor to a safe function pointer (there would be no call site left
+to check).
+
+Because no detection runs, this also bypasses process-wide token disabling
+including `testable_dispatch`. Use `summon()` whenever dispatch has to respond
+to runtime state. `ScalarToken::forge_token_dangerously()` asserts no features
+and is callable from anywhere.
+
+On a foreign architecture the constructor stays `unsafe fn` — no
+`#[target_feature]` context for those features can exist there, so there is
+nothing for rustc to check. On WASM, Rust permits safe `#[target_feature]`
+calls from any context: the engine validates the required instructions when
+the module loads.
+
+This whole pattern is pinned by `tests/forge_from_context.rs`, which carries
+`#![forbid(unsafe_code)]` — it compiles only if the safe route is genuinely
+safe. The rejected cases live in `tests/compile_fail/forge_*.rs`.

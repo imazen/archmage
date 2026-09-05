@@ -25,10 +25,14 @@
 //!
 //! 1. **Token guarantees runtime feature presence.** Constructing `T`
 //!    requires `T::summon()` (which performs runtime CPU feature
-//!    detection) or one of the upgrade extractors from a stronger token
-//!    that is itself proven by the same chain. The forge bypass
-//!    (`forge_token_dangerously`) is `unsafe` and explicitly off the
-//!    soundness chain.
+//!    detection), one of the upgrade extractors from a stronger token
+//!    that is itself proven by the same chain, or
+//!    `forge_token_dangerously()` — which is a safe `#[target_feature]`
+//!    function, so a safe call requires rustc to verify the caller's own
+//!    feature context covers the tier, and any other call is `unsafe`
+//!    with the obligation on the caller. magetypes never forges: the
+//!    soundness scanner's structural rules reject both
+//!    `forge_token_dangerously` and `new_unchecked` in this crate.
 //!
 //! 2. **The repr-construction operation is sound under those features.**
 //!    For native intrinsic paths, the chosen instruction is documented

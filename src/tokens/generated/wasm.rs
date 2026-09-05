@@ -32,7 +32,6 @@ impl SimdToken for Wasm128Token {
         }
     }
 
-    #[allow(deprecated)]
     #[inline]
     fn summon() -> Option<Self> {
         #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
@@ -40,7 +39,7 @@ impl SimdToken for Wasm128Token {
             // SAFETY: the required wasm features are compile-time
             // enabled; a runtime that validated this module supports
             // them (wasm has no runtime feature detection).
-            Some(unsafe { Self::forge_token_dangerously() })
+            Some(unsafe { Self::new_unchecked() })
         }
         #[cfg(not(all(target_arch = "wasm32", target_feature = "simd128")))]
         {
@@ -49,38 +48,50 @@ impl SimdToken for Wasm128Token {
     }
 }
 
-#[cfg(feature = "forge-token-api")]
 impl Wasm128Token {
-    /// Create a token without any checks.
+    /// Construct the token without any check. Crate-internal.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available. Using a forged token
-    /// when the feature is unavailable causes undefined behavior.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
+    /// The caller must have established, by compile-time `cfg`,
+    /// runtime detection, or possession of a superset token, that
+    /// every feature this token asserts is present on this CPU.
+    // Whether this is reachable depends on the target and on which
+    // `cfg(target_feature)` arms of `summon()` survive, so a token at
+    // the edge of the hierarchy can legitimately have no caller.
+    #[allow(dead_code)]
     #[inline(always)]
-    pub unsafe fn forge_token_dangerously() -> Self {
+    pub(crate) const unsafe fn new_unchecked() -> Self {
         Self { _private: () }
     }
 }
 
-#[cfg(not(feature = "forge-token-api"))]
 impl Wasm128Token {
-    /// Create a token without any checks.
+    /// Construct a WASM SIMD128 proof from the caller's statically proven
+    /// feature context.
+    ///
+    /// Rust permits safe calls to `#[target_feature]` functions from any
+    /// WASM context: the engine validates the required instructions when the
+    /// module is loaded, so a module that runs at all has the features.
+    ///
+    /// No runtime detection happens here, so this also bypasses
+    /// process-wide token disabling (including `testable_dispatch`):
+    /// the caller's feature context is already the proof. Use
+    /// [`SimdToken::summon`](crate::SimdToken::summon) when the
+    /// features have to be detected at runtime.
+    ///
+    /// Being a `#[target_feature]` function, this cannot be coerced to
+    /// a function pointer — there would be no call site left for rustc
+    /// to check.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available. Using a forged token
-    /// when the feature is unavailable causes undefined behavior.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
-    #[inline(always)]
-    pub(crate) unsafe fn forge_token_dangerously() -> Self {
+    /// When called through an `unsafe` block, the caller must ensure
+    /// every feature in this tier is available on the executing CPU.
+    /// Safe calls have that obligation discharged by the compiler.
+    #[inline]
+    #[target_feature(enable = "simd128")]
+    pub fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -126,7 +137,6 @@ impl SimdToken for Wasm128RelaxedToken {
         }
     }
 
-    #[allow(deprecated)]
     #[inline]
     fn summon() -> Option<Self> {
         #[cfg(all(
@@ -138,7 +148,7 @@ impl SimdToken for Wasm128RelaxedToken {
             // SAFETY: the required wasm features are compile-time
             // enabled; a runtime that validated this module supports
             // them (wasm has no runtime feature detection).
-            Some(unsafe { Self::forge_token_dangerously() })
+            Some(unsafe { Self::new_unchecked() })
         }
         #[cfg(not(all(
             target_arch = "wasm32",
@@ -151,38 +161,50 @@ impl SimdToken for Wasm128RelaxedToken {
     }
 }
 
-#[cfg(feature = "forge-token-api")]
 impl Wasm128RelaxedToken {
-    /// Create a token without any checks.
+    /// Construct the token without any check. Crate-internal.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available. Using a forged token
-    /// when the feature is unavailable causes undefined behavior.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
+    /// The caller must have established, by compile-time `cfg`,
+    /// runtime detection, or possession of a superset token, that
+    /// every feature this token asserts is present on this CPU.
+    // Whether this is reachable depends on the target and on which
+    // `cfg(target_feature)` arms of `summon()` survive, so a token at
+    // the edge of the hierarchy can legitimately have no caller.
+    #[allow(dead_code)]
     #[inline(always)]
-    pub unsafe fn forge_token_dangerously() -> Self {
+    pub(crate) const unsafe fn new_unchecked() -> Self {
         Self { _private: () }
     }
 }
 
-#[cfg(not(feature = "forge-token-api"))]
 impl Wasm128RelaxedToken {
-    /// Create a token without any checks.
+    /// Construct a WASM Relaxed SIMD proof from the caller's statically proven
+    /// feature context.
+    ///
+    /// Rust permits safe calls to `#[target_feature]` functions from any
+    /// WASM context: the engine validates the required instructions when the
+    /// module is loaded, so a module that runs at all has the features.
+    ///
+    /// No runtime detection happens here, so this also bypasses
+    /// process-wide token disabling (including `testable_dispatch`):
+    /// the caller's feature context is already the proof. Use
+    /// [`SimdToken::summon`](crate::SimdToken::summon) when the
+    /// features have to be detected at runtime.
+    ///
+    /// Being a `#[target_feature]` function, this cannot be coerced to
+    /// a function pointer — there would be no call site left for rustc
+    /// to check.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available. Using a forged token
-    /// when the feature is unavailable causes undefined behavior.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
-    #[inline(always)]
-    pub(crate) unsafe fn forge_token_dangerously() -> Self {
+    /// When called through an `unsafe` block, the caller must ensure
+    /// every feature in this tier is available on the executing CPU.
+    /// Safe calls have that obligation discharged by the compiler.
+    #[inline]
+    #[target_feature(enable = "simd128,relaxed-simd")]
+    pub fn forge_token_dangerously() -> Self {
         Self { _private: () }
     }
 }
@@ -191,13 +213,12 @@ impl Wasm128RelaxedToken {
     /// Extract a Wasm128Token — guaranteed because WASM Relaxed SIMD implies WASM SIMD128.
     ///
     /// Zero-cost: compiles away entirely.
-    #[allow(deprecated)]
     #[inline(always)]
     pub fn wasm128(self) -> Wasm128Token {
         // SAFETY: holding `self` proves this CPU has WASM Relaxed SIMD's
         // full feature set, a superset of WASM SIMD128's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { Wasm128Token::forge_token_dangerously() }
+        unsafe { Wasm128Token::new_unchecked() }
     }
 }
 

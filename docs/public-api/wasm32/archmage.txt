@@ -6,7 +6,7 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: archmage.txt 327 lines (supported surface) | archmage.features.txt 54 added (features: avx512,forge-token-api,macros,safe_unaligned_simd,std,testable_dispatch) | archmage.internal.txt 81 lines (81 hidden + 0 excluded-feature)
+# files: archmage.txt 381 lines (supported surface) | archmage.features.txt 0 added (features: avx512,forge-token-api,macros,safe_unaligned_simd,std,testable_dispatch) | archmage.internal.txt 81 lines (81 hidden + 0 excluded-feature)
 
 ## summary
 #
@@ -14,22 +14,22 @@
 #   pub types (struct/enum/trait/alias)       114
 #   pub consts/statics                         12
 #   free functions                              4
-#   inherent methods                          168
+#   inherent methods                          177
 #   struct fields                              12
-#   enum variants                               3
+#   enum variants                              48
 #   re-exports                                 54
 #   trait roster entries (type × trait)       164
 #   auto-trait-complete types                  23
 #   auto-trait exceptions                       1
 #
 # per-module pub lines:
-#   (root)                           84
+#   (root)                          129
 #   intrinsics                       19
 #   prelude                          87
 #   testing                          13
-#   tokens                          170
+#   tokens                          179
 
-## items (301 lines)
+## items (355 lines)
 
 pub mod archmage
 pub use arcane
@@ -91,37 +91,55 @@ pub use prelude::v128_load8_splat
 pub use prelude::v128_store
 pub fn tokens::Arm64V2Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::Arm64V2Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::Arm64V2Token::forge_token_dangerously() -> Self
 pub fn tokens::Arm64V3Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::Arm64V3Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::Arm64V3Token::forge_token_dangerously() -> Self
 pub fn tokens::Avx512Fp16Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::Avx512Fp16Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::Avx512Fp16Token::forge_token_dangerously() -> Self
 pub fn tokens::NeonAesToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::NeonAesToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::NeonAesToken::forge_token_dangerously() -> Self
 pub fn tokens::NeonCrcToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::NeonCrcToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::NeonCrcToken::forge_token_dangerously() -> Self
 pub fn tokens::NeonSha3Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::NeonSha3Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::NeonSha3Token::forge_token_dangerously() -> Self
 pub fn tokens::NeonToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::NeonToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::NeonToken::forge_token_dangerously() -> Self
 pub fn tokens::ScalarToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::ScalarToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::ScalarToken::forge_token_dangerously() -> Self
+pub fn tokens::Wasm128RelaxedToken::forge_token_dangerously() -> Self
 pub fn tokens::Wasm128RelaxedToken::wasm128(self) -> tokens::Wasm128Token
+pub fn tokens::Wasm128Token::forge_token_dangerously() -> Self
 pub fn tokens::X64CryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64CryptoToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64CryptoToken::forge_token_dangerously() -> Self
 pub fn tokens::X64V1Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V1Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64V1Token::forge_token_dangerously() -> Self
 pub fn tokens::X64V2Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V2Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64V2Token::forge_token_dangerously() -> Self
 pub fn tokens::X64V3CryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V3CryptoToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64V3CryptoToken::forge_token_dangerously() -> Self
 pub fn tokens::X64V3GfniCryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V3GfniCryptoToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64V3GfniCryptoToken::forge_token_dangerously() -> Self
 pub fn tokens::X64V3Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V3Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64V3Token::forge_token_dangerously() -> Self
 pub fn tokens::X64V4Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V4Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64V4Token::forge_token_dangerously() -> Self
 pub fn tokens::X64V4xToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V4xToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64V4xToken::forge_token_dangerously() -> Self
 pub fn prelude::IntoConcreteToken::as_arm_v2(self) -> core::option::Option<tokens::Arm64V2Token>
 pub fn prelude::IntoConcreteToken::as_arm_v3(self) -> core::option::Option<tokens::Arm64V3Token>
 pub fn prelude::IntoConcreteToken::as_avx512_fp16(self) -> core::option::Option<tokens::Avx512Fp16Token>
@@ -166,41 +184,59 @@ pub fn testing::lock_token_testing() -> testing::TokenTestGuard
 pub mod tokens
 pub fn tokens::Arm64V2Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::Arm64V2Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::Arm64V2Token::forge_token_dangerously() -> Self
 pub fn tokens::Arm64V3Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::Arm64V3Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::Arm64V3Token::forge_token_dangerously() -> Self
 pub fn tokens::Avx512Fp16Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::Avx512Fp16Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::Avx512Fp16Token::forge_token_dangerously() -> Self
 pub tokens::CompileTimeGuaranteedError::disable_flags: &'static str
 pub tokens::CompileTimeGuaranteedError::target_features: &'static str
 pub tokens::CompileTimeGuaranteedError::token_name: &'static str
 pub tokens::DisableAllSimdError::errors: alloc::vec::Vec<tokens::CompileTimeGuaranteedError>
 pub fn tokens::NeonAesToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::NeonAesToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::NeonAesToken::forge_token_dangerously() -> Self
 pub fn tokens::NeonCrcToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::NeonCrcToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::NeonCrcToken::forge_token_dangerously() -> Self
 pub fn tokens::NeonSha3Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::NeonSha3Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::NeonSha3Token::forge_token_dangerously() -> Self
 pub fn tokens::NeonToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::NeonToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::NeonToken::forge_token_dangerously() -> Self
 pub fn tokens::ScalarToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::ScalarToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::ScalarToken::forge_token_dangerously() -> Self
+pub fn tokens::Wasm128RelaxedToken::forge_token_dangerously() -> Self
 pub fn tokens::Wasm128RelaxedToken::wasm128(self) -> tokens::Wasm128Token
+pub fn tokens::Wasm128Token::forge_token_dangerously() -> Self
 pub fn tokens::X64CryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64CryptoToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64CryptoToken::forge_token_dangerously() -> Self
 pub fn tokens::X64V1Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V1Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64V1Token::forge_token_dangerously() -> Self
 pub fn tokens::X64V2Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V2Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64V2Token::forge_token_dangerously() -> Self
 pub fn tokens::X64V3CryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V3CryptoToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64V3CryptoToken::forge_token_dangerously() -> Self
 pub fn tokens::X64V3GfniCryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V3GfniCryptoToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64V3GfniCryptoToken::forge_token_dangerously() -> Self
 pub fn tokens::X64V3Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V3Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64V3Token::forge_token_dangerously() -> Self
 pub fn tokens::X64V4Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V4Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64V4Token::forge_token_dangerously() -> Self
 pub fn tokens::X64V4xToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V4xToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64V4xToken::forge_token_dangerously() -> Self
 pub fn tokens::IntoConcreteToken::as_arm_v2(self) -> core::option::Option<tokens::Arm64V2Token>
 pub fn tokens::IntoConcreteToken::as_arm_v3(self) -> core::option::Option<tokens::Arm64V3Token>
 pub fn tokens::IntoConcreteToken::as_avx512_fp16(self) -> core::option::Option<tokens::Avx512Fp16Token>
@@ -232,12 +268,15 @@ pub type tokens::Avx512ModernToken = tokens::X64V4xToken
 pub struct Arm64V2Token [also: prelude, tokens]
 pub fn tokens::Arm64V2Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::Arm64V2Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::Arm64V2Token::forge_token_dangerously() -> Self
 pub struct Arm64V3Token [also: prelude, tokens]
 pub fn tokens::Arm64V3Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::Arm64V3Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::Arm64V3Token::forge_token_dangerously() -> Self
 pub struct Avx512Fp16Token [also: prelude, tokens]
 pub fn tokens::Avx512Fp16Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::Avx512Fp16Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::Avx512Fp16Token::forge_token_dangerously() -> Self
 pub struct CompileTimeGuaranteedError [also: tokens]
 pub CompileTimeGuaranteedError::disable_flags: &'static str
 pub CompileTimeGuaranteedError::target_features: &'static str
@@ -247,45 +286,60 @@ pub DisableAllSimdError::errors: alloc::vec::Vec<tokens::CompileTimeGuaranteedEr
 pub struct NeonAesToken [also: prelude, tokens]
 pub fn tokens::NeonAesToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::NeonAesToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::NeonAesToken::forge_token_dangerously() -> Self
 pub struct NeonCrcToken [also: prelude, tokens]
 pub fn tokens::NeonCrcToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::NeonCrcToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::NeonCrcToken::forge_token_dangerously() -> Self
 pub struct NeonSha3Token [also: prelude, tokens]
 pub fn tokens::NeonSha3Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::NeonSha3Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::NeonSha3Token::forge_token_dangerously() -> Self
 pub struct NeonToken [also: prelude, tokens]
 pub fn tokens::NeonToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::NeonToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::NeonToken::forge_token_dangerously() -> Self
 pub struct ScalarToken [also: prelude, tokens]
 pub fn tokens::ScalarToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::ScalarToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub fn tokens::ScalarToken::forge_token_dangerously() -> Self
 pub struct Wasm128RelaxedToken [also: prelude, tokens]
+pub fn tokens::Wasm128RelaxedToken::forge_token_dangerously() -> Self
 pub fn tokens::Wasm128RelaxedToken::wasm128(self) -> tokens::Wasm128Token
 pub struct Wasm128Token [also: prelude, tokens]
+pub fn tokens::Wasm128Token::forge_token_dangerously() -> Self
 pub struct X64CryptoToken [also: prelude, tokens]
 pub fn tokens::X64CryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64CryptoToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64CryptoToken::forge_token_dangerously() -> Self
 pub struct X64V1Token [also: prelude, tokens]
 pub fn tokens::X64V1Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V1Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64V1Token::forge_token_dangerously() -> Self
 pub struct X64V2Token [also: prelude, tokens]
 pub fn tokens::X64V2Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V2Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64V2Token::forge_token_dangerously() -> Self
 pub struct X64V3CryptoToken [also: prelude, tokens]
 pub fn tokens::X64V3CryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V3CryptoToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64V3CryptoToken::forge_token_dangerously() -> Self
 pub struct X64V3GfniCryptoToken [also: prelude, tokens]
 pub fn tokens::X64V3GfniCryptoToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V3GfniCryptoToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64V3GfniCryptoToken::forge_token_dangerously() -> Self
 pub struct X64V3Token [also: prelude, tokens]
 pub fn tokens::X64V3Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V3Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64V3Token::forge_token_dangerously() -> Self
 pub struct X64V4Token [also: prelude, tokens]
 pub fn tokens::X64V4Token::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V4Token::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64V4Token::forge_token_dangerously() -> Self
 pub struct X64V4xToken [also: prelude, tokens]
 pub fn tokens::X64V4xToken::dangerously_disable_token_process_wide(bool) -> core::result::Result<(), tokens::CompileTimeGuaranteedError>
 pub fn tokens::X64V4xToken::manually_disabled() -> core::result::Result<bool, tokens::CompileTimeGuaranteedError>
+pub unsafe fn tokens::X64V4xToken::forge_token_dangerously() -> Self
 pub trait Has128BitSimd: tokens::SimdToken [also: tokens]
 pub trait Has256BitSimd: tokens::Has128BitSimd [also: tokens]
 pub trait Has512BitSimd: tokens::Has256BitSimd [also: tokens]

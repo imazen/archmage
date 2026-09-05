@@ -923,8 +923,6 @@ fn compile_time_error_from_disable_contains_features() {
 // Coverage: forge_token_dangerously + IntoConcreteToken for stubs
 // ============================================================================
 
-#[cfg(feature = "forge-token-api")]
-#[allow(deprecated)]
 #[test]
 fn stub_forge_and_into_concrete_token() {
     // ARM/WASM stubs exist on x86_64 and can be forged.
@@ -951,8 +949,7 @@ fn stub_forge_and_into_concrete_token() {
     }
 }
 
-#[cfg(all(feature = "avx512", feature = "forge-token-api"))]
-#[allow(deprecated)]
+#[cfg(feature = "avx512")]
 #[test]
 fn avx512fp16_forge_and_into_concrete_token() {
     unsafe {
@@ -962,12 +959,7 @@ fn avx512fp16_forge_and_into_concrete_token() {
     }
 }
 
-#[cfg(all(
-    target_arch = "x86_64",
-    feature = "avx512",
-    feature = "forge-token-api"
-))]
-#[allow(deprecated)]
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[test]
 fn avx512fp16_forge_and_downcast() {
     // Test the downcast extraction methods on a forged Avx512Fp16Token.

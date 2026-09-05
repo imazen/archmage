@@ -59,9 +59,10 @@ safe_unaligned_simd = []
 # uses runtime detection + cache, so dangerously_disable_token_process_wide()
 # and for_each_token_permutation() always work.
 testable_dispatch = []
-# Expose forge_token_dangerously() as a public method on token types.
-# Without this, it's pub(crate) only. Needed for testing token infrastructure
-# from external crates. The method is unsafe and deprecated — prefer summon().
+# Backwards-compat no-op. forge_token_dangerously() used to be gated behind
+# this feature; it is now always public, because it is a safe
+# #[target_feature] function that rustc checks against the caller's feature
+# context. This feature exists so `features = ["forge-token-api"]` doesn't break.
 forge-token-api = []
 
 [dependencies]

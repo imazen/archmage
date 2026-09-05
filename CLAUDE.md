@@ -1196,7 +1196,7 @@ Found by macro expansion snapshot compilation tests (`tests/expand/*.expanded.rs
 
 ## Open Questions
 
-- **Rite token forging**: Should tokenless `#[rite(v3)]` functions auto-forge a token at the top of the body? This would let them participate in incant! rewriting (pass token to callees). The forge is provably safe (`#[target_feature]` guarantees features). But: it adds generated `unsafe` to the body, and the soundness argument relies on `#[target_feature]` being the proof — which is a different safety model than "token from summon()". Deferred pending design clarity.
+- **Rite token forging**: Should tokenless `#[rite(v3)]` functions auto-forge a token at the top of the body? This would let them participate in incant! rewriting (pass token to callees). *The blocker is gone as of 0.9.29*: `forge_token_dangerously()` is a safe `#[target_feature]` fn, so a `#[rite(v3)]` body can write `let token = X64V3Token::forge_token_dangerously();` today with **no** generated `unsafe` — rustc checks the caller's feature set against the tier's. What remains is a pure API question: whether the macro should inject it implicitly (a hidden binding the user did not write) or leave it explicit as it is now. See `tests/forge_from_context.rs`.
 
 - **`incant_direct!` for inner function calls** (#19): New macro that calls `__arcane_fn_v3()` directly from matching `#[target_feature]` contexts, bypassing the trampoline without depending on `#[inline(always)]`. Requires `#[arcane(pub(crate))]` to expose the inner. Would subsume `#[rite]`'s use case (call inner directly without wrapper). See [issue #19](https://github.com/imazen/archmage/issues/19).
 
@@ -1284,7 +1284,7 @@ These are documented semantic differences between architectures. Tests must acco
 
 - **v1.0: Deprecate incant! passthrough mode (`with token`).** Zero uses in zen or any downstream crate. The use case (re-dispatch an existing token) is better served by `#[rite]` multi-tier or `IntoConcreteToken` directly. `default` tier solves the nesting case without passthrough.
 
-- **NOT planned for removal:** `#[simd_fn]`, `simd_route!`, `try_new()`, `forge_token_dangerously()`. These are discouraged migration aliases but remain supported — they don't cause confusion or bugs, they just have better-named equivalents.
+- **NOT planned for removal:** `#[simd_fn]`, `simd_route!`, `try_new()`. These are discouraged migration aliases but remain supported — they don't cause confusion or bugs, they just have better-named equivalents. `forge_token_dangerously()` is no longer in this list at all: since 0.9.29 it is a first-class safe `#[target_feature]` constructor (see "Constructing a token from an existing feature context" in the docs), not a discouraged alias. Its name is a poor fit for the safe path — renaming it is worth considering, but it must stay callable under the old name.
 
 - **Generator test fixtures**: Add example input/expected output pairs to each xtask generator (SIMD types, width dispatch, tokens, macro registry). These serve as both documentation of expected output and cross-platform regression tests — run on x86, ARM, and WASM to catch codegen divergence.
 

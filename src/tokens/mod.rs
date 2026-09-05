@@ -217,39 +217,27 @@ impl SimdToken for ScalarToken {
     }
 }
 
-#[cfg(feature = "forge-token-api")]
 impl ScalarToken {
-    /// Create a token without any checks.
+    /// Construct the token without any check. Crate-internal.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available. Using a forged token
-    /// when the feature is unavailable causes undefined behavior.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
-    #[inline(always)]
-    pub unsafe fn forge_token_dangerously() -> Self {
-        Self
-    }
-}
-
-#[cfg(not(feature = "forge-token-api"))]
-impl ScalarToken {
-    /// Create a token without any checks.
-    ///
-    /// # Safety
-    ///
-    /// Caller must guarantee the CPU feature is available. Using a forged token
-    /// when the feature is unavailable causes undefined behavior.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
+    /// Trivially satisfied: `ScalarToken` asserts no CPU features. It exists
+    /// so every token has the same internal constructor name.
     #[allow(dead_code)]
     #[inline(always)]
-    pub(crate) unsafe fn forge_token_dangerously() -> Self {
+    pub(crate) const unsafe fn new_unchecked() -> Self {
+        Self
+    }
+
+    /// Construct a scalar proof from the caller's feature context.
+    ///
+    /// `ScalarToken` asserts no CPU features, so it carries no
+    /// `#[target_feature]` gate and every context can construct it. The other
+    /// tokens' constructors of this name are safe only inside a matching
+    /// `#[target_feature]` context.
+    #[inline(always)]
+    pub fn forge_token_dangerously() -> Self {
         Self
     }
 }

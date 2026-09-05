@@ -48,4 +48,11 @@ fn ui_tests() {
 
     // Token aliasing: renaming a lower-tier token to a higher-tier name must fail
     t.compile_fail("tests/compile_fail/token_aliasing.rs");
+
+    // forge_token_dangerously() is a safe #[target_feature] fn: only a caller
+    // whose own feature context covers the tier may call it without `unsafe`.
+    t.compile_fail("tests/compile_fail/forge_missing_context.rs");
+    t.compile_fail("tests/compile_fail/forge_weaker_context.rs");
+    t.compile_fail("tests/compile_fail/forge_fn_pointer.rs");
+    t.compile_fail("tests/compile_fail/forge_wrong_arch.rs");
 }

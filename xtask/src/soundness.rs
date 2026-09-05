@@ -505,6 +505,10 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
             "token forging inside magetypes",
         ),
         (
+            r"\bnew_unchecked\b",
+            "use of archmage's crate-internal unchecked token constructor",
+        ),
+        (
             r"\bMaybeUninit\b",
             "uninitialized construction (potential token/Repr fabrication)",
         ),
@@ -574,6 +578,57 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
                 m.as_str().trim(),
                 why
             ));
+        }
+    }
+
+    // `Pod` says "every bit pattern is valid" — implementing it for a
+    // token-bearing wrapper would let `copy`/`cast`/`view` manufacture a
+    // proof out of arbitrary bytes. The only legitimate impls are the
+    // `impl_pod!` ones on raw scalars and stdarch vector types.
+    if rel != "magetypes/src/simd_storage.rs" {
+        let re =
+            Regex::new(r"unsafe\s+impl(?:\s*<[^>{]*>)?\s+(?:\w+::)*Pod\b").expect("pod impl regex");
+        for m in re.find_iter(text) {
+            errors.push(format!(
+                "{}:{}: STRUCTURAL RULE: `unsafe impl Pod` outside simd_storage.rs — \
+                 Pod asserts every bit pattern is valid, which would let the byte-cast \
+                 helpers fabricate a token-bearing wrapper from arbitrary bytes.",
+                rel,
+                line_of(text, m.start())
+            ));
+        }
+    }
+
+    // `TokenStorage`'s contract is "repr(C) pair of a Pod representation and a
+    // 1-ZST token". `check_token_layout` verifies the token half at
+    // monomorphization; the layout half is only guaranteed by the attribute,
+    // so require it to be present on the implementing struct.
+    {
+        let impl_re =
+            Regex::new(r"unsafe\s+impl(?:\s*<[^>{]*>)?\s+(?:\w+::)*TokenStorage\s+for\s+(\w+)")
+                .expect("token storage impl regex");
+        for m in impl_re.captures_iter(text) {
+            let ty = m.get(1).unwrap().as_str();
+            let struct_re = Regex::new(&format!(
+                r"((?:#\[[^\]]*\]\s*)*)(?:pub(?:\([^)]*\))?\s+)?struct\s+{}\b",
+                regex::escape(ty)
+            ))
+            .expect("struct decl regex");
+            let attrs = struct_re
+                .captures(text)
+                .map(|c| c.get(1).unwrap().as_str().to_string())
+                .unwrap_or_default();
+            if !(attrs.contains("repr(C)") || attrs.contains("repr(transparent)")) {
+                errors.push(format!(
+                    "{}:{}: STRUCTURAL RULE: `unsafe impl TokenStorage for {}` but `{}` \
+                     is not declared `#[repr(C)]` in this file — TokenStorage's contract \
+                     requires the Repr-then-token layout the attribute guarantees.",
+                    rel,
+                    line_of(text, m.get(0).unwrap().start()),
+                    ty,
+                    ty
+                ));
+            }
         }
     }
 

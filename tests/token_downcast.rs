@@ -5,10 +5,7 @@
 //! not stubs. So downcast tests are cfg-gated to the correct architecture.
 //! IntoConcreteToken and SimdToken trait methods work on stubs too.
 //!
-//! Requires the `forge-token-api` feature (tests forge tokens directly).
-#![cfg(feature = "forge-token-api")]
 
-#[allow(deprecated)] // forge_token_dangerously
 use archmage::*;
 
 // ============================================================================
@@ -192,7 +189,6 @@ mod wasm_downcast {
 // (Works with stubs — forge tokens for cross-arch testing)
 // ============================================================================
 
-#[allow(deprecated)]
 mod into_concrete {
     use super::*;
 

@@ -650,7 +650,7 @@ For the full testing API, see the [testing docs](https://imazen.github.io/archma
 | `safe_unaligned_simd` | yes | No-op (`safe_unaligned_simd` is always included). Kept for backwards compatibility |
 | `avx512` | no | AVX-512 tokens (`X64V4Token`, `X64V4xToken`, `Avx512Token`, `Avx512Fp16Token`) plus AVX-512 safe memory ops |
 | `testable_dispatch` | no | Makes token disabling work with `-Ctarget-cpu=native` |
-| `forge-token-api` | no | Exposes `forge_token_dangerously()` (unsafe, deprecated — prefer `summon()`); for testing token infrastructure from external crates |
+| `forge-token-api` | no | No-op, kept for backwards compatibility. `forge_token_dangerously()` is always available: it is a safe `#[target_feature]` fn, so a caller inside a matching feature region needs no `unsafe`, and every other caller does |
 
 ## Acknowledgments
 

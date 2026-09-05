@@ -33,17 +33,37 @@ impl SimdToken for X64V1Token {
     }
 }
 
-#[cfg(feature = "forge-token-api")]
 impl X64V1Token {
-    /// Create a token without any checks.
+    /// Construct the token without any check. Crate-internal.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
+    /// This token's architecture is not the compilation target, so no
+    /// caller can discharge this obligation. Nothing in this crate
+    /// calls it; it exists so the internal constructor has the same
+    /// name on every target.
+    #[allow(dead_code)]
+    #[inline(always)]
+    pub(crate) const unsafe fn new_unchecked() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl X64V1Token {
+    /// Construct a proof for a foreign architecture. Always `unsafe`.
+    ///
+    /// On this token's native architecture this is a **safe**
+    /// `#[target_feature]` function that rustc checks against the
+    /// caller's feature context. The current compilation target is a
+    /// different architecture, so no `#[target_feature]` context can
+    /// exist to check against and the function stays `unsafe fn`.
+    ///
+    /// # Safety
+    ///
+    /// Unsatisfiable: this token asserts CPU features that the target
+    /// architecture does not have. Any token produced here is a lie,
+    /// and using it to enter a SIMD region is undefined behavior. It
+    /// exists so cross-architecture code compiles, not to be called.
     #[inline(always)]
     pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -101,17 +121,37 @@ impl SimdToken for X64V2Token {
     }
 }
 
-#[cfg(feature = "forge-token-api")]
 impl X64V2Token {
-    /// Create a token without any checks.
+    /// Construct the token without any check. Crate-internal.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
+    /// This token's architecture is not the compilation target, so no
+    /// caller can discharge this obligation. Nothing in this crate
+    /// calls it; it exists so the internal constructor has the same
+    /// name on every target.
+    #[allow(dead_code)]
+    #[inline(always)]
+    pub(crate) const unsafe fn new_unchecked() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl X64V2Token {
+    /// Construct a proof for a foreign architecture. Always `unsafe`.
+    ///
+    /// On this token's native architecture this is a **safe**
+    /// `#[target_feature]` function that rustc checks against the
+    /// caller's feature context. The current compilation target is a
+    /// different architecture, so no `#[target_feature]` context can
+    /// exist to check against and the function stays `unsafe fn`.
+    ///
+    /// # Safety
+    ///
+    /// Unsatisfiable: this token asserts CPU features that the target
+    /// architecture does not have. Any token produced here is a lie,
+    /// and using it to enter a SIMD region is undefined behavior. It
+    /// exists so cross-architecture code compiles, not to be called.
     #[inline(always)]
     pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -168,17 +208,37 @@ impl SimdToken for X64CryptoToken {
     }
 }
 
-#[cfg(feature = "forge-token-api")]
 impl X64CryptoToken {
-    /// Create a token without any checks.
+    /// Construct the token without any check. Crate-internal.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
+    /// This token's architecture is not the compilation target, so no
+    /// caller can discharge this obligation. Nothing in this crate
+    /// calls it; it exists so the internal constructor has the same
+    /// name on every target.
+    #[allow(dead_code)]
+    #[inline(always)]
+    pub(crate) const unsafe fn new_unchecked() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl X64CryptoToken {
+    /// Construct a proof for a foreign architecture. Always `unsafe`.
+    ///
+    /// On this token's native architecture this is a **safe**
+    /// `#[target_feature]` function that rustc checks against the
+    /// caller's feature context. The current compilation target is a
+    /// different architecture, so no `#[target_feature]` context can
+    /// exist to check against and the function stays `unsafe fn`.
+    ///
+    /// # Safety
+    ///
+    /// Unsatisfiable: this token asserts CPU features that the target
+    /// architecture does not have. Any token produced here is a lie,
+    /// and using it to enter a SIMD region is undefined behavior. It
+    /// exists so cross-architecture code compiles, not to be called.
     #[inline(always)]
     pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -234,17 +294,37 @@ impl SimdToken for X64V3Token {
     }
 }
 
-#[cfg(feature = "forge-token-api")]
 impl X64V3Token {
-    /// Create a token without any checks.
+    /// Construct the token without any check. Crate-internal.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
+    /// This token's architecture is not the compilation target, so no
+    /// caller can discharge this obligation. Nothing in this crate
+    /// calls it; it exists so the internal constructor has the same
+    /// name on every target.
+    #[allow(dead_code)]
+    #[inline(always)]
+    pub(crate) const unsafe fn new_unchecked() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl X64V3Token {
+    /// Construct a proof for a foreign architecture. Always `unsafe`.
+    ///
+    /// On this token's native architecture this is a **safe**
+    /// `#[target_feature]` function that rustc checks against the
+    /// caller's feature context. The current compilation target is a
+    /// different architecture, so no `#[target_feature]` context can
+    /// exist to check against and the function stays `unsafe fn`.
+    ///
+    /// # Safety
+    ///
+    /// Unsatisfiable: this token asserts CPU features that the target
+    /// architecture does not have. Any token produced here is a lie,
+    /// and using it to enter a SIMD region is undefined behavior. It
+    /// exists so cross-architecture code compiles, not to be called.
     #[inline(always)]
     pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -300,17 +380,37 @@ impl SimdToken for X64V3CryptoToken {
     }
 }
 
-#[cfg(feature = "forge-token-api")]
 impl X64V3CryptoToken {
-    /// Create a token without any checks.
+    /// Construct the token without any check. Crate-internal.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
+    /// This token's architecture is not the compilation target, so no
+    /// caller can discharge this obligation. Nothing in this crate
+    /// calls it; it exists so the internal constructor has the same
+    /// name on every target.
+    #[allow(dead_code)]
+    #[inline(always)]
+    pub(crate) const unsafe fn new_unchecked() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl X64V3CryptoToken {
+    /// Construct a proof for a foreign architecture. Always `unsafe`.
+    ///
+    /// On this token's native architecture this is a **safe**
+    /// `#[target_feature]` function that rustc checks against the
+    /// caller's feature context. The current compilation target is a
+    /// different architecture, so no `#[target_feature]` context can
+    /// exist to check against and the function stays `unsafe fn`.
+    ///
+    /// # Safety
+    ///
+    /// Unsatisfiable: this token asserts CPU features that the target
+    /// architecture does not have. Any token produced here is a lie,
+    /// and using it to enter a SIMD region is undefined behavior. It
+    /// exists so cross-architecture code compiles, not to be called.
     #[inline(always)]
     pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -366,17 +466,37 @@ impl SimdToken for X64V3GfniCryptoToken {
     }
 }
 
-#[cfg(feature = "forge-token-api")]
 impl X64V3GfniCryptoToken {
-    /// Create a token without any checks.
+    /// Construct the token without any check. Crate-internal.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
+    /// This token's architecture is not the compilation target, so no
+    /// caller can discharge this obligation. Nothing in this crate
+    /// calls it; it exists so the internal constructor has the same
+    /// name on every target.
+    #[allow(dead_code)]
+    #[inline(always)]
+    pub(crate) const unsafe fn new_unchecked() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl X64V3GfniCryptoToken {
+    /// Construct a proof for a foreign architecture. Always `unsafe`.
+    ///
+    /// On this token's native architecture this is a **safe**
+    /// `#[target_feature]` function that rustc checks against the
+    /// caller's feature context. The current compilation target is a
+    /// different architecture, so no `#[target_feature]` context can
+    /// exist to check against and the function stays `unsafe fn`.
+    ///
+    /// # Safety
+    ///
+    /// Unsatisfiable: this token asserts CPU features that the target
+    /// architecture does not have. Any token produced here is a lie,
+    /// and using it to enter a SIMD region is undefined behavior. It
+    /// exists so cross-architecture code compiles, not to be called.
     #[inline(always)]
     pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -432,17 +552,37 @@ impl SimdToken for X64V4Token {
     }
 }
 
-#[cfg(feature = "forge-token-api")]
 impl X64V4Token {
-    /// Create a token without any checks.
+    /// Construct the token without any check. Crate-internal.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
+    /// This token's architecture is not the compilation target, so no
+    /// caller can discharge this obligation. Nothing in this crate
+    /// calls it; it exists so the internal constructor has the same
+    /// name on every target.
+    #[allow(dead_code)]
+    #[inline(always)]
+    pub(crate) const unsafe fn new_unchecked() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl X64V4Token {
+    /// Construct a proof for a foreign architecture. Always `unsafe`.
+    ///
+    /// On this token's native architecture this is a **safe**
+    /// `#[target_feature]` function that rustc checks against the
+    /// caller's feature context. The current compilation target is a
+    /// different architecture, so no `#[target_feature]` context can
+    /// exist to check against and the function stays `unsafe fn`.
+    ///
+    /// # Safety
+    ///
+    /// Unsatisfiable: this token asserts CPU features that the target
+    /// architecture does not have. Any token produced here is a lie,
+    /// and using it to enter a SIMD region is undefined behavior. It
+    /// exists so cross-architecture code compiles, not to be called.
     #[inline(always)]
     pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -498,17 +638,37 @@ impl SimdToken for X64V4xToken {
     }
 }
 
-#[cfg(feature = "forge-token-api")]
 impl X64V4xToken {
-    /// Create a token without any checks.
+    /// Construct the token without any check. Crate-internal.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
+    /// This token's architecture is not the compilation target, so no
+    /// caller can discharge this obligation. Nothing in this crate
+    /// calls it; it exists so the internal constructor has the same
+    /// name on every target.
+    #[allow(dead_code)]
+    #[inline(always)]
+    pub(crate) const unsafe fn new_unchecked() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl X64V4xToken {
+    /// Construct a proof for a foreign architecture. Always `unsafe`.
+    ///
+    /// On this token's native architecture this is a **safe**
+    /// `#[target_feature]` function that rustc checks against the
+    /// caller's feature context. The current compilation target is a
+    /// different architecture, so no `#[target_feature]` context can
+    /// exist to check against and the function stays `unsafe fn`.
+    ///
+    /// # Safety
+    ///
+    /// Unsatisfiable: this token asserts CPU features that the target
+    /// architecture does not have. Any token produced here is a lie,
+    /// and using it to enter a SIMD region is undefined behavior. It
+    /// exists so cross-architecture code compiles, not to be called.
     #[inline(always)]
     pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -564,17 +724,37 @@ impl SimdToken for Avx512Fp16Token {
     }
 }
 
-#[cfg(feature = "forge-token-api")]
 impl Avx512Fp16Token {
-    /// Create a token without any checks.
+    /// Construct the token without any check. Crate-internal.
     ///
     /// # Safety
     ///
-    /// Caller must guarantee the CPU feature is available.
-    #[deprecated(
-        since = "0.5.0",
-        note = "Pass tokens through from summon() instead of forging"
-    )]
+    /// This token's architecture is not the compilation target, so no
+    /// caller can discharge this obligation. Nothing in this crate
+    /// calls it; it exists so the internal constructor has the same
+    /// name on every target.
+    #[allow(dead_code)]
+    #[inline(always)]
+    pub(crate) const unsafe fn new_unchecked() -> Self {
+        Self { _private: () }
+    }
+}
+
+impl Avx512Fp16Token {
+    /// Construct a proof for a foreign architecture. Always `unsafe`.
+    ///
+    /// On this token's native architecture this is a **safe**
+    /// `#[target_feature]` function that rustc checks against the
+    /// caller's feature context. The current compilation target is a
+    /// different architecture, so no `#[target_feature]` context can
+    /// exist to check against and the function stays `unsafe fn`.
+    ///
+    /// # Safety
+    ///
+    /// Unsatisfiable: this token asserts CPU features that the target
+    /// architecture does not have. Any token produced here is a lie,
+    /// and using it to enter a SIMD region is undefined behavior. It
+    /// exists so cross-architecture code compiles, not to be called.
     #[inline(always)]
     pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
