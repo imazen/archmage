@@ -1163,44 +1163,17 @@ fn gen_saturating_arith(ty: &SimdType) -> String {
 fn gen_partition_slice(ty: &SimdType) -> String {
     let elem = ty.elem.name();
     let lanes = ty.lanes();
-    let needs_multiline = lanes >= 16;
+    formatdoc! {"
+        \x20   /// Split a slice into SIMD-width chunks and a scalar remainder.
+            ///
+            /// Returns `(&[[{elem}; {lanes}]], &[{elem}])` — fixed-size arrays suitable
+            /// for [`load`](Self::load), plus any leftover elements.
+            #[inline(always)]
+            pub fn partition_slice(_: T, data: &[{elem}]) -> (&[[{elem}; {lanes}]], &[{elem}]) {{
+                data.as_chunks::<{lanes}>()
+            }}
 
-    if needs_multiline {
-        formatdoc! {"
-            \x20   /// Split a slice into SIMD-width chunks and a scalar remainder.
-                ///
-                /// Returns `(&[[{elem}; {lanes}]], &[{elem}])` — the bulk portion reinterpreted
-                /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
-                #[inline(always)]
-                pub fn partition_slice(_: T, data: &[{elem}]) -> (&[[{elem}; {lanes}]], &[{elem}]) {{
-                    let bulk = data.len() / {lanes};
-                    let (head, tail) = data.split_at(bulk * {lanes});
-                    // SAFETY: head.len() is bulk * {lanes}, so it's exactly `bulk` chunks of [{elem}; {lanes}].
-                    // The pointer cast is valid because [{elem}] and [[{elem}; {lanes}]] have the same alignment.
-                    let chunks =
-                        unsafe {{ core::slice::from_raw_parts(head.as_ptr().cast::<[{elem}; {lanes}]>(), bulk) }};
-                    (chunks, tail)
-                }}
-
-        "}
-    } else {
-        formatdoc! {"
-            \x20   /// Split a slice into SIMD-width chunks and a scalar remainder.
-                ///
-                /// Returns `(&[[{elem}; {lanes}]], &[{elem}])` — the bulk portion reinterpreted
-                /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
-                #[inline(always)]
-                pub fn partition_slice(_: T, data: &[{elem}]) -> (&[[{elem}; {lanes}]], &[{elem}]) {{
-                    let bulk = data.len() / {lanes};
-                    let (head, tail) = data.split_at(bulk * {lanes});
-                    // SAFETY: head.len() is bulk * {lanes}, so it's exactly `bulk` chunks of [{elem}; {lanes}].
-                    // The pointer cast is valid because [{elem}] and [[{elem}; {lanes}]] have the same alignment.
-                    let chunks = unsafe {{ core::slice::from_raw_parts(head.as_ptr().cast::<[{elem}; {lanes}]>(), bulk) }};
-                    (chunks, tail)
-                }}
-
-        "}
-    }
+    "}
 }
 
 fn gen_partition_slice_mut(ty: &SimdType) -> String {
@@ -1214,13 +1187,7 @@ fn gen_partition_slice_mut(ty: &SimdType) -> String {
             /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
             #[inline(always)]
             pub fn partition_slice_mut(_: T, data: &mut [{elem}]) -> (&mut [[{elem}; {lanes}]], &mut [{elem}]) {{
-                let bulk = data.len() / {lanes};
-                let (head, tail) = data.split_at_mut(bulk * {lanes});
-                // SAFETY: head.len() is bulk * {lanes}, so it's exactly `bulk` chunks of [{elem}; {lanes}].
-                // The pointer cast is valid because [{elem}] and [[{elem}; {lanes}]] have the same alignment.
-                let chunks =
-                    unsafe {{ core::slice::from_raw_parts_mut(head.as_mut_ptr().cast::<[{elem}; {lanes}]>(), bulk) }};
-                (chunks, tail)
+                data.as_chunks_mut::<{lanes}>()
             }}
 
     "}
