@@ -670,6 +670,7 @@ fn x86_pack(p: &NarrowPair, prefix: &str, dst_signed: bool) -> String {
 /// restores `[a..., b...]`. Skipping it would make this the one tier that
 /// silently produces different bytes.
 pub(super) fn generate_x86_v3_widen_narrow_impls(w512: bool) -> String {
+    let arcane = super::backend_syntax::arcane("X64V3Token");
     let mut code = String::new();
 
     for p in all_widen_pairs()
@@ -703,9 +704,9 @@ pub(super) fn generate_x86_v3_widen_narrow_impls(w512: bool) -> String {
                 }
             };
             code.push_str(&formatdoc! {r#"
-                    #[inline(always)]
+                    {arcane}
                     fn {m}(self, a: {repr}) -> {repr} {{
-                        unsafe {{ {body} }}
+                        {body}
                     }}
 
             "#, m = p.method(half)});
@@ -734,9 +735,9 @@ pub(super) fn generate_x86_v3_widen_narrow_impls(w512: bool) -> String {
                 }
             };
             code.push_str(&formatdoc! {r#"
-                    #[inline(always)]
+                    {arcane}
                     fn {m}(self, a: {repr}, b: {repr}) -> {repr} {{
-                        unsafe {{ {body} }}
+                        {body}
                     }}
 
             "#, m = p.method(dst_signed)});
@@ -766,6 +767,7 @@ pub(super) fn generate_x86_v3_widen_narrow_impls(w512: bool) -> String {
 /// lane is in `0..=0x7FFF`, where the signed and unsigned readings coincide,
 /// and the instruction's saturation to `0..=255` is exactly `packus`'s.
 pub(super) fn generate_x86_v4_widen_narrow_impls(token: &str) -> String {
+    let arcane = super::backend_syntax::arcane(token);
     let mut code = String::new();
 
     for p in all_widen_pairs()
@@ -780,9 +782,9 @@ pub(super) fn generate_x86_v4_widen_narrow_impls(token: &str) -> String {
                 Half::High => "_mm512_extracti64x4_epi64::<1>(a)",
             };
             code.push_str(&formatdoc! {r#"
-                    #[inline(always)]
+                    {arcane}
                     fn {m}(self, a: __m512i) -> __m512i {{
-                        unsafe {{ {cvt}({extract}) }}
+                        {cvt}({extract})
                     }}
 
             "#, m = p.method(half)});
@@ -800,14 +802,12 @@ pub(super) fn generate_x86_v4_widen_narrow_impls(token: &str) -> String {
 
         let signed_cvt = format!("_mm512_cvtsepi{sb}_epi{db}");
         code.push_str(&formatdoc! {r#"
-                #[inline(always)]
+                {arcane}
                 fn {m}(self, a: __m512i, b: __m512i) -> __m512i {{
-                    unsafe {{
-                        _mm512_inserti64x4::<1>(
-                            _mm512_castsi256_si512({signed_cvt}(a)),
-                            {signed_cvt}(b),
-                        )
-                    }}
+                    _mm512_inserti64x4::<1>(
+                        _mm512_castsi256_si512({signed_cvt}(a)),
+                        {signed_cvt}(b),
+                    )
                 }}
 
         "#, m = p.method(true)});
@@ -815,18 +815,16 @@ pub(super) fn generate_x86_v4_widen_narrow_impls(token: &str) -> String {
         let unsigned_cvt = format!("_mm512_cvtusepi{sb}_epi{db}");
         let max = format!("_mm512_max_epi{sb}");
         code.push_str(&formatdoc! {r#"
-                #[inline(always)]
+                {arcane}
                 fn {m}(self, a: __m512i, b: __m512i) -> __m512i {{
-                    unsafe {{
-                        // Clamp at zero so the unsigned-source instruction sees
-                        // the same value the signed source held; above the
-                        // clamp both readings agree.
-                        let zero = _mm512_setzero_si512();
-                        _mm512_inserti64x4::<1>(
-                            _mm512_castsi256_si512({unsigned_cvt}({max}(a, zero))),
-                            {unsigned_cvt}({max}(b, zero)),
-                        )
-                    }}
+                    // Clamp at zero so the unsigned-source instruction sees
+                    // the same value the signed source held; above the
+                    // clamp both readings agree.
+                    let zero = _mm512_setzero_si512();
+                    _mm512_inserti64x4::<1>(
+                        _mm512_castsi256_si512({unsigned_cvt}({max}(a, zero))),
+                        {unsigned_cvt}({max}(b, zero)),
+                    )
                 }}
 
         "#, m = p.method(false)});
@@ -848,6 +846,7 @@ pub(super) fn generate_x86_v4_widen_narrow_impls(token: &str) -> String {
 /// full 128-bit register. That is a signature difference, not a semantic one —
 /// the lane order is natural, as everywhere else.
 pub(super) fn generate_neon_widen_narrow_impls(w512: bool) -> String {
+    let arcane = super::backend_syntax::arcane("NeonToken");
     let mut code = String::new();
 
     for p in all_widen_pairs()
@@ -875,9 +874,9 @@ pub(super) fn generate_neon_widen_narrow_impls(w512: bool) -> String {
                 })
                 .collect();
             code.push_str(&formatdoc! {r#"
-                    #[inline(always)]
+                    {arcane}
                     fn {m}(self, a: {src_repr}) -> {dst_repr} {{
-                        unsafe {{ {body} }}
+                        {body}
                     }}
 
             "#, m = p.method(half), body = pack_subs(&items)});
@@ -918,9 +917,9 @@ pub(super) fn generate_neon_widen_narrow_impls(w512: bool) -> String {
                 })
                 .collect();
             code.push_str(&formatdoc! {r#"
-                    #[inline(always)]
+                    {arcane}
                     fn {m}(self, a: {src_repr}, b: {src_repr}) -> {dst_repr} {{
-                        unsafe {{ {body} }}
+                        {body}
                     }}
 
             "#, m = p.method(dst_signed), body = pack_subs(&items)});

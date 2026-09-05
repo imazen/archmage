@@ -638,12 +638,15 @@ pub(super) fn generate_x86_int_impls(
 }
 
 fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
+    let lanes = ty.lanes;
+    let arcane = super::backend_syntax::arcane(token);
+    let baseline = super::backend_syntax::sse2_or_arcane(token, ty.width_bits);
+    let baseline_end = if ty.width_bits == 128 { "}" } else { "" };
     let trait_name = ty.trait_name();
     let inner = ty.x86_inner_type();
     let p = ty.x86_prefix();
     let bits = ty.width_bits;
     let array = ty.array_type();
-    let lanes = ty.lanes;
     let elem = ty.elem;
     let set1_suf = ty.x86_set1_suffix();
     let arith_suf = ty.x86_arith_suffix();
@@ -658,14 +661,14 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
 
             // ====== Construction ======
 
-            #[inline(always)]
+            {arcane}
             fn splat(self, v: {elem}) -> {inner} {{
-                unsafe {{ {p}_set1_{set1_suf}(v{set1_cast}) }}
+                {p}_set1_{set1_suf}(v{set1_cast})
             }}
 
-            #[inline(always)]
+            {arcane}
             fn zero(self) -> {inner} {{
-                unsafe {{ {p}_setzero_si{bits}() }}
+                {p}_setzero_si{bits}()
             }}
 
             #[inline(always)]
@@ -692,23 +695,25 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
 
             // ====== Arithmetic ======
 
-            #[inline(always)]
+            {baseline}
             fn add(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_add_{arith_suf}(a, b) }}
+                {p}_add_{arith_suf}(a, b)
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {baseline}
             fn sub(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_sub_{arith_suf}(a, b) }}
+                {p}_sub_{arith_suf}(a, b)
             }}
+            {baseline_end}
     "#});
 
     // Mul
     if ty.has_native_mul() {
         body.push_str(&formatdoc! {r#"
-            #[inline(always)]
+            {arcane}
             fn mul(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_mullo_epi16(a, b) }}
+                {p}_mullo_epi16(a, b)
             }}
         "#});
     }
@@ -716,9 +721,9 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
     // Neg
     if ty.signed {
         body.push_str(&formatdoc! {r#"
-            #[inline(always)]
+            {arcane}
             fn neg(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_sub_{arith_suf}({p}_setzero_si{bits}(), a) }}
+                {p}_sub_{arith_suf}({p}_setzero_si{bits}(), a)
             }}
         "#});
     }
@@ -730,14 +735,14 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
 
             // ====== Math ======
 
-            #[inline(always)]
+            {arcane}
             fn min(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_min_{mm_suf}(a, b) }}
+                {p}_min_{mm_suf}(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn max(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_max_{mm_suf}(a, b) }}
+                {p}_max_{mm_suf}(a, b)
             }}
         "#});
     } else {
@@ -746,26 +751,22 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
 
             // ====== Math ======
 
-            #[inline(always)]
+            {arcane}
             fn min(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{
-                    let bias = {p}_set1_epi64x(i64::MIN);
-                    let a_biased = {p}_xor_si{bits}(a, bias);
-                    let b_biased = {p}_xor_si{bits}(b, bias);
-                    let mask = {p}_cmpgt_epi64(a_biased, b_biased);
-                    {p}_blendv_epi8(a, b, mask)
-                }}
+                let bias = {p}_set1_epi64x(i64::MIN);
+                let a_biased = {p}_xor_si{bits}(a, bias);
+                let b_biased = {p}_xor_si{bits}(b, bias);
+                let mask = {p}_cmpgt_epi64(a_biased, b_biased);
+                {p}_blendv_epi8(a, b, mask)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn max(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{
-                    let bias = {p}_set1_epi64x(i64::MIN);
-                    let a_biased = {p}_xor_si{bits}(a, bias);
-                    let b_biased = {p}_xor_si{bits}(b, bias);
-                    let mask = {p}_cmpgt_epi64(a_biased, b_biased);
-                    {p}_blendv_epi8(b, a, mask)
-                }}
+                let bias = {p}_set1_epi64x(i64::MIN);
+                let a_biased = {p}_xor_si{bits}(a, bias);
+                let b_biased = {p}_xor_si{bits}(b, bias);
+                let mask = {p}_cmpgt_epi64(a_biased, b_biased);
+                {p}_blendv_epi8(b, a, mask)
             }}
         "#});
     }
@@ -773,9 +774,9 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
     // Abs
     if ty.signed && ty.elem_bits <= 16 {
         body.push_str(&formatdoc! {r#"
-            #[inline(always)]
+            {arcane}
             fn abs(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_abs_{arith_suf}(a) }}
+                {p}_abs_{arith_suf}(a)
             }}
         "#});
     }
@@ -788,43 +789,37 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
 
             // ====== Comparisons ======
 
-            #[inline(always)]
+            {arcane}
             fn simd_eq(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_cmpeq_{cmp_suf}(a, b) }}
+                {p}_cmpeq_{cmp_suf}(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_ne(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{
-                    let eq = {p}_cmpeq_{cmp_suf}(a, b);
-                    {p}_andnot_si{bits}(eq, {p}_set1_{set1_suf}(-1))
-                }}
+                let eq = {p}_cmpeq_{cmp_suf}(a, b);
+                {p}_andnot_si{bits}(eq, {p}_set1_{set1_suf}(-1))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_lt(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_cmpgt_{cmp_suf}(b, a) }}
+                {p}_cmpgt_{cmp_suf}(b, a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_le(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{
-                    let gt = {p}_cmpgt_{cmp_suf}(a, b);
-                    {p}_andnot_si{bits}(gt, {p}_set1_{set1_suf}(-1))
-                }}
+                let gt = {p}_cmpgt_{cmp_suf}(a, b);
+                {p}_andnot_si{bits}(gt, {p}_set1_{set1_suf}(-1))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_gt(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_cmpgt_{cmp_suf}(a, b) }}
+                {p}_cmpgt_{cmp_suf}(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_ge(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{
-                    let lt = {p}_cmpgt_{cmp_suf}(b, a);
-                    {p}_andnot_si{bits}(lt, {p}_set1_{set1_suf}(-1))
-                }}
+                let lt = {p}_cmpgt_{cmp_suf}(b, a);
+                {p}_andnot_si{bits}(lt, {p}_set1_{set1_suf}(-1))
             }}
         "#});
     } else {
@@ -840,48 +835,40 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
 
             // ====== Comparisons ======
 
-            #[inline(always)]
+            {arcane}
             fn simd_eq(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_cmpeq_{cmp_suf}(a, b) }}
+                {p}_cmpeq_{cmp_suf}(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_ne(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{
-                    let eq = {p}_cmpeq_{cmp_suf}(a, b);
-                    {p}_andnot_si{bits}(eq, {p}_set1_{set1_suf}(-1{set1_lit}))
-                }}
+                let eq = {p}_cmpeq_{cmp_suf}(a, b);
+                {p}_andnot_si{bits}(eq, {p}_set1_{set1_suf}(-1{set1_lit}))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_gt(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{
-                    let bias = {bias_set1};
-                    let sa = {p}_xor_si{bits}(a, bias);
-                    let sb = {p}_xor_si{bits}(b, bias);
-                    {p}_cmpgt_{cmp_suf}(sa, sb)
-                }}
+                let bias = {bias_set1};
+                let sa = {p}_xor_si{bits}(a, bias);
+                let sb = {p}_xor_si{bits}(b, bias);
+                {p}_cmpgt_{cmp_suf}(sa, sb)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_lt(self, a: {inner}, b: {inner}) -> {inner} {{
-                <Self as {trait_name}>::simd_gt(self, b, a)
+                <Self as {trait_name}>::simd_gt(_self, b, a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_le(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{
-                    let gt = <Self as {trait_name}>::simd_gt(self, a, b);
-                    {p}_andnot_si{bits}(gt, {p}_set1_{set1_suf}(-1{set1_lit}))
-                }}
+                let gt = <Self as {trait_name}>::simd_gt(_self, a, b);
+                {p}_andnot_si{bits}(gt, {p}_set1_{set1_suf}(-1{set1_lit}))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_ge(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{
-                    let lt = <Self as {trait_name}>::simd_gt(self, b, a);
-                    {p}_andnot_si{bits}(lt, {p}_set1_{set1_suf}(-1{set1_lit}))
-                }}
+                let lt = <Self as {trait_name}>::simd_gt(_self, b, a);
+                {p}_andnot_si{bits}(lt, {p}_set1_{set1_suf}(-1{set1_lit}))
             }}
         "#});
     }
@@ -889,9 +876,9 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
     // Blend
     body.push_str(&formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn blend(self, mask: {inner}, if_true: {inner}, if_false: {inner}) -> {inner} {{
-                unsafe {{ {p}_blendv_epi8(if_false, if_true, mask) }}
+                {p}_blendv_epi8(if_false, if_true, mask)
             }}
     "#});
 
@@ -901,7 +888,7 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
 
             // ====== Reductions ======
 
-            #[inline(always)]
+            {arcane}
             fn reduce_add(self, a: {inner}) -> {elem} {{
         {reduce_body}
             }}
@@ -912,25 +899,29 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
 
             // ====== Bitwise ======
 
-            #[inline(always)]
+            {baseline}
             fn not(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_andnot_si{bits}(a, {p}_set1_{set1_suf}(-1{set1_lit})) }}
+                {p}_andnot_si{bits}(a, {p}_set1_{set1_suf}(-1{set1_lit}))
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {baseline}
             fn bitand(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_and_si{bits}(a, b) }}
+                {p}_and_si{bits}(a, b)
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {baseline}
             fn bitor(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_or_si{bits}(a, b) }}
+                {p}_or_si{bits}(a, b)
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {baseline}
             fn bitxor(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_xor_si{bits}(a, b) }}
+                {p}_xor_si{bits}(a, b)
             }}
+            {baseline_end}
     "#});
 
     // Shifts
@@ -957,11 +948,12 @@ fn generate_x86_int_reduce_add(ty: &IntVecType) -> String {
     // The SIMD horizontal reductions for 8/16-bit are complex and rarely
     // performance-critical. The to_array + fold approach is simple and correct.
     formatdoc! {"
-                let arr = <Self as {trait_name}>::to_array(self, a);
+                let arr = <Self as {trait_name}>::to_array(_self, a);
                 arr.iter().copied().fold(0{elem}, {elem}::wrapping_add)"}
 }
 
 fn generate_x86_int_shifts(ty: &IntVecType) -> String {
+    let arcane = super::backend_syntax::arcane("X64V3Token");
     let inner = ty.x86_inner_type();
     let p = ty.x86_prefix();
     let bits = ty.width_bits;
@@ -972,42 +964,36 @@ fn generate_x86_int_shifts(ty: &IntVecType) -> String {
 
             // ====== Shifts (polyfill via 16-bit) ======
 
-            #[inline(always)]
+            {arcane}
             fn shl_const<const N: i32>(self, a: {inner}) -> {inner} {{
-                unsafe {{
-                    let shifted = {p}_slli_epi16::<N>(a);
-                    let mask = {p}_set1_epi8((0xFFu8.wrapping_shl(N as u32)) as i8);
-                    {p}_and_si{bits}(shifted, mask)
-                }}
+                let shifted = {p}_slli_epi16::<N>(a);
+                let mask = {p}_set1_epi8((0xFFu8.wrapping_shl(N as u32)) as i8);
+                {p}_and_si{bits}(shifted, mask)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_const<const N: i32>(self, a: {inner}) -> {inner} {{
-                unsafe {{
-                    let shifted = {p}_srli_epi16::<N>(a);
-                    let mask = {p}_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
-                    {p}_and_si{bits}(shifted, mask)
-                }}
+                let shifted = {p}_srli_epi16::<N>(a);
+                let mask = {p}_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
+                {p}_and_si{bits}(shifted, mask)
             }}
         "#};
 
         if ty.signed {
             code.push_str(&formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn shr_arithmetic_const<const N: i32>(self, a: {inner}) -> {inner} {{
-                unsafe {{
-                    let shifted = {p}_srli_epi16::<N>(a);
-                    let byte_mask = {p}_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
-                    let logical = {p}_and_si{bits}(shifted, byte_mask);
-                    let zero = {p}_setzero_si{bits}();
-                    let sign = {p}_cmpgt_epi8(zero, a);
-                    // High-N-bits fill mask via u16 shift: 0x00 at N == 0 (identity
-                    // shift needs no sign fill). A u8 `0xFF << (8 - N)` would wrap
-                    // the shift amount at N == 0 and corrupt negative lanes.
-                    let fill = {p}_set1_epi8(((0xFF00u16 >> N) & 0xFF) as i8);
-                    {p}_or_si{bits}(logical, {p}_and_si{bits}(sign, fill))
-                }}
+                let shifted = {p}_srli_epi16::<N>(a);
+                let byte_mask = {p}_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
+                let logical = {p}_and_si{bits}(shifted, byte_mask);
+                let zero = {p}_setzero_si{bits}();
+                let sign = {p}_cmpgt_epi8(zero, a);
+                // High-N-bits fill mask via u16 shift: 0x00 at N == 0 (identity
+                // shift needs no sign fill). A u8 `0xFF << (8 - N)` would wrap
+                // the shift amount at N == 0 and corrupt negative lanes.
+                let fill = {p}_set1_epi8(((0xFF00u16 >> N) & 0xFF) as i8);
+                {p}_or_si{bits}(logical, {p}_and_si{bits}(sign, fill))
             }}
             "#});
         }
@@ -1018,23 +1004,23 @@ fn generate_x86_int_shifts(ty: &IntVecType) -> String {
 
             // ====== Shifts ======
 
-            #[inline(always)]
+            {arcane}
             fn shl_const<const N: i32>(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_slli_epi16::<N>(a) }}
+                {p}_slli_epi16::<N>(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_const<const N: i32>(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_srli_epi16::<N>(a) }}
+                {p}_srli_epi16::<N>(a)
             }}
         "#};
 
         if ty.signed {
             code.push_str(&formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn shr_arithmetic_const<const N: i32>(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_srai_epi16::<N>(a) }}
+                {p}_srai_epi16::<N>(a)
             }}
             "#});
         }
@@ -1045,14 +1031,14 @@ fn generate_x86_int_shifts(ty: &IntVecType) -> String {
 
             // ====== Shifts ======
 
-            #[inline(always)]
+            {arcane}
             fn shl_const<const N: i32>(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_slli_epi64::<N>(a) }}
+                {p}_slli_epi64::<N>(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_const<const N: i32>(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_srli_epi64::<N>(a) }}
+                {p}_srli_epi64::<N>(a)
             }}
         "#}
     }
@@ -1067,6 +1053,7 @@ fn generate_x86_int_shifts(ty: &IntVecType) -> String {
 /// PSLLW/PSRLW give 0 when the count exceeds the lane width, and PSRAW clamps
 /// to a sign fill. No extra clamp is emitted on x86.
 fn generate_x86_int_uniform_shifts(ty: &IntVecType) -> String {
+    let arcane = super::backend_syntax::arcane("X64V3Token");
     if !ty.has_saturating() {
         return String::new();
     }
@@ -1082,45 +1069,39 @@ fn generate_x86_int_uniform_shifts(ty: &IntVecType) -> String {
 
             // ====== Uniform variable shifts (8-bit: polyfill via 16-bit) ======
 
-            #[inline(always)]
+            {arcane}
             fn shl_uniform(self, a: {inner}, count: u32) -> {inner} {{
-                unsafe {{
-                    let shifted = {p}_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
-                    // `checked_shl` yields None (-> mask 0) once count >= 8,
-                    // which is the all-zero result the contract requires.
-                    let mask = {p}_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
-                    {p}_and_si{bits}(shifted, mask)
-                }}
+                let shifted = {p}_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
+                // `checked_shl` yields None (-> mask 0) once count >= 8,
+                // which is the all-zero result the contract requires.
+                let mask = {p}_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
+                {p}_and_si{bits}(shifted, mask)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_uniform(self, a: {inner}, count: u32) -> {inner} {{
-                unsafe {{
-                    let shifted = {p}_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-                    let mask = {p}_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-                    {p}_and_si{bits}(shifted, mask)
-                }}
+                let shifted = {p}_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
+                let mask = {p}_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
+                {p}_and_si{bits}(shifted, mask)
             }}
         "#};
 
         if ty.signed {
             code.push_str(&formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn shr_arithmetic_uniform(self, a: {inner}, count: u32) -> {inner} {{
-                unsafe {{
-                    let shifted = {p}_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-                    let byte_mask = {p}_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-                    let logical = {p}_and_si{bits}(shifted, byte_mask);
-                    let zero = {p}_setzero_si{bits}();
-                    let sign = {p}_cmpgt_epi8(zero, a);
-                    // High-`count`-bits fill mask. `count.min(8)` saturates the
-                    // fill to the whole byte, which is the sign fill the
-                    // contract requires for out-of-range counts; a plain
-                    // `>> count` would be a u16 overflow at count >= 16.
-                    let fill = {p}_set1_epi8(((0xFF00u16 >> count.min(8)) & 0xFF) as u8 as i8);
-                    {p}_or_si{bits}(logical, {p}_and_si{bits}(sign, fill))
-                }}
+                let shifted = {p}_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
+                let byte_mask = {p}_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
+                let logical = {p}_and_si{bits}(shifted, byte_mask);
+                let zero = {p}_setzero_si{bits}();
+                let sign = {p}_cmpgt_epi8(zero, a);
+                // High-`count`-bits fill mask. `count.min(8)` saturates the
+                // fill to the whole byte, which is the sign fill the
+                // contract requires for out-of-range counts; a plain
+                // `>> count` would be a u16 overflow at count >= 16.
+                let fill = {p}_set1_epi8(((0xFF00u16 >> count.min(8)) & 0xFF) as u8 as i8);
+                {p}_or_si{bits}(logical, {p}_and_si{bits}(sign, fill))
             }}
             "#});
         }
@@ -1131,23 +1112,23 @@ fn generate_x86_int_uniform_shifts(ty: &IntVecType) -> String {
 
             // ====== Uniform variable shifts ======
 
-            #[inline(always)]
+            {arcane}
             fn shl_uniform(self, a: {inner}, count: u32) -> {inner} {{
-                unsafe {{ {p}_sll_{suf}(a, _mm_cvtsi32_si128(count as i32)) }}
+                {p}_sll_{suf}(a, _mm_cvtsi32_si128(count as i32))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_uniform(self, a: {inner}, count: u32) -> {inner} {{
-                unsafe {{ {p}_srl_{suf}(a, _mm_cvtsi32_si128(count as i32)) }}
+                {p}_srl_{suf}(a, _mm_cvtsi32_si128(count as i32))
             }}
         "#};
 
         if ty.signed {
             code.push_str(&formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn shr_arithmetic_uniform(self, a: {inner}, count: u32) -> {inner} {{
-                unsafe {{ {p}_sra_{suf}(a, _mm_cvtsi32_si128(count as i32)) }}
+                {p}_sra_{suf}(a, _mm_cvtsi32_si128(count as i32))
             }}
             "#});
         }
@@ -1158,6 +1139,7 @@ fn generate_x86_int_uniform_shifts(ty: &IntVecType) -> String {
 /// Saturating add/sub, x86. Emitted only at 8- and 16-bit, where
 /// PADDS/PADDUS/PSUBS/PSUBUS exist at every tier (SSE2 / AVX2 / AVX-512BW).
 fn generate_x86_int_saturating(ty: &IntVecType) -> String {
+    let arcane = super::backend_syntax::arcane("X64V3Token");
     if !ty.has_saturating() {
         return String::new();
     }
@@ -1169,19 +1151,20 @@ fn generate_x86_int_saturating(ty: &IntVecType) -> String {
 
             // ====== Saturating arithmetic ======
 
-            #[inline(always)]
+            {arcane}
             fn saturating_add(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_adds_{suf}(a, b) }}
+                {p}_adds_{suf}(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn saturating_sub(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_subs_{suf}(a, b) }}
+                {p}_subs_{suf}(a, b)
             }}
     "#}
 }
 
 fn generate_x86_int_boolean(ty: &IntVecType) -> String {
+    let arcane = super::backend_syntax::arcane("X64V3Token");
     let inner = ty.x86_inner_type();
     let p = ty.x86_prefix();
     let bits = ty.width_bits;
@@ -1198,19 +1181,19 @@ fn generate_x86_int_boolean(ty: &IntVecType) -> String {
 
             // ====== Boolean ======
 
-            #[inline(always)]
+            {arcane}
             fn all_true(self, a: {inner}) -> bool {{
-                unsafe {{ {p}_movemask_epi8(a) == {all_mask} }}
+                {p}_movemask_epi8(a) == {all_mask}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn any_true(self, a: {inner}) -> bool {{
-                unsafe {{ {p}_movemask_epi8(a) != 0 }}
+                {p}_movemask_epi8(a) != 0
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitmask(self, a: {inner}) -> u32 {{
-                unsafe {{ {p}_movemask_epi8(a) as u32 }}
+                {p}_movemask_epi8(a) as u32
             }}
             "#}
         }
@@ -1243,21 +1226,19 @@ fn generate_x86_int_boolean(ty: &IntVecType) -> String {
 
             // ====== Boolean ======
 
-            #[inline(always)]
+            {arcane}
             fn all_true(self, a: {inner}) -> bool {{
-                unsafe {{ {p}_movemask_epi8(a) == {all_mask_bytes} }}
+                {p}_movemask_epi8(a) == {all_mask_bytes}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn any_true(self, a: {inner}) -> bool {{
-                unsafe {{ {p}_movemask_epi8(a) != 0 }}
+                {p}_movemask_epi8(a) != 0
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitmask(self, a: {inner}) -> u32 {{
-                unsafe {{
-                    {bitmask_body}
-                }}
+                {bitmask_body}
             }}
             "#}
         }
@@ -1268,19 +1249,19 @@ fn generate_x86_int_boolean(ty: &IntVecType) -> String {
 
             // ====== Boolean ======
 
-            #[inline(always)]
+            {arcane}
             fn all_true(self, a: {inner}) -> bool {{
-                unsafe {{ {p}_movemask_pd({p}_castsi{bits}_pd(a)) == {all_mask} }}
+                {p}_movemask_pd({p}_castsi{bits}_pd(a)) == {all_mask}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn any_true(self, a: {inner}) -> bool {{
-                unsafe {{ {p}_movemask_pd({p}_castsi{bits}_pd(a)) != 0 }}
+                {p}_movemask_pd({p}_castsi{bits}_pd(a)) != 0
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitmask(self, a: {inner}) -> u32 {{
-                unsafe {{ {p}_movemask_pd({p}_castsi{bits}_pd(a)) as u32 }}
+                {p}_movemask_pd({p}_castsi{bits}_pd(a)) as u32
             }}
             "#}
         }
@@ -1639,10 +1620,11 @@ pub(super) fn generate_neon_int_impls(types: &[IntVecType]) -> String {
 }
 
 fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
+    let lanes = ty.lanes;
+    let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let array = ty.array_type();
     let elem = ty.elem;
-    let lanes = ty.lanes;
     let ns = ty.neon_suffix();
     let nt = ty.neon_native_type();
     let _ut = ty.neon_unsigned_type();
@@ -1714,14 +1696,14 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
         impl {trait_name} for archmage::NeonToken {{
             type Repr = {nt};
 
-            #[inline(always)]
+            {arcane}
             fn splat(self, v: {elem}) -> {nt} {{
-                unsafe {{ vdupq_n_{ns}(v) }}
+                vdupq_n_{ns}(v)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn zero(self) -> {nt} {{
-                unsafe {{ vdupq_n_{ns}(0) }}
+                vdupq_n_{ns}(0)
             }}
 
             #[inline(always)]
@@ -1746,81 +1728,81 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
                 out
             }}
 
-            #[inline(always)]
-            fn add(self, a: {nt}, b: {nt}) -> {nt} {{ unsafe {{ vaddq_{ns}(a, b) }} }}
-            #[inline(always)]
-            fn sub(self, a: {nt}, b: {nt}) -> {nt} {{ unsafe {{ vsubq_{ns}(a, b) }} }}
+            {arcane}
+            fn add(self, a: {nt}, b: {nt}) -> {nt} {{ vaddq_{ns}(a, b) }}
+            {arcane}
+            fn sub(self, a: {nt}, b: {nt}) -> {nt} {{ vsubq_{ns}(a, b) }}
     "#};
 
     if ty.has_native_mul() {
         body.push_str(&formatdoc! {r#"
-            #[inline(always)]
-            fn mul(self, a: {nt}, b: {nt}) -> {nt} {{ unsafe {{ vmulq_{ns}(a, b) }} }}
+            {arcane}
+            fn mul(self, a: {nt}, b: {nt}) -> {nt} {{ vmulq_{ns}(a, b) }}
         "#});
     }
 
     if ty.signed {
         body.push_str(&formatdoc! {r#"
-            #[inline(always)]
-            fn neg(self, a: {nt}) -> {nt} {{ unsafe {{ vnegq_{ns}(a) }} }}
+            {arcane}
+            fn neg(self, a: {nt}) -> {nt} {{ vnegq_{ns}(a) }}
         "#});
     }
 
     if ty.elem_bits == 64 {
         // NEON lacks vminq_u64/vmaxq_u64 — polyfill with compare + blend
         body.push_str(&formatdoc! {r#"
-            #[inline(always)]
-            fn min(self, a: {nt}, b: {nt}) -> {nt} {{ unsafe {{ vbslq_u64(vcltq_u64(a, b), a, b) }} }}
-            #[inline(always)]
-            fn max(self, a: {nt}, b: {nt}) -> {nt} {{ unsafe {{ vbslq_u64(vcgtq_u64(a, b), a, b) }} }}
+            {arcane}
+            fn min(self, a: {nt}, b: {nt}) -> {nt} {{ vbslq_u64(vcltq_u64(a, b), a, b) }}
+            {arcane}
+            fn max(self, a: {nt}, b: {nt}) -> {nt} {{ vbslq_u64(vcgtq_u64(a, b), a, b) }}
         "#});
     } else {
         body.push_str(&formatdoc! {r#"
-            #[inline(always)]
-            fn min(self, a: {nt}, b: {nt}) -> {nt} {{ unsafe {{ vminq_{ns}(a, b) }} }}
-            #[inline(always)]
-            fn max(self, a: {nt}, b: {nt}) -> {nt} {{ unsafe {{ vmaxq_{ns}(a, b) }} }}
+            {arcane}
+            fn min(self, a: {nt}, b: {nt}) -> {nt} {{ vminq_{ns}(a, b) }}
+            {arcane}
+            fn max(self, a: {nt}, b: {nt}) -> {nt} {{ vmaxq_{ns}(a, b) }}
         "#});
     }
 
     if ty.signed && ty.elem_bits <= 16 {
         body.push_str(&formatdoc! {r#"
-            #[inline(always)]
-            fn abs(self, a: {nt}) -> {nt} {{ unsafe {{ vabsq_{ns}(a) }} }}
+            {arcane}
+            fn abs(self, a: {nt}) -> {nt} {{ vabsq_{ns}(a) }}
         "#});
     }
 
     // Comparisons
     body.push_str(&formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn simd_eq(self, a: {nt}, b: {nt}) -> {nt} {{
-                unsafe {{ {eq} }}
+                {eq}
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_ne(self, a: {nt}, b: {nt}) -> {nt} {{
-                unsafe {{ {ne} }}
+                {ne}
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_lt(self, a: {nt}, b: {nt}) -> {nt} {{
-                unsafe {{ {lt} }}
+                {lt}
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_le(self, a: {nt}, b: {nt}) -> {nt} {{
-                unsafe {{ {le} }}
+                {le}
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_gt(self, a: {nt}, b: {nt}) -> {nt} {{
-                unsafe {{ {gt} }}
+                {gt}
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_ge(self, a: {nt}, b: {nt}) -> {nt} {{
-                unsafe {{ {ge} }}
+                {ge}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn blend(self, mask: {nt}, if_true: {nt}, if_false: {nt}) -> {nt} {{
-                unsafe {{ {blend_body} }}
+                {blend_body}
             }}
     "#,
         eq = wrap_cmp(&format!("vceqq_{ns}")),
@@ -1834,63 +1816,63 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
     // Reduce add
     if ty.elem_bits <= 16 {
         body.push_str(&formatdoc! {r#"
-            #[inline(always)]
+            {arcane}
             fn reduce_add(self, a: {nt}) -> {elem} {{
-                unsafe {{ vaddvq_{ns}(a) }}
+                vaddvq_{ns}(a)
             }}
         "#});
     } else {
         // u64: vaddvq_u64 exists on NEON
         body.push_str(&formatdoc! {r#"
-            #[inline(always)]
+            {arcane}
             fn reduce_add(self, a: {nt}) -> {elem} {{
-                unsafe {{ vaddvq_{ns}(a) }}
+                vaddvq_{ns}(a)
             }}
         "#});
     }
 
     // Bitwise
     body.push_str(&formatdoc! {r#"
-            #[inline(always)]
+            {arcane}
             fn not(self, a: {nt}) -> {nt} {{
-                unsafe {{ {not_body} }}
+                {not_body}
             }}
-            #[inline(always)]
+            {arcane}
             fn bitand(self, a: {nt}, b: {nt}) -> {nt} {{
-                unsafe {{ vandq_{ns}(a, b) }}
+                vandq_{ns}(a, b)
             }}
-            #[inline(always)]
+            {arcane}
             fn bitor(self, a: {nt}, b: {nt}) -> {nt} {{
-                unsafe {{ vorrq_{ns}(a, b) }}
+                vorrq_{ns}(a, b)
             }}
-            #[inline(always)]
+            {arcane}
             fn bitxor(self, a: {nt}, b: {nt}) -> {nt} {{
-                unsafe {{ veorq_{ns}(a, b) }}
+                veorq_{ns}(a, b)
             }}
     "#});
 
     // Shifts
     let max_sh = ty.elem_bits - 1;
     body.push_str(&formatdoc! {r#"
-            #[inline(always)]
+            {arcane}
             fn shl_const<const N: i32>(self, a: {nt}) -> {nt} {{
-                unsafe {{ vshlq_n_{ns}::<N>(a) }}
+                vshlq_n_{ns}::<N>(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_const<const N: i32>(self, a: {nt}) -> {nt} {{
                 const {{ assert!(N >= 0 && N <= {max_sh}) }};
-                unsafe {{ {shr_logical} }}
+                {shr_logical}
             }}
     "#});
 
     if ty.signed {
         let us = &ns[1..]; // "8", "16"
         body.push_str(&formatdoc! {r#"
-            #[inline(always)]
+            {arcane}
             fn shr_arithmetic_const<const N: i32>(self, a: {nt}) -> {nt} {{
                 const {{ assert!(N >= 0 && N <= {max_sh}) }};
-                unsafe {{ vshlq_{ns}(a, vdupq_n_s{us}((-N) as i{us})) }}
+                vshlq_{ns}(a, vdupq_n_s{us}((-N) as i{us}))
             }}
         "#});
     }
@@ -1905,9 +1887,9 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
         let max_sh = eb - 1;
         body.push_str(&formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn shl_uniform(self, a: {nt}, count: u32) -> {nt} {{
-                unsafe {{ vshlq_{ns}(a, vdupq_n_s{us}(count.min({eb}) as i{us})) }}
+                vshlq_{ns}(a, vdupq_n_s{us}(count.min({eb}) as i{us}))
             }}
         "#});
 
@@ -1919,18 +1901,18 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
             format!("vshlq_{ns}(a, vdupq_n_s{us}(-(count.min({eb}) as i{us})))")
         };
         body.push_str(&formatdoc! {r#"
-            #[inline(always)]
+            {arcane}
             fn shr_logical_uniform(self, a: {nt}, count: u32) -> {nt} {{
-                unsafe {{ {shr_logical_uniform} }}
+                {shr_logical_uniform}
             }}
         "#});
 
         if ty.signed {
             body.push_str(&formatdoc! {r#"
-            #[inline(always)]
+            {arcane}
             fn shr_arithmetic_uniform(self, a: {nt}, count: u32) -> {nt} {{
                 // Clamping to lane_bits - 1 gives the contracted sign fill.
-                unsafe {{ vshlq_{ns}(a, vdupq_n_s{us}(-(count.min({max_sh}) as i{us}))) }}
+                vshlq_{ns}(a, vdupq_n_s{us}(-(count.min({max_sh}) as i{us})))
             }}
             "#});
         }
@@ -1939,14 +1921,14 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
     if ty.has_saturating() {
         body.push_str(&formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn saturating_add(self, a: {nt}, b: {nt}) -> {nt} {{
-                unsafe {{ vqaddq_{ns}(a, b) }}
+                vqaddq_{ns}(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn saturating_sub(self, a: {nt}, b: {nt}) -> {nt} {{
-                unsafe {{ vqsubq_{ns}(a, b) }}
+                vqsubq_{ns}(a, b)
             }}
         "#});
     }
@@ -1969,17 +1951,17 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
         let bitmask_body = generate_neon_bitmask(ty);
         body.push_str(&formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn all_true(self, a: {nt}) -> bool {{
-                unsafe {{ {all_true_body} }}
+                {all_true_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn any_true(self, a: {nt}) -> bool {{
-                unsafe {{ {any_true_body} }}
+                {any_true_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitmask(self, a: {nt}) -> u32 {{
         {bitmask_body}
             }}
@@ -1988,24 +1970,22 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
         // u64: 2 lanes, manual extraction (NEON lacks vminvq_u64/vmaxvq_u64)
         body.push_str(&formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn all_true(self, a: {nt}) -> bool {{
-                unsafe {{ vgetq_lane_u64::<0>(a) != 0 && vgetq_lane_u64::<1>(a) != 0 }}
+                vgetq_lane_u64::<0>(a) != 0 && vgetq_lane_u64::<1>(a) != 0
             }}
 
-            #[inline(always)]
+            {arcane}
             fn any_true(self, a: {nt}) -> bool {{
-                unsafe {{ vgetq_lane_u64::<0>(a) != 0 || vgetq_lane_u64::<1>(a) != 0 }}
+                vgetq_lane_u64::<0>(a) != 0 || vgetq_lane_u64::<1>(a) != 0
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitmask(self, a: {nt}) -> u32 {{
-                unsafe {{
-                    let shift = vshrq_n_{ns}::<63>(a);
-                    let lane0 = vgetq_lane_{ns}::<0>(shift) as u32;
-                    let lane1 = vgetq_lane_{ns}::<1>(shift) as u32;
-                    lane0 | (lane1 << 1)
-                }}
+                let shift = vshrq_n_{ns}::<63>(a);
+                let lane0 = vgetq_lane_{ns}::<0>(shift) as u32;
+                let lane1 = vgetq_lane_{ns}::<1>(shift) as u32;
+                lane0 | (lane1 << 1)
             }}
         "#});
     }
@@ -2057,88 +2037,23 @@ fn generate_neon_bitmask(ty: &IntVecType) -> String {
                     }
                 })
                 .collect();
-            formatdoc! {r#"
-                unsafe {{
-                    {bitmask}
-                }}"#,
-                bitmask = items.join(" | "),
-            }
+            items.join(" | ")
         }
         _ => unreachable!("bitmask for 64-bit handled separately"),
     }
 }
 
 fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
+    let lanes = ty.lanes;
+    let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let repr = ty.neon_repr();
     let array = ty.array_type();
     let elem = ty.elem;
-    let lanes = ty.lanes;
     let ns = ty.neon_suffix();
     let _nt = ty.neon_native_type();
     let sub_count = ty.sub_count();
     let lanes_per_128 = ty.lanes_per_128();
-
-    let binary_op = |intrinsic: &str| -> String {
-        let items: Vec<String> = (0..sub_count)
-            .map(|i| format!("{intrinsic}(a[{i}], b[{i}])"))
-            .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
-    };
-
-    let unary_op = |intrinsic: &str| -> String {
-        let items: Vec<String> = (0..sub_count)
-            .map(|i| format!("{intrinsic}(a[{i}])"))
-            .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
-    };
-
-    let from_u_fn = ty.neon_reinterpret_from_u();
-    let to_u_fn = ty.neon_reinterpret_to_u();
-
-    let cmp_op = |intrinsic: &str| -> String {
-        if ty.signed {
-            let items: Vec<String> = (0..sub_count)
-                .map(|i| format!("{from_u_fn}({intrinsic}(a[{i}], b[{i}]))"))
-                .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
-        } else {
-            let items: Vec<String> = (0..sub_count)
-                .map(|i| format!("{intrinsic}(a[{i}], b[{i}])"))
-                .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
-        }
-    };
-
-    let ne_op = || -> String {
-        let us = match ty.elem_bits {
-            8 => "u8",
-            16 => "u16",
-            64 => "u64",
-            _ => unreachable!(),
-        };
-        if ty.signed {
-            let items: Vec<String> = (0..sub_count)
-                .map(|i| format!("{from_u_fn}(vmvnq_{us}(vceqq_{ns}(a[{i}], b[{i}])))"))
-                .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
-        } else if ty.elem_bits == 64 {
-            // NEON lacks vmvnq_u64 — use XOR with all-ones
-            let items: Vec<String> = (0..sub_count)
-                .map(|i| format!("veorq_u64(vceqq_u64(a[{i}], b[{i}]), vdupq_n_u64(u64::MAX))"))
-                .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
-        } else {
-            let items: Vec<String> = (0..sub_count)
-                .map(|i| format!("vmvnq_{us}(vceqq_{ns}(a[{i}], b[{i}]))"))
-                .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
-        }
-    };
-
-    let v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", ");
-    let z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", ");
-
     let load_lanes: Vec<String> = (0..sub_count)
         .map(|i| {
             let offset = i * lanes_per_128;
@@ -2155,6 +2070,66 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
         .collect();
     let store_body = store_lines.join("\n                    ");
 
+    let binary_op = |intrinsic: &str| -> String {
+        let items: Vec<String> = (0..sub_count)
+            .map(|i| format!("{intrinsic}(a[{i}], b[{i}])"))
+            .collect();
+        format!("[{}]", items.join(", "))
+    };
+
+    let unary_op = |intrinsic: &str| -> String {
+        let items: Vec<String> = (0..sub_count)
+            .map(|i| format!("{intrinsic}(a[{i}])"))
+            .collect();
+        format!("[{}]", items.join(", "))
+    };
+
+    let from_u_fn = ty.neon_reinterpret_from_u();
+    let to_u_fn = ty.neon_reinterpret_to_u();
+
+    let cmp_op = |intrinsic: &str| -> String {
+        if ty.signed {
+            let items: Vec<String> = (0..sub_count)
+                .map(|i| format!("{from_u_fn}({intrinsic}(a[{i}], b[{i}]))"))
+                .collect();
+            format!("[{}]", items.join(", "))
+        } else {
+            let items: Vec<String> = (0..sub_count)
+                .map(|i| format!("{intrinsic}(a[{i}], b[{i}])"))
+                .collect();
+            format!("[{}]", items.join(", "))
+        }
+    };
+
+    let ne_op = || -> String {
+        let us = match ty.elem_bits {
+            8 => "u8",
+            16 => "u16",
+            64 => "u64",
+            _ => unreachable!(),
+        };
+        if ty.signed {
+            let items: Vec<String> = (0..sub_count)
+                .map(|i| format!("{from_u_fn}(vmvnq_{us}(vceqq_{ns}(a[{i}], b[{i}])))"))
+                .collect();
+            format!("[{}]", items.join(", "))
+        } else if ty.elem_bits == 64 {
+            // NEON lacks vmvnq_u64 — use XOR with all-ones
+            let items: Vec<String> = (0..sub_count)
+                .map(|i| format!("veorq_u64(vceqq_u64(a[{i}], b[{i}]), vdupq_n_u64(u64::MAX))"))
+                .collect();
+            format!("[{}]", items.join(", "))
+        } else {
+            let items: Vec<String> = (0..sub_count)
+                .map(|i| format!("vmvnq_{us}(vceqq_{ns}(a[{i}], b[{i}]))"))
+                .collect();
+            format!("[{}]", items.join(", "))
+        }
+    };
+
+    let v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", ");
+    let z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", ");
+
     let blend_items: Vec<String> = (0..sub_count)
         .map(|i| {
             if ty.signed {
@@ -2164,13 +2139,13 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
             }
         })
         .collect();
-    let blend_body = format!("unsafe {{ [{}] }}", blend_items.join(", "));
+    let blend_body = format!("[{}]", blend_items.join(", "));
 
     let not_op = if ty.elem_bits == 64 {
         let items: Vec<String> = (0..sub_count)
             .map(|i| format!("veorq_{ns}(a[{i}], vdupq_n_{ns}(u64::MAX))"))
             .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
+        format!("[{}]", items.join(", "))
     } else {
         unary_op(&format!("vmvnq_{ns}"))
     };
@@ -2178,7 +2153,7 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
     let shl_items: Vec<String> = (0..sub_count)
         .map(|i| format!("vshlq_n_{ns}::<N>(a[{i}])"))
         .collect();
-    let shl_body = format!("unsafe {{ [{}] }}", shl_items.join(", "));
+    let shl_body = format!("[{}]", shl_items.join(", "));
 
     let shr_logical_items: Vec<String> = (0..sub_count)
         .map(|i| {
@@ -2193,7 +2168,7 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
         })
         .collect();
     let shr_logical_body = format!(
-        "const {{ assert!(N >= 0 && N <= {}) }};\n                unsafe {{ [{}] }}",
+        "const {{ assert!(N >= 0 && N <= {}) }};\n                [{}]",
         ty.elem_bits - 1,
         shr_logical_items.join(", ")
     );
@@ -2202,20 +2177,16 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
         impl {trait_name} for archmage::NeonToken {{
             type Repr = {repr};
 
-            #[inline(always)]
+            {arcane}
             fn splat(self, v: {elem}) -> {repr} {{
-                unsafe {{
-                    let v4 = vdupq_n_{ns}(v);
-                    [{v4_copies}]
-                }}
+                let v4 = vdupq_n_{ns}(v);
+                [{v4_copies}]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn zero(self) -> {repr} {{
-                unsafe {{
-                    let z = vdupq_n_{ns}(0);
-                    [{z_copies}]
-                }}
+                let z = vdupq_n_{ns}(0);
+                [{z_copies}]
             }}
 
             #[inline(always)]
@@ -2242,9 +2213,9 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
                 out
             }}
 
-            #[inline(always)]
+            {arcane}
             fn add(self, a: {repr}, b: {repr}) -> {repr} {{ {add} }}
-            #[inline(always)]
+            {arcane}
             fn sub(self, a: {repr}, b: {repr}) -> {repr} {{ {sub} }}
     "#,
         add = binary_op(&format!("vaddq_{ns}")),
@@ -2253,14 +2224,14 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
 
     if ty.has_native_mul() {
         code.push_str(&formatdoc! {r#"
-            #[inline(always)]
+            {arcane}
             fn mul(self, a: {repr}, b: {repr}) -> {repr} {{ {mul} }}
         "#, mul = binary_op(&format!("vmulq_{ns}"))});
     }
 
     if ty.signed {
         code.push_str(&formatdoc! {r#"
-            #[inline(always)]
+            {arcane}
             fn neg(self, a: {repr}) -> {repr} {{ {neg} }}
         "#, neg = unary_op(&format!("vnegq_{ns}"))});
     }
@@ -2274,19 +2245,19 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
             .map(|i| format!("vbslq_u64(vcgtq_u64(a[{i}], b[{i}]), a[{i}], b[{i}])"))
             .collect();
         code.push_str(&formatdoc! {r#"
-            #[inline(always)]
-            fn min(self, a: {repr}, b: {repr}) -> {repr} {{ unsafe {{ [{min}] }} }}
-            #[inline(always)]
-            fn max(self, a: {repr}, b: {repr}) -> {repr} {{ unsafe {{ [{max}] }} }}
+            {arcane}
+            fn min(self, a: {repr}, b: {repr}) -> {repr} {{ [{min}] }}
+            {arcane}
+            fn max(self, a: {repr}, b: {repr}) -> {repr} {{ [{max}] }}
         "#,
             min = min_items.join(", "),
             max = max_items.join(", "),
         });
     } else {
         code.push_str(&formatdoc! {r#"
-            #[inline(always)]
+            {arcane}
             fn min(self, a: {repr}, b: {repr}) -> {repr} {{ {min} }}
-            #[inline(always)]
+            {arcane}
             fn max(self, a: {repr}, b: {repr}) -> {repr} {{ {max} }}
         "#,
             min = binary_op(&format!("vminq_{ns}")),
@@ -2296,54 +2267,54 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
 
     if ty.signed && ty.elem_bits <= 16 {
         code.push_str(&formatdoc! {r#"
-            #[inline(always)]
+            {arcane}
             fn abs(self, a: {repr}) -> {repr} {{ {abs} }}
         "#, abs = unary_op(&format!("vabsq_{ns}"))});
     }
 
     code.push_str(&formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn simd_eq(self, a: {repr}, b: {repr}) -> {repr} {{ {eq} }}
-            #[inline(always)]
+            {arcane}
             fn simd_ne(self, a: {repr}, b: {repr}) -> {repr} {{ {ne} }}
-            #[inline(always)]
+            {arcane}
             fn simd_lt(self, a: {repr}, b: {repr}) -> {repr} {{ {lt} }}
-            #[inline(always)]
+            {arcane}
             fn simd_le(self, a: {repr}, b: {repr}) -> {repr} {{ {le} }}
-            #[inline(always)]
+            {arcane}
             fn simd_gt(self, a: {repr}, b: {repr}) -> {repr} {{ {gt} }}
-            #[inline(always)]
+            {arcane}
             fn simd_ge(self, a: {repr}, b: {repr}) -> {repr} {{ {ge} }}
 
-            #[inline(always)]
+            {arcane}
             fn blend(self, mask: {repr}, if_true: {repr}, if_false: {repr}) -> {repr} {{
                 {blend_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn reduce_add(self, a: {repr}) -> {elem} {{
                 let mut sum = 0{elem};
                 // Iterate the array rather than indexing by range
                 // (clippy::needless_range_loop).
                 for v in a {{
-                    sum = sum.wrapping_add(unsafe {{ vaddvq_{ns}(v) }});
+                    sum = sum.wrapping_add(vaddvq_{ns}(v));
                 }}
                 sum
             }}
 
-            #[inline(always)]
+            {arcane}
             fn not(self, a: {repr}) -> {repr} {{ {not_op} }}
-            #[inline(always)]
+            {arcane}
             fn bitand(self, a: {repr}, b: {repr}) -> {repr} {{ {bitand} }}
-            #[inline(always)]
+            {arcane}
             fn bitor(self, a: {repr}, b: {repr}) -> {repr} {{ {bitor} }}
-            #[inline(always)]
+            {arcane}
             fn bitxor(self, a: {repr}, b: {repr}) -> {repr} {{ {bitxor} }}
 
-            #[inline(always)]
+            {arcane}
             fn shl_const<const N: i32>(self, a: {repr}) -> {repr} {{ {shl_body} }}
-            #[inline(always)]
+            {arcane}
             fn shr_logical_const<const N: i32>(self, a: {repr}) -> {repr} {{ {shr_logical_body} }}
     "#,
         eq = cmp_op(&format!("vceqq_{ns}")),
@@ -2364,10 +2335,10 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
             .map(|i| format!("vshlq_{ns}(a[{i}], vdupq_n_s{us}((-N) as i{us}))"))
             .collect();
         code.push_str(&formatdoc! {r#"
-            #[inline(always)]
+            {arcane}
             fn shr_arithmetic_const<const N: i32>(self, a: {repr}) -> {repr} {{
                 const {{ assert!(N >= 0 && N <= {max_sh}) }};
-                unsafe {{ [{shr_arith}] }}
+                [{shr_arith}]
             }}
         "#, shr_arith = shr_arith_items.join(", ")});
     }
@@ -2396,14 +2367,14 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
 
         code.push_str(&formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn shl_uniform(self, a: {repr}, count: u32) -> {repr} {{
-                unsafe {{ [{shl_u}] }}
+                [{shl_u}]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_uniform(self, a: {repr}, count: u32) -> {repr} {{
-                unsafe {{ [{shr_l_u}] }}
+                [{shr_l_u}]
             }}
         "#, shl_u = shl_u.join(", "), shr_l_u = shr_l_u.join(", ")});
 
@@ -2414,9 +2385,9 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
                 })
                 .collect();
             code.push_str(&formatdoc! {r#"
-            #[inline(always)]
+            {arcane}
             fn shr_arithmetic_uniform(self, a: {repr}, count: u32) -> {repr} {{
-                unsafe {{ [{shr_a_u}] }}
+                [{shr_a_u}]
             }}
             "#, shr_a_u = shr_a_u.join(", ")});
         }
@@ -2425,10 +2396,10 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
     if ty.has_saturating() {
         code.push_str(&formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn saturating_add(self, a: {repr}, b: {repr}) -> {repr} {{ {qadd} }}
 
-            #[inline(always)]
+            {arcane}
             fn saturating_sub(self, a: {repr}, b: {repr}) -> {repr} {{ {qsub} }}
         "#,
             qadd = binary_op(&format!("vqaddq_{ns}")),
@@ -2466,24 +2437,24 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
 
     code.push_str(&formatdoc! {r#"
 
-            #[inline(always)]
+            {arcane}
             fn all_true(self, a: {repr}) -> bool {{
-                unsafe {{ {all_true} }}
+                {all_true}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn any_true(self, a: {repr}) -> bool {{
-                unsafe {{ {any_true} }}
+                {any_true}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitmask(self, a: {repr}) -> u32 {{
                 // Delegate to NeonToken native bitmask per sub-vector, combine.
                 // Enumerate the array rather than indexing by range
                 // (clippy::needless_range_loop).
                 let mut result = 0u32;
                 for (i, v) in a.into_iter().enumerate() {{
-                    result |= <archmage::NeonToken as {native_trait}>::bitmask(self, v) << (i * {lanes_per_128});
+                    result |= <archmage::NeonToken as {native_trait}>::bitmask(_self, v) << (i * {lanes_per_128});
                 }}
                 result
             }}

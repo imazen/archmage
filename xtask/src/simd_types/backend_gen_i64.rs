@@ -286,6 +286,9 @@ pub(super) fn generate_x86_i64_impls(
 }
 
 fn generate_x86_i64_impl(ty: &I64VecType, token: &str) -> String {
+    let arcane = super::backend_syntax::arcane(token);
+    let baseline = super::backend_syntax::sse2_or_arcane(token, ty.width_bits);
+    let baseline_end = if ty.width_bits == 128 { "}" } else { "" };
     let trait_name = ty.trait_name();
     let inner = ty.x86_inner_type();
     let p = ty.x86_prefix();
@@ -304,7 +307,7 @@ fn generate_x86_i64_impl(ty: &I64VecType, token: &str) -> String {
     //   let mask = !srli_epi64(set1_epi64x(-1), N)  // upper N bits set
     //   result = logical | (sign64 & mask)
     let shr_arith_body = formatdoc! {"
-                unsafe {{
+                {{
                     // Broadcast sign of each 64-bit lane to all bits of that lane
                     let sign_ext = {p}_srai_epi32::<31>(a);
                     let sign64 = {p}_shuffle_epi32::<0xF5>(sign_ext);
@@ -328,14 +331,14 @@ fn generate_x86_i64_impl(ty: &I64VecType, token: &str) -> String {
 
             // ====== Construction ======
 
-            #[inline(always)]
+            {arcane}
             fn splat(self, v: i64) -> {inner} {{
-                unsafe {{ {p}_set1_epi64x(v) }}
+                {p}_set1_epi64x(v)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn zero(self) -> {inner} {{
-                unsafe {{ {p}_setzero_si{bits}() }}
+                {p}_setzero_si{bits}()
             }}
 
             #[inline(always)]
@@ -363,45 +366,47 @@ fn generate_x86_i64_impl(ty: &I64VecType, token: &str) -> String {
 
             // ====== Arithmetic ======
 
-            #[inline(always)]
+            {baseline}
             fn add(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_add_epi64(a, b) }}
+                {p}_add_epi64(a, b)
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {baseline}
             fn sub(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_sub_epi64(a, b) }}
+                {p}_sub_epi64(a, b)
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {arcane}
             fn neg(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_sub_epi64({p}_setzero_si{bits}(), a) }}
+                {p}_sub_epi64({p}_setzero_si{bits}(), a)
             }}
 
             // ====== Math ======
 
-            #[inline(always)]
+            {arcane}
             fn min(self, a: {inner}, b: {inner}) -> {inner} {{
                 // Polyfill: compare+select (no native i64 min on AVX2)
-                unsafe {{
+                {{
                     let mask = {p}_cmpgt_epi64(a, b);
                     {p}_blendv_epi8(a, b, mask)
                 }}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn max(self, a: {inner}, b: {inner}) -> {inner} {{
                 // Polyfill: compare+select (no native i64 max on AVX2)
-                unsafe {{
+                {{
                     let mask = {p}_cmpgt_epi64(a, b);
                     {p}_blendv_epi8(b, a, mask)
                 }}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn abs(self, a: {inner}) -> {inner} {{
                 // Polyfill: (a ^ sign) - sign (two's complement trick)
-                unsafe {{
+                {{
                     let zero = {p}_setzero_si{bits}();
                     let sign = {p}_cmpgt_epi64(zero, a);
                     {p}_sub_epi64({p}_xor_si{bits}(a, sign), sign)
@@ -410,113 +415,111 @@ fn generate_x86_i64_impl(ty: &I64VecType, token: &str) -> String {
 
             // ====== Comparisons ======
 
-            #[inline(always)]
+            {arcane}
             fn simd_eq(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_cmpeq_epi64(a, b) }}
+                {p}_cmpeq_epi64(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_ne(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{
-                    let eq = {p}_cmpeq_epi64(a, b);
-                    {p}_xor_si{bits}(eq, {p}_set1_epi64x(-1))
-                }}
+                let eq = {p}_cmpeq_epi64(a, b);
+                {p}_xor_si{bits}(eq, {p}_set1_epi64x(-1))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_lt(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_cmpgt_epi64(b, a) }}
+                {p}_cmpgt_epi64(b, a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_le(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{
-                    let gt = {p}_cmpgt_epi64(a, b);
-                    {p}_xor_si{bits}(gt, {p}_set1_epi64x(-1))
-                }}
+                let gt = {p}_cmpgt_epi64(a, b);
+                {p}_xor_si{bits}(gt, {p}_set1_epi64x(-1))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_gt(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_cmpgt_epi64(a, b) }}
+                {p}_cmpgt_epi64(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_ge(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{
-                    let lt = {p}_cmpgt_epi64(b, a);
-                    {p}_xor_si{bits}(lt, {p}_set1_epi64x(-1))
-                }}
+                let lt = {p}_cmpgt_epi64(b, a);
+                {p}_xor_si{bits}(lt, {p}_set1_epi64x(-1))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn blend(self, mask: {inner}, if_true: {inner}, if_false: {inner}) -> {inner} {{
-                unsafe {{ {p}_blendv_epi8(if_false, if_true, mask) }}
+                {p}_blendv_epi8(if_false, if_true, mask)
             }}
 
             // ====== Reductions ======
 
-            #[inline(always)]
+            {arcane}
             fn reduce_add(self, a: {inner}) -> i64 {{
         {reduce_add_body}
             }}
 
             // ====== Bitwise ======
 
-            #[inline(always)]
+            {baseline}
             fn not(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_xor_si{bits}(a, {p}_set1_epi64x(-1)) }}
+                {p}_xor_si{bits}(a, {p}_set1_epi64x(-1))
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {baseline}
             fn bitand(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_and_si{bits}(a, b) }}
+                {p}_and_si{bits}(a, b)
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {baseline}
             fn bitor(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_or_si{bits}(a, b) }}
+                {p}_or_si{bits}(a, b)
             }}
+            {baseline_end}
 
-            #[inline(always)]
+            {baseline}
             fn bitxor(self, a: {inner}, b: {inner}) -> {inner} {{
-                unsafe {{ {p}_xor_si{bits}(a, b) }}
+                {p}_xor_si{bits}(a, b)
             }}
+            {baseline_end}
 
             // ====== Shifts ======
 
-            #[inline(always)]
+            {arcane}
             fn shl_const<const N: i32>(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_slli_epi64::<N>(a) }}
+                {p}_slli_epi64::<N>(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_arithmetic_const<const N: i32>(self, a: {inner}) -> {inner} {{
                 // Polyfill: no native _srai_epi64 on AVX2.
                 // Use logical shift + sign extension.
         {shr_arith_body}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_const<const N: i32>(self, a: {inner}) -> {inner} {{
-                unsafe {{ {p}_srli_epi64::<N>(a) }}
+                {p}_srli_epi64::<N>(a)
             }}
 
             // ====== Boolean ======
 
-            #[inline(always)]
+            {arcane}
             fn all_true(self, a: {inner}) -> bool {{
-                unsafe {{ {p}_movemask_pd({p}_castsi{bits}_pd(a)) == {all_mask} }}
+                {p}_movemask_pd({p}_castsi{bits}_pd(a)) == {all_mask}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn any_true(self, a: {inner}) -> bool {{
-                unsafe {{ {p}_movemask_pd({p}_castsi{bits}_pd(a)) != 0 }}
+                {p}_movemask_pd({p}_castsi{bits}_pd(a)) != 0
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitmask(self, a: {inner}) -> u32 {{
-                unsafe {{ {p}_movemask_pd({p}_castsi{bits}_pd(a)) as u32 }}
+                {p}_movemask_pd({p}_castsi{bits}_pd(a)) as u32
             }}
         }}
     "#}
@@ -895,22 +898,23 @@ pub(super) fn generate_neon_i64_impls(types: &[I64VecType]) -> String {
 }
 
 fn generate_neon_native_i64_impl(ty: &I64VecType) -> String {
+    let lanes = ty.lanes;
+    let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let array = ty.array_type();
-    let lanes = ty.lanes;
 
     formatdoc! {r#"
         impl {trait_name} for archmage::NeonToken {{
             type Repr = int64x2_t;
 
-            #[inline(always)]
+            {arcane}
             fn splat(self, v: i64) -> int64x2_t {{
-                unsafe {{ vdupq_n_s64(v) }}
+                vdupq_n_s64(v)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn zero(self) -> int64x2_t {{
-                unsafe {{ vdupq_n_s64(0i64) }}
+                vdupq_n_s64(0i64)
             }}
 
             #[inline(always)]
@@ -935,190 +939,175 @@ fn generate_neon_native_i64_impl(ty: &I64VecType) -> String {
                 out
             }}
 
-            #[inline(always)]
-            fn add(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {{ unsafe {{ vaddq_s64(a, b) }} }}
-            #[inline(always)]
-            fn sub(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {{ unsafe {{ vsubq_s64(a, b) }} }}
-            #[inline(always)]
-            fn neg(self, a: int64x2_t) -> int64x2_t {{ unsafe {{ vnegq_s64(a) }} }}
-            #[inline(always)]
+            {arcane}
+            fn add(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {{ vaddq_s64(a, b) }}
+            {arcane}
+            fn sub(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {{ vsubq_s64(a, b) }}
+            {arcane}
+            fn neg(self, a: int64x2_t) -> int64x2_t {{ vnegq_s64(a) }}
+            {arcane}
             fn min(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {{
                 // NEON lacks native i64 min; polyfill via compare+select
-                unsafe {{
+                {{
                     let mask = vcltq_s64(a, b);
                     vbslq_s64(mask, a, b)
                 }}
             }}
-            #[inline(always)]
+            {arcane}
             fn max(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {{
                 // NEON lacks native i64 max; polyfill via compare+select
-                unsafe {{
+                {{
                     let mask = vcgtq_s64(a, b);
                     vbslq_s64(mask, a, b)
                 }}
             }}
-            #[inline(always)]
-            fn abs(self, a: int64x2_t) -> int64x2_t {{ unsafe {{ vabsq_s64(a) }} }}
+            {arcane}
+            fn abs(self, a: int64x2_t) -> int64x2_t {{ vabsq_s64(a) }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_eq(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {{
-                unsafe {{ vreinterpretq_s64_u64(vceqq_s64(a, b)) }}
+                vreinterpretq_s64_u64(vceqq_s64(a, b))
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_ne(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {{
-                unsafe {{
-                    let eq = vceqq_s64(a, b);
-                    // NOT via XOR with all-ones
-                    vreinterpretq_s64_u64(veorq_u64(eq, vdupq_n_u64(u64::MAX)))
-                }}
+                let eq = vceqq_s64(a, b);
+                // NOT via XOR with all-ones
+                vreinterpretq_s64_u64(veorq_u64(eq, vdupq_n_u64(u64::MAX)))
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_lt(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {{
-                unsafe {{ vreinterpretq_s64_u64(vcltq_s64(a, b)) }}
+                vreinterpretq_s64_u64(vcltq_s64(a, b))
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_le(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {{
-                unsafe {{ vreinterpretq_s64_u64(vcleq_s64(a, b)) }}
+                vreinterpretq_s64_u64(vcleq_s64(a, b))
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_gt(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {{
-                unsafe {{ vreinterpretq_s64_u64(vcgtq_s64(a, b)) }}
+                vreinterpretq_s64_u64(vcgtq_s64(a, b))
             }}
-            #[inline(always)]
+            {arcane}
             fn simd_ge(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {{
-                unsafe {{ vreinterpretq_s64_u64(vcgeq_s64(a, b)) }}
+                vreinterpretq_s64_u64(vcgeq_s64(a, b))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn blend(self, mask: int64x2_t, if_true: int64x2_t, if_false: int64x2_t) -> int64x2_t {{
-                unsafe {{ vbslq_s64(vreinterpretq_u64_s64(mask), if_true, if_false) }}
+                vbslq_s64(vreinterpretq_u64_s64(mask), if_true, if_false)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn reduce_add(self, a: int64x2_t) -> i64 {{
-                unsafe {{
-                    let sum = vpaddq_s64(a, a);
-                    vgetq_lane_s64::<0>(sum)
-                }}
+                let sum = vpaddq_s64(a, a);
+                vgetq_lane_s64::<0>(sum)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn not(self, a: int64x2_t) -> int64x2_t {{
-                unsafe {{
-                    let ones = vdupq_n_s64(-1i64);
-                    veorq_s64(a, ones)
-                }}
+                let ones = vdupq_n_s64(-1i64);
+                veorq_s64(a, ones)
             }}
-            #[inline(always)]
+            {arcane}
             fn bitand(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {{
-                unsafe {{ vandq_s64(a, b) }}
+                vandq_s64(a, b)
             }}
-            #[inline(always)]
+            {arcane}
             fn bitor(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {{
-                unsafe {{ vorrq_s64(a, b) }}
+                vorrq_s64(a, b)
             }}
-            #[inline(always)]
+            {arcane}
             fn bitxor(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {{
-                unsafe {{ veorq_s64(a, b) }}
+                veorq_s64(a, b)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shl_const<const N: i32>(self, a: int64x2_t) -> int64x2_t {{
-                unsafe {{ vshlq_n_s64::<N>(a) }}
+                vshlq_n_s64::<N>(a)
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_arithmetic_const<const N: i32>(self, a: int64x2_t) -> int64x2_t {{
                 const {{ assert!(N >= 0 && N <= 63) }};
-                unsafe {{ vshlq_s64(a, vdupq_n_s64((-N) as i64)) }}
+                vshlq_s64(a, vdupq_n_s64((-N) as i64))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_const<const N: i32>(self, a: int64x2_t) -> int64x2_t {{
                 const {{ assert!(N >= 0 && N <= 63) }};
-                unsafe {{ vreinterpretq_s64_u64(vshlq_u64(vreinterpretq_u64_s64(a), vdupq_n_s64((-N) as i64))) }}
+                vreinterpretq_s64_u64(vshlq_u64(vreinterpretq_u64_s64(a), vdupq_n_s64((-N) as i64)))
             }}
 
-            #[inline(always)]
+            {arcane}
             fn all_true(self, a: int64x2_t) -> bool {{
-                unsafe {{
-                    let as_u64 = vreinterpretq_u64_s64(a);
-                    vgetq_lane_u64::<0>(as_u64) != 0 && vgetq_lane_u64::<1>(as_u64) != 0
-                }}
+                let as_u64 = vreinterpretq_u64_s64(a);
+                vgetq_lane_u64::<0>(as_u64) != 0 && vgetq_lane_u64::<1>(as_u64) != 0
             }}
 
-            #[inline(always)]
+            {arcane}
             fn any_true(self, a: int64x2_t) -> bool {{
-                unsafe {{
-                    let as_u64 = vreinterpretq_u64_s64(a);
-                    (vgetq_lane_u64::<0>(as_u64) | vgetq_lane_u64::<1>(as_u64)) != 0
-                }}
+                let as_u64 = vreinterpretq_u64_s64(a);
+                (vgetq_lane_u64::<0>(as_u64) | vgetq_lane_u64::<1>(as_u64)) != 0
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitmask(self, a: int64x2_t) -> u32 {{
-                unsafe {{
-                    let signs = vshrq_n_u64::<63>(vreinterpretq_u64_s64(a));
-                    ((vgetq_lane_u64::<0>(signs) & 1) | ((vgetq_lane_u64::<1>(signs) & 1) << 1)) as u32
-                }}
+                let signs = vshrq_n_u64::<63>(vreinterpretq_u64_s64(a));
+                ((vgetq_lane_u64::<0>(signs) & 1) | ((vgetq_lane_u64::<1>(signs) & 1) << 1)) as u32
             }}
         }}
     "#}
 }
 
 fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
+    let lanes = ty.lanes;
+    let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let repr = ty.neon_repr();
     let array = ty.array_type();
-    let lanes = ty.lanes;
     let sub_count = ty.sub_count();
 
     let binary_op = |intrinsic: &str| -> String {
         let items: Vec<String> = (0..sub_count)
             .map(|i| format!("{intrinsic}(a[{i}], b[{i}])"))
             .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
+        format!("[{}]", items.join(", "))
     };
 
     let unary_op = |intrinsic: &str| -> String {
         let items: Vec<String> = (0..sub_count)
             .map(|i| format!("{intrinsic}(a[{i}])"))
             .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
+        format!("[{}]", items.join(", "))
     };
 
     let cmp_op = |intrinsic: &str| -> String {
         let items: Vec<String> = (0..sub_count)
             .map(|i| format!("vreinterpretq_s64_u64({intrinsic}(a[{i}], b[{i}]))"))
             .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
+        format!("[{}]", items.join(", "))
     };
 
     let ne_op = || -> String {
         let items: Vec<String> = (0..sub_count)
             .map(|i| format!("vreinterpretq_s64_u64(veorq_u64(vceqq_s64(a[{i}], b[{i}]), vdupq_n_u64(u64::MAX)))"))
             .collect();
-        format!("unsafe {{ [{}] }}", items.join(", "))
+        format!("[{}]", items.join(", "))
     };
 
     formatdoc! {r#"
         impl {trait_name} for archmage::NeonToken {{
             type Repr = {repr};
 
-            #[inline(always)]
+            {arcane}
             fn splat(self, v: i64) -> {repr} {{
-                unsafe {{
-                    let v2 = vdupq_n_s64(v);
-                    [{v2_copies}]
-                }}
+                let v2 = vdupq_n_s64(v);
+                [{v2_copies}]
             }}
 
-            #[inline(always)]
+            {arcane}
             fn zero(self) -> {repr} {{
-                unsafe {{
-                    let z = vdupq_n_s64(0i64);
-                    [{z_copies}]
-                }}
+                let z = vdupq_n_s64(0i64);
+                [{z_copies}]
             }}
 
             #[inline(always)]
@@ -1147,96 +1136,98 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
                 out
             }}
 
-            #[inline(always)]
+            {arcane}
             fn add(self, a: {repr}, b: {repr}) -> {repr} {{ {add} }}
-            #[inline(always)]
+            {arcane}
             fn sub(self, a: {repr}, b: {repr}) -> {repr} {{ {sub} }}
-            #[inline(always)]
+            {arcane}
             fn neg(self, a: {repr}) -> {repr} {{ {neg} }}
-            #[inline(always)]
+            {arcane}
             fn min(self, a: {repr}, b: {repr}) -> {repr} {{
                 // NEON lacks native i64 min; polyfill via compare+select per sub-vector
                 {min}
             }}
-            #[inline(always)]
+            {arcane}
             fn max(self, a: {repr}, b: {repr}) -> {repr} {{
                 // NEON lacks native i64 max; polyfill via compare+select per sub-vector
                 {max}
             }}
-            #[inline(always)]
+            {arcane}
             fn abs(self, a: {repr}) -> {repr} {{ {abs} }}
 
-            #[inline(always)]
+            {arcane}
             fn simd_eq(self, a: {repr}, b: {repr}) -> {repr} {{ {eq} }}
-            #[inline(always)]
+            {arcane}
             fn simd_ne(self, a: {repr}, b: {repr}) -> {repr} {{ {ne} }}
-            #[inline(always)]
+            {arcane}
             fn simd_lt(self, a: {repr}, b: {repr}) -> {repr} {{ {lt} }}
-            #[inline(always)]
+            {arcane}
             fn simd_le(self, a: {repr}, b: {repr}) -> {repr} {{ {le} }}
-            #[inline(always)]
+            {arcane}
             fn simd_gt(self, a: {repr}, b: {repr}) -> {repr} {{ {gt} }}
-            #[inline(always)]
+            {arcane}
             fn simd_ge(self, a: {repr}, b: {repr}) -> {repr} {{ {ge} }}
 
-            #[inline(always)]
+            {arcane}
             fn blend(self, mask: {repr}, if_true: {repr}, if_false: {repr}) -> {repr} {{
                 {blend}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn reduce_add(self, a: {repr}) -> i64 {{
                 {reduce_add}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn not(self, a: {repr}) -> {repr} {{ {not} }}
-            #[inline(always)]
+            {arcane}
             fn bitand(self, a: {repr}, b: {repr}) -> {repr} {{ {bitand} }}
-            #[inline(always)]
+            {arcane}
             fn bitor(self, a: {repr}, b: {repr}) -> {repr} {{ {bitor} }}
-            #[inline(always)]
+            {arcane}
             fn bitxor(self, a: {repr}, b: {repr}) -> {repr} {{ {bitxor} }}
 
-            #[inline(always)]
+            {arcane}
             fn shl_const<const N: i32>(self, a: {repr}) -> {repr} {{
                 {shl}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_arithmetic_const<const N: i32>(self, a: {repr}) -> {repr} {{
                 {shr_arith}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn shr_logical_const<const N: i32>(self, a: {repr}) -> {repr} {{
                 {shr_logic}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn all_true(self, a: {repr}) -> bool {{
                 {all_true}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn any_true(self, a: {repr}) -> bool {{
                 {any_true}
             }}
 
-            #[inline(always)]
+            {arcane}
             fn bitmask(self, a: {repr}) -> u32 {{
                 {bitmask}
             }}
         }}
     "#,
-        v2_copies = (0..sub_count).map(|_| "v2").collect::<Vec<_>>().join(", "),
-        z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
-        load_lanes = (0..sub_count)
-            .map(|i| format!("vld1q_s64(data.as_ptr().add({}))", i * 2))
-            .collect::<Vec<_>>().join(", "),
+
         store_lanes = (0..sub_count)
             .map(|i| format!("vst1q_s64(out.as_mut_ptr().add({}), repr[{i}]);", i * 2))
             .collect::<Vec<_>>().join("\n            "),
+
+        load_lanes = (0..sub_count)
+            .map(|i| format!("vld1q_s64(data.as_ptr().add({}))", i * 2))
+            .collect::<Vec<_>>().join(", "),
+        v2_copies = (0..sub_count).map(|_| "v2").collect::<Vec<_>>().join(", "),
+        z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
         add = binary_op("vaddq_s64"),
         sub = binary_op("vsubq_s64"),
         neg = unary_op("vnegq_s64"),
@@ -1244,13 +1235,13 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!("vbslq_s64(vcltq_s64(a[{i}], b[{i}]), a[{i}], b[{i}])"))
                 .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
+            format!("[{}]", items.join(", "))
         },
         max = {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!("vbslq_s64(vcgtq_s64(a[{i}], b[{i}]), a[{i}], b[{i}])"))
                 .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
+            format!("[{}]", items.join(", "))
         },
         abs = unary_op("vabsq_s64"),
         eq = cmp_op("vceqq_s64"),
@@ -1263,10 +1254,10 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!("vbslq_s64(vreinterpretq_u64_s64(mask[{i}]), if_true[{i}], if_false[{i}])"))
                 .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
+            format!("[{}]", items.join(", "))
         },
         reduce_add = {
-            let mut body = "unsafe {\n".to_string();
+            let mut body = "{\n".to_string();
             body.push_str("            let m = vaddq_s64(a[0], a[1]);\n");
             for i in 2..sub_count {
                 body.push_str(&format!("            let m = vaddq_s64(m, a[{i}]);\n"));
@@ -1280,7 +1271,7 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!("veorq_s64(a[{i}], vdupq_n_s64(-1i64))"))
                 .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
+            format!("[{}]", items.join(", "))
         },
         bitand = binary_op("vandq_s64"),
         bitor = binary_op("vorrq_s64"),
@@ -1289,14 +1280,14 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!("vshlq_n_s64::<N>(a[{i}])"))
                 .collect();
-            format!("unsafe {{ [{}] }}", items.join(", "))
+            format!("[{}]", items.join(", "))
         },
         shr_arith = {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!("vshlq_s64(a[{i}], vdupq_n_s64((-N) as i64))"))
                 .collect();
             format!(
-                "const {{ assert!(N >= 0 && N <= 63) }};\n                unsafe {{ [{}] }}",
+                "const {{ assert!(N >= 0 && N <= 63) }};\n                [{}]",
                 items.join(", ")
             )
         },
@@ -1309,7 +1300,7 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
                 })
                 .collect();
             format!(
-                "const {{ assert!(N >= 0 && N <= 63) }};\n                unsafe {{ [{}] }}",
+                "const {{ assert!(N >= 0 && N <= 63) }};\n                [{}]",
                 items.join(", ")
             )
         },
@@ -1319,7 +1310,7 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
                     format!("(vgetq_lane_u64::<0>(vreinterpretq_u64_s64(a[{i}])) != 0 && vgetq_lane_u64::<1>(vreinterpretq_u64_s64(a[{i}])) != 0)")
                 })
                 .collect();
-            format!("unsafe {{ {} }}", items.join(" && "))
+            items.join(" && ")
         },
         any_true = {
             let items: Vec<String> = (0..sub_count)
@@ -1327,10 +1318,10 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
                     format!("((vgetq_lane_u64::<0>(vreinterpretq_u64_s64(a[{i}])) | vgetq_lane_u64::<1>(vreinterpretq_u64_s64(a[{i}]))) != 0)")
                 })
                 .collect();
-            format!("unsafe {{ {} }}", items.join(" || "))
+            items.join(" || ")
         },
         bitmask = {
-            let mut body = "unsafe {\n".to_string();
+            let mut body = "{\n".to_string();
             body.push_str("            let mut bits = 0u32;\n");
             for i in 0..sub_count {
                 let base = i * 2;

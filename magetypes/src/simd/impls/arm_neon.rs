@@ -2,30 +2,19 @@
 //!
 //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 //!
-//! # Safety (audit contract for every `unsafe` block in this file)
+//! # Safety (audit contract for remaining storage operations)
 //!
-//! All `unsafe` blocks below are inside `impl ... for NeonToken`
-//! blocks and fall into exactly three shapes:
-//!
-//! 1. **Value-based intrinsic calls** — sound because the receiver
-//!    token is a proof the CPU supports the intrinsic's required
-//!    features (`cargo xtask soundness` statically verifies every
-//!    intrinsic's feature set against the impl's token on every
-//!    generate/CI run; tokens are only obtainable via runtime
-//!    detection).
-//! 2. **Loads/stores through references** (`as_ptr`/`as_mut_ptr` on
-//!    sized arrays) — sound because the reference guarantees a valid,
-//!    correctly-sized allocation, and the unaligned-tolerant
-//!    instructions are used.
-//! 3. **`transmute` between fixed-size arrays and vector types** —
-//!    sound because both sides are plain-old-data of equal size
-//!    (compile-time checked by `transmute` itself).
-//!
-//! Anything outside these shapes must carry its own `// SAFETY:`
-//! comment and be added to the audit notes in `docs/SOUNDNESS.md`.
+//! `#[arcane]` checks value intrinsics against the receiver token's features.
+//! Raw storage operations retain their explicit unsafe blocks;
+//! array references provide valid extents for unaligned loads/stores.
+//! Transmutes copy initialized numeric/vector bits; rustc checks size.
+//! These operations never manufacture a token.
 
 #[cfg(target_arch = "aarch64")]
 use core::arch::aarch64::*;
+
+#[cfg(target_arch = "aarch64")]
+use archmage::{NeonToken, arcane};
 
 use crate::simd::backends::*;
 
@@ -33,14 +22,14 @@ use crate::simd::backends::*;
 impl F32x4Backend for archmage::NeonToken {
     type Repr = float32x4_t;
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn splat(self, v: f32) -> float32x4_t {
-        unsafe { vdupq_n_f32(v) }
+        vdupq_n_f32(v)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn zero(self) -> float32x4_t {
-        unsafe { vdupq_n_f32(0.0) }
+        vdupq_n_f32(0.0)
     }
 
     #[inline(always)]
@@ -65,116 +54,116 @@ impl F32x4Backend for archmage::NeonToken {
         out
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn add(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
-        unsafe { vaddq_f32(a, b) }
+        vaddq_f32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sub(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
-        unsafe { vsubq_f32(a, b) }
+        vsubq_f32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
-        unsafe { vmulq_f32(a, b) }
+        vmulq_f32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn div(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
-        unsafe { vdivq_f32(a, b) }
+        vdivq_f32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn neg(self, a: float32x4_t) -> float32x4_t {
-        unsafe { vnegq_f32(a) }
+        vnegq_f32(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
-        unsafe { vminq_f32(a, b) }
+        vminq_f32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
-        unsafe { vmaxq_f32(a, b) }
+        vmaxq_f32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sqrt(self, a: float32x4_t) -> float32x4_t {
-        unsafe { vsqrtq_f32(a) }
+        vsqrtq_f32(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn abs(self, a: float32x4_t) -> float32x4_t {
-        unsafe { vabsq_f32(a) }
+        vabsq_f32(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn floor(self, a: float32x4_t) -> float32x4_t {
-        unsafe { vrndmq_f32(a) }
+        vrndmq_f32(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn ceil(self, a: float32x4_t) -> float32x4_t {
-        unsafe { vrndpq_f32(a) }
+        vrndpq_f32(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn round(self, a: float32x4_t) -> float32x4_t {
-        unsafe { vrndnq_f32(a) }
+        vrndnq_f32(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul_add(self, a: float32x4_t, b: float32x4_t, c: float32x4_t) -> float32x4_t {
-        unsafe { vfmaq_f32(c, a, b) }
+        vfmaq_f32(c, a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul_sub(self, a: float32x4_t, b: float32x4_t, c: float32x4_t) -> float32x4_t {
-        unsafe { vfmaq_f32(vnegq_f32(c), a, b) }
+        vfmaq_f32(vnegq_f32(c), a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
-        unsafe { vreinterpretq_f32_u32(vceqq_f32(a, b)) }
+        vreinterpretq_f32_u32(vceqq_f32(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ne(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
-        unsafe { vreinterpretq_f32_u32(vmvnq_u32(vceqq_f32(a, b))) }
+        vreinterpretq_f32_u32(vmvnq_u32(vceqq_f32(a, b)))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_lt(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
-        unsafe { vreinterpretq_f32_u32(vcltq_f32(a, b)) }
+        vreinterpretq_f32_u32(vcltq_f32(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_le(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
-        unsafe { vreinterpretq_f32_u32(vcleq_f32(a, b)) }
+        vreinterpretq_f32_u32(vcleq_f32(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_gt(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
-        unsafe { vreinterpretq_f32_u32(vcgtq_f32(a, b)) }
+        vreinterpretq_f32_u32(vcgtq_f32(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ge(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
-        unsafe { vreinterpretq_f32_u32(vcgeq_f32(a, b)) }
+        vreinterpretq_f32_u32(vcgeq_f32(a, b))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn blend(self, mask: float32x4_t, if_true: float32x4_t, if_false: float32x4_t) -> float32x4_t {
-        unsafe { vbslq_f32(vreinterpretq_u32_f32(mask), if_true, if_false) }
+        vbslq_f32(vreinterpretq_u32_f32(mask), if_true, if_false)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_add(self, a: float32x4_t) -> f32 {
-        unsafe {
+        {
             let pair = vpaddq_f32(a, a);
             let pair = vpaddq_f32(pair, pair);
             vgetq_lane_f32::<0>(pair)
         }
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_min(self, a: float32x4_t) -> f32 {
-        unsafe {
+        {
             let pair = vpminq_f32(a, a);
             let pair = vpminq_f32(pair, pair);
             vgetq_lane_f32::<0>(pair)
         }
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_max(self, a: float32x4_t) -> f32 {
-        unsafe {
+        {
             let pair = vpmaxq_f32(a, a);
             let pair = vpmaxq_f32(pair, pair);
             vgetq_lane_f32::<0>(pair)
@@ -216,68 +205,54 @@ impl F32x4Backend for archmage::NeonToken {
     //   Neoverse-N1 (Ampere Altra): exact is SLOWER
     //     rcp 1.39x, rsqrt 2.15x
     //     (benchmarks/rsqrt_arm_neoverse-n1_2026-06-21.md)
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn rcp_approx(self, a: float32x4_t) -> float32x4_t {
-        unsafe {
-            let y = vrecpeq_f32(a);
-            vmulq_f32(vrecpsq_f32(a, y), y)
-        }
+        let y = vrecpeq_f32(a);
+        vmulq_f32(vrecpsq_f32(a, y), y)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn rsqrt_approx(self, a: float32x4_t) -> float32x4_t {
-        unsafe {
-            let y = vrsqrteq_f32(a);
-            vmulq_f32(y, vrsqrtsq_f32(a, vmulq_f32(y, y)))
-        }
+        let y = vrsqrteq_f32(a);
+        vmulq_f32(y, vrsqrtsq_f32(a, vmulq_f32(y, y)))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn recip(self, a: float32x4_t) -> float32x4_t {
-        unsafe {
-            let y = <Self as F32x4Backend>::rcp_approx(self, a);
-            vmulq_f32(vrecpsq_f32(a, y), y)
-        }
+        let y = <Self as F32x4Backend>::rcp_approx(_self, a);
+        vmulq_f32(vrecpsq_f32(a, y), y)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn rsqrt(self, a: float32x4_t) -> float32x4_t {
-        unsafe {
-            let y = <Self as F32x4Backend>::rsqrt_approx(self, a);
-            vmulq_f32(y, vrsqrtsq_f32(a, vmulq_f32(y, y)))
-        }
+        let y = <Self as F32x4Backend>::rsqrt_approx(_self, a);
+        vmulq_f32(y, vrsqrtsq_f32(a, vmulq_f32(y, y)))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn not(self, a: float32x4_t) -> float32x4_t {
-        unsafe { vreinterpretq_f32_u32(vmvnq_u32(vreinterpretq_u32_f32(a))) }
+        vreinterpretq_f32_u32(vmvnq_u32(vreinterpretq_u32_f32(a)))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitand(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
-        unsafe {
-            vreinterpretq_f32_u32(vandq_u32(
-                vreinterpretq_u32_f32(a),
-                vreinterpretq_u32_f32(b),
-            ))
-        }
+        vreinterpretq_f32_u32(vandq_u32(
+            vreinterpretq_u32_f32(a),
+            vreinterpretq_u32_f32(b),
+        ))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitor(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
-        unsafe {
-            vreinterpretq_f32_u32(vorrq_u32(
-                vreinterpretq_u32_f32(a),
-                vreinterpretq_u32_f32(b),
-            ))
-        }
+        vreinterpretq_f32_u32(vorrq_u32(
+            vreinterpretq_u32_f32(a),
+            vreinterpretq_u32_f32(b),
+        ))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitxor(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
-        unsafe {
-            vreinterpretq_f32_u32(veorq_u32(
-                vreinterpretq_u32_f32(a),
-                vreinterpretq_u32_f32(b),
-            ))
-        }
+        vreinterpretq_f32_u32(veorq_u32(
+            vreinterpretq_u32_f32(a),
+            vreinterpretq_u32_f32(b),
+        ))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn to_u8_bytes(self, a: float32x4_t) -> [u8; 4] {
         unsafe {
             let i16s = vqmovn_s32(vcvtnq_s32_f32(a));
@@ -287,7 +262,7 @@ impl F32x4Backend for archmage::NeonToken {
         }
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn store_rgba_bytes(
         self,
         r: float32x4_t,
@@ -317,20 +292,16 @@ impl F32x8Backend for archmage::NeonToken {
 
     // ====== Construction ======
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn splat(self, v: f32) -> [float32x4_t; 2] {
-        unsafe {
-            let v4 = vdupq_n_f32(v);
-            [v4, v4]
-        }
+        let v4 = vdupq_n_f32(v);
+        [v4, v4]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn zero(self) -> [float32x4_t; 2] {
-        unsafe {
-            let z = vdupq_n_f32(0.0);
-            [z, z]
-        }
+        let z = vdupq_n_f32(0.0);
+        [z, z]
     }
 
     #[inline(always)]
@@ -365,69 +336,69 @@ impl F32x8Backend for archmage::NeonToken {
 
     // ====== Arithmetic ======
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn add(self, a: [float32x4_t; 2], b: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe { [vaddq_f32(a[0], b[0]), vaddq_f32(a[1], b[1])] }
+        [vaddq_f32(a[0], b[0]), vaddq_f32(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sub(self, a: [float32x4_t; 2], b: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe { [vsubq_f32(a[0], b[0]), vsubq_f32(a[1], b[1])] }
+        [vsubq_f32(a[0], b[0]), vsubq_f32(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul(self, a: [float32x4_t; 2], b: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe { [vmulq_f32(a[0], b[0]), vmulq_f32(a[1], b[1])] }
+        [vmulq_f32(a[0], b[0]), vmulq_f32(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn div(self, a: [float32x4_t; 2], b: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe { [vdivq_f32(a[0], b[0]), vdivq_f32(a[1], b[1])] }
+        [vdivq_f32(a[0], b[0]), vdivq_f32(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn neg(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe { [vnegq_f32(a[0]), vnegq_f32(a[1])] }
+        [vnegq_f32(a[0]), vnegq_f32(a[1])]
     }
 
     // ====== Math ======
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: [float32x4_t; 2], b: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe { [vminq_f32(a[0], b[0]), vminq_f32(a[1], b[1])] }
+        [vminq_f32(a[0], b[0]), vminq_f32(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: [float32x4_t; 2], b: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe { [vmaxq_f32(a[0], b[0]), vmaxq_f32(a[1], b[1])] }
+        [vmaxq_f32(a[0], b[0]), vmaxq_f32(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sqrt(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe { [vsqrtq_f32(a[0]), vsqrtq_f32(a[1])] }
+        [vsqrtq_f32(a[0]), vsqrtq_f32(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn abs(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe { [vabsq_f32(a[0]), vabsq_f32(a[1])] }
+        [vabsq_f32(a[0]), vabsq_f32(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn floor(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe { [vrndmq_f32(a[0]), vrndmq_f32(a[1])] }
+        [vrndmq_f32(a[0]), vrndmq_f32(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn ceil(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe { [vrndpq_f32(a[0]), vrndpq_f32(a[1])] }
+        [vrndpq_f32(a[0]), vrndpq_f32(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn round(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe { [vrndnq_f32(a[0]), vrndnq_f32(a[1])] }
+        [vrndnq_f32(a[0]), vrndnq_f32(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul_add(
         self,
         a: [float32x4_t; 2],
@@ -435,10 +406,10 @@ impl F32x8Backend for archmage::NeonToken {
         c: [float32x4_t; 2],
     ) -> [float32x4_t; 2] {
         // vfmaq = acc + x*y, so mul_add(a, b, c) = a*b + c => vfmaq(c, a, b)
-        unsafe { [vfmaq_f32(c[0], a[0], b[0]), vfmaq_f32(c[1], a[1], b[1])] }
+        [vfmaq_f32(c[0], a[0], b[0]), vfmaq_f32(c[1], a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul_sub(
         self,
         a: [float32x4_t; 2],
@@ -446,96 +417,80 @@ impl F32x8Backend for archmage::NeonToken {
         c: [float32x4_t; 2],
     ) -> [float32x4_t; 2] {
         // a*b - c => vfmaq(-c, a, b) = -c + a*b
-        unsafe {
-            [
-                vfmaq_f32(vnegq_f32(c[0]), a[0], b[0]),
-                vfmaq_f32(vnegq_f32(c[1]), a[1], b[1]),
-            ]
-        }
+        [
+            vfmaq_f32(vnegq_f32(c[0]), a[0], b[0]),
+            vfmaq_f32(vnegq_f32(c[1]), a[1], b[1]),
+        ]
     }
 
     // ====== Comparisons ======
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: [float32x4_t; 2], b: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_f32_u32(vceqq_f32(a[0], b[0])),
-                vreinterpretq_f32_u32(vceqq_f32(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_f32_u32(vceqq_f32(a[0], b[0])),
+            vreinterpretq_f32_u32(vceqq_f32(a[1], b[1])),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ne(self, a: [float32x4_t; 2], b: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_f32_u32(vmvnq_u32(vceqq_f32(a[0], b[0]))),
-                vreinterpretq_f32_u32(vmvnq_u32(vceqq_f32(a[1], b[1]))),
-            ]
-        }
+        [
+            vreinterpretq_f32_u32(vmvnq_u32(vceqq_f32(a[0], b[0]))),
+            vreinterpretq_f32_u32(vmvnq_u32(vceqq_f32(a[1], b[1]))),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_lt(self, a: [float32x4_t; 2], b: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_f32_u32(vcltq_f32(a[0], b[0])),
-                vreinterpretq_f32_u32(vcltq_f32(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_f32_u32(vcltq_f32(a[0], b[0])),
+            vreinterpretq_f32_u32(vcltq_f32(a[1], b[1])),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_le(self, a: [float32x4_t; 2], b: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_f32_u32(vcleq_f32(a[0], b[0])),
-                vreinterpretq_f32_u32(vcleq_f32(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_f32_u32(vcleq_f32(a[0], b[0])),
+            vreinterpretq_f32_u32(vcleq_f32(a[1], b[1])),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_gt(self, a: [float32x4_t; 2], b: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_f32_u32(vcgtq_f32(a[0], b[0])),
-                vreinterpretq_f32_u32(vcgtq_f32(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_f32_u32(vcgtq_f32(a[0], b[0])),
+            vreinterpretq_f32_u32(vcgtq_f32(a[1], b[1])),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ge(self, a: [float32x4_t; 2], b: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_f32_u32(vcgeq_f32(a[0], b[0])),
-                vreinterpretq_f32_u32(vcgeq_f32(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_f32_u32(vcgeq_f32(a[0], b[0])),
+            vreinterpretq_f32_u32(vcgeq_f32(a[1], b[1])),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn blend(
         self,
         mask: [float32x4_t; 2],
         if_true: [float32x4_t; 2],
         if_false: [float32x4_t; 2],
     ) -> [float32x4_t; 2] {
-        unsafe {
-            [
-                vbslq_f32(vreinterpretq_u32_f32(mask[0]), if_true[0], if_false[0]),
-                vbslq_f32(vreinterpretq_u32_f32(mask[1]), if_true[1], if_false[1]),
-            ]
-        }
+        [
+            vbslq_f32(vreinterpretq_u32_f32(mask[0]), if_true[0], if_false[0]),
+            vbslq_f32(vreinterpretq_u32_f32(mask[1]), if_true[1], if_false[1]),
+        ]
     }
 
     // ====== Reductions ======
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_add(self, a: [float32x4_t; 2]) -> f32 {
-        unsafe {
+        {
             let m = vaddq_f32(a[0], a[1]);
             let pair = vpaddq_f32(m, m);
             let pair = vpaddq_f32(pair, pair);
@@ -543,9 +498,9 @@ impl F32x8Backend for archmage::NeonToken {
         }
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_min(self, a: [float32x4_t; 2]) -> f32 {
-        unsafe {
+        {
             let m = vminq_f32(a[0], a[1]);
             let pair = vpminq_f32(m, m);
             let pair = vpminq_f32(pair, pair);
@@ -553,9 +508,9 @@ impl F32x8Backend for archmage::NeonToken {
         }
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_max(self, a: [float32x4_t; 2]) -> f32 {
-        unsafe {
+        {
             let m = vmaxq_f32(a[0], a[1]);
             let pair = vpmaxq_f32(m, m);
             let pair = vpmaxq_f32(pair, pair);
@@ -568,87 +523,79 @@ impl F32x8Backend for archmage::NeonToken {
     // Delegate to the native f32x4/f64x2 backend so the polyfill inherits
     // its >=12-bit fused `_approx` (raw vrecpe + 1 FRECPS) and exact full
     // methods — one source of truth for the estimate.
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn rcp_approx(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        core::array::from_fn(|i| <Self as F32x4Backend>::rcp_approx(self, a[i]))
+        core::array::from_fn(|i| <Self as F32x4Backend>::rcp_approx(_self, a[i]))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn rsqrt_approx(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        core::array::from_fn(|i| <Self as F32x4Backend>::rsqrt_approx(self, a[i]))
+        core::array::from_fn(|i| <Self as F32x4Backend>::rsqrt_approx(_self, a[i]))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn recip(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        core::array::from_fn(|i| <Self as F32x4Backend>::recip(self, a[i]))
+        core::array::from_fn(|i| <Self as F32x4Backend>::recip(_self, a[i]))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn rsqrt(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        core::array::from_fn(|i| <Self as F32x4Backend>::rsqrt(self, a[i]))
+        core::array::from_fn(|i| <Self as F32x4Backend>::rsqrt(_self, a[i]))
     }
 
     // ====== Bitwise ======
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn not(self, a: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_f32_u32(vmvnq_u32(vreinterpretq_u32_f32(a[0]))),
-                vreinterpretq_f32_u32(vmvnq_u32(vreinterpretq_u32_f32(a[1]))),
-            ]
-        }
+        [
+            vreinterpretq_f32_u32(vmvnq_u32(vreinterpretq_u32_f32(a[0]))),
+            vreinterpretq_f32_u32(vmvnq_u32(vreinterpretq_u32_f32(a[1]))),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitand(self, a: [float32x4_t; 2], b: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_f32_u32(vandq_u32(
-                    vreinterpretq_u32_f32(a[0]),
-                    vreinterpretq_u32_f32(b[0]),
-                )),
-                vreinterpretq_f32_u32(vandq_u32(
-                    vreinterpretq_u32_f32(a[1]),
-                    vreinterpretq_u32_f32(b[1]),
-                )),
-            ]
-        }
+        [
+            vreinterpretq_f32_u32(vandq_u32(
+                vreinterpretq_u32_f32(a[0]),
+                vreinterpretq_u32_f32(b[0]),
+            )),
+            vreinterpretq_f32_u32(vandq_u32(
+                vreinterpretq_u32_f32(a[1]),
+                vreinterpretq_u32_f32(b[1]),
+            )),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitor(self, a: [float32x4_t; 2], b: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_f32_u32(vorrq_u32(
-                    vreinterpretq_u32_f32(a[0]),
-                    vreinterpretq_u32_f32(b[0]),
-                )),
-                vreinterpretq_f32_u32(vorrq_u32(
-                    vreinterpretq_u32_f32(a[1]),
-                    vreinterpretq_u32_f32(b[1]),
-                )),
-            ]
-        }
+        [
+            vreinterpretq_f32_u32(vorrq_u32(
+                vreinterpretq_u32_f32(a[0]),
+                vreinterpretq_u32_f32(b[0]),
+            )),
+            vreinterpretq_f32_u32(vorrq_u32(
+                vreinterpretq_u32_f32(a[1]),
+                vreinterpretq_u32_f32(b[1]),
+            )),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitxor(self, a: [float32x4_t; 2], b: [float32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_f32_u32(veorq_u32(
-                    vreinterpretq_u32_f32(a[0]),
-                    vreinterpretq_u32_f32(b[0]),
-                )),
-                vreinterpretq_f32_u32(veorq_u32(
-                    vreinterpretq_u32_f32(a[1]),
-                    vreinterpretq_u32_f32(b[1]),
-                )),
-            ]
-        }
+        [
+            vreinterpretq_f32_u32(veorq_u32(
+                vreinterpretq_u32_f32(a[0]),
+                vreinterpretq_u32_f32(b[0]),
+            )),
+            vreinterpretq_f32_u32(veorq_u32(
+                vreinterpretq_u32_f32(a[1]),
+                vreinterpretq_u32_f32(b[1]),
+            )),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn to_u8_bytes(self, a: [float32x4_t; 2]) -> [u8; 8] {
         unsafe {
             let i0 = vqmovn_s32(vcvtnq_s32_f32(a[0]));
@@ -658,7 +605,7 @@ impl F32x8Backend for archmage::NeonToken {
         }
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn store_rgba_bytes(
         self,
         r: [float32x4_t; 2],
@@ -694,14 +641,14 @@ impl F32x8Backend for archmage::NeonToken {
 impl F64x2Backend for archmage::NeonToken {
     type Repr = float64x2_t;
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn splat(self, v: f64) -> float64x2_t {
-        unsafe { vdupq_n_f64(v) }
+        vdupq_n_f64(v)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn zero(self) -> float64x2_t {
-        unsafe { vdupq_n_f64(0.0) }
+        vdupq_n_f64(0.0)
     }
 
     #[inline(always)]
@@ -726,114 +673,114 @@ impl F64x2Backend for archmage::NeonToken {
         out
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn add(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
-        unsafe { vaddq_f64(a, b) }
+        vaddq_f64(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sub(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
-        unsafe { vsubq_f64(a, b) }
+        vsubq_f64(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
-        unsafe { vmulq_f64(a, b) }
+        vmulq_f64(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn div(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
-        unsafe { vdivq_f64(a, b) }
+        vdivq_f64(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn neg(self, a: float64x2_t) -> float64x2_t {
-        unsafe { vnegq_f64(a) }
+        vnegq_f64(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
-        unsafe { vminq_f64(a, b) }
+        vminq_f64(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
-        unsafe { vmaxq_f64(a, b) }
+        vmaxq_f64(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sqrt(self, a: float64x2_t) -> float64x2_t {
-        unsafe { vsqrtq_f64(a) }
+        vsqrtq_f64(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn abs(self, a: float64x2_t) -> float64x2_t {
-        unsafe { vabsq_f64(a) }
+        vabsq_f64(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn floor(self, a: float64x2_t) -> float64x2_t {
-        unsafe { vrndmq_f64(a) }
+        vrndmq_f64(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn ceil(self, a: float64x2_t) -> float64x2_t {
-        unsafe { vrndpq_f64(a) }
+        vrndpq_f64(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn round(self, a: float64x2_t) -> float64x2_t {
-        unsafe { vrndnq_f64(a) }
+        vrndnq_f64(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul_add(self, a: float64x2_t, b: float64x2_t, c: float64x2_t) -> float64x2_t {
-        unsafe { vfmaq_f64(c, a, b) }
+        vfmaq_f64(c, a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul_sub(self, a: float64x2_t, b: float64x2_t, c: float64x2_t) -> float64x2_t {
-        unsafe { vfmaq_f64(vnegq_f64(c), a, b) }
+        vfmaq_f64(vnegq_f64(c), a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
-        unsafe { vreinterpretq_f64_u64(vceqq_f64(a, b)) }
+        vreinterpretq_f64_u64(vceqq_f64(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ne(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
-        unsafe { vreinterpretq_f64_u64(veorq_u64(vceqq_f64(a, b), vdupq_n_u64(u64::MAX))) }
+        vreinterpretq_f64_u64(veorq_u64(vceqq_f64(a, b), vdupq_n_u64(u64::MAX)))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_lt(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
-        unsafe { vreinterpretq_f64_u64(vcltq_f64(a, b)) }
+        vreinterpretq_f64_u64(vcltq_f64(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_le(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
-        unsafe { vreinterpretq_f64_u64(vcleq_f64(a, b)) }
+        vreinterpretq_f64_u64(vcleq_f64(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_gt(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
-        unsafe { vreinterpretq_f64_u64(vcgtq_f64(a, b)) }
+        vreinterpretq_f64_u64(vcgtq_f64(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ge(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
-        unsafe { vreinterpretq_f64_u64(vcgeq_f64(a, b)) }
+        vreinterpretq_f64_u64(vcgeq_f64(a, b))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn blend(self, mask: float64x2_t, if_true: float64x2_t, if_false: float64x2_t) -> float64x2_t {
-        unsafe { vbslq_f64(vreinterpretq_u64_f64(mask), if_true, if_false) }
+        vbslq_f64(vreinterpretq_u64_f64(mask), if_true, if_false)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_add(self, a: float64x2_t) -> f64 {
-        unsafe {
+        {
             let pair = vpaddq_f64(a, a);
             vgetq_lane_f64::<0>(pair)
         }
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_min(self, a: float64x2_t) -> f64 {
-        unsafe {
+        {
             let pair = vpminq_f64(a, a);
             vgetq_lane_f64::<0>(pair)
         }
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_max(self, a: float64x2_t) -> f64 {
-        unsafe {
+        {
             let pair = vpmaxq_f64(a, a);
             vgetq_lane_f64::<0>(pair)
         }
@@ -875,59 +822,49 @@ impl F64x2Backend for archmage::NeonToken {
     //   Neoverse / server ARM: NOT MEASURED for f64. The f32 form is
     //     slower there, so treat an f64 regression as plausible until
     //     someone runs `bench_rsqrt_f64` on that class of core.
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn rcp_approx(self, a: float64x2_t) -> float64x2_t {
-        unsafe {
-            let y = vrecpeq_f64(a);
-            vmulq_f64(vrecpsq_f64(a, y), y)
-        }
+        let y = vrecpeq_f64(a);
+        vmulq_f64(vrecpsq_f64(a, y), y)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn rsqrt_approx(self, a: float64x2_t) -> float64x2_t {
-        unsafe {
-            let y = vrsqrteq_f64(a);
-            vmulq_f64(y, vrsqrtsq_f64(a, vmulq_f64(y, y)))
-        }
+        let y = vrsqrteq_f64(a);
+        vmulq_f64(y, vrsqrtsq_f64(a, vmulq_f64(y, y)))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn recip(self, a: float64x2_t) -> float64x2_t {
-        unsafe { vdivq_f64(vdupq_n_f64(1.0), a) }
+        vdivq_f64(vdupq_n_f64(1.0), a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn rsqrt(self, a: float64x2_t) -> float64x2_t {
-        unsafe { vdivq_f64(vdupq_n_f64(1.0), vsqrtq_f64(a)) }
+        vdivq_f64(vdupq_n_f64(1.0), vsqrtq_f64(a))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn not(self, a: float64x2_t) -> float64x2_t {
-        unsafe { vreinterpretq_f64_u64(veorq_u64(vreinterpretq_u64_f64(a), vdupq_n_u64(u64::MAX))) }
+        vreinterpretq_f64_u64(veorq_u64(vreinterpretq_u64_f64(a), vdupq_n_u64(u64::MAX)))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitand(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
-        unsafe {
-            vreinterpretq_f64_u64(vandq_u64(
-                vreinterpretq_u64_f64(a),
-                vreinterpretq_u64_f64(b),
-            ))
-        }
+        vreinterpretq_f64_u64(vandq_u64(
+            vreinterpretq_u64_f64(a),
+            vreinterpretq_u64_f64(b),
+        ))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitor(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
-        unsafe {
-            vreinterpretq_f64_u64(vorrq_u64(
-                vreinterpretq_u64_f64(a),
-                vreinterpretq_u64_f64(b),
-            ))
-        }
+        vreinterpretq_f64_u64(vorrq_u64(
+            vreinterpretq_u64_f64(a),
+            vreinterpretq_u64_f64(b),
+        ))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitxor(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
-        unsafe {
-            vreinterpretq_f64_u64(veorq_u64(
-                vreinterpretq_u64_f64(a),
-                vreinterpretq_u64_f64(b),
-            ))
-        }
+        vreinterpretq_f64_u64(veorq_u64(
+            vreinterpretq_u64_f64(a),
+            vreinterpretq_u64_f64(b),
+        ))
     }
 }
 
@@ -937,20 +874,16 @@ impl F64x4Backend for archmage::NeonToken {
 
     // ====== Construction ======
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn splat(self, v: f64) -> [float64x2_t; 2] {
-        unsafe {
-            let v4 = vdupq_n_f64(v);
-            [v4, v4]
-        }
+        let v4 = vdupq_n_f64(v);
+        [v4, v4]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn zero(self) -> [float64x2_t; 2] {
-        unsafe {
-            let z = vdupq_n_f64(0.0);
-            [z, z]
-        }
+        let z = vdupq_n_f64(0.0);
+        [z, z]
     }
 
     #[inline(always)]
@@ -985,69 +918,69 @@ impl F64x4Backend for archmage::NeonToken {
 
     // ====== Arithmetic ======
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn add(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe { [vaddq_f64(a[0], b[0]), vaddq_f64(a[1], b[1])] }
+        [vaddq_f64(a[0], b[0]), vaddq_f64(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sub(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe { [vsubq_f64(a[0], b[0]), vsubq_f64(a[1], b[1])] }
+        [vsubq_f64(a[0], b[0]), vsubq_f64(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe { [vmulq_f64(a[0], b[0]), vmulq_f64(a[1], b[1])] }
+        [vmulq_f64(a[0], b[0]), vmulq_f64(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn div(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe { [vdivq_f64(a[0], b[0]), vdivq_f64(a[1], b[1])] }
+        [vdivq_f64(a[0], b[0]), vdivq_f64(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn neg(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe { [vnegq_f64(a[0]), vnegq_f64(a[1])] }
+        [vnegq_f64(a[0]), vnegq_f64(a[1])]
     }
 
     // ====== Math ======
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe { [vminq_f64(a[0], b[0]), vminq_f64(a[1], b[1])] }
+        [vminq_f64(a[0], b[0]), vminq_f64(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe { [vmaxq_f64(a[0], b[0]), vmaxq_f64(a[1], b[1])] }
+        [vmaxq_f64(a[0], b[0]), vmaxq_f64(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sqrt(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe { [vsqrtq_f64(a[0]), vsqrtq_f64(a[1])] }
+        [vsqrtq_f64(a[0]), vsqrtq_f64(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn abs(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe { [vabsq_f64(a[0]), vabsq_f64(a[1])] }
+        [vabsq_f64(a[0]), vabsq_f64(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn floor(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe { [vrndmq_f64(a[0]), vrndmq_f64(a[1])] }
+        [vrndmq_f64(a[0]), vrndmq_f64(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn ceil(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe { [vrndpq_f64(a[0]), vrndpq_f64(a[1])] }
+        [vrndpq_f64(a[0]), vrndpq_f64(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn round(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe { [vrndnq_f64(a[0]), vrndnq_f64(a[1])] }
+        [vrndnq_f64(a[0]), vrndnq_f64(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul_add(
         self,
         a: [float64x2_t; 2],
@@ -1055,10 +988,10 @@ impl F64x4Backend for archmage::NeonToken {
         c: [float64x2_t; 2],
     ) -> [float64x2_t; 2] {
         // vfmaq = acc + x*y, so mul_add(a, b, c) = a*b + c => vfmaq(c, a, b)
-        unsafe { [vfmaq_f64(c[0], a[0], b[0]), vfmaq_f64(c[1], a[1], b[1])] }
+        [vfmaq_f64(c[0], a[0], b[0]), vfmaq_f64(c[1], a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul_sub(
         self,
         a: [float64x2_t; 2],
@@ -1066,114 +999,98 @@ impl F64x4Backend for archmage::NeonToken {
         c: [float64x2_t; 2],
     ) -> [float64x2_t; 2] {
         // a*b - c => vfmaq(-c, a, b) = -c + a*b
-        unsafe {
-            [
-                vfmaq_f64(vnegq_f64(c[0]), a[0], b[0]),
-                vfmaq_f64(vnegq_f64(c[1]), a[1], b[1]),
-            ]
-        }
+        [
+            vfmaq_f64(vnegq_f64(c[0]), a[0], b[0]),
+            vfmaq_f64(vnegq_f64(c[1]), a[1], b[1]),
+        ]
     }
 
     // ====== Comparisons ======
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_f64_u64(vceqq_f64(a[0], b[0])),
-                vreinterpretq_f64_u64(vceqq_f64(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_f64_u64(vceqq_f64(a[0], b[0])),
+            vreinterpretq_f64_u64(vceqq_f64(a[1], b[1])),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ne(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_f64_u64(veorq_u64(vceqq_f64(a[0], b[0]), vdupq_n_u64(u64::MAX))),
-                vreinterpretq_f64_u64(veorq_u64(vceqq_f64(a[1], b[1]), vdupq_n_u64(u64::MAX))),
-            ]
-        }
+        [
+            vreinterpretq_f64_u64(veorq_u64(vceqq_f64(a[0], b[0]), vdupq_n_u64(u64::MAX))),
+            vreinterpretq_f64_u64(veorq_u64(vceqq_f64(a[1], b[1]), vdupq_n_u64(u64::MAX))),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_lt(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_f64_u64(vcltq_f64(a[0], b[0])),
-                vreinterpretq_f64_u64(vcltq_f64(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_f64_u64(vcltq_f64(a[0], b[0])),
+            vreinterpretq_f64_u64(vcltq_f64(a[1], b[1])),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_le(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_f64_u64(vcleq_f64(a[0], b[0])),
-                vreinterpretq_f64_u64(vcleq_f64(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_f64_u64(vcleq_f64(a[0], b[0])),
+            vreinterpretq_f64_u64(vcleq_f64(a[1], b[1])),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_gt(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_f64_u64(vcgtq_f64(a[0], b[0])),
-                vreinterpretq_f64_u64(vcgtq_f64(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_f64_u64(vcgtq_f64(a[0], b[0])),
+            vreinterpretq_f64_u64(vcgtq_f64(a[1], b[1])),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ge(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_f64_u64(vcgeq_f64(a[0], b[0])),
-                vreinterpretq_f64_u64(vcgeq_f64(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_f64_u64(vcgeq_f64(a[0], b[0])),
+            vreinterpretq_f64_u64(vcgeq_f64(a[1], b[1])),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn blend(
         self,
         mask: [float64x2_t; 2],
         if_true: [float64x2_t; 2],
         if_false: [float64x2_t; 2],
     ) -> [float64x2_t; 2] {
-        unsafe {
-            [
-                vbslq_f64(vreinterpretq_u64_f64(mask[0]), if_true[0], if_false[0]),
-                vbslq_f64(vreinterpretq_u64_f64(mask[1]), if_true[1], if_false[1]),
-            ]
-        }
+        [
+            vbslq_f64(vreinterpretq_u64_f64(mask[0]), if_true[0], if_false[0]),
+            vbslq_f64(vreinterpretq_u64_f64(mask[1]), if_true[1], if_false[1]),
+        ]
     }
 
     // ====== Reductions ======
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_add(self, a: [float64x2_t; 2]) -> f64 {
-        unsafe {
+        {
             let m = vaddq_f64(a[0], a[1]);
             let pair = vpaddq_f64(m, m);
             vgetq_lane_f64::<0>(pair)
         }
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_min(self, a: [float64x2_t; 2]) -> f64 {
-        unsafe {
+        {
             let m = vminq_f64(a[0], a[1]);
             let pair = vpminq_f64(m, m);
             vgetq_lane_f64::<0>(pair)
         }
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_max(self, a: [float64x2_t; 2]) -> f64 {
-        unsafe {
+        {
             let m = vmaxq_f64(a[0], a[1]);
             let pair = vpmaxq_f64(m, m);
             vgetq_lane_f64::<0>(pair)
@@ -1185,90 +1102,82 @@ impl F64x4Backend for archmage::NeonToken {
     // Delegate to the native f32x4/f64x2 backend so the polyfill inherits
     // its >=12-bit fused `_approx` (raw vrecpe + 1 FRECPS) and exact full
     // methods — one source of truth for the estimate.
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn rcp_approx(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        core::array::from_fn(|i| <Self as F64x2Backend>::rcp_approx(self, a[i]))
+        core::array::from_fn(|i| <Self as F64x2Backend>::rcp_approx(_self, a[i]))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn rsqrt_approx(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        core::array::from_fn(|i| <Self as F64x2Backend>::rsqrt_approx(self, a[i]))
+        core::array::from_fn(|i| <Self as F64x2Backend>::rsqrt_approx(_self, a[i]))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn recip(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        core::array::from_fn(|i| <Self as F64x2Backend>::recip(self, a[i]))
+        core::array::from_fn(|i| <Self as F64x2Backend>::recip(_self, a[i]))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn rsqrt(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        core::array::from_fn(|i| <Self as F64x2Backend>::rsqrt(self, a[i]))
+        core::array::from_fn(|i| <Self as F64x2Backend>::rsqrt(_self, a[i]))
     }
 
     // ====== Bitwise ======
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn not(self, a: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_f64_u64(veorq_u64(
-                    vreinterpretq_u64_f64(a[0]),
-                    vdupq_n_u64(u64::MAX),
-                )),
-                vreinterpretq_f64_u64(veorq_u64(
-                    vreinterpretq_u64_f64(a[1]),
-                    vdupq_n_u64(u64::MAX),
-                )),
-            ]
-        }
+        [
+            vreinterpretq_f64_u64(veorq_u64(
+                vreinterpretq_u64_f64(a[0]),
+                vdupq_n_u64(u64::MAX),
+            )),
+            vreinterpretq_f64_u64(veorq_u64(
+                vreinterpretq_u64_f64(a[1]),
+                vdupq_n_u64(u64::MAX),
+            )),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitand(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_f64_u64(vandq_u64(
-                    vreinterpretq_u64_f64(a[0]),
-                    vreinterpretq_u64_f64(b[0]),
-                )),
-                vreinterpretq_f64_u64(vandq_u64(
-                    vreinterpretq_u64_f64(a[1]),
-                    vreinterpretq_u64_f64(b[1]),
-                )),
-            ]
-        }
+        [
+            vreinterpretq_f64_u64(vandq_u64(
+                vreinterpretq_u64_f64(a[0]),
+                vreinterpretq_u64_f64(b[0]),
+            )),
+            vreinterpretq_f64_u64(vandq_u64(
+                vreinterpretq_u64_f64(a[1]),
+                vreinterpretq_u64_f64(b[1]),
+            )),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitor(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_f64_u64(vorrq_u64(
-                    vreinterpretq_u64_f64(a[0]),
-                    vreinterpretq_u64_f64(b[0]),
-                )),
-                vreinterpretq_f64_u64(vorrq_u64(
-                    vreinterpretq_u64_f64(a[1]),
-                    vreinterpretq_u64_f64(b[1]),
-                )),
-            ]
-        }
+        [
+            vreinterpretq_f64_u64(vorrq_u64(
+                vreinterpretq_u64_f64(a[0]),
+                vreinterpretq_u64_f64(b[0]),
+            )),
+            vreinterpretq_f64_u64(vorrq_u64(
+                vreinterpretq_u64_f64(a[1]),
+                vreinterpretq_u64_f64(b[1]),
+            )),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitxor(self, a: [float64x2_t; 2], b: [float64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_f64_u64(veorq_u64(
-                    vreinterpretq_u64_f64(a[0]),
-                    vreinterpretq_u64_f64(b[0]),
-                )),
-                vreinterpretq_f64_u64(veorq_u64(
-                    vreinterpretq_u64_f64(a[1]),
-                    vreinterpretq_u64_f64(b[1]),
-                )),
-            ]
-        }
+        [
+            vreinterpretq_f64_u64(veorq_u64(
+                vreinterpretq_u64_f64(a[0]),
+                vreinterpretq_u64_f64(b[0]),
+            )),
+            vreinterpretq_f64_u64(veorq_u64(
+                vreinterpretq_u64_f64(a[1]),
+                vreinterpretq_u64_f64(b[1]),
+            )),
+        ]
     }
 }
 
@@ -1276,14 +1185,14 @@ impl F64x4Backend for archmage::NeonToken {
 impl I32x4Backend for archmage::NeonToken {
     type Repr = int32x4_t;
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn splat(self, v: i32) -> int32x4_t {
-        unsafe { vdupq_n_s32(v) }
+        vdupq_n_s32(v)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn zero(self) -> int32x4_t {
-        unsafe { vdupq_n_s32(0) }
+        vdupq_n_s32(0)
     }
 
     #[inline(always)]
@@ -1308,102 +1217,102 @@ impl I32x4Backend for archmage::NeonToken {
         out
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn add(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {
-        unsafe { vaddq_s32(a, b) }
+        vaddq_s32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sub(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {
-        unsafe { vsubq_s32(a, b) }
+        vsubq_s32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {
-        unsafe { vmulq_s32(a, b) }
+        vmulq_s32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn neg(self, a: int32x4_t) -> int32x4_t {
-        unsafe { vnegq_s32(a) }
+        vnegq_s32(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {
-        unsafe { vminq_s32(a, b) }
+        vminq_s32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {
-        unsafe { vmaxq_s32(a, b) }
+        vmaxq_s32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn abs(self, a: int32x4_t) -> int32x4_t {
-        unsafe { vabsq_s32(a) }
+        vabsq_s32(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {
-        unsafe { vreinterpretq_s32_u32(vceqq_s32(a, b)) }
+        vreinterpretq_s32_u32(vceqq_s32(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ne(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {
-        unsafe { vreinterpretq_s32_u32(vmvnq_u32(vceqq_s32(a, b))) }
+        vreinterpretq_s32_u32(vmvnq_u32(vceqq_s32(a, b)))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_lt(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {
-        unsafe { vreinterpretq_s32_u32(vcltq_s32(a, b)) }
+        vreinterpretq_s32_u32(vcltq_s32(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_le(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {
-        unsafe { vreinterpretq_s32_u32(vcleq_s32(a, b)) }
+        vreinterpretq_s32_u32(vcleq_s32(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_gt(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {
-        unsafe { vreinterpretq_s32_u32(vcgtq_s32(a, b)) }
+        vreinterpretq_s32_u32(vcgtq_s32(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ge(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {
-        unsafe { vreinterpretq_s32_u32(vcgeq_s32(a, b)) }
+        vreinterpretq_s32_u32(vcgeq_s32(a, b))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn blend(self, mask: int32x4_t, if_true: int32x4_t, if_false: int32x4_t) -> int32x4_t {
-        unsafe { vbslq_s32(vreinterpretq_u32_s32(mask), if_true, if_false) }
+        vbslq_s32(vreinterpretq_u32_s32(mask), if_true, if_false)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_add(self, a: int32x4_t) -> i32 {
-        unsafe { vaddvq_s32(a) }
+        vaddvq_s32(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn not(self, a: int32x4_t) -> int32x4_t {
-        unsafe { vmvnq_s32(a) }
+        vmvnq_s32(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitand(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {
-        unsafe { vandq_s32(a, b) }
+        vandq_s32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitor(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {
-        unsafe { vorrq_s32(a, b) }
+        vorrq_s32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitxor(self, a: int32x4_t, b: int32x4_t) -> int32x4_t {
-        unsafe { veorq_s32(a, b) }
+        veorq_s32(a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_const<const N: i32>(self, a: int32x4_t) -> int32x4_t {
-        unsafe { vshlq_n_s32::<N>(a) }
+        vshlq_n_s32::<N>(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_arithmetic_const<const N: i32>(self, a: int32x4_t) -> int32x4_t {
         const { assert!(N >= 0 && N <= 31) };
-        unsafe { vshlq_s32(a, vdupq_n_s32(-N)) }
+        vshlq_s32(a, vdupq_n_s32(-N))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_const<const N: i32>(self, a: int32x4_t) -> int32x4_t {
         const { assert!(N >= 0 && N <= 31) };
-        unsafe { vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a), vdupq_n_s32(-N))) }
+        vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a), vdupq_n_s32(-N)))
     }
 
     // ====== Uniform variable shifts ======
@@ -1412,51 +1321,47 @@ impl I32x4Backend for archmage::NeonToken {
     // a signed value, so an unclamped 256 would wrap to a no-op
     // instead of the contracted zero.
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_uniform(self, a: int32x4_t, count: u32) -> int32x4_t {
-        unsafe { vshlq_s32(a, vdupq_n_s32(count.min(32) as i32)) }
+        vshlq_s32(a, vdupq_n_s32(count.min(32) as i32))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_uniform(self, a: int32x4_t, count: u32) -> int32x4_t {
-        unsafe {
-            vreinterpretq_s32_u32(vshlq_u32(
-                vreinterpretq_u32_s32(a),
-                vdupq_n_s32(-(count.min(32) as i32)),
-            ))
-        }
+        vreinterpretq_s32_u32(vshlq_u32(
+            vreinterpretq_u32_s32(a),
+            vdupq_n_s32(-(count.min(32) as i32)),
+        ))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_arithmetic_uniform(self, a: int32x4_t, count: u32) -> int32x4_t {
         // Clamping to 31 gives the contracted sign fill.
-        unsafe { vshlq_s32(a, vdupq_n_s32(-(count.min(31) as i32))) }
+        vshlq_s32(a, vdupq_n_s32(-(count.min(31) as i32)))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn all_true(self, a: int32x4_t) -> bool {
-        unsafe { vminvq_u32(vreinterpretq_u32_s32(a)) != 0 }
+        vminvq_u32(vreinterpretq_u32_s32(a)) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn any_true(self, a: int32x4_t) -> bool {
-        unsafe { vmaxvq_u32(vreinterpretq_u32_s32(a)) != 0 }
+        vmaxvq_u32(vreinterpretq_u32_s32(a)) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: int32x4_t) -> u32 {
-        unsafe {
-            // Extract sign bit of each 32-bit lane as 0/1 (LOGICAL shift on
-            // the u32 view — an arithmetic s32 shift would sign-extend to
-            // 0xFFFF_FFFF and corrupt the packed mask).
-            let shift = vshrq_n_u32::<31>(vreinterpretq_u32_s32(a));
-            // Pack: lane0 | (lane1<<1) | (lane2<<2) | (lane3<<3)
-            let lane0 = vgetq_lane_u32::<0>(shift);
-            let lane1 = vgetq_lane_u32::<1>(shift);
-            let lane2 = vgetq_lane_u32::<2>(shift);
-            let lane3 = vgetq_lane_u32::<3>(shift);
-            lane0 | (lane1 << 1) | (lane2 << 2) | (lane3 << 3)
-        }
+        // Extract sign bit of each 32-bit lane as 0/1 (LOGICAL shift on
+        // the u32 view — an arithmetic s32 shift would sign-extend to
+        // 0xFFFF_FFFF and corrupt the packed mask).
+        let shift = vshrq_n_u32::<31>(vreinterpretq_u32_s32(a));
+        // Pack: lane0 | (lane1<<1) | (lane2<<2) | (lane3<<3)
+        let lane0 = vgetq_lane_u32::<0>(shift);
+        let lane1 = vgetq_lane_u32::<1>(shift);
+        let lane2 = vgetq_lane_u32::<2>(shift);
+        let lane3 = vgetq_lane_u32::<3>(shift);
+        lane0 | (lane1 << 1) | (lane2 << 2) | (lane3 << 3)
     }
 }
 
@@ -1464,20 +1369,16 @@ impl I32x4Backend for archmage::NeonToken {
 impl I32x8Backend for archmage::NeonToken {
     type Repr = [int32x4_t; 2];
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn splat(self, v: i32) -> [int32x4_t; 2] {
-        unsafe {
-            let v4 = vdupq_n_s32(v);
-            [v4, v4]
-        }
+        let v4 = vdupq_n_s32(v);
+        [v4, v4]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn zero(self) -> [int32x4_t; 2] {
-        unsafe {
-            let z = vdupq_n_s32(0);
-            [z, z]
-        }
+        let z = vdupq_n_s32(0);
+        [z, z]
     }
 
     #[inline(always)]
@@ -1510,155 +1411,137 @@ impl I32x8Backend for archmage::NeonToken {
         out
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn add(self, a: [int32x4_t; 2], b: [int32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe { [vaddq_s32(a[0], b[0]), vaddq_s32(a[1], b[1])] }
+        [vaddq_s32(a[0], b[0]), vaddq_s32(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sub(self, a: [int32x4_t; 2], b: [int32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe { [vsubq_s32(a[0], b[0]), vsubq_s32(a[1], b[1])] }
+        [vsubq_s32(a[0], b[0]), vsubq_s32(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul(self, a: [int32x4_t; 2], b: [int32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe { [vmulq_s32(a[0], b[0]), vmulq_s32(a[1], b[1])] }
+        [vmulq_s32(a[0], b[0]), vmulq_s32(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn neg(self, a: [int32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe { [vnegq_s32(a[0]), vnegq_s32(a[1])] }
+        [vnegq_s32(a[0]), vnegq_s32(a[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: [int32x4_t; 2], b: [int32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe { [vminq_s32(a[0], b[0]), vminq_s32(a[1], b[1])] }
+        [vminq_s32(a[0], b[0]), vminq_s32(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: [int32x4_t; 2], b: [int32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe { [vmaxq_s32(a[0], b[0]), vmaxq_s32(a[1], b[1])] }
+        [vmaxq_s32(a[0], b[0]), vmaxq_s32(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn abs(self, a: [int32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe { [vabsq_s32(a[0]), vabsq_s32(a[1])] }
+        [vabsq_s32(a[0]), vabsq_s32(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: [int32x4_t; 2], b: [int32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s32_u32(vceqq_s32(a[0], b[0])),
-                vreinterpretq_s32_u32(vceqq_s32(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_s32_u32(vceqq_s32(a[0], b[0])),
+            vreinterpretq_s32_u32(vceqq_s32(a[1], b[1])),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ne(self, a: [int32x4_t; 2], b: [int32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s32_u32(vmvnq_u32(vceqq_s32(a[0], b[0]))),
-                vreinterpretq_s32_u32(vmvnq_u32(vceqq_s32(a[1], b[1]))),
-            ]
-        }
+        [
+            vreinterpretq_s32_u32(vmvnq_u32(vceqq_s32(a[0], b[0]))),
+            vreinterpretq_s32_u32(vmvnq_u32(vceqq_s32(a[1], b[1]))),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_lt(self, a: [int32x4_t; 2], b: [int32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s32_u32(vcltq_s32(a[0], b[0])),
-                vreinterpretq_s32_u32(vcltq_s32(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_s32_u32(vcltq_s32(a[0], b[0])),
+            vreinterpretq_s32_u32(vcltq_s32(a[1], b[1])),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_le(self, a: [int32x4_t; 2], b: [int32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s32_u32(vcleq_s32(a[0], b[0])),
-                vreinterpretq_s32_u32(vcleq_s32(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_s32_u32(vcleq_s32(a[0], b[0])),
+            vreinterpretq_s32_u32(vcleq_s32(a[1], b[1])),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_gt(self, a: [int32x4_t; 2], b: [int32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s32_u32(vcgtq_s32(a[0], b[0])),
-                vreinterpretq_s32_u32(vcgtq_s32(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_s32_u32(vcgtq_s32(a[0], b[0])),
+            vreinterpretq_s32_u32(vcgtq_s32(a[1], b[1])),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ge(self, a: [int32x4_t; 2], b: [int32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s32_u32(vcgeq_s32(a[0], b[0])),
-                vreinterpretq_s32_u32(vcgeq_s32(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_s32_u32(vcgeq_s32(a[0], b[0])),
+            vreinterpretq_s32_u32(vcgeq_s32(a[1], b[1])),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn blend(
         self,
         mask: [int32x4_t; 2],
         if_true: [int32x4_t; 2],
         if_false: [int32x4_t; 2],
     ) -> [int32x4_t; 2] {
-        unsafe {
-            [
-                vbslq_s32(vreinterpretq_u32_s32(mask[0]), if_true[0], if_false[0]),
-                vbslq_s32(vreinterpretq_u32_s32(mask[1]), if_true[1], if_false[1]),
-            ]
-        }
+        [
+            vbslq_s32(vreinterpretq_u32_s32(mask[0]), if_true[0], if_false[0]),
+            vbslq_s32(vreinterpretq_u32_s32(mask[1]), if_true[1], if_false[1]),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_add(self, a: [int32x4_t; 2]) -> i32 {
-        unsafe {
+        {
             let m = vaddq_s32(a[0], a[1]);
             vaddvq_s32(m)
         }
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn not(self, a: [int32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe { [vmvnq_s32(a[0]), vmvnq_s32(a[1])] }
+        [vmvnq_s32(a[0]), vmvnq_s32(a[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitand(self, a: [int32x4_t; 2], b: [int32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe { [vandq_s32(a[0], b[0]), vandq_s32(a[1], b[1])] }
+        [vandq_s32(a[0], b[0]), vandq_s32(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitor(self, a: [int32x4_t; 2], b: [int32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe { [vorrq_s32(a[0], b[0]), vorrq_s32(a[1], b[1])] }
+        [vorrq_s32(a[0], b[0]), vorrq_s32(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitxor(self, a: [int32x4_t; 2], b: [int32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe { [veorq_s32(a[0], b[0]), veorq_s32(a[1], b[1])] }
+        [veorq_s32(a[0], b[0]), veorq_s32(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_const<const N: i32>(self, a: [int32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe { [vshlq_n_s32::<N>(a[0]), vshlq_n_s32::<N>(a[1])] }
+        [vshlq_n_s32::<N>(a[0]), vshlq_n_s32::<N>(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_arithmetic_const<const N: i32>(self, a: [int32x4_t; 2]) -> [int32x4_t; 2] {
         const { assert!(N >= 0 && N <= 31) };
-        unsafe {
-            [
-                vshlq_s32(a[0], vdupq_n_s32(-N)),
-                vshlq_s32(a[1], vdupq_n_s32(-N)),
-            ]
-        }
+        [
+            vshlq_s32(a[0], vdupq_n_s32(-N)),
+            vshlq_s32(a[1], vdupq_n_s32(-N)),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_const<const N: i32>(self, a: [int32x4_t; 2]) -> [int32x4_t; 2] {
         const { assert!(N >= 0 && N <= 31) };
-        unsafe {
-            [
-                vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a[0]), vdupq_n_s32(-N))),
-                vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a[1]), vdupq_n_s32(-N))),
-            ]
-        }
+        [
+            vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a[0]), vdupq_n_s32(-N))),
+            vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a[1]), vdupq_n_s32(-N))),
+        ]
     }
 
     // ====== Uniform variable shifts ======
@@ -1666,52 +1549,40 @@ impl I32x8Backend for archmage::NeonToken {
     // clamp rationale as the 128-bit impl (USHL/SSHL read the low
     // byte of each amount lane).
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_uniform(self, a: [int32x4_t; 2], count: u32) -> [int32x4_t; 2] {
-        unsafe {
-            let c = vdupq_n_s32(count.min(32) as i32);
-            [vshlq_s32(a[0], c), vshlq_s32(a[1], c)]
-        }
+        let c = vdupq_n_s32(count.min(32) as i32);
+        [vshlq_s32(a[0], c), vshlq_s32(a[1], c)]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_uniform(self, a: [int32x4_t; 2], count: u32) -> [int32x4_t; 2] {
-        unsafe {
-            let c = vdupq_n_s32(-(count.min(32) as i32));
-            [
-                vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a[0]), c)),
-                vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a[1]), c)),
-            ]
-        }
+        let c = vdupq_n_s32(-(count.min(32) as i32));
+        [
+            vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a[0]), c)),
+            vreinterpretq_s32_u32(vshlq_u32(vreinterpretq_u32_s32(a[1]), c)),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_arithmetic_uniform(self, a: [int32x4_t; 2], count: u32) -> [int32x4_t; 2] {
-        unsafe {
-            let c = vdupq_n_s32(-(count.min(31) as i32));
-            [vshlq_s32(a[0], c), vshlq_s32(a[1], c)]
-        }
+        let c = vdupq_n_s32(-(count.min(31) as i32));
+        [vshlq_s32(a[0], c), vshlq_s32(a[1], c)]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn all_true(self, a: [int32x4_t; 2]) -> bool {
-        unsafe {
-            vminvq_u32(vreinterpretq_u32_s32(a[0])) != 0
-                && vminvq_u32(vreinterpretq_u32_s32(a[1])) != 0
-        }
+        vminvq_u32(vreinterpretq_u32_s32(a[0])) != 0 && vminvq_u32(vreinterpretq_u32_s32(a[1])) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn any_true(self, a: [int32x4_t; 2]) -> bool {
-        unsafe {
-            vmaxvq_u32(vreinterpretq_u32_s32(a[0])) != 0
-                || vmaxvq_u32(vreinterpretq_u32_s32(a[1])) != 0
-        }
+        vmaxvq_u32(vreinterpretq_u32_s32(a[0])) != 0 || vmaxvq_u32(vreinterpretq_u32_s32(a[1])) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: [int32x4_t; 2]) -> u32 {
-        unsafe {
+        {
             let mut bits = 0u32;
             let s0 = vshrq_n_u32::<31>(vreinterpretq_u32_s32(a[0]));
             bits |= vgetq_lane_u32::<0>(s0);
@@ -1732,14 +1603,14 @@ impl I32x8Backend for archmage::NeonToken {
 impl U32x4Backend for archmage::NeonToken {
     type Repr = uint32x4_t;
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn splat(self, v: u32) -> uint32x4_t {
-        unsafe { vdupq_n_u32(v) }
+        vdupq_n_u32(v)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn zero(self) -> uint32x4_t {
-        unsafe { vdupq_n_u32(0) }
+        vdupq_n_u32(0)
     }
 
     #[inline(always)]
@@ -1764,88 +1635,88 @@ impl U32x4Backend for archmage::NeonToken {
         out
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn add(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
-        unsafe { vaddq_u32(a, b) }
+        vaddq_u32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sub(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
-        unsafe { vsubq_u32(a, b) }
+        vsubq_u32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
-        unsafe { vmulq_u32(a, b) }
+        vmulq_u32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
-        unsafe { vminq_u32(a, b) }
+        vminq_u32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
-        unsafe { vmaxq_u32(a, b) }
+        vmaxq_u32(a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
-        unsafe { vceqq_u32(a, b) }
+        vceqq_u32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ne(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
-        unsafe { vmvnq_u32(vceqq_u32(a, b)) }
+        vmvnq_u32(vceqq_u32(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_lt(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
-        unsafe { vcltq_u32(a, b) }
+        vcltq_u32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_le(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
-        unsafe { vcleq_u32(a, b) }
+        vcleq_u32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_gt(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
-        unsafe { vcgtq_u32(a, b) }
+        vcgtq_u32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ge(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
-        unsafe { vcgeq_u32(a, b) }
+        vcgeq_u32(a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn blend(self, mask: uint32x4_t, if_true: uint32x4_t, if_false: uint32x4_t) -> uint32x4_t {
-        unsafe { vbslq_u32(mask, if_true, if_false) }
+        vbslq_u32(mask, if_true, if_false)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_add(self, a: uint32x4_t) -> u32 {
-        unsafe { vaddvq_u32(a) }
+        vaddvq_u32(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn not(self, a: uint32x4_t) -> uint32x4_t {
-        unsafe { vmvnq_u32(a) }
+        vmvnq_u32(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitand(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
-        unsafe { vandq_u32(a, b) }
+        vandq_u32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitor(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
-        unsafe { vorrq_u32(a, b) }
+        vorrq_u32(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitxor(self, a: uint32x4_t, b: uint32x4_t) -> uint32x4_t {
-        unsafe { veorq_u32(a, b) }
+        veorq_u32(a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_const<const N: i32>(self, a: uint32x4_t) -> uint32x4_t {
-        unsafe { vshlq_n_u32::<N>(a) }
+        vshlq_n_u32::<N>(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_const<const N: i32>(self, a: uint32x4_t) -> uint32x4_t {
         const { assert!(N >= 0 && N <= 31) };
-        unsafe { vshlq_u32(a, vdupq_n_s32(-N)) }
+        vshlq_u32(a, vdupq_n_s32(-N))
     }
 
     // ====== Uniform variable shifts ======
@@ -1854,38 +1725,36 @@ impl U32x4Backend for archmage::NeonToken {
     // signed value, so an unclamped 256 would wrap to a no-op instead
     // of the contracted zero.
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_uniform(self, a: uint32x4_t, count: u32) -> uint32x4_t {
-        unsafe { vshlq_u32(a, vdupq_n_s32(count.min(32) as i32)) }
+        vshlq_u32(a, vdupq_n_s32(count.min(32) as i32))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_uniform(self, a: uint32x4_t, count: u32) -> uint32x4_t {
-        unsafe { vshlq_u32(a, vdupq_n_s32(-(count.min(32) as i32))) }
+        vshlq_u32(a, vdupq_n_s32(-(count.min(32) as i32)))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn all_true(self, a: uint32x4_t) -> bool {
-        unsafe { vminvq_u32(a) == u32::MAX }
+        vminvq_u32(a) == u32::MAX
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn any_true(self, a: uint32x4_t) -> bool {
-        unsafe { vmaxvq_u32(a) != 0 }
+        vmaxvq_u32(a) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: uint32x4_t) -> u32 {
-        unsafe {
-            // Extract sign bit of each 32-bit lane
-            let shift = vshrq_n_u32::<31>(a);
-            // Pack: lane0 | (lane1<<1) | (lane2<<2) | (lane3<<3)
-            let lane0 = vgetq_lane_u32::<0>(shift);
-            let lane1 = vgetq_lane_u32::<1>(shift);
-            let lane2 = vgetq_lane_u32::<2>(shift);
-            let lane3 = vgetq_lane_u32::<3>(shift);
-            lane0 | (lane1 << 1) | (lane2 << 2) | (lane3 << 3)
-        }
+        // Extract sign bit of each 32-bit lane
+        let shift = vshrq_n_u32::<31>(a);
+        // Pack: lane0 | (lane1<<1) | (lane2<<2) | (lane3<<3)
+        let lane0 = vgetq_lane_u32::<0>(shift);
+        let lane1 = vgetq_lane_u32::<1>(shift);
+        let lane2 = vgetq_lane_u32::<2>(shift);
+        let lane3 = vgetq_lane_u32::<3>(shift);
+        lane0 | (lane1 << 1) | (lane2 << 2) | (lane3 << 3)
     }
 }
 
@@ -1893,20 +1762,16 @@ impl U32x4Backend for archmage::NeonToken {
 impl U32x8Backend for archmage::NeonToken {
     type Repr = [uint32x4_t; 2];
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn splat(self, v: u32) -> [uint32x4_t; 2] {
-        unsafe {
-            let v4 = vdupq_n_u32(v);
-            [v4, v4]
-        }
+        let v4 = vdupq_n_u32(v);
+        [v4, v4]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn zero(self) -> [uint32x4_t; 2] {
-        unsafe {
-            let z = vdupq_n_u32(0);
-            [z, z]
-        }
+        let z = vdupq_n_u32(0);
+        [z, z]
     }
 
     #[inline(always)]
@@ -1939,111 +1804,105 @@ impl U32x8Backend for archmage::NeonToken {
         out
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn add(self, a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
-        unsafe { [vaddq_u32(a[0], b[0]), vaddq_u32(a[1], b[1])] }
+        [vaddq_u32(a[0], b[0]), vaddq_u32(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sub(self, a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
-        unsafe { [vsubq_u32(a[0], b[0]), vsubq_u32(a[1], b[1])] }
+        [vsubq_u32(a[0], b[0]), vsubq_u32(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul(self, a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
-        unsafe { [vmulq_u32(a[0], b[0]), vmulq_u32(a[1], b[1])] }
+        [vmulq_u32(a[0], b[0]), vmulq_u32(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
-        unsafe { [vminq_u32(a[0], b[0]), vminq_u32(a[1], b[1])] }
+        [vminq_u32(a[0], b[0]), vminq_u32(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
-        unsafe { [vmaxq_u32(a[0], b[0]), vmaxq_u32(a[1], b[1])] }
+        [vmaxq_u32(a[0], b[0]), vmaxq_u32(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
-        unsafe { [vceqq_u32(a[0], b[0]), vceqq_u32(a[1], b[1])] }
+        [vceqq_u32(a[0], b[0]), vceqq_u32(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ne(self, a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
-        unsafe {
-            [
-                vmvnq_u32(vceqq_u32(a[0], b[0])),
-                vmvnq_u32(vceqq_u32(a[1], b[1])),
-            ]
-        }
+        [
+            vmvnq_u32(vceqq_u32(a[0], b[0])),
+            vmvnq_u32(vceqq_u32(a[1], b[1])),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_lt(self, a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
-        unsafe { [vcltq_u32(a[0], b[0]), vcltq_u32(a[1], b[1])] }
+        [vcltq_u32(a[0], b[0]), vcltq_u32(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_le(self, a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
-        unsafe { [vcleq_u32(a[0], b[0]), vcleq_u32(a[1], b[1])] }
+        [vcleq_u32(a[0], b[0]), vcleq_u32(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_gt(self, a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
-        unsafe { [vcgtq_u32(a[0], b[0]), vcgtq_u32(a[1], b[1])] }
+        [vcgtq_u32(a[0], b[0]), vcgtq_u32(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ge(self, a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
-        unsafe { [vcgeq_u32(a[0], b[0]), vcgeq_u32(a[1], b[1])] }
+        [vcgeq_u32(a[0], b[0]), vcgeq_u32(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn blend(
         self,
         mask: [uint32x4_t; 2],
         if_true: [uint32x4_t; 2],
         if_false: [uint32x4_t; 2],
     ) -> [uint32x4_t; 2] {
-        unsafe {
-            [
-                vbslq_u32(mask[0], if_true[0], if_false[0]),
-                vbslq_u32(mask[1], if_true[1], if_false[1]),
-            ]
-        }
+        [
+            vbslq_u32(mask[0], if_true[0], if_false[0]),
+            vbslq_u32(mask[1], if_true[1], if_false[1]),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_add(self, a: [uint32x4_t; 2]) -> u32 {
-        unsafe {
+        {
             let m = vaddq_u32(a[0], a[1]);
             vaddvq_u32(m)
         }
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn not(self, a: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
-        unsafe { [vmvnq_u32(a[0]), vmvnq_u32(a[1])] }
+        [vmvnq_u32(a[0]), vmvnq_u32(a[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitand(self, a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
-        unsafe { [vandq_u32(a[0], b[0]), vandq_u32(a[1], b[1])] }
+        [vandq_u32(a[0], b[0]), vandq_u32(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitor(self, a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
-        unsafe { [vorrq_u32(a[0], b[0]), vorrq_u32(a[1], b[1])] }
+        [vorrq_u32(a[0], b[0]), vorrq_u32(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitxor(self, a: [uint32x4_t; 2], b: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
-        unsafe { [veorq_u32(a[0], b[0]), veorq_u32(a[1], b[1])] }
+        [veorq_u32(a[0], b[0]), veorq_u32(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_const<const N: i32>(self, a: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
-        unsafe { [vshlq_n_u32::<N>(a[0]), vshlq_n_u32::<N>(a[1])] }
+        [vshlq_n_u32::<N>(a[0]), vshlq_n_u32::<N>(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_const<const N: i32>(self, a: [uint32x4_t; 2]) -> [uint32x4_t; 2] {
         const { assert!(N >= 0 && N <= 31) };
-        unsafe {
-            [
-                vshlq_u32(a[0], vdupq_n_s32(-N)),
-                vshlq_u32(a[1], vdupq_n_s32(-N)),
-            ]
-        }
+        [
+            vshlq_u32(a[0], vdupq_n_s32(-N)),
+            vshlq_u32(a[1], vdupq_n_s32(-N)),
+        ]
     }
 
     // ====== Uniform variable shifts ======
@@ -2051,35 +1910,31 @@ impl U32x8Backend for archmage::NeonToken {
     // clamp rationale as the 128-bit impl (USHL reads the low byte
     // of each amount lane).
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_uniform(self, a: [uint32x4_t; 2], count: u32) -> [uint32x4_t; 2] {
-        unsafe {
-            let c = vdupq_n_s32(count.min(32) as i32);
-            [vshlq_u32(a[0], c), vshlq_u32(a[1], c)]
-        }
+        let c = vdupq_n_s32(count.min(32) as i32);
+        [vshlq_u32(a[0], c), vshlq_u32(a[1], c)]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_uniform(self, a: [uint32x4_t; 2], count: u32) -> [uint32x4_t; 2] {
-        unsafe {
-            let c = vdupq_n_s32(-(count.min(32) as i32));
-            [vshlq_u32(a[0], c), vshlq_u32(a[1], c)]
-        }
+        let c = vdupq_n_s32(-(count.min(32) as i32));
+        [vshlq_u32(a[0], c), vshlq_u32(a[1], c)]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn all_true(self, a: [uint32x4_t; 2]) -> bool {
-        unsafe { vminvq_u32(a[0]) == u32::MAX && vminvq_u32(a[1]) == u32::MAX }
+        vminvq_u32(a[0]) == u32::MAX && vminvq_u32(a[1]) == u32::MAX
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn any_true(self, a: [uint32x4_t; 2]) -> bool {
-        unsafe { vmaxvq_u32(a[0]) != 0 || vmaxvq_u32(a[1]) != 0 }
+        vmaxvq_u32(a[0]) != 0 || vmaxvq_u32(a[1]) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: [uint32x4_t; 2]) -> u32 {
-        unsafe {
+        {
             let mut bits = 0u32;
             let s0 = vshrq_n_u32::<31>(a[0]);
             bits |= vgetq_lane_u32::<0>(s0);
@@ -2100,14 +1955,14 @@ impl U32x8Backend for archmage::NeonToken {
 impl I64x2Backend for archmage::NeonToken {
     type Repr = int64x2_t;
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn splat(self, v: i64) -> int64x2_t {
-        unsafe { vdupq_n_s64(v) }
+        vdupq_n_s64(v)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn zero(self) -> int64x2_t {
-        unsafe { vdupq_n_s64(0i64) }
+        vdupq_n_s64(0i64)
     }
 
     #[inline(always)]
@@ -2132,145 +1987,131 @@ impl I64x2Backend for archmage::NeonToken {
         out
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn add(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {
-        unsafe { vaddq_s64(a, b) }
+        vaddq_s64(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sub(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {
-        unsafe { vsubq_s64(a, b) }
+        vsubq_s64(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn neg(self, a: int64x2_t) -> int64x2_t {
-        unsafe { vnegq_s64(a) }
+        vnegq_s64(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {
         // NEON lacks native i64 min; polyfill via compare+select
-        unsafe {
+        {
             let mask = vcltq_s64(a, b);
             vbslq_s64(mask, a, b)
         }
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {
         // NEON lacks native i64 max; polyfill via compare+select
-        unsafe {
+        {
             let mask = vcgtq_s64(a, b);
             vbslq_s64(mask, a, b)
         }
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn abs(self, a: int64x2_t) -> int64x2_t {
-        unsafe { vabsq_s64(a) }
+        vabsq_s64(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {
-        unsafe { vreinterpretq_s64_u64(vceqq_s64(a, b)) }
+        vreinterpretq_s64_u64(vceqq_s64(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ne(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {
-        unsafe {
-            let eq = vceqq_s64(a, b);
-            // NOT via XOR with all-ones
-            vreinterpretq_s64_u64(veorq_u64(eq, vdupq_n_u64(u64::MAX)))
-        }
+        let eq = vceqq_s64(a, b);
+        // NOT via XOR with all-ones
+        vreinterpretq_s64_u64(veorq_u64(eq, vdupq_n_u64(u64::MAX)))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_lt(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {
-        unsafe { vreinterpretq_s64_u64(vcltq_s64(a, b)) }
+        vreinterpretq_s64_u64(vcltq_s64(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_le(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {
-        unsafe { vreinterpretq_s64_u64(vcleq_s64(a, b)) }
+        vreinterpretq_s64_u64(vcleq_s64(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_gt(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {
-        unsafe { vreinterpretq_s64_u64(vcgtq_s64(a, b)) }
+        vreinterpretq_s64_u64(vcgtq_s64(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ge(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {
-        unsafe { vreinterpretq_s64_u64(vcgeq_s64(a, b)) }
+        vreinterpretq_s64_u64(vcgeq_s64(a, b))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn blend(self, mask: int64x2_t, if_true: int64x2_t, if_false: int64x2_t) -> int64x2_t {
-        unsafe { vbslq_s64(vreinterpretq_u64_s64(mask), if_true, if_false) }
+        vbslq_s64(vreinterpretq_u64_s64(mask), if_true, if_false)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_add(self, a: int64x2_t) -> i64 {
-        unsafe {
-            let sum = vpaddq_s64(a, a);
-            vgetq_lane_s64::<0>(sum)
-        }
+        let sum = vpaddq_s64(a, a);
+        vgetq_lane_s64::<0>(sum)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn not(self, a: int64x2_t) -> int64x2_t {
-        unsafe {
-            let ones = vdupq_n_s64(-1i64);
-            veorq_s64(a, ones)
-        }
+        let ones = vdupq_n_s64(-1i64);
+        veorq_s64(a, ones)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitand(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {
-        unsafe { vandq_s64(a, b) }
+        vandq_s64(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitor(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {
-        unsafe { vorrq_s64(a, b) }
+        vorrq_s64(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitxor(self, a: int64x2_t, b: int64x2_t) -> int64x2_t {
-        unsafe { veorq_s64(a, b) }
+        veorq_s64(a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_const<const N: i32>(self, a: int64x2_t) -> int64x2_t {
-        unsafe { vshlq_n_s64::<N>(a) }
+        vshlq_n_s64::<N>(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_arithmetic_const<const N: i32>(self, a: int64x2_t) -> int64x2_t {
         const { assert!(N >= 0 && N <= 63) };
-        unsafe { vshlq_s64(a, vdupq_n_s64((-N) as i64)) }
+        vshlq_s64(a, vdupq_n_s64((-N) as i64))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_const<const N: i32>(self, a: int64x2_t) -> int64x2_t {
         const { assert!(N >= 0 && N <= 63) };
-        unsafe {
-            vreinterpretq_s64_u64(vshlq_u64(
-                vreinterpretq_u64_s64(a),
-                vdupq_n_s64((-N) as i64),
-            ))
-        }
+        vreinterpretq_s64_u64(vshlq_u64(
+            vreinterpretq_u64_s64(a),
+            vdupq_n_s64((-N) as i64),
+        ))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn all_true(self, a: int64x2_t) -> bool {
-        unsafe {
-            let as_u64 = vreinterpretq_u64_s64(a);
-            vgetq_lane_u64::<0>(as_u64) != 0 && vgetq_lane_u64::<1>(as_u64) != 0
-        }
+        let as_u64 = vreinterpretq_u64_s64(a);
+        vgetq_lane_u64::<0>(as_u64) != 0 && vgetq_lane_u64::<1>(as_u64) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn any_true(self, a: int64x2_t) -> bool {
-        unsafe {
-            let as_u64 = vreinterpretq_u64_s64(a);
-            (vgetq_lane_u64::<0>(as_u64) | vgetq_lane_u64::<1>(as_u64)) != 0
-        }
+        let as_u64 = vreinterpretq_u64_s64(a);
+        (vgetq_lane_u64::<0>(as_u64) | vgetq_lane_u64::<1>(as_u64)) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: int64x2_t) -> u32 {
-        unsafe {
-            let signs = vshrq_n_u64::<63>(vreinterpretq_u64_s64(a));
-            ((vgetq_lane_u64::<0>(signs) & 1) | ((vgetq_lane_u64::<1>(signs) & 1) << 1)) as u32
-        }
+        let signs = vshrq_n_u64::<63>(vreinterpretq_u64_s64(a));
+        ((vgetq_lane_u64::<0>(signs) & 1) | ((vgetq_lane_u64::<1>(signs) & 1) << 1)) as u32
     }
 }
 
@@ -2278,20 +2119,16 @@ impl I64x2Backend for archmage::NeonToken {
 impl I64x4Backend for archmage::NeonToken {
     type Repr = [int64x2_t; 2];
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn splat(self, v: i64) -> [int64x2_t; 2] {
-        unsafe {
-            let v2 = vdupq_n_s64(v);
-            [v2, v2]
-        }
+        let v2 = vdupq_n_s64(v);
+        [v2, v2]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn zero(self) -> [int64x2_t; 2] {
-        unsafe {
-            let z = vdupq_n_s64(0i64);
-            [z, z]
-        }
+        let z = vdupq_n_s64(0i64);
+        [z, z]
     }
 
     #[inline(always)]
@@ -2324,202 +2161,174 @@ impl I64x4Backend for archmage::NeonToken {
         out
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn add(self, a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
-        unsafe { [vaddq_s64(a[0], b[0]), vaddq_s64(a[1], b[1])] }
+        [vaddq_s64(a[0], b[0]), vaddq_s64(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sub(self, a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
-        unsafe { [vsubq_s64(a[0], b[0]), vsubq_s64(a[1], b[1])] }
+        [vsubq_s64(a[0], b[0]), vsubq_s64(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn neg(self, a: [int64x2_t; 2]) -> [int64x2_t; 2] {
-        unsafe { [vnegq_s64(a[0]), vnegq_s64(a[1])] }
+        [vnegq_s64(a[0]), vnegq_s64(a[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
         // NEON lacks native i64 min; polyfill via compare+select per sub-vector
-        unsafe {
-            [
-                vbslq_s64(vcltq_s64(a[0], b[0]), a[0], b[0]),
-                vbslq_s64(vcltq_s64(a[1], b[1]), a[1], b[1]),
-            ]
-        }
+        [
+            vbslq_s64(vcltq_s64(a[0], b[0]), a[0], b[0]),
+            vbslq_s64(vcltq_s64(a[1], b[1]), a[1], b[1]),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
         // NEON lacks native i64 max; polyfill via compare+select per sub-vector
-        unsafe {
-            [
-                vbslq_s64(vcgtq_s64(a[0], b[0]), a[0], b[0]),
-                vbslq_s64(vcgtq_s64(a[1], b[1]), a[1], b[1]),
-            ]
-        }
+        [
+            vbslq_s64(vcgtq_s64(a[0], b[0]), a[0], b[0]),
+            vbslq_s64(vcgtq_s64(a[1], b[1]), a[1], b[1]),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn abs(self, a: [int64x2_t; 2]) -> [int64x2_t; 2] {
-        unsafe { [vabsq_s64(a[0]), vabsq_s64(a[1])] }
+        [vabsq_s64(a[0]), vabsq_s64(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s64_u64(vceqq_s64(a[0], b[0])),
-                vreinterpretq_s64_u64(vceqq_s64(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_s64_u64(vceqq_s64(a[0], b[0])),
+            vreinterpretq_s64_u64(vceqq_s64(a[1], b[1])),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ne(self, a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s64_u64(veorq_u64(vceqq_s64(a[0], b[0]), vdupq_n_u64(u64::MAX))),
-                vreinterpretq_s64_u64(veorq_u64(vceqq_s64(a[1], b[1]), vdupq_n_u64(u64::MAX))),
-            ]
-        }
+        [
+            vreinterpretq_s64_u64(veorq_u64(vceqq_s64(a[0], b[0]), vdupq_n_u64(u64::MAX))),
+            vreinterpretq_s64_u64(veorq_u64(vceqq_s64(a[1], b[1]), vdupq_n_u64(u64::MAX))),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_lt(self, a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s64_u64(vcltq_s64(a[0], b[0])),
-                vreinterpretq_s64_u64(vcltq_s64(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_s64_u64(vcltq_s64(a[0], b[0])),
+            vreinterpretq_s64_u64(vcltq_s64(a[1], b[1])),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_le(self, a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s64_u64(vcleq_s64(a[0], b[0])),
-                vreinterpretq_s64_u64(vcleq_s64(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_s64_u64(vcleq_s64(a[0], b[0])),
+            vreinterpretq_s64_u64(vcleq_s64(a[1], b[1])),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_gt(self, a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s64_u64(vcgtq_s64(a[0], b[0])),
-                vreinterpretq_s64_u64(vcgtq_s64(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_s64_u64(vcgtq_s64(a[0], b[0])),
+            vreinterpretq_s64_u64(vcgtq_s64(a[1], b[1])),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ge(self, a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s64_u64(vcgeq_s64(a[0], b[0])),
-                vreinterpretq_s64_u64(vcgeq_s64(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_s64_u64(vcgeq_s64(a[0], b[0])),
+            vreinterpretq_s64_u64(vcgeq_s64(a[1], b[1])),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn blend(
         self,
         mask: [int64x2_t; 2],
         if_true: [int64x2_t; 2],
         if_false: [int64x2_t; 2],
     ) -> [int64x2_t; 2] {
-        unsafe {
-            [
-                vbslq_s64(vreinterpretq_u64_s64(mask[0]), if_true[0], if_false[0]),
-                vbslq_s64(vreinterpretq_u64_s64(mask[1]), if_true[1], if_false[1]),
-            ]
-        }
+        [
+            vbslq_s64(vreinterpretq_u64_s64(mask[0]), if_true[0], if_false[0]),
+            vbslq_s64(vreinterpretq_u64_s64(mask[1]), if_true[1], if_false[1]),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_add(self, a: [int64x2_t; 2]) -> i64 {
-        unsafe {
+        {
             let m = vaddq_s64(a[0], a[1]);
             let sum = vpaddq_s64(m, m);
             vgetq_lane_s64::<0>(sum)
         }
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn not(self, a: [int64x2_t; 2]) -> [int64x2_t; 2] {
-        unsafe {
-            [
-                veorq_s64(a[0], vdupq_n_s64(-1i64)),
-                veorq_s64(a[1], vdupq_n_s64(-1i64)),
-            ]
-        }
+        [
+            veorq_s64(a[0], vdupq_n_s64(-1i64)),
+            veorq_s64(a[1], vdupq_n_s64(-1i64)),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitand(self, a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
-        unsafe { [vandq_s64(a[0], b[0]), vandq_s64(a[1], b[1])] }
+        [vandq_s64(a[0], b[0]), vandq_s64(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitor(self, a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
-        unsafe { [vorrq_s64(a[0], b[0]), vorrq_s64(a[1], b[1])] }
+        [vorrq_s64(a[0], b[0]), vorrq_s64(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitxor(self, a: [int64x2_t; 2], b: [int64x2_t; 2]) -> [int64x2_t; 2] {
-        unsafe { [veorq_s64(a[0], b[0]), veorq_s64(a[1], b[1])] }
+        [veorq_s64(a[0], b[0]), veorq_s64(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_const<const N: i32>(self, a: [int64x2_t; 2]) -> [int64x2_t; 2] {
-        unsafe { [vshlq_n_s64::<N>(a[0]), vshlq_n_s64::<N>(a[1])] }
+        [vshlq_n_s64::<N>(a[0]), vshlq_n_s64::<N>(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_arithmetic_const<const N: i32>(self, a: [int64x2_t; 2]) -> [int64x2_t; 2] {
         const { assert!(N >= 0 && N <= 63) };
-        unsafe {
-            [
-                vshlq_s64(a[0], vdupq_n_s64((-N) as i64)),
-                vshlq_s64(a[1], vdupq_n_s64((-N) as i64)),
-            ]
-        }
+        [
+            vshlq_s64(a[0], vdupq_n_s64((-N) as i64)),
+            vshlq_s64(a[1], vdupq_n_s64((-N) as i64)),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_const<const N: i32>(self, a: [int64x2_t; 2]) -> [int64x2_t; 2] {
         const { assert!(N >= 0 && N <= 63) };
-        unsafe {
-            [
-                vreinterpretq_s64_u64(vshlq_u64(
-                    vreinterpretq_u64_s64(a[0]),
-                    vdupq_n_s64((-N) as i64),
-                )),
-                vreinterpretq_s64_u64(vshlq_u64(
-                    vreinterpretq_u64_s64(a[1]),
-                    vdupq_n_s64((-N) as i64),
-                )),
-            ]
-        }
+        [
+            vreinterpretq_s64_u64(vshlq_u64(
+                vreinterpretq_u64_s64(a[0]),
+                vdupq_n_s64((-N) as i64),
+            )),
+            vreinterpretq_s64_u64(vshlq_u64(
+                vreinterpretq_u64_s64(a[1]),
+                vdupq_n_s64((-N) as i64),
+            )),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn all_true(self, a: [int64x2_t; 2]) -> bool {
-        unsafe {
-            (vgetq_lane_u64::<0>(vreinterpretq_u64_s64(a[0])) != 0
-                && vgetq_lane_u64::<1>(vreinterpretq_u64_s64(a[0])) != 0)
-                && (vgetq_lane_u64::<0>(vreinterpretq_u64_s64(a[1])) != 0
-                    && vgetq_lane_u64::<1>(vreinterpretq_u64_s64(a[1])) != 0)
-        }
+        (vgetq_lane_u64::<0>(vreinterpretq_u64_s64(a[0])) != 0
+            && vgetq_lane_u64::<1>(vreinterpretq_u64_s64(a[0])) != 0)
+            && (vgetq_lane_u64::<0>(vreinterpretq_u64_s64(a[1])) != 0
+                && vgetq_lane_u64::<1>(vreinterpretq_u64_s64(a[1])) != 0)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn any_true(self, a: [int64x2_t; 2]) -> bool {
-        unsafe {
-            ((vgetq_lane_u64::<0>(vreinterpretq_u64_s64(a[0]))
-                | vgetq_lane_u64::<1>(vreinterpretq_u64_s64(a[0])))
+        ((vgetq_lane_u64::<0>(vreinterpretq_u64_s64(a[0]))
+            | vgetq_lane_u64::<1>(vreinterpretq_u64_s64(a[0])))
+            != 0)
+            || ((vgetq_lane_u64::<0>(vreinterpretq_u64_s64(a[1]))
+                | vgetq_lane_u64::<1>(vreinterpretq_u64_s64(a[1])))
                 != 0)
-                || ((vgetq_lane_u64::<0>(vreinterpretq_u64_s64(a[1]))
-                    | vgetq_lane_u64::<1>(vreinterpretq_u64_s64(a[1])))
-                    != 0)
-        }
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: [int64x2_t; 2]) -> u32 {
-        unsafe {
+        {
             let mut bits = 0u32;
             let s0 = vshrq_n_u64::<63>(vreinterpretq_u64_s64(a[0]));
             bits |= vgetq_lane_u64::<0>(s0) as u32;
@@ -2536,14 +2345,14 @@ impl I64x4Backend for archmage::NeonToken {
 impl I8x16Backend for archmage::NeonToken {
     type Repr = int8x16_t;
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn splat(self, v: i8) -> int8x16_t {
-        unsafe { vdupq_n_s8(v) }
+        vdupq_n_s8(v)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn zero(self) -> int8x16_t {
-        unsafe { vdupq_n_s8(0) }
+        vdupq_n_s8(0)
     }
 
     #[inline(always)]
@@ -2568,136 +2377,134 @@ impl I8x16Backend for archmage::NeonToken {
         out
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn add(self, a: int8x16_t, b: int8x16_t) -> int8x16_t {
-        unsafe { vaddq_s8(a, b) }
+        vaddq_s8(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sub(self, a: int8x16_t, b: int8x16_t) -> int8x16_t {
-        unsafe { vsubq_s8(a, b) }
+        vsubq_s8(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn neg(self, a: int8x16_t) -> int8x16_t {
-        unsafe { vnegq_s8(a) }
+        vnegq_s8(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: int8x16_t, b: int8x16_t) -> int8x16_t {
-        unsafe { vminq_s8(a, b) }
+        vminq_s8(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: int8x16_t, b: int8x16_t) -> int8x16_t {
-        unsafe { vmaxq_s8(a, b) }
+        vmaxq_s8(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn abs(self, a: int8x16_t) -> int8x16_t {
-        unsafe { vabsq_s8(a) }
+        vabsq_s8(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: int8x16_t, b: int8x16_t) -> int8x16_t {
-        unsafe { vreinterpretq_s8_u8(vceqq_s8(a, b)) }
+        vreinterpretq_s8_u8(vceqq_s8(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ne(self, a: int8x16_t, b: int8x16_t) -> int8x16_t {
-        unsafe { vreinterpretq_s8_u8(vmvnq_u8(vceqq_s8(a, b))) }
+        vreinterpretq_s8_u8(vmvnq_u8(vceqq_s8(a, b)))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_lt(self, a: int8x16_t, b: int8x16_t) -> int8x16_t {
-        unsafe { vreinterpretq_s8_u8(vcltq_s8(a, b)) }
+        vreinterpretq_s8_u8(vcltq_s8(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_le(self, a: int8x16_t, b: int8x16_t) -> int8x16_t {
-        unsafe { vreinterpretq_s8_u8(vcleq_s8(a, b)) }
+        vreinterpretq_s8_u8(vcleq_s8(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_gt(self, a: int8x16_t, b: int8x16_t) -> int8x16_t {
-        unsafe { vreinterpretq_s8_u8(vcgtq_s8(a, b)) }
+        vreinterpretq_s8_u8(vcgtq_s8(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ge(self, a: int8x16_t, b: int8x16_t) -> int8x16_t {
-        unsafe { vreinterpretq_s8_u8(vcgeq_s8(a, b)) }
+        vreinterpretq_s8_u8(vcgeq_s8(a, b))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn blend(self, mask: int8x16_t, if_true: int8x16_t, if_false: int8x16_t) -> int8x16_t {
-        unsafe { vbslq_s8(vreinterpretq_u8_s8(mask), if_true, if_false) }
+        vbslq_s8(vreinterpretq_u8_s8(mask), if_true, if_false)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_add(self, a: int8x16_t) -> i8 {
-        unsafe { vaddvq_s8(a) }
+        vaddvq_s8(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn not(self, a: int8x16_t) -> int8x16_t {
-        unsafe { vmvnq_s8(a) }
+        vmvnq_s8(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitand(self, a: int8x16_t, b: int8x16_t) -> int8x16_t {
-        unsafe { vandq_s8(a, b) }
+        vandq_s8(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitor(self, a: int8x16_t, b: int8x16_t) -> int8x16_t {
-        unsafe { vorrq_s8(a, b) }
+        vorrq_s8(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitxor(self, a: int8x16_t, b: int8x16_t) -> int8x16_t {
-        unsafe { veorq_s8(a, b) }
+        veorq_s8(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_const<const N: i32>(self, a: int8x16_t) -> int8x16_t {
-        unsafe { vshlq_n_s8::<N>(a) }
+        vshlq_n_s8::<N>(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_const<const N: i32>(self, a: int8x16_t) -> int8x16_t {
         const { assert!(N >= 0 && N <= 7) };
-        unsafe { vreinterpretq_s8_u8(vshlq_u8(vreinterpretq_u8_s8(a), vdupq_n_s8((-N) as i8))) }
+        vreinterpretq_s8_u8(vshlq_u8(vreinterpretq_u8_s8(a), vdupq_n_s8((-N) as i8)))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_arithmetic_const<const N: i32>(self, a: int8x16_t) -> int8x16_t {
         const { assert!(N >= 0 && N <= 7) };
-        unsafe { vshlq_s8(a, vdupq_n_s8((-N) as i8)) }
+        vshlq_s8(a, vdupq_n_s8((-N) as i8))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_uniform(self, a: int8x16_t, count: u32) -> int8x16_t {
-        unsafe { vshlq_s8(a, vdupq_n_s8(count.min(8) as i8)) }
+        vshlq_s8(a, vdupq_n_s8(count.min(8) as i8))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_uniform(self, a: int8x16_t, count: u32) -> int8x16_t {
-        unsafe {
-            vreinterpretq_s8_u8(vshlq_u8(
-                vreinterpretq_u8_s8(a),
-                vdupq_n_s8(-(count.min(8) as i8)),
-            ))
-        }
+        vreinterpretq_s8_u8(vshlq_u8(
+            vreinterpretq_u8_s8(a),
+            vdupq_n_s8(-(count.min(8) as i8)),
+        ))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_arithmetic_uniform(self, a: int8x16_t, count: u32) -> int8x16_t {
         // Clamping to lane_bits - 1 gives the contracted sign fill.
-        unsafe { vshlq_s8(a, vdupq_n_s8(-(count.min(7) as i8))) }
+        vshlq_s8(a, vdupq_n_s8(-(count.min(7) as i8)))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn saturating_add(self, a: int8x16_t, b: int8x16_t) -> int8x16_t {
-        unsafe { vqaddq_s8(a, b) }
+        vqaddq_s8(a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn saturating_sub(self, a: int8x16_t, b: int8x16_t) -> int8x16_t {
-        unsafe { vqsubq_s8(a, b) }
+        vqsubq_s8(a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn all_true(self, a: int8x16_t) -> bool {
-        unsafe { vminvq_u8(vreinterpretq_u8_s8(a)) != 0 }
+        vminvq_u8(vreinterpretq_u8_s8(a)) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn any_true(self, a: int8x16_t) -> bool {
-        unsafe { vmaxvq_u8(vreinterpretq_u8_s8(a)) != 0 }
+        vmaxvq_u8(vreinterpretq_u8_s8(a)) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: int8x16_t) -> u32 {
         unsafe {
             // Shift each byte right by 7 to isolate sign bit
@@ -2723,20 +2530,16 @@ impl I8x16Backend for archmage::NeonToken {
 impl I8x32Backend for archmage::NeonToken {
     type Repr = [int8x16_t; 2];
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn splat(self, v: i8) -> [int8x16_t; 2] {
-        unsafe {
-            let v4 = vdupq_n_s8(v);
-            [v4, v4]
-        }
+        let v4 = vdupq_n_s8(v);
+        [v4, v4]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn zero(self) -> [int8x16_t; 2] {
-        unsafe {
-            let z = vdupq_n_s8(0);
-            [z, z]
-        }
+        let z = vdupq_n_s8(0);
+        [z, z]
     }
 
     #[inline(always)]
@@ -2769,221 +2572,193 @@ impl I8x32Backend for archmage::NeonToken {
         out
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn add(self, a: [int8x16_t; 2], b: [int8x16_t; 2]) -> [int8x16_t; 2] {
-        unsafe { [vaddq_s8(a[0], b[0]), vaddq_s8(a[1], b[1])] }
+        [vaddq_s8(a[0], b[0]), vaddq_s8(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sub(self, a: [int8x16_t; 2], b: [int8x16_t; 2]) -> [int8x16_t; 2] {
-        unsafe { [vsubq_s8(a[0], b[0]), vsubq_s8(a[1], b[1])] }
+        [vsubq_s8(a[0], b[0]), vsubq_s8(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn neg(self, a: [int8x16_t; 2]) -> [int8x16_t; 2] {
-        unsafe { [vnegq_s8(a[0]), vnegq_s8(a[1])] }
+        [vnegq_s8(a[0]), vnegq_s8(a[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: [int8x16_t; 2], b: [int8x16_t; 2]) -> [int8x16_t; 2] {
-        unsafe { [vminq_s8(a[0], b[0]), vminq_s8(a[1], b[1])] }
+        [vminq_s8(a[0], b[0]), vminq_s8(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: [int8x16_t; 2], b: [int8x16_t; 2]) -> [int8x16_t; 2] {
-        unsafe { [vmaxq_s8(a[0], b[0]), vmaxq_s8(a[1], b[1])] }
+        [vmaxq_s8(a[0], b[0]), vmaxq_s8(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn abs(self, a: [int8x16_t; 2]) -> [int8x16_t; 2] {
-        unsafe { [vabsq_s8(a[0]), vabsq_s8(a[1])] }
+        [vabsq_s8(a[0]), vabsq_s8(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: [int8x16_t; 2], b: [int8x16_t; 2]) -> [int8x16_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s8_u8(vceqq_s8(a[0], b[0])),
-                vreinterpretq_s8_u8(vceqq_s8(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_s8_u8(vceqq_s8(a[0], b[0])),
+            vreinterpretq_s8_u8(vceqq_s8(a[1], b[1])),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ne(self, a: [int8x16_t; 2], b: [int8x16_t; 2]) -> [int8x16_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s8_u8(vmvnq_u8(vceqq_s8(a[0], b[0]))),
-                vreinterpretq_s8_u8(vmvnq_u8(vceqq_s8(a[1], b[1]))),
-            ]
-        }
+        [
+            vreinterpretq_s8_u8(vmvnq_u8(vceqq_s8(a[0], b[0]))),
+            vreinterpretq_s8_u8(vmvnq_u8(vceqq_s8(a[1], b[1]))),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_lt(self, a: [int8x16_t; 2], b: [int8x16_t; 2]) -> [int8x16_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s8_u8(vcltq_s8(a[0], b[0])),
-                vreinterpretq_s8_u8(vcltq_s8(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_s8_u8(vcltq_s8(a[0], b[0])),
+            vreinterpretq_s8_u8(vcltq_s8(a[1], b[1])),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_le(self, a: [int8x16_t; 2], b: [int8x16_t; 2]) -> [int8x16_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s8_u8(vcleq_s8(a[0], b[0])),
-                vreinterpretq_s8_u8(vcleq_s8(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_s8_u8(vcleq_s8(a[0], b[0])),
+            vreinterpretq_s8_u8(vcleq_s8(a[1], b[1])),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_gt(self, a: [int8x16_t; 2], b: [int8x16_t; 2]) -> [int8x16_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s8_u8(vcgtq_s8(a[0], b[0])),
-                vreinterpretq_s8_u8(vcgtq_s8(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_s8_u8(vcgtq_s8(a[0], b[0])),
+            vreinterpretq_s8_u8(vcgtq_s8(a[1], b[1])),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ge(self, a: [int8x16_t; 2], b: [int8x16_t; 2]) -> [int8x16_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s8_u8(vcgeq_s8(a[0], b[0])),
-                vreinterpretq_s8_u8(vcgeq_s8(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_s8_u8(vcgeq_s8(a[0], b[0])),
+            vreinterpretq_s8_u8(vcgeq_s8(a[1], b[1])),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn blend(
         self,
         mask: [int8x16_t; 2],
         if_true: [int8x16_t; 2],
         if_false: [int8x16_t; 2],
     ) -> [int8x16_t; 2] {
-        unsafe {
-            [
-                vbslq_s8(vreinterpretq_u8_s8(mask[0]), if_true[0], if_false[0]),
-                vbslq_s8(vreinterpretq_u8_s8(mask[1]), if_true[1], if_false[1]),
-            ]
-        }
+        [
+            vbslq_s8(vreinterpretq_u8_s8(mask[0]), if_true[0], if_false[0]),
+            vbslq_s8(vreinterpretq_u8_s8(mask[1]), if_true[1], if_false[1]),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_add(self, a: [int8x16_t; 2]) -> i8 {
         let mut sum = 0i8;
         // Iterate the array rather than indexing by range
         // (clippy::needless_range_loop).
         for v in a {
-            sum = sum.wrapping_add(unsafe { vaddvq_s8(v) });
+            sum = sum.wrapping_add(vaddvq_s8(v));
         }
         sum
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn not(self, a: [int8x16_t; 2]) -> [int8x16_t; 2] {
-        unsafe { [vmvnq_s8(a[0]), vmvnq_s8(a[1])] }
+        [vmvnq_s8(a[0]), vmvnq_s8(a[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitand(self, a: [int8x16_t; 2], b: [int8x16_t; 2]) -> [int8x16_t; 2] {
-        unsafe { [vandq_s8(a[0], b[0]), vandq_s8(a[1], b[1])] }
+        [vandq_s8(a[0], b[0]), vandq_s8(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitor(self, a: [int8x16_t; 2], b: [int8x16_t; 2]) -> [int8x16_t; 2] {
-        unsafe { [vorrq_s8(a[0], b[0]), vorrq_s8(a[1], b[1])] }
+        [vorrq_s8(a[0], b[0]), vorrq_s8(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitxor(self, a: [int8x16_t; 2], b: [int8x16_t; 2]) -> [int8x16_t; 2] {
-        unsafe { [veorq_s8(a[0], b[0]), veorq_s8(a[1], b[1])] }
+        [veorq_s8(a[0], b[0]), veorq_s8(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_const<const N: i32>(self, a: [int8x16_t; 2]) -> [int8x16_t; 2] {
-        unsafe { [vshlq_n_s8::<N>(a[0]), vshlq_n_s8::<N>(a[1])] }
+        [vshlq_n_s8::<N>(a[0]), vshlq_n_s8::<N>(a[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_const<const N: i32>(self, a: [int8x16_t; 2]) -> [int8x16_t; 2] {
         const { assert!(N >= 0 && N <= 7) };
-        unsafe {
-            [
-                vreinterpretq_s8_u8(vshlq_u8(vreinterpretq_u8_s8(a[0]), vdupq_n_s8((-N) as i8))),
-                vreinterpretq_s8_u8(vshlq_u8(vreinterpretq_u8_s8(a[1]), vdupq_n_s8((-N) as i8))),
-            ]
-        }
+        [
+            vreinterpretq_s8_u8(vshlq_u8(vreinterpretq_u8_s8(a[0]), vdupq_n_s8((-N) as i8))),
+            vreinterpretq_s8_u8(vshlq_u8(vreinterpretq_u8_s8(a[1]), vdupq_n_s8((-N) as i8))),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_arithmetic_const<const N: i32>(self, a: [int8x16_t; 2]) -> [int8x16_t; 2] {
         const { assert!(N >= 0 && N <= 7) };
-        unsafe {
-            [
-                vshlq_s8(a[0], vdupq_n_s8((-N) as i8)),
-                vshlq_s8(a[1], vdupq_n_s8((-N) as i8)),
-            ]
-        }
+        [
+            vshlq_s8(a[0], vdupq_n_s8((-N) as i8)),
+            vshlq_s8(a[1], vdupq_n_s8((-N) as i8)),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_uniform(self, a: [int8x16_t; 2], count: u32) -> [int8x16_t; 2] {
-        unsafe {
-            [
-                vshlq_s8(a[0], vdupq_n_s8(count.min(8) as i8)),
-                vshlq_s8(a[1], vdupq_n_s8(count.min(8) as i8)),
-            ]
-        }
+        [
+            vshlq_s8(a[0], vdupq_n_s8(count.min(8) as i8)),
+            vshlq_s8(a[1], vdupq_n_s8(count.min(8) as i8)),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_uniform(self, a: [int8x16_t; 2], count: u32) -> [int8x16_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s8_u8(vshlq_u8(
-                    vreinterpretq_u8_s8(a[0]),
-                    vdupq_n_s8(-(count.min(8) as i8)),
-                )),
-                vreinterpretq_s8_u8(vshlq_u8(
-                    vreinterpretq_u8_s8(a[1]),
-                    vdupq_n_s8(-(count.min(8) as i8)),
-                )),
-            ]
-        }
+        [
+            vreinterpretq_s8_u8(vshlq_u8(
+                vreinterpretq_u8_s8(a[0]),
+                vdupq_n_s8(-(count.min(8) as i8)),
+            )),
+            vreinterpretq_s8_u8(vshlq_u8(
+                vreinterpretq_u8_s8(a[1]),
+                vdupq_n_s8(-(count.min(8) as i8)),
+            )),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_arithmetic_uniform(self, a: [int8x16_t; 2], count: u32) -> [int8x16_t; 2] {
-        unsafe {
-            [
-                vshlq_s8(a[0], vdupq_n_s8(-(count.min(7) as i8))),
-                vshlq_s8(a[1], vdupq_n_s8(-(count.min(7) as i8))),
-            ]
-        }
+        [
+            vshlq_s8(a[0], vdupq_n_s8(-(count.min(7) as i8))),
+            vshlq_s8(a[1], vdupq_n_s8(-(count.min(7) as i8))),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn saturating_add(self, a: [int8x16_t; 2], b: [int8x16_t; 2]) -> [int8x16_t; 2] {
-        unsafe { [vqaddq_s8(a[0], b[0]), vqaddq_s8(a[1], b[1])] }
+        [vqaddq_s8(a[0], b[0]), vqaddq_s8(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn saturating_sub(self, a: [int8x16_t; 2], b: [int8x16_t; 2]) -> [int8x16_t; 2] {
-        unsafe { [vqsubq_s8(a[0], b[0]), vqsubq_s8(a[1], b[1])] }
+        [vqsubq_s8(a[0], b[0]), vqsubq_s8(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn all_true(self, a: [int8x16_t; 2]) -> bool {
-        unsafe {
-            vminvq_u8(vreinterpretq_u8_s8(a[0])) != 0 && vminvq_u8(vreinterpretq_u8_s8(a[1])) != 0
-        }
+        vminvq_u8(vreinterpretq_u8_s8(a[0])) != 0 && vminvq_u8(vreinterpretq_u8_s8(a[1])) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn any_true(self, a: [int8x16_t; 2]) -> bool {
-        unsafe {
-            vmaxvq_u8(vreinterpretq_u8_s8(a[0])) != 0 || vmaxvq_u8(vreinterpretq_u8_s8(a[1])) != 0
-        }
+        vmaxvq_u8(vreinterpretq_u8_s8(a[0])) != 0 || vmaxvq_u8(vreinterpretq_u8_s8(a[1])) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: [int8x16_t; 2]) -> u32 {
         // Delegate to NeonToken native bitmask per sub-vector, combine.
         // Enumerate the array rather than indexing by range
         // (clippy::needless_range_loop).
         let mut result = 0u32;
         for (i, v) in a.into_iter().enumerate() {
-            result |= <archmage::NeonToken as I8x16Backend>::bitmask(self, v) << (i * 16);
+            result |= <archmage::NeonToken as I8x16Backend>::bitmask(_self, v) << (i * 16);
         }
         result
     }
@@ -2993,14 +2768,14 @@ impl I8x32Backend for archmage::NeonToken {
 impl U8x16Backend for archmage::NeonToken {
     type Repr = uint8x16_t;
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn splat(self, v: u8) -> uint8x16_t {
-        unsafe { vdupq_n_u8(v) }
+        vdupq_n_u8(v)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn zero(self) -> uint8x16_t {
-        unsafe { vdupq_n_u8(0) }
+        vdupq_n_u8(0)
     }
 
     #[inline(always)]
@@ -3025,113 +2800,113 @@ impl U8x16Backend for archmage::NeonToken {
         out
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn add(self, a: uint8x16_t, b: uint8x16_t) -> uint8x16_t {
-        unsafe { vaddq_u8(a, b) }
+        vaddq_u8(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sub(self, a: uint8x16_t, b: uint8x16_t) -> uint8x16_t {
-        unsafe { vsubq_u8(a, b) }
+        vsubq_u8(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: uint8x16_t, b: uint8x16_t) -> uint8x16_t {
-        unsafe { vminq_u8(a, b) }
+        vminq_u8(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: uint8x16_t, b: uint8x16_t) -> uint8x16_t {
-        unsafe { vmaxq_u8(a, b) }
+        vmaxq_u8(a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: uint8x16_t, b: uint8x16_t) -> uint8x16_t {
-        unsafe { vceqq_u8(a, b) }
+        vceqq_u8(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ne(self, a: uint8x16_t, b: uint8x16_t) -> uint8x16_t {
-        unsafe { vmvnq_u8(vceqq_u8(a, b)) }
+        vmvnq_u8(vceqq_u8(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_lt(self, a: uint8x16_t, b: uint8x16_t) -> uint8x16_t {
-        unsafe { vcltq_u8(a, b) }
+        vcltq_u8(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_le(self, a: uint8x16_t, b: uint8x16_t) -> uint8x16_t {
-        unsafe { vcleq_u8(a, b) }
+        vcleq_u8(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_gt(self, a: uint8x16_t, b: uint8x16_t) -> uint8x16_t {
-        unsafe { vcgtq_u8(a, b) }
+        vcgtq_u8(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ge(self, a: uint8x16_t, b: uint8x16_t) -> uint8x16_t {
-        unsafe { vcgeq_u8(a, b) }
+        vcgeq_u8(a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn blend(self, mask: uint8x16_t, if_true: uint8x16_t, if_false: uint8x16_t) -> uint8x16_t {
-        unsafe { vbslq_u8(mask, if_true, if_false) }
+        vbslq_u8(mask, if_true, if_false)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_add(self, a: uint8x16_t) -> u8 {
-        unsafe { vaddvq_u8(a) }
+        vaddvq_u8(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn not(self, a: uint8x16_t) -> uint8x16_t {
-        unsafe { vmvnq_u8(a) }
+        vmvnq_u8(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitand(self, a: uint8x16_t, b: uint8x16_t) -> uint8x16_t {
-        unsafe { vandq_u8(a, b) }
+        vandq_u8(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitor(self, a: uint8x16_t, b: uint8x16_t) -> uint8x16_t {
-        unsafe { vorrq_u8(a, b) }
+        vorrq_u8(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitxor(self, a: uint8x16_t, b: uint8x16_t) -> uint8x16_t {
-        unsafe { veorq_u8(a, b) }
+        veorq_u8(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_const<const N: i32>(self, a: uint8x16_t) -> uint8x16_t {
-        unsafe { vshlq_n_u8::<N>(a) }
+        vshlq_n_u8::<N>(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_const<const N: i32>(self, a: uint8x16_t) -> uint8x16_t {
         const { assert!(N >= 0 && N <= 7) };
-        unsafe { vshlq_u8(a, vdupq_n_s8((-N) as i8)) }
+        vshlq_u8(a, vdupq_n_s8((-N) as i8))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_uniform(self, a: uint8x16_t, count: u32) -> uint8x16_t {
-        unsafe { vshlq_u8(a, vdupq_n_s8(count.min(8) as i8)) }
+        vshlq_u8(a, vdupq_n_s8(count.min(8) as i8))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_uniform(self, a: uint8x16_t, count: u32) -> uint8x16_t {
-        unsafe { vshlq_u8(a, vdupq_n_s8(-(count.min(8) as i8))) }
+        vshlq_u8(a, vdupq_n_s8(-(count.min(8) as i8)))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn saturating_add(self, a: uint8x16_t, b: uint8x16_t) -> uint8x16_t {
-        unsafe { vqaddq_u8(a, b) }
+        vqaddq_u8(a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn saturating_sub(self, a: uint8x16_t, b: uint8x16_t) -> uint8x16_t {
-        unsafe { vqsubq_u8(a, b) }
+        vqsubq_u8(a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn all_true(self, a: uint8x16_t) -> bool {
-        unsafe { vminvq_u8(a) != 0 }
+        vminvq_u8(a) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn any_true(self, a: uint8x16_t) -> bool {
-        unsafe { vmaxvq_u8(a) != 0 }
+        vmaxvq_u8(a) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: uint8x16_t) -> u32 {
         unsafe {
             // Shift each byte right by 7 to isolate sign bit
@@ -3157,20 +2932,16 @@ impl U8x16Backend for archmage::NeonToken {
 impl U8x32Backend for archmage::NeonToken {
     type Repr = [uint8x16_t; 2];
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn splat(self, v: u8) -> [uint8x16_t; 2] {
-        unsafe {
-            let v4 = vdupq_n_u8(v);
-            [v4, v4]
-        }
+        let v4 = vdupq_n_u8(v);
+        [v4, v4]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn zero(self) -> [uint8x16_t; 2] {
-        unsafe {
-            let z = vdupq_n_u8(0);
-            [z, z]
-        }
+        let z = vdupq_n_u8(0);
+        [z, z]
     }
 
     #[inline(always)]
@@ -3203,159 +2974,149 @@ impl U8x32Backend for archmage::NeonToken {
         out
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn add(self, a: [uint8x16_t; 2], b: [uint8x16_t; 2]) -> [uint8x16_t; 2] {
-        unsafe { [vaddq_u8(a[0], b[0]), vaddq_u8(a[1], b[1])] }
+        [vaddq_u8(a[0], b[0]), vaddq_u8(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sub(self, a: [uint8x16_t; 2], b: [uint8x16_t; 2]) -> [uint8x16_t; 2] {
-        unsafe { [vsubq_u8(a[0], b[0]), vsubq_u8(a[1], b[1])] }
+        [vsubq_u8(a[0], b[0]), vsubq_u8(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: [uint8x16_t; 2], b: [uint8x16_t; 2]) -> [uint8x16_t; 2] {
-        unsafe { [vminq_u8(a[0], b[0]), vminq_u8(a[1], b[1])] }
+        [vminq_u8(a[0], b[0]), vminq_u8(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: [uint8x16_t; 2], b: [uint8x16_t; 2]) -> [uint8x16_t; 2] {
-        unsafe { [vmaxq_u8(a[0], b[0]), vmaxq_u8(a[1], b[1])] }
+        [vmaxq_u8(a[0], b[0]), vmaxq_u8(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: [uint8x16_t; 2], b: [uint8x16_t; 2]) -> [uint8x16_t; 2] {
-        unsafe { [vceqq_u8(a[0], b[0]), vceqq_u8(a[1], b[1])] }
+        [vceqq_u8(a[0], b[0]), vceqq_u8(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ne(self, a: [uint8x16_t; 2], b: [uint8x16_t; 2]) -> [uint8x16_t; 2] {
-        unsafe {
-            [
-                vmvnq_u8(vceqq_u8(a[0], b[0])),
-                vmvnq_u8(vceqq_u8(a[1], b[1])),
-            ]
-        }
+        [
+            vmvnq_u8(vceqq_u8(a[0], b[0])),
+            vmvnq_u8(vceqq_u8(a[1], b[1])),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_lt(self, a: [uint8x16_t; 2], b: [uint8x16_t; 2]) -> [uint8x16_t; 2] {
-        unsafe { [vcltq_u8(a[0], b[0]), vcltq_u8(a[1], b[1])] }
+        [vcltq_u8(a[0], b[0]), vcltq_u8(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_le(self, a: [uint8x16_t; 2], b: [uint8x16_t; 2]) -> [uint8x16_t; 2] {
-        unsafe { [vcleq_u8(a[0], b[0]), vcleq_u8(a[1], b[1])] }
+        [vcleq_u8(a[0], b[0]), vcleq_u8(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_gt(self, a: [uint8x16_t; 2], b: [uint8x16_t; 2]) -> [uint8x16_t; 2] {
-        unsafe { [vcgtq_u8(a[0], b[0]), vcgtq_u8(a[1], b[1])] }
+        [vcgtq_u8(a[0], b[0]), vcgtq_u8(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ge(self, a: [uint8x16_t; 2], b: [uint8x16_t; 2]) -> [uint8x16_t; 2] {
-        unsafe { [vcgeq_u8(a[0], b[0]), vcgeq_u8(a[1], b[1])] }
+        [vcgeq_u8(a[0], b[0]), vcgeq_u8(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn blend(
         self,
         mask: [uint8x16_t; 2],
         if_true: [uint8x16_t; 2],
         if_false: [uint8x16_t; 2],
     ) -> [uint8x16_t; 2] {
-        unsafe {
-            [
-                vbslq_u8(mask[0], if_true[0], if_false[0]),
-                vbslq_u8(mask[1], if_true[1], if_false[1]),
-            ]
-        }
+        [
+            vbslq_u8(mask[0], if_true[0], if_false[0]),
+            vbslq_u8(mask[1], if_true[1], if_false[1]),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_add(self, a: [uint8x16_t; 2]) -> u8 {
         let mut sum = 0u8;
         // Iterate the array rather than indexing by range
         // (clippy::needless_range_loop).
         for v in a {
-            sum = sum.wrapping_add(unsafe { vaddvq_u8(v) });
+            sum = sum.wrapping_add(vaddvq_u8(v));
         }
         sum
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn not(self, a: [uint8x16_t; 2]) -> [uint8x16_t; 2] {
-        unsafe { [vmvnq_u8(a[0]), vmvnq_u8(a[1])] }
+        [vmvnq_u8(a[0]), vmvnq_u8(a[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitand(self, a: [uint8x16_t; 2], b: [uint8x16_t; 2]) -> [uint8x16_t; 2] {
-        unsafe { [vandq_u8(a[0], b[0]), vandq_u8(a[1], b[1])] }
+        [vandq_u8(a[0], b[0]), vandq_u8(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitor(self, a: [uint8x16_t; 2], b: [uint8x16_t; 2]) -> [uint8x16_t; 2] {
-        unsafe { [vorrq_u8(a[0], b[0]), vorrq_u8(a[1], b[1])] }
+        [vorrq_u8(a[0], b[0]), vorrq_u8(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitxor(self, a: [uint8x16_t; 2], b: [uint8x16_t; 2]) -> [uint8x16_t; 2] {
-        unsafe { [veorq_u8(a[0], b[0]), veorq_u8(a[1], b[1])] }
+        [veorq_u8(a[0], b[0]), veorq_u8(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_const<const N: i32>(self, a: [uint8x16_t; 2]) -> [uint8x16_t; 2] {
-        unsafe { [vshlq_n_u8::<N>(a[0]), vshlq_n_u8::<N>(a[1])] }
+        [vshlq_n_u8::<N>(a[0]), vshlq_n_u8::<N>(a[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_const<const N: i32>(self, a: [uint8x16_t; 2]) -> [uint8x16_t; 2] {
         const { assert!(N >= 0 && N <= 7) };
-        unsafe {
-            [
-                vshlq_u8(a[0], vdupq_n_s8((-N) as i8)),
-                vshlq_u8(a[1], vdupq_n_s8((-N) as i8)),
-            ]
-        }
+        [
+            vshlq_u8(a[0], vdupq_n_s8((-N) as i8)),
+            vshlq_u8(a[1], vdupq_n_s8((-N) as i8)),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_uniform(self, a: [uint8x16_t; 2], count: u32) -> [uint8x16_t; 2] {
-        unsafe {
-            [
-                vshlq_u8(a[0], vdupq_n_s8(count.min(8) as i8)),
-                vshlq_u8(a[1], vdupq_n_s8(count.min(8) as i8)),
-            ]
-        }
+        [
+            vshlq_u8(a[0], vdupq_n_s8(count.min(8) as i8)),
+            vshlq_u8(a[1], vdupq_n_s8(count.min(8) as i8)),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_uniform(self, a: [uint8x16_t; 2], count: u32) -> [uint8x16_t; 2] {
-        unsafe {
-            [
-                vshlq_u8(a[0], vdupq_n_s8(-(count.min(8) as i8))),
-                vshlq_u8(a[1], vdupq_n_s8(-(count.min(8) as i8))),
-            ]
-        }
+        [
+            vshlq_u8(a[0], vdupq_n_s8(-(count.min(8) as i8))),
+            vshlq_u8(a[1], vdupq_n_s8(-(count.min(8) as i8))),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn saturating_add(self, a: [uint8x16_t; 2], b: [uint8x16_t; 2]) -> [uint8x16_t; 2] {
-        unsafe { [vqaddq_u8(a[0], b[0]), vqaddq_u8(a[1], b[1])] }
+        [vqaddq_u8(a[0], b[0]), vqaddq_u8(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn saturating_sub(self, a: [uint8x16_t; 2], b: [uint8x16_t; 2]) -> [uint8x16_t; 2] {
-        unsafe { [vqsubq_u8(a[0], b[0]), vqsubq_u8(a[1], b[1])] }
+        [vqsubq_u8(a[0], b[0]), vqsubq_u8(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn all_true(self, a: [uint8x16_t; 2]) -> bool {
-        unsafe { vminvq_u8(a[0]) != 0 && vminvq_u8(a[1]) != 0 }
+        vminvq_u8(a[0]) != 0 && vminvq_u8(a[1]) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn any_true(self, a: [uint8x16_t; 2]) -> bool {
-        unsafe { vmaxvq_u8(a[0]) != 0 || vmaxvq_u8(a[1]) != 0 }
+        vmaxvq_u8(a[0]) != 0 || vmaxvq_u8(a[1]) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: [uint8x16_t; 2]) -> u32 {
         // Delegate to NeonToken native bitmask per sub-vector, combine.
         // Enumerate the array rather than indexing by range
         // (clippy::needless_range_loop).
         let mut result = 0u32;
         for (i, v) in a.into_iter().enumerate() {
-            result |= <archmage::NeonToken as U8x16Backend>::bitmask(self, v) << (i * 16);
+            result |= <archmage::NeonToken as U8x16Backend>::bitmask(_self, v) << (i * 16);
         }
         result
     }
@@ -3365,14 +3126,14 @@ impl U8x32Backend for archmage::NeonToken {
 impl I16x8Backend for archmage::NeonToken {
     type Repr = int16x8_t;
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn splat(self, v: i16) -> int16x8_t {
-        unsafe { vdupq_n_s16(v) }
+        vdupq_n_s16(v)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn zero(self) -> int16x8_t {
-        unsafe { vdupq_n_s16(0) }
+        vdupq_n_s16(0)
     }
 
     #[inline(always)]
@@ -3397,156 +3158,150 @@ impl I16x8Backend for archmage::NeonToken {
         out
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn add(self, a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { vaddq_s16(a, b) }
+        vaddq_s16(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sub(self, a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { vsubq_s16(a, b) }
+        vsubq_s16(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul(self, a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { vmulq_s16(a, b) }
+        vmulq_s16(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn neg(self, a: int16x8_t) -> int16x8_t {
-        unsafe { vnegq_s16(a) }
+        vnegq_s16(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { vminq_s16(a, b) }
+        vminq_s16(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { vmaxq_s16(a, b) }
+        vmaxq_s16(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn abs(self, a: int16x8_t) -> int16x8_t {
-        unsafe { vabsq_s16(a) }
+        vabsq_s16(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { vreinterpretq_s16_u16(vceqq_s16(a, b)) }
+        vreinterpretq_s16_u16(vceqq_s16(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ne(self, a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { vreinterpretq_s16_u16(vmvnq_u16(vceqq_s16(a, b))) }
+        vreinterpretq_s16_u16(vmvnq_u16(vceqq_s16(a, b)))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_lt(self, a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { vreinterpretq_s16_u16(vcltq_s16(a, b)) }
+        vreinterpretq_s16_u16(vcltq_s16(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_le(self, a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { vreinterpretq_s16_u16(vcleq_s16(a, b)) }
+        vreinterpretq_s16_u16(vcleq_s16(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_gt(self, a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { vreinterpretq_s16_u16(vcgtq_s16(a, b)) }
+        vreinterpretq_s16_u16(vcgtq_s16(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ge(self, a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { vreinterpretq_s16_u16(vcgeq_s16(a, b)) }
+        vreinterpretq_s16_u16(vcgeq_s16(a, b))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn blend(self, mask: int16x8_t, if_true: int16x8_t, if_false: int16x8_t) -> int16x8_t {
-        unsafe { vbslq_s16(vreinterpretq_u16_s16(mask), if_true, if_false) }
+        vbslq_s16(vreinterpretq_u16_s16(mask), if_true, if_false)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_add(self, a: int16x8_t) -> i16 {
-        unsafe { vaddvq_s16(a) }
+        vaddvq_s16(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn not(self, a: int16x8_t) -> int16x8_t {
-        unsafe { vmvnq_s16(a) }
+        vmvnq_s16(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitand(self, a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { vandq_s16(a, b) }
+        vandq_s16(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitor(self, a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { vorrq_s16(a, b) }
+        vorrq_s16(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitxor(self, a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { veorq_s16(a, b) }
+        veorq_s16(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_const<const N: i32>(self, a: int16x8_t) -> int16x8_t {
-        unsafe { vshlq_n_s16::<N>(a) }
+        vshlq_n_s16::<N>(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_const<const N: i32>(self, a: int16x8_t) -> int16x8_t {
         const { assert!(N >= 0 && N <= 15) };
-        unsafe {
-            vreinterpretq_s16_u16(vshlq_u16(
-                vreinterpretq_u16_s16(a),
-                vdupq_n_s16((-N) as i16),
-            ))
-        }
+        vreinterpretq_s16_u16(vshlq_u16(
+            vreinterpretq_u16_s16(a),
+            vdupq_n_s16((-N) as i16),
+        ))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_arithmetic_const<const N: i32>(self, a: int16x8_t) -> int16x8_t {
         const { assert!(N >= 0 && N <= 15) };
-        unsafe { vshlq_s16(a, vdupq_n_s16((-N) as i16)) }
+        vshlq_s16(a, vdupq_n_s16((-N) as i16))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_uniform(self, a: int16x8_t, count: u32) -> int16x8_t {
-        unsafe { vshlq_s16(a, vdupq_n_s16(count.min(16) as i16)) }
+        vshlq_s16(a, vdupq_n_s16(count.min(16) as i16))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_uniform(self, a: int16x8_t, count: u32) -> int16x8_t {
-        unsafe {
-            vreinterpretq_s16_u16(vshlq_u16(
-                vreinterpretq_u16_s16(a),
-                vdupq_n_s16(-(count.min(16) as i16)),
-            ))
-        }
+        vreinterpretq_s16_u16(vshlq_u16(
+            vreinterpretq_u16_s16(a),
+            vdupq_n_s16(-(count.min(16) as i16)),
+        ))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_arithmetic_uniform(self, a: int16x8_t, count: u32) -> int16x8_t {
         // Clamping to lane_bits - 1 gives the contracted sign fill.
-        unsafe { vshlq_s16(a, vdupq_n_s16(-(count.min(15) as i16))) }
+        vshlq_s16(a, vdupq_n_s16(-(count.min(15) as i16)))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn saturating_add(self, a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { vqaddq_s16(a, b) }
+        vqaddq_s16(a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn saturating_sub(self, a: int16x8_t, b: int16x8_t) -> int16x8_t {
-        unsafe { vqsubq_s16(a, b) }
+        vqsubq_s16(a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn all_true(self, a: int16x8_t) -> bool {
-        unsafe { vminvq_u16(vreinterpretq_u16_s16(a)) != 0 }
+        vminvq_u16(vreinterpretq_u16_s16(a)) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn any_true(self, a: int16x8_t) -> bool {
-        unsafe { vmaxvq_u16(vreinterpretq_u16_s16(a)) != 0 }
+        vmaxvq_u16(vreinterpretq_u16_s16(a)) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: int16x8_t) -> u32 {
-        unsafe {
-            (vgetq_lane_u16::<0>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1)
-                | (vgetq_lane_u16::<1>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 1
-                | (vgetq_lane_u16::<2>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 2
-                | (vgetq_lane_u16::<3>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 3
-                | (vgetq_lane_u16::<4>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 4
-                | (vgetq_lane_u16::<5>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 5
-                | (vgetq_lane_u16::<6>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 6
-                | (vgetq_lane_u16::<7>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 7
-        }
+        (vgetq_lane_u16::<0>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1)
+            | (vgetq_lane_u16::<1>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 1
+            | (vgetq_lane_u16::<2>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 2
+            | (vgetq_lane_u16::<3>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 3
+            | (vgetq_lane_u16::<4>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 4
+            | (vgetq_lane_u16::<5>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 5
+            | (vgetq_lane_u16::<6>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 6
+            | (vgetq_lane_u16::<7>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 7
     }
 }
 
@@ -3554,20 +3309,16 @@ impl I16x8Backend for archmage::NeonToken {
 impl I16x16Backend for archmage::NeonToken {
     type Repr = [int16x8_t; 2];
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn splat(self, v: i16) -> [int16x8_t; 2] {
-        unsafe {
-            let v4 = vdupq_n_s16(v);
-            [v4, v4]
-        }
+        let v4 = vdupq_n_s16(v);
+        [v4, v4]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn zero(self) -> [int16x8_t; 2] {
-        unsafe {
-            let z = vdupq_n_s16(0);
-            [z, z]
-        }
+        let z = vdupq_n_s16(0);
+        [z, z]
     }
 
     #[inline(always)]
@@ -3600,233 +3351,203 @@ impl I16x16Backend for archmage::NeonToken {
         out
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn add(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe { [vaddq_s16(a[0], b[0]), vaddq_s16(a[1], b[1])] }
+        [vaddq_s16(a[0], b[0]), vaddq_s16(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sub(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe { [vsubq_s16(a[0], b[0]), vsubq_s16(a[1], b[1])] }
+        [vsubq_s16(a[0], b[0]), vsubq_s16(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe { [vmulq_s16(a[0], b[0]), vmulq_s16(a[1], b[1])] }
+        [vmulq_s16(a[0], b[0]), vmulq_s16(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn neg(self, a: [int16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe { [vnegq_s16(a[0]), vnegq_s16(a[1])] }
+        [vnegq_s16(a[0]), vnegq_s16(a[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe { [vminq_s16(a[0], b[0]), vminq_s16(a[1], b[1])] }
+        [vminq_s16(a[0], b[0]), vminq_s16(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe { [vmaxq_s16(a[0], b[0]), vmaxq_s16(a[1], b[1])] }
+        [vmaxq_s16(a[0], b[0]), vmaxq_s16(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn abs(self, a: [int16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe { [vabsq_s16(a[0]), vabsq_s16(a[1])] }
+        [vabsq_s16(a[0]), vabsq_s16(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s16_u16(vceqq_s16(a[0], b[0])),
-                vreinterpretq_s16_u16(vceqq_s16(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_s16_u16(vceqq_s16(a[0], b[0])),
+            vreinterpretq_s16_u16(vceqq_s16(a[1], b[1])),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ne(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s16_u16(vmvnq_u16(vceqq_s16(a[0], b[0]))),
-                vreinterpretq_s16_u16(vmvnq_u16(vceqq_s16(a[1], b[1]))),
-            ]
-        }
+        [
+            vreinterpretq_s16_u16(vmvnq_u16(vceqq_s16(a[0], b[0]))),
+            vreinterpretq_s16_u16(vmvnq_u16(vceqq_s16(a[1], b[1]))),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_lt(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s16_u16(vcltq_s16(a[0], b[0])),
-                vreinterpretq_s16_u16(vcltq_s16(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_s16_u16(vcltq_s16(a[0], b[0])),
+            vreinterpretq_s16_u16(vcltq_s16(a[1], b[1])),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_le(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s16_u16(vcleq_s16(a[0], b[0])),
-                vreinterpretq_s16_u16(vcleq_s16(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_s16_u16(vcleq_s16(a[0], b[0])),
+            vreinterpretq_s16_u16(vcleq_s16(a[1], b[1])),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_gt(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s16_u16(vcgtq_s16(a[0], b[0])),
-                vreinterpretq_s16_u16(vcgtq_s16(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_s16_u16(vcgtq_s16(a[0], b[0])),
+            vreinterpretq_s16_u16(vcgtq_s16(a[1], b[1])),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ge(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s16_u16(vcgeq_s16(a[0], b[0])),
-                vreinterpretq_s16_u16(vcgeq_s16(a[1], b[1])),
-            ]
-        }
+        [
+            vreinterpretq_s16_u16(vcgeq_s16(a[0], b[0])),
+            vreinterpretq_s16_u16(vcgeq_s16(a[1], b[1])),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn blend(
         self,
         mask: [int16x8_t; 2],
         if_true: [int16x8_t; 2],
         if_false: [int16x8_t; 2],
     ) -> [int16x8_t; 2] {
-        unsafe {
-            [
-                vbslq_s16(vreinterpretq_u16_s16(mask[0]), if_true[0], if_false[0]),
-                vbslq_s16(vreinterpretq_u16_s16(mask[1]), if_true[1], if_false[1]),
-            ]
-        }
+        [
+            vbslq_s16(vreinterpretq_u16_s16(mask[0]), if_true[0], if_false[0]),
+            vbslq_s16(vreinterpretq_u16_s16(mask[1]), if_true[1], if_false[1]),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_add(self, a: [int16x8_t; 2]) -> i16 {
         let mut sum = 0i16;
         // Iterate the array rather than indexing by range
         // (clippy::needless_range_loop).
         for v in a {
-            sum = sum.wrapping_add(unsafe { vaddvq_s16(v) });
+            sum = sum.wrapping_add(vaddvq_s16(v));
         }
         sum
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn not(self, a: [int16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe { [vmvnq_s16(a[0]), vmvnq_s16(a[1])] }
+        [vmvnq_s16(a[0]), vmvnq_s16(a[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitand(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe { [vandq_s16(a[0], b[0]), vandq_s16(a[1], b[1])] }
+        [vandq_s16(a[0], b[0]), vandq_s16(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitor(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe { [vorrq_s16(a[0], b[0]), vorrq_s16(a[1], b[1])] }
+        [vorrq_s16(a[0], b[0]), vorrq_s16(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitxor(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe { [veorq_s16(a[0], b[0]), veorq_s16(a[1], b[1])] }
+        [veorq_s16(a[0], b[0]), veorq_s16(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_const<const N: i32>(self, a: [int16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe { [vshlq_n_s16::<N>(a[0]), vshlq_n_s16::<N>(a[1])] }
+        [vshlq_n_s16::<N>(a[0]), vshlq_n_s16::<N>(a[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_const<const N: i32>(self, a: [int16x8_t; 2]) -> [int16x8_t; 2] {
         const { assert!(N >= 0 && N <= 15) };
-        unsafe {
-            [
-                vreinterpretq_s16_u16(vshlq_u16(
-                    vreinterpretq_u16_s16(a[0]),
-                    vdupq_n_s16((-N) as i16),
-                )),
-                vreinterpretq_s16_u16(vshlq_u16(
-                    vreinterpretq_u16_s16(a[1]),
-                    vdupq_n_s16((-N) as i16),
-                )),
-            ]
-        }
+        [
+            vreinterpretq_s16_u16(vshlq_u16(
+                vreinterpretq_u16_s16(a[0]),
+                vdupq_n_s16((-N) as i16),
+            )),
+            vreinterpretq_s16_u16(vshlq_u16(
+                vreinterpretq_u16_s16(a[1]),
+                vdupq_n_s16((-N) as i16),
+            )),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_arithmetic_const<const N: i32>(self, a: [int16x8_t; 2]) -> [int16x8_t; 2] {
         const { assert!(N >= 0 && N <= 15) };
-        unsafe {
-            [
-                vshlq_s16(a[0], vdupq_n_s16((-N) as i16)),
-                vshlq_s16(a[1], vdupq_n_s16((-N) as i16)),
-            ]
-        }
+        [
+            vshlq_s16(a[0], vdupq_n_s16((-N) as i16)),
+            vshlq_s16(a[1], vdupq_n_s16((-N) as i16)),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_uniform(self, a: [int16x8_t; 2], count: u32) -> [int16x8_t; 2] {
-        unsafe {
-            [
-                vshlq_s16(a[0], vdupq_n_s16(count.min(16) as i16)),
-                vshlq_s16(a[1], vdupq_n_s16(count.min(16) as i16)),
-            ]
-        }
+        [
+            vshlq_s16(a[0], vdupq_n_s16(count.min(16) as i16)),
+            vshlq_s16(a[1], vdupq_n_s16(count.min(16) as i16)),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_uniform(self, a: [int16x8_t; 2], count: u32) -> [int16x8_t; 2] {
-        unsafe {
-            [
-                vreinterpretq_s16_u16(vshlq_u16(
-                    vreinterpretq_u16_s16(a[0]),
-                    vdupq_n_s16(-(count.min(16) as i16)),
-                )),
-                vreinterpretq_s16_u16(vshlq_u16(
-                    vreinterpretq_u16_s16(a[1]),
-                    vdupq_n_s16(-(count.min(16) as i16)),
-                )),
-            ]
-        }
+        [
+            vreinterpretq_s16_u16(vshlq_u16(
+                vreinterpretq_u16_s16(a[0]),
+                vdupq_n_s16(-(count.min(16) as i16)),
+            )),
+            vreinterpretq_s16_u16(vshlq_u16(
+                vreinterpretq_u16_s16(a[1]),
+                vdupq_n_s16(-(count.min(16) as i16)),
+            )),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_arithmetic_uniform(self, a: [int16x8_t; 2], count: u32) -> [int16x8_t; 2] {
-        unsafe {
-            [
-                vshlq_s16(a[0], vdupq_n_s16(-(count.min(15) as i16))),
-                vshlq_s16(a[1], vdupq_n_s16(-(count.min(15) as i16))),
-            ]
-        }
+        [
+            vshlq_s16(a[0], vdupq_n_s16(-(count.min(15) as i16))),
+            vshlq_s16(a[1], vdupq_n_s16(-(count.min(15) as i16))),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn saturating_add(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe { [vqaddq_s16(a[0], b[0]), vqaddq_s16(a[1], b[1])] }
+        [vqaddq_s16(a[0], b[0]), vqaddq_s16(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn saturating_sub(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int16x8_t; 2] {
-        unsafe { [vqsubq_s16(a[0], b[0]), vqsubq_s16(a[1], b[1])] }
+        [vqsubq_s16(a[0], b[0]), vqsubq_s16(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn all_true(self, a: [int16x8_t; 2]) -> bool {
-        unsafe {
-            vminvq_u16(vreinterpretq_u16_s16(a[0])) != 0
-                && vminvq_u16(vreinterpretq_u16_s16(a[1])) != 0
-        }
+        vminvq_u16(vreinterpretq_u16_s16(a[0])) != 0 && vminvq_u16(vreinterpretq_u16_s16(a[1])) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn any_true(self, a: [int16x8_t; 2]) -> bool {
-        unsafe {
-            vmaxvq_u16(vreinterpretq_u16_s16(a[0])) != 0
-                || vmaxvq_u16(vreinterpretq_u16_s16(a[1])) != 0
-        }
+        vmaxvq_u16(vreinterpretq_u16_s16(a[0])) != 0 || vmaxvq_u16(vreinterpretq_u16_s16(a[1])) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: [int16x8_t; 2]) -> u32 {
         // Delegate to NeonToken native bitmask per sub-vector, combine.
         // Enumerate the array rather than indexing by range
         // (clippy::needless_range_loop).
         let mut result = 0u32;
         for (i, v) in a.into_iter().enumerate() {
-            result |= <archmage::NeonToken as I16x8Backend>::bitmask(self, v) << (i * 8);
+            result |= <archmage::NeonToken as I16x8Backend>::bitmask(_self, v) << (i * 8);
         }
         result
     }
@@ -3836,14 +3557,14 @@ impl I16x16Backend for archmage::NeonToken {
 impl U16x8Backend for archmage::NeonToken {
     type Repr = uint16x8_t;
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn splat(self, v: u16) -> uint16x8_t {
-        unsafe { vdupq_n_u16(v) }
+        vdupq_n_u16(v)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn zero(self) -> uint16x8_t {
-        unsafe { vdupq_n_u16(0) }
+        vdupq_n_u16(0)
     }
 
     #[inline(always)]
@@ -3868,128 +3589,126 @@ impl U16x8Backend for archmage::NeonToken {
         out
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn add(self, a: uint16x8_t, b: uint16x8_t) -> uint16x8_t {
-        unsafe { vaddq_u16(a, b) }
+        vaddq_u16(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sub(self, a: uint16x8_t, b: uint16x8_t) -> uint16x8_t {
-        unsafe { vsubq_u16(a, b) }
+        vsubq_u16(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul(self, a: uint16x8_t, b: uint16x8_t) -> uint16x8_t {
-        unsafe { vmulq_u16(a, b) }
+        vmulq_u16(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: uint16x8_t, b: uint16x8_t) -> uint16x8_t {
-        unsafe { vminq_u16(a, b) }
+        vminq_u16(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: uint16x8_t, b: uint16x8_t) -> uint16x8_t {
-        unsafe { vmaxq_u16(a, b) }
+        vmaxq_u16(a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: uint16x8_t, b: uint16x8_t) -> uint16x8_t {
-        unsafe { vceqq_u16(a, b) }
+        vceqq_u16(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ne(self, a: uint16x8_t, b: uint16x8_t) -> uint16x8_t {
-        unsafe { vmvnq_u16(vceqq_u16(a, b)) }
+        vmvnq_u16(vceqq_u16(a, b))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_lt(self, a: uint16x8_t, b: uint16x8_t) -> uint16x8_t {
-        unsafe { vcltq_u16(a, b) }
+        vcltq_u16(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_le(self, a: uint16x8_t, b: uint16x8_t) -> uint16x8_t {
-        unsafe { vcleq_u16(a, b) }
+        vcleq_u16(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_gt(self, a: uint16x8_t, b: uint16x8_t) -> uint16x8_t {
-        unsafe { vcgtq_u16(a, b) }
+        vcgtq_u16(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ge(self, a: uint16x8_t, b: uint16x8_t) -> uint16x8_t {
-        unsafe { vcgeq_u16(a, b) }
+        vcgeq_u16(a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn blend(self, mask: uint16x8_t, if_true: uint16x8_t, if_false: uint16x8_t) -> uint16x8_t {
-        unsafe { vbslq_u16(mask, if_true, if_false) }
+        vbslq_u16(mask, if_true, if_false)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_add(self, a: uint16x8_t) -> u16 {
-        unsafe { vaddvq_u16(a) }
+        vaddvq_u16(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn not(self, a: uint16x8_t) -> uint16x8_t {
-        unsafe { vmvnq_u16(a) }
+        vmvnq_u16(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitand(self, a: uint16x8_t, b: uint16x8_t) -> uint16x8_t {
-        unsafe { vandq_u16(a, b) }
+        vandq_u16(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitor(self, a: uint16x8_t, b: uint16x8_t) -> uint16x8_t {
-        unsafe { vorrq_u16(a, b) }
+        vorrq_u16(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitxor(self, a: uint16x8_t, b: uint16x8_t) -> uint16x8_t {
-        unsafe { veorq_u16(a, b) }
+        veorq_u16(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_const<const N: i32>(self, a: uint16x8_t) -> uint16x8_t {
-        unsafe { vshlq_n_u16::<N>(a) }
+        vshlq_n_u16::<N>(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_const<const N: i32>(self, a: uint16x8_t) -> uint16x8_t {
         const { assert!(N >= 0 && N <= 15) };
-        unsafe { vshlq_u16(a, vdupq_n_s16((-N) as i16)) }
+        vshlq_u16(a, vdupq_n_s16((-N) as i16))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_uniform(self, a: uint16x8_t, count: u32) -> uint16x8_t {
-        unsafe { vshlq_u16(a, vdupq_n_s16(count.min(16) as i16)) }
+        vshlq_u16(a, vdupq_n_s16(count.min(16) as i16))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_uniform(self, a: uint16x8_t, count: u32) -> uint16x8_t {
-        unsafe { vshlq_u16(a, vdupq_n_s16(-(count.min(16) as i16))) }
+        vshlq_u16(a, vdupq_n_s16(-(count.min(16) as i16)))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn saturating_add(self, a: uint16x8_t, b: uint16x8_t) -> uint16x8_t {
-        unsafe { vqaddq_u16(a, b) }
+        vqaddq_u16(a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn saturating_sub(self, a: uint16x8_t, b: uint16x8_t) -> uint16x8_t {
-        unsafe { vqsubq_u16(a, b) }
+        vqsubq_u16(a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn all_true(self, a: uint16x8_t) -> bool {
-        unsafe { vminvq_u16(a) != 0 }
+        vminvq_u16(a) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn any_true(self, a: uint16x8_t) -> bool {
-        unsafe { vmaxvq_u16(a) != 0 }
+        vmaxvq_u16(a) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: uint16x8_t) -> u32 {
-        unsafe {
-            (vgetq_lane_u16::<0>(vshrq_n_u16::<15>(a)) as u32 & 1)
-                | (vgetq_lane_u16::<1>(vshrq_n_u16::<15>(a)) as u32 & 1) << 1
-                | (vgetq_lane_u16::<2>(vshrq_n_u16::<15>(a)) as u32 & 1) << 2
-                | (vgetq_lane_u16::<3>(vshrq_n_u16::<15>(a)) as u32 & 1) << 3
-                | (vgetq_lane_u16::<4>(vshrq_n_u16::<15>(a)) as u32 & 1) << 4
-                | (vgetq_lane_u16::<5>(vshrq_n_u16::<15>(a)) as u32 & 1) << 5
-                | (vgetq_lane_u16::<6>(vshrq_n_u16::<15>(a)) as u32 & 1) << 6
-                | (vgetq_lane_u16::<7>(vshrq_n_u16::<15>(a)) as u32 & 1) << 7
-        }
+        (vgetq_lane_u16::<0>(vshrq_n_u16::<15>(a)) as u32 & 1)
+            | (vgetq_lane_u16::<1>(vshrq_n_u16::<15>(a)) as u32 & 1) << 1
+            | (vgetq_lane_u16::<2>(vshrq_n_u16::<15>(a)) as u32 & 1) << 2
+            | (vgetq_lane_u16::<3>(vshrq_n_u16::<15>(a)) as u32 & 1) << 3
+            | (vgetq_lane_u16::<4>(vshrq_n_u16::<15>(a)) as u32 & 1) << 4
+            | (vgetq_lane_u16::<5>(vshrq_n_u16::<15>(a)) as u32 & 1) << 5
+            | (vgetq_lane_u16::<6>(vshrq_n_u16::<15>(a)) as u32 & 1) << 6
+            | (vgetq_lane_u16::<7>(vshrq_n_u16::<15>(a)) as u32 & 1) << 7
     }
 }
 
@@ -3997,20 +3716,16 @@ impl U16x8Backend for archmage::NeonToken {
 impl U16x16Backend for archmage::NeonToken {
     type Repr = [uint16x8_t; 2];
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn splat(self, v: u16) -> [uint16x8_t; 2] {
-        unsafe {
-            let v4 = vdupq_n_u16(v);
-            [v4, v4]
-        }
+        let v4 = vdupq_n_u16(v);
+        [v4, v4]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn zero(self) -> [uint16x8_t; 2] {
-        unsafe {
-            let z = vdupq_n_u16(0);
-            [z, z]
-        }
+        let z = vdupq_n_u16(0);
+        [z, z]
     }
 
     #[inline(always)]
@@ -4043,163 +3758,153 @@ impl U16x16Backend for archmage::NeonToken {
         out
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn add(self, a: [uint16x8_t; 2], b: [uint16x8_t; 2]) -> [uint16x8_t; 2] {
-        unsafe { [vaddq_u16(a[0], b[0]), vaddq_u16(a[1], b[1])] }
+        [vaddq_u16(a[0], b[0]), vaddq_u16(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sub(self, a: [uint16x8_t; 2], b: [uint16x8_t; 2]) -> [uint16x8_t; 2] {
-        unsafe { [vsubq_u16(a[0], b[0]), vsubq_u16(a[1], b[1])] }
+        [vsubq_u16(a[0], b[0]), vsubq_u16(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn mul(self, a: [uint16x8_t; 2], b: [uint16x8_t; 2]) -> [uint16x8_t; 2] {
-        unsafe { [vmulq_u16(a[0], b[0]), vmulq_u16(a[1], b[1])] }
+        [vmulq_u16(a[0], b[0]), vmulq_u16(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: [uint16x8_t; 2], b: [uint16x8_t; 2]) -> [uint16x8_t; 2] {
-        unsafe { [vminq_u16(a[0], b[0]), vminq_u16(a[1], b[1])] }
+        [vminq_u16(a[0], b[0]), vminq_u16(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: [uint16x8_t; 2], b: [uint16x8_t; 2]) -> [uint16x8_t; 2] {
-        unsafe { [vmaxq_u16(a[0], b[0]), vmaxq_u16(a[1], b[1])] }
+        [vmaxq_u16(a[0], b[0]), vmaxq_u16(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: [uint16x8_t; 2], b: [uint16x8_t; 2]) -> [uint16x8_t; 2] {
-        unsafe { [vceqq_u16(a[0], b[0]), vceqq_u16(a[1], b[1])] }
+        [vceqq_u16(a[0], b[0]), vceqq_u16(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ne(self, a: [uint16x8_t; 2], b: [uint16x8_t; 2]) -> [uint16x8_t; 2] {
-        unsafe {
-            [
-                vmvnq_u16(vceqq_u16(a[0], b[0])),
-                vmvnq_u16(vceqq_u16(a[1], b[1])),
-            ]
-        }
+        [
+            vmvnq_u16(vceqq_u16(a[0], b[0])),
+            vmvnq_u16(vceqq_u16(a[1], b[1])),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_lt(self, a: [uint16x8_t; 2], b: [uint16x8_t; 2]) -> [uint16x8_t; 2] {
-        unsafe { [vcltq_u16(a[0], b[0]), vcltq_u16(a[1], b[1])] }
+        [vcltq_u16(a[0], b[0]), vcltq_u16(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_le(self, a: [uint16x8_t; 2], b: [uint16x8_t; 2]) -> [uint16x8_t; 2] {
-        unsafe { [vcleq_u16(a[0], b[0]), vcleq_u16(a[1], b[1])] }
+        [vcleq_u16(a[0], b[0]), vcleq_u16(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_gt(self, a: [uint16x8_t; 2], b: [uint16x8_t; 2]) -> [uint16x8_t; 2] {
-        unsafe { [vcgtq_u16(a[0], b[0]), vcgtq_u16(a[1], b[1])] }
+        [vcgtq_u16(a[0], b[0]), vcgtq_u16(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ge(self, a: [uint16x8_t; 2], b: [uint16x8_t; 2]) -> [uint16x8_t; 2] {
-        unsafe { [vcgeq_u16(a[0], b[0]), vcgeq_u16(a[1], b[1])] }
+        [vcgeq_u16(a[0], b[0]), vcgeq_u16(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn blend(
         self,
         mask: [uint16x8_t; 2],
         if_true: [uint16x8_t; 2],
         if_false: [uint16x8_t; 2],
     ) -> [uint16x8_t; 2] {
-        unsafe {
-            [
-                vbslq_u16(mask[0], if_true[0], if_false[0]),
-                vbslq_u16(mask[1], if_true[1], if_false[1]),
-            ]
-        }
+        [
+            vbslq_u16(mask[0], if_true[0], if_false[0]),
+            vbslq_u16(mask[1], if_true[1], if_false[1]),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_add(self, a: [uint16x8_t; 2]) -> u16 {
         let mut sum = 0u16;
         // Iterate the array rather than indexing by range
         // (clippy::needless_range_loop).
         for v in a {
-            sum = sum.wrapping_add(unsafe { vaddvq_u16(v) });
+            sum = sum.wrapping_add(vaddvq_u16(v));
         }
         sum
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn not(self, a: [uint16x8_t; 2]) -> [uint16x8_t; 2] {
-        unsafe { [vmvnq_u16(a[0]), vmvnq_u16(a[1])] }
+        [vmvnq_u16(a[0]), vmvnq_u16(a[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitand(self, a: [uint16x8_t; 2], b: [uint16x8_t; 2]) -> [uint16x8_t; 2] {
-        unsafe { [vandq_u16(a[0], b[0]), vandq_u16(a[1], b[1])] }
+        [vandq_u16(a[0], b[0]), vandq_u16(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitor(self, a: [uint16x8_t; 2], b: [uint16x8_t; 2]) -> [uint16x8_t; 2] {
-        unsafe { [vorrq_u16(a[0], b[0]), vorrq_u16(a[1], b[1])] }
+        [vorrq_u16(a[0], b[0]), vorrq_u16(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitxor(self, a: [uint16x8_t; 2], b: [uint16x8_t; 2]) -> [uint16x8_t; 2] {
-        unsafe { [veorq_u16(a[0], b[0]), veorq_u16(a[1], b[1])] }
+        [veorq_u16(a[0], b[0]), veorq_u16(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_const<const N: i32>(self, a: [uint16x8_t; 2]) -> [uint16x8_t; 2] {
-        unsafe { [vshlq_n_u16::<N>(a[0]), vshlq_n_u16::<N>(a[1])] }
+        [vshlq_n_u16::<N>(a[0]), vshlq_n_u16::<N>(a[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_const<const N: i32>(self, a: [uint16x8_t; 2]) -> [uint16x8_t; 2] {
         const { assert!(N >= 0 && N <= 15) };
-        unsafe {
-            [
-                vshlq_u16(a[0], vdupq_n_s16((-N) as i16)),
-                vshlq_u16(a[1], vdupq_n_s16((-N) as i16)),
-            ]
-        }
+        [
+            vshlq_u16(a[0], vdupq_n_s16((-N) as i16)),
+            vshlq_u16(a[1], vdupq_n_s16((-N) as i16)),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_uniform(self, a: [uint16x8_t; 2], count: u32) -> [uint16x8_t; 2] {
-        unsafe {
-            [
-                vshlq_u16(a[0], vdupq_n_s16(count.min(16) as i16)),
-                vshlq_u16(a[1], vdupq_n_s16(count.min(16) as i16)),
-            ]
-        }
+        [
+            vshlq_u16(a[0], vdupq_n_s16(count.min(16) as i16)),
+            vshlq_u16(a[1], vdupq_n_s16(count.min(16) as i16)),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_uniform(self, a: [uint16x8_t; 2], count: u32) -> [uint16x8_t; 2] {
-        unsafe {
-            [
-                vshlq_u16(a[0], vdupq_n_s16(-(count.min(16) as i16))),
-                vshlq_u16(a[1], vdupq_n_s16(-(count.min(16) as i16))),
-            ]
-        }
+        [
+            vshlq_u16(a[0], vdupq_n_s16(-(count.min(16) as i16))),
+            vshlq_u16(a[1], vdupq_n_s16(-(count.min(16) as i16))),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn saturating_add(self, a: [uint16x8_t; 2], b: [uint16x8_t; 2]) -> [uint16x8_t; 2] {
-        unsafe { [vqaddq_u16(a[0], b[0]), vqaddq_u16(a[1], b[1])] }
+        [vqaddq_u16(a[0], b[0]), vqaddq_u16(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn saturating_sub(self, a: [uint16x8_t; 2], b: [uint16x8_t; 2]) -> [uint16x8_t; 2] {
-        unsafe { [vqsubq_u16(a[0], b[0]), vqsubq_u16(a[1], b[1])] }
+        [vqsubq_u16(a[0], b[0]), vqsubq_u16(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn all_true(self, a: [uint16x8_t; 2]) -> bool {
-        unsafe { vminvq_u16(a[0]) != 0 && vminvq_u16(a[1]) != 0 }
+        vminvq_u16(a[0]) != 0 && vminvq_u16(a[1]) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn any_true(self, a: [uint16x8_t; 2]) -> bool {
-        unsafe { vmaxvq_u16(a[0]) != 0 || vmaxvq_u16(a[1]) != 0 }
+        vmaxvq_u16(a[0]) != 0 || vmaxvq_u16(a[1]) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: [uint16x8_t; 2]) -> u32 {
         // Delegate to NeonToken native bitmask per sub-vector, combine.
         // Enumerate the array rather than indexing by range
         // (clippy::needless_range_loop).
         let mut result = 0u32;
         for (i, v) in a.into_iter().enumerate() {
-            result |= <archmage::NeonToken as U16x8Backend>::bitmask(self, v) << (i * 8);
+            result |= <archmage::NeonToken as U16x8Backend>::bitmask(_self, v) << (i * 8);
         }
         result
     }
@@ -4209,14 +3914,14 @@ impl U16x16Backend for archmage::NeonToken {
 impl U64x2Backend for archmage::NeonToken {
     type Repr = uint64x2_t;
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn splat(self, v: u64) -> uint64x2_t {
-        unsafe { vdupq_n_u64(v) }
+        vdupq_n_u64(v)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn zero(self) -> uint64x2_t {
-        unsafe { vdupq_n_u64(0) }
+        vdupq_n_u64(0)
     }
 
     #[inline(always)]
@@ -4241,101 +3946,99 @@ impl U64x2Backend for archmage::NeonToken {
         out
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn add(self, a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
-        unsafe { vaddq_u64(a, b) }
+        vaddq_u64(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sub(self, a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
-        unsafe { vsubq_u64(a, b) }
+        vsubq_u64(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
-        unsafe { vbslq_u64(vcltq_u64(a, b), a, b) }
+        vbslq_u64(vcltq_u64(a, b), a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
-        unsafe { vbslq_u64(vcgtq_u64(a, b), a, b) }
+        vbslq_u64(vcgtq_u64(a, b), a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
-        unsafe { vceqq_u64(a, b) }
+        vceqq_u64(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ne(self, a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
-        unsafe { veorq_u64(vceqq_u64(a, b), vdupq_n_u64(u64::MAX)) }
+        veorq_u64(vceqq_u64(a, b), vdupq_n_u64(u64::MAX))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_lt(self, a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
-        unsafe { vcltq_u64(a, b) }
+        vcltq_u64(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_le(self, a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
-        unsafe { vcleq_u64(a, b) }
+        vcleq_u64(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_gt(self, a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
-        unsafe { vcgtq_u64(a, b) }
+        vcgtq_u64(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ge(self, a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
-        unsafe { vcgeq_u64(a, b) }
+        vcgeq_u64(a, b)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn blend(self, mask: uint64x2_t, if_true: uint64x2_t, if_false: uint64x2_t) -> uint64x2_t {
-        unsafe { vbslq_u64(mask, if_true, if_false) }
+        vbslq_u64(mask, if_true, if_false)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_add(self, a: uint64x2_t) -> u64 {
-        unsafe { vaddvq_u64(a) }
+        vaddvq_u64(a)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn not(self, a: uint64x2_t) -> uint64x2_t {
-        unsafe { veorq_u64(a, vdupq_n_u64(u64::MAX)) }
+        veorq_u64(a, vdupq_n_u64(u64::MAX))
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitand(self, a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
-        unsafe { vandq_u64(a, b) }
+        vandq_u64(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitor(self, a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
-        unsafe { vorrq_u64(a, b) }
+        vorrq_u64(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitxor(self, a: uint64x2_t, b: uint64x2_t) -> uint64x2_t {
-        unsafe { veorq_u64(a, b) }
+        veorq_u64(a, b)
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_const<const N: i32>(self, a: uint64x2_t) -> uint64x2_t {
-        unsafe { vshlq_n_u64::<N>(a) }
+        vshlq_n_u64::<N>(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_const<const N: i32>(self, a: uint64x2_t) -> uint64x2_t {
         const { assert!(N >= 0 && N <= 63) };
-        unsafe { vshlq_u64(a, vdupq_n_s64((-N) as i64)) }
+        vshlq_u64(a, vdupq_n_s64((-N) as i64))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn all_true(self, a: uint64x2_t) -> bool {
-        unsafe { vgetq_lane_u64::<0>(a) != 0 && vgetq_lane_u64::<1>(a) != 0 }
+        vgetq_lane_u64::<0>(a) != 0 && vgetq_lane_u64::<1>(a) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn any_true(self, a: uint64x2_t) -> bool {
-        unsafe { vgetq_lane_u64::<0>(a) != 0 || vgetq_lane_u64::<1>(a) != 0 }
+        vgetq_lane_u64::<0>(a) != 0 || vgetq_lane_u64::<1>(a) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: uint64x2_t) -> u32 {
-        unsafe {
-            let shift = vshrq_n_u64::<63>(a);
-            let lane0 = vgetq_lane_u64::<0>(shift) as u32;
-            let lane1 = vgetq_lane_u64::<1>(shift) as u32;
-            lane0 | (lane1 << 1)
-        }
+        let shift = vshrq_n_u64::<63>(a);
+        let lane0 = vgetq_lane_u64::<0>(shift) as u32;
+        let lane1 = vgetq_lane_u64::<1>(shift) as u32;
+        lane0 | (lane1 << 1)
     }
 }
 
@@ -4343,20 +4046,16 @@ impl U64x2Backend for archmage::NeonToken {
 impl U64x4Backend for archmage::NeonToken {
     type Repr = [uint64x2_t; 2];
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn splat(self, v: u64) -> [uint64x2_t; 2] {
-        unsafe {
-            let v4 = vdupq_n_u64(v);
-            [v4, v4]
-        }
+        let v4 = vdupq_n_u64(v);
+        [v4, v4]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn zero(self) -> [uint64x2_t; 2] {
-        unsafe {
-            let z = vdupq_n_u64(0);
-            [z, z]
-        }
+        let z = vdupq_n_u64(0);
+        [z, z]
     }
 
     #[inline(always)]
@@ -4389,154 +4088,138 @@ impl U64x4Backend for archmage::NeonToken {
         out
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn add(self, a: [uint64x2_t; 2], b: [uint64x2_t; 2]) -> [uint64x2_t; 2] {
-        unsafe { [vaddq_u64(a[0], b[0]), vaddq_u64(a[1], b[1])] }
+        [vaddq_u64(a[0], b[0]), vaddq_u64(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn sub(self, a: [uint64x2_t; 2], b: [uint64x2_t; 2]) -> [uint64x2_t; 2] {
-        unsafe { [vsubq_u64(a[0], b[0]), vsubq_u64(a[1], b[1])] }
+        [vsubq_u64(a[0], b[0]), vsubq_u64(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn min(self, a: [uint64x2_t; 2], b: [uint64x2_t; 2]) -> [uint64x2_t; 2] {
-        unsafe {
-            [
-                vbslq_u64(vcltq_u64(a[0], b[0]), a[0], b[0]),
-                vbslq_u64(vcltq_u64(a[1], b[1]), a[1], b[1]),
-            ]
-        }
+        [
+            vbslq_u64(vcltq_u64(a[0], b[0]), a[0], b[0]),
+            vbslq_u64(vcltq_u64(a[1], b[1]), a[1], b[1]),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn max(self, a: [uint64x2_t; 2], b: [uint64x2_t; 2]) -> [uint64x2_t; 2] {
-        unsafe {
-            [
-                vbslq_u64(vcgtq_u64(a[0], b[0]), a[0], b[0]),
-                vbslq_u64(vcgtq_u64(a[1], b[1]), a[1], b[1]),
-            ]
-        }
+        [
+            vbslq_u64(vcgtq_u64(a[0], b[0]), a[0], b[0]),
+            vbslq_u64(vcgtq_u64(a[1], b[1]), a[1], b[1]),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: [uint64x2_t; 2], b: [uint64x2_t; 2]) -> [uint64x2_t; 2] {
-        unsafe { [vceqq_u64(a[0], b[0]), vceqq_u64(a[1], b[1])] }
+        [vceqq_u64(a[0], b[0]), vceqq_u64(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ne(self, a: [uint64x2_t; 2], b: [uint64x2_t; 2]) -> [uint64x2_t; 2] {
-        unsafe {
-            [
-                veorq_u64(vceqq_u64(a[0], b[0]), vdupq_n_u64(u64::MAX)),
-                veorq_u64(vceqq_u64(a[1], b[1]), vdupq_n_u64(u64::MAX)),
-            ]
-        }
+        [
+            veorq_u64(vceqq_u64(a[0], b[0]), vdupq_n_u64(u64::MAX)),
+            veorq_u64(vceqq_u64(a[1], b[1]), vdupq_n_u64(u64::MAX)),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_lt(self, a: [uint64x2_t; 2], b: [uint64x2_t; 2]) -> [uint64x2_t; 2] {
-        unsafe { [vcltq_u64(a[0], b[0]), vcltq_u64(a[1], b[1])] }
+        [vcltq_u64(a[0], b[0]), vcltq_u64(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_le(self, a: [uint64x2_t; 2], b: [uint64x2_t; 2]) -> [uint64x2_t; 2] {
-        unsafe { [vcleq_u64(a[0], b[0]), vcleq_u64(a[1], b[1])] }
+        [vcleq_u64(a[0], b[0]), vcleq_u64(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_gt(self, a: [uint64x2_t; 2], b: [uint64x2_t; 2]) -> [uint64x2_t; 2] {
-        unsafe { [vcgtq_u64(a[0], b[0]), vcgtq_u64(a[1], b[1])] }
+        [vcgtq_u64(a[0], b[0]), vcgtq_u64(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_ge(self, a: [uint64x2_t; 2], b: [uint64x2_t; 2]) -> [uint64x2_t; 2] {
-        unsafe { [vcgeq_u64(a[0], b[0]), vcgeq_u64(a[1], b[1])] }
+        [vcgeq_u64(a[0], b[0]), vcgeq_u64(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn blend(
         self,
         mask: [uint64x2_t; 2],
         if_true: [uint64x2_t; 2],
         if_false: [uint64x2_t; 2],
     ) -> [uint64x2_t; 2] {
-        unsafe {
-            [
-                vbslq_u64(mask[0], if_true[0], if_false[0]),
-                vbslq_u64(mask[1], if_true[1], if_false[1]),
-            ]
-        }
+        [
+            vbslq_u64(mask[0], if_true[0], if_false[0]),
+            vbslq_u64(mask[1], if_true[1], if_false[1]),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn reduce_add(self, a: [uint64x2_t; 2]) -> u64 {
         let mut sum = 0u64;
         // Iterate the array rather than indexing by range
         // (clippy::needless_range_loop).
         for v in a {
-            sum = sum.wrapping_add(unsafe { vaddvq_u64(v) });
+            sum = sum.wrapping_add(vaddvq_u64(v));
         }
         sum
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn not(self, a: [uint64x2_t; 2]) -> [uint64x2_t; 2] {
-        unsafe {
-            [
-                veorq_u64(a[0], vdupq_n_u64(u64::MAX)),
-                veorq_u64(a[1], vdupq_n_u64(u64::MAX)),
-            ]
-        }
+        [
+            veorq_u64(a[0], vdupq_n_u64(u64::MAX)),
+            veorq_u64(a[1], vdupq_n_u64(u64::MAX)),
+        ]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitand(self, a: [uint64x2_t; 2], b: [uint64x2_t; 2]) -> [uint64x2_t; 2] {
-        unsafe { [vandq_u64(a[0], b[0]), vandq_u64(a[1], b[1])] }
+        [vandq_u64(a[0], b[0]), vandq_u64(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitor(self, a: [uint64x2_t; 2], b: [uint64x2_t; 2]) -> [uint64x2_t; 2] {
-        unsafe { [vorrq_u64(a[0], b[0]), vorrq_u64(a[1], b[1])] }
+        [vorrq_u64(a[0], b[0]), vorrq_u64(a[1], b[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitxor(self, a: [uint64x2_t; 2], b: [uint64x2_t; 2]) -> [uint64x2_t; 2] {
-        unsafe { [veorq_u64(a[0], b[0]), veorq_u64(a[1], b[1])] }
+        [veorq_u64(a[0], b[0]), veorq_u64(a[1], b[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shl_const<const N: i32>(self, a: [uint64x2_t; 2]) -> [uint64x2_t; 2] {
-        unsafe { [vshlq_n_u64::<N>(a[0]), vshlq_n_u64::<N>(a[1])] }
+        [vshlq_n_u64::<N>(a[0]), vshlq_n_u64::<N>(a[1])]
     }
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn shr_logical_const<const N: i32>(self, a: [uint64x2_t; 2]) -> [uint64x2_t; 2] {
         const { assert!(N >= 0 && N <= 63) };
-        unsafe {
-            [
-                vshlq_u64(a[0], vdupq_n_s64((-N) as i64)),
-                vshlq_u64(a[1], vdupq_n_s64((-N) as i64)),
-            ]
-        }
+        [
+            vshlq_u64(a[0], vdupq_n_s64((-N) as i64)),
+            vshlq_u64(a[1], vdupq_n_s64((-N) as i64)),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn all_true(self, a: [uint64x2_t; 2]) -> bool {
-        unsafe {
-            vgetq_lane_u64::<0>(a[0]) != 0
-                && vgetq_lane_u64::<1>(a[0]) != 0
-                && vgetq_lane_u64::<0>(a[1]) != 0
-                && vgetq_lane_u64::<1>(a[1]) != 0
-        }
+        vgetq_lane_u64::<0>(a[0]) != 0
+            && vgetq_lane_u64::<1>(a[0]) != 0
+            && vgetq_lane_u64::<0>(a[1]) != 0
+            && vgetq_lane_u64::<1>(a[1]) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn any_true(self, a: [uint64x2_t; 2]) -> bool {
-        unsafe {
-            vgetq_lane_u64::<0>(a[0]) != 0
-                || vgetq_lane_u64::<1>(a[0]) != 0
-                || vgetq_lane_u64::<0>(a[1]) != 0
-                || vgetq_lane_u64::<1>(a[1]) != 0
-        }
+        vgetq_lane_u64::<0>(a[0]) != 0
+            || vgetq_lane_u64::<1>(a[0]) != 0
+            || vgetq_lane_u64::<0>(a[1]) != 0
+            || vgetq_lane_u64::<1>(a[1]) != 0
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: [uint64x2_t; 2]) -> u32 {
         // Delegate to NeonToken native bitmask per sub-vector, combine.
         // Enumerate the array rather than indexing by range
         // (clippy::needless_range_loop).
         let mut result = 0u32;
         for (i, v) in a.into_iter().enumerate() {
-            result |= <archmage::NeonToken as U64x2Backend>::bitmask(self, v) << (i * 2);
+            result |= <archmage::NeonToken as U64x2Backend>::bitmask(_self, v) << (i * 2);
         }
         result
     }
@@ -4544,172 +4227,162 @@ impl U64x4Backend for archmage::NeonToken {
 
 #[cfg(target_arch = "aarch64")]
 impl F32x4Convert for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_f32_to_i32(self, a: float32x4_t) -> int32x4_t {
-        unsafe { vreinterpretq_s32_f32(a) }
+        vreinterpretq_s32_f32(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_i32_to_f32(self, a: int32x4_t) -> float32x4_t {
-        unsafe { vreinterpretq_f32_s32(a) }
+        vreinterpretq_f32_s32(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn convert_f32_to_i32(self, a: float32x4_t) -> int32x4_t {
-        unsafe { vcvtq_s32_f32(a) }
+        vcvtq_s32_f32(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn convert_f32_to_i32_round(self, a: float32x4_t) -> int32x4_t {
-        unsafe { vcvtnq_s32_f32(a) }
+        vcvtnq_s32_f32(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn convert_i32_to_f32(self, a: int32x4_t) -> float32x4_t {
-        unsafe { vcvtq_f32_s32(a) }
+        vcvtq_f32_s32(a)
     }
 }
 
 #[cfg(target_arch = "aarch64")]
 impl F32x8Convert for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_f32_to_i32(self, a: [float32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe { [vreinterpretq_s32_f32(a[0]), vreinterpretq_s32_f32(a[1])] }
+        [vreinterpretq_s32_f32(a[0]), vreinterpretq_s32_f32(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_i32_to_f32(self, a: [int32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe { [vreinterpretq_f32_s32(a[0]), vreinterpretq_f32_s32(a[1])] }
+        [vreinterpretq_f32_s32(a[0]), vreinterpretq_f32_s32(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn convert_f32_to_i32(self, a: [float32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe { [vcvtq_s32_f32(a[0]), vcvtq_s32_f32(a[1])] }
+        [vcvtq_s32_f32(a[0]), vcvtq_s32_f32(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn convert_f32_to_i32_round(self, a: [float32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe { [vcvtnq_s32_f32(a[0]), vcvtnq_s32_f32(a[1])] }
+        [vcvtnq_s32_f32(a[0]), vcvtnq_s32_f32(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn convert_i32_to_f32(self, a: [int32x4_t; 2]) -> [float32x4_t; 2] {
-        unsafe { [vcvtq_f32_s32(a[0]), vcvtq_f32_s32(a[1])] }
+        [vcvtq_f32_s32(a[0]), vcvtq_f32_s32(a[1])]
     }
 }
 
 #[cfg(all(target_arch = "aarch64", feature = "w512"))]
 impl F32x16Convert for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_f32_to_i32(self, a: [float32x4_t; 4]) -> [int32x4_t; 4] {
-        unsafe {
-            [
-                vreinterpretq_s32_f32(a[0]),
-                vreinterpretq_s32_f32(a[1]),
-                vreinterpretq_s32_f32(a[2]),
-                vreinterpretq_s32_f32(a[3]),
-            ]
-        }
+        [
+            vreinterpretq_s32_f32(a[0]),
+            vreinterpretq_s32_f32(a[1]),
+            vreinterpretq_s32_f32(a[2]),
+            vreinterpretq_s32_f32(a[3]),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_i32_to_f32(self, a: [int32x4_t; 4]) -> [float32x4_t; 4] {
-        unsafe {
-            [
-                vreinterpretq_f32_s32(a[0]),
-                vreinterpretq_f32_s32(a[1]),
-                vreinterpretq_f32_s32(a[2]),
-                vreinterpretq_f32_s32(a[3]),
-            ]
-        }
+        [
+            vreinterpretq_f32_s32(a[0]),
+            vreinterpretq_f32_s32(a[1]),
+            vreinterpretq_f32_s32(a[2]),
+            vreinterpretq_f32_s32(a[3]),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn convert_f32_to_i32(self, a: [float32x4_t; 4]) -> [int32x4_t; 4] {
-        unsafe {
-            [
-                vcvtq_s32_f32(a[0]),
-                vcvtq_s32_f32(a[1]),
-                vcvtq_s32_f32(a[2]),
-                vcvtq_s32_f32(a[3]),
-            ]
-        }
+        [
+            vcvtq_s32_f32(a[0]),
+            vcvtq_s32_f32(a[1]),
+            vcvtq_s32_f32(a[2]),
+            vcvtq_s32_f32(a[3]),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn convert_f32_to_i32_round(self, a: [float32x4_t; 4]) -> [int32x4_t; 4] {
-        unsafe {
-            [
-                vcvtnq_s32_f32(a[0]),
-                vcvtnq_s32_f32(a[1]),
-                vcvtnq_s32_f32(a[2]),
-                vcvtnq_s32_f32(a[3]),
-            ]
-        }
+        [
+            vcvtnq_s32_f32(a[0]),
+            vcvtnq_s32_f32(a[1]),
+            vcvtnq_s32_f32(a[2]),
+            vcvtnq_s32_f32(a[3]),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn convert_i32_to_f32(self, a: [int32x4_t; 4]) -> [float32x4_t; 4] {
-        unsafe {
-            [
-                vcvtq_f32_s32(a[0]),
-                vcvtq_f32_s32(a[1]),
-                vcvtq_f32_s32(a[2]),
-                vcvtq_f32_s32(a[3]),
-            ]
-        }
+        [
+            vcvtq_f32_s32(a[0]),
+            vcvtq_f32_s32(a[1]),
+            vcvtq_f32_s32(a[2]),
+            vcvtq_f32_s32(a[3]),
+        ]
     }
 }
 
 #[cfg(target_arch = "aarch64")]
 impl U32x4Bitcast for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_u32_to_i32(self, a: uint32x4_t) -> int32x4_t {
-        unsafe { vreinterpretq_s32_u32(a) }
+        vreinterpretq_s32_u32(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_i32_to_u32(self, a: int32x4_t) -> uint32x4_t {
-        unsafe { vreinterpretq_u32_s32(a) }
+        vreinterpretq_u32_s32(a)
     }
 }
 
 #[cfg(target_arch = "aarch64")]
 impl U32x8Bitcast for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_u32_to_i32(self, a: [uint32x4_t; 2]) -> [int32x4_t; 2] {
-        unsafe { [vreinterpretq_s32_u32(a[0]), vreinterpretq_s32_u32(a[1])] }
+        [vreinterpretq_s32_u32(a[0]), vreinterpretq_s32_u32(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_i32_to_u32(self, a: [int32x4_t; 2]) -> [uint32x4_t; 2] {
-        unsafe { [vreinterpretq_u32_s32(a[0]), vreinterpretq_u32_s32(a[1])] }
+        [vreinterpretq_u32_s32(a[0]), vreinterpretq_u32_s32(a[1])]
     }
 }
 
 #[cfg(target_arch = "aarch64")]
 impl I64x2Bitcast for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_i64_to_f64(self, a: int64x2_t) -> float64x2_t {
-        unsafe { vreinterpretq_f64_s64(a) }
+        vreinterpretq_f64_s64(a)
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_f64_to_i64(self, a: float64x2_t) -> int64x2_t {
-        unsafe { vreinterpretq_s64_f64(a) }
+        vreinterpretq_s64_f64(a)
     }
 }
 
 #[cfg(target_arch = "aarch64")]
 impl I64x4Bitcast for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_i64_to_f64(self, a: [int64x2_t; 2]) -> [float64x2_t; 2] {
-        unsafe { [vreinterpretq_f64_s64(a[0]), vreinterpretq_f64_s64(a[1])] }
+        [vreinterpretq_f64_s64(a[0]), vreinterpretq_f64_s64(a[1])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_f64_to_i64(self, a: [float64x2_t; 2]) -> [int64x2_t; 2] {
-        unsafe { [vreinterpretq_s64_f64(a[0]), vreinterpretq_s64_f64(a[1])] }
+        [vreinterpretq_s64_f64(a[0]), vreinterpretq_s64_f64(a[1])]
     }
 }
 
@@ -4787,345 +4460,313 @@ impl U64x4Bitcast for archmage::NeonToken {
 
 #[cfg(target_arch = "aarch64")]
 impl U8x16Widen for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_u8_to_u16(self, a: uint8x16_t) -> uint16x8_t {
-        unsafe { vmovl_u8(vget_low_u8(a)) }
+        vmovl_u8(vget_low_u8(a))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_high_u8_to_u16(self, a: uint8x16_t) -> uint16x8_t {
-        unsafe { vmovl_high_u8(a) }
+        vmovl_high_u8(a)
     }
 }
 
 #[cfg(target_arch = "aarch64")]
 impl U16x8Widen for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_u16_to_u32(self, a: uint16x8_t) -> uint32x4_t {
-        unsafe { vmovl_u16(vget_low_u16(a)) }
+        vmovl_u16(vget_low_u16(a))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_high_u16_to_u32(self, a: uint16x8_t) -> uint32x4_t {
-        unsafe { vmovl_high_u16(a) }
+        vmovl_high_u16(a)
     }
 }
 
 #[cfg(target_arch = "aarch64")]
 impl I8x16Widen for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_i8_to_i16(self, a: int8x16_t) -> int16x8_t {
-        unsafe { vmovl_s8(vget_low_s8(a)) }
+        vmovl_s8(vget_low_s8(a))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_high_i8_to_i16(self, a: int8x16_t) -> int16x8_t {
-        unsafe { vmovl_high_s8(a) }
+        vmovl_high_s8(a)
     }
 }
 
 #[cfg(target_arch = "aarch64")]
 impl I16x8Widen for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_i16_to_i32(self, a: int16x8_t) -> int32x4_t {
-        unsafe { vmovl_s16(vget_low_s16(a)) }
+        vmovl_s16(vget_low_s16(a))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_high_i16_to_i32(self, a: int16x8_t) -> int32x4_t {
-        unsafe { vmovl_high_s16(a) }
+        vmovl_high_s16(a)
     }
 }
 
 #[cfg(target_arch = "aarch64")]
 impl U8x32Widen for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_u8_to_u16(self, a: [uint8x16_t; 2]) -> [uint16x8_t; 2] {
-        unsafe { [vmovl_u8(vget_low_u8(a[0])), vmovl_high_u8(a[0])] }
+        [vmovl_u8(vget_low_u8(a[0])), vmovl_high_u8(a[0])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_high_u8_to_u16(self, a: [uint8x16_t; 2]) -> [uint16x8_t; 2] {
-        unsafe { [vmovl_u8(vget_low_u8(a[1])), vmovl_high_u8(a[1])] }
+        [vmovl_u8(vget_low_u8(a[1])), vmovl_high_u8(a[1])]
     }
 }
 
 #[cfg(target_arch = "aarch64")]
 impl U16x16Widen for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_u16_to_u32(self, a: [uint16x8_t; 2]) -> [uint32x4_t; 2] {
-        unsafe { [vmovl_u16(vget_low_u16(a[0])), vmovl_high_u16(a[0])] }
+        [vmovl_u16(vget_low_u16(a[0])), vmovl_high_u16(a[0])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_high_u16_to_u32(self, a: [uint16x8_t; 2]) -> [uint32x4_t; 2] {
-        unsafe { [vmovl_u16(vget_low_u16(a[1])), vmovl_high_u16(a[1])] }
+        [vmovl_u16(vget_low_u16(a[1])), vmovl_high_u16(a[1])]
     }
 }
 
 #[cfg(target_arch = "aarch64")]
 impl I8x32Widen for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_i8_to_i16(self, a: [int8x16_t; 2]) -> [int16x8_t; 2] {
-        unsafe { [vmovl_s8(vget_low_s8(a[0])), vmovl_high_s8(a[0])] }
+        [vmovl_s8(vget_low_s8(a[0])), vmovl_high_s8(a[0])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_high_i8_to_i16(self, a: [int8x16_t; 2]) -> [int16x8_t; 2] {
-        unsafe { [vmovl_s8(vget_low_s8(a[1])), vmovl_high_s8(a[1])] }
+        [vmovl_s8(vget_low_s8(a[1])), vmovl_high_s8(a[1])]
     }
 }
 
 #[cfg(target_arch = "aarch64")]
 impl I16x16Widen for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_i16_to_i32(self, a: [int16x8_t; 2]) -> [int32x4_t; 2] {
-        unsafe { [vmovl_s16(vget_low_s16(a[0])), vmovl_high_s16(a[0])] }
+        [vmovl_s16(vget_low_s16(a[0])), vmovl_high_s16(a[0])]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_high_i16_to_i32(self, a: [int16x8_t; 2]) -> [int32x4_t; 2] {
-        unsafe { [vmovl_s16(vget_low_s16(a[1])), vmovl_high_s16(a[1])] }
+        [vmovl_s16(vget_low_s16(a[1])), vmovl_high_s16(a[1])]
     }
 }
 
 #[cfg(target_arch = "aarch64")]
 impl I16x8Narrow for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn narrow_saturating_i16_to_i8(self, a: int16x8_t, b: int16x8_t) -> int8x16_t {
-        unsafe { vcombine_s8(vqmovn_s16(a), vqmovn_s16(b)) }
+        vcombine_s8(vqmovn_s16(a), vqmovn_s16(b))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn narrow_saturating_i16_to_u8(self, a: int16x8_t, b: int16x8_t) -> uint8x16_t {
-        unsafe { vcombine_u8(vqmovun_s16(a), vqmovun_s16(b)) }
+        vcombine_u8(vqmovun_s16(a), vqmovun_s16(b))
     }
 }
 
 #[cfg(target_arch = "aarch64")]
 impl I32x4Narrow for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn narrow_saturating_i32_to_i16(self, a: int32x4_t, b: int32x4_t) -> int16x8_t {
-        unsafe { vcombine_s16(vqmovn_s32(a), vqmovn_s32(b)) }
+        vcombine_s16(vqmovn_s32(a), vqmovn_s32(b))
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn narrow_saturating_i32_to_u16(self, a: int32x4_t, b: int32x4_t) -> uint16x8_t {
-        unsafe { vcombine_u16(vqmovun_s32(a), vqmovun_s32(b)) }
+        vcombine_u16(vqmovun_s32(a), vqmovun_s32(b))
     }
 }
 
 #[cfg(target_arch = "aarch64")]
 impl I16x16Narrow for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn narrow_saturating_i16_to_i8(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int8x16_t; 2] {
-        unsafe {
-            [
-                vcombine_s8(vqmovn_s16(a[0]), vqmovn_s16(a[1])),
-                vcombine_s8(vqmovn_s16(b[0]), vqmovn_s16(b[1])),
-            ]
-        }
+        [
+            vcombine_s8(vqmovn_s16(a[0]), vqmovn_s16(a[1])),
+            vcombine_s8(vqmovn_s16(b[0]), vqmovn_s16(b[1])),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn narrow_saturating_i16_to_u8(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [uint8x16_t; 2] {
-        unsafe {
-            [
-                vcombine_u8(vqmovun_s16(a[0]), vqmovun_s16(a[1])),
-                vcombine_u8(vqmovun_s16(b[0]), vqmovun_s16(b[1])),
-            ]
-        }
+        [
+            vcombine_u8(vqmovun_s16(a[0]), vqmovun_s16(a[1])),
+            vcombine_u8(vqmovun_s16(b[0]), vqmovun_s16(b[1])),
+        ]
     }
 }
 
 #[cfg(target_arch = "aarch64")]
 impl I32x8Narrow for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn narrow_saturating_i32_to_i16(self, a: [int32x4_t; 2], b: [int32x4_t; 2]) -> [int16x8_t; 2] {
-        unsafe {
-            [
-                vcombine_s16(vqmovn_s32(a[0]), vqmovn_s32(a[1])),
-                vcombine_s16(vqmovn_s32(b[0]), vqmovn_s32(b[1])),
-            ]
-        }
+        [
+            vcombine_s16(vqmovn_s32(a[0]), vqmovn_s32(a[1])),
+            vcombine_s16(vqmovn_s32(b[0]), vqmovn_s32(b[1])),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn narrow_saturating_i32_to_u16(self, a: [int32x4_t; 2], b: [int32x4_t; 2]) -> [uint16x8_t; 2] {
-        unsafe {
-            [
-                vcombine_u16(vqmovun_s32(a[0]), vqmovun_s32(a[1])),
-                vcombine_u16(vqmovun_s32(b[0]), vqmovun_s32(b[1])),
-            ]
-        }
+        [
+            vcombine_u16(vqmovun_s32(a[0]), vqmovun_s32(a[1])),
+            vcombine_u16(vqmovun_s32(b[0]), vqmovun_s32(b[1])),
+        ]
     }
 }
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
 impl U8x64Widen for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_u8_to_u16(self, a: [uint8x16_t; 4]) -> [uint16x8_t; 4] {
-        unsafe {
-            [
-                vmovl_u8(vget_low_u8(a[0])),
-                vmovl_high_u8(a[0]),
-                vmovl_u8(vget_low_u8(a[1])),
-                vmovl_high_u8(a[1]),
-            ]
-        }
+        [
+            vmovl_u8(vget_low_u8(a[0])),
+            vmovl_high_u8(a[0]),
+            vmovl_u8(vget_low_u8(a[1])),
+            vmovl_high_u8(a[1]),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_high_u8_to_u16(self, a: [uint8x16_t; 4]) -> [uint16x8_t; 4] {
-        unsafe {
-            [
-                vmovl_u8(vget_low_u8(a[2])),
-                vmovl_high_u8(a[2]),
-                vmovl_u8(vget_low_u8(a[3])),
-                vmovl_high_u8(a[3]),
-            ]
-        }
+        [
+            vmovl_u8(vget_low_u8(a[2])),
+            vmovl_high_u8(a[2]),
+            vmovl_u8(vget_low_u8(a[3])),
+            vmovl_high_u8(a[3]),
+        ]
     }
 }
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
 impl U16x32Widen for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_u16_to_u32(self, a: [uint16x8_t; 4]) -> [uint32x4_t; 4] {
-        unsafe {
-            [
-                vmovl_u16(vget_low_u16(a[0])),
-                vmovl_high_u16(a[0]),
-                vmovl_u16(vget_low_u16(a[1])),
-                vmovl_high_u16(a[1]),
-            ]
-        }
+        [
+            vmovl_u16(vget_low_u16(a[0])),
+            vmovl_high_u16(a[0]),
+            vmovl_u16(vget_low_u16(a[1])),
+            vmovl_high_u16(a[1]),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_high_u16_to_u32(self, a: [uint16x8_t; 4]) -> [uint32x4_t; 4] {
-        unsafe {
-            [
-                vmovl_u16(vget_low_u16(a[2])),
-                vmovl_high_u16(a[2]),
-                vmovl_u16(vget_low_u16(a[3])),
-                vmovl_high_u16(a[3]),
-            ]
-        }
+        [
+            vmovl_u16(vget_low_u16(a[2])),
+            vmovl_high_u16(a[2]),
+            vmovl_u16(vget_low_u16(a[3])),
+            vmovl_high_u16(a[3]),
+        ]
     }
 }
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
 impl I8x64Widen for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_i8_to_i16(self, a: [int8x16_t; 4]) -> [int16x8_t; 4] {
-        unsafe {
-            [
-                vmovl_s8(vget_low_s8(a[0])),
-                vmovl_high_s8(a[0]),
-                vmovl_s8(vget_low_s8(a[1])),
-                vmovl_high_s8(a[1]),
-            ]
-        }
+        [
+            vmovl_s8(vget_low_s8(a[0])),
+            vmovl_high_s8(a[0]),
+            vmovl_s8(vget_low_s8(a[1])),
+            vmovl_high_s8(a[1]),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_high_i8_to_i16(self, a: [int8x16_t; 4]) -> [int16x8_t; 4] {
-        unsafe {
-            [
-                vmovl_s8(vget_low_s8(a[2])),
-                vmovl_high_s8(a[2]),
-                vmovl_s8(vget_low_s8(a[3])),
-                vmovl_high_s8(a[3]),
-            ]
-        }
+        [
+            vmovl_s8(vget_low_s8(a[2])),
+            vmovl_high_s8(a[2]),
+            vmovl_s8(vget_low_s8(a[3])),
+            vmovl_high_s8(a[3]),
+        ]
     }
 }
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
 impl I16x32Widen for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_i16_to_i32(self, a: [int16x8_t; 4]) -> [int32x4_t; 4] {
-        unsafe {
-            [
-                vmovl_s16(vget_low_s16(a[0])),
-                vmovl_high_s16(a[0]),
-                vmovl_s16(vget_low_s16(a[1])),
-                vmovl_high_s16(a[1]),
-            ]
-        }
+        [
+            vmovl_s16(vget_low_s16(a[0])),
+            vmovl_high_s16(a[0]),
+            vmovl_s16(vget_low_s16(a[1])),
+            vmovl_high_s16(a[1]),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_high_i16_to_i32(self, a: [int16x8_t; 4]) -> [int32x4_t; 4] {
-        unsafe {
-            [
-                vmovl_s16(vget_low_s16(a[2])),
-                vmovl_high_s16(a[2]),
-                vmovl_s16(vget_low_s16(a[3])),
-                vmovl_high_s16(a[3]),
-            ]
-        }
+        [
+            vmovl_s16(vget_low_s16(a[2])),
+            vmovl_high_s16(a[2]),
+            vmovl_s16(vget_low_s16(a[3])),
+            vmovl_high_s16(a[3]),
+        ]
     }
 }
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
 impl I16x32Narrow for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn narrow_saturating_i16_to_i8(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int8x16_t; 4] {
-        unsafe {
-            [
-                vcombine_s8(vqmovn_s16(a[0]), vqmovn_s16(a[1])),
-                vcombine_s8(vqmovn_s16(a[2]), vqmovn_s16(a[3])),
-                vcombine_s8(vqmovn_s16(b[0]), vqmovn_s16(b[1])),
-                vcombine_s8(vqmovn_s16(b[2]), vqmovn_s16(b[3])),
-            ]
-        }
+        [
+            vcombine_s8(vqmovn_s16(a[0]), vqmovn_s16(a[1])),
+            vcombine_s8(vqmovn_s16(a[2]), vqmovn_s16(a[3])),
+            vcombine_s8(vqmovn_s16(b[0]), vqmovn_s16(b[1])),
+            vcombine_s8(vqmovn_s16(b[2]), vqmovn_s16(b[3])),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn narrow_saturating_i16_to_u8(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [uint8x16_t; 4] {
-        unsafe {
-            [
-                vcombine_u8(vqmovun_s16(a[0]), vqmovun_s16(a[1])),
-                vcombine_u8(vqmovun_s16(a[2]), vqmovun_s16(a[3])),
-                vcombine_u8(vqmovun_s16(b[0]), vqmovun_s16(b[1])),
-                vcombine_u8(vqmovun_s16(b[2]), vqmovun_s16(b[3])),
-            ]
-        }
+        [
+            vcombine_u8(vqmovun_s16(a[0]), vqmovun_s16(a[1])),
+            vcombine_u8(vqmovun_s16(a[2]), vqmovun_s16(a[3])),
+            vcombine_u8(vqmovun_s16(b[0]), vqmovun_s16(b[1])),
+            vcombine_u8(vqmovun_s16(b[2]), vqmovun_s16(b[3])),
+        ]
     }
 }
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
 impl I32x16Narrow for archmage::NeonToken {
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn narrow_saturating_i32_to_i16(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int16x8_t; 4] {
-        unsafe {
-            [
-                vcombine_s16(vqmovn_s32(a[0]), vqmovn_s32(a[1])),
-                vcombine_s16(vqmovn_s32(a[2]), vqmovn_s32(a[3])),
-                vcombine_s16(vqmovn_s32(b[0]), vqmovn_s32(b[1])),
-                vcombine_s16(vqmovn_s32(b[2]), vqmovn_s32(b[3])),
-            ]
-        }
+        [
+            vcombine_s16(vqmovn_s32(a[0]), vqmovn_s32(a[1])),
+            vcombine_s16(vqmovn_s32(a[2]), vqmovn_s32(a[3])),
+            vcombine_s16(vqmovn_s32(b[0]), vqmovn_s32(b[1])),
+            vcombine_s16(vqmovn_s32(b[2]), vqmovn_s32(b[3])),
+        ]
     }
 
-    #[inline(always)]
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn narrow_saturating_i32_to_u16(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [uint16x8_t; 4] {
-        unsafe {
-            [
-                vcombine_u16(vqmovun_s32(a[0]), vqmovun_s32(a[1])),
-                vcombine_u16(vqmovun_s32(a[2]), vqmovun_s32(a[3])),
-                vcombine_u16(vqmovun_s32(b[0]), vqmovun_s32(b[1])),
-                vcombine_u16(vqmovun_s32(b[2]), vqmovun_s32(b[3])),
-            ]
-        }
+        [
+            vcombine_u16(vqmovun_s32(a[0]), vqmovun_s32(a[1])),
+            vcombine_u16(vqmovun_s32(a[2]), vqmovun_s32(a[3])),
+            vcombine_u16(vqmovun_s32(b[0]), vqmovun_s32(b[1])),
+            vcombine_u16(vqmovun_s32(b[2]), vqmovun_s32(b[3])),
+        ]
     }
 }
 #[cfg(feature = "w512")]

@@ -23,7 +23,11 @@ use crate::token_discovery::*;
 fn gen_token_assertion(
     token_type_name: &Option<String>,
     token_type: &Option<Type>,
+    suppress_const_test: bool,
 ) -> proc_macro2::TokenStream {
+    if suppress_const_test {
+        return quote! {};
+    }
     if let (Some(name), Some(ty)) = (token_type_name, token_type)
         && let Some(expected_tag) = crate::generated::expected_tier_tag(name)
     {
@@ -35,6 +39,9 @@ fn gen_token_assertion(
 
 #[derive(Default)]
 pub(crate) struct ArcaneArgs {
+    /// Trusted generators may omit the accidental token-name mismatch check.
+    /// Intrinsic feature checking remains enabled.
+    suppress_const_test: bool,
     /// Use `#[inline(always)]` instead of `#[inline]` for the inner function.
     /// Requires nightly Rust with `#![feature(target_feature_inline_always)]`.
     inline_always: bool,
@@ -67,6 +74,7 @@ impl Parse for ArcaneArgs {
         while !input.is_empty() {
             let ident: Ident = input.parse()?;
             match ident.to_string().as_str() {
+                "suppress_const_test" => args.suppress_const_test = true,
                 "inline_always" => args.inline_always = true,
                 "stub" => {
                     return Err(syn::Error::new(
@@ -164,7 +172,18 @@ pub(crate) fn arcane_impl(
         token_type_name,
         magetypes_namespace,
         token_type,
-    } = match find_token_param(&input_fn.sig) {
+    } = match find_token_param(&input_fn.sig).or_else(|| {
+        // A concrete token receiver can itself prove the required features.
+        // Reuse normal discovery so token validation and feature lookup agree.
+        let self_ty = args.self_type.as_ref()?;
+        if !has_self_receiver {
+            return None;
+        }
+        let mut receiver_sig = input_fn.sig.clone();
+        receiver_sig.inputs.clear();
+        receiver_sig.inputs.push(syn::parse_quote!(_self: #self_ty));
+        find_token_param(&receiver_sig)
+    }) {
         Some(result) => result,
         None => {
             // Check for specific misuse: featureless traits like SimdToken
@@ -572,7 +591,8 @@ pub(crate) fn arcane_impl_sibling(
         // Wrapper function: fn original_name(...) { unsafe { sibling_call } }
         // The unsafe block is needed because the sibling has #[target_feature] and
         // the wrapper doesn't — calling across this boundary requires unsafe.
-        let token_assertion = gen_token_assertion(&token_type_name, &token_type);
+        let token_assertion =
+            gen_token_assertion(&token_type_name, &token_type, args.suppress_const_test);
         let wrapper_fn = quote! {
             #cfg_guard
             #(#attrs)*
@@ -812,7 +832,8 @@ pub(crate) fn arcane_impl_nested(
             quote! {}
         };
 
-        let token_assertion = gen_token_assertion(&token_type_name, &token_type);
+        let token_assertion =
+            gen_token_assertion(&token_type_name, &token_type, args.suppress_const_test);
         quote! {
             // Real implementation for the correct architecture
             #cfg_guard
@@ -835,7 +856,8 @@ pub(crate) fn arcane_impl_nested(
         }
     } else {
         // No specific arch (trait bounds or generic) - generate without cfg guards
-        let token_assertion = gen_token_assertion(&token_type_name, &token_type);
+        let token_assertion =
+            gen_token_assertion(&token_type_name, &token_type, args.suppress_const_test);
         quote! {
             #(#attrs)*
             #[inline(always)]
@@ -864,13 +886,14 @@ mod assertion_tests {
     #[test]
     fn concrete_checks_are_a_single_shared_lookup() {
         let ty = Some(parse_quote!(renamed::X64V3Token));
-        let check = gen_token_assertion(&Some("X64V3Token".into()), &ty);
+        let check = gen_token_assertion(&Some("X64V3Token".into()), &ty, false);
         assert_eq!(
             check.to_string(),
             quote!(let _: () = <renamed::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;).to_string()
         );
         // No fresh const initializer, comparison, indexing, or branch per call.
-        assert!(gen_token_assertion(&None, &None).is_empty());
+        assert!(gen_token_assertion(&None, &None, false).is_empty());
+        assert!(gen_token_assertion(&Some("X64V3Token".into()), &ty, true).is_empty());
     }
 
     #[test]

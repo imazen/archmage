@@ -204,6 +204,10 @@ use token_discovery::*;
 /// This rejects accidental token-name aliases without reevaluating a tag comparison
 /// in every expansion. The matching archmage release pins this macro crate exactly.
 /// Public constants do not prevent deliberate forgery.
+///
+/// `#[arcane(suppress_const_test)]` omits this accidental-misuse check for trusted
+/// generators. The caller must ensure the actual token proves the tier selected
+/// by its name. Intrinsic target-feature checking remains enabled.
 #[proc_macro_attribute]
 pub fn arcane(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as ArcaneArgs);

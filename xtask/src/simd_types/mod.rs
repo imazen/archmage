@@ -20,6 +20,7 @@ pub mod backend_gen_i64;
 pub mod backend_gen_remaining_int;
 pub mod backend_gen_w512;
 pub mod backend_gen_widen_narrow;
+mod backend_syntax;
 pub mod generic_gen;
 pub mod parity_tests;
 pub mod scalar_parity_gen;
