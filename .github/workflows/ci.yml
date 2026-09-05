@@ -50,6 +50,8 @@ jobs:
         run: python3 xtask/codegen.py "$BASE_SHA" "$HEAD_SHA"
       - name: Verify storage, pointer, and bounds-check elimination
         run: python3 xtask/codegen.py --storage-access
+      - name: Compare integer primitives to handwritten intrinsic kernels
+        run: python3 xtask/codegen.py --integer-ops
 
   # ==========================================================================
   # Primary: Native x64 testing (stable only - MSRV tested separately)

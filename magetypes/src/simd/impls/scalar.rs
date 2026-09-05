@@ -9303,6 +9303,74 @@ impl I32x8Narrow for archmage::ScalarToken {
         })
     }
 }
+impl I16x8Pairwise for archmage::ScalarToken {
+    #[inline(always)]
+    fn madd_adjacent(self, a: [i16; 8], b: [i16; 8]) -> [i32; 4] {
+        core::array::from_fn(|k| {
+            (a[2 * k] as i32 * b[2 * k] as i32)
+                .wrapping_add(a[2 * k + 1] as i32 * b[2 * k + 1] as i32)
+        })
+    }
+}
+impl I16x8AbsDiff for archmage::ScalarToken {
+    #[inline(always)]
+    fn abs_diff(self, a: [i16; 8], b: [i16; 8]) -> [u16; 8] {
+        core::array::from_fn(|k| a[k].abs_diff(b[k]))
+    }
+}
+impl U8x16AbsDiff for archmage::ScalarToken {
+    #[inline(always)]
+    fn abs_diff(self, a: [u8; 16], b: [u8; 16]) -> [u8; 16] {
+        core::array::from_fn(|k| a[k].abs_diff(b[k]))
+    }
+
+    #[inline(always)]
+    fn reduce_add_u32(self, a: [u8; 16]) -> u32 {
+        a.into_iter().map(u32::from).sum()
+    }
+
+    #[inline(always)]
+    fn sum_abs_diff(self, a: [u8; 16], b: [u8; 16]) -> u32 {
+        a.into_iter()
+            .zip(b)
+            .map(|(a, b)| u32::from(a.abs_diff(b)))
+            .sum()
+    }
+}
+impl I16x16Pairwise for archmage::ScalarToken {
+    #[inline(always)]
+    fn madd_adjacent(self, a: [i16; 16], b: [i16; 16]) -> [i32; 8] {
+        core::array::from_fn(|k| {
+            (a[2 * k] as i32 * b[2 * k] as i32)
+                .wrapping_add(a[2 * k + 1] as i32 * b[2 * k + 1] as i32)
+        })
+    }
+}
+impl I16x16AbsDiff for archmage::ScalarToken {
+    #[inline(always)]
+    fn abs_diff(self, a: [i16; 16], b: [i16; 16]) -> [u16; 16] {
+        core::array::from_fn(|k| a[k].abs_diff(b[k]))
+    }
+}
+impl U8x32AbsDiff for archmage::ScalarToken {
+    #[inline(always)]
+    fn abs_diff(self, a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
+        core::array::from_fn(|k| a[k].abs_diff(b[k]))
+    }
+
+    #[inline(always)]
+    fn reduce_add_u32(self, a: [u8; 32]) -> u32 {
+        a.into_iter().map(u32::from).sum()
+    }
+
+    #[inline(always)]
+    fn sum_abs_diff(self, a: [u8; 32], b: [u8; 32]) -> u32 {
+        a.into_iter()
+            .zip(b)
+            .map(|(a, b)| u32::from(a.abs_diff(b)))
+            .sum()
+    }
+}
 
 #[cfg(feature = "w512")]
 impl U8x64Widen for archmage::ScalarToken {
@@ -9415,6 +9483,43 @@ impl I32x16Narrow for archmage::ScalarToken {
             let v: i32 = if i < 16 { a[i] } else { b[i - 16] };
             v.clamp(0, u16::MAX as i32) as u16
         })
+    }
+}
+#[cfg(feature = "w512")]
+impl I16x32Pairwise for archmage::ScalarToken {
+    #[inline(always)]
+    fn madd_adjacent(self, a: [i16; 32], b: [i16; 32]) -> [i32; 16] {
+        core::array::from_fn(|k| {
+            (a[2 * k] as i32 * b[2 * k] as i32)
+                .wrapping_add(a[2 * k + 1] as i32 * b[2 * k + 1] as i32)
+        })
+    }
+}
+#[cfg(feature = "w512")]
+impl I16x32AbsDiff for archmage::ScalarToken {
+    #[inline(always)]
+    fn abs_diff(self, a: [i16; 32], b: [i16; 32]) -> [u16; 32] {
+        core::array::from_fn(|k| a[k].abs_diff(b[k]))
+    }
+}
+#[cfg(feature = "w512")]
+impl U8x64AbsDiff for archmage::ScalarToken {
+    #[inline(always)]
+    fn abs_diff(self, a: [u8; 64], b: [u8; 64]) -> [u8; 64] {
+        core::array::from_fn(|k| a[k].abs_diff(b[k]))
+    }
+
+    #[inline(always)]
+    fn reduce_add_u32(self, a: [u8; 64]) -> u32 {
+        a.into_iter().map(u32::from).sum()
+    }
+
+    #[inline(always)]
+    fn sum_abs_diff(self, a: [u8; 64], b: [u8; 64]) -> u32 {
+        a.into_iter()
+            .zip(b)
+            .map(|(a, b)| u32::from(a.abs_diff(b)))
+            .sum()
     }
 }
 #[cfg(feature = "w512")]

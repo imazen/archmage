@@ -4497,6 +4497,77 @@ impl I32x8Narrow for archmage::NeonToken {
         ]
     }
 }
+impl I16x8Pairwise for archmage::NeonToken {
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn madd_adjacent(self, a: int16x8_t, b: int16x8_t) -> int32x4_t {
+        vpaddq_s32(
+            vmull_s16(vget_low_s16(a), vget_low_s16(b)),
+            vmull_high_s16(a, b),
+        )
+    }
+}
+impl I16x8AbsDiff for archmage::NeonToken {
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn abs_diff(self, a: int16x8_t, b: int16x8_t) -> uint16x8_t {
+        vreinterpretq_u16_s16(vabdq_s16(a, b))
+    }
+}
+impl U8x16AbsDiff for archmage::NeonToken {
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn abs_diff(self, a: uint8x16_t, b: uint8x16_t) -> uint8x16_t {
+        vabdq_u8(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn reduce_add_u32(self, a: uint8x16_t) -> u32 {
+        vaddlvq_u8(a) as u32
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn sum_abs_diff(self, a: uint8x16_t, b: uint8x16_t) -> u32 {
+        vaddlvq_u8(vabdq_u8(a, b)) as u32
+    }
+}
+impl I16x16Pairwise for archmage::NeonToken {
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn madd_adjacent(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [int32x4_t; 2] {
+        [
+            vpaddq_s32(
+                vmull_s16(vget_low_s16(a[0]), vget_low_s16(b[0])),
+                vmull_high_s16(a[0], b[0]),
+            ),
+            vpaddq_s32(
+                vmull_s16(vget_low_s16(a[1]), vget_low_s16(b[1])),
+                vmull_high_s16(a[1], b[1]),
+            ),
+        ]
+    }
+}
+impl I16x16AbsDiff for archmage::NeonToken {
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn abs_diff(self, a: [int16x8_t; 2], b: [int16x8_t; 2]) -> [uint16x8_t; 2] {
+        [
+            vreinterpretq_u16_s16(vabdq_s16(a[0], b[0])),
+            vreinterpretq_u16_s16(vabdq_s16(a[1], b[1])),
+        ]
+    }
+}
+impl U8x32AbsDiff for archmage::NeonToken {
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn abs_diff(self, a: [uint8x16_t; 2], b: [uint8x16_t; 2]) -> [uint8x16_t; 2] {
+        [vabdq_u8(a[0], b[0]), vabdq_u8(a[1], b[1])]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn reduce_add_u32(self, a: [uint8x16_t; 2]) -> u32 {
+        (vaddlvq_u8(a[0]) as u32) + (vaddlvq_u8(a[1]) as u32)
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn sum_abs_diff(self, a: [uint8x16_t; 2], b: [uint8x16_t; 2]) -> u32 {
+        (vaddlvq_u8(vabdq_u8(a[0], b[0])) as u32) + (vaddlvq_u8(vabdq_u8(a[1], b[1])) as u32)
+    }
+}
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
@@ -4639,6 +4710,70 @@ impl I32x16Narrow for archmage::NeonToken {
             vcombine_u16(vqmovun_s32(b[0]), vqmovun_s32(b[1])),
             vcombine_u16(vqmovun_s32(b[2]), vqmovun_s32(b[3])),
         ]
+    }
+}
+#[cfg(feature = "w512")]
+impl I16x32Pairwise for archmage::NeonToken {
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn madd_adjacent(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int32x4_t; 4] {
+        [
+            vpaddq_s32(
+                vmull_s16(vget_low_s16(a[0]), vget_low_s16(b[0])),
+                vmull_high_s16(a[0], b[0]),
+            ),
+            vpaddq_s32(
+                vmull_s16(vget_low_s16(a[1]), vget_low_s16(b[1])),
+                vmull_high_s16(a[1], b[1]),
+            ),
+            vpaddq_s32(
+                vmull_s16(vget_low_s16(a[2]), vget_low_s16(b[2])),
+                vmull_high_s16(a[2], b[2]),
+            ),
+            vpaddq_s32(
+                vmull_s16(vget_low_s16(a[3]), vget_low_s16(b[3])),
+                vmull_high_s16(a[3], b[3]),
+            ),
+        ]
+    }
+}
+#[cfg(feature = "w512")]
+impl I16x32AbsDiff for archmage::NeonToken {
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn abs_diff(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [uint16x8_t; 4] {
+        [
+            vreinterpretq_u16_s16(vabdq_s16(a[0], b[0])),
+            vreinterpretq_u16_s16(vabdq_s16(a[1], b[1])),
+            vreinterpretq_u16_s16(vabdq_s16(a[2], b[2])),
+            vreinterpretq_u16_s16(vabdq_s16(a[3], b[3])),
+        ]
+    }
+}
+#[cfg(feature = "w512")]
+impl U8x64AbsDiff for archmage::NeonToken {
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn abs_diff(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
+        [
+            vabdq_u8(a[0], b[0]),
+            vabdq_u8(a[1], b[1]),
+            vabdq_u8(a[2], b[2]),
+            vabdq_u8(a[3], b[3]),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn reduce_add_u32(self, a: [uint8x16_t; 4]) -> u32 {
+        (vaddlvq_u8(a[0]) as u32)
+            + (vaddlvq_u8(a[1]) as u32)
+            + (vaddlvq_u8(a[2]) as u32)
+            + (vaddlvq_u8(a[3]) as u32)
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn sum_abs_diff(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> u32 {
+        (vaddlvq_u8(vabdq_u8(a[0], b[0])) as u32)
+            + (vaddlvq_u8(vabdq_u8(a[1], b[1])) as u32)
+            + (vaddlvq_u8(vabdq_u8(a[2], b[2])) as u32)
+            + (vaddlvq_u8(vabdq_u8(a[3], b[3])) as u32)
     }
 }
 #[cfg(feature = "w512")]

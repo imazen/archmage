@@ -514,3 +514,117 @@ pub trait I32x16Narrow:
         b: <Self as super::I32x16Backend>::Repr,
     ) -> <Self as super::U16x32Backend>::Repr;
 }
+
+/// Adjacent signed 16-bit dot products with wrapping 32-bit results.
+pub trait I16x8Pairwise: super::I16x8Backend + super::I32x4Backend {
+    /// Lane k = a[2k]*b[2k] + a[2k+1]*b[2k+1], modulo 2^32.
+    fn madd_adjacent(
+        self,
+        a: <Self as super::I16x8Backend>::Repr,
+        b: <Self as super::I16x8Backend>::Repr,
+    ) -> <Self as super::I32x4Backend>::Repr;
+}
+
+/// Full-range absolute differences, with unsigned output lanes.
+pub trait I16x8AbsDiff: super::I16x8Backend + super::U16x8Backend {
+    /// Exact |a[i] - b[i]|; signed inputs can span the full unsigned range.
+    fn abs_diff(
+        self,
+        a: <Self as super::I16x8Backend>::Repr,
+        b: <Self as super::I16x8Backend>::Repr,
+    ) -> <Self as super::U16x8Backend>::Repr;
+}
+
+/// Full-range absolute differences, with unsigned output lanes.
+pub trait U8x16AbsDiff: super::U8x16Backend {
+    /// Exact |a[i] - b[i]|; signed inputs can span the full unsigned range.
+    fn abs_diff(
+        self,
+        a: <Self as super::U8x16Backend>::Repr,
+        b: <Self as super::U8x16Backend>::Repr,
+    ) -> <Self as super::U8x16Backend>::Repr;
+    /// Exact widening sum, at most 4080.
+    fn reduce_add_u32(self, a: <Self as super::U8x16Backend>::Repr) -> u32;
+    /// Exact sum of absolute byte differences, using a native SAD where available.
+    fn sum_abs_diff(
+        self,
+        a: <Self as super::U8x16Backend>::Repr,
+        b: <Self as super::U8x16Backend>::Repr,
+    ) -> u32;
+}
+
+/// Adjacent signed 16-bit dot products with wrapping 32-bit results.
+pub trait I16x16Pairwise: super::I16x16Backend + super::I32x8Backend {
+    /// Lane k = a[2k]*b[2k] + a[2k+1]*b[2k+1], modulo 2^32.
+    fn madd_adjacent(
+        self,
+        a: <Self as super::I16x16Backend>::Repr,
+        b: <Self as super::I16x16Backend>::Repr,
+    ) -> <Self as super::I32x8Backend>::Repr;
+}
+
+/// Full-range absolute differences, with unsigned output lanes.
+pub trait I16x16AbsDiff: super::I16x16Backend + super::U16x16Backend {
+    /// Exact |a[i] - b[i]|; signed inputs can span the full unsigned range.
+    fn abs_diff(
+        self,
+        a: <Self as super::I16x16Backend>::Repr,
+        b: <Self as super::I16x16Backend>::Repr,
+    ) -> <Self as super::U16x16Backend>::Repr;
+}
+
+/// Full-range absolute differences, with unsigned output lanes.
+pub trait U8x32AbsDiff: super::U8x32Backend {
+    /// Exact |a[i] - b[i]|; signed inputs can span the full unsigned range.
+    fn abs_diff(
+        self,
+        a: <Self as super::U8x32Backend>::Repr,
+        b: <Self as super::U8x32Backend>::Repr,
+    ) -> <Self as super::U8x32Backend>::Repr;
+    /// Exact widening sum, at most 8160.
+    fn reduce_add_u32(self, a: <Self as super::U8x32Backend>::Repr) -> u32;
+    /// Exact sum of absolute byte differences, using a native SAD where available.
+    fn sum_abs_diff(
+        self,
+        a: <Self as super::U8x32Backend>::Repr,
+        b: <Self as super::U8x32Backend>::Repr,
+    ) -> u32;
+}
+#[cfg(feature = "w512")]
+/// Adjacent signed 16-bit dot products with wrapping 32-bit results.
+pub trait I16x32Pairwise: super::I16x32Backend + super::I32x16Backend {
+    /// Lane k = a[2k]*b[2k] + a[2k+1]*b[2k+1], modulo 2^32.
+    fn madd_adjacent(
+        self,
+        a: <Self as super::I16x32Backend>::Repr,
+        b: <Self as super::I16x32Backend>::Repr,
+    ) -> <Self as super::I32x16Backend>::Repr;
+}
+#[cfg(feature = "w512")]
+/// Full-range absolute differences, with unsigned output lanes.
+pub trait I16x32AbsDiff: super::I16x32Backend + super::U16x32Backend {
+    /// Exact |a[i] - b[i]|; signed inputs can span the full unsigned range.
+    fn abs_diff(
+        self,
+        a: <Self as super::I16x32Backend>::Repr,
+        b: <Self as super::I16x32Backend>::Repr,
+    ) -> <Self as super::U16x32Backend>::Repr;
+}
+#[cfg(feature = "w512")]
+/// Full-range absolute differences, with unsigned output lanes.
+pub trait U8x64AbsDiff: super::U8x64Backend {
+    /// Exact |a[i] - b[i]|; signed inputs can span the full unsigned range.
+    fn abs_diff(
+        self,
+        a: <Self as super::U8x64Backend>::Repr,
+        b: <Self as super::U8x64Backend>::Repr,
+    ) -> <Self as super::U8x64Backend>::Repr;
+    /// Exact widening sum, at most 16320.
+    fn reduce_add_u32(self, a: <Self as super::U8x64Backend>::Repr) -> u32;
+    /// Exact sum of absolute byte differences, using a native SAD where available.
+    fn sum_abs_diff(
+        self,
+        a: <Self as super::U8x64Backend>::Repr,
+        b: <Self as super::U8x64Backend>::Repr,
+    ) -> u32;
+}

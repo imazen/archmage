@@ -470,5 +470,8 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
         });
     }
 
+    code.push_str(&crate::simd_types::backend_gen_integer_ops::generic(
+        type_name,
+    ));
     code
 }
