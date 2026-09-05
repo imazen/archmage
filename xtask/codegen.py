@@ -1034,10 +1034,282 @@ def storage_access_probes():
     assert not failures, failures[:12]
 
 
+def integer_reference(arch, width, op, parts):
+    """Independent handwritten intrinsic kernels, not generator output."""
+    prefix = "_mm" if width == 128 else f"_mm{width}"
+    p = prefix
+
+    def dot(a, b):
+        if arch == "x86":
+            return f"{p}_madd_epi16({a}, {b})"
+        if arch == "neon":
+            return f"vpaddq_s32(vmull_s16(vget_low_s16({a}), vget_low_s16({b})), vmull_high_s16({a}, {b}))"
+        return f"i32x4_dot_i16x8({a}, {b})"
+
+    def diff(a, b, signed):
+        if arch == "x86":
+            suffix = "epi16" if signed else "epu8"
+            return f"{p}_sub_{'epi16' if signed else 'epi8'}({p}_max_{suffix}({a},{b}),{p}_min_{suffix}({a},{b}))"
+        if arch == "neon":
+            return (
+                f"vreinterpretq_u16_s16(vabdq_s16({a},{b}))"
+                if signed
+                else f"vabdq_u8({a},{b})"
+            )
+        lane = "i16x8" if signed else "u8x16"
+        return f"{lane}_sub({lane}_max({a},{b}),{lane}_min({a},{b}))"
+
+    def sum_bytes(a, b=None):
+        if arch == "x86":
+            b = b or f"{p}_setzero_si{width}()"
+            pre = f"let s = {p}_sad_epu8({a},{b});"
+            if width == 512:
+                return "{" + pre + "_mm512_reduce_add_epi64(s) as u32}"
+            if width == 256:
+                pre += "let s = _mm_add_epi64(_mm256_castsi256_si128(s), _mm256_extracti128_si256::<1>(s));"
+            return (
+                "{"
+                + pre
+                + "_mm_cvtsi128_si64(_mm_add_epi64(s,_mm_srli_si128::<8>(s))) as u32}"
+            )
+        if b:
+            a = diff(a, b, False)
+        if arch == "neon":
+            return f"vaddlvq_u8({a}) as u32"
+        return (
+            "{let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16("
+            + a
+            + ")); u32x4_extract_lane::<0>(s)+u32x4_extract_lane::<1>(s)+u32x4_extract_lane::<2>(s)+u32x4_extract_lane::<3>(s)}"
+        )
+
+    values = []
+    for i in range(parts):
+        a, b = f"a[{i}]", f"b[{i}]"
+        if op in ("madd", "msub"):
+            value = dot(a, b)
+            if op == "msub":
+                sub = (
+                    f"{p}_sub_epi32"
+                    if arch == "x86"
+                    else "vsubq_s32"
+                    if arch == "neon"
+                    else "i32x4_sub"
+                )
+                value = f"{sub}(c[{i}],{value})"
+        elif op.startswith("abs"):
+            value = diff(a, b, op == "abs_i16")
+        else:
+            value = sum_bytes(a, b if op in ("sad_composed", "sum_abs_diff") else None)
+        values.append(value)
+    return (
+        "[" + ", ".join(values) + "]"
+        if op in ("madd", "msub", "abs_i16", "abs_u8")
+        else " + ".join(f"({x})" for x in values)
+    )
+
+
+def integer_probes():
+    """Compare public APIs to direct intrinsics in matching feature contexts.
+
+    Raw transmute appears only in these independent reference kernels: equal
+    sized initialized numeric arrays/vectors, never tokens or references.
+    Also expose the cost of composing abs_diff with a widening sum versus SAD.
+    """
+    import tomllib
+
+    repository = pathlib.Path(__file__).resolve().parent.parent
+    (pathlib.Path.home() / "tmp").mkdir(parents=True, exist_ok=True)
+    root = pathlib.Path(
+        tempfile.mkdtemp(
+            prefix="archmage-integer-codegen-", dir=pathlib.Path.home() / "tmp"
+        )
+    )
+    print("Integer codegen artifacts:", root, flush=True)
+    (root / "src").mkdir()
+    (root / "Cargo.toml").write_text(
+        f'[package]\nname="integer_probe"\nversion="0.0.0"\nedition="2024"\n[dependencies]\narchmage={{path="{repository}",features=["avx512"]}}\nmagetypes={{path="{repository}/magetypes",features=["avx512"]}}\n[workspace]\n'
+    )
+    features = {
+        t["name"]: ",".join(t["features"])
+        for t in tomllib.loads((repository / "token-registry.toml").read_text())[
+            "token"
+        ]
+    }
+    targets = {
+        "x86_64-unknown-linux-gnu": (
+            "x86",
+            [
+                ("v3", "X64V3Token", [128, 256, 512]),
+                ("v4", "X64V4Token", [512]),
+                ("v4x", "X64V4xToken", [512]),
+            ],
+        ),
+        "aarch64-unknown-linux-gnu": ("neon", [("neon", "NeonToken", [128, 256, 512])]),
+        "wasm32-unknown-unknown": ("wasm", [("wasm", "Wasm128Token", [128, 256, 512])]),
+    }
+    env = dict(
+        os.environ, TMPDIR=str(pathlib.Path.home() / "tmp"), CARGO_INCREMENTAL="0"
+    )
+    for key in (
+        "RUSTFLAGS",
+        "CARGO_ENCODED_RUSTFLAGS",
+        "CARGO_TARGET_DIR",
+        "CARGO_BUILD_TARGET",
+        "RUSTC_WRAPPER",
+        "RUSTC_WORKSPACE_WRAPPER",
+    ):
+        env.pop(key, None)
+    result = {}
+    failures = []
+    for target, (arch, tiers) in targets.items():
+        source = [
+            f"#![allow(unused_parens)]\nuse core::arch::{'x86_64' if arch == 'x86' else 'aarch64' if arch == 'neon' else 'wasm32'}::*;\nuse archmage::*;\nuse magetypes::simd::generic::*;"
+        ]
+        names = []
+        for tier, token, widths in tiers:
+            for width in widths:
+                native = min(
+                    width,
+                    256 if tier == "v3" else 512 if tier in ("v4", "v4x") else 128,
+                )
+                parts = width // native
+                for op in (
+                    "madd",
+                    "msub",
+                    "abs_i16",
+                    "abs_u8",
+                    "sum_u8",
+                    "sad_composed",
+                    "sum_abs_diff",
+                ):
+                    elem = "i16" if op in ("madd", "msub", "abs_i16") else "u8"
+                    n = width // (16 if elem == "i16" else 8)
+                    dst = (
+                        "i32"
+                        if op in ("madd", "msub")
+                        else "u16"
+                        if op == "abs_i16"
+                        else "u8"
+                    )
+                    length = width // (
+                        32 if dst == "i32" else 16 if dst == "u16" else 8
+                    )
+                    name = f"{tier}_{width}_{op}"
+                    names.append(name)
+                    args = f"token: {token}, a: [{elem};{n}]"
+                    if op != "sum_u8":
+                        args += f", b: [{elem};{n}]"
+                    if op == "msub":
+                        args += f", accumulator: [i32;{width // 32}]"
+                    result_type = (
+                        f"[{dst};{length}]"
+                        if op in ("madd", "msub", "abs_i16", "abs_u8")
+                        else "u32"
+                    )
+                    api = f"let a = {elem}x{n}::<{token}>::from_array(token,a);"
+                    if op != "sum_u8":
+                        api += f"let b = {elem}x{n}::<{token}>::from_array(token,b);"
+                    api += {
+                        "madd": "a.madd_adjacent(b).to_array()",
+                        "msub": f"a.msub_adjacent(b, i32x{width // 32}::<{token}>::from_array(token,accumulator)).to_array()",
+                        "abs_i16": "a.abs_diff(b).to_array()",
+                        "abs_u8": "a.abs_diff(b).to_array()",
+                        "sum_u8": "a.reduce_add_u32()",
+                        "sad_composed": "a.abs_diff(b).reduce_add_u32()",
+                        "sum_abs_diff": "a.sum_abs_diff(b)",
+                    }[op]
+
+                    def raw_type(e):
+                        if arch == "x86":
+                            return f"__m{native}i"
+                        if arch == "wasm":
+                            return "v128"
+                        return {
+                            "i16": "int16x8_t",
+                            "u16": "uint16x8_t",
+                            "i32": "int32x4_t",
+                            "u8": "uint8x16_t",
+                        }[e]
+
+                    hand = f"let a: [{raw_type(elem)};{parts}] = unsafe {{core::mem::transmute(a)}};"
+                    if op != "sum_u8":
+                        hand += f"let b: [{raw_type(elem)};{parts}] = unsafe {{core::mem::transmute(b)}};"
+                    if op == "msub":
+                        hand += f"let c: [{raw_type('i32')};{parts}] = unsafe {{core::mem::transmute(accumulator)}};"
+                    expr = integer_reference(arch, native, op, parts)
+                    hand += (
+                        f"let r: [{raw_type(dst)};{parts}] = {expr}; unsafe {{core::mem::transmute(r)}}"
+                        if result_type != "u32"
+                        else expr
+                    )
+                    for kind, body in [("api", api), ("hand", hand)]:
+                        source.append(
+                            f'#[unsafe(no_mangle)]\n#[target_feature(enable="{features[token]}")]\n#[inline(never)]\npub fn {kind}_{name}({args}) -> {result_type} {{ {body} }}'
+                        )
+        code = "\n".join(source)
+        (root / "src/lib.rs").write_text(code)
+        (root / f"{target}.rs").write_text(code)
+        completed = subprocess.run(
+            [
+                "cargo",
+                "+stable",
+                "rustc",
+                "--manifest-path",
+                str(root / "Cargo.toml"),
+                "--release",
+                "--lib",
+                "--target",
+                target,
+                "--",
+                "--emit=asm",
+            ],
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        (root / f"{target}.log").write_text(completed.stdout + completed.stderr)
+        if completed.returncode:
+            raise RuntimeError(completed.stderr)
+        files = list(
+            (root / "target" / target / "release/deps").glob("integer_probe-*.s")
+        )
+        assert len(files) == 1
+        assembly = files[0].read_text()
+        (root / f"{target}.s").write_text(assembly)
+        functions = parse(assembly)
+        assert {n for n in functions if n.startswith(("api_", "hand_"))} == {
+            f"{kind}_{name}" for kind in ("api", "hand") for name in names
+        }
+        rows = []
+        for name in names:
+            api, hand = (
+                expand("api_" + name, functions),
+                expand("hand_" + name, functions),
+            )
+            equal = api == hand
+            if not equal and not name.endswith("sad_composed"):
+                failures.append((target, name, api, hand))
+            rows.append({"name": name, "identical": equal, "api": api, "hand": hand})
+        result[target] = rows
+        print(
+            target,
+            sum(r["identical"] for r in rows),
+            "/",
+            len(rows),
+            "identical intrinsic references",
+            flush=True,
+        )
+    (root / "results.json").write_text(json.dumps(result, indent=2))
+    assert not failures, failures
+
+
 def main():
     if not __debug__:
         raise RuntimeError("Run without Python -O: assertions must be enabled")
     self_test()
+    if sys.argv[1:] == ["--integer-ops"]:
+        integer_probes()
+        return
     if sys.argv[1:] == ["--storage-access"]:
         storage_access_probes()
         return

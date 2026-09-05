@@ -17,6 +17,7 @@
 pub mod arch;
 pub mod backend_gen;
 pub mod backend_gen_i64;
+pub mod backend_gen_integer_ops;
 pub mod backend_gen_remaining_int;
 pub mod backend_gen_w512;
 pub mod backend_gen_widen_narrow;
