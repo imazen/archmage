@@ -1364,15 +1364,15 @@ fn generate_wasm_native_i64_impl(ty: &I64VecType) -> String {
             #[inline(always)]
             fn zero(self) -> v128 {{ i64x2_splat(0i64) }}
             #[inline(always)]
-            fn load(self, data: &{array}) -> v128 {{ unsafe {{ v128_load(data.as_ptr().cast()) }} }}
+            fn load(self, data: &{array}) -> v128 {{ crate::simd_storage::copy(data) }}
             #[inline(always)]
-            fn from_array(self, arr: {array}) -> v128 {{ unsafe {{ v128_load(arr.as_ptr().cast()) }} }}
+            fn from_array(self, arr: {array}) -> v128 {{ crate::simd_storage::cast(arr) }}
             #[inline(always)]
-            fn store(self, repr: v128, out: &mut {array}) {{ unsafe {{ v128_store(out.as_mut_ptr().cast(), repr) }}; }}
+            fn store(self, repr: v128, out: &mut {array}) {{ crate::simd_storage::store(repr, out); }}
             #[inline(always)]
             fn to_array(self, repr: v128) -> {array} {{
                 let mut out = [0i64; {lanes}];
-                unsafe {{ v128_store(out.as_mut_ptr().cast(), repr) }};
+                crate::simd_storage::store(repr, &mut out);
                 out
             }}
 
@@ -1496,9 +1496,7 @@ fn generate_wasm_polyfill_i64_impl(ty: &I64VecType) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> {repr} {{
-                unsafe {{
-                    [{load_lanes}]
-                }}
+                {load_lanes}
             }}
 
             #[inline(always)]
@@ -1508,9 +1506,7 @@ fn generate_wasm_polyfill_i64_impl(ty: &I64VecType) -> String {
 
             #[inline(always)]
             fn store(self, repr: {repr}, out: &mut {array}) {{
-                unsafe {{
-                    {store_lanes}
-                }}
+                {store_lanes}
             }}
 
             #[inline(always)]
@@ -1604,12 +1600,12 @@ fn generate_wasm_polyfill_i64_impl(ty: &I64VecType) -> String {
     "#,
         v2_copies = (0..sub_count).map(|_| "v2").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
-        load_lanes = (0..sub_count)
-            .map(|i| format!("v128_load(data.as_ptr().add({}).cast())", i * 2))
-            .collect::<Vec<_>>().join(", "),
+        load_lanes = format!("[{}]", (0..sub_count)
+            .map(|i| format!("crate::simd_storage::copy(&data.as_chunks::<{}>().0[{i}])", 2))
+            .collect::<Vec<_>>().join(", ")),
         store_lanes = (0..sub_count)
-            .map(|i| format!("v128_store(out.as_mut_ptr().add({}).cast(), repr[{i}]);", i * 2))
-            .collect::<Vec<_>>().join("\n            "),
+            .map(|i| format!("crate::simd_storage::store(repr[{i}], &mut out.as_chunks_mut::<{}>().0[{i}]);", 2))
+            .collect::<Vec<_>>().join("\n"),
         add = binary_op("i64x2_add"),
         sub = binary_op("i64x2_sub"),
         neg = unary_op("i64x2_neg"),

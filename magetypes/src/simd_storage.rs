@@ -61,6 +61,13 @@ const _: () = {
     );
 };
 
+#[cfg(target_arch = "wasm32")]
+const _: () = {
+    // v128 is exactly 16 initialized bytes, accepts every bit pattern, and
+    // contains no pointers. Arrays of v128 have no inter-element padding.
+    impl_pod!(core::arch::wasm32::v128);
+};
+
 /// Copy same-sized storage without requiring the source's alignment to match Dst.
 #[inline(always)]
 pub(crate) fn copy<Src: Pod, Dst: Pod>(src: &Src) -> Dst {
@@ -111,5 +118,25 @@ mod tests {
         let halves: [[u32; 2]; 2] = cast(lanes);
         assert_eq!(halves, [[0, 1], [u32::MAX, 0x8000_0000]]);
         assert_eq!(cast::<_, [u32; 4]>(halves), lanes);
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    #[test]
+    fn wasm_vectors_preserve_bits_order_and_unaligned_destinations() {
+        use core::arch::wasm32::v128;
+
+        #[repr(align(16))]
+        struct Bytes([u8; 66]);
+        let input: [u8; 64] = core::array::from_fn(|i| (i * 37 + 11) as u8);
+        let vectors: [v128; 4] = cast(input);
+        assert_eq!(cast::<_, [u8; 16]>(vectors[0]), input[..16]);
+        assert_eq!(cast::<_, [u8; 16]>(vectors[3]), input[48..]);
+        let mut bytes = Bytes([0xa5; 66]);
+        let destination: &mut [u8; 64] = (&mut bytes.0[1..65]).try_into().unwrap();
+        store(vectors, destination);
+        let reloaded: [v128; 4] = copy(destination);
+        assert_eq!(cast::<_, [u8; 64]>(reloaded), input);
+        assert_eq!(bytes.0[0], 0xa5);
+        assert_eq!(bytes.0[65], 0xa5);
     }
 }

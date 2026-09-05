@@ -1127,27 +1127,12 @@ fn impls_safety_contract(token_desc: &str) -> String {
         .to_string();
     }
     formatdoc! {r#"
-        //! # Safety (audit contract for every `unsafe` block in this file)
+        //! # Safety (audit contract — checked backend boundaries)
         //!
-        //! All `unsafe` blocks below are inside `impl ... for {token_desc}`
-        //! blocks and fall into exactly three shapes:
-        //!
-        //! 1. **Value-based intrinsic calls** — sound because the receiver
-        //!    token is a proof the CPU supports the intrinsic's required
-        //!    features (`cargo xtask soundness` statically verifies every
-        //!    intrinsic's feature set against the impl's token on every
-        //!    generate/CI run; tokens are only obtainable via runtime
-        //!    detection).
-        //! 2. **Loads/stores through references** (`as_ptr`/`as_mut_ptr` on
-        //!    sized arrays) — sound because the reference guarantees a valid,
-        //!    correctly-sized allocation, and the unaligned-tolerant
-        //!    instructions are used.
-        //! 3. **`transmute` between fixed-size arrays and vector types** —
-        //!    sound because both sides are plain-old-data of equal size
-        //!    (compile-time checked by `transmute` itself).
-        //!
-        //! Anything outside these shapes must carry its own `// SAFETY:`
-        //! comment and be added to the audit notes in `docs/SOUNDNESS.md`.
+        //! Value intrinsics use WebAssembly's safe SIMD API with `{token_desc}`.
+        //! Whole-array storage copies use `crate::simd_storage`, whose POD bounds
+        //! and compile-time size checks cover both v128 and arrays of v128.
+        //! No raw-pointer load/store operations are generated here.
     "#}
 }
 
@@ -3338,9 +3323,7 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> {repr} {{
-                unsafe {{
-                    [{load_lanes}]
-                }}
+                {load_lanes}
             }}
 
             #[inline(always)]
@@ -3350,9 +3333,7 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
 
             #[inline(always)]
             fn store(self, repr: {repr}, out: &mut {array}) {{
-                unsafe {{
-                    {store_lanes}
-                }}
+                {store_lanes}
             }}
 
             #[inline(always)]
@@ -3463,12 +3444,12 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
     "#,
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
-        load_lanes = (0..sub_count)
-            .map(|i| format!("v128_load(data.as_ptr().add({}).cast())", i * native_lanes))
-            .collect::<Vec<_>>().join(", "),
+        load_lanes = format!("[{}]", (0..sub_count)
+            .map(|i| format!("crate::simd_storage::copy(&data.as_chunks::<{}>().0[{i}])", native_lanes))
+            .collect::<Vec<_>>().join(", ")),
         store_lanes = (0..sub_count)
-            .map(|i| format!("v128_store(out.as_mut_ptr().add({}).cast(), repr[{i}]);", i * native_lanes))
-            .collect::<Vec<_>>().join("\n            "),
+            .map(|i| format!("crate::simd_storage::store(repr[{i}], &mut out.as_chunks_mut::<{}>().0[{i}]);", native_lanes))
+            .collect::<Vec<_>>().join("\n"),
         add = binary_op(&format!("{wp}_add")),
         sub = binary_op(&format!("{wp}_sub")),
         mul = binary_op(&format!("{wp}_mul")),
@@ -3595,15 +3576,15 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn zero(self) -> v128 {{ {wp}_splat(0.0) }}
             #[inline(always)]
-            fn load(self, data: &{array}) -> v128 {{ unsafe {{ v128_load(data.as_ptr().cast()) }} }}
+            fn load(self, data: &{array}) -> v128 {{ crate::simd_storage::copy(data) }}
             #[inline(always)]
-            fn from_array(self, arr: {array}) -> v128 {{ unsafe {{ v128_load(arr.as_ptr().cast()) }} }}
+            fn from_array(self, arr: {array}) -> v128 {{ crate::simd_storage::cast(arr) }}
             #[inline(always)]
-            fn store(self, repr: v128, out: &mut {array}) {{ unsafe {{ v128_store(out.as_mut_ptr().cast(), repr) }}; }}
+            fn store(self, repr: v128, out: &mut {array}) {{ crate::simd_storage::store(repr, out); }}
             #[inline(always)]
             fn to_array(self, repr: v128) -> {array} {{
                 let mut out = [{zero_lit}; {lanes}];
-                unsafe {{ v128_store(out.as_mut_ptr().cast(), repr) }};
+                crate::simd_storage::store(repr, &mut out);
                 out
             }}
 
@@ -5621,15 +5602,15 @@ fn generate_wasm_native_i32_impl(ty: &I32VecType) -> String {
             #[inline(always)]
             fn zero(self) -> v128 {{ i32x4_splat(0) }}
             #[inline(always)]
-            fn load(self, data: &{array}) -> v128 {{ unsafe {{ v128_load(data.as_ptr().cast()) }} }}
+            fn load(self, data: &{array}) -> v128 {{ crate::simd_storage::copy(data) }}
             #[inline(always)]
-            fn from_array(self, arr: {array}) -> v128 {{ unsafe {{ v128_load(arr.as_ptr().cast()) }} }}
+            fn from_array(self, arr: {array}) -> v128 {{ crate::simd_storage::cast(arr) }}
             #[inline(always)]
-            fn store(self, repr: v128, out: &mut {array}) {{ unsafe {{ v128_store(out.as_mut_ptr().cast(), repr) }}; }}
+            fn store(self, repr: v128, out: &mut {array}) {{ crate::simd_storage::store(repr, out); }}
             #[inline(always)]
             fn to_array(self, repr: v128) -> {array} {{
                 let mut out = [0i32; {lanes}];
-                unsafe {{ v128_store(out.as_mut_ptr().cast(), repr) }};
+                crate::simd_storage::store(repr, &mut out);
                 out
             }}
 
@@ -5763,9 +5744,7 @@ fn generate_wasm_polyfill_i32_impl(ty: &I32VecType) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> {repr} {{
-                unsafe {{
-                    [{load_lanes}]
-                }}
+                {load_lanes}
             }}
 
             #[inline(always)]
@@ -5775,9 +5754,7 @@ fn generate_wasm_polyfill_i32_impl(ty: &I32VecType) -> String {
 
             #[inline(always)]
             fn store(self, repr: {repr}, out: &mut {array}) {{
-                unsafe {{
-                    {store_lanes}
-                }}
+                {store_lanes}
             }}
 
             #[inline(always)]
@@ -5893,12 +5870,12 @@ fn generate_wasm_polyfill_i32_impl(ty: &I32VecType) -> String {
     "#,
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
-        load_lanes = (0..sub_count)
-            .map(|i| format!("v128_load(data.as_ptr().add({}).cast())", i * 4))
-            .collect::<Vec<_>>().join(", "),
+        load_lanes = format!("[{}]", (0..sub_count)
+            .map(|i| format!("crate::simd_storage::copy(&data.as_chunks::<{}>().0[{i}])", 4))
+            .collect::<Vec<_>>().join(", ")),
         store_lanes = (0..sub_count)
-            .map(|i| format!("v128_store(out.as_mut_ptr().add({}).cast(), repr[{i}]);", i * 4))
-            .collect::<Vec<_>>().join("\n            "),
+            .map(|i| format!("crate::simd_storage::store(repr[{i}], &mut out.as_chunks_mut::<{}>().0[{i}]);", 4))
+            .collect::<Vec<_>>().join("\n"),
         add = binary_op("i32x4_add"),
         sub = binary_op("i32x4_sub"),
         mul = binary_op("i32x4_mul"),
@@ -7247,15 +7224,15 @@ fn generate_wasm_native_u32_impl(ty: &U32VecType) -> String {
             #[inline(always)]
             fn zero(self) -> v128 {{ u32x4_splat(0) }}
             #[inline(always)]
-            fn load(self, data: &{array}) -> v128 {{ unsafe {{ v128_load(data.as_ptr().cast()) }} }}
+            fn load(self, data: &{array}) -> v128 {{ crate::simd_storage::copy(data) }}
             #[inline(always)]
-            fn from_array(self, arr: {array}) -> v128 {{ unsafe {{ v128_load(arr.as_ptr().cast()) }} }}
+            fn from_array(self, arr: {array}) -> v128 {{ crate::simd_storage::cast(arr) }}
             #[inline(always)]
-            fn store(self, repr: v128, out: &mut {array}) {{ unsafe {{ v128_store(out.as_mut_ptr().cast(), repr) }}; }}
+            fn store(self, repr: v128, out: &mut {array}) {{ crate::simd_storage::store(repr, out); }}
             #[inline(always)]
             fn to_array(self, repr: v128) -> {array} {{
                 let mut out = [0u32; {lanes}];
-                unsafe {{ v128_store(out.as_mut_ptr().cast(), repr) }};
+                crate::simd_storage::store(repr, &mut out);
                 out
             }}
 
@@ -7377,9 +7354,7 @@ fn generate_wasm_polyfill_u32_impl(ty: &U32VecType) -> String {
 
             #[inline(always)]
             fn load(self, data: &{array}) -> {repr} {{
-                unsafe {{
-                    [{load_lanes}]
-                }}
+                {load_lanes}
             }}
 
             #[inline(always)]
@@ -7389,9 +7364,7 @@ fn generate_wasm_polyfill_u32_impl(ty: &U32VecType) -> String {
 
             #[inline(always)]
             fn store(self, repr: {repr}, out: &mut {array}) {{
-                unsafe {{
-                    {store_lanes}
-                }}
+                {store_lanes}
             }}
 
             #[inline(always)]
@@ -7491,12 +7464,12 @@ fn generate_wasm_polyfill_u32_impl(ty: &U32VecType) -> String {
     "#,
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
-        load_lanes = (0..sub_count)
-            .map(|i| format!("v128_load(data.as_ptr().add({}).cast())", i * 4))
-            .collect::<Vec<_>>().join(", "),
+        load_lanes = format!("[{}]", (0..sub_count)
+            .map(|i| format!("crate::simd_storage::copy(&data.as_chunks::<{}>().0[{i}])", 4))
+            .collect::<Vec<_>>().join(", ")),
         store_lanes = (0..sub_count)
-            .map(|i| format!("v128_store(out.as_mut_ptr().add({}).cast(), repr[{i}]);", i * 4))
-            .collect::<Vec<_>>().join("\n            "),
+            .map(|i| format!("crate::simd_storage::store(repr[{i}], &mut out.as_chunks_mut::<{}>().0[{i}]);", 4))
+            .collect::<Vec<_>>().join("\n"),
         add = binary_op("i32x4_add"),
         sub = binary_op("i32x4_sub"),
         mul = binary_op("i32x4_mul"),

@@ -2,27 +2,12 @@
 //!
 //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 //!
-//! # Safety (audit contract for every `unsafe` block in this file)
+//! # Safety (audit contract — checked backend boundaries)
 //!
-//! All `unsafe` blocks below are inside `impl ... for Wasm128Token`
-//! blocks and fall into exactly three shapes:
-//!
-//! 1. **Value-based intrinsic calls** — sound because the receiver
-//!    token is a proof the CPU supports the intrinsic's required
-//!    features (`cargo xtask soundness` statically verifies every
-//!    intrinsic's feature set against the impl's token on every
-//!    generate/CI run; tokens are only obtainable via runtime
-//!    detection).
-//! 2. **Loads/stores through references** (`as_ptr`/`as_mut_ptr` on
-//!    sized arrays) — sound because the reference guarantees a valid,
-//!    correctly-sized allocation, and the unaligned-tolerant
-//!    instructions are used.
-//! 3. **`transmute` between fixed-size arrays and vector types** —
-//!    sound because both sides are plain-old-data of equal size
-//!    (compile-time checked by `transmute` itself).
-//!
-//! Anything outside these shapes must carry its own `// SAFETY:`
-//! comment and be added to the audit notes in `docs/SOUNDNESS.md`.
+//! Value intrinsics use WebAssembly's safe SIMD API with `Wasm128Token`.
+//! Whole-array storage copies use `crate::simd_storage`, whose POD bounds
+//! and compile-time size checks cover both v128 and arrays of v128.
+//! No raw-pointer load/store operations are generated here.
 
 #[cfg(target_arch = "wasm32")]
 use core::arch::wasm32::*;
@@ -43,20 +28,20 @@ impl F32x4Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn load(self, data: &[f32; 4]) -> v128 {
-        unsafe { v128_load(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
     #[inline(always)]
     fn from_array(self, arr: [f32; 4]) -> v128 {
-        unsafe { v128_load(arr.as_ptr().cast()) }
+        crate::simd_storage::cast(arr)
     }
     #[inline(always)]
     fn store(self, repr: v128, out: &mut [f32; 4]) {
-        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
     #[inline(always)]
     fn to_array(self, repr: v128) -> [f32; 4] {
         let mut out = [0.0f32; 4];
-        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, &mut out);
         out
     }
 
@@ -227,12 +212,10 @@ impl F32x8Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn load(self, data: &[f32; 8]) -> [v128; 2] {
-        unsafe {
-            [
-                v128_load(data.as_ptr().add(0).cast()),
-                v128_load(data.as_ptr().add(4).cast()),
-            ]
-        }
+        [
+            crate::simd_storage::copy(&data.as_chunks::<4>().0[0]),
+            crate::simd_storage::copy(&data.as_chunks::<4>().0[1]),
+        ]
     }
 
     #[inline(always)]
@@ -242,10 +225,8 @@ impl F32x8Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn store(self, repr: [v128; 2], out: &mut [f32; 8]) {
-        unsafe {
-            v128_store(out.as_mut_ptr().add(0).cast(), repr[0]);
-            v128_store(out.as_mut_ptr().add(4).cast(), repr[1]);
-        }
+        crate::simd_storage::store(repr[0], &mut out.as_chunks_mut::<4>().0[0]);
+        crate::simd_storage::store(repr[1], &mut out.as_chunks_mut::<4>().0[1]);
     }
 
     #[inline(always)]
@@ -433,20 +414,20 @@ impl F64x2Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn load(self, data: &[f64; 2]) -> v128 {
-        unsafe { v128_load(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
     #[inline(always)]
     fn from_array(self, arr: [f64; 2]) -> v128 {
-        unsafe { v128_load(arr.as_ptr().cast()) }
+        crate::simd_storage::cast(arr)
     }
     #[inline(always)]
     fn store(self, repr: v128, out: &mut [f64; 2]) {
-        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
     #[inline(always)]
     fn to_array(self, repr: v128) -> [f64; 2] {
         let mut out = [0.0f64; 2];
-        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, &mut out);
         out
     }
 
@@ -605,12 +586,10 @@ impl F64x4Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn load(self, data: &[f64; 4]) -> [v128; 2] {
-        unsafe {
-            [
-                v128_load(data.as_ptr().add(0).cast()),
-                v128_load(data.as_ptr().add(2).cast()),
-            ]
-        }
+        [
+            crate::simd_storage::copy(&data.as_chunks::<2>().0[0]),
+            crate::simd_storage::copy(&data.as_chunks::<2>().0[1]),
+        ]
     }
 
     #[inline(always)]
@@ -620,10 +599,8 @@ impl F64x4Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn store(self, repr: [v128; 2], out: &mut [f64; 4]) {
-        unsafe {
-            v128_store(out.as_mut_ptr().add(0).cast(), repr[0]);
-            v128_store(out.as_mut_ptr().add(2).cast(), repr[1]);
-        }
+        crate::simd_storage::store(repr[0], &mut out.as_chunks_mut::<2>().0[0]);
+        crate::simd_storage::store(repr[1], &mut out.as_chunks_mut::<2>().0[1]);
     }
 
     #[inline(always)]
@@ -808,20 +785,20 @@ impl I32x4Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn load(self, data: &[i32; 4]) -> v128 {
-        unsafe { v128_load(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
     #[inline(always)]
     fn from_array(self, arr: [i32; 4]) -> v128 {
-        unsafe { v128_load(arr.as_ptr().cast()) }
+        crate::simd_storage::cast(arr)
     }
     #[inline(always)]
     fn store(self, repr: v128, out: &mut [i32; 4]) {
-        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
     #[inline(always)]
     fn to_array(self, repr: v128) -> [i32; 4] {
         let mut out = [0i32; 4];
-        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, &mut out);
         out
     }
 
@@ -975,12 +952,10 @@ impl I32x8Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn load(self, data: &[i32; 8]) -> [v128; 2] {
-        unsafe {
-            [
-                v128_load(data.as_ptr().add(0).cast()),
-                v128_load(data.as_ptr().add(4).cast()),
-            ]
-        }
+        [
+            crate::simd_storage::copy(&data.as_chunks::<4>().0[0]),
+            crate::simd_storage::copy(&data.as_chunks::<4>().0[1]),
+        ]
     }
 
     #[inline(always)]
@@ -990,10 +965,8 @@ impl I32x8Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn store(self, repr: [v128; 2], out: &mut [i32; 8]) {
-        unsafe {
-            v128_store(out.as_mut_ptr().add(0).cast(), repr[0]);
-            v128_store(out.as_mut_ptr().add(4).cast(), repr[1]);
-        }
+        crate::simd_storage::store(repr[0], &mut out.as_chunks_mut::<4>().0[0]);
+        crate::simd_storage::store(repr[1], &mut out.as_chunks_mut::<4>().0[1]);
     }
 
     #[inline(always)]
@@ -1167,20 +1140,20 @@ impl U32x4Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn load(self, data: &[u32; 4]) -> v128 {
-        unsafe { v128_load(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
     #[inline(always)]
     fn from_array(self, arr: [u32; 4]) -> v128 {
-        unsafe { v128_load(arr.as_ptr().cast()) }
+        crate::simd_storage::cast(arr)
     }
     #[inline(always)]
     fn store(self, repr: v128, out: &mut [u32; 4]) {
-        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
     #[inline(always)]
     fn to_array(self, repr: v128) -> [u32; 4] {
         let mut out = [0u32; 4];
-        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, &mut out);
         out
     }
 
@@ -1318,12 +1291,10 @@ impl U32x8Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn load(self, data: &[u32; 8]) -> [v128; 2] {
-        unsafe {
-            [
-                v128_load(data.as_ptr().add(0).cast()),
-                v128_load(data.as_ptr().add(4).cast()),
-            ]
-        }
+        [
+            crate::simd_storage::copy(&data.as_chunks::<4>().0[0]),
+            crate::simd_storage::copy(&data.as_chunks::<4>().0[1]),
+        ]
     }
 
     #[inline(always)]
@@ -1333,10 +1304,8 @@ impl U32x8Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn store(self, repr: [v128; 2], out: &mut [u32; 8]) {
-        unsafe {
-            v128_store(out.as_mut_ptr().add(0).cast(), repr[0]);
-            v128_store(out.as_mut_ptr().add(4).cast(), repr[1]);
-        }
+        crate::simd_storage::store(repr[0], &mut out.as_chunks_mut::<4>().0[0]);
+        crate::simd_storage::store(repr[1], &mut out.as_chunks_mut::<4>().0[1]);
     }
 
     #[inline(always)]
@@ -1496,20 +1465,20 @@ impl I64x2Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn load(self, data: &[i64; 2]) -> v128 {
-        unsafe { v128_load(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
     #[inline(always)]
     fn from_array(self, arr: [i64; 2]) -> v128 {
-        unsafe { v128_load(arr.as_ptr().cast()) }
+        crate::simd_storage::cast(arr)
     }
     #[inline(always)]
     fn store(self, repr: v128, out: &mut [i64; 2]) {
-        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
     #[inline(always)]
     fn to_array(self, repr: v128) -> [i64; 2] {
         let mut out = [0i64; 2];
-        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, &mut out);
         out
     }
 
@@ -1642,12 +1611,10 @@ impl I64x4Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn load(self, data: &[i64; 4]) -> [v128; 2] {
-        unsafe {
-            [
-                v128_load(data.as_ptr().add(0).cast()),
-                v128_load(data.as_ptr().add(2).cast()),
-            ]
-        }
+        [
+            crate::simd_storage::copy(&data.as_chunks::<2>().0[0]),
+            crate::simd_storage::copy(&data.as_chunks::<2>().0[1]),
+        ]
     }
 
     #[inline(always)]
@@ -1657,10 +1624,8 @@ impl I64x4Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn store(self, repr: [v128; 2], out: &mut [i64; 4]) {
-        unsafe {
-            v128_store(out.as_mut_ptr().add(0).cast(), repr[0]);
-            v128_store(out.as_mut_ptr().add(2).cast(), repr[1]);
-        }
+        crate::simd_storage::store(repr[0], &mut out.as_chunks_mut::<2>().0[0]);
+        crate::simd_storage::store(repr[1], &mut out.as_chunks_mut::<2>().0[1]);
     }
 
     #[inline(always)]
@@ -1833,23 +1798,23 @@ impl I8x16Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn load(self, data: &[i8; 16]) -> v128 {
-        unsafe { v128_load(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i8; 16]) -> v128 {
-        unsafe { v128_load(arr.as_ptr().cast()) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: v128, out: &mut [i8; 16]) {
-        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: v128) -> [i8; 16] {
         let mut out = [0i8; 16];
-        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, &mut out);
         out
     }
 
@@ -2002,12 +1967,10 @@ impl I8x32Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn load(self, data: &[i8; 32]) -> [v128; 2] {
-        unsafe {
-            [
-                v128_load(data.as_ptr().cast::<u8>().add(0).cast()),
-                v128_load(data.as_ptr().cast::<u8>().add(16).cast()),
-            ]
-        }
+        [
+            crate::simd_storage::copy(&data.as_chunks::<16>().0[0]),
+            crate::simd_storage::copy(&data.as_chunks::<16>().0[1]),
+        ]
     }
 
     #[inline(always)]
@@ -2017,10 +1980,8 @@ impl I8x32Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn store(self, repr: [v128; 2], out: &mut [i8; 32]) {
-        unsafe {
-            v128_store(out.as_mut_ptr().cast::<u8>().add(0).cast(), repr[0]);
-            v128_store(out.as_mut_ptr().cast::<u8>().add(16).cast(), repr[1]);
-        }
+        crate::simd_storage::store(repr[0], &mut out.as_chunks_mut::<16>().0[0]);
+        crate::simd_storage::store(repr[1], &mut out.as_chunks_mut::<16>().0[1]);
     }
 
     #[inline(always)]
@@ -2195,23 +2156,23 @@ impl U8x16Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn load(self, data: &[u8; 16]) -> v128 {
-        unsafe { v128_load(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u8; 16]) -> v128 {
-        unsafe { v128_load(arr.as_ptr().cast()) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: v128, out: &mut [u8; 16]) {
-        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: v128) -> [u8; 16] {
         let mut out = [0u8; 16];
-        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, &mut out);
         out
     }
 
@@ -2348,12 +2309,10 @@ impl U8x32Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn load(self, data: &[u8; 32]) -> [v128; 2] {
-        unsafe {
-            [
-                v128_load(data.as_ptr().cast::<u8>().add(0).cast()),
-                v128_load(data.as_ptr().cast::<u8>().add(16).cast()),
-            ]
-        }
+        [
+            crate::simd_storage::copy(&data.as_chunks::<16>().0[0]),
+            crate::simd_storage::copy(&data.as_chunks::<16>().0[1]),
+        ]
     }
 
     #[inline(always)]
@@ -2363,10 +2322,8 @@ impl U8x32Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn store(self, repr: [v128; 2], out: &mut [u8; 32]) {
-        unsafe {
-            v128_store(out.as_mut_ptr().cast::<u8>().add(0).cast(), repr[0]);
-            v128_store(out.as_mut_ptr().cast::<u8>().add(16).cast(), repr[1]);
-        }
+        crate::simd_storage::store(repr[0], &mut out.as_chunks_mut::<16>().0[0]);
+        crate::simd_storage::store(repr[1], &mut out.as_chunks_mut::<16>().0[1]);
     }
 
     #[inline(always)]
@@ -2524,23 +2481,23 @@ impl I16x8Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn load(self, data: &[i16; 8]) -> v128 {
-        unsafe { v128_load(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [i16; 8]) -> v128 {
-        unsafe { v128_load(arr.as_ptr().cast()) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: v128, out: &mut [i16; 8]) {
-        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: v128) -> [i16; 8] {
         let mut out = [0i16; 8];
-        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, &mut out);
         out
     }
 
@@ -2697,12 +2654,10 @@ impl I16x16Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn load(self, data: &[i16; 16]) -> [v128; 2] {
-        unsafe {
-            [
-                v128_load(data.as_ptr().cast::<u8>().add(0).cast()),
-                v128_load(data.as_ptr().cast::<u8>().add(16).cast()),
-            ]
-        }
+        [
+            crate::simd_storage::copy(&data.as_chunks::<8>().0[0]),
+            crate::simd_storage::copy(&data.as_chunks::<8>().0[1]),
+        ]
     }
 
     #[inline(always)]
@@ -2712,10 +2667,8 @@ impl I16x16Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn store(self, repr: [v128; 2], out: &mut [i16; 16]) {
-        unsafe {
-            v128_store(out.as_mut_ptr().cast::<u8>().add(0).cast(), repr[0]);
-            v128_store(out.as_mut_ptr().cast::<u8>().add(16).cast(), repr[1]);
-        }
+        crate::simd_storage::store(repr[0], &mut out.as_chunks_mut::<8>().0[0]);
+        crate::simd_storage::store(repr[1], &mut out.as_chunks_mut::<8>().0[1]);
     }
 
     #[inline(always)]
@@ -2894,23 +2847,23 @@ impl U16x8Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn load(self, data: &[u16; 8]) -> v128 {
-        unsafe { v128_load(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u16; 8]) -> v128 {
-        unsafe { v128_load(arr.as_ptr().cast()) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: v128, out: &mut [u16; 8]) {
-        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: v128) -> [u16; 8] {
         let mut out = [0u16; 8];
-        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, &mut out);
         out
     }
 
@@ -3051,12 +3004,10 @@ impl U16x16Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn load(self, data: &[u16; 16]) -> [v128; 2] {
-        unsafe {
-            [
-                v128_load(data.as_ptr().cast::<u8>().add(0).cast()),
-                v128_load(data.as_ptr().cast::<u8>().add(16).cast()),
-            ]
-        }
+        [
+            crate::simd_storage::copy(&data.as_chunks::<8>().0[0]),
+            crate::simd_storage::copy(&data.as_chunks::<8>().0[1]),
+        ]
     }
 
     #[inline(always)]
@@ -3066,10 +3017,8 @@ impl U16x16Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn store(self, repr: [v128; 2], out: &mut [u16; 16]) {
-        unsafe {
-            v128_store(out.as_mut_ptr().cast::<u8>().add(0).cast(), repr[0]);
-            v128_store(out.as_mut_ptr().cast::<u8>().add(16).cast(), repr[1]);
-        }
+        crate::simd_storage::store(repr[0], &mut out.as_chunks_mut::<8>().0[0]);
+        crate::simd_storage::store(repr[1], &mut out.as_chunks_mut::<8>().0[1]);
     }
 
     #[inline(always)]
@@ -3231,23 +3180,23 @@ impl U64x2Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn load(self, data: &[u64; 2]) -> v128 {
-        unsafe { v128_load(data.as_ptr().cast()) }
+        crate::simd_storage::copy(data)
     }
 
     #[inline(always)]
     fn from_array(self, arr: [u64; 2]) -> v128 {
-        unsafe { v128_load(arr.as_ptr().cast()) }
+        crate::simd_storage::cast(arr)
     }
 
     #[inline(always)]
     fn store(self, repr: v128, out: &mut [u64; 2]) {
-        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, out);
     }
 
     #[inline(always)]
     fn to_array(self, repr: v128) -> [u64; 2] {
         let mut out = [0u64; 2];
-        unsafe { v128_store(out.as_mut_ptr().cast(), repr) };
+        crate::simd_storage::store(repr, &mut out);
         out
     }
 
@@ -3369,12 +3318,10 @@ impl U64x4Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn load(self, data: &[u64; 4]) -> [v128; 2] {
-        unsafe {
-            [
-                v128_load(data.as_ptr().cast::<u8>().add(0).cast()),
-                v128_load(data.as_ptr().cast::<u8>().add(16).cast()),
-            ]
-        }
+        [
+            crate::simd_storage::copy(&data.as_chunks::<2>().0[0]),
+            crate::simd_storage::copy(&data.as_chunks::<2>().0[1]),
+        ]
     }
 
     #[inline(always)]
@@ -3384,10 +3331,8 @@ impl U64x4Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn store(self, repr: [v128; 2], out: &mut [u64; 4]) {
-        unsafe {
-            v128_store(out.as_mut_ptr().cast::<u8>().add(0).cast(), repr[0]);
-            v128_store(out.as_mut_ptr().cast::<u8>().add(16).cast(), repr[1]);
-        }
+        crate::simd_storage::store(repr[0], &mut out.as_chunks_mut::<2>().0[0]);
+        crate::simd_storage::store(repr[1], &mut out.as_chunks_mut::<2>().0[1]);
     }
 
     #[inline(always)]
