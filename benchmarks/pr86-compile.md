@@ -7,7 +7,7 @@ native method templates and checked POD storage helpers. The earlier
 ## Implementation
 
 Native generator templates interpolate `{arcane}` before methods. The shared
-syntax helper emits `#[archmage::arcane(_self = archmage::ConcreteToken)]`;
+syntax helper emits `#[arcane(_self = ConcreteToken)]` using explicit imports;
 `self` is the token proof and method bodies refer to it as `_self`. There is no
 post-processing pass. Templates generate safe intrinsics, checked bit casts,
 and fixed-array load/store helpers directly.
@@ -70,3 +70,28 @@ python3 benchmarks/pr85-arcane-compile.py /path/to/pr85 /path/to/pr86 /tmp/resul
 
 ARM was compile-checked, not runtime-tested. Other existing unsafe code outside
 the three native backend files is outside this change's scope.
+
+## Follow-up: qualified versus imported attribute paths
+
+The measurements above used qualified paths. The follow-up changes the generator
+helper to emit `#[arcane(_self = X64V3Token)]` (and the equivalent V4/V4x/NEON
+forms), with cfg-gated imports. All 2,206 attributes are shortened; other token
+references are unchanged.
+
+Compared against PR #86 commit `d3a06bc`, on the same machine/toolchain and with
+the same commands and cache controls described above. Six runs per variant per
+command, alternating which variant ran first, with no concurrent builds.
+
+| Command | Qualified median (range) | Imported median (range) | Difference |
+| --- | --- | --- | --- |
+| check | 1.133 s (1.127–1.140) | 1.128 s (1.117–1.132) | −5 ms (−0.44%) |
+| release build | 1.336 s (1.282–1.345) | 1.341 s (1.313–1.345) | +5 ms (+0.38%) |
+
+The ranges overlap and the direction differs between commands: there is no
+meaningful compile-time advantage demonstrated for either spelling. This is a
+readability cleanup. NEON remains cfg-disabled in the x86 timing runs.
+
+Raw data: `pr86-short-paths.json` (`baseline` = qualified, `arcane` = imported).
+Reproduce using `pr85-arcane-compile.py` with the qualified and imported worktrees.
+Generator regression, regeneration idempotence, x86 default/AVX-512 builds, ARM
+AVX-512-feature compile check, formatting, and diff whitespace checks passed.

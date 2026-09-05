@@ -1,0 +1,146 @@
+[
+  {
+    "mode": "check",
+    "variant": "baseline",
+    "trial": 1,
+    "seconds": 1.1273805401287973
+  },
+  {
+    "mode": "check",
+    "variant": "arcane",
+    "trial": 1,
+    "seconds": 1.116746444022283
+  },
+  {
+    "mode": "check",
+    "variant": "arcane",
+    "trial": 2,
+    "seconds": 1.1276886509731412
+  },
+  {
+    "mode": "check",
+    "variant": "baseline",
+    "trial": 2,
+    "seconds": 1.1286351061426103
+  },
+  {
+    "mode": "check",
+    "variant": "baseline",
+    "trial": 3,
+    "seconds": 1.1337509169243276
+  },
+  {
+    "mode": "check",
+    "variant": "arcane",
+    "trial": 3,
+    "seconds": 1.12571528297849
+  },
+  {
+    "mode": "check",
+    "variant": "arcane",
+    "trial": 4,
+    "seconds": 1.1319645498879254
+  },
+  {
+    "mode": "check",
+    "variant": "baseline",
+    "trial": 4,
+    "seconds": 1.131940650055185
+  },
+  {
+    "mode": "check",
+    "variant": "baseline",
+    "trial": 5,
+    "seconds": 1.1399892349727452
+  },
+  {
+    "mode": "check",
+    "variant": "arcane",
+    "trial": 5,
+    "seconds": 1.1279498529620469
+  },
+  {
+    "mode": "check",
+    "variant": "arcane",
+    "trial": 6,
+    "seconds": 1.1308962551411241
+  },
+  {
+    "mode": "check",
+    "variant": "baseline",
+    "trial": 6,
+    "seconds": 1.1356381059158593
+  },
+  {
+    "mode": "release",
+    "variant": "baseline",
+    "trial": 1,
+    "seconds": 1.3448309330269694
+  },
+  {
+    "mode": "release",
+    "variant": "arcane",
+    "trial": 1,
+    "seconds": 1.3449435830116272
+  },
+  {
+    "mode": "release",
+    "variant": "arcane",
+    "trial": 2,
+    "seconds": 1.339374218834564
+  },
+  {
+    "mode": "release",
+    "variant": "baseline",
+    "trial": 2,
+    "seconds": 1.3168179709464312
+  },
+  {
+    "mode": "release",
+    "variant": "baseline",
+    "trial": 3,
+    "seconds": 1.2815478979609907
+  },
+  {
+    "mode": "release",
+    "variant": "arcane",
+    "trial": 3,
+    "seconds": 1.3130935649387538
+  },
+  {
+    "mode": "release",
+    "variant": "arcane",
+    "trial": 4,
+    "seconds": 1.3432096859905869
+  },
+  {
+    "mode": "release",
+    "variant": "baseline",
+    "trial": 4,
+    "seconds": 1.3349047298543155
+  },
+  {
+    "mode": "release",
+    "variant": "baseline",
+    "trial": 5,
+    "seconds": 1.3406127649359405
+  },
+  {
+    "mode": "release",
+    "variant": "arcane",
+    "trial": 5,
+    "seconds": 1.3391373781487346
+  },
+  {
+    "mode": "release",
+    "variant": "arcane",
+    "trial": 6,
+    "seconds": 1.3424696328584105
+  },
+  {
+    "mode": "release",
+    "variant": "baseline",
+    "trial": 6,
+    "seconds": 1.3368741681333631
+  }
+]

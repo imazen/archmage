@@ -1175,6 +1175,9 @@ fn generate_x86_v4_impls_file(w512_types: &[super::backend_gen_w512::W512Type]) 
         #[cfg(target_arch = "x86_64")]
         use core::arch::x86_64::*;
 
+        #[cfg(target_arch = "x86_64")]
+        use archmage::{{arcane, X64V4Token, X64V4xToken}};
+
         use crate::simd::backends::*;
 
     "#};
@@ -1282,6 +1285,9 @@ fn generate_x86_impls(types: &[FloatVecType], token: &str, max_width: usize) -> 
         {safety}
         #[cfg(target_arch = "x86_64")]
         use core::arch::x86_64::*;
+
+        #[cfg(target_arch = "x86_64")]
+        use archmage::{{arcane, {token}}};
 
         use crate::simd::backends::*;
 
@@ -2423,6 +2429,9 @@ fn generate_neon_impls(types: &[FloatVecType]) -> String {
         {safety}
         #[cfg(target_arch = "aarch64")]
         use core::arch::aarch64::*;
+
+        #[cfg(target_arch = "aarch64")]
+        use archmage::{{arcane, NeonToken}};
 
         use crate::simd::backends::*;
 
