@@ -1,8 +1,8 @@
-error[E0080]: index out of bounds: the length is 1 but the index is 1
+error[E0599]: no associated function or constant named `__ARCHMAGE_ASSERT_TIER_F38B284B` found for struct `X64V2Token` in the current scope
  --> tests/compile_fail/token_aliasing.rs:8:1
   |
 8 | #[arcane]
-  | ^^^^^^^^^ evaluation of `evil::_ARCHMAGE_TOKEN_MISMATCH` failed here
+  | ^^^^^^^^^ associated function or constant not found in `X64V2Token`
   |
   = note: this error originates in the attribute macro `arcane` (in Nightly builds, run with -Z macro-backtrace for more info)
 

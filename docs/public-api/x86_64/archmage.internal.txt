@@ -10,7 +10,7 @@
 ## summary
 #
 #   pub modules                                 1
-#   pub consts/statics                         18
+#   pub consts/statics                         35
 #   pub macros                                  5
 #   free functions                              1
 #   inherent methods                           23
@@ -22,27 +22,44 @@
 #   __private                         1
 #   prelude                           2
 #   testing                           1
-#   tokens                           38
+#   tokens                           55
 
-## items (50 lines)
+## items (67 lines)
 
+pub const tokens::Arm64V2Token::__ARCHMAGE_ASSERT_TIER_B0231590: ()
 pub const tokens::Arm64V2Token::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::Arm64V3Token::__ARCHMAGE_ASSERT_TIER_B2F6E2D5: ()
 pub const tokens::Arm64V3Token::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::Avx512Fp16Token::__ARCHMAGE_ASSERT_TIER_2F39FFC0: ()
 pub const tokens::Avx512Fp16Token::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::NeonAesToken::__ARCHMAGE_ASSERT_TIER_8C16863D: ()
 pub const tokens::NeonAesToken::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::NeonCrcToken::__ARCHMAGE_ASSERT_TIER_5C2B1B4E: ()
 pub const tokens::NeonCrcToken::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::NeonSha3Token::__ARCHMAGE_ASSERT_TIER_8215198F: ()
 pub const tokens::NeonSha3Token::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::NeonToken::__ARCHMAGE_ASSERT_TIER_72CB52B2: ()
 pub const tokens::NeonToken::__ARCHMAGE_TIER_TAG: u32
 pub const tokens::ScalarToken::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::Wasm128RelaxedToken::__ARCHMAGE_ASSERT_TIER_821D5452: ()
 pub const tokens::Wasm128RelaxedToken::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::Wasm128Token::__ARCHMAGE_ASSERT_TIER_1E0DF26B: ()
 pub const tokens::Wasm128Token::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::X64CryptoToken::__ARCHMAGE_ASSERT_TIER_F5F0FBF5: ()
 pub const tokens::X64CryptoToken::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::X64V1Token::__ARCHMAGE_ASSERT_TIER_510E0DCD: ()
 pub const tokens::X64V1Token::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::X64V2Token::__ARCHMAGE_ASSERT_TIER_8CCD97C6: ()
 pub const tokens::X64V2Token::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::X64V3CryptoToken::__ARCHMAGE_ASSERT_TIER_01EAE708: ()
 pub const tokens::X64V3CryptoToken::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::X64V3GfniCryptoToken::__ARCHMAGE_ASSERT_TIER_49A7BE90: ()
 pub const tokens::X64V3GfniCryptoToken::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::X64V3Token::__ARCHMAGE_ASSERT_TIER_F38B284B: ()
 pub const tokens::X64V3Token::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::X64V4Token::__ARCHMAGE_ASSERT_TIER_FE1B900C: ()
 pub const tokens::X64V4Token::__ARCHMAGE_TIER_TAG: u32
+pub const tokens::X64V4xToken::__ARCHMAGE_ASSERT_TIER_8F63232A: ()
 pub const tokens::X64V4xToken::__ARCHMAGE_TIER_TAG: u32
 pub fn SimdToken::try_new() -> core::option::Option<Self>
 pub fn __private::assert_archmage_token<T: tokens::SimdToken>(&T)

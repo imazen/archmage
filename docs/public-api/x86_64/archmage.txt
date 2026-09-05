@@ -6,7 +6,7 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: archmage.txt 490 lines (supported surface) | archmage.features.txt 438 added (features: avx512,forge-token-api,macros,safe_unaligned_simd,std,testable_dispatch) | archmage.internal.txt 69 lines (69 hidden + 0 excluded-feature)
+# files: archmage.txt 490 lines (supported surface) | archmage.features.txt 438 added (features: avx512,forge-token-api,macros,safe_unaligned_simd,std,testable_dispatch) | archmage.internal.txt 86 lines (86 hidden + 0 excluded-feature)
 
 ## summary
 #

@@ -40,9 +40,7 @@ impl Process for Filter {
             }
             sum
         }
-        const _ARCHMAGE_TOKEN_MISMATCH: () = [
-            (),
-        ][!(<archmage::X64V4Token>::__ARCHMAGE_TIER_TAG == 4263219212u32) as usize];
+        let _: () = <archmage::X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
         unsafe { __simd_inner_process_v4(self, _token, data) }
     }
     #[allow(dead_code)]
@@ -66,9 +64,7 @@ impl Process for Filter {
             }
             sum
         }
-        const _ARCHMAGE_TOKEN_MISMATCH: () = [
-            (),
-        ][!(<archmage::X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
+        let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
         unsafe { __simd_inner_process_v3(self, _token, data) }
     }
     #[allow(dead_code)]

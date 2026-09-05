@@ -17,9 +17,7 @@ fn fma<T>(token: X64V3Token, a: T, b: T, c: T) -> T
 where
     T: Copy + Mul<Output = T> + Add<Output = T>,
 {
-    const _ARCHMAGE_TOKEN_MISMATCH: () = [
-        (),
-    ][!(<X64V3Token>::__ARCHMAGE_TIER_TAG == 4085983307u32) as usize];
+    let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
     unsafe { __arcane_fma::<T>(token, a, b, c) }
 }
 fn main() {}
