@@ -551,8 +551,7 @@ impl<T: I32x16Backend> Index<usize> for i32x16<T> {
     #[inline(always)]
     fn index(&self, i: usize) -> &i32 {
         assert!(i < 16, "i32x16 index out of bounds: {i}");
-        // SAFETY: i32x16's repr is layout-compatible with [i32; 16], and i < 16.
-        unsafe { &*(core::ptr::from_ref(self).cast::<i32>()).add(i) }
+        &crate::simd_storage::view::<_, [i32; 16]>(&self.0)[i]
     }
 }
 
@@ -560,8 +559,7 @@ impl<T: I32x16Backend> IndexMut<usize> for i32x16<T> {
     #[inline(always)]
     fn index_mut(&mut self, i: usize) -> &mut i32 {
         assert!(i < 16, "i32x16 index out of bounds: {i}");
-        // SAFETY: i32x16's repr is layout-compatible with [i32; 16], and i < 16.
-        unsafe { &mut *(core::ptr::from_mut(self).cast::<i32>()).add(i) }
+        &mut crate::simd_storage::view_mut::<_, [i32; 16]>(&mut self.0)[i]
     }
 }
 

@@ -757,7 +757,8 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
         /// The token proves CPU support was verified via `summon()`.
         pub trait {trait_name}: SimdToken + Sealed + Copy + 'static {{
             /// Platform-native SIMD representation.
-            type Repr: Copy + Clone + Send + Sync;
+            #[allow(private_bounds)]
+            type Repr: Copy + Clone + Send + Sync + crate::simd_storage::Pod;
 
             // ====== Construction ======
 
@@ -3696,7 +3697,8 @@ fn generate_i32_backend_trait(ty: &I32VecType) -> String {
         /// The token proves CPU support was verified via `summon()`.
         pub trait {trait_name}: SimdToken + Sealed + Copy + 'static {{
             /// Platform-native SIMD representation.
-            type Repr: Copy + Clone + Send + Sync;
+            #[allow(private_bounds)]
+            type Repr: Copy + Clone + Send + Sync + crate::simd_storage::Pod;
 
             // ====== Construction ======
 
@@ -6081,7 +6083,8 @@ fn generate_u32_backend_trait(ty: &U32VecType) -> String {
         /// The token proves CPU support was verified via `summon()`.
         pub trait {trait_name}: SimdToken + Sealed + Copy + 'static {{
             /// Platform-native SIMD representation.
-            type Repr: Copy + Clone + Send + Sync;
+            #[allow(private_bounds)]
+            type Repr: Copy + Clone + Send + Sync + crate::simd_storage::Pod;
 
             // ====== Construction ======
 

@@ -390,7 +390,8 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
         /// The token proves CPU support was verified via `summon()`.
         pub trait {trait_name}: SimdToken + Sealed + Copy + 'static {{
             /// Platform-native SIMD representation.
-            type Repr: Copy + Clone + Send + Sync;
+            #[allow(private_bounds)]
+            type Repr: Copy + Clone + Send + Sync + crate::simd_storage::Pod;
 
             // ====== Construction ======
 
@@ -608,7 +609,8 @@ fn generate_int_backend_trait(ty: &W512Type) -> String {
         /// The token proves CPU support was verified via `summon()`.
         pub trait {trait_name}: SimdToken + Sealed + Copy + 'static {{
             /// Platform-native SIMD representation.
-            type Repr: Copy + Clone + Send + Sync;
+            #[allow(private_bounds)]
+            type Repr: Copy + Clone + Send + Sync + crate::simd_storage::Pod;
 
             // ====== Construction ======
 

@@ -93,67 +93,43 @@ fn gen_basic_block_ops(
         impl<T: {trait_name}> {name}<T> {{
             // ====== Array/Byte Views ======
             //
-            // Layout note for every view below: {name}<T> is #[repr(C)]
-            // (T::Repr, token) where the token is a 1-ZST, so its size and
-            // layout are exactly T::Repr's. Each method opens with an
-            // inline-const assert tying size_of::<Self>() to the literal
-            // array size it casts to — evaluated per backend at
-            // monomorphization, so a mis-sized future Repr is a compile
-            // error, never an out-of-bounds view.
+            // Views borrow only raw storage. Checked helpers enforce size and
+            // alignment without exposing or manufacturing the token.
 
             /// Reference to underlying array (zero-copy).
             #[inline(always)]
             pub fn as_array(&self) -> &[{elem}; {lanes}] {{
-                const {{ assert!(core::mem::size_of::<Self>() == core::mem::size_of::<[{elem}; {lanes}]>()) }};
-                // SAFETY: size asserted above; #[repr(C)] over T::Repr (bag
-                // of {elem} lanes) + trailing ZST token, so element layout
-                // matches [{elem}; {lanes}].
-                unsafe {{ &*core::ptr::from_ref(self).cast::<[{elem}; {lanes}]>() }}
+                crate::simd_storage::view(&self.0)
             }}
 
             /// Mutable reference to underlying array (zero-copy).
             #[inline(always)]
             pub fn as_array_mut(&mut self) -> &mut [{elem}; {lanes}] {{
-                const {{ assert!(core::mem::size_of::<Self>() == core::mem::size_of::<[{elem}; {lanes}]>()) }};
-                // SAFETY: same layout guarantee as as_array
-                unsafe {{ &mut *core::ptr::from_mut(self).cast::<[{elem}; {lanes}]>() }}
+                crate::simd_storage::view_mut(&mut self.0)
             }}
 
             /// View as byte array.
             #[inline(always)]
             pub fn as_bytes(&self) -> &[u8; {byte_size}] {{
-                const {{ assert!(core::mem::size_of::<Self>() == {byte_size}) }};
-                // SAFETY: size asserted above; every byte of a SIMD vector
-                // repr is initialized POD.
-                unsafe {{ &*core::ptr::from_ref(self).cast::<[u8; {byte_size}]>() }}
+                crate::simd_storage::view(&self.0)
             }}
 
             /// View as mutable byte array.
             #[inline(always)]
             pub fn as_bytes_mut(&mut self) -> &mut [u8; {byte_size}] {{
-                const {{ assert!(core::mem::size_of::<Self>() == {byte_size}) }};
-                // SAFETY: size asserted above; all bit patterns are valid
-                // for {elem} lanes, so writes through the view stay sound.
-                unsafe {{ &mut *core::ptr::from_mut(self).cast::<[u8; {byte_size}]>() }}
+                crate::simd_storage::view_mut(&mut self.0)
             }}
 
             /// Create from byte array reference (token-gated).
             #[inline(always)]
-            pub fn from_bytes(_: T, bytes: &[u8; {byte_size}]) -> Self {{
-                const {{ assert!(core::mem::size_of::<Self>() == {byte_size}) }};
-                // SAFETY: sizes match (asserted above); all bit patterns are
-                // valid {elem} lanes and the token is a ZST; transmute_copy
-                // reads unaligned.
-                unsafe {{ core::mem::transmute_copy(bytes) }}
+            pub fn from_bytes(token: T, bytes: &[u8; {byte_size}]) -> Self {{
+                Self(crate::simd_storage::copy(bytes), token)
             }}
 
             /// Create from owned byte array (token-gated).
             #[inline(always)]
-            pub fn from_bytes_owned(_: T, bytes: [u8; {byte_size}]) -> Self {{
-                const {{ assert!(core::mem::size_of::<Self>() == {byte_size}) }};
-                // SAFETY: as from_bytes — sizes asserted, all bit patterns
-                // valid, unaligned read.
-                unsafe {{ core::mem::transmute_copy(&bytes) }}
+            pub fn from_bytes_owned(token: T, bytes: [u8; {byte_size}]) -> Self {{
+                Self(crate::simd_storage::cast(bytes), token)
             }}
 
             // ====== Slice Casting ======
@@ -593,10 +569,7 @@ fn gen_u32x4_bitcast_f32() -> String {
             /// Bitcast to f32x4 (reinterpret bits, no conversion).
             #[inline(always)]
             pub fn bitcast_f32x4(self) -> super::f32x4<T> {{
-                const {{ assert!(core::mem::size_of::<Self>() == core::mem::size_of::<super::f32x4<T>>()) }};
-                // SAFETY: sizes asserted equal above; f32 lanes accept all
-                // bit patterns.
-                unsafe {{ core::mem::transmute_copy(&self) }}
+                super::f32x4(crate::simd_storage::cast(self.0), self.1)
             }}
 
             /// Bitcast to f32x4 by reference (zero-cost pointer cast).
