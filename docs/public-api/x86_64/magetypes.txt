@@ -6,14 +6,14 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2454 lines (supported surface) | magetypes.features.txt 75 added (features: avx512,std,w512) | magetypes.internal.txt 34 lines (41 hidden + 0 excluded-feature)
+# files: magetypes.txt 2460 lines (supported surface) | magetypes.features.txt 75 added (features: avx512,std,w512) | magetypes.internal.txt 34 lines (41 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                12
 #   pub types (struct/enum/trait/alias)       404
 #   pub consts/statics                        228
-#   free functions                           3096
+#   free functions                           3108
 #   inherent methods                         1249
 #   enum variants                               1
 #   re-exports                                  2
@@ -25,10 +25,10 @@
 # per-module pub lines:
 #   (root)                          321
 #   cast                              3
-#   prelude                        3014
+#   prelude                        3026
 #   simd                           1654
 
-## items (2230 lines)
+## items (2236 lines)
 
 pub mod magetypes
 pub use archmage
@@ -295,6 +295,9 @@ pub fn [i16; 16]::from(prelude::i16x16<T>) -> [i16; 16] [also: (root)]
 pub const fn prelude::i16x32<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
 pub const fn prelude::i16x32<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::i16x32<T>::abs_diff(self, Self) -> prelude::u16x32<T> [also: prelude::i16x32<T>]
+pub fn prelude::i16x32<T>::bitcast_mut_u16x32(&mut self) -> &mut prelude::u16x32<T> [also: prelude::i16x32<T>]
+pub fn prelude::i16x32<T>::bitcast_ref_u16x32(&self) -> &prelude::u16x32<T> [also: prelude::i16x32<T>]
+pub fn prelude::i16x32<T>::bitcast_u16x32(self) -> prelude::u16x32<T> [also: prelude::i16x32<T>]
 pub fn prelude::i16x32<T>::from_array(T, [i16; 32]) -> Self [also: prelude::i16x32<T>]
 pub fn prelude::i16x32<T>::from_repr(T, <T as simd::backends::I16x32Backend>::Repr) -> Self [also: prelude::i16x32<T>]
 pub fn prelude::i16x32<T>::into_repr(self) -> <T as simd::backends::I16x32Backend>::Repr [also: prelude::i16x32<T>]
@@ -539,6 +542,9 @@ pub fn [u16; 16]::from(prelude::u16x16<T>) -> [u16; 16] [also: (root)]
 #[repr(C)] pub struct prelude::u16x32<T: simd::backends::U16x32Backend>(_, _) [also: simd::generic]
 pub const fn prelude::u16x32<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
 pub const fn prelude::u16x32<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
+pub fn prelude::u16x32<T>::bitcast_i16x32(self) -> prelude::i16x32<T> [also: prelude::u16x32<T>]
+pub fn prelude::u16x32<T>::bitcast_mut_i16x32(&mut self) -> &mut prelude::i16x32<T> [also: prelude::u16x32<T>]
+pub fn prelude::u16x32<T>::bitcast_ref_i16x32(&self) -> &prelude::i16x32<T> [also: prelude::u16x32<T>]
 pub fn prelude::u16x32<T>::from_array(T, [u16; 32]) -> Self [also: prelude::u16x32<T>]
 pub fn prelude::u16x32<T>::from_repr(T, <T as simd::backends::U16x32Backend>::Repr) -> Self [also: prelude::u16x32<T>]
 pub fn prelude::u16x32<T>::into_repr(self) -> <T as simd::backends::U16x32Backend>::Repr [also: prelude::u16x32<T>]

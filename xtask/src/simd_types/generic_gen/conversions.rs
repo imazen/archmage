@@ -243,6 +243,34 @@ pub(crate) fn gen_unsigned_signed_bitcast(
     "#}
 }
 
+/// W512 signed/unsigned storage has identical lane bits and layout on every
+/// sealed backend. Reuse the checked storage operations instead of introducing
+/// per-ISA bitcast traits: no arithmetic or new unsafe boundary is needed.
+pub(crate) fn gen_w512_i16_bitcast(src: &str, trait_bound: &str) -> String {
+    let target = if src == "u16x32" { "i16x32" } else { "u16x32" };
+    formatdoc! {r#"
+        impl<T: {trait_bound}> {src}<T> {{
+            /// Reinterpret all 32 lanes as {target}, preserving every bit.
+            #[inline(always)]
+            pub fn bitcast_{target}(self) -> super::{target}<T> {{
+                super::{target}::from_repr_unchecked(self.1, crate::simd_storage::cast(self.0))
+            }}
+
+            /// Borrow the same storage as {target}, preserving the token and lifetime.
+            #[inline(always)]
+            pub fn bitcast_ref_{target}(&self) -> &super::{target}<T> {{
+                crate::simd_storage::vector_view(self.1, &self.0)
+            }}
+
+            /// Exclusively borrow the same storage as {target}; all lane bits remain valid.
+            #[inline(always)]
+            pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T> {{
+                crate::simd_storage::vector_view_mut(self.1, &mut self.0)
+            }}
+        }}
+    "#}
+}
+
 // ============================================================================
 // u32 -> i32 bitcasts
 // ============================================================================

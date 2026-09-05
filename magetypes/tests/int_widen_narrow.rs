@@ -549,6 +549,78 @@ macro_rules! run_all {
     }};
 }
 
+// Values, shared borrows and exclusive reborrows preserve the same initialized
+// 64 bytes. Exercise high bits, lane order and writes in both directions.
+#[cfg(feature = "w512")]
+fn check_w512_bitcast_views<T>(token: T)
+where
+    T: magetypes::simd::backends::I16x32Backend + magetypes::simd::backends::U16x32Backend,
+{
+    let bits = core::array::from_fn(|i| (i as u16).wrapping_mul(8191));
+    let mut unsigned = u16x32::from_array(token, bits);
+    let signed = unsigned.bitcast_i16x32();
+    assert_eq!(signed.to_array(), bits.map(|x| x as i16));
+    assert_eq!(signed.bitcast_u16x32().to_array(), bits);
+    assert_eq!(unsigned.bitcast_ref_i16x32().to_array(), signed.to_array());
+    assert_eq!(
+        core::ptr::from_ref(&unsigned).cast::<u8>(),
+        core::ptr::from_ref(unsigned.bitcast_ref_i16x32()).cast::<u8>()
+    );
+    {
+        let view = unsigned.bitcast_mut_i16x32();
+        assert_eq!(view.bitcast_ref_u16x32().to_array(), bits);
+        for i in 0..32 {
+            view[i] = i16::MIN + i as i16;
+        }
+        // A nested exclusive reborrow must remain valid when returning to the
+        // signed view and then the original unsigned owner.
+        view.bitcast_mut_u16x32()[31] = u16::MAX;
+        assert_eq!(view[31], -1);
+    }
+    let expected = core::array::from_fn(|i| if i == 31 { u16::MAX } else { 0x8000 + i as u16 });
+    assert_eq!(unsigned.to_array(), expected);
+}
+
+#[cfg(feature = "w512")]
+#[test]
+fn scalar_w512_bitcast_views() {
+    // ScalarToken makes this test executable under Miri without CPU intrinsics.
+    check_w512_bitcast_views(ScalarToken);
+}
+
+#[cfg(feature = "w512")]
+macro_rules! check_w512_byte_dot {
+    ($Tok:ty, $t:expr) => {{
+        let token = $t;
+        check_w512_bitcast_views(token);
+        // Exhaust every u16 bit pattern, batching lane-distinct values.
+        for start in (0..65536u32).step_by(32) {
+            let bits = core::array::from_fn(|i| (start + i as u32) as u16);
+            let value = u16x32::<$Tok>::from_array(token, bits).bitcast_i16x32();
+            assert_eq!(value.to_array(), bits.map(|x| x as i16));
+            assert_eq!(value.bitcast_u16x32().to_array(), bits);
+        }
+        for seed in 0..256usize {
+            let bytes: [u8; 64] = core::array::from_fn(|i| (seed + i * 13) as u8);
+            let rhs: [i16; 32] = core::array::from_fn(|i| (i as i16).wrapping_mul(8191));
+            let input = u8x64::<$Tok>::load(token, &bytes);
+            for (offset, widened) in [(0, input.widen_low()), (32, input.widen_high())] {
+                let actual = widened
+                    .bitcast_i16x32()
+                    .madd_adjacent(i16x32::load(token, &rhs))
+                    .to_array();
+                let expected: [i32; 16] = core::array::from_fn(|k| {
+                    (i64::from(bytes[offset + 2 * k]) * i64::from(rhs[2 * k])
+                        + i64::from(bytes[offset + 2 * k + 1]) * i64::from(rhs[2 * k + 1]))
+                        as i32
+                });
+                assert_eq!(actual, expected, "byte dot seed {seed}, offset {offset}");
+            }
+        }
+        2 * 65536 + 256 * 2 * 16
+    }};
+}
+
 /// The 512-bit widths: a 4x/2x polyfill on most backends, native AVX-512 on
 /// `X64V4Token`/`X64V4xToken`.
 #[cfg(feature = "w512")]
@@ -556,6 +628,7 @@ macro_rules! run_all_512 {
     ($Tok:ty, $t:expr) => {{
         let t = $t;
         let mut n = 0usize;
+        n += check_w512_byte_dot!($Tok, t);
         n += check_widen!($Tok, t, u8x64, u8, u16, 64, 32);
         n += check_widen!($Tok, t, i8x64, i8, i16, 64, 32);
         n += check_widen!($Tok, t, u16x32, u16, u32, 32, 16);
@@ -734,6 +807,34 @@ fn integer_primitives_in_one_magetypes_body() {
     assert_eq!(integer_kernel_scalar(ScalarToken, &a, &b, &bytes), expected);
     assert_eq!(
         archmage::incant!(integer_kernel(&a, &b, &bytes), [v3, neon, wasm128, scalar]),
+        expected
+    );
+}
+
+#[cfg(feature = "w512")]
+#[archmage::magetypes(define(u8x64, i16x32), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+fn w512_byte_dot(token: Token, bytes: &[u8; 64], rhs: &[i16; 32]) -> [i32; 16] {
+    u8x64::load(token, bytes)
+        .widen_low()
+        .bitcast_i16x32()
+        .madd_adjacent(i16x32::load(token, rhs))
+        .to_array()
+}
+
+#[cfg(feature = "w512")]
+#[test]
+fn w512_byte_dot_in_one_magetypes_body() {
+    let bytes = core::array::from_fn(|i| (128 + i) as u8);
+    let rhs = core::array::from_fn(|i| i as i16 - 16);
+    let expected = core::array::from_fn(|k| {
+        i32::from(bytes[2 * k]) * i32::from(rhs[2 * k])
+            + i32::from(bytes[2 * k + 1]) * i32::from(rhs[2 * k + 1])
+    });
+    assert_eq!(
+        archmage::incant!(
+            w512_byte_dot(&bytes, &rhs),
+            [v4(cfg(avx512)), v3, neon, wasm128, scalar]
+        ),
         expected
     );
 }

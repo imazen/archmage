@@ -309,6 +309,19 @@ pub(crate) fn all_conversions() -> Vec<Conversion> {
                 gen_unsigned_signed_bitcast(src, "i16x16", "u16_to_i16", "bitcast_i16x16")
             },
         },
+        // W512 i16/u16 bitcasts use the shared checked storage primitives.
+        Conversion {
+            src: "i16x32",
+            trait_bound: "crate::simd::backends::I16x32Backend + crate::simd::backends::U16x32Backend",
+            _in_backends: true,
+            gen_fn: gen_w512_i16_bitcast,
+        },
+        Conversion {
+            src: "u16x32",
+            trait_bound: "crate::simd::backends::I16x32Backend + crate::simd::backends::U16x32Backend",
+            _in_backends: true,
+            gen_fn: gen_w512_i16_bitcast,
+        },
         // u32 -> i32 bitcasts
         Conversion {
             src: "u32x4",
