@@ -4,7 +4,7 @@
 //! Only raw scalar/vector storage implements Pod. Never implement it for tokens
 //! or token-bearing SIMD wrappers: arbitrary bytes must not manufacture proofs.
 
-use core::mem::size_of;
+use core::mem::{align_of, size_of};
 
 /// Plain storage with no padding, pointers, or invalid bit patterns.
 ///
@@ -77,6 +77,30 @@ pub(crate) fn copy<Src: Pod, Dst: Pod>(src: &Src) -> Dst {
     unsafe { core::mem::transmute_copy(src) }
 }
 
+/// Borrow plain storage as an equally sized, no-more-aligned plain type.
+#[inline(always)]
+pub(crate) fn view<Src: Pod, Dst: Pod>(src: &Src) -> &Dst {
+    const {
+        assert!(size_of::<Src>() == size_of::<Dst>());
+        assert!(align_of::<Src>() >= align_of::<Dst>());
+    }
+    // SAFETY: size and alignment are checked at compile time. Pod guarantees
+    // initialized bytes and validity; the returned borrow retains src's lifetime.
+    unsafe { &*core::ptr::from_ref(src).cast::<Dst>() }
+}
+
+/// Exclusively borrow plain storage, permitting every possible replacement bit pattern.
+#[inline(always)]
+pub(crate) fn view_mut<Src: Pod, Dst: Pod>(src: &mut Src) -> &mut Dst {
+    const {
+        assert!(size_of::<Src>() == size_of::<Dst>());
+        assert!(align_of::<Src>() >= align_of::<Dst>());
+    }
+    // SAFETY: as in view, with exclusive access for the returned lifetime.
+    // Both types are Pod, so writes through Dst leave a valid Src.
+    unsafe { &mut *core::ptr::from_mut(src).cast::<Dst>() }
+}
+
 /// By-value convenience for existing backend bit reinterpretations.
 #[inline(always)]
 pub(crate) fn cast<Src: Pod, Dst: Pod>(src: Src) -> Dst {
@@ -110,6 +134,18 @@ mod tests {
         assert_eq!(cast::<_, u64>(cast::<_, f64>(bits)), bits);
         assert_eq!(bytes.0[0], 0xa5);
         assert_eq!(&bytes.0[9..], &[0xa5; 8]);
+    }
+
+    #[test]
+    fn views_preserve_bits_and_mutations() {
+        let mut bits = [0x7fc0_1234_u32, 0x8000_0000];
+        let floats: &[f32; 2] = view(&bits);
+        assert_eq!(floats[0].to_bits(), bits[0]);
+        assert_eq!(floats[1].to_bits(), bits[1]);
+        view_mut::<_, [f32; 2]>(&mut bits)[1] = f32::from_bits(0xffff_ffff);
+        assert_eq!(bits[1], 0xffff_ffff);
+        view_mut::<_, [u8; 8]>(&mut bits).fill(0xa5);
+        assert_eq!(bits, [0xa5a5_a5a5; 2]);
     }
 
     #[test]

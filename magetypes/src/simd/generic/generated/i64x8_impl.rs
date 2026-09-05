@@ -499,8 +499,7 @@ impl<T: I64x8Backend> Index<usize> for i64x8<T> {
     #[inline(always)]
     fn index(&self, i: usize) -> &i64 {
         assert!(i < 8, "i64x8 index out of bounds: {i}");
-        // SAFETY: i64x8's repr is layout-compatible with [i64; 8], and i < 8.
-        unsafe { &*(core::ptr::from_ref(self).cast::<i64>()).add(i) }
+        &crate::simd_storage::view::<_, [i64; 8]>(&self.0)[i]
     }
 }
 
@@ -508,8 +507,7 @@ impl<T: I64x8Backend> IndexMut<usize> for i64x8<T> {
     #[inline(always)]
     fn index_mut(&mut self, i: usize) -> &mut i64 {
         assert!(i < 8, "i64x8 index out of bounds: {i}");
-        // SAFETY: i64x8's repr is layout-compatible with [i64; 8], and i < 8.
-        unsafe { &mut *(core::ptr::from_mut(self).cast::<i64>()).add(i) }
+        &mut crate::simd_storage::view_mut::<_, [i64; 8]>(&mut self.0)[i]
     }
 }
 

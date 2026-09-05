@@ -704,7 +704,7 @@ pub fn prelude::F32x8FromHalves::low(self, <Self as simd::backends::F32x8Backend
 pub mod simd
 pub mod simd::backends
 pub trait simd::backends::F32x16Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::F32x16Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::F32x16Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::F32x16Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::bitand(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -752,7 +752,7 @@ pub fn simd::backends::F32x16Convert::convert_f32_to_i32_round(self, <Self as si
 pub fn simd::backends::F32x16Convert::convert_f32_to_i32_saturating(self, <Self as simd::backends::F32x16Backend>::Repr) -> <Self as simd::backends::I32x16Backend>::Repr
 pub fn simd::backends::F32x16Convert::convert_i32_to_f32(self, <Self as simd::backends::I32x16Backend>::Repr) -> <Self as simd::backends::F32x16Backend>::Repr
 pub trait simd::backends::F32x4Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::F32x4Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::F32x4Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::F32x4Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::bitand(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -802,7 +802,7 @@ pub fn simd::backends::F32x4Convert::convert_f32_to_i32_round(self, <Self as sim
 pub fn simd::backends::F32x4Convert::convert_f32_to_i32_saturating(self, <Self as simd::backends::F32x4Backend>::Repr) -> <Self as simd::backends::I32x4Backend>::Repr
 pub fn simd::backends::F32x4Convert::convert_i32_to_f32(self, <Self as simd::backends::I32x4Backend>::Repr) -> <Self as simd::backends::F32x4Backend>::Repr
 pub trait simd::backends::F32x8Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::F32x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::F32x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::F32x8Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::bitand(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -853,7 +853,7 @@ pub fn simd::backends::F32x8Convert::convert_f32_to_i32_round(self, <Self as sim
 pub fn simd::backends::F32x8Convert::convert_f32_to_i32_saturating(self, <Self as simd::backends::F32x8Backend>::Repr) -> <Self as simd::backends::I32x8Backend>::Repr
 pub fn simd::backends::F32x8Convert::convert_i32_to_f32(self, <Self as simd::backends::I32x8Backend>::Repr) -> <Self as simd::backends::F32x8Backend>::Repr
 pub trait simd::backends::F64x2Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::F64x2Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::F64x2Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::F64x2Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::bitand(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -894,7 +894,7 @@ pub fn simd::backends::F64x2Backend::sub(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::F64x2Backend::to_array(self, Self::Repr) -> [f64; 2]
 pub fn simd::backends::F64x2Backend::zero(self) -> Self::Repr
 pub trait simd::backends::F64x4Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::F64x4Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::F64x4Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::F64x4Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::bitand(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -935,7 +935,7 @@ pub fn simd::backends::F64x4Backend::sub(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::F64x4Backend::to_array(self, Self::Repr) -> [f64; 4]
 pub fn simd::backends::F64x4Backend::zero(self) -> Self::Repr
 pub trait simd::backends::F64x8Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::F64x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::F64x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::F64x8Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x8Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x8Backend::bitand(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -976,7 +976,7 @@ pub fn simd::backends::F64x8Backend::sub(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::F64x8Backend::to_array(self, Self::Repr) -> [f64; 8]
 pub fn simd::backends::F64x8Backend::zero(self) -> Self::Repr
 pub trait simd::backends::I16x16Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::I16x16Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::I16x16Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::I16x16Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x16Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x16Backend::all_true(self, Self::Repr) -> bool
@@ -1024,7 +1024,7 @@ pub trait simd::backends::I16x16Widen: simd::backends::I16x16Backend + simd::bac
 pub fn simd::backends::I16x16Widen::widen_high_i16_to_i32(self, <Self as simd::backends::I16x16Backend>::Repr) -> <Self as simd::backends::I32x8Backend>::Repr
 pub fn simd::backends::I16x16Widen::widen_low_i16_to_i32(self, <Self as simd::backends::I16x16Backend>::Repr) -> <Self as simd::backends::I32x8Backend>::Repr
 pub trait simd::backends::I16x32Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::I16x32Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::I16x32Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::I16x32Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x32Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x32Backend::all_true(self, Self::Repr) -> bool
@@ -1069,7 +1069,7 @@ pub trait simd::backends::I16x32Widen: simd::backends::I16x32Backend + simd::bac
 pub fn simd::backends::I16x32Widen::widen_high_i16_to_i32(self, <Self as simd::backends::I16x32Backend>::Repr) -> <Self as simd::backends::I32x16Backend>::Repr
 pub fn simd::backends::I16x32Widen::widen_low_i16_to_i32(self, <Self as simd::backends::I16x32Backend>::Repr) -> <Self as simd::backends::I32x16Backend>::Repr
 pub trait simd::backends::I16x8Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::I16x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::I16x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::I16x8Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x8Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x8Backend::all_true(self, Self::Repr) -> bool
@@ -1117,7 +1117,7 @@ pub trait simd::backends::I16x8Widen: simd::backends::I16x8Backend + simd::backe
 pub fn simd::backends::I16x8Widen::widen_high_i16_to_i32(self, <Self as simd::backends::I16x8Backend>::Repr) -> <Self as simd::backends::I32x4Backend>::Repr
 pub fn simd::backends::I16x8Widen::widen_low_i16_to_i32(self, <Self as simd::backends::I16x8Backend>::Repr) -> <Self as simd::backends::I32x4Backend>::Repr
 pub trait simd::backends::I32x16Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::I32x16Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::I32x16Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::I32x16Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x16Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x16Backend::all_true(self, Self::Repr) -> bool
@@ -1157,7 +1157,7 @@ pub trait simd::backends::I32x16Narrow: simd::backends::I32x16Backend + simd::ba
 pub fn simd::backends::I32x16Narrow::narrow_saturating_i32_to_i16(self, <Self as simd::backends::I32x16Backend>::Repr, <Self as simd::backends::I32x16Backend>::Repr) -> <Self as simd::backends::I16x32Backend>::Repr
 pub fn simd::backends::I32x16Narrow::narrow_saturating_i32_to_u16(self, <Self as simd::backends::I32x16Backend>::Repr, <Self as simd::backends::I32x16Backend>::Repr) -> <Self as simd::backends::U16x32Backend>::Repr
 pub trait simd::backends::I32x4Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::I32x4Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::I32x4Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::I32x4Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x4Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x4Backend::all_true(self, Self::Repr) -> bool
@@ -1197,7 +1197,7 @@ pub trait simd::backends::I32x4Narrow: simd::backends::I32x4Backend + simd::back
 pub fn simd::backends::I32x4Narrow::narrow_saturating_i32_to_i16(self, <Self as simd::backends::I32x4Backend>::Repr, <Self as simd::backends::I32x4Backend>::Repr) -> <Self as simd::backends::I16x8Backend>::Repr
 pub fn simd::backends::I32x4Narrow::narrow_saturating_i32_to_u16(self, <Self as simd::backends::I32x4Backend>::Repr, <Self as simd::backends::I32x4Backend>::Repr) -> <Self as simd::backends::U16x8Backend>::Repr
 pub trait simd::backends::I32x8Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::I32x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::I32x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::I32x8Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x8Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x8Backend::all_true(self, Self::Repr) -> bool
@@ -1237,7 +1237,7 @@ pub trait simd::backends::I32x8Narrow: simd::backends::I32x8Backend + simd::back
 pub fn simd::backends::I32x8Narrow::narrow_saturating_i32_to_i16(self, <Self as simd::backends::I32x8Backend>::Repr, <Self as simd::backends::I32x8Backend>::Repr) -> <Self as simd::backends::I16x16Backend>::Repr
 pub fn simd::backends::I32x8Narrow::narrow_saturating_i32_to_u16(self, <Self as simd::backends::I32x8Backend>::Repr, <Self as simd::backends::I32x8Backend>::Repr) -> <Self as simd::backends::U16x16Backend>::Repr
 pub trait simd::backends::I64x2Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::I64x2Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::I64x2Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::I64x2Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I64x2Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I64x2Backend::all_true(self, Self::Repr) -> bool
@@ -1273,7 +1273,7 @@ pub trait simd::backends::I64x2Bitcast: simd::backends::I64x2Backend + simd::bac
 pub fn simd::backends::I64x2Bitcast::bitcast_f64_to_i64(self, <Self as simd::backends::F64x2Backend>::Repr) -> <Self as simd::backends::I64x2Backend>::Repr
 pub fn simd::backends::I64x2Bitcast::bitcast_i64_to_f64(self, <Self as simd::backends::I64x2Backend>::Repr) -> <Self as simd::backends::F64x2Backend>::Repr
 pub trait simd::backends::I64x4Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::I64x4Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::I64x4Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::I64x4Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I64x4Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I64x4Backend::all_true(self, Self::Repr) -> bool
@@ -1309,7 +1309,7 @@ pub trait simd::backends::I64x4Bitcast: simd::backends::I64x4Backend + simd::bac
 pub fn simd::backends::I64x4Bitcast::bitcast_f64_to_i64(self, <Self as simd::backends::F64x4Backend>::Repr) -> <Self as simd::backends::I64x4Backend>::Repr
 pub fn simd::backends::I64x4Bitcast::bitcast_i64_to_f64(self, <Self as simd::backends::I64x4Backend>::Repr) -> <Self as simd::backends::F64x4Backend>::Repr
 pub trait simd::backends::I64x8Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::I64x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::I64x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::I64x8Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I64x8Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I64x8Backend::all_true(self, Self::Repr) -> bool
@@ -1342,7 +1342,7 @@ pub fn simd::backends::I64x8Backend::sub(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::I64x8Backend::to_array(self, Self::Repr) -> [i64; 8]
 pub fn simd::backends::I64x8Backend::zero(self) -> Self::Repr
 pub trait simd::backends::I8x16Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::I8x16Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::I8x16Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::I8x16Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x16Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x16Backend::all_true(self, Self::Repr) -> bool
@@ -1386,7 +1386,7 @@ pub trait simd::backends::I8x16Widen: simd::backends::I8x16Backend + simd::backe
 pub fn simd::backends::I8x16Widen::widen_high_i8_to_i16(self, <Self as simd::backends::I8x16Backend>::Repr) -> <Self as simd::backends::I16x8Backend>::Repr
 pub fn simd::backends::I8x16Widen::widen_low_i8_to_i16(self, <Self as simd::backends::I8x16Backend>::Repr) -> <Self as simd::backends::I16x8Backend>::Repr
 pub trait simd::backends::I8x32Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::I8x32Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::I8x32Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::I8x32Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x32Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x32Backend::all_true(self, Self::Repr) -> bool
@@ -1430,7 +1430,7 @@ pub trait simd::backends::I8x32Widen: simd::backends::I8x32Backend + simd::backe
 pub fn simd::backends::I8x32Widen::widen_high_i8_to_i16(self, <Self as simd::backends::I8x32Backend>::Repr) -> <Self as simd::backends::I16x16Backend>::Repr
 pub fn simd::backends::I8x32Widen::widen_low_i8_to_i16(self, <Self as simd::backends::I8x32Backend>::Repr) -> <Self as simd::backends::I16x16Backend>::Repr
 pub trait simd::backends::I8x64Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::I8x64Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::I8x64Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::I8x64Backend::abs(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x64Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x64Backend::all_true(self, Self::Repr) -> bool
@@ -1471,7 +1471,7 @@ pub trait simd::backends::I8x64Widen: simd::backends::I8x64Backend + simd::backe
 pub fn simd::backends::I8x64Widen::widen_high_i8_to_i16(self, <Self as simd::backends::I8x64Backend>::Repr) -> <Self as simd::backends::I16x32Backend>::Repr
 pub fn simd::backends::I8x64Widen::widen_low_i8_to_i16(self, <Self as simd::backends::I8x64Backend>::Repr) -> <Self as simd::backends::I16x32Backend>::Repr
 pub trait simd::backends::U16x16Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::U16x16Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::U16x16Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::U16x16Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x16Backend::all_true(self, Self::Repr) -> bool
 pub fn simd::backends::U16x16Backend::any_true(self, Self::Repr) -> bool
@@ -1509,7 +1509,7 @@ pub trait simd::backends::U16x16Widen: simd::backends::U16x16Backend + simd::bac
 pub fn simd::backends::U16x16Widen::widen_high_u16_to_u32(self, <Self as simd::backends::U16x16Backend>::Repr) -> <Self as simd::backends::U32x8Backend>::Repr
 pub fn simd::backends::U16x16Widen::widen_low_u16_to_u32(self, <Self as simd::backends::U16x16Backend>::Repr) -> <Self as simd::backends::U32x8Backend>::Repr
 pub trait simd::backends::U16x32Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::U16x32Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::U16x32Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::U16x32Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x32Backend::all_true(self, Self::Repr) -> bool
 pub fn simd::backends::U16x32Backend::any_true(self, Self::Repr) -> bool
@@ -1550,7 +1550,7 @@ pub trait simd::backends::U16x32Widen: simd::backends::U16x32Backend + simd::bac
 pub fn simd::backends::U16x32Widen::widen_high_u16_to_u32(self, <Self as simd::backends::U16x32Backend>::Repr) -> <Self as simd::backends::U32x16Backend>::Repr
 pub fn simd::backends::U16x32Widen::widen_low_u16_to_u32(self, <Self as simd::backends::U16x32Backend>::Repr) -> <Self as simd::backends::U32x16Backend>::Repr
 pub trait simd::backends::U16x8Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::U16x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::U16x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::U16x8Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x8Backend::all_true(self, Self::Repr) -> bool
 pub fn simd::backends::U16x8Backend::any_true(self, Self::Repr) -> bool
@@ -1588,7 +1588,7 @@ pub trait simd::backends::U16x8Widen: simd::backends::U16x8Backend + simd::backe
 pub fn simd::backends::U16x8Widen::widen_high_u16_to_u32(self, <Self as simd::backends::U16x8Backend>::Repr) -> <Self as simd::backends::U32x4Backend>::Repr
 pub fn simd::backends::U16x8Widen::widen_low_u16_to_u32(self, <Self as simd::backends::U16x8Backend>::Repr) -> <Self as simd::backends::U32x4Backend>::Repr
 pub trait simd::backends::U32x16Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::U32x16Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::U32x16Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::U32x16Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x16Backend::all_true(self, Self::Repr) -> bool
 pub fn simd::backends::U32x16Backend::any_true(self, Self::Repr) -> bool
@@ -1624,7 +1624,7 @@ pub fn simd::backends::U32x16Backend::sub(self, Self::Repr, Self::Repr) -> Self:
 pub fn simd::backends::U32x16Backend::to_array(self, Self::Repr) -> [u32; 16]
 pub fn simd::backends::U32x16Backend::zero(self) -> Self::Repr
 pub trait simd::backends::U32x4Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::U32x4Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::U32x4Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::U32x4Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x4Backend::all_true(self, Self::Repr) -> bool
 pub fn simd::backends::U32x4Backend::any_true(self, Self::Repr) -> bool
@@ -1660,7 +1660,7 @@ pub trait simd::backends::U32x4Bitcast: simd::backends::U32x4Backend + simd::bac
 pub fn simd::backends::U32x4Bitcast::bitcast_i32_to_u32(self, <Self as simd::backends::I32x4Backend>::Repr) -> <Self as simd::backends::U32x4Backend>::Repr
 pub fn simd::backends::U32x4Bitcast::bitcast_u32_to_i32(self, <Self as simd::backends::U32x4Backend>::Repr) -> <Self as simd::backends::I32x4Backend>::Repr
 pub trait simd::backends::U32x8Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::U32x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::U32x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::U32x8Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x8Backend::all_true(self, Self::Repr) -> bool
 pub fn simd::backends::U32x8Backend::any_true(self, Self::Repr) -> bool
@@ -1696,7 +1696,7 @@ pub trait simd::backends::U32x8Bitcast: simd::backends::U32x8Backend + simd::bac
 pub fn simd::backends::U32x8Bitcast::bitcast_i32_to_u32(self, <Self as simd::backends::I32x8Backend>::Repr) -> <Self as simd::backends::U32x8Backend>::Repr
 pub fn simd::backends::U32x8Bitcast::bitcast_u32_to_i32(self, <Self as simd::backends::U32x8Backend>::Repr) -> <Self as simd::backends::I32x8Backend>::Repr
 pub trait simd::backends::U64x2Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::U64x2Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::U64x2Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::U64x2Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U64x2Backend::all_true(self, Self::Repr) -> bool
 pub fn simd::backends::U64x2Backend::any_true(self, Self::Repr) -> bool
@@ -1729,7 +1729,7 @@ pub trait simd::backends::U64x2Bitcast: simd::backends::U64x2Backend + simd::bac
 pub fn simd::backends::U64x2Bitcast::bitcast_i64_to_u64(self, <Self as simd::backends::I64x2Backend>::Repr) -> <Self as simd::backends::U64x2Backend>::Repr
 pub fn simd::backends::U64x2Bitcast::bitcast_u64_to_i64(self, <Self as simd::backends::U64x2Backend>::Repr) -> <Self as simd::backends::I64x2Backend>::Repr
 pub trait simd::backends::U64x4Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::U64x4Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::U64x4Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::U64x4Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U64x4Backend::all_true(self, Self::Repr) -> bool
 pub fn simd::backends::U64x4Backend::any_true(self, Self::Repr) -> bool
@@ -1762,7 +1762,7 @@ pub trait simd::backends::U64x4Bitcast: simd::backends::U64x4Backend + simd::bac
 pub fn simd::backends::U64x4Bitcast::bitcast_i64_to_u64(self, <Self as simd::backends::I64x4Backend>::Repr) -> <Self as simd::backends::U64x4Backend>::Repr
 pub fn simd::backends::U64x4Bitcast::bitcast_u64_to_i64(self, <Self as simd::backends::U64x4Backend>::Repr) -> <Self as simd::backends::I64x4Backend>::Repr
 pub trait simd::backends::U64x8Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::U64x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::U64x8Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::U64x8Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U64x8Backend::all_true(self, Self::Repr) -> bool
 pub fn simd::backends::U64x8Backend::any_true(self, Self::Repr) -> bool
@@ -1794,7 +1794,7 @@ pub fn simd::backends::U64x8Backend::sub(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::U64x8Backend::to_array(self, Self::Repr) -> [u64; 8]
 pub fn simd::backends::U64x8Backend::zero(self) -> Self::Repr
 pub trait simd::backends::U8x16Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::U8x16Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::U8x16Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::U8x16Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x16Backend::all_true(self, Self::Repr) -> bool
 pub fn simd::backends::U8x16Backend::any_true(self, Self::Repr) -> bool
@@ -1831,7 +1831,7 @@ pub trait simd::backends::U8x16Widen: simd::backends::U8x16Backend + simd::backe
 pub fn simd::backends::U8x16Widen::widen_high_u8_to_u16(self, <Self as simd::backends::U8x16Backend>::Repr) -> <Self as simd::backends::U16x8Backend>::Repr
 pub fn simd::backends::U8x16Widen::widen_low_u8_to_u16(self, <Self as simd::backends::U8x16Backend>::Repr) -> <Self as simd::backends::U16x8Backend>::Repr
 pub trait simd::backends::U8x32Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::U8x32Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::U8x32Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::U8x32Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x32Backend::all_true(self, Self::Repr) -> bool
 pub fn simd::backends::U8x32Backend::any_true(self, Self::Repr) -> bool
@@ -1868,7 +1868,7 @@ pub trait simd::backends::U8x32Widen: simd::backends::U8x32Backend + simd::backe
 pub fn simd::backends::U8x32Widen::widen_high_u8_to_u16(self, <Self as simd::backends::U8x32Backend>::Repr) -> <Self as simd::backends::U16x16Backend>::Repr
 pub fn simd::backends::U8x32Widen::widen_low_u8_to_u16(self, <Self as simd::backends::U8x32Backend>::Repr) -> <Self as simd::backends::U16x16Backend>::Repr
 pub trait simd::backends::U8x64Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
-pub type simd::backends::U8x64Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync
+pub type simd::backends::U8x64Backend::Repr: core::marker::Copy + core::clone::Clone + core::marker::Send + core::marker::Sync + crate::simd_storage::Pod
 pub fn simd::backends::U8x64Backend::add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x64Backend::all_true(self, Self::Repr) -> bool
 pub fn simd::backends::U8x64Backend::any_true(self, Self::Repr) -> bool

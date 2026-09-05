@@ -136,7 +136,8 @@ pub(super) fn generate_i64_backend_trait(ty: &I64VecType) -> String {
         /// The token proves CPU support was verified via `summon()`.
         pub trait {trait_name}: SimdToken + Sealed + Copy + 'static {{
             /// Platform-native SIMD representation.
-            type Repr: Copy + Clone + Send + Sync;
+            #[allow(private_bounds)]
+            type Repr: Copy + Clone + Send + Sync + crate::simd_storage::Pod;
 
             // ====== Construction ======
 

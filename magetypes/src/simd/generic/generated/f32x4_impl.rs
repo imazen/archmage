@@ -670,8 +670,7 @@ impl<T: F32x4Backend> Index<usize> for f32x4<T> {
     #[inline(always)]
     fn index(&self, i: usize) -> &f32 {
         assert!(i < 4, "f32x4 index out of bounds: {i}");
-        // SAFETY: f32x4's repr is layout-compatible with [f32; 4], and i < 4.
-        unsafe { &*(core::ptr::from_ref(self).cast::<f32>()).add(i) }
+        &crate::simd_storage::view::<_, [f32; 4]>(&self.0)[i]
     }
 }
 
@@ -679,8 +678,7 @@ impl<T: F32x4Backend> IndexMut<usize> for f32x4<T> {
     #[inline(always)]
     fn index_mut(&mut self, i: usize) -> &mut f32 {
         assert!(i < 4, "f32x4 index out of bounds: {i}");
-        // SAFETY: f32x4's repr is layout-compatible with [f32; 4], and i < 4.
-        unsafe { &mut *(core::ptr::from_mut(self).cast::<f32>()).add(i) }
+        &mut crate::simd_storage::view_mut::<_, [f32; 4]>(&mut self.0)[i]
     }
 }
 
