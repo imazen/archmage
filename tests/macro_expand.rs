@@ -51,10 +51,5 @@ fn expanded_output_compiles() {
     t.pass("tests/expand/combinations/*.expanded.rs");
 }
 
-/// Known bugs: expanded output that doesn't compile standalone.
-#[test]
-#[cfg(target_arch = "x86_64")]
-fn expanded_output_known_bugs() {
-    let t = trybuild::TestCases::new();
-    t.compile_fail("tests/expand/should-fail/*.expanded.rs");
-}
+// Known-bug rejection reasons are checked by soundness_exploits.rs using
+// stable error codes/symbols rather than line-number and diagnostic-note snapshots.
