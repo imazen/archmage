@@ -1,0 +1,45 @@
+   Compiling archmage-macros v0.9.29 (/Users/lilith/work/archmage/archmage-macros)
+   Compiling archmage v0.9.29 (/Users/lilith/work/archmage)
+   Compiling magetypes v0.9.29 (/Users/lilith/work/archmage/magetypes)
+    Finished `bench` profile [optimized] target(s) in 3.67s
+     Running benches/generic_vs_concrete.rs (target/release/deps/generic_vs_concrete-98ed66230db5d2c2)
+ARM add-green: all variants passed alignment/tail parity checks
+[zenbench] calibration: int=0.40ns/iter mem_bw=86.5GiB/s mem_lat=7.7ns
+[zenbench] timer resolution: 41ns, loop overhead: 0.42ns/iter, TSC: 1.000 ticks/ns (invariant)
+[zenbench] results → /Users/lilith/tmp/zenbench/zenbench-1788669915-d992.txt
+
+═══════════════════════════════════════════════════════════════
+  zenbench  1788669915-d992
+  git: bdc8a109e1d43afd8f84da8e92f8f80f90368b17
+═══════════════════════════════════════════════════════════════
+
+  arm_add_green/16  200 rounds × 71K calls
+                         mean ±mad ns  95% CI vs base    iB/s
+  ├─ scalar               10.7 ±1.0ns  [10.6–10.9]ns    1.39G
+  ├─ scalar_unrolled      10.6 ±1.1ns  [-2.4%–+0.4%]    1.40G [1]
+  ├─ magetypes16          10.0 ±0.8ns  [-8.0%–-5.3%]    1.49G
+  ├─ magetypes32          11.2 ±1.0ns  [+3.4%–+6.1%]    1.32G
+  ├─ magetypes_scalar     10.5 ±0.9ns  [-3.4%–-0.6%]    1.42G [2]
+  ├─ magetypes32_scalar   11.2 ±0.8ns  [+2.8%–+5.6%]    1.33G
+  ╰─ direct_neon          10.3 ±1.0ns  [-5.4%–-2.4%]    1.44G
+
+  magetypes16         ███████████████████████████████████████████████ 1.49 GiB/s
+  direct_neon         ██████████████████████████████████████████████ 1.44 GiB/s
+  magetypes_scalar    █████████████████████████████████████████████ 1.42 GiB/s
+  scalar_unrolled     ████████████████████████████████████████████ 1.40 GiB/s
+  scalar              ████████████████████████████████████████████ 1.39 GiB/s
+  magetypes32_scalar  ██████████████████████████████████████████ 1.33 GiB/s
+  magetypes32         ██████████████████████████████████████████ 1.32 GiB/s
+  [1] CI crosses zero
+  [2] CI crosses zero
+
+  total: 26.5s  (7 noisy rounds)
+═══════════════════════════════════════════════════════════════
+  filter: cargo bench -- --group=NAME  format: --format=llm|csv|md|json
+group=arm_add_green/16 benchmark=scalar  |  vs_base=baseline  |  min=8.7ns mean=10.7ns median=10.7ns mad=1.0ns  |  throughput=1.39 GiB/s  |  n=200 cv=7.5% rounds=200 calls=71428 mean_ci=[10.6ns 10.9ns]
+group=arm_add_green/16 benchmark=scalar_unrolled  |  vs_base_pct=-1.01 ci=[-2.45% +0.41%] significant=false effect=-0.13 p=0.1978  |  min=8.9ns mean=10.6ns median=10.7ns mad=1.1ns  |  throughput=1.40 GiB/s  |  n=200 cv=7.6% rounds=200 calls=71428 mean_ci=[10.5ns 10.7ns]
+group=arm_add_green/16 benchmark=magetypes16  |  vs_base_pct=-6.64 ci=[-8.00% -5.33%] significant=true effect=-0.93 p=0.0000  |  min=8.2ns mean=10.0ns median=10.0ns mad=0.8ns  |  throughput=1.49 GiB/s  |  n=200 cv=7.3% rounds=200 calls=71428 mean_ci=[9.9ns 10.1ns]
+group=arm_add_green/16 benchmark=magetypes32  |  vs_base_pct=+4.71 ci=[+3.36% +6.07%] significant=true effect=0.60 p=0.0000  |  min=9.0ns mean=11.2ns median=11.2ns mad=1.0ns  |  throughput=1.32 GiB/s  |  n=200 cv=7.9% rounds=200 calls=71428 mean_ci=[11.1ns 11.4ns]
+group=arm_add_green/16 benchmark=magetypes_scalar  |  vs_base_pct=-1.99 ci=[-3.40% -0.65%] significant=false effect=-0.27 p=0.0089  |  min=8.6ns mean=10.5ns median=10.5ns mad=0.9ns  |  throughput=1.42 GiB/s  |  n=200 cv=7.4% rounds=200 calls=71428 mean_ci=[10.4ns 10.6ns]
+group=arm_add_green/16 benchmark=magetypes32_scalar  |  vs_base_pct=+4.21 ci=[+2.81% +5.57%] significant=true effect=0.55 p=0.0000  |  min=9.1ns mean=11.2ns median=11.2ns mad=0.8ns  |  throughput=1.33 GiB/s  |  n=200 cv=7.5% rounds=200 calls=71428 mean_ci=[11.1ns 11.3ns]
+group=arm_add_green/16 benchmark=direct_neon  |  vs_base_pct=-3.87 ci=[-5.39% -2.40%] significant=true effect=-0.49 p=0.0000  |  min=8.4ns mean=10.3ns median=10.3ns mad=1.0ns  |  throughput=1.44 GiB/s  |  n=200 cv=8.8% rounds=200 calls=71428 mean_ci=[10.2ns 10.5ns] cold=42.0ns

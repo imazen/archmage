@@ -71,3 +71,17 @@ Assembly was extracted from
 `target/release/deps/generic_vs_concrete-98ed66230db5d2c2` using `otool -tvV`.
 The four excerpts retain original addresses and symbols. Each artifact is
 under 30 KB. No library implementation or public API changed in this experiment.
+
+## Landing validation
+
+Before pushing, these benchmark/report commits were rebased onto
+`2a1c94195954` (the concurrent tier-trait authentication fix). The benchmark
+source is now `3249abce27ba`; the measured pre-rebase source remains
+`c3e94d85`. Kernel bodies are unchanged by the rebase. The timings and assembly
+above were collected before that rebase and have not been relabeled as new
+measurements. Post-rebase ARM benchmark clippy with warnings denied and the
+required generation, registry, token, and static soundness checks pass.
+
+The [post-rebase smoke run](post-rebase-smoke.log) also passes all seven
+variants through alignment/tail parity checks and the 16-byte timing group.
+It is a build/execution check, not a repeat of the larger working-set sweep.
