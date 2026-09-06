@@ -1,5 +1,8 @@
 //! ASM comparison: generic magetypes f32x8<T> vs concrete f32x8<x64v3>
 //!
+//! On aarch64, compares scalar, generic 16/32-byte magetypes, and direct NEON
+//! add-green row kernels. Run with `just bench-arm-codegen-macos` on macOS.
+//!
 //! Tests whether `#[inline(always)]` on backend trait methods is sufficient for
 //! LLVM to produce identical assembly when:
 //!   1. Generic function called without #[target_feature] on caller
@@ -21,8 +24,17 @@
 // x86-only bench: stub main so the `harness = false` target still links on
 // other architectures (a crate-level `#![cfg]` would leave the bench with no
 // `main` at all).
-#[cfg(not(target_arch = "x86_64"))]
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
 fn main() {}
+
+#[cfg(target_arch = "aarch64")]
+#[path = "support/arm_codegen.rs"]
+mod arm_impl;
+
+#[cfg(target_arch = "aarch64")]
+fn main() {
+    arm_impl::run();
+}
 
 #[cfg(target_arch = "x86_64")]
 mod x86_impl {

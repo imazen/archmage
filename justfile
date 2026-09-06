@@ -316,3 +316,13 @@ docs-clean:
 # Serve the intrinsics browser locally (port 3500)
 intrinsics-serve:
     cd docs/intrinsics-browser && python3 -m http.server 3500
+# Native ARM codegen comparisons; no target-cpu override.
+bench-arm-codegen-macos:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    test "$(uname -s)" = Darwin
+    mkdir -p "$HOME/tmp"
+    audit_log="$HOME/tmp/archmage-arm-codegen-$(date -u +%Y%m%dT%H%M%SZ).log"
+    TMPDIR="$HOME/tmp" CARGO_BUILD_JOBS=4 RAYON_NUM_THREADS=4 OMP_NUM_THREADS=4 \
+      nice -n 19 /usr/bin/time -l cargo bench --locked -p magetypes --bench generic_vs_concrete -- --format=llm \
+      2>&1 | tee "$audit_log"
