@@ -1,0 +1,145 @@
+   Compiling magetypes v0.9.29 (/Users/lilith/work/archmage/magetypes)
+    Finished `bench` profile [optimized] target(s) in 0.27s
+     Running benches/generic_vs_concrete.rs (target/release/deps/generic_vs_concrete-98ed66230db5d2c2)
+ARM add-green: all variants passed alignment/tail parity checks
+[zenbench] calibration: int=0.40ns/iter mem_bw=79.7GiB/s mem_lat=7.8ns
+[zenbench] timer resolution: 41ns, loop overhead: 0.42ns/iter, TSC: 1.000 ticks/ns (invariant)
+[zenbench] results → /Users/lilith/tmp/zenbench/zenbench-1788659635-a8f6.txt
+
+═══════════════════════════════════════════════════════════════
+  zenbench  1788659635-a8f6
+  git: 80e9748a4b40a45800458e6ccba9f2491e0a009f
+═══════════════════════════════════════════════════════════════
+
+  arm_add_green/16  200 rounds × 71K calls
+                         mean ±mad ns  95% CI vs base    iB/s
+  ├─ scalar               10.9 ±1.0ns  [10.8–11.0]ns    1.37G
+  ├─ scalar_unrolled      10.8 ±1.1ns  [-2.6%–+0.6%]    1.38G [1]
+  ├─ magetypes16          10.2 ±1.0ns  [-7.7%–-4.9%]    1.46G
+  ├─ magetypes32          11.2 ±0.9ns  [+1.5%–+4.4%]    1.33G
+  ├─ magetypes_scalar     10.9 ±0.8ns  [-1.5%–+1.5%]    1.37G [2]
+  ├─ magetypes32_scalar   11.4 ±1.0ns  [+3.2%–+6.1%]    1.31G
+  ╰─ direct_neon          10.2 ±0.9ns  [-7.7%–-4.8%]    1.46G
+
+  magetypes16         ███████████████████████████████████████████████ 1.46 GiB/s
+  direct_neon         ███████████████████████████████████████████████ 1.46 GiB/s
+  scalar_unrolled     █████████████████████████████████████████████ 1.38 GiB/s
+  scalar              ████████████████████████████████████████████ 1.37 GiB/s
+  magetypes_scalar    ████████████████████████████████████████████ 1.37 GiB/s
+  magetypes32         ███████████████████████████████████████████ 1.33 GiB/s
+  magetypes32_scalar  ██████████████████████████████████████████ 1.31 GiB/s
+  [1] CI crosses zero
+  [2] CI crosses zero
+
+  arm_add_green/256  200 rounds × 37K calls
+                         mean ±mad ns  95% CI vs base      iB/s
+  ├─ scalar               32.7 ±4.3ns  [31.9–33.6]ns      7.28G
+  ├─ scalar_unrolled      33.6 ±5.0ns  [-0.2%–+2.8%]      7.10G [1] [2]
+  ├─ magetypes16          16.2 ±2.1ns  [-51.4%–-48.6%]    14.7G
+  ├─ magetypes32          14.2 ±1.8ns  [-57.4%–-54.6%]    16.7G
+  ├─ magetypes_scalar     34.0 ±3.4ns  [+1.5%–+4.6%]      7.02G
+  ├─ magetypes32_scalar   34.1 ±3.9ns  [+2.1%–+5.0%]      6.99G [3]
+  ╰─ direct_neon          16.2 ±2.1ns  [-51.6%–-48.9%]    14.7G
+
+  magetypes32         ███████████████████████████████████████████████ 16.7 GiB/s
+  direct_neon         █████████████████████████████████████████ 14.7 GiB/s
+  magetypes16         █████████████████████████████████████████ 14.7 GiB/s
+  scalar              ████████████████████ 7.28 GiB/s
+  scalar_unrolled     ████████████████████ 7.10 GiB/s
+  magetypes_scalar    ████████████████████ 7.02 GiB/s
+  magetypes32_scalar  ████████████████████ 6.99 GiB/s
+  [1] CI crosses zero
+  [2] CV=22%
+  [3] CV=20%
+
+  arm_add_green/4096  200 rounds × 3K calls
+                         mean ±mad ns  95% CI vs base      iB/s
+  ├─ scalar               635 ±64ns  [624–646]ns        6.00G
+  ├─ scalar_unrolled      635 ±45ns  [-1.8%–+1.5%]      6.01G [1]
+  ├─ magetypes16          159 ±14ns  [-76.2%–-73.7%]    24.0G
+  ├─ magetypes32           92 ±10ns  [-86.7%–-84.2%]    41.3G
+  ├─ magetypes_scalar     636 ±53ns  [-1.5%–+1.6%]      6.00G [2]
+  ├─ magetypes32_scalar   630 ±65ns  [-2.3%–+0.6%]      6.06G [3]
+  ╰─ direct_neon          160 ±20ns  [-76.1%–-73.5%]    23.8G
+
+  magetypes32         ███████████████████████████████████████████████ 41.3 GiB/s
+  magetypes16         ███████████████████████████ 24.0 GiB/s
+  direct_neon         ███████████████████████████ 23.8 GiB/s
+  magetypes32_scalar  ███████ 6.06 GiB/s
+  scalar_unrolled     ███████ 6.01 GiB/s
+  scalar              ███████ 6.00 GiB/s
+  magetypes_scalar    ███████ 6.00 GiB/s
+  [1] CI crosses zero
+  [2] CI crosses zero
+  [3] CI crosses zero
+
+  arm_add_green/65536  200 rounds × 210 calls
+                          mean ±mad µs  95% CI vs base      iB/s
+  ├─ scalar               10.6 ±1.1µs  [10.4–10.7]µs      5.77G
+  ├─ scalar_unrolled      10.6 ±1.2µs  [-1.1%–+1.7%]      5.77G [1]
+  ├─ magetypes16           2.2 ±0.2µs  [-80.9%–-78.4%]    28.3G
+  ├─ magetypes32           1.2 ±0.2µs  [-89.9%–-87.4%]    50.8G
+  ├─ magetypes_scalar     10.6 ±1.2µs  [-1.8%–+1.0%]      5.77G [2]
+  ├─ magetypes32_scalar   10.5 ±1.1µs  [-1.6%–+1.1%]      5.80G [3]
+  ╰─ direct_neon           2.1 ±0.3µs  [-80.9%–-78.4%]    28.4G
+
+  magetypes32         ███████████████████████████████████████████████ 50.8 GiB/s
+  direct_neon         ██████████████████████████ 28.4 GiB/s
+  magetypes16         ██████████████████████████ 28.3 GiB/s
+  magetypes32_scalar  █████ 5.80 GiB/s
+  magetypes_scalar    █████ 5.77 GiB/s
+  scalar              █████ 5.77 GiB/s
+  scalar_unrolled     █████ 5.77 GiB/s
+  [1] CI crosses zero
+  [2] CI crosses zero
+  [3] CI crosses zero
+
+  total: 104.4s  (10 noisy rounds)
+═══════════════════════════════════════════════════════════════
+  filter: cargo bench -- --group=NAME  format: --format=llm|csv|md|json
+group=arm_add_green/16 benchmark=scalar  |  vs_base=baseline  |  min=8.9ns mean=10.9ns median=10.8ns mad=1.0ns  |  throughput=1.37 GiB/s  |  n=200 cv=8.1% rounds=200 calls=71428 mean_ci=[10.8ns 11.0ns]
+group=arm_add_green/16 benchmark=scalar_unrolled  |  vs_base_pct=-0.98 ci=[-2.59% +0.59%] significant=false effect=-0.12 p=0.3022  |  min=8.6ns mean=10.8ns median=10.8ns mad=1.1ns  |  throughput=1.38 GiB/s  |  n=200 cv=8.2% rounds=200 calls=71428 mean_ci=[10.6ns 10.9ns] cold=41.0ns
+group=arm_add_green/16 benchmark=magetypes16  |  vs_base_pct=-6.24 ci=[-7.67% -4.88%] significant=true effect=-0.82 p=0.0000  |  min=8.3ns mean=10.2ns median=10.2ns mad=1.0ns  |  throughput=1.46 GiB/s  |  n=200 cv=7.6% rounds=200 calls=71428 mean_ci=[10.1ns 10.3ns]
+group=arm_add_green/16 benchmark=magetypes32  |  vs_base_pct=+2.93 ci=[+1.47% +4.39%] significant=true effect=0.36 p=0.0003  |  min=8.9ns mean=11.2ns median=11.1ns mad=0.9ns  |  throughput=1.33 GiB/s  |  n=200 cv=7.9% rounds=200 calls=71428 mean_ci=[11.1ns 11.3ns]
+group=arm_add_green/16 benchmark=magetypes_scalar  |  vs_base_pct=+0.05 ci=[-1.49% +1.53%] significant=false effect=0.01 p=0.9382  |  min=8.8ns mean=10.9ns median=10.9ns mad=0.8ns  |  throughput=1.37 GiB/s  |  n=200 cv=7.2% rounds=200 calls=71428 mean_ci=[10.8ns 11.0ns]
+group=arm_add_green/16 benchmark=magetypes32_scalar  |  vs_base_pct=+4.64 ci=[+3.15% +6.12%] significant=true effect=0.59 p=0.0000  |  min=9.2ns mean=11.4ns median=11.3ns mad=1.0ns  |  throughput=1.31 GiB/s  |  n=200 cv=7.2% rounds=200 calls=71428 mean_ci=[11.3ns 11.5ns]
+group=arm_add_green/16 benchmark=direct_neon  |  vs_base_pct=-6.24 ci=[-7.73% -4.79%] significant=true effect=-0.81 p=0.0000  |  min=8.5ns mean=10.2ns median=10.1ns mad=0.9ns  |  throughput=1.46 GiB/s  |  n=200 cv=7.8% rounds=200 calls=71428 mean_ci=[10.1ns 10.3ns] cold=41.0ns
+group=arm_add_green/256 benchmark=scalar  |  vs_base=baseline  |  min=23.0ns mean=32.7ns median=32.8ns mad=4.3ns  |  throughput=7.28 GiB/s  |  n=200 cv=18.8% rounds=200 calls=37037 mean_ci=[31.9ns 33.6ns] cold=167.0ns
+group=arm_add_green/256 benchmark=scalar_unrolled  |  vs_base_pct=+1.32 ci=[-0.20% +2.81%] significant=false effect=0.09 p=0.0639  |  min=23.2ns mean=33.6ns median=33.1ns mad=5.0ns  |  throughput=7.10 GiB/s  |  n=200 cv=21.9% rounds=200 calls=37037 mean_ci=[32.6ns 34.6ns] cold=41.0ns
+group=arm_add_green/256 benchmark=magetypes16  |  vs_base_pct=-50.00 ci=[-51.37% -48.65%] significant=true effect=-4.34 p=0.0000  |  min=10.8ns mean=16.2ns median=16.4ns mad=2.1ns  |  throughput=14.70 GiB/s  |  n=200 cv=16.0% rounds=200 calls=37037 mean_ci=[15.9ns 16.6ns] cold=42.0ns
+group=arm_add_green/256 benchmark=magetypes32  |  vs_base_pct=-55.96 ci=[-57.35% -54.57%] significant=true effect=-5.16 p=0.0000  |  min=9.7ns mean=14.2ns median=14.3ns mad=1.8ns  |  throughput=16.74 GiB/s  |  n=200 cv=15.4% rounds=200 calls=37037 mean_ci=[13.9ns 14.5ns] cold=42.0ns
+group=arm_add_green/256 benchmark=magetypes_scalar  |  vs_base_pct=+3.08 ci=[+1.54% +4.57%] significant=true effect=0.22 p=0.0001  |  min=24.0ns mean=34.0ns median=34.3ns mad=3.4ns  |  throughput=7.02 GiB/s  |  n=200 cv=17.4% rounds=200 calls=37037 mean_ci=[33.2ns 34.8ns] cold=84.0ns
+group=arm_add_green/256 benchmark=magetypes32_scalar  |  vs_base_pct=+3.56 ci=[+2.11% +5.01%] significant=true effect=0.26 p=0.0000  |  min=24.1ns mean=34.1ns median=33.8ns mad=3.9ns  |  throughput=6.99 GiB/s  |  n=200 cv=20.2% rounds=200 calls=37037 mean_ci=[33.2ns 35.1ns] cold=42.0ns
+group=arm_add_green/256 benchmark=direct_neon  |  vs_base_pct=-50.23 ci=[-51.64% -48.86%] significant=true effect=-4.44 p=0.0000  |  min=9.9ns mean=16.2ns median=16.3ns mad=2.1ns  |  throughput=14.71 GiB/s  |  n=200 cv=17.2% rounds=200 calls=37037 mean_ci=[15.8ns 16.6ns]
+group=arm_add_green/4096 benchmark=scalar  |  vs_base=baseline  |  min=300.5ns mean=635.3ns median=637.5ns mad=64.4ns  |  throughput=6.00 GiB/s  |  n=200 cv=12.2% rounds=200 calls=3355 mean_ci=[624.5ns 645.8ns] cold=292.0ns
+group=arm_add_green/4096 benchmark=scalar_unrolled  |  vs_base_pct=-0.13 ci=[-1.79% +1.53%] significant=false effect=-0.01 p=0.8802  |  min=301.3ns mean=634.5ns median=637.6ns mad=45.3ns  |  throughput=6.01 GiB/s  |  n=200 cv=12.0% rounds=200 calls=3355 mean_ci=[623.8ns 644.8ns] cold=291.0ns
+group=arm_add_green/4096 benchmark=magetypes16  |  vs_base_pct=-74.97 ci=[-76.21% -73.73%] significant=true effect=-10.56 p=0.0000  |  min=75.9ns mean=159.1ns median=161.0ns mad=13.8ns  |  throughput=23.98 GiB/s  |  n=200 cv=12.4% rounds=200 calls=3355 mean_ci=[156.4ns 161.8ns] cold=84.0ns
+group=arm_add_green/4096 benchmark=magetypes32  |  vs_base_pct=-85.46 ci=[-86.73% -84.22%] significant=true effect=-12.39 p=0.0000  |  min=43.7ns mean=92.4ns median=93.4ns mad=9.9ns  |  throughput=41.28 GiB/s  |  n=200 cv=12.7% rounds=200 calls=3355 mean_ci=[90.8ns 94.0ns] cold=83.0ns
+group=arm_add_green/4096 benchmark=magetypes_scalar  |  vs_base_pct=+0.06 ci=[-1.49% +1.59%] significant=false effect=0.01 p=0.8687  |  min=300.9ns mean=635.7ns median=637.8ns mad=53.5ns  |  throughput=6.00 GiB/s  |  n=200 cv=12.1% rounds=200 calls=3355 mean_ci=[624.7ns 646.2ns] cold=333.0ns
+group=arm_add_green/4096 benchmark=magetypes32_scalar  |  vs_base_pct=-0.85 ci=[-2.30% +0.60%] significant=false effect=-0.07 p=0.3579  |  min=300.5ns mean=630.0ns median=638.0ns mad=65.1ns  |  throughput=6.06 GiB/s  |  n=200 cv=12.4% rounds=200 calls=3355 mean_ci=[618.8ns 640.8ns] cold=334.0ns
+group=arm_add_green/4096 benchmark=direct_neon  |  vs_base_pct=-74.80 ci=[-76.06% -73.53%] significant=true effect=-10.08 p=0.0000  |  min=79.3ns mean=160.2ns median=161.2ns mad=20.0ns  |  throughput=23.82 GiB/s  |  n=200 cv=12.9% rounds=200 calls=3355 mean_ci=[157.4ns 163.0ns] cold=125.0ns
+group=arm_add_green/65536 benchmark=scalar  |  vs_base=baseline  |  min=5.79µs mean=10.57µs median=10.86µs mad=1.05µs  |  throughput=5.77 GiB/s  |  n=200 cv=10.4% rounds=200 calls=210 mean_ci=[10.42µs 10.73µs] cold=4.58µs
+group=arm_add_green/65536 benchmark=scalar_unrolled  |  vs_base_pct=+0.32 ci=[-1.13% +1.72%] significant=false effect=0.03 p=0.5300  |  min=6.24µs mean=10.58µs median=10.65µs mad=1.19µs  |  throughput=5.77 GiB/s  |  n=200 cv=10.9% rounds=200 calls=210 mean_ci=[10.42µs 10.74µs] cold=5.12µs
+group=arm_add_green/65536 benchmark=magetypes16  |  vs_base_pct=-79.62 ci=[-80.85% -78.38%] significant=true effect=-11.28 p=0.0000  |  min=1.27µs mean=2.15µs median=2.25µs mad=206.2ns  |  throughput=28.34 GiB/s  |  n=200 cv=10.5% rounds=200 calls=210 mean_ci=[2.12µs 2.18µs] cold=1.00µs
+group=arm_add_green/65536 benchmark=magetypes32  |  vs_base_pct=-88.64 ci=[-89.92% -87.36%] significant=true effect=-12.86 p=0.0000  |  min=708.7ns mean=1.20µs median=1.16µs mad=211.4ns  |  throughput=50.81 GiB/s  |  n=200 cv=11.0% rounds=200 calls=210 mean_ci=[1.18µs 1.22µs] cold=542.0ns
+group=arm_add_green/65536 benchmark=magetypes_scalar  |  vs_base_pct=-0.37 ci=[-1.79% +0.99%] significant=false effect=-0.04 p=0.6782  |  min=5.99µs mean=10.57µs median=10.55µs mad=1.22µs  |  throughput=5.77 GiB/s  |  n=200 cv=9.6% rounds=200 calls=210 mean_ci=[10.43µs 10.71µs] cold=4.67µs
+group=arm_add_green/65536 benchmark=magetypes32_scalar  |  vs_base_pct=-0.28 ci=[-1.61% +1.06%] significant=false effect=-0.03 p=0.5671  |  min=5.96µs mean=10.53µs median=10.69µs mad=1.15µs  |  throughput=5.80 GiB/s  |  n=200 cv=9.6% rounds=200 calls=210 mean_ci=[10.39µs 10.67µs] cold=5.83µs
+group=arm_add_green/65536 benchmark=direct_neon  |  vs_base_pct=-79.68 ci=[-80.89% -78.44%] significant=true effect=-11.27 p=0.0000  |  min=1.27µs mean=2.15µs median=2.13µs mad=289.3ns  |  throughput=28.43 GiB/s  |  n=200 cv=10.9% rounds=200 calls=210 mean_ci=[2.11µs 2.18µs] cold=1.04µs
+      105.02 real        30.68 user         8.88 sys
+           141066240  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+              147632  page reclaims
+                 109  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   2  messages sent
+                   2  messages received
+                   5  signals received
+                  46  voluntary context switches
+              121461  involuntary context switches
+           656436959  instructions retired
+           214533341  cycles elapsed
+            34718272  peak memory footprint

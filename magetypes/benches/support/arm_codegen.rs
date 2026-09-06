@@ -136,7 +136,7 @@ fn bench(suite: &mut Suite) {
     // Working-set sweep, not an image-quality calibration. Every kernel is
     // branchless in pixel values, and operates on one row supplied by caller.
     for bytes in [16usize, 256, 4096, 65536] {
-        suite.compare(&format!("arm_add_green/{bytes}"), |g| {
+        suite.compare(format!("arm_add_green/{bytes}"), |g| {
             g.throughput(Throughput::Bytes(bytes as u64));
             for &(name, kernel) in KERNELS {
                 g.bench(name, move |b| {
