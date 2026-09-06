@@ -1182,6 +1182,8 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 Found by macro expansion snapshot compilation tests (`tests/expand/*.expanded.rs`):
 
+0. **`#[arcane]`/`#[rite]` on a wildcard param with an `impl Trait` bound: E0562.** `#[arcane] fn f(_: impl HasX64V2, ..)` renames the wildcard to `__archmage_arg_0` and re-binds it as `let _: impl HasX64V2 = __archmage_arg_0;`, which is not legal — `impl Trait` cannot appear in the type of a variable binding. A wildcard with a *concrete* token (`_: X64V3Token`) is fine, and is the committed `wildcard_token` snapshot. Fix: skip the type annotation on the rebind when the type is `impl Trait`, or when the pattern is a wildcard.
+
 1. ~~**`#[autoversion]` on `unsafe fn`: dispatcher drops `unsafe`**~~ — Fixed. Dispatcher now preserves `unsafe fn` and wraps variant calls in `unsafe {}`.
 
 2. **`#[rite]` on trait impl method: `#[target_feature]` on safe trait method is invalid** — Rust rejects `#[target_feature(..)]` on safe trait methods. The macro applies it directly, which works as macro output but the expanded code is invalid standalone Rust. (`tests/expand/rite_trait_impl.expanded.rs`)

@@ -26,6 +26,30 @@ A *proof* is one of:
    `#[arcane]` wrapper, a matching-feature safe call (Rust 1.86+), or an
    explicit `unsafe` call that took on the obligation.
 
+Both proofs are authenticated, because both are selected **by name** from the
+signature and a name is not a proof:
+
+* A **concrete token** (`token: X64V3Token`) is checked against its generated
+  `__ARCHMAGE_ASSERT_TIER_<tag>` const, which a same-named local struct does not
+  have (`tests/soundness/token_shadowing_exploit.rs`) and a lower tier aliased to
+  a higher tier's name does not match (`token_aliasing_exploit.rs`).
+* A **tier trait bound** (`impl HasX64V2`, `<T: HasX64V2>`, or a where-clause) is
+  re-stated through an absolute `::archmage::` path that a local trait cannot
+  shadow, and required of the token value:
+
+  ```rust
+  const fn __archmage_assert_tier_trait<__T: ?Sized + ::archmage::HasX64V2>(_: &__T) {}
+  __archmage_assert_tier_trait(&token);
+  ```
+
+  Since the tier traits are sealed through `SimdToken`, only a genuine token of
+  that tier or stronger satisfies it. A `const fn` so it provably has no runtime
+  body; by reference so the form also works for `impl Trait` in argument
+  position, where the type cannot be named; all bounds on one helper so a
+  multi-trait bound is checked as the same union of tiers the feature list was
+  built from. Pinned by `trait_shadowing_exploit.rs` (plus its generic and
+  `#[rite]` variants) and `trait_aliasing_exploit.rs`.
+
 Proofs union: a method taking `X64V4Token` inside an
 `impl … for X64V3Token` block may use V3 ∪ V4 features.
 

@@ -184,6 +184,7 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
         token_type_name: _token_type_name,
         magetypes_namespace,
         token_type: _,
+        tier_traits,
     } = if let Some(tier_token) = args.tier_tokens.first() {
         // Tier specified directly (e.g., #[rite(v3)]) — no token param needed.
         // `default` tier (DEFAULT_TIER_SENTINEL) is tokenless: no features,
@@ -217,6 +218,9 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
             },
             magetypes_namespace,
             token_type: None,
+            // Tokenless tier form (`#[rite(v3)]`): the tier comes from the
+            // attribute, not from a bound, so there is no trait to authenticate.
+            tier_traits: Vec::new(),
         }
     } else {
         match find_token_param(&input_fn.sig) {
@@ -326,10 +330,16 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
         args.import_intrinsics,
         args.import_magetypes,
     );
-    if !body_imports.is_empty() {
+    // `#[rite]` has no wrapper — it puts `#[target_feature]` on the function
+    // itself — so a trait/generic bound is authenticated at the top of the body.
+    // Concrete tokens keep their tier-tag const in `#[arcane]`'s wrapper; a
+    // tokenless tier form (`#[rite(v3)]`) has no bound to authenticate.
+    let tier_trait_assertion = crate::common::gen_tier_trait_assertion(&tier_traits, &token_ident);
+    if !body_imports.is_empty() || !tier_trait_assertion.is_empty() {
         let original_body = &input_fn.body;
         input_fn.body = quote! {
             #body_imports
+            #tier_trait_assertion
             #original_body
         };
     }

@@ -126,6 +126,25 @@ pub(crate) fn traits_to_features(trait_names: &[String]) -> Option<Vec<&'static 
     }
 }
 
+/// The archmage tier traits among `trait_names` — i.e. the ones that actually
+/// contributed target features.
+///
+/// `#[arcane]`/`#[rite]` resolve a trait bound **by name**, so on its own a bound
+/// like `impl HasX64V2` proves nothing: a downstream crate can declare its own
+/// trait of that name and receive the tier's `#[target_feature]` with no proof
+/// at all. The emitted code re-states these names through an absolute
+/// `::archmage::` path so rustc checks that the bound really is archmage's.
+/// See `gen_tier_trait_assertion` in `common.rs`.
+pub(crate) fn traits_to_tier_traits(trait_names: &[String]) -> Vec<String> {
+    let mut tiers: Vec<String> = Vec::new();
+    for trait_name in trait_names {
+        if trait_to_features(trait_name).is_some() && !tiers.contains(trait_name) {
+            tiers.push(trait_name.clone());
+        }
+    }
+    tiers
+}
+
 /// Trait names that don't map to any CPU features. These are valid in the type
 /// system but cannot be used as token bounds in `#[arcane]`/`#[rite]` because
 /// the macros need concrete features to generate `#[target_feature]` attributes.
@@ -193,6 +212,12 @@ pub(crate) struct TokenParamInfo {
     /// Full type from the function signature (for const tier tag assertion).
     /// Set for concrete token types, None for trait/generic bounds.
     pub token_type: Option<Type>,
+    /// The archmage tier traits the features were derived from. Empty for a
+    /// concrete token (which is checked by its tier-tag const instead); one or
+    /// more names for a trait or generic bound, which the emitted code
+    /// re-states through `::archmage::` so a same-named local trait cannot
+    /// stand in for archmage's.
+    pub tier_traits: Vec<String>,
 }
 
 /// Resolve magetypes namespace from a list of trait names.
@@ -230,7 +255,7 @@ pub(crate) fn find_token_param(sig: &Signature) -> Option<TokenParamInfo> {
             }
             FnArg::Typed(PatType { pat, ty, .. }) => {
                 if let Some(info) = extract_token_type_info(ty) {
-                    let (features, arch, token_name, mage_ns, full_type) = match info {
+                    let (features, arch, token_name, mage_ns, full_type, tier_traits) = match info {
                         TokenTypeInfo::Concrete(ref name) => {
                             let features = token_to_features(name).map(|f| f.to_vec());
                             let arch = token_to_arch(name);
@@ -239,12 +264,20 @@ pub(crate) fn find_token_param(sig: &Signature) -> Option<TokenParamInfo> {
                             // This preserves any path prefix (e.g., `my_crate::X64V3Token`)
                             // so the assertion resolves through re-exports.
                             let full_type = Some(ty.as_ref().clone());
-                            (features, arch, Some(name.clone()), ns, full_type)
+                            (
+                                features,
+                                arch,
+                                Some(name.clone()),
+                                ns,
+                                full_type,
+                                Vec::new(),
+                            )
                         }
                         TokenTypeInfo::ImplTrait(ref trait_names) => {
                             let ns = traits_to_magetypes_namespace(trait_names);
                             let arch = traits_to_arch(trait_names);
-                            (traits_to_features(trait_names), arch, None, ns, None)
+                            let tiers = traits_to_tier_traits(trait_names);
+                            (traits_to_features(trait_names), arch, None, ns, None, tiers)
                         }
                         TokenTypeInfo::Generic(type_name) => {
                             // Look up the generic parameter's bounds
@@ -254,7 +287,11 @@ pub(crate) fn find_token_param(sig: &Signature) -> Option<TokenParamInfo> {
                                 .as_ref()
                                 .and_then(|t| traits_to_magetypes_namespace(t));
                             let arch = bounds.as_ref().and_then(|t| traits_to_arch(t));
-                            (features, arch, None, ns, None)
+                            let tiers = bounds
+                                .as_ref()
+                                .map(|t| traits_to_tier_traits(t))
+                                .unwrap_or_default();
+                            (features, arch, None, ns, None, tiers)
                         }
                     };
 
@@ -275,6 +312,7 @@ pub(crate) fn find_token_param(sig: &Signature) -> Option<TokenParamInfo> {
                                 token_type_name: token_name,
                                 magetypes_namespace: mage_ns,
                                 token_type: full_type,
+                                tier_traits,
                             });
                         }
                     }

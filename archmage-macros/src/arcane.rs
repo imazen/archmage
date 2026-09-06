@@ -172,6 +172,7 @@ pub(crate) fn arcane_impl(
         token_type_name,
         magetypes_namespace,
         token_type,
+        tier_traits,
     } = match find_token_param(&input_fn.sig).or_else(|| {
         // A concrete token receiver can itself prove the required features.
         // Reuse normal discovery so token validation and feature lookup agree.
@@ -346,6 +347,7 @@ pub(crate) fn arcane_impl(
             target_feature_attrs,
             inline_attr,
             _token_ident,
+            tier_traits,
         )
     } else {
         arcane_impl_sibling(
@@ -357,6 +359,7 @@ pub(crate) fn arcane_impl(
             target_feature_attrs,
             inline_attr,
             _token_ident,
+            tier_traits,
         )
     }
 }
@@ -485,6 +488,7 @@ pub(crate) fn arcane_impl_sibling(
     target_feature_attrs: Vec<Attribute>,
     inline_attr: Attribute,
     _token_ident: Ident,
+    tier_traits: Vec<String>,
 ) -> TokenStream {
     let vis = &input_fn.vis;
     let sig = &input_fn.sig;
@@ -593,12 +597,15 @@ pub(crate) fn arcane_impl_sibling(
         // the wrapper doesn't — calling across this boundary requires unsafe.
         let token_assertion =
             gen_token_assertion(&token_type_name, &token_type, args.suppress_const_test);
+        let tier_trait_assertion =
+            crate::common::gen_tier_trait_assertion(&tier_traits, &_token_ident);
         let wrapper_fn = quote! {
             #cfg_guard
             #(#attrs)*
             #[inline(always)]
             #vis #sig {
                 #token_assertion
+                #tier_trait_assertion
                 // SAFETY: The token parameter proves the required CPU features are available.
                 // Calling a #[target_feature] function from a non-matching context requires
                 // unsafe because the CPU may not support those instructions. The token's
@@ -657,10 +664,13 @@ pub(crate) fn arcane_impl_sibling(
             }
         };
 
+        let tier_trait_assertion =
+            crate::common::gen_tier_trait_assertion(&tier_traits, &_token_ident);
         let wrapper_fn = quote! {
             #(#attrs)*
             #[inline(always)]
             #vis #sig {
+                #tier_trait_assertion
                 // SAFETY: The token proves the required CPU features are available.
                 unsafe { #sibling_call }
             }
@@ -690,6 +700,7 @@ pub(crate) fn arcane_impl_nested(
     target_feature_attrs: Vec<Attribute>,
     inline_attr: Attribute,
     _token_ident: Ident,
+    tier_traits: Vec<String>,
 ) -> TokenStream {
     let vis = &input_fn.vis;
     let sig = &input_fn.sig;
@@ -834,6 +845,8 @@ pub(crate) fn arcane_impl_nested(
 
         let token_assertion =
             gen_token_assertion(&token_type_name, &token_type, args.suppress_const_test);
+        let tier_trait_assertion =
+            crate::common::gen_tier_trait_assertion(&tier_traits, &_token_ident);
         quote! {
             // Real implementation for the correct architecture
             #cfg_guard
@@ -848,6 +861,7 @@ pub(crate) fn arcane_impl_nested(
                 }
 
                 #token_assertion
+                #tier_trait_assertion
                 // SAFETY: The token parameter proves the required CPU features are available.
                 unsafe { #inner_fn_name #turbofish(#(#inner_args),*) }
             }
@@ -858,6 +872,8 @@ pub(crate) fn arcane_impl_nested(
         // No specific arch (trait bounds or generic) - generate without cfg guards
         let token_assertion =
             gen_token_assertion(&token_type_name, &token_type, args.suppress_const_test);
+        let tier_trait_assertion =
+            crate::common::gen_tier_trait_assertion(&tier_traits, &_token_ident);
         quote! {
             #(#attrs)*
             #[inline(always)]
@@ -870,6 +886,7 @@ pub(crate) fn arcane_impl_nested(
                 }
 
                 #token_assertion
+                #tier_trait_assertion
                 // SAFETY: The token proves the required CPU features are available.
                 unsafe { #inner_fn_name #turbofish(#(#inner_args),*) }
             }

@@ -7,6 +7,13 @@ fn __arcane_process<T: HasX64V2>(token: T, a: f32) -> f32 {
 }
 #[inline(always)]
 fn process<T: HasX64V2>(token: T, a: f32) -> f32 {
+    {
+        #[inline(always)]
+        const fn __archmage_assert_tier_trait<__T: ?Sized + ::archmage::HasX64V2>(
+            _: &__T,
+        ) {}
+        __archmage_assert_tier_trait(&token);
+    }
     unsafe { __arcane_process::<T>(token, a) }
 }
 fn main() {}

@@ -1,6 +1,7 @@
 //! Shared utilities for all proc-macros.
 
-use quote::{ToTokens, quote};
+use proc_macro2::Ident;
+use quote::{ToTokens, format_ident, quote};
 use syn::{Attribute, GenericParam, Signature, Type, parse::ParseStream, token};
 
 /// A function parsed with the body left as an opaque TokenStream.
@@ -300,4 +301,65 @@ pub(crate) fn suffix_path(path: &syn::Path, suffix: &str) -> syn::Path {
         last.ident = quote::format_ident!("{}_{}", last.ident, suffix);
     }
     suffixed
+}
+
+/// Emit the tier-trait identity assertion for a trait or generic token bound.
+///
+/// `#[arcane]`/`#[rite]` resolve a tier trait **by name**: seeing `HasX64V2` in
+/// the signature is what selects the SSE4.2 `#[target_feature]` list. On its own
+/// that proves nothing, because a downstream crate can declare
+///
+/// ```ignore
+/// pub trait HasX64V2 {}
+/// impl HasX64V2 for NotAToken {}
+/// ```
+///
+/// and receive the whole feature set with no token, no sealing and no runtime
+/// detection — in ordinary safe code, with no diagnostic. On a CPU without the
+/// features that is SIGILL.
+///
+/// A concrete token is already covered: the wrapper asserts its generated
+/// `__ARCHMAGE_ASSERT_TIER_<tag>` const, which a same-named local struct does
+/// not have. This is the equivalent for the bound case. It re-states each tier
+/// trait through an **absolute** `::archmage::` path, which a local trait cannot
+/// shadow, and requires the token value's type to satisfy it:
+///
+/// ```ignore
+/// const fn __archmage_assert_tier_trait<__T: ?Sized + ::archmage::HasX64V2>(_: &__T) {}
+/// __archmage_assert_tier_trait(&token);
+/// ```
+///
+/// Because archmage's tier traits are sealed through `SimdToken`, satisfying the
+/// bound is only possible for a genuine token of that tier or stronger. A
+/// same-named local trait fails with rustc's own diagnostic, which names both:
+/// "`impl HasX64V2` implements similarly named trait `HasX64V2`, but not
+/// `archmage::HasX64V2`". A real but *weaker* token fails too, closing the
+/// trait-bound analogue of the token-aliasing hole.
+///
+/// It is a `const fn` so it provably has no runtime body, and its parameter is
+/// taken by reference so the form works for `impl Trait` in argument position,
+/// where the type cannot be named. All bounds are emitted on one helper, so a
+/// multi-trait bound (`impl HasNeon + HasNeonAes`) is checked as the same union
+/// of tiers the `#[target_feature]` list was built from.
+///
+/// Returns nothing for a concrete token (`tier_traits` empty) — that path keeps
+/// its cheaper const assertion.
+pub(crate) fn gen_tier_trait_assertion(
+    tier_traits: &[String],
+    token_ident: &Ident,
+) -> proc_macro2::TokenStream {
+    if tier_traits.is_empty() {
+        return quote! {};
+    }
+    let bounds = tier_traits.iter().map(|name| {
+        let ident = format_ident!("{}", name);
+        quote! { + ::archmage::#ident }
+    });
+    quote! {
+        {
+            #[inline(always)]
+            const fn __archmage_assert_tier_trait<__T: ?Sized #(#bounds)*>(_: &__T) {}
+            __archmage_assert_tier_trait(&#token_ident);
+        }
+    }
 }
