@@ -1,7 +1,0 @@
-error[E0133]: call to function `X64V3Token::forge_token_dangerously` with `#[target_feature]` is unsafe and requires unsafe block
- --> tests/compile_fail/forge_weaker_context.rs:7:5
-  |
-7 |     X64V3Token::forge_token_dangerously()
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ call to function with `#[target_feature]`
-  |
-  = help: in order for the call to be safe, the context requires the following additional target features: sse3, ssse3, sse4.1, sse4.2, popcnt, cmpxchg16b, avx, avx2, fma, bmi1, bmi2, f16c, lzcnt, and movbe

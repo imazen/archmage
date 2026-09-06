@@ -84,7 +84,7 @@ impl SimdToken for X64V1Token {
         {
             // SAFETY: SSE/SSE2 are the x86-64 ABI baseline — every
             // x86-64 CPU has them, so this token needs no detection.
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::from_context() })
         }
         #[cfg(feature = "testable_dispatch")]
         {
@@ -92,27 +92,9 @@ impl SimdToken for X64V1Token {
                 1 => None,
                 // SAFETY: SSE/SSE2 are the x86-64 ABI baseline (the
                 // cache only simulates unavailability for tests).
-                _ => Some(unsafe { Self::new_unchecked() }),
+                _ => Some(unsafe { Self::from_context() }),
             }
         }
-    }
-}
-
-impl X64V1Token {
-    /// Construct the token without any check. Crate-internal.
-    ///
-    /// # Safety
-    ///
-    /// The caller must have established, by compile-time `cfg`,
-    /// runtime detection, or possession of a superset token, that
-    /// every feature this token asserts is present on this CPU.
-    // Whether this is reachable depends on the target and on which
-    // `cfg(target_feature)` arms of `summon()` survive, so a token at
-    // the edge of the hierarchy can legitimately have no caller.
-    #[allow(dead_code)]
-    #[inline(always)]
-    pub(crate) const unsafe fn new_unchecked() -> Self {
-        Self { _private: () }
     }
 }
 
@@ -134,8 +116,8 @@ impl X64V1Token {
     /// features have to be detected at runtime.
     ///
     /// Being a `#[target_feature]` function, this cannot be coerced to
-    /// a function pointer — there would be no call site left for rustc
-    /// to check.
+    /// a safe function pointer — there would be no call site left for
+    /// rustc to check.
     ///
     /// # Safety
     ///
@@ -144,8 +126,31 @@ impl X64V1Token {
     /// Safe calls have that obligation discharged by the compiler.
     #[inline]
     #[target_feature(enable = "sse,sse2")]
-    pub fn forge_token_dangerously() -> Self {
+    pub fn from_context() -> Self {
         Self { _private: () }
+    }
+
+    /// Deprecated alias for [`X64V1Token::from_context`].
+    ///
+    /// Identical in every respect — same `#[target_feature]` gate, same
+    /// safe-call rules. The name predates the compiler-checked design
+    /// and describes only the `unsafe` half of it.
+    ///
+    /// # Safety
+    ///
+    /// Identical to [`X64V1Token::from_context`]: when called through an
+    /// `unsafe` block, the caller must ensure every feature in this
+    /// tier is available on the executing CPU. Safe calls have that
+    /// obligation discharged by the compiler.
+    #[deprecated(
+        since = "0.9.29",
+        note = "Renamed to from_context() — the constructor is checked against the caller's target-feature context"
+    )]
+    #[inline]
+    #[target_feature(enable = "sse,sse2")]
+    pub fn forge_token_dangerously() -> Self {
+        // Matching features: a safe call inside the same region.
+        Self::from_context()
     }
 }
 
@@ -305,7 +310,7 @@ impl SimdToken for X64V2Token {
             // SAFETY: every feature this token asserts is enabled at
             // compile time (cfg(target_feature)), so the binary only
             // runs on CPUs that have them.
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::from_context() })
         }
 
         // Runtime path with caching
@@ -322,29 +327,11 @@ impl SimdToken for X64V2Token {
             match X64_V2_CACHE.load(Ordering::Relaxed) {
                 // SAFETY: 2 is only ever stored by x64_v2_detect()
                 // after a positive runtime check of every feature.
-                2 => Some(unsafe { Self::new_unchecked() }),
+                2 => Some(unsafe { Self::from_context() }),
                 1 => None,
                 _ => x64_v2_detect(),
             }
         }
-    }
-}
-
-impl X64V2Token {
-    /// Construct the token without any check. Crate-internal.
-    ///
-    /// # Safety
-    ///
-    /// The caller must have established, by compile-time `cfg`,
-    /// runtime detection, or possession of a superset token, that
-    /// every feature this token asserts is present on this CPU.
-    // Whether this is reachable depends on the target and on which
-    // `cfg(target_feature)` arms of `summon()` survive, so a token at
-    // the edge of the hierarchy can legitimately have no caller.
-    #[allow(dead_code)]
-    #[inline(always)]
-    pub(crate) const unsafe fn new_unchecked() -> Self {
-        Self { _private: () }
     }
 }
 
@@ -366,8 +353,8 @@ impl X64V2Token {
     /// features have to be detected at runtime.
     ///
     /// Being a `#[target_feature]` function, this cannot be coerced to
-    /// a function pointer — there would be no call site left for rustc
-    /// to check.
+    /// a safe function pointer — there would be no call site left for
+    /// rustc to check.
     ///
     /// # Safety
     ///
@@ -376,8 +363,31 @@ impl X64V2Token {
     /// Safe calls have that obligation discharged by the compiler.
     #[inline]
     #[target_feature(enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b")]
-    pub fn forge_token_dangerously() -> Self {
+    pub fn from_context() -> Self {
         Self { _private: () }
+    }
+
+    /// Deprecated alias for [`X64V2Token::from_context`].
+    ///
+    /// Identical in every respect — same `#[target_feature]` gate, same
+    /// safe-call rules. The name predates the compiler-checked design
+    /// and describes only the `unsafe` half of it.
+    ///
+    /// # Safety
+    ///
+    /// Identical to [`X64V2Token::from_context`]: when called through an
+    /// `unsafe` block, the caller must ensure every feature in this
+    /// tier is available on the executing CPU. Safe calls have that
+    /// obligation discharged by the compiler.
+    #[deprecated(
+        since = "0.9.29",
+        note = "Renamed to from_context() — the constructor is checked against the caller's target-feature context"
+    )]
+    #[inline]
+    #[target_feature(enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b")]
+    pub fn forge_token_dangerously() -> Self {
+        // Matching features: a safe call inside the same region.
+        Self::from_context()
     }
 }
 
@@ -390,7 +400,7 @@ impl X64V2Token {
         // SAFETY: holding `self` proves this CPU has x86-64-v2's
         // full feature set, a superset of x86-64-v1's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V1Token::new_unchecked() }
+        unsafe { X64V1Token::from_context() }
     }
 }
 
@@ -529,7 +539,7 @@ fn x64_v2_detect() -> Option<X64V2Token> {
     if available {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
-        Some(unsafe { X64V2Token::new_unchecked() })
+        Some(unsafe { X64V2Token::from_context() })
     } else {
         None
     }
@@ -607,7 +617,7 @@ impl SimdToken for X64CryptoToken {
             // SAFETY: every feature this token asserts is enabled at
             // compile time (cfg(target_feature)), so the binary only
             // runs on CPUs that have them.
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::from_context() })
         }
 
         // Runtime path with caching
@@ -626,29 +636,11 @@ impl SimdToken for X64CryptoToken {
             match X64_CRYPTO_CACHE.load(Ordering::Relaxed) {
                 // SAFETY: 2 is only ever stored by x64_crypto_detect()
                 // after a positive runtime check of every feature.
-                2 => Some(unsafe { Self::new_unchecked() }),
+                2 => Some(unsafe { Self::from_context() }),
                 1 => None,
                 _ => x64_crypto_detect(),
             }
         }
-    }
-}
-
-impl X64CryptoToken {
-    /// Construct the token without any check. Crate-internal.
-    ///
-    /// # Safety
-    ///
-    /// The caller must have established, by compile-time `cfg`,
-    /// runtime detection, or possession of a superset token, that
-    /// every feature this token asserts is present on this CPU.
-    // Whether this is reachable depends on the target and on which
-    // `cfg(target_feature)` arms of `summon()` survive, so a token at
-    // the edge of the hierarchy can legitimately have no caller.
-    #[allow(dead_code)]
-    #[inline(always)]
-    pub(crate) const unsafe fn new_unchecked() -> Self {
-        Self { _private: () }
     }
 }
 
@@ -670,8 +662,8 @@ impl X64CryptoToken {
     /// features have to be detected at runtime.
     ///
     /// Being a `#[target_feature]` function, this cannot be coerced to
-    /// a function pointer — there would be no call site left for rustc
-    /// to check.
+    /// a safe function pointer — there would be no call site left for
+    /// rustc to check.
     ///
     /// # Safety
     ///
@@ -680,8 +672,31 @@ impl X64CryptoToken {
     /// Safe calls have that obligation discharged by the compiler.
     #[inline]
     #[target_feature(enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,pclmulqdq,aes")]
-    pub fn forge_token_dangerously() -> Self {
+    pub fn from_context() -> Self {
         Self { _private: () }
+    }
+
+    /// Deprecated alias for [`X64CryptoToken::from_context`].
+    ///
+    /// Identical in every respect — same `#[target_feature]` gate, same
+    /// safe-call rules. The name predates the compiler-checked design
+    /// and describes only the `unsafe` half of it.
+    ///
+    /// # Safety
+    ///
+    /// Identical to [`X64CryptoToken::from_context`]: when called through an
+    /// `unsafe` block, the caller must ensure every feature in this
+    /// tier is available on the executing CPU. Safe calls have that
+    /// obligation discharged by the compiler.
+    #[deprecated(
+        since = "0.9.29",
+        note = "Renamed to from_context() — the constructor is checked against the caller's target-feature context"
+    )]
+    #[inline]
+    #[target_feature(enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,pclmulqdq,aes")]
+    pub fn forge_token_dangerously() -> Self {
+        // Matching features: a safe call inside the same region.
+        Self::from_context()
     }
 }
 
@@ -694,7 +709,7 @@ impl X64CryptoToken {
         // SAFETY: holding `self` proves this CPU has x86-64 Crypto's
         // full feature set, a superset of x86-64-v1's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V1Token::new_unchecked() }
+        unsafe { X64V1Token::from_context() }
     }
     /// Extract a X64V2Token — guaranteed because x86-64 Crypto implies x86-64-v2.
     ///
@@ -704,7 +719,7 @@ impl X64CryptoToken {
         // SAFETY: holding `self` proves this CPU has x86-64 Crypto's
         // full feature set, a superset of x86-64-v2's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V2Token::new_unchecked() }
+        unsafe { X64V2Token::from_context() }
     }
 }
 
@@ -849,7 +864,7 @@ fn x64_crypto_detect() -> Option<X64CryptoToken> {
     if available {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
-        Some(unsafe { X64CryptoToken::new_unchecked() })
+        Some(unsafe { X64CryptoToken::from_context() })
     } else {
         None
     }
@@ -942,7 +957,7 @@ impl SimdToken for X64V3Token {
             // SAFETY: every feature this token asserts is enabled at
             // compile time (cfg(target_feature)), so the binary only
             // runs on CPUs that have them.
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::from_context() })
         }
 
         // Runtime path with caching
@@ -967,29 +982,11 @@ impl SimdToken for X64V3Token {
             match X64_V3_CACHE.load(Ordering::Relaxed) {
                 // SAFETY: 2 is only ever stored by x64_v3_detect()
                 // after a positive runtime check of every feature.
-                2 => Some(unsafe { Self::new_unchecked() }),
+                2 => Some(unsafe { Self::from_context() }),
                 1 => None,
                 _ => x64_v3_detect(),
             }
         }
-    }
-}
-
-impl X64V3Token {
-    /// Construct the token without any check. Crate-internal.
-    ///
-    /// # Safety
-    ///
-    /// The caller must have established, by compile-time `cfg`,
-    /// runtime detection, or possession of a superset token, that
-    /// every feature this token asserts is present on this CPU.
-    // Whether this is reachable depends on the target and on which
-    // `cfg(target_feature)` arms of `summon()` survive, so a token at
-    // the edge of the hierarchy can legitimately have no caller.
-    #[allow(dead_code)]
-    #[inline(always)]
-    pub(crate) const unsafe fn new_unchecked() -> Self {
-        Self { _private: () }
     }
 }
 
@@ -1011,8 +1008,8 @@ impl X64V3Token {
     /// features have to be detected at runtime.
     ///
     /// Being a `#[target_feature]` function, this cannot be coerced to
-    /// a function pointer — there would be no call site left for rustc
-    /// to check.
+    /// a safe function pointer — there would be no call site left for
+    /// rustc to check.
     ///
     /// # Safety
     ///
@@ -1023,8 +1020,33 @@ impl X64V3Token {
     #[target_feature(
         enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
     )]
-    pub fn forge_token_dangerously() -> Self {
+    pub fn from_context() -> Self {
         Self { _private: () }
+    }
+
+    /// Deprecated alias for [`X64V3Token::from_context`].
+    ///
+    /// Identical in every respect — same `#[target_feature]` gate, same
+    /// safe-call rules. The name predates the compiler-checked design
+    /// and describes only the `unsafe` half of it.
+    ///
+    /// # Safety
+    ///
+    /// Identical to [`X64V3Token::from_context`]: when called through an
+    /// `unsafe` block, the caller must ensure every feature in this
+    /// tier is available on the executing CPU. Safe calls have that
+    /// obligation discharged by the compiler.
+    #[deprecated(
+        since = "0.9.29",
+        note = "Renamed to from_context() — the constructor is checked against the caller's target-feature context"
+    )]
+    #[inline]
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    pub fn forge_token_dangerously() -> Self {
+        // Matching features: a safe call inside the same region.
+        Self::from_context()
     }
 }
 
@@ -1037,7 +1059,7 @@ impl X64V3Token {
         // SAFETY: holding `self` proves this CPU has x86-64-v3's
         // full feature set, a superset of x86-64-v1's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V1Token::new_unchecked() }
+        unsafe { X64V1Token::from_context() }
     }
     /// Extract a X64V2Token — guaranteed because x86-64-v3 implies x86-64-v2.
     ///
@@ -1047,7 +1069,7 @@ impl X64V3Token {
         // SAFETY: holding `self` proves this CPU has x86-64-v3's
         // full feature set, a superset of x86-64-v2's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V2Token::new_unchecked() }
+        unsafe { X64V2Token::from_context() }
     }
 }
 
@@ -1228,7 +1250,7 @@ fn x64_v3_detect() -> Option<X64V3Token> {
     if available {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
-        Some(unsafe { X64V3Token::new_unchecked() })
+        Some(unsafe { X64V3Token::from_context() })
     } else {
         None
     }
@@ -1335,7 +1357,7 @@ impl SimdToken for X64V3CryptoToken {
             // SAFETY: every feature this token asserts is enabled at
             // compile time (cfg(target_feature)), so the binary only
             // runs on CPUs that have them.
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::from_context() })
         }
 
         // Runtime path with caching
@@ -1364,29 +1386,11 @@ impl SimdToken for X64V3CryptoToken {
             match X64_V3_CRYPTO_CACHE.load(Ordering::Relaxed) {
                 // SAFETY: 2 is only ever stored by x64_v3_crypto_detect()
                 // after a positive runtime check of every feature.
-                2 => Some(unsafe { Self::new_unchecked() }),
+                2 => Some(unsafe { Self::from_context() }),
                 1 => None,
                 _ => x64_v3_crypto_detect(),
             }
         }
-    }
-}
-
-impl X64V3CryptoToken {
-    /// Construct the token without any check. Crate-internal.
-    ///
-    /// # Safety
-    ///
-    /// The caller must have established, by compile-time `cfg`,
-    /// runtime detection, or possession of a superset token, that
-    /// every feature this token asserts is present on this CPU.
-    // Whether this is reachable depends on the target and on which
-    // `cfg(target_feature)` arms of `summon()` survive, so a token at
-    // the edge of the hierarchy can legitimately have no caller.
-    #[allow(dead_code)]
-    #[inline(always)]
-    pub(crate) const unsafe fn new_unchecked() -> Self {
-        Self { _private: () }
     }
 }
 
@@ -1408,8 +1412,8 @@ impl X64V3CryptoToken {
     /// features have to be detected at runtime.
     ///
     /// Being a `#[target_feature]` function, this cannot be coerced to
-    /// a function pointer — there would be no call site left for rustc
-    /// to check.
+    /// a safe function pointer — there would be no call site left for
+    /// rustc to check.
     ///
     /// # Safety
     ///
@@ -1420,8 +1424,33 @@ impl X64V3CryptoToken {
     #[target_feature(
         enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes"
     )]
-    pub fn forge_token_dangerously() -> Self {
+    pub fn from_context() -> Self {
         Self { _private: () }
+    }
+
+    /// Deprecated alias for [`X64V3CryptoToken::from_context`].
+    ///
+    /// Identical in every respect — same `#[target_feature]` gate, same
+    /// safe-call rules. The name predates the compiler-checked design
+    /// and describes only the `unsafe` half of it.
+    ///
+    /// # Safety
+    ///
+    /// Identical to [`X64V3CryptoToken::from_context`]: when called through an
+    /// `unsafe` block, the caller must ensure every feature in this
+    /// tier is available on the executing CPU. Safe calls have that
+    /// obligation discharged by the compiler.
+    #[deprecated(
+        since = "0.9.29",
+        note = "Renamed to from_context() — the constructor is checked against the caller's target-feature context"
+    )]
+    #[inline]
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes"
+    )]
+    pub fn forge_token_dangerously() -> Self {
+        // Matching features: a safe call inside the same region.
+        Self::from_context()
     }
 }
 
@@ -1434,7 +1463,7 @@ impl X64V3CryptoToken {
         // SAFETY: holding `self` proves this CPU has x86-64-v3 Crypto's
         // full feature set, a superset of x86-64 Crypto's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64CryptoToken::new_unchecked() }
+        unsafe { X64CryptoToken::from_context() }
     }
     /// Extract a X64V1Token — guaranteed because x86-64-v3 Crypto implies x86-64-v1.
     ///
@@ -1444,7 +1473,7 @@ impl X64V3CryptoToken {
         // SAFETY: holding `self` proves this CPU has x86-64-v3 Crypto's
         // full feature set, a superset of x86-64-v1's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V1Token::new_unchecked() }
+        unsafe { X64V1Token::from_context() }
     }
     /// Extract a X64V2Token — guaranteed because x86-64-v3 Crypto implies x86-64-v2.
     ///
@@ -1454,7 +1483,7 @@ impl X64V3CryptoToken {
         // SAFETY: holding `self` proves this CPU has x86-64-v3 Crypto's
         // full feature set, a superset of x86-64-v2's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V2Token::new_unchecked() }
+        unsafe { X64V2Token::from_context() }
     }
     /// Extract a X64V3Token — guaranteed because x86-64-v3 Crypto implies x86-64-v3.
     ///
@@ -1464,7 +1493,7 @@ impl X64V3CryptoToken {
         // SAFETY: holding `self` proves this CPU has x86-64-v3 Crypto's
         // full feature set, a superset of x86-64-v3's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V3Token::new_unchecked() }
+        unsafe { X64V3Token::from_context() }
     }
 }
 
@@ -1660,7 +1689,7 @@ fn x64_v3_crypto_detect() -> Option<X64V3CryptoToken> {
     if available {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
-        Some(unsafe { X64V3CryptoToken::new_unchecked() })
+        Some(unsafe { X64V3CryptoToken::from_context() })
     } else {
         None
     }
@@ -1776,7 +1805,7 @@ impl SimdToken for X64V3GfniCryptoToken {
             // SAFETY: every feature this token asserts is enabled at
             // compile time (cfg(target_feature)), so the binary only
             // runs on CPUs that have them.
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::from_context() })
         }
 
         // Runtime path with caching
@@ -1806,29 +1835,11 @@ impl SimdToken for X64V3GfniCryptoToken {
             match X64_V3_GFNI_CRYPTO_CACHE.load(Ordering::Relaxed) {
                 // SAFETY: 2 is only ever stored by x64_v3_gfni_crypto_detect()
                 // after a positive runtime check of every feature.
-                2 => Some(unsafe { Self::new_unchecked() }),
+                2 => Some(unsafe { Self::from_context() }),
                 1 => None,
                 _ => x64_v3_gfni_crypto_detect(),
             }
         }
-    }
-}
-
-impl X64V3GfniCryptoToken {
-    /// Construct the token without any check. Crate-internal.
-    ///
-    /// # Safety
-    ///
-    /// The caller must have established, by compile-time `cfg`,
-    /// runtime detection, or possession of a superset token, that
-    /// every feature this token asserts is present on this CPU.
-    // Whether this is reachable depends on the target and on which
-    // `cfg(target_feature)` arms of `summon()` survive, so a token at
-    // the edge of the hierarchy can legitimately have no caller.
-    #[allow(dead_code)]
-    #[inline(always)]
-    pub(crate) const unsafe fn new_unchecked() -> Self {
-        Self { _private: () }
     }
 }
 
@@ -1850,8 +1861,8 @@ impl X64V3GfniCryptoToken {
     /// features have to be detected at runtime.
     ///
     /// Being a `#[target_feature]` function, this cannot be coerced to
-    /// a function pointer — there would be no call site left for rustc
-    /// to check.
+    /// a safe function pointer — there would be no call site left for
+    /// rustc to check.
     ///
     /// # Safety
     ///
@@ -1862,8 +1873,33 @@ impl X64V3GfniCryptoToken {
     #[target_feature(
         enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes,gfni"
     )]
-    pub fn forge_token_dangerously() -> Self {
+    pub fn from_context() -> Self {
         Self { _private: () }
+    }
+
+    /// Deprecated alias for [`X64V3GfniCryptoToken::from_context`].
+    ///
+    /// Identical in every respect — same `#[target_feature]` gate, same
+    /// safe-call rules. The name predates the compiler-checked design
+    /// and describes only the `unsafe` half of it.
+    ///
+    /// # Safety
+    ///
+    /// Identical to [`X64V3GfniCryptoToken::from_context`]: when called through an
+    /// `unsafe` block, the caller must ensure every feature in this
+    /// tier is available on the executing CPU. Safe calls have that
+    /// obligation discharged by the compiler.
+    #[deprecated(
+        since = "0.9.29",
+        note = "Renamed to from_context() — the constructor is checked against the caller's target-feature context"
+    )]
+    #[inline]
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes,gfni"
+    )]
+    pub fn forge_token_dangerously() -> Self {
+        // Matching features: a safe call inside the same region.
+        Self::from_context()
     }
 }
 
@@ -1876,7 +1912,7 @@ impl X64V3GfniCryptoToken {
         // SAFETY: holding `self` proves this CPU has x86-64-v3 GFNI Crypto's
         // full feature set, a superset of x86-64 Crypto's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64CryptoToken::new_unchecked() }
+        unsafe { X64CryptoToken::from_context() }
     }
     /// Extract a X64V1Token — guaranteed because x86-64-v3 GFNI Crypto implies x86-64-v1.
     ///
@@ -1886,7 +1922,7 @@ impl X64V3GfniCryptoToken {
         // SAFETY: holding `self` proves this CPU has x86-64-v3 GFNI Crypto's
         // full feature set, a superset of x86-64-v1's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V1Token::new_unchecked() }
+        unsafe { X64V1Token::from_context() }
     }
     /// Extract a X64V2Token — guaranteed because x86-64-v3 GFNI Crypto implies x86-64-v2.
     ///
@@ -1896,7 +1932,7 @@ impl X64V3GfniCryptoToken {
         // SAFETY: holding `self` proves this CPU has x86-64-v3 GFNI Crypto's
         // full feature set, a superset of x86-64-v2's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V2Token::new_unchecked() }
+        unsafe { X64V2Token::from_context() }
     }
     /// Extract a X64V3CryptoToken — guaranteed because x86-64-v3 GFNI Crypto implies x86-64-v3 Crypto.
     ///
@@ -1906,7 +1942,7 @@ impl X64V3GfniCryptoToken {
         // SAFETY: holding `self` proves this CPU has x86-64-v3 GFNI Crypto's
         // full feature set, a superset of x86-64-v3 Crypto's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V3CryptoToken::new_unchecked() }
+        unsafe { X64V3CryptoToken::from_context() }
     }
     /// Extract a X64V3Token — guaranteed because x86-64-v3 GFNI Crypto implies x86-64-v3.
     ///
@@ -1916,7 +1952,7 @@ impl X64V3GfniCryptoToken {
         // SAFETY: holding `self` proves this CPU has x86-64-v3 GFNI Crypto's
         // full feature set, a superset of x86-64-v3's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V3Token::new_unchecked() }
+        unsafe { X64V3Token::from_context() }
     }
 }
 
@@ -2115,7 +2151,7 @@ fn x64_v3_gfni_crypto_detect() -> Option<X64V3GfniCryptoToken> {
     if available {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
-        Some(unsafe { X64V3GfniCryptoToken::new_unchecked() })
+        Some(unsafe { X64V3GfniCryptoToken::from_context() })
     } else {
         None
     }
@@ -2230,7 +2266,7 @@ impl SimdToken for X64V4Token {
             // SAFETY: every feature this token asserts is enabled at
             // compile time (cfg(target_feature)), so the binary only
             // runs on CPUs that have them.
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::from_context() })
         }
 
         // Runtime path with caching
@@ -2262,29 +2298,11 @@ impl SimdToken for X64V4Token {
             match X64_V4_CACHE.load(Ordering::Relaxed) {
                 // SAFETY: 2 is only ever stored by x64_v4_detect()
                 // after a positive runtime check of every feature.
-                2 => Some(unsafe { Self::new_unchecked() }),
+                2 => Some(unsafe { Self::from_context() }),
                 1 => None,
                 _ => x64_v4_detect(),
             }
         }
-    }
-}
-
-impl X64V4Token {
-    /// Construct the token without any check. Crate-internal.
-    ///
-    /// # Safety
-    ///
-    /// The caller must have established, by compile-time `cfg`,
-    /// runtime detection, or possession of a superset token, that
-    /// every feature this token asserts is present on this CPU.
-    // Whether this is reachable depends on the target and on which
-    // `cfg(target_feature)` arms of `summon()` survive, so a token at
-    // the edge of the hierarchy can legitimately have no caller.
-    #[allow(dead_code)]
-    #[inline(always)]
-    pub(crate) const unsafe fn new_unchecked() -> Self {
-        Self { _private: () }
     }
 }
 
@@ -2306,8 +2324,8 @@ impl X64V4Token {
     /// features have to be detected at runtime.
     ///
     /// Being a `#[target_feature]` function, this cannot be coerced to
-    /// a function pointer — there would be no call site left for rustc
-    /// to check.
+    /// a safe function pointer — there would be no call site left for
+    /// rustc to check.
     ///
     /// # Safety
     ///
@@ -2318,8 +2336,33 @@ impl X64V4Token {
     #[target_feature(
         enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
     )]
-    pub fn forge_token_dangerously() -> Self {
+    pub fn from_context() -> Self {
         Self { _private: () }
+    }
+
+    /// Deprecated alias for [`X64V4Token::from_context`].
+    ///
+    /// Identical in every respect — same `#[target_feature]` gate, same
+    /// safe-call rules. The name predates the compiler-checked design
+    /// and describes only the `unsafe` half of it.
+    ///
+    /// # Safety
+    ///
+    /// Identical to [`X64V4Token::from_context`]: when called through an
+    /// `unsafe` block, the caller must ensure every feature in this
+    /// tier is available on the executing CPU. Safe calls have that
+    /// obligation discharged by the compiler.
+    #[deprecated(
+        since = "0.9.29",
+        note = "Renamed to from_context() — the constructor is checked against the caller's target-feature context"
+    )]
+    #[inline]
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+    )]
+    pub fn forge_token_dangerously() -> Self {
+        // Matching features: a safe call inside the same region.
+        Self::from_context()
     }
 }
 
@@ -2332,7 +2375,7 @@ impl X64V4Token {
         // SAFETY: holding `self` proves this CPU has AVX-512's
         // full feature set, a superset of x86-64 Crypto's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64CryptoToken::new_unchecked() }
+        unsafe { X64CryptoToken::from_context() }
     }
     /// Extract a X64V1Token — guaranteed because AVX-512 implies x86-64-v1.
     ///
@@ -2342,7 +2385,7 @@ impl X64V4Token {
         // SAFETY: holding `self` proves this CPU has AVX-512's
         // full feature set, a superset of x86-64-v1's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V1Token::new_unchecked() }
+        unsafe { X64V1Token::from_context() }
     }
     /// Extract a X64V2Token — guaranteed because AVX-512 implies x86-64-v2.
     ///
@@ -2352,7 +2395,7 @@ impl X64V4Token {
         // SAFETY: holding `self` proves this CPU has AVX-512's
         // full feature set, a superset of x86-64-v2's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V2Token::new_unchecked() }
+        unsafe { X64V2Token::from_context() }
     }
     /// Extract a X64V3Token — guaranteed because AVX-512 implies x86-64-v3.
     ///
@@ -2362,7 +2405,7 @@ impl X64V4Token {
         // SAFETY: holding `self` proves this CPU has AVX-512's
         // full feature set, a superset of x86-64-v3's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V3Token::new_unchecked() }
+        unsafe { X64V3Token::from_context() }
     }
 }
 
@@ -2576,7 +2619,7 @@ fn x64_v4_detect() -> Option<X64V4Token> {
     if available {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
-        Some(unsafe { X64V4Token::new_unchecked() })
+        Some(unsafe { X64V4Token::from_context() })
     } else {
         None
     }
@@ -2719,7 +2762,7 @@ impl SimdToken for X64V4xToken {
             // SAFETY: every feature this token asserts is enabled at
             // compile time (cfg(target_feature)), so the binary only
             // runs on CPUs that have them.
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::from_context() })
         }
 
         // Runtime path with caching
@@ -2760,29 +2803,11 @@ impl SimdToken for X64V4xToken {
             match X64_V4X_CACHE.load(Ordering::Relaxed) {
                 // SAFETY: 2 is only ever stored by x64_v4x_detect()
                 // after a positive runtime check of every feature.
-                2 => Some(unsafe { Self::new_unchecked() }),
+                2 => Some(unsafe { Self::from_context() }),
                 1 => None,
                 _ => x64_v4x_detect(),
             }
         }
-    }
-}
-
-impl X64V4xToken {
-    /// Construct the token without any check. Crate-internal.
-    ///
-    /// # Safety
-    ///
-    /// The caller must have established, by compile-time `cfg`,
-    /// runtime detection, or possession of a superset token, that
-    /// every feature this token asserts is present on this CPU.
-    // Whether this is reachable depends on the target and on which
-    // `cfg(target_feature)` arms of `summon()` survive, so a token at
-    // the edge of the hierarchy can legitimately have no caller.
-    #[allow(dead_code)]
-    #[inline(always)]
-    pub(crate) const unsafe fn new_unchecked() -> Self {
-        Self { _private: () }
     }
 }
 
@@ -2804,8 +2829,8 @@ impl X64V4xToken {
     /// features have to be detected at runtime.
     ///
     /// Being a `#[target_feature]` function, this cannot be coerced to
-    /// a function pointer — there would be no call site left for rustc
-    /// to check.
+    /// a safe function pointer — there would be no call site left for
+    /// rustc to check.
     ///
     /// # Safety
     ///
@@ -2816,8 +2841,33 @@ impl X64V4xToken {
     #[target_feature(
         enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
     )]
-    pub fn forge_token_dangerously() -> Self {
+    pub fn from_context() -> Self {
         Self { _private: () }
+    }
+
+    /// Deprecated alias for [`X64V4xToken::from_context`].
+    ///
+    /// Identical in every respect — same `#[target_feature]` gate, same
+    /// safe-call rules. The name predates the compiler-checked design
+    /// and describes only the `unsafe` half of it.
+    ///
+    /// # Safety
+    ///
+    /// Identical to [`X64V4xToken::from_context`]: when called through an
+    /// `unsafe` block, the caller must ensure every feature in this
+    /// tier is available on the executing CPU. Safe calls have that
+    /// obligation discharged by the compiler.
+    #[deprecated(
+        since = "0.9.29",
+        note = "Renamed to from_context() — the constructor is checked against the caller's target-feature context"
+    )]
+    #[inline]
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+    )]
+    pub fn forge_token_dangerously() -> Self {
+        // Matching features: a safe call inside the same region.
+        Self::from_context()
     }
 }
 
@@ -2830,7 +2880,7 @@ impl X64V4xToken {
         // SAFETY: holding `self` proves this CPU has x86-64-v4x's
         // full feature set, a superset of x86-64 Crypto's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64CryptoToken::new_unchecked() }
+        unsafe { X64CryptoToken::from_context() }
     }
     /// Extract a X64V1Token — guaranteed because x86-64-v4x implies x86-64-v1.
     ///
@@ -2840,7 +2890,7 @@ impl X64V4xToken {
         // SAFETY: holding `self` proves this CPU has x86-64-v4x's
         // full feature set, a superset of x86-64-v1's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V1Token::new_unchecked() }
+        unsafe { X64V1Token::from_context() }
     }
     /// Extract a X64V2Token — guaranteed because x86-64-v4x implies x86-64-v2.
     ///
@@ -2850,7 +2900,7 @@ impl X64V4xToken {
         // SAFETY: holding `self` proves this CPU has x86-64-v4x's
         // full feature set, a superset of x86-64-v2's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V2Token::new_unchecked() }
+        unsafe { X64V2Token::from_context() }
     }
     /// Extract a X64V3CryptoToken — guaranteed because x86-64-v4x implies x86-64-v3 Crypto.
     ///
@@ -2860,7 +2910,7 @@ impl X64V4xToken {
         // SAFETY: holding `self` proves this CPU has x86-64-v4x's
         // full feature set, a superset of x86-64-v3 Crypto's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V3CryptoToken::new_unchecked() }
+        unsafe { X64V3CryptoToken::from_context() }
     }
     /// Extract a X64V3GfniCryptoToken — guaranteed because x86-64-v4x implies x86-64-v3 GFNI Crypto.
     ///
@@ -2870,7 +2920,7 @@ impl X64V4xToken {
         // SAFETY: holding `self` proves this CPU has x86-64-v4x's
         // full feature set, a superset of x86-64-v3 GFNI Crypto's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V3GfniCryptoToken::new_unchecked() }
+        unsafe { X64V3GfniCryptoToken::from_context() }
     }
     /// Extract a X64V3Token — guaranteed because x86-64-v4x implies x86-64-v3.
     ///
@@ -2880,7 +2930,7 @@ impl X64V4xToken {
         // SAFETY: holding `self` proves this CPU has x86-64-v4x's
         // full feature set, a superset of x86-64-v3's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V3Token::new_unchecked() }
+        unsafe { X64V3Token::from_context() }
     }
     /// Extract a X64V4Token — guaranteed because x86-64-v4x implies AVX-512.
     ///
@@ -2890,7 +2940,7 @@ impl X64V4xToken {
         // SAFETY: holding `self` proves this CPU has x86-64-v4x's
         // full feature set, a superset of AVX-512's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V4Token::new_unchecked() }
+        unsafe { X64V4Token::from_context() }
     }
 
     /// Get a X64V4Token (alias for `.v4()`)
@@ -2898,7 +2948,7 @@ impl X64V4xToken {
     pub fn avx512(self) -> X64V4Token {
         // SAFETY: identical to `.v4()` — self's feature set is a
         // registry-verified superset of AVX-512's.
-        unsafe { X64V4Token::new_unchecked() }
+        unsafe { X64V4Token::from_context() }
     }
 }
 
@@ -3158,7 +3208,7 @@ fn x64_v4x_detect() -> Option<X64V4xToken> {
     if available {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
-        Some(unsafe { X64V4xToken::new_unchecked() })
+        Some(unsafe { X64V4xToken::from_context() })
     } else {
         None
     }
@@ -3276,7 +3326,7 @@ impl SimdToken for Avx512Fp16Token {
             // SAFETY: every feature this token asserts is enabled at
             // compile time (cfg(target_feature)), so the binary only
             // runs on CPUs that have them.
-            Some(unsafe { Self::new_unchecked() })
+            Some(unsafe { Self::from_context() })
         }
 
         // Runtime path with caching
@@ -3309,29 +3359,11 @@ impl SimdToken for Avx512Fp16Token {
             match AVX512_FP16_CACHE.load(Ordering::Relaxed) {
                 // SAFETY: 2 is only ever stored by avx512_fp16_detect()
                 // after a positive runtime check of every feature.
-                2 => Some(unsafe { Self::new_unchecked() }),
+                2 => Some(unsafe { Self::from_context() }),
                 1 => None,
                 _ => avx512_fp16_detect(),
             }
         }
-    }
-}
-
-impl Avx512Fp16Token {
-    /// Construct the token without any check. Crate-internal.
-    ///
-    /// # Safety
-    ///
-    /// The caller must have established, by compile-time `cfg`,
-    /// runtime detection, or possession of a superset token, that
-    /// every feature this token asserts is present on this CPU.
-    // Whether this is reachable depends on the target and on which
-    // `cfg(target_feature)` arms of `summon()` survive, so a token at
-    // the edge of the hierarchy can legitimately have no caller.
-    #[allow(dead_code)]
-    #[inline(always)]
-    pub(crate) const unsafe fn new_unchecked() -> Self {
-        Self { _private: () }
     }
 }
 
@@ -3353,8 +3385,8 @@ impl Avx512Fp16Token {
     /// features have to be detected at runtime.
     ///
     /// Being a `#[target_feature]` function, this cannot be coerced to
-    /// a function pointer — there would be no call site left for rustc
-    /// to check.
+    /// a safe function pointer — there would be no call site left for
+    /// rustc to check.
     ///
     /// # Safety
     ///
@@ -3365,8 +3397,33 @@ impl Avx512Fp16Token {
     #[target_feature(
         enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16"
     )]
-    pub fn forge_token_dangerously() -> Self {
+    pub fn from_context() -> Self {
         Self { _private: () }
+    }
+
+    /// Deprecated alias for [`Avx512Fp16Token::from_context`].
+    ///
+    /// Identical in every respect — same `#[target_feature]` gate, same
+    /// safe-call rules. The name predates the compiler-checked design
+    /// and describes only the `unsafe` half of it.
+    ///
+    /// # Safety
+    ///
+    /// Identical to [`Avx512Fp16Token::from_context`]: when called through an
+    /// `unsafe` block, the caller must ensure every feature in this
+    /// tier is available on the executing CPU. Safe calls have that
+    /// obligation discharged by the compiler.
+    #[deprecated(
+        since = "0.9.29",
+        note = "Renamed to from_context() — the constructor is checked against the caller's target-feature context"
+    )]
+    #[inline]
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16"
+    )]
+    pub fn forge_token_dangerously() -> Self {
+        // Matching features: a safe call inside the same region.
+        Self::from_context()
     }
 }
 
@@ -3379,7 +3436,7 @@ impl Avx512Fp16Token {
         // SAFETY: holding `self` proves this CPU has AVX-512FP16's
         // full feature set, a superset of x86-64 Crypto's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64CryptoToken::new_unchecked() }
+        unsafe { X64CryptoToken::from_context() }
     }
     /// Extract a X64V1Token — guaranteed because AVX-512FP16 implies x86-64-v1.
     ///
@@ -3389,7 +3446,7 @@ impl Avx512Fp16Token {
         // SAFETY: holding `self` proves this CPU has AVX-512FP16's
         // full feature set, a superset of x86-64-v1's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V1Token::new_unchecked() }
+        unsafe { X64V1Token::from_context() }
     }
     /// Extract a X64V2Token — guaranteed because AVX-512FP16 implies x86-64-v2.
     ///
@@ -3399,7 +3456,7 @@ impl Avx512Fp16Token {
         // SAFETY: holding `self` proves this CPU has AVX-512FP16's
         // full feature set, a superset of x86-64-v2's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V2Token::new_unchecked() }
+        unsafe { X64V2Token::from_context() }
     }
     /// Extract a X64V3Token — guaranteed because AVX-512FP16 implies x86-64-v3.
     ///
@@ -3409,7 +3466,7 @@ impl Avx512Fp16Token {
         // SAFETY: holding `self` proves this CPU has AVX-512FP16's
         // full feature set, a superset of x86-64-v3's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V3Token::new_unchecked() }
+        unsafe { X64V3Token::from_context() }
     }
     /// Extract a X64V4Token — guaranteed because AVX-512FP16 implies AVX-512.
     ///
@@ -3419,7 +3476,7 @@ impl Avx512Fp16Token {
         // SAFETY: holding `self` proves this CPU has AVX-512FP16's
         // full feature set, a superset of AVX-512's (registry-
         // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { X64V4Token::new_unchecked() }
+        unsafe { X64V4Token::from_context() }
     }
 
     /// Get a X64V4Token (alias for `.v4()`)
@@ -3427,7 +3484,7 @@ impl Avx512Fp16Token {
     pub fn avx512(self) -> X64V4Token {
         // SAFETY: identical to `.v4()` — self's feature set is a
         // registry-verified superset of AVX-512's.
-        unsafe { X64V4Token::new_unchecked() }
+        unsafe { X64V4Token::from_context() }
     }
 }
 
@@ -3639,7 +3696,7 @@ fn avx512_fp16_detect() -> Option<Avx512Fp16Token> {
     if available {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
-        Some(unsafe { Avx512Fp16Token::new_unchecked() })
+        Some(unsafe { Avx512Fp16Token::from_context() })
     } else {
         None
     }

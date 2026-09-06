@@ -4,7 +4,7 @@ use archmage::{X64V3Token, rite};
 
 #[rite(v1)]
 fn weaker() -> X64V3Token {
-    X64V3Token::forge_token_dangerously()
+    X64V3Token::from_context()
 }
 
 fn main() {}

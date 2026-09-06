@@ -4,8 +4,14 @@
 //! Pointer-based SIMD operations (load, store, gather, masked ops) must always
 //! require unsafe blocks, even inside #[target_feature] functions.
 //!
-//! Note: These tests are skipped in CI because trybuild's exact stderr matching
-//! is fragile across Rust versions and platforms. Run locally to verify.
+//! These DO run in CI, on every platform. trybuild compares rustc's rendered
+//! stderr byte-for-byte, so only put a case here when its diagnostic is
+//! platform- and version-stable. In particular, anything whose message names
+//! target features is not: rustc appends a note listing the features enabled in
+//! the *build configuration*, and that set differs per target (Linux x86-64
+//! says "the sse and sse2"; macOS-Intel says "the cmpxchg16b, sse, sse2, sse3,
+//! sse4.1, and ssse3"). Those cases belong in `tests/soundness_exploits.rs`,
+//! which asserts an error code plus message fragments instead.
 
 // These tests only apply to x86_64 (the UI tests use x86_64 intrinsics)
 #![cfg(target_arch = "x86_64")]
@@ -49,10 +55,11 @@ fn ui_tests() {
     // Token aliasing: renaming a lower-tier token to a higher-tier name must fail
     t.compile_fail("tests/compile_fail/token_aliasing.rs");
 
-    // forge_token_dangerously() is a safe #[target_feature] fn: only a caller
-    // whose own feature context covers the tier may call it without `unsafe`.
-    t.compile_fail("tests/compile_fail/forge_missing_context.rs");
-    t.compile_fail("tests/compile_fail/forge_weaker_context.rs");
-    t.compile_fail("tests/compile_fail/forge_fn_pointer.rs");
-    t.compile_fail("tests/compile_fail/forge_wrong_arch.rs");
+    // NOTE: from_context()'s rejection cases deliberately live in
+    // tests/soundness_exploits.rs, not here. Their rustc output names the
+    // target features enabled in the build configuration, and that set differs
+    // per platform (Linux x86-64 lists "sse and sse2"; macOS-Intel lists
+    // "cmpxchg16b, sse, sse2, sse3, sse4.1, and ssse3"), so a committed
+    // .stderr snapshot cannot pass on every runner. The exploit harness
+    // asserts an error code plus message fragments instead.
 }

@@ -34,29 +34,14 @@ impl SimdToken for NeonToken {
 }
 
 impl NeonToken {
-    /// Construct the token without any check. Crate-internal.
-    ///
-    /// # Safety
-    ///
-    /// This token's architecture is not the compilation target, so no
-    /// caller can discharge this obligation. Nothing in this crate
-    /// calls it; it exists so the internal constructor has the same
-    /// name on every target.
-    #[allow(dead_code)]
-    #[inline(always)]
-    pub(crate) const unsafe fn new_unchecked() -> Self {
-        Self { _private: () }
-    }
-}
-
-impl NeonToken {
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
-    /// On this token's native architecture this is a **safe**
-    /// `#[target_feature]` function that rustc checks against the
-    /// caller's feature context. The current compilation target is a
-    /// different architecture, so no `#[target_feature]` context can
-    /// exist to check against and the function stays `unsafe fn`.
+    /// On this token's native architecture the constructor is
+    /// `from_context()`, a **safe** `#[target_feature]` function that
+    /// rustc checks against the caller's feature context. The current
+    /// compilation target is a different architecture, so no such
+    /// context can exist, there is nothing for rustc to check, and no
+    /// `from_context()` is generated — only this `unsafe fn`.
     ///
     /// # Safety
     ///
@@ -64,6 +49,10 @@ impl NeonToken {
     /// architecture does not have. Any token produced here is a lie,
     /// and using it to enter a SIMD region is undefined behavior. It
     /// exists so cross-architecture code compiles, not to be called.
+    #[deprecated(
+        since = "0.9.29",
+        note = "Renamed to from_context() on native architectures; on a foreign architecture the features cannot exist at all"
+    )]
     #[inline(always)]
     pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -120,29 +109,14 @@ impl SimdToken for NeonAesToken {
 }
 
 impl NeonAesToken {
-    /// Construct the token without any check. Crate-internal.
-    ///
-    /// # Safety
-    ///
-    /// This token's architecture is not the compilation target, so no
-    /// caller can discharge this obligation. Nothing in this crate
-    /// calls it; it exists so the internal constructor has the same
-    /// name on every target.
-    #[allow(dead_code)]
-    #[inline(always)]
-    pub(crate) const unsafe fn new_unchecked() -> Self {
-        Self { _private: () }
-    }
-}
-
-impl NeonAesToken {
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
-    /// On this token's native architecture this is a **safe**
-    /// `#[target_feature]` function that rustc checks against the
-    /// caller's feature context. The current compilation target is a
-    /// different architecture, so no `#[target_feature]` context can
-    /// exist to check against and the function stays `unsafe fn`.
+    /// On this token's native architecture the constructor is
+    /// `from_context()`, a **safe** `#[target_feature]` function that
+    /// rustc checks against the caller's feature context. The current
+    /// compilation target is a different architecture, so no such
+    /// context can exist, there is nothing for rustc to check, and no
+    /// `from_context()` is generated — only this `unsafe fn`.
     ///
     /// # Safety
     ///
@@ -150,6 +124,10 @@ impl NeonAesToken {
     /// architecture does not have. Any token produced here is a lie,
     /// and using it to enter a SIMD region is undefined behavior. It
     /// exists so cross-architecture code compiles, not to be called.
+    #[deprecated(
+        since = "0.9.29",
+        note = "Renamed to from_context() on native architectures; on a foreign architecture the features cannot exist at all"
+    )]
     #[inline(always)]
     pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -206,29 +184,14 @@ impl SimdToken for NeonSha3Token {
 }
 
 impl NeonSha3Token {
-    /// Construct the token without any check. Crate-internal.
-    ///
-    /// # Safety
-    ///
-    /// This token's architecture is not the compilation target, so no
-    /// caller can discharge this obligation. Nothing in this crate
-    /// calls it; it exists so the internal constructor has the same
-    /// name on every target.
-    #[allow(dead_code)]
-    #[inline(always)]
-    pub(crate) const unsafe fn new_unchecked() -> Self {
-        Self { _private: () }
-    }
-}
-
-impl NeonSha3Token {
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
-    /// On this token's native architecture this is a **safe**
-    /// `#[target_feature]` function that rustc checks against the
-    /// caller's feature context. The current compilation target is a
-    /// different architecture, so no `#[target_feature]` context can
-    /// exist to check against and the function stays `unsafe fn`.
+    /// On this token's native architecture the constructor is
+    /// `from_context()`, a **safe** `#[target_feature]` function that
+    /// rustc checks against the caller's feature context. The current
+    /// compilation target is a different architecture, so no such
+    /// context can exist, there is nothing for rustc to check, and no
+    /// `from_context()` is generated — only this `unsafe fn`.
     ///
     /// # Safety
     ///
@@ -236,6 +199,10 @@ impl NeonSha3Token {
     /// architecture does not have. Any token produced here is a lie,
     /// and using it to enter a SIMD region is undefined behavior. It
     /// exists so cross-architecture code compiles, not to be called.
+    #[deprecated(
+        since = "0.9.29",
+        note = "Renamed to from_context() on native architectures; on a foreign architecture the features cannot exist at all"
+    )]
     #[inline(always)]
     pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -292,29 +259,14 @@ impl SimdToken for NeonCrcToken {
 }
 
 impl NeonCrcToken {
-    /// Construct the token without any check. Crate-internal.
-    ///
-    /// # Safety
-    ///
-    /// This token's architecture is not the compilation target, so no
-    /// caller can discharge this obligation. Nothing in this crate
-    /// calls it; it exists so the internal constructor has the same
-    /// name on every target.
-    #[allow(dead_code)]
-    #[inline(always)]
-    pub(crate) const unsafe fn new_unchecked() -> Self {
-        Self { _private: () }
-    }
-}
-
-impl NeonCrcToken {
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
-    /// On this token's native architecture this is a **safe**
-    /// `#[target_feature]` function that rustc checks against the
-    /// caller's feature context. The current compilation target is a
-    /// different architecture, so no `#[target_feature]` context can
-    /// exist to check against and the function stays `unsafe fn`.
+    /// On this token's native architecture the constructor is
+    /// `from_context()`, a **safe** `#[target_feature]` function that
+    /// rustc checks against the caller's feature context. The current
+    /// compilation target is a different architecture, so no such
+    /// context can exist, there is nothing for rustc to check, and no
+    /// `from_context()` is generated — only this `unsafe fn`.
     ///
     /// # Safety
     ///
@@ -322,6 +274,10 @@ impl NeonCrcToken {
     /// architecture does not have. Any token produced here is a lie,
     /// and using it to enter a SIMD region is undefined behavior. It
     /// exists so cross-architecture code compiles, not to be called.
+    #[deprecated(
+        since = "0.9.29",
+        note = "Renamed to from_context() on native architectures; on a foreign architecture the features cannot exist at all"
+    )]
     #[inline(always)]
     pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -380,29 +336,14 @@ impl SimdToken for Arm64V2Token {
 }
 
 impl Arm64V2Token {
-    /// Construct the token without any check. Crate-internal.
-    ///
-    /// # Safety
-    ///
-    /// This token's architecture is not the compilation target, so no
-    /// caller can discharge this obligation. Nothing in this crate
-    /// calls it; it exists so the internal constructor has the same
-    /// name on every target.
-    #[allow(dead_code)]
-    #[inline(always)]
-    pub(crate) const unsafe fn new_unchecked() -> Self {
-        Self { _private: () }
-    }
-}
-
-impl Arm64V2Token {
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
-    /// On this token's native architecture this is a **safe**
-    /// `#[target_feature]` function that rustc checks against the
-    /// caller's feature context. The current compilation target is a
-    /// different architecture, so no `#[target_feature]` context can
-    /// exist to check against and the function stays `unsafe fn`.
+    /// On this token's native architecture the constructor is
+    /// `from_context()`, a **safe** `#[target_feature]` function that
+    /// rustc checks against the caller's feature context. The current
+    /// compilation target is a different architecture, so no such
+    /// context can exist, there is nothing for rustc to check, and no
+    /// `from_context()` is generated — only this `unsafe fn`.
     ///
     /// # Safety
     ///
@@ -410,6 +351,10 @@ impl Arm64V2Token {
     /// architecture does not have. Any token produced here is a lie,
     /// and using it to enter a SIMD region is undefined behavior. It
     /// exists so cross-architecture code compiles, not to be called.
+    #[deprecated(
+        since = "0.9.29",
+        note = "Renamed to from_context() on native architectures; on a foreign architecture the features cannot exist at all"
+    )]
     #[inline(always)]
     pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }
@@ -469,29 +414,14 @@ impl SimdToken for Arm64V3Token {
 }
 
 impl Arm64V3Token {
-    /// Construct the token without any check. Crate-internal.
-    ///
-    /// # Safety
-    ///
-    /// This token's architecture is not the compilation target, so no
-    /// caller can discharge this obligation. Nothing in this crate
-    /// calls it; it exists so the internal constructor has the same
-    /// name on every target.
-    #[allow(dead_code)]
-    #[inline(always)]
-    pub(crate) const unsafe fn new_unchecked() -> Self {
-        Self { _private: () }
-    }
-}
-
-impl Arm64V3Token {
     /// Construct a proof for a foreign architecture. Always `unsafe`.
     ///
-    /// On this token's native architecture this is a **safe**
-    /// `#[target_feature]` function that rustc checks against the
-    /// caller's feature context. The current compilation target is a
-    /// different architecture, so no `#[target_feature]` context can
-    /// exist to check against and the function stays `unsafe fn`.
+    /// On this token's native architecture the constructor is
+    /// `from_context()`, a **safe** `#[target_feature]` function that
+    /// rustc checks against the caller's feature context. The current
+    /// compilation target is a different architecture, so no such
+    /// context can exist, there is nothing for rustc to check, and no
+    /// `from_context()` is generated — only this `unsafe fn`.
     ///
     /// # Safety
     ///
@@ -499,6 +429,10 @@ impl Arm64V3Token {
     /// architecture does not have. Any token produced here is a lie,
     /// and using it to enter a SIMD region is undefined behavior. It
     /// exists so cross-architecture code compiles, not to be called.
+    #[deprecated(
+        since = "0.9.29",
+        note = "Renamed to from_context() on native architectures; on a foreign architecture the features cannot exist at all"
+    )]
     #[inline(always)]
     pub unsafe fn forge_token_dangerously() -> Self {
         Self { _private: () }

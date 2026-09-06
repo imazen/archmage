@@ -2188,14 +2188,14 @@ fn run_safety_audit() -> Result<()> {
     let unsafe_pattern = Regex::new(r"\bunsafe\s*\{").expect("invalid unsafe regex");
     let forge_pattern =
         Regex::new(r"forge_token_dangerously\s*\(\s*\)").expect("invalid forge regex");
-    let unchecked_pattern =
-        Regex::new(r"new_unchecked\s*\(\s*\)").expect("invalid new_unchecked regex");
+    let from_context_pattern =
+        Regex::new(r"from_context\s*\(\s*\)").expect("invalid from_context regex");
 
     let mut critical_count = 0;
     let mut fragile_count = 0;
     let mut unsafe_without_safety = 0;
     let mut forge_calls = 0;
-    let mut unchecked_calls = 0;
+    let mut from_context_calls = 0;
 
     let dirs = ["src", "archmage-macros/src", "magetypes/src", "xtask/src"];
 
@@ -2235,11 +2235,11 @@ fn run_safety_audit() -> Result<()> {
                 }
             }
 
-            // Count token constructor calls. `forge_token_dangerously()` is the
-            // public, `#[target_feature]`-checked one; `new_unchecked()` is the
-            // crate-internal one every generated call site uses.
+            // Count token constructor calls. `from_context()` is the
+            // `#[target_feature]`-checked constructor every generated call site
+            // uses; `forge_token_dangerously()` is its deprecated alias.
             forge_calls += forge_pattern.find_iter(&content).count();
-            unchecked_calls += unchecked_pattern.find_iter(&content).count();
+            from_context_calls += from_context_pattern.find_iter(&content).count();
         }
     }
 
@@ -2251,7 +2251,10 @@ fn run_safety_audit() -> Result<()> {
         unsafe_without_safety
     );
     println!("  forge_token_dangerously() calls: {}", forge_calls);
-    println!("  new_unchecked() calls:              {}", unchecked_calls);
+    println!(
+        "  from_context() calls:               {}",
+        from_context_calls
+    );
 
     // 2. Check intrinsics database freshness
     println!("\n=== Intrinsics Database ===");

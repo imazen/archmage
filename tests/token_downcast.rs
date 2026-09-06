@@ -6,6 +6,14 @@
 //! IntoConcreteToken and SimdToken trait methods work on stubs too.
 //!
 
+// This file forges tokens for *every* tier, including the ones that are
+// foreign-architecture stubs on whatever target it is compiled for. Stubs have
+// no `from_context()` — no `#[target_feature]` context for their features can
+// exist there — so the deprecated `unsafe fn` alias is the only constructor
+// that is present on all of them. `tests/from_context.rs` covers the checked
+// constructor on native tokens.
+#![allow(deprecated)]
+
 use archmage::*;
 
 // ============================================================================

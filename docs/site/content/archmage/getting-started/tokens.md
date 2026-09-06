@@ -190,7 +190,7 @@ Available traits:
 ## Constructing a token from an existing feature context
 
 Inside a `#[target_feature]` region you have already proved the features — the
-attribute is the proof. `forge_token_dangerously()` converts that proof back
+attribute is the proof. `from_context()` converts that proof back
 into a token, and rustc checks the conversion:
 
 ```rust
@@ -199,7 +199,7 @@ use archmage::{X64V3Token, arcane, rite};
 // Tier-based #[rite] takes no token, but its body is an AVX2+FMA region.
 #[rite(v3)]
 fn needs_a_token(data: &[f32; 8]) -> f32 {
-    let token = X64V3Token::forge_token_dangerously();  // safe — no `unsafe`
+    let token = X64V3Token::from_context();  // safe — no `unsafe`
     consume(token, data)
 }
 
@@ -231,7 +231,7 @@ to check).
 
 Because no detection runs, this also bypasses process-wide token disabling
 including `testable_dispatch`. Use `summon()` whenever dispatch has to respond
-to runtime state. `ScalarToken::forge_token_dangerously()` asserts no features
+to runtime state. `ScalarToken::from_context()` asserts no features
 and is callable from anywhere.
 
 On a foreign architecture the constructor stays `unsafe fn` — no
@@ -240,6 +240,42 @@ nothing for rustc to check. On WASM, Rust permits safe `#[target_feature]`
 calls from any context: the engine validates the required instructions when
 the module loads.
 
-This whole pattern is pinned by `tests/forge_from_context.rs`, which carries
+### What this is for
+
+The point is to stop threading a token through code that has already proved the
+features. Three shapes benefit:
+
+- **Tokenless tier bodies.** `#[rite(v3)]` takes no token by design. When its
+  body reaches something token-gated — a magetypes method, a token-based
+  `#[rite]` — it can forge one instead of taking a parameter it does not want.
+- **Recursion.** A recursive `#[rite]` need not carry a token down every frame;
+  materialize it at the leaves, where it is used.
+- **Closures.** A closure inside a `#[target_feature]` region inherits the
+  region's features, so it may forge as well. This stays sound even if the
+  closure outlives the region (boxed, stored, returned): reaching the region
+  proved the CPU has the features, and that does not change for the life of the
+  process.
+
+Two things it does **not** replace:
+
+- **Backend trait receivers.** `fn splat(self, …)` on a `*Backend` trait keeps
+  its `self` receiver — those methods are reachable by UFCS from any context,
+  not only from a feature region, so the receiver is the only proof available.
+  The soundness scanner enforces this mechanically.
+- **`#[magetypes]` token parameters.** A `#[magetypes]` body can write
+  `Token::from_context()` and get the right tier per variant, but the
+  macro still requires the token parameter, because each variant is an
+  `#[arcane]` wrapper.
+
+### Prefer it to `summon().unwrap()` inside a proven region
+
+Inside a `#[rite]`/`#[arcane]` body, `Token::summon().unwrap()` is a latent
+panic, not just a wasted check. `dangerously_disable_token_process_wide()` and
+the `testable_dispatch` feature make `summon()` return `None` on purpose so
+dispatch can be exercised down the lower tiers — and then the `unwrap()` fires
+in code that provably has the features and is already executing them. Forging is
+correct there and costs nothing.
+
+This whole pattern is pinned by `tests/from_context.rs`, which carries
 `#![forbid(unsafe_code)]` — it compiles only if the safe route is genuinely
-safe. The rejected cases live in `tests/compile_fail/forge_*.rs`.
+safe. The rejected cases live in `tests/soundness/from_context_*.rs` (driven by `tests/soundness_exploits.rs`).

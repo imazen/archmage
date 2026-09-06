@@ -218,18 +218,6 @@ impl SimdToken for ScalarToken {
 }
 
 impl ScalarToken {
-    /// Construct the token without any check. Crate-internal.
-    ///
-    /// # Safety
-    ///
-    /// Trivially satisfied: `ScalarToken` asserts no CPU features. It exists
-    /// so every token has the same internal constructor name.
-    #[allow(dead_code)]
-    #[inline(always)]
-    pub(crate) const unsafe fn new_unchecked() -> Self {
-        Self
-    }
-
     /// Construct a scalar proof from the caller's feature context.
     ///
     /// `ScalarToken` asserts no CPU features, so it carries no
@@ -237,7 +225,17 @@ impl ScalarToken {
     /// tokens' constructors of this name are safe only inside a matching
     /// `#[target_feature]` context.
     #[inline(always)]
-    pub fn forge_token_dangerously() -> Self {
+    pub const fn from_context() -> Self {
+        Self
+    }
+
+    /// Deprecated alias for [`ScalarToken::from_context`].
+    #[deprecated(
+        since = "0.9.29",
+        note = "Renamed to from_context() — the constructor is checked against the caller's target-feature context"
+    )]
+    #[inline(always)]
+    pub const fn forge_token_dangerously() -> Self {
         Self
     }
 }

@@ -920,10 +920,11 @@ fn compile_time_error_from_disable_contains_features() {
 }
 
 // ============================================================================
-// Coverage: forge_token_dangerously + IntoConcreteToken for stubs
+// Coverage: foreign-architecture constructors + IntoConcreteToken for stubs
 // ============================================================================
 
 #[test]
+#[allow(deprecated)] // stubs have no from_context(); the unsafe alias is all there is
 fn stub_forge_and_into_concrete_token() {
     // ARM/WASM stubs exist on x86_64 and can be forged.
     // Their IntoConcreteToken impls should return Some(self) for their own type.
@@ -944,7 +945,7 @@ fn stub_forge_and_into_concrete_token() {
         let wasm = Wasm128Token::forge_token_dangerously();
         assert!(wasm.as_wasm128().is_some());
 
-        let scalar = ScalarToken::forge_token_dangerously();
+        let scalar = ScalarToken::from_context();
         assert!(scalar.as_scalar().is_some());
     }
 }
@@ -953,7 +954,7 @@ fn stub_forge_and_into_concrete_token() {
 #[test]
 fn avx512fp16_forge_and_into_concrete_token() {
     unsafe {
-        let fp16 = Avx512Fp16Token::forge_token_dangerously();
+        let fp16 = Avx512Fp16Token::from_context();
         assert!(fp16.as_avx512_fp16().is_some());
         assert!(fp16.as_x64v3().is_none());
     }
@@ -964,7 +965,7 @@ fn avx512fp16_forge_and_into_concrete_token() {
 fn avx512fp16_forge_and_downcast() {
     // Test the downcast extraction methods on a forged Avx512Fp16Token.
     unsafe {
-        let fp16 = Avx512Fp16Token::forge_token_dangerously();
+        let fp16 = Avx512Fp16Token::from_context();
         let _v4: X64V4Token = fp16.v4();
         let _avx512: X64V4Token = fp16.avx512();
         let _v3: X64V3Token = fp16.v3();

@@ -505,8 +505,8 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
             "token forging inside magetypes",
         ),
         (
-            r"\bnew_unchecked\b",
-            "use of archmage's crate-internal unchecked token constructor",
+            r"\bfrom_context\b",
+            "token construction from a feature context inside magetypes",
         ),
         (
             r"\bMaybeUninit\b",

@@ -19,9 +19,8 @@ A *proof* is one of:
    `SimdToken` supertrait, no `Default`/`new`. The constructors are
    `summon()` (runtime CPU detection, including the compile-time
    `cfg(target_feature)` fast path — the binary only runs where the features
-   exist), `forge_token_dangerously()` (see below), and the crate-internal
-   `new_unchecked()` that both are built from. Holding a token therefore
-   implies the CPU has that tier's features.
+   exist) and `from_context()` (see below), which `summon()` is itself built
+   from. Holding a token therefore implies the CPU has that tier's features.
 2. **A `#[target_feature(enable = …)]` region.** Reaching such a function
    means the caller discharged the feature obligation — via a token-gated
    `#[arcane]` wrapper, a matching-feature safe call (Rust 1.86+), or an
@@ -32,9 +31,9 @@ Proofs union: a method taking `X64V4Token` inside an
 
 ### Converting proof 2 back into proof 1
 
-`forge_token_dangerously()` is a **safe** `#[target_feature]` function
-carrying its tier's complete feature list, which makes rustc the arbiter of
-each call site:
+`from_context()` is a **safe** `#[target_feature]` function carrying its
+tier's complete feature list, which makes rustc the arbiter of each call
+site:
 
 * From a caller whose own `#[target_feature]` attribute enables the tier's
   features or a superset — an `#[arcane]` / `#[rite]` / `#[magetypes]` body —
@@ -43,22 +42,28 @@ each call site:
   only way to move from a feature region back to a token without either a
   redundant runtime check or a hand-written obligation.
 * From every other caller the call is `unsafe` and the caller carries the
-  obligation by hand, exactly as before this became a safe function.
+  obligation by hand. That is how every generated internal call site uses
+  it — `summon()`, the cold detect functions, the extraction methods and
+  `IntoConcreteToken` are all feature-free functions.
+
+`forge_token_dangerously()` is a deprecated alias with the identical gate.
 
 Three properties are load-bearing and pinned by tests:
 
 * Features enabled *globally* (`-C target-feature=+avx2`, `-C
   target-cpu=native`) do **not** make the call safe — rustc requires them on
-  the caller's own attribute (`tests/compile_fail/forge_missing_context.rs`).
-* A weaker context cannot forge a stronger token
-  (`tests/compile_fail/forge_weaker_context.rs`).
+  the caller's own attribute
+  (`tests/soundness/from_context_missing_context.rs`).
+* A weaker context cannot construct a stronger token
+  (`tests/soundness/from_context_weaker_context.rs`).
 * The function cannot be coerced to a safe function pointer — there would be
-  no call site left to check (`tests/compile_fail/forge_fn_pointer.rs`).
+  no call site left to check (`tests/soundness/from_context_fn_pointer.rs`).
 
 On a **foreign architecture** the stub constructor stays `unsafe fn`: no
 `#[target_feature]` context for those features can exist on that target, so
-there is nothing for rustc to check and no safe path should exist
-(`tests/compile_fail/forge_wrong_arch.rs`). On **WASM**, Rust permits safe
+there is nothing for rustc to check, so no `from_context()` is generated at
+all — only the `unsafe fn` alias
+(`tests/soundness/from_context_wrong_arch.rs`). On **WASM**, Rust permits safe
 calls to `#[target_feature]` functions from any context; the engine validates
 the required instructions when the module is loaded, so a module that runs at
 all has the features. `ScalarToken` asserts the empty feature set, so its
@@ -70,18 +75,34 @@ feature context is already the proof, and there is no way to make a
 `#[target_feature]` region stop having its features. Use `summon()` when
 dispatch must respond to runtime state.
 
-The whole safe path is pinned by `tests/forge_from_context.rs`, which is
+The whole safe path is pinned by `tests/from_context.rs`, which is
 `#![forbid(unsafe_code)]` — it compiles only if the safe route is genuinely
-safe.
+safe. The four rejection cases are driven by `tests/soundness_exploits.rs`
+rather than trybuild: rustc's diagnostic names the target features enabled in
+the *build configuration*, and that set differs per platform (Linux x86-64
+says "the sse and sse2"; macOS-Intel says "the cmpxchg16b, sse, sse2, sse3,
+sse4.1, and ssse3"), so a committed `.stderr` snapshot cannot pass on every
+runner. The exploit harness asserts an error code plus message fragments
+instead, which is stable across platforms and rustc versions. The soundness scanner's structural rules ban both `from_context` and
+`forge_token_dangerously` from magetypes.
 
-`new_unchecked()` is `pub(crate)`, carries no `#[target_feature]`, and is
-what every generated internal call site (`summon()`, the cold detect
-functions, the extraction methods, `IntoConcreteToken`) uses. Keeping it
-feature-free is deliberate: a `#[target_feature]` constructor cannot be
-`#[inline(always)]` and would put an LLVM optimization boundary in the middle
-of `summon()`, whose compile-time-guaranteed path must vanish entirely. The
-soundness scanner's structural rules ban both `forge_token_dangerously` and
-`new_unchecked` from magetypes.
+**The feature gate is free.** `#[inline(always)]` is not permitted on a
+`#[target_feature]` function, so `from_context()` is plain `#[inline]`, and
+LLVM will not inline it into the feature-free functions that call it. It does
+not need to: the body constructs a ZST and emits no instructions, so the call
+is dead-code-eliminated instead. Measured with `cargo asm` (0.2.62, rustc
+1.97.1) against the pre-gate constructor across five probes — the entry
+`summon()`-then-dispatch pattern, an extraction downcast, `summon()` in a
+loop, `IntoConcreteToken`, and bare `summon()` — built both generically and
+with `-C target-cpu=x86-64-v3`:
+
+* no call to the constructor survives in **any** probe;
+* the `call` count is unchanged everywhere (the one that remains is the cold
+  `x64_v3_detect`, which was always there);
+* under `-C target-cpu=x86-64-v3` every probe is instruction-identical, and
+  bare `summon()` is still `mov eax, 1; ret` — it compiles away entirely;
+* generically the instruction counts move by −2/+0/+1/+0/−1, which is branch
+  layout and register allocation, not work.
 
 Since Rust 1.87, value-based `core::arch` intrinsics are *safe* inside a
 matching `#[target_feature]` region; everywhere else they require `unsafe`
@@ -93,16 +114,16 @@ receiver.
 
 | Surface | Count | Invariant | Discipline |
 |---|---|---|---|
-| `src/tokens/generated/{x86,arm,wasm}.rs` `new_unchecked()` call sites | 90 (58 x86 + 29 arm + 3 wasm) | summon/detect just verified the features, the features are compile-time guaranteed, or the source token's feature set is a registry-verified superset (extraction methods) | per-block `// SAFETY:` comments, generator-emitted, checker-enforced |
-| `src/tokens/mod.rs` (`ScalarToken` constructors) | 1 `unsafe fn`, 0 blocks | `ScalarToken` proves the empty feature set, so `new_unchecked()` is trivially satisfiable and `forge_token_dangerously()` is an ungated safe `fn` | doc sections |
-| `src/tokens/generated/{x86,arm,wasm}_stubs.rs` forge definitions | 17 total (9 x86 + 6 arm + 2 wasm); 8–15 visible per target | foreign-architecture constructors: `unsafe fn` with an *unsatisfiable* `# Safety` contract — they exist so cross-architecture code compiles, not to be called | doc sections; `tests/compile_fail/forge_wrong_arch.rs` |
+| `src/tokens/generated/{x86,arm,wasm}.rs` `from_context()` call sites | 90 (58 x86 + 29 arm + 3 wasm) | summon/detect just verified the features, the features are compile-time guaranteed, or the source token's feature set is a registry-verified superset (extraction methods) | per-block `// SAFETY:` comments, generator-emitted, checker-enforced |
+| `src/tokens/mod.rs` (`ScalarToken` constructors) | 0 | `ScalarToken` proves the empty feature set, so `from_context()` and its deprecated alias are ungated safe `const fn`s | doc sections |
+| `src/tokens/generated/{x86,arm,wasm}_stubs.rs` forge definitions | 17 total (9 x86 + 6 arm + 2 wasm); 8–15 visible per target | foreign-architecture constructors: `unsafe fn` with an *unsatisfiable* `# Safety` contract — they exist so cross-architecture code compiles, not to be called | doc sections; `tests/soundness/from_context_wrong_arch.rs` |
 | `magetypes/src/simd/impls/{x86_v3,x86_v4,arm_neon,wasm128}.rs` | **1 block** (was ~1,960) | per-method `#[arcane(_self = Token)]` turns each body into a `#[target_feature]` region, so the 5,142 value intrinsics in these files need no `unsafe` at all; the one remaining block is `x86_v3.rs`'s `sse2_baseline!` macro, which calls a *narrower* SSE2-only inner fn from the AVX tier | file-header audit contract (generator-emitted, checker-enforced); every intrinsic re-verified against the registry per run |
 | `magetypes/src` outside `impls/` | **8 blocks, all in `simd_storage.rs`** (was 225) | size/align-guarded layout casts over `Pod` (all-bit-patterns-valid) storage; the four token-taking helpers additionally require a token value and const-assert the token is a 1-ZST | per-block `// SAFETY:` comments, checker-enforced; `unsafe impl Pod` is banned outside this file and every `TokenStorage` type must be `#[repr(C)]` |
 | `archmage-macros` emitted code (`#[arcane]` wrappers etc.) | 1 `unsafe` block per wrapper | the token parameter (tier-tag const-asserted) proves the sibling's `#[target_feature]` set | justified in macro source; expansion snapshots under `tests/expand/` are re-verified by the intrinsic scanner (comments cannot survive tokenization, so snapshots carry no SAFETY text) |
 
 Notable absences, enforced by structural rules: no `MaybeUninit`, no
-`mem::zeroed`, no forging (neither `forge_token_dangerously` nor
-`new_unchecked`), no bare `transmute` outside the backend impls,
+`mem::zeroed`, no token construction (neither `from_context` nor
+`forge_token_dangerously`), no bare `transmute` outside the backend impls,
 no `Default`/serde/bytemuck construction of SIMD wrappers anywhere in
 magetypes.
 

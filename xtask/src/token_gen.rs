@@ -291,11 +291,9 @@ fn gen_real_token_struct(
         }}
     "});
 
-    // new_unchecked() — crate-internal constructor, no target-feature gate.
-    out.push_str(&gen_new_unchecked(token));
-
-    // forge_token_dangerously() — public, safe, gated by #[target_feature].
-    out.push_str(&gen_forge(token));
+    // from_context() + its deprecated forge_token_dangerously() alias:
+    // safe constructors gated by #[target_feature].
+    out.push_str(&gen_from_context(token));
 
     // Extraction methods
     gen_extraction_methods(out, reg, token);
@@ -306,58 +304,27 @@ fn gen_real_token_struct(
     }
 }
 
-/// Generate the crate-internal unchecked constructor.
+/// Generate the public `from_context()` constructor.
 ///
-/// This is the constructor every generated internal call site uses
-/// (`summon()`, the cold detect functions, the extraction methods,
-/// `IntoConcreteToken`). It deliberately carries **no** `#[target_feature]`
-/// so it stays `#[inline(always)]`-able into the plain, feature-free
-/// functions that host runtime detection. Adding a feature gate here would
-/// put an LLVM optimization boundary in the middle of `summon()`.
-fn gen_new_unchecked(token: &TokenDef) -> String {
-    let name = &token.name;
-    formatdoc! {"
-
-        impl {name} {{
-            /// Construct the token without any check. Crate-internal.
-            ///
-            /// # Safety
-            ///
-            /// The caller must have established, by compile-time `cfg`,
-            /// runtime detection, or possession of a superset token, that
-            /// every feature this token asserts is present on this CPU.
-            // Whether this is reachable depends on the target and on which
-            // `cfg(target_feature)` arms of `summon()` survive, so a token at
-            // the edge of the hierarchy can legitimately have no caller.
-            #[allow(dead_code)]
-            #[inline(always)]
-            pub(crate) const unsafe fn new_unchecked() -> Self {{
-                Self {{ _private: () }}
-            }}
-        }}
-    "}
-}
-
-/// Generate the public `forge_token_dangerously()` constructor.
-///
-/// The function is a **safe** `fn` carrying this tier's complete
-/// `#[target_feature]` list, which makes rustc the arbiter of whether a
-/// given call site may construct the proof:
+/// A **safe** `fn` carrying this tier's complete `#[target_feature]` list, which
+/// makes rustc the arbiter of whether a given call site may construct the proof:
 ///
 /// * From a caller whose own `#[target_feature]` set is this tier's set or a
 ///   superset (an `#[arcane]` / `#[rite]` / `#[magetypes]` body), the call is
 ///   safe and needs no `unsafe` block — the caller's attribute *is* the proof.
-/// * From anywhere else the call is `unsafe`, exactly as before, and the
-///   caller carries the obligation by hand.
+/// * From anywhere else the call is `unsafe`, and the caller carries the
+///   obligation by hand. That is how the generated internals use it.
 ///
-/// Note that globally enabled features (`-C target-feature=+avx2`,
-/// `-C target-cpu=native`) do **not** make the call safe; rustc requires the
-/// features to be listed in the caller's own `#[target_feature]`.
+/// Globally enabled features (`-C target-feature=+avx2`, `-C target-cpu=native`)
+/// do **not** make the call safe; rustc requires them on the caller's own
+/// `#[target_feature]`.
 ///
 /// `#[inline(always)]` is not permitted on a `#[target_feature]` function, so
-/// this is plain `#[inline]`. That is why the internal call sites use
-/// `new_unchecked()` instead.
-fn gen_forge(token: &TokenDef) -> String {
+/// this is plain `#[inline]`. Codegen is unaffected: the body is a ZST
+/// construction with no instructions, so LLVM drops the call even where the
+/// feature mismatch blocks inlining (verified with `cargo asm`, see
+/// `docs/SOUNDNESS.md`).
+fn gen_from_context(token: &TokenDef) -> String {
     let name = &token.name;
     let features = token.features.join(",");
     let display = token.display_name.as_deref().unwrap_or(name);
@@ -381,8 +348,8 @@ fn gen_forge(token: &TokenDef) -> String {
             /// features have to be detected at runtime.
             ///
             /// Being a `#[target_feature]` function, this cannot be coerced to
-            /// a function pointer — there would be no call site left for rustc
-            /// to check.
+            /// a safe function pointer — there would be no call site left for
+            /// rustc to check.
             ///
             /// # Safety
             ///
@@ -391,8 +358,31 @@ fn gen_forge(token: &TokenDef) -> String {
             /// Safe calls have that obligation discharged by the compiler.
             #[inline]
             #[target_feature(enable = "{features}")]
-            pub fn forge_token_dangerously() -> Self {{
+            pub fn from_context() -> Self {{
                 Self {{ _private: () }}
+            }}
+
+            /// Deprecated alias for [`{name}::from_context`].
+            ///
+            /// Identical in every respect — same `#[target_feature]` gate, same
+            /// safe-call rules. The name predates the compiler-checked design
+            /// and describes only the `unsafe` half of it.
+            ///
+            /// # Safety
+            ///
+            /// Identical to [`{name}::from_context`]: when called through an
+            /// `unsafe` block, the caller must ensure every feature in this
+            /// tier is available on the executing CPU. Safe calls have that
+            /// obligation discharged by the compiler.
+            #[deprecated(
+                since = "0.9.29",
+                note = "Renamed to from_context() — the constructor is checked against the caller's target-feature context"
+            )]
+            #[inline]
+            #[target_feature(enable = "{features}")]
+            pub fn forge_token_dangerously() -> Self {{
+                // Matching features: a safe call inside the same region.
+                Self::from_context()
             }}
         }}
     "#}
@@ -507,7 +497,7 @@ fn gen_summon_x86(token: &TokenDef) -> String {
             {INDENT}    {{
             {INDENT}        // SAFETY: SSE/SSE2 are the x86-64 ABI baseline — every
             {INDENT}        // x86-64 CPU has them, so this token needs no detection.
-            {INDENT}        Some(unsafe {{ Self::new_unchecked() }})
+            {INDENT}        Some(unsafe {{ Self::from_context() }})
             {INDENT}    }}
             {INDENT}    #[cfg(feature = \"testable_dispatch\")]
             {INDENT}    {{
@@ -515,7 +505,7 @@ fn gen_summon_x86(token: &TokenDef) -> String {
             {INDENT}            1 => None,
             {INDENT}            // SAFETY: SSE/SSE2 are the x86-64 ABI baseline (the
             {INDENT}            // cache only simulates unavailability for tests).
-            {INDENT}            _ => Some(unsafe {{ Self::new_unchecked() }}),
+            {INDENT}            _ => Some(unsafe {{ Self::from_context() }}),
             {INDENT}        }}
             {INDENT}    }}
             {INDENT}}}
@@ -535,7 +525,7 @@ fn gen_summon_x86(token: &TokenDef) -> String {
         {INDENT}        // SAFETY: every feature this token asserts is enabled at
         {INDENT}        // compile time (cfg(target_feature)), so the binary only
         {INDENT}        // runs on CPUs that have them.
-        {INDENT}        Some(unsafe {{ Self::new_unchecked() }})
+        {INDENT}        Some(unsafe {{ Self::from_context() }})
         {INDENT}    }}
 
         {INDENT}    // Runtime path with caching
@@ -544,7 +534,7 @@ fn gen_summon_x86(token: &TokenDef) -> String {
         {INDENT}        match {cache_name}.load(Ordering::Relaxed) {{
         {INDENT}            // SAFETY: 2 is only ever stored by {detect_fn_name}()
         {INDENT}            // after a positive runtime check of every feature.
-        {INDENT}            2 => Some(unsafe {{ Self::new_unchecked() }}),
+        {INDENT}            2 => Some(unsafe {{ Self::from_context() }}),
         {INDENT}            1 => None,
         {INDENT}            _ => {detect_fn_name}(),
         {INDENT}        }}
@@ -589,7 +579,7 @@ fn gen_summon_cold_x86(token: &TokenDef) -> String {
             if available {{
                 // SAFETY: `available` — runtime detection just confirmed every
                 // feature this token asserts is present on this CPU.
-                Some(unsafe {{ {name}::new_unchecked() }})
+                Some(unsafe {{ {name}::from_context() }})
             }} else {{
                 None
             }}
@@ -617,7 +607,7 @@ fn gen_summon_aarch64(token: &TokenDef) -> String {
         {INDENT}        // SAFETY: every feature this token asserts is enabled at
         {INDENT}        // compile time (cfg(target_feature)), so the binary only
         {INDENT}        // runs on CPUs that have them.
-        {INDENT}        Some(unsafe {{ Self::new_unchecked() }})
+        {INDENT}        Some(unsafe {{ Self::from_context() }})
         {INDENT}    }}
 
         {INDENT}    // Runtime path with caching
@@ -626,7 +616,7 @@ fn gen_summon_aarch64(token: &TokenDef) -> String {
         {INDENT}        match {cache_name}.load(Ordering::Relaxed) {{
         {INDENT}            // SAFETY: 2 is only ever stored by {detect_fn_name}()
         {INDENT}            // after a positive runtime check of every feature.
-        {INDENT}            2 => Some(unsafe {{ Self::new_unchecked() }}),
+        {INDENT}            2 => Some(unsafe {{ Self::from_context() }}),
         {INDENT}            1 => None,
         {INDENT}            _ => {detect_fn_name}(),
         {INDENT}        }}
@@ -656,7 +646,7 @@ fn gen_summon_cold_aarch64(token: &TokenDef) -> String {
             if available {{
                 // SAFETY: `available` — runtime detection just confirmed every
                 // feature this token asserts is present on this CPU.
-                Some(unsafe {{ {name}::new_unchecked() }})
+                Some(unsafe {{ {name}::from_context() }})
             }} else {{
                 None
             }}
@@ -678,7 +668,7 @@ fn gen_summon_wasm(token: &TokenDef) -> String {
         {INDENT}        // SAFETY: the required wasm features are compile-time
         {INDENT}        // enabled; a runtime that validated this module supports
         {INDENT}        // them (wasm has no runtime feature detection).
-        {INDENT}        Some(unsafe {{ Self::new_unchecked() }})
+        {INDENT}        Some(unsafe {{ Self::from_context() }})
         {INDENT}    }}
         {INDENT}    #[cfg(not(all(target_arch = \"wasm32\", {all_conditions})))]
         {INDENT}    {{
@@ -736,7 +726,7 @@ fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
             {INDENT}    // SAFETY: holding `self` proves this CPU has {token_display}'s
             {INDENT}    // full feature set, a superset of {anc_display}'s (registry-
             {INDENT}    // verified hierarchy), so the ancestor token's claim holds.
-            {INDENT}    unsafe {{ {anc_name}::new_unchecked() }}
+            {INDENT}    unsafe {{ {anc_name}::from_context() }}
             {INDENT}}}
         "});
 
@@ -749,7 +739,7 @@ fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
                 {INDENT}pub fn {alias_name}(self) -> {anc_name} {{
                 {INDENT}    // SAFETY: identical to `.{short}()` — self's feature set is a
                 {INDENT}    // registry-verified superset of {anc_display}'s.
-                {INDENT}    unsafe {{ {anc_name}::new_unchecked() }}
+                {INDENT}    unsafe {{ {anc_name}::from_context() }}
                 {INDENT}}}
             "});
         }
@@ -1000,29 +990,14 @@ fn gen_stub_token_struct(out: &mut String, token: &TokenDef) {
         }}
 
         impl {name} {{
-            /// Construct the token without any check. Crate-internal.
-            ///
-            /// # Safety
-            ///
-            /// This token's architecture is not the compilation target, so no
-            /// caller can discharge this obligation. Nothing in this crate
-            /// calls it; it exists so the internal constructor has the same
-            /// name on every target.
-            #[allow(dead_code)]
-            #[inline(always)]
-            pub(crate) const unsafe fn new_unchecked() -> Self {{
-                Self {{ _private: () }}
-            }}
-        }}
-
-        impl {name} {{
             /// Construct a proof for a foreign architecture. Always `unsafe`.
             ///
-            /// On this token's native architecture this is a **safe**
-            /// `#[target_feature]` function that rustc checks against the
-            /// caller's feature context. The current compilation target is a
-            /// different architecture, so no `#[target_feature]` context can
-            /// exist to check against and the function stays `unsafe fn`.
+            /// On this token's native architecture the constructor is
+            /// `from_context()`, a **safe** `#[target_feature]` function that
+            /// rustc checks against the caller's feature context. The current
+            /// compilation target is a different architecture, so no such
+            /// context can exist, there is nothing for rustc to check, and no
+            /// `from_context()` is generated — only this `unsafe fn`.
             ///
             /// # Safety
             ///
@@ -1030,6 +1005,10 @@ fn gen_stub_token_struct(out: &mut String, token: &TokenDef) {
             /// architecture does not have. Any token produced here is a lie,
             /// and using it to enter a SIMD region is undefined behavior. It
             /// exists so cross-architecture code compiles, not to be called.
+            #[deprecated(
+                since = \"0.9.29\",
+                note = \"Renamed to from_context() on native architectures; on a foreign architecture the features cannot exist at all\"
+            )]
             #[inline(always)]
             pub unsafe fn forge_token_dangerously() -> Self {{
                 Self {{ _private: () }}
