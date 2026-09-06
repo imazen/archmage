@@ -951,10 +951,13 @@ fn stub_forge_and_into_concrete_token() {
 }
 
 #[cfg(feature = "avx512")]
+#[allow(deprecated)]
+// not target_arch-gated: on non-x86 this is the stub, which
+// has no from_context() — only the unsafe alias exists on every target
 #[test]
 fn avx512fp16_forge_and_into_concrete_token() {
     unsafe {
-        let fp16 = Avx512Fp16Token::from_context();
+        let fp16 = Avx512Fp16Token::forge_token_dangerously();
         assert!(fp16.as_avx512_fp16().is_some());
         assert!(fp16.as_x64v3().is_none());
     }

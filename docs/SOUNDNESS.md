@@ -83,7 +83,11 @@ the *build configuration*, and that set differs per platform (Linux x86-64
 says "the sse and sse2"; macOS-Intel says "the cmpxchg16b, sse, sse2, sse3,
 sse4.1, and ssse3"), so a committed `.stderr` snapshot cannot pass on every
 runner. The exploit harness asserts an error code plus message fragments
-instead, which is stable across platforms and rustc versions. The soundness scanner's structural rules ban both `from_context` and
+instead — and the fragments are our own identifiers, not rustc prose, so a
+reworded diagnostic cannot break them either. `cargo xtask validate` enforces
+the boundary: it rejects any committed trybuild `.stderr` that names target
+features, quotes the build configuration, embeds an absolute or toolchain path,
+carries a rustc version, or depends on pointer width. The soundness scanner's structural rules ban both `from_context` and
 `forge_token_dangerously` from magetypes.
 
 **The feature gate is free.** `#[inline(always)]` is not permitted on a

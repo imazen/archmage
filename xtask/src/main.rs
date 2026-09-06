@@ -882,6 +882,7 @@ fn main() -> Result<()> {
         "validate" => {
             let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
             soundness::verify(&reg)?;
+            soundness::check_stderr_snapshot_portability()?;
             validate_summon(&reg)?;
         }
         "validate-registry" => validate_registry()?,

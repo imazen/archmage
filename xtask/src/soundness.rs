@@ -1240,3 +1240,112 @@ mod tests {
         verify(&reg).expect("repo soundness verification");
     }
 }
+
+/// Guard the committed `.stderr` snapshots against portability rot.
+///
+/// `trybuild` compares rustc's rendered diagnostic byte-for-byte, so a case
+/// whose message varies by platform or toolchain passes on the machine that
+/// blessed it and fails everywhere else. That is not hypothetical: the
+/// `from_context()` rejection cases were blessed on Linux x86-64, whose
+/// diagnostic ends
+///
+/// ```text
+/// = note: the sse and sse2 target features being enabled in the build
+///         configuration does not remove the requirement to list them ...
+/// ```
+///
+/// while macOS-Intel renders `the cmpxchg16b, sse, sse2, sse3, sse4.1, and
+/// ssse3` for the same code, because the two targets enable different baseline
+/// features. They now live in `tests/soundness_exploits.rs`, which asserts an
+/// error code plus message fragments and is stable across platforms and rustc
+/// releases.
+///
+/// This check keeps a case like that from being added back. It only inspects
+/// snapshots consumed by trybuild (`tests/compile_fail/`, `tests/ui/`); the
+/// fragment harness reads its sources from `tests/soundness/` and ignores any
+/// `.stderr` sitting beside them.
+pub fn check_stderr_snapshot_portability() -> Result<()> {
+    println!("=== Compile-fail snapshot portability ===\n");
+
+    // Each rule is a thing rustc renders differently depending on where or with
+    // which toolchain it runs.
+    let rules: &[(&str, &str, &str)] = &[
+        (
+            r"target features? ",
+            "names target features",
+            "the enabled-feature baseline differs per target (Linux x86-64 vs \
+             macOS-Intel vs i686)",
+        ),
+        (
+            r"enabled in the build configuration",
+            "quotes the build configuration's feature set",
+            "that set is target-specific",
+        ),
+        (
+            r"(?:/home/|/Users/|[A-Za-z]:\\)",
+            "contains an absolute path",
+            "paths differ per machine and per CI runner",
+        ),
+        (
+            r"(?:\.cargo[/\\]registry|toolchains[/\\])",
+            "contains a toolchain or registry path",
+            "those paths embed the toolchain version and the runner's layout",
+        ),
+        (
+            r"rust-\d+\.\d+",
+            "embeds a rustc version",
+            "clippy help URLs carry the version and change on every bump",
+        ),
+        (
+            r"size of `?usize`?|\b(?:32|64)-bit\b",
+            "depends on pointer width",
+            "i686 and armv7 are 32-bit CI targets",
+        ),
+    ];
+
+    let mut errors = Vec::new();
+    let mut checked = 0usize;
+    for dir in ["tests/compile_fail", "tests/ui"] {
+        let path = Path::new(dir);
+        if !path.is_dir() {
+            continue;
+        }
+        let mut entries: Vec<PathBuf> = fs::read_dir(path)?
+            .filter_map(|e| e.ok().map(|e| e.path()))
+            .filter(|p| p.extension().is_some_and(|e| e == "stderr"))
+            .collect();
+        entries.sort();
+        for file in entries {
+            checked += 1;
+            let text = fs::read_to_string(&file)?;
+            for (pat, what, why) in rules {
+                let re = Regex::new(pat).expect("snapshot portability regex");
+                if let Some(m) = re.find(&text) {
+                    errors.push(format!(
+                        "{}:{}: snapshot {} (`{}`) — {}. trybuild matches stderr \
+                         byte-for-byte, so this passes only where it was blessed. \
+                         Move the case to tests/soundness_exploits.rs, which asserts \
+                         an error code plus message fragments.",
+                        file.display(),
+                        line_of(&text, m.start()),
+                        what,
+                        m.as_str().trim(),
+                        why
+                    ));
+                }
+            }
+        }
+    }
+
+    if errors.is_empty() {
+        println!("Checked {checked} committed .stderr snapshots\n");
+        println!("✓ Snapshot portability PASSED");
+        println!("  No snapshot depends on the host platform or toolchain version.");
+        return Ok(());
+    }
+    println!("✗ Snapshot portability FAILED — {} issue(s):", errors.len());
+    for e in &errors {
+        println!("  {e}");
+    }
+    bail!("{} non-portable compile-fail snapshot(s)", errors.len());
+}

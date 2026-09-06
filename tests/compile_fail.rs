@@ -12,6 +12,11 @@
 //! says "the sse and sse2"; macOS-Intel says "the cmpxchg16b, sse, sse2, sse3,
 //! sse4.1, and ssse3"). Those cases belong in `tests/soundness_exploits.rs`,
 //! which asserts an error code plus message fragments instead.
+//!
+//! `cargo xtask validate` enforces this mechanically: it rejects a committed
+//! `.stderr` that names target features, quotes the build configuration,
+//! embeds an absolute or toolchain path, carries a rustc version, or depends
+//! on pointer width.
 
 // These tests only apply to x86_64 (the UI tests use x86_64 intrinsics)
 #![cfg(target_arch = "x86_64")]
