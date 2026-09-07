@@ -165,4 +165,20 @@ pub trait I32x4Backend: SimdToken + Sealed + Copy + 'static {
     fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {
         <Self as I32x4Backend>::min(self, <Self as I32x4Backend>::max(self, a, lo), hi)
     }
+    /// Clamp to i16's range, then concatenate a's 4 lanes followed by b's.
+    fn narrow_saturating_i32_to_i16(
+        self,
+        a: <Self as super::I32x4Backend>::Repr,
+        b: <Self as super::I32x4Backend>::Repr,
+    ) -> <Self as super::I16x8Backend>::Repr
+    where
+        Self: super::I16x8Backend;
+    /// Clamp to u16's range, then concatenate a's 4 lanes followed by b's.
+    fn narrow_saturating_i32_to_u16(
+        self,
+        a: <Self as super::I32x4Backend>::Repr,
+        b: <Self as super::I32x4Backend>::Repr,
+    ) -> <Self as super::U16x8Backend>::Repr
+    where
+        Self: super::U16x8Backend;
 }

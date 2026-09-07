@@ -1311,6 +1311,15 @@ impl I32x4Backend for archmage::X64V3Token {
     fn bitmask(self, a: __m128i) -> u32 {
         _mm_movemask_ps(_mm_castsi128_ps(a)) as u32
     }
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn narrow_saturating_i32_to_i16(self, a: __m128i, b: __m128i) -> __m128i {
+        _mm_packs_epi32(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn narrow_saturating_i32_to_u16(self, a: __m128i, b: __m128i) -> __m128i {
+        _mm_packus_epi32(a, b)
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -1519,6 +1528,15 @@ impl I32x8Backend for archmage::X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitmask(self, a: __m256i) -> u32 {
         _mm256_movemask_ps(_mm256_castsi256_ps(a)) as u32
+    }
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn narrow_saturating_i32_to_i16(self, a: __m256i, b: __m256i) -> __m256i {
+        _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi32(a, b))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn narrow_saturating_i32_to_u16(self, a: __m256i, b: __m256i) -> __m256i {
+        _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi32(a, b))
     }
 }
 
@@ -2531,6 +2549,16 @@ impl I8x16Backend for archmage::X64V3Token {
     fn bitmask(self, a: __m128i) -> u32 {
         _mm_movemask_epi8(a) as u32
     }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_low_i8_to_i16(self, a: __m128i) -> __m128i {
+        _mm_cvtepi8_epi16(a)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_high_i8_to_i16(self, a: __m128i) -> __m128i {
+        _mm_cvtepi8_epi16(_mm_srli_si128::<8>(a))
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2730,6 +2758,16 @@ impl I8x32Backend for archmage::X64V3Token {
     fn bitmask(self, a: __m256i) -> u32 {
         _mm256_movemask_epi8(a) as u32
     }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_low_i8_to_i16(self, a: __m256i) -> __m256i {
+        _mm256_cvtepi8_epi16(_mm256_castsi256_si128(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_high_i8_to_i16(self, a: __m256i) -> __m256i {
+        _mm256_cvtepi8_epi16(_mm256_extracti128_si256::<1>(a))
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2915,6 +2953,26 @@ impl U8x16Backend for archmage::X64V3Token {
     fn bitmask(self, a: __m128i) -> u32 {
         _mm_movemask_epi8(a) as u32
     }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_low_u8_to_u16(self, a: __m128i) -> __m128i {
+        _mm_cvtepu8_epi16(a)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_high_u8_to_u16(self, a: __m128i) -> __m128i {
+        _mm_cvtepu8_epi16(_mm_srli_si128::<8>(a))
+    }
+
+    sse2_baseline! {
+    fn abs_diff(self, a: __m128i, b: __m128i) -> __m128i { _mm_sub_epi8(_mm_max_epu8(a, b), _mm_min_epu8(a, b)) }
+    }
+    sse2_baseline! {
+    fn reduce_add_u32(self, a: __m128i) -> u32 { { let s = _mm_sad_epu8(a, _mm_setzero_si128()); _mm_cvtsi128_si64(_mm_add_epi64(s, _mm_srli_si128::<8>(s))) as u32 } }
+    }
+    sse2_baseline! {
+    fn sum_abs_diff(self, a: __m128i, b: __m128i) -> u32 { { let s = _mm_sad_epu8(a, b); _mm_cvtsi128_si64(_mm_add_epi64(s, _mm_srli_si128::<8>(s))) as u32 } }
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -3093,6 +3151,43 @@ impl U8x32Backend for archmage::X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitmask(self, a: __m256i) -> u32 {
         _mm256_movemask_epi8(a) as u32
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_low_u8_to_u16(self, a: __m256i) -> __m256i {
+        _mm256_cvtepu8_epi16(_mm256_castsi256_si128(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_high_u8_to_u16(self, a: __m256i) -> __m256i {
+        _mm256_cvtepu8_epi16(_mm256_extracti128_si256::<1>(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn abs_diff(self, a: __m256i, b: __m256i) -> __m256i {
+        _mm256_sub_epi8(_mm256_max_epu8(a, b), _mm256_min_epu8(a, b))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn reduce_add_u32(self, a: __m256i) -> u32 {
+        {
+            let s = _mm256_sad_epu8(a, _mm256_setzero_si256());
+            {
+                let s = _mm_add_epi64(_mm256_castsi256_si128(s), _mm256_extracti128_si256::<1>(s));
+                _mm_cvtsi128_si64(_mm_add_epi64(s, _mm_srli_si128::<8>(s))) as u32
+            }
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn sum_abs_diff(self, a: __m256i, b: __m256i) -> u32 {
+        {
+            let s = _mm256_sad_epu8(a, b);
+            {
+                let s = _mm_add_epi64(_mm256_castsi256_si128(s), _mm256_extracti128_si256::<1>(s));
+                _mm_cvtsi128_si64(_mm_add_epi64(s, _mm_srli_si128::<8>(s))) as u32
+            }
+        }
     }
 }
 
@@ -3308,6 +3403,33 @@ impl I16x8Backend for archmage::X64V3Token {
         let packed = _mm_packs_epi16(shifted, shifted);
         (_mm_movemask_epi8(packed) & 0xFF) as u32
     }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_low_i16_to_i32(self, a: __m128i) -> __m128i {
+        _mm_cvtepi16_epi32(a)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_high_i16_to_i32(self, a: __m128i) -> __m128i {
+        _mm_cvtepi16_epi32(_mm_srli_si128::<8>(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn narrow_saturating_i16_to_i8(self, a: __m128i, b: __m128i) -> __m128i {
+        _mm_packs_epi16(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn narrow_saturating_i16_to_u8(self, a: __m128i, b: __m128i) -> __m128i {
+        _mm_packus_epi16(a, b)
+    }
+
+    sse2_baseline! {
+    fn madd_adjacent(self, a: __m128i, b: __m128i) -> __m128i { _mm_madd_epi16(a, b) }
+    }
+    sse2_baseline! {
+    fn abs_diff(self, a: __m128i, b: __m128i) -> __m128i { _mm_sub_epi16(_mm_max_epi16(a, b), _mm_min_epi16(a, b)) }
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -3519,6 +3641,36 @@ impl I16x16Backend for archmage::X64V3Token {
         let packed = _mm_packs_epi16(lo, hi);
         (_mm_movemask_epi8(packed) as u32) & 0xFFFF
     }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_low_i16_to_i32(self, a: __m256i) -> __m256i {
+        _mm256_cvtepi16_epi32(_mm256_castsi256_si128(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_high_i16_to_i32(self, a: __m256i) -> __m256i {
+        _mm256_cvtepi16_epi32(_mm256_extracti128_si256::<1>(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn narrow_saturating_i16_to_i8(self, a: __m256i, b: __m256i) -> __m256i {
+        _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi16(a, b))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn narrow_saturating_i16_to_u8(self, a: __m256i, b: __m256i) -> __m256i {
+        _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi16(a, b))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn madd_adjacent(self, a: __m256i, b: __m256i) -> __m256i {
+        _mm256_madd_epi16(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn abs_diff(self, a: __m256i, b: __m256i) -> __m256i {
+        _mm256_sub_epi16(_mm256_max_epi16(a, b), _mm256_min_epi16(a, b))
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -3718,6 +3870,16 @@ impl U16x8Backend for archmage::X64V3Token {
         let packed = _mm_packs_epi16(shifted, shifted);
         (_mm_movemask_epi8(packed) & 0xFF) as u32
     }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_low_u16_to_u32(self, a: __m128i) -> __m128i {
+        _mm_cvtepu16_epi32(a)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_high_u16_to_u32(self, a: __m128i) -> __m128i {
+        _mm_cvtepu16_epi32(_mm_srli_si128::<8>(a))
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -3913,6 +4075,16 @@ impl U16x16Backend for archmage::X64V3Token {
         let hi = _mm256_extracti128_si256::<1>(shifted);
         let packed = _mm_packs_epi16(lo, hi);
         (_mm_movemask_epi8(packed) as u32) & 0xFFFF
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_low_u16_to_u32(self, a: __m256i) -> __m256i {
+        _mm256_cvtepu16_epi32(_mm256_castsi256_si128(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_high_u16_to_u32(self, a: __m256i) -> __m256i {
+        _mm256_cvtepu16_epi32(_mm256_extracti128_si256::<1>(a))
     }
 }
 
@@ -4501,404 +4673,6 @@ impl U64x4Bitcast for archmage::X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitcast_i64_to_u64(self, a: __m256i) -> __m256i {
         a
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl U8x16Widen for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_low_u8_to_u16(self, a: __m128i) -> __m128i {
-        _mm_cvtepu8_epi16(a)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_high_u8_to_u16(self, a: __m128i) -> __m128i {
-        _mm_cvtepu8_epi16(_mm_srli_si128::<8>(a))
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl U16x8Widen for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_low_u16_to_u32(self, a: __m128i) -> __m128i {
-        _mm_cvtepu16_epi32(a)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_high_u16_to_u32(self, a: __m128i) -> __m128i {
-        _mm_cvtepu16_epi32(_mm_srli_si128::<8>(a))
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl I8x16Widen for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_low_i8_to_i16(self, a: __m128i) -> __m128i {
-        _mm_cvtepi8_epi16(a)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_high_i8_to_i16(self, a: __m128i) -> __m128i {
-        _mm_cvtepi8_epi16(_mm_srli_si128::<8>(a))
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl I16x8Widen for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_low_i16_to_i32(self, a: __m128i) -> __m128i {
-        _mm_cvtepi16_epi32(a)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_high_i16_to_i32(self, a: __m128i) -> __m128i {
-        _mm_cvtepi16_epi32(_mm_srli_si128::<8>(a))
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl U8x32Widen for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_low_u8_to_u16(self, a: __m256i) -> __m256i {
-        _mm256_cvtepu8_epi16(_mm256_castsi256_si128(a))
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_high_u8_to_u16(self, a: __m256i) -> __m256i {
-        _mm256_cvtepu8_epi16(_mm256_extracti128_si256::<1>(a))
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl U16x16Widen for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_low_u16_to_u32(self, a: __m256i) -> __m256i {
-        _mm256_cvtepu16_epi32(_mm256_castsi256_si128(a))
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_high_u16_to_u32(self, a: __m256i) -> __m256i {
-        _mm256_cvtepu16_epi32(_mm256_extracti128_si256::<1>(a))
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl I8x32Widen for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_low_i8_to_i16(self, a: __m256i) -> __m256i {
-        _mm256_cvtepi8_epi16(_mm256_castsi256_si128(a))
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_high_i8_to_i16(self, a: __m256i) -> __m256i {
-        _mm256_cvtepi8_epi16(_mm256_extracti128_si256::<1>(a))
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl I16x16Widen for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_low_i16_to_i32(self, a: __m256i) -> __m256i {
-        _mm256_cvtepi16_epi32(_mm256_castsi256_si128(a))
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_high_i16_to_i32(self, a: __m256i) -> __m256i {
-        _mm256_cvtepi16_epi32(_mm256_extracti128_si256::<1>(a))
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl I16x8Narrow for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn narrow_saturating_i16_to_i8(self, a: __m128i, b: __m128i) -> __m128i {
-        _mm_packs_epi16(a, b)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn narrow_saturating_i16_to_u8(self, a: __m128i, b: __m128i) -> __m128i {
-        _mm_packus_epi16(a, b)
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl I32x4Narrow for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn narrow_saturating_i32_to_i16(self, a: __m128i, b: __m128i) -> __m128i {
-        _mm_packs_epi32(a, b)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn narrow_saturating_i32_to_u16(self, a: __m128i, b: __m128i) -> __m128i {
-        _mm_packus_epi32(a, b)
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl I16x16Narrow for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn narrow_saturating_i16_to_i8(self, a: __m256i, b: __m256i) -> __m256i {
-        _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi16(a, b))
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn narrow_saturating_i16_to_u8(self, a: __m256i, b: __m256i) -> __m256i {
-        _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi16(a, b))
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl I32x8Narrow for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn narrow_saturating_i32_to_i16(self, a: __m256i, b: __m256i) -> __m256i {
-        _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi32(a, b))
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn narrow_saturating_i32_to_u16(self, a: __m256i, b: __m256i) -> __m256i {
-        _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi32(a, b))
-    }
-}
-impl I16x8Pairwise for archmage::X64V3Token {
-    sse2_baseline! {
-    fn madd_adjacent(self, a: __m128i, b: __m128i) -> __m128i { _mm_madd_epi16(a, b) }
-    }
-}
-impl I16x8AbsDiff for archmage::X64V3Token {
-    sse2_baseline! {
-    fn abs_diff(self, a: __m128i, b: __m128i) -> __m128i { _mm_sub_epi16(_mm_max_epi16(a, b), _mm_min_epi16(a, b)) }
-    }
-}
-impl U8x16AbsDiff for archmage::X64V3Token {
-    sse2_baseline! {
-    fn abs_diff(self, a: __m128i, b: __m128i) -> __m128i { _mm_sub_epi8(_mm_max_epu8(a, b), _mm_min_epu8(a, b)) }
-    }
-    sse2_baseline! {
-    fn reduce_add_u32(self, a: __m128i) -> u32 { { let s = _mm_sad_epu8(a, _mm_setzero_si128()); _mm_cvtsi128_si64(_mm_add_epi64(s, _mm_srli_si128::<8>(s))) as u32 } }
-    }
-    sse2_baseline! {
-    fn sum_abs_diff(self, a: __m128i, b: __m128i) -> u32 { { let s = _mm_sad_epu8(a, b); _mm_cvtsi128_si64(_mm_add_epi64(s, _mm_srli_si128::<8>(s))) as u32 } }
-    }
-}
-impl I16x16Pairwise for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn madd_adjacent(self, a: __m256i, b: __m256i) -> __m256i {
-        _mm256_madd_epi16(a, b)
-    }
-}
-impl I16x16AbsDiff for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn abs_diff(self, a: __m256i, b: __m256i) -> __m256i {
-        _mm256_sub_epi16(_mm256_max_epi16(a, b), _mm256_min_epi16(a, b))
-    }
-}
-impl U8x32AbsDiff for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn abs_diff(self, a: __m256i, b: __m256i) -> __m256i {
-        _mm256_sub_epi8(_mm256_max_epu8(a, b), _mm256_min_epu8(a, b))
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn reduce_add_u32(self, a: __m256i) -> u32 {
-        {
-            let s = _mm256_sad_epu8(a, _mm256_setzero_si256());
-            {
-                let s = _mm_add_epi64(_mm256_castsi256_si128(s), _mm256_extracti128_si256::<1>(s));
-                _mm_cvtsi128_si64(_mm_add_epi64(s, _mm_srli_si128::<8>(s))) as u32
-            }
-        }
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn sum_abs_diff(self, a: __m256i, b: __m256i) -> u32 {
-        {
-            let s = _mm256_sad_epu8(a, b);
-            {
-                let s = _mm_add_epi64(_mm256_castsi256_si128(s), _mm256_extracti128_si256::<1>(s));
-                _mm_cvtsi128_si64(_mm_add_epi64(s, _mm_srli_si128::<8>(s))) as u32
-            }
-        }
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
-impl U8x64Widen for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_low_u8_to_u16(self, a: [__m256i; 2]) -> [__m256i; 2] {
-        [
-            _mm256_cvtepu8_epi16(_mm256_castsi256_si128(a[0])),
-            _mm256_cvtepu8_epi16(_mm256_extracti128_si256::<1>(a[0])),
-        ]
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_high_u8_to_u16(self, a: [__m256i; 2]) -> [__m256i; 2] {
-        [
-            _mm256_cvtepu8_epi16(_mm256_castsi256_si128(a[1])),
-            _mm256_cvtepu8_epi16(_mm256_extracti128_si256::<1>(a[1])),
-        ]
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
-impl U16x32Widen for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_low_u16_to_u32(self, a: [__m256i; 2]) -> [__m256i; 2] {
-        [
-            _mm256_cvtepu16_epi32(_mm256_castsi256_si128(a[0])),
-            _mm256_cvtepu16_epi32(_mm256_extracti128_si256::<1>(a[0])),
-        ]
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_high_u16_to_u32(self, a: [__m256i; 2]) -> [__m256i; 2] {
-        [
-            _mm256_cvtepu16_epi32(_mm256_castsi256_si128(a[1])),
-            _mm256_cvtepu16_epi32(_mm256_extracti128_si256::<1>(a[1])),
-        ]
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
-impl I8x64Widen for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_low_i8_to_i16(self, a: [__m256i; 2]) -> [__m256i; 2] {
-        [
-            _mm256_cvtepi8_epi16(_mm256_castsi256_si128(a[0])),
-            _mm256_cvtepi8_epi16(_mm256_extracti128_si256::<1>(a[0])),
-        ]
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_high_i8_to_i16(self, a: [__m256i; 2]) -> [__m256i; 2] {
-        [
-            _mm256_cvtepi8_epi16(_mm256_castsi256_si128(a[1])),
-            _mm256_cvtepi8_epi16(_mm256_extracti128_si256::<1>(a[1])),
-        ]
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
-impl I16x32Widen for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_low_i16_to_i32(self, a: [__m256i; 2]) -> [__m256i; 2] {
-        [
-            _mm256_cvtepi16_epi32(_mm256_castsi256_si128(a[0])),
-            _mm256_cvtepi16_epi32(_mm256_extracti128_si256::<1>(a[0])),
-        ]
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn widen_high_i16_to_i32(self, a: [__m256i; 2]) -> [__m256i; 2] {
-        [
-            _mm256_cvtepi16_epi32(_mm256_castsi256_si128(a[1])),
-            _mm256_cvtepi16_epi32(_mm256_extracti128_si256::<1>(a[1])),
-        ]
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
-impl I16x32Narrow for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn narrow_saturating_i16_to_i8(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
-        [
-            _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi16(a[0], a[1])),
-            _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi16(b[0], b[1])),
-        ]
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn narrow_saturating_i16_to_u8(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
-        [
-            _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi16(a[0], a[1])),
-            _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi16(b[0], b[1])),
-        ]
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
-impl I32x16Narrow for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn narrow_saturating_i32_to_i16(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
-        [
-            _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi32(a[0], a[1])),
-            _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi32(b[0], b[1])),
-        ]
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn narrow_saturating_i32_to_u16(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
-        [
-            _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi32(a[0], a[1])),
-            _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi32(b[0], b[1])),
-        ]
-    }
-}
-#[cfg(feature = "w512")]
-impl I16x32Pairwise for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn madd_adjacent(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
-        [_mm256_madd_epi16(a[0], b[0]), _mm256_madd_epi16(a[1], b[1])]
-    }
-}
-#[cfg(feature = "w512")]
-impl I16x32AbsDiff for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn abs_diff(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
-        [
-            _mm256_sub_epi16(_mm256_max_epi16(a[0], b[0]), _mm256_min_epi16(a[0], b[0])),
-            _mm256_sub_epi16(_mm256_max_epi16(a[1], b[1]), _mm256_min_epi16(a[1], b[1])),
-        ]
-    }
-}
-#[cfg(feature = "w512")]
-impl U8x64AbsDiff for archmage::X64V3Token {
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn abs_diff(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
-        [
-            _mm256_sub_epi8(_mm256_max_epu8(a[0], b[0]), _mm256_min_epu8(a[0], b[0])),
-            _mm256_sub_epi8(_mm256_max_epu8(a[1], b[1]), _mm256_min_epu8(a[1], b[1])),
-        ]
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn reduce_add_u32(self, a: [__m256i; 2]) -> u32 {
-        ({
-            let s = _mm256_sad_epu8(a[0], _mm256_setzero_si256());
-            {
-                let s = _mm_add_epi64(_mm256_castsi256_si128(s), _mm256_extracti128_si256::<1>(s));
-                _mm_cvtsi128_si64(_mm_add_epi64(s, _mm_srli_si128::<8>(s))) as u32
-            }
-        }) + ({
-            let s = _mm256_sad_epu8(a[1], _mm256_setzero_si256());
-            {
-                let s = _mm_add_epi64(_mm256_castsi256_si128(s), _mm256_extracti128_si256::<1>(s));
-                _mm_cvtsi128_si64(_mm_add_epi64(s, _mm_srli_si128::<8>(s))) as u32
-            }
-        })
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn sum_abs_diff(self, a: [__m256i; 2], b: [__m256i; 2]) -> u32 {
-        ({
-            let s = _mm256_sad_epu8(a[0], b[0]);
-            {
-                let s = _mm_add_epi64(_mm256_castsi256_si128(s), _mm256_extracti128_si256::<1>(s));
-                _mm_cvtsi128_si64(_mm_add_epi64(s, _mm_srli_si128::<8>(s))) as u32
-            }
-        }) + ({
-            let s = _mm256_sad_epu8(a[1], b[1]);
-            {
-                let s = _mm_add_epi64(_mm256_castsi256_si128(s), _mm256_extracti128_si256::<1>(s));
-                _mm_cvtsi128_si64(_mm_add_epi64(s, _mm_srli_si128::<8>(s))) as u32
-            }
-        })
     }
 }
 #[cfg(feature = "w512")]
@@ -5784,6 +5558,21 @@ impl I8x64Backend for archmage::X64V3Token {
             <archmage::X64V3Token as I8x32Backend>::bitxor(self, a[1], b[1]),
         ]
     }
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_low_i8_to_i16(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        [
+            _mm256_cvtepi8_epi16(_mm256_castsi256_si128(a[0])),
+            _mm256_cvtepi8_epi16(_mm256_extracti128_si256::<1>(a[0])),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_high_i8_to_i16(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        [
+            _mm256_cvtepi8_epi16(_mm256_castsi256_si128(a[1])),
+            _mm256_cvtepi8_epi16(_mm256_extracti128_si256::<1>(a[1])),
+        ]
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -6040,6 +5829,63 @@ impl U8x64Backend for archmage::X64V3Token {
             <archmage::X64V3Token as U8x32Backend>::bitxor(self, a[0], b[0]),
             <archmage::X64V3Token as U8x32Backend>::bitxor(self, a[1], b[1]),
         ]
+    }
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_low_u8_to_u16(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        [
+            _mm256_cvtepu8_epi16(_mm256_castsi256_si128(a[0])),
+            _mm256_cvtepu8_epi16(_mm256_extracti128_si256::<1>(a[0])),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_high_u8_to_u16(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        [
+            _mm256_cvtepu8_epi16(_mm256_castsi256_si128(a[1])),
+            _mm256_cvtepu8_epi16(_mm256_extracti128_si256::<1>(a[1])),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn abs_diff(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+        [
+            _mm256_sub_epi8(_mm256_max_epu8(a[0], b[0]), _mm256_min_epu8(a[0], b[0])),
+            _mm256_sub_epi8(_mm256_max_epu8(a[1], b[1]), _mm256_min_epu8(a[1], b[1])),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn reduce_add_u32(self, a: [__m256i; 2]) -> u32 {
+        ({
+            let s = _mm256_sad_epu8(a[0], _mm256_setzero_si256());
+            {
+                let s = _mm_add_epi64(_mm256_castsi256_si128(s), _mm256_extracti128_si256::<1>(s));
+                _mm_cvtsi128_si64(_mm_add_epi64(s, _mm_srli_si128::<8>(s))) as u32
+            }
+        }) + ({
+            let s = _mm256_sad_epu8(a[1], _mm256_setzero_si256());
+            {
+                let s = _mm_add_epi64(_mm256_castsi256_si128(s), _mm256_extracti128_si256::<1>(s));
+                _mm_cvtsi128_si64(_mm_add_epi64(s, _mm_srli_si128::<8>(s))) as u32
+            }
+        })
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn sum_abs_diff(self, a: [__m256i; 2], b: [__m256i; 2]) -> u32 {
+        ({
+            let s = _mm256_sad_epu8(a[0], b[0]);
+            {
+                let s = _mm_add_epi64(_mm256_castsi256_si128(s), _mm256_extracti128_si256::<1>(s));
+                _mm_cvtsi128_si64(_mm_add_epi64(s, _mm_srli_si128::<8>(s))) as u32
+            }
+        }) + ({
+            let s = _mm256_sad_epu8(a[1], b[1]);
+            {
+                let s = _mm_add_epi64(_mm256_castsi256_si128(s), _mm256_extracti128_si256::<1>(s));
+                _mm_cvtsi128_si64(_mm_add_epi64(s, _mm_srli_si128::<8>(s))) as u32
+            }
+        })
     }
 }
 
@@ -6334,6 +6180,50 @@ impl I16x32Backend for archmage::X64V3Token {
             <archmage::X64V3Token as I16x16Backend>::bitxor(self, a[1], b[1]),
         ]
     }
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_low_i16_to_i32(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        [
+            _mm256_cvtepi16_epi32(_mm256_castsi256_si128(a[0])),
+            _mm256_cvtepi16_epi32(_mm256_extracti128_si256::<1>(a[0])),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_high_i16_to_i32(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        [
+            _mm256_cvtepi16_epi32(_mm256_castsi256_si128(a[1])),
+            _mm256_cvtepi16_epi32(_mm256_extracti128_si256::<1>(a[1])),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn narrow_saturating_i16_to_i8(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+        [
+            _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi16(a[0], a[1])),
+            _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi16(b[0], b[1])),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn narrow_saturating_i16_to_u8(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+        [
+            _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi16(a[0], a[1])),
+            _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi16(b[0], b[1])),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn madd_adjacent(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+        [_mm256_madd_epi16(a[0], b[0]), _mm256_madd_epi16(a[1], b[1])]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn abs_diff(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+        [
+            _mm256_sub_epi16(_mm256_max_epi16(a[0], b[0]), _mm256_min_epi16(a[0], b[0])),
+            _mm256_sub_epi16(_mm256_max_epi16(a[1], b[1]), _mm256_min_epi16(a[1], b[1])),
+        ]
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -6620,6 +6510,21 @@ impl U16x32Backend for archmage::X64V3Token {
             <archmage::X64V3Token as U16x16Backend>::bitxor(self, a[1], b[1]),
         ]
     }
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_low_u16_to_u32(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        [
+            _mm256_cvtepu16_epi32(_mm256_castsi256_si128(a[0])),
+            _mm256_cvtepu16_epi32(_mm256_extracti128_si256::<1>(a[0])),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn widen_high_u16_to_u32(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        [
+            _mm256_cvtepu16_epi32(_mm256_castsi256_si128(a[1])),
+            _mm256_cvtepu16_epi32(_mm256_extracti128_si256::<1>(a[1])),
+        ]
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -6897,6 +6802,21 @@ impl I32x16Backend for archmage::X64V3Token {
         [
             <archmage::X64V3Token as I32x8Backend>::bitxor(self, a[0], b[0]),
             <archmage::X64V3Token as I32x8Backend>::bitxor(self, a[1], b[1]),
+        ]
+    }
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn narrow_saturating_i32_to_i16(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+        [
+            _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi32(a[0], a[1])),
+            _mm256_permute4x64_epi64::<0xD8>(_mm256_packs_epi32(b[0], b[1])),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn narrow_saturating_i32_to_u16(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
+        [
+            _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi32(a[0], a[1])),
+            _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi32(b[0], b[1])),
         ]
     }
 }

@@ -1210,6 +1210,8 @@ Found by macro expansion snapshot compilation tests (`tests/expand/*.expanded.rs
 
 ## Pending Work
 
+- **Completed: consolidate the 27 unpublished magetypes operation traits.** Widening, narrowing, pairwise, absolute-difference and byte-reduction methods live on their source backend traits; cross-type destinations use method-level bounds. Published conversion traits remain supported. `source_backend_bounds_are_sufficient` pins the minimal generic bounds, and `xtask/codegen.py` compares downstream assembly across x86, NEON and WASM.
+
 ### API Parity Status (0 issues — complete!)
 
 **Current state:** All W128 types have identical APIs across x86/ARM/WASM. Reduced from 270 → 0 parity issues (100%).

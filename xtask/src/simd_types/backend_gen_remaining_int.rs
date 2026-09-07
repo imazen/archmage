@@ -375,6 +375,7 @@ pub(super) fn all_remaining_int_types() -> Vec<IntVecType> {
 // ============================================================================
 
 pub(super) fn generate_int_backend_trait(ty: &IntVecType) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::trait_methods(&ty.name());
     let trait_name = ty.trait_name();
     let elem = ty.elem;
     let lanes = ty.lanes;
@@ -614,6 +615,7 @@ pub(super) fn generate_int_backend_trait(ty: &IntVecType) -> String {
         /// The token proves CPU support was verified via `summon()`.
         pub trait {trait_name}: SimdToken + Sealed + Copy + 'static {{
         {methods}
+        {integer_methods}
         }}
     "#}
 }
@@ -640,6 +642,7 @@ pub(super) fn generate_x86_int_impls(
 }
 
 fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), token);
     let arcane = super::backend_syntax::arcane(token);
     let baseline = super::backend_syntax::sse2_or_arcane(token, ty.width_bits);
     let baseline_end = if ty.width_bits == 128 { "}" } else { "" };
@@ -936,6 +939,7 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
     formatdoc! {r#"
         impl {trait_name} for archmage::{token} {{
         {body}
+        {integer_methods}
         }}
     "#}
 }
@@ -1234,6 +1238,7 @@ pub(super) fn generate_scalar_int_impls(types: &[IntVecType]) -> String {
 }
 
 fn generate_scalar_int_impl(ty: &IntVecType) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "ScalarToken");
     let trait_name = ty.trait_name();
     let array = ty.array_type();
     let elem = ty.elem;
@@ -1546,6 +1551,7 @@ fn generate_scalar_int_impl(ty: &IntVecType) -> String {
 
             #[inline(always)]
             fn bitmask(self, a: {array}) -> u32 {{ {bitmask_body} }}
+        {integer_methods}
         }}
     "#});
 
@@ -1571,6 +1577,7 @@ pub(super) fn generate_neon_int_impls(types: &[IntVecType]) -> String {
 }
 
 fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "NeonToken");
     let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let array = ty.array_type();
@@ -1938,6 +1945,7 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
         "#});
     }
 
+    body.push_str(&integer_methods);
     body.push_str("    }\n");
     body
 }
@@ -1992,6 +2000,7 @@ fn generate_neon_bitmask(ty: &IntVecType) -> String {
 }
 
 fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "NeonToken");
     let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let repr = ty.neon_repr();
@@ -2386,6 +2395,7 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
                 }}
                 result
             }}
+        {integer_methods}
         }}
     "#,
         all_true = all_true_items.join(" && "),
@@ -2425,6 +2435,7 @@ pub(super) fn generate_wasm_int_impls(types: &[IntVecType]) -> String {
 }
 
 fn generate_wasm_native_int_impl(ty: &IntVecType) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "Wasm128Token");
     let trait_name = ty.trait_name();
     let array = ty.array_type();
     let elem = ty.elem;
@@ -2738,6 +2749,7 @@ fn generate_wasm_native_int_impl(ty: &IntVecType) -> String {
             fn any_true(self, a: v128) -> bool {{ v128_any_true(a) }}
             #[inline(always)]
             fn bitmask(self, a: v128) -> u32 {{ {bitmask_fn}(a) as u32 }}
+        {integer_methods}
         }}
     "#});
 
@@ -2745,6 +2757,7 @@ fn generate_wasm_native_int_impl(ty: &IntVecType) -> String {
 }
 
 fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "Wasm128Token");
     let trait_name = ty.trait_name();
     let repr = ty.wasm_repr();
     let array = ty.array_type();
@@ -3140,6 +3153,7 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
                 }}
                 result
             }}
+        {integer_methods}
         }}
     "#,
         all_true = all_true_items.join(" && "),

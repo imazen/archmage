@@ -6,62 +6,44 @@ fn upper(s: &str) -> String {
     s[..1].to_uppercase() + &s[1..]
 }
 
-pub(super) fn trait_names() -> Vec<(usize, String)> {
-    [128, 256, 512]
-        .into_iter()
-        .flat_map(|w| {
-            [
-                (w, format!("I16x{}Pairwise", w / 16)),
-                (w, format!("I16x{}AbsDiff", w / 16)),
-                (w, format!("U8x{}AbsDiff", w / 8)),
-            ]
-        })
-        .collect()
-}
-
-pub(super) fn traits() -> String {
-    let mut out = String::new();
-    for w in [128, 256, 512] {
-        let gate = if w == 512 {
-            "#[cfg(feature = \"w512\")]"
-        } else {
-            ""
-        };
-        let (n, m) = (w / 16, w / 32);
+pub(super) fn trait_methods(name: &str) -> String {
+    let Some((elem, lanes)) = name.split_once('x') else {
+        return String::new();
+    };
+    if !matches!(elem, "i16" | "u8") {
+        return String::new();
+    }
+    let n: usize = lanes.parse().unwrap();
+    let sb = format!("{}Backend", upper(name));
+    let db = if elem == "i16" {
+        format!("U16x{n}Backend")
+    } else {
+        sb.clone()
+    };
+    let bound = if elem == "i16" {
+        format!("where Self: super::{db}")
+    } else {
+        String::new()
+    };
+    let mut out = formatdoc! {r#"
+        /// Exact full-range absolute difference, with unsigned output lanes.
+        fn abs_diff(self, a: <Self as super::{sb}>::Repr, b: <Self as super::{sb}>::Repr) -> <Self as super::{db}>::Repr {bound};
+    "#};
+    if elem == "i16" {
+        let m = n / 2;
         out += &formatdoc! {r#"
-            {gate}
-            /// Adjacent signed 16-bit dot products with wrapping 32-bit results.
-            pub trait I16x{n}Pairwise: super::I16x{n}Backend + super::I32x{m}Backend {{
-                /// Lane k = a[2k]*b[2k] + a[2k+1]*b[2k+1], modulo 2^32.
-                fn madd_adjacent(self, a: <Self as super::I16x{n}Backend>::Repr, b: <Self as super::I16x{n}Backend>::Repr) -> <Self as super::I32x{m}Backend>::Repr;
-            }}
+            /// Lane k = a[2k]*b[2k] + a[2k+1]*b[2k+1], modulo 2^32.
+            fn madd_adjacent(self, a: <Self as super::{sb}>::Repr, b: <Self as super::{sb}>::Repr) -> <Self as super::I32x{m}Backend>::Repr
+            where Self: super::I32x{m}Backend;
         "#};
-        for (elem, n, dst) in [("i16", w / 16, "u16"), ("u8", w / 8, "u8")] {
-            let src = format!("{}x{n}", upper(elem));
-            let dest = format!("{}x{n}", upper(dst));
-            let sum = if elem == "u8" {
-                format!(
-                    "/// Exact widening sum, at most {}.\nfn reduce_add_u32(self, a: <Self as super::{src}Backend>::Repr) -> u32;\n/// Exact sum of absolute byte differences, using a native SAD where available.\nfn sum_abs_diff(self, a: <Self as super::{src}Backend>::Repr, b: <Self as super::{src}Backend>::Repr) -> u32;",
-                    n * 255
-                )
-            } else {
-                String::new()
-            };
-            let extra = if src == dest {
-                String::new()
-            } else {
-                format!(" + super::{dest}Backend")
-            };
-            out += &formatdoc! {r#"
-                {gate}
-                /// Full-range absolute differences, with unsigned output lanes.
-                pub trait {src}AbsDiff: super::{src}Backend{extra} {{
-                    /// Exact |a[i] - b[i]|; signed inputs can span the full unsigned range.
-                    fn abs_diff(self, a: <Self as super::{src}Backend>::Repr, b: <Self as super::{src}Backend>::Repr) -> <Self as super::{dest}Backend>::Repr;
-                    {sum}
-                }}
-            "#};
-        }
+    } else {
+        let max = n * 255;
+        out += &formatdoc! {r#"
+            /// Exact widening sum, at most {max}.
+            fn reduce_add_u32(self, a: <Self as super::{sb}>::Repr) -> u32;
+            /// Terminal sum of absolute byte differences. Reduce once after long accumulation loops where possible.
+            fn sum_abs_diff(self, a: <Self as super::{sb}>::Repr, b: <Self as super::{sb}>::Repr) -> u32;
+        "#};
     }
     out
 }
@@ -75,6 +57,11 @@ pub(super) fn generic(name: &str) -> String {
     }
     let n: usize = lanes.parse().unwrap();
     let bound = upper(name);
+    let extra = if elem == "i16" {
+        format!(" + crate::simd::backends::U16x{n}Backend")
+    } else {
+        String::new()
+    };
     let dest = if elem == "i16" {
         format!("u16x{n}")
     } else {
@@ -86,43 +73,43 @@ pub(super) fn generic(name: &str) -> String {
         ""
     };
     let mut out = formatdoc! {r#"
-        impl<T: crate::simd::backends::{bound}AbsDiff> {name}<T> {{
+        impl<T: crate::simd::backends::{bound}Backend{extra}> {name}<T> {{
             {signed_note}
             /// Exact lane-wise absolute difference, without saturation or wrapping.
             #[inline(always)]
             pub fn abs_diff(self, rhs: Self) -> super::{dest}<T> {{
-                super::{dest}::from_repr_unchecked(self.1, T::abs_diff(self.1, self.0, rhs.0))
+                super::{dest}::from_repr_unchecked(self.1, <T as crate::simd::backends::{bound}Backend>::abs_diff(self.1, self.0, rhs.0))
             }}
         }}
     "#};
     if elem == "i16" {
         let m = n / 2;
         out += &formatdoc! {r#"
-            impl<T: crate::simd::backends::{bound}Pairwise> {name}<T> {{
+            impl<T: crate::simd::backends::{bound}Backend + crate::simd::backends::I32x{m}Backend> {name}<T> {{
                 /// Multiply signed lanes, then sum adjacent pairs into i32 lanes.
                 /// Lane k uses exactly input lanes 2k and 2k+1, in that order.
                 /// The sum wraps modulo 2^32: two MIN*MIN products yield i32::MIN.
                 /// Neither this operation nor the WASM dot instruction saturates.
                 #[inline(always)]
                 pub fn madd_adjacent(self, rhs: Self) -> super::i32x{m}<T> {{
-                    super::i32x{m}::from_repr_unchecked(self.1, T::madd_adjacent(self.1, self.0, rhs.0))
+                    super::i32x{m}::from_repr_unchecked(self.1, <T as crate::simd::backends::{bound}Backend>::madd_adjacent(self.1, self.0, rhs.0))
                 }}
 
             }}
         "#};
     } else {
         out += &formatdoc! {r#"
-            impl<T: crate::simd::backends::{bound}AbsDiff> {name}<T> {{
+            impl<T: crate::simd::backends::{bound}Backend> {name}<T> {{
                 /// Sum all lanes exactly into u32 (unlike wrapping reduce_add).
                 #[inline(always)]
-                pub fn reduce_add_u32(self) -> u32 {{ T::reduce_add_u32(self.1, self.0) }}
+                pub fn reduce_add_u32(self) -> u32 {{ <T as crate::simd::backends::{bound}Backend>::reduce_add_u32(self.1, self.0) }}
 
                 /// Exact sum of absolute byte differences (SAD).
                 /// Terminal reduction of one vector pair; x86 can use psadbw.
                 /// For long loops, accumulating vector partial sums and reducing once
                 /// can be faster than returning a scalar sum on every iteration.
                 #[inline(always)]
-                pub fn sum_abs_diff(self, rhs: Self) -> u32 {{ T::sum_abs_diff(self.1, self.0, rhs.0) }}
+                pub fn sum_abs_diff(self, rhs: Self) -> u32 {{ <T as crate::simd::backends::{bound}Backend>::sum_abs_diff(self.1, self.0, rhs.0) }}
             }}
         "#};
     }
@@ -163,9 +150,9 @@ fn repr(arch: &str, elem: &str, width: usize) -> String {
     }
 }
 
-pub(super) fn impls(arch: &str, token: &str, w512: bool) -> String {
+pub(super) fn methods(arch: &str, token: &str, src: &str) -> String {
     let mut out = String::new();
-    for w in [128, 256, 512].into_iter().filter(|w| (*w == 512) == w512) {
+    for w in [128, 256, 512] {
         let native = if arch == "v4" {
             512
         } else if arch == "x86" {
@@ -187,14 +174,9 @@ pub(super) fn impls(arch: &str, token: &str, w512: bool) -> String {
             };
             let n = w / if elem == "u8" { 8 } else { 16 };
             let src_name = format!("{}x{n}", upper(elem));
-            let tn = format!(
-                "{src_name}{}",
-                if op == "madd_adjacent" {
-                    "Pairwise"
-                } else {
-                    "AbsDiff"
-                }
-            );
+            if src_name != upper(src) {
+                continue;
+            }
             let sr = repr(arch, elem, w);
             let dr = repr(arch, dst, w);
             let method = if op == "madd_adjacent" {
@@ -239,7 +221,7 @@ pub(super) fn impls(arch: &str, token: &str, w512: bool) -> String {
                 }
             };
             out += &format!(
-                "impl {tn} for archmage::{token} {{\n{attr}\nfn {method}(self, a: {sr}, b: {sr}) -> {dr} {{ {body} }}\n{close}\n"
+                "{attr}\nfn {method}(self, a: {sr}, b: {sr}) -> {dr} {{ {body} }}\n{close}\n"
             );
             if op == "abs_u8" {
                 for (method, rhs, scalar) in [
@@ -291,7 +273,6 @@ pub(super) fn impls(arch: &str, token: &str, w512: bool) -> String {
                     );
                 }
             }
-            out += "}\n";
         }
     }
     out

@@ -30,7 +30,7 @@
 #![allow(clippy::chunks_exact_to_as_chunks)]
 
 use archmage::SimdToken;
-use magetypes::simd::backends::{I16x8Narrow, U8x16Widen, U16x8Widen, U32x4Backend};
+use magetypes::simd::backends::{I16x8Backend, U8x16Backend, U16x8Backend, U32x4Backend};
 use magetypes::simd::generic::{i16x8, u8x16, u16x8, u32x4};
 use zenbench::criterion_compat::*;
 use zenbench::{criterion_group, criterion_main};
@@ -56,7 +56,7 @@ fn i16_input(n: usize) -> Vec<i16> {
 
 /// `widen_low` + `widen_high` over the slice — one instruction per half.
 #[inline(always)]
-fn widen_slice<T: U8x16Widen>(t: T, src: &[u8], dst: &mut [u16]) {
+fn widen_slice<T: U8x16Backend + U16x8Backend>(t: T, src: &[u8], dst: &mut [u16]) {
     for (s, d) in src.chunks_exact(16).zip(dst.chunks_exact_mut(16)) {
         let arr: [u8; 16] = s.try_into().unwrap();
         let v = u8x16::<T>::from_array(t, arr);
@@ -67,7 +67,7 @@ fn widen_slice<T: U8x16Widen>(t: T, src: &[u8], dst: &mut [u16]) {
 
 /// The array round trip a portable body needs without the primitive.
 #[inline(always)]
-fn widen_via_array_slice<T: U8x16Widen>(t: T, src: &[u8], dst: &mut [u16]) {
+fn widen_via_array_slice<T: U8x16Backend + U16x8Backend>(t: T, src: &[u8], dst: &mut [u16]) {
     for (s, d) in src.chunks_exact(16).zip(dst.chunks_exact_mut(16)) {
         let arr: [u8; 16] = s.try_into().unwrap();
         let v = u8x16::<T>::from_array(t, arr);
@@ -83,7 +83,7 @@ fn widen_via_array_slice<T: U8x16Widen>(t: T, src: &[u8], dst: &mut [u16]) {
 #[inline(always)]
 fn widen_chain_slice<T>(t: T, src: &[u8]) -> u32
 where
-    T: U8x16Widen + U16x8Widen + U32x4Backend,
+    T: U8x16Backend + U16x8Backend + U32x4Backend,
 {
     let mut acc = u32x4::<T>::zero(t);
     for s in src.chunks_exact(16) {
@@ -100,7 +100,7 @@ where
 #[inline(always)]
 fn widen_chain_via_array_slice<T>(t: T, src: &[u8]) -> u32
 where
-    T: U8x16Widen + U16x8Widen + U32x4Backend,
+    T: U8x16Backend + U16x8Backend + U32x4Backend,
 {
     let mut acc = u32x4::<T>::zero(t);
     for s in src.chunks_exact(16) {
@@ -123,7 +123,7 @@ where
 
 /// `narrow_saturating_u8` over the slice — one call per 16 output bytes.
 #[inline(always)]
-fn narrow_slice<T: I16x8Narrow>(t: T, src: &[i16], dst: &mut [u8]) {
+fn narrow_slice<T: I16x8Backend + U8x16Backend>(t: T, src: &[i16], dst: &mut [u8]) {
     for (s, d) in src.chunks_exact(16).zip(dst.chunks_exact_mut(16)) {
         let lo = i16x8::<T>::from_array(t, s[..8].try_into().unwrap());
         let hi = i16x8::<T>::from_array(t, s[8..].try_into().unwrap());
@@ -133,7 +133,7 @@ fn narrow_slice<T: I16x8Narrow>(t: T, src: &[i16], dst: &mut [u8]) {
 
 /// The array round trip with an explicit clamp.
 #[inline(always)]
-fn narrow_via_array_slice<T: I16x8Narrow>(t: T, src: &[i16], dst: &mut [u8]) {
+fn narrow_via_array_slice<T: I16x8Backend + U8x16Backend>(t: T, src: &[i16], dst: &mut [u8]) {
     for (s, d) in src.chunks_exact(16).zip(dst.chunks_exact_mut(16)) {
         let lo = i16x8::<T>::from_array(t, s[..8].try_into().unwrap());
         let hi = i16x8::<T>::from_array(t, s[8..].try_into().unwrap());
@@ -159,14 +159,14 @@ fn narrow_via_array_slice<T: I16x8Narrow>(t: T, src: &[i16], dst: &mut [u8]) {
 mod v3_arcane {
     use super::*;
     use archmage::{X64V3Token, arcane};
-    use magetypes::simd::backends::I16x16Narrow;
+    use magetypes::simd::backends::{I16x16Backend, U8x32Backend};
     use magetypes::simd::generic::i16x16;
 
     /// 256-bit narrow — the width that carries the `permute4x64::<0xD8>`
     /// lane-order fixup. This is the case whose cost the 128-bit kernels
     /// cannot show.
     #[inline(always)]
-    fn narrow256_slice<T: I16x16Narrow>(t: T, src: &[i16], dst: &mut [u8]) {
+    fn narrow256_slice<T: I16x16Backend + U8x32Backend>(t: T, src: &[i16], dst: &mut [u8]) {
         for (s, d) in src.chunks_exact(32).zip(dst.chunks_exact_mut(32)) {
             let lo = i16x16::<T>::from_array(t, s[..16].try_into().unwrap());
             let hi = i16x16::<T>::from_array(t, s[16..].try_into().unwrap());
@@ -175,7 +175,11 @@ mod v3_arcane {
     }
 
     #[inline(always)]
-    fn narrow256_via_array_slice<T: I16x16Narrow>(t: T, src: &[i16], dst: &mut [u8]) {
+    fn narrow256_via_array_slice<T: I16x16Backend + U8x32Backend>(
+        t: T,
+        src: &[i16],
+        dst: &mut [u8],
+    ) {
         for (s, d) in src.chunks_exact(32).zip(dst.chunks_exact_mut(32)) {
             let lo = i16x16::<T>::from_array(t, s[..16].try_into().unwrap());
             let hi = i16x16::<T>::from_array(t, s[16..].try_into().unwrap());

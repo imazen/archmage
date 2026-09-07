@@ -521,7 +521,7 @@ impl<T: U8x64Backend> core::fmt::Debug for u8x64<T> {
 // Widening (u8x64 -> u16x32)
 // ============================================================================
 
-impl<T: crate::simd::backends::U8x64Widen> u8x64<T> {
+impl<T: crate::simd::backends::U8x64Backend + crate::simd::backends::U16x32Backend> u8x64<T> {
     /// Zero-extend the low half of the lanes to `u16x32`.
     ///
     /// Result lane `i` is `self[i] as u16` for `i` in `0..32`.
@@ -529,7 +529,10 @@ impl<T: crate::simd::backends::U8x64Widen> u8x64<T> {
     /// see `docs/CROSS-ISA-INT-PRIMITIVES.md`.
     #[inline(always)]
     pub fn widen_low(self) -> super::u16x32<T> {
-        super::u16x32::from_repr_unchecked(self.1, T::widen_low_u8_to_u16(self.1, self.0))
+        super::u16x32::from_repr_unchecked(
+            self.1,
+            <T as crate::simd::backends::U8x64Backend>::widen_low_u8_to_u16(self.1, self.0),
+        )
     }
 
     /// Zero-extend the high half of the lanes to `u16x32`.
@@ -537,22 +540,28 @@ impl<T: crate::simd::backends::U8x64Widen> u8x64<T> {
     /// Result lane `i` is `self[i + 32] as u16`.
     #[inline(always)]
     pub fn widen_high(self) -> super::u16x32<T> {
-        super::u16x32::from_repr_unchecked(self.1, T::widen_high_u8_to_u16(self.1, self.0))
+        super::u16x32::from_repr_unchecked(
+            self.1,
+            <T as crate::simd::backends::U8x64Backend>::widen_high_u8_to_u16(self.1, self.0),
+        )
     }
 }
 
-impl<T: crate::simd::backends::U8x64AbsDiff> u8x64<T> {
+impl<T: crate::simd::backends::U8x64Backend> u8x64<T> {
     /// Exact lane-wise absolute difference, without saturation or wrapping.
     #[inline(always)]
     pub fn abs_diff(self, rhs: Self) -> super::u8x64<T> {
-        super::u8x64::from_repr_unchecked(self.1, T::abs_diff(self.1, self.0, rhs.0))
+        super::u8x64::from_repr_unchecked(
+            self.1,
+            <T as crate::simd::backends::U8x64Backend>::abs_diff(self.1, self.0, rhs.0),
+        )
     }
 }
-impl<T: crate::simd::backends::U8x64AbsDiff> u8x64<T> {
+impl<T: crate::simd::backends::U8x64Backend> u8x64<T> {
     /// Sum all lanes exactly into u32 (unlike wrapping reduce_add).
     #[inline(always)]
     pub fn reduce_add_u32(self) -> u32 {
-        T::reduce_add_u32(self.1, self.0)
+        <T as crate::simd::backends::U8x64Backend>::reduce_add_u32(self.1, self.0)
     }
 
     /// Exact sum of absolute byte differences (SAD).
@@ -561,7 +570,7 @@ impl<T: crate::simd::backends::U8x64AbsDiff> u8x64<T> {
     /// can be faster than returning a scalar sum on every iteration.
     #[inline(always)]
     pub fn sum_abs_diff(self, rhs: Self) -> u32 {
-        T::sum_abs_diff(self.1, self.0, rhs.0)
+        <T as crate::simd::backends::U8x64Backend>::sum_abs_diff(self.1, self.0, rhs.0)
     }
 }
 // ============================================================================

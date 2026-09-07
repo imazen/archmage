@@ -33,7 +33,7 @@
 //! element-wise `simd_cast` of its 128-bit input (`core_arch/x86/avx2.rs:884`),
 //! not an `unpack`, so there is nothing to undo.
 
-use indoc::{formatdoc, indoc};
+use indoc::formatdoc;
 
 // ============================================================================
 // Data model
@@ -92,16 +92,12 @@ fn upper(name: &str) -> String {
 }
 
 impl WidenPair {
-    /// `"U8x16Widen"`.
-    pub fn trait_name(&self) -> String {
-        format!("{}Widen", upper(self.src))
-    }
     /// `"U8x16Backend"`.
-    fn src_backend(&self) -> String {
+    pub(super) fn src_backend(&self) -> String {
         format!("{}Backend", upper(self.src))
     }
     /// `"U16x8Backend"`.
-    fn dst_backend(&self) -> String {
+    pub(super) fn dst_backend(&self) -> String {
         format!("{}Backend", upper(self.dst))
     }
     /// `"widen_low_u8_to_u16"` / `"widen_high_u8_to_u16"`.
@@ -124,17 +120,13 @@ impl WidenPair {
 }
 
 impl NarrowPair {
-    /// `"I16x8Narrow"`.
-    pub fn trait_name(&self) -> String {
-        format!("{}Narrow", upper(self.src))
-    }
-    fn src_backend(&self) -> String {
+    pub(super) fn src_backend(&self) -> String {
         format!("{}Backend", upper(self.src))
     }
-    fn sdst_backend(&self) -> String {
+    pub(super) fn sdst_backend(&self) -> String {
         format!("{}Backend", upper(self.sdst))
     }
-    fn udst_backend(&self) -> String {
+    pub(super) fn udst_backend(&self) -> String {
         format!("{}Backend", upper(self.udst))
     }
     /// `"narrow_saturating_i16_to_i8"` / `"narrow_saturating_i16_to_u8"`.
@@ -348,113 +340,58 @@ pub(super) fn all_narrow_pairs() -> Vec<NarrowPair> {
 }
 
 // ============================================================================
-// Trait definitions -> backends/widen_narrow.rs
+// Method declarations for the source backend traits
 // ============================================================================
 
-pub(super) fn generate_widen_narrow_traits() -> String {
-    let mut code = String::from(indoc_header());
-
-    for p in all_widen_pairs() {
-        let gate = w512_gate(p.width_bits);
-        let tn = p.trait_name();
+/// Operations belong to the source shape. Destination bounds are method-local:
+/// i16 widening and i32 narrowing must not create a supertrait cycle.
+pub(super) fn trait_methods(src: &str) -> String {
+    let mut code = String::new();
+    for p in all_widen_pairs().into_iter().filter(|p| p.src == src) {
         let sb = p.src_backend();
         let db = p.dst_backend();
-        let (src, dst) = (p.src, p.dst);
         let de = p.dst_elem;
-        let half_lanes = p.dst_lanes();
-        let extend = if p.signed { "Sign" } else { "Zero" };
-        let lo = p.method(Half::Low);
-        let hi = p.method(Half::High);
-        code.push_str(&formatdoc! {r#"
-            /// {extend}-extending widening from `{src}` to `{dst}`.
-            ///
-            /// Native at every tier and in natural lane order everywhere; see
-            /// `docs/CROSS-ISA-INT-PRIMITIVES.md` §3.
-            {gate}pub trait {tn}: super::{sb} + super::{db} + SimdToken + Sealed + Copy + 'static {{
-                /// {extend}-extend source lanes `0..{half_lanes}` to `{de}`.
-                ///
-                /// Result lane `i` is `a[i] as {de}` for `i` in `0..{half_lanes}`.
-                fn {lo}(self, a: <Self as super::{sb}>::Repr) -> <Self as super::{db}>::Repr;
-
-                /// {extend}-extend source lanes `{half_lanes}..{src_lanes}` to `{de}`.
-                ///
-                /// Result lane `i` is `a[i + {half_lanes}] as {de}`.
-                fn {hi}(self, a: <Self as super::{sb}>::Repr) -> <Self as super::{db}>::Repr;
-            }}
-
-        "#, src_lanes = p.src_lanes});
+        let n = p.dst_lanes();
+        for half in [Half::Low, Half::High] {
+            let method = p.method(half);
+            let offset = if matches!(half, Half::Low) { 0 } else { n };
+            code.push_str(&formatdoc! {r#"
+                /// Widen in natural lane order: result[i] = a[i + {offset}] as {de}.
+                fn {method}(self, a: <Self as super::{sb}>::Repr) -> <Self as super::{db}>::Repr
+                where Self: super::{db};
+            "#});
+        }
     }
-
-    for p in all_narrow_pairs() {
-        let gate = w512_gate(p.width_bits);
-        let tn = p.trait_name();
+    for p in all_narrow_pairs().into_iter().filter(|p| p.src == src) {
         let sb = p.src_backend();
-        let sdb = p.sdst_backend();
-        let udb = p.udst_backend();
-        let (src, sdst, udst) = (p.src, p.sdst, p.udst);
-        let (se, sde, ude) = (p.src_elem, p.sdst_elem, p.udst_elem);
         let n = p.src_lanes;
-        let sm = p.method(true);
-        let um = p.method(false);
-        code.push_str(&formatdoc! {r#"
-            /// Saturating narrowing from two `{src}` operands.
-            ///
-            /// Only the **signed-source** shape is offered: x86 and wasm have no
-            /// unsigned-source narrowing instruction, so a `u{srcw} -> u{dstw}`
-            /// saturating narrow would disagree across ISAs above `0x{hi_hex}`.
-            /// See `docs/CROSS-ISA-INT-PRIMITIVES.md` §3.
-            {gate}pub trait {tn}:
-                super::{sb} + super::{sdb} + super::{udb} + SimdToken + Sealed + Copy + 'static
-            {{
-                /// Signed-saturating narrow to `{sdst}`.
-                ///
-                /// Result lane `i` is `a[i].clamp({sde}::MIN, {sde}::MAX)` for
-                /// `i < {n}` and `b[i - {n}].clamp(..)` for `i >= {n}`.
-                fn {sm}(
-                    self,
-                    a: <Self as super::{sb}>::Repr,
-                    b: <Self as super::{sb}>::Repr,
-                ) -> <Self as super::{sdb}>::Repr;
-
-                /// Unsigned-saturating narrow to `{udst}`.
-                ///
-                /// Result lane `i` is `a[i].clamp(0, {ude}::MAX as {se})` for
-                /// `i < {n}` and `b[i - {n}].clamp(..)` for `i >= {n}`.
-                fn {um}(
-                    self,
-                    a: <Self as super::{sb}>::Repr,
-                    b: <Self as super::{sb}>::Repr,
-                ) -> <Self as super::{udb}>::Repr;
-            }}
-
-        "#,
-            srcw = elem_bits(p.src_elem),
-            dstw = elem_bits(p.sdst_elem),
-            hi_hex = format!("{:X}", (1u64 << (elem_bits(p.src_elem) - 1)) - 1),
-        });
+        for signed in [true, false] {
+            let db = if signed {
+                p.sdst_backend()
+            } else {
+                p.udst_backend()
+            };
+            let de = if signed { p.sdst_elem } else { p.udst_elem };
+            let method = p.method(signed);
+            code.push_str(&formatdoc! {r#"
+                /// Clamp to {de}'s range, then concatenate a's {n} lanes followed by b's.
+                fn {method}(self, a: <Self as super::{sb}>::Repr, b: <Self as super::{sb}>::Repr) -> <Self as super::{db}>::Repr
+                where Self: super::{db};
+            "#});
+        }
     }
-
-    code.push_str(&super::backend_gen_integer_ops::traits());
-    code
+    code + &super::backend_gen_integer_ops::trait_methods(src)
 }
 
-fn indoc_header() -> &'static str {
-    indoc! {r#"
-        //! Widening and saturating-narrowing conversion traits for integer types.
-        //!
-        //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
-
-        use super::sealed::Sealed;
-        use archmage::SimdToken;
-
-    "#}
-}
-
-fn w512_gate(width_bits: usize) -> &'static str {
-    if width_bits == 512 {
-        "#[cfg(feature = \"w512\")]\n"
-    } else {
-        ""
+/// Emit directly inside the source backend impl; no generated-code rewriting.
+pub(super) fn methods(src: &str, token: &str) -> String {
+    match token {
+        "ScalarToken" => generate_scalar_widen_narrow_methods(src),
+        "X64V3Token" => generate_x86_v3_widen_narrow_methods(src),
+        "X64V4Token" | "X64V4xToken" => generate_x86_v4_widen_narrow_methods(src, token),
+        "NeonToken" => generate_neon_widen_narrow_methods(src),
+        "Wasm128Token" => generate_wasm_widen_narrow_methods(src),
+        _ => panic!("unsupported integer backend token: {token}"),
     }
 }
 
@@ -538,15 +475,6 @@ fn pack_subs(items: &[String]) -> String {
     }
 }
 
-/// `impl Trait for archmage::Token {` header with the right cfg attributes.
-fn impl_header(trait_name: &str, token: &str, arch: Option<&str>) -> String {
-    let arch_attr = match arch {
-        Some(a) => format!("#[cfg(target_arch = \"{a}\")]\n"),
-        None => String::new(),
-    };
-    format!("\n{arch_attr}impl {trait_name} for archmage::{token} {{\n")
-}
-
 // ============================================================================
 // Scalar backend
 // ============================================================================
@@ -568,19 +496,15 @@ fn impl_header(trait_name: &str, token: &str, arch: Option<&str>) -> String {
 /// Extracting the half as a sub-array first (`split_at`/`as_chunks` + `map`)
 /// is WORSE — the 8-byte half copy itself gets integer-promoted and both
 /// halves degrade.
-pub(super) fn generate_scalar_widen_narrow_impls(w512: bool) -> String {
+fn generate_scalar_widen_narrow_methods(src: &str) -> String {
     let mut code = String::new();
 
-    for p in all_widen_pairs()
-        .into_iter()
-        .filter(|p| is_w512(p.width_bits) == w512)
-    {
+    for p in all_widen_pairs().into_iter().filter(|p| p.src == src) {
         let src_repr = scalar_repr(p.src_elem, p.src_lanes);
         let dst_repr = scalar_repr(p.dst_elem, p.dst_lanes());
         let de = p.dst_elem;
         let half = p.dst_lanes();
         let full_repr = scalar_repr(p.dst_elem, p.src_lanes);
-        code.push_str(&impl_header(&p.trait_name(), "ScalarToken", None));
         code.push_str(&formatdoc! {r#"
                 #[inline(always)]
                 fn {lo}(self, a: {src_repr}) -> {dst_repr} {{
@@ -598,19 +522,14 @@ pub(super) fn generate_scalar_widen_narrow_impls(w512: bool) -> String {
                     core::array::from_fn(|i| f[i + {half}])
                 }}
         "#, lo = p.method(Half::Low), hi = p.method(Half::High)});
-        code.push_str("}\n");
     }
 
-    for p in all_narrow_pairs()
-        .into_iter()
-        .filter(|p| is_w512(p.width_bits) == w512)
-    {
+    for p in all_narrow_pairs().into_iter().filter(|p| p.src == src) {
         let src_repr = scalar_repr(p.src_elem, p.src_lanes);
         let sdst_repr = scalar_repr(p.sdst_elem, p.src_lanes * 2);
         let udst_repr = scalar_repr(p.udst_elem, p.src_lanes * 2);
         let (se, sde, ude) = (p.src_elem, p.sdst_elem, p.udst_elem);
         let n = p.src_lanes;
-        code.push_str(&impl_header(&p.trait_name(), "ScalarToken", None));
         code.push_str(&formatdoc! {r#"
                 #[inline(always)]
                 fn {sm}(self, a: {src_repr}, b: {src_repr}) -> {sdst_repr} {{
@@ -628,19 +547,14 @@ pub(super) fn generate_scalar_widen_narrow_impls(w512: bool) -> String {
                     }})
                 }}
         "#, sm = p.method(true), um = p.method(false)});
-        code.push_str("}\n");
     }
 
-    code.push_str(&super::backend_gen_integer_ops::impls(
+    code.push_str(&super::backend_gen_integer_ops::methods(
         "scalar",
         "ScalarToken",
-        w512,
+        src,
     ));
     code
-}
-
-fn is_w512(width_bits: usize) -> bool {
-    width_bits == 512
 }
 
 // ============================================================================
@@ -675,16 +589,12 @@ fn x86_pack(p: &NarrowPair, prefix: &str, dst_signed: bool) -> String {
 /// `_mm256_permute4x64_epi64::<0xD8>` — dst = src lanes `[0, 2, 1, 3]` —
 /// restores `[a..., b...]`. Skipping it would make this the one tier that
 /// silently produces different bytes.
-pub(super) fn generate_x86_v3_widen_narrow_impls(w512: bool) -> String {
+fn generate_x86_v3_widen_narrow_methods(src: &str) -> String {
     let arcane = super::backend_syntax::arcane("X64V3Token");
     let mut code = String::new();
 
-    for p in all_widen_pairs()
-        .into_iter()
-        .filter(|p| is_w512(p.width_bits) == w512)
-    {
+    for p in all_widen_pairs().into_iter().filter(|p| p.src == src) {
         let repr = x86_v3_repr(p.width_bits);
-        code.push_str(&impl_header(&p.trait_name(), "X64V3Token", Some("x86_64")));
         for half in [Half::Low, Half::High] {
             let body = match p.width_bits {
                 128 => {
@@ -717,15 +627,10 @@ pub(super) fn generate_x86_v3_widen_narrow_impls(w512: bool) -> String {
 
             "#, m = p.method(half)});
         }
-        code.push_str("}\n");
     }
 
-    for p in all_narrow_pairs()
-        .into_iter()
-        .filter(|p| is_w512(p.width_bits) == w512)
-    {
+    for p in all_narrow_pairs().into_iter().filter(|p| p.src == src) {
         let repr = x86_v3_repr(p.width_bits);
-        code.push_str(&impl_header(&p.trait_name(), "X64V3Token", Some("x86_64")));
         for dst_signed in [true, false] {
             let body = match p.width_bits {
                 128 => format!("{}(a, b)", x86_pack(&p, "_mm", dst_signed)),
@@ -748,13 +653,12 @@ pub(super) fn generate_x86_v3_widen_narrow_impls(w512: bool) -> String {
 
             "#, m = p.method(dst_signed)});
         }
-        code.push_str("}\n");
     }
 
-    code.push_str(&super::backend_gen_integer_ops::impls(
+    code.push_str(&super::backend_gen_integer_ops::methods(
         "x86",
         "X64V3Token",
-        w512,
+        src,
     ));
     code
 }
@@ -777,16 +681,12 @@ pub(super) fn generate_x86_v3_widen_narrow_impls(w512: bool) -> String {
 /// is first clamped at zero with `_mm512_max_epi16`. After that clamp every
 /// lane is in `0..=0x7FFF`, where the signed and unsigned readings coincide,
 /// and the instruction's saturation to `0..=255` is exactly `packus`'s.
-pub(super) fn generate_x86_v4_widen_narrow_impls(token: &str) -> String {
+fn generate_x86_v4_widen_narrow_methods(src: &str, token: &str) -> String {
     let arcane = super::backend_syntax::arcane(token);
     let mut code = String::new();
 
-    for p in all_widen_pairs()
-        .into_iter()
-        .filter(|p| is_w512(p.width_bits))
-    {
+    for p in all_widen_pairs().into_iter().filter(|p| p.src == src) {
         let cvt = x86_cvt(&p, "_mm512");
-        code.push_str(&impl_header(&p.trait_name(), token, Some("x86_64")));
         for half in [Half::Low, Half::High] {
             let extract = match half {
                 Half::Low => "_mm512_castsi512_si256(a)",
@@ -800,16 +700,11 @@ pub(super) fn generate_x86_v4_widen_narrow_impls(token: &str) -> String {
 
             "#, m = p.method(half)});
         }
-        code.push_str("}\n");
     }
 
-    for p in all_narrow_pairs()
-        .into_iter()
-        .filter(|p| is_w512(p.width_bits))
-    {
+    for p in all_narrow_pairs().into_iter().filter(|p| p.src == src) {
         let sb = elem_bits(p.src_elem);
         let db = sb / 2;
-        code.push_str(&impl_header(&p.trait_name(), token, Some("x86_64")));
 
         let signed_cvt = format!("_mm512_cvtsepi{sb}_epi{db}");
         code.push_str(&formatdoc! {r#"
@@ -839,10 +734,9 @@ pub(super) fn generate_x86_v4_widen_narrow_impls(token: &str) -> String {
                 }}
 
         "#, m = p.method(false)});
-        code.push_str("}\n");
     }
 
-    code.push_str(&super::backend_gen_integer_ops::impls("v4", token, true));
+    code.push_str(&super::backend_gen_integer_ops::methods("v4", token, src));
     code
 }
 
@@ -857,19 +751,15 @@ pub(super) fn generate_x86_v4_widen_narrow_impls(token: &str) -> String {
 /// 64-bit `uint8x8_t` (hence `vget_low_u8`) while `vmovl_high_u8` consumes the
 /// full 128-bit register. That is a signature difference, not a semantic one —
 /// the lane order is natural, as everywhere else.
-pub(super) fn generate_neon_widen_narrow_impls(w512: bool) -> String {
+fn generate_neon_widen_narrow_methods(src: &str) -> String {
     let arcane = super::backend_syntax::arcane("NeonToken");
     let mut code = String::new();
 
-    for p in all_widen_pairs()
-        .into_iter()
-        .filter(|p| is_w512(p.width_bits) == w512)
-    {
+    for p in all_widen_pairs().into_iter().filter(|p| p.src == src) {
         let src_repr = neon_repr(p.src_elem, p.width_bits);
         let dst_repr = neon_repr(p.dst_elem, p.width_bits);
         let ns = neon_suffix(p.src_elem);
         let subs = p.subs();
-        code.push_str(&impl_header(&p.trait_name(), "NeonToken", Some("aarch64")));
         for half in [Half::Low, Half::High] {
             // Dest sub `j` of this half is global half-register `g`; the source
             // 128-bit sub it comes from is `g / 2` and the half within that sub
@@ -893,17 +783,12 @@ pub(super) fn generate_neon_widen_narrow_impls(w512: bool) -> String {
 
             "#, m = p.method(half), body = pack_subs(&items)});
         }
-        code.push_str("}\n");
     }
 
-    for p in all_narrow_pairs()
-        .into_iter()
-        .filter(|p| is_w512(p.width_bits) == w512)
-    {
+    for p in all_narrow_pairs().into_iter().filter(|p| p.src == src) {
         let src_repr = neon_repr(p.src_elem, p.width_bits);
         let ns = neon_suffix(p.src_elem);
         let subs = p.subs();
-        code.push_str(&impl_header(&p.trait_name(), "NeonToken", Some("aarch64")));
         for dst_signed in [true, false] {
             let dst_elem = if dst_signed { p.sdst_elem } else { p.udst_elem };
             let dst_repr = neon_repr(dst_elem, p.width_bits);
@@ -936,13 +821,12 @@ pub(super) fn generate_neon_widen_narrow_impls(w512: bool) -> String {
 
             "#, m = p.method(dst_signed), body = pack_subs(&items)});
         }
-        code.push_str("}\n");
     }
 
-    code.push_str(&super::backend_gen_integer_ops::impls(
+    code.push_str(&super::backend_gen_integer_ops::methods(
         "neon",
         "NeonToken",
-        w512,
+        src,
     ));
     code
 }
@@ -958,22 +842,14 @@ pub(super) fn generate_neon_widen_narrow_impls(w512: bool) -> String {
 /// `_u` — whose Rust spellings already say "the input lanes are always
 /// interpreted as signed integers" (`core_arch/wasm32/simd128.rs`), which is
 /// the same signed-source restriction this trait family is typed around.
-pub(super) fn generate_wasm_widen_narrow_impls(w512: bool) -> String {
+fn generate_wasm_widen_narrow_methods(src: &str) -> String {
     let mut code = String::new();
 
-    for p in all_widen_pairs()
-        .into_iter()
-        .filter(|p| is_w512(p.width_bits) == w512)
-    {
+    for p in all_widen_pairs().into_iter().filter(|p| p.src == src) {
         let repr = wasm_repr(p.width_bits);
         let src128 = native128_name(p.src_elem);
         let dst128 = native128_name(p.dst_elem);
         let subs = p.subs();
-        code.push_str(&impl_header(
-            &p.trait_name(),
-            "Wasm128Token",
-            Some("wasm32"),
-        ));
         for half in [Half::Low, Half::High] {
             let items: Vec<String> = (0..subs)
                 .map(|j| {
@@ -991,21 +867,12 @@ pub(super) fn generate_wasm_widen_narrow_impls(w512: bool) -> String {
 
             "#, m = p.method(half), body = pack_subs(&items)});
         }
-        code.push_str("}\n");
     }
 
-    for p in all_narrow_pairs()
-        .into_iter()
-        .filter(|p| is_w512(p.width_bits) == w512)
-    {
+    for p in all_narrow_pairs().into_iter().filter(|p| p.src == src) {
         let repr = wasm_repr(p.width_bits);
         let src128 = native128_name(p.src_elem);
         let subs = p.subs();
-        code.push_str(&impl_header(
-            &p.trait_name(),
-            "Wasm128Token",
-            Some("wasm32"),
-        ));
         for dst_signed in [true, false] {
             let dst_elem = if dst_signed { p.sdst_elem } else { p.udst_elem };
             let dst128 = native128_name(dst_elem);
@@ -1030,13 +897,12 @@ pub(super) fn generate_wasm_widen_narrow_impls(w512: bool) -> String {
 
             "#, m = p.method(dst_signed), body = pack_subs(&items)});
         }
-        code.push_str("}\n");
     }
 
-    code.push_str(&super::backend_gen_integer_ops::impls(
+    code.push_str(&super::backend_gen_integer_ops::methods(
         "wasm",
         "Wasm128Token",
-        w512,
+        src,
     ));
     code
 }

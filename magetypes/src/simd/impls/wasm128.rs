@@ -932,6 +932,15 @@ impl I32x4Backend for archmage::Wasm128Token {
     fn bitmask(self, a: v128) -> u32 {
         i32x4_bitmask(a) as u32
     }
+    #[inline(always)]
+    fn narrow_saturating_i32_to_i16(self, a: v128, b: v128) -> v128 {
+        i16x8_narrow_i32x4(a, b)
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i32_to_u16(self, a: v128, b: v128) -> v128 {
+        u16x8_narrow_i32x4(a, b)
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -1123,6 +1132,21 @@ impl I32x8Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn bitmask(self, a: [v128; 2]) -> u32 {
         ((i32x4_bitmask(a[0]) as u32) << 0) | ((i32x4_bitmask(a[1]) as u32) << 4)
+    }
+    #[inline(always)]
+    fn narrow_saturating_i32_to_i16(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            i16x8_narrow_i32x4(a[0], a[1]),
+            i16x8_narrow_i32x4(b[0], b[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i32_to_u16(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            u16x8_narrow_i32x4(a[0], a[1]),
+            u16x8_narrow_i32x4(b[0], b[1]),
+        ]
     }
 }
 
@@ -1931,6 +1955,15 @@ impl I8x16Backend for archmage::Wasm128Token {
     fn bitmask(self, a: v128) -> u32 {
         i8x16_bitmask(a) as u32
     }
+    #[inline(always)]
+    fn widen_low_i8_to_i16(self, a: v128) -> v128 {
+        i16x8_extend_low_i8x16(a)
+    }
+
+    #[inline(always)]
+    fn widen_high_i8_to_i16(self, a: v128) -> v128 {
+        i16x8_extend_high_i8x16(a)
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -2099,6 +2132,15 @@ impl I8x32Backend for archmage::Wasm128Token {
         }
         result
     }
+    #[inline(always)]
+    fn widen_low_i8_to_i16(self, a: [v128; 2]) -> [v128; 2] {
+        [i16x8_extend_low_i8x16(a[0]), i16x8_extend_high_i8x16(a[0])]
+    }
+
+    #[inline(always)]
+    fn widen_high_i8_to_i16(self, a: [v128; 2]) -> [v128; 2] {
+        [i16x8_extend_low_i8x16(a[1]), i16x8_extend_high_i8x16(a[1])]
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -2237,6 +2279,45 @@ impl U8x16Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn bitmask(self, a: v128) -> u32 {
         i8x16_bitmask(a) as u32
+    }
+    #[inline(always)]
+    fn widen_low_u8_to_u16(self, a: v128) -> v128 {
+        u16x8_extend_low_u8x16(a)
+    }
+
+    #[inline(always)]
+    fn widen_high_u8_to_u16(self, a: v128) -> v128 {
+        u16x8_extend_high_u8x16(a)
+    }
+
+    #[inline(always)]
+    fn abs_diff(self, a: v128, b: v128) -> v128 {
+        u8x16_sub(u8x16_max(a, b), u8x16_min(a, b))
+    }
+
+    #[inline(always)]
+    fn reduce_add_u32(self, a: v128) -> u32 {
+        {
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(a));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        }
+    }
+
+    #[inline(always)]
+    fn sum_abs_diff(self, a: v128, b: v128) -> u32 {
+        {
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(u8x16_sub(
+                u8x16_max(a, b),
+                u8x16_min(a, b),
+            )));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        }
     }
 }
 
@@ -2393,6 +2474,63 @@ impl U8x32Backend for archmage::Wasm128Token {
             result |= (i8x16_bitmask(v) as u32) << (i * 16);
         }
         result
+    }
+    #[inline(always)]
+    fn widen_low_u8_to_u16(self, a: [v128; 2]) -> [v128; 2] {
+        [u16x8_extend_low_u8x16(a[0]), u16x8_extend_high_u8x16(a[0])]
+    }
+
+    #[inline(always)]
+    fn widen_high_u8_to_u16(self, a: [v128; 2]) -> [v128; 2] {
+        [u16x8_extend_low_u8x16(a[1]), u16x8_extend_high_u8x16(a[1])]
+    }
+
+    #[inline(always)]
+    fn abs_diff(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            u8x16_sub(u8x16_max(a[0], b[0]), u8x16_min(a[0], b[0])),
+            u8x16_sub(u8x16_max(a[1], b[1]), u8x16_min(a[1], b[1])),
+        ]
+    }
+
+    #[inline(always)]
+    fn reduce_add_u32(self, a: [v128; 2]) -> u32 {
+        ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(a[0]));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        }) + ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(a[1]));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        })
+    }
+
+    #[inline(always)]
+    fn sum_abs_diff(self, a: [v128; 2], b: [v128; 2]) -> u32 {
+        ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(u8x16_sub(
+                u8x16_max(a[0], b[0]),
+                u8x16_min(a[0], b[0]),
+            )));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        }) + ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(u8x16_sub(
+                u8x16_max(a[1], b[1]),
+                u8x16_min(a[1], b[1]),
+            )));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        })
     }
 }
 
@@ -2564,6 +2702,35 @@ impl I16x8Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn bitmask(self, a: v128) -> u32 {
         i16x8_bitmask(a) as u32
+    }
+    #[inline(always)]
+    fn widen_low_i16_to_i32(self, a: v128) -> v128 {
+        i32x4_extend_low_i16x8(a)
+    }
+
+    #[inline(always)]
+    fn widen_high_i16_to_i32(self, a: v128) -> v128 {
+        i32x4_extend_high_i16x8(a)
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i16_to_i8(self, a: v128, b: v128) -> v128 {
+        i8x16_narrow_i16x8(a, b)
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i16_to_u8(self, a: v128, b: v128) -> v128 {
+        u8x16_narrow_i16x8(a, b)
+    }
+
+    #[inline(always)]
+    fn madd_adjacent(self, a: v128, b: v128) -> v128 {
+        i32x4_dot_i16x8(a, b)
+    }
+
+    #[inline(always)]
+    fn abs_diff(self, a: v128, b: v128) -> v128 {
+        i16x8_sub(i16x8_max(a, b), i16x8_min(a, b))
     }
 }
 
@@ -2760,6 +2927,44 @@ impl I16x16Backend for archmage::Wasm128Token {
         }
         result
     }
+    #[inline(always)]
+    fn widen_low_i16_to_i32(self, a: [v128; 2]) -> [v128; 2] {
+        [i32x4_extend_low_i16x8(a[0]), i32x4_extend_high_i16x8(a[0])]
+    }
+
+    #[inline(always)]
+    fn widen_high_i16_to_i32(self, a: [v128; 2]) -> [v128; 2] {
+        [i32x4_extend_low_i16x8(a[1]), i32x4_extend_high_i16x8(a[1])]
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i16_to_i8(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            i8x16_narrow_i16x8(a[0], a[1]),
+            i8x16_narrow_i16x8(b[0], b[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i16_to_u8(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            u8x16_narrow_i16x8(a[0], a[1]),
+            u8x16_narrow_i16x8(b[0], b[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn madd_adjacent(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [i32x4_dot_i16x8(a[0], b[0]), i32x4_dot_i16x8(a[1], b[1])]
+    }
+
+    #[inline(always)]
+    fn abs_diff(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
+        [
+            i16x8_sub(i16x8_max(a[0], b[0]), i16x8_min(a[0], b[0])),
+            i16x8_sub(i16x8_max(a[1], b[1]), i16x8_min(a[1], b[1])),
+        ]
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -2914,6 +3119,15 @@ impl U16x8Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn bitmask(self, a: v128) -> u32 {
         i16x8_bitmask(a) as u32
+    }
+    #[inline(always)]
+    fn widen_low_u16_to_u32(self, a: v128) -> v128 {
+        u32x4_extend_low_u16x8(a)
+    }
+
+    #[inline(always)]
+    fn widen_high_u16_to_u32(self, a: v128) -> v128 {
+        u32x4_extend_high_u16x8(a)
     }
 }
 
@@ -3092,6 +3306,15 @@ impl U16x16Backend for archmage::Wasm128Token {
             result |= (i16x8_bitmask(v) as u32) << (i * 8);
         }
         result
+    }
+    #[inline(always)]
+    fn widen_low_u16_to_u32(self, a: [v128; 2]) -> [v128; 2] {
+        [u32x4_extend_low_u16x8(a[0]), u32x4_extend_high_u16x8(a[0])]
+    }
+
+    #[inline(always)]
+    fn widen_high_u16_to_u32(self, a: [v128; 2]) -> [v128; 2] {
+        [u32x4_extend_low_u16x8(a[1]), u32x4_extend_high_u16x8(a[1])]
     }
 }
 
@@ -3618,531 +3841,6 @@ impl U64x4Bitcast for archmage::Wasm128Token {
     #[inline(always)]
     fn bitcast_i64_to_u64(self, a: [v128; 2]) -> [v128; 2] {
         a
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl U8x16Widen for archmage::Wasm128Token {
-    #[inline(always)]
-    fn widen_low_u8_to_u16(self, a: v128) -> v128 {
-        u16x8_extend_low_u8x16(a)
-    }
-
-    #[inline(always)]
-    fn widen_high_u8_to_u16(self, a: v128) -> v128 {
-        u16x8_extend_high_u8x16(a)
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl U16x8Widen for archmage::Wasm128Token {
-    #[inline(always)]
-    fn widen_low_u16_to_u32(self, a: v128) -> v128 {
-        u32x4_extend_low_u16x8(a)
-    }
-
-    #[inline(always)]
-    fn widen_high_u16_to_u32(self, a: v128) -> v128 {
-        u32x4_extend_high_u16x8(a)
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl I8x16Widen for archmage::Wasm128Token {
-    #[inline(always)]
-    fn widen_low_i8_to_i16(self, a: v128) -> v128 {
-        i16x8_extend_low_i8x16(a)
-    }
-
-    #[inline(always)]
-    fn widen_high_i8_to_i16(self, a: v128) -> v128 {
-        i16x8_extend_high_i8x16(a)
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl I16x8Widen for archmage::Wasm128Token {
-    #[inline(always)]
-    fn widen_low_i16_to_i32(self, a: v128) -> v128 {
-        i32x4_extend_low_i16x8(a)
-    }
-
-    #[inline(always)]
-    fn widen_high_i16_to_i32(self, a: v128) -> v128 {
-        i32x4_extend_high_i16x8(a)
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl U8x32Widen for archmage::Wasm128Token {
-    #[inline(always)]
-    fn widen_low_u8_to_u16(self, a: [v128; 2]) -> [v128; 2] {
-        [u16x8_extend_low_u8x16(a[0]), u16x8_extend_high_u8x16(a[0])]
-    }
-
-    #[inline(always)]
-    fn widen_high_u8_to_u16(self, a: [v128; 2]) -> [v128; 2] {
-        [u16x8_extend_low_u8x16(a[1]), u16x8_extend_high_u8x16(a[1])]
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl U16x16Widen for archmage::Wasm128Token {
-    #[inline(always)]
-    fn widen_low_u16_to_u32(self, a: [v128; 2]) -> [v128; 2] {
-        [u32x4_extend_low_u16x8(a[0]), u32x4_extend_high_u16x8(a[0])]
-    }
-
-    #[inline(always)]
-    fn widen_high_u16_to_u32(self, a: [v128; 2]) -> [v128; 2] {
-        [u32x4_extend_low_u16x8(a[1]), u32x4_extend_high_u16x8(a[1])]
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl I8x32Widen for archmage::Wasm128Token {
-    #[inline(always)]
-    fn widen_low_i8_to_i16(self, a: [v128; 2]) -> [v128; 2] {
-        [i16x8_extend_low_i8x16(a[0]), i16x8_extend_high_i8x16(a[0])]
-    }
-
-    #[inline(always)]
-    fn widen_high_i8_to_i16(self, a: [v128; 2]) -> [v128; 2] {
-        [i16x8_extend_low_i8x16(a[1]), i16x8_extend_high_i8x16(a[1])]
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl I16x16Widen for archmage::Wasm128Token {
-    #[inline(always)]
-    fn widen_low_i16_to_i32(self, a: [v128; 2]) -> [v128; 2] {
-        [i32x4_extend_low_i16x8(a[0]), i32x4_extend_high_i16x8(a[0])]
-    }
-
-    #[inline(always)]
-    fn widen_high_i16_to_i32(self, a: [v128; 2]) -> [v128; 2] {
-        [i32x4_extend_low_i16x8(a[1]), i32x4_extend_high_i16x8(a[1])]
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl I16x8Narrow for archmage::Wasm128Token {
-    #[inline(always)]
-    fn narrow_saturating_i16_to_i8(self, a: v128, b: v128) -> v128 {
-        i8x16_narrow_i16x8(a, b)
-    }
-
-    #[inline(always)]
-    fn narrow_saturating_i16_to_u8(self, a: v128, b: v128) -> v128 {
-        u8x16_narrow_i16x8(a, b)
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl I32x4Narrow for archmage::Wasm128Token {
-    #[inline(always)]
-    fn narrow_saturating_i32_to_i16(self, a: v128, b: v128) -> v128 {
-        i16x8_narrow_i32x4(a, b)
-    }
-
-    #[inline(always)]
-    fn narrow_saturating_i32_to_u16(self, a: v128, b: v128) -> v128 {
-        u16x8_narrow_i32x4(a, b)
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl I16x16Narrow for archmage::Wasm128Token {
-    #[inline(always)]
-    fn narrow_saturating_i16_to_i8(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
-        [
-            i8x16_narrow_i16x8(a[0], a[1]),
-            i8x16_narrow_i16x8(b[0], b[1]),
-        ]
-    }
-
-    #[inline(always)]
-    fn narrow_saturating_i16_to_u8(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
-        [
-            u8x16_narrow_i16x8(a[0], a[1]),
-            u8x16_narrow_i16x8(b[0], b[1]),
-        ]
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl I32x8Narrow for archmage::Wasm128Token {
-    #[inline(always)]
-    fn narrow_saturating_i32_to_i16(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
-        [
-            i16x8_narrow_i32x4(a[0], a[1]),
-            i16x8_narrow_i32x4(b[0], b[1]),
-        ]
-    }
-
-    #[inline(always)]
-    fn narrow_saturating_i32_to_u16(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
-        [
-            u16x8_narrow_i32x4(a[0], a[1]),
-            u16x8_narrow_i32x4(b[0], b[1]),
-        ]
-    }
-}
-impl I16x8Pairwise for archmage::Wasm128Token {
-    #[inline(always)]
-    fn madd_adjacent(self, a: v128, b: v128) -> v128 {
-        i32x4_dot_i16x8(a, b)
-    }
-}
-impl I16x8AbsDiff for archmage::Wasm128Token {
-    #[inline(always)]
-    fn abs_diff(self, a: v128, b: v128) -> v128 {
-        i16x8_sub(i16x8_max(a, b), i16x8_min(a, b))
-    }
-}
-impl U8x16AbsDiff for archmage::Wasm128Token {
-    #[inline(always)]
-    fn abs_diff(self, a: v128, b: v128) -> v128 {
-        u8x16_sub(u8x16_max(a, b), u8x16_min(a, b))
-    }
-
-    #[inline(always)]
-    fn reduce_add_u32(self, a: v128) -> u32 {
-        {
-            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(a));
-            u32x4_extract_lane::<0>(s)
-                + u32x4_extract_lane::<1>(s)
-                + u32x4_extract_lane::<2>(s)
-                + u32x4_extract_lane::<3>(s)
-        }
-    }
-
-    #[inline(always)]
-    fn sum_abs_diff(self, a: v128, b: v128) -> u32 {
-        {
-            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(u8x16_sub(
-                u8x16_max(a, b),
-                u8x16_min(a, b),
-            )));
-            u32x4_extract_lane::<0>(s)
-                + u32x4_extract_lane::<1>(s)
-                + u32x4_extract_lane::<2>(s)
-                + u32x4_extract_lane::<3>(s)
-        }
-    }
-}
-impl I16x16Pairwise for archmage::Wasm128Token {
-    #[inline(always)]
-    fn madd_adjacent(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
-        [i32x4_dot_i16x8(a[0], b[0]), i32x4_dot_i16x8(a[1], b[1])]
-    }
-}
-impl I16x16AbsDiff for archmage::Wasm128Token {
-    #[inline(always)]
-    fn abs_diff(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
-        [
-            i16x8_sub(i16x8_max(a[0], b[0]), i16x8_min(a[0], b[0])),
-            i16x8_sub(i16x8_max(a[1], b[1]), i16x8_min(a[1], b[1])),
-        ]
-    }
-}
-impl U8x32AbsDiff for archmage::Wasm128Token {
-    #[inline(always)]
-    fn abs_diff(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
-        [
-            u8x16_sub(u8x16_max(a[0], b[0]), u8x16_min(a[0], b[0])),
-            u8x16_sub(u8x16_max(a[1], b[1]), u8x16_min(a[1], b[1])),
-        ]
-    }
-
-    #[inline(always)]
-    fn reduce_add_u32(self, a: [v128; 2]) -> u32 {
-        ({
-            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(a[0]));
-            u32x4_extract_lane::<0>(s)
-                + u32x4_extract_lane::<1>(s)
-                + u32x4_extract_lane::<2>(s)
-                + u32x4_extract_lane::<3>(s)
-        }) + ({
-            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(a[1]));
-            u32x4_extract_lane::<0>(s)
-                + u32x4_extract_lane::<1>(s)
-                + u32x4_extract_lane::<2>(s)
-                + u32x4_extract_lane::<3>(s)
-        })
-    }
-
-    #[inline(always)]
-    fn sum_abs_diff(self, a: [v128; 2], b: [v128; 2]) -> u32 {
-        ({
-            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(u8x16_sub(
-                u8x16_max(a[0], b[0]),
-                u8x16_min(a[0], b[0]),
-            )));
-            u32x4_extract_lane::<0>(s)
-                + u32x4_extract_lane::<1>(s)
-                + u32x4_extract_lane::<2>(s)
-                + u32x4_extract_lane::<3>(s)
-        }) + ({
-            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(u8x16_sub(
-                u8x16_max(a[1], b[1]),
-                u8x16_min(a[1], b[1]),
-            )));
-            u32x4_extract_lane::<0>(s)
-                + u32x4_extract_lane::<1>(s)
-                + u32x4_extract_lane::<2>(s)
-                + u32x4_extract_lane::<3>(s)
-        })
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "wasm32")]
-impl U8x64Widen for archmage::Wasm128Token {
-    #[inline(always)]
-    fn widen_low_u8_to_u16(self, a: [v128; 4]) -> [v128; 4] {
-        [
-            u16x8_extend_low_u8x16(a[0]),
-            u16x8_extend_high_u8x16(a[0]),
-            u16x8_extend_low_u8x16(a[1]),
-            u16x8_extend_high_u8x16(a[1]),
-        ]
-    }
-
-    #[inline(always)]
-    fn widen_high_u8_to_u16(self, a: [v128; 4]) -> [v128; 4] {
-        [
-            u16x8_extend_low_u8x16(a[2]),
-            u16x8_extend_high_u8x16(a[2]),
-            u16x8_extend_low_u8x16(a[3]),
-            u16x8_extend_high_u8x16(a[3]),
-        ]
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "wasm32")]
-impl U16x32Widen for archmage::Wasm128Token {
-    #[inline(always)]
-    fn widen_low_u16_to_u32(self, a: [v128; 4]) -> [v128; 4] {
-        [
-            u32x4_extend_low_u16x8(a[0]),
-            u32x4_extend_high_u16x8(a[0]),
-            u32x4_extend_low_u16x8(a[1]),
-            u32x4_extend_high_u16x8(a[1]),
-        ]
-    }
-
-    #[inline(always)]
-    fn widen_high_u16_to_u32(self, a: [v128; 4]) -> [v128; 4] {
-        [
-            u32x4_extend_low_u16x8(a[2]),
-            u32x4_extend_high_u16x8(a[2]),
-            u32x4_extend_low_u16x8(a[3]),
-            u32x4_extend_high_u16x8(a[3]),
-        ]
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "wasm32")]
-impl I8x64Widen for archmage::Wasm128Token {
-    #[inline(always)]
-    fn widen_low_i8_to_i16(self, a: [v128; 4]) -> [v128; 4] {
-        [
-            i16x8_extend_low_i8x16(a[0]),
-            i16x8_extend_high_i8x16(a[0]),
-            i16x8_extend_low_i8x16(a[1]),
-            i16x8_extend_high_i8x16(a[1]),
-        ]
-    }
-
-    #[inline(always)]
-    fn widen_high_i8_to_i16(self, a: [v128; 4]) -> [v128; 4] {
-        [
-            i16x8_extend_low_i8x16(a[2]),
-            i16x8_extend_high_i8x16(a[2]),
-            i16x8_extend_low_i8x16(a[3]),
-            i16x8_extend_high_i8x16(a[3]),
-        ]
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "wasm32")]
-impl I16x32Widen for archmage::Wasm128Token {
-    #[inline(always)]
-    fn widen_low_i16_to_i32(self, a: [v128; 4]) -> [v128; 4] {
-        [
-            i32x4_extend_low_i16x8(a[0]),
-            i32x4_extend_high_i16x8(a[0]),
-            i32x4_extend_low_i16x8(a[1]),
-            i32x4_extend_high_i16x8(a[1]),
-        ]
-    }
-
-    #[inline(always)]
-    fn widen_high_i16_to_i32(self, a: [v128; 4]) -> [v128; 4] {
-        [
-            i32x4_extend_low_i16x8(a[2]),
-            i32x4_extend_high_i16x8(a[2]),
-            i32x4_extend_low_i16x8(a[3]),
-            i32x4_extend_high_i16x8(a[3]),
-        ]
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "wasm32")]
-impl I16x32Narrow for archmage::Wasm128Token {
-    #[inline(always)]
-    fn narrow_saturating_i16_to_i8(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
-        [
-            i8x16_narrow_i16x8(a[0], a[1]),
-            i8x16_narrow_i16x8(a[2], a[3]),
-            i8x16_narrow_i16x8(b[0], b[1]),
-            i8x16_narrow_i16x8(b[2], b[3]),
-        ]
-    }
-
-    #[inline(always)]
-    fn narrow_saturating_i16_to_u8(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
-        [
-            u8x16_narrow_i16x8(a[0], a[1]),
-            u8x16_narrow_i16x8(a[2], a[3]),
-            u8x16_narrow_i16x8(b[0], b[1]),
-            u8x16_narrow_i16x8(b[2], b[3]),
-        ]
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "wasm32")]
-impl I32x16Narrow for archmage::Wasm128Token {
-    #[inline(always)]
-    fn narrow_saturating_i32_to_i16(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
-        [
-            i16x8_narrow_i32x4(a[0], a[1]),
-            i16x8_narrow_i32x4(a[2], a[3]),
-            i16x8_narrow_i32x4(b[0], b[1]),
-            i16x8_narrow_i32x4(b[2], b[3]),
-        ]
-    }
-
-    #[inline(always)]
-    fn narrow_saturating_i32_to_u16(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
-        [
-            u16x8_narrow_i32x4(a[0], a[1]),
-            u16x8_narrow_i32x4(a[2], a[3]),
-            u16x8_narrow_i32x4(b[0], b[1]),
-            u16x8_narrow_i32x4(b[2], b[3]),
-        ]
-    }
-}
-#[cfg(feature = "w512")]
-impl I16x32Pairwise for archmage::Wasm128Token {
-    #[inline(always)]
-    fn madd_adjacent(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
-        [
-            i32x4_dot_i16x8(a[0], b[0]),
-            i32x4_dot_i16x8(a[1], b[1]),
-            i32x4_dot_i16x8(a[2], b[2]),
-            i32x4_dot_i16x8(a[3], b[3]),
-        ]
-    }
-}
-#[cfg(feature = "w512")]
-impl I16x32AbsDiff for archmage::Wasm128Token {
-    #[inline(always)]
-    fn abs_diff(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
-        [
-            i16x8_sub(i16x8_max(a[0], b[0]), i16x8_min(a[0], b[0])),
-            i16x8_sub(i16x8_max(a[1], b[1]), i16x8_min(a[1], b[1])),
-            i16x8_sub(i16x8_max(a[2], b[2]), i16x8_min(a[2], b[2])),
-            i16x8_sub(i16x8_max(a[3], b[3]), i16x8_min(a[3], b[3])),
-        ]
-    }
-}
-#[cfg(feature = "w512")]
-impl U8x64AbsDiff for archmage::Wasm128Token {
-    #[inline(always)]
-    fn abs_diff(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
-        [
-            u8x16_sub(u8x16_max(a[0], b[0]), u8x16_min(a[0], b[0])),
-            u8x16_sub(u8x16_max(a[1], b[1]), u8x16_min(a[1], b[1])),
-            u8x16_sub(u8x16_max(a[2], b[2]), u8x16_min(a[2], b[2])),
-            u8x16_sub(u8x16_max(a[3], b[3]), u8x16_min(a[3], b[3])),
-        ]
-    }
-
-    #[inline(always)]
-    fn reduce_add_u32(self, a: [v128; 4]) -> u32 {
-        ({
-            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(a[0]));
-            u32x4_extract_lane::<0>(s)
-                + u32x4_extract_lane::<1>(s)
-                + u32x4_extract_lane::<2>(s)
-                + u32x4_extract_lane::<3>(s)
-        }) + ({
-            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(a[1]));
-            u32x4_extract_lane::<0>(s)
-                + u32x4_extract_lane::<1>(s)
-                + u32x4_extract_lane::<2>(s)
-                + u32x4_extract_lane::<3>(s)
-        }) + ({
-            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(a[2]));
-            u32x4_extract_lane::<0>(s)
-                + u32x4_extract_lane::<1>(s)
-                + u32x4_extract_lane::<2>(s)
-                + u32x4_extract_lane::<3>(s)
-        }) + ({
-            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(a[3]));
-            u32x4_extract_lane::<0>(s)
-                + u32x4_extract_lane::<1>(s)
-                + u32x4_extract_lane::<2>(s)
-                + u32x4_extract_lane::<3>(s)
-        })
-    }
-
-    #[inline(always)]
-    fn sum_abs_diff(self, a: [v128; 4], b: [v128; 4]) -> u32 {
-        ({
-            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(u8x16_sub(
-                u8x16_max(a[0], b[0]),
-                u8x16_min(a[0], b[0]),
-            )));
-            u32x4_extract_lane::<0>(s)
-                + u32x4_extract_lane::<1>(s)
-                + u32x4_extract_lane::<2>(s)
-                + u32x4_extract_lane::<3>(s)
-        }) + ({
-            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(u8x16_sub(
-                u8x16_max(a[1], b[1]),
-                u8x16_min(a[1], b[1]),
-            )));
-            u32x4_extract_lane::<0>(s)
-                + u32x4_extract_lane::<1>(s)
-                + u32x4_extract_lane::<2>(s)
-                + u32x4_extract_lane::<3>(s)
-        }) + ({
-            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(u8x16_sub(
-                u8x16_max(a[2], b[2]),
-                u8x16_min(a[2], b[2]),
-            )));
-            u32x4_extract_lane::<0>(s)
-                + u32x4_extract_lane::<1>(s)
-                + u32x4_extract_lane::<2>(s)
-                + u32x4_extract_lane::<3>(s)
-        }) + ({
-            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(u8x16_sub(
-                u8x16_max(a[3], b[3]),
-                u8x16_min(a[3], b[3]),
-            )));
-            u32x4_extract_lane::<0>(s)
-                + u32x4_extract_lane::<1>(s)
-                + u32x4_extract_lane::<2>(s)
-                + u32x4_extract_lane::<3>(s)
-        })
     }
 }
 #[cfg(feature = "w512")]
@@ -4939,6 +4637,25 @@ impl I8x64Backend for archmage::Wasm128Token {
     fn bitxor(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as I8x16Backend>::bitxor(self, a[i], b[i]))
     }
+    #[inline(always)]
+    fn widen_low_i8_to_i16(self, a: [v128; 4]) -> [v128; 4] {
+        [
+            i16x8_extend_low_i8x16(a[0]),
+            i16x8_extend_high_i8x16(a[0]),
+            i16x8_extend_low_i8x16(a[1]),
+            i16x8_extend_high_i8x16(a[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn widen_high_i8_to_i16(self, a: [v128; 4]) -> [v128; 4] {
+        [
+            i16x8_extend_low_i8x16(a[2]),
+            i16x8_extend_high_i8x16(a[2]),
+            i16x8_extend_low_i8x16(a[3]),
+            i16x8_extend_high_i8x16(a[3]),
+        ]
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -5180,6 +4897,105 @@ impl U8x64Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn bitxor(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as U8x16Backend>::bitxor(self, a[i], b[i]))
+    }
+    #[inline(always)]
+    fn widen_low_u8_to_u16(self, a: [v128; 4]) -> [v128; 4] {
+        [
+            u16x8_extend_low_u8x16(a[0]),
+            u16x8_extend_high_u8x16(a[0]),
+            u16x8_extend_low_u8x16(a[1]),
+            u16x8_extend_high_u8x16(a[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn widen_high_u8_to_u16(self, a: [v128; 4]) -> [v128; 4] {
+        [
+            u16x8_extend_low_u8x16(a[2]),
+            u16x8_extend_high_u8x16(a[2]),
+            u16x8_extend_low_u8x16(a[3]),
+            u16x8_extend_high_u8x16(a[3]),
+        ]
+    }
+
+    #[inline(always)]
+    fn abs_diff(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        [
+            u8x16_sub(u8x16_max(a[0], b[0]), u8x16_min(a[0], b[0])),
+            u8x16_sub(u8x16_max(a[1], b[1]), u8x16_min(a[1], b[1])),
+            u8x16_sub(u8x16_max(a[2], b[2]), u8x16_min(a[2], b[2])),
+            u8x16_sub(u8x16_max(a[3], b[3]), u8x16_min(a[3], b[3])),
+        ]
+    }
+
+    #[inline(always)]
+    fn reduce_add_u32(self, a: [v128; 4]) -> u32 {
+        ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(a[0]));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        }) + ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(a[1]));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        }) + ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(a[2]));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        }) + ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(a[3]));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        })
+    }
+
+    #[inline(always)]
+    fn sum_abs_diff(self, a: [v128; 4], b: [v128; 4]) -> u32 {
+        ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(u8x16_sub(
+                u8x16_max(a[0], b[0]),
+                u8x16_min(a[0], b[0]),
+            )));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        }) + ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(u8x16_sub(
+                u8x16_max(a[1], b[1]),
+                u8x16_min(a[1], b[1]),
+            )));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        }) + ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(u8x16_sub(
+                u8x16_max(a[2], b[2]),
+                u8x16_min(a[2], b[2]),
+            )));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        }) + ({
+            let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16(u8x16_sub(
+                u8x16_max(a[3], b[3]),
+                u8x16_min(a[3], b[3]),
+            )));
+            u32x4_extract_lane::<0>(s)
+                + u32x4_extract_lane::<1>(s)
+                + u32x4_extract_lane::<2>(s)
+                + u32x4_extract_lane::<3>(s)
+        })
     }
 }
 
@@ -5453,6 +5269,65 @@ impl I16x32Backend for archmage::Wasm128Token {
     fn bitxor(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as I16x8Backend>::bitxor(self, a[i], b[i]))
     }
+    #[inline(always)]
+    fn widen_low_i16_to_i32(self, a: [v128; 4]) -> [v128; 4] {
+        [
+            i32x4_extend_low_i16x8(a[0]),
+            i32x4_extend_high_i16x8(a[0]),
+            i32x4_extend_low_i16x8(a[1]),
+            i32x4_extend_high_i16x8(a[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn widen_high_i16_to_i32(self, a: [v128; 4]) -> [v128; 4] {
+        [
+            i32x4_extend_low_i16x8(a[2]),
+            i32x4_extend_high_i16x8(a[2]),
+            i32x4_extend_low_i16x8(a[3]),
+            i32x4_extend_high_i16x8(a[3]),
+        ]
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i16_to_i8(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        [
+            i8x16_narrow_i16x8(a[0], a[1]),
+            i8x16_narrow_i16x8(a[2], a[3]),
+            i8x16_narrow_i16x8(b[0], b[1]),
+            i8x16_narrow_i16x8(b[2], b[3]),
+        ]
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i16_to_u8(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        [
+            u8x16_narrow_i16x8(a[0], a[1]),
+            u8x16_narrow_i16x8(a[2], a[3]),
+            u8x16_narrow_i16x8(b[0], b[1]),
+            u8x16_narrow_i16x8(b[2], b[3]),
+        ]
+    }
+
+    #[inline(always)]
+    fn madd_adjacent(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        [
+            i32x4_dot_i16x8(a[0], b[0]),
+            i32x4_dot_i16x8(a[1], b[1]),
+            i32x4_dot_i16x8(a[2], b[2]),
+            i32x4_dot_i16x8(a[3], b[3]),
+        ]
+    }
+
+    #[inline(always)]
+    fn abs_diff(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        [
+            i16x8_sub(i16x8_max(a[0], b[0]), i16x8_min(a[0], b[0])),
+            i16x8_sub(i16x8_max(a[1], b[1]), i16x8_min(a[1], b[1])),
+            i16x8_sub(i16x8_max(a[2], b[2]), i16x8_min(a[2], b[2])),
+            i16x8_sub(i16x8_max(a[3], b[3]), i16x8_min(a[3], b[3])),
+        ]
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -5721,6 +5596,25 @@ impl U16x32Backend for archmage::Wasm128Token {
     fn bitxor(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as U16x8Backend>::bitxor(self, a[i], b[i]))
     }
+    #[inline(always)]
+    fn widen_low_u16_to_u32(self, a: [v128; 4]) -> [v128; 4] {
+        [
+            u32x4_extend_low_u16x8(a[0]),
+            u32x4_extend_high_u16x8(a[0]),
+            u32x4_extend_low_u16x8(a[1]),
+            u32x4_extend_high_u16x8(a[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn widen_high_u16_to_u32(self, a: [v128; 4]) -> [v128; 4] {
+        [
+            u32x4_extend_low_u16x8(a[2]),
+            u32x4_extend_high_u16x8(a[2]),
+            u32x4_extend_low_u16x8(a[3]),
+            u32x4_extend_high_u16x8(a[3]),
+        ]
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -5978,6 +5872,25 @@ impl I32x16Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn bitxor(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as I32x4Backend>::bitxor(self, a[i], b[i]))
+    }
+    #[inline(always)]
+    fn narrow_saturating_i32_to_i16(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        [
+            i16x8_narrow_i32x4(a[0], a[1]),
+            i16x8_narrow_i32x4(a[2], a[3]),
+            i16x8_narrow_i32x4(b[0], b[1]),
+            i16x8_narrow_i32x4(b[2], b[3]),
+        ]
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i32_to_u16(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
+        [
+            u16x8_narrow_i32x4(a[0], a[1]),
+            u16x8_narrow_i32x4(a[2], a[3]),
+            u16x8_narrow_i32x4(b[0], b[1]),
+            u16x8_narrow_i32x4(b[2], b[3]),
+        ]
     }
 }
 

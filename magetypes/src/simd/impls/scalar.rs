@@ -1707,6 +1707,21 @@ impl I32x4Backend for archmage::ScalarToken {
             | (((a[2] as u32) >> 31) << 2)
             | (((a[3] as u32) >> 31) << 3)
     }
+    #[inline(always)]
+    fn narrow_saturating_i32_to_i16(self, a: [i32; 4], b: [i32; 4]) -> [i16; 8] {
+        core::array::from_fn(|i| {
+            let v: i32 = if i < 4 { a[i] } else { b[i - 4] };
+            v.clamp(i16::MIN as i32, i16::MAX as i32) as i16
+        })
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i32_to_u16(self, a: [i32; 4], b: [i32; 4]) -> [u16; 8] {
+        core::array::from_fn(|i| {
+            let v: i32 = if i < 4 { a[i] } else { b[i - 4] };
+            v.clamp(0, u16::MAX as i32) as u16
+        })
+    }
 }
 
 impl I32x8Backend for archmage::ScalarToken {
@@ -2083,6 +2098,21 @@ impl I32x8Backend for archmage::ScalarToken {
             | (((a[5] as u32) >> 31) << 5)
             | (((a[6] as u32) >> 31) << 6)
             | (((a[7] as u32) >> 31) << 7)
+    }
+    #[inline(always)]
+    fn narrow_saturating_i32_to_i16(self, a: [i32; 8], b: [i32; 8]) -> [i16; 16] {
+        core::array::from_fn(|i| {
+            let v: i32 = if i < 8 { a[i] } else { b[i - 8] };
+            v.clamp(i16::MIN as i32, i16::MAX as i32) as i16
+        })
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i32_to_u16(self, a: [i32; 8], b: [i32; 8]) -> [u16; 16] {
+        core::array::from_fn(|i| {
+            let v: i32 = if i < 8 { a[i] } else { b[i - 8] };
+            v.clamp(0, u16::MAX as i32) as u16
+        })
     }
 }
 
@@ -3701,6 +3731,21 @@ impl I8x16Backend for archmage::ScalarToken {
             | ((a[14] >> 7) as u32 & 1) << 14
             | ((a[15] >> 7) as u32 & 1) << 15
     }
+    #[inline(always)]
+    fn widen_low_i8_to_i16(self, a: [i8; 16]) -> [i16; 8] {
+        // Widen all lanes, keep the low half: dodges SROA integer
+        // promotion of a half-array read (#77); the high half is DCE'd.
+        let f: [i16; 16] = core::array::from_fn(|i| a[i] as i16);
+        core::array::from_fn(|i| f[i])
+    }
+
+    #[inline(always)]
+    fn widen_high_i8_to_i16(self, a: [i8; 16]) -> [i16; 8] {
+        // Widen all lanes, keep the high half: dodges SROA integer
+        // promotion of a half-array read (#77); the low half is DCE'd.
+        let f: [i16; 16] = core::array::from_fn(|i| a[i] as i16);
+        core::array::from_fn(|i| f[i + 8])
+    }
 }
 
 impl I8x32Backend for archmage::ScalarToken {
@@ -4720,6 +4765,21 @@ impl I8x32Backend for archmage::ScalarToken {
             | ((a[30] >> 7) as u32 & 1) << 30
             | ((a[31] >> 7) as u32 & 1) << 31
     }
+    #[inline(always)]
+    fn widen_low_i8_to_i16(self, a: [i8; 32]) -> [i16; 16] {
+        // Widen all lanes, keep the low half: dodges SROA integer
+        // promotion of a half-array read (#77); the high half is DCE'd.
+        let f: [i16; 32] = core::array::from_fn(|i| a[i] as i16);
+        core::array::from_fn(|i| f[i])
+    }
+
+    #[inline(always)]
+    fn widen_high_i8_to_i16(self, a: [i8; 32]) -> [i16; 16] {
+        // Widen all lanes, keep the high half: dodges SROA integer
+        // promotion of a half-array read (#77); the low half is DCE'd.
+        let f: [i16; 32] = core::array::from_fn(|i| a[i] as i16);
+        core::array::from_fn(|i| f[i + 16])
+    }
 }
 
 impl U8x16Backend for archmage::ScalarToken {
@@ -5252,6 +5312,38 @@ impl U8x16Backend for archmage::ScalarToken {
             | ((a[13] >> 7) as u32 & 1) << 13
             | ((a[14] >> 7) as u32 & 1) << 14
             | ((a[15] >> 7) as u32 & 1) << 15
+    }
+    #[inline(always)]
+    fn widen_low_u8_to_u16(self, a: [u8; 16]) -> [u16; 8] {
+        // Widen all lanes, keep the low half: dodges SROA integer
+        // promotion of a half-array read (#77); the high half is DCE'd.
+        let f: [u16; 16] = core::array::from_fn(|i| a[i] as u16);
+        core::array::from_fn(|i| f[i])
+    }
+
+    #[inline(always)]
+    fn widen_high_u8_to_u16(self, a: [u8; 16]) -> [u16; 8] {
+        // Widen all lanes, keep the high half: dodges SROA integer
+        // promotion of a half-array read (#77); the low half is DCE'd.
+        let f: [u16; 16] = core::array::from_fn(|i| a[i] as u16);
+        core::array::from_fn(|i| f[i + 8])
+    }
+    #[inline(always)]
+    fn abs_diff(self, a: [u8; 16], b: [u8; 16]) -> [u8; 16] {
+        core::array::from_fn(|k| a[k].abs_diff(b[k]))
+    }
+
+    #[inline(always)]
+    fn reduce_add_u32(self, a: [u8; 16]) -> u32 {
+        a.into_iter().map(u32::from).sum()
+    }
+
+    #[inline(always)]
+    fn sum_abs_diff(self, a: [u8; 16], b: [u8; 16]) -> u32 {
+        a.into_iter()
+            .zip(b)
+            .map(|(a, b)| u32::from(a.abs_diff(b)))
+            .sum()
     }
 }
 
@@ -6158,6 +6250,38 @@ impl U8x32Backend for archmage::ScalarToken {
             | ((a[30] >> 7) as u32 & 1) << 30
             | ((a[31] >> 7) as u32 & 1) << 31
     }
+    #[inline(always)]
+    fn widen_low_u8_to_u16(self, a: [u8; 32]) -> [u16; 16] {
+        // Widen all lanes, keep the low half: dodges SROA integer
+        // promotion of a half-array read (#77); the high half is DCE'd.
+        let f: [u16; 32] = core::array::from_fn(|i| a[i] as u16);
+        core::array::from_fn(|i| f[i])
+    }
+
+    #[inline(always)]
+    fn widen_high_u8_to_u16(self, a: [u8; 32]) -> [u16; 16] {
+        // Widen all lanes, keep the high half: dodges SROA integer
+        // promotion of a half-array read (#77); the low half is DCE'd.
+        let f: [u16; 32] = core::array::from_fn(|i| a[i] as u16);
+        core::array::from_fn(|i| f[i + 16])
+    }
+    #[inline(always)]
+    fn abs_diff(self, a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
+        core::array::from_fn(|k| a[k].abs_diff(b[k]))
+    }
+
+    #[inline(always)]
+    fn reduce_add_u32(self, a: [u8; 32]) -> u32 {
+        a.into_iter().map(u32::from).sum()
+    }
+
+    #[inline(always)]
+    fn sum_abs_diff(self, a: [u8; 32], b: [u8; 32]) -> u32 {
+        a.into_iter()
+            .zip(b)
+            .map(|(a, b)| u32::from(a.abs_diff(b)))
+            .sum()
+    }
 }
 
 impl I16x8Backend for archmage::ScalarToken {
@@ -6587,6 +6711,48 @@ impl I16x8Backend for archmage::ScalarToken {
             | ((a[5] >> 15) as u32 & 1) << 5
             | ((a[6] >> 15) as u32 & 1) << 6
             | ((a[7] >> 15) as u32 & 1) << 7
+    }
+    #[inline(always)]
+    fn widen_low_i16_to_i32(self, a: [i16; 8]) -> [i32; 4] {
+        // Widen all lanes, keep the low half: dodges SROA integer
+        // promotion of a half-array read (#77); the high half is DCE'd.
+        let f: [i32; 8] = core::array::from_fn(|i| a[i] as i32);
+        core::array::from_fn(|i| f[i])
+    }
+
+    #[inline(always)]
+    fn widen_high_i16_to_i32(self, a: [i16; 8]) -> [i32; 4] {
+        // Widen all lanes, keep the high half: dodges SROA integer
+        // promotion of a half-array read (#77); the low half is DCE'd.
+        let f: [i32; 8] = core::array::from_fn(|i| a[i] as i32);
+        core::array::from_fn(|i| f[i + 4])
+    }
+    #[inline(always)]
+    fn narrow_saturating_i16_to_i8(self, a: [i16; 8], b: [i16; 8]) -> [i8; 16] {
+        core::array::from_fn(|i| {
+            let v: i16 = if i < 8 { a[i] } else { b[i - 8] };
+            v.clamp(i8::MIN as i16, i8::MAX as i16) as i8
+        })
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i16_to_u8(self, a: [i16; 8], b: [i16; 8]) -> [u8; 16] {
+        core::array::from_fn(|i| {
+            let v: i16 = if i < 8 { a[i] } else { b[i - 8] };
+            v.clamp(0, u8::MAX as i16) as u8
+        })
+    }
+    #[inline(always)]
+    fn madd_adjacent(self, a: [i16; 8], b: [i16; 8]) -> [i32; 4] {
+        core::array::from_fn(|k| {
+            (a[2 * k] as i32 * b[2 * k] as i32)
+                .wrapping_add(a[2 * k + 1] as i32 * b[2 * k + 1] as i32)
+        })
+    }
+
+    #[inline(always)]
+    fn abs_diff(self, a: [i16; 8], b: [i16; 8]) -> [u16; 8] {
+        core::array::from_fn(|k| a[k].abs_diff(b[k]))
     }
 }
 
@@ -7237,6 +7403,48 @@ impl I16x16Backend for archmage::ScalarToken {
             | ((a[14] >> 15) as u32 & 1) << 14
             | ((a[15] >> 15) as u32 & 1) << 15
     }
+    #[inline(always)]
+    fn widen_low_i16_to_i32(self, a: [i16; 16]) -> [i32; 8] {
+        // Widen all lanes, keep the low half: dodges SROA integer
+        // promotion of a half-array read (#77); the high half is DCE'd.
+        let f: [i32; 16] = core::array::from_fn(|i| a[i] as i32);
+        core::array::from_fn(|i| f[i])
+    }
+
+    #[inline(always)]
+    fn widen_high_i16_to_i32(self, a: [i16; 16]) -> [i32; 8] {
+        // Widen all lanes, keep the high half: dodges SROA integer
+        // promotion of a half-array read (#77); the low half is DCE'd.
+        let f: [i32; 16] = core::array::from_fn(|i| a[i] as i32);
+        core::array::from_fn(|i| f[i + 8])
+    }
+    #[inline(always)]
+    fn narrow_saturating_i16_to_i8(self, a: [i16; 16], b: [i16; 16]) -> [i8; 32] {
+        core::array::from_fn(|i| {
+            let v: i16 = if i < 16 { a[i] } else { b[i - 16] };
+            v.clamp(i8::MIN as i16, i8::MAX as i16) as i8
+        })
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i16_to_u8(self, a: [i16; 16], b: [i16; 16]) -> [u8; 32] {
+        core::array::from_fn(|i| {
+            let v: i16 = if i < 16 { a[i] } else { b[i - 16] };
+            v.clamp(0, u8::MAX as i16) as u8
+        })
+    }
+    #[inline(always)]
+    fn madd_adjacent(self, a: [i16; 16], b: [i16; 16]) -> [i32; 8] {
+        core::array::from_fn(|k| {
+            (a[2 * k] as i32 * b[2 * k] as i32)
+                .wrapping_add(a[2 * k + 1] as i32 * b[2 * k + 1] as i32)
+        })
+    }
+
+    #[inline(always)]
+    fn abs_diff(self, a: [i16; 16], b: [i16; 16]) -> [u16; 16] {
+        core::array::from_fn(|k| a[k].abs_diff(b[k]))
+    }
 }
 
 impl U16x8Backend for archmage::ScalarToken {
@@ -7618,6 +7826,21 @@ impl U16x8Backend for archmage::ScalarToken {
             | ((a[5] >> 15) as u32 & 1) << 5
             | ((a[6] >> 15) as u32 & 1) << 6
             | ((a[7] >> 15) as u32 & 1) << 7
+    }
+    #[inline(always)]
+    fn widen_low_u16_to_u32(self, a: [u16; 8]) -> [u32; 4] {
+        // Widen all lanes, keep the low half: dodges SROA integer
+        // promotion of a half-array read (#77); the high half is DCE'd.
+        let f: [u32; 8] = core::array::from_fn(|i| a[i] as u32);
+        core::array::from_fn(|i| f[i])
+    }
+
+    #[inline(always)]
+    fn widen_high_u16_to_u32(self, a: [u16; 8]) -> [u32; 4] {
+        // Widen all lanes, keep the high half: dodges SROA integer
+        // promotion of a half-array read (#77); the low half is DCE'd.
+        let f: [u32; 8] = core::array::from_fn(|i| a[i] as u32);
+        core::array::from_fn(|i| f[i + 4])
     }
 }
 
@@ -8195,6 +8418,21 @@ impl U16x16Backend for archmage::ScalarToken {
             | ((a[13] >> 15) as u32 & 1) << 13
             | ((a[14] >> 15) as u32 & 1) << 14
             | ((a[15] >> 15) as u32 & 1) << 15
+    }
+    #[inline(always)]
+    fn widen_low_u16_to_u32(self, a: [u16; 16]) -> [u32; 8] {
+        // Widen all lanes, keep the low half: dodges SROA integer
+        // promotion of a half-array read (#77); the high half is DCE'd.
+        let f: [u32; 16] = core::array::from_fn(|i| a[i] as u32);
+        core::array::from_fn(|i| f[i])
+    }
+
+    #[inline(always)]
+    fn widen_high_u16_to_u32(self, a: [u16; 16]) -> [u32; 8] {
+        // Widen all lanes, keep the high half: dodges SROA integer
+        // promotion of a half-array read (#77); the low half is DCE'd.
+        let f: [u32; 16] = core::array::from_fn(|i| a[i] as u32);
+        core::array::from_fn(|i| f[i + 8])
     }
 }
 
@@ -9011,441 +9249,6 @@ impl U64x4Bitcast for archmage::ScalarToken {
         [a[0] as u64, a[1] as u64, a[2] as u64, a[3] as u64]
     }
 }
-
-impl U8x16Widen for archmage::ScalarToken {
-    #[inline(always)]
-    fn widen_low_u8_to_u16(self, a: [u8; 16]) -> [u16; 8] {
-        // Widen all lanes, keep the low half: dodges SROA integer
-        // promotion of a half-array read (#77); the high half is DCE'd.
-        let f: [u16; 16] = core::array::from_fn(|i| a[i] as u16);
-        core::array::from_fn(|i| f[i])
-    }
-
-    #[inline(always)]
-    fn widen_high_u8_to_u16(self, a: [u8; 16]) -> [u16; 8] {
-        // Widen all lanes, keep the high half: dodges SROA integer
-        // promotion of a half-array read (#77); the low half is DCE'd.
-        let f: [u16; 16] = core::array::from_fn(|i| a[i] as u16);
-        core::array::from_fn(|i| f[i + 8])
-    }
-}
-
-impl U16x8Widen for archmage::ScalarToken {
-    #[inline(always)]
-    fn widen_low_u16_to_u32(self, a: [u16; 8]) -> [u32; 4] {
-        // Widen all lanes, keep the low half: dodges SROA integer
-        // promotion of a half-array read (#77); the high half is DCE'd.
-        let f: [u32; 8] = core::array::from_fn(|i| a[i] as u32);
-        core::array::from_fn(|i| f[i])
-    }
-
-    #[inline(always)]
-    fn widen_high_u16_to_u32(self, a: [u16; 8]) -> [u32; 4] {
-        // Widen all lanes, keep the high half: dodges SROA integer
-        // promotion of a half-array read (#77); the low half is DCE'd.
-        let f: [u32; 8] = core::array::from_fn(|i| a[i] as u32);
-        core::array::from_fn(|i| f[i + 4])
-    }
-}
-
-impl I8x16Widen for archmage::ScalarToken {
-    #[inline(always)]
-    fn widen_low_i8_to_i16(self, a: [i8; 16]) -> [i16; 8] {
-        // Widen all lanes, keep the low half: dodges SROA integer
-        // promotion of a half-array read (#77); the high half is DCE'd.
-        let f: [i16; 16] = core::array::from_fn(|i| a[i] as i16);
-        core::array::from_fn(|i| f[i])
-    }
-
-    #[inline(always)]
-    fn widen_high_i8_to_i16(self, a: [i8; 16]) -> [i16; 8] {
-        // Widen all lanes, keep the high half: dodges SROA integer
-        // promotion of a half-array read (#77); the low half is DCE'd.
-        let f: [i16; 16] = core::array::from_fn(|i| a[i] as i16);
-        core::array::from_fn(|i| f[i + 8])
-    }
-}
-
-impl I16x8Widen for archmage::ScalarToken {
-    #[inline(always)]
-    fn widen_low_i16_to_i32(self, a: [i16; 8]) -> [i32; 4] {
-        // Widen all lanes, keep the low half: dodges SROA integer
-        // promotion of a half-array read (#77); the high half is DCE'd.
-        let f: [i32; 8] = core::array::from_fn(|i| a[i] as i32);
-        core::array::from_fn(|i| f[i])
-    }
-
-    #[inline(always)]
-    fn widen_high_i16_to_i32(self, a: [i16; 8]) -> [i32; 4] {
-        // Widen all lanes, keep the high half: dodges SROA integer
-        // promotion of a half-array read (#77); the low half is DCE'd.
-        let f: [i32; 8] = core::array::from_fn(|i| a[i] as i32);
-        core::array::from_fn(|i| f[i + 4])
-    }
-}
-
-impl U8x32Widen for archmage::ScalarToken {
-    #[inline(always)]
-    fn widen_low_u8_to_u16(self, a: [u8; 32]) -> [u16; 16] {
-        // Widen all lanes, keep the low half: dodges SROA integer
-        // promotion of a half-array read (#77); the high half is DCE'd.
-        let f: [u16; 32] = core::array::from_fn(|i| a[i] as u16);
-        core::array::from_fn(|i| f[i])
-    }
-
-    #[inline(always)]
-    fn widen_high_u8_to_u16(self, a: [u8; 32]) -> [u16; 16] {
-        // Widen all lanes, keep the high half: dodges SROA integer
-        // promotion of a half-array read (#77); the low half is DCE'd.
-        let f: [u16; 32] = core::array::from_fn(|i| a[i] as u16);
-        core::array::from_fn(|i| f[i + 16])
-    }
-}
-
-impl U16x16Widen for archmage::ScalarToken {
-    #[inline(always)]
-    fn widen_low_u16_to_u32(self, a: [u16; 16]) -> [u32; 8] {
-        // Widen all lanes, keep the low half: dodges SROA integer
-        // promotion of a half-array read (#77); the high half is DCE'd.
-        let f: [u32; 16] = core::array::from_fn(|i| a[i] as u32);
-        core::array::from_fn(|i| f[i])
-    }
-
-    #[inline(always)]
-    fn widen_high_u16_to_u32(self, a: [u16; 16]) -> [u32; 8] {
-        // Widen all lanes, keep the high half: dodges SROA integer
-        // promotion of a half-array read (#77); the low half is DCE'd.
-        let f: [u32; 16] = core::array::from_fn(|i| a[i] as u32);
-        core::array::from_fn(|i| f[i + 8])
-    }
-}
-
-impl I8x32Widen for archmage::ScalarToken {
-    #[inline(always)]
-    fn widen_low_i8_to_i16(self, a: [i8; 32]) -> [i16; 16] {
-        // Widen all lanes, keep the low half: dodges SROA integer
-        // promotion of a half-array read (#77); the high half is DCE'd.
-        let f: [i16; 32] = core::array::from_fn(|i| a[i] as i16);
-        core::array::from_fn(|i| f[i])
-    }
-
-    #[inline(always)]
-    fn widen_high_i8_to_i16(self, a: [i8; 32]) -> [i16; 16] {
-        // Widen all lanes, keep the high half: dodges SROA integer
-        // promotion of a half-array read (#77); the low half is DCE'd.
-        let f: [i16; 32] = core::array::from_fn(|i| a[i] as i16);
-        core::array::from_fn(|i| f[i + 16])
-    }
-}
-
-impl I16x16Widen for archmage::ScalarToken {
-    #[inline(always)]
-    fn widen_low_i16_to_i32(self, a: [i16; 16]) -> [i32; 8] {
-        // Widen all lanes, keep the low half: dodges SROA integer
-        // promotion of a half-array read (#77); the high half is DCE'd.
-        let f: [i32; 16] = core::array::from_fn(|i| a[i] as i32);
-        core::array::from_fn(|i| f[i])
-    }
-
-    #[inline(always)]
-    fn widen_high_i16_to_i32(self, a: [i16; 16]) -> [i32; 8] {
-        // Widen all lanes, keep the high half: dodges SROA integer
-        // promotion of a half-array read (#77); the low half is DCE'd.
-        let f: [i32; 16] = core::array::from_fn(|i| a[i] as i32);
-        core::array::from_fn(|i| f[i + 8])
-    }
-}
-
-impl I16x8Narrow for archmage::ScalarToken {
-    #[inline(always)]
-    fn narrow_saturating_i16_to_i8(self, a: [i16; 8], b: [i16; 8]) -> [i8; 16] {
-        core::array::from_fn(|i| {
-            let v: i16 = if i < 8 { a[i] } else { b[i - 8] };
-            v.clamp(i8::MIN as i16, i8::MAX as i16) as i8
-        })
-    }
-
-    #[inline(always)]
-    fn narrow_saturating_i16_to_u8(self, a: [i16; 8], b: [i16; 8]) -> [u8; 16] {
-        core::array::from_fn(|i| {
-            let v: i16 = if i < 8 { a[i] } else { b[i - 8] };
-            v.clamp(0, u8::MAX as i16) as u8
-        })
-    }
-}
-
-impl I32x4Narrow for archmage::ScalarToken {
-    #[inline(always)]
-    fn narrow_saturating_i32_to_i16(self, a: [i32; 4], b: [i32; 4]) -> [i16; 8] {
-        core::array::from_fn(|i| {
-            let v: i32 = if i < 4 { a[i] } else { b[i - 4] };
-            v.clamp(i16::MIN as i32, i16::MAX as i32) as i16
-        })
-    }
-
-    #[inline(always)]
-    fn narrow_saturating_i32_to_u16(self, a: [i32; 4], b: [i32; 4]) -> [u16; 8] {
-        core::array::from_fn(|i| {
-            let v: i32 = if i < 4 { a[i] } else { b[i - 4] };
-            v.clamp(0, u16::MAX as i32) as u16
-        })
-    }
-}
-
-impl I16x16Narrow for archmage::ScalarToken {
-    #[inline(always)]
-    fn narrow_saturating_i16_to_i8(self, a: [i16; 16], b: [i16; 16]) -> [i8; 32] {
-        core::array::from_fn(|i| {
-            let v: i16 = if i < 16 { a[i] } else { b[i - 16] };
-            v.clamp(i8::MIN as i16, i8::MAX as i16) as i8
-        })
-    }
-
-    #[inline(always)]
-    fn narrow_saturating_i16_to_u8(self, a: [i16; 16], b: [i16; 16]) -> [u8; 32] {
-        core::array::from_fn(|i| {
-            let v: i16 = if i < 16 { a[i] } else { b[i - 16] };
-            v.clamp(0, u8::MAX as i16) as u8
-        })
-    }
-}
-
-impl I32x8Narrow for archmage::ScalarToken {
-    #[inline(always)]
-    fn narrow_saturating_i32_to_i16(self, a: [i32; 8], b: [i32; 8]) -> [i16; 16] {
-        core::array::from_fn(|i| {
-            let v: i32 = if i < 8 { a[i] } else { b[i - 8] };
-            v.clamp(i16::MIN as i32, i16::MAX as i32) as i16
-        })
-    }
-
-    #[inline(always)]
-    fn narrow_saturating_i32_to_u16(self, a: [i32; 8], b: [i32; 8]) -> [u16; 16] {
-        core::array::from_fn(|i| {
-            let v: i32 = if i < 8 { a[i] } else { b[i - 8] };
-            v.clamp(0, u16::MAX as i32) as u16
-        })
-    }
-}
-impl I16x8Pairwise for archmage::ScalarToken {
-    #[inline(always)]
-    fn madd_adjacent(self, a: [i16; 8], b: [i16; 8]) -> [i32; 4] {
-        core::array::from_fn(|k| {
-            (a[2 * k] as i32 * b[2 * k] as i32)
-                .wrapping_add(a[2 * k + 1] as i32 * b[2 * k + 1] as i32)
-        })
-    }
-}
-impl I16x8AbsDiff for archmage::ScalarToken {
-    #[inline(always)]
-    fn abs_diff(self, a: [i16; 8], b: [i16; 8]) -> [u16; 8] {
-        core::array::from_fn(|k| a[k].abs_diff(b[k]))
-    }
-}
-impl U8x16AbsDiff for archmage::ScalarToken {
-    #[inline(always)]
-    fn abs_diff(self, a: [u8; 16], b: [u8; 16]) -> [u8; 16] {
-        core::array::from_fn(|k| a[k].abs_diff(b[k]))
-    }
-
-    #[inline(always)]
-    fn reduce_add_u32(self, a: [u8; 16]) -> u32 {
-        a.into_iter().map(u32::from).sum()
-    }
-
-    #[inline(always)]
-    fn sum_abs_diff(self, a: [u8; 16], b: [u8; 16]) -> u32 {
-        a.into_iter()
-            .zip(b)
-            .map(|(a, b)| u32::from(a.abs_diff(b)))
-            .sum()
-    }
-}
-impl I16x16Pairwise for archmage::ScalarToken {
-    #[inline(always)]
-    fn madd_adjacent(self, a: [i16; 16], b: [i16; 16]) -> [i32; 8] {
-        core::array::from_fn(|k| {
-            (a[2 * k] as i32 * b[2 * k] as i32)
-                .wrapping_add(a[2 * k + 1] as i32 * b[2 * k + 1] as i32)
-        })
-    }
-}
-impl I16x16AbsDiff for archmage::ScalarToken {
-    #[inline(always)]
-    fn abs_diff(self, a: [i16; 16], b: [i16; 16]) -> [u16; 16] {
-        core::array::from_fn(|k| a[k].abs_diff(b[k]))
-    }
-}
-impl U8x32AbsDiff for archmage::ScalarToken {
-    #[inline(always)]
-    fn abs_diff(self, a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
-        core::array::from_fn(|k| a[k].abs_diff(b[k]))
-    }
-
-    #[inline(always)]
-    fn reduce_add_u32(self, a: [u8; 32]) -> u32 {
-        a.into_iter().map(u32::from).sum()
-    }
-
-    #[inline(always)]
-    fn sum_abs_diff(self, a: [u8; 32], b: [u8; 32]) -> u32 {
-        a.into_iter()
-            .zip(b)
-            .map(|(a, b)| u32::from(a.abs_diff(b)))
-            .sum()
-    }
-}
-
-#[cfg(feature = "w512")]
-impl U8x64Widen for archmage::ScalarToken {
-    #[inline(always)]
-    fn widen_low_u8_to_u16(self, a: [u8; 64]) -> [u16; 32] {
-        // Widen all lanes, keep the low half: dodges SROA integer
-        // promotion of a half-array read (#77); the high half is DCE'd.
-        let f: [u16; 64] = core::array::from_fn(|i| a[i] as u16);
-        core::array::from_fn(|i| f[i])
-    }
-
-    #[inline(always)]
-    fn widen_high_u8_to_u16(self, a: [u8; 64]) -> [u16; 32] {
-        // Widen all lanes, keep the high half: dodges SROA integer
-        // promotion of a half-array read (#77); the low half is DCE'd.
-        let f: [u16; 64] = core::array::from_fn(|i| a[i] as u16);
-        core::array::from_fn(|i| f[i + 32])
-    }
-}
-
-#[cfg(feature = "w512")]
-impl U16x32Widen for archmage::ScalarToken {
-    #[inline(always)]
-    fn widen_low_u16_to_u32(self, a: [u16; 32]) -> [u32; 16] {
-        // Widen all lanes, keep the low half: dodges SROA integer
-        // promotion of a half-array read (#77); the high half is DCE'd.
-        let f: [u32; 32] = core::array::from_fn(|i| a[i] as u32);
-        core::array::from_fn(|i| f[i])
-    }
-
-    #[inline(always)]
-    fn widen_high_u16_to_u32(self, a: [u16; 32]) -> [u32; 16] {
-        // Widen all lanes, keep the high half: dodges SROA integer
-        // promotion of a half-array read (#77); the low half is DCE'd.
-        let f: [u32; 32] = core::array::from_fn(|i| a[i] as u32);
-        core::array::from_fn(|i| f[i + 16])
-    }
-}
-
-#[cfg(feature = "w512")]
-impl I8x64Widen for archmage::ScalarToken {
-    #[inline(always)]
-    fn widen_low_i8_to_i16(self, a: [i8; 64]) -> [i16; 32] {
-        // Widen all lanes, keep the low half: dodges SROA integer
-        // promotion of a half-array read (#77); the high half is DCE'd.
-        let f: [i16; 64] = core::array::from_fn(|i| a[i] as i16);
-        core::array::from_fn(|i| f[i])
-    }
-
-    #[inline(always)]
-    fn widen_high_i8_to_i16(self, a: [i8; 64]) -> [i16; 32] {
-        // Widen all lanes, keep the high half: dodges SROA integer
-        // promotion of a half-array read (#77); the low half is DCE'd.
-        let f: [i16; 64] = core::array::from_fn(|i| a[i] as i16);
-        core::array::from_fn(|i| f[i + 32])
-    }
-}
-
-#[cfg(feature = "w512")]
-impl I16x32Widen for archmage::ScalarToken {
-    #[inline(always)]
-    fn widen_low_i16_to_i32(self, a: [i16; 32]) -> [i32; 16] {
-        // Widen all lanes, keep the low half: dodges SROA integer
-        // promotion of a half-array read (#77); the high half is DCE'd.
-        let f: [i32; 32] = core::array::from_fn(|i| a[i] as i32);
-        core::array::from_fn(|i| f[i])
-    }
-
-    #[inline(always)]
-    fn widen_high_i16_to_i32(self, a: [i16; 32]) -> [i32; 16] {
-        // Widen all lanes, keep the high half: dodges SROA integer
-        // promotion of a half-array read (#77); the low half is DCE'd.
-        let f: [i32; 32] = core::array::from_fn(|i| a[i] as i32);
-        core::array::from_fn(|i| f[i + 16])
-    }
-}
-
-#[cfg(feature = "w512")]
-impl I16x32Narrow for archmage::ScalarToken {
-    #[inline(always)]
-    fn narrow_saturating_i16_to_i8(self, a: [i16; 32], b: [i16; 32]) -> [i8; 64] {
-        core::array::from_fn(|i| {
-            let v: i16 = if i < 32 { a[i] } else { b[i - 32] };
-            v.clamp(i8::MIN as i16, i8::MAX as i16) as i8
-        })
-    }
-
-    #[inline(always)]
-    fn narrow_saturating_i16_to_u8(self, a: [i16; 32], b: [i16; 32]) -> [u8; 64] {
-        core::array::from_fn(|i| {
-            let v: i16 = if i < 32 { a[i] } else { b[i - 32] };
-            v.clamp(0, u8::MAX as i16) as u8
-        })
-    }
-}
-
-#[cfg(feature = "w512")]
-impl I32x16Narrow for archmage::ScalarToken {
-    #[inline(always)]
-    fn narrow_saturating_i32_to_i16(self, a: [i32; 16], b: [i32; 16]) -> [i16; 32] {
-        core::array::from_fn(|i| {
-            let v: i32 = if i < 16 { a[i] } else { b[i - 16] };
-            v.clamp(i16::MIN as i32, i16::MAX as i32) as i16
-        })
-    }
-
-    #[inline(always)]
-    fn narrow_saturating_i32_to_u16(self, a: [i32; 16], b: [i32; 16]) -> [u16; 32] {
-        core::array::from_fn(|i| {
-            let v: i32 = if i < 16 { a[i] } else { b[i - 16] };
-            v.clamp(0, u16::MAX as i32) as u16
-        })
-    }
-}
-#[cfg(feature = "w512")]
-impl I16x32Pairwise for archmage::ScalarToken {
-    #[inline(always)]
-    fn madd_adjacent(self, a: [i16; 32], b: [i16; 32]) -> [i32; 16] {
-        core::array::from_fn(|k| {
-            (a[2 * k] as i32 * b[2 * k] as i32)
-                .wrapping_add(a[2 * k + 1] as i32 * b[2 * k + 1] as i32)
-        })
-    }
-}
-#[cfg(feature = "w512")]
-impl I16x32AbsDiff for archmage::ScalarToken {
-    #[inline(always)]
-    fn abs_diff(self, a: [i16; 32], b: [i16; 32]) -> [u16; 32] {
-        core::array::from_fn(|k| a[k].abs_diff(b[k]))
-    }
-}
-#[cfg(feature = "w512")]
-impl U8x64AbsDiff for archmage::ScalarToken {
-    #[inline(always)]
-    fn abs_diff(self, a: [u8; 64], b: [u8; 64]) -> [u8; 64] {
-        core::array::from_fn(|k| a[k].abs_diff(b[k]))
-    }
-
-    #[inline(always)]
-    fn reduce_add_u32(self, a: [u8; 64]) -> u32 {
-        a.into_iter().map(u32::from).sum()
-    }
-
-    #[inline(always)]
-    fn sum_abs_diff(self, a: [u8; 64], b: [u8; 64]) -> u32 {
-        a.into_iter()
-            .zip(b)
-            .map(|(a, b)| u32::from(a.abs_diff(b)))
-            .sum()
-    }
-}
 #[cfg(feature = "w512")]
 impl F32x16Backend for archmage::ScalarToken {
     type Repr = [f32; 16];
@@ -10115,6 +9918,21 @@ impl I8x64Backend for archmage::ScalarToken {
         }
         mask
     }
+    #[inline(always)]
+    fn widen_low_i8_to_i16(self, a: [i8; 64]) -> [i16; 32] {
+        // Widen all lanes, keep the low half: dodges SROA integer
+        // promotion of a half-array read (#77); the high half is DCE'd.
+        let f: [i16; 64] = core::array::from_fn(|i| a[i] as i16);
+        core::array::from_fn(|i| f[i])
+    }
+
+    #[inline(always)]
+    fn widen_high_i8_to_i16(self, a: [i8; 64]) -> [i16; 32] {
+        // Widen all lanes, keep the high half: dodges SROA integer
+        // promotion of a half-array read (#77); the low half is DCE'd.
+        let f: [i16; 64] = core::array::from_fn(|i| a[i] as i16);
+        core::array::from_fn(|i| f[i + 32])
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -10304,6 +10122,38 @@ impl U8x64Backend for archmage::ScalarToken {
             }
         }
         mask
+    }
+    #[inline(always)]
+    fn widen_low_u8_to_u16(self, a: [u8; 64]) -> [u16; 32] {
+        // Widen all lanes, keep the low half: dodges SROA integer
+        // promotion of a half-array read (#77); the high half is DCE'd.
+        let f: [u16; 64] = core::array::from_fn(|i| a[i] as u16);
+        core::array::from_fn(|i| f[i])
+    }
+
+    #[inline(always)]
+    fn widen_high_u8_to_u16(self, a: [u8; 64]) -> [u16; 32] {
+        // Widen all lanes, keep the high half: dodges SROA integer
+        // promotion of a half-array read (#77); the low half is DCE'd.
+        let f: [u16; 64] = core::array::from_fn(|i| a[i] as u16);
+        core::array::from_fn(|i| f[i + 32])
+    }
+    #[inline(always)]
+    fn abs_diff(self, a: [u8; 64], b: [u8; 64]) -> [u8; 64] {
+        core::array::from_fn(|k| a[k].abs_diff(b[k]))
+    }
+
+    #[inline(always)]
+    fn reduce_add_u32(self, a: [u8; 64]) -> u32 {
+        a.into_iter().map(u32::from).sum()
+    }
+
+    #[inline(always)]
+    fn sum_abs_diff(self, a: [u8; 64], b: [u8; 64]) -> u32 {
+        a.into_iter()
+            .zip(b)
+            .map(|(a, b)| u32::from(a.abs_diff(b)))
+            .sum()
     }
 }
 
@@ -10534,6 +10384,48 @@ impl I16x32Backend for archmage::ScalarToken {
         }
         mask
     }
+    #[inline(always)]
+    fn widen_low_i16_to_i32(self, a: [i16; 32]) -> [i32; 16] {
+        // Widen all lanes, keep the low half: dodges SROA integer
+        // promotion of a half-array read (#77); the high half is DCE'd.
+        let f: [i32; 32] = core::array::from_fn(|i| a[i] as i32);
+        core::array::from_fn(|i| f[i])
+    }
+
+    #[inline(always)]
+    fn widen_high_i16_to_i32(self, a: [i16; 32]) -> [i32; 16] {
+        // Widen all lanes, keep the high half: dodges SROA integer
+        // promotion of a half-array read (#77); the low half is DCE'd.
+        let f: [i32; 32] = core::array::from_fn(|i| a[i] as i32);
+        core::array::from_fn(|i| f[i + 16])
+    }
+    #[inline(always)]
+    fn narrow_saturating_i16_to_i8(self, a: [i16; 32], b: [i16; 32]) -> [i8; 64] {
+        core::array::from_fn(|i| {
+            let v: i16 = if i < 32 { a[i] } else { b[i - 32] };
+            v.clamp(i8::MIN as i16, i8::MAX as i16) as i8
+        })
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i16_to_u8(self, a: [i16; 32], b: [i16; 32]) -> [u8; 64] {
+        core::array::from_fn(|i| {
+            let v: i16 = if i < 32 { a[i] } else { b[i - 32] };
+            v.clamp(0, u8::MAX as i16) as u8
+        })
+    }
+    #[inline(always)]
+    fn madd_adjacent(self, a: [i16; 32], b: [i16; 32]) -> [i32; 16] {
+        core::array::from_fn(|k| {
+            (a[2 * k] as i32 * b[2 * k] as i32)
+                .wrapping_add(a[2 * k + 1] as i32 * b[2 * k + 1] as i32)
+        })
+    }
+
+    #[inline(always)]
+    fn abs_diff(self, a: [i16; 32], b: [i16; 32]) -> [u16; 32] {
+        core::array::from_fn(|k| a[k].abs_diff(b[k]))
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -10762,6 +10654,21 @@ impl U16x32Backend for archmage::ScalarToken {
         }
         mask
     }
+    #[inline(always)]
+    fn widen_low_u16_to_u32(self, a: [u16; 32]) -> [u32; 16] {
+        // Widen all lanes, keep the low half: dodges SROA integer
+        // promotion of a half-array read (#77); the high half is DCE'd.
+        let f: [u32; 32] = core::array::from_fn(|i| a[i] as u32);
+        core::array::from_fn(|i| f[i])
+    }
+
+    #[inline(always)]
+    fn widen_high_u16_to_u32(self, a: [u16; 32]) -> [u32; 16] {
+        // Widen all lanes, keep the high half: dodges SROA integer
+        // promotion of a half-array read (#77); the low half is DCE'd.
+        let f: [u32; 32] = core::array::from_fn(|i| a[i] as u32);
+        core::array::from_fn(|i| f[i + 16])
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -10980,6 +10887,21 @@ impl I32x16Backend for archmage::ScalarToken {
             }
         }
         mask
+    }
+    #[inline(always)]
+    fn narrow_saturating_i32_to_i16(self, a: [i32; 16], b: [i32; 16]) -> [i16; 32] {
+        core::array::from_fn(|i| {
+            let v: i32 = if i < 16 { a[i] } else { b[i - 16] };
+            v.clamp(i16::MIN as i32, i16::MAX as i32) as i16
+        })
+    }
+
+    #[inline(always)]
+    fn narrow_saturating_i32_to_u16(self, a: [i32; 16], b: [i32; 16]) -> [u16; 32] {
+        core::array::from_fn(|i| {
+            let v: i32 = if i < 16 { a[i] } else { b[i - 16] };
+            v.clamp(0, u16::MAX as i32) as u16
+        })
     }
 }
 

@@ -451,11 +451,6 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
         generate_scalar_w512_impls, generate_w512_backend_trait, generate_wasm_w512_impls,
         generate_x86_v3_w512_impls,
     };
-    use super::backend_gen_widen_narrow::{
-        generate_neon_widen_narrow_impls, generate_scalar_widen_narrow_impls,
-        generate_wasm_widen_narrow_impls, generate_widen_narrow_traits,
-        generate_x86_v3_widen_narrow_impls, generate_x86_v4_widen_narrow_impls,
-    };
 
     let types = all_float_types();
     let i32_types = all_i32_types();
@@ -531,13 +526,6 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
         generate_additional_convert_traits(),
     );
 
-    // 8b. Widening / saturating-narrowing traits (u8<->u16, i8<->i16,
-    //     u16<->u32, i16<->i32). See docs/CROSS-ISA-INT-PRIMITIVES.md.
-    files.insert(
-        "backends/widen_narrow.rs".to_string(),
-        generate_widen_narrow_traits(),
-    );
-
     // 9. backends/mod.rs
     files.insert(
         "backends/mod.rs".to_string(),
@@ -561,8 +549,6 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_x86_int_impls(&remaining_int_types, "X64V3Token", 256)
             + &generate_x86_convert_impls("X64V3Token")
             + &generate_x86_additional_convert_impls("X64V3Token")
-            + &generate_x86_v3_widen_narrow_impls(false)
-            + &gate_w512_impls(generate_x86_v3_widen_narrow_impls(true))
             + &gate_w512_impls(generate_x86_v3_w512_impls(&w512_types)),
     );
     files.insert(
@@ -574,8 +560,6 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_scalar_int_impls(&remaining_int_types)
             + &generate_scalar_convert_impls()
             + &generate_scalar_additional_convert_impls()
-            + &generate_scalar_widen_narrow_impls(false)
-            + &gate_w512_impls(generate_scalar_widen_narrow_impls(true))
             + &gate_w512_impls(generate_scalar_w512_impls(&w512_types)),
     );
     files.insert(
@@ -587,8 +571,6 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_neon_int_impls(&remaining_int_types)
             + &generate_neon_convert_impls()
             + &generate_neon_additional_convert_impls()
-            + &generate_neon_widen_narrow_impls(false)
-            + &gate_w512_impls(generate_neon_widen_narrow_impls(true))
             + &gate_w512_impls(generate_neon_w512_impls(&w512_types)),
     );
     files.insert(
@@ -600,8 +582,6 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
             + &generate_wasm_int_impls(&remaining_int_types)
             + &generate_wasm_convert_impls()
             + &generate_wasm_additional_convert_impls()
-            + &generate_wasm_widen_narrow_impls(false)
-            + &gate_w512_impls(generate_wasm_widen_narrow_impls(true))
             + &gate_w512_impls(generate_wasm_w512_impls(&w512_types)),
     );
 
@@ -611,11 +591,7 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
     // implies `w512` (and we want a single gate scheme).
     files.insert(
         "impls/x86_v4.rs".to_string(),
-        gate_w512_impls(
-            generate_x86_v4_impls_file(&w512_types)
-                + &generate_x86_v4_widen_narrow_impls("X64V4Token")
-                + &generate_x86_v4_widen_narrow_impls("X64V4xToken"),
-        ),
+        gate_w512_impls(generate_x86_v4_impls_file(&w512_types)),
     );
 
     // 11. impls/mod.rs
@@ -1013,39 +989,6 @@ fn generate_backends_mod(
 
     // Additional conversion traits (i8↔u8, i16↔u16, u64↔i64 bitcasts)
     code.push_str("mod convert_int;\npub use convert_int::{I8x16Bitcast, I8x32Bitcast, I16x8Bitcast, I16x16Bitcast, U64x2Bitcast, U64x4Bitcast};\n\n");
-
-    // Widening / saturating-narrowing traits. The 512-bit families are gated
-    // with the rest of the w512 surface.
-    {
-        use super::backend_gen_widen_narrow::{all_narrow_pairs, all_widen_pairs};
-        let named: Vec<(usize, String)> = all_widen_pairs()
-            .iter()
-            .map(|p| (p.width_bits, p.trait_name()))
-            .chain(
-                all_narrow_pairs()
-                    .iter()
-                    .map(|p| (p.width_bits, p.trait_name())),
-            )
-            .chain(super::backend_gen_integer_ops::trait_names())
-            .collect();
-        let base: Vec<&str> = named
-            .iter()
-            .filter(|(w, _)| *w != 512)
-            .map(|(_, n)| n.as_str())
-            .collect();
-        let w512: Vec<&str> = named
-            .iter()
-            .filter(|(w, _)| *w == 512)
-            .map(|(_, n)| n.as_str())
-            .collect();
-        code.push_str("mod widen_narrow;\n");
-        code.push_str(&format!("pub use widen_narrow::{{{}}};\n", base.join(", ")));
-        code.push_str("#[cfg(feature = \"w512\")]\n");
-        code.push_str(&format!(
-            "pub use widen_narrow::{{{}}};\n\n",
-            w512.join(", ")
-        ));
-    }
 
     // Type aliases for ergonomic use
     for (alias, full, doc) in [
@@ -3668,6 +3611,7 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
 // ============================================================================
 
 fn generate_i32_backend_trait(ty: &I32VecType) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::trait_methods(&ty.name());
     let trait_name = ty.trait_name();
     let lanes = ty.lanes;
     let array = ty.array_type();
@@ -3840,6 +3784,7 @@ fn generate_i32_backend_trait(ty: &I32VecType) -> String {
             fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {{
                 <Self as {trait_name}>::min(self, <Self as {trait_name}>::max(self, a, lo), hi)
             }}
+        {integer_methods}
         }}
     "#,
         name = ty.name(),
@@ -4039,6 +3984,7 @@ fn generate_x86_i32_impls(types: &[I32VecType], token: &str, max_width: usize) -
 }
 
 fn generate_x86_i32_impl(ty: &I32VecType, token: &str) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), token);
     let arcane = super::backend_syntax::arcane(token);
     let baseline = super::backend_syntax::sse2_or_arcane(token, ty.width_bits);
     let baseline_end = if ty.width_bits == 128 { "}" } else { "" };
@@ -4255,6 +4201,7 @@ fn generate_x86_i32_impl(ty: &I32VecType, token: &str) -> String {
             fn bitmask(self, a: {inner}) -> u32 {{
                 {p}_movemask_ps({p}_castsi{bits}_ps(a)) as u32
             }}
+        {integer_methods}
         }}
     "#,
         all_mask = if lanes == 4 { "0xF" } else { "0xFF" },
@@ -4482,6 +4429,7 @@ fn generate_scalar_i32_impls(types: &[I32VecType]) -> String {
 }
 
 fn generate_scalar_i32_impl(ty: &I32VecType) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "ScalarToken");
     let trait_name = ty.trait_name();
     let lanes = ty.lanes;
     let array = ty.array_type();
@@ -4793,6 +4741,7 @@ fn generate_scalar_i32_impl(ty: &I32VecType) -> String {
             fn bitmask(self, a: {array}) -> u32 {{
                 {bitmask}
             }}
+        {integer_methods}
         }}
     "#,
         add_lanes = binary_method("wrapping_add"),
@@ -4976,6 +4925,7 @@ fn generate_neon_i32_impls(types: &[I32VecType]) -> String {
 }
 
 fn generate_neon_native_i32_impl(ty: &I32VecType) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "NeonToken");
     let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let array = ty.array_type();
@@ -5146,11 +5096,13 @@ fn generate_neon_native_i32_impl(ty: &I32VecType) -> String {
                 let lane3 = vgetq_lane_u32::<3>(shift);
                 lane0 | (lane1 << 1) | (lane2 << 2) | (lane3 << 3)
             }}
+        {integer_methods}
         }}
     "#}
 }
 
 fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "NeonToken");
     let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let repr = ty.neon_repr();
@@ -5323,6 +5275,7 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
             fn bitmask(self, a: {repr}) -> u32 {{
                 {bitmask}
             }}
+        {integer_methods}
         }}
     "#,
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
@@ -5587,6 +5540,7 @@ fn generate_wasm_i32_impls(types: &[I32VecType]) -> String {
 }
 
 fn generate_wasm_native_i32_impl(ty: &I32VecType) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "Wasm128Token");
     let trait_name = ty.trait_name();
     let array = ty.array_type();
     let lanes = ty.lanes;
@@ -5696,11 +5650,13 @@ fn generate_wasm_native_i32_impl(ty: &I32VecType) -> String {
             fn any_true(self, a: v128) -> bool {{ v128_any_true(a) }}
             #[inline(always)]
             fn bitmask(self, a: v128) -> u32 {{ i32x4_bitmask(a) as u32 }}
+        {integer_methods}
         }}
     "#}
 }
 
 fn generate_wasm_polyfill_i32_impl(ty: &I32VecType) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "Wasm128Token");
     let trait_name = ty.trait_name();
     let repr = ty.wasm_repr();
     let array = ty.array_type();
@@ -5869,6 +5825,7 @@ fn generate_wasm_polyfill_i32_impl(ty: &I32VecType) -> String {
             fn bitmask(self, a: {repr}) -> u32 {{
                 {bitmask}
             }}
+        {integer_methods}
         }}
     "#,
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),

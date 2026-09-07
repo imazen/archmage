@@ -625,7 +625,7 @@ impl<T: crate::simd::backends::F32x16Convert> i32x16<T> {
 // Saturating narrowing (i32x16 -> i16x32 / u16x32)
 // ============================================================================
 
-impl<T: crate::simd::backends::I32x16Narrow> i32x16<T> {
+impl<T: crate::simd::backends::I32x16Backend> i32x16<T> {
     /// Narrow `self` and `high` to `i16x32`, clamping each lane to
     /// the `i16` range.
     ///
@@ -634,10 +634,15 @@ impl<T: crate::simd::backends::I32x16Narrow> i32x16<T> {
     /// on every backend (the AVX2 arm pays one
     /// `permute4x64` to get there).
     #[inline(always)]
-    pub fn narrow_saturating_i16(self, high: Self) -> super::i16x32<T> {
+    pub fn narrow_saturating_i16(self, high: Self) -> super::i16x32<T>
+    where
+        T: crate::simd::backends::I16x32Backend,
+    {
         super::i16x32::from_repr_unchecked(
             self.1,
-            T::narrow_saturating_i32_to_i16(self.1, self.0, high.0),
+            <T as crate::simd::backends::I32x16Backend>::narrow_saturating_i32_to_i16(
+                self.1, self.0, high.0,
+            ),
         )
     }
 
@@ -649,10 +654,15 @@ impl<T: crate::simd::backends::I32x16Narrow> i32x16<T> {
     /// (which would return `0` on x86/wasm and `u16::MAX` on NEON
     /// above the signed maximum) is not expressible here.
     #[inline(always)]
-    pub fn narrow_saturating_u16(self, high: Self) -> super::u16x32<T> {
+    pub fn narrow_saturating_u16(self, high: Self) -> super::u16x32<T>
+    where
+        T: crate::simd::backends::U16x32Backend,
+    {
         super::u16x32::from_repr_unchecked(
             self.1,
-            T::narrow_saturating_i32_to_u16(self.1, self.0, high.0),
+            <T as crate::simd::backends::I32x16Backend>::narrow_saturating_i32_to_u16(
+                self.1, self.0, high.0,
+            ),
         )
     }
 }

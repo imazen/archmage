@@ -9,6 +9,8 @@
 
 ## [Unreleased]
 
+- Consolidate 27 unpublished integer capability traits into the existing source backend traits. Cross-type operations require only their destination backend; byte sums no longer require an `AbsDiff` trait. Existing published conversion traits remain supported.
+
 - Prune unpublished `msub_adjacent` (use `accumulator - a.madd_adjacent(b)`) and W512 i16/u16 reference bitcasts; retain the W512 value casts. Byte reductions document the cost of reducing inside accumulation loops.
 
 ### QUEUED BREAKING CHANGES

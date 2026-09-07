@@ -148,4 +148,32 @@ pub trait U8x64Backend: SimdToken + Sealed + Copy + 'static {
     fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {
         <Self as U8x64Backend>::min(self, <Self as U8x64Backend>::max(self, a, lo), hi)
     }
+    /// Widen in natural lane order: result[i] = a[i + 0] as u16.
+    fn widen_low_u8_to_u16(
+        self,
+        a: <Self as super::U8x64Backend>::Repr,
+    ) -> <Self as super::U16x32Backend>::Repr
+    where
+        Self: super::U16x32Backend;
+    /// Widen in natural lane order: result[i] = a[i + 32] as u16.
+    fn widen_high_u8_to_u16(
+        self,
+        a: <Self as super::U8x64Backend>::Repr,
+    ) -> <Self as super::U16x32Backend>::Repr
+    where
+        Self: super::U16x32Backend;
+    /// Exact full-range absolute difference, with unsigned output lanes.
+    fn abs_diff(
+        self,
+        a: <Self as super::U8x64Backend>::Repr,
+        b: <Self as super::U8x64Backend>::Repr,
+    ) -> <Self as super::U8x64Backend>::Repr;
+    /// Exact widening sum, at most 16320.
+    fn reduce_add_u32(self, a: <Self as super::U8x64Backend>::Repr) -> u32;
+    /// Terminal sum of absolute byte differences. Reduce once after long accumulation loops where possible.
+    fn sum_abs_diff(
+        self,
+        a: <Self as super::U8x64Backend>::Repr,
+        b: <Self as super::U8x64Backend>::Repr,
+    ) -> u32;
 }

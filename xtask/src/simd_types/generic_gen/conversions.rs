@@ -409,7 +409,8 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
     let mut code = String::new();
 
     for p in all_widen_pairs().into_iter().filter(|p| p.src == type_name) {
-        let trait_bound = p.trait_name();
+        let trait_bound = p.src_backend();
+        let dst_bound = p.dst_backend();
         let (src, dst, de) = (p.src, p.dst, p.dst_elem);
         let half = p.src_lanes / 2;
         let extend = if p.signed { "Sign" } else { "Zero" };
@@ -418,7 +419,7 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
             // Widening ({src} -> {dst})
             // ============================================================================
 
-            impl<T: crate::simd::backends::{trait_bound}> {src}<T> {{
+            impl<T: crate::simd::backends::{trait_bound} + crate::simd::backends::{dst_bound}> {src}<T> {{
                 /// {extend}-extend the low half of the lanes to `{dst}`.
                 ///
                 /// Result lane `i` is `self[i] as {de}` for `i` in `0..{half}`.
@@ -426,7 +427,7 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
                 /// see `docs/CROSS-ISA-INT-PRIMITIVES.md`.
                 #[inline(always)]
                 pub fn widen_low(self) -> super::{dst}<T> {{
-                    super::{dst}::from_repr_unchecked(self.1, T::{lo}(self.1, self.0))
+                    super::{dst}::from_repr_unchecked(self.1, <T as crate::simd::backends::{trait_bound}>::{lo}(self.1, self.0))
                 }}
 
                 /// {extend}-extend the high half of the lanes to `{dst}`.
@@ -434,7 +435,7 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
                 /// Result lane `i` is `self[i + {half}] as {de}`.
                 #[inline(always)]
                 pub fn widen_high(self) -> super::{dst}<T> {{
-                    super::{dst}::from_repr_unchecked(self.1, T::{hi}(self.1, self.0))
+                    super::{dst}::from_repr_unchecked(self.1, <T as crate::simd::backends::{trait_bound}>::{hi}(self.1, self.0))
                 }}
             }}
 
@@ -445,7 +446,9 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
         .into_iter()
         .filter(|p| p.src == type_name)
     {
-        let trait_bound = p.trait_name();
+        let trait_bound = p.src_backend();
+        let sdst_bound = p.sdst_backend();
+        let udst_bound = p.udst_backend();
         let src = p.src;
         let n = p.src_lanes;
         let (sdst, sde, udst, ude, se) = (p.sdst, p.sdst_elem, p.udst, p.udst_elem, p.src_elem);
@@ -463,8 +466,9 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
                 /// on every backend (the AVX2 arm pays one
                 /// `permute4x64` to get there).
                 #[inline(always)]
-                pub fn narrow_saturating_{sde}(self, high: Self) -> super::{sdst}<T> {{
-                    super::{sdst}::from_repr_unchecked(self.1, T::{sm}(self.1, self.0, high.0))
+                pub fn narrow_saturating_{sde}(self, high: Self) -> super::{sdst}<T>
+                where T: crate::simd::backends::{sdst_bound} {{
+                    super::{sdst}::from_repr_unchecked(self.1, <T as crate::simd::backends::{trait_bound}>::{sm}(self.1, self.0, high.0))
                 }}
 
                 /// Narrow `self` and `high` to `{udst}`, clamping each lane to
@@ -475,8 +479,9 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
                 /// (which would return `0` on x86/wasm and `{ude}::MAX` on NEON
                 /// above the signed maximum) is not expressible here.
                 #[inline(always)]
-                pub fn narrow_saturating_{ude}(self, high: Self) -> super::{udst}<T> {{
-                    super::{udst}::from_repr_unchecked(self.1, T::{um}(self.1, self.0, high.0))
+                pub fn narrow_saturating_{ude}(self, high: Self) -> super::{udst}<T>
+                where T: crate::simd::backends::{udst_bound} {{
+                    super::{udst}::from_repr_unchecked(self.1, <T as crate::simd::backends::{trait_bound}>::{um}(self.1, self.0, high.0))
                 }}
             }}
 

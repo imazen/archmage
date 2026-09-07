@@ -552,6 +552,7 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
 
 /// Generate a backend trait for a W512 integer type.
 fn generate_int_backend_trait(ty: &W512Type) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::trait_methods(&ty.name());
     let trait_name = ty.trait_name();
     let elem = ty.elem;
     let lanes = ty.lanes;
@@ -725,6 +726,7 @@ fn generate_int_backend_trait(ty: &W512Type) -> String {
             fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {{
                 <Self as {trait_name}>::min(self, <Self as {trait_name}>::max(self, a, lo), hi)
             }}
+        {integer_methods}
         }}
     "#}
 }
@@ -1114,6 +1116,7 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
 
 /// Generate scalar backend implementation for a W512 integer type.
 fn generate_scalar_int_impl(ty: &W512Type) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "ScalarToken");
     let trait_name = ty.trait_name();
     let elem = ty.elem;
     let lanes = ty.lanes;
@@ -1321,6 +1324,7 @@ fn generate_scalar_int_impl(ty: &W512Type) -> String {
 
             #[inline(always)]
             fn bitmask(self, a: {array}) -> u64 {{ {bitmask_body} }}
+        {integer_methods}
         }}
     "#,
         zero_for_not = format!("0{elem}"),
@@ -1347,6 +1351,7 @@ pub(super) fn generate_scalar_w512_impls(types: &[W512Type]) -> String {
 
 /// Generate V3 polyfill implementation that delegates to the 256-bit backend.
 fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "X64V3Token");
     let trait_name = ty.trait_name();
     let half_trait = ty.half_backend_trait();
     let v3_repr = ty.x86_v3_repr();
@@ -1797,6 +1802,7 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
                     <archmage::X64V3Token as {half_trait}>::bitxor(self, a[1], b[1]),
                 ]
             }}
+        {integer_methods}
         }}
     "#});
 
@@ -1835,6 +1841,7 @@ fn generate_4way_polyfill_impl(
     arch: &str,
     quarter_trait: &str,
 ) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), token);
     let trait_name = ty.trait_name();
     let elem = ty.elem;
     let lanes = ty.lanes;
@@ -2238,6 +2245,7 @@ fn generate_4way_polyfill_impl(
             fn bitxor(self, a: {repr}, b: {repr}) -> {repr} {{
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::bitxor(self, a[i], b[i]))
             }}
+        {integer_methods}
         }}
     "#});
 
@@ -2545,6 +2553,7 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
 
 /// Generate V4 native implementation for a W512 integer type.
 fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), token);
     let arcane = super::backend_syntax::arcane(token);
     let trait_name = ty.trait_name();
     let elem = ty.elem;
@@ -2816,6 +2825,7 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
                     zero
                 ) as u64
             }}
+        {integer_methods}
         }}
     "#,
         sign_type = match elem_bits {

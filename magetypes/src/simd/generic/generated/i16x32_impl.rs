@@ -617,7 +617,7 @@ impl<T: crate::simd::backends::I16x32Backend + crate::simd::backends::U16x32Back
 // Widening (i16x32 -> i32x16)
 // ============================================================================
 
-impl<T: crate::simd::backends::I16x32Widen> i16x32<T> {
+impl<T: crate::simd::backends::I16x32Backend + crate::simd::backends::I32x16Backend> i16x32<T> {
     /// Sign-extend the low half of the lanes to `i32x16`.
     ///
     /// Result lane `i` is `self[i] as i32` for `i` in `0..16`.
@@ -625,7 +625,10 @@ impl<T: crate::simd::backends::I16x32Widen> i16x32<T> {
     /// see `docs/CROSS-ISA-INT-PRIMITIVES.md`.
     #[inline(always)]
     pub fn widen_low(self) -> super::i32x16<T> {
-        super::i32x16::from_repr_unchecked(self.1, T::widen_low_i16_to_i32(self.1, self.0))
+        super::i32x16::from_repr_unchecked(
+            self.1,
+            <T as crate::simd::backends::I16x32Backend>::widen_low_i16_to_i32(self.1, self.0),
+        )
     }
 
     /// Sign-extend the high half of the lanes to `i32x16`.
@@ -633,7 +636,10 @@ impl<T: crate::simd::backends::I16x32Widen> i16x32<T> {
     /// Result lane `i` is `self[i + 16] as i32`.
     #[inline(always)]
     pub fn widen_high(self) -> super::i32x16<T> {
-        super::i32x16::from_repr_unchecked(self.1, T::widen_high_i16_to_i32(self.1, self.0))
+        super::i32x16::from_repr_unchecked(
+            self.1,
+            <T as crate::simd::backends::I16x32Backend>::widen_high_i16_to_i32(self.1, self.0),
+        )
     }
 }
 
@@ -641,7 +647,7 @@ impl<T: crate::simd::backends::I16x32Widen> i16x32<T> {
 // Saturating narrowing (i16x32 -> i8x64 / u8x64)
 // ============================================================================
 
-impl<T: crate::simd::backends::I16x32Narrow> i16x32<T> {
+impl<T: crate::simd::backends::I16x32Backend> i16x32<T> {
     /// Narrow `self` and `high` to `i8x64`, clamping each lane to
     /// the `i8` range.
     ///
@@ -650,10 +656,15 @@ impl<T: crate::simd::backends::I16x32Narrow> i16x32<T> {
     /// on every backend (the AVX2 arm pays one
     /// `permute4x64` to get there).
     #[inline(always)]
-    pub fn narrow_saturating_i8(self, high: Self) -> super::i8x64<T> {
+    pub fn narrow_saturating_i8(self, high: Self) -> super::i8x64<T>
+    where
+        T: crate::simd::backends::I8x64Backend,
+    {
         super::i8x64::from_repr_unchecked(
             self.1,
-            T::narrow_saturating_i16_to_i8(self.1, self.0, high.0),
+            <T as crate::simd::backends::I16x32Backend>::narrow_saturating_i16_to_i8(
+                self.1, self.0, high.0,
+            ),
         )
     }
 
@@ -665,30 +676,41 @@ impl<T: crate::simd::backends::I16x32Narrow> i16x32<T> {
     /// (which would return `0` on x86/wasm and `u8::MAX` on NEON
     /// above the signed maximum) is not expressible here.
     #[inline(always)]
-    pub fn narrow_saturating_u8(self, high: Self) -> super::u8x64<T> {
+    pub fn narrow_saturating_u8(self, high: Self) -> super::u8x64<T>
+    where
+        T: crate::simd::backends::U8x64Backend,
+    {
         super::u8x64::from_repr_unchecked(
             self.1,
-            T::narrow_saturating_i16_to_u8(self.1, self.0, high.0),
+            <T as crate::simd::backends::I16x32Backend>::narrow_saturating_i16_to_u8(
+                self.1, self.0, high.0,
+            ),
         )
     }
 }
 
-impl<T: crate::simd::backends::I16x32AbsDiff> i16x32<T> {
+impl<T: crate::simd::backends::I16x32Backend + crate::simd::backends::U16x32Backend> i16x32<T> {
     /// MIN.abs_diff(MAX) is u16::MAX.
     /// Exact lane-wise absolute difference, without saturation or wrapping.
     #[inline(always)]
     pub fn abs_diff(self, rhs: Self) -> super::u16x32<T> {
-        super::u16x32::from_repr_unchecked(self.1, T::abs_diff(self.1, self.0, rhs.0))
+        super::u16x32::from_repr_unchecked(
+            self.1,
+            <T as crate::simd::backends::I16x32Backend>::abs_diff(self.1, self.0, rhs.0),
+        )
     }
 }
-impl<T: crate::simd::backends::I16x32Pairwise> i16x32<T> {
+impl<T: crate::simd::backends::I16x32Backend + crate::simd::backends::I32x16Backend> i16x32<T> {
     /// Multiply signed lanes, then sum adjacent pairs into i32 lanes.
     /// Lane k uses exactly input lanes 2k and 2k+1, in that order.
     /// The sum wraps modulo 2^32: two MIN*MIN products yield i32::MIN.
     /// Neither this operation nor the WASM dot instruction saturates.
     #[inline(always)]
     pub fn madd_adjacent(self, rhs: Self) -> super::i32x16<T> {
-        super::i32x16::from_repr_unchecked(self.1, T::madd_adjacent(self.1, self.0, rhs.0))
+        super::i32x16::from_repr_unchecked(
+            self.1,
+            <T as crate::simd::backends::I16x32Backend>::madd_adjacent(self.1, self.0, rhs.0),
+        )
     }
 }
 // ============================================================================

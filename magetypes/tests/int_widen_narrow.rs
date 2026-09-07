@@ -817,3 +817,32 @@ fn w512_byte_dot_in_one_magetypes_body() {
         expected
     );
 }
+
+// These helpers deliberately name only the operation's source and destination
+// shapes. Compilation proves that unrelated capabilities are not required.
+#[test]
+fn source_backend_bounds_are_sufficient() {
+    use magetypes::simd::backends::{I16x8Backend, I32x4Backend, U8x16Backend};
+    fn byte_sum<T: U8x16Backend>(t: T) -> u32 {
+        u8x16::splat(t, 255)
+            .abs_diff(u8x16::zero(t))
+            .reduce_add_u32()
+    }
+    fn dot<T: I16x8Backend + I32x4Backend>(t: T) -> [i32; 4] {
+        i16x8::splat(t, 2)
+            .madd_adjacent(i16x8::splat(t, 3))
+            .to_array()
+    }
+    fn narrow<T: I16x8Backend + U8x16Backend>(t: T) -> [u8; 16] {
+        // Signed-destination I8x16Backend is intentionally absent.
+        i16x8::splat(t, -1)
+            .narrow_saturating_u8(i16x8::splat(t, 300))
+            .to_array()
+    }
+    assert_eq!(byte_sum(ScalarToken), 4080);
+    assert_eq!(dot(ScalarToken), [12; 4]);
+    assert_eq!(
+        narrow(ScalarToken),
+        core::array::from_fn(|i| if i < 8 { 0 } else { 255 })
+    );
+}

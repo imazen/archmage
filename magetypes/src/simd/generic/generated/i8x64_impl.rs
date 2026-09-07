@@ -551,7 +551,7 @@ impl<T: I8x64Backend> core::fmt::Debug for i8x64<T> {
 // Widening (i8x64 -> i16x32)
 // ============================================================================
 
-impl<T: crate::simd::backends::I8x64Widen> i8x64<T> {
+impl<T: crate::simd::backends::I8x64Backend + crate::simd::backends::I16x32Backend> i8x64<T> {
     /// Sign-extend the low half of the lanes to `i16x32`.
     ///
     /// Result lane `i` is `self[i] as i16` for `i` in `0..32`.
@@ -559,7 +559,10 @@ impl<T: crate::simd::backends::I8x64Widen> i8x64<T> {
     /// see `docs/CROSS-ISA-INT-PRIMITIVES.md`.
     #[inline(always)]
     pub fn widen_low(self) -> super::i16x32<T> {
-        super::i16x32::from_repr_unchecked(self.1, T::widen_low_i8_to_i16(self.1, self.0))
+        super::i16x32::from_repr_unchecked(
+            self.1,
+            <T as crate::simd::backends::I8x64Backend>::widen_low_i8_to_i16(self.1, self.0),
+        )
     }
 
     /// Sign-extend the high half of the lanes to `i16x32`.
@@ -567,7 +570,10 @@ impl<T: crate::simd::backends::I8x64Widen> i8x64<T> {
     /// Result lane `i` is `self[i + 32] as i16`.
     #[inline(always)]
     pub fn widen_high(self) -> super::i16x32<T> {
-        super::i16x32::from_repr_unchecked(self.1, T::widen_high_i8_to_i16(self.1, self.0))
+        super::i16x32::from_repr_unchecked(
+            self.1,
+            <T as crate::simd::backends::I8x64Backend>::widen_high_i8_to_i16(self.1, self.0),
+        )
     }
 }
 
