@@ -316,3 +316,10 @@ docs-clean:
 # Serve the intrinsics browser locally (port 3500)
 intrinsics-serve:
     cd docs/intrinsics-browser && python3 -m http.server 3500
+
+# Integer APIs, independent intrinsic references and ARM accumulation fusion.
+integer-codegen:
+    PYTHONDONTWRITEBYTECODE=1 python3 xtask/codegen.py --integer-ops
+
+integer-tests:
+    cargo test -p magetypes --test int_widen_narrow --features "std avx512"

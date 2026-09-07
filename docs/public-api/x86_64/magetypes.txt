@@ -6,18 +6,18 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2454 lines (supported surface) | magetypes.features.txt 75 added (features: avx512,std,w512) | magetypes.internal.txt 34 lines (41 hidden + 0 excluded-feature)
+# files: magetypes.txt 2472 lines (supported surface) | magetypes.features.txt 75 added (features: avx512,std,w512) | magetypes.internal.txt 34 lines (41 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                12
-#   pub types (struct/enum/trait/alias)       404
+#   pub types (struct/enum/trait/alias)       410
 #   pub consts/statics                        228
-#   free functions                           3096
-#   inherent methods                         1249
+#   free functions                           3108
+#   inherent methods                         1255
 #   enum variants                               1
 #   re-exports                                  2
-#   trait roster entries (type × trait)       796
+#   trait roster entries (type × trait)       808
 #   conditional trait impls (verbatim)        120
 #   auto-trait-complete types                  10
 #   auto-trait exceptions                      30
@@ -25,10 +25,10 @@
 # per-module pub lines:
 #   (root)                          321
 #   cast                              3
-#   prelude                        3014
-#   simd                           1654
+#   prelude                        3026
+#   simd                           1666
 
-## items (2230 lines)
+## items (2248 lines)
 
 pub mod magetypes
 pub use archmage
@@ -533,6 +533,7 @@ pub fn prelude::u16x16<T>::partition_slice(T, &[u16]) -> (&[[u16; 16]], &[u16]) 
 pub fn prelude::u16x16<T>::partition_slice_mut(T, &mut [u16]) -> (&mut [[u16; 16]], &mut [u16]) [also: prelude::u16x16<T>]
 pub fn prelude::u16x16<T>::store(self, &mut [u16; 16]) [also: prelude::u16x16<T>]
 pub fn prelude::u16x16<T>::to_array(self) -> [u16; 16] [also: prelude::u16x16<T>]
+pub fn prelude::u16x16<T>::pairwise_widen_add(self) -> prelude::u32x8<T> [also: prelude::u16x16<T>]
 pub fn prelude::u16x16<T>::widen_high(self) -> prelude::u32x8<T> [also: prelude::u16x16<T>]
 pub fn prelude::u16x16<T>::widen_low(self) -> prelude::u32x8<T> [also: prelude::u16x16<T>]
 pub fn [u16; 16]::from(prelude::u16x16<T>) -> [u16; 16] [also: (root)]
@@ -547,6 +548,7 @@ pub fn prelude::u16x32<T>::partition_slice(T, &[u16]) -> (&[[u16; 32]], &[u16]) 
 pub fn prelude::u16x32<T>::partition_slice_mut(T, &mut [u16]) -> (&mut [[u16; 32]], &mut [u16]) [also: prelude::u16x32<T>]
 pub fn prelude::u16x32<T>::store(self, &mut [u16; 32]) [also: prelude::u16x32<T>]
 pub fn prelude::u16x32<T>::to_array(self) -> [u16; 32] [also: prelude::u16x32<T>]
+pub fn prelude::u16x32<T>::pairwise_widen_add(self) -> prelude::u32x16<T> [also: prelude::u16x32<T>]
 pub fn prelude::u16x32<T>::widen_high(self) -> prelude::u32x16<T> [also: prelude::u16x32<T>]
 pub fn prelude::u16x32<T>::widen_low(self) -> prelude::u32x16<T> [also: prelude::u16x32<T>]
 pub fn [u16; 32]::from(prelude::u16x32<T>) -> [u16; 32] [also: (root)]
@@ -567,6 +569,7 @@ pub fn prelude::u16x8<T>::reduce_add(self) -> u16 [also: prelude::u16x16<T>, pre
 pub fn prelude::u16x8<T>::splat(T, u16) -> Self [also: prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>]
 pub fn prelude::u16x8<T>::store(self, &mut [u16; 8]) [also: prelude::u16x8<T>]
 pub fn prelude::u16x8<T>::to_array(self) -> [u16; 8] [also: prelude::u16x8<T>]
+pub fn prelude::u16x8<T>::pairwise_widen_add(self) -> prelude::u32x4<T> [also: prelude::u16x8<T>]
 pub fn prelude::u16x8<T>::widen_high(self) -> prelude::u32x4<T> [also: prelude::u16x8<T>]
 pub fn prelude::u16x8<T>::widen_low(self) -> prelude::u32x4<T> [also: prelude::u16x8<T>]
 pub fn [u16; 8]::from(prelude::u16x8<T>) -> [u16; 8] [also: (root)]
@@ -679,6 +682,7 @@ pub fn prelude::u8x16<T>::reduce_add(self) -> u8 [also: prelude::u8x16<T>, prelu
 pub fn prelude::u8x16<T>::splat(T, u8) -> Self [also: prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
 pub fn prelude::u8x16<T>::store(self, &mut [u8; 16]) [also: prelude::u8x16<T>]
 pub fn prelude::u8x16<T>::to_array(self) -> [u8; 16] [also: prelude::u8x16<T>]
+pub fn prelude::u8x16<T>::pairwise_widen_add(self) -> prelude::u16x8<T> [also: prelude::u8x16<T>]
 pub fn prelude::u8x16<T>::widen_high(self) -> prelude::u16x8<T> [also: prelude::u8x16<T>]
 pub fn prelude::u8x16<T>::widen_low(self) -> prelude::u16x8<T> [also: prelude::u8x16<T>]
 pub fn [u8; 16]::from(prelude::u8x16<T>) -> [u8; 16] [also: (root)]
@@ -697,6 +701,7 @@ pub fn prelude::u8x32<T>::partition_slice(T, &[u8]) -> (&[[u8; 32]], &[u8]) [als
 pub fn prelude::u8x32<T>::partition_slice_mut(T, &mut [u8]) -> (&mut [[u8; 32]], &mut [u8]) [also: prelude::u8x32<T>]
 pub fn prelude::u8x32<T>::store(self, &mut [u8; 32]) [also: prelude::u8x32<T>]
 pub fn prelude::u8x32<T>::to_array(self) -> [u8; 32] [also: prelude::u8x32<T>]
+pub fn prelude::u8x32<T>::pairwise_widen_add(self) -> prelude::u16x16<T> [also: prelude::u8x32<T>]
 pub fn prelude::u8x32<T>::widen_high(self) -> prelude::u16x16<T> [also: prelude::u8x32<T>]
 pub fn prelude::u8x32<T>::widen_low(self) -> prelude::u16x16<T> [also: prelude::u8x32<T>]
 pub fn [u8; 32]::from(prelude::u8x32<T>) -> [u8; 32] [also: (root)]
@@ -712,6 +717,7 @@ pub fn prelude::u8x64<T>::partition_slice(T, &[u8]) -> (&[[u8; 64]], &[u8]) [als
 pub fn prelude::u8x64<T>::partition_slice_mut(T, &mut [u8]) -> (&mut [[u8; 64]], &mut [u8]) [also: prelude::u8x64<T>]
 pub fn prelude::u8x64<T>::store(self, &mut [u8; 64]) [also: prelude::u8x64<T>]
 pub fn prelude::u8x64<T>::to_array(self) -> [u8; 64] [also: prelude::u8x64<T>]
+pub fn prelude::u8x64<T>::pairwise_widen_add(self) -> prelude::u16x32<T> [also: prelude::u8x64<T>]
 pub fn prelude::u8x64<T>::widen_high(self) -> prelude::u16x32<T> [also: prelude::u8x64<T>]
 pub fn prelude::u8x64<T>::widen_low(self) -> prelude::u16x32<T> [also: prelude::u8x64<T>]
 pub fn [u8; 64]::from(prelude::u8x64<T>) -> [u8; 64] [also: (root)]
@@ -1543,6 +1549,8 @@ pub fn simd::backends::U16x16Backend::store(self, Self::Repr, &mut [u16; 16])
 pub fn simd::backends::U16x16Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x16Backend::to_array(self, Self::Repr) -> [u16; 16]
 pub fn simd::backends::U16x16Backend::zero(self) -> Self::Repr
+pub trait simd::backends::U16x16Pairwise: simd::backends::U16x16Backend + simd::backends::U32x8Backend
+pub fn simd::backends::U16x16Pairwise::pairwise_widen_add(self, <Self as simd::backends::U16x16Backend>::Repr) -> <Self as simd::backends::U32x8Backend>::Repr
 pub trait simd::backends::U16x16Widen: simd::backends::U16x16Backend + simd::backends::U32x8Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub fn simd::backends::U16x16Widen::widen_high_u16_to_u32(self, <Self as simd::backends::U16x16Backend>::Repr) -> <Self as simd::backends::U32x8Backend>::Repr
 pub fn simd::backends::U16x16Widen::widen_low_u16_to_u32(self, <Self as simd::backends::U16x16Backend>::Repr) -> <Self as simd::backends::U32x8Backend>::Repr
@@ -1584,6 +1592,8 @@ pub fn simd::backends::U16x32Backend::store(self, Self::Repr, &mut [u16; 32])
 pub fn simd::backends::U16x32Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x32Backend::to_array(self, Self::Repr) -> [u16; 32]
 pub fn simd::backends::U16x32Backend::zero(self) -> Self::Repr
+pub trait simd::backends::U16x32Pairwise: simd::backends::U16x32Backend + simd::backends::U32x16Backend
+pub fn simd::backends::U16x32Pairwise::pairwise_widen_add(self, <Self as simd::backends::U16x32Backend>::Repr) -> <Self as simd::backends::U32x16Backend>::Repr
 pub trait simd::backends::U16x32Widen: simd::backends::U16x32Backend + simd::backends::U32x16Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub fn simd::backends::U16x32Widen::widen_high_u16_to_u32(self, <Self as simd::backends::U16x32Backend>::Repr) -> <Self as simd::backends::U32x16Backend>::Repr
 pub fn simd::backends::U16x32Widen::widen_low_u16_to_u32(self, <Self as simd::backends::U16x32Backend>::Repr) -> <Self as simd::backends::U32x16Backend>::Repr
@@ -1622,6 +1632,8 @@ pub fn simd::backends::U16x8Backend::store(self, Self::Repr, &mut [u16; 8])
 pub fn simd::backends::U16x8Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x8Backend::to_array(self, Self::Repr) -> [u16; 8]
 pub fn simd::backends::U16x8Backend::zero(self) -> Self::Repr
+pub trait simd::backends::U16x8Pairwise: simd::backends::U16x8Backend + simd::backends::U32x4Backend
+pub fn simd::backends::U16x8Pairwise::pairwise_widen_add(self, <Self as simd::backends::U16x8Backend>::Repr) -> <Self as simd::backends::U32x4Backend>::Repr
 pub trait simd::backends::U16x8Widen: simd::backends::U16x8Backend + simd::backends::U32x4Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub fn simd::backends::U16x8Widen::widen_high_u16_to_u32(self, <Self as simd::backends::U16x8Backend>::Repr) -> <Self as simd::backends::U32x4Backend>::Repr
 pub fn simd::backends::U16x8Widen::widen_low_u16_to_u32(self, <Self as simd::backends::U16x8Backend>::Repr) -> <Self as simd::backends::U32x4Backend>::Repr
@@ -1869,6 +1881,8 @@ pub fn simd::backends::U8x16Backend::store(self, Self::Repr, &mut [u8; 16])
 pub fn simd::backends::U8x16Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x16Backend::to_array(self, Self::Repr) -> [u8; 16]
 pub fn simd::backends::U8x16Backend::zero(self) -> Self::Repr
+pub trait simd::backends::U8x16Pairwise: simd::backends::U8x16Backend + simd::backends::U16x8Backend
+pub fn simd::backends::U8x16Pairwise::pairwise_widen_add(self, <Self as simd::backends::U8x16Backend>::Repr) -> <Self as simd::backends::U16x8Backend>::Repr
 pub trait simd::backends::U8x16Widen: simd::backends::U8x16Backend + simd::backends::U16x8Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub fn simd::backends::U8x16Widen::widen_high_u8_to_u16(self, <Self as simd::backends::U8x16Backend>::Repr) -> <Self as simd::backends::U16x8Backend>::Repr
 pub fn simd::backends::U8x16Widen::widen_low_u8_to_u16(self, <Self as simd::backends::U8x16Backend>::Repr) -> <Self as simd::backends::U16x8Backend>::Repr
@@ -1910,6 +1924,8 @@ pub fn simd::backends::U8x32Backend::store(self, Self::Repr, &mut [u8; 32])
 pub fn simd::backends::U8x32Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x32Backend::to_array(self, Self::Repr) -> [u8; 32]
 pub fn simd::backends::U8x32Backend::zero(self) -> Self::Repr
+pub trait simd::backends::U8x32Pairwise: simd::backends::U8x32Backend + simd::backends::U16x16Backend
+pub fn simd::backends::U8x32Pairwise::pairwise_widen_add(self, <Self as simd::backends::U8x32Backend>::Repr) -> <Self as simd::backends::U16x16Backend>::Repr
 pub trait simd::backends::U8x32Widen: simd::backends::U8x32Backend + simd::backends::U16x16Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub fn simd::backends::U8x32Widen::widen_high_u8_to_u16(self, <Self as simd::backends::U8x32Backend>::Repr) -> <Self as simd::backends::U16x16Backend>::Repr
 pub fn simd::backends::U8x32Widen::widen_low_u8_to_u16(self, <Self as simd::backends::U8x32Backend>::Repr) -> <Self as simd::backends::U16x16Backend>::Repr
@@ -1954,6 +1970,8 @@ pub fn simd::backends::U8x64Backend::store(self, Self::Repr, &mut [u8; 64])
 pub fn simd::backends::U8x64Backend::sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x64Backend::to_array(self, Self::Repr) -> [u8; 64]
 pub fn simd::backends::U8x64Backend::zero(self) -> Self::Repr
+pub trait simd::backends::U8x64Pairwise: simd::backends::U8x64Backend + simd::backends::U16x32Backend
+pub fn simd::backends::U8x64Pairwise::pairwise_widen_add(self, <Self as simd::backends::U8x64Backend>::Repr) -> <Self as simd::backends::U16x32Backend>::Repr
 pub trait simd::backends::U8x64Widen: simd::backends::U8x64Backend + simd::backends::U16x32Backend + archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static
 pub fn simd::backends::U8x64Widen::widen_high_u8_to_u16(self, <Self as simd::backends::U8x64Backend>::Repr) -> <Self as simd::backends::U16x32Backend>::Repr
 pub fn simd::backends::U8x64Widen::widen_low_u8_to_u16(self, <Self as simd::backends::U8x64Backend>::Repr) -> <Self as simd::backends::U16x32Backend>::Repr
@@ -2293,9 +2311,9 @@ pub fn WidthDispatch::u8x64_zero(self) -> Self::U8x64
 [u8; 16]: From<prelude::u8x16<T>>
 [u8; 32]: From<prelude::u8x32<T>>
 [u8; 64]: From<prelude::u8x64<T>>
-archmage::tokens::ScalarToken: SimdTypes, prelude::F16Convert, prelude::F32x16FromHalves, prelude::F32x8FromHalves, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x4Convert, simd::backends::F32x8Backend, simd::backends::F32x8Convert, simd::backends::F64x2Backend, simd::backends::F64x4Backend, simd::backends::F64x8Backend, simd::backends::I16x16AbsDiff, simd::backends::I16x16Backend, simd::backends::I16x16Bitcast, simd::backends::I16x16Narrow, simd::backends::I16x16Pairwise, simd::backends::I16x16Widen, simd::backends::I16x32AbsDiff, simd::backends::I16x32Backend, simd::backends::I16x32Narrow, simd::backends::I16x32Pairwise, simd::backends::I16x32Widen, simd::backends::I16x8AbsDiff, simd::backends::I16x8Backend, simd::backends::I16x8Bitcast, simd::backends::I16x8Narrow, simd::backends::I16x8Pairwise, simd::backends::I16x8Widen, simd::backends::I32x16Backend, simd::backends::I32x16Narrow, simd::backends::I32x4Backend, simd::backends::I32x4Narrow, simd::backends::I32x8Backend, simd::backends::I32x8Narrow, simd::backends::I64x2Backend, simd::backends::I64x2Bitcast, simd::backends::I64x4Backend, simd::backends::I64x4Bitcast, simd::backends::I64x8Backend, simd::backends::I8x16Backend, simd::backends::I8x16Bitcast, simd::backends::I8x16Widen, simd::backends::I8x32Backend, simd::backends::I8x32Bitcast, simd::backends::I8x32Widen, simd::backends::I8x64Backend, simd::backends::I8x64Widen, simd::backends::U16x16Backend, simd::backends::U16x16Widen, simd::backends::U16x32Backend, simd::backends::U16x32Widen, simd::backends::U16x8Backend, simd::backends::U16x8Widen, simd::backends::U32x16Backend, simd::backends::U32x4Backend, simd::backends::U32x4Bitcast, simd::backends::U32x8Backend, simd::backends::U32x8Bitcast, simd::backends::U64x2Backend, simd::backends::U64x2Bitcast, simd::backends::U64x4Backend, simd::backends::U64x4Bitcast, simd::backends::U64x8Backend, simd::backends::U8x16AbsDiff, simd::backends::U8x16Backend, simd::backends::U8x16Widen, simd::backends::U8x32AbsDiff, simd::backends::U8x32Backend, simd::backends::U8x32Widen, simd::backends::U8x64AbsDiff, simd::backends::U8x64Backend, simd::backends::U8x64Widen
+archmage::tokens::ScalarToken: SimdTypes, prelude::F16Convert, prelude::F32x16FromHalves, prelude::F32x8FromHalves, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x4Convert, simd::backends::F32x8Backend, simd::backends::F32x8Convert, simd::backends::F64x2Backend, simd::backends::F64x4Backend, simd::backends::F64x8Backend, simd::backends::I16x16AbsDiff, simd::backends::I16x16Backend, simd::backends::I16x16Bitcast, simd::backends::I16x16Narrow, simd::backends::I16x16Pairwise, simd::backends::I16x16Widen, simd::backends::I16x32AbsDiff, simd::backends::I16x32Backend, simd::backends::I16x32Narrow, simd::backends::I16x32Pairwise, simd::backends::I16x32Widen, simd::backends::I16x8AbsDiff, simd::backends::I16x8Backend, simd::backends::I16x8Bitcast, simd::backends::I16x8Narrow, simd::backends::I16x8Pairwise, simd::backends::I16x8Widen, simd::backends::I32x16Backend, simd::backends::I32x16Narrow, simd::backends::I32x4Backend, simd::backends::I32x4Narrow, simd::backends::I32x8Backend, simd::backends::I32x8Narrow, simd::backends::I64x2Backend, simd::backends::I64x2Bitcast, simd::backends::I64x4Backend, simd::backends::I64x4Bitcast, simd::backends::I64x8Backend, simd::backends::I8x16Backend, simd::backends::I8x16Bitcast, simd::backends::I8x16Widen, simd::backends::I8x32Backend, simd::backends::I8x32Bitcast, simd::backends::I8x32Widen, simd::backends::I8x64Backend, simd::backends::I8x64Widen, simd::backends::U16x16Backend, simd::backends::U16x16Pairwise, simd::backends::U16x16Widen, simd::backends::U16x32Backend, simd::backends::U16x32Pairwise, simd::backends::U16x32Widen, simd::backends::U16x8Backend, simd::backends::U16x8Pairwise, simd::backends::U16x8Widen, simd::backends::U32x16Backend, simd::backends::U32x4Backend, simd::backends::U32x4Bitcast, simd::backends::U32x8Backend, simd::backends::U32x8Bitcast, simd::backends::U64x2Backend, simd::backends::U64x2Bitcast, simd::backends::U64x4Backend, simd::backends::U64x4Bitcast, simd::backends::U64x8Backend, simd::backends::U8x16AbsDiff, simd::backends::U8x16Backend, simd::backends::U8x16Pairwise, simd::backends::U8x16Widen, simd::backends::U8x32AbsDiff, simd::backends::U8x32Backend, simd::backends::U8x32Pairwise, simd::backends::U8x32Widen, simd::backends::U8x64AbsDiff, simd::backends::U8x64Backend, simd::backends::U8x64Pairwise, simd::backends::U8x64Widen
 archmage::tokens::generated::x86::X64V2Token: SimdTypes
-archmage::tokens::generated::x86::X64V3Token: SimdTypes, WidthDispatch, prelude::F16Convert, prelude::F32x16FromHalves, prelude::F32x8FromHalves, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x4Convert, simd::backends::F32x8Backend, simd::backends::F32x8Convert, simd::backends::F64x2Backend, simd::backends::F64x4Backend, simd::backends::F64x8Backend, simd::backends::I16x16AbsDiff, simd::backends::I16x16Backend, simd::backends::I16x16Bitcast, simd::backends::I16x16Narrow, simd::backends::I16x16Pairwise, simd::backends::I16x16Widen, simd::backends::I16x32AbsDiff, simd::backends::I16x32Backend, simd::backends::I16x32Narrow, simd::backends::I16x32Pairwise, simd::backends::I16x32Widen, simd::backends::I16x8AbsDiff, simd::backends::I16x8Backend, simd::backends::I16x8Bitcast, simd::backends::I16x8Narrow, simd::backends::I16x8Pairwise, simd::backends::I16x8Widen, simd::backends::I32x16Backend, simd::backends::I32x16Narrow, simd::backends::I32x4Backend, simd::backends::I32x4Narrow, simd::backends::I32x8Backend, simd::backends::I32x8Narrow, simd::backends::I64x2Backend, simd::backends::I64x2Bitcast, simd::backends::I64x4Backend, simd::backends::I64x4Bitcast, simd::backends::I64x8Backend, simd::backends::I8x16Backend, simd::backends::I8x16Bitcast, simd::backends::I8x16Widen, simd::backends::I8x32Backend, simd::backends::I8x32Bitcast, simd::backends::I8x32Widen, simd::backends::I8x64Backend, simd::backends::I8x64Widen, simd::backends::U16x16Backend, simd::backends::U16x16Widen, simd::backends::U16x32Backend, simd::backends::U16x32Widen, simd::backends::U16x8Backend, simd::backends::U16x8Widen, simd::backends::U32x16Backend, simd::backends::U32x4Backend, simd::backends::U32x4Bitcast, simd::backends::U32x8Backend, simd::backends::U32x8Bitcast, simd::backends::U64x2Backend, simd::backends::U64x2Bitcast, simd::backends::U64x4Backend, simd::backends::U64x4Bitcast, simd::backends::U64x8Backend, simd::backends::U8x16AbsDiff, simd::backends::U8x16Backend, simd::backends::U8x16Widen, simd::backends::U8x32AbsDiff, simd::backends::U8x32Backend, simd::backends::U8x32Widen, simd::backends::U8x64AbsDiff, simd::backends::U8x64Backend, simd::backends::U8x64Widen
+archmage::tokens::generated::x86::X64V3Token: SimdTypes, WidthDispatch, prelude::F16Convert, prelude::F32x16FromHalves, prelude::F32x8FromHalves, simd::backends::F32x16Backend, simd::backends::F32x16Convert, simd::backends::F32x4Backend, simd::backends::F32x4Convert, simd::backends::F32x8Backend, simd::backends::F32x8Convert, simd::backends::F64x2Backend, simd::backends::F64x4Backend, simd::backends::F64x8Backend, simd::backends::I16x16AbsDiff, simd::backends::I16x16Backend, simd::backends::I16x16Bitcast, simd::backends::I16x16Narrow, simd::backends::I16x16Pairwise, simd::backends::I16x16Widen, simd::backends::I16x32AbsDiff, simd::backends::I16x32Backend, simd::backends::I16x32Narrow, simd::backends::I16x32Pairwise, simd::backends::I16x32Widen, simd::backends::I16x8AbsDiff, simd::backends::I16x8Backend, simd::backends::I16x8Bitcast, simd::backends::I16x8Narrow, simd::backends::I16x8Pairwise, simd::backends::I16x8Widen, simd::backends::I32x16Backend, simd::backends::I32x16Narrow, simd::backends::I32x4Backend, simd::backends::I32x4Narrow, simd::backends::I32x8Backend, simd::backends::I32x8Narrow, simd::backends::I64x2Backend, simd::backends::I64x2Bitcast, simd::backends::I64x4Backend, simd::backends::I64x4Bitcast, simd::backends::I64x8Backend, simd::backends::I8x16Backend, simd::backends::I8x16Bitcast, simd::backends::I8x16Widen, simd::backends::I8x32Backend, simd::backends::I8x32Bitcast, simd::backends::I8x32Widen, simd::backends::I8x64Backend, simd::backends::I8x64Widen, simd::backends::U16x16Backend, simd::backends::U16x16Pairwise, simd::backends::U16x16Widen, simd::backends::U16x32Backend, simd::backends::U16x32Pairwise, simd::backends::U16x32Widen, simd::backends::U16x8Backend, simd::backends::U16x8Pairwise, simd::backends::U16x8Widen, simd::backends::U32x16Backend, simd::backends::U32x4Backend, simd::backends::U32x4Bitcast, simd::backends::U32x8Backend, simd::backends::U32x8Bitcast, simd::backends::U64x2Backend, simd::backends::U64x2Bitcast, simd::backends::U64x4Backend, simd::backends::U64x4Bitcast, simd::backends::U64x8Backend, simd::backends::U8x16AbsDiff, simd::backends::U8x16Backend, simd::backends::U8x16Pairwise, simd::backends::U8x16Widen, simd::backends::U8x32AbsDiff, simd::backends::U8x32Backend, simd::backends::U8x32Pairwise, simd::backends::U8x32Widen, simd::backends::U8x64AbsDiff, simd::backends::U8x64Backend, simd::backends::U8x64Pairwise, simd::backends::U8x64Widen
 prelude::f32x16<T>: Add, Add<f32>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Debug, Div, Div<f32>, DivAssign, Index<usize>, IndexMut<usize>, Mul, Mul<f32>, MulAssign, Neg, Sub, Sub<f32>, SubAssign
 prelude::f32x4<T>: Add, Add<f32>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Debug, Div, Div<f32>, DivAssign, Index<usize>, IndexMut<usize>, Mul, Mul<f32>, MulAssign, Neg, Sub, Sub<f32>, SubAssign
 prelude::f32x8<T>: Add, Add<f32>, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Debug, Div, Div<f32>, DivAssign, Index<usize>, IndexMut<usize>, Mul, Mul<f32>, MulAssign, Neg, Sub, Sub<f32>, SubAssign

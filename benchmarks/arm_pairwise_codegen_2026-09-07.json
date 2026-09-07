@@ -1,0 +1,322 @@
+{
+  "archmage_base": "9981d4f9ad90b0cc57bb244e1b1c16df761bdb20",
+  "compiler": "rustc 1.98.0 (88d9e12ae 2026-08-18)\nbinary: rustc\ncommit-hash: 88d9e12ae178fab0fb5cc050a94da85685d449ea\ncommit-date: 2026-08-18\nhost: aarch64-apple-darwin\nrelease: 1.98.0\nLLVM version: 22.1.8\n",
+  "command": "nice -n 19 env CARGO_BUILD_JOBS=4 TMPDIR=$HOME/tmp just integer-codegen",
+  "full_artifacts": "/Users/lilith/tmp/archmage-integer-codegen-_wkyyrab",
+  "targets": {
+    "x86_64-unknown-linux-gnu": [
+      {
+        "name": "v3_128_pair_u8",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 7,
+        "reference_instructions": 7
+      },
+      {
+        "name": "v3_128_pair_u16",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 8,
+        "reference_instructions": 8
+      },
+      {
+        "name": "v3_128_pair_acc_u8",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 8,
+        "reference_instructions": 8
+      },
+      {
+        "name": "v3_128_pair_acc_u16",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 9,
+        "reference_instructions": 9
+      },
+      {
+        "name": "v3_256_pair_u8",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 8,
+        "reference_instructions": 8
+      },
+      {
+        "name": "v3_256_pair_u16",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 9,
+        "reference_instructions": 9
+      },
+      {
+        "name": "v3_256_pair_acc_u8",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 9,
+        "reference_instructions": 9
+      },
+      {
+        "name": "v3_256_pair_acc_u16",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 10,
+        "reference_instructions": 10
+      },
+      {
+        "name": "v3_512_pair_u8",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 14,
+        "reference_instructions": 14
+      },
+      {
+        "name": "v3_512_pair_u16",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 14,
+        "reference_instructions": 14
+      },
+      {
+        "name": "v3_512_pair_acc_u8",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 16,
+        "reference_instructions": 16
+      },
+      {
+        "name": "v3_512_pair_acc_u16",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 16,
+        "reference_instructions": 16
+      },
+      {
+        "name": "v4_512_pair_u8",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 8,
+        "reference_instructions": 8
+      },
+      {
+        "name": "v4_512_pair_u16",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 8,
+        "reference_instructions": 8
+      },
+      {
+        "name": "v4_512_pair_acc_u8",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 9,
+        "reference_instructions": 9
+      },
+      {
+        "name": "v4_512_pair_acc_u16",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 9,
+        "reference_instructions": 9
+      },
+      {
+        "name": "v4x_512_pair_u8",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 8,
+        "reference_instructions": 8
+      },
+      {
+        "name": "v4x_512_pair_u16",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 8,
+        "reference_instructions": 8
+      },
+      {
+        "name": "v4x_512_pair_acc_u8",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 9,
+        "reference_instructions": 9
+      },
+      {
+        "name": "v4x_512_pair_acc_u16",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 9,
+        "reference_instructions": 9
+      }
+    ],
+    "aarch64-unknown-linux-gnu": [
+      {
+        "name": "neon_128_pair_u8",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 4,
+        "reference_instructions": 4
+      },
+      {
+        "name": "neon_128_pair_u16",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 4,
+        "reference_instructions": 4
+      },
+      {
+        "name": "neon_128_pair_acc_u8",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 5,
+        "reference_instructions": 5
+      },
+      {
+        "name": "neon_128_pair_acc_u16",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 5,
+        "reference_instructions": 5
+      },
+      {
+        "name": "neon_256_pair_u8",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 5,
+        "reference_instructions": 5
+      },
+      {
+        "name": "neon_256_pair_u16",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 5,
+        "reference_instructions": 5
+      },
+      {
+        "name": "neon_256_pair_acc_u8",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 6,
+        "reference_instructions": 6
+      },
+      {
+        "name": "neon_256_pair_acc_u16",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 6,
+        "reference_instructions": 6
+      },
+      {
+        "name": "neon_512_pair_u8",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 9,
+        "reference_instructions": 9
+      },
+      {
+        "name": "neon_512_pair_u16",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 9,
+        "reference_instructions": 9
+      },
+      {
+        "name": "neon_512_pair_acc_u8",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 11,
+        "reference_instructions": 11
+      },
+      {
+        "name": "neon_512_pair_acc_u16",
+        "identical": true,
+        "equal_dataflow": false,
+        "api_instructions": 11,
+        "reference_instructions": 11
+      }
+    ],
+    "wasm32-unknown-unknown": [
+      {
+        "name": "wasm_128_pair_u8",
+        "identical": true,
+        "equal_dataflow": true,
+        "api_instructions": 5,
+        "reference_instructions": 5
+      },
+      {
+        "name": "wasm_128_pair_u16",
+        "identical": true,
+        "equal_dataflow": true,
+        "api_instructions": 5,
+        "reference_instructions": 5
+      },
+      {
+        "name": "wasm_128_pair_acc_u8",
+        "identical": true,
+        "equal_dataflow": true,
+        "api_instructions": 8,
+        "reference_instructions": 8
+      },
+      {
+        "name": "wasm_128_pair_acc_u16",
+        "identical": true,
+        "equal_dataflow": true,
+        "api_instructions": 8,
+        "reference_instructions": 8
+      },
+      {
+        "name": "wasm_256_pair_u8",
+        "identical": true,
+        "equal_dataflow": true,
+        "api_instructions": 10,
+        "reference_instructions": 10
+      },
+      {
+        "name": "wasm_256_pair_u16",
+        "identical": true,
+        "equal_dataflow": true,
+        "api_instructions": 10,
+        "reference_instructions": 10
+      },
+      {
+        "name": "wasm_256_pair_acc_u8",
+        "identical": true,
+        "equal_dataflow": true,
+        "api_instructions": 16,
+        "reference_instructions": 16
+      },
+      {
+        "name": "wasm_256_pair_acc_u16",
+        "identical": true,
+        "equal_dataflow": true,
+        "api_instructions": 16,
+        "reference_instructions": 16
+      },
+      {
+        "name": "wasm_512_pair_u8",
+        "identical": true,
+        "equal_dataflow": true,
+        "api_instructions": 20,
+        "reference_instructions": 20
+      },
+      {
+        "name": "wasm_512_pair_u16",
+        "identical": true,
+        "equal_dataflow": true,
+        "api_instructions": 20,
+        "reference_instructions": 20
+      },
+      {
+        "name": "wasm_512_pair_acc_u8",
+        "identical": false,
+        "equal_dataflow": true,
+        "api_instructions": 32,
+        "reference_instructions": 32
+      },
+      {
+        "name": "wasm_512_pair_acc_u16",
+        "identical": false,
+        "equal_dataflow": true,
+        "api_instructions": 32,
+        "reference_instructions": 32
+      }
+    ]
+  }
+}

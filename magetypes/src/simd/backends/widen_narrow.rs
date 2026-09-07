@@ -628,3 +628,57 @@ pub trait U8x64AbsDiff: super::U8x64Backend {
         b: <Self as super::U8x64Backend>::Repr,
     ) -> u32;
 }
+
+/// Exact unsigned adjacent sums in lanes twice as wide.
+pub trait U8x16Pairwise: super::U8x16Backend + super::U16x8Backend {
+    /// Output lane k = widened a[2k] + widened a[2k+1].
+    fn pairwise_widen_add(
+        self,
+        a: <Self as super::U8x16Backend>::Repr,
+    ) -> <Self as super::U16x8Backend>::Repr;
+}
+
+/// Exact unsigned adjacent sums in lanes twice as wide.
+pub trait U16x8Pairwise: super::U16x8Backend + super::U32x4Backend {
+    /// Output lane k = widened a[2k] + widened a[2k+1].
+    fn pairwise_widen_add(
+        self,
+        a: <Self as super::U16x8Backend>::Repr,
+    ) -> <Self as super::U32x4Backend>::Repr;
+}
+
+/// Exact unsigned adjacent sums in lanes twice as wide.
+pub trait U8x32Pairwise: super::U8x32Backend + super::U16x16Backend {
+    /// Output lane k = widened a[2k] + widened a[2k+1].
+    fn pairwise_widen_add(
+        self,
+        a: <Self as super::U8x32Backend>::Repr,
+    ) -> <Self as super::U16x16Backend>::Repr;
+}
+
+/// Exact unsigned adjacent sums in lanes twice as wide.
+pub trait U16x16Pairwise: super::U16x16Backend + super::U32x8Backend {
+    /// Output lane k = widened a[2k] + widened a[2k+1].
+    fn pairwise_widen_add(
+        self,
+        a: <Self as super::U16x16Backend>::Repr,
+    ) -> <Self as super::U32x8Backend>::Repr;
+}
+#[cfg(feature = "w512")]
+/// Exact unsigned adjacent sums in lanes twice as wide.
+pub trait U8x64Pairwise: super::U8x64Backend + super::U16x32Backend {
+    /// Output lane k = widened a[2k] + widened a[2k+1].
+    fn pairwise_widen_add(
+        self,
+        a: <Self as super::U8x64Backend>::Repr,
+    ) -> <Self as super::U16x32Backend>::Repr;
+}
+#[cfg(feature = "w512")]
+/// Exact unsigned adjacent sums in lanes twice as wide.
+pub trait U16x32Pairwise: super::U16x32Backend + super::U32x16Backend {
+    /// Output lane k = widened a[2k] + widened a[2k+1].
+    fn pairwise_widen_add(
+        self,
+        a: <Self as super::U16x32Backend>::Repr,
+    ) -> <Self as super::U32x16Backend>::Repr;
+}

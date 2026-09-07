@@ -4822,6 +4822,34 @@ impl U8x32AbsDiff for archmage::X64V3Token {
         }
     }
 }
+impl U8x16Pairwise for archmage::X64V3Token {
+    sse2_baseline! {
+    fn pairwise_widen_add(self, a: __m128i) -> __m128i { _mm_add_epi16(_mm_and_si128(a, _mm_set1_epi16(255)), _mm_srli_epi16::<8>(a)) }
+    }
+}
+impl U16x8Pairwise for archmage::X64V3Token {
+    sse2_baseline! {
+    fn pairwise_widen_add(self, a: __m128i) -> __m128i { _mm_add_epi32(_mm_and_si128(a, _mm_set1_epi32(65535)), _mm_srli_epi32::<16>(a)) }
+    }
+}
+impl U8x32Pairwise for archmage::X64V3Token {
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn pairwise_widen_add(self, a: __m256i) -> __m256i {
+        _mm256_add_epi16(
+            _mm256_and_si256(a, _mm256_set1_epi16(255)),
+            _mm256_srli_epi16::<8>(a),
+        )
+    }
+}
+impl U16x16Pairwise for archmage::X64V3Token {
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn pairwise_widen_add(self, a: __m256i) -> __m256i {
+        _mm256_add_epi32(
+            _mm256_and_si256(a, _mm256_set1_epi32(65535)),
+            _mm256_srli_epi32::<16>(a),
+        )
+    }
+}
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
@@ -5001,6 +5029,38 @@ impl U8x64AbsDiff for archmage::X64V3Token {
                 _mm_cvtsi128_si64(_mm_add_epi64(s, _mm_srli_si128::<8>(s))) as u32
             }
         })
+    }
+}
+#[cfg(feature = "w512")]
+impl U8x64Pairwise for archmage::X64V3Token {
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn pairwise_widen_add(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        [
+            _mm256_add_epi16(
+                _mm256_and_si256(a[0], _mm256_set1_epi16(255)),
+                _mm256_srli_epi16::<8>(a[0]),
+            ),
+            _mm256_add_epi16(
+                _mm256_and_si256(a[1], _mm256_set1_epi16(255)),
+                _mm256_srli_epi16::<8>(a[1]),
+            ),
+        ]
+    }
+}
+#[cfg(feature = "w512")]
+impl U16x32Pairwise for archmage::X64V3Token {
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn pairwise_widen_add(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        [
+            _mm256_add_epi32(
+                _mm256_and_si256(a[0], _mm256_set1_epi32(65535)),
+                _mm256_srli_epi32::<16>(a[0]),
+            ),
+            _mm256_add_epi32(
+                _mm256_and_si256(a[1], _mm256_set1_epi32(65535)),
+                _mm256_srli_epi32::<16>(a[1]),
+            ),
+        ]
     }
 }
 #[cfg(feature = "w512")]

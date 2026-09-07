@@ -3964,6 +3964,36 @@ impl U8x32AbsDiff for archmage::Wasm128Token {
         })
     }
 }
+impl U8x16Pairwise for archmage::Wasm128Token {
+    #[inline(always)]
+    fn pairwise_widen_add(self, a: v128) -> v128 {
+        u16x8_extadd_pairwise_u8x16(a)
+    }
+}
+impl U16x8Pairwise for archmage::Wasm128Token {
+    #[inline(always)]
+    fn pairwise_widen_add(self, a: v128) -> v128 {
+        u32x4_extadd_pairwise_u16x8(a)
+    }
+}
+impl U8x32Pairwise for archmage::Wasm128Token {
+    #[inline(always)]
+    fn pairwise_widen_add(self, a: [v128; 2]) -> [v128; 2] {
+        [
+            u16x8_extadd_pairwise_u8x16(a[0]),
+            u16x8_extadd_pairwise_u8x16(a[1]),
+        ]
+    }
+}
+impl U16x16Pairwise for archmage::Wasm128Token {
+    #[inline(always)]
+    fn pairwise_widen_add(self, a: [v128; 2]) -> [v128; 2] {
+        [
+            u32x4_extadd_pairwise_u16x8(a[0]),
+            u32x4_extadd_pairwise_u16x8(a[1]),
+        ]
+    }
+}
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "wasm32")]
@@ -4212,6 +4242,30 @@ impl U8x64AbsDiff for archmage::Wasm128Token {
                 + u32x4_extract_lane::<2>(s)
                 + u32x4_extract_lane::<3>(s)
         })
+    }
+}
+#[cfg(feature = "w512")]
+impl U8x64Pairwise for archmage::Wasm128Token {
+    #[inline(always)]
+    fn pairwise_widen_add(self, a: [v128; 4]) -> [v128; 4] {
+        [
+            u16x8_extadd_pairwise_u8x16(a[0]),
+            u16x8_extadd_pairwise_u8x16(a[1]),
+            u16x8_extadd_pairwise_u8x16(a[2]),
+            u16x8_extadd_pairwise_u8x16(a[3]),
+        ]
+    }
+}
+#[cfg(feature = "w512")]
+impl U16x32Pairwise for archmage::Wasm128Token {
+    #[inline(always)]
+    fn pairwise_widen_add(self, a: [v128; 4]) -> [v128; 4] {
+        [
+            u32x4_extadd_pairwise_u16x8(a[0]),
+            u32x4_extadd_pairwise_u16x8(a[1]),
+            u32x4_extadd_pairwise_u16x8(a[2]),
+            u32x4_extadd_pairwise_u16x8(a[3]),
+        ]
     }
 }
 #[cfg(feature = "w512")]

@@ -16,6 +16,7 @@ pub(super) fn trait_names() -> Vec<(usize, String)> {
                 (w, format!("U8x{}AbsDiff", w / 8)),
             ]
         })
+        .chain(super::backend_gen_pairwise::trait_names())
         .collect()
 }
 
@@ -63,7 +64,7 @@ pub(super) fn traits() -> String {
             "#};
         }
     }
-    out
+    out + &super::backend_gen_pairwise::traits()
 }
 
 pub(super) fn generic(name: &str) -> String {
@@ -71,7 +72,7 @@ pub(super) fn generic(name: &str) -> String {
         return String::new();
     };
     if !matches!(elem, "i16" | "u8") {
-        return String::new();
+        return super::backend_gen_pairwise::generic(name);
     }
     let n: usize = lanes.parse().unwrap();
     let bound = upper(name);
@@ -132,10 +133,10 @@ pub(super) fn generic(name: &str) -> String {
             }}
         "#};
     }
-    out
+    out + &super::backend_gen_pairwise::generic(name)
 }
 
-fn repr(arch: &str, elem: &str, width: usize) -> String {
+pub(super) fn repr(arch: &str, elem: &str, width: usize) -> String {
     let native = match arch {
         "x86" => 256.min(width),
         "v4" => width,
@@ -143,7 +144,7 @@ fn repr(arch: &str, elem: &str, width: usize) -> String {
     };
     let bits = if elem == "u8" {
         8
-    } else if elem == "i32" {
+    } else if matches!(elem, "i32" | "u32") {
         32
     } else {
         16
@@ -300,7 +301,7 @@ pub(super) fn impls(arch: &str, token: &str, w512: bool) -> String {
             out += "}\n";
         }
     }
-    out
+    out + &super::backend_gen_pairwise::impls(arch, token, w512)
 }
 
 fn native_expr(arch: &str, width: usize, op: &str, a: &str, b: &str) -> String {
