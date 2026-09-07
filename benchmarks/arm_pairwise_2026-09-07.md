@@ -4,7 +4,7 @@ Tested on Apple M4 Pro with rustc 1.98.0 / LLVM 22.1.8, without
 `target-cpu=native`. Archmage implementation: `bdab9808`, based on
 [PR #96](https://github.com/imazen/archmage/pull/96) at `9981d4f9`.
 The matching local [zenav1-svt](https://github.com/imazen/zenav1-svt) change is
-`03e089b5`, based on `74d92430`. Neither change is published.
+`03e089b5`, based on `74d92430`. These are development revisions, not crate releases.
 
 The experiment supports one new operation name, `pairwise_widen_add`, for
 unsigned byte and halfword vectors. Each output lane sums two adjacent input
