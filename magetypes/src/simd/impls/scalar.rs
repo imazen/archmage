@@ -5345,6 +5345,11 @@ impl U8x16Backend for archmage::ScalarToken {
             .map(|(a, b)| u32::from(a.abs_diff(b)))
             .sum()
     }
+
+    #[inline(always)]
+    fn pairwise_widen_add(self, a: [u8; 16]) -> [u16; 8] {
+        core::array::from_fn(|k| u16::from(a[2 * k]).wrapping_add(u16::from(a[2 * k + 1])))
+    }
 }
 
 impl U8x32Backend for archmage::ScalarToken {
@@ -6281,6 +6286,11 @@ impl U8x32Backend for archmage::ScalarToken {
             .zip(b)
             .map(|(a, b)| u32::from(a.abs_diff(b)))
             .sum()
+    }
+
+    #[inline(always)]
+    fn pairwise_widen_add(self, a: [u8; 32]) -> [u16; 16] {
+        core::array::from_fn(|k| u16::from(a[2 * k]).wrapping_add(u16::from(a[2 * k + 1])))
     }
 }
 
@@ -7842,6 +7852,10 @@ impl U16x8Backend for archmage::ScalarToken {
         let f: [u32; 8] = core::array::from_fn(|i| a[i] as u32);
         core::array::from_fn(|i| f[i + 4])
     }
+    #[inline(always)]
+    fn pairwise_widen_add(self, a: [u16; 8]) -> [u32; 4] {
+        core::array::from_fn(|k| u32::from(a[2 * k]).wrapping_add(u32::from(a[2 * k + 1])))
+    }
 }
 
 impl U16x16Backend for archmage::ScalarToken {
@@ -8433,6 +8447,10 @@ impl U16x16Backend for archmage::ScalarToken {
         // promotion of a half-array read (#77); the low half is DCE'd.
         let f: [u32; 16] = core::array::from_fn(|i| a[i] as u32);
         core::array::from_fn(|i| f[i + 8])
+    }
+    #[inline(always)]
+    fn pairwise_widen_add(self, a: [u16; 16]) -> [u32; 8] {
+        core::array::from_fn(|k| u32::from(a[2 * k]).wrapping_add(u32::from(a[2 * k + 1])))
     }
 }
 
@@ -10155,6 +10173,11 @@ impl U8x64Backend for archmage::ScalarToken {
             .map(|(a, b)| u32::from(a.abs_diff(b)))
             .sum()
     }
+
+    #[inline(always)]
+    fn pairwise_widen_add(self, a: [u8; 64]) -> [u16; 32] {
+        core::array::from_fn(|k| u16::from(a[2 * k]).wrapping_add(u16::from(a[2 * k + 1])))
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -10668,6 +10691,10 @@ impl U16x32Backend for archmage::ScalarToken {
         // promotion of a half-array read (#77); the low half is DCE'd.
         let f: [u32; 32] = core::array::from_fn(|i| a[i] as u32);
         core::array::from_fn(|i| f[i + 16])
+    }
+    #[inline(always)]
+    fn pairwise_widen_add(self, a: [u16; 32]) -> [u32; 16] {
+        core::array::from_fn(|k| u32::from(a[2 * k]).wrapping_add(u32::from(a[2 * k + 1])))
     }
 }
 

@@ -1199,6 +1199,21 @@ def integer_reference(arch, width, op, parts):
                     else "i32x4_sub"
                 )
                 value = f"{sub}(c[{i}],{value})"
+        elif op.startswith("pair"):
+            bits = 8 if op.endswith("u8") else 16
+            wide = bits * 2
+            if arch == "neon":
+                value = (f"vpadalq_u{bits}(c[{i}],{a})" if op.startswith("pair_acc")
+                         else f"vpaddlq_u{bits}({a})")
+            else:
+                if arch == "x86":
+                    value = f"{p}_add_epi{wide}({p}_and_si{width}({a},{p}_set1_epi{wide}({(1 << bits)-1})),{p}_srli_epi{wide}::<{bits}>({a}))"
+                    add = f"{p}_add_epi{wide}"
+                else:
+                    value = f"u{wide}x{128//wide}_extadd_pairwise_u{bits}x{128//bits}({a})"
+                    add = f"u{wide}x{128//wide}_add"
+                if op.startswith("pair_acc"):
+                    value = f"{add}({value},c[{i}])"
         elif op.startswith("abs"):
             value = diff(a, b, op == "abs_i16")
         else:
@@ -1206,9 +1221,58 @@ def integer_reference(arch, width, op, parts):
         values.append(value)
     return (
         "[" + ", ".join(values) + "]"
-        if op in ("madd", "msub", "abs_i16", "abs_u8")
+        if op in ("madd", "msub", "abs_i16", "abs_u8") or op.startswith("pair")
         else " + ".join(f"({x})" for x in values)
     )
+
+
+def wasm_pairwise_dataflow(body):
+    """Exact vector expressions and destinations, allowing commuted integer add.
+
+    Recognizes only the straight-line pairwise probes; unknown instructions,
+    leftover stack values, changed widths/offsets/alignment or signedness fail.
+    Instruction counts are checked separately at the call site.
+    """
+    stack, stores = [], []
+    try:
+        for line in body:
+            op, _, arg = line.partition("\t")
+            if op == "local.get":
+                stack.append(("arg", arg))
+            elif op == "v128.load":
+                stack.append((op, arg, stack.pop()))
+            elif op in ("i16x8.extadd_pairwise_i8x16_u", "i32x4.extadd_pairwise_i16x8_u"):
+                stack.append((op, stack.pop()))
+            elif op in ("i16x8.add", "i32x4.add"):
+                a, b = stack.pop(), stack.pop()
+                stack.append((op, *sorted((a, b))))
+            elif op == "v128.store":
+                value, address = stack.pop(), stack.pop()
+                stores.append((op, arg, address, value))
+            else:
+                return None
+        return stores if stores and not stack else None
+    except (IndexError, TypeError):
+        return None
+
+
+def test_wasm_pairwise_dataflow():
+    prefix = ["local.get\t0"]
+    a = ["local.get\t1", "v128.load\t0:p2align=0", "i16x8.extadd_pairwise_i8x16_u"]
+    b = ["local.get\t2", "v128.load\t0:p2align=1"]
+    suffix = ["i16x8.add", "v128.store\t0:p2align=1"]
+    original = prefix + a + b + suffix
+    expected = wasm_pairwise_dataflow(original)
+    assert expected is not None
+    assert expected == wasm_pairwise_dataflow(prefix + b + a + suffix)
+    for old, new in [("local.get\t1", "local.get\t3"),
+                     ("v128.load\t0:p2align=0", "v128.load\t16:p2align=0"),
+                     ("i16x8.extadd_pairwise_i8x16_u", "i16x8.extadd_pairwise_i8x16_s"),
+                     ("i16x8.add", "i32x4.add"),
+                     ("v128.store\t0:p2align=1", "v128.store\t16:p2align=1")]:
+        assert expected != wasm_pairwise_dataflow([new if x == old else x for x in original])
+    assert wasm_pairwise_dataflow(original[:-1]) is None
+    assert wasm_pairwise_dataflow(original + ["local.get\t0"]) is None
 
 
 def integer_probes():
@@ -1284,9 +1348,10 @@ def integer_probes():
                     "sum_u8",
                     "sad_composed",
                     "sum_abs_diff",
+                    "pair_u8", "pair_u16", "pair_acc_u8", "pair_acc_u16",
                 ):
-                    elem = "i16" if op in ("madd", "msub", "abs_i16") else "u8"
-                    n = width // (16 if elem == "i16" else 8)
+                    elem = "i16" if op in ("madd", "msub", "abs_i16") else "u16" if op.startswith("pair") and op.endswith("u16") else "u8"
+                    n = width // (16 if elem in ("i16", "u16") else 8)
                     dst = (
                         "i32"
                         if op in ("madd", "msub")
@@ -1294,23 +1359,27 @@ def integer_probes():
                         if op == "abs_i16"
                         else "u8"
                     )
+                    if op.startswith("pair"):
+                        dst = "u16" if elem == "u8" else "u32"
                     length = width // (
-                        32 if dst == "i32" else 16 if dst == "u16" else 8
+                        32 if dst in ("i32", "u32") else 16 if dst == "u16" else 8
                     )
                     name = f"{tier}_{width}_{op}"
                     names.append(name)
                     args = f"token: {token}, a: [{elem};{n}]"
-                    if op != "sum_u8":
+                    if op != "sum_u8" and not op.startswith("pair"):
                         args += f", b: [{elem};{n}]"
                     if op == "msub":
                         args += f", accumulator: [i32;{width // 32}]"
+                    if op.startswith("pair_acc"):
+                        args += f", accumulator: [{dst};{length}]"
                     result_type = (
                         f"[{dst};{length}]"
-                        if op in ("madd", "msub", "abs_i16", "abs_u8")
+                        if op in ("madd", "msub", "abs_i16", "abs_u8") or op.startswith("pair")
                         else "u32"
                     )
                     api = f"let a = {elem}x{n}::<{token}>::from_array(token,a);"
-                    if op != "sum_u8":
+                    if op != "sum_u8" and not op.startswith("pair"):
                         api += f"let b = {elem}x{n}::<{token}>::from_array(token,b);"
                     api += {
                         "madd": "a.madd_adjacent(b).to_array()",
@@ -1320,6 +1389,10 @@ def integer_probes():
                         "sum_u8": "a.reduce_add_u32()",
                         "sad_composed": "a.abs_diff(b).reduce_add_u32()",
                         "sum_abs_diff": "a.sum_abs_diff(b)",
+                        "pair_u8": "a.pairwise_widen_add().to_array()",
+                        "pair_u16": "a.pairwise_widen_add().to_array()",
+                        "pair_acc_u8": f"({dst}x{length}::<{token}>::from_array(token,accumulator) + a.pairwise_widen_add()).to_array()",
+                        "pair_acc_u16": f"({dst}x{length}::<{token}>::from_array(token,accumulator) + a.pairwise_widen_add()).to_array()",
                     }[op]
 
                     def raw_type(e):
@@ -1331,15 +1404,33 @@ def integer_probes():
                             "i16": "int16x8_t",
                             "u16": "uint16x8_t",
                             "i32": "int32x4_t",
+                            "u32": "uint32x4_t",
                             "u8": "uint8x16_t",
                         }[e]
 
                     hand = f"let a: [{raw_type(elem)};{parts}] = unsafe {{core::mem::transmute(a)}};"
-                    if op != "sum_u8":
+                    if op != "sum_u8" and not op.startswith("pair"):
                         hand += f"let b: [{raw_type(elem)};{parts}] = unsafe {{core::mem::transmute(b)}};"
                     if op == "msub":
                         hand += f"let c: [{raw_type('i32')};{parts}] = unsafe {{core::mem::transmute(accumulator)}};"
-                    expr = integer_reference(arch, native, op, parts)
+                    if op.startswith("pair_acc"):
+                        hand += f"let c: [{raw_type(dst)};{parts}] = unsafe {{core::mem::transmute(accumulator)}};"
+                    if op.startswith("pair") and arch == "x86":
+                        # Match the primitive's feature boundary, including
+                        # SSE2 at 128 bits. Accumulation remains a separate op.
+                        raw_src, raw_dst = raw_type(elem), raw_type(dst)
+                        primitive = "pair_u8" if elem == "u8" else "pair_u16"
+                        pair_expr = integer_reference(arch, native, primitive, parts)
+                        pair_features = "sse2" if native == 128 else features[token]
+                        hand += f'#[inline] #[target_feature(enable="{pair_features}")] fn pairs(a: [{raw_src};{parts}]) -> [{raw_dst};{parts}] {{ {pair_expr} }} let pairs = pairs(a);'
+                        if op.startswith("pair_acc"):
+                            wide = 16 if elem == "u8" else 32
+                            prefix = "_mm" if native == 128 else f"_mm{native}"
+                            expr = "[" + ",".join(f"{prefix}_add_epi{wide}(pairs[{i}],c[{i}])" for i in range(parts)) + "]"
+                        else:
+                            expr = "pairs"
+                    else:
+                        expr = integer_reference(arch, native, op, parts)
                     hand += (
                         f"let r: [{raw_type(dst)};{parts}] = {expr}; unsafe {{core::mem::transmute(r)}}"
                         if result_type != "u32"
@@ -1440,11 +1531,18 @@ def integer_probes():
                 expand("hand_" + name, functions),
             )
             equal = api == hand
+            pair_equivalent = (
+                arch == "wasm" and "_pair" in name
+                and wasm_pairwise_dataflow(api) is not None
+                and wasm_pairwise_dataflow(api) == wasm_pairwise_dataflow(hand)
+                and collections.Counter(map(opcode, api)) == collections.Counter(map(opcode, hand))
+            )
             if target.startswith("aarch64") and name in (
                 "neon_512_byte_dot_low",
                 "neon_512_byte_dot_high",
             ):
                 equal = neon_widen_mul_operands(api) == neon_widen_mul_operands(hand)
+            equal = equal or pair_equivalent
             exploratory = name.endswith("sad_composed") or (
                 target.startswith("wasm")
                 and name
@@ -1469,6 +1567,7 @@ def integer_probes():
                 {
                     "name": name,
                     "identical": api == hand,
+                    "pair_dataflow_equal": pair_equivalent,
                     "matches_reference": equal,
                     "api": api,
                     "hand": hand,
@@ -1491,6 +1590,7 @@ def main():
     if not __debug__:
         raise RuntimeError("Run without Python -O: assertions must be enabled")
     self_test()
+    test_wasm_pairwise_dataflow()
     if sys.argv[1:] == ["--integer-ops"]:
         integer_probes()
         return

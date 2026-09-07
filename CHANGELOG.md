@@ -9,6 +9,8 @@
 
 ## [Unreleased]
 
+- Add `pairwise_widen_add()` for unsigned byte and halfword vectors at 128/256/512 bits. Each output is the exact widened sum of adjacent inputs. Methods live on the existing source backend traits; no new capability traits are introduced. NEON accumulation can fuse to `UADALP`.
+
 - Consolidate 27 unpublished integer capability traits into the existing source backend traits. Cross-type operations require only their destination backend; byte sums no longer require an `AbsDiff` trait. Existing published conversion traits remain supported.
 
 - Prune unpublished `msub_adjacent` (use `accumulator - a.madd_adjacent(b)`) and W512 i16/u16 reference bitcasts; retain the W512 value casts. Byte reductions document the cost of reducing inside accumulation loops.

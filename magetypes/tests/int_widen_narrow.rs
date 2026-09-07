@@ -471,6 +471,53 @@ macro_rules! check_integer_ops {
     }};
 }
 
+// Lane-distinct values cover pair grouping across native/polyfill boundaries.
+// Compute the oracle in u64 so premature u8/u16 wrapping is observable.
+macro_rules! check_pairwise_widen {
+    ($Tok:ty, $t:expr, $Vec:ident, $elem:ty, $n:expr) => {{
+        let mut count = 0;
+        for seed in 0..1024usize {
+            let input: [$elem; $n] = core::array::from_fn(|i| {
+                if seed == 0 {
+                    <$elem>::MAX
+                } else if seed == 1 {
+                    if i % 2 == 0 { 0 } else { <$elem>::MAX }
+                } else {
+                    (seed.wrapping_mul(19873).wrapping_add(i * 971)) as $elem
+                }
+            });
+            let got = $Vec::<$Tok>::from_array($t, input)
+                .pairwise_widen_add()
+                .to_array();
+            for k in 0..$n / 2 {
+                assert_eq!(
+                    got[k] as u64,
+                    input[2 * k] as u64 + input[2 * k + 1] as u64,
+                    "pairwise widening lane {k}, seed {seed}"
+                );
+                count += 1;
+            }
+        }
+        if <$elem>::BITS == 8 {
+            // Every possible byte pair at every output lane, with independent
+            // rotations so native/polyfill segment ordering stays observable.
+            for pair in 0..=u16::MAX {
+                let input: [$elem; $n] = core::array::from_fn(|i| {
+                    (pair.rotate_left((i / 2 % 16) as u32) >> (8 * (i % 2))) as $elem
+                });
+                let got = $Vec::<$Tok>::from_array($t, input)
+                    .pairwise_widen_add()
+                    .to_array();
+                for k in 0..$n / 2 {
+                    assert_eq!(got[k] as u64, input[2 * k] as u64 + input[2 * k + 1] as u64);
+                    count += 1;
+                }
+            }
+        }
+        count
+    }};
+}
+
 macro_rules! run_all {
     ($Tok:ty, $t:expr) => {{
         let t = $t;
@@ -541,6 +588,10 @@ macro_rules! run_all {
         n += exhaustive_widen_16!($Tok, t, u16x8, u16, u32);
         n += exhaustive_widen_16!($Tok, t, i16x8, i16, i32);
         n += exhaustive_narrow_i16!($Tok, t);
+        n += check_pairwise_widen!($Tok, t, u8x16, u8, 16);
+        n += check_pairwise_widen!($Tok, t, u8x32, u8, 32);
+        n += check_pairwise_widen!($Tok, t, u16x8, u16, 8);
+        n += check_pairwise_widen!($Tok, t, u16x16, u16, 16);
         n += check_integer_ops!($Tok, t, i16x8, i32x4, u8x16, 8, 16);
         n += check_integer_ops!($Tok, t, i16x16, i32x8, u8x32, 16, 32);
         n
@@ -636,6 +687,8 @@ macro_rules! run_all_512 {
             16,
             32
         );
+        n += check_pairwise_widen!($Tok, t, u8x64, u8, 64);
+        n += check_pairwise_widen!($Tok, t, u16x32, u16, 32);
         n += check_integer_ops!($Tok, t, i16x32, i32x16, u8x64, 32, 64);
         n
     }};
@@ -822,7 +875,9 @@ fn w512_byte_dot_in_one_magetypes_body() {
 // shapes. Compilation proves that unrelated capabilities are not required.
 #[test]
 fn source_backend_bounds_are_sufficient() {
-    use magetypes::simd::backends::{I16x8Backend, I32x4Backend, U8x16Backend};
+    use magetypes::simd::backends::{
+        I16x8Backend, I32x4Backend, U8x16Backend, U16x8Backend, U32x4Backend,
+    };
     fn byte_sum<T: U8x16Backend>(t: T) -> u32 {
         u8x16::splat(t, 255)
             .abs_diff(u8x16::zero(t))
@@ -839,6 +894,14 @@ fn source_backend_bounds_are_sufficient() {
             .narrow_saturating_u8(i16x8::splat(t, 300))
             .to_array()
     }
+    fn pair_bytes<T: U8x16Backend + U16x8Backend>(t: T) -> [u16; 8] {
+        u8x16::splat(t, 255).pairwise_widen_add().to_array()
+    }
+    fn pair_halfwords<T: U16x8Backend + U32x4Backend>(t: T) -> [u32; 4] {
+        u16x8::splat(t, u16::MAX).pairwise_widen_add().to_array()
+    }
+    assert_eq!(pair_bytes(ScalarToken), [510; 8]);
+    assert_eq!(pair_halfwords(ScalarToken), [131070; 4]);
     assert_eq!(byte_sum(ScalarToken), 4080);
     assert_eq!(dot(ScalarToken), [12; 4]);
     assert_eq!(

@@ -885,6 +885,14 @@ impl U8x64Backend for archmage::X64V4Token {
             _mm512_reduce_add_epi64(s) as u32
         }
     }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn pairwise_widen_add(self, a: __m512i) -> __m512i {
+        _mm512_add_epi16(
+            _mm512_and_si512(a, _mm512_set1_epi16(255)),
+            _mm512_srli_epi16::<8>(a),
+        )
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -1335,6 +1343,14 @@ impl U16x32Backend for archmage::X64V4Token {
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn widen_high_u16_to_u32(self, a: __m512i) -> __m512i {
         _mm512_cvtepu16_epi32(_mm512_extracti64x4_epi64::<1>(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn pairwise_widen_add(self, a: __m512i) -> __m512i {
+        _mm512_add_epi32(
+            _mm512_and_si512(a, _mm512_set1_epi32(65535)),
+            _mm512_srli_epi32::<16>(a),
+        )
     }
 }
 
@@ -2941,6 +2957,14 @@ impl U8x64Backend for archmage::X64V4xToken {
             _mm512_reduce_add_epi64(s) as u32
         }
     }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn pairwise_widen_add(self, a: __m512i) -> __m512i {
+        _mm512_add_epi16(
+            _mm512_and_si512(a, _mm512_set1_epi16(255)),
+            _mm512_srli_epi16::<8>(a),
+        )
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -3391,6 +3415,14 @@ impl U16x32Backend for archmage::X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn widen_high_u16_to_u32(self, a: __m512i) -> __m512i {
         _mm512_cvtepu16_epi32(_mm512_extracti64x4_epi64::<1>(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn pairwise_widen_add(self, a: __m512i) -> __m512i {
+        _mm512_add_epi32(
+            _mm512_and_si512(a, _mm512_set1_epi32(65535)),
+            _mm512_srli_epi32::<16>(a),
+        )
     }
 }
 

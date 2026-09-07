@@ -2319,6 +2319,11 @@ impl U8x16Backend for archmage::Wasm128Token {
                 + u32x4_extract_lane::<3>(s)
         }
     }
+
+    #[inline(always)]
+    fn pairwise_widen_add(self, a: v128) -> v128 {
+        u16x8_extadd_pairwise_u8x16(a)
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -2531,6 +2536,14 @@ impl U8x32Backend for archmage::Wasm128Token {
                 + u32x4_extract_lane::<2>(s)
                 + u32x4_extract_lane::<3>(s)
         })
+    }
+
+    #[inline(always)]
+    fn pairwise_widen_add(self, a: [v128; 2]) -> [v128; 2] {
+        [
+            u16x8_extadd_pairwise_u8x16(a[0]),
+            u16x8_extadd_pairwise_u8x16(a[1]),
+        ]
     }
 }
 
@@ -3129,6 +3142,11 @@ impl U16x8Backend for archmage::Wasm128Token {
     fn widen_high_u16_to_u32(self, a: v128) -> v128 {
         u32x4_extend_high_u16x8(a)
     }
+
+    #[inline(always)]
+    fn pairwise_widen_add(self, a: v128) -> v128 {
+        u32x4_extadd_pairwise_u16x8(a)
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -3315,6 +3333,14 @@ impl U16x16Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn widen_high_u16_to_u32(self, a: [v128; 2]) -> [v128; 2] {
         [u32x4_extend_low_u16x8(a[1]), u32x4_extend_high_u16x8(a[1])]
+    }
+
+    #[inline(always)]
+    fn pairwise_widen_add(self, a: [v128; 2]) -> [v128; 2] {
+        [
+            u32x4_extadd_pairwise_u16x8(a[0]),
+            u32x4_extadd_pairwise_u16x8(a[1]),
+        ]
     }
 }
 
@@ -4997,6 +5023,16 @@ impl U8x64Backend for archmage::Wasm128Token {
                 + u32x4_extract_lane::<3>(s)
         })
     }
+
+    #[inline(always)]
+    fn pairwise_widen_add(self, a: [v128; 4]) -> [v128; 4] {
+        [
+            u16x8_extadd_pairwise_u8x16(a[0]),
+            u16x8_extadd_pairwise_u8x16(a[1]),
+            u16x8_extadd_pairwise_u8x16(a[2]),
+            u16x8_extadd_pairwise_u8x16(a[3]),
+        ]
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -5613,6 +5649,16 @@ impl U16x32Backend for archmage::Wasm128Token {
             u32x4_extend_high_u16x8(a[2]),
             u32x4_extend_low_u16x8(a[3]),
             u32x4_extend_high_u16x8(a[3]),
+        ]
+    }
+
+    #[inline(always)]
+    fn pairwise_widen_add(self, a: [v128; 4]) -> [v128; 4] {
+        [
+            u32x4_extadd_pairwise_u16x8(a[0]),
+            u32x4_extadd_pairwise_u16x8(a[1]),
+            u32x4_extadd_pairwise_u16x8(a[2]),
+            u32x4_extadd_pairwise_u16x8(a[3]),
         ]
     }
 }

@@ -2855,6 +2855,11 @@ impl U8x16Backend for archmage::NeonToken {
     fn sum_abs_diff(self, a: uint8x16_t, b: uint8x16_t) -> u32 {
         vaddlvq_u8(vabdq_u8(a, b)) as u32
     }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn pairwise_widen_add(self, a: uint8x16_t) -> uint16x8_t {
+        vpaddlq_u8(a)
+    }
 }
 
 #[cfg(target_arch = "aarch64")]
@@ -3046,6 +3051,11 @@ impl U8x32Backend for archmage::NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn sum_abs_diff(self, a: [uint8x16_t; 2], b: [uint8x16_t; 2]) -> u32 {
         (vaddlvq_u8(vabdq_u8(a[0], b[0])) as u32) + (vaddlvq_u8(vabdq_u8(a[1], b[1])) as u32)
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn pairwise_widen_add(self, a: [uint8x16_t; 2]) -> [uint16x8_t; 2] {
+        [vpaddlq_u8(a[0]), vpaddlq_u8(a[1])]
     }
 }
 
@@ -3711,6 +3721,11 @@ impl U16x8Backend for archmage::NeonToken {
     fn widen_high_u16_to_u32(self, a: uint16x8_t) -> uint32x4_t {
         vmovl_high_u16(a)
     }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn pairwise_widen_add(self, a: uint16x8_t) -> uint32x4_t {
+        vpaddlq_u16(a)
+    }
 }
 
 #[cfg(target_arch = "aarch64")]
@@ -3907,6 +3922,11 @@ impl U16x16Backend for archmage::NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_high_u16_to_u32(self, a: [uint16x8_t; 2]) -> [uint32x4_t; 2] {
         [vmovl_u16(vget_low_u16(a[1])), vmovl_high_u16(a[1])]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn pairwise_widen_add(self, a: [uint16x8_t; 2]) -> [uint32x4_t; 2] {
+        [vpaddlq_u16(a[0]), vpaddlq_u16(a[1])]
     }
 }
 
@@ -5533,6 +5553,16 @@ impl U8x64Backend for archmage::NeonToken {
             + (vaddlvq_u8(vabdq_u8(a[2], b[2])) as u32)
             + (vaddlvq_u8(vabdq_u8(a[3], b[3])) as u32)
     }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn pairwise_widen_add(self, a: [uint8x16_t; 4]) -> [uint16x8_t; 4] {
+        [
+            vpaddlq_u8(a[0]),
+            vpaddlq_u8(a[1]),
+            vpaddlq_u8(a[2]),
+            vpaddlq_u8(a[3]),
+        ]
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -6143,6 +6173,16 @@ impl U16x32Backend for archmage::NeonToken {
             vmovl_high_u16(a[2]),
             vmovl_u16(vget_low_u16(a[3])),
             vmovl_high_u16(a[3]),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn pairwise_widen_add(self, a: [uint16x8_t; 4]) -> [uint32x4_t; 4] {
+        [
+            vpaddlq_u16(a[0]),
+            vpaddlq_u16(a[1]),
+            vpaddlq_u16(a[2]),
+            vpaddlq_u16(a[3]),
         ]
     }
 }

@@ -30,6 +30,7 @@ result, without a guarantee about its payload or sign.
 | Narrow two vectors `a`, `b` | All clamped lanes of `a`, followed by all clamped lanes of `b` | AVX2 packs interleave 128-bit groups; a permutation restores order. Native AVX-512 uses conversions and insertion, plus a zero clamp for unsigned destinations. |
 | Signed i16 `MIN.abs_diff(MAX)` | `65535u16` | NEON has native absolute difference. x86/WASM use signed max/min and wrapping subtraction; the unsigned result preserves the full range. |
 | Adjacent i16 dot product with both pairs equal to `(MIN, MIN)` | `i32::MIN` | `madd_adjacent` wraps modulo 2³². NEON widens products and pair-adds; x86/WASM dot instructions already wrap this exceptional sum. |
+| `pairwise_widen_add` on unsigned pairs `(255u8, 255)` / `(65535u16, 65535)` | `510u16` / `131070u32` per pair | Both inputs widen before addition. NEON/WASM have unsigned pairwise widening instructions; x86 masks and shifts each wider lane before adding. |
 | Sum 64 bytes all equal to 255 | `16320u32` | `reduce_add_u32` widens rather than using wrapping byte addition. `sum_abs_diff` has the same maximum for 64 lanes. |
 | `round()` on `[2.5, 3.5, -2.5, -3.5]` | `[2, 4, -2, -4]` | Ties-to-even, including the scalar fallback. This differs from Rust's ties-away-from-zero `f32::round()`. |
 
@@ -120,6 +121,7 @@ reciprocal approximation's exceptional-value behavior.
 | Fixed lane count | A 512-bit vector is one native AVX-512 register, two AVX2 registers, or four NEON/WASM vectors. | Treat width as a logical shape; measure the whole kernel. |
 | Token feature superset | V4 does not implement every smaller vector backend just because the CPU supports their instructions. | Use the supported common shape, or explicitly downcast to V3 for a smaller-width kernel. |
 | Widening/narrowing | Extraction, concatenation, lane-order repair, and load folding vary by ISA and shape. | Do not assume one instruction per public method. |
+| `pairwise_widen_add` followed by vector addition | NEON can fuse the pairwise sum and accumulation into `UADALP`; other ISAs use their own lowering. | Each pair sum is exact, but later accumulation wraps at the destination width. Bound the accumulated range or periodically widen/drain the accumulator. |
 | `sum_abs_diff` | x86 SAD produces partial sums natively; the public method returns a completed scalar reduction. | For long loops, vector accumulation followed by one reduction can beat reducing every chunk. |
 | Checked slices and indexing | Unknown dynamic indices retain bounds checks; slice views may require length/alignment checks. | Use fixed arrays or loops whose bounds are visible to the compiler. Bounds checks are not unconditionally elided. |
 | Unsigned-source narrowing, wider saturation, per-lane shifts | Some ISAs need emulation. Their absence from this API is a scope/cost decision, not mathematical impossibility. | Add an operation only with a concrete consumer and measured lowering. |

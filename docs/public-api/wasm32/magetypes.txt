@@ -6,15 +6,15 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2388 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 34 lines (41 hidden + 0 excluded-feature)
+# files: magetypes.txt 2400 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 34 lines (41 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                12
 #   pub types (struct/enum/trait/alias)       287
 #   pub consts/statics                        228
-#   free functions                           2984
-#   inherent methods                         1233
+#   free functions                           2996
+#   inherent methods                         1239
 #   enum variants                               1
 #   re-exports                                  2
 #   trait roster entries (type × trait)       740
@@ -25,10 +25,10 @@
 # per-module pub lines:
 #   (root)                          321
 #   cast                              3
-#   prelude                        2902
-#   simd                           1521
+#   prelude                        2914
+#   simd                           1527
 
-## items (2164 lines)
+## items (2176 lines)
 
 pub mod magetypes
 pub use archmage
@@ -521,6 +521,7 @@ pub fn prelude::u16x16<T>::partition_slice(T, &[u16]) -> (&[[u16; 16]], &[u16]) 
 pub fn prelude::u16x16<T>::partition_slice_mut(T, &mut [u16]) -> (&mut [[u16; 16]], &mut [u16]) [also: prelude::u16x16<T>]
 pub fn prelude::u16x16<T>::store(self, &mut [u16; 16]) [also: prelude::u16x16<T>]
 pub fn prelude::u16x16<T>::to_array(self) -> [u16; 16] [also: prelude::u16x16<T>]
+pub fn prelude::u16x16<T>::pairwise_widen_add(self) -> prelude::u32x8<T> where T: simd::backends::U32x8Backend [also: prelude::u16x16<T>]
 pub fn [u16; 16]::from(prelude::u16x16<T>) -> [u16; 16] [also: (root)]
 #[repr(C)] pub struct prelude::u16x32<T: simd::backends::U16x32Backend>(_, _) [also: simd::generic]
 pub const fn prelude::u16x32<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
@@ -536,6 +537,7 @@ pub fn prelude::u16x32<T>::partition_slice(T, &[u16]) -> (&[[u16; 32]], &[u16]) 
 pub fn prelude::u16x32<T>::partition_slice_mut(T, &mut [u16]) -> (&mut [[u16; 32]], &mut [u16]) [also: prelude::u16x32<T>]
 pub fn prelude::u16x32<T>::store(self, &mut [u16; 32]) [also: prelude::u16x32<T>]
 pub fn prelude::u16x32<T>::to_array(self) -> [u16; 32] [also: prelude::u16x32<T>]
+pub fn prelude::u16x32<T>::pairwise_widen_add(self) -> prelude::u32x16<T> where T: simd::backends::U32x16Backend [also: prelude::u16x32<T>]
 pub fn [u16; 32]::from(prelude::u16x32<T>) -> [u16; 32] [also: (root)]
 #[repr(C)] pub struct prelude::u16x8<T: simd::backends::U16x8Backend>(_, _) [also: simd::generic]
 pub const fn prelude::u16x8<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
@@ -556,6 +558,7 @@ pub fn prelude::u16x8<T>::reduce_add(self) -> u16 [also: prelude::u16x16<T>, pre
 pub fn prelude::u16x8<T>::splat(T, u16) -> Self [also: prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>]
 pub fn prelude::u16x8<T>::store(self, &mut [u16; 8]) [also: prelude::u16x8<T>]
 pub fn prelude::u16x8<T>::to_array(self) -> [u16; 8] [also: prelude::u16x8<T>]
+pub fn prelude::u16x8<T>::pairwise_widen_add(self) -> prelude::u32x4<T> where T: simd::backends::U32x4Backend [also: prelude::u16x8<T>]
 pub fn [u16; 8]::from(prelude::u16x8<T>) -> [u16; 8] [also: (root)]
 #[repr(C)] pub struct prelude::u32x16<T: simd::backends::U32x16Backend>(_, _) [also: simd::generic]
 pub const fn prelude::u32x16<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
@@ -666,6 +669,7 @@ pub fn prelude::u8x16<T>::splat(T, u8) -> Self [also: prelude::u8x16<T>, prelude
 pub fn prelude::u8x16<T>::store(self, &mut [u8; 16]) [also: prelude::u8x16<T>]
 pub fn prelude::u8x16<T>::to_array(self) -> [u8; 16] [also: prelude::u8x16<T>]
 pub fn prelude::u8x16<T>::abs_diff(self, Self) -> prelude::u8x16<T> [also: prelude::u8x16<T>]
+pub fn prelude::u8x16<T>::pairwise_widen_add(self) -> prelude::u16x8<T> where T: simd::backends::U16x8Backend [also: prelude::u8x16<T>]
 pub fn prelude::u8x16<T>::reduce_add_u32(self) -> u32 [also: prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
 pub fn prelude::u8x16<T>::sum_abs_diff(self, Self) -> u32 [also: prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
 pub fn [u8; 16]::from(prelude::u8x16<T>) -> [u8; 16] [also: (root)]
@@ -686,6 +690,7 @@ pub fn prelude::u8x32<T>::partition_slice_mut(T, &mut [u8]) -> (&mut [[u8; 32]],
 pub fn prelude::u8x32<T>::store(self, &mut [u8; 32]) [also: prelude::u8x32<T>]
 pub fn prelude::u8x32<T>::to_array(self) -> [u8; 32] [also: prelude::u8x32<T>]
 pub fn prelude::u8x32<T>::abs_diff(self, Self) -> prelude::u8x32<T> [also: prelude::u8x32<T>]
+pub fn prelude::u8x32<T>::pairwise_widen_add(self) -> prelude::u16x16<T> where T: simd::backends::U16x16Backend [also: prelude::u8x32<T>]
 pub fn [u8; 32]::from(prelude::u8x32<T>) -> [u8; 32] [also: (root)]
 #[repr(C)] pub struct prelude::u8x64<T: simd::backends::U8x64Backend>(_, _) [also: simd::generic]
 pub const fn prelude::u8x64<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
@@ -701,6 +706,7 @@ pub fn prelude::u8x64<T>::partition_slice_mut(T, &mut [u8]) -> (&mut [[u8; 64]],
 pub fn prelude::u8x64<T>::store(self, &mut [u8; 64]) [also: prelude::u8x64<T>]
 pub fn prelude::u8x64<T>::to_array(self) -> [u8; 64] [also: prelude::u8x64<T>]
 pub fn prelude::u8x64<T>::abs_diff(self, Self) -> prelude::u8x64<T> [also: prelude::u8x64<T>]
+pub fn prelude::u8x64<T>::pairwise_widen_add(self) -> prelude::u16x32<T> where T: simd::backends::U16x32Backend [also: prelude::u8x64<T>]
 pub fn [u8; 64]::from(prelude::u8x64<T>) -> [u8; 64] [also: (root)]
 pub fn prelude::F16Convert::f16_to_f32_into(self, &[u16], &mut [f32])
 pub fn prelude::F16Convert::f16_to_f32_slice(self, &[u16], &mut [f32])
@@ -1485,6 +1491,7 @@ pub fn simd::backends::U16x16Backend::max(self, Self::Repr, Self::Repr) -> Self:
 pub fn simd::backends::U16x16Backend::min(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x16Backend::mul(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x16Backend::not(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U16x16Backend::pairwise_widen_add(self, <Self as simd::backends::U16x16Backend>::Repr) -> <Self as simd::backends::U32x8Backend>::Repr where Self: simd::backends::U32x8Backend
 pub fn simd::backends::U16x16Backend::reduce_add(self, Self::Repr) -> u16
 pub fn simd::backends::U16x16Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x16Backend::saturating_sub(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1523,6 +1530,7 @@ pub fn simd::backends::U16x32Backend::min(self, Self::Repr, Self::Repr) -> Self:
 pub fn simd::backends::U16x32Backend::mul(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x32Backend::neg(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x32Backend::not(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U16x32Backend::pairwise_widen_add(self, <Self as simd::backends::U16x32Backend>::Repr) -> <Self as simd::backends::U32x16Backend>::Repr where Self: simd::backends::U32x16Backend
 pub fn simd::backends::U16x32Backend::reduce_add(self, Self::Repr) -> u16
 pub fn simd::backends::U16x32Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x32Backend::saturating_sub(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1562,6 +1570,7 @@ pub fn simd::backends::U16x8Backend::max(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::U16x8Backend::min(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x8Backend::mul(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x8Backend::not(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U16x8Backend::pairwise_widen_add(self, <Self as simd::backends::U16x8Backend>::Repr) -> <Self as simd::backends::U32x4Backend>::Repr where Self: simd::backends::U32x4Backend
 pub fn simd::backends::U16x8Backend::reduce_add(self, Self::Repr) -> u16
 pub fn simd::backends::U16x8Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x8Backend::saturating_sub(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1805,6 +1814,7 @@ pub fn simd::backends::U8x16Backend::load(self, &[u8; 16]) -> Self::Repr
 pub fn simd::backends::U8x16Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x16Backend::min(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x16Backend::not(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U8x16Backend::pairwise_widen_add(self, <Self as simd::backends::U8x16Backend>::Repr) -> <Self as simd::backends::U16x8Backend>::Repr where Self: simd::backends::U16x8Backend
 pub fn simd::backends::U8x16Backend::reduce_add(self, Self::Repr) -> u8
 pub fn simd::backends::U8x16Backend::reduce_add_u32(self, <Self as simd::backends::U8x16Backend>::Repr) -> u32
 pub fn simd::backends::U8x16Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1842,6 +1852,7 @@ pub fn simd::backends::U8x32Backend::load(self, &[u8; 32]) -> Self::Repr
 pub fn simd::backends::U8x32Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x32Backend::min(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x32Backend::not(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U8x32Backend::pairwise_widen_add(self, <Self as simd::backends::U8x32Backend>::Repr) -> <Self as simd::backends::U16x16Backend>::Repr where Self: simd::backends::U16x16Backend
 pub fn simd::backends::U8x32Backend::reduce_add(self, Self::Repr) -> u8
 pub fn simd::backends::U8x32Backend::reduce_add_u32(self, <Self as simd::backends::U8x32Backend>::Repr) -> u32
 pub fn simd::backends::U8x32Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1880,6 +1891,7 @@ pub fn simd::backends::U8x64Backend::max(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::U8x64Backend::min(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x64Backend::neg(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x64Backend::not(self, Self::Repr) -> Self::Repr
+pub fn simd::backends::U8x64Backend::pairwise_widen_add(self, <Self as simd::backends::U8x64Backend>::Repr) -> <Self as simd::backends::U16x32Backend>::Repr where Self: simd::backends::U16x32Backend
 pub fn simd::backends::U8x64Backend::reduce_add(self, Self::Repr) -> u8
 pub fn simd::backends::U8x64Backend::reduce_add_u32(self, <Self as simd::backends::U8x64Backend>::Repr) -> u32
 pub fn simd::backends::U8x64Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr

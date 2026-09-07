@@ -2973,6 +2973,9 @@ impl U8x16Backend for archmage::X64V3Token {
     sse2_baseline! {
     fn sum_abs_diff(self, a: __m128i, b: __m128i) -> u32 { { let s = _mm_sad_epu8(a, b); _mm_cvtsi128_si64(_mm_add_epi64(s, _mm_srli_si128::<8>(s))) as u32 } }
     }
+    sse2_baseline! {
+    fn pairwise_widen_add(self, a: __m128i) -> __m128i { _mm_add_epi16(_mm_and_si128(a, _mm_set1_epi16(255)), _mm_srli_epi16::<8>(a)) }
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -3188,6 +3191,14 @@ impl U8x32Backend for archmage::X64V3Token {
                 _mm_cvtsi128_si64(_mm_add_epi64(s, _mm_srli_si128::<8>(s))) as u32
             }
         }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn pairwise_widen_add(self, a: __m256i) -> __m256i {
+        _mm256_add_epi16(
+            _mm256_and_si256(a, _mm256_set1_epi16(255)),
+            _mm256_srli_epi16::<8>(a),
+        )
     }
 }
 
@@ -3880,6 +3891,10 @@ impl U16x8Backend for archmage::X64V3Token {
     fn widen_high_u16_to_u32(self, a: __m128i) -> __m128i {
         _mm_cvtepu16_epi32(_mm_srli_si128::<8>(a))
     }
+
+    sse2_baseline! {
+    fn pairwise_widen_add(self, a: __m128i) -> __m128i { _mm_add_epi32(_mm_and_si128(a, _mm_set1_epi32(65535)), _mm_srli_epi32::<16>(a)) }
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -4085,6 +4100,14 @@ impl U16x16Backend for archmage::X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn widen_high_u16_to_u32(self, a: __m256i) -> __m256i {
         _mm256_cvtepu16_epi32(_mm256_extracti128_si256::<1>(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn pairwise_widen_add(self, a: __m256i) -> __m256i {
+        _mm256_add_epi32(
+            _mm256_and_si256(a, _mm256_set1_epi32(65535)),
+            _mm256_srli_epi32::<16>(a),
+        )
     }
 }
 
@@ -5887,6 +5910,20 @@ impl U8x64Backend for archmage::X64V3Token {
             }
         })
     }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn pairwise_widen_add(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        [
+            _mm256_add_epi16(
+                _mm256_and_si256(a[0], _mm256_set1_epi16(255)),
+                _mm256_srli_epi16::<8>(a[0]),
+            ),
+            _mm256_add_epi16(
+                _mm256_and_si256(a[1], _mm256_set1_epi16(255)),
+                _mm256_srli_epi16::<8>(a[1]),
+            ),
+        ]
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -6523,6 +6560,20 @@ impl U16x32Backend for archmage::X64V3Token {
         [
             _mm256_cvtepu16_epi32(_mm256_castsi256_si128(a[1])),
             _mm256_cvtepu16_epi32(_mm256_extracti128_si256::<1>(a[1])),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn pairwise_widen_add(self, a: [__m256i; 2]) -> [__m256i; 2] {
+        [
+            _mm256_add_epi32(
+                _mm256_and_si256(a[0], _mm256_set1_epi32(65535)),
+                _mm256_srli_epi32::<16>(a[0]),
+            ),
+            _mm256_add_epi32(
+                _mm256_and_si256(a[1], _mm256_set1_epi32(65535)),
+                _mm256_srli_epi32::<16>(a[1]),
+            ),
         ]
     }
 }

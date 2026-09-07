@@ -11,7 +11,7 @@ pub(super) fn trait_methods(name: &str) -> String {
         return String::new();
     };
     if !matches!(elem, "i16" | "u8") {
-        return String::new();
+        return super::backend_gen_pairwise::trait_methods(name);
     }
     let n: usize = lanes.parse().unwrap();
     let sb = format!("{}Backend", upper(name));
@@ -45,7 +45,7 @@ pub(super) fn trait_methods(name: &str) -> String {
             fn sum_abs_diff(self, a: <Self as super::{sb}>::Repr, b: <Self as super::{sb}>::Repr) -> u32;
         "#};
     }
-    out
+    out + &super::backend_gen_pairwise::trait_methods(name)
 }
 
 pub(super) fn generic(name: &str) -> String {
@@ -53,7 +53,7 @@ pub(super) fn generic(name: &str) -> String {
         return String::new();
     };
     if !matches!(elem, "i16" | "u8") {
-        return String::new();
+        return super::backend_gen_pairwise::generic(name);
     }
     let n: usize = lanes.parse().unwrap();
     let bound = upper(name);
@@ -113,10 +113,10 @@ pub(super) fn generic(name: &str) -> String {
             }}
         "#};
     }
-    out
+    out + &super::backend_gen_pairwise::generic(name)
 }
 
-fn repr(arch: &str, elem: &str, width: usize) -> String {
+pub(super) fn repr(arch: &str, elem: &str, width: usize) -> String {
     let native = match arch {
         "x86" => 256.min(width),
         "v4" => width,
@@ -124,7 +124,7 @@ fn repr(arch: &str, elem: &str, width: usize) -> String {
     };
     let bits = if elem == "u8" {
         8
-    } else if elem == "i32" {
+    } else if matches!(elem, "i32" | "u32") {
         32
     } else {
         16
@@ -275,7 +275,7 @@ pub(super) fn methods(arch: &str, token: &str, src: &str) -> String {
             }
         }
     }
-    out
+    out + &super::backend_gen_pairwise::methods(arch, token, src)
 }
 
 fn native_expr(arch: &str, width: usize, op: &str, a: &str, b: &str) -> String {

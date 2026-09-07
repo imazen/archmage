@@ -578,6 +578,25 @@ impl<T: crate::simd::backends::U8x16Backend> u8x16<T> {
         <T as crate::simd::backends::U8x16Backend>::sum_abs_diff(self.1, self.0, rhs.0)
     }
 }
+impl<T: crate::simd::backends::U8x16Backend> u8x16<T> {
+    /// Sum adjacent pairs into unsigned lanes twice as wide.
+    ///
+    /// Output lane `k` is `self[2*k] + self[2*k+1]`, with both
+    /// inputs widened before addition. The result is exact for the
+    /// full input range; no lane wraps or saturates. Pair ordering
+    /// is unchanged across native and polyfilled widths.
+    /// Subsequent accumulation uses the destination's normal wrapping addition.
+    #[inline(always)]
+    pub fn pairwise_widen_add(self) -> super::u16x8<T>
+    where
+        T: crate::simd::backends::U16x8Backend,
+    {
+        super::u16x8::from_repr_unchecked(
+            self.1,
+            <T as crate::simd::backends::U8x16Backend>::pairwise_widen_add(self.1, self.0),
+        )
+    }
+}
 // ============================================================================
 // Platform-specific concrete impls
 // ============================================================================

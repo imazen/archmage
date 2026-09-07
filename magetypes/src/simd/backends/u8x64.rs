@@ -176,4 +176,11 @@ pub trait U8x64Backend: SimdToken + Sealed + Copy + 'static {
         a: <Self as super::U8x64Backend>::Repr,
         b: <Self as super::U8x64Backend>::Repr,
     ) -> u32;
+    /// Exact unsigned adjacent sums: output[k] = widened a[2*k] + widened a[2*k+1].
+    fn pairwise_widen_add(
+        self,
+        a: <Self as super::U8x64Backend>::Repr,
+    ) -> <Self as super::U16x32Backend>::Repr
+    where
+        Self: super::U16x32Backend;
 }
