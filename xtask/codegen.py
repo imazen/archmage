@@ -555,7 +555,66 @@ def neon_widen_mul_operands(body):
     return result
 
 
+def retained_reference_casts(ty, before, after):
+    """Keep baseline probes; permit only the four deliberately retired casts."""
+    pattern = r"pub fn (bitcast_(?:ref|mut)_\w+)\(&(mut )?self\) -> &(mut )?super::(\w+)<T>"
+    old = re.findall(pattern, before)
+    new = set(re.findall(pattern, after))
+    retired = {
+        (source, f"bitcast_{kind}_{dest}", mutable, mutable, dest)
+        for source, dest in [("i16x32", "u16x32"), ("u16x32", "i16x32")]
+        for kind, mutable in [("ref", ""), ("mut", "mut ")]
+    }
+    for signature in old:
+        if signature not in new:
+            assert (ty, *signature) in retired, ("unexpected removed cast", ty, signature)
+            assert not any(item[0] == signature[0] for item in new), (
+                "changed cast signature", ty, signature
+            )
+    return [
+        (method, output_mut, dest)
+        for method, input_mut, output_mut, dest in old
+        if (method, input_mut, output_mut, dest) in new
+    ]
+
+
+def reference_cast_source(root, side, ty):
+    directory = root / f"{side}-src" / "magetypes/src/simd/generic/generated"
+    result = (directory / f"{ty}_impl.rs").read_text()
+    block = directory / f"block_ops_{ty}.rs"
+    if block.exists():
+        result += block.read_text()
+    return result
+
+
 def self_test():
+    for source, dest in [("i16x32", "u16x32"), ("u16x32", "i16x32")]:
+        for kind, mutable in [("ref", ""), ("mut", "mut ")]:
+            method = f"bitcast_{kind}_{dest}"
+            declaration = f"pub fn {method}(&{mutable}self) -> &{mutable}super::{dest}<T>"
+            assert retained_reference_casts(source, declaration, declaration) == [
+                (method, mutable, dest)
+            ]
+            assert retained_reference_casts(source, declaration, "") == []
+            for ty, after in [
+                ("wrong_source", ""),
+                (source, declaration.replace(f"super::{dest}", "super::wrong")),
+                (source, declaration.replace("&mut ", "&") if mutable else
+                 declaration.replace("&self", "&mut self")),
+            ]:
+                try:
+                    retained_reference_casts(ty, declaration, after)
+                except AssertionError:
+                    pass
+                else:
+                    raise AssertionError(("unexpected API change accepted", ty, after))
+    try:
+        retained_reference_casts("u8x16", "pub fn bitcast_ref_i8x16(&self) -> &super::i8x16<T>", "")
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError("arbitrary cast removal accepted")
+
     def assembly(body, data=""):
         return (
             "\t.type probe,@function\nprobe:\n"
@@ -1642,25 +1701,11 @@ def main():
                                     f"{ty}::<{token}>::from_bytes_owned(token,value)",
                                 ),
                             ]
-                        # Compare the baseline surface on both revisions. Newly
-                        # added casts are checked by --storage-access instead.
-                        impl_text = (
-                            root
-                            / "before-src"
-                            / "magetypes/src/simd/generic/generated"
-                            / f"{ty}_impl.rs"
-                        ).read_text()
-                        block_file = (
-                            root
-                            / "before-src"
-                            / "magetypes/src/simd/generic/generated"
-                            / f"block_ops_{ty}.rs"
-                        )
-                        if block_file.exists():
-                            impl_text += block_file.read_text()
-                        for method, mutable, dest in re.findall(
-                            r"pub fn (bitcast_(?:ref|mut)_\w+)\(&(?:mut )?self\) -> &(mut )?super::(\w+)<T>",
-                            impl_text,
+                        # Newly added casts are checked by --storage-access.
+                        for method, mutable, dest in retained_reference_casts(
+                            ty,
+                            reference_cast_source(root, "before", ty),
+                            reference_cast_source(root, "after", ty),
                         ):
                             borrow = "&mut " if mutable else "&"
                             funcs.append(
