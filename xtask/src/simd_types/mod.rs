@@ -643,7 +643,12 @@ pub fn generate_simd_tests() -> String {
 #![allow(clippy::needless_range_loop)]
 
 use magetypes::simd::*;
+// The bare re-exports are aliases with the backend fixed, so name the generic
+// form explicitly — these tests deliberately vary the token.
+use magetypes::simd::generic;
 use archmage::{SimdToken, X64V3Token};
+#[cfg(feature = "avx512")]
+use archmage::{X64V4Token, X64V4xToken};
 
 "#,
     );
@@ -1213,5 +1218,115 @@ fn test_i16x16_bitcast_u16x16() {
 "#,
     );
 
+    gen_load_coverage_tests(&mut code);
+
     code
+}
+
+/// Generate a `load` round-trip test for every SIMD type on every native token.
+///
+/// `load` is the only backend method whose body is a bare `simd_storage` call, so
+/// its `size_of::<Src>() == size_of::<Dst>()` assert is the sole check standing
+/// between `transmute_copy` and an out-of-bounds read. That assert is
+/// post-monomorphization: it is evaluated when the method is instantiated for
+/// codegen and not before, so a `load` that nothing ever calls is never checked.
+///
+/// Measured with `-Zprint-mono-items` across the whole magetypes test suite
+/// before these existed: 23 of the 326 backend `simd_storage` call sites were
+/// never instantiated, and every one of them was a `load` — the seven 256-bit
+/// integer types on v3 and the eight 512-bit types on v4/v4x. Corrupting
+/// `U8x32Backend::load` to read 64 bytes out of a 32-byte array compiled cleanly
+/// through the entire suite.
+///
+/// Nothing about that was unsound — an uninstantiated function is never emitted,
+/// so the failure mode is a compile error deferred to whoever first calls it,
+/// not undefined behavior. But it means CI was not checking those call sites at
+/// all. One touch per (type, token) moves them into the checked set.
+fn gen_load_coverage_tests(code: &mut String) {
+    use crate::simd_types::types::{ElementType, SimdWidth, all_simd_types};
+
+    code.push_str(
+        "\n// ---------------------------------------------------------------------\n\
+         // `load` coverage: instantiate every backend `load` so its size assert is\n\
+         // evaluated. See gen_load_coverage_tests in xtask for why this exists.\n\
+         // ---------------------------------------------------------------------\n",
+    );
+
+    for ty in all_simd_types() {
+        let name = ty.name();
+        let elem = ty.elem.name();
+        let lanes = ty.lanes();
+        let (value, zero, expected_sum) = if ty.elem.is_float() {
+            (
+                format!("(i as {elem}) * 1.5 - 3.0"),
+                format!("0.0{elem}"),
+                // Values and partial sums are exact multiples of 0.5 and well
+                // inside the mantissa, so tree- and linear-order agree exactly.
+                format!("data.iter().sum::<{elem}>()"),
+            )
+        } else {
+            (
+                format!("(i as {elem}).wrapping_mul(37).wrapping_add(11)"),
+                format!("0{elem}"),
+                // Wrapping integer addition is associative, so the backend's
+                // tree reduction and this fold agree regardless of order.
+                format!("data.iter().fold(0{elem}, |a, &b| a.wrapping_add(b))"),
+            )
+        };
+
+        // 512-bit types exist only under `w512`; their native impls need `avx512`.
+        let tokens: Vec<(&str, Option<&str>)> = if ty.width == SimdWidth::W512 {
+            vec![
+                ("X64V3Token", Some("w512")),
+                ("X64V4Token", Some("avx512")),
+                ("X64V4xToken", Some("avx512")),
+            ]
+        } else {
+            vec![("X64V3Token", None)]
+        };
+
+        for (token, feature) in tokens {
+            let gate = match feature {
+                Some(f) => format!("#[cfg(feature = \"{f}\")]\n"),
+                None => String::new(),
+            };
+            let suffix = token.to_lowercase().replace("token", "");
+            code.push_str(&format!(
+                r#"
+{gate}#[test]
+fn load_roundtrip_{name}_{suffix}() {{
+    let data: [{elem}; {lanes}] = core::array::from_fn(|i| {value});
+    match {token}::summon() {{
+        Some(token) => {{
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::{name}::<{token}>::load(token, &data);
+            assert_eq!(v.to_array(), data, "{name}::<{token}> load -> to_array");
+
+            let mut out = [{zero}; {lanes}];
+            v.store(&mut out);
+            assert_eq!(out, data, "{name}::<{token}> load -> store");
+
+            let w = generic::{name}::<{token}>::from_array(token, data);
+            assert_eq!(w.to_array(), data, "{name}::<{token}> from_array -> to_array");
+
+            assert_eq!(
+                v.reduce_add(),
+                {expected_sum},
+                "{name}::<{token}> reduce_add"
+            );
+        }}
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            {token}::compiled_with(),
+            Some(true),
+            "{token}::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }}
+}}
+"#
+            ));
+        }
+    }
 }

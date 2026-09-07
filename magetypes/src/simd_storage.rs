@@ -13,51 +13,79 @@ use core::mem::{align_of, size_of};
 /// contain no pointers or interior mutability. Copying its bits must be sound.
 pub(crate) unsafe trait Pod: Copy {}
 
+/// Register a type as [`Pod`], stating its layout in bytes.
+///
+/// The number is **the sum of the type's field sizes**, not `size_of`, and the
+/// two are asserted equal. For every type registered here they coincide, which
+/// is the point: a type with padding has `size_of` strictly greater than the sum
+/// of its fields, so writing the honest field total makes the assert fire.
+///
+/// That matters because padding is the one `Pod` violation with no other
+/// backstop. `copy` reaches `transmute_copy`, which reads `size_of::<Dst>()`
+/// bytes; over a padded type those bytes are uninitialized and reading them is
+/// undefined behavior — Miri reports `constructing invalid value: encountered
+/// uninitialized memory`. Nothing else in this module can catch it: the size and
+/// alignment asserts at every call site pass, because a padded type has a
+/// perfectly ordinary size and alignment.
+///
+/// So: adding a type here means asserting, by hand and on the record, that its
+/// bytes are all real. The other `Pod` obligations — no pointers, no validity
+/// invariant (no `bool`, `char`, `NonZero*`, enums), no interior mutability —
+/// stay the author's to check; only the byte total is mechanical.
 macro_rules! impl_pod {
-    ($($ty:ty),+ $(,)?) => {$(
+    ($($ty:ty => $field_bytes:expr),+ $(,)?) => {$(
         // SAFETY: numeric scalars and stdarch vectors have no padding or pointers,
         // and accept every bit pattern. Vector layout matches the lane array,
         // with potentially stronger alignment; the helpers handle that difference.
+        // The padding half of that claim is checked below.
         unsafe impl Pod for $ty {}
+        const _: () = assert!(
+            size_of::<$ty>() == $field_bytes,
+            concat!(
+                "Pod registration for `", stringify!($ty), "` declares a field-byte \
+                 total that does not equal its size_of. Either the declared total is \
+                 wrong, or the type has padding — and a padded type is not Pod, \
+                 because `copy`/`cast` would read its uninitialized padding bytes."
+            )
+        );
     )+};
 }
 
-impl_pod!(u8, i8, u16, i16, u32, i32, u64, i64, f32, f64);
+impl_pod!(
+    u8 => 1, i8 => 1,
+    u16 => 2, i16 => 2,
+    u32 => 4, i32 => 4,
+    u64 => 8, i64 => 8,
+    f32 => 4, f64 => 8,
+);
 // SAFETY: arrays add no padding between elements and preserve their validity.
 unsafe impl<T: Pod, const N: usize> Pod for [T; N] {}
 
 #[cfg(target_arch = "x86_64")]
 const _: () = {
     use core::arch::x86_64::*;
-    impl_pod!(__m128, __m128d, __m128i, __m256, __m256d, __m256i);
+    impl_pod!(
+        __m128 => 16, __m128d => 16, __m128i => 16,
+        __m256 => 32, __m256d => 32, __m256i => 32,
+    );
     #[cfg(feature = "avx512")]
-    impl_pod!(__m512, __m512d, __m512i);
+    impl_pod!(__m512 => 64, __m512d => 64, __m512i => 64);
 };
 
 #[cfg(target_arch = "aarch64")]
 const _: () = {
     use core::arch::aarch64::*;
     impl_pod!(
-        float32x2_t,
-        float32x4_t,
-        float64x1_t,
-        float64x2_t,
-        int8x8_t,
-        int8x16_t,
-        uint8x8_t,
-        uint8x16_t,
-        int16x4_t,
-        int16x8_t,
-        uint16x4_t,
-        uint16x8_t,
-        int32x2_t,
-        int32x4_t,
-        uint32x2_t,
-        uint32x4_t,
-        int64x1_t,
-        int64x2_t,
-        uint64x1_t,
-        uint64x2_t,
+        float32x2_t => 8,   float32x4_t => 16,
+        float64x1_t => 8,   float64x2_t => 16,
+        int8x8_t => 8,      int8x16_t => 16,
+        uint8x8_t => 8,     uint8x16_t => 16,
+        int16x4_t => 8,     int16x8_t => 16,
+        uint16x4_t => 8,    uint16x8_t => 16,
+        int32x2_t => 8,     int32x4_t => 16,
+        uint32x2_t => 8,    uint32x4_t => 16,
+        int64x1_t => 8,     int64x2_t => 16,
+        uint64x1_t => 8,    uint64x2_t => 16,
     );
 };
 
@@ -65,7 +93,7 @@ const _: () = {
 const _: () = {
     // v128 is exactly 16 initialized bytes, accepts every bit pattern, and
     // contains no pointers. Arrays of v128 have no inter-element padding.
-    impl_pod!(core::arch::wasm32::v128);
+    impl_pod!(core::arch::wasm32::v128 => 16);
 };
 
 /// Storage whose arbitrary bits are valid only in the presence of a token.

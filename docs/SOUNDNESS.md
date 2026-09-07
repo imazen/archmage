@@ -146,7 +146,7 @@ receiver.
 | `src/tokens/mod.rs` (`ScalarToken` constructors) | 0 | `ScalarToken` proves the empty feature set, so `from_context()` and its deprecated alias are ungated safe `const fn`s | doc sections |
 | `src/tokens/generated/{x86,arm,wasm}_stubs.rs` forge definitions | 17 total (9 x86 + 6 arm + 2 wasm); 8–15 visible per target | foreign-architecture constructors: `unsafe fn` with an *unsatisfiable* `# Safety` contract — they exist so cross-architecture code compiles, not to be called | doc sections; `tests/soundness/from_context_wrong_arch.rs` |
 | `magetypes/src/simd/impls/{x86_v3,x86_v4,arm_neon,wasm128}.rs` | **1 block** (was ~1,960) | per-method `#[arcane(_self = Token)]` turns each body into a `#[target_feature]` region, so the 5,142 value intrinsics in these files need no `unsafe` at all; the one remaining block is `x86_v3.rs`'s `sse2_baseline!` macro, which calls a *narrower* SSE2-only inner fn from the AVX tier | file-header audit contract (generator-emitted, checker-enforced); every intrinsic re-verified against the registry per run |
-| `magetypes/src` outside `impls/` | **8 blocks, all in `simd_storage.rs`** (was 225) | size/align-guarded layout casts over `Pod` (all-bit-patterns-valid) storage; the four token-taking helpers additionally require a token value and const-assert the token is a 1-ZST | per-block `// SAFETY:` comments, checker-enforced; `unsafe impl Pod` is banned outside this file and every `TokenStorage` type must be `#[repr(C)]` |
+| `magetypes/src` outside `impls/` | **8 blocks, all in `simd_storage.rs`** (was 225) | size/align-guarded layout casts over `Pod` (all-bit-patterns-valid) storage; the four token-taking helpers additionally require a token value and const-assert the token is a 1-ZST | per-block `// SAFETY:` comments, checker-enforced; `unsafe impl Pod` is banned outside this file, every `Pod` registration declares a field-byte total, and every `TokenStorage` type must be `#[repr(C)]` |
 | `archmage-macros` emitted code (`#[arcane]` wrappers etc.) | 1 `unsafe` block per wrapper | the token parameter (tier-tag const-asserted) proves the sibling's `#[target_feature]` set | justified in macro source; expansion snapshots under `tests/expand/` are re-verified by the intrinsic scanner (comments cannot survive tokenization, so snapshots carry no SAFETY text) |
 
 Notable absences, enforced by structural rules: no `MaybeUninit`, no
@@ -154,6 +154,42 @@ Notable absences, enforced by structural rules: no `MaybeUninit`, no
 `forge_token_dangerously`), no bare `transmute` outside the backend impls,
 no `Default`/serde/bytemuck construction of SIMD wrappers anywhere in
 magetypes.
+
+### Two things the storage helpers do **not** check, and what covers them
+
+Moving the pointer work into `simd_storage` helpers inverted most call-site
+bugs: a wrong `Dst` is a hard `E0080` at monomorphization (size), or an
+alignment assert, or a wrong-`N` assert — none of which a raw
+`unsafe { &*ptr.cast::<Dst>() }` at the call site checked at all. Two gaps
+survive that inversion, and both are now covered.
+
+**1. Padding in a `Pod` type.** This is the only `Pod` violation with no other
+backstop: a padded type has an ordinary size and alignment, so every call-site
+assert passes, and then `copy`/`cast` reach `transmute_copy`, which reads
+`size_of::<Dst>()` bytes — including the uninitialized padding. Miri reports
+`constructing invalid value: encountered uninitialized memory`. `impl_pod!`
+therefore takes a **field-byte total**, asserted against `size_of`: for a padded
+type the honest field sum is strictly smaller, so registration fails to compile.
+Being a `const _` item this is evaluated eagerly, not post-monomorphization. The
+remaining `Pod` obligations — no pointers, no validity invariant (`bool`,
+`char`, `NonZero*`, enums), no interior mutability — are still the author's to
+check.
+
+**2. Call sites nothing instantiates.** The helpers' asserts are inline `const`
+blocks in generic functions, so they are evaluated at *codegen*, not at
+type-check. A call site on a path no test reaches is never checked. Measured
+with `-Zprint-mono-items` across all 40 magetypes test targets: **70 of the 180
+host-instantiable backend `simd_storage` call sites were never instantiated** —
+26 `load`, 26 `store`, 18 `reduce_add`. Corrupting `U8x32Backend::load` to read
+64 bytes out of a 32-byte array compiled cleanly through the entire suite.
+
+Nothing about that was unsound: an uninstantiated function is never emitted, so
+the failure mode is a compile error deferred to whoever first calls it, never
+UB. But CI was not checking those sites. `generate_simd_tests` now emits a
+round-trip touching `load`, `store`, `from_array`, `to_array` and `reduce_add`
+for all 30 types on every native token, taking the count to **0 of 180**. The
+146 ARM/WASM sites are `cfg`'d out on an x86 host and were not measured; they
+need an aarch64/wasm32 mono run before anything can be claimed about them.
 
 ## The mechanical verifiers
 

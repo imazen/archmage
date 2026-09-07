@@ -5,8 +5,13 @@
 #![cfg(target_arch = "x86_64")]
 #![allow(clippy::needless_range_loop)]
 
-use archmage::{SimdToken, X64V3Token};
 use magetypes::simd::*;
+// The bare re-exports are aliases with the backend fixed, so name the generic
+// form explicitly — these tests deliberately vary the token.
+use archmage::{SimdToken, X64V3Token};
+#[cfg(feature = "avx512")]
+use archmage::{X64V4Token, X64V4xToken};
+use magetypes::simd::generic;
 
 #[test]
 fn test_f32x8_basic() {
@@ -583,5 +588,1890 @@ fn test_i16x16_bitcast_u16x16() {
         let i = i16x16::splat(token, -1);
         let u = i.bitcast_u16x16();
         assert_eq!(u[0], u16::MAX);
+    }
+}
+
+// ---------------------------------------------------------------------
+// `load` coverage: instantiate every backend `load` so its size assert is
+// evaluated. See gen_load_coverage_tests in xtask for why this exists.
+// ---------------------------------------------------------------------
+
+#[test]
+fn load_roundtrip_f32x4_x64v3() {
+    let data: [f32; 4] = core::array::from_fn(|i| (i as f32) * 1.5 - 3.0);
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::f32x4::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "f32x4::<X64V3Token> load -> to_array");
+
+            let mut out = [0.0f32; 4];
+            v.store(&mut out);
+            assert_eq!(out, data, "f32x4::<X64V3Token> load -> store");
+
+            let w = generic::f32x4::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "f32x4::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().sum::<f32>(),
+                "f32x4::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[test]
+fn load_roundtrip_f64x2_x64v3() {
+    let data: [f64; 2] = core::array::from_fn(|i| (i as f64) * 1.5 - 3.0);
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::f64x2::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "f64x2::<X64V3Token> load -> to_array");
+
+            let mut out = [0.0f64; 2];
+            v.store(&mut out);
+            assert_eq!(out, data, "f64x2::<X64V3Token> load -> store");
+
+            let w = generic::f64x2::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "f64x2::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().sum::<f64>(),
+                "f64x2::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[test]
+fn load_roundtrip_i8x16_x64v3() {
+    let data: [i8; 16] = core::array::from_fn(|i| (i as i8).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::i8x16::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "i8x16::<X64V3Token> load -> to_array");
+
+            let mut out = [0i8; 16];
+            v.store(&mut out);
+            assert_eq!(out, data, "i8x16::<X64V3Token> load -> store");
+
+            let w = generic::i8x16::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "i8x16::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0i8, |a, &b| a.wrapping_add(b)),
+                "i8x16::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[test]
+fn load_roundtrip_u8x16_x64v3() {
+    let data: [u8; 16] = core::array::from_fn(|i| (i as u8).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::u8x16::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "u8x16::<X64V3Token> load -> to_array");
+
+            let mut out = [0u8; 16];
+            v.store(&mut out);
+            assert_eq!(out, data, "u8x16::<X64V3Token> load -> store");
+
+            let w = generic::u8x16::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "u8x16::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0u8, |a, &b| a.wrapping_add(b)),
+                "u8x16::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[test]
+fn load_roundtrip_i16x8_x64v3() {
+    let data: [i16; 8] = core::array::from_fn(|i| (i as i16).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::i16x8::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "i16x8::<X64V3Token> load -> to_array");
+
+            let mut out = [0i16; 8];
+            v.store(&mut out);
+            assert_eq!(out, data, "i16x8::<X64V3Token> load -> store");
+
+            let w = generic::i16x8::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "i16x8::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0i16, |a, &b| a.wrapping_add(b)),
+                "i16x8::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[test]
+fn load_roundtrip_u16x8_x64v3() {
+    let data: [u16; 8] = core::array::from_fn(|i| (i as u16).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::u16x8::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "u16x8::<X64V3Token> load -> to_array");
+
+            let mut out = [0u16; 8];
+            v.store(&mut out);
+            assert_eq!(out, data, "u16x8::<X64V3Token> load -> store");
+
+            let w = generic::u16x8::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "u16x8::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0u16, |a, &b| a.wrapping_add(b)),
+                "u16x8::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[test]
+fn load_roundtrip_i32x4_x64v3() {
+    let data: [i32; 4] = core::array::from_fn(|i| (i as i32).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::i32x4::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "i32x4::<X64V3Token> load -> to_array");
+
+            let mut out = [0i32; 4];
+            v.store(&mut out);
+            assert_eq!(out, data, "i32x4::<X64V3Token> load -> store");
+
+            let w = generic::i32x4::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "i32x4::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0i32, |a, &b| a.wrapping_add(b)),
+                "i32x4::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[test]
+fn load_roundtrip_u32x4_x64v3() {
+    let data: [u32; 4] = core::array::from_fn(|i| (i as u32).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::u32x4::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "u32x4::<X64V3Token> load -> to_array");
+
+            let mut out = [0u32; 4];
+            v.store(&mut out);
+            assert_eq!(out, data, "u32x4::<X64V3Token> load -> store");
+
+            let w = generic::u32x4::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "u32x4::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0u32, |a, &b| a.wrapping_add(b)),
+                "u32x4::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[test]
+fn load_roundtrip_i64x2_x64v3() {
+    let data: [i64; 2] = core::array::from_fn(|i| (i as i64).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::i64x2::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "i64x2::<X64V3Token> load -> to_array");
+
+            let mut out = [0i64; 2];
+            v.store(&mut out);
+            assert_eq!(out, data, "i64x2::<X64V3Token> load -> store");
+
+            let w = generic::i64x2::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "i64x2::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0i64, |a, &b| a.wrapping_add(b)),
+                "i64x2::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[test]
+fn load_roundtrip_u64x2_x64v3() {
+    let data: [u64; 2] = core::array::from_fn(|i| (i as u64).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::u64x2::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "u64x2::<X64V3Token> load -> to_array");
+
+            let mut out = [0u64; 2];
+            v.store(&mut out);
+            assert_eq!(out, data, "u64x2::<X64V3Token> load -> store");
+
+            let w = generic::u64x2::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "u64x2::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0u64, |a, &b| a.wrapping_add(b)),
+                "u64x2::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[test]
+fn load_roundtrip_f32x8_x64v3() {
+    let data: [f32; 8] = core::array::from_fn(|i| (i as f32) * 1.5 - 3.0);
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::f32x8::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "f32x8::<X64V3Token> load -> to_array");
+
+            let mut out = [0.0f32; 8];
+            v.store(&mut out);
+            assert_eq!(out, data, "f32x8::<X64V3Token> load -> store");
+
+            let w = generic::f32x8::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "f32x8::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().sum::<f32>(),
+                "f32x8::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[test]
+fn load_roundtrip_f64x4_x64v3() {
+    let data: [f64; 4] = core::array::from_fn(|i| (i as f64) * 1.5 - 3.0);
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::f64x4::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "f64x4::<X64V3Token> load -> to_array");
+
+            let mut out = [0.0f64; 4];
+            v.store(&mut out);
+            assert_eq!(out, data, "f64x4::<X64V3Token> load -> store");
+
+            let w = generic::f64x4::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "f64x4::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().sum::<f64>(),
+                "f64x4::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[test]
+fn load_roundtrip_i8x32_x64v3() {
+    let data: [i8; 32] = core::array::from_fn(|i| (i as i8).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::i8x32::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "i8x32::<X64V3Token> load -> to_array");
+
+            let mut out = [0i8; 32];
+            v.store(&mut out);
+            assert_eq!(out, data, "i8x32::<X64V3Token> load -> store");
+
+            let w = generic::i8x32::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "i8x32::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0i8, |a, &b| a.wrapping_add(b)),
+                "i8x32::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[test]
+fn load_roundtrip_u8x32_x64v3() {
+    let data: [u8; 32] = core::array::from_fn(|i| (i as u8).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::u8x32::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "u8x32::<X64V3Token> load -> to_array");
+
+            let mut out = [0u8; 32];
+            v.store(&mut out);
+            assert_eq!(out, data, "u8x32::<X64V3Token> load -> store");
+
+            let w = generic::u8x32::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "u8x32::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0u8, |a, &b| a.wrapping_add(b)),
+                "u8x32::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[test]
+fn load_roundtrip_i16x16_x64v3() {
+    let data: [i16; 16] = core::array::from_fn(|i| (i as i16).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::i16x16::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "i16x16::<X64V3Token> load -> to_array");
+
+            let mut out = [0i16; 16];
+            v.store(&mut out);
+            assert_eq!(out, data, "i16x16::<X64V3Token> load -> store");
+
+            let w = generic::i16x16::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "i16x16::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0i16, |a, &b| a.wrapping_add(b)),
+                "i16x16::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[test]
+fn load_roundtrip_u16x16_x64v3() {
+    let data: [u16; 16] = core::array::from_fn(|i| (i as u16).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::u16x16::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "u16x16::<X64V3Token> load -> to_array");
+
+            let mut out = [0u16; 16];
+            v.store(&mut out);
+            assert_eq!(out, data, "u16x16::<X64V3Token> load -> store");
+
+            let w = generic::u16x16::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "u16x16::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0u16, |a, &b| a.wrapping_add(b)),
+                "u16x16::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[test]
+fn load_roundtrip_i32x8_x64v3() {
+    let data: [i32; 8] = core::array::from_fn(|i| (i as i32).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::i32x8::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "i32x8::<X64V3Token> load -> to_array");
+
+            let mut out = [0i32; 8];
+            v.store(&mut out);
+            assert_eq!(out, data, "i32x8::<X64V3Token> load -> store");
+
+            let w = generic::i32x8::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "i32x8::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0i32, |a, &b| a.wrapping_add(b)),
+                "i32x8::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[test]
+fn load_roundtrip_u32x8_x64v3() {
+    let data: [u32; 8] = core::array::from_fn(|i| (i as u32).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::u32x8::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "u32x8::<X64V3Token> load -> to_array");
+
+            let mut out = [0u32; 8];
+            v.store(&mut out);
+            assert_eq!(out, data, "u32x8::<X64V3Token> load -> store");
+
+            let w = generic::u32x8::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "u32x8::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0u32, |a, &b| a.wrapping_add(b)),
+                "u32x8::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[test]
+fn load_roundtrip_i64x4_x64v3() {
+    let data: [i64; 4] = core::array::from_fn(|i| (i as i64).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::i64x4::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "i64x4::<X64V3Token> load -> to_array");
+
+            let mut out = [0i64; 4];
+            v.store(&mut out);
+            assert_eq!(out, data, "i64x4::<X64V3Token> load -> store");
+
+            let w = generic::i64x4::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "i64x4::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0i64, |a, &b| a.wrapping_add(b)),
+                "i64x4::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[test]
+fn load_roundtrip_u64x4_x64v3() {
+    let data: [u64; 4] = core::array::from_fn(|i| (i as u64).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::u64x4::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "u64x4::<X64V3Token> load -> to_array");
+
+            let mut out = [0u64; 4];
+            v.store(&mut out);
+            assert_eq!(out, data, "u64x4::<X64V3Token> load -> store");
+
+            let w = generic::u64x4::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "u64x4::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0u64, |a, &b| a.wrapping_add(b)),
+                "u64x4::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "w512")]
+#[test]
+fn load_roundtrip_f32x16_x64v3() {
+    let data: [f32; 16] = core::array::from_fn(|i| (i as f32) * 1.5 - 3.0);
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::f32x16::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "f32x16::<X64V3Token> load -> to_array");
+
+            let mut out = [0.0f32; 16];
+            v.store(&mut out);
+            assert_eq!(out, data, "f32x16::<X64V3Token> load -> store");
+
+            let w = generic::f32x16::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "f32x16::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().sum::<f32>(),
+                "f32x16::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn load_roundtrip_f32x16_x64v4() {
+    let data: [f32; 16] = core::array::from_fn(|i| (i as f32) * 1.5 - 3.0);
+    match X64V4Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::f32x16::<X64V4Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "f32x16::<X64V4Token> load -> to_array");
+
+            let mut out = [0.0f32; 16];
+            v.store(&mut out);
+            assert_eq!(out, data, "f32x16::<X64V4Token> load -> store");
+
+            let w = generic::f32x16::<X64V4Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "f32x16::<X64V4Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().sum::<f32>(),
+                "f32x16::<X64V4Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V4Token::compiled_with(),
+            Some(true),
+            "X64V4Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn load_roundtrip_f32x16_x64v4x() {
+    let data: [f32; 16] = core::array::from_fn(|i| (i as f32) * 1.5 - 3.0);
+    match X64V4xToken::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::f32x16::<X64V4xToken>::load(token, &data);
+            assert_eq!(v.to_array(), data, "f32x16::<X64V4xToken> load -> to_array");
+
+            let mut out = [0.0f32; 16];
+            v.store(&mut out);
+            assert_eq!(out, data, "f32x16::<X64V4xToken> load -> store");
+
+            let w = generic::f32x16::<X64V4xToken>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "f32x16::<X64V4xToken> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().sum::<f32>(),
+                "f32x16::<X64V4xToken> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V4xToken::compiled_with(),
+            Some(true),
+            "X64V4xToken::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "w512")]
+#[test]
+fn load_roundtrip_f64x8_x64v3() {
+    let data: [f64; 8] = core::array::from_fn(|i| (i as f64) * 1.5 - 3.0);
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::f64x8::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "f64x8::<X64V3Token> load -> to_array");
+
+            let mut out = [0.0f64; 8];
+            v.store(&mut out);
+            assert_eq!(out, data, "f64x8::<X64V3Token> load -> store");
+
+            let w = generic::f64x8::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "f64x8::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().sum::<f64>(),
+                "f64x8::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn load_roundtrip_f64x8_x64v4() {
+    let data: [f64; 8] = core::array::from_fn(|i| (i as f64) * 1.5 - 3.0);
+    match X64V4Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::f64x8::<X64V4Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "f64x8::<X64V4Token> load -> to_array");
+
+            let mut out = [0.0f64; 8];
+            v.store(&mut out);
+            assert_eq!(out, data, "f64x8::<X64V4Token> load -> store");
+
+            let w = generic::f64x8::<X64V4Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "f64x8::<X64V4Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().sum::<f64>(),
+                "f64x8::<X64V4Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V4Token::compiled_with(),
+            Some(true),
+            "X64V4Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn load_roundtrip_f64x8_x64v4x() {
+    let data: [f64; 8] = core::array::from_fn(|i| (i as f64) * 1.5 - 3.0);
+    match X64V4xToken::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::f64x8::<X64V4xToken>::load(token, &data);
+            assert_eq!(v.to_array(), data, "f64x8::<X64V4xToken> load -> to_array");
+
+            let mut out = [0.0f64; 8];
+            v.store(&mut out);
+            assert_eq!(out, data, "f64x8::<X64V4xToken> load -> store");
+
+            let w = generic::f64x8::<X64V4xToken>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "f64x8::<X64V4xToken> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().sum::<f64>(),
+                "f64x8::<X64V4xToken> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V4xToken::compiled_with(),
+            Some(true),
+            "X64V4xToken::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "w512")]
+#[test]
+fn load_roundtrip_i8x64_x64v3() {
+    let data: [i8; 64] = core::array::from_fn(|i| (i as i8).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::i8x64::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "i8x64::<X64V3Token> load -> to_array");
+
+            let mut out = [0i8; 64];
+            v.store(&mut out);
+            assert_eq!(out, data, "i8x64::<X64V3Token> load -> store");
+
+            let w = generic::i8x64::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "i8x64::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0i8, |a, &b| a.wrapping_add(b)),
+                "i8x64::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn load_roundtrip_i8x64_x64v4() {
+    let data: [i8; 64] = core::array::from_fn(|i| (i as i8).wrapping_mul(37).wrapping_add(11));
+    match X64V4Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::i8x64::<X64V4Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "i8x64::<X64V4Token> load -> to_array");
+
+            let mut out = [0i8; 64];
+            v.store(&mut out);
+            assert_eq!(out, data, "i8x64::<X64V4Token> load -> store");
+
+            let w = generic::i8x64::<X64V4Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "i8x64::<X64V4Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0i8, |a, &b| a.wrapping_add(b)),
+                "i8x64::<X64V4Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V4Token::compiled_with(),
+            Some(true),
+            "X64V4Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn load_roundtrip_i8x64_x64v4x() {
+    let data: [i8; 64] = core::array::from_fn(|i| (i as i8).wrapping_mul(37).wrapping_add(11));
+    match X64V4xToken::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::i8x64::<X64V4xToken>::load(token, &data);
+            assert_eq!(v.to_array(), data, "i8x64::<X64V4xToken> load -> to_array");
+
+            let mut out = [0i8; 64];
+            v.store(&mut out);
+            assert_eq!(out, data, "i8x64::<X64V4xToken> load -> store");
+
+            let w = generic::i8x64::<X64V4xToken>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "i8x64::<X64V4xToken> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0i8, |a, &b| a.wrapping_add(b)),
+                "i8x64::<X64V4xToken> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V4xToken::compiled_with(),
+            Some(true),
+            "X64V4xToken::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "w512")]
+#[test]
+fn load_roundtrip_u8x64_x64v3() {
+    let data: [u8; 64] = core::array::from_fn(|i| (i as u8).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::u8x64::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "u8x64::<X64V3Token> load -> to_array");
+
+            let mut out = [0u8; 64];
+            v.store(&mut out);
+            assert_eq!(out, data, "u8x64::<X64V3Token> load -> store");
+
+            let w = generic::u8x64::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "u8x64::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0u8, |a, &b| a.wrapping_add(b)),
+                "u8x64::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn load_roundtrip_u8x64_x64v4() {
+    let data: [u8; 64] = core::array::from_fn(|i| (i as u8).wrapping_mul(37).wrapping_add(11));
+    match X64V4Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::u8x64::<X64V4Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "u8x64::<X64V4Token> load -> to_array");
+
+            let mut out = [0u8; 64];
+            v.store(&mut out);
+            assert_eq!(out, data, "u8x64::<X64V4Token> load -> store");
+
+            let w = generic::u8x64::<X64V4Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "u8x64::<X64V4Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0u8, |a, &b| a.wrapping_add(b)),
+                "u8x64::<X64V4Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V4Token::compiled_with(),
+            Some(true),
+            "X64V4Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn load_roundtrip_u8x64_x64v4x() {
+    let data: [u8; 64] = core::array::from_fn(|i| (i as u8).wrapping_mul(37).wrapping_add(11));
+    match X64V4xToken::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::u8x64::<X64V4xToken>::load(token, &data);
+            assert_eq!(v.to_array(), data, "u8x64::<X64V4xToken> load -> to_array");
+
+            let mut out = [0u8; 64];
+            v.store(&mut out);
+            assert_eq!(out, data, "u8x64::<X64V4xToken> load -> store");
+
+            let w = generic::u8x64::<X64V4xToken>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "u8x64::<X64V4xToken> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0u8, |a, &b| a.wrapping_add(b)),
+                "u8x64::<X64V4xToken> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V4xToken::compiled_with(),
+            Some(true),
+            "X64V4xToken::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "w512")]
+#[test]
+fn load_roundtrip_i16x32_x64v3() {
+    let data: [i16; 32] = core::array::from_fn(|i| (i as i16).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::i16x32::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "i16x32::<X64V3Token> load -> to_array");
+
+            let mut out = [0i16; 32];
+            v.store(&mut out);
+            assert_eq!(out, data, "i16x32::<X64V3Token> load -> store");
+
+            let w = generic::i16x32::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "i16x32::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0i16, |a, &b| a.wrapping_add(b)),
+                "i16x32::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn load_roundtrip_i16x32_x64v4() {
+    let data: [i16; 32] = core::array::from_fn(|i| (i as i16).wrapping_mul(37).wrapping_add(11));
+    match X64V4Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::i16x32::<X64V4Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "i16x32::<X64V4Token> load -> to_array");
+
+            let mut out = [0i16; 32];
+            v.store(&mut out);
+            assert_eq!(out, data, "i16x32::<X64V4Token> load -> store");
+
+            let w = generic::i16x32::<X64V4Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "i16x32::<X64V4Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0i16, |a, &b| a.wrapping_add(b)),
+                "i16x32::<X64V4Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V4Token::compiled_with(),
+            Some(true),
+            "X64V4Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn load_roundtrip_i16x32_x64v4x() {
+    let data: [i16; 32] = core::array::from_fn(|i| (i as i16).wrapping_mul(37).wrapping_add(11));
+    match X64V4xToken::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::i16x32::<X64V4xToken>::load(token, &data);
+            assert_eq!(v.to_array(), data, "i16x32::<X64V4xToken> load -> to_array");
+
+            let mut out = [0i16; 32];
+            v.store(&mut out);
+            assert_eq!(out, data, "i16x32::<X64V4xToken> load -> store");
+
+            let w = generic::i16x32::<X64V4xToken>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "i16x32::<X64V4xToken> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0i16, |a, &b| a.wrapping_add(b)),
+                "i16x32::<X64V4xToken> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V4xToken::compiled_with(),
+            Some(true),
+            "X64V4xToken::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "w512")]
+#[test]
+fn load_roundtrip_u16x32_x64v3() {
+    let data: [u16; 32] = core::array::from_fn(|i| (i as u16).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::u16x32::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "u16x32::<X64V3Token> load -> to_array");
+
+            let mut out = [0u16; 32];
+            v.store(&mut out);
+            assert_eq!(out, data, "u16x32::<X64V3Token> load -> store");
+
+            let w = generic::u16x32::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "u16x32::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0u16, |a, &b| a.wrapping_add(b)),
+                "u16x32::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn load_roundtrip_u16x32_x64v4() {
+    let data: [u16; 32] = core::array::from_fn(|i| (i as u16).wrapping_mul(37).wrapping_add(11));
+    match X64V4Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::u16x32::<X64V4Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "u16x32::<X64V4Token> load -> to_array");
+
+            let mut out = [0u16; 32];
+            v.store(&mut out);
+            assert_eq!(out, data, "u16x32::<X64V4Token> load -> store");
+
+            let w = generic::u16x32::<X64V4Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "u16x32::<X64V4Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0u16, |a, &b| a.wrapping_add(b)),
+                "u16x32::<X64V4Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V4Token::compiled_with(),
+            Some(true),
+            "X64V4Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn load_roundtrip_u16x32_x64v4x() {
+    let data: [u16; 32] = core::array::from_fn(|i| (i as u16).wrapping_mul(37).wrapping_add(11));
+    match X64V4xToken::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::u16x32::<X64V4xToken>::load(token, &data);
+            assert_eq!(v.to_array(), data, "u16x32::<X64V4xToken> load -> to_array");
+
+            let mut out = [0u16; 32];
+            v.store(&mut out);
+            assert_eq!(out, data, "u16x32::<X64V4xToken> load -> store");
+
+            let w = generic::u16x32::<X64V4xToken>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "u16x32::<X64V4xToken> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0u16, |a, &b| a.wrapping_add(b)),
+                "u16x32::<X64V4xToken> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V4xToken::compiled_with(),
+            Some(true),
+            "X64V4xToken::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "w512")]
+#[test]
+fn load_roundtrip_i32x16_x64v3() {
+    let data: [i32; 16] = core::array::from_fn(|i| (i as i32).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::i32x16::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "i32x16::<X64V3Token> load -> to_array");
+
+            let mut out = [0i32; 16];
+            v.store(&mut out);
+            assert_eq!(out, data, "i32x16::<X64V3Token> load -> store");
+
+            let w = generic::i32x16::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "i32x16::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0i32, |a, &b| a.wrapping_add(b)),
+                "i32x16::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn load_roundtrip_i32x16_x64v4() {
+    let data: [i32; 16] = core::array::from_fn(|i| (i as i32).wrapping_mul(37).wrapping_add(11));
+    match X64V4Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::i32x16::<X64V4Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "i32x16::<X64V4Token> load -> to_array");
+
+            let mut out = [0i32; 16];
+            v.store(&mut out);
+            assert_eq!(out, data, "i32x16::<X64V4Token> load -> store");
+
+            let w = generic::i32x16::<X64V4Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "i32x16::<X64V4Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0i32, |a, &b| a.wrapping_add(b)),
+                "i32x16::<X64V4Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V4Token::compiled_with(),
+            Some(true),
+            "X64V4Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn load_roundtrip_i32x16_x64v4x() {
+    let data: [i32; 16] = core::array::from_fn(|i| (i as i32).wrapping_mul(37).wrapping_add(11));
+    match X64V4xToken::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::i32x16::<X64V4xToken>::load(token, &data);
+            assert_eq!(v.to_array(), data, "i32x16::<X64V4xToken> load -> to_array");
+
+            let mut out = [0i32; 16];
+            v.store(&mut out);
+            assert_eq!(out, data, "i32x16::<X64V4xToken> load -> store");
+
+            let w = generic::i32x16::<X64V4xToken>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "i32x16::<X64V4xToken> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0i32, |a, &b| a.wrapping_add(b)),
+                "i32x16::<X64V4xToken> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V4xToken::compiled_with(),
+            Some(true),
+            "X64V4xToken::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "w512")]
+#[test]
+fn load_roundtrip_u32x16_x64v3() {
+    let data: [u32; 16] = core::array::from_fn(|i| (i as u32).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::u32x16::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "u32x16::<X64V3Token> load -> to_array");
+
+            let mut out = [0u32; 16];
+            v.store(&mut out);
+            assert_eq!(out, data, "u32x16::<X64V3Token> load -> store");
+
+            let w = generic::u32x16::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "u32x16::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0u32, |a, &b| a.wrapping_add(b)),
+                "u32x16::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn load_roundtrip_u32x16_x64v4() {
+    let data: [u32; 16] = core::array::from_fn(|i| (i as u32).wrapping_mul(37).wrapping_add(11));
+    match X64V4Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::u32x16::<X64V4Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "u32x16::<X64V4Token> load -> to_array");
+
+            let mut out = [0u32; 16];
+            v.store(&mut out);
+            assert_eq!(out, data, "u32x16::<X64V4Token> load -> store");
+
+            let w = generic::u32x16::<X64V4Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "u32x16::<X64V4Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0u32, |a, &b| a.wrapping_add(b)),
+                "u32x16::<X64V4Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V4Token::compiled_with(),
+            Some(true),
+            "X64V4Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn load_roundtrip_u32x16_x64v4x() {
+    let data: [u32; 16] = core::array::from_fn(|i| (i as u32).wrapping_mul(37).wrapping_add(11));
+    match X64V4xToken::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::u32x16::<X64V4xToken>::load(token, &data);
+            assert_eq!(v.to_array(), data, "u32x16::<X64V4xToken> load -> to_array");
+
+            let mut out = [0u32; 16];
+            v.store(&mut out);
+            assert_eq!(out, data, "u32x16::<X64V4xToken> load -> store");
+
+            let w = generic::u32x16::<X64V4xToken>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "u32x16::<X64V4xToken> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0u32, |a, &b| a.wrapping_add(b)),
+                "u32x16::<X64V4xToken> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V4xToken::compiled_with(),
+            Some(true),
+            "X64V4xToken::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "w512")]
+#[test]
+fn load_roundtrip_i64x8_x64v3() {
+    let data: [i64; 8] = core::array::from_fn(|i| (i as i64).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::i64x8::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "i64x8::<X64V3Token> load -> to_array");
+
+            let mut out = [0i64; 8];
+            v.store(&mut out);
+            assert_eq!(out, data, "i64x8::<X64V3Token> load -> store");
+
+            let w = generic::i64x8::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "i64x8::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0i64, |a, &b| a.wrapping_add(b)),
+                "i64x8::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn load_roundtrip_i64x8_x64v4() {
+    let data: [i64; 8] = core::array::from_fn(|i| (i as i64).wrapping_mul(37).wrapping_add(11));
+    match X64V4Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::i64x8::<X64V4Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "i64x8::<X64V4Token> load -> to_array");
+
+            let mut out = [0i64; 8];
+            v.store(&mut out);
+            assert_eq!(out, data, "i64x8::<X64V4Token> load -> store");
+
+            let w = generic::i64x8::<X64V4Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "i64x8::<X64V4Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0i64, |a, &b| a.wrapping_add(b)),
+                "i64x8::<X64V4Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V4Token::compiled_with(),
+            Some(true),
+            "X64V4Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn load_roundtrip_i64x8_x64v4x() {
+    let data: [i64; 8] = core::array::from_fn(|i| (i as i64).wrapping_mul(37).wrapping_add(11));
+    match X64V4xToken::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::i64x8::<X64V4xToken>::load(token, &data);
+            assert_eq!(v.to_array(), data, "i64x8::<X64V4xToken> load -> to_array");
+
+            let mut out = [0i64; 8];
+            v.store(&mut out);
+            assert_eq!(out, data, "i64x8::<X64V4xToken> load -> store");
+
+            let w = generic::i64x8::<X64V4xToken>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "i64x8::<X64V4xToken> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0i64, |a, &b| a.wrapping_add(b)),
+                "i64x8::<X64V4xToken> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V4xToken::compiled_with(),
+            Some(true),
+            "X64V4xToken::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "w512")]
+#[test]
+fn load_roundtrip_u64x8_x64v3() {
+    let data: [u64; 8] = core::array::from_fn(|i| (i as u64).wrapping_mul(37).wrapping_add(11));
+    match X64V3Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::u64x8::<X64V3Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "u64x8::<X64V3Token> load -> to_array");
+
+            let mut out = [0u64; 8];
+            v.store(&mut out);
+            assert_eq!(out, data, "u64x8::<X64V3Token> load -> store");
+
+            let w = generic::u64x8::<X64V3Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "u64x8::<X64V3Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0u64, |a, &b| a.wrapping_add(b)),
+                "u64x8::<X64V3Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V3Token::compiled_with(),
+            Some(true),
+            "X64V3Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn load_roundtrip_u64x8_x64v4() {
+    let data: [u64; 8] = core::array::from_fn(|i| (i as u64).wrapping_mul(37).wrapping_add(11));
+    match X64V4Token::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::u64x8::<X64V4Token>::load(token, &data);
+            assert_eq!(v.to_array(), data, "u64x8::<X64V4Token> load -> to_array");
+
+            let mut out = [0u64; 8];
+            v.store(&mut out);
+            assert_eq!(out, data, "u64x8::<X64V4Token> load -> store");
+
+            let w = generic::u64x8::<X64V4Token>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "u64x8::<X64V4Token> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0u64, |a, &b| a.wrapping_add(b)),
+                "u64x8::<X64V4Token> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V4Token::compiled_with(),
+            Some(true),
+            "X64V4Token::summon() returned None although its features are compile-time guaranteed"
+        ),
+    }
+}
+
+#[cfg(feature = "avx512")]
+#[test]
+fn load_roundtrip_u64x8_x64v4x() {
+    let data: [u64; 8] = core::array::from_fn(|i| (i as u64).wrapping_mul(37).wrapping_add(11));
+    match X64V4xToken::summon() {
+        Some(token) => {
+            // Every method here has a bare `simd_storage` call in its backend
+            // body, so touching them is what evaluates their size asserts.
+            let v = generic::u64x8::<X64V4xToken>::load(token, &data);
+            assert_eq!(v.to_array(), data, "u64x8::<X64V4xToken> load -> to_array");
+
+            let mut out = [0u64; 8];
+            v.store(&mut out);
+            assert_eq!(out, data, "u64x8::<X64V4xToken> load -> store");
+
+            let w = generic::u64x8::<X64V4xToken>::from_array(token, data);
+            assert_eq!(
+                w.to_array(),
+                data,
+                "u64x8::<X64V4xToken> from_array -> to_array"
+            );
+
+            assert_eq!(
+                v.reduce_add(),
+                data.iter().fold(0u64, |a, &b| a.wrapping_add(b)),
+                "u64x8::<X64V4xToken> reduce_add"
+            );
+        }
+        // No graceful skip: if the features were compile-time guaranteed then
+        // summon() must have succeeded, and that is testable either way.
+        None => assert_ne!(
+            X64V4xToken::compiled_with(),
+            Some(true),
+            "X64V4xToken::summon() returned None although its features are compile-time guaranteed"
+        ),
     }
 }
