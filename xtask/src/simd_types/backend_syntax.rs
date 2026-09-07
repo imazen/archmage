@@ -2,6 +2,8 @@
 //! The generator selects the concrete token. Suppression removes only the
 //! redundant name check; rustc still checks intrinsic feature requirements.
 pub(super) fn arcane(token: &str) -> String {
+    // Only registry-selected concrete tokens reach this generator. Suppression
+    // removes a redundant name-mismatch guard, not intrinsic feature checking.
     format!("#[arcane(suppress_const_test, _self = {token})]")
 }
 

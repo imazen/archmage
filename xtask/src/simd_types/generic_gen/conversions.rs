@@ -423,8 +423,8 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
                 /// {extend}-extend the low half of the lanes to `{dst}`.
                 ///
                 /// Result lane `i` is `self[i] as {de}` for `i` in `0..{half}`.
-                /// One instruction on every backend, in natural lane order —
-                /// see `docs/CROSS-ISA-INT-PRIMITIVES.md`.
+                /// Natural lane order on every backend. Instruction count depends
+                /// on the ISA, vector width, and surrounding loads.
                 #[inline(always)]
                 pub fn widen_low(self) -> super::{dst}<T> {{
                     super::{dst}::from_repr_unchecked(self.1, <T as crate::simd::backends::{trait_bound}>::{lo}(self.1, self.0))
@@ -474,10 +474,9 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
                 /// Narrow `self` and `high` to `{udst}`, clamping each lane to
                 /// the `{ude}` range.
                 ///
-                /// The source stays `{se}`: this is the only narrowing shape the
-                /// x86 and wasm instruction sets offer, so a `u{srcw}` source
-                /// (which would return `0` on x86/wasm and `{ude}::MAX` on NEON
-                /// above the signed maximum) is not expressible here.
+                /// The source stays `{se}` to match native signed-source packs on
+                /// x86 and WASM. An unsigned-source operation would require a
+                /// different lowering to preserve its full input range.
                 #[inline(always)]
                 pub fn narrow_saturating_{ude}(self, high: Self) -> super::{udst}<T>
                 where T: crate::simd::backends::{udst_bound} {{
@@ -488,7 +487,6 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
         "#,
             sm = p.method(true),
             um = p.method(false),
-            srcw = p.width_bits / p.src_lanes,
         });
     }
 

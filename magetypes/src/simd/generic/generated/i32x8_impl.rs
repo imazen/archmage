@@ -630,10 +630,9 @@ impl<T: crate::simd::backends::I32x8Backend> i32x8<T> {
     /// Narrow `self` and `high` to `u16x16`, clamping each lane to
     /// the `u16` range.
     ///
-    /// The source stays `i32`: this is the only narrowing shape the
-    /// x86 and wasm instruction sets offer, so a `u32` source
-    /// (which would return `0` on x86/wasm and `u16::MAX` on NEON
-    /// above the signed maximum) is not expressible here.
+    /// The source stays `i32` to match native signed-source packs on
+    /// x86 and WASM. An unsigned-source operation would require a
+    /// different lowering to preserve its full input range.
     #[inline(always)]
     pub fn narrow_saturating_u16(self, high: Self) -> super::u16x16<T>
     where

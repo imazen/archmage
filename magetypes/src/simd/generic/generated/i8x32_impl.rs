@@ -560,8 +560,8 @@ impl<T: crate::simd::backends::I8x32Backend + crate::simd::backends::I16x16Backe
     /// Sign-extend the low half of the lanes to `i16x16`.
     ///
     /// Result lane `i` is `self[i] as i16` for `i` in `0..16`.
-    /// One instruction on every backend, in natural lane order —
-    /// see `docs/CROSS-ISA-INT-PRIMITIVES.md`.
+    /// Natural lane order on every backend. Instruction count depends
+    /// on the ISA, vector width, and surrounding loads.
     #[inline(always)]
     pub fn widen_low(self) -> super::i16x16<T> {
         super::i16x16::from_repr_unchecked(

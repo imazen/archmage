@@ -621,8 +621,8 @@ impl<T: crate::simd::backends::I16x32Backend + crate::simd::backends::I32x16Back
     /// Sign-extend the low half of the lanes to `i32x16`.
     ///
     /// Result lane `i` is `self[i] as i32` for `i` in `0..16`.
-    /// One instruction on every backend, in natural lane order —
-    /// see `docs/CROSS-ISA-INT-PRIMITIVES.md`.
+    /// Natural lane order on every backend. Instruction count depends
+    /// on the ISA, vector width, and surrounding loads.
     #[inline(always)]
     pub fn widen_low(self) -> super::i32x16<T> {
         super::i32x16::from_repr_unchecked(
@@ -671,10 +671,9 @@ impl<T: crate::simd::backends::I16x32Backend> i16x32<T> {
     /// Narrow `self` and `high` to `u8x64`, clamping each lane to
     /// the `u8` range.
     ///
-    /// The source stays `i16`: this is the only narrowing shape the
-    /// x86 and wasm instruction sets offer, so a `u16` source
-    /// (which would return `0` on x86/wasm and `u8::MAX` on NEON
-    /// above the signed maximum) is not expressible here.
+    /// The source stays `i16` to match native signed-source packs on
+    /// x86 and WASM. An unsigned-source operation would require a
+    /// different lowering to preserve its full input range.
     #[inline(always)]
     pub fn narrow_saturating_u8(self, high: Self) -> super::u8x64<T>
     where

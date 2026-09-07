@@ -207,7 +207,10 @@ use token_discovery::*;
 ///
 /// `#[arcane(suppress_const_test)]` omits this accidental-misuse check for trusted
 /// generators. The caller must ensure the actual token proves the tier selected
-/// by its name. Intrinsic target-feature checking remains enabled.
+/// by its name. Intrinsic target-feature checking remains enabled, but does not
+/// authenticate that token: it checks instructions against the generated feature
+/// context. Ordinary callers should keep the default check enabled. This option
+/// is intended for generators whose registry already establishes that match.
 #[proc_macro_attribute]
 pub fn arcane(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as ArcaneArgs);
