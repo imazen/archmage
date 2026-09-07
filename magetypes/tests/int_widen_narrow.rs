@@ -409,9 +409,7 @@ macro_rules! check_integer_ops {
             let va = $I::<$Tok>::from_array(t, a);
             let vb = $I::<$Tok>::from_array(t, b);
             let dot = va.madd_adjacent(vb).to_array();
-            let sub = va
-                .msub_adjacent(vb, $Acc::<$Tok>::from_array(t, accum))
-                .to_array();
+            let sub = ($Acc::<$Tok>::from_array(t, accum) - va.madd_adjacent(vb)).to_array();
             let diff = va.abs_diff(vb).to_array();
             for k in 0..$ni / 2 {
                 let exact =
@@ -549,50 +547,31 @@ macro_rules! run_all {
     }};
 }
 
-// Values, shared borrows and exclusive reborrows preserve the same initialized
-// 64 bytes. Exercise high bits, lane order and writes in both directions.
+// Value casts preserve all 64 initialized bytes, including high bits and lane order.
 #[cfg(feature = "w512")]
-fn check_w512_bitcast_views<T>(token: T)
+fn check_w512_bitcast_values<T>(token: T)
 where
     T: magetypes::simd::backends::I16x32Backend + magetypes::simd::backends::U16x32Backend,
 {
     let bits = core::array::from_fn(|i| (i as u16).wrapping_mul(8191));
-    let mut unsigned = u16x32::from_array(token, bits);
+    let unsigned = u16x32::from_array(token, bits);
     let signed = unsigned.bitcast_i16x32();
     assert_eq!(signed.to_array(), bits.map(|x| x as i16));
     assert_eq!(signed.bitcast_u16x32().to_array(), bits);
-    assert_eq!(unsigned.bitcast_ref_i16x32().to_array(), signed.to_array());
-    assert_eq!(
-        core::ptr::from_ref(&unsigned).cast::<u8>(),
-        core::ptr::from_ref(unsigned.bitcast_ref_i16x32()).cast::<u8>()
-    );
-    {
-        let view = unsigned.bitcast_mut_i16x32();
-        assert_eq!(view.bitcast_ref_u16x32().to_array(), bits);
-        for i in 0..32 {
-            view[i] = i16::MIN + i as i16;
-        }
-        // A nested exclusive reborrow must remain valid when returning to the
-        // signed view and then the original unsigned owner.
-        view.bitcast_mut_u16x32()[31] = u16::MAX;
-        assert_eq!(view[31], -1);
-    }
-    let expected = core::array::from_fn(|i| if i == 31 { u16::MAX } else { 0x8000 + i as u16 });
-    assert_eq!(unsigned.to_array(), expected);
 }
 
 #[cfg(feature = "w512")]
 #[test]
-fn scalar_w512_bitcast_views() {
+fn scalar_w512_bitcast_values() {
     // ScalarToken makes this test executable under Miri without CPU intrinsics.
-    check_w512_bitcast_views(ScalarToken);
+    check_w512_bitcast_values(ScalarToken);
 }
 
 #[cfg(feature = "w512")]
 macro_rules! check_w512_byte_dot {
     ($Tok:ty, $t:expr) => {{
         let token = $t;
-        check_w512_bitcast_views(token);
+        check_w512_bitcast_values(token);
         // Exhaust every u16 bit pattern, batching lane-distinct values.
         for start in (0..65536u32).step_by(32) {
             let bits = core::array::from_fn(|i| (start + i as u32) as u16);
@@ -793,7 +772,7 @@ fn wasm128_backend() {
 fn integer_kernel(token: Token, a: &[i16; 8], b: &[i16; 8], bytes: &[u8; 16]) -> ([i32; 4], u32) {
     let a = i16x8::load(token, a);
     let b = i16x8::load(token, b);
-    let result = a.msub_adjacent(b, i32x4::splat(token, 10));
+    let result = i32x4::splat(token, 10) - a.madd_adjacent(b);
     let sad = u8x16::load(token, bytes).sum_abs_diff(u8x16::splat(token, 255));
     (result.to_array(), sad)
 }

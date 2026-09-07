@@ -251,7 +251,7 @@ impl W512Type {
     /// 64-bit stays out: x86 has no `sra_epi64` below AVX-512, so the
     /// arithmetic flavor is not universal at v3.
     fn has_uniform_shift_ops(&self) -> bool {
-        !self.is_float() && matches!(self.elem_bits, 8 | 16 | 32)
+        !self.is_float() && matches!(self.elem_bits, 16 | 32)
     }
 
     /// The unsigned counterpart of this element type.
@@ -876,55 +876,8 @@ fn w512_new_ops_delegate(ty: &W512Type, token: &str, sub_trait: &str, repr: &str
 /// Native AVX-512 bodies for the new families.
 fn w512_new_ops_v4(ty: &W512Type, token: &str) -> String {
     let arcane = super::backend_syntax::arcane(token);
-    if !ty.has_uniform_shift_ops() {
-        return String::new();
-    }
 
-    let shifts = if ty.elem_bits == 8 {
-        // No byte shift exists on x86; same 16-bit + byte-mask polyfill the
-        // const forms use, with the masks computed from the runtime count.
-        let shr_arith = if ty.is_signed() {
-            formatdoc! {r#"
-            {arcane}
-            fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {{
-                let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-                let byte_mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-                let logical = _mm512_and_si512(shifted, byte_mask);
-                let sign = _mm512_movm_epi8(_mm512_cmplt_epi8_mask(a, _mm512_setzero_si512()));
-                // `count.min(8)` saturates the fill to the whole byte, which
-                // is the contracted sign fill for out-of-range counts.
-                let fill = _mm512_set1_epi8(((0xFF00u16 >> count.min(8)) & 0xFF) as u8 as i8);
-                _mm512_or_si512(logical, _mm512_and_si512(sign, fill))
-            }}
-            "#}
-        } else {
-            formatdoc! {r#"
-            {arcane}
-            fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {{
-                let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-                let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-                _mm512_and_si512(shifted, mask)
-            }}
-            "#}
-        };
-        formatdoc! {r#"
-            {arcane}
-            fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {{
-                let shifted = _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
-                let mask = _mm512_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
-                _mm512_and_si512(shifted, mask)
-            }}
-
-            {arcane}
-            fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {{
-                let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-                let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-                _mm512_and_si512(shifted, mask)
-            }}
-
-            {shr_arith}
-        "#}
-    } else {
+    let shifts = if ty.has_uniform_shift_ops() {
         // 16-bit: _mm512_{sll,srl,sra}_epi16 (avx512bw); 32-bit: the epi32
         // forms (avx512f). Hardware gives 0 / sign fill at count >= width,
         // and _mm_cvtsi32_si128 zero-extends, so no clamp is needed.
@@ -946,6 +899,8 @@ fn w512_new_ops_v4(ty: &W512Type, token: &str) -> String {
                 _mm512_{arith}_epi{eb}(a, _mm_cvtsi32_si128(count as i32))
             }}
         "#}
+    } else {
+        String::new()
     };
 
     if ty.has_new_int_ops() {

@@ -2398,23 +2398,6 @@ impl I8x16Backend for archmage::NeonToken {
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
-    fn shl_uniform(self, a: int8x16_t, count: u32) -> int8x16_t {
-        vshlq_s8(a, vdupq_n_s8(count.min(8) as i8))
-    }
-    #[arcane(suppress_const_test, _self = NeonToken)]
-    fn shr_logical_uniform(self, a: int8x16_t, count: u32) -> int8x16_t {
-        vreinterpretq_s8_u8(vshlq_u8(
-            vreinterpretq_u8_s8(a),
-            vdupq_n_s8(-(count.min(8) as i8)),
-        ))
-    }
-    #[arcane(suppress_const_test, _self = NeonToken)]
-    fn shr_arithmetic_uniform(self, a: int8x16_t, count: u32) -> int8x16_t {
-        // Clamping to lane_bits - 1 gives the contracted sign fill.
-        vshlq_s8(a, vdupq_n_s8(-(count.min(7) as i8)))
-    }
-
-    #[arcane(suppress_const_test, _self = NeonToken)]
     fn saturating_add(self, a: int8x16_t, b: int8x16_t) -> int8x16_t {
         vqaddq_s8(a, b)
     }
@@ -2623,35 +2606,6 @@ impl I8x32Backend for archmage::NeonToken {
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
-    fn shl_uniform(self, a: [int8x16_t; 2], count: u32) -> [int8x16_t; 2] {
-        [
-            vshlq_s8(a[0], vdupq_n_s8(count.min(8) as i8)),
-            vshlq_s8(a[1], vdupq_n_s8(count.min(8) as i8)),
-        ]
-    }
-
-    #[arcane(suppress_const_test, _self = NeonToken)]
-    fn shr_logical_uniform(self, a: [int8x16_t; 2], count: u32) -> [int8x16_t; 2] {
-        [
-            vreinterpretq_s8_u8(vshlq_u8(
-                vreinterpretq_u8_s8(a[0]),
-                vdupq_n_s8(-(count.min(8) as i8)),
-            )),
-            vreinterpretq_s8_u8(vshlq_u8(
-                vreinterpretq_u8_s8(a[1]),
-                vdupq_n_s8(-(count.min(8) as i8)),
-            )),
-        ]
-    }
-    #[arcane(suppress_const_test, _self = NeonToken)]
-    fn shr_arithmetic_uniform(self, a: [int8x16_t; 2], count: u32) -> [int8x16_t; 2] {
-        [
-            vshlq_s8(a[0], vdupq_n_s8(-(count.min(7) as i8))),
-            vshlq_s8(a[1], vdupq_n_s8(-(count.min(7) as i8))),
-        ]
-    }
-
-    #[arcane(suppress_const_test, _self = NeonToken)]
     fn saturating_add(self, a: [int8x16_t; 2], b: [int8x16_t; 2]) -> [int8x16_t; 2] {
         [vqaddq_s8(a[0], b[0]), vqaddq_s8(a[1], b[1])]
     }
@@ -2793,15 +2747,6 @@ impl U8x16Backend for archmage::NeonToken {
     fn shr_logical_const<const N: i32>(self, a: uint8x16_t) -> uint8x16_t {
         const { assert!(N >= 0 && N <= 7) };
         vshlq_u8(a, vdupq_n_s8((-N) as i8))
-    }
-
-    #[arcane(suppress_const_test, _self = NeonToken)]
-    fn shl_uniform(self, a: uint8x16_t, count: u32) -> uint8x16_t {
-        vshlq_u8(a, vdupq_n_s8(count.min(8) as i8))
-    }
-    #[arcane(suppress_const_test, _self = NeonToken)]
-    fn shr_logical_uniform(self, a: uint8x16_t, count: u32) -> uint8x16_t {
-        vshlq_u8(a, vdupq_n_s8(-(count.min(8) as i8)))
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -2978,22 +2923,6 @@ impl U8x32Backend for archmage::NeonToken {
         [
             vshlq_u8(a[0], vdupq_n_s8((-N) as i8)),
             vshlq_u8(a[1], vdupq_n_s8((-N) as i8)),
-        ]
-    }
-
-    #[arcane(suppress_const_test, _self = NeonToken)]
-    fn shl_uniform(self, a: [uint8x16_t; 2], count: u32) -> [uint8x16_t; 2] {
-        [
-            vshlq_u8(a[0], vdupq_n_s8(count.min(8) as i8)),
-            vshlq_u8(a[1], vdupq_n_s8(count.min(8) as i8)),
-        ]
-    }
-
-    #[arcane(suppress_const_test, _self = NeonToken)]
-    fn shr_logical_uniform(self, a: [uint8x16_t; 2], count: u32) -> [uint8x16_t; 2] {
-        [
-            vshlq_u8(a[0], vdupq_n_s8(-(count.min(8) as i8))),
-            vshlq_u8(a[1], vdupq_n_s8(-(count.min(8) as i8))),
         ]
     }
 
@@ -5466,27 +5395,6 @@ impl I8x64Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
-    fn shl_uniform(self, a: [int8x16_t; 4], count: u32) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as I8x16Backend>::shl_uniform(self, a[i], count)
-        })
-    }
-
-    #[inline(always)]
-    fn shr_logical_uniform(self, a: [int8x16_t; 4], count: u32) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as I8x16Backend>::shr_logical_uniform(self, a[i], count)
-        })
-    }
-
-    #[inline(always)]
-    fn shr_arithmetic_uniform(self, a: [int8x16_t; 4], count: u32) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as I8x16Backend>::shr_arithmetic_uniform(self, a[i], count)
-        })
-    }
-
-    #[inline(always)]
     fn saturating_add(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
         core::array::from_fn(|i| {
             <archmage::NeonToken as I8x16Backend>::saturating_add(self, a[i], b[i])
@@ -5716,27 +5624,6 @@ impl U8x64Backend for archmage::NeonToken {
     fn shr_logical_const<const N: i32>(self, a: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
         core::array::from_fn(|i| {
             <archmage::NeonToken as U8x16Backend>::shr_logical_const::<N>(self, a[i])
-        })
-    }
-
-    #[inline(always)]
-    fn shl_uniform(self, a: [uint8x16_t; 4], count: u32) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as U8x16Backend>::shl_uniform(self, a[i], count)
-        })
-    }
-
-    #[inline(always)]
-    fn shr_logical_uniform(self, a: [uint8x16_t; 4], count: u32) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as U8x16Backend>::shr_logical_uniform(self, a[i], count)
-        })
-    }
-
-    #[inline(always)]
-    fn shr_arithmetic_uniform(self, a: [uint8x16_t; 4], count: u32) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as U8x16Backend>::shr_logical_uniform(self, a[i], count)
         })
     }
 

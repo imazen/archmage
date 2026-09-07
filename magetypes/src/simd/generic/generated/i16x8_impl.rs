@@ -687,14 +687,6 @@ impl<T: crate::simd::backends::I16x8Pairwise> i16x8<T> {
     pub fn madd_adjacent(self, rhs: Self) -> super::i32x4<T> {
         super::i32x4::from_repr_unchecked(self.1, T::madd_adjacent(self.1, self.0, rhs.0))
     }
-
-    /// Subtract the adjacent pairwise dot product from accumulator.
-    /// Each i32 lane wraps modulo 2^32. This is the accumulator form
-    /// used by Wiener statistics, not a difference between products.
-    #[inline(always)]
-    pub fn msub_adjacent(self, rhs: Self, accumulator: super::i32x4<T>) -> super::i32x4<T> {
-        accumulator - self.madd_adjacent(rhs)
-    }
 }
 // ============================================================================
 // Platform-specific concrete impls

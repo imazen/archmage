@@ -108,13 +108,6 @@ pub(super) fn generic(name: &str) -> String {
                     super::i32x{m}::from_repr_unchecked(self.1, T::madd_adjacent(self.1, self.0, rhs.0))
                 }}
 
-                /// Subtract the adjacent pairwise dot product from accumulator.
-                /// Each i32 lane wraps modulo 2^32. This is the accumulator form
-                /// used by Wiener statistics, not a difference between products.
-                #[inline(always)]
-                pub fn msub_adjacent(self, rhs: Self, accumulator: super::i32x{m}<T>) -> super::i32x{m}<T> {{
-                    accumulator - self.madd_adjacent(rhs)
-                }}
             }}
         "#};
     } else {
@@ -125,8 +118,9 @@ pub(super) fn generic(name: &str) -> String {
                 pub fn reduce_add_u32(self) -> u32 {{ T::reduce_add_u32(self.1, self.0) }}
 
                 /// Exact sum of absolute byte differences (SAD).
-                /// Prefer this fused operation when only the sum is needed:
-                /// x86 can use psadbw directly instead of materializing abs_diff.
+                /// Terminal reduction of one vector pair; x86 can use psadbw.
+                /// For long loops, accumulating vector partial sums and reducing once
+                /// can be faster than returning a scalar sum on every iteration.
                 #[inline(always)]
                 pub fn sum_abs_diff(self, rhs: Self) -> u32 {{ T::sum_abs_diff(self.1, self.0, rhs.0) }}
             }}

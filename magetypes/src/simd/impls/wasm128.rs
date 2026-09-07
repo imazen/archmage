@@ -1910,22 +1910,6 @@ impl I8x16Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn shl_uniform(self, a: v128, count: u32) -> v128 {
-        let keep: i8 = if count < 8 { -1 } else { 0 };
-        v128_and(i8x16_shl(a, count), i8x16_splat(keep))
-    }
-
-    #[inline(always)]
-    fn shr_logical_uniform(self, a: v128, count: u32) -> v128 {
-        let keep: i8 = if count < 8 { -1 } else { 0 };
-        v128_and(u8x16_shr(a, count), i8x16_splat(keep))
-    }
-    #[inline(always)]
-    fn shr_arithmetic_uniform(self, a: v128, count: u32) -> v128 {
-        i8x16_shr(a, if count > 7 { 7 } else { count })
-    }
-
-    #[inline(always)]
     fn saturating_add(self, a: v128, b: v128) -> v128 {
         i8x16_add_sat(a, b)
     }
@@ -2086,29 +2070,6 @@ impl I8x32Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn shl_uniform(self, a: [v128; 2], count: u32) -> [v128; 2] {
-        let keep = i8x16_splat(if count < 8 { -1i8 } else { 0 });
-        [
-            v128_and(i8x16_shl(a[0], count), keep),
-            v128_and(i8x16_shl(a[1], count), keep),
-        ]
-    }
-
-    #[inline(always)]
-    fn shr_logical_uniform(self, a: [v128; 2], count: u32) -> [v128; 2] {
-        let keep = i8x16_splat(if count < 8 { -1i8 } else { 0 });
-        [
-            v128_and(u8x16_shr(a[0], count), keep),
-            v128_and(u8x16_shr(a[1], count), keep),
-        ]
-    }
-    #[inline(always)]
-    fn shr_arithmetic_uniform(self, a: [v128; 2], count: u32) -> [v128; 2] {
-        let clamped = if count > 7 { 7 } else { count };
-        [i8x16_shr(a[0], clamped), i8x16_shr(a[1], clamped)]
-    }
-
-    #[inline(always)]
     fn saturating_add(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
         [i8x16_add_sat(a[0], b[0]), i8x16_add_sat(a[1], b[1])]
     }
@@ -2253,18 +2214,6 @@ impl U8x16Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: v128) -> v128 {
         u8x16_shr(a, N as u32)
-    }
-
-    #[inline(always)]
-    fn shl_uniform(self, a: v128, count: u32) -> v128 {
-        let keep: i8 = if count < 8 { -1 } else { 0 };
-        v128_and(i8x16_shl(a, count), i8x16_splat(keep))
-    }
-
-    #[inline(always)]
-    fn shr_logical_uniform(self, a: v128, count: u32) -> v128 {
-        let keep: i8 = if count < 8 { -1 } else { 0 };
-        v128_and(u8x16_shr(a, count), i8x16_splat(keep))
     }
 
     #[inline(always)]
@@ -2413,24 +2362,6 @@ impl U8x32Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [v128; 2]) -> [v128; 2] {
         [u8x16_shr(a[0], N as u32), u8x16_shr(a[1], N as u32)]
-    }
-
-    #[inline(always)]
-    fn shl_uniform(self, a: [v128; 2], count: u32) -> [v128; 2] {
-        let keep = i8x16_splat(if count < 8 { -1i8 } else { 0 });
-        [
-            v128_and(i8x16_shl(a[0], count), keep),
-            v128_and(i8x16_shl(a[1], count), keep),
-        ]
-    }
-
-    #[inline(always)]
-    fn shr_logical_uniform(self, a: [v128; 2], count: u32) -> [v128; 2] {
-        let keep = i8x16_splat(if count < 8 { -1i8 } else { 0 });
-        [
-            v128_and(u8x16_shr(a[0], count), keep),
-            v128_and(u8x16_shr(a[1], count), keep),
-        ]
     }
 
     #[inline(always)]
@@ -4900,27 +4831,6 @@ impl I8x64Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
-    fn shl_uniform(self, a: [v128; 4], count: u32) -> [v128; 4] {
-        core::array::from_fn(|i| {
-            <archmage::Wasm128Token as I8x16Backend>::shl_uniform(self, a[i], count)
-        })
-    }
-
-    #[inline(always)]
-    fn shr_logical_uniform(self, a: [v128; 4], count: u32) -> [v128; 4] {
-        core::array::from_fn(|i| {
-            <archmage::Wasm128Token as I8x16Backend>::shr_logical_uniform(self, a[i], count)
-        })
-    }
-
-    #[inline(always)]
-    fn shr_arithmetic_uniform(self, a: [v128; 4], count: u32) -> [v128; 4] {
-        core::array::from_fn(|i| {
-            <archmage::Wasm128Token as I8x16Backend>::shr_arithmetic_uniform(self, a[i], count)
-        })
-    }
-
-    #[inline(always)]
     fn saturating_add(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| {
             <archmage::Wasm128Token as I8x16Backend>::saturating_add(self, a[i], b[i])
@@ -5159,27 +5069,6 @@ impl U8x64Backend for archmage::Wasm128Token {
     fn shr_logical_const<const N: i32>(self, a: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| {
             <archmage::Wasm128Token as U8x16Backend>::shr_logical_const::<N>(self, a[i])
-        })
-    }
-
-    #[inline(always)]
-    fn shl_uniform(self, a: [v128; 4], count: u32) -> [v128; 4] {
-        core::array::from_fn(|i| {
-            <archmage::Wasm128Token as U8x16Backend>::shl_uniform(self, a[i], count)
-        })
-    }
-
-    #[inline(always)]
-    fn shr_logical_uniform(self, a: [v128; 4], count: u32) -> [v128; 4] {
-        core::array::from_fn(|i| {
-            <archmage::Wasm128Token as U8x16Backend>::shr_logical_uniform(self, a[i], count)
-        })
-    }
-
-    #[inline(always)]
-    fn shr_arithmetic_uniform(self, a: [v128; 4], count: u32) -> [v128; 4] {
-        core::array::from_fn(|i| {
-            <archmage::Wasm128Token as U8x16Backend>::shr_logical_uniform(self, a[i], count)
         })
     }
 

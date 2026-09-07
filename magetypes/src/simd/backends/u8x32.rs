@@ -113,19 +113,6 @@ pub trait U8x32Backend: SimdToken + Sealed + Copy + 'static {
     /// `N` must be in `0..=lane_bits-1`; the generic front-ends reject out-of-range `N` at compile time.
     fn shr_logical_const<const N: i32>(self, a: Self::Repr) -> Self::Repr;
 
-    // ====== Uniform variable shifts ======
-
-    /// Shift left by a runtime `count` applied identically to every lane.
-    ///
-    /// `count >= 8` produces all-zero lanes on every backend.
-    fn shl_uniform(self, a: Self::Repr, count: u32) -> Self::Repr;
-
-    /// Logical (zero-filling) shift right by a runtime `count` applied
-    /// identically to every lane.
-    ///
-    /// `count >= 8` produces all-zero lanes on every backend.
-    fn shr_logical_uniform(self, a: Self::Repr, count: u32) -> Self::Repr;
-
     // ====== Saturating arithmetic ======
 
     /// Lane-wise addition that clamps to the element range instead of

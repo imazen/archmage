@@ -2503,39 +2503,6 @@ impl I8x16Backend for archmage::X64V3Token {
         _mm_or_si128(logical, _mm_and_si128(sign, fill))
     }
 
-    // ====== Uniform variable shifts (8-bit: polyfill via 16-bit) ======
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn shl_uniform(self, a: __m128i, count: u32) -> __m128i {
-        let shifted = _mm_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
-        // `checked_shl` yields None (-> mask 0) once count >= 8,
-        // which is the all-zero result the contract requires.
-        let mask = _mm_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
-        _mm_and_si128(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn shr_logical_uniform(self, a: __m128i, count: u32) -> __m128i {
-        let shifted = _mm_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-        _mm_and_si128(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn shr_arithmetic_uniform(self, a: __m128i, count: u32) -> __m128i {
-        let shifted = _mm_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let byte_mask = _mm_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-        let logical = _mm_and_si128(shifted, byte_mask);
-        let zero = _mm_setzero_si128();
-        let sign = _mm_cmpgt_epi8(zero, a);
-        // High-`count`-bits fill mask. `count.min(8)` saturates the
-        // fill to the whole byte, which is the sign fill the
-        // contract requires for out-of-range counts; a plain
-        // `>> count` would be a u16 overflow at count >= 16.
-        let fill = _mm_set1_epi8(((0xFF00u16 >> count.min(8)) & 0xFF) as u8 as i8);
-        _mm_or_si128(logical, _mm_and_si128(sign, fill))
-    }
-
     // ====== Saturating arithmetic ======
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -2735,39 +2702,6 @@ impl I8x32Backend for archmage::X64V3Token {
         _mm256_or_si256(logical, _mm256_and_si256(sign, fill))
     }
 
-    // ====== Uniform variable shifts (8-bit: polyfill via 16-bit) ======
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn shl_uniform(self, a: __m256i, count: u32) -> __m256i {
-        let shifted = _mm256_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
-        // `checked_shl` yields None (-> mask 0) once count >= 8,
-        // which is the all-zero result the contract requires.
-        let mask = _mm256_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
-        _mm256_and_si256(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn shr_logical_uniform(self, a: __m256i, count: u32) -> __m256i {
-        let shifted = _mm256_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm256_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-        _mm256_and_si256(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn shr_arithmetic_uniform(self, a: __m256i, count: u32) -> __m256i {
-        let shifted = _mm256_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let byte_mask = _mm256_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-        let logical = _mm256_and_si256(shifted, byte_mask);
-        let zero = _mm256_setzero_si256();
-        let sign = _mm256_cmpgt_epi8(zero, a);
-        // High-`count`-bits fill mask. `count.min(8)` saturates the
-        // fill to the whole byte, which is the sign fill the
-        // contract requires for out-of-range counts; a plain
-        // `>> count` would be a u16 overflow at count >= 16.
-        let fill = _mm256_set1_epi8(((0xFF00u16 >> count.min(8)) & 0xFF) as u8 as i8);
-        _mm256_or_si256(logical, _mm256_and_si256(sign, fill))
-    }
-
     // ====== Saturating arithmetic ======
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -2953,24 +2887,6 @@ impl U8x16Backend for archmage::X64V3Token {
         _mm_and_si128(shifted, mask)
     }
 
-    // ====== Uniform variable shifts (8-bit: polyfill via 16-bit) ======
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn shl_uniform(self, a: __m128i, count: u32) -> __m128i {
-        let shifted = _mm_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
-        // `checked_shl` yields None (-> mask 0) once count >= 8,
-        // which is the all-zero result the contract requires.
-        let mask = _mm_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
-        _mm_and_si128(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn shr_logical_uniform(self, a: __m128i, count: u32) -> __m128i {
-        let shifted = _mm_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-        _mm_and_si128(shifted, mask)
-    }
-
     // ====== Saturating arithmetic ======
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -3147,24 +3063,6 @@ impl U8x32Backend for archmage::X64V3Token {
     fn shr_logical_const<const N: i32>(self, a: __m256i) -> __m256i {
         let shifted = _mm256_srli_epi16::<N>(a);
         let mask = _mm256_set1_epi8((0xFFu8.wrapping_shr(N as u32)) as i8);
-        _mm256_and_si256(shifted, mask)
-    }
-
-    // ====== Uniform variable shifts (8-bit: polyfill via 16-bit) ======
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn shl_uniform(self, a: __m256i, count: u32) -> __m256i {
-        let shifted = _mm256_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
-        // `checked_shl` yields None (-> mask 0) once count >= 8,
-        // which is the all-zero result the contract requires.
-        let mask = _mm256_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
-        _mm256_and_si256(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V3Token)]
-    fn shr_logical_uniform(self, a: __m256i, count: u32) -> __m256i {
-        let shifted = _mm256_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm256_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
         _mm256_and_si256(shifted, mask)
     }
 
@@ -5759,27 +5657,6 @@ impl I8x64Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
-    fn shl_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
-        core::array::from_fn(|i| {
-            <archmage::X64V3Token as I8x32Backend>::shl_uniform(self, a[i], count)
-        })
-    }
-
-    #[inline(always)]
-    fn shr_logical_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
-        core::array::from_fn(|i| {
-            <archmage::X64V3Token as I8x32Backend>::shr_logical_uniform(self, a[i], count)
-        })
-    }
-
-    #[inline(always)]
-    fn shr_arithmetic_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
-        core::array::from_fn(|i| {
-            <archmage::X64V3Token as I8x32Backend>::shr_arithmetic_uniform(self, a[i], count)
-        })
-    }
-
-    #[inline(always)]
     fn saturating_add(self, a: [__m256i; 2], b: [__m256i; 2]) -> [__m256i; 2] {
         core::array::from_fn(|i| {
             <archmage::X64V3Token as I8x32Backend>::saturating_add(self, a[i], b[i])
@@ -6034,27 +5911,6 @@ impl U8x64Backend for archmage::X64V3Token {
             <archmage::X64V3Token as U8x32Backend>::shr_logical_const::<N>(self, a[0]),
             <archmage::X64V3Token as U8x32Backend>::shr_logical_const::<N>(self, a[1]),
         ]
-    }
-
-    #[inline(always)]
-    fn shl_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
-        core::array::from_fn(|i| {
-            <archmage::X64V3Token as U8x32Backend>::shl_uniform(self, a[i], count)
-        })
-    }
-
-    #[inline(always)]
-    fn shr_logical_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
-        core::array::from_fn(|i| {
-            <archmage::X64V3Token as U8x32Backend>::shr_logical_uniform(self, a[i], count)
-        })
-    }
-
-    #[inline(always)]
-    fn shr_arithmetic_uniform(self, a: [__m256i; 2], count: u32) -> [__m256i; 2] {
-        core::array::from_fn(|i| {
-            <archmage::X64V3Token as U8x32Backend>::shr_logical_uniform(self, a[i], count)
-        })
     }
 
     #[inline(always)]

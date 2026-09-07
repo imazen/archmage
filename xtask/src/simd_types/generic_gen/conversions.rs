@@ -256,17 +256,6 @@ pub(crate) fn gen_w512_i16_bitcast(src: &str, trait_bound: &str) -> String {
                 super::{target}::from_repr_unchecked(self.1, crate::simd_storage::cast(self.0))
             }}
 
-            /// Borrow the same storage as {target}, preserving the token and lifetime.
-            #[inline(always)]
-            pub fn bitcast_ref_{target}(&self) -> &super::{target}<T> {{
-                crate::simd_storage::vector_view(self.1, &self.0)
-            }}
-
-            /// Exclusively borrow the same storage as {target}; all lane bits remain valid.
-            #[inline(always)]
-            pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T> {{
-                crate::simd_storage::vector_view_mut(self.1, &mut self.0)
-            }}
         }}
     "#}
 }

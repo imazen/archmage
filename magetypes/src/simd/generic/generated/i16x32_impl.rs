@@ -611,18 +611,6 @@ impl<T: crate::simd::backends::I16x32Backend + crate::simd::backends::U16x32Back
     pub fn bitcast_u16x32(self) -> super::u16x32<T> {
         super::u16x32::from_repr_unchecked(self.1, crate::simd_storage::cast(self.0))
     }
-
-    /// Borrow the same storage as u16x32, preserving the token and lifetime.
-    #[inline(always)]
-    pub fn bitcast_ref_u16x32(&self) -> &super::u16x32<T> {
-        crate::simd_storage::vector_view(self.1, &self.0)
-    }
-
-    /// Exclusively borrow the same storage as u16x32; all lane bits remain valid.
-    #[inline(always)]
-    pub fn bitcast_mut_u16x32(&mut self) -> &mut super::u16x32<T> {
-        crate::simd_storage::vector_view_mut(self.1, &mut self.0)
-    }
 }
 
 // ============================================================================
@@ -701,14 +689,6 @@ impl<T: crate::simd::backends::I16x32Pairwise> i16x32<T> {
     #[inline(always)]
     pub fn madd_adjacent(self, rhs: Self) -> super::i32x16<T> {
         super::i32x16::from_repr_unchecked(self.1, T::madd_adjacent(self.1, self.0, rhs.0))
-    }
-
-    /// Subtract the adjacent pairwise dot product from accumulator.
-    /// Each i32 lane wraps modulo 2^32. This is the accumulator form
-    /// used by Wiener statistics, not a difference between products.
-    #[inline(always)]
-    pub fn msub_adjacent(self, rhs: Self, accumulator: super::i32x16<T>) -> super::i32x16<T> {
-        accumulator - self.madd_adjacent(rhs)
     }
 }
 // ============================================================================

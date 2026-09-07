@@ -943,7 +943,7 @@ def storage_access_probes():
                             dest = "u16x32" if elem == "i16" else "i16x32"
                             dst = f"{dest}<{token}>"
                             # Same token, same initialized lane bytes and layout.
-                            # The reference casts preserve the existing proof.
+                            # The value cast preserves the existing proof.
                             cases += [
                                 (
                                     "signed_cast",
@@ -952,22 +952,6 @@ def storage_access_probes():
                                     dst,
                                     f"value.bitcast_{dest}()",
                                     f"unsafe {{core::ptr::from_ref(value).cast::<{dst}>().read()}}",
-                                ),
-                                (
-                                    "signed_ref",
-                                    False,
-                                    "",
-                                    f"&{dst}",
-                                    f"value.bitcast_ref_{dest}()",
-                                    f"unsafe {{&*core::ptr::from_ref(value).cast::<{dst}>()}}",
-                                ),
-                                (
-                                    "signed_mut",
-                                    True,
-                                    "",
-                                    f"&mut {dst}",
-                                    f"value.bitcast_mut_{dest}()",
-                                    f"unsafe {{&mut *core::ptr::from_mut(value).cast::<{dst}>()}}",
                                 ),
                             ]
                         if ty in [
@@ -1271,7 +1255,7 @@ def integer_probes():
                         api += f"let b = {elem}x{n}::<{token}>::from_array(token,b);"
                     api += {
                         "madd": "a.madd_adjacent(b).to_array()",
-                        "msub": f"a.msub_adjacent(b, i32x{width // 32}::<{token}>::from_array(token,accumulator)).to_array()",
+                        "msub": f"(i32x{width // 32}::<{token}>::from_array(token,accumulator) - a.madd_adjacent(b)).to_array()",
                         "abs_i16": "a.abs_diff(b).to_array()",
                         "abs_u8": "a.abs_diff(b).to_array()",
                         "sum_u8": "a.reduce_add_u32()",

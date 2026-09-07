@@ -629,32 +629,6 @@ impl I8x64Backend for archmage::X64V4Token {
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm512_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
-        _mm512_and_si512(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-        _mm512_and_si512(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let byte_mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-        let logical = _mm512_and_si512(shifted, byte_mask);
-        let sign = _mm512_movm_epi8(_mm512_cmplt_epi8_mask(a, _mm512_setzero_si512()));
-        // `count.min(8)` saturates the fill to the whole byte, which
-        // is the contracted sign fill for out-of-range counts.
-        let fill = _mm512_set1_epi8(((0xFF00u16 >> count.min(8)) & 0xFF) as u8 as i8);
-        _mm512_or_si512(logical, _mm512_and_si512(sign, fill))
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
     fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
         _mm512_adds_epi8(a, b)
     }
@@ -841,27 +815,6 @@ impl U8x64Backend for archmage::X64V4Token {
         let count = _mm_cvtsi32_si128(N);
         let shifted = _mm512_srl_epi16(a, count);
         let mask = _mm512_set1_epi8(((0xFFu16 >> N) & 0xFF) as i8);
-        _mm512_and_si512(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm512_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
-        _mm512_and_si512(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-        _mm512_and_si512(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
         _mm512_and_si512(shifted, mask)
     }
 
@@ -2626,32 +2579,6 @@ impl I8x64Backend for archmage::X64V4xToken {
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm512_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
-        _mm512_and_si512(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-        _mm512_and_si512(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let byte_mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-        let logical = _mm512_and_si512(shifted, byte_mask);
-        let sign = _mm512_movm_epi8(_mm512_cmplt_epi8_mask(a, _mm512_setzero_si512()));
-        // `count.min(8)` saturates the fill to the whole byte, which
-        // is the contracted sign fill for out-of-range counts.
-        let fill = _mm512_set1_epi8(((0xFF00u16 >> count.min(8)) & 0xFF) as u8 as i8);
-        _mm512_or_si512(logical, _mm512_and_si512(sign, fill))
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
         _mm512_adds_epi8(a, b)
     }
@@ -2838,27 +2765,6 @@ impl U8x64Backend for archmage::X64V4xToken {
         let count = _mm_cvtsi32_si128(N);
         let shifted = _mm512_srl_epi16(a, count);
         let mask = _mm512_set1_epi8(((0xFFu16 >> N) & 0xFF) as i8);
-        _mm512_and_si512(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm512_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
-        _mm512_and_si512(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-        _mm512_and_si512(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
         _mm512_and_si512(shifted, mask)
     }
 

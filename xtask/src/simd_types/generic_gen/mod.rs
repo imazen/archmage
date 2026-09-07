@@ -64,7 +64,7 @@ pub(crate) fn has_shr_arithmetic(elem: ElementType) -> bool {
 
 /// Whether the type carries the uniform-variable-shift family.
 ///
-/// 8/16/32-bit integers. The audit (`docs/CROSS-ISA-INT-PRIMITIVES.md` §2a)
+/// 16/32-bit integers. The audit (`docs/CROSS-ISA-INT-PRIMITIVES.md` §2a)
 /// proves the uniform form universal at every one of these widths on every
 /// tier: SSE2/AVX2/AVX-512BW `PSLL/PSRL/PSRA` with the count in an XMM,
 /// NEON `vshlq_*` with a splatted (clamped) count, wasm's `u32` count plus
@@ -75,12 +75,7 @@ pub(crate) fn has_shr_arithmetic(elem: ElementType) -> bool {
 pub(crate) fn has_uniform_shifts(elem: ElementType) -> bool {
     matches!(
         elem,
-        ElementType::I8
-            | ElementType::U8
-            | ElementType::I16
-            | ElementType::U16
-            | ElementType::I32
-            | ElementType::U32
+        ElementType::I16 | ElementType::U16 | ElementType::I32 | ElementType::U32
     )
 }
 

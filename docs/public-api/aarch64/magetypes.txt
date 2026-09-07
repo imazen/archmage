@@ -6,15 +6,15 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2437 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 34 lines (41 hidden + 0 excluded-feature)
+# files: magetypes.txt 2414 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 34 lines (41 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                12
 #   pub types (struct/enum/trait/alias)       314
 #   pub consts/statics                        228
-#   free functions                           3028
-#   inherent methods                         1249
+#   free functions                           2984
+#   inherent methods                         1233
 #   enum variants                               1
 #   re-exports                                  2
 #   trait roster entries (type × trait)       795
@@ -25,10 +25,10 @@
 # per-module pub lines:
 #   (root)                          321
 #   cast                              3
-#   prelude                        2946
-#   simd                           1564
+#   prelude                        2902
+#   simd                           1548
 
-## items (2214 lines)
+## items (2191 lines)
 
 pub mod magetypes
 pub use archmage
@@ -279,7 +279,6 @@ pub fn prelude::i16x16<T>::bitcast_u16x16(self) -> prelude::u16x16<T> [also: pre
 pub fn prelude::i16x16<T>::narrow_saturating_i8(self, Self) -> prelude::i8x32<T> [also: prelude::i16x16<T>]
 pub fn prelude::i16x16<T>::narrow_saturating_u8(self, Self) -> prelude::u8x32<T> [also: prelude::i16x16<T>]
 pub fn prelude::i16x16<T>::madd_adjacent(self, Self) -> prelude::i32x8<T> [also: prelude::i16x16<T>]
-pub fn prelude::i16x16<T>::msub_adjacent(self, Self, prelude::i32x8<T>) -> prelude::i32x8<T> [also: prelude::i16x16<T>]
 pub fn prelude::i16x16<T>::widen_high(self) -> prelude::i32x8<T> [also: prelude::i16x16<T>]
 pub fn prelude::i16x16<T>::widen_low(self) -> prelude::i32x8<T> [also: prelude::i16x16<T>]
 pub fn [i16; 16]::from(prelude::i16x16<T>) -> [i16; 16] [also: (root)]
@@ -287,8 +286,6 @@ pub fn [i16; 16]::from(prelude::i16x16<T>) -> [i16; 16] [also: (root)]
 pub const fn prelude::i16x32<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
 pub const fn prelude::i16x32<archmage::tokens::generated::arm::NeonToken>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::i16x32<T>::abs_diff(self, Self) -> prelude::u16x32<T> [also: prelude::i16x32<T>]
-pub fn prelude::i16x32<T>::bitcast_mut_u16x32(&mut self) -> &mut prelude::u16x32<T> [also: prelude::i16x32<T>]
-pub fn prelude::i16x32<T>::bitcast_ref_u16x32(&self) -> &prelude::u16x32<T> [also: prelude::i16x32<T>]
 pub fn prelude::i16x32<T>::bitcast_u16x32(self) -> prelude::u16x32<T> [also: prelude::i16x32<T>]
 pub fn prelude::i16x32<T>::from_array(T, [i16; 32]) -> Self [also: prelude::i16x32<T>]
 pub fn prelude::i16x32<T>::from_repr(T, <T as simd::backends::I16x32Backend>::Repr) -> Self [also: prelude::i16x32<T>]
@@ -301,7 +298,6 @@ pub fn prelude::i16x32<T>::to_array(self) -> [i16; 32] [also: prelude::i16x32<T>
 pub fn prelude::i16x32<T>::narrow_saturating_i8(self, Self) -> prelude::i8x64<T> [also: prelude::i16x32<T>]
 pub fn prelude::i16x32<T>::narrow_saturating_u8(self, Self) -> prelude::u8x64<T> [also: prelude::i16x32<T>]
 pub fn prelude::i16x32<T>::madd_adjacent(self, Self) -> prelude::i32x16<T> [also: prelude::i16x32<T>]
-pub fn prelude::i16x32<T>::msub_adjacent(self, Self, prelude::i32x16<T>) -> prelude::i32x16<T> [also: prelude::i16x32<T>]
 pub fn prelude::i16x32<T>::widen_high(self) -> prelude::i32x16<T> [also: prelude::i16x32<T>]
 pub fn prelude::i16x32<T>::widen_low(self) -> prelude::i32x16<T> [also: prelude::i16x32<T>]
 pub fn [i16; 32]::from(prelude::i16x32<T>) -> [i16; 32] [also: (root)]
@@ -324,13 +320,13 @@ pub fn prelude::i16x8<T>::saturating_add(self, Self) -> Self [also: prelude::i16
 pub fn prelude::i16x8<T>::saturating_sub(self, Self) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
 pub fn prelude::i16x8<T>::shl<const N: i32>(self) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
 pub fn prelude::i16x8<T>::shl_const<const N: i32>(self) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
-pub fn prelude::i16x8<T>::shl_uniform(self, u32) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
+pub fn prelude::i16x8<T>::shl_uniform(self, u32) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>]
 pub fn prelude::i16x8<T>::shr_arithmetic<const N: i32>(self) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>]
 pub fn prelude::i16x8<T>::shr_arithmetic_const<const N: i32>(self) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>]
-pub fn prelude::i16x8<T>::shr_arithmetic_uniform(self, u32) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>]
+pub fn prelude::i16x8<T>::shr_arithmetic_uniform(self, u32) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>]
 pub fn prelude::i16x8<T>::shr_logical<const N: i32>(self) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
 pub fn prelude::i16x8<T>::shr_logical_const<const N: i32>(self) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
-pub fn prelude::i16x8<T>::shr_logical_uniform(self, u32) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
+pub fn prelude::i16x8<T>::shr_logical_uniform(self, u32) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>]
 pub fn prelude::i16x8<T>::splat(T, i16) -> Self [also: prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>]
 pub fn prelude::i16x8<T>::store(self, &mut [i16; 8]) [also: prelude::i16x8<T>]
 pub fn prelude::i16x8<T>::to_array(self) -> [i16; 8] [also: prelude::i16x8<T>]
@@ -340,7 +336,6 @@ pub fn prelude::i16x8<T>::bitcast_u16x8(self) -> prelude::u16x8<T> [also: prelud
 pub fn prelude::i16x8<T>::narrow_saturating_i8(self, Self) -> prelude::i8x16<T> [also: prelude::i16x8<T>]
 pub fn prelude::i16x8<T>::narrow_saturating_u8(self, Self) -> prelude::u8x16<T> [also: prelude::i16x8<T>]
 pub fn prelude::i16x8<T>::madd_adjacent(self, Self) -> prelude::i32x4<T> [also: prelude::i16x8<T>]
-pub fn prelude::i16x8<T>::msub_adjacent(self, Self, prelude::i32x4<T>) -> prelude::i32x4<T> [also: prelude::i16x8<T>]
 pub fn prelude::i16x8<T>::widen_high(self) -> prelude::i32x4<T> [also: prelude::i16x8<T>]
 pub fn prelude::i16x8<T>::widen_low(self) -> prelude::i32x4<T> [also: prelude::i16x8<T>]
 pub fn [i16; 8]::from(prelude::i16x8<T>) -> [i16; 8] [also: (root)]
@@ -531,8 +526,6 @@ pub fn [u16; 16]::from(prelude::u16x16<T>) -> [u16; 16] [also: (root)]
 pub const fn prelude::u16x32<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
 pub const fn prelude::u16x32<archmage::tokens::generated::arm::NeonToken>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::u16x32<T>::bitcast_i16x32(self) -> prelude::i16x32<T> [also: prelude::u16x32<T>]
-pub fn prelude::u16x32<T>::bitcast_mut_i16x32(&mut self) -> &mut prelude::i16x32<T> [also: prelude::u16x32<T>]
-pub fn prelude::u16x32<T>::bitcast_ref_i16x32(&self) -> &prelude::i16x32<T> [also: prelude::u16x32<T>]
 pub fn prelude::u16x32<T>::from_array(T, [u16; 32]) -> Self [also: prelude::u16x32<T>]
 pub fn prelude::u16x32<T>::from_repr(T, <T as simd::backends::U16x32Backend>::Repr) -> Self [also: prelude::u16x32<T>]
 pub fn prelude::u16x32<T>::into_repr(self) -> <T as simd::backends::U16x32Backend>::Repr [also: prelude::u16x32<T>]
@@ -1395,11 +1388,8 @@ pub fn simd::backends::I8x16Backend::reduce_add(self, Self::Repr) -> i8
 pub fn simd::backends::I8x16Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x16Backend::saturating_sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x16Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::I8x16Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I8x16Backend::shr_arithmetic_const<const N: i32>(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::I8x16Backend::shr_arithmetic_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I8x16Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::I8x16Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I8x16Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x16Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x16Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1439,11 +1429,8 @@ pub fn simd::backends::I8x32Backend::reduce_add(self, Self::Repr) -> i8
 pub fn simd::backends::I8x32Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x32Backend::saturating_sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x32Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::I8x32Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I8x32Backend::shr_arithmetic_const<const N: i32>(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::I8x32Backend::shr_arithmetic_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I8x32Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::I8x32Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I8x32Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x32Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x32Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1483,11 +1470,8 @@ pub fn simd::backends::I8x64Backend::reduce_add(self, Self::Repr) -> i8
 pub fn simd::backends::I8x64Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x64Backend::saturating_sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x64Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::I8x64Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I8x64Backend::shr_arithmetic_const<const N: i32>(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::I8x64Backend::shr_arithmetic_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I8x64Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::I8x64Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::I8x64Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x64Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x64Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1849,9 +1833,7 @@ pub fn simd::backends::U8x16Backend::reduce_add(self, Self::Repr) -> u8
 pub fn simd::backends::U8x16Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x16Backend::saturating_sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x16Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::U8x16Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U8x16Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::U8x16Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U8x16Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x16Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x16Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1890,9 +1872,7 @@ pub fn simd::backends::U8x32Backend::reduce_add(self, Self::Repr) -> u8
 pub fn simd::backends::U8x32Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x32Backend::saturating_sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x32Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::U8x32Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U8x32Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::U8x32Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U8x32Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x32Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x32Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1932,11 +1912,8 @@ pub fn simd::backends::U8x64Backend::reduce_add(self, Self::Repr) -> u8
 pub fn simd::backends::U8x64Backend::saturating_add(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x64Backend::saturating_sub(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x64Backend::shl_const<const N: i32>(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::U8x64Backend::shl_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U8x64Backend::shr_arithmetic_const<const N: i32>(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::U8x64Backend::shr_arithmetic_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U8x64Backend::shr_logical_const<const N: i32>(self, Self::Repr) -> Self::Repr
-pub fn simd::backends::U8x64Backend::shr_logical_uniform(self, Self::Repr, u32) -> Self::Repr
 pub fn simd::backends::U8x64Backend::simd_eq(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x64Backend::simd_ge(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x64Backend::simd_gt(self, Self::Repr, Self::Repr) -> Self::Repr

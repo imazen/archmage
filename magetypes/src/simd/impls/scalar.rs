@@ -3633,28 +3633,6 @@ impl I8x16Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn shl_uniform(self, a: [i8; 16], count: u32) -> [i8; 16] {
-        a.map(|x| if count >= 8 { 0 } else { x.wrapping_shl(count) })
-    }
-
-    #[inline(always)]
-    fn shr_logical_uniform(self, a: [i8; 16], count: u32) -> [i8; 16] {
-        a.map(|x| {
-            if count >= 8 {
-                0
-            } else {
-                ((x as u8).wrapping_shr(count)) as i8
-            }
-        })
-    }
-
-    #[inline(always)]
-    fn shr_arithmetic_uniform(self, a: [i8; 16], count: u32) -> [i8; 16] {
-        // Clamping to lane_bits - 1 *is* the sign fill.
-        a.map(|x| x.wrapping_shr(if count > 7 { 7 } else { count }))
-    }
-
-    #[inline(always)]
     fn saturating_add(self, a: [i8; 16], b: [i8; 16]) -> [i8; 16] {
         core::array::from_fn(|i| a[i].saturating_add(b[i]))
     }
@@ -4626,28 +4604,6 @@ impl I8x32Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn shl_uniform(self, a: [i8; 32], count: u32) -> [i8; 32] {
-        a.map(|x| if count >= 8 { 0 } else { x.wrapping_shl(count) })
-    }
-
-    #[inline(always)]
-    fn shr_logical_uniform(self, a: [i8; 32], count: u32) -> [i8; 32] {
-        a.map(|x| {
-            if count >= 8 {
-                0
-            } else {
-                ((x as u8).wrapping_shr(count)) as i8
-            }
-        })
-    }
-
-    #[inline(always)]
-    fn shr_arithmetic_uniform(self, a: [i8; 32], count: u32) -> [i8; 32] {
-        // Clamping to lane_bits - 1 *is* the sign fill.
-        a.map(|x| x.wrapping_shr(if count > 7 { 7 } else { count }))
-    }
-
-    #[inline(always)]
     fn saturating_add(self, a: [i8; 32], b: [i8; 32]) -> [i8; 32] {
         core::array::from_fn(|i| a[i].saturating_add(b[i]))
     }
@@ -5226,22 +5182,6 @@ impl U8x16Backend for archmage::ScalarToken {
             a[14].wrapping_shr(N as u32),
             a[15].wrapping_shr(N as u32),
         ]
-    }
-
-    #[inline(always)]
-    fn shl_uniform(self, a: [u8; 16], count: u32) -> [u8; 16] {
-        a.map(|x| if count >= 8 { 0 } else { x.wrapping_shl(count) })
-    }
-
-    #[inline(always)]
-    fn shr_logical_uniform(self, a: [u8; 16], count: u32) -> [u8; 16] {
-        a.map(|x| {
-            if count >= 8 {
-                0
-            } else {
-                ((x as u8).wrapping_shr(count)) as u8
-            }
-        })
     }
 
     #[inline(always)]
@@ -6099,22 +6039,6 @@ impl U8x32Backend for archmage::ScalarToken {
             a[30].wrapping_shr(N as u32),
             a[31].wrapping_shr(N as u32),
         ]
-    }
-
-    #[inline(always)]
-    fn shl_uniform(self, a: [u8; 32], count: u32) -> [u8; 32] {
-        a.map(|x| if count >= 8 { 0 } else { x.wrapping_shl(count) })
-    }
-
-    #[inline(always)]
-    fn shr_logical_uniform(self, a: [u8; 32], count: u32) -> [u8; 32] {
-        a.map(|x| {
-            if count >= 8 {
-                0
-            } else {
-                ((x as u8).wrapping_shr(count)) as u8
-            }
-        })
     }
 
     #[inline(always)]
@@ -10162,33 +10086,6 @@ impl I8x64Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn shl_uniform(self, a: [i8; 64], count: u32) -> [i8; 64] {
-        core::array::from_fn(|i| {
-            if count >= 8 {
-                0
-            } else {
-                (a[i] as u8).wrapping_shl(count) as i8
-            }
-        })
-    }
-
-    #[inline(always)]
-    fn shr_logical_uniform(self, a: [i8; 64], count: u32) -> [i8; 64] {
-        core::array::from_fn(|i| {
-            if count >= 8 {
-                0
-            } else {
-                (a[i] as u8).wrapping_shr(count) as i8
-            }
-        })
-    }
-
-    #[inline(always)]
-    fn shr_arithmetic_uniform(self, a: [i8; 64], count: u32) -> [i8; 64] {
-        core::array::from_fn(|i| a[i].wrapping_shr(if count > 7 { 7 } else { count }))
-    }
-
-    #[inline(always)]
     fn saturating_add(self, a: [i8; 64], b: [i8; 64]) -> [i8; 64] {
         core::array::from_fn(|i| a[i].saturating_add(b[i]))
     }
@@ -10374,39 +10271,6 @@ impl U8x64Backend for archmage::ScalarToken {
                 (a[i] as u8).wrapping_shr(N as u32) as u8
             } else {
                 0
-            }
-        })
-    }
-
-    #[inline(always)]
-    fn shl_uniform(self, a: [u8; 64], count: u32) -> [u8; 64] {
-        core::array::from_fn(|i| {
-            if count >= 8 {
-                0
-            } else {
-                (a[i] as u8).wrapping_shl(count) as u8
-            }
-        })
-    }
-
-    #[inline(always)]
-    fn shr_logical_uniform(self, a: [u8; 64], count: u32) -> [u8; 64] {
-        core::array::from_fn(|i| {
-            if count >= 8 {
-                0
-            } else {
-                (a[i] as u8).wrapping_shr(count) as u8
-            }
-        })
-    }
-
-    #[inline(always)]
-    fn shr_arithmetic_uniform(self, a: [u8; 64], count: u32) -> [u8; 64] {
-        core::array::from_fn(|i| {
-            if count >= 8 {
-                0
-            } else {
-                a[i].wrapping_shr(count)
             }
         })
     }
