@@ -3,62 +3,35 @@ title = "Bitcast"
 weight = 3
 +++
 
-Bitcast reinterprets the raw bits of a vector as a different type without converting the values. The total bit width must match.
+A bitcast preserves bits; a numeric conversion preserves a numeric value as far
+as the destination can represent it. They are not interchangeable. For example,
+bitcasting `1.0f32` to i32 yields its IEEE bit encoding, not integer one.
 
-## Float / Integer Bitcast
-
-```rust
-use magetypes::simd::{
-    generic::{f32x8, i32x8},
-    backends::F32x8Convert,
-};
-
-#[inline(always)]
-fn float_int_bitcast<T: F32x8Convert>(token: T) {
-    // View float bits as integers
-    let floats = f32x8::<T>::splat(token, 1.0);
-    let bits = floats.bitcast_i32x8();
-    // Each lane is 0x3f800000 (IEEE 754 representation of 1.0)
-
-    // View integer bits as floats
-    let ints = i32x8::<T>::splat(token, 0x3f800000);
-    let floats = ints.bitcast_f32x8();
-    // Each lane is 1.0
-}
-```
-
-Bitcast does not convert values. `1.0f32` as bits is `0x3f800000`; bitcasting that integer back gives `1.0f32`. But bitcasting an integer `1` to float gives `1.4e-45` (the IEEE 754 float with that bit pattern), not `1.0`.
-
-## Signed / Unsigned
-
-Reinterpret between signed and unsigned with the same element width:
+This reference exercise checks the distinction within a complete feature context.
+Integer/float bit manipulation is used by zen color and approximation kernels;
+this roundtrip is an API test rather than a production algorithm.
 
 ```rust
-use magetypes::simd::{
-    generic::{i32x8, u32x8},
-    backends::I32x8Backend,
-};
-
-#[inline(always)]
-fn signed_unsigned_bitcast<T: I32x8Backend>(token: T) {
-    // i32x8 -> u32x8 (no conversion, just reinterpretation)
-    let signed = i32x8::<T>::from_array(token, [-1, 0, 1, 2, 3, 4, 5, 6]);
-    let unsigned = signed.bitcast_u32x8();
-    // [0xFFFFFFFF, 0, 1, 2, 3, 4, 5, 6]
-
-    // u32x8 -> i32x8
-    let unsigned = u32x8::<T>::splat(token, 0xFFFFFFFF);
-    let signed = unsigned.bitcast_i32x8();
-    // [-1; 8]
+use archmage::prelude::*;
+#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+fn bits_impl(token: Token, input: [f32; 8]) -> ([i32; 8], [f32; 8]) {
+    let v = f32x8::from_array(token, input);
+    let bits = v.bitcast_to_i32();
+    (bits.to_array(), bits.bitcast_to_f32().to_array())
 }
+pub fn bits(input: [f32; 8]) -> ([i32; 8], [f32; 8]) {
+    incant!(bits_impl(input), [v3, neon, wasm128, scalar])
+}
+let (encoded, roundtrip) = bits([1.0; 8]);
+assert_eq!(encoded, [1.0f32.to_bits() as i32; 8]);
+assert_eq!(roundtrip, [1.0; 8]);
 ```
 
-This is the same as `as u32` or `as i32` in Rust — no data changes, just the type's interpretation of the bit pattern.
+Use `bitcast_to_i32` / `bitcast_to_f32` for value casts. Older width-specific
+names such as `bitcast_i32x8` remain compatibility aliases. Signed/unsigned byte
+casts have shape-specific names; follow their method reference.
 
-## When to Use Bitcast
-
-Bitcasts are common in SIMD programming for:
-
-- **Bit manipulation of floats** — extract exponents, manipulate sign bits, fast absolute value via AND with a mask
-- **Type punning between same-width types** — view `f32x8` as `i32x8` for integer comparisons
-- **Implementing higher-level operations** — many SIMD algorithms mix float and integer views of the same data
+Reference casts preserve borrowing and require compatible size/alignment and
+valid bit patterns; use only the library's provided methods. They do not make
+arbitrary user structs safe to reinterpret. Prefer value operations unless a
+measured caller needs a borrowed view.

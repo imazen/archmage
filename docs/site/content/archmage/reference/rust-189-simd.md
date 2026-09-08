@@ -145,8 +145,8 @@ With 1.89, the full token hierarchy compiles on stable:
 | Token | Features used |
 |-------|--------------|
 | `X64V4Token` | `avx512f`, `avx512bw`, `avx512cd`, `avx512dq`, `avx512vl` |
-| `X64V4xToken` | Above + `avx512vbmi`, `avx512vbmi2`, `avx512bitalg`, `avx512vnni`, `avx512vpopcntdq`, `avx512ifma`, `avx512bf16`, `gfni`, `vaes`, `vpclmulqdq` |
-| `Avx512Fp16Token` | Above + `avx512fp16` |
+| `X64V4xToken` | Above + `avx512vbmi`, `avx512vbmi2`, `avx512bitalg`, `avx512vnni`, `avx512vpopcntdq`, `avx512ifma`, `gfni`, `vaes`, `vpclmulqdq` |
+| `Avx512Fp16Token` | V4 foundation + `avx512fp16` (not the V4x extension set) |
 
 This also means `is_x86_feature_detected!("avx512f")` and friends work on stable for runtime detection via `summon()`.
 

@@ -22,6 +22,10 @@ fn square_impl(token: Token, plane: &mut [f32]) {
 pub fn square(plane: &mut [f32]) {
     incant!(square_impl(plane), [v3, neon, wasm128, scalar])
 }
+
+let mut values = [3.0; 11];
+square(&mut values);
+assert_eq!(values, [9.0; 11]);
 ```
 
 ## Exact calls and checks

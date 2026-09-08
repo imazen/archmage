@@ -1,37 +1,41 @@
 //! # magetypes
 //!
-//! [Guide and examples](https://imazen.github.io/archmage/) · [Intrinsics browser](https://imazen.github.io/archmage/intrinsics/) · [ISA contracts](https://imazen.github.io/archmage/magetypes/isa-quirks/)
+//! [Guide](https://imazen.github.io/archmage/) · [Intrinsics browser](https://imazen.github.io/archmage/intrinsics/) · [Archmage API](https://docs.rs/archmage/latest/archmage/) · [Magetypes API](https://docs.rs/magetypes/latest/magetypes/)
 //!
-//! Token-gated SIMD types with natural operators.
+//! Token-gated SIMD vectors with natural operators. This complete kernel is adapted
+//! from zenfilters; its generated caller establishes the target-feature context.
 //!
-//! This crate provides SIMD vector types (`f32x8`, `i32x4`, etc.) that use
-//! [archmage](https://docs.rs/archmage) tokens for safe construction.
+//! ```rust
+//! #![forbid(unsafe_code)]
+//! use archmage::prelude::*;
 //!
-//! ## Supported Platforms
-//!
-//! - **x86-64**: x86-64-v3 (128-bit, 256-bit), AVX-512 (512-bit)
-//! - **AArch64**: NEON (128-bit)
-//! - **WASM**: SIMD128 (128-bit) - compile with `RUSTFLAGS="-C target-feature=+simd128"`
-//! - **All other targets**: Scalar fallback (pure array math, no hardware SIMD)
-//!
-//! ## Example
-//!
-//! ```no_run
-//! # #[cfg(target_arch = "x86_64")]
-//! # fn main() {
-//! use archmage::{X64V3Token, SimdToken};
-//! use magetypes::simd::f32x8;
-//!
-//! if let Some(token) = X64V3Token::summon() {
-//!     let a = f32x8::splat(token, 1.0);
-//!     let b = f32x8::splat(token, 2.0);
-//!     let c = a + b;  // Natural operators!
-//!     println!("Result: {:?}", c.to_array());
+//! #[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+//! fn gain_impl(token: Token, plane: &mut [f32], gain: f32) {
+//!     let factor = f32x8::splat(token, gain);
+//!     let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+//!     for chunk in chunks {
+//!         (f32x8::load(token, chunk) * factor).store(chunk);
+//!     }
+//!     for value in tail {
+//!         *value *= gain;
+//!     }
 //! }
-//! # }
-//! # #[cfg(not(target_arch = "x86_64"))]
-//! # fn main() {}
+//!
+//! pub fn apply_gain(plane: &mut [f32], gain: f32) {
+//!     incant!(gain_impl(plane, gain), [v3, neon, wasm128, scalar])
+//! }
+//!
+//!
+//! let mut plane = [2.0; 11];
+//! apply_gain(&mut plane, 0.5);
+//! assert_eq!(plane, [1.0; 11]);
 //! ```
+//!
+//! Use [generic functions and const modes](https://imazen.github.io/archmage/magetypes/dispatch/types-and-dispatch/)
+//! for reusable data/algorithm specialization. `define(...)` is optional shorthand.
+//! Logical [`f32x8<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html) stays eight lanes; `w512` enables wider shapes and `avx512`
+//! adds native AVX-512 implementations. See the [ISA contracts](https://imazen.github.io/archmage/magetypes/isa-quirks/)
+//! for numerical differences and fixups.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]

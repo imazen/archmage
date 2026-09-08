@@ -1,14 +1,12 @@
-<!-- GENERATED FROM README.md by zenutils gen-readme-crates.sh — DO NOT EDIT. -->
-
 # archmage
 
-**[Browse 12,000+ SIMD Intrinsics →](https://imazen.github.io/archmage/intrinsics/)** · [Docs](https://imazen.github.io/archmage/) · [Magetypes](https://imazen.github.io/archmage/magetypes/) · [API Docs](https://docs.rs/archmage)
+[Guide](https://imazen.github.io/archmage/) · [Intrinsics browser](https://imazen.github.io/archmage/intrinsics/) · [Archmage API](https://docs.rs/archmage/latest/archmage/) · [Magetypes API](https://docs.rs/magetypes/latest/magetypes/)
 
 Archmage lets you write SIMD code in Rust **without `unsafe`** — your crate keeps `#![forbid(unsafe_code)]` while calling intrinsics directly. It works on x86-64, AArch64, and WASM, is `no_std + alloc` (with `std` on by default for runtime CPU detection), and depends only on [`archmage-macros`](https://crates.io/crates/archmage-macros) and [`safe_unaligned_simd`](https://crates.io/crates/safe_unaligned_simd). You pick a CPU tier, prove it's present once with `summon()`, and the type system keeps every intrinsic call sound.
 
 ## Image planes and audio buffers
 
-Use `archmage` with `magetypes` for portable vector kernels:
+Use `archmage` with the [magetypes vector crate](https://docs.rs/magetypes/latest/magetypes/) for portable vector kernels:
 
 ```toml
 [dependencies]
@@ -50,575 +48,77 @@ lists available reference-based memory operations. See the [guide](https://imaze
 for both approaches, and [reusable generic kernels](https://imazen.github.io/archmage/magetypes/examples/generic-kernels/)
 for sharing algorithms across vector backends.
 
-## How Rust enforces SIMD safety
 
-Rust 1.86 (Apr 2025) and 1.87 (May 2025) changed the rules for `#[target_feature]` functions:
+## Generics and generated variants
 
-```
-  Rust's #[target_feature] call rules (1.86+)
+`#[magetypes]` is an [archmage attribute](https://docs.rs/archmage/latest/archmage/attr.magetypes.html).
+The [magetypes crate](https://docs.rs/magetypes/latest/magetypes/) supplies vector
+types such as [`f32x4<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x4.html) and [`f32x8<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html). `define(f32x8)` creates a local alias;
+explicit [`f32x8::<Token>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html) uses the same implementation. Type and const generics
+can remain on the generated function, as in zenavif's sample/pixel kernels and
+zenanalyze's const-mode/input-type kernels.
 
-  ┌─────────────────────────┐         ┌──────────────────────────────┐
-  │  fn normal_code()       │ unsafe  │ #[target_feature(avx2, fma)] │
-  │                         │────────▶│ fn simd_work()               │
-  │  (no target features)   │         │                              │
-  └─────────────────────────┘         └──────────────┬───────────────┘
-                                                     │
-          Calling simd_work() from                   │ safe
-          normal_code() requires                     │ (subset of
-          an unsafe call. The caller                     ▼ caller's features)
-          has fewer features.          ┌──────────────────────────────┐
-                                       │ #[target_feature(avx2)]      │
-                                       │ fn simd_helper()             │
-                                       │                              │
-                                       └──────────────────────────────┘
+Read the [complete generic specialization example](https://imazen.github.io/archmage/magetypes/dispatch/types-and-dispatch/).
+For reusable backend-generic helpers, keep the generated feature-enabled caller:
+an inline attribute or token argument alone does not enable that context.
 
-  Caller has same or superset features? Safe call. No unsafe needed.
-  Caller has fewer features?            Rust requires an unsafe block.
-```
+| Work | Pattern |
+|---|---|
+| Portable vector kernel | `#[magetypes]` + public `incant!` |
+| Reusable algorithm | Generated entry → inline backend-generic helper |
+| Ordinary loop offered to LLVM for vectorization | `#[autoversion]` |
+| Hand-tuned ISA entry | `#[arcane]` |
+| Matched internal intrinsic helper | `#[rite]` |
 
-Inside a `#[target_feature]` function, **value-based intrinsics are safe** — `_mm256_add_ps`, shuffles, compares, anything that doesn't touch a pointer. Only pointer-based memory ops (`_mm256_loadu_ps(ptr)`) remain unsafe.
+`stub` has been removed. `incant!` handles cross-architecture call-site guards.
+The reference forms `with token` and `without token` remain implemented; they
+respectively select by the held token's exact type and call a tokenless variant
+in a matching macro-managed context. See [dispatch](https://imazen.github.io/archmage/archmage/dispatch/incant/).
 
-Two gaps remain:
+## Tokens from an existing feature context
 
-1. **The boundary crossing.** The first call from normal code into a `#[target_feature]` function requires `unsafe`. Someone has to verify the CPU actually has those features.
-
-2. **Memory operations.** `_mm256_loadu_ps` takes `*const f32`. Raw pointers need `unsafe`.
-
-## How archmage closes both gaps
-
-Archmage makes the boundary crossing **sound** by tying it to runtime CPU detection. You can't cross without proof.
-
-```
-  Your crate: #![forbid(unsafe_code)]
-
-  ┌────────────────────────────────────────────────────────────┐
-  │                                                            │
-  │  1. summon()          Checks CPUID. Returns Some(token)    │
-  │     X64V3Token        only if AVX2+FMA are present.        │
-  │                       Token is zero-sized proof.           │
-  │          │                                                 │
-  │          ▼                                                 │
-  │  2. #[arcane] fn      Reads token type from signature.     │
-  │     my_func(token,..) Generates #[target_feature] sibling. │
-  │                       Wraps the unsafe call internally —   │
-  │          │            your code never writes unsafe.        │
-  │          ▼                                                 │
-  │  3. More #[arcane]    Matching features? Safe call.        │
-  │     + plain fns       LLVM inlines — no boundary.          │
-  │          │                                                 │
-  │          ▼                                                 │
-  │  4. Intrinsics        Value ops: safe (Rust 1.87+)         │
-  │     in scope          Memory ops: safe_unaligned_simd      │
-  │                       takes &[f32; 8], not *const f32      │
-  │                                                            │
-  │  Result: all intrinsics are safe. No unsafe in your code.  │
-  └────────────────────────────────────────────────────────────┘
-```
-
-**Tokens are grouped by common CPU tiers.** `X64V3Token` covers AVX2+FMA+BMI2 — the set that Haswell (2013) and Zen 1+ share. `NeonToken` covers AArch64 NEON. `Arm64V2Token` covers CRC+RDM+DotProd+FP16+AES+SHA2 — the set that Apple M1, Cortex-A55+, and Graviton 2+ share. You pick a tier, not individual features. `summon()` checks all features in the tier atomically; it either succeeds (every feature present) or returns `None`. The token is zero-sized — passing it costs nothing. Detection is cached (~1.3 ns), or compiles away entirely with `-Ctarget-cpu=haswell`.
-
-**`#[arcane]` is the trampoline.** It generates a sibling function with `#[target_feature(enable = "avx2,fma,...")]` and an `#[inline(always)]` wrapper that calls it through `unsafe`. The macro generates the `unsafe` block, not you. Since the token's existence proves the features are present, the call is sound. From inside the `#[arcane]` function, you can use intrinsics directly (value ops are safe) and call other `#[arcane]` functions with matching features (safe under Rust 1.86+, and LLVM inlines the wrapper away — zero overhead). `#[arcane]` handles `#[cfg(target_arch)]` gating automatically.
-
-**[`safe_unaligned_simd`](https://crates.io/crates/safe_unaligned_simd)** (by [okaneco](https://github.com/okaneco)) closes the memory gap. It shadows `core::arch`'s pointer-based load/store functions with reference-based versions — `_mm256_loadu_ps` takes `&[f32; 8]` instead of `*const f32`. Same names, safe signatures. Archmage re-exports these through `import_intrinsics`, so the safe versions are in scope automatically.
-
-All tokens compile on all platforms. On the wrong architecture, `summon()` returns `None`. You rarely need `#[cfg(target_arch)]` in your code.
-
-### Why `#![forbid(unsafe_code)]` matters for AI-written SIMD
-
-AI is a patient compiler. It can write SIMD intrinsics, run benchmarks, iterate on hot loops, and try instruction sequences that no human would bother testing. Constraining AI to `#![forbid(unsafe_code)]` means it can't introduce undefined behavior — the type system catches unsound calls at compile time. The result is hand-tuned SIMD that's both fast and provably safe.
-
-### One import, zero `#[cfg]`
-
-`use archmage::prelude::*` gives you everything — tokens, traits, macros, all platform intrinsics, and safe memory ops. All tokens compile on all platforms; `summon()` returns `None` on the wrong architecture. You rarely need `#[cfg(target_arch)]` in your code.
+When a helper already has target features, `from_context()` constructs a token
+without runtime detection. Rust checks that the caller's features cover the
+token's requirements. It is not a baseline-callable unchecked constructor.
 
 ```rust
 use archmage::prelude::*;
-
-#[arcane]  // intrinsics already in scope from prelude
-fn example(_: X64V3Token, data: &[f32; 8]) -> __m256 {
-    _mm256_loadu_ps(data)
+#[rite(v3)]
+fn helper() -> bool {
+    let _token = X64V3Token::from_context();
+    true
 }
-```
-
-`#[arcane]` wraps its output in `#[cfg(target_arch = "x86_64")]` automatically — the function doesn't exist on ARM, and that's fine. For dispatch across architectures, `incant!` handles the cfg gating for you:
-
-```rust
-use archmage::prelude::*;
-
 #[arcane]
-fn process_v3(_: X64V3Token, data: &mut [f32]) { /* AVX2 */ }
-#[arcane]
-fn process_neon(_: NeonToken, data: &mut [f32]) { /* NEON */ }
-fn process_scalar(_: ScalarToken, data: &mut [f32]) { /* fallback */ }
-
-pub fn process(data: &mut [f32]) {
-    incant!(process(data), [v3, neon, scalar])  // no #[cfg] needed
-}
+fn entry(_token: X64V3Token) -> bool { helper() }
+#[cfg(target_arch = "x86_64")]
+if let Some(token) = X64V3Token::summon() { assert!(entry(token)); }
 ```
 
-If you prefer scoped imports over the prelude, use `import_intrinsics` to inject intrinsics into the function body only:
-
-```rust
-use archmage::{X64V3Token, SimdToken, arcane};
-
-#[arcane(import_intrinsics)]  // injects intrinsics inside this function only
-fn example(_: X64V3Token, data: &[f32; 8]) -> core::arch::x86_64::__m256 {
-    _mm256_loadu_ps(data)  // in scope from import_intrinsics
-}
-```
-
-Both import the same combined intrinsics module — the prelude imports them at module scope, `import_intrinsics` scopes them to the function body.
-
-## Which macro do I use?
-
-```
-         Writing a SIMD function?
-         ┌───────────┴───────────┐
-  Hand-written intrinsics    Scalar code, let compiler
-         │                   auto-vectorize
-         │                        │
-  ┌──────▼──────┐          ┌──────▼──────────┐
-  │  #[arcane]  │          │  #[autoversion]  │
-  │             │          │                  │
-  │ Use for all │          │ Generates per-   │
-  │ SIMD fns —  │          │ tier variants +  │
-  │ entry points│          │ dispatcher from  │
-  │ AND helpers │          │ one scalar body  │
-  └──────┬──────┘          └─────────────────┘
-         │
-  Need cross-arch dispatch?
-         │
-  ┌──────▼──────────────────┐
-  │  incant!()              │
-  │                         │
-  │ Routes to _v3, _neon,   │
-  │ _scalar, etc.           │
-  │ Handles all #[cfg] for  │
-  │ you — zero boilerplate  │
-  └─────────────────────────┘
-```
-
-Plain `#[inline(always)]` functions with no macro also work — if they inline into an `#[arcane]` caller, LLVM compiles them with the caller's features for free.
-
-## `#[arcane]` everywhere
-
-Use `#[arcane]` for every SIMD function — entry points and internal helpers alike. When one `#[arcane]` function calls another with matching features, LLVM inlines the wrapper away. Zero overhead.
-
-```rust
-use archmage::prelude::*;
-
-#[arcane]
-fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    let products = mul_vectors(token, a, b);  // #[arcane] — inlines, zero cost
-    horizontal_sum(token, products)            // #[arcane] — same
-}
-
-#[arcane]
-fn mul_vectors(_: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> __m256 {
-    _mm256_mul_ps(_mm256_loadu_ps(a), _mm256_loadu_ps(b))
-}
-
-#[arcane]
-fn horizontal_sum(_: X64V3Token, v: __m256) -> f32 {
-    // Fold 256→128, then the movehdup/movehl reduction. (Avoid
-    // `_mm256_hadd_ps` for horizontal sums — it's slower, 3 µops/6c vs
-    // 2 µops/4c for shuffle+add, and operates within 128-bit lanes.)
-    let low = _mm256_castps256_ps128(v);
-    let high = _mm256_extractf128_ps::<1>(v);
-    let q = _mm_add_ps(low, high);
-    let shuf = _mm_movehdup_ps(q);
-    let sums = _mm_add_ps(q, shuf);
-    let shuf = _mm_movehl_ps(shuf, sums);
-    _mm_cvtss_f32(_mm_add_ss(sums, shuf))
-}
-
-fn main() {
-    if let Some(token) = X64V3Token::summon() {
-        let result = dot_product(token, &[1.0; 8], &[2.0; 8]);
-        println!("{result}");
-    }
-}
-```
-
-### The target-feature boundary
-
-The one thing that costs performance is calling an `#[arcane]` function **from code without matching features** — each call crosses LLVM's `#[target_feature]` optimization boundary. Put loops inside the `#[arcane]` function, not around it.
-
-Processing 1000 8-float vector additions ([full benchmark details](https://github.com/imazen/archmage/blob/main/docs/PERFORMANCE.md)):
-
-| Pattern | Time | Why |
-|---------|------|-----|
-| `#[arcane]` calling `#[arcane]` (same features) | 547 ns | Features match — LLVM inlines |
-| `#[arcane]` per iteration from non-SIMD code | 2209 ns (4x) | Target-feature boundary per call |
-| Bare `#[target_feature]` (no archmage) | 2222 ns (4x) | Same boundary — archmage adds nothing |
-
-The 4x penalty is LLVM's `#[target_feature]` boundary, not archmage overhead. Bare `#[target_feature]` without archmage has the same cost. With real workloads (DCT-8), the boundary costs up to 6.2x.
-
-**The rule:** enter `#[arcane]` once from non-SIMD code, put the loop inside. From within `#[arcane]`, call other `#[arcane]` functions freely — same or subset features means LLVM inlines.
-
-For trait impls, use `#[arcane(_self = Type)]` — a nested inner-function approach (since sibling would add methods not in the trait definition).
-
-### Processing a whole `&[f32]` slice with raw intrinsics
-
-The examples above take `&[f32; 8]` — a single register's worth, fixed-size. Real buffers are `&[f32]` slices of arbitrary length. The safe `_mm256_loadu_ps` / `_mm256_storeu_ps` shadows take `&[f32; 8]` / `&mut [f32; 8]`, so you **window the slice into fixed-size array refs** with `chunk.try_into().unwrap()` (the `try_into` from `&[f32]` to `&[f32; 8]` is infallible for a length-8 sub-slice and the panic branch is optimized out), then handle the leftover with a scalar tail. This is the same shape as a hand-rolled SIMD loop — and per "The target-feature boundary" above, the loop lives **inside** the `#[arcane]` body so each lane stays on the fast path.
-
-If LLVM can already auto-vectorize the scalar version, prefer `#[autoversion]` (next section) — it's the first-try-clean path and needs no intrinsics. Reach for explicit intrinsics like this when you need a specific instruction the auto-vectorizer won't pick, or a cross-lane op it can't express.
-
-```rust
-use archmage::prelude::*;
-
-// One `#[arcane]` entry point per tier. The loop is inside, so the whole
-// slice is processed without re-crossing the target-feature boundary.
-
-#[arcane]
-fn scale_v3(_: X64V3Token, data: &mut [f32], factor: f32) {
-    let factor_v = _mm256_set1_ps(factor);
-    let mut chunks = data.chunks_exact_mut(8);
-    for chunk in &mut chunks {
-        // &mut [f32] (len 8) -> &mut [f32; 8]; infallible, panic branch elided.
-        let arr: &mut [f32; 8] = chunk.try_into().unwrap();
-        let v = _mm256_loadu_ps(&*arr);          // safe: &[f32; 8] (reborrow)
-        _mm256_storeu_ps(arr, _mm256_mul_ps(v, factor_v));  // safe: &mut [f32; 8]
-    }
-    for x in chunks.into_remainder() {           // scalar tail (0..7 elems)
-        *x *= factor;
-    }
-}
-
-// _scalar is MANDATORY — incant! always emits the unconditional fallback call.
-#[arcane]
-fn scale_scalar(_: ScalarToken, data: &mut [f32], factor: f32) {
-    for x in data {
-        *x *= factor;
-    }
-}
-
-// Public entry: runtime-dispatch to the best available tier.
-pub fn scale(data: &mut [f32], factor: f32) {
-    incant!(scale(data, factor), [v3, neon, scalar])
-}
-```
-
-`incant!` resolves `scale` to `scale_v3` / `scale_neon` / `scale_scalar` by suffix, wrapping each in the matching `#[cfg(target_arch)]` so you only define variants for the architectures you target.
-
-> **Alignment:** `_mm256_loadu_ps` / `_mm256_storeu_ps` are the *unaligned* load/store — `&[f32; 8]` only guarantees 4-byte (`f32`) alignment, and that's all these need. There's no 32-byte-alignment requirement, so windowing an arbitrary `&[f32]` is sound. (For the aligned `_mm256_load_ps`, you'd have to guarantee 32-byte alignment yourself; the unaligned form is the right default and the speed difference is negligible on modern cores.)
-
-#### NEON variant of the same loop
-
-On AArch64 the same pattern uses 128-bit registers — window into `&[f32; 4]` instead of `&[f32; 8]`. The memory ops are `vld1q_f32` (safe shadow, takes `&[f32; 4]`) and `vst1q_f32` (safe shadow, takes `&mut [f32; 4]`); the arithmetic `vmulq_f32` / `vdupq_n_f32` are `core::arch::aarch64` value intrinsics, safe inside `#[arcane]` since Rust 1.87. Add this `_neon` variant and the `incant!` above routes to it on ARM with no other change:
-
-```rust
-use archmage::prelude::*;
-
-#[arcane]
-fn scale_neon(_: NeonToken, data: &mut [f32], factor: f32) {
-    let factor_v = vdupq_n_f32(factor);          // value intrinsic
-    let mut chunks = data.chunks_exact_mut(4);
-    for chunk in &mut chunks {
-        let arr: &mut [f32; 4] = chunk.try_into().unwrap();
-        let v = vld1q_f32(&*arr);                 // safe shadow: &[f32; 4] (reborrow)
-        vst1q_f32(arr, vmulq_f32(v, factor_v));   // safe shadow: &mut [f32; 4]
-    }
-    for x in chunks.into_remainder() {
-        *x *= factor;
-    }
-}
-```
-
-> **NEON memory-op caveat (verified):** unlike x86's `loadu`, NEON's `vld1q_f32` / `vst1q_f32` are *element-aligned*, not freely unaligned — the underlying instruction's alignment behavior is governed by the system control register, so [`safe_unaligned_simd`](https://crates.io/crates/safe_unaligned_simd) only guarantees soundness on `rustc >= 1.88.0` (the LLVM bug that inserted spurious alignment assertions was fixed there). To load genuinely-unaligned `f32` data on NEON, load it as a `u8x16` and reinterpret. See that crate's `aarch64` module docs for the full statement. `&[f32; 4]` (4-byte alignment) is fine for the windowing here.
-
-## Auto-vectorization with `#[autoversion]`
-
-Don't want to write intrinsics? Write plain scalar code and let the compiler vectorize it:
-
-```rust
-use archmage::prelude::*;
-
-#[autoversion]
-fn sum_of_squares(data: &[f32]) -> f32 {
-    let mut sum = 0.0f32;
-    for &x in data {
-        sum += x * x;
-    }
-    sum
-}
-
-// Call directly — no token needed, no unsafe:
-let result = sum_of_squares(&my_data);
-```
-
-`#[autoversion]` generates a separate copy of your function for each architecture tier — each compiled with `#[target_feature]` to unlock the auto-vectorizer — plus a runtime dispatcher that picks the best one. On x86-64 with AVX2+FMA, that loop compiles to `vfmadd231ps` (8 floats per cycle). On ARM, you get `fmla`. The `_scalar` fallback compiles without SIMD features as a safety net.
-
-Write the function tokenless, as above — the generated dispatcher keeps your original signature and each per-tier variant gets its concrete token injected automatically. (An explicit `_token: SimdToken` parameter is still accepted but deprecated since 0.9.11 and slated for removal in v1.0 — don't add one.)
-
-**What gets generated** (default tiers):
-
-- `sum_of_squares_v4(token: X64V4Token, ...)` — AVX-512 (with `avx512` feature)
-- `sum_of_squares_v3(token: X64V3Token, ...)` — AVX2+FMA
-- `sum_of_squares_neon(token: NeonToken, ...)` — AArch64 NEON
-- `sum_of_squares_wasm128(token: Wasm128Token, ...)` — WASM SIMD
-- `sum_of_squares_scalar(token: ScalarToken, ...)` — no SIMD
-- `sum_of_squares(data: &[f32]) -> f32` — **dispatcher** (token param removed)
-
-Explicit tiers: `#[autoversion(v3, neon)]`. `scalar` is always implicit. Use modifiers to tweak defaults: `#[autoversion(+arm_v2)]` adds a tier, `#[autoversion(-wasm128)]` removes one. Gate a tier on a Cargo feature: `#[autoversion(v4(cfg(avx512)), v3, neon)]`.
-
-For inherent methods, `self` works naturally — no special parameters needed. For trait method delegation, use `#[autoversion(_self = MyType)]` and `_self` in the body. See the [full parameter reference](https://imazen.github.io/archmage/archmage/dispatch/autoversion/) or the [API docs](https://docs.rs/archmage/latest/archmage/attr.autoversion.html).
-
-**When to use which:**
-
-| | `#[autoversion]` | `#[arcane]` + `incant!` |
-|---|---|---|
-| You write | Scalar loops | SIMD intrinsics |
-| Vectorization | Compiler auto-vectorizes | You choose the instructions |
-| Lines of code | 1 attribute | Per-tier variants + dispatch |
-| Best for | Simple numeric loops | Hand-tuned SIMD kernels |
-
-## SIMD types with `magetypes`
-
-`magetypes` provides ergonomic SIMD vector types (`f32x8`, `i32x4`, etc.) with natural Rust operators. Its vector types share archmage’s capability tokens and dispatch macros.
-
-One generic body runs on x86, NEON, WASM, and scalar — ISAs that quietly disagree on corner cases (shift-count overflow, reciprocal rails, narrowing lane order, NaN in min/max). [docs/CROSS-ISA-DIVERGENCES.md](docs/CROSS-ISA-DIVERGENCES.md) is the canonical inventory of every known case: which ones magetypes fixes up to identical semantics (and what the fixup costs), which the API makes unrepresentable, and which stay per-backend by documented contract.
-
-```toml
-[dependencies]
-archmage = "0.9.27"
-magetypes = "0.9.27"
-```
-
-```rust
-use archmage::prelude::*;
-use magetypes::simd::generic::f32x8;
-
-fn dot_product(a: &[f32], b: &[f32]) -> f32 {
-    if let Some(token) = X64V3Token::summon() {
-        dot_product_simd(token, a, b)
-    } else {
-        a.iter().zip(b).map(|(x, y)| x * y).sum()
-    }
-}
-
-#[arcane]
-fn dot_product_simd(token: X64V3Token, a: &[f32], b: &[f32]) -> f32 {
-    let mut sum = f32x8::zero(token);
-    for (a_chunk, b_chunk) in a.chunks_exact(8).zip(b.chunks_exact(8)) {
-        let va = f32x8::load(token, a_chunk.try_into().unwrap());
-        let vb = f32x8::load(token, b_chunk.try_into().unwrap());
-        sum = va.mul_add(vb, sum);
-    }
-    sum.reduce_add()
-}
-```
-
-`f32x8` wraps `__m256` on x86 with AVX2. On ARM/WASM, it's polyfilled with two `f32x4` operations — same API, automatic fallback. The `#[arcane]` wrapper lets LLVM optimize the entire loop as a single SIMD region.
-
-### Cross-platform in one body: `#[magetypes]`
-
-The `#[magetypes]` attribute generates one `#[arcane]`-wrapped variant per listed tier with the `Token` placeholder substituted to the concrete token type. Combined with the `define(...)` flag — which injects the matching-tier magetypes type aliases at the top of each variant body — one function covers every platform:
-
-```rust
-use archmage::prelude::*;
-
-#[magetypes(define(f32x8), v4, v3, neon, wasm128, scalar)]
-fn scale_plane_impl(token: Token, plane: &mut [f32], factor: f32) {
-    // `f32x8` is in scope — `f32x8<X64V3Token>` in the v3 variant,
-    // `f32x8<NeonToken>` in neon, `f32x8<ScalarToken>` in scalar, etc.
-    let factor_v = f32x8::splat(token, factor);
-    let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
-    for chunk in chunks {
-        (f32x8::load(token, chunk) * factor_v).store(chunk);
-    }
-    for v in tail { *v *= factor; }
-}
-
-pub fn scale_plane(plane: &mut [f32], factor: f32) {
-    incant!(scale_plane_impl(plane, factor))
-}
-```
-
-`#[magetypes(rite, ...)]` is a second flag that emits `#[rite]`-style direct `#[target_feature]` + `#[inline]` variants instead of `#[arcane]` wrappers — for inner helpers called from matching-feature contexts where the optimization-boundary cost matters. See the [idiomatic_patterns_all](https://github.com/imazen/archmage/blob/main/magetypes/examples/idiomatic_patterns_all.rs) example for the full vocabulary.
-
-## Tier naming conventions
-
-`incant!` and `#[autoversion]` dispatch to suffixed functions. `incant!(sum(data))` calls `sum_v3`, `sum_neon`, etc. These suffixes correspond to tokens:
-
-| Suffix | Token | Arch | Key features |
-|--------|-------|------|------|
-| `_v1` | `X64V1Token` | x86_64 | SSE2 (baseline) |
-| `_v2` | `X64V2Token` | x86_64 | + SSE4.2, POPCNT |
-| `_v3` | `X64V3Token` | x86_64 | + AVX2, FMA, BMI2 |
-| `_v4` | `X64V4Token` | x86_64 | + AVX-512 F/BW/CD/DQ/VL |
-| `_v4x` | `X64V4xToken` | x86_64 | + VBMI, VNNI, GFNI, VAES, … (Ice Lake, Zen 4+) |
-| `_neon` | `NeonToken` | aarch64 | NEON |
-| `_arm_v2` | `Arm64V2Token` | aarch64 | + CRC, RDM, DotProd, AES, SHA2 |
-| `_arm_v3` | `Arm64V3Token` | aarch64 | + SHA3, I8MM, BF16 |
-| `_wasm128` | `Wasm128Token` | wasm32 | SIMD128 |
-| `_scalar` | `ScalarToken` | any | No SIMD (always available) |
-
-By default, `incant!` tries `_v4` (if the `avx512` feature is enabled), `_v3`, `_neon`, `_wasm128`, then `_scalar`. You can restrict to specific tiers: `incant!(sum(data), [v3, neon, scalar])`. Tier names accept the `_` prefix — `_v3` is identical to `v3`, matching the suffix on generated function names.
-
-Instead of restating the entire default list, use modifiers: `[+arm_v2]` adds a tier, `[-wasm128]` removes one, `[+v4]` makes v4 unconditional. Gate a tier on a Cargo feature with `v4(cfg(avx512))` (shorthand: `v4(avx512)`). Plain tiers may be mixed with modifiers: any `+` makes the list additive (a plain tier is treated as `+tier`); a plain list with `-` removals (no `+`) overrides the defaults with the plain tiers and drops the named fallback — so `[v3, -scalar]` resolves to just `v3`.
-
-Always include `scalar` (or `default`) in explicit tier lists — it documents the fallback path. (Currently auto-appended if omitted; will become a compile error in v1.0.)
-
-## Runtime dispatch with `incant!` <sub>(alias: `dispatch_variant!`)</sub>
-
-Write platform-specific variants with concrete types, then dispatch at runtime:
-
-```rust
-use archmage::prelude::*;
-use magetypes::simd::generic::f32x8;
-
-// No #[cfg] needed — #[arcane] handles it
-#[arcane]
-fn sum_squares_v3(token: X64V3Token, data: &[f32]) -> f32 {
-    let chunks = data.chunks_exact(8);
-    let mut acc = f32x8::zero(token);
-    for chunk in chunks {
-        let v = f32x8::from_array(token, chunk.try_into().unwrap());
-        acc = v.mul_add(v, acc);
-    }
-    acc.reduce_add() + chunks.remainder().iter().map(|x| x * x).sum::<f32>()
-}
-
-fn sum_squares_scalar(_token: ScalarToken, data: &[f32]) -> f32 {
-    data.iter().map(|x| x * x).sum()
-}
-
-/// Dispatches to the best available at runtime — no #[cfg] needed.
-fn sum_squares(data: &[f32]) -> f32 {
-    incant!(sum_squares(data), [v3, scalar])
-}
-```
-
-Each variant's first parameter is the matching token type — `_v3` takes `X64V3Token`, `_neon` takes `NeonToken`, etc.
-
-**`_scalar` is mandatory.** `incant!` always emits an unconditional call to `fn_scalar(ScalarToken, ...)` as the final fallback. If the `_scalar` function doesn't exist, you get a compile error — not a runtime failure. Always include `scalar` in explicit tier lists (e.g., `[v3, neon, scalar]`) to document this dependency. Currently `scalar` is auto-appended if omitted; this will become a compile error in v1.0.
-
-`incant!` wraps each tier's call in `#[cfg(target_arch)]` and `#[cfg(feature)]` guards, so you only define variants for architectures you target. With no explicit tier list, `incant!` dispatches to `v3`, `neon`, `wasm128`, and `scalar` by default (plus `v4` if the `avx512` feature is enabled).
-
-Gate a tier on a Cargo feature with the `tier(cfg(feature))` syntax: `incant!(sum(data), [v4(cfg(avx512)), v3, neon, scalar])`. The shorthand `v4(avx512)` also works.
-
-Use modifiers to tweak the default tier list without restating it: `[+arm_v2]` adds a tier, `[-wasm128]` removes one. Plain tiers may be mixed with `+`/`-` (any `+` ⇒ additive; plain + `-` with no `+` ⇒ override the plain set and drop the named fallback, e.g. `[v3, -scalar]` → just `v3`).
-
-Known tiers: `v1`, `v2`, `x64_crypto`, `v3`, `v3_crypto`, `v3_gfni_crypto`, `v4`, `v4x`, `arm_v2`, `arm_v3`, `neon`, `neon_aes`, `neon_sha3`, `neon_crc`, `wasm128`, `scalar`.
-
-If you already have a token, use `with` to dispatch on its concrete type: `incant!(func(data) with token, [v3, neon, scalar])`. This uses `IntoConcreteToken` for compile-time monomorphized dispatch — no runtime summon.
-
-To call a **tokenless** multi-tier helper (one from `#[rite(v3, neon)]`, `#[autoversion]`, or a `#[magetypes]` scalar/default variant) from inside any tier body, use `without`: `incant!(func(data) without token)` rewrites to `func_<caller_tier>(data)` — no token threaded, no dispatch, compile error on feature mismatch. See the [dispatch docs](https://imazen.github.io/archmage/archmage/dispatch/incant/#tokenless-calls-without-token).
-
-### Token position
-
-Use `Token` to mark where the summoned token is placed: `incant!(process(data, Token), [v3, scalar])` puts the token last. Without `Token`, the token is prepended.
-
-### Zero-overhead nesting
-
-Inside `#[arcane]`, `#[rite]`, `#[autoversion]`, or `#[magetypes]` bodies, `incant!` is automatically rewritten to a direct call — no runtime dispatch. The rewriter handles downcasting, upgrade attempts, feature-gated tiers, and `without token` for tokenless callees. See the [dispatch docs](https://imazen.github.io/archmage/archmage/dispatch/incant/) for details.
-
-## Tokens
-
-| Token | Alias | Features | Hardware |
-|-------|-------|----------|----------|
-| `X64V1Token` | `Sse2Token` | SSE, SSE2 | x86_64 baseline (always available) |
-| `X64V2Token` | | + SSE4.2, POPCNT | Nehalem 2008+ |
-| `X64CryptoToken` | | V2 + PCLMULQDQ, AES-NI | Westmere 2010+ |
-| `X64V3Token` | — | + AVX2, FMA, BMI2 | Haswell 2013+, Zen 1+ |
-| `X64V3CryptoToken` | | V3 + VPCLMULQDQ, VAES | Zen 3+ 2020, Alder Lake 2021+ |
-| `X64V3GfniCryptoToken` | | V3 Crypto + GFNI | Alder/Raptor/Meteor/Arrow/Lunar Lake, Sierra Forest, Zen 4+ |
-| `X64V4Token` | `Server64` | + AVX-512 F/BW/CD/DQ/VL (requires `avx512` feature) | Skylake-X 2017+, Zen 4+ |
-| `X64V4xToken` | | V4 + VBMI, VNNI, VBMI2, BITALG, GFNI, VAES, VPCLMULQDQ (requires `avx512`) | Ice Lake 2019+, Zen 4+ |
-| `Avx512Fp16Token` | | + AVX-512 FP16 (requires `avx512`) | Sapphire Rapids 2023+ |
-| `NeonToken` | `Arm64` | NEON | All 64-bit ARM |
-| `Arm64V2Token` | | + CRC, RDM, DotProd, FP16, AES, SHA2 | A55+, M1+, Graviton 2+ |
-| `Arm64V3Token` | | + FHM, FCMA, SHA3, I8MM, BF16 | A510+, M2+, Snapdragon X |
-| `Wasm128Token` | | WASM SIMD | Compile-time only |
-| `ScalarToken` | | (none) | Always available |
-
-Higher tokens subsume lower ones: `X64V4Token` → `X64V3Token` → `X64V2Token` → `X64V1Token`. Downcasting is free (zero-cost). `incant!` handles `#[cfg(target_arch)]` gating automatically — you don't need to write cfg guards for cross-arch dispatch.
-
-See [`token-registry.toml`](https://github.com/imazen/archmage/blob/main/token-registry.toml) for the complete mapping of tokens to CPU features.
-
-## Testing SIMD dispatch paths
-
-`for_each_token_permutation` tests every `incant!` dispatch path on your native hardware — no cross-compilation needed. It disables tokens one at a time, running your closure at each combination from "all SIMD enabled" down to "scalar only":
-
-```rust
-use archmage::testing::{for_each_token_permutation, CompileTimePolicy};
-
-#[test]
-fn sum_squares_matches_across_tiers() {
-    let data: Vec<f32> = (0..1024).map(|i| i as f32).collect();
-    let expected: f32 = data.iter().map(|x| x * x).sum();
-
-    let report = for_each_token_permutation(CompileTimePolicy::Warn, |perm| {
-        let result = sum_squares(&data);
-        assert!(
-            (result - expected).abs() < 1e-1,
-            "mismatch at tier: {perm}"
-        );
-    });
-
-    assert!(report.permutations_run >= 2, "expected multiple tiers");
-}
-```
-
-On an AVX-512 machine this runs 5–7 permutations; on Haswell, 3. Tokens the CPU doesn't have are skipped automatically.
-
-### The `testable_dispatch` feature
-
-When you compile with `-Ctarget-cpu=native` (or `-Ctarget-cpu=haswell`, etc.), Rust bakes the feature checks into the binary at compile time. `X64V3Token::summon()` compiles to a constant `Some(token)` — it can't be disabled at runtime, and `for_each_token_permutation` can't test fallback paths.
-
-The `testable_dispatch` feature forces runtime detection even when compile-time detection would succeed. Enable it in dev-dependencies for full permutation coverage:
-
-```toml
-[dev-dependencies]
-archmage = { version = "0.9", features = ["testable_dispatch"] }
-```
-
-`CompileTimePolicy` controls what happens when a token can't be disabled:
-
-| Policy | Behavior |
-|--------|----------|
-| `Warn` | Skip the token, collect a warning in the report |
-| `WarnStderr` | Same, plus print each warning to stderr |
-| `Fail` | Panic — use in CI with `testable_dispatch` where full coverage is expected |
-
-### Serializing parallel tests with `lock_token_testing()`
-
-Token disabling is process-wide — if `cargo test` runs tests in parallel, one test disabling `X64V3Token` would break another test that expects it to be available. `for_each_token_permutation` acquires an internal mutex automatically. If you need to disable tokens manually (via `dangerously_disable_token_process_wide`), wrap your test in `lock_token_testing()` to serialize against other permutation tests:
-
-```rust
-use archmage::testing::lock_token_testing;
-use archmage::{X64V3Token, SimdToken};
-
-#[test]
-fn manual_disable_test() {
-    let _lock = lock_token_testing();
-    let baseline = my_function(&data);
-    X64V3Token::dangerously_disable_token_process_wide(true).unwrap();
-    let fallback = my_function(&data);
-    X64V3Token::dangerously_disable_token_process_wide(false).unwrap();
-    assert_eq!(baseline, fallback);
-}
-```
-
-The lock is reentrant — `for_each_token_permutation` called from within a `lock_token_testing` scope works without deadlock.
-
-For the full testing API, see the [testing docs](https://imazen.github.io/archmage/archmage/testing/dispatch-testing/).
-
-## Feature flags
-
-| Feature | Default | |
-|---------|---------|---|
-| `std` | yes | Standard library (required for runtime detection) |
-| `macros` | yes | No-op (macros are always available). Kept for backwards compatibility |
-| `safe_unaligned_simd` | yes | No-op (`safe_unaligned_simd` is always included). Kept for backwards compatibility |
-| `avx512` | no | AVX-512 tokens (`X64V4Token`, `X64V4xToken`, `Avx512Token`, `Avx512Fp16Token`) plus AVX-512 safe memory ops |
-| `testable_dispatch` | no | Makes token disabling work with `-Ctarget-cpu=native` |
-| `forge-token-api` | no | No-op, kept for backwards compatibility. `from_context()` is always available: it is a safe `#[target_feature]` fn, so a caller inside a matching feature region needs no `unsafe`, and every other caller does |
-
-## Acknowledgments
-
-- **[`safe_unaligned_simd`](https://crates.io/crates/safe_unaligned_simd)** by [okaneco](https://github.com/okaneco) — Reference-based wrappers for every SIMD load/store intrinsic across x86, ARM, and WASM. This crate closed the last `unsafe` gap: `_mm256_loadu_ps` taking `*const f32` was the one thing you couldn't make safe without a wrapper. Archmage depends on it and re-exports its functions through `import_intrinsics`, shadowing `core::arch`'s pointer-based versions automatically.
+This is a repository addition after 0.9.28. See
+[from_context and token extraction](https://imazen.github.io/archmage/archmage/getting-started/tokens/).
+Use `.v3()` to extract a V3 token from a stronger proof; `as_x64v3()` instead
+checks whether the held token is exactly a V3 token.
+
+## Features and numerical contracts
+
+Rust 1.89 is the minimum supported version. Archmage macros are always included;
+its `macros` feature is a compatibility no-op. `std` is enabled by default.
+Magetypes also defaults to `w512`, which supplies logical 512-bit types and
+polyfills. Optional `avx512` adds native AVX-512 support; it does not detect the
+running CPU. Follow the [feature-forwarding example](https://imazen.github.io/archmage/archmage/getting-started/installation/)
+when exposing features from your own crate.
+
+Logical width does not change with the selected ISA: [`f32x8`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html) stays eight lanes.
+Use supported backend lists; do not assume every stronger token implements
+every narrower backend. The [ISA quirks and fixups](https://imazen.github.io/archmage/magetypes/isa-quirks/)
+explain NaNs, rounding, saturation, lane ordering, and measured repair costs.
+[Transcendentals](https://imazen.github.io/archmage/magetypes/math/transcendentals/)
+have a separate domain and precision discussion.
+
+Compile the complete call chain, test supported tiers and scalar tails, and
+inspect optimized code under your supported baseline. See
+[testing](https://imazen.github.io/archmage/archmage/testing/dispatch-testing/) and
+[production coverage](https://imazen.github.io/archmage/magetypes/examples/coverage/).
 
 ## License
 

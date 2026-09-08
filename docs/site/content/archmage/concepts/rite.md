@@ -3,473 +3,121 @@ title = "The #[rite] Macro"
 weight = 4
 +++
 
-<sub>(alias: `#[token_target_features]`)</sub>
+`#[rite]` applies target features directly to an internal helper. `#[arcane]`
+provides the safe entry from ordinary code. Put the batch loop behind the entry,
+then call matched helpers inside it.
 
-`#[rite]` is an advanced alternative to `#[arcane]` for internal SIMD helpers. It adds `#[target_feature]` + `#[inline]` directly to your function — no wrapper, no boundary.
-
-For most code, `#[arcane]` works for both entry points and helpers (LLVM inlines the wrapper when features match). `#[rite]` is useful when you want explicit `#[target_feature]` without a wrapper, or when generating multi-tier suffixed variants.
-
-> Because `#[rite]` has no safe wrapper, you **cannot** use a `#[rite]` function as an `incant!` dispatch target — `incant!` calls variants from cold code, and a wrapperless `#[target_feature]` call there is a compile error (`E0133`). Use `#[arcane]` for `incant!` targets; reach `#[rite]` helpers from *inside* a matching-feature `#[arcane]`/`#[magetypes]` body.
-
-## Three Modes
-
-`#[rite]` works in three modes:
-
-```rust
-// 1. Token-based: token parameter determines features
-#[rite(import_intrinsics)]
-fn helper(_token: X64V3Token, data: &[f32; 8]) -> __m256 {
-    _mm256_loadu_ps(data)
-}
-
-// 2. Tier-based (single): tier name determines features, no token needed
-#[rite(v3, import_intrinsics)]
-fn helper(data: &[f32; 8]) -> __m256 {
-    _mm256_loadu_ps(data)
-}
-
-// 3. Multi-tier: generates suffixed variants for each tier
-#[rite(v3, v4, import_intrinsics)]
-fn helper(data: &[f32; 8]) -> __m256 {
-    _mm256_loadu_ps(data)
-}
-// Produces: helper_v3() and helper_v4()
-```
-
-Single-tier and token-based generate one function with identical attributes. Multi-tier generates a suffixed copy of the function for each tier, each compiled with different `#[target_feature]` attributes.
-
-**Use tier-based** (`#[rite(v3)]`) when the function doesn't need the token for anything else. **Use token-based** when you pass the token to other functions or magetypes constructors. The token form can be easier to remember if you already have the token in scope — but both produce identical machine code.
-
-## How It Works
-
-{% mermaid() %}
-flowchart LR
-    A["Your code:<br/>#[rite(v3, import_intrinsics)]<br/>fn process(data: &[f32; 8])"] --> B["Macro adds:<br/>#[target_feature(...)]<br/>#[inline]<br/>+ auto-imports intrinsics"]
-
-    style A fill:#1a4a6e,color:#fff
-    style B fill:#2d5a27,color:#fff
-{% end %}
-
-No inner function. Just attributes on your function. LLVM inlines it into any caller with matching `#[target_feature]` — keeping everything in one optimization region.
-
-{% mermaid() %}
-flowchart TD
-    PUB["Public API<br/>(no SIMD features)"] --> ARC["#[arcane] entry point<br/>(creates safe wrapper)"]
-    ARC --> H1["#[rite] fn<br/>(inlines fully)"]
-    ARC --> H2["#[rite] fn<br/>(inlines fully)"]
-    H1 --> H3["#[rite] fn<br/>(inlines fully)"]
-
-    PUB -.->|"unsafe needed<br/>if calling #[rite]<br/>directly"| H1
-
-    style PUB fill:#5a3d1e,color:#fff
-    style ARC fill:#2d5a27,color:#fff
-    style H1 fill:#1a4a6e,color:#fff
-    style H2 fill:#1a4a6e,color:#fff
-    style H3 fill:#1a4a6e,color:#fff
-{% end %}
-
-## When to Use `#[rite]` vs `#[arcane]`
-
-For most code, `#[arcane]` works everywhere — LLVM inlines the wrapper when features match (V3→V3 = zero overhead). `#[rite]` is available when you want direct `#[target_feature]` + `#[inline]` without a wrapper.
-
-| Caller | `#[arcane]` | `#[rite]` |
-|--------|-------------|-----------|
-| From non-SIMD code | Required (generates safe wrapper) | N/A |
-| From `#[arcane]`/`#[rite]` with matching features | Works (wrapper inlined away) | Also works (no wrapper) |
+This small x86 specialization follows the multiply/load/store/tail structure of
+`zenfilters/src/simd/x86.rs`. It is an adaptation for illustrating the boundary,
+not a replacement for the portable [gain tutorial](@/archmage/getting-started/first-simd.md).
 
 ```rust
 use archmage::prelude::*;
 
-// ENTRY POINT: receives token from caller
+#[rite(import_intrinsics)]
+fn scale_chunk(_token: X64V3Token, chunk: &mut [f32; 8], factor: f32) {
+    let v = _mm256_loadu_ps(chunk);
+    let scaled = _mm256_mul_ps(v, _mm256_set1_ps(factor));
+    _mm256_storeu_ps(chunk, scaled);
+}
+
 #[arcane(import_intrinsics)]
-pub fn dot_product(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    let products = mul_vectors(a, b);       // tier-based — no token needed
-    horizontal_sum(token, products)          // token-based — passes token on
+fn scale_v3(token: X64V3Token, data: &mut [f32], factor: f32) {
+    let (chunks, tail) = data.as_chunks_mut::<8>();
+    for chunk in chunks { scale_chunk(token, chunk, factor); }
+    for value in tail { *value *= factor; }
 }
 
-// Tier-based: no token parameter, just specify the tier
-#[rite(v3, import_intrinsics)]
-fn mul_vectors(a: &[f32; 8], b: &[f32; 8]) -> __m256 {
-    _mm256_mul_ps(_mm256_loadu_ps(a), _mm256_loadu_ps(b))
+fn scale_scalar(_token: ScalarToken, data: &mut [f32], factor: f32) {
+    for value in data { *value *= factor; }
 }
 
-// Token-based: same behavior, token threaded through
-#[rite(import_intrinsics)]
-fn horizontal_sum(_token: X64V3Token, v: __m256) -> f32 {
-    let mut lanes = [0.0f32; 8];
-    _mm256_storeu_ps(&mut lanes, v);
-    lanes.iter().sum::<f32>()
+pub fn scale(data: &mut [f32], factor: f32) {
+    incant!(scale(data, factor), [v3, scalar])
 }
+let mut data = [2.0; 11];
+scale(&mut data, 3.0);
+assert_eq!(data, [6.0; 11]);
 ```
 
-## What It Generates
+The safe unaligned wrappers accept array references. Both x86 functions receive
+V3 features; the helper can inline into the loop. `incant!` references the x86
+entry only on x86. Other targets use the scalar implementation.
 
-<details>
-<summary>Token-based expansion (click to expand)</summary>
+## Forms
 
-```rust
-// Your code:
-#[rite(import_intrinsics)]
-fn helper(_token: X64V3Token, v: __m256) -> __m256 {
-    _mm256_add_ps(v, v)
-}
+| Form | Use |
+|---|---|
+| `#[rite]` with a concrete token parameter | Features inferred from that token |
+| `#[rite(v3)]` | Explicit tier, no token parameter required; function keeps its name |
+| `#[rite(v3, neon)]` | Multiple suffixed, cfg-gated variants |
+| `#[magetypes(rite, ...)]` | Per-tier `Token` substitution plus direct feature attributes |
+| `import_intrinsics` | Combined intrinsic namespace with available reference-based wrappers |
 
-// Generated (NO wrapper function):
-#[cfg(target_arch = "x86_64")]
-#[target_feature(enable = "avx2,fma,bmi1,bmi2,...")]
-#[inline]
-fn helper(_token: X64V3Token, v: __m256) -> __m256 {
-    use archmage::intrinsics::x86_64::*;
-    _mm256_add_ps(v, v)
-}
-```
+A tokenless `#[rite(v3)]` body can obtain `X64V3Token::from_context()` when it
+needs a token. Rust checks that the caller context covers the constructor's
+features. This is a reference option; the primary zen examples thread tokens.
 
-</details>
+Rite has no baseline-safe outer wrapper. Summoning a token in an ordinary caller
+does not make a direct rite call safe to rustc. Use the default `#[magetypes]`
+or `#[arcane]` entry. Attributes permit optimization; they do not establish a
+universal zero-call or zero-overhead result. Inspect your optimized loop.
 
-<details>
-<summary>Tier-based expansion (click to expand)</summary>
+## Tokenless helpers in codec call chains
 
-```rust
-// Your code:
-#[rite(v3, import_intrinsics)]
-fn helper(v: __m256) -> __m256 {
-    _mm256_add_ps(v, v)
-}
+`rav1d-safe` uses `#[rite(neon)]` for `cfl_row_8bpc` calling `cfl_lane4` in
+[`safe_simd/ipred_arm.rs`](https://github.com/imazen/rav1d-safe/blob/e73811f5d4dad81b75195ca18554fd8a5df19515/src/safe_simd/ipred_arm.rs).
+Both helpers have explicit features and no token parameter. The surrounding
+codec entry supplies the feature context. Ordinary calls between matching
+helpers work; `without token` is not required for this production pattern.
 
-// Generated — identical attributes, no token parameter:
-#[cfg(target_arch = "x86_64")]
-#[target_feature(enable = "avx2,fma,bmi1,bmi2,...")]
-#[inline]
-fn helper(v: __m256) -> __m256 {
-    use archmage::intrinsics::x86_64::*;
-    _mm256_add_ps(v, v)
-}
-```
+In the runnable x86 example above, the corresponding refactor is to annotate
+`scale_chunk` with `#[rite(v3, import_intrinsics)]`, remove its token argument,
+and call `scale_chunk(chunk, factor)` from `scale_v3`. The feature-enabled
+entry still receives the proof token. This is useful when inner helpers operate
+only on intrinsic values and references and have no need to construct magetypes.
 
-The tier name (`v3`) maps to the same features as `X64V3Token`. No token appears in the generated code.
+## Call a token-first helper from a tokenless context
 
-</details>
-
-<details>
-<summary>Multi-tier expansion (click to expand)</summary>
-
-```rust
-// Your code:
-#[rite(v3, v4, import_intrinsics)]
-fn process(data: &[f32; 4]) -> f32 {
-    let v = _mm_loadu_ps(data);
-    let mut lanes = [0.0f32; 4];
-    _mm_storeu_ps(&mut lanes, v);
-    lanes.iter().sum::<f32>()
-}
-
-// Generated — two suffixed variants:
-#[cfg(target_arch = "x86_64")]
-#[target_feature(enable = "avx2,fma,bmi1,bmi2,...")]
-#[inline]
-fn process_v3(data: &[f32; 4]) -> f32 {
-    use archmage::intrinsics::x86_64::*;
-    let v = _mm_loadu_ps(data);
-    let mut lanes = [0.0f32; 4];
-    _mm_storeu_ps(&mut lanes, v);
-    lanes.iter().sum::<f32>()
-}
-
-#[cfg(target_arch = "x86_64")]
-#[target_feature(enable = "avx512f,avx512bw,...")]
-#[inline]
-fn process_v4(data: &[f32; 4]) -> f32 {
-    use archmage::intrinsics::x86_64::*;
-    let v = _mm_loadu_ps(data);
-    let mut lanes = [0.0f32; 4];
-    _mm_storeu_ps(&mut lanes, v);
-    lanes.iter().sum::<f32>()
-}
-```
-
-The original function name disappears — only the suffixed variants exist. Each is compiled with different `#[target_feature]` attributes, so LLVM auto-vectorizes each with the available instructions for that tier.
-
-</details>
-
-<details>
-<summary>Compare to #[arcane] which creates a wrapper</summary>
-
-The macro emits a target-feature function plus a token-justified boundary
-call. That implementation belongs to archmage; callers use `#[arcane]` or
-`#[magetypes]`, and helpers use a matching `#[rite]` context.
-
-</details>
-
-## Multi-Tier `#[rite]`
-
-When you specify more than one tier, `#[rite]` generates a separate suffixed function for each:
+Repository addition: a tokenless `#[rite]` body can use ordinary `incant!` to
+call a token-first helper. The rewriter selects a covered tier and supplies
+`CalleeToken::from_context()`. It does not summon or attempt a stronger tier.
 
 ```rust
 use archmage::prelude::*;
-
-// One function body, three compiled variants
-#[rite(v3, v4, neon)]
-fn scale(data: &[f32; 4], factor: f32) -> [f32; 4] {
-    [
-        data[0] * factor,
-        data[1] * factor,
-        data[2] * factor,
-        data[3] * factor,
-    ]
+#[magetypes(rite, v3, neon, wasm128, scalar)]
+fn sum<const N: usize>(_token: Token, values: &[u32; N]) -> u32 {
+    values.iter().sum()
 }
-// Generates: scale_v3(), scale_v4(), scale_neon()
+#[rite(v3, neon, wasm128, scalar)]
+fn helper(values: &[u32; 3]) -> u32 {
+    incant!(sum::<3>(values), [v3, neon, wasm128, scalar])
+}
+#[magetypes(v3, neon, wasm128, scalar)]
+fn entry(_token: Token, values: &[u32; 3]) -> u32 {
+    incant!(helper(values) without token)
+}
+pub fn total(values: &[u32; 3]) -> u32 {
+    incant!(entry(values), [v3, neon, wasm128, scalar])
+}
+assert_eq!(total(&[1, 2, 3]), 6);
 ```
 
-Each variant gets:
-- Its own `#[target_feature]` (v3 gets AVX2+FMA, v4 gets AVX-512, neon gets NEON)
-- `#[cfg(target_arch)]` gating (v3/v4 get `x86_64`, neon gets `aarch64`)
-- `#[inline]` for inlining into callers
+The V3 helper contains the equivalent of
+`sum_v3::<3>(X64V3Token::from_context(), values)`. The registry's implication
+relationships restrict selection to the caller's architecture and covered
+features. Rust independently checks the emitted constructor and helper calls.
+A cfg-disabled preferred tier falls through to another covered tier or the
+explicit scalar/default fallback. No covered tier and no fallback is a compile
+error. A fallback is selected statically, not by a CPU probe.
 
-### Calling from `#[arcane]`
+An ordinary baseline caller cannot construct feature proof:
 
-The primary use case is calling the right variant from within SIMD code:
-
-```rust
-#[arcane(import_intrinsics)]
-fn entry(token: X64V3Token, data: &[f32; 4]) -> [f32; 4] {
-    scale_v3(data, 2.0)  // Safe! Caller has V3 features, callee needs V3
-}
+```compile_fail,E0133
+use archmage::X64V3Token;
+fn main() { let _token = X64V3Token::from_context(); }
 ```
 
-Since Rust 1.86, a `#[target_feature]` function can safely call another `#[target_feature]` function when the caller has matching or superset features. The `#[arcane]` wrapper gives the caller V3 features, so calling `scale_v3()` (which also needs V3) requires no `unsafe`.
-
-### When to use multi-tier
-
-Multi-tier is useful when:
-- You want LLVM to auto-vectorize the same scalar loop at different feature levels
-- You're writing `incant!`-style dispatch helpers without `#[magetypes]`
-- You need variants of a utility function for different platforms
-
-For intrinsics-heavy code where each tier uses different instructions, write separate functions per tier instead.
-
-### Multi-tier with options
-
-All options (`import_intrinsics`, `import_magetypes`) work with multi-tier:
-
-```rust
-#[rite(v3, v4, import_intrinsics)]
-fn process(data: &[f32; 4]) -> f32 {
-    let v = _mm_loadu_ps(data);
-    let mut lanes = [0.0f32; 4];
-    _mm_storeu_ps(&mut lanes, v);
-    lanes.iter().sum::<f32>()
-}
-// Generates: process_v3(), process_v4() on x86_64
-// Cfg'd out on other architectures
-```
-
-## Why This Works (Rust 1.86+)
-
-Since Rust 1.86, calling a `#[target_feature]` function from another function with matching or superset features is **safe** — no `unsafe` block needed. This is what makes `#[rite]` functions callable from `#[arcane]` or other `#[rite]` functions without `unsafe`:
-
-```rust
-#[target_feature(enable = "avx2,fma")]
-fn outer(data: &[f32; 8]) -> f32 {
-    inner_add(data) + inner_mul(data)  // Safe! No unsafe needed!
-}
-
-#[target_feature(enable = "avx2")]
-#[inline]
-fn inner_add(data: &[f32; 8]) -> f32 { /* ... */ }
-
-#[target_feature(enable = "avx2")]
-#[inline]
-fn inner_mul(data: &[f32; 8]) -> f32 { /* ... */ }
-```
-
-The caller's features (`avx2,fma`) are a superset of the callee's (`avx2`), so the compiler knows the call is safe.
-
-This applies equally to multi-tier variants. When `process_v3()` is called from an `#[arcane]` function with V3 features, or from another `#[rite(v3)]` function, the call is safe because the features match.
-
-## Test helpers through a safe entry
-
-Call a `#[rite]` helper from a matching `#[arcane]` or `#[magetypes]` context.
-The generated boundary checks capability through the token; a test does not
-need to make a manual unsafe call.
-
-```rust
-use archmage::prelude::*;
-
-#[rite(v3)]
-fn double(value: f32) -> f32 { value * 2.0 }
-
-#[arcane]
-fn test_entry(token: X64V3Token, value: f32) -> f32 { double(value) }
-
-#[cfg(target_arch = "x86_64")]
-#[test]
-fn test_double() {
-    if let Some(token) = X64V3Token::summon() {
-        assert_eq!(test_entry(token, 3.0), 6.0);
-    }
-}
-```
-
-For generic vector kernels, use the
-[`#[magetypes]` entry pattern](@/magetypes/examples/generic-kernels.md).
-A direct `#[rite]` call from a caller lacking the required target features
-remains outside Rust's safe-call rules.
-
-## Benefits
-
-1. **No target-feature boundary**: Inlines into callers with matching features
-2. **Better inlining**: LLVM sees the actual function with matching target attributes
-3. **Cleaner stack traces**: No `__inner` functions in backtraces
-4. **Syntactic sugar**: No need to manually maintain feature strings
-
-## Choosing Between #[arcane] and #[rite]
-
-**`#[arcane]` works everywhere** — entry points and helpers alike. When features match, LLVM inlines the wrapper away. `#[rite]` is an alternative for when you want explicit `#[target_feature]` + `#[inline]` without a wrapper.
-
-| Situation | Recommended | Why |
-|-----------|-------------|-----|
-| Entry point / public API | `#[arcane]` | Generates safe wrapper for non-SIMD callers |
-| Internal helper | `#[arcane]` or `#[rite]` | Both work; arcane wrapper inlines when features match |
-| Multi-tier auto-vectorization | `#[rite(v3, v4, neon)]` | Generates suffixed variants from one body |
-| Tokenless helper (no threading) | `#[rite(v3)]` | Cleaner — no token parameter needed |
-
-## When to Use Tier-Based vs Token-Based
-
-| Situation | Recommended |
-|-----------|------------|
-| Pure intrinsics helper (no magetypes, no forwarding) | `#[rite(v3)]` — cleaner, no token to thread |
-| Uses magetypes types (`f32x8::load(token, ...)`) | `#[rite]` with token — magetypes needs the token |
-| Passes token to other token-based `#[rite]` functions | `#[rite]` with token — already have it |
-| Deep in a call chain, token is just passed through unused | `#[rite(v3)]` — drop the ceremony |
-| Same body should compile for multiple tiers | `#[rite(v3, v4)]` — generates suffixed variants |
-
-Both single-tier and token-based produce identical machine code. Multi-tier produces one copy per tier, each compiled with different features. The choice is about what you need.
-
-## Tier Names
-
-The tier name maps to the same features as the corresponding token. All `incant!` tier names work. Tier names accept the `_` prefix — `_v3` is identical to `v3`, matching the suffix on generated function names:
-
-| Tier | Token | Architecture | Features |
-|------|-------|-------------|----------|
-| `v1` | `X64V1Token` | x86_64 | SSE, SSE2 (baseline) |
-| `v2` | `X64V2Token` | x86_64 | + SSE4.2, POPCNT |
-| `v3` | `X64V3Token` | x86_64 | + AVX2, FMA, BMI2 |
-| `v4` / `avx512` | `X64V4Token` | x86_64 | + AVX-512 |
-| `v4x` | `X64V4xToken` | x86_64 | + modern AVX-512 extensions |
-| `neon` | `NeonToken` | aarch64 | NEON |
-| `arm_v2` | `Arm64V2Token` | aarch64 | + CRC, RDM, DotProd, FP16 |
-| `arm_v3` | `Arm64V3Token` | aarch64 | + SHA3, I8MM, BF16 |
-| `wasm128` | `Wasm128Token` | wasm32 | SIMD128 |
-| `x64_crypto` | `X64CryptoToken` | x86_64 | V2 + PCLMULQDQ, AES-NI |
-| `v3_crypto` | `X64V3CryptoToken` | x86_64 | V3 + VPCLMULQDQ, VAES |
-| `v3_gfni_crypto` | `X64V3GfniCryptoToken` | x86_64 | V3 Crypto + GFNI |
-
-These are the same tier names used by `incant!` and `#[autoversion]`.
-
-## Composition
-
-`#[rite]` functions compose naturally — both token-based and tier-based:
-
-```rust
-// Tier-based helpers — no tokens needed
-#[rite(v3, import_intrinsics)]
-fn mul_vectors(a: &[f32; 8], b: &[f32; 8]) -> __m256 {
-    _mm256_mul_ps(_mm256_loadu_ps(a), _mm256_loadu_ps(b))
-}
-
-#[rite(v3, import_intrinsics)]
-fn load_vector(c: &[f32; 8]) -> __m256 {
-    _mm256_loadu_ps(c)
-}
-
-#[rite(v3, import_intrinsics)]
-fn add_raw(a: __m256, b: __m256) -> __m256 {
-    _mm256_add_ps(a, b)
-}
-
-// Compose them — no tokens threaded through
-#[rite(v3, import_intrinsics)]
-fn complex_op(a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> __m256 {
-    let ab = mul_vectors(a, b);
-    let vc = load_vector(c);
-    add_raw(ab, vc)
-}
-```
-
-All `#[rite]` functions inline into the caller — no target-feature boundary, one optimization region.
-
-## Cross-Architecture Behavior
-
-Like `#[arcane]`, `#[rite]` cfg's out functions on non-matching architectures by default. On the wrong architecture, no function is emitted — no dead code.
-
-```rust
-// Only exists on x86_64 — cfg'd out on ARM/WASM
-#[rite(v3, import_intrinsics)]
-fn helper(v: __m256) -> __m256 {
-    _mm256_add_ps(v, v)
-}
-```
-
-For multi-tier, each variant gets its own `#[cfg(target_arch)]` guard:
-
-```rust
-#[rite(v3, neon)]
-fn portable_helper(x: f32, y: f32) -> f32 { x + y }
-// portable_helper_v3() on x86_64, portable_helper_neon() on aarch64
-```
-
-Use `incant!` for cross-arch dispatch — it handles all cfg gating automatically.
-
-## Auto-Imports
-
-`#[rite]` supports `import_intrinsics` and `import_magetypes`. Both work with all modes:
-
-```rust
-// Tier-based with auto-imports
-#[rite(v3, import_intrinsics, import_magetypes)]
-fn helper(data: &[f32; 8]) -> f32 {
-    // core::arch::x86_64::* and magetypes::simd::v3::* both in scope
-    let v = _mm256_loadu_ps(data);
-    let _ = _mm256_add_ps(v, v);
-    0.0
-}
-
-// Token-based with auto-imports (same behavior)
-#[rite(import_intrinsics, import_magetypes)]
-fn helper_with_token(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    let v = f32x8::load(token, data);
-    v.reduce_add()
-}
-```
-
-For most code, `#[arcane(import_intrinsics)]` works for both entry points and helpers. `#[rite]` is an alternative when you want direct `#[target_feature]` without a wrapper.
-
-See [#\[arcane\] Options](@/archmage/concepts/arcane.md#import-intrinsics) for the full namespace mapping.
-
-## Inlining Behavior
-
-`#[rite]` uses `#[inline]` which is sufficient for full inlining when called from matching `#[target_feature]` context. This applies equally to all `#[rite]` modes — token-based, tier-based, and multi-tier variants all emit the same `#[inline]` attribute.
-
-Benchmarks show `#[rite]` with `#[inline]` performs identically to manually inlined code — 547 ns vs 544 ns on 1000 8-float vector adds. `#[arcane]` calling `#[arcane]` with matching features also hits 547 ns — the wrapper inlines away. See the [full benchmark data](https://github.com/imazen/archmage/blob/main/docs/PERFORMANCE.md).
-
-`#[inline(always)]` combined with `#[target_feature]` is not allowed on stable Rust, but we don't need it — `#[inline]` works perfectly.
-
-## Options Reference
-
-All options combine freely. Order doesn't matter.
-
-| Option | Effect |
-|--------|--------|
-| `v3`, `neon`, `v4`, ... | Tier name — sets features (one = single function, multiple = suffixed variants) |
-| `import_intrinsics` | Injects `use archmage::intrinsics::{arch}::*` (safe memory ops) |
-| `import_magetypes` | Injects magetypes SIMD type imports |
-
-**Examples:**
-
-```rust
-#[rite(v3)]                                    // single tier
-#[rite(v3, import_intrinsics)]                 // single tier + safe intrinsics
-#[rite(v3, v4, neon)]                          // multi-tier (generates _v3, _v4, _neon)
-#[rite(v3, v4, import_intrinsics)]             // multi-tier + safe intrinsics
-#[rite(import_intrinsics)]                     // token-based (reads token from params)
-```
+The example above is a reference composition test, not a claim that zen already
+uses this new spelling. It shortens the explicit `from_context()` bridge. Plain
+calls between existing tokenless helpers remain appropriate too.

@@ -19,6 +19,9 @@ fn lookup_impl(token: Token, table: &[f32], indices: &[usize; 8], gain: f32) -> 
 pub fn lookup(table: &[f32], indices: &[usize; 8], gain: f32) -> [f32; 8] {
     incant!(lookup_impl(table, indices, gain), [v3, neon, wasm128, scalar])
 }
+
+assert_eq!(lookup(&[2.0, 3.0], &[0, 1, 0, 1, 0, 1, 0, 1], 2.0),
+           [4.0, 6.0, 4.0, 6.0, 4.0, 6.0, 4.0, 6.0]);
 ```
 
 Every index is bounds-checked unless the compiler can prove it valid. An invalid

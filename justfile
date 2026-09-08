@@ -301,6 +301,11 @@ verify-asm-update:
 doc-check:
     RUSTDOCFLAGS="-Dwarnings" cargo doc --features "std avx512" --no-deps
 
+# Compile and execute website and README Rust examples directly
+docs-test:
+    python3 xtask/check_docs.py
+    python3 xtask/check_docs.py --features avx512
+
 # Build the documentation site (Zola)
 docs:
     cd docs/site && zola build -o ../../target/site

@@ -1,6 +1,7 @@
 +++
 title = "Your First SIMD Function"
 weight = 2
+aliases = ["magetypes/getting-started/first-types/"]
 +++
 
 Start with a real image-plane kernel adapted from `zenfilters`. The
@@ -28,6 +29,10 @@ pub fn apply_gain(plane: &mut [f32], gain: f32) {
     incant!(gain_impl(plane, gain), [v3, neon, wasm128, scalar])
 }
 
+
+let mut data = [2.0; 11];
+apply_gain(&mut data, 0.5);
+assert_eq!(data, [1.0; 11]);
 ```
 
 The full chain is `apply_gain` → `incant!` → a generated `gain_impl_<tier>` →
@@ -44,6 +49,6 @@ at the boundary and `#[rite(import_intrinsics)]` for matched helpers; the
 reference-based memory operations.
 
 A token is proof of the required features, not a runtime allocation. A fixed
-lane count is a logical shape: NEON/WASM split `f32x8` into two native vectors.
+lane count is a logical shape: NEON/WASM split [`f32x8`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html) into two native vectors.
 Normal Rust array alignment is sufficient. [ISA quirks and fixups](@/magetypes/isa-quirks.md)
 explain the contracts that are portable and the floating-point differences.

@@ -32,6 +32,22 @@ concurrency:
   cancel-in-progress: ${{ github.event_name != 'push' }}
 
 jobs:
+  website-examples:
+    name: Website examples (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run actual Markdown examples with default features
+        run: python3 xtask/check_docs.py
+      - name: Run actual Markdown examples with AVX-512 support
+        run: python3 xtask/check_docs.py --features avx512
+
   storage-codegen:
     name: SIMD codegen against PR base
     if: github.event_name == 'pull_request'
@@ -48,6 +64,8 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: python3 xtask/codegen.py "$BASE_SHA" "$HEAD_SHA"
+      - name: Verify tokenless context bridge has no runtime overhead
+        run: python3 xtask/codegen.py --tokenless-context
       - name: Verify storage, pointer, and bounds-check elimination
         run: python3 xtask/codegen.py --storage-access
       - name: Compare integer primitives to handwritten intrinsic kernels

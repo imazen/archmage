@@ -1,93 +1,74 @@
 +++
 title = "Target-Feature Boundaries"
 weight = 2
+aliases = ["archmage/advanced/llvm-boundaries/"]
 +++
 
-The biggest performance pitfall with SIMD isn't `summon()` cost (~1.3 ns cached) — it's calling `#[arcane]` functions from inside hot loops. Each call crosses a `#[target_feature]` boundary that LLVM can't optimize across: 4x slower in benchmarks. Token hoisting alone doesn't fix this — even with the token pre-summoned, each `#[arcane]` call still hits the boundary.
+A CPU token proves that instructions are available. A function's target features
+tell the compiler which instructions it may emit. Passing a token to an ordinary
+function changes neither its target features nor its compilation baseline.
 
-The fix: enter `#[arcane(import_intrinsics)]` once, put your loop inside it, and use `#[rite]` for helpers. `#[rite]` works in three modes: token-based (`#[rite(import_intrinsics)]`), tier-based (`#[rite(v3, import_intrinsics)]` — no token needed), or multi-tier (`#[rite(v3, v4, neon)]` — generates suffixed variants).
+## Enter once around the loop
 
-{% mermaid() %}
-flowchart TD
-    API["Public API<br/>summon() here"] --> ARC["#[arcane] entry<br/>(one boundary crossing)"]
-    ARC --> L["Loop over data"]
-    L --> R1["#[rite] helper<br/>(inlines — no boundary)"]
-    R1 --> R2["#[rite] helper<br/>(inlines — no boundary)"]
-    L -->|"next iteration"| L
+The [complete zenfilters example](@/magetypes/examples/generic-kernels.md)
+shows both supported arrangements:
 
-    style API fill:#5a3d1e,color:#fff
-    style ARC fill:#2d5a27,color:#fff
-    style R1 fill:#1a4a6e,color:#fff
-    style R2 fill:#1a4a6e,color:#fff
-{% end %}
-
-## Example
-
-```rust
-use archmage::prelude::*;
-
-fn find_closest(points: &[[f32; 8]], query: &[f32; 8]) -> usize {
-    if let Some(token) = X64V3Token::summon() {
-        find_closest_simd(token, points, query)
-    } else {
-        find_closest_scalar(points, query)
-    }
-}
-
-// Entry point: #[arcane] — one boundary crossing
-#[arcane(import_intrinsics)]
-fn find_closest_simd(token: X64V3Token, points: &[[f32; 8]], query: &[f32; 8]) -> usize {
-    let mut best_idx = 0;
-    let mut best_dist = f32::MAX;
-
-    for (i, point) in points.iter().enumerate() {
-        let d = distance_simd(point, query);  // #[rite(v3)] inlines here — no token
-        if d < best_dist {
-            best_dist = d;
-            best_idx = i;
-        }
-    }
-    best_idx
-}
-
-// Called from SIMD context: #[rite(v3)] — inlines into caller, no token needed
-#[rite(v3, import_intrinsics)]
-fn distance_simd(a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    let va = _mm256_loadu_ps(a);
-    let vb = _mm256_loadu_ps(b);
-    let diff = _mm256_sub_ps(va, vb);
-    let sq = _mm256_mul_ps(diff, diff);
-    // Horizontal sum → scalar (store + sum; avoids the slower _mm256_hadd_ps)
-    let mut lanes = [0.0f32; 8];
-    _mm256_storeu_ps(&mut lanes, sq);
-    lanes.iter().sum::<f32>().sqrt()
-}
+```text
+public apply_gain
+  → incant! selects a tier once
+    → #[magetypes] generated feature-enabled body
+      → load / multiply / store / scalar tail
 ```
 
-> **With magetypes**, the `distance_simd` body becomes more concise:
-> ```rust
-> let va = f32x8::from_array(token, *a);
-> let vb = f32x8::from_array(token, *b);
-> let diff = va - vb;
-> (diff * diff).reduce_add().sqrt()
-> ```
-
-## Why This Matters
-
-`#[target_feature(enable = "avx2,fma,...")]` changes LLVM's compilation target for that function. LLVM cannot inline a function with extended target features into a caller with baseline features. Each `#[arcane]` call from non-SIMD code crosses this boundary — LLVM can't hoist loads, sink stores, or optimize across iterations.
-
-This is not archmage overhead. A bare `#[target_feature]` function without archmage has the same cost (verified in `benches/asm_inspection.rs` — pattern 7). The boundary is inherent to how LLVM handles `#[target_feature]`.
-
-The fix is `#[rite]`: it adds `#[target_feature]` + `#[inline]` directly, so LLVM can inline it into any caller with matching features. Use `#[rite(v3, import_intrinsics)]` to specify the tier without a token parameter, or `#[rite(import_intrinsics)]` with a token. Everything inside one `#[arcane]` entry point shares the same LLVM target — `#[rite]` functions inline freely.
-
-## With `-Ctarget-cpu=native`
-
-When the compiler knows the target has the features, `summon()` compiles away entirely and the whole binary shares the same LLVM target — no boundaries at all:
-
-```bash
-RUSTFLAGS="-Ctarget-cpu=native" cargo build --release
+```text
+public gain
+  → incant! selects a tier once
+    → #[magetypes] generated feature-enabled entry
+      → inline gain_kernel<T: F32x8Backend>
+        → load / multiply / store / scalar tail
 ```
 
-## Benchmark results
+Keep the outer row, strip, or batch loop inside the feature-enabled function.
+Summoning once but calling a tiny SIMD entry for every pixel still crosses the
+boundary repeatedly. Such calls can prevent loop optimization and add call
+and register-transfer overhead. There is no universal slowdown multiplier.
 
-The boundary costs 4x on simple vector adds and up to 6.2x on real workloads (DCT-8). Archmage and bare `#[target_feature]` produce identical timings — the boundary is LLVM's, not ours. See the [full benchmark data](https://github.com/imazen/archmage/blob/main/docs/PERFORMANCE.md) for all patterns, including cross-token nesting results.
+## Generics are not dynamic dispatch
+
+Rust monomorphizes `fn kernel<T: F32x8Backend>` for its concrete callers.
+A trait bound does not create a trait object or inherently prevent inlining.
+The generated caller establishes target features. An inline generic helper
+can then optimize in that context. Use `#[inline]`, or `#[inline(always)]`
+where inspection justifies the stronger hint; validate the resulting loop.
+
+A generic `#[arcane] fn f<T: HasX64V2>` establishes the features associated with
+**HasX64V2**, even if a particular caller passes a V3 token. It does not ask LLVM
+to compile the body for every stronger capability of `T`. Use tier generation
+when the function should be compiled separately at several feature levels.
+
+## Which calls can inline?
+
+| Caller → callee | Consequence |
+|---|---|
+| Baseline → V3 entry | Required feature boundary; put substantial work behind it |
+| V3 → matching `#[rite]` helper | Features permit inlining; optimizer still decides |
+| V4 → V3 helper | Superset permits inlining; explicit `.v3()` provides a V3 token |
+| V3 → V4 helper | Stronger features need their own proof and boundary |
+| Tier body → ordinary generic helper | Can inline into the tier; a surviving out-of-line helper retains its own compilation context |
+
+`#[rite]` supplies features directly, without the safe outer entry wrapper.
+Use it for matched internal calls, not a public baseline `incant!` target.
+Nested `incant!` can select the matching sibling/helper within a macro-managed
+context; see [dispatch](@/archmage/dispatch/incant.md).
+
+## Prove performance for the caller you ship
+
+Inspect optimized code built with your supported baseline, not only
+`-Ctarget-cpu=native`. Confirm dispatch is outside the loop, the hot loop has
+no helper calls caused by lost feature context, and array chunk indexing has
+no panic path in that loop. Compare equivalent algorithms, tails, and floating
+point contracts. Vector width alone does not establish throughput.
+
+Use the repository's `xtask/codegen.py` checks and representative downstream
+kernels. Benchmark each ISA on hardware that supports it. QEMU and WASM test
+runners can check correctness; they do not substitute for native timing.

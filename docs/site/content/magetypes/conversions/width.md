@@ -3,104 +3,44 @@ title = "Width Conversions"
 weight = 2
 +++
 
-Change the width of vector elements: narrow wide values to fit in fewer bits, or widen narrow values for more headroom.
+Widen lanes before arithmetic that needs extra range. Narrow with saturation
+only when clamping is the intended output contract. This is central to byte
+filters and codec quantization; [zenresize's convolution](@/magetypes/examples/convolution.md)
+provides the surrounding row/strip design.
 
-## Narrowing (Wider to Narrower)
-
-### Integer packing with saturation
-
-```rust
-use magetypes::simd::{
-    generic::{i16x8, i32x4},
-    backends::{I16x8Backend, I32x4Backend},
-};
-
-#[inline(always)]
-fn pack_examples<T: I16x8Backend>(token: T) {
-    // i16x8 -> i8x16 (two i16x8 vectors packed into one i8x16, clamped to i8 range)
-    let a = i16x8::<T>::from_array(token, [1, 2, 3, 4, 5, 6, 7, 8]);
-    let b = i16x8::<T>::from_array(token, [9, 10, 11, 12, 13, 14, 15, 16]);
-    let narrow = a.pack_i8(b);   // [1, 2, ..., 16] as i8x16
-
-    // i16x8 -> u8x16 (unsigned, saturated)
-    let narrow = a.pack_u8(b);   // Values clamped to 0..255
-}
-
-#[inline(always)]
-fn pack_i32<T: I32x4Backend>(token: T) {
-    // i32x4 -> i16x8
-    let c = i32x4::<T>::from_array(token, [1, 2, 3, 4]);
-    let d = i32x4::<T>::from_array(token, [5, 6, 7, 8]);
-    let narrow = c.pack_i16(d);  // [1, 2, 3, 4, 5, 6, 7, 8] as i16x8
-}
-```
-
-Saturation means values outside the target range are clamped to the target type's min/max rather than wrapping.
-
-## Widening (Narrower to Wider)
-
-### Integer extension
+The following API exercise preserves lane order through unsigned widening and
+signed-to-unsigned saturating narrowing. It deliberately uses a bounded input
+range so the intermediate i16 addition cannot overflow.
 
 ```rust
-use magetypes::simd::{
-    generic::i16x8,
-    backends::I16x8Backend,
-};
-
-#[inline(always)]
-fn extend_examples<T: I16x8Backend>(token: T) {
-    // i16x8 -> two i32x4 halves
-    let narrow = i16x8::<T>::from_array(token, [1, 2, 3, 4, 5, 6, 7, 8]);
-    let (lo, hi) = narrow.extend_i32();   // lo = [1, 2, 3, 4], hi = [5, 6, 7, 8]
-
-    // Or just the low half
-    let lo = narrow.extend_lo_i32();      // [1, 2, 3, 4] as i32x4
+use archmage::prelude::*;
+#[magetypes(define(u8x16, i16x8), v3, neon, wasm128, scalar)]
+fn brighten_impl(token: Token, input: [u8; 16], amount: u8) -> [u8; 16] {
+    let bytes = u8x16::from_array(token, input);
+    let lo = bytes.widen_low().bitcast_i16x8();
+    let hi = bytes.widen_high().bitcast_i16x8();
+    let offset = i16x8::splat(token, i16::from(amount));
+    (lo + offset).narrow_saturating_u8(hi + offset).to_array()
 }
-```
-
-`extend_i32()` returns a tuple of `(lo, hi)` — the full vector split into two halves at the wider element size. `extend_lo_i32()` returns only the lower half.
-
-### Float conversion from integer
-
-```rust
-// given token: T where T: I16x8Backend
-// i16x8 -> f32x4 (lower half, via integer extension + float conversion)
-let narrow = i16x8::<T>::from_array(token, [1, 2, 3, 4, 5, 6, 7, 8]);
-let floats = narrow.extend_lo_f32();  // [1.0, 2.0, 3.0, 4.0] as f32x4
-```
-
-## Float-Integer Conversions
-
-See [Float / Integer](@/magetypes/conversions/float-int.md) for `to_i32x4()`, `to_i32x4_round()`, and `to_f32x4()`.
-
-## Example: Image Brightening
-
-Widening to a larger type for arithmetic, then narrowing back:
-
-```rust
-use archmage::{arcane, SimdToken};
-use magetypes::simd::{
-    generic::i16x8,
-    backends::I16x8Backend,
-};
-
-#[arcane(import_intrinsics)]
-fn brighten<T: I16x8Backend>(token: T, pixels: &[u8; 16], amount: i16) -> [u8; 16] {
-    let v = i16x8::<T>::from_array(token, [
-        pixels[0] as i16, pixels[1] as i16, pixels[2] as i16, pixels[3] as i16,
-        pixels[4] as i16, pixels[5] as i16, pixels[6] as i16, pixels[7] as i16,
-    ]);
-    let v2 = i16x8::<T>::from_array(token, [
-        pixels[8] as i16,  pixels[9] as i16,  pixels[10] as i16, pixels[11] as i16,
-        pixels[12] as i16, pixels[13] as i16, pixels[14] as i16, pixels[15] as i16,
-    ]);
-
-    let brightness = i16x8::<T>::splat(token, amount);
-    let lo_bright = v + brightness;
-    let hi_bright = v2 + brightness;
-
-    // Pack back to u8 with saturation (clamps to 0..255)
-    let result = lo_bright.pack_u8(hi_bright);
-    result.to_array()
+pub fn brighten(input: [u8; 16], amount: u8) -> [u8; 16] {
+    incant!(brighten_impl(input, amount), [v3, neon, wasm128, scalar])
 }
+let input = [0, 1, 2, 3, 4, 5, 6, 7, 240, 241, 242, 243, 252, 253, 254, 255];
+assert_eq!(brighten(input, 10), input.map(|v| v.saturating_add(10)));
 ```
+
+Unsigned input widens to values in 0..255, which can be reinterpreted as positive
+i16. Adding an unsigned byte gives 0..510, safely within i16. The final narrowing
+clamps to 0..255. This proof would fail for an unrestricted i16 offset.
+
+| Method | Lane arrangement |
+|---|---|
+| `widen_low()` / `widen_high()` | Low/high input halves, preserving order; signed input sign-extends |
+| `narrow_saturating_i8(high)` / `narrow_saturating_u8(high)` | All clamped lanes of self, then all clamped lanes of high |
+| Corresponding i32→i16 / u16 methods | Same concatenate-and-saturate model |
+| `pairwise_widen_add()` | Adds adjacent source lanes into wider result lanes |
+
+A pairwise sum is not a dot product or a terminal reduction. Use it when the
+next stage needs adjacent-pair vector sums. ISA lane-local packing instructions
+may need a shuffle to satisfy the public whole-vector ordering; that fixup is
+part of the [ISA contract](@/magetypes/isa-quirks.md), not optional overhead.

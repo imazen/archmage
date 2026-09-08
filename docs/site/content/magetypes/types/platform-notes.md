@@ -3,84 +3,32 @@ title = "Platform Notes"
 weight = 2
 +++
 
-Magetypes uses a generic strategy-pattern design: `f32x8<T>` where `T` is the backend token. The same type name works on all platforms — the token determines which intrinsics get used.
+[`f32x8<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html) denotes eight logical lanes. The token selects the implementation,
+not the lane count. Use `#[magetypes]` to bind `Token` per tier and `incant!`
+to enter it, as in the [first kernel](@/archmage/getting-started/first-simd.md).
 
-## The Generic Pattern
+| Shape | Common implementations |
+|---|---|
+| [`f32x4`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x4.html) | V2/V3, NEON, WASM, scalar |
+| [`f32x8`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html) | V3, split NEON/WASM, scalar |
+| [`f32x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x16.html) (`w512`) | Split V3/NEON/WASM, scalar; native V4 with `avx512` |
 
-Import from `magetypes::simd::generic` and `magetypes::simd::backends`:
+A stronger token does not automatically implement every backend trait.
+Hardware feature implication and Rust trait implementation are separate facts.
+When using a V3 shape from a V4 context, extract `token.v3()` explicitly.
+Do not place V4 into an eight-lane tier list and assume the macro widens it.
 
-```rust
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Backend,
-};
+`w512` is enabled by default and provides logical 512-bit shapes. `avx512`
+adds native AVX-512 support and implies `w512`. With default features disabled,
+request `w512` explicitly if you use those shapes. Wider ARM/WASM polyfills
+also depend on this logical-width feature.
 
-#[inline(always)]
-fn process<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
-    let v = f32x8::<T>::load(token, data);
-    v.reduce_add()
-}
-```
+Generic imports are portable; explicit calls to architecture-specific functions
+may still require cfg guards. `incant!` supplies those guards. Bare
+architecture-bound aliases can be convenient locally, but tutorials use explicit
+generic types or `define` so the backend selection remains visible.
 
-The function above compiles correctly on x86-64 (backed by `__m256`), AArch64 (polyfilled with two `float32x4_t`), and WASM (polyfilled with two `v128`). The token type determines the backend.
-
-## No Platform-Specific Imports
-
-The generic types in `magetypes::simd::generic` compile on every architecture — you pass a token and the backend follows — so there are no `#[cfg]`-guarded platform module imports to manage:
-
-```rust
-use magetypes::simd::generic::f32x8;
-```
-
-The crate root also re-exports bare aliases (`magetypes::simd::f32x8`, etc.) that bind the generic type to each architecture's recommended token — `X64V3Token` on x86-64, `NeonToken` on AArch64, `Wasm128Token` on WASM. Prefer the explicit `generic::f32x8<T>` form in portable code so the token stays visible.
-
-## Feature Flags
-
-| Feature | Effect |
-|---------|--------|
-| `avx512` | Enables 512-bit types on x86-64 (`f32x16`, `i32x16`, `f64x8`, etc.) |
-| `std` | Standard library support (on by default) |
-
-Without `avx512`, 512-bit types are not available at all. 128-bit and 256-bit types are always available on x86-64.
-
-On ARM and WASM, only 128-bit native types exist. Wider types are polyfilled regardless of feature flags.
-
-## Token Requirements by Width
-
-Each width tier requires a minimum token:
-
-| Width | x86-64 Token | ARM Token | WASM Token |
-|-------|-------------|-----------|------------|
-| 128-bit | `X64V2Token` | `NeonToken` | `Wasm128Token` |
-| 256-bit | `X64V3Token` | `NeonToken` (polyfill) | `Wasm128Token` (polyfill) |
-| 512-bit | `X64V4Token` | `NeonToken` (polyfill) | `Wasm128Token` (polyfill) |
-
-Higher tokens also work — `X64V3Token` accepts any function expecting `X64V2Token` because V3 is a superset of V2.
-
-## Backend Type Aliases
-
-The `backends` module provides lowercase type aliases for use in generic bounds and explicit turbofish:
-
-```rust
-use magetypes::simd::backends::{x64v3, neon, wasm128};
-
-// Concrete instantiations for specific platforms
-type MyF32x8 = magetypes::simd::generic::f32x8<x64v3>;
-```
-
-The aliases: `x64v1`, `x64v2`, `x64v3`, `x64v4`, `x86_v4x`, `neon`, `wasm128`, `scalar`.
-
-## Compile-Time Optimization
-
-When building for a known CPU, detection compiles away:
-
-```bash
-# On x86-64:
-RUSTFLAGS="-Ctarget-cpu=native" cargo build --release
-# summon() becomes a no-op when the target guarantees the features
-
-# On WASM:
-RUSTFLAGS="-Ctarget-feature=+simd128" cargo build --target wasm32-unknown-unknown
-```
-
-With `-Ctarget-cpu=haswell`, `X64V3Token::summon()` returns `Some(true)` at compile time. The runtime check is elided entirely.
+Use `-Ctarget-cpu=native` only for a known deployment CPU. `summon()` returns
+`Option<Token>`, not `Some(true)`; `compiled_with()` is the separate query about
+compile-time guarantees. A global feature guarantee can eliminate detection,
+but is not a replacement for testing your baseline-dispatched build.

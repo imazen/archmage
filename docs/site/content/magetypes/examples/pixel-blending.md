@@ -43,6 +43,12 @@ pub fn blend_row(fg: &mut [f32], bg: &[f32]) {
     incant!(blend_entry(fg, bg), [v3, neon, wasm128, scalar])
 }
 
+
+let mut fg = [0.1, 0.2, 0.3, 0.5];
+blend_row(&mut fg, &[0.4, 0.4, 0.4, 1.0]);
+for (actual, expected) in fg.into_iter().zip([0.3, 0.4, 0.5, 1.0]) {
+    assert!((actual - expected).abs() < 1e-6);
+}
 ```
 
 The buffers contain **premultiplied RGBA f32** in the same working color space;

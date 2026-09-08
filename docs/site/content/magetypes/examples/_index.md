@@ -16,12 +16,9 @@ Start with complete, compiled call chains adapted from real crates in `zen/`:
 - [linear-srgb: gamma decoding](@/magetypes/math/transcendentals.md) — vector approximation and scalar tail, with their accuracy distinction.
 
 Each page gives a pinned source revision, the production call chain, and any
-adaptations required to make the excerpt standalone. The snippets are compiled
-and exercised in `magetypes/tests/doc_examples.rs`.
+adaptations required to make the excerpt standalone. Rust fences are compiled directly by `xtask/check_docs.py`; the existing
+`magetypes/tests/doc_examples.rs` adds numerical regression cases.
 
-The [convolution](@/magetypes/examples/convolution.md),
-[Gaussian blur](@/magetypes/examples/gaussian-blur.md),
-[quantization](@/magetypes/examples/quantization.md), and
-[color conversion](@/magetypes/examples/color-convert.md) pages are production
-source walkthroughs. They link the complete types and call sites instead of
-presenting partial algorithms with undefined helpers as runnable examples.
+- [Generic types and const modes](@/magetypes/dispatch/types-and-dispatch.md) — zenanalyze, zenavif, and zenpixels-convert specialization.
+- [Production codec and filter walkthroughs](@/magetypes/examples/convolution.md) — convolution, blur, quantization, and color conversion in one place.
+- [Coverage and suspicious gaps](@/magetypes/examples/coverage.md) — what actual zen usage supports, and what it does not.

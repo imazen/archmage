@@ -10,5 +10,5 @@ sidebar = true
 
 Get magetypes running in your project. Two short pages cover everything:
 
-1. [Installation](@/magetypes/getting-started/installation.md) — Add the dependency, configure feature flags
-2. [Your First Types](@/magetypes/getting-started/first-types.md) — Write generic backend functions, summon a token, construct vectors, operate, extract results
+1. [Installation](@/archmage/getting-started/installation.md) — Add the dependency, configure feature flags
+2. [Your First Types](@/archmage/getting-started/first-simd.md) — Write generic backend functions, summon a token, construct vectors, operate, extract results

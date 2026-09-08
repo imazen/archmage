@@ -15,7 +15,7 @@ For a reduction, accumulate in a vector inside that same context and call
 
 ### Align your structs
 
-For AVX2 data (256-bit), align to 32 bytes:
+Only if measurements require stronger alignment, an owned type can request it:
 
 ```rust
 #[repr(C, align(32))]

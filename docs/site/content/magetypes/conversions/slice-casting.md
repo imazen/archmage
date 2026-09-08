@@ -3,77 +3,36 @@ title = "Slice Casting"
 weight = 4
 +++
 
-Magetypes provides safe, token-gated slice casting as an alternative to `bytemuck`. These methods reinterpret scalar slices as SIMD vector slices (and vice versa) without copying data.
+Prefer array chunks plus `load`/`store` for ordinary image rows. They accept
+normal scalar alignment and make tails explicit, as in
+[zenfilters gain](@/magetypes/examples/generic-kernels.md).
 
-## Cast Scalar Slices to Vector Slices
+`cast_slice(token, slice)` and `cast_slice_mut` instead borrow a slice of vector
+objects. They return `None` when the scalar count or alignment is incompatible.
+Alignment can differ by backend, so a cast that works for one tier can fail for
+another. Do not unwrap merely because the input length is a multiple of lanes.
+
+This is a reference-only API exercise; the reviewed zen image loops mostly use
+array chunks and value loads rather than vector-reference slice casts.
 
 ```rust
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Backend,
-};
-
-#[inline(always)]
-fn cast_examples<T: F32x8Backend>(token: T) {
-    // View &[f32] as &[f32x8] (zero-copy)
-    let data: &[f32] = &[1.0; 64];
-    if let Some(chunks) = f32x8::<T>::cast_slice(token, data) {
-        // chunks: &[f32x8<T>] with 8 elements (64 / 8 = 8)
-        for chunk in chunks {
-            let sum = chunk.reduce_add();
-        }
-    }
-
-    // Mutable version
-    let data: &mut [f32] = &mut [0.0; 64];
-    if let Some(chunks) = f32x8::<T>::cast_slice_mut(token, data) {
-        // chunks: &mut [f32x8<T>]
-    }
+use archmage::prelude::*;
+#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+fn roundtrip_impl(token: Token) -> [f32; 8] {
+    let v = f32x8::splat(token, 1.0);
+    let bytes = *v.as_bytes();
+    f32x8::from_bytes(token, &bytes).to_array()
 }
+pub fn roundtrip() -> [f32; 8] {
+    incant!(roundtrip_impl(), [v3, neon, wasm128, scalar])
+}
+assert_eq!(roundtrip(), [1.0; 8]);
 ```
 
-`cast_slice` returns `None` if the slice length isn't a multiple of the vector width or if alignment is wrong. No UB possible.
+`as_bytes` / `as_bytes_mut` borrow the native representation; `from_bytes` and
+`from_bytes_owned` construct a value with a token. These are native-endian bit
+views, not a portable serialized format. Arbitrary float bits include NaNs.
 
-## Byte-Level Access
-
-View a vector's raw bytes. These don't need a token — you already have the vector, which proves CPU support:
-
-```rust
-// given token: T where T: F32x8Backend
-let v = f32x8::<T>::splat(token, 1.0);
-
-// Immutable byte view (zero-cost)
-let bytes: &[u8; 32] = v.as_bytes();
-
-// Mutable byte view
-let mut v = f32x8::<T>::splat(token, 0.0);
-let bytes: &mut [u8; 32] = v.as_bytes_mut();
-```
-
-## Create from Bytes
-
-Construct a vector from raw bytes (token-gated):
-
-```rust
-// given token: T where T: F32x8Backend
-let bytes = [0u8; 32];
-let v = f32x8::<T>::from_bytes(token, &bytes);
-
-// Owned version
-let v = f32x8::<T>::from_bytes_owned(token, bytes);
-```
-
-## Why Not bytemuck?
-
-Implementing bytemuck's `Pod` and `Zeroable` traits would bypass token-gated construction:
-
-```rust
-// bytemuck would allow this — no token, no CPU check:
-let v: f32x8 = bytemuck::Zeroable::zeroed();  // Bad: no proof of CPU support
-
-// magetypes requires the token:
-// given token: T where T: F32x8Backend
-let v = f32x8::<T>::zero(token);  // Good: token proves the CPU can handle it
-```
-
-The token-gated `cast_slice` and `from_bytes` methods provide the same functionality without compromising the safety model. `cast_slice` returns `None` on alignment or length mismatch, so you get runtime safety checks without `unsafe`.
+Magetypes vectors do not expose unrestricted `Pod`/`Zeroable` construction,
+which would bypass the token requirement. This does not prohibit using bytemuck
+for ordinary scalar pixel buffers under that crate's own validity rules.

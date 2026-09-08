@@ -2,6 +2,7 @@
 title = "Reusable Generic Kernels"
 description = "Real image-plane and audio-buffer loops with per-tier dispatch and reusable generic helpers"
 weight = 0
+aliases = ["magetypes/examples/plane-ops/"]
 +++
 
 This runnable example is adapted from `zenfilters` in the `zen/zenpipe`
@@ -43,6 +44,10 @@ fn gain_impl(token: Token, plane: &mut [f32], gain: f32) {
 pub fn apply_gain(plane: &mut [f32], gain: f32) {
     incant!(gain_impl(plane, gain), [v3, neon, wasm128, scalar])
 }
+
+let mut data = [2.0; 11];
+apply_gain(&mut data, 0.5);
+assert_eq!(data, [1.0; 11]);
 ```
 
 `#[magetypes]` creates the concrete per-tier functions. `#[inline(always)]` alone
@@ -82,6 +87,10 @@ fn gain_entry(token: Token, plane: &mut [f32], gain: f32) {
 pub fn gain(plane: &mut [f32], factor: f32) {
     incant!(gain_entry(plane, factor), [v3, neon, wasm128, scalar])
 }
+
+let mut data = [2.0; 11];
+gain(&mut data, 0.5);
+assert_eq!(data, [1.0; 11]);
 ```
 
 The generic bound selects available operations; monomorphization resolves the
