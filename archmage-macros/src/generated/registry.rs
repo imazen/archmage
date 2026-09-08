@@ -194,6 +194,32 @@ pub(crate) fn token_to_features(token_name: &str) -> Option<&'static [&'static s
     }
 }
 
+/// Precomputed target-feature CSV for concrete tokens, including aliases.
+#[rustfmt::skip]
+pub(crate) fn token_to_features_csv(name: &str) -> Option<&'static str> {
+    match name {
+        "X64V1Token" | "Sse2Token" => Some("sse,sse2"),
+        "X64V2Token" => Some("sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b"),
+        "X64CryptoToken" => Some("sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,pclmulqdq,aes"),
+        "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some("sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"),
+        "X64V3CryptoToken" => Some("sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes"),
+        "X64V3GfniCryptoToken" => Some("sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,vpclmulqdq,vaes,gfni"),
+        "X64V4Token" | "Avx512Token" | "Server64" => Some("sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"),
+        "X64V4xToken" | "Avx512ModernToken" => Some("sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"),
+        "Avx512Fp16Token" => Some("sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16"),
+        "NeonToken" | "Arm64" => Some("neon"),
+        "NeonAesToken" => Some("neon,aes"),
+        "NeonSha3Token" => Some("neon,sha3"),
+        "NeonCrcToken" => Some("neon,crc"),
+        "Arm64V2Token" => Some("neon,crc,rdm,dotprod,fp16,aes,sha2"),
+        "Arm64V3Token" => Some("neon,crc,rdm,dotprod,fp16,aes,sha2,fhm,fcma,sha3,i8mm,bf16"),
+        "Wasm128Token" => Some("simd128"),
+        "Wasm128RelaxedToken" => Some("simd128,relaxed-simd"),
+        "ScalarToken" => Some(""),
+        _ => None,
+    }
+}
+
 /// Maps a trait bound name to its required target features.
 ///
 /// Generated from token-registry.toml. Includes token type names

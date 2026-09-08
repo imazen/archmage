@@ -36,22 +36,14 @@ pub(crate) fn magetypes_impl(
     rite_flag: bool,
     defines: &[String],
 ) -> TokenStream {
-    // Strip user-provided #[arcane] / #[rite] to prevent double-wrapping
-    // (magetypes auto-adds one of them on non-scalar variants)
-    input_fn
-        .attrs
-        .retain(|attr| !attr.path().is_ident("arcane") && !attr.path().is_ident("rite"));
-
+    // Propagate ordinary attributes once; these macro attributes are consumed
+    // or supplied per tier below.
+    input_fn.attrs.retain(|attr| {
+        !["arcane", "rite", "magetypes"]
+            .iter()
+            .any(|name| attr.path().is_ident(name))
+    });
     let fn_name = &input_fn.sig.ident;
-
-    // Attrs to propagate to each variant: doc comments, #[allow], #[inline], etc.
-    // Exclude #[magetypes] (consumed) and #[arcane]/#[rite] (already stripped above).
-    let propagated_attrs: Vec<_> = input_fn
-        .attrs
-        .iter()
-        .filter(|a| !a.path().is_ident("magetypes"))
-        .cloned()
-        .collect();
 
     // Build the `define(...)` type-alias preamble once. Each alias RHS still
     // references `Token` — the per-tier substitution below rewrites it to the
@@ -67,14 +59,15 @@ pub(crate) fn magetypes_impl(
         quote! { #(#aliases)* }
     };
 
-    let mut variants = Vec::new();
+    // Dispatch presence is independent of the tier. Scan the original body
+    // once, before making variants (the define preamble contains no dispatch).
+    let has_dispatch = tokens_contain_ident(&input_fn.body, &["incant", "dispatch_variant"]);
+    let mut variants = Vec::with_capacity(tiers.len());
 
     for tier in tiers {
         // Clone and rename at the AST level (no string surgery)
         let mut variant_fn = input_fn.clone();
         variant_fn.sig.ident = quote::format_ident!("{}_{}", fn_name, tier.suffix);
-        // Propagate doc comments, #[allow], etc. to each variant
-        variant_fn.attrs = propagated_attrs.clone();
 
         // Prepend the `define(...)` type aliases to the body. They appear
         // inside the function scope, shadowing any outer `f32x8`/etc. for
@@ -93,7 +86,7 @@ pub(crate) fn magetypes_impl(
         // variants are also `#[arcane]`-wrapped (which handles the token-first
         // forms); this pass is what gives the scalar/default variants — emitted
         // plain, with no arcane wrapper — a working `without token` too.
-        {
+        if has_dispatch {
             let ctx = crate::rewrite::CallerContext {
                 tier_suffix: tier.suffix.to_string(),
                 target_arch: tier.target_arch,
@@ -101,7 +94,7 @@ pub(crate) fn magetypes_impl(
                 has_token: false,
                 derive_token: false,
             };
-            variant_fn.body = crate::rewrite::rewrite_incant_in_body(variant_fn.body.clone(), &ctx);
+            variant_fn.body = crate::rewrite::rewrite_incant_in_body(variant_fn.body, &ctx);
         }
 
         // Replace `Token` ident with the concrete token path at the token level.

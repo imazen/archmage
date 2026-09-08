@@ -462,7 +462,8 @@ unsafe impl std::alloc::GlobalAlloc for CountAlloc {
 }
 
 /// Run with `cargo test -p archmage-macros --lib profile_allocations -- --ignored --nocapture`.
-/// Counts signature/argument parsing and expansion, but not input lexing. Uses
+/// Counts calls routed through this test allocator, not input lexing. Dynamically
+/// linked libstd can bypass it; use heaptrack for complete allocation counts. Uses
 /// proc_macro2's standalone backend; confirm wall-time wins in actual consumers.
 #[test]
 #[ignore = "measurement, not a correctness test"]
@@ -812,4 +813,78 @@ fn lint_attributes_and_destructured_dispatch_inputs_are_preserved() {
     assert!(output.to_string().contains("__autoversion_wild_"));
     assert!(output.to_string().contains("self . f_scalar"));
     syn::parse2::<syn::File>(output).unwrap();
+}
+
+#[test]
+fn registered_features_are_unique_and_have_precomputed_csv() {
+    for name in generated::ALL_CONCRETE_TOKENS
+        .iter()
+        .copied()
+        .chain(["ScalarToken"])
+    {
+        let features = generated::token_to_features(name).unwrap();
+        assert_eq!(
+            generated::token_to_features_csv(name).unwrap(),
+            features.join(",")
+        );
+        assert!(matches!(
+            crate::token_discovery::features_csv(Some(name), features),
+            std::borrow::Cow::Borrowed(_)
+        ));
+    }
+    assert!(generated::token_to_features_csv("UnknownToken").is_none());
+    // Borrowing a registry list preserves the old deduplication behavior only
+    // if lists are unique. Check every token and trait, including aliases.
+    for features in generated::ALL_CONCRETE_TOKENS
+        .iter()
+        .map(|name| generated::token_to_features(name).unwrap())
+        .chain(
+            generated::ALL_TRAIT_NAMES
+                .iter()
+                .map(|name| generated::trait_to_features(name).unwrap()),
+        )
+    {
+        for (i, feature) in features.iter().enumerate() {
+            assert!(!features[..i].contains(feature), "duplicate {feature}");
+        }
+    }
+}
+
+#[test]
+fn combined_trait_features_preserve_first_seen_order() {
+    use crate::token_discovery::traits_to_features;
+    use std::borrow::Cow;
+
+    let single = traits_to_features(&["HasX64V2".into()]).unwrap();
+    assert!(matches!(single, Cow::Borrowed(_)));
+    let redundant = traits_to_features(&["HasX64V2".into(), "HasX64V2".into()]).unwrap();
+    assert!(matches!(redundant, Cow::Borrowed(_)));
+    assert_eq!(single, redundant);
+
+    for names in [
+        ["HasX64V2", "HasNeon"],
+        ["HasNeon", "HasX64V2"],
+        ["HasX64V2", "HasX64V4"],
+        ["HasX64V4", "HasX64V2"],
+    ] {
+        let mut expected = Vec::new();
+        for name in names {
+            for feature in generated::trait_to_features(name).unwrap() {
+                if !expected.contains(feature) {
+                    expected.push(*feature);
+                }
+            }
+        }
+        let actual = traits_to_features(&names.map(str::to_owned)).unwrap();
+        assert_eq!(actual.as_ref(), expected);
+        assert_eq!(
+            crate::token_discovery::features_csv(None, &actual),
+            expected.join(",")
+        );
+    }
+    assert!(traits_to_features(&["UnknownTrait".into()]).is_none());
+    let unusual = ["future_feature", "avx2", "future_feature"];
+    let csv = crate::token_discovery::features_csv(None, &unusual);
+    assert!(matches!(csv, Cow::Owned(_)));
+    assert_eq!(csv, unusual.join(","));
 }
