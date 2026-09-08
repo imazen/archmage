@@ -56,6 +56,10 @@ pub fn add_green(rgba: &mut [u8]) {
     incant!(add_green_entry(rgba), [v3, neon, wasm128, scalar])
 }
 
+
+let mut pixels = [250, 10, 20, 255, 1, 2, 3, 4];
+add_green(&mut pixels);
+assert_eq!(pixels, [4, 10, 30, 255, 3, 2, 5, 4]);
 ```
 
 Data is packed RGBA8. Red and blue add green modulo 256; green and alpha remain

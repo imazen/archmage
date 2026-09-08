@@ -67,11 +67,11 @@ Single-tier and token-based produce identical `#[target_feature]` attributes. Mu
 
 Multi-tier variants are safe to call from matching `#[arcane]` or `#[rite]` contexts — since Rust 1.86, `#[target_feature]` functions can safely call other `#[target_feature]` functions when the caller has matching or superset features.
 
-### CRITICAL: Target-Feature Boundaries (4x Performance Impact)
+### CRITICAL: Target-Feature Boundaries
 
 **Enter `#[arcane(import_intrinsics)]` once at the top, use `#[rite(import_intrinsics)]` for everything inside.**
 
-LLVM cannot inline across mismatched `#[target_feature]` attributes. Each `#[arcane]` call from non-SIMD code creates an optimization boundary — LLVM can't hoist loads, sink stores, or vectorize across it. This costs 4-6x depending on workload (see `benches/asm_inspection.rs` and `docs/PERFORMANCE.md`). Token hoisting doesn't help — even with the token pre-summoned, calling `#[arcane]` per iteration still hits the boundary.
+LLVM cannot inline a stronger-feature callee into a weaker-feature caller; superset callers can inline covered callees. Each `#[arcane]` call from non-SIMD code creates an optimization boundary — LLVM can't hoist loads, sink stores, or vectorize across it. This costs 4-6x depending on workload (see `benches/asm_inspection.rs` and `docs/PERFORMANCE.md`). Token hoisting doesn't help — even with the token pre-summoned, calling `#[arcane]` per iteration still hits the boundary.
 
 ```rust
 // WRONG: #[arcane] boundary every iteration (4x slower)
@@ -116,96 +116,25 @@ fn dist_simd(a: &[f32; 8], b: &[f32; 8]) -> f32 {
 
 **The rule:** `#[arcane(import_intrinsics)]` at the entry point, `#[rite(v3, import_intrinsics)]` for everything called from SIMD code (or `#[rite(import_intrinsics)]` with a token when using magetypes).
 
-### CRITICAL: Generic Bounds Are Optimization Barriers
+### Generic kernels and feature contexts
 
-**Generic passthrough with trait bounds breaks inlining.** The compiler cannot inline across generic boundaries — each trait-bounded call is a potential indirect call.
+Rust generics monomorphize; trait bounds are not inherently indirect calls or
+inlining barriers. `#[magetypes]` supports type and const generics and supplies
+per-tier contexts. `define(f32x8)` is shorthand for the same generic vector with
+`Token` substituted; explicit `f32x8::<Token>` is equally idiomatic.
 
-```rust
-// BAD: Generic bound prevents inlining into caller
-#[arcane(import_intrinsics)]
-fn process_generic<T: HasX64V2>(token: T, data: &[f32]) -> f32 {
-    inner_work(token, data)  // Can't inline — T could be any type
-}
+A plain backend-generic helper needs a feature-enabled caller and appropriate
+inlining for good codegen. Neither `#[inline(always)]` nor a concrete token
+argument alone supplies target features. Do not claim a universal 18x penalty
+or guaranteed assembly equivalence without inspecting the actual kernel.
 
-#[rite(import_intrinsics)]
-fn inner_work<T: HasX64V2>(token: T, data: &[f32]) -> f32 {
-    // Even with #[inline(always)], this may not inline through generic
-    ...
-}
-```
+A tier-bound macro enables the declared bound's features, not extra features
+of a stronger concrete instantiation. Superset callers can inline lower-tier
+helpers; token extraction is explicit (`v4.v3()`). `as_x64v3()` tests exact type
+identity and returns None for a V4 token. It is not an upgrade or downcast.
 
-```rust
-// GOOD: Concrete token enables full inlining
-#[arcane(import_intrinsics)]
-fn process_concrete(token: X64V3Token, data: &[f32]) -> f32 {
-    inner_work(token, data)  // Fully inlinable — concrete type
-}
-
-#[rite(import_intrinsics)]
-fn inner_work(token: X64V3Token, data: &[f32]) -> f32 {
-    // Inlines into caller, single #[target_feature] region
-    ...
-}
-```
-
-**Why this matters:**
-- `#[target_feature]` functions inline to share the feature-enabled region
-- Generic bounds break this chain — each function is a separate compilation unit
-- Even `#[inline(always)]` can't force inlining across trait object boundaries
-
-**Exception: magetypes backend generics are zero-cost inside a `#[target_feature]` region — if they inline.**
-`f32x8::<T>` where `T: F32x8Backend` produces **identical assembly** to concrete `f32x8::<x64v3>` — but only when the generic function inlines into a `#[target_feature]`-enabled caller. The generic function has no `#[target_feature]` of its own; it inherits the caller's features through inlining. **Mark generic SIMD helpers `#[inline(always)]`** to guarantee this. With `#[inline(never)]`, the same generic code is 18x slower — intrinsics become function calls because the non-inlined function body compiles without target features. See `benches/generic_vs_concrete.rs`.
-
-**The normal caller is a `#[magetypes]`-generated variant, not a hand-written `#[arcane]`.** `#[magetypes]` IS the per-tier `#[arcane]` wrapper generator — given `#[magetypes(v4, v3, neon, wasm128, scalar)]`, it emits one `#[arcane]`-wrapped variant per listed tier with `Token` substituted to the concrete type. Your generic `#[inline(always)] fn<T: F32x8Backend>` kernel inlines into each of those variants; `T` is inferred from the concrete token at each call site. Do not hand-write per-tier `#[arcane]` wrappers around a generic kernel — the macro already does it. Reach for `#[arcane]` directly only at a public entry point for one tier, or to slot one hand-tuned variant into an existing `#[magetypes]` family by the `_<tier>` suffix. Canonical example: `magetypes/examples/idiomatic_patterns_all.rs`.
-
-**Downcasting is free:** Pass a higher token to a function expecting a lower one. Nested `#[arcane]` with downcasting preserves the inlining chain:
-
-```rust
-#[arcane(import_intrinsics)]
-fn v4_kernel(token: X64V4Token, data: &mut [f32]) {
-    // Can call V3 functions — V4 is a superset
-    let partial = v3_impl(token, &data[..8]);  // Downcasts, still inlines
-    // ... AVX-512 specific work ...
-}
-
-#[rite(import_intrinsics)]
-fn v3_impl(token: X64V3Token, chunk: &[f32]) -> f32 {
-    // AVX2+FMA work — inlines into v4_kernel
-    ...
-}
-```
-
-**Extraction methods for explicit downcasting:** Every token has `.v1()`, `.v2()`, `.v3()`, `.neon()`, etc. methods to get any lower-tier token it implies. These are guaranteed (infallible), zero-cost, and the primary way to downcast when you need a specific lower token type:
-
-```rust
-let v4 = X64V4Token::summon().unwrap();
-let v3: X64V3Token = v4.v3();        // guaranteed — V4 implies V3
-let v2: X64V2Token = v4.v2();        // guaranteed — V4 implies V2
-let crypto = v4.x64_crypto();        // guaranteed — V4 implies crypto
-
-let arm_v3 = Arm64V3Token::summon().unwrap();
-let arm_v2 = arm_v3.arm_v2();        // guaranteed — V3 implies V2
-let neon = arm_v3.neon();            // guaranteed — V3 implies NEON
-```
-
-**`IntoConcreteToken::as_*()` is NOT downcasting — it's identity checking.** `v4_token.as_x64v3()` returns `None` because the token is not literally an `X64V3Token`. Use `.v3()` for downcasting, `as_*()` for type-based dispatch branching.
-
-**Upcasting via `IntoConcreteToken`:** Safe, but creates an LLVM optimization boundary:
-
-```rust
-fn process<T: IntoConcreteToken>(token: T, data: &mut [f32]) {
-    // Generic caller has baseline LLVM target
-    if let Some(v4) = token.as_x64v4() {
-        process_v4(v4, data);  // Callee has AVX-512 target — mismatched
-    } else if let Some(v3) = token.as_x64v3() {
-        process_v3(v3, data);
-    }
-}
-```
-
-The issue: `#[target_feature]` changes LLVM's target for that function. Generic caller and feature-enabled callee have mismatched targets, so LLVM can't optimize across that boundary. Do dispatch once at entry, not deep in hot code.
-
-**The rule:** Use concrete tokens for hot paths. Downcasting (V4→V3) via extraction methods is free. Upcasting via `IntoConcreteToken` is safe but creates optimization boundaries.
+Canonical complete examples: `docs/site/content/magetypes/dispatch/types-and-dispatch.md`
+and `docs/site/content/magetypes/examples/generic-kernels.md`.
 
 ### When `-Ctarget-cpu=native` Is Fine
 
@@ -233,24 +162,13 @@ fn always_on_x86_64() { }
 
 Default `x86_64-unknown-linux-gnu` only enables SSE/SSE2. Extended features require `-Ctarget-cpu` or `-Ctarget-feature`.
 
-### The Cargo Feature Trap
+### Cargo features and CPU features
 
-**WRONG:** Gating type aliases on cargo features:
-
-```rust
-// BAD: Types don't exist unless cargo feature enabled!
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-pub use crate::simd::x86::w512::f32x16 as F32Vec;
-```
-
-This breaks runtime dispatch — types aren't available even if CPU supports AVX-512.
-
-**Cargo features should control:**
-- Whether to *attempt* higher tiers at runtime
-- Compile-time-only paths for known targets
-
-**Cargo features should NOT control:**
-- Whether SIMD types exist
+`magetypes/w512` (default) enables logical 512-bit types and polyfills.
+`magetypes/avx512` adds native AVX-512 and implies w512. Archmage macros are
+always included; `macros` is a compatibility no-op. Cargo features control
+compiled support, not CPU availability. Forward caller features explicitly.
+See `docs/site/content/archmage/getting-started/installation.md`.
 
 ### `#[arcane]`: Expansion Modes
 
@@ -280,30 +198,9 @@ impl SimdOps for Processor {
 
 ### `#[arcane]`/`#[rite]`: Cross-Arch Behavior
 
-**Default (cfg-out):** On wrong architecture, no function is emitted. Less dead code.
-Direct *call sites* referencing the function by name must use `#[cfg]` guards, `stub`, or `incant!`. No `#[cfg]` is needed on the function *definitions* — the macros handle that.
-
-**With `stub`:** Generates unreachable stub on wrong architecture.
-Use when cross-arch dispatch references the function without cfg guards.
-
-```rust
-#[arcane(stub)]  // unreachable stub on non-x86
-fn process_avx2(token: X64V3Token, data: &[f32]) -> f32 { ... }
-
-#[arcane(stub)]  // unreachable stub on non-ARM
-fn process_neon(token: NeonToken, data: &[f32]) -> f32 { ... }
-
-// Both referenced without cfg guards — stubs make this compile everywhere
-fn dispatch(data: &[f32]) -> f32 {
-    if let Some(t) = X64V3Token::summon() { process_avx2(t, data) }
-    else if let Some(t) = NeonToken::summon() { process_neon(t, data) }
-    else { data.iter().sum() }
-}
-```
-
-`incant!` is unaffected — it already cfg-gates dispatch calls.
-
-`#[rite(stub)]` works the same way for `#[rite]` functions.
+Wrong-architecture definitions are omitted. `stub` has been removed; both parsers
+reject it. Use `incant!` for cfg-gated calls or guard manual call sites explicitly.
+A runtime summon branch does not make an unresolved function name compile.
 
 ### `incant!`: Dispatch Macro
 
@@ -607,40 +504,20 @@ fn example(_token: X64V3Token, data: &[f32; 8]) -> __m256 {
 
 ## CRITICAL: Doc Example Testing (CI-Enforced)
 
-Every code example in `docs/site/content/` MUST have a corresponding test in
-`magetypes/tests/doc_examples.rs` (for magetypes docs) or `tests/doc_examples.rs`
-(for archmage docs). Code that appears in documentation MUST compile and pass tests.
+Run `just docs-test`: it compiles and executes the actual website and package
+README Rust fences with default and AVX-512 features. No implicit imports or
+hidden helper definitions are supplied. Do not maintain untested Markdown
+copies. Existing `magetypes/tests/doc_examples.rs` supplies additional numerical
+regressions; run it for changes to those examples too.
 
-- When modifying doc pages, update the corresponding test
-- When adding new doc pages with code examples, add tests first
-- `cargo test -p magetypes --test doc_examples` must pass before pushing doc changes
-- Magetypes examples MUST use the generic pattern: `f32x8::<T>`, not flat aliases
-- Flat aliases (`use magetypes::simd::f32x8`) are BANNED in documentation
+Every runnable example must include the public/generated/helper call chain and
+an invocation. Label syntax-only fragments as text and reference-only exercises
+as such. Use production zen sources with explicit adaptation notes. Do not
+promote an option based solely on an expansion test; document observed usage.
 
-### Correct doc import pattern
-
-```rust
-use magetypes::simd::{
-    generic::f32x8,
-    backends::{F32x8Backend, x64v3, neon, scalar},
-};
-```
-
-### Correct generic function pattern (primary in all docs)
-
-Generic SIMD helpers MUST be `#[inline(always)]` — they have no `#[target_feature]` of their own and rely on inlining into the `#[arcane]` caller to get AVX2/NEON features. Without inlining, intrinsics become function calls (18x slower).
-
-```rust
-#[inline(always)]
-fn sum<T: F32x8Backend>(token: T, data: &[f32]) -> f32 {
-    let mut acc = f32x8::<T>::zero(token);
-    for chunk in data.chunks_exact(8) {
-        let v = f32x8::<T>::load(token, chunk.try_into().unwrap());
-        acc = acc + v;
-    }
-    acc.reduce_add()
-}
-```
+Generic vector names in prose link to docs.rs/magetypes/latest. Both explicit
+`f32x8::<Token>` and `define(f32x8)` inside `#[magetypes]` are idiomatic. Backend-
+generic helpers are useful for reuse, not a substitute for the generated entry.
 
 ## Quick Start
 
@@ -917,9 +794,7 @@ fn my_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 |--------|---------|--------|---------|------|
 | `#[arcane]` | Default | - | Default | - |
 | `#[arcane(nested)]` | - | Yes | Default | - |
-| `#[arcane(stub)]` | Default | - | - | Yes |
 | `#[arcane(_self = T)]` | - | Implied | Default | - |
-| `#[arcane(nested, stub)]` | - | Yes | - | Yes |
 
 ## Friendly Aliases
 
@@ -1198,7 +1073,12 @@ Found by macro expansion snapshot compilation tests (`tests/expand/*.expanded.rs
 
 ## Open Questions
 
-- **Rite token forging**: Should tokenless `#[rite(v3)]` functions auto-forge a token at the top of the body? This would let them participate in incant! rewriting (pass token to callees). *The blocker is gone as of 0.9.29*: `Token::from_context()` is a safe `#[target_feature]` fn, so a `#[rite(v3)]` body can write `let token = X64V3Token::from_context();` today with **no** generated `unsafe` — rustc checks the caller's feature set against the tier's. What remains is a pure API question: whether the macro should inject it implicitly (a hidden binding the user did not write) or leave it explicit as it is now. See `tests/from_context.rs`.
+- **Tokenless rite composition**: Implemented. Ordinary `incant!` inside a
+  tokenless rite body selects covered callee tiers and constructs the callee's
+  token with `from_context()`. The registry DAG and rustc both check coverage;
+  no implicit runtime upgrade. `without token` remains for tokenless callees,
+  `with token` explicitly selects by a held token's exact type. Tests are in
+  `tests/tokenless_context.rs`; codegen gate: `xtask/codegen.py --tokenless-context`.
 
 - **`incant_direct!` for inner function calls** (#19): New macro that calls `__arcane_fn_v3()` directly from matching `#[target_feature]` contexts, bypassing the trampoline without depending on `#[inline(always)]`. Requires `#[arcane(pub(crate))]` to expose the inner. Would subsume `#[rite]`'s use case (call inner directly without wrapper). See [issue #19](https://github.com/imazen/archmage/issues/19).
 

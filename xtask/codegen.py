@@ -1586,11 +1586,77 @@ def integer_probes():
     assert not failures, failures
 
 
+def tokenless_context_probes():
+    """Compare generated proof/calls with an explicit from_context bridge.
+
+    Fixed arrays make bounds statically provable. Both paths must compile to
+    identical straight-line code, including memory operands, on each ISA.
+    """
+    repository = pathlib.Path(__file__).resolve().parent.parent
+    scratch = pathlib.Path.home() / "tmp"
+    scratch.mkdir(exist_ok=True)
+    root = pathlib.Path(tempfile.mkdtemp(prefix="archmage-tokenless-", dir=scratch))
+    (root / "src").mkdir()
+    (root / "Cargo.toml").write_text(
+        '[package]\nname="context_probe"\nversion="0.0.0"\nedition="2024"\n'
+        f'[dependencies]\narchmage={{path={json.dumps(str(repository))}}}\n[workspace]\n'
+    )
+    env = dict(os.environ, TMPDIR=str(scratch), CARGO_INCREMENTAL="0")
+    for key in ("RUSTFLAGS", "CARGO_ENCODED_RUSTFLAGS", "CARGO_TARGET_DIR",
+                "CARGO_BUILD_TARGET", "RUSTC_WRAPPER", "RUSTC_WORKSPACE_WRAPPER"):
+        env.pop(key, None)
+    targets = {
+        "x86_64-unknown-linux-gnu": [("v3", "v3", "X64V3Token"), ("v3", "v2", "X64V2Token")],
+        "aarch64-unknown-linux-gnu": [("neon", "neon", "NeonToken")],
+        "wasm32-unknown-unknown": [("wasm128", "wasm128", "Wasm128Token")],
+    }
+    for target, cases in targets.items():
+        code = ["use archmage::prelude::*;"]
+        for i, (caller, callee, token) in enumerate(cases):
+            code.append(f'''
+#[rite]
+fn kernel{i}_{callee}(_token: {token}, a: &[u32; 8], out: &mut [u32; 8]) {{
+    for i in 0..8 {{ out[i] = a[i].wrapping_add(7); }}
+}}
+#[rite({caller})]
+#[unsafe(no_mangle)]
+pub fn api_{i}(a: &[u32; 8], out: &mut [u32; 8]) {{
+    incant!(kernel{i}(a, out), [{callee}, -scalar]);
+}}
+#[rite({caller})]
+#[unsafe(no_mangle)]
+pub fn hand_{i}(a: &[u32; 8], out: &mut [u32; 8]) {{
+    kernel{i}_{callee}({token}::from_context(), a, out);
+}}
+''')
+        (root / "src/lib.rs").write_text("\n".join(code))
+        run = subprocess.run(["cargo", "rustc", "--manifest-path", str(root / "Cargo.toml"),
+                              "--release", "--lib", "--target", target, "--", "--emit=asm"],
+                             env=env, capture_output=True, text=True)
+        (root / f"{target}.log").write_text(run.stdout + run.stderr)
+        assert run.returncode == 0, run.stderr
+        files = list((root / "target" / target / "release/deps").glob("context_probe-*.s"))
+        assert len(files) == 1, files
+        assembly = files[0].read_text()
+        (root / f"{target}.s").write_text(assembly)
+        functions = parse(assembly)
+        for i in range(len(cases)):
+            api, hand = (expand(f"{name}_{i}", functions) for name in ("api", "hand"))
+            assert api == hand, (target, i, api, hand)
+            assert not transfers(api) and "INTERNAL_CALL" not in api and "TAIL_CALL" not in api, (target, i, api)
+            assert not any("panic" in line or "cpuid" in line for line in api), (target, api)
+        print(target, len(cases), "identical context bridges; no calls, branches, or bounds panics", flush=True)
+    print("Context codegen artifacts:", root, flush=True)
+
+
 def main():
     if not __debug__:
         raise RuntimeError("Run without Python -O: assertions must be enabled")
     self_test()
     test_wasm_pairwise_dataflow()
+    if sys.argv[1:] == ["--tokenless-context"]:
+        tokenless_context_probes()
+        return
     if sys.argv[1:] == ["--integer-ops"]:
         integer_probes()
         return

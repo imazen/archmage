@@ -3,106 +3,69 @@ title = "Float / Integer"
 weight = 1
 +++
 
-Convert between floating-point and integer vector types.
+Choose the conversion's numerical contract before choosing the instruction.
+`zenjpeg` quantization and zen color kernels depend on rounding, clamping, and
+finite input ranges; those are algorithm decisions, not incidental details.
 
-## Float to Integer
+| Call | Contract |
+|---|---|
+| `v.to_i32()` | Truncates toward zero for in-range finite lanes; exceptional results vary by backend |
+| `v.to_i32_saturating()` | Rust `as`-style truncation and saturation, NaN → 0 |
+| `v.to_i32_round()` | Rounded conversion; consult ISA tables for rounding-mode and exceptional cases |
+| `v.to_f32()` on integer vectors | Numeric conversion; large integers can lose precision |
+| `v.bitcast_to_i32()` | Bit reinterpretation, not numeric conversion |
 
-### Truncate (toward zero)
-
-Behaves like `as i32` in Rust — drops the fractional part:
+This reference check exercises values for which the distinction matters:
 
 ```rust
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Convert,
-};
-
-#[inline(always)]
-fn truncate<T: F32x8Convert>(token: T) {
-    let floats = f32x8::<T>::from_array(token, [1.5, 2.7, -3.2, 4.0, 5.9, 6.1, 7.0, 8.5]);
-
-    let ints = floats.to_i32x8();
-    // [1, 2, -3, 4, 5, 6, 7, 8]
+use archmage::prelude::*;
+#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+fn convert_impl(token: Token, values: [f32; 8]) -> [i32; 8] {
+    f32x8::from_array(token, values).to_i32_saturating().to_array()
 }
-```
-
-### Round to nearest
-
-Rounds to the nearest integer (banker's rounding — ties go to even):
-
-```rust
-// given token: T where T: F32x8Convert
-let rounded = floats.to_i32x8_round();
-// [2, 3, -3, 4, 6, 6, 7, 8]
-```
-
-## Integer to Float
-
-```rust
-use magetypes::simd::{
-    generic::i32x8,
-    backends::I32x8Convert,
-};
-
-#[inline(always)]
-fn int_to_float<T: I32x8Convert>(token: T) {
-    let ints = i32x8::<T>::from_array(token, [1, 2, 3, 4, 5, 6, 7, 8]);
-    let floats = ints.to_f32x8();
-    // [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+pub fn convert(values: [f32; 8]) -> [i32; 8] {
+    incant!(convert_impl(values), [v3, neon, wasm128, scalar])
 }
+let values = [f32::NAN, f32::INFINITY, f32::NEG_INFINITY, 3e9, -3e9, 1.9, -1.9, 0.0];
+assert_eq!(convert(values), values.map(|x| x as i32));
 ```
 
-For values that don't fit exactly in f32 (integers above 2^24), the result is the nearest representable float.
+Bare x86 truncation can return `i32::MIN` for positive overflow and NaN; other
+backends saturate with NaN → 0. `to_i32_saturating` repairs that divergence on
+x86. See the exact [ISA fixup table](@/magetypes/isa-quirks.md) for instructions
+and measured costs. Do not pay for a fixup unnecessarily when a proved input
+domain makes the native operation equivalent, but document and test that proof.
 
-## 128-bit Variants
+Width-specific names such as `to_i32x8` remain aliases. They do not change the
+exceptional-value contract. For quantization, also define tie handling and the
+range before narrowing; saturating the final store cannot repair earlier overflow.
 
-The same methods exist on 128-bit types:
+## Half-precision storage
+
+`zenresize/src/simd/wide_kernels.rs` uses `F16Convert` for row/slice conversion.
+Half-precision storage is a numeric format, not a `u16 as f32` cast. The u16
+input holds IEEE binary16 bits.
 
 ```rust
-use magetypes::simd::{
-    generic::f32x4,
-    backends::F32x4Convert,
-};
-
-#[inline(always)]
-fn conversions_128<T: F32x4Convert>(token: T) {
-    let floats = f32x4::<T>::from_array(token, [1.5, 2.7, -3.2, 4.0]);
-    let ints = floats.to_i32x4();          // Truncate
-    let rounded = floats.to_i32x4_round(); // Round
-
-    let back = ints.to_f32x4();
+use archmage::prelude::*;
+use magetypes::simd::F16Convert;
+#[magetypes(v3, neon, wasm128, scalar)]
+fn decode_half_impl(token: Token, input: &[u16], output: &mut [f32]) {
+    token.f16_to_f32_slice(input, output);
 }
+pub fn decode_half(input: &[u16], output: &mut [f32]) {
+    incant!(decode_half_impl(input, output), [v3, neon, wasm128, scalar])
+}
+let mut output = [0.0; 3];
+decode_half(&[0x0000, 0x3c00, 0xc000], &mut output);
+assert_eq!(output, [0.0, 1.0, -2.0]);
 ```
 
-## Convert trait coverage
-
-`F32x4Convert` and `F32x8Convert` are implemented for `X64V3Token`, `NeonToken`, `Wasm128Token`, and `ScalarToken` only. They are **not** implemented for `X64V4Token`, `X64V4xToken`, or `Avx512Fp16Token` — generic kernels parameterized on `T: F32x4Convert` / `T: F32x8Convert` reject V4-family tokens at compile time.
-
-`F32x16Convert` is implemented on **every** token — V3 / V4 / V4x / NEON / WASM / scalar (only `Avx512Fp16Token` is missing). On AVX-512 silicon `f32x16<T>` runs at native 512-bit width; on every other platform the same code path runs through polyfills (two `f32x8` ops on V3, four `f32x4` ops on NEON / WASM, scalar lanes on `ScalarToken`). Widening a kernel to `f32x16` is the cleanest workaround for the missing `F32x4Convert` / `F32x8Convert` impls on V4 — a single kernel covers every platform.
-
-Polyfill cost depends on the kernel shape: pure per-element compute (add / mul / fma / polynomial bodies) is effectively free; reductions pay ~1.5-2× over a hand-tuned native version; heavy cross-lane shuffles can be expensive; and on V3 a transcendental with many live temporaries can quadruple register pressure and start spilling. See [transcendentals → polyfill overhead]({{< ref "/magetypes/math/transcendentals" >}}#f32x16-polyfill-overhead-by-operation) for the full breakdown.
-
-This affects any function bounded on `F32x4Convert` / `F32x8Convert` — including the [transcendentals]({{< ref "/magetypes/math/transcendentals" >}}) (`pow_*`, `log2_*`, `exp2_*`, `ln_*`, `exp_*`, `log10_*`) and `to_i32x4` / `to_i32x8` conversions on `f32x4` / `f32x8`. See [issue #45](https://github.com/imazen/archmage/issues/45) for the full audit and the build-time tradeoffs of the proposed delegation fix.
-
-## Lane Access
-
-Vectors implement `Index<usize>` and `IndexMut<usize>` for single-lane access:
-
-```rust
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Backend,
-};
-
-#[inline(always)]
-fn lane_access<T: F32x8Backend>(token: T) {
-    let v = f32x8::<T>::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
-
-    let third = v[2];   // 3.0
-
-    let mut v = v;
-    v[2] = 99.0;        // [1.0, 2.0, 99.0, 4.0, 5.0, 6.0, 7.0, 8.0]
-}
-```
-
-Lane indices are runtime values with bounds checking — out-of-bounds panics.
+The whole-buffer converters require equal lengths and can select a stronger
+hardware conversion path once per buffer. They are an intentional exception to
+“never detect inside a helper”: the unit of work is an entire slice. In-register
+`i32x4::f16_to_f32` and `f32x4::to_f16` do not perform that whole-buffer dispatch.
+A V4 holder can extract `.v3()` to reach the supported slice converter surface.
+NaN bit handling and hardware availability vary with target and Rust version;
+consult the [F16Convert API](https://docs.rs/magetypes/latest/magetypes/simd/trait.F16Convert.html)
+and exhaustive conversion tests for that contract.

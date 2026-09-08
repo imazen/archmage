@@ -1,115 +1,67 @@
 //! # archmage
 //!
-//! [Guide and examples](https://imazen.github.io/archmage/) · [Intrinsics browser](https://imazen.github.io/archmage/intrinsics/) · [ISA contracts](https://imazen.github.io/archmage/magetypes/isa-quirks/)
+//! [Guide](https://imazen.github.io/archmage/) · [Intrinsics browser](https://imazen.github.io/archmage/intrinsics/) · [Archmage API](https://docs.rs/archmage/latest/archmage/) · [Magetypes API](https://docs.rs/magetypes/latest/magetypes/)
 //!
-//! > Safely invoke your intrinsic power, using the tokens granted to you by the CPU.
-//! > Cast primitive magics faster than any mage alive.
+//! Archmage provides CPU-capability tokens, feature-enabled functions, and dispatch.
+//! The `#[magetypes]` attribute belongs to archmage; the
+//! [magetypes crate](https://docs.rs/magetypes/latest/magetypes/) provides the vectors.
+//! Start with the [complete portable kernel](https://imazen.github.io/archmage/archmage/getting-started/first-simd/)
+//! and [generic specialization](https://imazen.github.io/archmage/magetypes/dispatch/types-and-dispatch/).
 //!
-//! archmage provides capability tokens that prove CPU feature availability at runtime,
-//! making raw SIMD intrinsics safe to call via the `#[arcane]` macro.
+//! For a direct-intrinsic specialization, keep the full loop behind an entry:
 //!
-//! ## Quick Example
-//!
-//! ```rust,ignore
-//! use archmage::{X64V3Token, SimdToken, arcane};
-//!
+//! ```rust
+//! use archmage::prelude::*;
 //! #[arcane(import_intrinsics)]
-//! fn multiply_add(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
-//!     // import_intrinsics brings all intrinsics + safe memory ops into scope
-//!     let va = _mm256_loadu_ps(a);  // Takes &[f32; 8], not *const f32
-//!     let vb = _mm256_loadu_ps(b);
-//!
-//!     // Value-based intrinsics are SAFE inside #[arcane]! (Rust 1.87+)
-//!     let result = _mm256_fmadd_ps(va, vb, va);
-//!
-//!     let mut out = [0.0f32; 8];
-//!     _mm256_storeu_ps(&mut out, result);
+//! fn multiply_v3(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+//!     let v = _mm256_loadu_ps(data);
+//!     let mut out = [0.0; 8];
+//!     _mm256_storeu_ps(&mut out, _mm256_mul_ps(v, _mm256_set1_ps(2.0)));
 //!     out
 //! }
-//!
-//! fn main() {
-//!     // X64V3Token: AVX2 + FMA + BMI2 (Haswell 2013+, Zen 1+)
-//!     // CPUID check elided if compiled with -C target-cpu=native
-//!     if let Some(token) = X64V3Token::summon() {
-//!         let result = multiply_add(token, &[1.0; 8], &[2.0; 8]);
-//!     }
+//! fn multiply_scalar(_token: ScalarToken, data: &[f32; 8]) -> [f32; 8] {
+//!     data.map(|v| v * 2.0)
 //! }
+//! pub fn multiply(data: &[f32; 8]) -> [f32; 8] {
+//!     incant!(multiply(data), [v3, scalar])
+//! }
+//! assert_eq!(multiply(&[3.0; 8]), [6.0; 8]);
 //! ```
 //!
-//! ## Auto-Imports
+//! Use default `#[magetypes]` for generated portable entry variants, `#[arcane]`
+//! for individual entries, and matching `#[rite]` or inline generic helpers inside.
+//! Generics are statically dispatched; an inline attribute alone does not enable
+//! features. A CPU token does not justify arbitrary pointers or unchecked indexing.
 //!
-//! `import_intrinsics` is the recommended default — it injects
-//! `archmage::intrinsics::{arch}::*` into the function body, giving you all
-//! platform types, value intrinsics, and safe memory ops in one import:
+//! ## Tokens from an existing feature context
 //!
-//! ```rust,ignore
-//! use archmage::{X64V3Token, SimdToken, arcane};
+//! When a helper already has target features, `from_context()` constructs a token
+//! without runtime detection. Rust checks that the caller's features cover the
+//! token's requirements. It is not a baseline-callable unchecked constructor.
 //!
-//! #[arcane(import_intrinsics)]
-//! fn load(_token: X64V3Token, data: &[f32; 8]) -> __m256 {
-//!     _mm256_loadu_ps(data)  // Safe! Takes &[f32; 8], not *const f32.
+//! ```rust
+//! use archmage::prelude::*;
+//! #[rite(v3)]
+//! fn helper() -> bool {
+//!     let _token = X64V3Token::from_context();
+//!     true
 //! }
+//! #[arcane]
+//! fn entry(_token: X64V3Token) -> bool { helper() }
+//! #[cfg(target_arch = "x86_64")]
+//! if let Some(token) = X64V3Token::summon() { assert!(entry(token)); }
 //! ```
 //!
-//! The prelude (`use archmage::prelude::*`) is still available for module-level imports.
-//! See the [`prelude`] module for full documentation.
+//! This is a repository addition after 0.9.28. See
+//! [from_context and token extraction](https://imazen.github.io/archmage/archmage/getting-started/tokens/).
+//! Use `.v3()` to extract a V3 token from a stronger proof; `as_x64v3()` instead
+//! checks whether the held token is exactly a V3 token.
 //!
-//! ## How It Works
+//! ## Features
 //!
-//! **Capability Tokens** are zero-sized proof types created via `summon()`, which
-//! checks CPUID at runtime (elided if compiled with target features enabled).
-//! See [`token-registry.toml`](https://github.com/imazen/archmage/blob/main/token-registry.toml)
-//! for the complete mapping of tokens to CPU features.
-//!
-//! **The `#[arcane]` and `#[rite]` macros** determine which `#[target_feature]`
-//! attributes to emit. `#[arcane]` reads the token type from the function
-//! signature. `#[rite]` works in three modes: token-based (reads the token
-//! parameter), tier-based (`#[rite(v3)]` — no token needed), or multi-tier
-//! (`#[rite(v3, v4, neon)]` — generates suffixed variants `fn_v3`, `fn_v4`,
-//! `fn_neon`).
-//!
-//! Descriptive aliases are available for AI-assisted coding:
-//! `#[token_target_features_boundary]` = `#[arcane]`,
-//! `#[token_target_features]` = `#[rite]`,
-//! `dispatch_variant!` = `incant!`.
-//!
-//! `#[arcane]` generates a sibling `#[target_feature]` function at the same
-//! scope, plus a safe wrapper that calls it. Since both live in the same scope,
-//! `self` and `Self` work naturally in methods. For trait impls, use
-//! `#[arcane(_self = Type)]` (nested mode). On wrong architectures, functions
-//! are cfg'd out by default. Use `incant!` for cross-arch dispatch.
-//!
-//! `#[rite]` applies `#[target_feature]` + `#[inline]` directly to the
-//! function, with no wrapper and no boundary. It works in three modes:
-//! - **Token-based** (`#[rite]`): reads the token from the function signature
-//! - **Tier-based** (`#[rite(v3)]`): specifies features via tier name, no token needed
-//! - **Multi-tier** (`#[rite(v3, v4, neon)]`): generates a suffixed copy for each tier
-//!
-//! **Use `#[arcane]` for all SIMD functions** — entry points and helpers alike.
-//! When one `#[arcane]` function calls another with matching features, LLVM
-//! inlines the wrapper away (zero overhead). `#[rite]` is available as an
-//! advanced alternative that adds `#[target_feature]` + `#[inline]` directly
-//! without a wrapper.
-//!
-//! Use concrete tokens like `X64V3Token` (AVX2+FMA) or `X64V4Token` (AVX-512).
-//! For generic code, use tier traits like `HasX64V2` or `HasX64V4`.
-//!
-//! ## Safety
-//!
-//! Since Rust 1.87, value-based SIMD intrinsics (arithmetic, shuffle, compare,
-//! bitwise) are safe inside `#[target_feature]` functions. Only pointer-based
-//! memory operations remain unsafe — `import_intrinsics` handles this by
-//! providing safe reference-based memory ops that shadow the pointer-based ones.
-//!
-//! Downstream crates can use `#![forbid(unsafe_code)]` when combining archmage
-//! tokens + `#[arcane]`/`#[rite]` macros + `import_intrinsics`.
-//!
-//! ## Feature Flags
-//!
-//! - `std` (default): Enable std library support
-//! - `avx512`: AVX-512 token support
-//!
-//! Macros (`#[arcane]`, `#[rite]`, `incant!`, etc.) are always available.
+//! `std` is enabled by default. `avx512` enables native intrinsic-wrapper and macro
+//! support. Token names and macros are always available; unsupported tokens cannot
+//! be summoned. `testable_dispatch` enables the tier-testing facilities.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]

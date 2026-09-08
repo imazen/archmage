@@ -3,154 +3,33 @@ title = "IntoConcreteToken Trait"
 weight = 4
 +++
 
-`IntoConcreteToken` enables compile-time dispatch via monomorphization. Each token type returns `Some(self)` for its own type and `None` for others.
-
-**Important:** `as_*()` methods are identity checks, not hierarchy-aware downcasts. `X64V4Token.as_x64v3()` returns `None` — it asks "are you literally `X64V3Token`?", not "do you support V3?". For guaranteed downcasting (V4 → V3), use [extraction methods](/archmage/getting-started/tokens/#extraction-methods) like `.v3()` instead.
-
-## Basic Usage
+`IntoConcreteToken` checks the **identity of a token's type**. It does not detect
+new CPU features or convert a higher token into a lower token.
 
 ```rust
-use archmage::{IntoConcreteToken, SimdToken, X64V3Token, NeonToken, ScalarToken};
-
-fn process<T: IntoConcreteToken>(token: T, data: &mut [f32]) {
-    // Compiler eliminates non-matching branches via monomorphization
-    if let Some(t) = token.as_x64v3() {
-        process_avx2(t, data);
-    } else if let Some(t) = token.as_neon() {
-        process_neon(t, data);
-    } else if let Some(_) = token.as_scalar() {
-        process_scalar(data);
-    }
+use archmage::{IntoConcreteToken, SimdToken, X64V4Token};
+#[cfg(target_arch = "x86_64")]
+if let Some(v4) = X64V4Token::summon() {
+    assert!(v4.as_x64v4().is_some());
+    assert!(v4.as_x64v3().is_none());
+    let v3 = v4.v3();
+    assert!(v3.as_x64v3().is_some());
 }
 ```
 
-When called with `X64V3Token`, the compiler sees:
-- `as_x64v3()` -> `Some(token)` (takes this branch)
-- `as_neon()` -> `None` (eliminated)
-- `as_scalar()` -> `None` (eliminated)
+Use `.v3()`, `.v2()`, or `.neon()` when the held token implies that lower tier.
+These extraction methods are infallible and do not repeat CPU detection.
+Use `summon()` when you need evidence for additional features.
 
-## Available Methods
+For ordinary portable kernels, use a generated entry and a backend-generic
+helper. For a family of concrete variants, use [incant!](@/archmage/dispatch/incant.md).
+Manual branching on exact token types must handle unrecognized token types and cfg-gate
+architecture-specific calls. Falling through without doing the work is not a
+valid scalar fallback.
 
-```rust
-pub trait IntoConcreteToken: SimdToken {
-    fn as_x64v1(self) -> Option<X64V1Token> { None }
-    fn as_x64v2(self) -> Option<X64V2Token> { None }
-    fn as_x64_crypto(self) -> Option<X64CryptoToken> { None }
-    fn as_x64v3(self) -> Option<X64V3Token> { None }
-    fn as_x64v3_crypto(self) -> Option<X64V3CryptoToken> { None }
-    fn as_x64v3_gfni_crypto(self) -> Option<X64V3GfniCryptoToken> { None }
-    fn as_x64v4(self) -> Option<X64V4Token> { None }
-    fn as_x64v4x(self) -> Option<X64V4xToken> { None }
-    fn as_avx512_fp16(self) -> Option<Avx512Fp16Token> { None }
-    fn as_neon(self) -> Option<NeonToken> { None }
-    fn as_neon_aes(self) -> Option<NeonAesToken> { None }
-    fn as_neon_sha3(self) -> Option<NeonSha3Token> { None }
-    fn as_neon_crc(self) -> Option<NeonCrcToken> { None }
-    fn as_arm_v2(self) -> Option<Arm64V2Token> { None }
-    fn as_arm_v3(self) -> Option<Arm64V3Token> { None }
-    fn as_wasm128(self) -> Option<Wasm128Token> { None }
-    fn as_wasm128_relaxed(self) -> Option<Wasm128RelaxedToken> { None }
-    fn as_scalar(self) -> Option<ScalarToken> { None }
-}
-```
+This is a low-level reference facility. The reviewed zen kernel patterns do not
+justify introducing exact-token-type dispatch into the beginner call chain.
 
-Each concrete token overrides its own method to return `Some(self)`.
-
-## Upcasting with IntoConcreteToken
-
-You can check if a token supports higher capabilities:
-
-```rust
-fn maybe_use_avx512<T: IntoConcreteToken>(token: T, data: &mut [f32]) {
-    // Check if we actually have AVX-512
-    if let Some(v4) = token.as_x64v4() {
-        fast_path_avx512(v4, data);
-    } else if let Some(v3) = token.as_x64v3() {
-        normal_path_avx2(v3, data);
-    }
-}
-```
-
-**Note**: This creates an LLVM optimization boundary. The generic caller and feature-enabled callee have different target settings. Do this dispatch at entry points, not in hot code.
-
-## Dispatch Order
-
-Check from highest to lowest capability:
-
-```rust
-fn dispatch<T: IntoConcreteToken>(token: T, data: &[f32]) -> f32 {
-    // Highest first
-    #[cfg(feature = "avx512")]
-    if let Some(t) = token.as_x64v4() {
-        return process_v4(t, data);
-    }
-
-    if let Some(t) = token.as_x64v3() {
-        return process_v3(t, data);
-    }
-
-    if let Some(t) = token.as_neon() {
-        return process_neon(t, data);
-    }
-
-    if let Some(t) = token.as_wasm128() {
-        return process_wasm(t, data);
-    }
-
-    // Scalar fallback
-    process_scalar(data)
-}
-```
-
-## vs incant!
-
-| Feature | `IntoConcreteToken` | `incant!` |
-|---------|---------------------|-----------|
-| Dispatch style | Explicit if/else | Macro-generated |
-| Token passing | Token already obtained | Summons tokens |
-| Flexibility | Full control | Convention-based |
-| Verbosity | More code | Less code |
-
-Use `IntoConcreteToken` when you already have a token and need to specialize. Use `incant!` for entry-point dispatch.
-
-## Example: Library with Generic Token API
-
-```rust
-use archmage::{IntoConcreteToken, SimdToken, arcane};
-
-/// Public API accepts any token
-pub fn transform<T: IntoConcreteToken>(token: T, data: &mut [f32]) {
-    if let Some(t) = token.as_x64v3() {
-        transform_avx2(t, data);
-    } else if let Some(t) = token.as_neon() {
-        transform_neon(t, data);
-    } else {
-        transform_scalar(data);
-    }
-}
-
-#[arcane(import_intrinsics)]
-fn transform_avx2(token: X64V3Token, data: &mut [f32]) {
-    // AVX2 implementation
-}
-
-#[arcane(import_intrinsics)]
-fn transform_neon(token: NeonToken, data: &mut [f32]) {
-    // NEON implementation
-}
-
-fn transform_scalar(data: &mut [f32]) {
-    // Scalar fallback
-}
-```
-
-Callers can pass any token:
-
-```rust
-if let Some(token) = X64V3Token::summon() {
-    transform(token, &mut data);  // Uses AVX2 path
-}
-
-// Or force scalar for testing
-transform(ScalarToken, &mut data);
-```
+With `incant!(... with token)`, a `scalar` tier only matches an actual
+`ScalarToken`; an unrecognized held token can panic. Use a tokenless `default`
+fallback if every unrecognized token must still run the operation.

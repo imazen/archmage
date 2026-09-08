@@ -2,13 +2,14 @@
 title = "ISA Quirks and Fixups"
 description = "Concrete edge-case results, portable contracts, and the cost of fixing ISA differences"
 weight = 9
+aliases = ["magetypes/cross-platform/differences/"]
 +++
 
 A portable vector type guarantees a lane count; it does not guarantee one machine
 instruction, identical floating-point results, or availability under every token.
 This page distinguishes **uniform contracts we enforce** from **current differences
 callers must account for**. It covers the generic `magetypes::simd::generic` API,
-primarily `f32x4`, `f32x8`, and `f32x16`; do not transfer these tables to legacy
+primarily [`f32x4`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x4.html), [`f32x8`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html), and [`f32x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x16.html); do not transfer these tables to legacy
 architecture-specific wrappers or other conversion methods without checking them.
 
 The floating-point tables assume the normal floating-point environment. Changing
@@ -24,18 +25,18 @@ CPU, width, compiler, baseline, and workload.
 
 | Exact generic method call | ISA / shape | Baseline and runtime fixup | Where the extra work occurs |
 |---|---|---|---|
-| `v.to_i32_saturating()` on `f32x4`, `f32x8`, `f32x16` | V3 native 128/256; W512 uses two halves | `to_i32()` uses truncating conversion. Add an overflow comparison, select `i32::MAX`, unordered comparison, and AND-NOT to zero NaNs. | Four additional vector operations per native half, plus constant materialization if needed. No data-dependent branch in this lowering. |
-| Same calls | Native V4/V4x `f32x16` | Truncating conversion plus two mask comparisons and two masked moves. | Per vector; predicate-register form rather than V3's full-vector masks. |
+| `v.to_i32_saturating()` on [`f32x4`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x4.html), [`f32x8`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html), [`f32x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x16.html) | V3 native 128/256; W512 uses two halves | `to_i32()` uses truncating conversion. Add an overflow comparison, select `i32::MAX`, unordered comparison, and AND-NOT to zero NaNs. | Four additional vector operations per native half, plus constant materialization if needed. No data-dependent branch in this lowering. |
+| Same calls | Native V4/V4x [`f32x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x16.html) | Truncating conversion plus two mask comparisons and two masked moves. | Per vector; predicate-register form rather than V3's full-vector masks. |
 | Same calls | NEON / WASM / scalar | The base conversion already clamps and maps NaN to zero. | No additional semantic repair; benchmark these as identity controls. |
-| `v.recip()` / `v.rsqrt()` on `f32x4`, `f32x8`; V3 `f32x16` | V3 native half | Same estimate and Newton arithmetic, then unordered compare and blend back to the estimate on invalid intermediates. | Two semantic repair operations per native half; the inspected lowering also needs a register copy to retain the estimate. Constants, loads and scheduling affect time. |
-| `v.recip()` / `v.rsqrt()` on native `f32x16` | V4/V4x | Estimate + Newton + `VFIXUPIMM` with a constant rail table. | One fixup instruction per vector plus table materialization; retaining values can also require register copies. |
+| `v.recip()` / `v.rsqrt()` on [`f32x4`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x4.html), [`f32x8`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html); V3 [`f32x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x16.html) | V3 native half | Same estimate and Newton arithmetic, then unordered compare and blend back to the estimate on invalid intermediates. | Two semantic repair operations per native half; the inspected lowering also needs a register copy to retain the estimate. Constants, loads and scheduling affect time. |
+| `v.recip()` / `v.rsqrt()` on native [`f32x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x16.html) | V4/V4x | Estimate + Newton + `VFIXUPIMM` with a constant rail table. | One fixup instruction per vector plus table materialization; retaining values can also require register copies. |
 | `v.recip()` / `v.rsqrt()` | NEON f32 | Two fused refinement steps. `rsqrt` places `a` and `y*y` inside `FRSQRTS` instead of forming the invalid `a*y` first. | Operand arrangement preserves special cases without an added compare/select. Current probe uses an identity control here, not the historical broken arrangement. |
 | `v.shl_uniform(count)` / `v.shr_logical_uniform(count)` on `i16x8/16/32`, `u16x8/16/32`, `i32x4/8/16`, `u32x4/8/16` | NEON | Clamp `count` to lane bits before conversion/broadcast; negate for right shift. This prevents large counts aliasing through NEON's signed low-byte interpretation. | Scalar min/select and broadcast per distinct count; usually hoistable when all loop iterations share the count. |
 | `v.shr_arithmetic_uniform(count)` on signed shapes above | NEON / WASM | Clamp to lane bits minus one, preserving sign-fill for excessive counts. | Scalar count preparation; NEON also broadcasts and negates. |
 | `v.shl_uniform(count)` / `v.shr_logical_uniform(count)` on the shapes above | WASM | Native shifts mask counts modulo lane bits. Compare the original count and AND the result with all-ones or zero. | Count comparison/splat plus a vector AND; invariant preparation may hoist. |
 | All uniform-shift calls above | x86 | Native excessive-count zero/sign-fill behavior already matches. | No semantic repair. Moving a runtime count into a register is still required. |
-| `a.narrow_saturating_i8(b)` / `a.narrow_saturating_u8(b)` on `i16x16`; `a.narrow_saturating_i16(b)` / `a.narrow_saturating_u16(b)` on `i32x8` | AVX2 | Native packs interleave 128-bit groups. `VPERMQ` with `0xD8` restores all of `a` followed by all of `b`. | One lane-order permutation per 256-bit pack; the V3 W512 path repeats it twice. |
-| Same narrowing methods on `i16x32` / `i32x16` | Native AVX-512 | Narrow each input to a half and insert/concatenate. Unsigned destinations clamp signed inputs to zero before unsigned conversion. | Two zero clamps for unsigned output, plus the two conversions and concatenation needed for the operation. |
+| `a.narrow_saturating_i8(b)` / `a.narrow_saturating_u8(b)` on [`i16x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i16x16.html); `a.narrow_saturating_i16(b)` / `a.narrow_saturating_u16(b)` on [`i32x8`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i32x8.html) | AVX2 | Native packs interleave 128-bit groups. `VPERMQ` with `0xD8` restores all of `a` followed by all of `b`. | One lane-order permutation per 256-bit pack; the V3 W512 path repeats it twice. |
+| Same narrowing methods on [`i16x32`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i16x32.html) / [`i32x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i32x16.html) | Native AVX-512 | Narrow each input to a half and insert/concatenate. Unsigned destinations clamp signed inputs to zero before unsigned conversion. | Two zero clamps for unsigned output, plus the two conversions and concatenation needed for the operation. |
 | Same narrowing families at 128 bits; NEON / WASM widths | Native halves | Native signed-source saturating narrows already have the desired lane order. | No AVX2-style lane-order repair; polyfills still require composition. |
 | `v.shl_const::<N>()`, `v.shr_logical_const::<N>()`, `v.shr_arithmetic_const::<N>()` | Every backend | Const assertions reject invalid counts before execution. | **No runtime assertion.** Constant byte shifts can still require shift/mask emulation. |
 

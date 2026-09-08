@@ -3,191 +3,52 @@ title = "Manual Dispatch"
 weight = 1
 +++
 
-The simplest dispatch pattern: check for tokens explicitly, call the appropriate implementation.
+Prefer `incant!` for routine dispatch. Manual dispatch is useful when a caller
+has an additional algorithm or workload decision. It must guard references to
+architecture-specific functions, even though token types exist on all targets.
 
-{% mermaid() %}
-flowchart TD
-    API["Public fn"] --> CHECK{"Token::summon()?"}
-    CHECK -->|"Some(token)"| SIMD["#[arcane] fn<br/>(SIMD path)"]
-    CHECK -->|None| SCALAR["Scalar fallback"]
-
-    style API fill:#5a3d1e,color:#fff
-    style SIMD fill:#2d5a27,color:#fff
-    style SCALAR fill:#1a4a6e,color:#fff
-{% end %}
-
-## Basic Pattern
+This is a manual-dispatch adaptation of the
+[zenfilters gain loop](@/magetypes/examples/generic-kernels.md). The source uses
+macro dispatch; the explicit branches here demonstrate the equivalent call-site
+requirements, not a second recommended production framework.
 
 ```rust
-use archmage::{X64V3Token, SimdToken};
+use archmage::prelude::*;
 
-pub fn process(data: &mut [f32]) {
-    if let Some(token) = X64V3Token::summon() {
-        process_avx2(token, data);
-    } else {
-        process_scalar(data);
+#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+fn gain_impl(token: Token, plane: &mut [f32], gain: f32) {
+    let factor = f32x8::splat(token, gain);
+    let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+    for chunk in chunks {
+        (f32x8::load(token, chunk) * factor).store(chunk);
     }
+    for value in tail { *value *= gain; }
 }
 
-#[arcane(import_intrinsics)]
-fn process_avx2(token: X64V3Token, data: &mut [f32]) {
-    // AVX2 implementation — intrinsics in scope from import_intrinsics
+pub fn apply_gain(plane: &mut [f32], gain: f32) {
+    #[cfg(target_arch = "x86_64")]
+    if let Some(t) = X64V3Token::summon() {
+        return gain_impl_v3(t, plane, gain);
+    }
+    #[cfg(target_arch = "aarch64")]
+    if let Some(t) = NeonToken::summon() {
+        return gain_impl_neon(t, plane, gain);
+    }
+    #[cfg(target_arch = "wasm32")]
+    if let Some(t) = Wasm128Token::summon() {
+        return gain_impl_wasm128(t, plane, gain);
+    }
+    gain_impl_scalar(ScalarToken, plane, gain);
 }
-
-fn process_scalar(data: &mut [f32]) {
-    // Scalar fallback
-}
+let mut plane = [2.0; 11];
+apply_gain(&mut plane, 0.5);
+assert_eq!(plane, [1.0; 11]);
 ```
 
-**That's it.** No `#[cfg(target_arch)]` needed—this compiles and runs everywhere.
+`stub` has been removed and is rejected by the macro parser. Use `incant!`
+or explicit call-site guards; do not resurrect unreachable stubs as fallback code.
 
-## No Architecture Guards Needed
-
-Tokens exist on all platforms. On unsupported architectures, `summon()` returns `None` and `#[arcane]` functions become unreachable stubs. You write one dispatch block:
-
-```rust
-use archmage::{X64V3Token, Arm64, Wasm128Token, SimdToken};
-
-pub fn process(data: &mut [f32]) {
-    // Try x86 AVX2
-    if let Some(token) = X64V3Token::summon() {
-        return process_x86(token, data);
-    }
-
-    // Try ARM NEON
-    if let Some(token) = Arm64::summon() {
-        return process_arm(token, data);
-    }
-
-    // Try WASM SIMD
-    if let Some(token) = Wasm128Token::summon() {
-        return process_wasm(token, data);
-    }
-
-    // Scalar fallback
-    process_scalar(data);
-}
-
-#[arcane(import_intrinsics)]
-fn process_x86(token: X64V3Token, data: &mut [f32]) { /* ... */ }
-
-#[arcane(import_intrinsics)]
-fn process_arm(token: Arm64, data: &mut [f32]) { /* ... */ }
-
-#[arcane(import_intrinsics)]
-fn process_wasm(token: Wasm128Token, data: &mut [f32]) { /* ... */ }
-
-fn process_scalar(data: &mut [f32]) { /* ... */ }
-```
-
-On x86-64: `X64V3Token::summon()` may succeed, others return `None`.
-On ARM: `Arm64::summon()` succeeds, others return `None`.
-On WASM: `Wasm128Token::summon()` may succeed, others return `None`.
-
-The `#[arcane]` functions for other architectures compile to unreachable stubs—the code exists but can never be called.
-
-## Multi-Tier x86 Dispatch
-
-Check from highest to lowest capability:
-
-```rust
-use archmage::{X64V4Token, X64V3Token, X64V2Token, SimdToken};
-
-pub fn process(data: &mut [f32]) {
-    // AVX-512 (requires avx512 feature)
-    #[cfg(feature = "avx512")]
-    if let Some(token) = X64V4Token::summon() {
-        return process_v4(token, data);
-    }
-
-    // AVX2+FMA (Haswell+, Zen+)
-    if let Some(token) = X64V3Token::summon() {
-        return process_v3(token, data);
-    }
-
-    // SSE4.2 (Nehalem+)
-    if let Some(token) = X64V2Token::summon() {
-        return process_v2(token, data);
-    }
-
-    process_scalar(data);
-}
-```
-
-Note: `#[cfg(feature = "avx512")]` is a **Cargo feature** gate (compile-time opt-in), not an architecture check. The actual CPU detection is still runtime via `summon()`.
-
-## When to Use Manual Dispatch
-
-**Use manual dispatch when:**
-- You have 2-3 tiers
-- You want explicit, readable control flow
-- Different tiers have different APIs
-
-**Consider [`incant!`](@/archmage/dispatch/incant.md) when:**
-- You have many tiers
-- All implementations have the same signature
-- You want automatic best-available selection
-
-## Avoiding Common Mistakes
-
-### Don't Dispatch in Hot Loops
-
-```rust
-// WRONG - summon + dispatch every iteration
-for chunk in data.chunks_mut(8) {
-    if let Some(token) = X64V3Token::summon() {
-        process_chunk(token, chunk);
-    }
-}
-
-// BETTER - token hoisted, but still crosses target-feature boundary per iteration
-if let Some(token) = X64V3Token::summon() {
-    for chunk in data.chunks_mut(8) {
-        process_chunk(token, chunk);  // #[arcane] = boundary per call
-    }
-} else {
-    for chunk in data.chunks_mut(8) {
-        process_chunk_scalar(chunk);
-    }
-}
-
-// BEST - loop inside #[arcane], #[rite] helpers stay in the same LLVM region
-if let Some(token) = X64V3Token::summon() {
-    process_all_chunks(token, data);
-} else {
-    process_all_chunks_scalar(data);
-}
-
-#[arcane(import_intrinsics)]
-fn process_all_chunks(token: X64V3Token, data: &mut [f32]) {
-    for chunk in data.chunks_exact_mut(8) {
-        process_chunk(token, chunk.try_into().unwrap());  // #[rite] inlines fully!
-    }
-}
-
-#[rite(v3, import_intrinsics)]
-fn process_chunk(chunk: &mut [f32; 8]) {
-    // Same target features as caller — LLVM optimizes across both
-    // Tier-based: no token needed. Also works with #[rite(import_intrinsics)] + token param,
-    // or #[rite(v3, v4, neon)] for multi-tier suffixed variants.
-}
-```
-
-The "BETTER" pattern still calls through an `#[arcane]` wrapper each iteration. Each wrapper crosses a `#[target_feature]` boundary — the caller has baseline features, the callee has AVX2+FMA. LLVM can't optimize across that. The "BEST" pattern puts the loop inside `#[arcane]` and uses `#[rite]` for the inner work, so LLVM sees one optimization region for the entire loop.
-
-### Don't Forget Early Returns
-
-```rust
-// WRONG - falls through to scalar even when SIMD available
-if let Some(token) = X64V3Token::summon() {
-    process_avx2(token, data);
-    // Missing return!
-}
-process_scalar(data);  // Always runs!
-
-// RIGHT
-if let Some(token) = X64V3Token::summon() {
-    return process_avx2(token, data);
-}
-process_scalar(data);
-```
+Do not add a second detection cache or a cached enum solely to avoid `summon()`:
+token detection already caches where appropriate. A caller-owned token can
+move detection outside a larger operation; the loop still needs the correct
+feature context. Test behavior when tiers are unavailable or disabled.

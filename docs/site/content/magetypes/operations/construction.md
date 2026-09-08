@@ -3,81 +3,38 @@ title = "Construction & Extraction"
 weight = 1
 +++
 
-All construction methods take a token as the first argument. Once you have a vector, extraction methods don't need the token.
+Construct vectors inside a generated feature context. `define(f32x8)` makes the
+body-local spelling concise; explicit [`f32x8::<Token>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html) works equally well.
 
-Constructor calls are always turbofished with the type parameter: `f32x8::<T>::splat(token, 1.0)`. The `T` is resolved by the function's generic bound.
-
-## Construction
-
-### From Array
-
-```rust
-use magetypes::simd::{generic::f32x8, backends::F32x8Backend};
-
-// given a token: T where T: F32x8Backend
-let data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-let v = f32x8::<T>::from_array(token, data);
-```
-
-### From Slice
+This API exercise uses the load/multiply/store operations in the
+[zenfilters gain chain](@/magetypes/examples/generic-kernels.md), reduced to one
+array so the construction and extraction calls are visible.
 
 ```rust
-// given a token: T where T: F32x8Backend
-let slice = &[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0f32];
-let v = f32x8::<T>::from_slice(token, slice);
+use archmage::prelude::*;
+#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+fn double_impl(token: Token, input: &[f32; 8]) -> [f32; 8] {
+    let v = f32x8::load(token, input);
+    (v * f32x8::splat(token, 2.0)).to_array()
+}
+pub fn double(input: &[f32; 8]) -> [f32; 8] {
+    incant!(double_impl(input), [v3, neon, wasm128, scalar])
+}
+assert_eq!(double(&[3.0; 8]), [6.0; 8]);
 ```
 
-The slice must have at least as many elements as the vector width.
+| Call | Contract |
+|---|---|
+| `f32x8::zero(token)` | All lanes zero |
+| `f32x8::splat(token, value)` | Repeat a scalar |
+| `f32x8::from_array(token, values)` | Consume a fixed-size array |
+| `f32x8::load(token, &values)` | Load a fixed-size array reference |
+| `f32x8::from_slice(token, values)` | Load the first vector; requires enough elements |
+| `v.to_array()` | Return all scalar lanes by value |
+| `v.store(&mut values)` | Store to a fixed-size array reference |
+| `v[index]` | Scalar lane access with Rust bounds checking |
 
-### Splat (Broadcast)
-
-Fill every lane with the same value:
-
-```rust
-// given a token: T where T: F32x8Backend
-let v = f32x8::<T>::splat(token, 3.14159);  // All 8 lanes = pi
-```
-
-### Zero
-
-```rust
-// given a token: T where T: F32x8Backend
-let v = f32x8::<T>::zero(token);  // All lanes = 0.0
-```
-
-### Load from Array Reference
-
-```rust
-// given a token: T where T: F32x8Backend, data: &[f32; 8]
-let v = f32x8::<T>::load(token, data);
-```
-
-`load` takes a reference to a fixed-size array, not a raw pointer. This is safe by design.
-
-## Extraction
-
-### To Array
-
-```rust
-let arr: [f32; 8] = v.to_array();
-```
-
-### Store to Array
-
-```rust
-let mut buf = [0.0f32; 8];
-v.store(&mut buf);  // Takes &mut [f32; 8]
-```
-
-### Access Single Lane
-
-Vectors implement `Index<usize>` and `IndexMut<usize>`:
-
-```rust
-let first = v[0];   // Read lane 0
-let third = v[2];   // Read lane 2
-
-v[2] = 99.0;        // Write lane 2
-```
-
-Lane access is runtime-indexed with bounds checking.
+Type inference often supplies `T`; turbofish is needed only when inference is
+insufficient. Fixed arrays carry the vector length in the type. Slice lengths
+and dynamic lane indices still need checks unless optimization proves them.
+See [memory and bounds](@/magetypes/memory/load-store.md).

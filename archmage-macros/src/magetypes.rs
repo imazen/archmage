@@ -99,6 +99,7 @@ pub(crate) fn magetypes_impl(
                 target_arch: tier.target_arch,
                 token_ident: quote::format_ident!("_"),
                 has_token: false,
+                derive_token: false,
             };
             variant_fn.body = crate::rewrite::rewrite_incant_in_body(variant_fn.body.clone(), &ctx);
         }

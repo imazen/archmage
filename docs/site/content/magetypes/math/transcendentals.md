@@ -47,6 +47,10 @@ pub fn gamma_to_linear_slice(values: &mut [f32], gamma: f32) {
     )
 }
 
+
+let mut values = [0.5; 19];
+gamma_to_linear_slice(&mut values, 2.2);
+for value in values { assert!((value - 0.5_f32.powf(2.2)).abs() < 1e-4); }
 ```
 
 For finite normalized samples and positive gamma, this decodes a simple power
@@ -79,48 +83,20 @@ for every input. FMA, range reduction, conversion behavior, and the input domain
 all matter. See [precision levels](@/magetypes/math/precision.md) and the
 [ISA contracts](@/magetypes/isa-quirks.md).
 
-## Platform Coverage
+## Width and backend selection
 
-- **x86-64**: All functions available on `f32x4`, `f32x8`, `f64x2`, `f64x4`
-- **AArch64**: Full support via NEON polynomial approximations
-- **WASM**: Most functions available; some use scalar fallback internally
+The complete example above uses [`f32x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x16.html) and requires `w512` (enabled by default).
+Native V4 additionally needs `avx512`; other listed tiers use polyfills. These
+are the supported listed tokens, not every token in the registry. The f32 and
+f64 method sets also differ; follow the selected type's API reference.
 
-The implementations use platform-tuned polynomial coefficients for best accuracy per instruction count.
+For [`f32x4`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x4.html) / [`f32x8`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html) transcendental bodies, use V3, NEON, WASM, and scalar.
+Current V4-family narrow conversion bounds are not supplied merely by the
+hardware's superset features. Keeping V3 on AVX-512 hardware is valid; widening
+to sixteen lanes is an algorithm and performance decision, not automatic macro
+behavior.
 
-## Known limitation: `f32x4` / `f32x8` transcendentals on AVX-512 tokens
-
-Transcendentals on `f32x4<T>` / `f32x8<T>` are bounded by `T: F32x4Convert` / `T: F32x8Convert`. Today these traits are implemented for `X64V3Token`, `NeonToken`, `Wasm128Token`, and `ScalarToken` — **not** for `X64V4Token`, `X64V4xToken`, or `Avx512Fp16Token`.
-
-The `f32x16<T>` path is unaffected: `F32x16Convert` is implemented for **every** token — `X64V3Token`, `X64V4Token`, `X64V4xToken`, `NeonToken`, `Wasm128Token`, and `ScalarToken` (only `Avx512Fp16Token` is missing). On AVX-512 silicon `f32x16` runs at native 512-bit width via `X64V4Token`; on every other platform the same `f32x16` code path runs through polyfills (two `f32x8` ops on V3, four `f32x4` ops on NEON / WASM, scalar lanes on `ScalarToken`). The full transcendental family (`pow_*`, `log2_*`, `exp2_*`, `ln_*`, `exp_*`, `log10_*`) is therefore available on `f32x16<T>` everywhere.
-
-**Practical effect.** A `#[magetypes(...)]` body that calls `pow_midp` / `log2_midp` / etc. on an `f32x8` cannot include `v4` in its tier list — the trait bound rejects V4 tokens at compile time. AVX-512 hardware running such a kernel either:
-
-1. Falls back to the V3 dispatch tier (256-bit AVX2 lanes — correct, slightly less throughput than AVX-512), or
-2. Requires writing a parallel `f32x16` body for the V4 tier.
-
-Tracked as [issue #45](https://github.com/imazen/archmage/issues/45). The fix is mechanical (delegate W128/W256 narrow backends from V4-family tokens through to V3 via `.v3()`, since V4 ⊃ V3 — same pattern as the existing `x86_v4_f32_delegated.rs`), but the build-time cost is non-trivial:
-
-| Approach | magetypes self-build delta | Trait redesign? |
-|---|---|---|
-| Hand-written / codegenned per-method delegation | ~+1.8s (≈+85% on a 2.1s release build) — measured: ~3ms per `#[inline(always)]` shell × ~2000 shells | No |
-| Trait redesign with default methods + `DelegateSource` associated type | ~zero in magetypes, monomorphized at use site downstream | Yes — significant change to all backend traits and impls |
-| Feature-gate the delegation (`features = ["v4-narrow-delegation"]`) | Zero by default; opt-in pays the +1.8s | No |
-| Widen kernels to `f32x16` where possible | Zero; works today | No, but doubles kernel surface for `f32x8`-shaped algorithms |
-
-Until #45 lands, the recommended workarounds are (in order of decreasing ergonomics):
-
-1. **Widen to `f32x16` if the kernel allows it.** `F32x16Convert` is impl'd on every token (V3 / V4 / V4x / NEON / WASM / scalar), so a single `f32x16<T>` kernel runs everywhere — natively at 512-bit on AVX-512, polyfilled to 2× `f32x8` on V3, 4× `f32x4` on NEON / WASM, scalar lanes on `ScalarToken`. No parallel kernels needed. *Caveats below.*
-2. **Drop V4 from the tier list** and let the V3 dispatch arm handle AVX-512 hardware (correct, slightly less throughput).
-3. **Hand-write an `_v4x` slot via `#[arcane]`** for the kernels where 512-bit width measurably pays off, slotted alongside the `#[magetypes]`-generated variants by suffix convention. Use this only after profiling shows the gain.
-
-### `f32x16` polyfill overhead by operation
-
-When the `f32x16` workaround runs on non-AVX-512 hardware, the polyfill is `[f32x8; 2]` (V3) or `[f32x4; 4]` (NEON / WASM). What that costs depends on which operations the kernel uses:
-
-- **Pure compute (`add`, `mul`, `fma`, polynomial bodies of transcendentals):** ~zero overhead. Each method maps componentwise to N× native ops; LLVM inlines through cleanly. The assembly is identical to hand-rolling N× native-width code. Most transcendental-heavy kernels (color conversion, tone mapping, gamma curves, AgX / BT.2408 / BT.2446 / HLG) live here.
-- **Reductions (`reduce_add`, `reduce_min`, `reduce_max`):** ~1.5-2× overhead. The polyfill does N sub-reductions + scalar combine, vs a smarter native version that could tree-reduce in SIMD first. A kernel that reduces every iteration pays this each loop pass.
-- **Cross-lane shuffles / blends across the high/low halves:** can be expensive — extract + reassemble across sub-vectors. Heavy lane-permutation kernels may want to stay native.
-- **Memory layout:** 16 elements per iteration instead of 4 / 8. Usually a *win* (less loop overhead, more ILP). On V3 (16 ymm registers) a transcendental with many live temporaries can quadruple register pressure and start spilling — measure before assuming it's free.
-- **Splat / scalar setup:** ~free. Constants get CSE'd; only register copies remain.
-
-**Rule of thumb:** for compute-bound per-element kernels (most transcendental work), widen to `f32x16` — it's effectively free on every platform. For reduction-heavy or shuffle-heavy kernels, or anything that's already register-bound on V3, profile before widening.
+Polyfills can split elementwise arithmetic efficiently, but reductions,
+shuffles, and live temporaries have different costs. There is no established
+universal 1.5–2× overhead or a guarantee that widening is free. Inspect assembly
+and measure representative inputs before changing the kernel's shape.

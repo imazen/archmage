@@ -3,125 +3,82 @@ title = "Type Overview"
 weight = 1
 +++
 
-Magetypes provides generic SIMD vector types parameterized by a backend token. Each type is written as `f32x8<T>` where `T` is a token type that determines the platform implementation. A function generic over `T: F32x8Backend` works on any backend that supports 8-lane f32 operations.
+Magetypes provides generic SIMD vector types parameterized by a backend token. Each type is written as [`f32x8<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html) where `T` is a token type that determines the platform implementation. A function generic over `T: F32x8Backend` works on any backend that supports 8-lane f32 operations.
 
 ## Available Types
 
-### x86-64
+### Native x86-64 shapes
 
-| Type | Elements | Width | Min Token |
+| Type | Elements | Width | Native Token |
 |------|----------|-------|-----------|
-| `f32x4<T>` | 4 x f32 | 128-bit | `X64V2Token` |
-| `f32x8<T>` | 8 x f32 | 256-bit | `X64V3Token` |
-| `f32x16<T>` | 16 x f32 | 512-bit | `X64V4Token`* |
-| `f64x2<T>` | 2 x f64 | 128-bit | `X64V2Token` |
-| `f64x4<T>` | 4 x f64 | 256-bit | `X64V3Token` |
-| `f64x8<T>` | 8 x f64 | 512-bit | `X64V4Token`* |
-| `i8x16<T>` | 16 x i8 | 128-bit | `X64V2Token` |
-| `i8x32<T>` | 32 x i8 | 256-bit | `X64V3Token` |
-| `i16x8<T>` | 8 x i16 | 128-bit | `X64V2Token` |
-| `i16x16<T>` | 16 x i16 | 256-bit | `X64V3Token` |
-| `i32x4<T>` | 4 x i32 | 128-bit | `X64V2Token` |
-| `i32x8<T>` | 8 x i32 | 256-bit | `X64V3Token` |
-| `i32x16<T>` | 16 x i32 | 512-bit | `X64V4Token`* |
-| `i64x2<T>` | 2 x i64 | 128-bit | `X64V2Token` |
-| `i64x4<T>` | 4 x i64 | 256-bit | `X64V3Token` |
-| `u8x16<T>` | 16 x u8 | 128-bit | `X64V2Token` |
-| `u8x32<T>` | 32 x u8 | 256-bit | `X64V3Token` |
-| `u16x8<T>` | 8 x u16 | 128-bit | `X64V2Token` |
-| `u16x16<T>` | 16 x u16 | 256-bit | `X64V3Token` |
-| `u32x4<T>` | 4 x u32 | 128-bit | `X64V2Token` |
-| `u32x8<T>` | 8 x u32 | 256-bit | `X64V3Token` |
-| `u64x2<T>` | 2 x u64 | 128-bit | `X64V2Token` |
-| `u64x4<T>` | 4 x u64 | 256-bit | `X64V3Token` |
+| [`f32x4<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x4.html) | 4 x f32 | 128-bit | `X64V2Token` |
+| [`f32x8<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html) | 8 x f32 | 256-bit | `X64V3Token` |
+| [`f32x16<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x16.html) | 16 x f32 | 512-bit | `X64V4Token`* |
+| [`f64x2<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f64x2.html) | 2 x f64 | 128-bit | `X64V2Token` |
+| [`f64x4<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f64x4.html) | 4 x f64 | 256-bit | `X64V3Token` |
+| [`f64x8<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f64x8.html) | 8 x f64 | 512-bit | `X64V4Token`* |
+| [`i8x16<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i8x16.html) | 16 x i8 | 128-bit | `X64V2Token` |
+| [`i8x32<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i8x32.html) | 32 x i8 | 256-bit | `X64V3Token` |
+| [`i16x8<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i16x8.html) | 8 x i16 | 128-bit | `X64V2Token` |
+| [`i16x16<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i16x16.html) | 16 x i16 | 256-bit | `X64V3Token` |
+| [`i32x4<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i32x4.html) | 4 x i32 | 128-bit | `X64V2Token` |
+| [`i32x8<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i32x8.html) | 8 x i32 | 256-bit | `X64V3Token` |
+| [`i32x16<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i32x16.html) | 16 x i32 | 512-bit | `X64V4Token`* |
+| [`i64x2<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i64x2.html) | 2 x i64 | 128-bit | `X64V2Token` |
+| [`i64x4<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i64x4.html) | 4 x i64 | 256-bit | `X64V3Token` |
+| [`u8x16<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.u8x16.html) | 16 x u8 | 128-bit | `X64V2Token` |
+| [`u8x32<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.u8x32.html) | 32 x u8 | 256-bit | `X64V3Token` |
+| [`u16x8<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.u16x8.html) | 8 x u16 | 128-bit | `X64V2Token` |
+| [`u16x16<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.u16x16.html) | 16 x u16 | 256-bit | `X64V3Token` |
+| [`u32x4<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.u32x4.html) | 4 x u32 | 128-bit | `X64V2Token` |
+| [`u32x8<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.u32x8.html) | 8 x u32 | 256-bit | `X64V3Token` |
+| [`u64x2<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.u64x2.html) | 2 x u64 | 128-bit | `X64V2Token` |
+| [`u64x4<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.u64x4.html) | 4 x u64 | 256-bit | `X64V3Token` |
 
-*Requires the `avx512` feature flag.
+*Native 512-bit implementations require `avx512`. Logical 512-bit types also have polyfills under the default `w512` feature. This table lists native implementations, not every supported token/shape combination.
 
 ### AArch64 (NEON)
 
 | Type | Elements | Width | Token |
 |------|----------|-------|-------|
-| `f32x4<T>` | 4 x f32 | 128-bit | `NeonToken` |
-| `f64x2<T>` | 2 x f64 | 128-bit | `NeonToken` |
-| `i8x16<T>` | 16 x i8 | 128-bit | `NeonToken` |
-| `i16x8<T>` | 8 x i16 | 128-bit | `NeonToken` |
-| `i32x4<T>` | 4 x i32 | 128-bit | `NeonToken` |
-| `i64x2<T>` | 2 x i64 | 128-bit | `NeonToken` |
-| `u8x16<T>` | 16 x u8 | 128-bit | `NeonToken` |
-| `u16x8<T>` | 8 x u16 | 128-bit | `NeonToken` |
-| `u32x4<T>` | 4 x u32 | 128-bit | `NeonToken` |
-| `u64x2<T>` | 2 x u64 | 128-bit | `NeonToken` |
+| [`f32x4<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x4.html) | 4 x f32 | 128-bit | `NeonToken` |
+| [`f64x2<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f64x2.html) | 2 x f64 | 128-bit | `NeonToken` |
+| [`i8x16<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i8x16.html) | 16 x i8 | 128-bit | `NeonToken` |
+| [`i16x8<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i16x8.html) | 8 x i16 | 128-bit | `NeonToken` |
+| [`i32x4<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i32x4.html) | 4 x i32 | 128-bit | `NeonToken` |
+| [`i64x2<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i64x2.html) | 2 x i64 | 128-bit | `NeonToken` |
+| [`u8x16<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.u8x16.html) | 16 x u8 | 128-bit | `NeonToken` |
+| [`u16x8<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.u16x8.html) | 8 x u16 | 128-bit | `NeonToken` |
+| [`u32x4<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.u32x4.html) | 4 x u32 | 128-bit | `NeonToken` |
+| [`u64x2<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.u64x2.html) | 2 x u64 | 128-bit | `NeonToken` |
 
-NEON registers are 128-bit. Wider types (`f32x8<T>`, etc.) are available as [polyfills](@/magetypes/cross-platform/polyfills.md) using pairs of NEON operations.
+NEON registers are 128-bit. Wider types ([`f32x8<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html), etc.) are available as [polyfills](@/magetypes/cross-platform/polyfills.md) using pairs of NEON operations.
 
 ### WASM (SIMD128)
 
 | Type | Elements | Width | Token |
 |------|----------|-------|-------|
-| `f32x4<T>` | 4 x f32 | 128-bit | `Wasm128Token` |
-| `f64x2<T>` | 2 x f64 | 128-bit | `Wasm128Token` |
-| `i8x16<T>` | 16 x i8 | 128-bit | `Wasm128Token` |
-| `i16x8<T>` | 8 x i16 | 128-bit | `Wasm128Token` |
-| `i32x4<T>` | 4 x i32 | 128-bit | `Wasm128Token` |
-| `i64x2<T>` | 2 x i64 | 128-bit | `Wasm128Token` |
-| `u8x16<T>` | 16 x u8 | 128-bit | `Wasm128Token` |
-| `u16x8<T>` | 8 x u16 | 128-bit | `Wasm128Token` |
-| `u32x4<T>` | 4 x u32 | 128-bit | `Wasm128Token` |
-| `u64x2<T>` | 2 x u64 | 128-bit | `Wasm128Token` |
+| [`f32x4<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x4.html) | 4 x f32 | 128-bit | `Wasm128Token` |
+| [`f64x2<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f64x2.html) | 2 x f64 | 128-bit | `Wasm128Token` |
+| [`i8x16<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i8x16.html) | 16 x i8 | 128-bit | `Wasm128Token` |
+| [`i16x8<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i16x8.html) | 8 x i16 | 128-bit | `Wasm128Token` |
+| [`i32x4<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i32x4.html) | 4 x i32 | 128-bit | `Wasm128Token` |
+| [`i64x2<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i64x2.html) | 2 x i64 | 128-bit | `Wasm128Token` |
+| [`u8x16<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.u8x16.html) | 16 x u8 | 128-bit | `Wasm128Token` |
+| [`u16x8<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.u16x8.html) | 8 x u16 | 128-bit | `Wasm128Token` |
+| [`u32x4<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.u32x4.html) | 4 x u32 | 128-bit | `Wasm128Token` |
+| [`u64x2<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.u64x2.html) | 2 x u64 | 128-bit | `Wasm128Token` |
 
 Wider types are available as polyfills, same as ARM.
 
-## Basic Usage
+## Using these types
 
-The correct pattern is a generic function bounded by the appropriate backend trait. The type parameter `T` is satisfied at the call site by whichever token the caller holds.
+Start with [the complete generated gain kernel](@/archmage/getting-started/first-simd.md),
+then [generic input types and const modes](@/magetypes/dispatch/types-and-dispatch.md).
+The macro supplies each tier's feature context. A bare generic helper called
+from baseline code does not get that context merely from its token argument.
 
-```rust
-use archmage::{X64V3Token, SimdToken};
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Backend,
-};
-
-#[inline(always)]
-fn example<T: F32x8Backend>(token: T) {
-    // Construct from array
-    let a = f32x8::<T>::from_array(token, [1.0; 8]);
-
-    // Splat a single value
-    let b = f32x8::<T>::splat(token, 2.0);
-
-    // Natural operators
-    let c = a + b;
-    let d = c * c;
-
-    // Extract result
-    let result: [f32; 8] = d.to_array();
-}
-
-// Call site: summon the token, then call the generic function
-if let Some(token) = X64V3Token::summon() {
-    example(token);
-}
-```
-
-## Type Properties
-
-All magetypes SIMD types are:
-
-- **Copy** — pass by value freely
-- **Clone** — explicit cloning works
-- **Debug** — print for debugging
-- **Send + Sync** — thread-safe
-
-```rust
-use magetypes::simd::{generic::f32x8, backends::F32x8Backend};
-
-#[inline(always)]
-fn copy_demo<T: F32x8Backend>(token: T) {
-    let a = f32x8::<T>::splat(token, 1.0);
-    let b = a;  // Copy, not move
-    let c = a + b;  // Both still valid
-}
-```
-
-**Why no `Pod`/`Zeroable`?** Implementing bytemuck traits would let users bypass token-gated construction (e.g., `bytemuck::zeroed::<f32x8<T>>()`), creating vectors without proving CPU support. Use the token-gated [cast_slice and from_bytes](@/magetypes/conversions/slice-casting.md) methods instead.
+The vector values are `Copy`, `Clone`, `Debug`, `Send`, and `Sync`. Constructors
+require tokens. `define(...)` is optional shorthand for explicit generic types.
+See [slice casting](@/magetypes/conversions/slice-casting.md) for why unrestricted
+`Pod`/`Zeroable` construction is not exposed.

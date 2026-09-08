@@ -28,6 +28,11 @@ jobs:
         with:
           submodules: true  # Fetch Goyo theme submodule
 
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Verify published examples
+        run: python3 xtask/check_docs.py --features avx512
+
       - name: Install Zola
         run: |
           ZOLA_VERSION="0.22.1"

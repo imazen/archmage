@@ -8,8 +8,8 @@ section_order = ["hero", "features", "easy_command", "final_cta"]
 
 [extra.hero]
 title = "Archmage"
-description = "Safely invoke your intrinsic power, using the tokens granted to you by the CPU. Zero overhead. Zero unsafe. Full SIMD."
-badge = "Rust 1.87+"
+description = "Safely invoke your intrinsic power, using the tokens granted to you by the CPU. Portable kernels, explicit CPU capabilities, and safe SIMD."
+badge = "Rust 1.89+"
 gradient_opacity = 15
 cta_buttons = [
     { text = "Get Started", url = "/archmage/getting-started/installation/", style = "primary" },
@@ -22,8 +22,8 @@ desc = "Capability tokens prove CPU features at the type level. #[arcane] enable
 icon = "fa-solid fa-shield-halved"
 
 [[extra.features]]
-title = "Zero Overhead"
-desc = "Generates identical assembly to hand-written #[target_feature] + unsafe. The safety abstractions exist only at compile time — at runtime, you get raw SIMD instructions."
+title = "Auditable Performance"
+desc = "Place the hot loop inside its target-feature context. Inspect codegen and benchmark the complete kernel against the same numerical contract."
 icon = "fa-solid fa-bolt"
 
 [[extra.features]]
@@ -33,12 +33,12 @@ icon = "fa-solid fa-globe"
 
 [[extra.features]]
 title = "Runtime Dispatch"
-desc = "incant! dispatches to the best available SIMD tier at runtime. Write _v3, _neon, _wasm128, and _scalar variants — the macro handles detection, cfg guards, and fallback."
+desc = "incant! dispatches to the best available SIMD tier at runtime. Generate _v3, _neon, _wasm128, and _scalar variants with #[magetypes] — the macro handles detection, cfg guards, and fallback."
 icon = "fa-solid fa-route"
 
 [[extra.features]]
 title = "Magetypes"
-desc = "Optional SIMD vector types with natural Rust operators. f32x8 wraps __m256 with +, -, *, /, FMA, comparisons, reductions, and transcendentals. Cross-platform polyfills included."
+desc = "Optional SIMD vector types with natural Rust operators. f32x8 has eight logical lanes with +, -, *, /, FMA, comparisons, reductions, and transcendentals. Cross-platform polyfills included."
 icon = "fa-solid fa-shapes"
 
 [[extra.features]]
@@ -57,6 +57,6 @@ tabs = [
 
 [extra.final_cta_section]
 title = "Start Writing Safe SIMD"
-description = "Archmage is stable, battle-tested, and generates identical assembly to hand-written unsafe code. Magetypes adds ergonomic vector types if you want them."
+description = "Learn from complete image and codec kernels: generics, target-feature contexts, safe memory access, and measured ISA tradeoffs."
 button = { text = "Read the Docs", url = "/archmage/" }
 +++

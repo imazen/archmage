@@ -3,89 +3,33 @@ title = "Precision Levels"
 weight = 2
 +++
 
-Transcendental functions come in multiple precision variants. Pick the level that matches your accuracy needs.
+Choose precision from the algorithm's input domain and error budget. `_lowp`
+and `_midp` name approximation families; they are not a universal relative-error
+or ULP guarantee for every function, backend, and exceptional input.
 
-## Precision Tiers
+| Suffix | Decision |
+|---|---|
+| `_lowp` | Lower-cost approximation where its measured domain error is acceptable |
+| `_midp` | More accurate approximation family; validate the relevant function and range |
+| `_midp_precise` where provided | Additional correction; inspect its documented domain and cost |
+| `_unchecked` where provided | Omits domain repair under documented numerical preconditions |
 
-| Suffix | Precision | Relative Speed | Typical Use |
-|--------|-----------|----------------|-------------|
-| `_lowp` | ~12 bits (~3.5 decimal digits) | Fastest | Graphics, audio, game physics |
-| `_midp` | ~20 bits (~6 decimal digits) | Balanced | General compute, ML inference |
+Unchecked numerical methods remain memory-safe. Out-of-domain values have
+unspecified or unsuitable numerical results, not permission to violate Rust
+memory safety. Repair can involve several comparisons, blends, and arithmetic
+operations; do not describe its cost as universally one comparison.
 
-```rust
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Convert,
-};
+Checked logarithms distinguish zero from negative values: for example the
+intended logarithmic zero rail is negative infinity, not a blanket NaN rule.
+Use the [method-specific transcendental tables](@/magetypes/math/transcendentals.md)
+and tests for exact behavior. `pow_midp` is not a complete scalar `powf`
+replacement for all negative bases and exponents.
 
-#[inline(always)]
-fn example<T: F32x8Convert>(token: T) {
-    let v = f32x8::<T>::splat(token, 2.0);
+For color work, record encoding, range, transfer curve, alpha policy, and error
+metric. A nominal bit count does not prove an error is invisible. For reductions,
+test cancellation and accumulation length. For bit-exact codec requirements,
+compare exact expected output on every supported tier.
 
-    let fast     = v.exp2_lowp();   // ~12-bit precision
-    let balanced = v.exp2_midp();   // ~20-bit precision
-}
-```
-
-There are no unsuffixed "full precision" transcendentals — `_midp` is the highest level. For exact results, use `sqrt()` (a hardware instruction).
-
-## When to Use Each
-
-**`_lowp` (~12 bits):** Use when visual or perceptual quality is what matters. 12 bits of precision means errors below 1 part in 4000 — invisible in pixel colors, inaudible in audio samples, and unnoticeable in physics simulations. The speed advantage compounds when you're calling these functions millions of times per frame.
-
-**`_midp` (~20 bits):** The default choice when you don't have a strong reason to pick another. Accurate enough for ML inference, signal processing, and most numerical work. The `_midp` variants use the same polynomial families as `_lowp` but with more terms.
-
-## Precise Variants
-
-Some `_midp` functions have a `_precise` variant that adds a correction step:
-
-```rust
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Convert,
-};
-
-#[inline(always)]
-fn example<T: F32x8Convert>(token: T) {
-    let v = f32x8::<T>::splat(token, 2.0);
-
-    let result = v.log2_midp();          // ~20-bit precision
-    let result = v.log2_midp_precise();  // Slightly more accurate, slightly slower
-}
-```
-
-Available `_precise` variants: `log2_midp_precise`, `ln_midp_precise`, `pow_midp_precise`, `log10_midp_precise`, `cbrt_midp_precise`.
-
-## Unchecked Variants
-
-Functions with domain restrictions (log requires positive input, etc.) have `_unchecked` variants that skip validation:
-
-```rust
-// given token: T where T: F32x8Convert
-// let v = f32x8::<T>::splat(token, 2.0);
-
-// Checked: returns NaN for non-positive inputs
-let result = v.ln_lowp();
-
-// Unchecked: undefined for non-positive inputs, slightly faster
-let result = v.ln_lowp_unchecked();
-```
-
-Use `_unchecked` only when you've already validated inputs or your algorithm guarantees valid ranges. The speed difference is small — the check is usually a single comparison.
-
-Available `_unchecked` variants exist for both `_lowp` and `_midp` tiers: `log2`, `exp2`, `ln`, `exp`, `log10`, `pow`.
-
-## Available Combinations
-
-| Function | `_lowp` | `_midp` | `_midp_precise` |
-|----------|---------|---------|-----------------|
-| `exp2` | yes | yes | — |
-| `exp` | yes | yes | — |
-| `log2` | yes | yes | yes |
-| `ln` | yes | yes | yes |
-| `log10` | yes | yes | yes |
-| `pow` | yes | yes | yes |
-| `cbrt` | — | yes | yes |
-| `sqrt` | exact hardware instruction | — | — |
-
-`sqrt` is a hardware instruction, not an approximation — there's no precision variant because it's already fast and exact.
+The complete [linear-srgb gamma chain](@/magetypes/math/transcendentals.md)
+uses a vector approximation and scalar `powf` tail. Those are not bit-identical
+implementations. Test the accepted error at the vector/tail boundary and across ISAs.

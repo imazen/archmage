@@ -1,5 +1,15 @@
 //! Proc-macros for archmage SIMD capability tokens.
 //!
+//! [Official guide and examples](https://imazen.github.io/archmage/) ·
+//! [Intrinsics browser](https://imazen.github.io/archmage/intrinsics/) ·
+//! [Archmage API](https://docs.rs/archmage/latest/archmage/) ·
+//! [Magetypes vector API](https://docs.rs/magetypes/latest/magetypes/)
+//!
+//! Applications should import these macros through `archmage`, which pins the
+//! compatible macro release. `#[magetypes]` generates functions; the separate
+//! magetypes crate supplies their vector types. See the
+//! [complete generic call chains](https://imazen.github.io/archmage/magetypes/dispatch/types-and-dispatch/).
+//!
 //! Provides `#[arcane]`, `#[rite]`, `#[autoversion]`, `incant!`, and `#[magetypes]`.
 
 mod arcane;
@@ -88,15 +98,7 @@ use token_discovery::*;
 /// **Default (cfg-out):** On the wrong architecture, the function is not emitted
 /// at all — no stub, no dead code. Code that references it must be cfg-gated.
 ///
-/// **With `stub`:** Generates an `unreachable!()` stub on wrong architectures.
-/// Use when cross-arch dispatch references the function without cfg guards.
-///
-/// ```ignore
-/// #[arcane(stub)]  // generates stub on wrong arch
-/// fn process_neon(token: NeonToken, data: &[f32]) -> f32 { ... }
-/// ```
-///
-/// `incant!` is unaffected — it already cfg-gates dispatch calls by architecture.
+/// `stub` has been removed. Use `incant!` or explicit call-site cfg guards.
 ///
 /// # Token Parameter Forms
 ///
@@ -122,7 +124,6 @@ use token_discovery::*;
 ///
 /// | Option | Effect |
 /// |--------|--------|
-/// | `stub` | Generate `unreachable!()` stub on wrong architecture |
 /// | `nested` | Use nested inner function instead of sibling |
 /// | `_self = Type` | Implies `nested`, transforms self receiver, replaces Self |
 /// | `inline_always` | Use `#[inline(always)]` (requires nightly) |
@@ -291,14 +292,13 @@ pub fn token_target_features_boundary(attr: TokenStream, item: TokenStream) -> T
 /// # Cross-Architecture Behavior
 ///
 /// Like `#[arcane]`, defaults to cfg-out (no function on wrong arch).
-/// Use `#[rite(stub)]` to generate an unreachable stub instead.
+/// `stub` has been removed; use `incant!` or explicit call-site cfg guards.
 ///
 /// # Options
 ///
 /// | Option | Effect |
 /// |--------|--------|
 /// | tier name(s) | `v3`, `neon`, etc. One = single function; multiple = suffixed variants |
-/// | `stub` | Generate `unreachable!()` stub on wrong architecture |
 /// | `import_intrinsics` | Auto-import `archmage::intrinsics::{arch}::*` (includes safe memory ops) |
 /// | `import_magetypes` | Auto-import `magetypes::simd::{ns}::*` and `magetypes::simd::backends::*` |
 ///
@@ -310,10 +310,9 @@ pub fn token_target_features_boundary(attr: TokenStream, item: TokenStream) -> T
 /// |--------|-------------|-----------|
 /// | Creates wrapper | Yes | No |
 /// | Entry point | Yes | No |
-/// | Inlines into caller | No (barrier) | Yes |
+/// | Inlines into caller | When feature context permits | When feature context permits |
 /// | Safe to call anywhere | Yes (with token) | Only from feature-enabled context |
 /// | Multi-tier variants | No | Yes (`#[rite(v3, v4, neon)]`) |
-/// | `stub` param | Yes | Yes |
 /// | `import_intrinsics` | Yes | Yes |
 /// | `import_magetypes` | Yes | Yes |
 #[proc_macro_attribute]
