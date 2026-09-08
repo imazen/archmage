@@ -526,10 +526,9 @@ pub(crate) fn arcane_impl_sibling(
         quote! {
             #sibling_fn
             #wrapper_fn
-
         }
     } else {
-        // No specific arch (trait bounds or generic) - no cfg guards, no stub needed.
+        // No specific arch (trait bounds or generic) - no cfg guards.
         // Still use sibling pattern for consistency. Sibling is always private.
         let sibling_fn = quote! {
             #[doc(hidden)]
@@ -709,7 +708,6 @@ pub(crate) fn arcane_impl_nested(
                 // SAFETY: The token parameter proves the required CPU features are available.
                 unsafe { #inner_fn_name #turbofish(#(#inner_args),*) }
             }
-
         }
     } else {
         // No specific arch (trait bounds or generic) - generate without cfg guards

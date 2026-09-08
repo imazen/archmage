@@ -8,7 +8,7 @@ use syn::{Attribute, GenericParam, Signature, Type, parse::ParseStream, token};
 ///
 /// Only the signature is fully parsed into an AST — the body tokens are collected
 /// without building any AST nodes (no expressions, statements, or patterns parsed).
-/// This saves ~2ms per function invocation at 100 lines of code.
+/// Parsing cost therefore scales with the signature rather than a body AST.
 #[derive(Clone)]
 pub(crate) struct LightFn {
     pub attrs: Vec<Attribute>,

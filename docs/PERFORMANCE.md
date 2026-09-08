@@ -191,3 +191,100 @@ cargo bench --bench asm_inspection --features "std avx512"
 Results will vary by CPU. The *ratios* between patterns are stable: archmage always matches bare `#[target_feature]` on the same workload. The boundary multiplier itself (4x on simple adds, 6.2x on DCT-8) depends on how much optimization LLVM loses when it can't inline — denser workloads lose more.
 
 `summon()` overhead is separate: ~1.3 ns cached, 0 ns with `-Ctarget-cpu=haswell` (compiles away). See [`benches/summon_overhead.rs`](../benches/summon_overhead.rs).
+
+## Proc-macro parsing and allocation pass (2026-09-07)
+
+Compared `0373579` with the parsing cleanup in `9382f9d` on the `wsl` Ryzen 9
+7950X, Rust 1.98.1. This changes macro execution, not the generated algorithms.
+Bodies were already opaque token streams; `syn` remains responsible for
+signatures, generics, bounds, and dispatch arguments.
+
+The changes borrow temporary tier names, avoid sorting already ordered default
+and filtered tier lists, preserve groups that need no rewriting, stream argument
+emission without intermediate vectors, and remove unreachable stub generation.
+The default-order test compares the fast path with general resolution, checks
+uniqueness and fallback placement, and separately checks caller-order stability
+for equal-priority and duplicate explicit tiers. Arbitrary user lists still sort.
+
+### Allocation evidence
+
+The ignored `profile_allocations` test counts allocation/reallocation calls while
+parsing and expanding pre-tokenized input on its own thread. These are
+**standalone proc_macro2 measurements**, not rustc's total allocations; input
+lexing is outside the measurement. It uses the default unoptimized test profile.
+
+| Input | Before allocations | After allocations |
+|---|---:|---:|
+| `arcane`, ordinary kernel | 128 | 116 |
+| `arcane`, nested dispatch | 166 | 163 |
+| `rite`, ordinary kernel | 89 | 81 |
+| `magetypes`, local vector alias | 300 | 240 |
+| `autoversion`, scalar loop | 380 | 370 |
+
+### Consumer builds
+
+`xtask/macro_perf.py` tests linear-srgb 0.6.12 (with `transfer`) and
+zenpixels-convert 0.2.16 from the same source archives used in earlier consumer
+comparisons. Each configuration has six paired baseline/candidate runs in
+alternating order. Cold runs start with empty Cargo artifact directories;
+registry sources and OS caches are warm. The script verifies identical dependency
+trees and that source edits rebuild the consumer while keeping archmage,
+archmage-macros, and magetypes fresh. Cargo's default dev and release profiles
+apply; release source-edit builds do not enable incremental compilation.
+
+Seconds below are medians. The last column uses the geometric mean of paired
+ratios and an approximate 95% Student-t interval on log ratios; it is not the
+ratio of the displayed medians. Small-sample intervals do not account for every
+possible machine-load effect.
+
+| Consumer | Profile | Cold before → after | Kernel edit before → after | Paired kernel-edit change (95% interval) |
+|---|---|---:|---:|---:|
+| linear-srgb | dev | 5.084 → 5.169 | 0.397 → 0.380 | −5.5% [−7.6%, −3.2%] |
+| linear-srgb | release | 5.296 → 5.265 | 1.346 → 1.338 | −0.6% [−1.6%, +0.5%] |
+| zenpixels-convert | dev | 5.901 → 5.875 | 0.621 → 0.586 | −5.1% [−10.2%, +0.3%] |
+| zenpixels-convert | release | 7.662 → 7.463 | 3.282 → 3.214 | −3.2% [−6.1%, −0.3%] |
+
+All four cold-build paired intervals include zero: **no demonstrated cold-build
+improvement or regression**. Ordinary-function edits were also measured: paired
+changes were −5.6% (linear dev), −0.6% (linear release), −2.1% (zenpixels dev), and
+−1.4% (zenpixels release); only linear dev's interval excluded zero.
+
+Four alternating nightly self-profile runs per variant measured all 608
+proc-macro expansions in magetypes. Median `expand_proc_macro` self time was
+64.25 ms before and 62.20 ms after, with overlapping samples. Macro invocation
+counts and `-Zmacro-stats` output were unchanged. This does not establish a
+significant aggregate expansion-time win or justify replacing syn wholesale.
+
+### Correctness and reproduction
+
+The macro library now runs its implementation directly as well as through rustc.
+134 unit/contract tests pass in both feature configurations; the allocation probe
+is deliberately opt-in. Existing expansion snapshots, compilation of both inputs
+and outputs, negative soundness cases, and behavioral tests pass. LLVM's library
+line report is 95.1%, not 100%; coverage is a gap-finding tool, not a soundness
+proof. The ISA comparison found identical resolved instruction bodies in all
+3,155 probes (1,591 x86, 782 ARM, 782 WASM).
+
+```bash
+cargo test -p archmage-macros --lib
+cargo test -p archmage-macros --lib --features avx512
+cargo test --test macro_expand --test soundness_exploits
+cargo test -p archmage-macros --lib profile_allocations -- --ignored --nocapture
+cargo llvm-cov -p archmage-macros --lib
+python3 xtask/codegen.py 0373579 WORKTREE
+# See the harness docstring for source archive and before/after tree preparation.
+python3 xtask/macro_perf.py "$HOME/tmp/archmage-macro-perf"
+
+# Profile the crate USING the macros, not just archmage-macros itself.
+mkdir -p "$HOME/tmp/macro-profile"
+CARGO_INCREMENTAL=0 cargo +nightly rustc -p magetypes --lib -- \
+  -Zmacro-stats -Zself-profile="$HOME/tmp/macro-profile"
+summarize summarize "$HOME"/tmp/macro-profile/*.mm_profdata
+```
+
+`-Zmacro-stats` describes expansion sizes/counts; it is not a timer.
+`-Zself-profile` records rustc query/event time; use `perf` with call stacks for
+hotspots inside the proc-macro library. The current measureme command is
+`summarize summarize FILE.mm_profdata` (not a hard-coded `.pft` suffix).
+See the [measureme instructions](https://github.com/rust-lang/measureme/tree/master/summarize)
+and [rustc profiling guide](https://rustc-dev-guide.rust-lang.org/profiling.html).
