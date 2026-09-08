@@ -6,6 +6,10 @@ on:
   # Stacked PRs target prior PR branches, so test every PR base.
   pull_request:
   workflow_dispatch:
+  workflow_call:
+    secrets:
+      CODECOV_TOKEN:
+        required: false
 
 env:
   CARGO_TERM_COLOR: always
@@ -28,10 +32,18 @@ env:
 # the third run completed — it went red on `generate-check`, and main then sat
 # red for four days until PR #66 tripped over the drift.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'push' && github.sha || 'pr' }}
-  cancel-in-progress: ${{ github.event_name != 'push' }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'pr' || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  workflow-contracts:
+    name: Release gate contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: python3 -m pip install PyYAML==6.0.3
+      - run: python3 xtask/check_ci_gate.py --test
+
   website-examples:
     name: Website examples (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -886,7 +898,6 @@ jobs:
   coverage:
     name: Coverage (x86_64)
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
 
@@ -923,7 +934,6 @@ jobs:
   coverage-aarch64:
     name: Coverage (aarch64)
     runs-on: ubuntu-24.04-arm
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
 
@@ -989,3 +999,42 @@ jobs:
           fi
           printf "  %s\n" "${FILES[@]}"
           cargo run -p xtask -- compare-arch-results "${FILES[@]}"
+
+  ci-gate:
+    name: Complete CI matrix
+    if: ${{ always() }}
+    needs:
+      - workflow-contracts
+      - website-examples
+      - storage-codegen
+      - test-x64
+      - test-aarch64
+      - test-cross
+      - test-wasm
+      - generate-check
+      - api-doc-check
+      - validate-safety
+      - soundness
+      - parity
+      - miri
+      - fuzz
+      - clippy
+      - clippy-aarch64
+      - fmt
+      - docs
+      - msrv
+      - feature-combos
+      - testable-dispatch
+      - sde
+      - coverage
+      - coverage-aarch64
+      - compare-arch-results
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: python3 -m pip install PyYAML==6.0.3
+      - name: Require every applicable job to succeed
+        env:
+          CI_RESULTS: ${{ toJSON(needs) }}
+          CI_EVENT: ${{ github.event_name }}
+        run: python3 xtask/check_ci_gate.py

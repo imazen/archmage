@@ -624,7 +624,7 @@ If ANY check fails:
 
    The single `v{version}` GitHub release fires one publish workflow run that publishes all three crates in dep order (archmage-macros → archmage → magetypes).
 
-   **Don't wait for main CI to go green first.** The publish workflow has its own `pre-publish-check` job that blocks on tests; if it fails, fix and re-tag.
+   **Don't wait for main CI to go green first.** The publish workflow calls the complete reusable `ci.yml` matrix at the release commit and separately verifies the packaged crates. Publishing requires both to succeed. The final CI gate rejects failed, cancelled, missing, or unexpectedly skipped jobs; only the PR-base codegen comparison is omitted outside PRs.
 
    `gh release create <tag>` infers the target from the pushed tag — do NOT pass `--target <sha>` (GitHub rejects it as `target_commitish is invalid` once the tag exists).
 
