@@ -212,6 +212,10 @@ The ignored `profile_allocations` test counts allocation/reallocation calls whil
 parsing and expanding pre-tokenized input on its own thread. These are
 **standalone proc_macro2 measurements**, not rustc's total allocations; input
 lexing is outside the measurement. It uses the default unoptimized test profile.
+These counts cover calls routed through the test allocator. Heaptrack subsequently
+confirmed that dynamically linked libstd bypasses this allocator for some paths,
+so the table is **partial allocation counts**, not complete per-expansion totals.
+The consumer wall-time measurements below are independent of this limitation.
 
 | Input | Before allocations | After allocations |
 |---|---:|---:|
@@ -220,6 +224,52 @@ lexing is outside the measurement. It uses the default unoptimized test profile.
 | `rite`, ordinary kernel | 89 | 81 |
 | `magetypes`, local vector alias | 300 | 240 |
 | `autoversion`, scalar loop | 380 | 370 |
+
+### Static-data follow-up
+
+Compared `3860cb7` with `89fd76a`: borrow registry feature lists with `Cow`,
+generate token-name-to-CSV lookups from the same registry, retain attributes once before
+cloning variants, scan each magetypes body once for dispatch, move bodies into
+the rewriter, and build identical dispatch arguments once outside the tier loop.
+Feature-list uniqueness and first-seen union ordering are checked by tests.
+Generic bounds retain the ordinary CSV join, preserving combination order.
+
+Heaptrack, filtered to stacks containing `expansion_tests::expand`, counted
+3,249,000 → 3,125,000 allocation calls over 1,000 repetitions of all five inputs
+(**3.8% fewer**). This includes libstd allocations bypassing the test allocator.
+Attribution to the nearest macro/dependency frame above the standard library:
+
+| Requesting crate | Calls per five-input suite before → after |
+|---|---:|
+| `archmage-macros` | 69 → 52 |
+| `proc_macro2` | 2,594 → 2,487 |
+| `syn` | 569 → 569 |
+| `quote` | 17 → 17 |
+
+These are standalone-backend allocation calls, not peak memory, actual rustc
+bridge counts, or evidence of a compile-time speedup. Dependency attribution
+does not mean unavoidable cost: most of the reduction comes from asking
+proc_macro2 to do less copying. The magetypes probe does not recursively expand
+its emitted arcane attributes. All 138 unit/contract tests pass; expansion
+snapshots and 3,155 resolved x86/ARM/WASM codegen probes are unchanged.
+
+The follow-up repeated all 144 consumer builds on `wsl` with the same pinned
+sources and dependency locks (six alternating pairs per configuration).
+Paired geometric-mean changes and 95% intervals:
+
+| Consumer | Profile | Cold build | Consumer arcane-body edit |
+|---|---|---:|---:|
+| linear-srgb | debug | -1.6% [-3.0, -0.2] | +3.5% [-0.5, +7.6] |
+| linear-srgb | release | -0.3% [-2.0, +1.4] | -2.7% [-5.3, +0.0] |
+| zenpixels-convert | debug | +0.3% [-1.4, +2.1] | -3.1% [-7.7, +1.8] |
+| zenpixels-convert | release | -1.7% [-5.7, +2.5] | -2.6% [-9.1, +4.4] |
+
+No configuration demonstrates a regression; the clearest improvement is the
+small linear-srgb cold-debug result. Ordinary-function edit intervals all
+include zero. This does not establish a broad compile-time speedup. Four alternating nightly
+self-profile runs per version measured 608 proc-macro expansions in both:
+66.55 → 65.14 ms median, with overlapping samples. All eight `-Zmacro-stats`
+reports are identical.
 
 ### Consumer builds
 
