@@ -273,6 +273,20 @@ impl<T: F64x2Backend> f64x2<T> {
         Self(T::mul_sub(self.1, self.0, a.0, b.0), self.1)
     }
 
+    /// Lanes `N..N+2` of the concatenation `[self, hi]` — the
+    /// cross-vector "funnel shift" (`valignd` / `vperm2f128`+`vpalignr` /
+    /// `EXT` / `i8x16.shuffle`).
+    ///
+    /// A 3-tap horizontal filter uses it to derive the `x-1` and `x+1`
+    /// vectors from two loads instead of three; a byte-shuffling kernel
+    /// uses it to slide a window. `N == 0` returns `self`; `N == 2`
+    /// is rejected at compile time, since a caller that wants `hi` should
+    /// use it directly.
+    #[inline(always)]
+    pub fn concat_shift<const N: i32>(self, hi: Self) -> Self {
+        Self(T::concat_shift::<N>(self.1, self.0, hi.0), self.1)
+    }
+
     // ====== Comparisons ======
 
     /// Lane-wise equality (returns mask).

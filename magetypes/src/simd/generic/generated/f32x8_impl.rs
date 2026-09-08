@@ -290,6 +290,29 @@ impl<T: F32x8Backend> f32x8<T> {
         Self(T::mul_sub(self.1, self.0, a.0, b.0), self.1)
     }
 
+    /// Lanes `N..N+8` of the concatenation `[self, hi]` — the
+    /// cross-vector "funnel shift" (`valignd` / `vperm2f128`+`vpalignr` /
+    /// `EXT` / `i8x16.shuffle`).
+    ///
+    /// A 3-tap horizontal filter uses it to derive the `x-1` and `x+1`
+    /// vectors from two loads instead of three; a byte-shuffling kernel
+    /// uses it to slide a window. `N == 0` returns `self`; `N == 8`
+    /// is rejected at compile time, since a caller that wants `hi` should
+    /// use it directly.    ///
+    /// ```rust
+    /// # use archmage::prelude::*;
+    /// # use magetypes::simd::generic::f32x8;
+    /// # fn demo<T: magetypes::simd::backends::F32x8Backend>(t: T) {
+    /// let lo = f32x8::from_array(t, core::array::from_fn(|i| i as f32));
+    /// let hi = f32x8::from_array(t, core::array::from_fn(|i| (8 + i) as f32));
+    /// assert_eq!(lo.concat_shift::<1>(hi).to_array()[0], 1.0);
+    /// # }
+    /// ```
+    #[inline(always)]
+    pub fn concat_shift<const N: i32>(self, hi: Self) -> Self {
+        Self(T::concat_shift::<N>(self.1, self.0, hi.0), self.1)
+    }
+
     // ====== Comparisons ======
 
     /// Lane-wise equality (returns mask).

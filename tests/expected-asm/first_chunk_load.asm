@@ -12,5 +12,5 @@ asm_patterns::x86_impl::__arcane_load_first_chunk_256:
 .LBB25_2:
 	push rax
 	.cfi_def_cfa_offset 16
-	lea rdi, [rip + .Lanon.ff48498752e7de0fb7d567d3ea463b08.16]
+	lea rdi, [rip + .Lanon.bbb2f47a6bbb2a68548d5b0cc4d77b31.16]
 	call qword ptr [rip + core::option::unwrap_failed@GOTPCREL]

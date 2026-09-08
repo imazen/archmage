@@ -902,9 +902,11 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             fn rsqrt(self, a: Self::Repr) -> Self::Repr {{ Self::rsqrt_approx(self, a) }}
             {to_u8_trait}
             {transpose_trait}
+            {concat_shift_trait}
         }}
     "#,
         name = ty.name(),
+        concat_shift_trait = super::concat_shift_gen::trait_decl(elem, lanes, &trait_name),
     }
 }
 
@@ -1476,6 +1478,9 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
     // Native AVX2 8x8 transpose (f32x8): unpck + shuffle_ps + permute2f128
     // network (24 ops), overriding the scalar gather default which AVX2 expands
     // to ~60 cross-lane ops.
+    let concat_shift_x86 =
+        super::concat_shift_gen::x86_native(elem, ty.lanes, ty.width_bits, inner, &arcane);
+
     let transpose_8x8_x86 = if elem == "f32" && bits == 256 {
         formatdoc! {r#"
 
@@ -1714,6 +1719,7 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
             {to_u8_x86}
             {store_rgba_x86}
             {transpose_8x8_x86}
+            {concat_shift_x86}
         }}
     "#,
     }
@@ -2784,8 +2790,16 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             }}
             {to_u8_arm_poly}
             {store_rgba_arm_poly}
+            {concat_shift_poly}
         }}
     "#,
+        concat_shift_poly = super::concat_shift_gen::polyfill_delegate(
+            lanes,
+            &repr,
+            "NeonToken",
+            &format!("F{}x{}Backend", &elem[1..], native_lanes),
+            native_lanes,
+        ),
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
         add_body = binary_op(&format!("vaddq_{ns}")),
@@ -3141,8 +3155,10 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             }}
             {to_u8_arm}
             {store_rgba_arm}
+            {concat_shift_arm}
         }}
     "#,
+        concat_shift_arm = super::concat_shift_gen::neon_native(elem, lanes, &repr, &arcane),
         reduce_add = reduce_pairwise(&format!("vpaddq_{ns}")),
         reduce_min = reduce_pairwise(&format!("vpminq_{ns}")),
         reduce_max = reduce_pairwise(&format!("vpmaxq_{ns}")),
@@ -3385,8 +3401,16 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
             fn bitor(self, a: {repr}, b: {repr}) -> {repr} {{ {or} }}
             #[inline(always)]
             fn bitxor(self, a: {repr}, b: {repr}) -> {repr} {{ {xor} }}
+            {concat_shift_poly}
         }}
     "#,
+        concat_shift_poly = super::concat_shift_gen::polyfill_delegate(
+            lanes,
+            &repr,
+            "Wasm128Token",
+            &sub_trait,
+            native_lanes,
+        ),
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
         load_lanes = format!("[{}]", (0..sub_count)
@@ -3598,8 +3622,10 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
             fn bitor(self, a: v128, b: v128) -> v128 {{ v128_or(a, b) }}
             #[inline(always)]
             fn bitxor(self, a: v128, b: v128) -> v128 {{ v128_xor(a, b) }}
+            {concat_shift_wasm}
         }}
     "#,
+        concat_shift_wasm = super::concat_shift_gen::wasm_native(elem, lanes),
         reduce_add = reduce_add_body(),
         reduce_min = reduce_minmax("min"),
         reduce_max = reduce_minmax("max"),
@@ -3785,8 +3811,10 @@ fn generate_i32_backend_trait(ty: &I32VecType) -> String {
                 <Self as {trait_name}>::min(self, <Self as {trait_name}>::max(self, a, lo), hi)
             }}
         {integer_methods}
+            {concat_shift_trait}
         }}
     "#,
+        concat_shift_trait = super::concat_shift_gen::trait_decl("i32", ty.lanes, &trait_name),
         name = ty.name(),
     }
 }
@@ -4202,8 +4230,10 @@ fn generate_x86_i32_impl(ty: &I32VecType, token: &str) -> String {
                 {p}_movemask_ps({p}_castsi{bits}_ps(a)) as u32
             }}
         {integer_methods}
+            {concat_shift}
         }}
     "#,
+        concat_shift = super::concat_shift_gen::x86_native("i32", ty.lanes, ty.width_bits, inner, &arcane),
         all_mask = if lanes == 4 { "0xF" } else { "0xFF" },
     }
 }
@@ -5097,8 +5127,11 @@ fn generate_neon_native_i32_impl(ty: &I32VecType) -> String {
                 lane0 | (lane1 << 1) | (lane2 << 2) | (lane3 << 3)
             }}
         {integer_methods}
+            {concat_shift}
         }}
-    "#}
+    "#,
+        concat_shift = super::concat_shift_gen::neon_native("i32", 4, "int32x4_t", &arcane),
+    }
 }
 
 fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
@@ -5276,8 +5309,10 @@ fn generate_neon_polyfill_i32_impl(ty: &I32VecType) -> String {
                 {bitmask}
             }}
         {integer_methods}
+            {concat_shift}
         }}
     "#,
+        concat_shift = super::concat_shift_gen::polyfill_delegate(ty.lanes, &repr, "NeonToken", "I32x4Backend", 4),
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
         add = binary_op("vaddq_s32"),
@@ -5651,8 +5686,11 @@ fn generate_wasm_native_i32_impl(ty: &I32VecType) -> String {
             #[inline(always)]
             fn bitmask(self, a: v128) -> u32 {{ i32x4_bitmask(a) as u32 }}
         {integer_methods}
+            {concat_shift}
         }}
-    "#}
+    "#,
+        concat_shift = super::concat_shift_gen::wasm_native("i32", 4),
+    }
 }
 
 fn generate_wasm_polyfill_i32_impl(ty: &I32VecType) -> String {
@@ -5826,8 +5864,10 @@ fn generate_wasm_polyfill_i32_impl(ty: &I32VecType) -> String {
                 {bitmask}
             }}
         {integer_methods}
+            {concat_shift}
         }}
     "#,
+        concat_shift = super::concat_shift_gen::polyfill_delegate(ty.lanes, &repr, "Wasm128Token", "I32x4Backend", 4),
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
         load_lanes = format!("[{}]", (0..sub_count)
@@ -6167,8 +6207,10 @@ fn generate_u32_backend_trait(ty: &U32VecType) -> String {
             fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {{
                 <Self as {trait_name}>::min(self, <Self as {trait_name}>::max(self, a, lo), hi)
             }}
+            {concat_shift_trait}
         }}
     "#,
+        concat_shift_trait = super::concat_shift_gen::trait_decl("u32", ty.lanes, &trait_name),
         name = ty.name(),
     }
 }
@@ -6395,8 +6437,10 @@ fn generate_x86_u32_impl(ty: &U32VecType, token: &str) -> String {
             fn bitmask(self, a: {inner}) -> u32 {{
                 {p}_movemask_ps({p}_castsi{bits}_ps(a)) as u32
             }}
+            {concat_shift}
         }}
     "#,
+        concat_shift = super::concat_shift_gen::x86_native("u32", ty.lanes, ty.width_bits, inner, &arcane),
         all_mask = if lanes == 4 { "0xF" } else { "0xFF" },
     }
 }
@@ -6904,8 +6948,11 @@ fn generate_neon_native_u32_impl(ty: &U32VecType) -> String {
                 let lane3 = vgetq_lane_u32::<3>(shift);
                 lane0 | (lane1 << 1) | (lane2 << 2) | (lane3 << 3)
             }}
+            {concat_shift}
         }}
-    "#}
+    "#,
+        concat_shift = super::concat_shift_gen::neon_native("u32", 4, "uint32x4_t", &arcane),
+    }
 }
 
 fn generate_neon_polyfill_u32_impl(ty: &U32VecType) -> String {
@@ -7063,8 +7110,10 @@ fn generate_neon_polyfill_u32_impl(ty: &U32VecType) -> String {
             fn bitmask(self, a: {repr}) -> u32 {{
                 {bitmask}
             }}
+            {concat_shift}
         }}
     "#,
+        concat_shift = super::concat_shift_gen::polyfill_delegate(ty.lanes, &repr, "NeonToken", "U32x4Backend", 4),
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
         add = binary_op("vaddq_u32"),
@@ -7264,8 +7313,11 @@ fn generate_wasm_native_u32_impl(ty: &U32VecType) -> String {
             fn any_true(self, a: v128) -> bool {{ v128_any_true(a) }}
             #[inline(always)]
             fn bitmask(self, a: v128) -> u32 {{ i32x4_bitmask(a) as u32 }}
+            {concat_shift}
         }}
-    "#}
+    "#,
+        concat_shift = super::concat_shift_gen::wasm_native("u32", 4),
+    }
 }
 
 fn generate_wasm_polyfill_u32_impl(ty: &U32VecType) -> String {
@@ -7421,8 +7473,10 @@ fn generate_wasm_polyfill_u32_impl(ty: &U32VecType) -> String {
             fn bitmask(self, a: {repr}) -> u32 {{
                 {bitmask}
             }}
+            {concat_shift}
         }}
     "#,
+        concat_shift = super::concat_shift_gen::polyfill_delegate(ty.lanes, &repr, "Wasm128Token", "U32x4Backend", 4),
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
         load_lanes = format!("[{}]", (0..sub_count)

@@ -295,6 +295,19 @@ check_contains "concat_shift_f32x16_v4x" "asm_patterns" \
     "asm_patterns::x86_impl::__arcane_concat_shift_f32x16_v4x" \
     "valign|palignr|vperm|vshuf"
 
+check_absent "concat_shift_u8x16_v3_no_gather" "asm_patterns" \
+    "asm_patterns::x86_impl::__arcane_concat_shift_u8x16_v3" \
+    "movz|movb" \
+    "fell back to per-byte moves"
+
+check_contains "concat_shift_u8x16_v3" "asm_patterns" \
+    "asm_patterns::x86_impl::__arcane_concat_shift_u8x16_v3" \
+    "palignr|pshuf|pblend"
+
+check_contains "concat_shift_i16x32_v4x" "asm_patterns" \
+    "asm_patterns::x86_impl::__arcane_concat_shift_i16x32_v4x" \
+    "valign|palignr|vperm"
+
 echo ""
 
 # ---- Summary ----

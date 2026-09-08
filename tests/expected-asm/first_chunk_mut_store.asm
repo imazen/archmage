@@ -4,13 +4,13 @@
 asm_patterns::x86_impl::__arcane_store_first_chunk_mut:
 	.cfi_startproc
 	cmp rdx, 7
-	jbe .LBB28_2
+	jbe .LBB29_2
 	vmovaps ymm0, ymmword ptr [rdi]
 	vmovups ymmword ptr [rsi], ymm0
 	vzeroupper
 	ret
-.LBB28_2:
+.LBB29_2:
 	push rax
 	.cfi_def_cfa_offset 16
-	lea rdi, [rip + .Lanon.ff48498752e7de0fb7d567d3ea463b08.17]
+	lea rdi, [rip + .Lanon.bbb2f47a6bbb2a68548d5b0cc4d77b31.17]
 	call qword ptr [rip + core::option::unwrap_failed@GOTPCREL]

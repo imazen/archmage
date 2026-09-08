@@ -42,6 +42,20 @@ impl IntVecType {
         format!("{upper}x{}Backend", self.lanes)
     }
 
+    /// The 128-bit trait for the same element type — what a 256- or 512-bit
+    /// polyfill delegates its per-sub-vector work to.
+    fn base_trait_name(&self) -> String {
+        let upper = match self.elem {
+            "i8" => "I8",
+            "u8" => "U8",
+            "i16" => "I16",
+            "u16" => "U16",
+            "u64" => "U64",
+            _ => unreachable!(),
+        };
+        format!("{upper}x{}Backend", 128 / (self.width_bits / self.lanes))
+    }
+
     /// Array type: "[i8; 16]", "[u16; 8]", etc.
     fn array_type(&self) -> String {
         format!("[{}; {}]", self.elem, self.lanes)
@@ -616,8 +630,11 @@ pub(super) fn generate_int_backend_trait(ty: &IntVecType) -> String {
         pub trait {trait_name}: SimdToken + Sealed + Copy + 'static {{
         {methods}
         {integer_methods}
+            {concat_shift_trait}
         }}
-    "#}
+    "#,
+        concat_shift_trait = super::concat_shift_gen::trait_decl(ty.elem, ty.lanes, &trait_name),
+    }
 }
 
 // ============================================================================
@@ -940,8 +957,11 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
         impl {trait_name} for archmage::{token} {{
         {body}
         {integer_methods}
+            {concat_shift}
         }}
-    "#}
+    "#,
+        concat_shift = super::concat_shift_gen::x86_native(ty.elem, ty.lanes, ty.width_bits, inner, &arcane),
+    }
 }
 
 fn generate_x86_int_reduce_add(ty: &IntVecType) -> String {
@@ -1946,6 +1966,14 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
     }
 
     body.push_str(&integer_methods);
+    // Native funnel shift: `vextq_*` exists for every element type, so this is
+    // the leaf the 256- and 512-bit polyfills delegate to.
+    body.push_str(&super::concat_shift_gen::neon_native(
+        ty.elem,
+        ty.lanes,
+        &ty.neon_repr(),
+        &arcane,
+    ));
     body.push_str("    }\n");
     body
 }
@@ -2396,8 +2424,10 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
                 result
             }}
         {integer_methods}
+            {concat_shift}
         }}
     "#,
+        concat_shift = super::concat_shift_gen::polyfill_delegate(ty.lanes, &repr, "NeonToken", &ty.base_trait_name(), ty.lanes / ty.sub_count()),
         all_true = all_true_items.join(" && "),
         any_true = any_true_items.join(" || "),
         native_trait = {
@@ -2750,8 +2780,9 @@ fn generate_wasm_native_int_impl(ty: &IntVecType) -> String {
             #[inline(always)]
             fn bitmask(self, a: v128) -> u32 {{ {bitmask_fn}(a) as u32 }}
         {integer_methods}
+            {concat_shift}
         }}
-    "#});
+    "#, concat_shift = super::concat_shift_gen::wasm_native(ty.elem, ty.lanes)});
 
     body
 }
@@ -3154,8 +3185,10 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
                 result
             }}
         {integer_methods}
+            {concat_shift}
         }}
     "#,
+        concat_shift = super::concat_shift_gen::polyfill_delegate(ty.lanes, &repr, "Wasm128Token", &ty.base_trait_name(), ty.lanes / ty.sub_count()),
         all_true = all_true_items.join(" && "),
         any_true = any_true_items.join(" || "),
     });

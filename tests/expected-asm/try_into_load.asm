@@ -12,7 +12,7 @@ asm_patterns::x86_impl::__arcane_load_try_into:
 .LBB21_2:
 	push rax
 	.cfi_def_cfa_offset 16
-	lea rcx, [rip + .Lanon.ff48498752e7de0fb7d567d3ea463b08.13]
+	lea rcx, [rip + .Lanon.bbb2f47a6bbb2a68548d5b0cc4d77b31.13]
 	mov esi, 8
 	xor edi, edi
 	call qword ptr [rip + core::slice::index::slice_index_fail@GOTPCREL]

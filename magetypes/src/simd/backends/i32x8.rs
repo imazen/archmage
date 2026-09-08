@@ -181,4 +181,36 @@ pub trait I32x8Backend: SimdToken + Sealed + Copy + 'static {
     ) -> <Self as super::U16x16Backend>::Repr
     where
         Self: super::U16x16Backend;
+
+    // ====== Cross-vector element shift ======
+
+    /// Lanes `N..N+8` of the concatenation `[lo, hi]`.
+    ///
+    /// `N == 0` returns `lo`; `N == 8` would return `hi` and is rejected,
+    /// since a caller that wants `hi` should just use it. This is the
+    /// "funnel shift" — `valignd` on AVX-512, `vperm2f128` + `vpalignr` on
+    /// AVX2, `EXT` on NEON, `i8x16.shuffle` on wasm — and it is what a
+    /// 3-tap horizontal filter needs to derive the `x-1` and `x+1` vectors
+    /// from two loads instead of three, and what a byte-shuffling kernel
+    /// needs to slide a window.
+    ///
+    /// `N` is `i32` because that is the type of the ISA immediates it
+    /// forwards to; a const generic cannot be cast in a const position.
+    ///
+    /// The default body is a lane gather, which LLVM does **not** recover
+    /// into a funnel shift (measured 2026-09-08: 6-7 scalar moves where the
+    /// native form is 1-2 instructions). It is the correctness fallback and
+    /// the differential-test reference; every backend whose ISA has the
+    /// instruction overrides it.
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let n = N as usize;
+        let a = <Self as I32x8Backend>::to_array(self, lo);
+        let b = <Self as I32x8Backend>::to_array(self, hi);
+        <Self as I32x8Backend>::from_array(
+            self,
+            core::array::from_fn(|i| if n + i < 8 { a[n + i] } else { b[n + i - 8] }),
+        )
+    }
 }

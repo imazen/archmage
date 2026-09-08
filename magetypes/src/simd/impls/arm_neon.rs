@@ -278,6 +278,18 @@ impl F32x4Backend for archmage::NeonToken {
         );
         crate::simd_storage::cast(vreinterpretq_u8_u32(pixels))
     }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn concat_shift<const N: i32>(self, lo: float32x4_t, hi: float32x4_t) -> float32x4_t {
+        const { assert!(N >= 0 && N < 4, "concat_shift: N must be in 0..4") };
+        match N {
+            0 => lo,
+            1 => vextq_f32::<1>(lo, hi),
+            2 => vextq_f32::<2>(lo, hi),
+            3 => vextq_f32::<3>(lo, hi),
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[cfg(target_arch = "aarch64")]
@@ -615,6 +627,39 @@ impl F32x8Backend for archmage::NeonToken {
         );
         crate::simd_storage::cast([vreinterpretq_u8_u32(p0), vreinterpretq_u8_u32(p1)])
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(
+        self,
+        lo: [float32x4_t; 2],
+        hi: [float32x4_t; 2],
+    ) -> [float32x4_t; 2] {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 4;
+        core::array::from_fn(|i| match N % 4 {
+            0 => <archmage::NeonToken as F32x4Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::NeonToken as F32x4Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::NeonToken as F32x4Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::NeonToken as F32x4Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(target_arch = "aarch64")]
@@ -843,6 +888,16 @@ impl F64x2Backend for archmage::NeonToken {
             vreinterpretq_u64_f64(a),
             vreinterpretq_u64_f64(b),
         ))
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn concat_shift<const N: i32>(self, lo: float64x2_t, hi: float64x2_t) -> float64x2_t {
+        const { assert!(N >= 0 && N < 2, "concat_shift: N must be in 0..2") };
+        match N {
+            0 => lo,
+            1 => vextq_f64::<1>(lo, hi),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -1147,6 +1202,29 @@ impl F64x4Backend for archmage::NeonToken {
             )),
         ]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(
+        self,
+        lo: [float64x2_t; 2],
+        hi: [float64x2_t; 2],
+    ) -> [float64x2_t; 2] {
+        const { assert!(N >= 0 && N < 4, "concat_shift: N must be in 0..4") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 2;
+        core::array::from_fn(|i| match N % 2 {
+            0 => <archmage::NeonToken as F64x2Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::NeonToken as F64x2Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(target_arch = "aarch64")]
@@ -1337,6 +1415,18 @@ impl I32x4Backend for archmage::NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn narrow_saturating_i32_to_u16(self, a: int32x4_t, b: int32x4_t) -> uint16x8_t {
         vcombine_u16(vqmovun_s32(a), vqmovun_s32(b))
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn concat_shift<const N: i32>(self, lo: int32x4_t, hi: int32x4_t) -> int32x4_t {
+        const { assert!(N >= 0 && N < 4, "concat_shift: N must be in 0..4") };
+        match N {
+            0 => lo,
+            1 => vextq_s32::<1>(lo, hi),
+            2 => vextq_s32::<2>(lo, hi),
+            3 => vextq_s32::<3>(lo, hi),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -1577,6 +1667,35 @@ impl I32x8Backend for archmage::NeonToken {
             vcombine_u16(vqmovun_s32(b[0]), vqmovun_s32(b[1])),
         ]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [int32x4_t; 2], hi: [int32x4_t; 2]) -> [int32x4_t; 2] {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 4;
+        core::array::from_fn(|i| match N % 4 {
+            0 => <archmage::NeonToken as I32x4Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::NeonToken as I32x4Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::NeonToken as I32x4Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::NeonToken as I32x4Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(target_arch = "aarch64")]
@@ -1733,6 +1852,18 @@ impl U32x4Backend for archmage::NeonToken {
         let lane2 = vgetq_lane_u32::<2>(shift);
         let lane3 = vgetq_lane_u32::<3>(shift);
         lane0 | (lane1 << 1) | (lane2 << 2) | (lane3 << 3)
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn concat_shift<const N: i32>(self, lo: uint32x4_t, hi: uint32x4_t) -> uint32x4_t {
+        const { assert!(N >= 0 && N < 4, "concat_shift: N must be in 0..4") };
+        match N {
+            0 => lo,
+            1 => vextq_u32::<1>(lo, hi),
+            2 => vextq_u32::<2>(lo, hi),
+            3 => vextq_u32::<3>(lo, hi),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -1917,6 +2048,39 @@ impl U32x8Backend for archmage::NeonToken {
             bits
         }
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(
+        self,
+        lo: [uint32x4_t; 2],
+        hi: [uint32x4_t; 2],
+    ) -> [uint32x4_t; 2] {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 4;
+        core::array::from_fn(|i| match N % 4 {
+            0 => <archmage::NeonToken as U32x4Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::NeonToken as U32x4Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::NeonToken as U32x4Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::NeonToken as U32x4Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(target_arch = "aarch64")]
@@ -2078,6 +2242,16 @@ impl I64x2Backend for archmage::NeonToken {
     fn bitmask(self, a: int64x2_t) -> u32 {
         let signs = vshrq_n_u64::<63>(vreinterpretq_u64_s64(a));
         ((vgetq_lane_u64::<0>(signs) & 1) | ((vgetq_lane_u64::<1>(signs) & 1) << 1)) as u32
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn concat_shift<const N: i32>(self, lo: int64x2_t, hi: int64x2_t) -> int64x2_t {
+        const { assert!(N >= 0 && N < 2, "concat_shift: N must be in 0..2") };
+        match N {
+            0 => lo,
+            1 => vextq_s64::<1>(lo, hi),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -2295,6 +2469,25 @@ impl I64x4Backend for archmage::NeonToken {
             bits
         }
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [int64x2_t; 2], hi: [int64x2_t; 2]) -> [int64x2_t; 2] {
+        const { assert!(N >= 0 && N < 4, "concat_shift: N must be in 0..4") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 2;
+        core::array::from_fn(|i| match N % 2 {
+            0 => <archmage::NeonToken as I64x2Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::NeonToken as I64x2Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(target_arch = "aarch64")]
@@ -2469,6 +2662,30 @@ impl I8x16Backend for archmage::NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_high_i8_to_i16(self, a: int8x16_t) -> int16x8_t {
         vmovl_high_s8(a)
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn concat_shift<const N: i32>(self, lo: int8x16_t, hi: int8x16_t) -> int8x16_t {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        match N {
+            0 => lo,
+            1 => vextq_s8::<1>(lo, hi),
+            2 => vextq_s8::<2>(lo, hi),
+            3 => vextq_s8::<3>(lo, hi),
+            4 => vextq_s8::<4>(lo, hi),
+            5 => vextq_s8::<5>(lo, hi),
+            6 => vextq_s8::<6>(lo, hi),
+            7 => vextq_s8::<7>(lo, hi),
+            8 => vextq_s8::<8>(lo, hi),
+            9 => vextq_s8::<9>(lo, hi),
+            10 => vextq_s8::<10>(lo, hi),
+            11 => vextq_s8::<11>(lo, hi),
+            12 => vextq_s8::<12>(lo, hi),
+            13 => vextq_s8::<13>(lo, hi),
+            14 => vextq_s8::<14>(lo, hi),
+            15 => vextq_s8::<15>(lo, hi),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -2678,6 +2895,95 @@ impl I8x32Backend for archmage::NeonToken {
     fn widen_high_i8_to_i16(self, a: [int8x16_t; 2]) -> [int16x8_t; 2] {
         [vmovl_s8(vget_low_s8(a[1])), vmovl_high_s8(a[1])]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [int8x16_t; 2], hi: [int8x16_t; 2]) -> [int8x16_t; 2] {
+        const { assert!(N >= 0 && N < 32, "concat_shift: N must be in 0..32") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 16;
+        core::array::from_fn(|i| match N % 16 {
+            0 => <archmage::NeonToken as I8x16Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::NeonToken as I8x16Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::NeonToken as I8x16Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::NeonToken as I8x16Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::NeonToken as I8x16Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::NeonToken as I8x16Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::NeonToken as I8x16Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            7 => <archmage::NeonToken as I8x16Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            8 => <archmage::NeonToken as I8x16Backend>::concat_shift::<8>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            9 => <archmage::NeonToken as I8x16Backend>::concat_shift::<9>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            10 => <archmage::NeonToken as I8x16Backend>::concat_shift::<10>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            11 => <archmage::NeonToken as I8x16Backend>::concat_shift::<11>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            12 => <archmage::NeonToken as I8x16Backend>::concat_shift::<12>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            13 => <archmage::NeonToken as I8x16Backend>::concat_shift::<13>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            14 => <archmage::NeonToken as I8x16Backend>::concat_shift::<14>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::NeonToken as I8x16Backend>::concat_shift::<15>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(target_arch = "aarch64")]
@@ -2859,6 +3165,30 @@ impl U8x16Backend for archmage::NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn pairwise_widen_add(self, a: uint8x16_t) -> uint16x8_t {
         vpaddlq_u8(a)
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn concat_shift<const N: i32>(self, lo: uint8x16_t, hi: uint8x16_t) -> uint8x16_t {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        match N {
+            0 => lo,
+            1 => vextq_u8::<1>(lo, hi),
+            2 => vextq_u8::<2>(lo, hi),
+            3 => vextq_u8::<3>(lo, hi),
+            4 => vextq_u8::<4>(lo, hi),
+            5 => vextq_u8::<5>(lo, hi),
+            6 => vextq_u8::<6>(lo, hi),
+            7 => vextq_u8::<7>(lo, hi),
+            8 => vextq_u8::<8>(lo, hi),
+            9 => vextq_u8::<9>(lo, hi),
+            10 => vextq_u8::<10>(lo, hi),
+            11 => vextq_u8::<11>(lo, hi),
+            12 => vextq_u8::<12>(lo, hi),
+            13 => vextq_u8::<13>(lo, hi),
+            14 => vextq_u8::<14>(lo, hi),
+            15 => vextq_u8::<15>(lo, hi),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -3056,6 +3386,99 @@ impl U8x32Backend for archmage::NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn pairwise_widen_add(self, a: [uint8x16_t; 2]) -> [uint16x8_t; 2] {
         [vpaddlq_u8(a[0]), vpaddlq_u8(a[1])]
+    }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(
+        self,
+        lo: [uint8x16_t; 2],
+        hi: [uint8x16_t; 2],
+    ) -> [uint8x16_t; 2] {
+        const { assert!(N >= 0 && N < 32, "concat_shift: N must be in 0..32") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 16;
+        core::array::from_fn(|i| match N % 16 {
+            0 => <archmage::NeonToken as U8x16Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::NeonToken as U8x16Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::NeonToken as U8x16Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::NeonToken as U8x16Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::NeonToken as U8x16Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::NeonToken as U8x16Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::NeonToken as U8x16Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            7 => <archmage::NeonToken as U8x16Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            8 => <archmage::NeonToken as U8x16Backend>::concat_shift::<8>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            9 => <archmage::NeonToken as U8x16Backend>::concat_shift::<9>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            10 => <archmage::NeonToken as U8x16Backend>::concat_shift::<10>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            11 => <archmage::NeonToken as U8x16Backend>::concat_shift::<11>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            12 => <archmage::NeonToken as U8x16Backend>::concat_shift::<12>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            13 => <archmage::NeonToken as U8x16Backend>::concat_shift::<13>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            14 => <archmage::NeonToken as U8x16Backend>::concat_shift::<14>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::NeonToken as U8x16Backend>::concat_shift::<15>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
     }
 }
 
@@ -3269,6 +3692,22 @@ impl I16x8Backend for archmage::NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn abs_diff(self, a: int16x8_t, b: int16x8_t) -> uint16x8_t {
         vreinterpretq_u16_s16(vabdq_s16(a, b))
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn concat_shift<const N: i32>(self, lo: int16x8_t, hi: int16x8_t) -> int16x8_t {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        match N {
+            0 => lo,
+            1 => vextq_s16::<1>(lo, hi),
+            2 => vextq_s16::<2>(lo, hi),
+            3 => vextq_s16::<3>(lo, hi),
+            4 => vextq_s16::<4>(lo, hi),
+            5 => vextq_s16::<5>(lo, hi),
+            6 => vextq_s16::<6>(lo, hi),
+            7 => vextq_s16::<7>(lo, hi),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -3555,6 +3994,55 @@ impl I16x16Backend for archmage::NeonToken {
             vreinterpretq_u16_s16(vabdq_s16(a[1], b[1])),
         ]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [int16x8_t; 2], hi: [int16x8_t; 2]) -> [int16x8_t; 2] {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 8;
+        core::array::from_fn(|i| match N % 8 {
+            0 => <archmage::NeonToken as I16x8Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::NeonToken as I16x8Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::NeonToken as I16x8Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::NeonToken as I16x8Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::NeonToken as I16x8Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::NeonToken as I16x8Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::NeonToken as I16x8Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::NeonToken as I16x8Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(target_arch = "aarch64")]
@@ -3725,6 +4213,22 @@ impl U16x8Backend for archmage::NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn pairwise_widen_add(self, a: uint16x8_t) -> uint32x4_t {
         vpaddlq_u16(a)
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn concat_shift<const N: i32>(self, lo: uint16x8_t, hi: uint16x8_t) -> uint16x8_t {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        match N {
+            0 => lo,
+            1 => vextq_u16::<1>(lo, hi),
+            2 => vextq_u16::<2>(lo, hi),
+            3 => vextq_u16::<3>(lo, hi),
+            4 => vextq_u16::<4>(lo, hi),
+            5 => vextq_u16::<5>(lo, hi),
+            6 => vextq_u16::<6>(lo, hi),
+            7 => vextq_u16::<7>(lo, hi),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -3928,6 +4432,59 @@ impl U16x16Backend for archmage::NeonToken {
     fn pairwise_widen_add(self, a: [uint16x8_t; 2]) -> [uint32x4_t; 2] {
         [vpaddlq_u16(a[0]), vpaddlq_u16(a[1])]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(
+        self,
+        lo: [uint16x8_t; 2],
+        hi: [uint16x8_t; 2],
+    ) -> [uint16x8_t; 2] {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 8;
+        core::array::from_fn(|i| match N % 8 {
+            0 => <archmage::NeonToken as U16x8Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::NeonToken as U16x8Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::NeonToken as U16x8Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::NeonToken as U16x8Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::NeonToken as U16x8Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::NeonToken as U16x8Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::NeonToken as U16x8Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::NeonToken as U16x8Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(target_arch = "aarch64")]
@@ -4057,6 +4614,16 @@ impl U64x2Backend for archmage::NeonToken {
         let lane0 = vgetq_lane_u64::<0>(shift) as u32;
         let lane1 = vgetq_lane_u64::<1>(shift) as u32;
         lane0 | (lane1 << 1)
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn concat_shift<const N: i32>(self, lo: uint64x2_t, hi: uint64x2_t) -> uint64x2_t {
+        const { assert!(N >= 0 && N < 2, "concat_shift: N must be in 0..2") };
+        match N {
+            0 => lo,
+            1 => vextq_u64::<1>(lo, hi),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -4230,6 +4797,29 @@ impl U64x4Backend for archmage::NeonToken {
             result |= <archmage::NeonToken as U64x2Backend>::bitmask(_self, v) << (i * 2);
         }
         result
+    }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(
+        self,
+        lo: [uint64x2_t; 2],
+        hi: [uint64x2_t; 2],
+    ) -> [uint64x2_t; 2] {
+        const { assert!(N >= 0 && N < 4, "concat_shift: N must be in 0..4") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 2;
+        core::array::from_fn(|i| match N % 2 {
+            0 => <archmage::NeonToken as U64x2Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::NeonToken as U64x2Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
     }
 }
 
@@ -4741,6 +5331,39 @@ impl F32x16Backend for archmage::NeonToken {
     fn bitxor(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
         core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::bitxor(self, a[i], b[i]))
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(
+        self,
+        lo: [float32x4_t; 4],
+        hi: [float32x4_t; 4],
+    ) -> [float32x4_t; 4] {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        let s = [lo[0], lo[1], lo[2], lo[3], hi[0], hi[1], hi[2], hi[3]];
+        let k = (N as usize) / 4;
+        core::array::from_fn(|i| match N % 4 {
+            0 => <archmage::NeonToken as F32x4Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::NeonToken as F32x4Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::NeonToken as F32x4Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::NeonToken as F32x4Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -5019,6 +5642,29 @@ impl F64x8Backend for archmage::NeonToken {
     fn bitxor(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
         core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::bitxor(self, a[i], b[i]))
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(
+        self,
+        lo: [float64x2_t; 4],
+        hi: [float64x2_t; 4],
+    ) -> [float64x2_t; 4] {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let s = [lo[0], lo[1], lo[2], lo[3], hi[0], hi[1], hi[2], hi[3]];
+        let k = (N as usize) / 2;
+        core::array::from_fn(|i| match N % 2 {
+            0 => <archmage::NeonToken as F64x2Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::NeonToken as F64x2Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -5274,6 +5920,95 @@ impl I8x64Backend for archmage::NeonToken {
             vmovl_s8(vget_low_s8(a[3])),
             vmovl_high_s8(a[3]),
         ]
+    }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [int8x16_t; 4], hi: [int8x16_t; 4]) -> [int8x16_t; 4] {
+        const { assert!(N >= 0 && N < 64, "concat_shift: N must be in 0..64") };
+        let s = [lo[0], lo[1], lo[2], lo[3], hi[0], hi[1], hi[2], hi[3]];
+        let k = (N as usize) / 16;
+        core::array::from_fn(|i| match N % 16 {
+            0 => <archmage::NeonToken as I8x16Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::NeonToken as I8x16Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::NeonToken as I8x16Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::NeonToken as I8x16Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::NeonToken as I8x16Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::NeonToken as I8x16Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::NeonToken as I8x16Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            7 => <archmage::NeonToken as I8x16Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            8 => <archmage::NeonToken as I8x16Backend>::concat_shift::<8>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            9 => <archmage::NeonToken as I8x16Backend>::concat_shift::<9>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            10 => <archmage::NeonToken as I8x16Backend>::concat_shift::<10>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            11 => <archmage::NeonToken as I8x16Backend>::concat_shift::<11>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            12 => <archmage::NeonToken as I8x16Backend>::concat_shift::<12>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            13 => <archmage::NeonToken as I8x16Backend>::concat_shift::<13>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            14 => <archmage::NeonToken as I8x16Backend>::concat_shift::<14>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::NeonToken as I8x16Backend>::concat_shift::<15>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
     }
 }
 
@@ -5562,6 +6297,99 @@ impl U8x64Backend for archmage::NeonToken {
             vpaddlq_u8(a[2]),
             vpaddlq_u8(a[3]),
         ]
+    }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(
+        self,
+        lo: [uint8x16_t; 4],
+        hi: [uint8x16_t; 4],
+    ) -> [uint8x16_t; 4] {
+        const { assert!(N >= 0 && N < 64, "concat_shift: N must be in 0..64") };
+        let s = [lo[0], lo[1], lo[2], lo[3], hi[0], hi[1], hi[2], hi[3]];
+        let k = (N as usize) / 16;
+        core::array::from_fn(|i| match N % 16 {
+            0 => <archmage::NeonToken as U8x16Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::NeonToken as U8x16Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::NeonToken as U8x16Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::NeonToken as U8x16Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::NeonToken as U8x16Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::NeonToken as U8x16Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::NeonToken as U8x16Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            7 => <archmage::NeonToken as U8x16Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            8 => <archmage::NeonToken as U8x16Backend>::concat_shift::<8>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            9 => <archmage::NeonToken as U8x16Backend>::concat_shift::<9>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            10 => <archmage::NeonToken as U8x16Backend>::concat_shift::<10>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            11 => <archmage::NeonToken as U8x16Backend>::concat_shift::<11>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            12 => <archmage::NeonToken as U8x16Backend>::concat_shift::<12>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            13 => <archmage::NeonToken as U8x16Backend>::concat_shift::<13>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            14 => <archmage::NeonToken as U8x16Backend>::concat_shift::<14>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::NeonToken as U8x16Backend>::concat_shift::<15>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
     }
 }
 
@@ -5897,6 +6725,55 @@ impl I16x32Backend for archmage::NeonToken {
             vreinterpretq_u16_s16(vabdq_s16(a[3], b[3])),
         ]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [int16x8_t; 4], hi: [int16x8_t; 4]) -> [int16x8_t; 4] {
+        const { assert!(N >= 0 && N < 32, "concat_shift: N must be in 0..32") };
+        let s = [lo[0], lo[1], lo[2], lo[3], hi[0], hi[1], hi[2], hi[3]];
+        let k = (N as usize) / 8;
+        core::array::from_fn(|i| match N % 8 {
+            0 => <archmage::NeonToken as I16x8Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::NeonToken as I16x8Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::NeonToken as I16x8Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::NeonToken as I16x8Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::NeonToken as I16x8Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::NeonToken as I16x8Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::NeonToken as I16x8Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::NeonToken as I16x8Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -6185,6 +7062,59 @@ impl U16x32Backend for archmage::NeonToken {
             vpaddlq_u16(a[3]),
         ]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(
+        self,
+        lo: [uint16x8_t; 4],
+        hi: [uint16x8_t; 4],
+    ) -> [uint16x8_t; 4] {
+        const { assert!(N >= 0 && N < 32, "concat_shift: N must be in 0..32") };
+        let s = [lo[0], lo[1], lo[2], lo[3], hi[0], hi[1], hi[2], hi[3]];
+        let k = (N as usize) / 8;
+        core::array::from_fn(|i| match N % 8 {
+            0 => <archmage::NeonToken as U16x8Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::NeonToken as U16x8Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::NeonToken as U16x8Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::NeonToken as U16x8Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::NeonToken as U16x8Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::NeonToken as U16x8Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::NeonToken as U16x8Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::NeonToken as U16x8Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -6453,6 +7383,35 @@ impl I32x16Backend for archmage::NeonToken {
             vcombine_u16(vqmovun_s32(b[2]), vqmovun_s32(b[3])),
         ]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [int32x4_t; 4], hi: [int32x4_t; 4]) -> [int32x4_t; 4] {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        let s = [lo[0], lo[1], lo[2], lo[3], hi[0], hi[1], hi[2], hi[3]];
+        let k = (N as usize) / 4;
+        core::array::from_fn(|i| match N % 4 {
+            0 => <archmage::NeonToken as I32x4Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::NeonToken as I32x4Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::NeonToken as I32x4Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::NeonToken as I32x4Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -6698,6 +7657,39 @@ impl U32x16Backend for archmage::NeonToken {
     fn bitxor(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
         core::array::from_fn(|i| <archmage::NeonToken as U32x4Backend>::bitxor(self, a[i], b[i]))
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(
+        self,
+        lo: [uint32x4_t; 4],
+        hi: [uint32x4_t; 4],
+    ) -> [uint32x4_t; 4] {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        let s = [lo[0], lo[1], lo[2], lo[3], hi[0], hi[1], hi[2], hi[3]];
+        let k = (N as usize) / 4;
+        core::array::from_fn(|i| match N % 4 {
+            0 => <archmage::NeonToken as U32x4Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::NeonToken as U32x4Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::NeonToken as U32x4Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::NeonToken as U32x4Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -6921,6 +7913,25 @@ impl I64x8Backend for archmage::NeonToken {
     fn bitxor(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
         core::array::from_fn(|i| <archmage::NeonToken as I64x2Backend>::bitxor(self, a[i], b[i]))
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [int64x2_t; 4], hi: [int64x2_t; 4]) -> [int64x2_t; 4] {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let s = [lo[0], lo[1], lo[2], lo[3], hi[0], hi[1], hi[2], hi[3]];
+        let k = (N as usize) / 2;
+        core::array::from_fn(|i| match N % 2 {
+            0 => <archmage::NeonToken as I64x2Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::NeonToken as I64x2Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -7139,5 +8150,28 @@ impl U64x8Backend for archmage::NeonToken {
     #[inline(always)]
     fn bitxor(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
         core::array::from_fn(|i| <archmage::NeonToken as U64x2Backend>::bitxor(self, a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(
+        self,
+        lo: [uint64x2_t; 4],
+        hi: [uint64x2_t; 4],
+    ) -> [uint64x2_t; 4] {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let s = [lo[0], lo[1], lo[2], lo[3], hi[0], hi[1], hi[2], hi[3]];
+        let k = (N as usize) / 2;
+        core::array::from_fn(|i| match N % 2 {
+            0 => <archmage::NeonToken as U64x2Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::NeonToken as U64x2Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
     }
 }

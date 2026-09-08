@@ -179,6 +179,29 @@ mod x86_impl {
         <archmage::X64V4xToken as F32x16Backend>::concat_shift::<1>(t, lo, hi)
     }
 
+    /// SSSE3 u8x16: a byte-granular shift, where the immediate IS the lane
+    /// count. The integer types are the ones that most often get hand-rolled
+    /// per-arch, so they are worth a gate of their own.
+    #[unsafe(no_mangle)]
+    #[arcane(import_intrinsics)]
+    fn concat_shift_u8x16_v3(t: archmage::X64V3Token, lo: __m128i, hi: __m128i) -> __m128i {
+        use magetypes::simd::backends::U8x16Backend;
+        <archmage::X64V3Token as U8x16Backend>::concat_shift::<3>(t, lo, hi)
+    }
+
+    /// AVX-512 i16x32 at a shift that crosses a 128-bit lane. This is the one
+    /// case with no single full-width instruction — `vpalignr` is per-lane at
+    /// every width — so it is built from two `valignd` windows plus a per-lane
+    /// `vpalignr`. If that decomposition ever regresses to the gather, this is
+    /// what notices.
+    #[cfg(feature = "avx512")]
+    #[unsafe(no_mangle)]
+    #[arcane(import_intrinsics)]
+    fn concat_shift_i16x32_v4x(t: archmage::X64V4xToken, lo: __m512i, hi: __m512i) -> __m512i {
+        use magetypes::simd::backends::I16x32Backend;
+        <archmage::X64V4xToken as I16x32Backend>::concat_shift::<9>(t, lo, hi)
+    }
+
     criterion_group!(benches, bench_load_patterns);
     criterion_main!(benches);
 

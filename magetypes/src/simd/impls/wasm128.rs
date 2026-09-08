@@ -192,6 +192,22 @@ impl F32x4Backend for archmage::Wasm128Token {
     fn bitxor(self, a: v128, b: v128) -> v128 {
         v128_xor(a, b)
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: v128, hi: v128) -> v128 {
+        const { assert!(N >= 0 && N < 4, "concat_shift: N must be in 0..4") };
+        match N {
+            0 => lo,
+            1 => i8x16_shuffle::<4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19>(lo, hi),
+            2 => i8x16_shuffle::<8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23>(
+                lo, hi,
+            ),
+            3 => i8x16_shuffle::<12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27>(
+                lo, hi,
+            ),
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -398,6 +414,35 @@ impl F32x8Backend for archmage::Wasm128Token {
     fn bitxor(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
         [v128_xor(a[0], b[0]), v128_xor(a[1], b[1])]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [v128; 2], hi: [v128; 2]) -> [v128; 2] {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 4;
+        core::array::from_fn(|i| match N % 4 {
+            0 => <archmage::Wasm128Token as F32x4Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::Wasm128Token as F32x4Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::Wasm128Token as F32x4Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::Wasm128Token as F32x4Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -565,6 +610,18 @@ impl F64x2Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn bitxor(self, a: v128, b: v128) -> v128 {
         v128_xor(a, b)
+    }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: v128, hi: v128) -> v128 {
+        const { assert!(N >= 0 && N < 2, "concat_shift: N must be in 0..2") };
+        match N {
+            0 => lo,
+            1 => i8x16_shuffle::<8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23>(
+                lo, hi,
+            ),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -769,6 +826,25 @@ impl F64x4Backend for archmage::Wasm128Token {
     fn bitxor(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
         [v128_xor(a[0], b[0]), v128_xor(a[1], b[1])]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [v128; 2], hi: [v128; 2]) -> [v128; 2] {
+        const { assert!(N >= 0 && N < 4, "concat_shift: N must be in 0..4") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 2;
+        core::array::from_fn(|i| match N % 2 {
+            0 => <archmage::Wasm128Token as F64x2Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::Wasm128Token as F64x2Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -940,6 +1016,22 @@ impl I32x4Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn narrow_saturating_i32_to_u16(self, a: v128, b: v128) -> v128 {
         u16x8_narrow_i32x4(a, b)
+    }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: v128, hi: v128) -> v128 {
+        const { assert!(N >= 0 && N < 4, "concat_shift: N must be in 0..4") };
+        match N {
+            0 => lo,
+            1 => i8x16_shuffle::<4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19>(lo, hi),
+            2 => i8x16_shuffle::<8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23>(
+                lo, hi,
+            ),
+            3 => i8x16_shuffle::<12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27>(
+                lo, hi,
+            ),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -1148,6 +1240,35 @@ impl I32x8Backend for archmage::Wasm128Token {
             u16x8_narrow_i32x4(b[0], b[1]),
         ]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [v128; 2], hi: [v128; 2]) -> [v128; 2] {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 4;
+        core::array::from_fn(|i| match N % 4 {
+            0 => <archmage::Wasm128Token as I32x4Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::Wasm128Token as I32x4Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::Wasm128Token as I32x4Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::Wasm128Token as I32x4Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -1294,6 +1415,22 @@ impl U32x4Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn bitmask(self, a: v128) -> u32 {
         i32x4_bitmask(a) as u32
+    }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: v128, hi: v128) -> v128 {
+        const { assert!(N >= 0 && N < 4, "concat_shift: N must be in 0..4") };
+        match N {
+            0 => lo,
+            1 => i8x16_shuffle::<4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19>(lo, hi),
+            2 => i8x16_shuffle::<8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23>(
+                lo, hi,
+            ),
+            3 => i8x16_shuffle::<12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27>(
+                lo, hi,
+            ),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -1473,6 +1610,35 @@ impl U32x8Backend for archmage::Wasm128Token {
     fn bitmask(self, a: [v128; 2]) -> u32 {
         ((i32x4_bitmask(a[0]) as u32) << 0) | ((i32x4_bitmask(a[1]) as u32) << 4)
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [v128; 2], hi: [v128; 2]) -> [v128; 2] {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 4;
+        core::array::from_fn(|i| match N % 4 {
+            0 => <archmage::Wasm128Token as U32x4Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::Wasm128Token as U32x4Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::Wasm128Token as U32x4Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::Wasm128Token as U32x4Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -1614,6 +1780,18 @@ impl I64x2Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn bitmask(self, a: v128) -> u32 {
         i64x2_bitmask(a) as u32
+    }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: v128, hi: v128) -> v128 {
+        const { assert!(N >= 0 && N < 2, "concat_shift: N must be in 0..2") };
+        match N {
+            0 => lo,
+            1 => i8x16_shuffle::<8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23>(
+                lo, hi,
+            ),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -1804,6 +1982,25 @@ impl I64x4Backend for archmage::Wasm128Token {
     fn bitmask(self, a: [v128; 2]) -> u32 {
         ((i64x2_bitmask(a[0]) as u32) << 0) | ((i64x2_bitmask(a[1]) as u32) << 2)
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [v128; 2], hi: [v128; 2]) -> [v128; 2] {
+        const { assert!(N >= 0 && N < 4, "concat_shift: N must be in 0..4") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 2;
+        core::array::from_fn(|i| match N % 2 {
+            0 => <archmage::Wasm128Token as I64x2Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::Wasm128Token as I64x2Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -1963,6 +2160,50 @@ impl I8x16Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn widen_high_i8_to_i16(self, a: v128) -> v128 {
         i16x8_extend_high_i8x16(a)
+    }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: v128, hi: v128) -> v128 {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        match N {
+            0 => lo,
+            1 => i8x16_shuffle::<1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(lo, hi),
+            2 => i8x16_shuffle::<2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17>(lo, hi),
+            3 => i8x16_shuffle::<3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18>(lo, hi),
+            4 => i8x16_shuffle::<4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19>(lo, hi),
+            5 => i8x16_shuffle::<5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20>(lo, hi),
+            6 => {
+                i8x16_shuffle::<6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21>(lo, hi)
+            }
+            7 => {
+                i8x16_shuffle::<7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22>(lo, hi)
+            }
+            8 => i8x16_shuffle::<8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23>(
+                lo, hi,
+            ),
+            9 => i8x16_shuffle::<9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24>(
+                lo, hi,
+            ),
+            10 => i8x16_shuffle::<10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25>(
+                lo, hi,
+            ),
+            11 => i8x16_shuffle::<11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26>(
+                lo, hi,
+            ),
+            12 => i8x16_shuffle::<12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27>(
+                lo, hi,
+            ),
+            13 => i8x16_shuffle::<13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28>(
+                lo, hi,
+            ),
+            14 => i8x16_shuffle::<14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29>(
+                lo, hi,
+            ),
+            15 => i8x16_shuffle::<15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30>(
+                lo, hi,
+            ),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -2140,6 +2381,95 @@ impl I8x32Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn widen_high_i8_to_i16(self, a: [v128; 2]) -> [v128; 2] {
         [i16x8_extend_low_i8x16(a[1]), i16x8_extend_high_i8x16(a[1])]
+    }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [v128; 2], hi: [v128; 2]) -> [v128; 2] {
+        const { assert!(N >= 0 && N < 32, "concat_shift: N must be in 0..32") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 16;
+        core::array::from_fn(|i| match N % 16 {
+            0 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            7 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            8 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<8>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            9 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<9>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            10 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<10>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            11 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<11>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            12 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<12>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            13 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<13>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            14 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<14>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<15>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
     }
 }
 
@@ -2323,6 +2653,50 @@ impl U8x16Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn pairwise_widen_add(self, a: v128) -> v128 {
         u16x8_extadd_pairwise_u8x16(a)
+    }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: v128, hi: v128) -> v128 {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        match N {
+            0 => lo,
+            1 => i8x16_shuffle::<1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(lo, hi),
+            2 => i8x16_shuffle::<2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17>(lo, hi),
+            3 => i8x16_shuffle::<3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18>(lo, hi),
+            4 => i8x16_shuffle::<4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19>(lo, hi),
+            5 => i8x16_shuffle::<5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20>(lo, hi),
+            6 => {
+                i8x16_shuffle::<6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21>(lo, hi)
+            }
+            7 => {
+                i8x16_shuffle::<7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22>(lo, hi)
+            }
+            8 => i8x16_shuffle::<8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23>(
+                lo, hi,
+            ),
+            9 => i8x16_shuffle::<9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24>(
+                lo, hi,
+            ),
+            10 => i8x16_shuffle::<10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25>(
+                lo, hi,
+            ),
+            11 => i8x16_shuffle::<11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26>(
+                lo, hi,
+            ),
+            12 => i8x16_shuffle::<12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27>(
+                lo, hi,
+            ),
+            13 => i8x16_shuffle::<13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28>(
+                lo, hi,
+            ),
+            14 => i8x16_shuffle::<14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29>(
+                lo, hi,
+            ),
+            15 => i8x16_shuffle::<15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30>(
+                lo, hi,
+            ),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -2545,6 +2919,95 @@ impl U8x32Backend for archmage::Wasm128Token {
             u16x8_extadd_pairwise_u8x16(a[1]),
         ]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [v128; 2], hi: [v128; 2]) -> [v128; 2] {
+        const { assert!(N >= 0 && N < 32, "concat_shift: N must be in 0..32") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 16;
+        core::array::from_fn(|i| match N % 16 {
+            0 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            7 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            8 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<8>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            9 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<9>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            10 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<10>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            11 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<11>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            12 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<12>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            13 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<13>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            14 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<14>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<15>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -2744,6 +3207,32 @@ impl I16x8Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn abs_diff(self, a: v128, b: v128) -> v128 {
         i16x8_sub(i16x8_max(a, b), i16x8_min(a, b))
+    }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: v128, hi: v128) -> v128 {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        match N {
+            0 => lo,
+            1 => i8x16_shuffle::<2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17>(lo, hi),
+            2 => i8x16_shuffle::<4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19>(lo, hi),
+            3 => {
+                i8x16_shuffle::<6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21>(lo, hi)
+            }
+            4 => i8x16_shuffle::<8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23>(
+                lo, hi,
+            ),
+            5 => i8x16_shuffle::<10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25>(
+                lo, hi,
+            ),
+            6 => i8x16_shuffle::<12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27>(
+                lo, hi,
+            ),
+            7 => i8x16_shuffle::<14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29>(
+                lo, hi,
+            ),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -2978,6 +3467,55 @@ impl I16x16Backend for archmage::Wasm128Token {
             i16x8_sub(i16x8_max(a[1], b[1]), i16x8_min(a[1], b[1])),
         ]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [v128; 2], hi: [v128; 2]) -> [v128; 2] {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 8;
+        core::array::from_fn(|i| match N % 8 {
+            0 => <archmage::Wasm128Token as I16x8Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::Wasm128Token as I16x8Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::Wasm128Token as I16x8Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::Wasm128Token as I16x8Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::Wasm128Token as I16x8Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::Wasm128Token as I16x8Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::Wasm128Token as I16x8Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::Wasm128Token as I16x8Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -3146,6 +3684,32 @@ impl U16x8Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn pairwise_widen_add(self, a: v128) -> v128 {
         u32x4_extadd_pairwise_u16x8(a)
+    }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: v128, hi: v128) -> v128 {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        match N {
+            0 => lo,
+            1 => i8x16_shuffle::<2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17>(lo, hi),
+            2 => i8x16_shuffle::<4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19>(lo, hi),
+            3 => {
+                i8x16_shuffle::<6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21>(lo, hi)
+            }
+            4 => i8x16_shuffle::<8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23>(
+                lo, hi,
+            ),
+            5 => i8x16_shuffle::<10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25>(
+                lo, hi,
+            ),
+            6 => i8x16_shuffle::<12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27>(
+                lo, hi,
+            ),
+            7 => i8x16_shuffle::<14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29>(
+                lo, hi,
+            ),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -3342,6 +3906,55 @@ impl U16x16Backend for archmage::Wasm128Token {
             u32x4_extadd_pairwise_u16x8(a[1]),
         ]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [v128; 2], hi: [v128; 2]) -> [v128; 2] {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 8;
+        core::array::from_fn(|i| match N % 8 {
+            0 => <archmage::Wasm128Token as U16x8Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::Wasm128Token as U16x8Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::Wasm128Token as U16x8Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::Wasm128Token as U16x8Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::Wasm128Token as U16x8Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::Wasm128Token as U16x8Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::Wasm128Token as U16x8Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::Wasm128Token as U16x8Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -3477,6 +4090,18 @@ impl U64x2Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn bitmask(self, a: v128) -> u32 {
         i64x2_bitmask(a) as u32
+    }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: v128, hi: v128) -> v128 {
+        const { assert!(N >= 0 && N < 2, "concat_shift: N must be in 0..2") };
+        match N {
+            0 => lo,
+            1 => i8x16_shuffle::<8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23>(
+                lo, hi,
+            ),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -3641,6 +4266,25 @@ impl U64x4Backend for archmage::Wasm128Token {
             result |= (i64x2_bitmask(v) as u32) << (i * 2);
         }
         result
+    }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [v128; 2], hi: [v128; 2]) -> [v128; 2] {
+        const { assert!(N >= 0 && N < 4, "concat_shift: N must be in 0..4") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 2;
+        core::array::from_fn(|i| match N % 2 {
+            0 => <archmage::Wasm128Token as U64x2Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::Wasm128Token as U64x2Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
     }
 }
 
@@ -4142,6 +4786,35 @@ impl F32x16Backend for archmage::Wasm128Token {
     fn bitxor(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as F32x4Backend>::bitxor(self, a[i], b[i]))
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [v128; 4], hi: [v128; 4]) -> [v128; 4] {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        let s = [lo[0], lo[1], lo[2], lo[3], hi[0], hi[1], hi[2], hi[3]];
+        let k = (N as usize) / 4;
+        core::array::from_fn(|i| match N % 4 {
+            0 => <archmage::Wasm128Token as F32x4Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::Wasm128Token as F32x4Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::Wasm128Token as F32x4Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::Wasm128Token as F32x4Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -4417,6 +5090,25 @@ impl F64x8Backend for archmage::Wasm128Token {
     fn bitxor(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as F64x2Backend>::bitxor(self, a[i], b[i]))
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [v128; 4], hi: [v128; 4]) -> [v128; 4] {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let s = [lo[0], lo[1], lo[2], lo[3], hi[0], hi[1], hi[2], hi[3]];
+        let k = (N as usize) / 2;
+        core::array::from_fn(|i| match N % 2 {
+            0 => <archmage::Wasm128Token as F64x2Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::Wasm128Token as F64x2Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -4681,6 +5373,95 @@ impl I8x64Backend for archmage::Wasm128Token {
             i16x8_extend_low_i8x16(a[3]),
             i16x8_extend_high_i8x16(a[3]),
         ]
+    }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [v128; 4], hi: [v128; 4]) -> [v128; 4] {
+        const { assert!(N >= 0 && N < 64, "concat_shift: N must be in 0..64") };
+        let s = [lo[0], lo[1], lo[2], lo[3], hi[0], hi[1], hi[2], hi[3]];
+        let k = (N as usize) / 16;
+        core::array::from_fn(|i| match N % 16 {
+            0 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            7 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            8 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<8>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            9 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<9>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            10 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<10>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            11 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<11>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            12 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<12>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            13 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<13>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            14 => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<14>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::Wasm128Token as I8x16Backend>::concat_shift::<15>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
     }
 }
 
@@ -5033,6 +5814,95 @@ impl U8x64Backend for archmage::Wasm128Token {
             u16x8_extadd_pairwise_u8x16(a[3]),
         ]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [v128; 4], hi: [v128; 4]) -> [v128; 4] {
+        const { assert!(N >= 0 && N < 64, "concat_shift: N must be in 0..64") };
+        let s = [lo[0], lo[1], lo[2], lo[3], hi[0], hi[1], hi[2], hi[3]];
+        let k = (N as usize) / 16;
+        core::array::from_fn(|i| match N % 16 {
+            0 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            7 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            8 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<8>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            9 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<9>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            10 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<10>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            11 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<11>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            12 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<12>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            13 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<13>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            14 => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<14>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::Wasm128Token as U8x16Backend>::concat_shift::<15>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -5364,6 +6234,55 @@ impl I16x32Backend for archmage::Wasm128Token {
             i16x8_sub(i16x8_max(a[3], b[3]), i16x8_min(a[3], b[3])),
         ]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [v128; 4], hi: [v128; 4]) -> [v128; 4] {
+        const { assert!(N >= 0 && N < 32, "concat_shift: N must be in 0..32") };
+        let s = [lo[0], lo[1], lo[2], lo[3], hi[0], hi[1], hi[2], hi[3]];
+        let k = (N as usize) / 8;
+        core::array::from_fn(|i| match N % 8 {
+            0 => <archmage::Wasm128Token as I16x8Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::Wasm128Token as I16x8Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::Wasm128Token as I16x8Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::Wasm128Token as I16x8Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::Wasm128Token as I16x8Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::Wasm128Token as I16x8Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::Wasm128Token as I16x8Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::Wasm128Token as I16x8Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -5661,6 +6580,55 @@ impl U16x32Backend for archmage::Wasm128Token {
             u32x4_extadd_pairwise_u16x8(a[3]),
         ]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [v128; 4], hi: [v128; 4]) -> [v128; 4] {
+        const { assert!(N >= 0 && N < 32, "concat_shift: N must be in 0..32") };
+        let s = [lo[0], lo[1], lo[2], lo[3], hi[0], hi[1], hi[2], hi[3]];
+        let k = (N as usize) / 8;
+        core::array::from_fn(|i| match N % 8 {
+            0 => <archmage::Wasm128Token as U16x8Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::Wasm128Token as U16x8Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::Wasm128Token as U16x8Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::Wasm128Token as U16x8Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::Wasm128Token as U16x8Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::Wasm128Token as U16x8Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::Wasm128Token as U16x8Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::Wasm128Token as U16x8Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -5938,6 +6906,35 @@ impl I32x16Backend for archmage::Wasm128Token {
             u16x8_narrow_i32x4(b[2], b[3]),
         ]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [v128; 4], hi: [v128; 4]) -> [v128; 4] {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        let s = [lo[0], lo[1], lo[2], lo[3], hi[0], hi[1], hi[2], hi[3]];
+        let k = (N as usize) / 4;
+        core::array::from_fn(|i| match N % 4 {
+            0 => <archmage::Wasm128Token as I32x4Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::Wasm128Token as I32x4Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::Wasm128Token as I32x4Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::Wasm128Token as I32x4Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -6192,6 +7189,35 @@ impl U32x16Backend for archmage::Wasm128Token {
     fn bitxor(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as U32x4Backend>::bitxor(self, a[i], b[i]))
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [v128; 4], hi: [v128; 4]) -> [v128; 4] {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        let s = [lo[0], lo[1], lo[2], lo[3], hi[0], hi[1], hi[2], hi[3]];
+        let k = (N as usize) / 4;
+        core::array::from_fn(|i| match N % 4 {
+            0 => <archmage::Wasm128Token as U32x4Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::Wasm128Token as U32x4Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::Wasm128Token as U32x4Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::Wasm128Token as U32x4Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -6424,6 +7450,25 @@ impl I64x8Backend for archmage::Wasm128Token {
     fn bitxor(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as I64x2Backend>::bitxor(self, a[i], b[i]))
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [v128; 4], hi: [v128; 4]) -> [v128; 4] {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let s = [lo[0], lo[1], lo[2], lo[3], hi[0], hi[1], hi[2], hi[3]];
+        let k = (N as usize) / 2;
+        core::array::from_fn(|i| match N % 2 {
+            0 => <archmage::Wasm128Token as I64x2Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::Wasm128Token as I64x2Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -6651,5 +7696,24 @@ impl U64x8Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn bitxor(self, a: [v128; 4], b: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| <archmage::Wasm128Token as U64x2Backend>::bitxor(self, a[i], b[i]))
+    }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [v128; 4], hi: [v128; 4]) -> [v128; 4] {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let s = [lo[0], lo[1], lo[2], lo[3], hi[0], hi[1], hi[2], hi[3]];
+        let k = (N as usize) / 2;
+        core::array::from_fn(|i| match N % 2 {
+            0 => <archmage::Wasm128Token as U64x2Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::Wasm128Token as U64x2Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
     }
 }
