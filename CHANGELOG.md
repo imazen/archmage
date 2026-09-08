@@ -1,19 +1,6 @@
 # Changelog
 
-## Unreleased
-
-- Make arcane's concrete-token check a shared tier-constant lookup by default,
-  and pin archmage-macros exactly to the matching 0.9.29 release.
-  This internal protocol requires matching token and macro crates; the new pin
-  cannot retroactively constrain older published archmage dependency ranges.
-
 ## [Unreleased]
-
-- Add `pairwise_widen_add()` for unsigned byte and halfword vectors at 128/256/512 bits. Each output is the exact widened sum of adjacent inputs. Methods live on the existing source backend traits; no new capability traits are introduced. NEON accumulation can fuse to `UADALP`.
-
-- Consolidate 27 unpublished integer capability traits into the existing source backend traits. Cross-type operations require only their destination backend; byte sums no longer require an `AbsDiff` trait. Existing published conversion traits remain supported.
-
-- Prune unpublished `msub_adjacent` (use `accumulator - a.madd_adjacent(b)`) and W512 i16/u16 reference bitcasts; retain the W512 value casts. Byte reductions document the cost of reducing inside accumulation loops.
 
 ### QUEUED BREAKING CHANGES
 
@@ -26,6 +13,28 @@
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 - Remove the six no-op `*_midp_precise` aliases (`exp2`/`exp`/`ln`/`log2`/`log10`/`pow` — each is literally `self.*_midp()`); `cbrt_midp_precise` stays, it does real denormal/zero handling. With the reciprocal tiers settling on `_portable` as the precise tier, a `_precise` suffix that does nothing is a naming lie.
 - Make `w512` non-default in magetypes — users who need 512-bit types add `features = ["w512"]`; saves ~25% build time for the majority who don't
+
+## [0.9.29] - 2026-09-07
+
+- Reduce procedural-macro allocation work using shared tier checks, borrowed
+  static feature lists, generated feature strings, and reused per-tier preparation.
+  Expansion snapshots and 3,155 ISA codegen probes remain unchanged; consumer
+  compile-time measurements and limitations are in `docs/PERFORMANCE.md`.
+- Derive covered callee tokens with `from_context()` when dispatching inside a
+  tokenless `#[rite]` context, with compiler checks for feature coverage.
+- Rewrite and consolidate the documentation around complete production SIMD
+  call chains and generic kernels; crosslink the official docs and all three crates.
+
+- Make arcane's concrete-token check a shared tier-constant lookup by default,
+  and pin archmage-macros exactly to the matching 0.9.29 release.
+  This internal protocol requires matching token and macro crates; the new pin
+  cannot retroactively constrain older published archmage dependency ranges.
+
+- Add `pairwise_widen_add()` for unsigned byte and halfword vectors at 128/256/512 bits. Each output is the exact widened sum of adjacent inputs. Methods live on the existing source backend traits; no new capability traits are introduced. NEON accumulation can fuse to `UADALP`.
+
+- Consolidate 27 unpublished integer capability traits into the existing source backend traits. Cross-type operations require only their destination backend; byte sums no longer require an `AbsDiff` trait. Existing published conversion traits remain supported.
+
+- Prune unpublished `msub_adjacent` (use `accumulator - a.madd_adjacent(b)`) and W512 i16/u16 reference bitcasts; retain the W512 value casts. Byte reductions document the cost of reducing inside accumulation loops.
 
 ### Added
 
