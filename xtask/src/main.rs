@@ -1771,18 +1771,18 @@ fn run_ci() -> Result<()> {
     generate_all()?;
     println!("└─ Code generation complete ─────────────────────────────────────────┘\n");
 
-    // Run cargo fmt on entire workspace to ensure consistent formatting
-    println!("┌─ Formatting workspace ──────────────────────────────────────────────┐");
+    // Check without rewriting generated output: formatting it here would hide
+    // generator drift that GitHub's raw generation check correctly rejects.
+    println!("┌─ Checking workspace formatting ─────────────────────────────────────┐");
     let fmt = std::process::Command::new("cargo")
-        .args(["fmt"])
+        .args(["fmt", "--all", "--", "--check"])
         .status()
         .context("Failed to run cargo fmt")?;
     if !fmt.success() {
-        println!("  Warning: cargo fmt returned non-zero");
-    } else {
-        println!("  ✓ Workspace formatted");
+        bail!("Workspace formatting differs; run cargo fmt and check generator output");
     }
-    println!("└─ Formatting complete ──────────────────────────────────────────────┘\n");
+    println!("  ✓ Workspace formatting is clean");
+    println!("└─ Formatting check complete ─────────────────────────────────────────┘\n");
 
     // Step 2: Check for clean worktree
     println!("┌─ Step 2/18: Checking for uncommitted changes ──────────────────────┐");

@@ -518,6 +518,9 @@ impl Registry {
         out.push_str(
             "/// Precomputed target-feature CSV for concrete tokens, including aliases.\n",
         );
+        // Keep the generated CSV table stable across rustfmt versions. The
+        // feature strings are indivisible; wrapping match arms adds no clarity.
+        out.push_str("#[rustfmt::skip]\n");
         out.push_str("pub(crate) fn token_to_features_csv(name: &str) -> Option<&'static str> {\n    match name {\n");
         for token in &self.token {
             out.push_str(&format!(
