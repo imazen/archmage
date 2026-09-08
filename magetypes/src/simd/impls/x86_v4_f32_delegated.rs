@@ -237,6 +237,20 @@ macro_rules! delegate_f32x4_to_v3 {
             fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {
                 <archmage::X64V3Token as F32x4Backend>::clamp(self.v3(), a, lo, hi)
             }
+            #[inline(always)]
+            fn to_u8_bytes(self, a: Self::Repr) -> [u8; 4] {
+                <archmage::X64V3Token as F32x4Backend>::to_u8_bytes(self.v3(), a)
+            }
+            #[inline(always)]
+            fn store_rgba_bytes(
+                self,
+                r: Self::Repr,
+                g: Self::Repr,
+                b: Self::Repr,
+                a: Self::Repr,
+            ) -> [u8; 16] {
+                <archmage::X64V3Token as F32x4Backend>::store_rgba_bytes(self.v3(), r, g, b, a)
+            }
         }
     };
 }
@@ -409,6 +423,24 @@ macro_rules! delegate_f32x8_to_v3 {
             #[inline(always)]
             fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {
                 <archmage::X64V3Token as F32x8Backend>::clamp(self.v3(), a, lo, hi)
+            }
+            #[inline(always)]
+            fn to_u8_bytes(self, a: Self::Repr) -> [u8; 8] {
+                <archmage::X64V3Token as F32x8Backend>::to_u8_bytes(self.v3(), a)
+            }
+            #[inline(always)]
+            fn store_rgba_bytes(
+                self,
+                r: Self::Repr,
+                g: Self::Repr,
+                b: Self::Repr,
+                a: Self::Repr,
+            ) -> [u8; 32] {
+                <archmage::X64V3Token as F32x8Backend>::store_rgba_bytes(self.v3(), r, g, b, a)
+            }
+            #[inline(always)]
+            fn transpose_8x8_repr(self, rows: [Self::Repr; 8]) -> [Self::Repr; 8] {
+                <archmage::X64V3Token as F32x8Backend>::transpose_8x8_repr(self.v3(), rows)
             }
         }
     };

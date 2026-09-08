@@ -884,6 +884,7 @@ fn main() -> Result<()> {
             soundness::verify(&reg)?;
             soundness::check_stderr_snapshot_portability()?;
             validate_summon(&reg)?;
+            validate_v4_f32_delegation()?;
         }
         "validate-registry" => validate_registry()?,
         "parity" => check_api_parity(false)?,
@@ -926,6 +927,106 @@ fn main() -> Result<()> {
         }
     }
 
+    Ok(())
+}
+
+/// Verify the hand-written AVX-512 f32 delegation forwards *every* backend
+/// trait method to `X64V3Token`.
+///
+/// `magetypes/src/simd/impls/x86_v4_f32_delegated.rs` is the one backend impl
+/// the generator does not emit. Because `F32x4Backend` / `F32x8Backend` give
+/// several methods a scalar **default** body, a method the delegation forgets
+/// still compiles — it just silently drops the V3 hardware path for every
+/// AVX-512 token. That is how `to_u8_bytes`, `store_rgba_bytes` and
+/// `transpose_8x8_repr` regressed to a per-lane `roundevenf` / gather after
+/// the concrete-type retirement restored them on V3 and NEON only
+/// (issue #60): `f32x8<X64V4Token>::transpose_8x8` compiled to ~198
+/// instructions against V3's ~32.
+///
+/// So: no silent defaults. Every trait method must appear in both macros.
+fn validate_v4_f32_delegation() -> Result<()> {
+    println!("\n=== Validating AVX-512 f32 delegation completeness ===");
+
+    /// Names of `fn`s declared directly inside the first `{}` block that
+    /// follows `header` in `src`.
+    fn methods_in_block(src: &str, header: &str, indent: &str) -> Result<Vec<String>> {
+        let start = src
+            .find(header)
+            .ok_or_else(|| anyhow::anyhow!("could not find `{header}`"))?;
+        let open = src[start..]
+            .find('{')
+            .ok_or_else(|| anyhow::anyhow!("no `{{` after `{header}`"))?
+            + start;
+        let mut depth = 0usize;
+        let mut end = open;
+        for (i, c) in src[open..].char_indices() {
+            match c {
+                '{' => depth += 1,
+                '}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        end = open + i;
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        let needle = format!("\n{indent}fn ");
+        Ok(src[open..end]
+            .match_indices(&needle)
+            .map(|(i, _)| {
+                let rest = &src[open + i + needle.len()..];
+                rest.chars()
+                    .take_while(|c| c.is_alphanumeric() || *c == '_')
+                    .collect::<String>()
+            })
+            .collect())
+    }
+
+    let deleg_path = "magetypes/src/simd/impls/x86_v4_f32_delegated.rs";
+    let deleg = std::fs::read_to_string(deleg_path)?;
+
+    let mut missing_total = 0usize;
+    for (trait_name, trait_path) in [
+        ("F32x4Backend", "magetypes/src/simd/backends/f32x4.rs"),
+        ("F32x8Backend", "magetypes/src/simd/backends/f32x8.rs"),
+    ] {
+        let trait_src = std::fs::read_to_string(trait_path)?;
+        let declared = methods_in_block(&trait_src, &format!("pub trait {trait_name}"), "    ")?;
+        let forwarded = methods_in_block(
+            &deleg,
+            &format!("impl {trait_name} for $token"),
+            "            ",
+        )?;
+
+        let missing: Vec<_> = declared
+            .iter()
+            .filter(|m| !forwarded.contains(m))
+            .cloned()
+            .collect();
+
+        println!(
+            "  {trait_name}: {} declared, {} forwarded, {} missing",
+            declared.len(),
+            forwarded.len(),
+            missing.len()
+        );
+        for m in &missing {
+            println!("    MISSING: {trait_name}::{m}");
+        }
+        missing_total += missing.len();
+    }
+
+    if missing_total > 0 {
+        anyhow::bail!(
+            "{missing_total} backend method(s) not forwarded in {deleg_path}.\n\
+             Every AVX-512 token would silently fall back to the trait's scalar default \
+             body for these, losing V3's hardware path. Add a forwarding method for each."
+        );
+    }
+
+    println!("  OK: every f32 backend method is forwarded to X64V3Token");
     Ok(())
 }
 

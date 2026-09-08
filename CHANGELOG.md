@@ -14,6 +14,11 @@
 - Remove the six no-op `*_midp_precise` aliases (`exp2`/`exp`/`ln`/`log2`/`log10`/`pow` — each is literally `self.*_midp()`); `cbrt_midp_precise` stays, it does real denormal/zero handling. With the reciprocal tiers settling on `_portable` as the precise tier, a `_precise` suffix that does nothing is a naming lie.
 - Make `w512` non-default in magetypes — users who need 512-bit types add `features = ["w512"]`; saves ~25% build time for the majority who don't
 
+### Fixed
+
+- **magetypes: AVX-512 tokens regained the native f32 block-op codegen they had silently lost.** `magetypes/src/simd/impls/x86_v4_f32_delegated.rs` — the one backend impl the generator does not emit — forwards each `F32x4Backend` / `F32x8Backend` method to `X64V3Token`, but it was written before the concrete-type retirement restored `to_u8_bytes` / `store_rgba_bytes` / `transpose_8x8_repr` (issue [#60](https://github.com/imazen/archmage/issues/60)). Those three arrived with scalar **default** bodies, so the delegation compiled without them and every AVX-512 token (`X64V4Token`, `X64V4xToken`, `Avx512Fp16Token`) fell through to a per-lane `roundevenf` / gather instead of V3's `vcvtps2dq`+`vpackssdw`+`vpackuswb` and `vunpck`+`vshufps`+`vperm2f128`. Measured on the generic types with `cargo asm` (x86-64, release): `f32x8::<X64V4Token>::transpose_8x8` 198 instructions vs V3's 32, `store_8_rgba_u8` 217 vs 34, `f32x4::to_u8` 227 vs 7 — and the V4 `to_u8` body was an out-of-line call into `core::array::try_from_fn` over the software round-and-clamp. With the five missing forwards added, each V4 entry point compiles to code byte-identical to its V3 counterpart (the linker folds them into aliases). Value results were always correct; only the instruction selection was lost.
+- **`cargo xtask validate` now fails when that delegation misses a method.** A trait method with a default body that the delegation forgets is invisible to the compiler — it just silently drops the hardware path. The new check parses both backend traits and both delegation macros and requires every declared method to be forwarded (41/41 and 42/42 today).
+
 ## [0.9.29] - 2026-09-07
 
 - Reduce procedural-macro allocation work using shared tier checks, borrowed
