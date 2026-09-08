@@ -386,7 +386,13 @@ impl<T: F32x8Backend> f32x8<T> {
     /// (`(exp_midp() + one).recip()` NaN'ing on saturated lanes)
     /// cannot occur at this tier.
     ///
-    /// **Subnormal inputs are the one unspecified case** — for 0 ULP
+    /// **Known accuracy limitation:** V3 reciprocal estimates also flush
+    /// subnormal outputs: `recip(f32::MAX)` can return zero rather
+    /// than the nonzero subnormal division result. This violates the
+    /// working precision target even though the input is normal.
+    /// Use `recip_portable()` when this range matters.
+    ///
+    /// **Subnormal inputs are unspecified** — for 0 ULP
     /// everywhere including subnormals, plus bit-identical
     /// cross-arch results, use
     /// [`recip_portable`](Self::recip_portable).

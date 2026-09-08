@@ -194,16 +194,9 @@ The original function name disappears — only the suffixed variants exist. Each
 <details>
 <summary>Compare to #[arcane] which creates a wrapper</summary>
 
-```rust
-fn helper(_token: X64V3Token, v: __m256) -> __m256 {
-    #[target_feature(enable = "avx2,fma,bmi1,bmi2,...")]
-    #[inline]
-    fn __inner(_token: X64V3Token, v: __m256) -> __m256 {
-        _mm256_add_ps(v, v)
-    }
-    unsafe { __inner(_token, v) }
-}
-```
+The macro emits a target-feature function plus a token-justified boundary
+call. That implementation belongs to archmage; callers use `#[arcane]` or
+`#[magetypes]`, and helpers use a matching `#[rite]` context.
 
 </details>
 
@@ -293,24 +286,34 @@ The caller's features (`avx2,fma`) are a superset of the callee's (`avx2`), so t
 
 This applies equally to multi-tier variants. When `process_v3()` is called from an `#[arcane]` function with V3 features, or from another `#[rite(v3)]` function, the call is safe because the features match.
 
-## Direct Calls Require Unsafe
+## Test helpers through a safe entry
 
-If you call a `#[rite]` function from outside a `#[target_feature]` context, you need `unsafe`:
+Call a `#[rite]` helper from a matching `#[arcane]` or `#[magetypes]` context.
+The generated boundary checks capability through the token; a test does not
+need to make a manual unsafe call.
 
 ```rust
+use archmage::prelude::*;
+
+#[rite(v3)]
+fn double(value: f32) -> f32 { value * 2.0 }
+
+#[arcane]
+fn test_entry(token: X64V3Token, value: f32) -> f32 { double(value) }
+
+#[cfg(target_arch = "x86_64")]
 #[test]
-fn test_helper() {
+fn test_double() {
     if let Some(token) = X64V3Token::summon() {
-        // Direct call from test (no target_feature) requires unsafe
-        let result = unsafe { helper(token, data) };
-        assert_eq!(result, expected);
+        assert_eq!(test_entry(token, 3.0), 6.0);
     }
 }
 ```
 
-This is correct—the test function doesn't have `#[target_feature]`, so the compiler can't verify safety at compile time. The `unsafe` block says "I checked at runtime via `summon()`."
-
-The same applies to multi-tier variants — calling `process_v3()` from a test or non-SIMD context requires `unsafe`.
+For generic vector kernels, use the
+[`#[magetypes]` entry pattern](@/magetypes/examples/generic-kernels.md).
+A direct `#[rite]` call from a caller lacking the required target features
+remains outside Rust's safe-call rules.
 
 ## Benefits
 

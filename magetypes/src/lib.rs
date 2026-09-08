@@ -1,5 +1,7 @@
 //! # magetypes
 //!
+//! [Guide and examples](https://imazen.github.io/archmage/) · [Intrinsics browser](https://imazen.github.io/archmage/intrinsics/) · [ISA contracts](https://imazen.github.io/archmage/magetypes/isa-quirks/)
+//!
 //! Token-gated SIMD types with natural operators.
 //!
 //! This crate provides SIMD vector types (`f32x8`, `i32x4`, etc.) that use

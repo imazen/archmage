@@ -20,7 +20,7 @@ For functions called from other SIMD code, use [`#[rite]`](@/archmage/concepts/r
 {% mermaid() %}
 flowchart LR
     A["Your code:<br/>#[arcane]<br/>fn kernel(token: X64V3Token, ...)"] --> B["Macro generates:<br/>__arcane_kernel (unsafe, #[target_feature])<br/>kernel (safe wrapper)"]
-    B --> C["Wrapper calls sibling<br/>via unsafe { __arcane_kernel(...) }"]
+    B --> C["Wrapper calls sibling<br/>via the internal boundary call"]
     C --> D["SAFETY: token proves<br/>CPU support exists"]
 
     style A fill:#2d5a27,color:#fff
@@ -75,22 +75,10 @@ fn add_vectors(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
 fn add(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
     _mm256_add_ps(a, b)  // In scope from import_intrinsics
 }
-
-// Generated (x86_64 only — cfg'd out on other architectures):
-#[cfg(target_arch = "x86_64")]
-#[doc(hidden)]
-#[target_feature(enable = "avx2,fma,bmi1,bmi2,...")]
-fn __arcane_add(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
-    use archmage::intrinsics::x86_64::*;
-    _mm256_add_ps(a, b)  // Safe inside #[target_feature]!
-}
-
-#[cfg(target_arch = "x86_64")]
-fn add(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
-    // SAFETY: Token proves CPU support was verified
-    unsafe { __arcane_add(token, a, b) }
-}
 ```
+
+The macro generates the target-feature boundary and its justified internal call.
+User code does not implement that boundary; see the expansion tests for exact output.
 
 </details>
 
@@ -107,20 +95,10 @@ impl SimdOps for MyType {
         _self.data.iter().sum()  // Use _self, not self
     }
 }
-
-// Generated:
-impl SimdOps for MyType {
-    fn compute(&self, token: X64V3Token) -> f32 {
-        #[target_feature(enable = "avx2,fma,bmi1,bmi2,...")]
-        #[inline]
-        fn __inner(_self: &MyType, token: X64V3Token) -> f32 {
-            use archmage::intrinsics::x86_64::*;
-            _self.data.iter().sum()
-        }
-        unsafe { __inner(self, token) }
-    }
-}
 ```
+
+The macro generates the target-feature boundary and its justified internal call.
+User code does not implement that boundary; see the expansion tests for exact output.
 
 The inner `fn` can't have a `self` receiver (Rust doesn't allow that in inner functions), so the macro renames `self` → `_self` with the concrete type you specified.
 

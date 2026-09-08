@@ -4,7 +4,9 @@
 
 Token-gated SIMD vector types. Write one kernel, run on AVX2, AVX-512, NEON, WASM SIMD128, or scalar — the `#[magetypes]` macro generates the per-tier target-feature contexts; `incant!` dispatches at runtime. No `unsafe`, `#![forbid(unsafe_code)]`-compatible.
 
-**[Intrinsics Browser](https://imazen.github.io/archmage/intrinsics/)** · [Tutorial Book](https://imazen.github.io/archmage/) · [API Docs](https://docs.rs/magetypes)
+**[Intrinsics Browser](https://imazen.github.io/archmage/intrinsics/)** · [Guide and examples](https://imazen.github.io/archmage/) · [API Docs](https://docs.rs/magetypes)
+
+See [reusable generic kernels](https://imazen.github.io/archmage/magetypes/examples/generic-kernels/) and [ISA quirks and fixup costs](https://imazen.github.io/archmage/magetypes/isa-quirks/).
 
 ## Quick start
 
@@ -19,6 +21,8 @@ archmage  = "0.9.27"   # required: provides the macros + tokens magetypes uses
 Default features (`std`, `w512`) are on. For `no_std + alloc`, use `default-features = false`. For native AVX-512 impls on x86-64, add `features = ["avx512"]` (implies `w512`). See [Cargo features](#cargo-features).
 
 Then write **one** kernel that runs on AVX2, AVX-512, NEON, WASM SIMD128, or scalar — `#[magetypes]` generates the per-tier `#[target_feature]` contexts and `incant!` picks the best at runtime, all `#![forbid(unsafe_code)]`-compatible:
+
+Adapted from the `zenfilters` plane-scaling kernel; the [complete production call chain and adaptation notes](https://imazen.github.io/archmage/magetypes/examples/generic-kernels/) include pinned source links.
 
 ```rust
 use archmage::prelude::*;
@@ -193,7 +197,7 @@ Reach for `#[rite]` when you want explicit target-feature control inside an `#[a
 
 | Macro | What it does | Generates | Own dispatcher? |
 |---|---|---|---|
-| `#[arcane]` | Wraps a function with `#[target_feature]` via a safe outer `fn` + `unsafe { ... }` inner call | 1 function (wrapper + sibling) | No |
+| `#[arcane]` | Wraps a function with `#[target_feature]` via a safe outer `fn` + `the internal boundary call` inner call | 1 function (wrapper + sibling) | No |
 | `#[rite]` | Applies `#[target_feature]` + `#[inline]` directly, no wrapper | 1 (single-tier) or N (multi-tier) | No |
 | `#[magetypes]` | Per-tier copies with `Token` substituted, each wrapped like `#[arcane]` | N per listed tier | No |
 | `#[autoversion]` | Per-tier copies of scalar body, bundled dispatcher | N + 1 dispatcher | **Yes** |

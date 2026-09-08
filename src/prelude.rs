@@ -125,9 +125,7 @@
 //!
 //! // Or use the combined intrinsics module directly:
 //! use archmage::intrinsics::x86_64::*;
-//!
-//! // If you need the raw unsafe pointer version explicitly:
-//! let v = unsafe { core::arch::x86_64::_mm256_loadu_ps(ptr) };
+
 //! ```
 
 // -- Traits --

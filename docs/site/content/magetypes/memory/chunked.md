@@ -5,73 +5,11 @@ weight = 4
 
 The standard pattern for processing large arrays with SIMD: iterate in fixed-size chunks, handle the remainder with scalar code.
 
-## The Pattern
-
-```rust
-use archmage::{arcane, rite};
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Backend,
-};
-
-#[arcane(import_intrinsics)]
-fn process_large<T: F32x8Backend>(token: T, data: &mut [f32]) {
-    let (chunks, remainder) = data.split_at_mut(data.len() - data.len() % 8);
-
-    // Process full 8-element chunks
-    for chunk in chunks.chunks_exact_mut(8) {
-        let chunk_arr: &mut [f32; 8] = chunk.try_into().unwrap();
-        let v = f32x8::<T>::from_array(token, *chunk_arr);
-        let result = v * v;  // Your SIMD operation
-        result.store(chunk_arr);
-    }
-
-    // Handle leftover elements (0-7) with scalar code
-    for x in remainder {
-        *x = *x * *x;
-    }
-}
-```
-
-`chunks_exact_mut(8)` yields slices of exactly 8 elements. The remainder (if the array length isn't a multiple of 8) is handled separately.
-
-## Reduction Over Chunks
-
-When reducing an entire array to a single value:
-
-```rust
-use archmage::arcane;
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Backend,
-};
-
-#[arcane(import_intrinsics)]
-fn sum_array<T: F32x8Backend>(token: T, data: &[f32]) -> f32 {
-    let chunks = data.chunks_exact(8);
-    let remainder = chunks.remainder();
-
-    // Accumulate in a SIMD register
-    let mut acc = f32x8::<T>::zero(token);
-    for chunk in chunks {
-        let chunk_arr: &[f32; 8] = chunk.try_into().unwrap();
-        let v = f32x8::<T>::from_array(token, *chunk_arr);
-        acc = acc + v;
-    }
-
-    // Reduce the accumulator to scalar
-    let mut total = acc.reduce_add();
-
-    // Add remainder
-    for &x in remainder {
-        total += x;
-    }
-
-    total
-}
-```
-
-Accumulating in a SIMD register and reducing once at the end is faster than reducing each chunk individually.
+See the complete [`#[magetypes]` image-plane loop](@/magetypes/memory/load-store.md)
+and [reusable generic helper](@/magetypes/examples/generic-kernels.md).
+Dispatch once, iterate array chunks, and handle the remainder explicitly.
+For a reduction, accumulate in a vector inside that same context and call
+`reduce_add()` once after the loop; floating-point association can differ by ISA.
 
 ## Alignment Tips
 
@@ -86,35 +24,24 @@ struct AlignedData {
 }
 ```
 
-### Allocate aligned memory
+### Allocate aligned memory safely
+
+When a measured consumer needs 32-byte alignment, let Rust allocate an aligned
+type and own its lifetime:
 
 ```rust
-use std::alloc::{alloc, Layout};
-
-let layout = Layout::from_size_align(size, 32).unwrap();
-let ptr = unsafe { alloc(layout) };
+#[repr(C, align(32))]
+struct AlignedBlock([f32; 8]);
+let blocks = vec![AlignedBlock([0.0; 8]), AlignedBlock([0.0; 8])];
+assert_eq!(blocks.as_ptr() as usize % 32, 0);
 ```
 
-### Check alignment at runtime
+The vector drops its allocation normally, and every element is initialized.
+Ordinary magetypes loads do not require this stronger alignment.
 
-```rust
-fn is_aligned<T>(ptr: *const T, align: usize) -> bool {
-    (ptr as usize) % align == 0
-}
-```
+## Performance tips
 
-In practice, unaligned access on modern CPUs is fast enough that explicit alignment is rarely worth the complexity. Profile before adding alignment boilerplate.
-
-## Performance Tips
-
-1. **Minimize loads and stores.** Keep data in SIMD registers as long as possible. Load once, do multiple operations, store once.
-
-2. **Prefer unaligned access.** Modern CPUs (Haswell+, all Cortex-A) handle unaligned loads/stores with negligible penalty. Don't complicate your code for alignment unless profiling shows a bottleneck.
-
-3. **Use streaming stores for large writes.** When writing large sequential buffers (image frames, audio buffers) that won't be read back soon, streaming stores avoid polluting the cache.
-
-4. **Batch operations.** Instead of processing one pixel or one sample at a time, accumulate a batch and process it in one SIMD pass.
-
-5. **Avoid gather in hot loops.** Sequential memory access is 3-10x faster than scattered access. If you find yourself using gather in a tight loop, consider restructuring your data layout.
-
-6. **Enter `#[arcane]` once.** Put your loop inside the `#[arcane]` function, not the other way around. Each `#[arcane]` call from non-SIMD code crosses a target-feature boundary that LLVM can't optimize across. See [Target-Feature Boundaries](@/archmage/concepts/target-feature-boundaries.md).
+Keep the loop inside one generated context; keep intermediate vectors in
+registers; retain a scalar tail. Test cache-resident and streaming working sets.
+Use measurements to choose layout and width rather than assuming that alignment,
+gather avoidance, or non-temporal stores always improve performance.

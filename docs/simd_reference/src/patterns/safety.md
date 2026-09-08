@@ -32,22 +32,20 @@ fn example(token: X64V3Token, a: __m256, b: __m256) -> __m256 {
 Raw pointer operations:
 
 ```rust
-#[arcane(import_intrinsics)]
-fn load_raw(_token: X64V3Token, ptr: *const f32) -> __m256 {
-    // Raw pointer — needs unsafe
-    unsafe { _mm256_loadu_ps(ptr) }
-}
+use archmage::prelude::*;
 
 #[arcane(import_intrinsics)]
-fn load_safe(_token: X64V3Token, data: &[f32; 8]) -> __m256 {
-    // Reference-based — no unsafe needed (import_intrinsics provides safe versions)
-    _mm256_loadu_ps(data)
+fn load_safe(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+    let value = _mm256_loadu_ps(data);
+    let mut output = [0.0; 8];
+    _mm256_storeu_ps(&mut output, value);
+    output
 }
 ```
 
 ## How `#[arcane]` works
 
-The macro generates a safe outer function wrapping an unsafe inner:
+The macro generates a safe outer function wrapping a target-feature inner:
 
 ```rust
 // You write:
@@ -56,18 +54,10 @@ fn kernel(token: X64V3Token, data: &[f32; 8]) -> f32 {
     let v = _mm256_setzero_ps();
     // ...
 }
-
-// Macro generates:
-fn kernel(_token: X64V3Token, data: &[f32; 8]) -> f32 {
-    #[target_feature(enable = "avx2,fma,...")]
-    fn __simd_inner_kernel(data: &[f32; 8]) -> f32 {
-        let v = _mm256_setzero_ps();  // Safe inside #[target_feature]
-        // ...
-    }
-    // SAFETY: Token existence proves CPU support was verified via summon()
-    unsafe { __simd_inner_kernel(data) }
-}
 ```
+
+The macro generates the target-feature boundary and its justified internal call.
+User code does not implement that boundary; see the expansion tests for exact output.
 
 The outer function is safe. The `unsafe` call to the inner function is justified by the token's existence.
 
@@ -98,21 +88,13 @@ fn process_chunk(chunk: &mut [f32; 8]) {
 }
 ```
 
-## Concrete tokens beat generics
+## Generic kernels need a generated context
 
-Generic bounds create LLVM optimization barriers:
-
-```rust
-// BAD: LLVM can't inline across the generic boundary
-#[arcane(import_intrinsics)]
-fn process<T: HasX64V2>(token: T, data: &[f32]) -> f32 { ... }
-
-// GOOD: Full inlining, single target_feature region
-#[arcane(import_intrinsics)]
-fn process(token: X64V3Token, data: &[f32]) -> f32 { ... }
-```
-
-`#[target_feature]` changes LLVM's compilation target for that function. A generic caller and a feature-enabled callee have mismatched targets, preventing cross-function optimization.
+Use `#[magetypes]` at the dispatched entry. A reusable `T: F32x8Backend` helper
+can inline into each concrete variant with `#[inline(always)]`. Monomorphized
+generic calls are statically resolved; generic bounds are not inherently an
+indirect call or optimization barrier. An inline attribute alone does not
+supply target features.
 
 **Downcasting is free:** Passing `X64V4Token` to a function expecting `X64V3Token` preserves the inlining chain.
 

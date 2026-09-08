@@ -55,16 +55,6 @@ use token_discovery::*;
 /// ```ignore
 /// #[arcane]
 /// fn process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] { /* body */ }
-/// // Expands to (x86_64 only):
-/// #[cfg(target_arch = "x86_64")]
-/// #[doc(hidden)]
-/// #[target_feature(enable = "avx2,fma,...")]
-/// fn __arcane_process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] { /* body */ }
-///
-/// #[cfg(target_arch = "x86_64")]
-/// fn process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-///     unsafe { __arcane_process(token, data) }
-/// }
 /// ```
 ///
 /// Methods work naturally:

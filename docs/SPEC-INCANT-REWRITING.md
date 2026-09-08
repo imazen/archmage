@@ -68,7 +68,7 @@ the generated `unsafe` block wraps only the call, not the body.
 ### The trampoline evaporates
 
 The trampoline `fn_v3(token, args)` is `#[inline(always)]` with a single
-`unsafe { __arcane_fn_v3(token, args) }` call. LLVM eliminates it completely.
+token-justified call to `__arcane_fn_v3(token, args)`. LLVM eliminates it completely.
 The `__arcane_fn_v3` inner has matching `#[target_feature]`, so it inlines
 into the caller. Net cost: zero.
 

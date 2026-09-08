@@ -37,9 +37,9 @@ archmage = { version = "0.9", features = ["avx512"] }
 - `Avx512Fp16Token`
 - `HasX64V4` trait
 
-## magetypes Features (exploratory)
+## magetypes Features
 
-[Magetypes](/magetypes/) is our exploratory companion crate — its API may change between releases.
+[Magetypes](/magetypes/) is the companion crate for token-gated SIMD vector types.
 
 ### `std` (default)
 

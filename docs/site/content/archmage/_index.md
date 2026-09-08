@@ -8,6 +8,36 @@ weight = 1
 sidebar = true
 +++
 
+Process an image plane (exposure) or an audio buffer (gain), including a short
+scalar tail. The vector type is generic over the token selected by `#[magetypes]`;
+`incant!` chooses the CPU tier once outside the loop. No manual per-tier wrappers
+or raw pointers are needed.
+
+Adapted from the `zenfilters` plane-scaling kernel; the [complete production call chain and adaptation notes](https://imazen.github.io/archmage/magetypes/examples/generic-kernels/) include pinned source links.
+
+```rust
+#![forbid(unsafe_code)]
+use archmage::prelude::*;
+
+#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+fn gain_impl(token: Token, plane: &mut [f32], gain: f32) {
+    let factor = f32x8::splat(token, gain);
+    let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+    for chunk in chunks {
+        (f32x8::load(token, chunk) * factor).store(chunk);
+    }
+    for value in tail {
+        *value *= gain;
+    }
+}
+
+pub fn apply_gain(plane: &mut [f32], gain: f32) {
+    incant!(gain_impl(plane, gain), [v3, neon, wasm128, scalar])
+}
+```
+
+See [reusable generic kernels](@/magetypes/examples/generic-kernels.md) for helper bounds and dispatch.
+
 # Archmage
 
 > Safely invoke your intrinsic power, using the tokens granted to you by the CPU. Cast primitive magics faster than any mage alive.
@@ -19,24 +49,6 @@ You prove CPU feature availability once with a **capability token**, then write 
 ## Zero Overhead
 
 Archmage generates identical assembly to bare `#[target_feature]` + `unsafe` code. The safety abstractions compile away entirely. The only thing that costs performance is calling `#[arcane]` from the wrong place (4-6x depending on workload). See [Target-Feature Boundaries](@/archmage/concepts/target-feature-boundaries.md) and [The #\[rite\] Macro](@/archmage/concepts/rite.md) for the fix.
-
-## The Problem
-
-Raw SIMD in Rust requires `unsafe`:
-
-```rust
-use std::arch::x86_64::*;
-
-// Every. Single. Call.
-unsafe {
-    let a = _mm256_loadu_ps(data.as_ptr());
-    let b = _mm256_set1_ps(2.0);
-    let c = _mm256_mul_ps(a, b);
-    _mm256_storeu_ps(out.as_mut_ptr(), c);
-}
-```
-
-This is tedious and error-prone. Miss a feature check? Undefined behavior on older CPUs.
 
 ## The Solution
 
@@ -85,9 +97,9 @@ fn main() {
 | AArch64 | `NeonToken`/`Arm64`, `Arm64V2Token`, `Arm64V3Token`, `NeonAesToken`, `NeonSha3Token`, `NeonCrcToken` | 128 bit |
 | WASM | `Wasm128Token`, `Wasm128RelaxedToken` | 128 bit |
 
-## Magetypes (Exploratory)
+## Magetypes
 
-[Magetypes](/magetypes/) is our companion crate that provides ergonomic SIMD vector types with natural Rust operators (`f32x8`, `i32x4`, etc.). It's an **exploratory crate** — the API may change between releases. Archmage itself is stable and does not depend on magetypes.
+[Magetypes](/magetypes/) is our companion crate that provides ergonomic SIMD vector types with natural Rust operators (`f32x8`, `i32x4`, etc.). Archmage itself is stable and does not depend on magetypes.
 
 ## Next Steps
 

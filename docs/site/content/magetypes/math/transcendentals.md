@@ -1,185 +1,83 @@
 +++
-title = "Transcendentals"
+title = "Transcendentals: Domains and Fixups"
 weight = 1
 +++
 
-Magetypes provides SIMD implementations of common math functions. These are polynomial approximations tuned per platform — faster than calling scalar `f32::exp()` in a loop.
+## Real call chain: gamma decoding in linear-srgb
 
-## Exponential Functions
+The following complete chain is taken from `zen/linear-srgb` at
+`6bae33ee657d0cc29eaae6fd869894ec78a41b1c`:
+[`gamma_to_linear_slice` → `incant!` → `gamma_to_linear_slice_tier`](https://github.com/imazen/linear-srgb/blob/6bae33ee657d0cc29eaae6fd869894ec78a41b1c/src/simd.rs#L1313),
+then `pow_midp` for full vectors and the
+[scalar tail helper](https://github.com/imazen/linear-srgb/blob/6bae33ee657d0cc29eaae6fd869894ec78a41b1c/src/scalar.rs#L300).
+Only the scalar helper's name/path is changed to make this excerpt standalone.
+This example requires the default `w512` feature; `avx512` enables its native V4
+variant. The other tiers polyfill the same logical 16-lane shape.
 
 ```rust
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Convert,
-};
+use archmage::prelude::*;
 
-#[inline(always)]
-fn exponentials<T: F32x8Convert>(token: T) {
-    let v = f32x8::<T>::splat(token, 3.0);
-
-    // Base-2 exponential: 2^x
-    let result = v.exp2_midp();   // [8.0; 8]
-
-    // Natural exponential: e^x
-    let result = v.exp_midp();    // [e^3; 8] ~ [20.09; 8]
+fn gamma_to_linear_scalar(encoded: f32, gamma: f32) -> f32 {
+    if encoded <= 0.0 {
+        0.0
+    } else if encoded >= 1.0 {
+        1.0
+    } else {
+        encoded.powf(gamma)
+    }
 }
-```
 
-## Logarithms
-
-```rust
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Convert,
-};
-
-#[inline(always)]
-fn logarithms<T: F32x8Convert>(token: T) {
-    let v = f32x8::<T>::splat(token, 8.0);
-
-    // Base-2 logarithm: log2(x)
-    let result = v.log2_midp();   // [3.0; 8]
-
-    // Natural logarithm: ln(x)
-    let result = v.ln_midp();     // [ln(8); 8] ~ [2.08; 8]
-
-    // Base-10 logarithm: log10(x)
-    let result = v.log10_midp();  // [log10(8); 8] ~ [0.90; 8]
+#[archmage::magetypes(define(f32x16), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+fn gamma_to_linear_slice_tier(token: Token, values: &mut [f32], gamma: f32) {
+    let (chunks, remainder) = values.as_chunks_mut::<16>();
+    for chunk in chunks {
+        let v = f32x16::from_array(token, *chunk);
+        let clamped = v.max(f32x16::zero(token)).min(f32x16::splat(token, 1.0));
+        *chunk = clamped.pow_midp(gamma).to_array();
+    }
+    for v in remainder {
+        *v = gamma_to_linear_scalar(*v, gamma);
+    }
 }
-```
 
-## Power
-
-```rust
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Convert,
-};
-
-#[inline(always)]
-fn power<T: F32x8Convert>(token: T) {
-    let base = f32x8::<T>::splat(token, 2.0);
-
-    // x^n (computed as exp2(n * log2(x)))
-    let result = base.pow_midp(3.0);  // [8.0; 8]
+pub fn gamma_to_linear_slice(values: &mut [f32], gamma: f32) {
+    incant!(
+        gamma_to_linear_slice_tier(values, gamma),
+        [v4, v3, neon, wasm128, scalar]
+    )
 }
+
 ```
 
-Note: `pow` takes a scalar exponent, not a vector.
+For finite normalized samples and positive gamma, this decodes a simple power
+transfer curve. It is not the piecewise sRGB transfer function. The vector body
+uses a polynomial approximation, while the tail uses scalar `powf`: do not
+promise bit identity between them. Test the consumer's error budget, especially
+around chunk boundaries. The code and all lengths through two chunks plus a
+tail are tested in `magetypes/tests/doc_examples.rs`.
 
-## Roots
+## Exact calls and runtime repair
 
-```rust
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Convert,
-};
+| Call | Additional work versus its unchecked polynomial | Domain / behavior |
+|---|---|---|
+| `v.log2_midp()` | Three compare/blend stages | Repair zero to negative infinity, negatives to NaN, positive infinity to infinity. This is not a universal guarantee of NaN payload or subnormal accuracy. |
+| `v.exp2_midp()` | Two min/max clamps, two comparisons, two blends | Clamp the polynomial input, return zero below −126 and infinity at/above 128. Subnormal outputs are deliberately not constructed. NaN behavior inherits backend min/max differences. |
+| `v.ln_midp()` / `v.log10_midp()` | `log2_midp` repairs plus scaling | Same logarithm domain restrictions. |
+| `v.exp_midp()` | Input scaling plus `exp2_midp` repairs | Same clamping policy after scaling. |
+| `v.pow_midp(gamma)` | Composes repaired log/exp and scaling | Not a full scalar `powf` replacement over all negative bases, exponents, NaNs and infinities. |
+| `v.sigmoid_midp()` / `v.silu_midp()` | Their documented exponential arithmetic and division | Use division internally; do not infer raw reciprocal-estimate special cases. |
+| `_unchecked` variants | Omit the corresponding domain repair | Memory-safe methods with numerical preconditions; the name does not authorize raw memory access. |
 
-#[inline(always)]
-fn roots<T: F32x8Convert>(token: T) {
-    let v = f32x8::<T>::splat(token, 9.0);
+These counts describe the expression graph. Inlining, constant folding, width
+polyfills, and ISA lowering change actual instructions and CPU cost. Isolated
+checked-versus-unchecked timings for these transcendental methods are not yet
+recorded in the [ISA explorer](../../../isa-explorer/). Do not substitute the
+reciprocal repair percentages for transcendental overhead.
 
-    // Square root (hardware instruction on all platforms)
-    let result = v.sqrt();            // [3.0; 8]
-
-    // Cube root (polynomial approximation)
-    let result = v.cbrt_midp();       // [cbrt(9); 8] ~ [2.08; 8]
-
-    // Reciprocal square root: 1/sqrt(x)
-    let result = v.rsqrt();           // [1/3; 8] ~ [0.33; 8]
-}
-```
-
-`sqrt()` maps to a single hardware instruction (`vsqrtps` on x86, `fsqrt` on ARM). It's exact, not an approximation.
-
-## Precision Variants
-
-Most transcendentals come in multiple precision levels. See [Precision Levels](@/magetypes/math/precision.md) for the full breakdown.
-
-```rust
-// given token: T where T: F32x8Convert
-let v = f32x8::<T>::splat(token, 2.0);
-
-let fast     = v.exp2_lowp();   // ~12-bit precision, fastest
-let balanced = v.exp2_midp();   // ~20-bit precision
-```
-
-There are no unsuffixed "full precision" transcendentals. `_midp` is the highest precision level for polynomial approximations. For exact results, use `sqrt()` (which is a hardware instruction, not an approximation).
-
-## Domain Errors
-
-Invalid inputs produce NaN or infinity, matching IEEE 754 behavior:
-
-```rust
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Convert,
-};
-
-#[inline(always)]
-fn domain_errors<T: F32x8Convert>(token: T) {
-    let v = f32x8::<T>::from_array(token, [-1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
-
-    // sqrt of negative -> NaN
-    let sqrt = v.sqrt();   // [NaN, 0.0, 1.0, 1.41, 1.73, 2.0, 2.24, 2.45]
-
-    // log of non-positive -> NaN or -inf
-    let log = v.ln_midp(); // [NaN, -inf, 0.0, 0.69, 1.10, 1.39, 1.61, 1.79]
-}
-```
-
-## Example: Gaussian Function
-
-```rust
-use archmage::{arcane, SimdToken};
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Convert,
-};
-
-#[arcane(import_intrinsics)]
-fn gaussian<T: F32x8Convert>(token: T, x: &[f32; 8], sigma: f32) -> [f32; 8] {
-    let v = f32x8::<T>::from_array(token, *x);
-    let sigma_v = f32x8::<T>::splat(token, sigma);
-    let two = f32x8::<T>::splat(token, 2.0);
-
-    // exp(-x^2 / (2 * sigma^2))
-    let x_sq = v * v;
-    let two_sigma_sq = two * sigma_v * sigma_v;
-    let exponent = -(x_sq / two_sigma_sq);
-    let result = exponent.exp_midp();  // Good precision, fast
-
-    result.to_array()
-}
-```
-
-## Example: Softmax
-
-```rust
-use archmage::{arcane, SimdToken};
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Convert,
-};
-
-#[arcane(import_intrinsics)]
-fn softmax<T: F32x8Convert>(token: T, logits: &[f32; 8]) -> [f32; 8] {
-    let v = f32x8::<T>::from_array(token, *logits);
-
-    // Subtract max for numerical stability
-    let max = v.reduce_max();
-    let shifted = v - f32x8::<T>::splat(token, max);
-
-    // exp(x - max)
-    let exp = shifted.exp_midp();
-
-    // Normalize
-    let sum = exp.reduce_add();
-    let result = exp / f32x8::<T>::splat(token, sum);
-
-    result.to_array()
-}
-```
+`_lowp` and `_midp` select approximation families, not one cross-ISA ULP guarantee
+for every input. FMA, range reduction, conversion behavior, and the input domain
+all matter. See [precision levels](@/magetypes/math/precision.md) and the
+[ISA contracts](@/magetypes/isa-quirks.md).
 
 ## Platform Coverage
 

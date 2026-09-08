@@ -1,5 +1,7 @@
 //! # archmage
 //!
+//! [Guide and examples](https://imazen.github.io/archmage/) · [Intrinsics browser](https://imazen.github.io/archmage/intrinsics/) · [ISA contracts](https://imazen.github.io/archmage/magetypes/isa-quirks/)
+//!
 //! > Safely invoke your intrinsic power, using the tokens granted to you by the CPU.
 //! > Cast primitive magics faster than any mage alive.
 //!

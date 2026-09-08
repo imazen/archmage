@@ -458,21 +458,6 @@ pub(crate) fn arcane_impl_wasm_safe(
 
 /// Sibling expansion (default): generates two functions at the same scope level.
 ///
-/// ```ignore
-/// // #[arcane] fn process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] { body }
-/// // expands to:
-/// #[cfg(target_arch = "x86_64")]
-/// #[doc(hidden)]
-/// #[target_feature(enable = "avx2,fma,...")]
-/// #[inline]
-/// fn __arcane_process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] { body }
-///
-/// #[cfg(target_arch = "x86_64")]
-/// fn process(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-///     unsafe { __arcane_process(token, data) }
-/// }
-/// ```
-///
 /// The sibling function is safe (Rust 2024 edition allows safe `#[target_feature]`
 /// functions). Only the call from the wrapper needs `unsafe` because the wrapper
 /// lacks matching target features. Compatible with `#![forbid(unsafe_code)]`.
