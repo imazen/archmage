@@ -6,87 +6,49 @@
 
 Archmage lets you write SIMD code in Rust **without `unsafe`** — your crate keeps `#![forbid(unsafe_code)]` while calling intrinsics directly. It works on x86-64, AArch64, and WASM, is `no_std + alloc` (with `std` on by default for runtime CPU detection), and depends only on [`archmage-macros`](https://crates.io/crates/archmage-macros) and [`safe_unaligned_simd`](https://crates.io/crates/safe_unaligned_simd). You pick a CPU tier, prove it's present once with `summon()`, and the type system keeps every intrinsic call sound.
 
-## Quick start
+## Image planes and audio buffers
+
+Use `archmage` with `magetypes` for portable vector kernels:
 
 ```toml
 [dependencies]
-archmage = "0.9.27"
+archmage = "0.9.28"
+magetypes = "0.9.28"
 ```
 
-```rust
-use archmage::prelude::*;  // tokens, traits, macros, intrinsics, safe memory ops
+Process an image plane (exposure) or an audio buffer (gain), including a short
+scalar tail. The vector type is generic over the token selected by `#[magetypes]`;
+`incant!` chooses the CPU tier once outside the loop. No manual per-tier wrappers
+or raw pointers are needed.
 
-// Write one variant per CPU tier. `#[arcane]` attaches the matching
-// `#[target_feature]` and generates the internal `unsafe` boundary —
-// your code stays safe and value-based intrinsics need no `unsafe`.
-#[arcane]
-fn scale_v3(_: X64V3Token, data: &mut [f32], k: f32) {   // AVX2 + FMA
-    let kv = _mm256_set1_ps(k);
-    let mut chunks = data.chunks_exact_mut(8);
-    for c in &mut chunks {
-        let a: &mut [f32; 8] = c.try_into().unwrap();        // window into a register
-        _mm256_storeu_ps(a, _mm256_mul_ps(_mm256_loadu_ps(&*a), kv));
+Adapted from the `zenfilters` plane-scaling kernel; the [complete production call chain and adaptation notes](https://imazen.github.io/archmage/magetypes/examples/generic-kernels/) include pinned source links.
+
+```rust
+#![forbid(unsafe_code)]
+use archmage::prelude::*;
+
+#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+fn gain_impl(token: Token, plane: &mut [f32], gain: f32) {
+    let factor = f32x8::splat(token, gain);
+    let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+    for chunk in chunks {
+        (f32x8::load(token, chunk) * factor).store(chunk);
     }
-    for x in chunks.into_remainder() { *x *= k; }            // scalar tail (0..7)
-}
-
-// `_scalar` is the mandatory fallback — available on every CPU.
-fn scale_scalar(_: ScalarToken, data: &mut [f32], k: f32) {
-    for x in data { *x *= k; }
-}
-
-// `incant!` detects the CPU once at runtime and calls the best variant.
-pub fn scale(data: &mut [f32], k: f32) {
-    incant!(scale(data, k), [v3, scalar])
-}
-```
-
-> **MSRV: Rust 1.89** — see [How Rust 1.89 brought the safe SIMD story together for Archmage](https://github.com/imazen/archmage/blob/main/MSRV.md).
-
-## The problem
-
-Raw SIMD in Rust requires `unsafe` for every intrinsic call:
-
-```rust
-use std::arch::x86_64::*;
-
-// Every. Single. Call.
-unsafe {
-    let a = _mm256_loadu_ps(data.as_ptr());      // unsafe: raw pointer
-    let b = _mm256_set1_ps(2.0);                  // unsafe: needs target_feature
-    let c = _mm256_mul_ps(a, b);                  // unsafe: needs target_feature
-    _mm256_storeu_ps(out.as_mut_ptr(), c);         // unsafe: raw pointer
-}
-```
-
-Miss a feature check and you get undefined behavior on older CPUs. Wrap everything in `unsafe` and hope for the best.
-
-## The solution
-
-```rust
-use archmage::prelude::*;  // tokens, traits, macros, intrinsics, safe memory ops
-
-// X64V3Token = AVX2 + FMA (Haswell 2013+, Zen 1+)
-#[arcane]
-fn multiply(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    let a = _mm256_loadu_ps(data);          // safe: takes &[f32; 8], not *const f32
-    let b = _mm256_set1_ps(2.0);            // safe: inside #[target_feature]
-    let c = _mm256_mul_ps(a, b);            // safe: value-based (Rust 1.87+)
-    let mut out = [0.0f32; 8];
-    _mm256_storeu_ps(&mut out, c);          // safe: takes &mut [f32; 8]
-    out
-}
-
-fn main() {
-    // Runtime CPU check — returns None if AVX2+FMA unavailable
-    if let Some(token) = X64V3Token::summon() {
-        let result = multiply(token, &[1.0; 8]);
-        println!("{:?}", result);
+    for value in tail {
+        *value *= gain;
     }
 }
+
+pub fn apply_gain(plane: &mut [f32], gain: f32) {
+    incant!(gain_impl(plane, gain), [v3, neon, wasm128, scalar])
+}
 ```
 
-No `unsafe` anywhere. Your crate can use `#![forbid(unsafe_code)]`.
+For ISA-specific kernels, use `#[arcane(import_intrinsics)]` at the entry and
+`#[rite(import_intrinsics)]` for helpers. The [intrinsics browser](https://imazen.github.io/archmage/intrinsics/)
+lists available reference-based memory operations. See the [guide](https://imazen.github.io/archmage/)
+for both approaches, and [reusable generic kernels](https://imazen.github.io/archmage/magetypes/examples/generic-kernels/)
+for sharing algorithms across vector backends.
 
 ## How Rust enforces SIMD safety
 
@@ -103,7 +65,7 @@ Rust 1.86 (Apr 2025) and 1.87 (May 2025) changed the rules for `#[target_feature
                                                      │
           Calling simd_work() from                   │ safe
           normal_code() requires                     │ (subset of
-          unsafe { }. The caller                     ▼ caller's features)
+          an unsafe call. The caller                     ▼ caller's features)
           has fewer features.          ┌──────────────────────────────┐
                                        │ #[target_feature(avx2)]      │
                                        │ fn simd_helper()             │
@@ -413,7 +375,9 @@ For inherent methods, `self` works naturally — no special parameters needed. F
 
 ## SIMD types with `magetypes`
 
-`magetypes` provides ergonomic SIMD vector types (`f32x8`, `i32x4`, etc.) with natural Rust operators. It's an exploratory companion crate — the API may change between releases.
+`magetypes` provides ergonomic SIMD vector types (`f32x8`, `i32x4`, etc.) with natural Rust operators. Its vector types share archmage’s capability tokens and dispatch macros.
+
+One generic body runs on x86, NEON, WASM, and scalar — ISAs that quietly disagree on corner cases (shift-count overflow, reciprocal rails, narrowing lane order, NaN in min/max). [docs/CROSS-ISA-DIVERGENCES.md](docs/CROSS-ISA-DIVERGENCES.md) is the canonical inventory of every known case: which ones magetypes fixes up to identical semantics (and what the fixup costs), which the API makes unrepresentable, and which stay per-backend by documented contract.
 
 ```toml
 [dependencies]

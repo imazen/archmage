@@ -5,7 +5,7 @@ weight = 3
 
 `#[magetypes]` generates platform-specific function variants by replacing `Token` with each concrete token type. It works with `incant!` to provide both generation and dispatch.
 
-> **Note:** This macro is part of archmage (the `macros` feature), not the [magetypes crate](/magetypes/). The name reflects that it generates code in the style that magetypes types use. Magetypes itself is an exploratory companion crate — its API may change between releases.
+> **Note:** This macro is part of archmage (the `macros` feature), not the [magetypes crate](/magetypes/). The name reflects that it generates code in the style that magetypes types use. Magetypes provides the vector types; archmage provides the macros and tokens.
 
 ## When to Use
 

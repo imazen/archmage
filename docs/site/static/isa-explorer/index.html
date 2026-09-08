@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ISA fixup explorer</title>
+<style>
+:root{color-scheme:light dark;font:16px system-ui}body{max-width:1100px;margin:1.5rem auto;padding:0 1rem}select,input{font:inherit;padding:.35rem;max-width:100%}label{display:inline-block;margin:.5rem 1rem .5rem 0}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}th,td{text-align:left;padding:.5rem;border-bottom:1px solid #8886}thead{position:sticky;top:0;background:Canvas}code{white-space:nowrap}.scroll{overflow:auto;max-height:32rem}.changed{background:#d58a1322}p{line-height:1.5}.muted{opacity:.8}
+</style>
+<h1>ISA fixup explorer</h1>
+<p>Recorded CPU observations, not SIMD executed in this browser. Choose a CPU, ISA and exact call to compare input and output bits. Subnormal behavior and NaN payloads can differ even when ordinary values agree.</p>
+<p><a href="../magetypes/isa-quirks/">Contracts and runtime fixups</a> · <a href="data.json" download>Download measurements and samples</a></p>
+<label>CPU <select id="cpu"></select></label><label>ISA / width <select id="isa"></select></label><label>Call <select id="method"></select></label>
+<label><input id="differences" type="checkbox">Only baseline/fixup differences</label>
+<p id="status" role="status">Loading recorded data…</p><p id="timing"></p><p id="provenance" class="muted"></p>
+<div class="scroll"><table><thead><tr><th scope="col">Input: value / bits</th><th scope="col">Baseline</th><th scope="col">Public method</th></tr></thead><tbody id="rows"></tbody></table></div>
+<p class="muted">The reciprocal baseline on x86 is the same Newton formulation without the rail repair. Saturating conversion is compared with <code>to_i32()</code>. Other sample operations compare the method with itself. NEON, WASM and scalar reciprocal rows are identity controls, not measurements of a removed fixup. Timings use ordinary inputs; exceptional values are sampled separately. Median and MAD summarize nine paired rounds in one process, not cross-machine confidence bounds.</p>
+<script>
+'use strict';
+const $=id=>document.getElementById(id), word=new DataView(new ArrayBuffer(4));
+function value(bits,integer=false){word.setUint32(0,bits);const n=integer?word.getInt32(0):word.getFloat32(0);return `${Object.is(n,-0)?'-0':String(n)} / 0x${bits.toString(16).padStart(8,'0')}`;}
+function choices(node,items){const old=node.value;node.replaceChildren(...items.map(x=>{const o=document.createElement('option');o.textContent=x;o.value=x;return o;}));if(items.includes(old))node.value=old;}
+fetch('data.json').then(r=>{if(!r.ok)throw Error(r.status);return r.json();}).then(data=>{
+ choices($('cpu'),data.runs.map(r=>r.label));
+ function render(level=0){
+  const run=data.runs.find(r=>r.label===$('cpu').value);
+  if(level<1)choices($('isa'),[...new Set(run.samples.map(r=>r.isa))]);
+  const available=run.samples.filter(r=>r.isa===$('isa').value);
+  if(level<2)choices($('method'),available.map(r=>r.method));
+  const sample=available.find(r=>r.method===$('method').value), integer=sample.method==='to_i32_saturating()'||sample.method.startsWith('simd_ne');
+  const rows=[];
+  sample.input.forEach((bits,i)=>{if($('differences').checked&&sample.baseline[i]===sample.fixed[i])return;const tr=document.createElement('tr');if(sample.baseline[i]!==sample.fixed[i])tr.className='changed';[value(bits),value(sample.baseline[i],integer),value(sample.fixed[i],integer)].forEach(text=>{const td=document.createElement('td');td.textContent=text;tr.append(td);});rows.push(tr);});
+  $('rows').replaceChildren(...rows);$('status').textContent=`${rows.length} of ${sample.input.length} recorded lanes shown. Integer/mask outputs are signed i32 plus raw bits; other outputs are f32.`;
+  const t=run.timings.find(r=>r.isa===sample.isa&&r.method===sample.method);
+  $('timing').textContent=t?`${t.comparison}: median overhead ${t.median_overhead_percent.toFixed(1)}%, ratio MAD ${t.ratio_mad_percent.toFixed(1)} percentage points. Includes loop and load/store traffic; not instruction latency.`:'No hardware timing recorded for this row.';
+  $('provenance').textContent=`${run.cpu}; ${run.compiler}; ${run.target}. Library ${data.library_revision.slice(0,12)}; probe SHA-256 ${data.probe_sha256.slice(0,16)}. ${data.protocol}`;
+ }
+ $('cpu').onchange=()=>render(0);$('isa').onchange=()=>render(1);$('method').onchange=()=>render(2);$('differences').onchange=()=>render(2);render();
+}).catch(error=>{$('status').textContent=`Could not load samples: ${error.message}. Use the JSON download or the static contract table.`;});
+</script></html>

@@ -352,7 +352,7 @@
     const token = i.t ? tokenMap[i.t] : null;
     const tokenDisplay = token ? token.name : 'Not covered by archmage';
     const docLinks = extractDocLinks(i.d || '');
-    const docText = (i.d || '').split('[')[0].trim();
+    const docText = (i.d || '').split('```')[0].split('[')[0].trim();
 
     let timingHtml = '';
     if (i.tc && allData.timing[i.tc]) {
@@ -437,7 +437,7 @@
         // Prelude shadows this intrinsic with the safe version
         code = `${prelude}\n// ${i.n} is safe via prelude (safe_unaligned_simd shadows core::arch)\n\n#[rite(import_intrinsics)]\nfn example(_: ${tn}, /* params */) {\n    let result = ${i.n}(/* args */);\n}`;
       } else {
-        code = `${prelude}\n\n#[rite(import_intrinsics)]\nfn example(_: ${tn}, /* params */) {\n    let result = unsafe { ${i.n}(/* args */) };\n}`;
+        return '<div class="detail-code"><div class="code-label">No safe wrapper available</div><p>This intrinsic has obligations beyond CPU feature support. No callable example is generated. Consult its safety contract and use a reference-based alternative where one exists.</p></div>';
       }
     } else {
       code = `${prelude}\n\n#[rite(import_intrinsics)]\nfn example(_: ${tn}, /* params */) {\n    let result = ${i.n}(/* args */);\n}`;

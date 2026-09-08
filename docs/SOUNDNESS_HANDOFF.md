@@ -110,7 +110,7 @@ For functions that produce or wrap a `Self::Repr`, the soundness argument follow
 1. **Token premise.** `Self` here is a token type. A value of `Self` exists only if `Self::summon()` returned `Some`, an upgrade extractor produced one, or `forge_token_dangerously()` was called. In every case, every feature in the registry's `features = [...]` list for this token is runtime-available.
 2. **Intrinsic precondition.** The intrinsic's vendor docs list the required target_feature (e.g. `_mm256_set1_ps` requires `avx` per Intel SDM Vol. 2C VBROADCASTSS).
 3. **Match.** The registry lists the required feature in the token's feature set, so (1) implies the precondition holds.
-4. **Conclusion.** The `unsafe { ... }` block is sound at this call site.
+4. **Conclusion.** The intrinsic call has the required feature proof; current generators establish a matching target-feature context.
 
 For polyfilled paths (`f32x16<X64V3Token>::Repr = [__m256; 2]`), add:
 

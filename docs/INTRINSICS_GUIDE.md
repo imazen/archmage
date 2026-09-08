@@ -214,14 +214,10 @@ let shuf = _mm256_shuffle_ps(v, v, 0b10_11_00_01);  // 1 cycle
 
 **Denormal numbers** (very small floats near zero) cause **100x+ slowdown** when they appear in computations.
 
-```rust
-// Set DAZ+FTZ flags at program start for SIMD-heavy code
-unsafe {
-    let mut mxcsr = _mm_getcsr();
-    mxcsr |= 0x8040;  // DAZ (bit 6) + FTZ (bit 15)
-    _mm_setcsr(mxcsr);
-}
-```
+Changing MXCSR changes the floating-point environment for surrounding code.
+There is no general safe environment-changing API here. Keep the default
+environment for the documented contracts; do not enable FTZ/DAZ globally as a
+routine SIMD optimization.
 
 **Trade-off**: Loses IEEE compliance for denormal handling. Usually fine for graphics/audio/ML.
 

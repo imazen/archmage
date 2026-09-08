@@ -60,23 +60,9 @@ impl Vector8 {
 
 ### What Gets Generated
 
-```rust
-impl Vector8 {
-    // Sibling: both live in the same impl block
-    #[cfg(target_arch = "x86_64")]
-    #[doc(hidden)]
-    #[target_feature(enable = "avx2,fma,...")]
-    fn __arcane_magnitude(&self, token: X64V3Token) -> f32 {
-        let sum: f32 = self.0.iter().map(|x| x * x).sum();
-        sum.sqrt()
-    }
-
-    #[cfg(target_arch = "x86_64")]
-    fn magnitude(&self, token: X64V3Token) -> f32 {
-        unsafe { self.__arcane_magnitude(token) }
-    }
-}
-```
+The macro emits a target-feature function plus a token-justified boundary
+call. That implementation belongs to archmage; callers use `#[arcane]` or
+`#[magetypes]`, and helpers use a matching `#[rite]` context.
 
 Both functions are in the same `impl` block, so `self`, `Self`, and associated constants resolve correctly.
 
@@ -115,21 +101,9 @@ impl SimdOps for Point {
 
 ### What Gets Generated
 
-```rust
-impl SimdOps for Point {
-    fn compute(&self, token: X64V3Token) -> f32 {
-        #[cfg(target_arch = "x86_64")]
-        #[target_feature(enable = "avx2,fma,...")]
-        #[inline]
-        fn __inner(_self: &Point, token: X64V3Token) -> f32 {
-            use archmage::intrinsics::x86_64::*;
-            _self.x * _self.x + _self.y * _self.y
-        }
-        #[cfg(target_arch = "x86_64")]
-        { unsafe { __inner(self, token) } }
-    }
-}
-```
+The macro emits a target-feature function plus a token-justified boundary
+call. That implementation belongs to archmage; callers use `#[arcane]` or
+`#[magetypes]`, and helpers use a matching `#[rite]` context.
 
 The inner `fn` can't have a `self` receiver (Rust doesn't allow that in inner function items), so the macro passes `self` as a regular parameter named `_self` with the concrete type you specified.
 

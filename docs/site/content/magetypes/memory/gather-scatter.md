@@ -3,87 +3,47 @@ title = "Gather & Scatter"
 weight = 2
 +++
 
-Non-contiguous memory access patterns and how to handle them in SIMD code.
-
-## The Problem
-
-SIMD loads and stores are contiguous — `from_slice` reads 4 or 8 consecutive elements. But real data often needs non-sequential access: lookup tables, sparse arrays, indexed structures.
-
-## Approach: Manual Gather via Lane Access
-
-Magetypes vectors support `Index<usize>` for lane access, so you can build a vector from scattered positions:
+A lookup-table kernel can gather through checked Rust indexing while keeping
+its arithmetic in a generated SIMD context:
 
 ```rust
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Backend,
-};
+use archmage::prelude::*;
 
-#[inline(always)]
-fn manual_gather<T: F32x8Backend>(token: T) -> f32x8<T> {
-    let data = [0.0f32, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0];
-    let indices = [0usize, 2, 4, 6, 8, 1, 3, 5];
+#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+fn lookup_impl(token: Token, table: &[f32], indices: &[usize; 8], gain: f32) -> [f32; 8] {
+    let values = core::array::from_fn(|lane| table[indices[lane]]);
+    let v = f32x8::from_array(token, values);
+    (v * f32x8::splat(token, gain)).to_array()
+}
 
-    let mut arr = [0.0f32; 8];
-    for i in 0..8 {
-        arr[i] = data[indices[i]];
-    }
-    f32x8::<T>::from_array(token, arr)
-    // result = [0.0, 20.0, 40.0, 60.0, 80.0, 10.0, 30.0, 50.0]
+pub fn lookup(table: &[f32], indices: &[usize; 8], gain: f32) -> [f32; 8] {
+    incant!(lookup_impl(table, indices, gain), [v3, neon, wasm128, scalar])
 }
 ```
 
-This is straightforward and safe. The compiler may auto-vectorize it, but don't count on it.
+Every index is bounds-checked unless the compiler can prove it valid. An invalid
+index panics; it cannot read outside the slice. LLVM may use scalar loads or a
+hardware gather. This example does not promise a gather instruction or zero
+bounds-check cost.
 
-## Approach: Raw Intrinsics for Gather
+A scatter can likewise use checked indexing. Define duplicate-index behavior
+explicitly (for example, the last lane wins) before selecting an implementation.
+Native scatter instructions need not share scalar lane-order semantics.
 
-If you need hardware gather (`vgatherdps`), use raw intrinsics inside `#[arcane]`. This is x86-specific and doesn't fit the generic backend pattern — use it only when targeting AVX2 directly:
+## Remaining API gap
 
-```rust
-use archmage::{X64V3Token, arcane};
+Magetypes has no portable checked gather/scatter method. The installed
+`safe_unaligned_simd` memory reexports do not supply the AVX2 gather used in the
+old example either. That example accepted unchecked indices behind a safe
+signature, so it has been removed. A future gather should accept a slice and
+checked indices, and specify signed offsets, masks, scale, and out-of-range
+behavior. A reusable validated index object may amortize checks over repeated
+lookups; justify it with a real consumer and codegen measurements first.
 
-#[arcane(import_intrinsics)]
-fn gather_example(token: X64V3Token, data: &[f32], indices: &[i32; 8]) -> [f32; 8] {
-    let idx = _mm256_loadu_si256(indices.as_ptr() as *const __m256i);
-    let gathered = unsafe {
-        _mm256_i32gather_ps::<4>(data.as_ptr(), idx)
-    };
-    let mut out = [0.0f32; 8];
-    unsafe { _mm256_storeu_ps(out.as_mut_ptr(), gathered) };
-    out
-}
-```
+## Prefetch and layout
 
-## Performance Note
-
-Gather and scatter are convenient but often slow compared to sequential access. On x86-64, `vgatherdps` issues one memory request per lane (up to 8 separate cache line accesses for `f32x8`). Sequential loads from contiguous memory benefit from cache line prefetching and can be 3-10x faster depending on the access pattern.
-
-Use gather when:
-- The access pattern is genuinely non-contiguous (lookup tables, sparse arrays)
-- Restructuring the data layout to be sequential isn't practical
-
-Avoid gather when:
-- You could rearrange your data to enable sequential access
-- You're in a tight inner loop — consider whether transposing the data once outside the loop would eliminate the gather
-
-## Prefetch
-
-Hint the CPU to load data into cache before you need it:
-
-```rust
-use std::arch::x86_64::*;
-
-// Prefetch for read, all cache levels
-unsafe { _mm_prefetch(ptr as *const i8, _MM_HINT_T0) };
-```
-
-Prefetch hints:
-
-| Hint | Cache Level | Use |
-|------|-------------|-----|
-| `_MM_HINT_T0` | All levels (L1+) | Data needed very soon |
-| `_MM_HINT_T1` | L2 and above | Data needed soon |
-| `_MM_HINT_T2` | L3 and above | Data needed later |
-| `_MM_HINT_NTA` | Non-temporal | Streaming data, don't pollute cache |
-
-Prefetching is most effective when issued 100-300 cycles before the data is needed. In a loop, prefetch 2-4 iterations ahead. Excessive prefetching can hurt performance by evicting useful data from cache.
+The generic API has no prefetch method. Prefetch distance is CPU- and
+workload-dependent; fixed cycle estimates are not a portable tuning rule.
+Start by comparing the actual indexed kernel with a contiguous or transposed
+layout. A future safe prefetch API should accept a reference or slice position
+and document architecture-specific hint handling.

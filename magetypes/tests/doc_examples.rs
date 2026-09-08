@@ -996,3 +996,310 @@ mod isa_quirks {
         check_float!(t, f32x16, 16, 1, false, false, false);
     }
 }
+
+// Complete call chains copied from the corresponding documentation snippets.
+
+mod complete_gain {
+    #![forbid(unsafe_code)]
+    use archmage::prelude::*;
+
+    #[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+    fn gain_impl(token: Token, plane: &mut [f32], gain: f32) {
+        let factor = f32x8::splat(token, gain);
+        let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+        for chunk in chunks {
+            (f32x8::load(token, chunk) * factor).store(chunk);
+        }
+        for value in tail {
+            *value *= gain;
+        }
+    }
+
+    pub fn apply_gain(plane: &mut [f32], gain: f32) {
+        incant!(gain_impl(plane, gain), [v3, neon, wasm128, scalar])
+    }
+
+    #[test]
+    fn empty_chunks_and_tail() {
+        for len in 0..34 {
+            let mut input: Vec<f32> = (0..len).map(|x| x as f32 - 9.0).collect();
+            let expected: Vec<f32> = input.iter().map(|x| x * 2.0).collect();
+            apply_gain(&mut input, 2.0);
+            assert_eq!(input, expected);
+        }
+    }
+}
+
+mod generic_gain {
+    use archmage::prelude::*;
+    use magetypes::simd::{backends::F32x8Backend, generic::f32x8};
+
+    #[inline(always)]
+    fn gain_kernel<T: F32x8Backend>(token: T, plane: &mut [f32], gain: f32) {
+        let factor = f32x8::<T>::splat(token, gain);
+        let (chunks, tail) = f32x8::<T>::partition_slice_mut(token, plane);
+        for chunk in chunks {
+            (f32x8::<T>::load(token, chunk) * factor).store(chunk);
+        }
+        for value in tail {
+            *value *= gain;
+        }
+    }
+
+    #[magetypes(v3, neon, wasm128, scalar)]
+    fn gain_entry(token: Token, plane: &mut [f32], gain: f32) {
+        gain_kernel(token, plane, gain);
+    }
+
+    pub fn gain(plane: &mut [f32], factor: f32) {
+        incant!(gain_entry(plane, factor), [v3, neon, wasm128, scalar])
+    }
+
+    #[test]
+    fn empty_chunks_and_tail() {
+        for len in 0..34 {
+            let mut input: Vec<f32> = (0..len).map(|x| x as f32 - 9.0).collect();
+            let expected: Vec<f32> = input.iter().map(|x| x * 2.0).collect();
+            gain(&mut input, 2.0);
+            assert_eq!(input, expected);
+        }
+    }
+}
+
+mod complete_square {
+    use archmage::prelude::*;
+
+    #[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+    fn square_impl(token: Token, plane: &mut [f32]) {
+        let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+        for chunk in chunks {
+            let v = f32x8::load(token, chunk);
+            (v * v).store(chunk);
+        }
+        for value in tail {
+            *value *= *value;
+        }
+    }
+
+    pub fn square(plane: &mut [f32]) {
+        incant!(square_impl(plane), [v3, neon, wasm128, scalar])
+    }
+
+    #[test]
+    fn empty_chunks_and_tail() {
+        for len in 0..34 {
+            let mut input: Vec<f32> = (0..len).map(|x| x as f32 - 9.0).collect();
+            let expected: Vec<f32> = input.iter().map(|x| x * x).collect();
+            square(&mut input);
+            assert_eq!(input, expected);
+        }
+    }
+}
+
+mod complete_lookup {
+    #![forbid(unsafe_code)]
+    use archmage::prelude::*;
+
+    #[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+    fn lookup_impl(token: Token, table: &[f32], indices: &[usize; 8], gain: f32) -> [f32; 8] {
+        let values = core::array::from_fn(|lane| table[indices[lane]]);
+        let v = f32x8::from_array(token, values);
+        (v * f32x8::splat(token, gain)).to_array()
+    }
+
+    pub fn lookup(table: &[f32], indices: &[usize; 8], gain: f32) -> [f32; 8] {
+        incant!(
+            lookup_impl(table, indices, gain),
+            [v3, neon, wasm128, scalar]
+        )
+    }
+
+    #[test]
+    fn repeated_and_boundary_indices() {
+        let table = [0.0, 10.0, 20.0, 30.0];
+        assert_eq!(
+            lookup(&table, &[3, 0, 3, 1, 2, 0, 2, 1], 2.0),
+            [60.0, 0.0, 60.0, 20.0, 40.0, 0.0, 40.0, 20.0]
+        );
+    }
+    #[test]
+    #[should_panic]
+    fn invalid_index_panics() {
+        lookup(&[1.0], &[0, 0, 0, 0, 0, 0, 0, 1], 1.0);
+    }
+}
+
+mod safe_rite_test {
+    #![forbid(unsafe_code)]
+    use archmage::prelude::*;
+
+    #[rite(v3)]
+    fn double(value: f32) -> f32 {
+        value * 2.0
+    }
+
+    #[arcane]
+    fn test_entry(token: X64V3Token, value: f32) -> f32 {
+        double(value)
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn test_double() {
+        if let Some(token) = X64V3Token::summon() {
+            assert_eq!(test_entry(token, 3.0), 6.0);
+        }
+    }
+}
+
+#[cfg(feature = "w512")]
+mod linear_srgb_gamma_chain {
+    #![forbid(unsafe_code)]
+    use archmage::prelude::*;
+
+    fn gamma_to_linear_scalar(encoded: f32, gamma: f32) -> f32 {
+        if encoded <= 0.0 {
+            0.0
+        } else if encoded >= 1.0 {
+            1.0
+        } else {
+            encoded.powf(gamma)
+        }
+    }
+
+    #[archmage::magetypes(define(f32x16), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+    fn gamma_to_linear_slice_tier(token: Token, values: &mut [f32], gamma: f32) {
+        let (chunks, remainder) = values.as_chunks_mut::<16>();
+        for chunk in chunks {
+            let v = f32x16::from_array(token, *chunk);
+            let clamped = v.max(f32x16::zero(token)).min(f32x16::splat(token, 1.0));
+            *chunk = clamped.pow_midp(gamma).to_array();
+        }
+        for v in remainder {
+            *v = gamma_to_linear_scalar(*v, gamma);
+        }
+    }
+
+    pub fn gamma_to_linear_slice(values: &mut [f32], gamma: f32) {
+        incant!(
+            gamma_to_linear_slice_tier(values, gamma),
+            [v4, v3, neon, wasm128, scalar]
+        )
+    }
+
+    #[test]
+    fn complete_chunks_and_tail_match_the_curve_budget() {
+        for len in 0..34 {
+            let mut values: Vec<f32> = (0..len).map(|x| x as f32 / 33.0).collect();
+            let expected: Vec<f32> = values.iter().map(|x| x.powf(2.2)).collect();
+            gamma_to_linear_slice(&mut values, 2.2);
+            for (actual, expected) in values.iter().zip(expected) {
+                assert!(
+                    (actual - expected).abs() <= 0.00005,
+                    "{actual} vs {expected}"
+                );
+            }
+        }
+    }
+}
+
+mod zenblend_complete_chain {
+    #![forbid(unsafe_code)]
+    use archmage::prelude::*;
+    use magetypes::simd::{backends::F32x4Backend, generic::f32x4};
+
+    #[inline]
+    fn blend_kernel<T: F32x4Backend>(token: T, fg: &mut [f32], bg: &[f32]) {
+        let (fg_chunks, _) = f32x4::<T>::partition_slice_mut(token, fg);
+        let (bg_chunks, _) = f32x4::<T>::partition_slice(token, bg);
+
+        for (fg_chunk, bg_chunk) in fg_chunks.iter_mut().zip(bg_chunks.iter()) {
+            let fg_pixel = f32x4::load(token, fg_chunk);
+            let bg_pixel = f32x4::load(token, bg_chunk);
+            let inv_alpha = f32x4::splat(token, 1.0 - fg_chunk[3]);
+            let result = fg_pixel + bg_pixel * inv_alpha;
+            result.store(fg_chunk);
+        }
+    }
+
+    #[magetypes(v3, neon, wasm128, scalar)]
+    fn blend_entry(token: Token, fg: &mut [f32], bg: &[f32]) {
+        blend_kernel(token, fg, bg);
+    }
+
+    pub fn blend_row(fg: &mut [f32], bg: &[f32]) {
+        incant!(blend_entry(fg, bg), [v3, neon, wasm128, scalar])
+    }
+
+    #[test]
+    fn partial_rows_and_complete_pixels() {
+        for len in 0..22 {
+            let mut fg = vec![0.25; len];
+            let bg = vec![0.5; 16];
+            let mut expected = fg.clone();
+            for px in expected.as_chunks_mut::<4>().0.iter_mut().take(4) {
+                let inverse = 1.0 - px[3];
+                for x in px {
+                    *x += 0.5 * inverse;
+                }
+            }
+            blend_row(&mut fg, &bg);
+            assert_eq!(fg, expected);
+        }
+    }
+}
+
+mod zenwebp_complete_chain {
+    #![forbid(unsafe_code)]
+    use archmage::prelude::*;
+
+    #[inline(always)]
+    fn add_green_portable<T: magetypes::simd::backends::U8x16Backend>(
+        _token: T,
+        image_data: &mut [u8],
+    ) {
+        // Process 4 pixels (16 bytes) at a time for autovectorization
+        let (chunks, remainder) = image_data.as_chunks_mut::<16>();
+        for chunk in chunks {
+            let g0 = chunk[1];
+            let g1 = chunk[5];
+            let g2 = chunk[9];
+            let g3 = chunk[13];
+            chunk[0] = chunk[0].wrapping_add(g0);
+            chunk[2] = chunk[2].wrapping_add(g0);
+            chunk[4] = chunk[4].wrapping_add(g1);
+            chunk[6] = chunk[6].wrapping_add(g1);
+            chunk[8] = chunk[8].wrapping_add(g2);
+            chunk[10] = chunk[10].wrapping_add(g2);
+            chunk[12] = chunk[12].wrapping_add(g3);
+            chunk[14] = chunk[14].wrapping_add(g3);
+        }
+        for pixel in remainder.as_chunks_mut::<4>().0 {
+            pixel[0] = pixel[0].wrapping_add(pixel[1]);
+            pixel[2] = pixel[2].wrapping_add(pixel[1]);
+        }
+    }
+
+    #[magetypes(v3, neon, wasm128, scalar)]
+    fn add_green_entry(token: Token, rgba: &mut [u8]) {
+        add_green_portable(token, rgba);
+    }
+
+    pub fn add_green(rgba: &mut [u8]) {
+        incant!(add_green_entry(rgba), [v3, neon, wasm128, scalar])
+    }
+
+    #[test]
+    fn chunks_tails_and_wrapping() {
+        for len in 0..36 {
+            let mut input: Vec<u8> = (0..len).map(|i| (i * 71 + 200) as u8).collect();
+            let mut expected = input.clone();
+            for px in expected.as_chunks_mut::<4>().0 {
+                px[0] = px[0].wrapping_add(px[1]);
+                px[2] = px[2].wrapping_add(px[1]);
+            }
+            add_green(&mut input);
+            assert_eq!(input, expected);
+        }
+    }
+}

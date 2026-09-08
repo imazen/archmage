@@ -45,9 +45,9 @@ fn add(_token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
 
 No individual `use` statements needed -- `X64V3Token`, `_mm256_loadu_ps`, `_mm256_add_ps`, and `_mm256_storeu_ps` all come from the prelude.
 
-## magetypes Prelude (exploratory)
+## magetypes Prelude
 
-[Magetypes](/magetypes/) is our exploratory companion crate — its API may change between releases. The primary magetypes pattern uses explicit generic imports for cross-platform code:
+[Magetypes](/magetypes/) is the companion crate for token-gated SIMD vector types. The primary magetypes pattern uses explicit generic imports for cross-platform code:
 
 ```rust
 use magetypes::simd::{

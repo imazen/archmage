@@ -38,18 +38,9 @@ Horizontal operations that combine lanes:
 | reduce_or  | SIMD available | SIMD available |
 
 **Float SIMD pattern (AVX2):**
-```rust
-pub fn reduce_add(self) -> f32 {
-    unsafe {
-        let hi = _mm256_extractf128_ps::<1>(self.0);
-        let lo = _mm256_castps256_ps128(self.0);
-        let sum = _mm_add_ps(lo, hi);
-        let h1 = _mm_hadd_ps(sum, sum);
-        let h2 = _mm_hadd_ps(h1, h1);
-        _mm_cvtss_f32(h2)
-    }
-}
-```
+Current implementations are emitted by the backend generators inside
+token-matched `#[arcane]` contexts. Use the generic vector operation from a
+`#[magetypes]` kernel; the old manually wrapped implementation is obsolete.
 
 **Integer scalar fallback pattern:**
 ```rust
@@ -79,38 +70,9 @@ Operations with no hardware support requiring mathematical computation:
 | sin_lowp | Range-reduced Chebyshev | varies |
 
 **Pattern:**
-```rust
-pub fn exp2_lowp(self) -> Self {
-    const C0: f32 = 1.0;
-    const C1: f32 = core::f32::consts::LN_2;
-    const C2: f32 = 0.240_226_5;
-    const C3: f32 = 0.055_504_11;
-
-    unsafe {
-        // Split into integer and fractional parts
-        let floor = _mm256_floor_ps(self.0);
-        let fract = _mm256_sub_ps(self.0, floor);
-
-        // Horner's method: ((C3*x + C2)*x + C1)*x + C0
-        let c3 = _mm256_set1_ps(C3);
-        let c2 = _mm256_set1_ps(C2);
-        let c1 = _mm256_set1_ps(C1);
-        let c0 = _mm256_set1_ps(C0);
-
-        let y = _mm256_fmadd_ps(c3, fract, c2);
-        let y = _mm256_fmadd_ps(y, fract, c1);
-        let y = _mm256_fmadd_ps(y, fract, c0);
-
-        // Scale by 2^floor using integer manipulation
-        let exp_int = _mm256_cvtps_epi32(floor);
-        let exp_int = _mm256_add_epi32(exp_int, _mm256_set1_epi32(127));
-        let exp_int = _mm256_slli_epi32::<23>(exp_int);
-        let scale = _mm256_castsi256_ps(exp_int);
-
-        Self(_mm256_mul_ps(y, scale))
-    }
-}
-```
+Current implementations are emitted by the backend generators inside
+token-matched `#[arcane]` contexts. Use the generic vector operation from a
+`#[magetypes]` kernel; the old manually wrapped implementation is obsolete.
 
 ## Platform-Specific Considerations
 
@@ -159,24 +121,9 @@ The xtask generator should:
 
 ### Fallback Selection in Generator
 
-```rust
-fn generate_reduce_add(arch: &dyn Arch, elem: ElementType) -> String {
-    if let Some(intrinsic) = arch.reduce_add_intrinsic(elem) {
-        // Native instruction available
-        format!("unsafe {{ {} }}", intrinsic)
-    } else if elem.is_float() && arch.has_hadd(elem) {
-        // Use shuffle tree reduction
-        arch.generate_shuffle_reduce_add(elem)
-    } else {
-        // Scalar fallback
-        format!(
-            "self.to_array().iter().copied().fold({}, {}::wrapping_add)",
-            elem.zero_literal(),
-            elem.type_name()
-        )
-    }
-}
-```
+Current implementations are emitted by the backend generators inside
+token-matched `#[arcane]` contexts. Use the generic vector operation from a
+`#[magetypes]` kernel; the old manually wrapped implementation is obsolete.
 
 ## Adding New Operations
 

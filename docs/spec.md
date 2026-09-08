@@ -6,8 +6,9 @@ This document is the authoritative reference for archmage's token architecture, 
 
 Archmage uses zero-sized **capability tokens** to prove CPU features are available at compile time. A token can only be constructed via:
 
-- `summon()` / `summon()` — runtime feature detection, returns `Option<Self>`
-- `forge_token_dangerously()` — unsafe, caller guarantees features are present
+- `summon()` — runtime feature detection, returns `Option<Self>`
+- `from_context()` — callable safely from a matching or superset target-feature context on the native architecture; otherwise the caller must establish the features.
+- `forge_token_dangerously()` — deprecated compatibility alias; use `from_context()`.
 
 Tokens are `Copy + Clone + Send + Sync + 'static`. They carry no data — the type itself is the proof.
 
@@ -156,11 +157,15 @@ The reverse direction (summon checks more than the macro enables) is safe but wa
 Rust 1.86 stabilized `target_feature_11` (safe `fn` with `#[target_feature]`, safe cross-calls between matching contexts). Rust 1.87 declared value-based `std::arch` intrinsics safe. Together, **value-based intrinsics are safe inside `#[target_feature]` functions**:
 
 ```rust
-#[target_feature(enable = "avx2")]
-fn example() {
-    let a = _mm256_setzero_ps();        // SAFE — value-based
-    let b = _mm256_add_ps(a, a);        // SAFE — value-based
-    let v = unsafe { _mm256_loadu_ps(ptr) };  // UNSAFE — pointer dereference
+use archmage::prelude::*;
+
+#[arcane(import_intrinsics)]
+fn example(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+    let a = _mm256_loadu_ps(data);
+    let b = _mm256_add_ps(a, a);
+    let mut out = [0.0; 8];
+    _mm256_storeu_ps(&mut out, b);
+    out
 }
 ```
 
@@ -191,22 +196,10 @@ fn kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
     let v = _mm256_setzero_ps();  // In scope from import_intrinsics
     // ...
 }
-
-// Generated (x86_64 only — cfg'd out on other architectures):
-#[cfg(target_arch = "x86_64")]
-#[doc(hidden)]
-#[target_feature(enable = "sse3,ssse3,sse4.1,...,avx2,fma,...")]
-fn __arcane_kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    let v = _mm256_setzero_ps();
-    // ...
-}
-
-#[cfg(target_arch = "x86_64")]
-fn kernel(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    // SAFETY: token existence proves CPU support was verified via summon()
-    unsafe { __arcane_kernel(token, data) }
-}
 ```
+
+The macro generates the target-feature boundary and its justified internal call.
+User code does not implement that boundary; see the expansion tests for exact output.
 
 Both functions live at the same scope level. For methods, both are in the same `impl` block, so `self`, `Self`, and associated constants resolve naturally.
 
@@ -214,26 +207,9 @@ Both functions live at the same scope level. For methods, both are in the same `
 
 For trait impls (where sibling would add methods not in the trait definition), use `#[arcane(nested)]` or `#[arcane(_self = Type)]`:
 
-```rust
-impl SimdOps for MyType {
-    #[arcane(_self = MyType)]
-    fn compute(&self, token: X64V3Token) -> f32 {
-        _self.data.iter().sum()  // _self replaces self
-    }
-}
-
-// Generated:
-impl SimdOps for MyType {
-    fn compute(&self, token: X64V3Token) -> f32 {
-        #[target_feature(enable = "...")]
-        #[inline]
-        fn __inner(_self: &MyType, token: X64V3Token) -> f32 {
-            _self.data.iter().sum()
-        }
-        unsafe { __inner(self, token) }
-    }
-}
-```
+The macro emits a target-feature function plus a token-justified boundary
+call. That implementation belongs to archmage; callers use `#[arcane]` or
+`#[magetypes]`, and helpers use a matching `#[rite]` context.
 
 #### Options
 

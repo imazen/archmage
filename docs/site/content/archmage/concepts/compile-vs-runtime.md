@@ -20,15 +20,9 @@ Understanding when feature detection happens—and how LLVM optimizes across fea
 
 This is the mechanism that makes SIMD work. It tells LLVM: "Inside this function, assume these CPU features are available."
 
-```rust
-#[target_feature(enable = "avx2,fma")]
-fn process_avx2(data: &[f32; 8]) -> f32 {
-    // LLVM generates AVX2 instructions here
-    // _mm256_* intrinsics compile to single instructions
-    let v = _mm256_loadu_ps(data.as_ptr());
-    // ...
-}
-```
+A function annotated with `#[target_feature(enable = "avx2,fma")]` is
+compiled with AVX2 and FMA enabled. Its caller must satisfy that context;
+the annotation alone does not perform runtime detection.
 
 Since Rust 1.86, the function itself isn't `unsafe`. But **calling** it from a context without matching target features requires `unsafe` — because without a `summon()` or CPUID check, there's no proof the CPU supports those instructions. Calling on an unsupported CPU means an illegal instruction fault.
 
@@ -38,17 +32,10 @@ Since Rust 1.86, the function itself isn't `unsafe`. But **calling** it from a c
 // You write:
 #[arcane(import_intrinsics)]
 fn process(token: X64V3Token, data: &[f32; 8]) -> f32 { /* ... */ }
-
-// Macro generates:
-fn process(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    #[target_feature(enable = "avx2,fma,bmi1,bmi2")]
-    #[inline]
-    fn __inner(token: X64V3Token, data: &[f32; 8]) -> f32 { /* ... */ }
-
-    // SAFETY: Token existence proves summon() succeeded
-    unsafe { __inner(token, data) }
-}
 ```
+
+The macro generates the target-feature boundary and its justified internal call.
+User code does not implement that boundary; see the expansion tests for exact output.
 
 The `unsafe` call is where we cross from "no target features" to "avx2+fma" — calling a function compiled for a different LLVM target than the caller. The token proves `summon()` succeeded, making that crossing sound.
 
@@ -188,19 +175,9 @@ This is **safe**—`as_x64v4()` returns `None` if the token doesn't support V4. 
 - **Tier-based** (`#[rite(v3)]`): specifies features via tier name, no token needed
 - **Multi-tier** (`#[rite(v3, v4, neon)]`): generates suffixed variants (`fn_v3`, `fn_v4`, `fn_neon`)
 
-```rust
-// #[arcane] creates a wrapper:
-fn entry(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    #[target_feature(enable = "avx2,fma,...")]
-    fn __inner(...) { ... }
-    unsafe { __inner(...) }
-}
-
-// #[rite] is the function directly:
-#[target_feature(enable = "avx2,fma,...")]
-#[inline]
-fn helper(data: &[f32; 8]) -> f32 { ... }  // Tier-based — no token needed
-```
+The macro emits a target-feature function plus a token-justified boundary
+call. That implementation belongs to archmage; callers use `#[arcane]` or
+`#[magetypes]`, and helpers use a matching `#[rite]` context.
 
 Since Rust 1.86+, calling a `#[target_feature]` function from a matching context is safe. So `#[arcane]` can call `#[rite]` functions without `unsafe`:
 

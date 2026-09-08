@@ -135,8 +135,8 @@ with `-C target-cpu=x86-64-v3`:
 Since Rust 1.87, value-based `core::arch` intrinsics are *safe* inside a
 matching `#[target_feature]` region; everywhere else they require `unsafe`
 with exactly this feature-availability obligation. magetypes' backend impls
-take the second route: `unsafe { intrinsic }` justified by the token
-receiver.
+use token-matched `#[arcane]` contexts, so the compiler checks value-intrinsic
+feature requirements inside each generated body.
 
 ## Where `unsafe` lives (the complete inventory)
 
@@ -160,7 +160,7 @@ magetypes.
 Moving the pointer work into `simd_storage` helpers inverted most call-site
 bugs: a wrong `Dst` is a hard `E0080` at monomorphization (size), or an
 alignment assert, or a wrong-`N` assert — none of which a raw
-`unsafe { &*ptr.cast::<Dst>() }` at the call site checked at all. Two gaps
+pointer-to-reference cast at the call site checked at all. Two gaps
 survive that inversion, and both are now covered.
 
 **1. Padding in a `Pod` type.** This is the only `Pod` violation with no other

@@ -49,18 +49,10 @@ fn kernel(token: X64V3Token, data: &[f32; 8]) -> f32 {
     let v = _mm256_setzero_ps();  // Safe inside #[target_feature]!
     // ...
 }
-
-// What the macro generates:
-fn kernel(_token: X64V3Token, data: &[f32; 8]) -> f32 {
-    #[target_feature(enable = "avx2,fma,...")]
-    fn __inner(data: &[f32; 8]) -> f32 {
-        let v = _mm256_setzero_ps();
-        // ...
-    }
-    // SAFETY: Token existence proves CPU support
-    unsafe { __inner(data) }
-}
 ```
+
+The macro generates the target-feature boundary and its justified internal call.
+User code does not implement that boundary; see the expansion tests for exact output.
 
 The outer function is safe. The `unsafe` is an implementation detail justified by the token.
 
@@ -69,14 +61,15 @@ The outer function is safe. The `unsafe` is an implementation detail justified b
 Value-based intrinsics are safe inside `#[target_feature]` functions:
 
 ```rust
-#[target_feature(enable = "avx2")]
-fn example() {
-    let a = _mm256_setzero_ps();       // Safe
-    let b = _mm256_add_ps(a, a);       // Safe
-    let c = _mm256_fmadd_ps(a, b, c);  // Safe
+use archmage::prelude::*;
 
-    // Only memory operations need unsafe:
-    let v = unsafe { _mm256_loadu_ps(ptr) };  // Raw pointer
+#[arcane(import_intrinsics)]
+fn example(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
+    let a = _mm256_loadu_ps(data);
+    let b = _mm256_add_ps(a, a);
+    let mut out = [0.0; 8];
+    _mm256_storeu_ps(&mut out, b);
+    out
 }
 ```
 
@@ -254,3 +247,28 @@ Note: `rcp` is `rcp_approx`, `rsqrt` is `rsqrt_approx` for fast approximations. 
 ## License
 
 MIT OR Apache-2.0
+
+## Documentation audit and remaining API gaps
+
+The public guides now lead with complete call chains adapted from `zenfilters`,
+`zenblend`, `zenwebp`, and `linear-srgb`, with pinned source links and explicit
+adaptation notes. Their executable counterparts are in
+`magetypes/tests/doc_examples.rs`. Entry points use `#[magetypes]` or `#[arcane]`;
+`#[inline(always)]` on a generic helper does not establish target features.
+
+Authored Markdown and browser examples no longer contain explicit unsafe blocks.
+Macro expansion internals are explained in prose. The intrinsic registry retains
+upstream documentation as data; the browser omits upstream code fences and does
+not offer a callable example when no safe wrapper exists.
+
+| Gap | Current safe approach | Requirement before adding an abstraction |
+|---|---|---|
+| Portable gather/scatter | Checked slice indexing and ordinary loads/stores | Define bounds, masking, scale, and duplicate scatter ordering; prove generated checks disappear when bounds are established. |
+| Non-temporal stores | Ordinary reference-based stores | Encode alignment, writable extent, and completion/fence obligations. |
+| Generic prefetch | Leave prefetch out of portable examples | A reference-based interface and evidence of a useful consumer. |
+| Floating-point environment changes | Use operations with the required documented semantics | An ambient MXCSR/FTZ/DAZ change affects surrounding code; a local token alone is insufficient. |
+
+These gaps are not reasons to expose a safe function that accepts unchecked raw
+pointers. The ISA quirks page separately records numerical portability limits,
+including V3 reciprocal underflow for large finite inputs, and distinguishes
+measured float fixups from integer fixups whose isolated timings remain unmeasured.

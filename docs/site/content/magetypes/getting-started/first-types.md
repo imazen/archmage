@@ -3,205 +3,47 @@ title = "Your First Types"
 weight = 2
 +++
 
-Every magetypes vector requires a token for construction. The pattern is: **write a generic function over a backend trait, summon a token, call the function.**
-
-## The Pattern
-
-Write the computation as a generic function bounded on the backend trait. The token parameter gates construction; once you have the vector, operators work without it.
-
-```rust
-use archmage::{X64V3Token, SimdToken};
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Backend,
-};
-
-#[inline(always)]
-fn scale_and_sum<T: F32x8Backend>(token: T, input: &[f32; 8]) -> f32 {
-    // 1. Construct: token is the first argument, turbofish selects the backend
-    let a = f32x8::<T>::from_array(token, *input);
-    let b = f32x8::<T>::splat(token, 2.0);
-
-    // 2. Operate: natural Rust operators
-    let c = a * b;
-
-    // 3. Extract: get scalar results back
-    c.reduce_add()
-}
-
-fn main() {
-    // 4. Summon: prove the CPU supports AVX2+FMA
-    if let Some(token) = X64V3Token::summon() {
-        let data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0f32];
-        let result = scale_and_sum(token, &data);
-        println!("{}", result);  // 72.0
-    }
-}
-```
-
-The turbofish `f32x8::<T>` is required on constructors because Rust can't infer the backend from a consumed token value. Once the vector exists, methods like `*`, `reduce_add()`, and `to_array()` resolve without annotation.
-
-## Why Tokens?
-
-The token proves CPU support exists. Without it, constructing an `f32x8` on a CPU without AVX2 would produce garbage or crash. The type system prevents this at compile time — you cannot call `f32x8::<T>::splat()` without a token of type `T`, and `T` can only be summoned if the CPU supports the required features.
-
-Tokens are zero-sized. Passing them around costs nothing at runtime. Construction functions need the token; once you have the vector, operations like `+`, `*`, `reduce_add()` don't need it again.
-
-## Summon Once, Use Many
-
-You don't need to summon a token every time you construct a vector. Summon once at the dispatch boundary, pass the token into generic SIMD code:
+Start with a real image-plane kernel adapted from `zenfilters`. The
+[production call chain and source revision](@/magetypes/examples/generic-kernels.md)
+are documented alongside the standalone version. Add both `archmage` and
+`magetypes`; their default features support this example.
 
 ```rust
-use archmage::{X64V3Token, SimdToken, arcane};
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Backend,
-};
-
-#[inline(always)]
-fn process_data<T: F32x8Backend>(token: T, input: &[f32; 8]) -> f32 {
-    let a = f32x8::<T>::from_array(token, *input);
-    let b = f32x8::<T>::splat(token, 0.5);  // Same token, no re-detection
-    let scaled = a * b;
-    scaled.reduce_add()
-}
-
-#[arcane(import_intrinsics)]
-fn process_avx2(token: X64V3Token, input: &[f32; 8]) -> f32 {
-    process_data(token, input)
-}
-
-fn main() {
-    if let Some(token) = X64V3Token::summon() {
-        let data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0f32];
-        let result = process_avx2(token, &data);
-        println!("sum of halved values: {}", result);  // 18.0
-    }
-}
-```
-
-`#[arcane]` generates `#[target_feature]` attributes from the token type, so SIMD intrinsics are safe inside the function. See [The #\[arcane\] Macro](@/archmage/concepts/arcane.md) for details.
-
-## Different Tokens, Different Types
-
-The backend type parameter determines what hardware you're targeting. The same generic function works across all of them:
-
-```rust
-use archmage::{X64V3Token, ScalarToken, SimdToken};
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Backend,
-};
-
-#[inline(always)]
-fn sum8<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
-    f32x8::<T>::from_array(token, *data).reduce_add()
-}
-
-fn dispatch_sum8(data: &[f32; 8]) -> f32 {
-    // Scalar is always available — no summon needed
-    let scalar = ScalarToken::new();
-
-    #[cfg(target_arch = "x86_64")]
-    if let Some(token) = X64V3Token::summon() {
-        return sum8(token, data);
-    }
-
-    sum8(scalar, data)
-}
-```
-
-On AArch64, `NeonToken` backs the NEON implementation. On x86-64, `X64V3Token` gives AVX2+FMA. On any platform, `ScalarToken` falls back to portable scalar code. The generic function `sum8` compiles correctly for each.
-
-## Concrete Backends
-
-When you need to name a specific backend type (e.g., in a `use` or a type annotation), the `backends` module exports short aliases:
-
-```rust
-use magetypes::simd::backends::{x64v3, neon, scalar};
-use magetypes::simd::generic::f32x8;
-
-// Explicit concrete types for type annotations or static dispatch
-type F32x8Avx2  = f32x8<x64v3>;
-type F32x8Neon  = f32x8<neon>;
-type F32x8Scalar = f32x8<scalar>;
-```
-
-These aliases (`x64v3`, `neon`, `wasm128`, `scalar`, etc.) are simply re-exports of the archmage token types under shorter names.
-
-## Implementation Name
-
-Concrete specializations expose `implementation_name()` to confirm which backend is active:
-
-```rust
-use magetypes::simd::generic::f32x8;
-
-fn show_impl() {
-    #[cfg(target_arch = "x86_64")]
-    println!("{}", f32x8::<archmage::X64V3Token>::implementation_name());
-    // "x86::v3::f32x8"
-}
-```
-
-This is an associated function on the concrete specialization, not on the generic type or on a vector value.
-
-## Type Properties
-
-All magetypes SIMD types are:
-
-- **Copy** — pass by value freely, no moves
-- **Clone** — explicit `.clone()` works
-- **Debug** — `println!("{:?}", v)` for debugging
-- **Send + Sync** — safe to share across threads
-
-```rust
-use magetypes::simd::{generic::f32x8, backends::F32x8Backend};
-
-#[inline(always)]
-fn copy_example<T: F32x8Backend>(token: T) {
-    let a = f32x8::<T>::splat(token, 1.0);
-    let b = a;       // Copy, not move
-    let c = a + b;   // Both still valid
-    let _ = c;
-}
-```
-
-## Performance Note
-
-The generic pattern (`f32x8::<T>`) produces **identical assembly** to concrete types (`f32x8::<x64v3>`) — but two conditions must hold:
-
-1. **The generic function must be called from inside `#[arcane]` or `#[rite]`** — without `#[target_feature]` on the caller, intrinsics become function calls (~18x slower).
-
-2. **The generic function must inline into the caller** — mark it `#[inline(always)]`. The generic function has no `#[target_feature]` of its own; it inherits the caller's features through inlining. Without inlining, even calling from `#[arcane]` is 18x slower.
-
-The backend methods are all `#[inline(always)]`, but that only helps once the generic body is inside the `#[target_feature]` region. For small same-crate functions, LLVM usually inlines without annotation — but this is a heuristic, not a guarantee. `#[inline(always)]` removes the ambiguity.
-
-See [Polyfills — Performance](@/magetypes/cross-platform/polyfills.md#performance-generic-concrete-inside-arcane-when-inlined) for benchmark data.
-
-## One Body, Every Platform: `#[magetypes]`
-
-The generic pattern above works when you want explicit control over each tier wrapper. For the common case — one algorithm, every platform — the `#[magetypes]` macro generates all the per-tier variants for you, and the `define(...)` flag injects the type aliases:
-
-```rust
+#![forbid(unsafe_code)]
 use archmage::prelude::*;
 
-#[magetypes(define(f32x8), v4, v3, neon, wasm128, scalar)]
-fn process_impl(token: Token, data: &[f32; 8]) -> f32 {
-    // `f32x8` is in scope via `define` — substituted to
-    // f32x8<X64V3Token> in the v3 variant, f32x8<NeonToken> in neon, etc.
-    f32x8::from_array(token, *data).reduce_add()
+#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+fn gain_impl(token: Token, plane: &mut [f32], gain: f32) {
+    let factor = f32x8::splat(token, gain);
+    let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+    for chunk in chunks {
+        (f32x8::load(token, chunk) * factor).store(chunk);
+    }
+    for value in tail {
+        *value *= gain;
+    }
 }
 
-pub fn process(data: &[f32; 8]) -> f32 {
-    incant!(process_impl(data))
+pub fn apply_gain(plane: &mut [f32], gain: f32) {
+    incant!(gain_impl(plane, gain), [v3, neon, wasm128, scalar])
 }
+
 ```
 
-`#[magetypes]` substitutes the `Token` placeholder per tier. `define(f32x8)` injects the alias line at the top of each variant body — no manual `type f32x8 = GenericF32x8<Token>;` boilerplate. See [Types and Dispatch](@/magetypes/dispatch/types-and-dispatch.md) for the full idiomatic patterns.
+The full chain is `apply_gain` → `incant!` → a generated `gain_impl_<tier>` →
+array-chunk loads, multiplication, and stores → scalar tail. The macro's
+`define(f32x8)` binds a generic vector to each selected token, enabling the right
+instructions inside the loop. Dispatch occurs outside the loop.
 
-## Next Steps
+For reuse across kernels, see the complete
+[zenblend generic-helper chain](@/magetypes/examples/pixel-blending.md).
+`#[inline(always)]` can help that helper inline, but it cannot replace the
+`#[magetypes]` entry context. For direct intrinsics, use `#[arcane(import_intrinsics)]`
+at the boundary and `#[rite(import_intrinsics)]` for matched helpers; the
+[intrinsics browser](https://imazen.github.io/archmage/intrinsics/) lists the
+reference-based memory operations.
 
-- [Types and Dispatch](@/magetypes/dispatch/types-and-dispatch.md) — the idiomatic `#[magetypes]` + `incant!` patterns
-- [Type Overview](@/magetypes/types/overview.md) — full list of available types per platform
-- [Arithmetic & Comparisons](@/magetypes/operations/operators.md) — operators, FMA, min/max
-- [Reductions](@/magetypes/operations/reductions.md) — `reduce_add`, `reduce_max`, `reduce_min`
+A token is proof of the required features, not a runtime allocation. A fixed
+lane count is a logical shape: NEON/WASM split `f32x8` into two native vectors.
+Normal Rust array alignment is sufficient. [ISA quirks and fixups](@/magetypes/isa-quirks.md)
+explain the contracts that are portable and the floating-point differences.

@@ -3,84 +3,54 @@ title = "Load & Store"
 weight = 1
 +++
 
-Moving data between memory and SIMD registers. For most cases, `from_array`/`from_slice` and `to_array`/`store` are what you want.
-
-## Unaligned Load
-
-The default and recommended approach. Modern CPUs handle unaligned access with minimal or no penalty:
+Process ordinary array references inside a generated target-feature context.
+The image-plane example handles every length, including the scalar tail:
 
 ```rust
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Backend,
-};
+use archmage::prelude::*;
 
-#[inline(always)]
-fn example<T: F32x8Backend>(token: T) {
-    // From an array
-    let arr = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-    let v = f32x8::<T>::from_array(token, arr);
+#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+fn square_impl(token: Token, plane: &mut [f32]) {
+    let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+    for chunk in chunks {
+        let v = f32x8::load(token, chunk);
+        (v * v).store(chunk);
+    }
+    for value in tail { *value *= *value; }
+}
 
-    // From a slice (must have enough elements)
-    let slice = &[1.0f32; 16];
-    let v = f32x8::<T>::from_slice(token, &slice[0..8]);
+pub fn square(plane: &mut [f32]) {
+    incant!(square_impl(plane), [v3, neon, wasm128, scalar])
 }
 ```
 
-## Aligned Load
+## Exact calls and checks
 
-If you know your data is aligned to the vector width (32 bytes for `f32x8`), you can use the aligned variant:
+| Call | Contract | Runtime work |
+|---|---|---|
+| `f32x8::<T>::load(token, array_ref)` | `&[f32; 8]` guarantees eight initialized elements | Unaligned vector load or the backend's smaller loads; no slice-length check |
+| `f32x8::<T>::from_array(token, array)` | Owned `[f32; 8]` | Value construction; copies can fold into the caller |
+| `f32x8::<T>::from_slice(token, slice)` | At least eight elements | Length check unless proved by the compiler |
+| `v.store(array_mut_ref)` | `&mut [f32; 8]` guarantees extent and exclusive access | Unaligned store or smaller stores |
+| `v.to_array()` | Owned `[f32; 8]` result | Value extraction; stores can fold into the caller |
+| `f32x8::<T>::partition_slice_mut(token, slice)` | Array chunks and a scalar tail | Computes chunk/tail extents once; no vector-alignment requirement |
 
-```rust
-// Aligned load — UB if pointer is not aligned to 32 bytes
-let v = unsafe { f32x8::<T>::load_aligned(ptr) };
-```
+The generic API does not provide `load_aligned`, `store_aligned`, or `stream`
+methods. Earlier versions of this page incorrectly advertised them. Do not
+substitute a raw pointer cast for these reference-based calls.
 
-In practice, the performance difference between aligned and unaligned loads is negligible on modern CPUs (Haswell+, all ARM Cortex-A). Prefer unaligned loads unless profiling says otherwise.
+For reusable `T: F32x8Backend` helpers, see
+[generic kernels](@/magetypes/examples/generic-kernels.md). Such helpers inline
+into the `#[magetypes]` context; an inline attribute alone does not enable ISA
+features.
 
-## Unaligned Store
+## Alignment and non-temporal stores
 
-```rust
-use magetypes::simd::{
-    generic::f32x8,
-    backends::F32x8Backend,
-};
+The reference APIs require normal Rust element alignment, not 32-byte SIMD
+alignment. Cache-line crossings and the working set can still affect speed;
+measure the complete loop before changing storage layout.
 
-#[inline(always)]
-fn example<T: F32x8Backend>(token: T) {
-    let v = f32x8::<T>::splat(token, 42.0);
-
-    // To an array
-    let arr: [f32; 8] = v.to_array();
-
-    // Store to a mutable array reference
-    let mut buf = [0.0f32; 8];
-    v.store(&mut buf);
-}
-```
-
-## Aligned Store
-
-```rust
-// Aligned store — UB if pointer is not aligned
-unsafe { v.store_aligned(ptr) };
-```
-
-## Streaming Stores
-
-Non-temporal stores bypass the cache hierarchy. Use for large sequential writes where the data won't be read back soon:
-
-```rust
-// Non-temporal store (bypasses cache)
-unsafe { v.stream(ptr) };
-```
-
-Streaming stores are useful when:
-- Writing large arrays sequentially (image processing, audio buffers)
-- Data won't be read again in the near future
-- You want to avoid evicting useful data from cache
-
-They are counterproductive when:
-- The buffer fits in cache and will be read soon
-- Access is random rather than sequential
-- The write volume is small
+There is no portable non-temporal-store abstraction here. A useful future API
+would need to encode address alignment, valid writable extent, and the ordering
+or completion fence before subsequent access. Merely wrapping a streaming
+intrinsic in a safe function would not establish those obligations.

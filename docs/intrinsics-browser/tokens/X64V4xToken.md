@@ -23,9 +23,9 @@ fn process(token: X64V4xToken, data: &mut [f32]) {
 
 #[rite(import_intrinsics)]  // All inner helpers
 fn process_chunk(_: X64V4xToken, chunk: &mut [f32; 16]) {
-    let v = _mm512_loadu_ps(chunk.as_ptr());  // safe inside #[rite]
+    let v = _mm512_loadu_ps(&*chunk);  // safe inside #[rite]
     let doubled = _mm512_add_ps(v, v);
-    _mm512_storeu_ps(chunk.as_mut_ptr(), doubled);
+    _mm512_storeu_ps(chunk, doubled);
 }
 // Use #![forbid(unsafe_code)] — import_intrinsics provides safe memory ops.
 ```

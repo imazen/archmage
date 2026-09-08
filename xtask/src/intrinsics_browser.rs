@@ -823,9 +823,9 @@ fn build_usage_example(token_def: &crate::registry::TokenDef, arch: &str) -> Str
 
                     #[rite(import_intrinsics)]  // All inner helpers
                     fn process_chunk(_: {primary_name}, chunk: &mut [f32; 16]) {{
-                        let v = _mm512_loadu_ps(chunk.as_ptr());  // safe inside #[rite]
+                        let v = _mm512_loadu_ps(&*chunk);  // safe inside #[rite]
                         let doubled = _mm512_add_ps(v, v);
-                        _mm512_storeu_ps(chunk.as_mut_ptr(), doubled);
+                        _mm512_storeu_ps(chunk, doubled);
                     }}
                     // Use #![forbid(unsafe_code)] — import_intrinsics provides safe memory ops."#}
             } else if token_def.features.iter().any(|f| f == "avx2") {

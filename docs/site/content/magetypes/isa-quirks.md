@@ -15,6 +15,81 @@ The floating-point tables assume the normal floating-point environment. Changing
 rounding modes or enabling flush-to-zero can change results. `NaN` means a NaN
 result, without a guarantee about its payload or sign.
 
+## Runtime fixups: exact calls and extra work
+
+These are **source-level lowerings**, not universal cycle counts. Constants can
+fold away, invariant count preparation can move out of a loop, and wider
+polyfills repeat the native sequence. The measured table below identifies its
+CPU, width, compiler, baseline, and workload.
+
+| Exact generic method call | ISA / shape | Baseline and runtime fixup | Where the extra work occurs |
+|---|---|---|---|
+| `v.to_i32_saturating()` on `f32x4`, `f32x8`, `f32x16` | V3 native 128/256; W512 uses two halves | `to_i32()` uses truncating conversion. Add an overflow comparison, select `i32::MAX`, unordered comparison, and AND-NOT to zero NaNs. | Four additional vector operations per native half, plus constant materialization if needed. No data-dependent branch in this lowering. |
+| Same calls | Native V4/V4x `f32x16` | Truncating conversion plus two mask comparisons and two masked moves. | Per vector; predicate-register form rather than V3's full-vector masks. |
+| Same calls | NEON / WASM / scalar | The base conversion already clamps and maps NaN to zero. | No additional semantic repair; benchmark these as identity controls. |
+| `v.recip()` / `v.rsqrt()` on `f32x4`, `f32x8`; V3 `f32x16` | V3 native half | Same estimate and Newton arithmetic, then unordered compare and blend back to the estimate on invalid intermediates. | Two semantic repair operations per native half; the inspected lowering also needs a register copy to retain the estimate. Constants, loads and scheduling affect time. |
+| `v.recip()` / `v.rsqrt()` on native `f32x16` | V4/V4x | Estimate + Newton + `VFIXUPIMM` with a constant rail table. | One fixup instruction per vector plus table materialization; retaining values can also require register copies. |
+| `v.recip()` / `v.rsqrt()` | NEON f32 | Two fused refinement steps. `rsqrt` places `a` and `y*y` inside `FRSQRTS` instead of forming the invalid `a*y` first. | Operand arrangement preserves special cases without an added compare/select. Current probe uses an identity control here, not the historical broken arrangement. |
+| `v.shl_uniform(count)` / `v.shr_logical_uniform(count)` on `i16x8/16/32`, `u16x8/16/32`, `i32x4/8/16`, `u32x4/8/16` | NEON | Clamp `count` to lane bits before conversion/broadcast; negate for right shift. This prevents large counts aliasing through NEON's signed low-byte interpretation. | Scalar min/select and broadcast per distinct count; usually hoistable when all loop iterations share the count. |
+| `v.shr_arithmetic_uniform(count)` on signed shapes above | NEON / WASM | Clamp to lane bits minus one, preserving sign-fill for excessive counts. | Scalar count preparation; NEON also broadcasts and negates. |
+| `v.shl_uniform(count)` / `v.shr_logical_uniform(count)` on the shapes above | WASM | Native shifts mask counts modulo lane bits. Compare the original count and AND the result with all-ones or zero. | Count comparison/splat plus a vector AND; invariant preparation may hoist. |
+| All uniform-shift calls above | x86 | Native excessive-count zero/sign-fill behavior already matches. | No semantic repair. Moving a runtime count into a register is still required. |
+| `a.narrow_saturating_i8(b)` / `a.narrow_saturating_u8(b)` on `i16x16`; `a.narrow_saturating_i16(b)` / `a.narrow_saturating_u16(b)` on `i32x8` | AVX2 | Native packs interleave 128-bit groups. `VPERMQ` with `0xD8` restores all of `a` followed by all of `b`. | One lane-order permutation per 256-bit pack; the V3 W512 path repeats it twice. |
+| Same narrowing methods on `i16x32` / `i32x16` | Native AVX-512 | Narrow each input to a half and insert/concatenate. Unsigned destinations clamp signed inputs to zero before unsigned conversion. | Two zero clamps for unsigned output, plus the two conversions and concatenation needed for the operation. |
+| Same narrowing families at 128 bits; NEON / WASM widths | Native halves | Native signed-source saturating narrows already have the desired lane order. | No AVX2-style lane-order repair; polyfills still require composition. |
+| `v.shl_const::<N>()`, `v.shr_logical_const::<N>()`, `v.shr_arithmetic_const::<N>()` | Every backend | Const assertions reject invalid counts before execution. | **No runtime assertion.** Constant byte shifts can still require shift/mask emulation. |
+
+`abs_diff`, `madd_adjacent`, `pairwise_widen_add`, saturating arithmetic, and
+`reduce_add_u32` sometimes need several instructions because an ISA lacks that
+operation. That is emulation of the operation, not an extra check imposed by a
+safe wrapper. `round()` enforces ties-to-even; the scalar fallback may need
+rounding code while hardware backends have native rounding instructions.
+
+## Measured overhead and recorded values
+
+[Open the interactive ISA explorer](../../isa-explorer/) to filter by CPU, ISA,
+width, and exact call; inspect decimal values and raw bits; or download the
+JSON with every paired timing round. It is an offline record viewer and does
+not claim to execute NEON or AVX-512 in your browser.
+
+{{ isa_explorer() }}
+
+The first measurements use 2,048 ordinary positive f32 values, release builds,
+no `target-cpu` override, and nine alternating AB/BA rounds. Timings include
+loads, stores, and the loop. The percentage is the median of paired ratios;
+MAD describes within-process variation, not a confidence interval. These are
+**throughput costs in this kernel**, not instruction latencies or predicted
+application slowdowns. Different widths cannot be compared as equal work per
+vector. Exceptional inputs are sampled separately, not included in timing.
+
+| CPU / compiler | Exact call / shape | Baseline | Median overhead | Ratio MAD |
+|---|---|---|---:|---:|
+| AMD Ryzen 9 7950X 16-Core Processor / 1.98.1 | `to_i32_saturating()` / x86-v3/f32x4 | `to_i32()` | +84.2% | 0.6 pp |
+| AMD Ryzen 9 7950X 16-Core Processor / 1.98.1 | `recip()` / x86-v3/f32x4 | same Newton arithmetic, no rail repair | +31.8% | 1.6 pp |
+| AMD Ryzen 9 7950X 16-Core Processor / 1.98.1 | `rsqrt()` / x86-v3/f32x4 | same Newton arithmetic, no rail repair | +26.7% | 0.5 pp |
+| AMD Ryzen 9 7950X 16-Core Processor / 1.98.1 | `to_i32_saturating()` / x86-v4/f32x16 | `to_i32()` | +44.7% | 0.7 pp |
+| AMD Ryzen 9 7950X 16-Core Processor / 1.98.1 | `recip()` / x86-v4/f32x16 | same Newton arithmetic, no rail repair | +17.2% | 0.5 pp |
+| AMD Ryzen 9 7950X 16-Core Processor / 1.98.1 | `rsqrt()` / x86-v4/f32x16 | same Newton arithmetic, no rail repair | +13.7% | 1.1 pp |
+| Apple M4 Pro / 1.98.0 | `to_i32_saturating()` / neon/f32x4 | identity control | -0.0% | 1.2 pp |
+| Apple M4 Pro / 1.98.0 | `recip()` / neon/f32x4 | identity control | -0.0% | 0.1 pp |
+| Apple M4 Pro / 1.98.0 | `rsqrt()` / neon/f32x4 | identity control | -0.1% | 0.1 pp |
+
+The M4 identity controls show measurement variation, not a benefit from adding
+or removing code. Integer clamp/permutation costs above are currently supported
+by source/codegen inspection; **isolated baseline-versus-fixup timings have not
+yet been recorded for them**. Existing `int_uniform_shift` benches compare
+runtime versus constant counts, which also changes instruction selection and
+is not an isolated fixup measurement. Do not label that ratio a clamp cost.
+
+Reproduce the sample/timing run with `cargo run --release -p magetypes --example
+isa_fixups --features avx512`. Use `-- --samples-only` for Wasmtime/QEMU. Capture
+`rustc -Vv` and CPU identification before stdout, then collect runs with
+`python3 xtask/isa_evidence.py CPU=run.txt --output docs/site/static/isa-explorer/data.json`.
+The collector validates array shapes, bit encodings, and saturating-conversion
+outputs against an independent scalar oracle. The dataset records its library
+revision and probe source hash. Store actual outputs per CPU; do not synthesize
+ISA results from a table or report emulator timings as hardware performance.
+
 ## Results we make portable
 
 | Operation and input | Result on every backend | What we fix up |
@@ -103,16 +178,26 @@ Choose the arithmetic formulation according to the application's error budget.
 | `+inf` | `+0` | `+0` | x86 repairs invalid Newton intermediates; NEON uses fused refinement instructions with suitable special-case behavior. |
 | `-inf` | `-0` | `NaN` | Same policy. |
 | `NaN` | `NaN` | `NaN` | Payload/sign unspecified. |
-| Normal inputs in the real domain | Working precision, at most 4 ULP | Working precision, at most 4 ULP | Estimates plus refinement where appropriate; division on other backends. |
+| Ordinary normal inputs in the tested range | Working precision target: at most 4 ULP | Working precision target: at most 4 ULP | Estimates plus refinement where appropriate; see the documented gap below. |
 | Subnormal inputs | Unspecified at the working tier | Unspecified at the working tier | Use the `_portable` variants when subnormals matter. |
+
+**Observed contract gap:** on Ryzen 7950X, V3 `f32x4::recip()` maps
+`f32::MAX` (`0x7f7fffff`) to `+0` and `-f32::MAX` to `-0`. Their correctly rounded
+reciprocals are nonzero subnormals (`0x00200000` / `0x80200000`). Thus the current
+rustdoc promise that *only subnormal inputs* are unspecified is too broad:
+normal inputs with subnormal reciprocal outputs can also lose the ≤4 ULP
+claim. This is recorded as a gap, not silently treated as a conforming result.
+`recip_portable()` supplies the division result. A repair to the working tier
+needs a separate accuracy/codegen/performance review; this documentation change
+does not add runtime branches or alter the implementation.
 
 On x86 128/256-bit vectors, special-case repair uses comparison and blending;
 native AVX-512 uses fixup instructions. NEON arranges fused refinement to avoid
 forming an invalid intermediate multiply. The `_portable` variants use division
 (and square root for rsqrt). Raw `_approx` variants have weaker guarantees;
 do not infer their special-case behavior from the working-tier table.
-`sigmoid_midp` and `silu_midp` use division internally rather than inheriting a raw
-reciprocal approximation's exceptional-value behavior.
+Transcendental approximation domains and fixups are documented separately in
+[Transcendentals](@/magetypes/math/transcendentals.md).
 
 ## Portability of cost and availability
 

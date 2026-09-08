@@ -13,7 +13,7 @@ badge = "Rust 1.87+"
 gradient_opacity = 15
 cta_buttons = [
     { text = "Get Started", url = "/archmage/getting-started/installation/", style = "primary" },
-    { text = "Magetypes (Experimental)", url = "/magetypes/", style = "secondary" },
+    { text = "Magetypes", url = "/magetypes/", style = "secondary" },
 ]
 
 [[extra.features]]
@@ -37,7 +37,7 @@ desc = "incant! dispatches to the best available SIMD tier at runtime. Write _v3
 icon = "fa-solid fa-route"
 
 [[extra.features]]
-title = "Magetypes (Experimental)"
+title = "Magetypes"
 desc = "Optional SIMD vector types with natural Rust operators. f32x8 wraps __m256 with +, -, *, /, FMA, comparisons, reductions, and transcendentals. Cross-platform polyfills included."
 icon = "fa-solid fa-shapes"
 

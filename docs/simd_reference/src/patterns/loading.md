@@ -105,13 +105,11 @@ fn load_bytes(_token: X64V3Token, data: &[u8; 32]) -> __m256i {
 
 ## What NOT to do
 
+Raw pointer loads require separate extent and alignment proofs. Prefer the
+reference-based wrappers above; ordinary slice alignment does not establish
+32-byte alignment for an aligned-load intrinsic.
+
 ```rust
-// WRONG: Raw pointer load outside unsafe
-let v = _mm256_loadu_ps(data.as_ptr());  // Needs unsafe
-
-// WRONG: Aligned load on potentially unaligned data
-let v = _mm256_load_ps(data.as_ptr());  // UB if not 32-byte aligned!
-
 // WRONG: summon() + #[arcane] boundary every iteration
 for chunk in data.chunks_exact(8) {
     if let Some(token) = X64V3Token::summon() {
