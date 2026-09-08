@@ -14,16 +14,13 @@ fn expand(name: &str, args: Tokens, item: Tokens) -> syn::Result<Tokens> {
         "rite" | "token_target_features" => rite_impl(syn::parse2(item)?, syn::parse2(args)?),
         "autoversion" => autoversion_impl(syn::parse2(item)?, syn::parse2(args)?),
         "magetypes" => {
-            let (rite, defines, mut names) = parse_magetypes_attr.parse2(args)?;
-            if names.is_empty() {
-                names = DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect();
-            }
-            magetypes::magetypes_impl(
-                syn::parse2(item)?,
-                &resolve_tiers(&names, proc_macro2::Span::call_site(), true)?,
-                rite,
-                &defines,
-            )
+            let (rite, defines, names) = parse_magetypes_attr.parse2(args)?;
+            let tiers = if names.is_empty() {
+                default_tiers(true)
+            } else {
+                resolve_tiers(&names, proc_macro2::Span::call_site(), true)?
+            };
+            magetypes::magetypes_impl(syn::parse2(item)?, &tiers, rite, &defines)
         }
         _ => panic!("unrecognized macro {name}"),
     })
@@ -526,5 +523,204 @@ fn profile_allocations() {
             bytes / iterations,
             start.elapsed().as_nanos() / iterations as u128
         );
+    }
+}
+
+#[test]
+fn default_tiers_are_sorted_unique_and_match_general_resolution() {
+    let names = DEFAULT_TIER_NAMES
+        .iter()
+        .map(|n| n.to_string())
+        .collect::<Vec<_>>();
+    for gates in [false, true] {
+        let general = resolve_tiers(&names, proc_macro2::Span::call_site(), gates).unwrap();
+        let defaults = default_tiers(gates);
+        assert_eq!(defaults.len(), general.len());
+        assert!(defaults.windows(2).all(|t| t[0].priority >= t[1].priority));
+        for (i, (a, b)) in defaults.iter().zip(&general).enumerate() {
+            assert_eq!(
+                (a.name, &a.feature_gate, a.allow_unexpected_cfg),
+                (b.name, &b.feature_gate, b.allow_unexpected_cfg)
+            );
+            assert!(defaults[..i].iter().all(|t| t.name != a.name));
+        }
+        assert_eq!(defaults.last().unwrap().name, "scalar");
+    }
+    // Explicit equal-priority entries retain caller order, including duplicates.
+    let names = ["wasm128", "neon", "v3", "neon", "scalar"].map(String::from);
+    let resolved = resolve_tiers(&names, proc_macro2::Span::call_site(), false).unwrap();
+    assert_eq!(
+        resolved.iter().map(|t| t.name).collect::<Vec<_>>(),
+        ["v3", "wasm128", "neon", "neon", "scalar"]
+    );
+}
+
+#[test]
+fn presence_scan_is_conservative_across_all_group_kinds() {
+    assert!(!tokens_contain_ident(
+        &quote!("incant Token"; r#"dispatch_variant"#; SomeToken; incantation),
+        &["incant", "dispatch_variant", "Token"]
+    ));
+    for delimiter in [
+        Delimiter::None,
+        Delimiter::Brace,
+        Delimiter::Bracket,
+        Delimiter::Parenthesis,
+    ] {
+        for name in ["incant", "dispatch_variant", "Token"] {
+            let id = proc_macro2::Ident::new(name, proc_macro2::Span::call_site());
+            let group = Group::new(delimiter, quote!(before #id after));
+            let tokens: Tokens = std::iter::once(TokenTree::Group(group)).collect();
+            assert!(tokens_contain_ident(&tokens, &[name]));
+        }
+    }
+}
+
+#[test]
+fn light_parser_preserves_opaque_body_and_rejects_broken_signatures() {
+    let input = quote!(#[allow(dead_code)] pub(crate) unsafe extern "C" fn kernel<'a, T: Copy, const N: usize>(token: X64V3Token, data: &'a [T; N]) -> &'a [T; N] where T: 'a {
+        // Deliberately not a Rust expression: LightFn must not parse the body.
+        opaque DSL => [Token :: { arbitrary : tokens }];
+    });
+    let parsed: LightFn = syn::parse2(input.clone()).unwrap();
+    assert_eq!(parsed.to_token_stream().to_string(), input.to_string());
+    for invalid in [
+        quote!(fn f(token X64V3Token) {}),
+        quote!(fn f<T(token: T) {}),
+        quote!(
+            fn f();
+        ),
+        quote!(fn f() {}, trailing),
+    ] {
+        assert!(syn::parse2::<LightFn>(invalid).is_err());
+    }
+}
+
+#[test]
+fn nested_dispatch_rewrites_have_exact_outputs() {
+    let ctx = rewrite::CallerContext {
+        tier_suffix: "v3".into(),
+        target_arch: Some("x86_64"),
+        token_ident: quote::format_ident!("token"),
+        has_token: true,
+        derive_token: false,
+    };
+    for (input, expected) in [
+        (
+            quote!(({ incant!(f(Token, x), [v3, scalar]) })),
+            quote!(({ f_v3(token, x) })),
+        ),
+        (
+            quote!([dispatch_variant!(f(x) without token)]),
+            quote!([f_v3(x)]),
+        ),
+        (
+            quote!(|| { incant!(f(x), [v2, scalar]) }),
+            quote!(|| { f_v2(token.v2(), x) }),
+        ),
+        (
+            quote!(incant!(f(Token, x), [neon, default])),
+            quote!(f_default(x)),
+        ),
+        (
+            quote!(
+                fn inner() {
+                    incant!(f(x));
+                }
+            ),
+            quote!(
+                fn inner() {
+                    incant!(f(x));
+                }
+            ),
+        ),
+        (quote!(incant!(invalid...)), quote!(incant!(invalid...))),
+        (
+            quote!(incant!(f(x) with held, [v3, scalar])),
+            quote!(incant!(f(x) with held, [v3, scalar])),
+        ),
+    ] {
+        assert_eq!(
+            rewrite::rewrite_incant_in_body(input, &ctx).to_string(),
+            expected.to_string()
+        );
+    }
+    let ctx = rewrite::CallerContext {
+        has_token: false,
+        derive_token: true,
+        ..ctx
+    };
+    let output =
+        rewrite::rewrite_incant_in_body(quote!(incant!(f(Token, x), [neon, default])), &ctx);
+    assert_eq!(output.to_string(), quote!(f_default(x)).to_string());
+    let output = rewrite::rewrite_incant_in_body(quote!(incant!(f(x))), &ctx).to_string();
+    assert!(output.contains("f_v3 (archmage :: X64V3Token :: from_context () , x)"));
+}
+
+#[test]
+fn receivers_and_generic_modes_keep_feature_checks() {
+    for (args, input) in [
+        (
+            quote!(),
+            quote!(
+                fn f(&mut self, token: X64V3Token) {
+                    self.touch(token);
+                }
+            ),
+        ),
+        (
+            quote!(inline_always),
+            quote!(
+                fn f(token: X64V3Token) {}
+            ),
+        ),
+        (
+            quote!(_self = Container),
+            quote!(
+                fn f(&self, token: Wasm128Token) {
+                    _self.touch(token);
+                }
+            ),
+        ),
+        (
+            quote!(nested),
+            quote!(
+                fn f<T: HasX64V2 + HasNeon>(token: T) {}
+            ),
+        ),
+        (
+            quote!(),
+            quote!(
+                fn f<T: HasX64V2 + HasNeon>(token: T) {}
+            ),
+        ),
+    ] {
+        let out = expand("arcane", args, input).unwrap();
+        assert!(!out.to_string().contains("compile_error"));
+        assert!(out.to_string().contains("target_feature"));
+        syn::parse2::<syn::File>(out).unwrap();
+    }
+    let out = expand(
+        "rite",
+        quote!(v3, neon, import_magetypes),
+        quote!(
+            #[allow(dead_code)]
+            fn f() {
+                opaque!();
+            }
+        ),
+    )
+    .unwrap();
+    assert!(out.to_string().contains("magetypes :: simd"));
+    if !cfg!(feature = "avx512") {
+        let out = expand(
+            "rite",
+            quote!(v4, v3, import_intrinsics),
+            quote!(
+                fn f() {}
+            ),
+        )
+        .unwrap();
+        assert!(out.to_string().contains("requires the `avx512` feature"));
     }
 }

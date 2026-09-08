@@ -1855,6 +1855,24 @@ fn run_ci() -> Result<()> {
     println!("  ✓ Clippy passed (default features)");
     println!("└─ Clippy check passed (default features) ───────────────────────────┘\n");
 
+    // Proc-macro unit tests are not included by the root package's cargo test.
+    for features in ["", "avx512"] {
+        let status = std::process::Command::new("cargo")
+            .args([
+                "test",
+                "-p",
+                "archmage-macros",
+                "--lib",
+                "--features",
+                features,
+            ])
+            .status()
+            .context("Failed to run macro contract tests")?;
+        if !status.success() {
+            bail!("Macro contract tests failed (features: {features})");
+        }
+    }
+
     // Step 9: Tests
     println!("┌─ Step 9/18: Running tests ─────────────────────────────────────────┐");
     let tests = std::process::Command::new("cargo")

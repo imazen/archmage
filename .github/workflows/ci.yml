@@ -100,6 +100,11 @@ jobs:
       - name: Run tests
         run: cargo test --features "${{ env.FEATURES }}"
 
+      - name: Macro input, output, and diagnostic contracts
+        run: |
+          cargo test -p archmage-macros --lib
+          cargo test -p archmage-macros --lib --features avx512
+
       # token_infrastructure uses dangerously_disable_token_process_wide() —
       # process-wide state that races when tests run in parallel.
       - name: Run token infrastructure tests (serialized)
@@ -186,6 +191,11 @@ jobs:
 
       - name: Run tests
         run: cargo test --features "${{ env.FEATURES }}"
+
+      - name: Macro input, output, and diagnostic contracts
+        run: |
+          cargo test -p archmage-macros --lib
+          cargo test -p archmage-macros --lib --features avx512
 
       # token_infrastructure uses dangerously_disable_token_process_wide() —
       # process-wide state that races when tests run in parallel.

@@ -275,6 +275,27 @@ impl core::ops::Deref for ResolvedTier {
     }
 }
 
+/// The fixed defaults are already in stable descending priority order (tested
+/// below). No modifier processing, name copies, or sorting is needed here.
+pub(crate) fn default_tiers(default_feature_gates: bool) -> Vec<ResolvedTier> {
+    DEFAULT_TIER_NAMES
+        .iter()
+        .map(|name| {
+            let tier = find_tier(name).expect("registered default tier");
+            let feature_gate = if default_feature_gates {
+                tier.cfg_feature.map(String::from)
+            } else {
+                None
+            };
+            ResolvedTier {
+                tier,
+                allow_unexpected_cfg: feature_gate.is_some(),
+                feature_gate,
+            }
+        })
+        .collect()
+}
+
 /// Resolve tier names to descriptors, sorted by dispatch priority (highest first).
 ///
 /// When `default_feature_gates` is true, tiers with `cfg_feature` in their
@@ -311,7 +332,7 @@ pub(crate) fn resolve_tiers(
     // User-overridden tiers are tracked so that default_feature_gates doesn't
     // re-apply the descriptor's cfg_feature on them. Writing +v4 means "I want
     // v4 exactly as written, without the automatic avx512 gate."
-    let mut user_overrides: Vec<String> = Vec::new();
+    let mut user_overrides: Vec<&str> = Vec::new();
     // Tracks whether the user explicitly removed the scalar/default fallback
     // via `-scalar` or `-default`. Used to suppress the auto-append below so
     // that `[-scalar]` (or `[v3, -scalar]`) actually drops the scalar variant.
@@ -320,23 +341,23 @@ pub(crate) fn resolve_tiers(
     // `default` and `scalar` are interchangeable fallback slots.
     let is_fallback_base = |base: &str| base == "default" || base == "scalar";
     // Normalize a tier entry to its base name (strip prefix/gate/`_`).
-    let base_of = |raw: &str| -> String {
+    fn base_of(raw: &str) -> &str {
         let s = raw
             .strip_prefix('+')
             .or_else(|| raw.strip_prefix('-'))
             .unwrap_or(raw);
         let s = s.split('(').next().unwrap_or(s);
-        s.strip_prefix('_').unwrap_or(s).to_string()
-    };
+        s.strip_prefix('_').unwrap_or(s)
+    }
 
-    let effective_names: Vec<String> = if additive_mode {
+    let effective_names: Vec<&str> = if additive_mode {
         // In additive mode, start with defaults then merge user entries:
         // - Same base name → replace (e.g., +v4 overrides the default v4(avx512) gate)
         // - New base name → append (e.g., +arm_v2 adds a tier)
         //
         // This lets users write [+default] to swap scalar→default, [+v4] to make
         // v4 unconditional, or [+neon(cfg(neon))] to gate a default tier.
-        let mut names: Vec<String> = DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect();
+        let mut names = DEFAULT_TIER_NAMES.to_vec();
         for raw in tier_names {
             let is_removal = raw.starts_with('-');
             let stripped = raw
@@ -344,7 +365,7 @@ pub(crate) fn resolve_tiers(
                 .or_else(|| raw.strip_prefix('-'))
                 .unwrap_or(raw);
             let base = base_of(raw);
-            let is_fallback = is_fallback_base(&base);
+            let is_fallback = is_fallback_base(base);
 
             let pos = names.iter().position(|n| {
                 let n_base = n.split('(').next().unwrap_or(n);
@@ -365,10 +386,10 @@ pub(crate) fn resolve_tiers(
                 // Removing a tier that's not in defaults is a silent no-op
             } else if let Some(pos) = pos {
                 // Replace existing default with user's version
-                names[pos] = stripped.to_string();
+                names[pos] = stripped;
                 user_overrides.push(base);
             } else {
-                names.push(stripped.to_string());
+                names.push(stripped);
                 user_overrides.push(base);
             }
         }
@@ -376,11 +397,11 @@ pub(crate) fn resolve_tiers(
     } else {
         // Override mode: plain tiers form the set (never sees `+` — that would
         // force additive mode). `-tier` removes from the set / drops the fallback.
-        let mut names: Vec<String> = Vec::new();
+        let mut names: Vec<&str> = Vec::new();
         for raw in tier_names {
             if raw.starts_with('-') {
                 let base = base_of(raw);
-                let is_fallback = is_fallback_base(&base);
+                let is_fallback = is_fallback_base(base);
                 if let Some(pos) = names.iter().position(|n| {
                     let n_base = n.split('(').next().unwrap_or(n);
                     let n_base = n_base.strip_prefix('_').unwrap_or(n_base);
@@ -396,27 +417,27 @@ pub(crate) fn resolve_tiers(
                     fallback_explicitly_removed = true;
                 }
             } else {
-                names.push(raw.clone());
+                names.push(raw.as_str());
             }
         }
         names
     };
 
-    let mut tiers = Vec::new();
+    let mut tiers = Vec::with_capacity(effective_names.len() + 1);
     for raw_name in &effective_names {
         let (name, explicit_gate) = if let Some(paren_pos) = raw_name.find('(') {
             let tier_name = &raw_name[..paren_pos];
             let feat = raw_name[paren_pos + 1..].trim_end_matches(')');
             (tier_name, Some(feat.to_string()))
         } else {
-            (raw_name.as_str(), None)
+            (*raw_name, None)
         };
         match find_tier(name) {
             Some(tier) => {
                 let is_explicit = explicit_gate.is_some();
                 // User-overridden tiers (from + entries) get exactly what the user
                 // wrote — no auto-gating from the descriptor. +v4 means unconditional.
-                let is_user_override = user_overrides.iter().any(|o| o == tier.name);
+                let is_user_override = user_overrides.contains(&tier.name);
                 let feature_gate = explicit_gate.or_else(|| {
                     if default_feature_gates && !is_user_override {
                         tier.cfg_feature.map(String::from)

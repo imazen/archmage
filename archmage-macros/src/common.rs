@@ -111,6 +111,17 @@ pub(crate) fn build_turbofish(generics: &syn::Generics) -> proc_macro2::TokenStr
     }
 }
 
+/// Conservative token-level presence check. Literals and partial identifier
+/// matches do not count. A false positive only costs a rewrite pass; a false
+/// negative would change expansion, so all delimiter kinds are traversed.
+pub(crate) fn tokens_contain_ident(tokens: &proc_macro2::TokenStream, names: &[&str]) -> bool {
+    tokens.clone().into_iter().any(|token| match token {
+        proc_macro2::TokenTree::Ident(id) => names.iter().any(|name| id == *name),
+        proc_macro2::TokenTree::Group(group) => tokens_contain_ident(&group.stream(), names),
+        _ => false,
+    })
+}
+
 /// Replace all occurrences of a named identifier in a token stream.
 ///
 /// Recurses into groups (braces, parens, brackets). Each matching `Ident` is
@@ -128,7 +139,12 @@ pub(crate) fn replace_ident_in_tokens(
                 result.extend(replacement.clone());
             }
             proc_macro2::TokenTree::Group(group) => {
-                let new_stream = replace_ident_in_tokens(group.stream(), target, replacement);
+                let stream = group.stream();
+                if !tokens_contain_ident(&stream, &[target]) {
+                    result.extend(std::iter::once(proc_macro2::TokenTree::Group(group)));
+                    continue;
+                }
+                let new_stream = replace_ident_in_tokens(stream, target, replacement);
                 let mut new_group = proc_macro2::Group::new(group.delimiter(), new_stream);
                 new_group.set_span(group.span());
                 result.extend(std::iter::once(proc_macro2::TokenTree::Group(new_group)));
@@ -257,25 +273,20 @@ pub(crate) fn build_call_args_with_ident(
     match find_token_placement(args, caller_token_ident) {
         TokenPlacement::Explicit => {
             // Replace Token marker with token expression
-            let replaced: Vec<proc_macro2::TokenStream> = args
+            let replaced = args
                 .iter()
-                .map(|arg| replace_ident_in_tokens(arg.to_token_stream(), "Token", token_expr))
-                .collect();
+                .map(|arg| replace_ident_in_tokens(arg.to_token_stream(), "Token", token_expr));
             quote! { #(#replaced),* }
         }
         TokenPlacement::Variable(idx) => {
             // Replace the caller's token variable with the target token expression
-            let replaced: Vec<proc_macro2::TokenStream> = args
-                .iter()
-                .enumerate()
-                .map(|(i, arg)| {
-                    if i == idx {
-                        token_expr.clone()
-                    } else {
-                        arg.to_token_stream()
-                    }
-                })
-                .collect();
+            let replaced = args.iter().enumerate().map(|(i, arg)| {
+                if i == idx {
+                    token_expr.clone()
+                } else {
+                    arg.to_token_stream()
+                }
+            });
             quote! { #(#replaced),* }
         }
         TokenPlacement::None => {

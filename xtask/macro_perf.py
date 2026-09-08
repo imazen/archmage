@@ -78,7 +78,7 @@ for package, config in workloads.items():
         tree = run(cmd, dest).stdout
         (results/f'{package}-{variant}-tree.txt').write_text(tree)
         tree = tree.replace('archmage v0.9.28', 'archmage v0.9.29').replace('archmage-macros v0.9.28', 'archmage-macros v0.9.29').replace('magetypes v0.9.28', 'magetypes v0.9.29')
-        trees.append(tree.replace(str(root/variant), 'CONSUMER').replace(str(arch_path(variant)), 'ARCHMAGE'))
+        trees.append(tree.replace(str(root/'consumers'/variant), 'CONSUMER').replace(str(arch_path(variant)), 'ARCHMAGE'))
     assert len(set(trees)) == 1, ('dependency trees differ', package)
 
 rows = []

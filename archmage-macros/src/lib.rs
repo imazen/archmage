@@ -428,20 +428,13 @@ pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
             Err(e) => return e.to_compile_error().into(),
         };
 
-    let tier_names = if tier_names.is_empty() {
-        DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect()
+    let tiers = if tier_names.is_empty() {
+        default_tiers(true)
     } else {
-        tier_names
-    };
-
-    // default_optional: tiers with cfg_feature are optional by default
-    let tiers = match resolve_tiers(
-        &tier_names,
-        input_fn.sig.ident.span(),
-        true, // magetypes always uses default_optional for cfg_feature tiers
-    ) {
-        Ok(t) => t,
-        Err(e) => return e.to_compile_error().into(),
+        match resolve_tiers(&tier_names, input_fn.sig.ident.span(), true) {
+            Ok(t) => t,
+            Err(e) => return e.to_compile_error().into(),
+        }
     };
 
     magetypes_impl(input_fn, &tiers, rite_flag, &defines).into()

@@ -49,9 +49,6 @@ pub(crate) struct ArcaneArgs {
     /// When specified, `self`/`&self`/`&mut self` is transformed to `_self: Type`/`&Type`/`&mut Type`.
     /// Implies `nested = true`.
     pub(crate) self_type: Option<Type>,
-    /// Generate an `unreachable!()` stub on the wrong architecture.
-    /// Default is false (cfg-out: no function emitted on wrong arch).
-    pub(crate) stub: bool,
     /// Use nested inner function instead of sibling function.
     /// Implied by `_self = Type`. Required for associated functions in impl blocks
     /// that have no `self` receiver (the macro can't distinguish them from free functions).
@@ -321,13 +318,7 @@ pub(crate) fn arcane_impl(
     // The wasm validation model guarantees unsupported instructions trap deterministically,
     // so there's no UB from feature mismatch. Skip the unsafe wrapper entirely.
     if target_arch == Some("wasm32") {
-        return arcane_impl_wasm_safe(
-            input_fn,
-            &args,
-            token_type_name,
-            target_feature_attrs,
-            inline_attr,
-        );
+        return arcane_impl_wasm_safe(input_fn, &args, target_feature_attrs, inline_attr);
     }
 
     if args.nested {
@@ -368,16 +359,12 @@ pub(crate) fn arcane_impl(
 pub(crate) fn arcane_impl_wasm_safe(
     input_fn: LightFn,
     args: &ArcaneArgs,
-    token_type_name: Option<String>,
     target_feature_attrs: Vec<Attribute>,
     inline_attr: Attribute,
 ) -> TokenStream {
     let vis = &input_fn.vis;
     let sig = &input_fn.sig;
-    let fn_name = &sig.ident;
     let attrs = &input_fn.attrs;
-
-    let token_type_str = token_type_name.as_deref().unwrap_or("UnknownToken");
 
     // If _self = Type is set, inject `let _self = self;` at top of body so user code
     // referencing `_self` works. The function remains in impl scope, so `Self` resolves
@@ -399,43 +386,6 @@ pub(crate) fn arcane_impl_wasm_safe(
         new_attrs.push(attr.clone());
     }
 
-    let stub = if args.stub {
-        // Build stub args for suppressing unused-variable warnings
-        let stub_args: Vec<proc_macro2::TokenStream> = sig
-            .inputs
-            .iter()
-            .filter_map(|arg| match arg {
-                FnArg::Typed(pat_type) => {
-                    if let syn::Pat::Ident(pat_ident) = pat_type.pat.as_ref() {
-                        let ident = &pat_ident.ident;
-                        Some(quote!(#ident))
-                    } else {
-                        None
-                    }
-                }
-                FnArg::Receiver(_) => None,
-            })
-            .collect();
-
-        quote! {
-            #[cfg(not(target_arch = "wasm32"))]
-            #vis #sig {
-                let _ = (#(#stub_args),*);
-                unreachable!(
-                    "BUG: {}() was called but requires {} (target_arch = \"wasm32\"). \
-                     {}::summon() returns None on this architecture, so this function \
-                     is unreachable in safe code. If you used forge_token_dangerously(), \
-                     that is the bug.",
-                    stringify!(#fn_name),
-                    #token_type_str,
-                    #token_type_str,
-                )
-            }
-        }
-    } else {
-        quote! {}
-    };
-
     let expanded = quote! {
         #[cfg(target_arch = "wasm32")]
         #(#new_attrs)*
@@ -443,7 +393,6 @@ pub(crate) fn arcane_impl_wasm_safe(
             #body
         }
 
-        #stub
     };
 
     expanded
@@ -535,27 +484,9 @@ pub(crate) fn arcane_impl_sibling(
         quote! { #sibling_name #turbofish(#(#all_args),*) }
     };
 
-    // Build stub args for suppressing unused warnings
-    let stub_args: Vec<proc_macro2::TokenStream> = inputs
-        .iter()
-        .filter_map(|arg| match arg {
-            FnArg::Typed(pat_type) => {
-                if let syn::Pat::Ident(pat_ident) = pat_type.pat.as_ref() {
-                    let ident = &pat_ident.ident;
-                    Some(quote!(#ident))
-                } else {
-                    None
-                }
-            }
-            FnArg::Receiver(_) => None, // self doesn't need _ = suppression
-        })
-        .collect();
-
-    let token_type_str = token_type_name.as_deref().unwrap_or("UnknownToken");
-
     let cfg_guard = gen_cfg_guard(target_arch, args.cfg_feature.as_deref());
 
-    let expanded = if target_arch.is_some() {
+    if target_arch.is_some() {
         // Sibling function: #[doc(hidden)] #[target_feature] fn __arcane_fn(...)
         // Always private — only the wrapper is user-visible.
         // Safe declaration — Rust 2024 allows safe #[target_feature] functions.
@@ -592,42 +523,10 @@ pub(crate) fn arcane_impl_sibling(
             }
         };
 
-        // Optional stub for other architectures / missing feature
-        let stub = if args.stub {
-            let arch_str = target_arch.unwrap_or("unknown");
-            // Negate the cfg guard used for the real implementation
-            let not_cfg = match (target_arch, args.cfg_feature.as_deref()) {
-                (Some(arch), Some(feat)) => {
-                    quote! { #[cfg(not(all(target_arch = #arch, feature = #feat)))] }
-                }
-                (Some(arch), None) => quote! { #[cfg(not(target_arch = #arch))] },
-                _ => quote! {},
-            };
-            quote! {
-                #not_cfg
-                #(#attrs)*
-                #vis #sig {
-                    let _ = (#(#stub_args),*);
-                    unreachable!(
-                        "BUG: {}() was called but requires {} (target_arch = \"{}\"). \
-                         {}::summon() returns None on this architecture, so this function \
-                         is unreachable in safe code. If you used forge_token_dangerously(), \
-                         that is the bug.",
-                        stringify!(#fn_name),
-                        #token_type_str,
-                        #arch_str,
-                        #token_type_str,
-                    )
-                }
-            }
-        } else {
-            quote! {}
-        };
-
         quote! {
             #sibling_fn
             #wrapper_fn
-            #stub
+
         }
     } else {
         // No specific arch (trait bounds or generic) - no cfg guards, no stub needed.
@@ -658,9 +557,7 @@ pub(crate) fn arcane_impl_sibling(
             #sibling_fn
             #wrapper_fn
         }
-    };
-
-    expanded
+    }
 }
 
 /// Nested inner function expansion (opt-in via `nested` or `_self = Type`).
@@ -787,40 +684,9 @@ pub(crate) fn arcane_impl_nested(
         )
     };
 
-    let token_type_str = token_type_name.as_deref().unwrap_or("UnknownToken");
     let cfg_guard = gen_cfg_guard(target_arch, args.cfg_feature.as_deref());
 
-    let expanded = if target_arch.is_some() {
-        let stub = if args.stub {
-            let arch_str = target_arch.unwrap_or("unknown");
-            let not_cfg = match (target_arch, args.cfg_feature.as_deref()) {
-                (Some(arch), Some(feat)) => {
-                    quote! { #[cfg(not(all(target_arch = #arch, feature = #feat)))] }
-                }
-                (Some(arch), None) => quote! { #[cfg(not(target_arch = #arch))] },
-                _ => quote! {},
-            };
-            quote! {
-                #not_cfg
-                #(#attrs)*
-                #vis #sig {
-                    let _ = (#(#inner_args),*);
-                    unreachable!(
-                        "BUG: {}() was called but requires {} (target_arch = \"{}\"). \
-                         {}::summon() returns None on this architecture, so this function \
-                         is unreachable in safe code. If you used forge_token_dangerously(), \
-                         that is the bug.",
-                        stringify!(#fn_name),
-                        #token_type_str,
-                        #arch_str,
-                        #token_type_str,
-                    )
-                }
-            }
-        } else {
-            quote! {}
-        };
-
+    if target_arch.is_some() {
         let token_assertion =
             gen_token_assertion(&token_type_name, &token_type, args.suppress_const_test);
         let tier_trait_assertion =
@@ -844,7 +710,6 @@ pub(crate) fn arcane_impl_nested(
                 unsafe { #inner_fn_name #turbofish(#(#inner_args),*) }
             }
 
-            #stub
         }
     } else {
         // No specific arch (trait bounds or generic) - generate without cfg guards
@@ -869,9 +734,7 @@ pub(crate) fn arcane_impl_nested(
                 unsafe { #inner_fn_name #turbofish(#(#inner_args),*) }
             }
         }
-    };
-
-    expanded
+    }
 }
 
 #[cfg(test)]

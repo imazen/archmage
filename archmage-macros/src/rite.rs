@@ -1,6 +1,6 @@
 //! `#[rite]` — adds `#[target_feature]` + `#[inline]` directly.
 //!
-//! Single-tier, multi-tier, and stub modes.
+//! Single-tier and multi-tier helpers.
 
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
@@ -19,9 +19,6 @@ use crate::token_discovery::*;
 
 #[derive(Default)]
 pub(crate) struct RiteArgs {
-    /// Generate an `unreachable!()` stub on the wrong architecture.
-    /// Default is false (cfg-out: no function emitted on wrong arch).
-    pub(crate) stub: bool,
     /// Inject `use archmage::intrinsics::{arch}::*;` (includes safe memory ops).
     pub(crate) import_intrinsics: bool,
     /// Inject `use magetypes::simd::{ns}::*;`, `use magetypes::simd::generic::*;`,
@@ -340,31 +337,13 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
         };
     }
 
-    // If we know the target arch, generate cfg-gated impl (+ optional stub)
+    // If we know the target arch, generate cfg-gated impl
     let cfg_guard = gen_cfg_guard(target_arch, args.cfg_feature.as_deref());
     if target_arch.is_some() {
         let vis = &input_fn.vis;
         let sig = &input_fn.sig;
         let attrs = &input_fn.attrs;
         let body = &input_fn.body;
-
-        let stub = if args.stub {
-            let not_cfg = match (target_arch, args.cfg_feature.as_deref()) {
-                (Some(arch), Some(feat)) => {
-                    quote! { #[cfg(not(all(target_arch = #arch, feature = #feat)))] }
-                }
-                (Some(arch), None) => quote! { #[cfg(not(target_arch = #arch))] },
-                _ => quote! {},
-            };
-            quote! {
-                #not_cfg
-                #vis #sig {
-                    unreachable!("This function requires a specific architecture and feature set")
-                }
-            }
-        } else {
-            quote! {}
-        };
 
         quote! {
             #cfg_guard
@@ -373,7 +352,6 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
                 #body
             }
 
-            #stub
         }
     } else {
         // No specific arch (trait bounds) - just emit the annotated function
@@ -517,27 +495,6 @@ pub(crate) fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenS
                     #body
                 }
             });
-
-            if args.stub {
-                let not_cfg = match (target_arch, args.cfg_feature.as_deref()) {
-                    (Some(arch), Some(feat)) => {
-                        quote! { #[cfg(not(all(target_arch = #arch, feature = #feat)))] }
-                    }
-                    (Some(arch), None) => quote! { #[cfg(not(target_arch = #arch))] },
-                    _ => quote! {},
-                };
-                let arch_str = target_arch.unwrap_or("unknown");
-                variants.extend(quote! {
-                    #not_cfg
-                    #vis #sig {
-                        unreachable!(concat!(
-                            "This function requires ",
-                            #arch_str,
-                            " architecture"
-                        ))
-                    }
-                });
-            }
         } else {
             // No specific arch — just emit the annotated function
             variants.extend(quote!(#variant_fn));

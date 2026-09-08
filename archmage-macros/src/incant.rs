@@ -192,11 +192,6 @@ pub(crate) fn incant_impl(input: IncantInput) -> TokenStream {
     let func_path = &input.func_path;
     let args = &input.args;
 
-    // Resolve tiers
-    let tier_names: Vec<String> = match &input.tiers {
-        Some((names, _)) => names.clone(),
-        None => DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect(),
-    };
     let last_segment_span = func_path
         .segments
         .last()
@@ -250,9 +245,12 @@ pub(crate) fn incant_impl(input: IncantInput) -> TokenStream {
     // BOTH default and explicit tier lists — backwards compatible with published
     // crates using [v4, v3, neon] where _v4 is behind #[cfg(feature = "avx512")].
     // Users with unconditional _v4 functions use v4(!) or just don't cfg-gate them.
-    let tiers = match resolve_tiers(&tier_names, error_span, true) {
-        Ok(t) => t,
-        Err(e) => return e.to_compile_error(),
+    let tiers = match &input.tiers {
+        None => default_tiers(true),
+        Some((names, _)) => match resolve_tiers(names, error_span, true) {
+            Ok(t) => t,
+            Err(e) => return e.to_compile_error(),
+        },
     };
 
     // Group tiers by architecture for cfg-guarded blocks
@@ -345,11 +343,9 @@ pub(crate) fn gen_incant_passthrough(
     let has_default = tiers.iter().any(|t| t.name == "default");
     let fallback_arm = if has_default {
         let fn_default = suffix_path(func_path, "default");
-        let default_args: Vec<syn::Expr> = args
+        let default_args = args
             .iter()
-            .filter(|a| !crate::common::is_bare_ident_pub(a, "Token"))
-            .cloned()
-            .collect();
+            .filter(|a| !crate::common::is_bare_ident_pub(a, "Token"));
         quote! {
             break '__incant #fn_default(#(#default_args),*);
         }
@@ -452,11 +448,9 @@ pub(crate) fn gen_incant_entry(
     let fallback_call = if has_default {
         let fn_default = suffix_path(func_path, "default");
         // Default tier: strip Token marker from args if present (tokenless call)
-        let default_args: Vec<syn::Expr> = args
+        let default_args = args
             .iter()
-            .filter(|a| !crate::common::is_bare_ident_pub(a, "Token"))
-            .cloned()
-            .collect();
+            .filter(|a| !crate::common::is_bare_ident_pub(a, "Token"));
         quote! { #fn_default(#(#default_args),*) }
     } else {
         let fn_scalar = suffix_path(func_path, "scalar");

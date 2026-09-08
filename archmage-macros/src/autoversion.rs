@@ -203,14 +203,12 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
 
     // Resolve tiers — autoversion always includes v4 in its defaults because it
     // generates scalar code compiled with #[target_feature], not import_intrinsics.
-    let tier_names: Vec<String> = match &args.tiers {
-        Some(names) => names.clone(),
-        None => DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect(),
-    };
-    // autoversion never skips avx512 — it generates scalar code with #[target_feature]
-    let tiers = match resolve_tiers(&tier_names, input_fn.sig.ident.span(), false) {
-        Ok(t) => t,
-        Err(e) => return e.to_compile_error(),
+    let tiers = match &args.tiers {
+        None => default_tiers(false),
+        Some(names) => match resolve_tiers(names, input_fn.sig.ident.span(), false) {
+            Ok(t) => t,
+            Err(e) => return e.to_compile_error(),
+        },
     };
 
     // Strip #[arcane] / #[rite] to prevent double-wrapping
