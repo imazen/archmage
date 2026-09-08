@@ -20,15 +20,9 @@ Understanding when feature detection happens—and how LLVM optimizes across fea
 
 This is the mechanism that makes SIMD work. It tells LLVM: "Inside this function, assume these CPU features are available."
 
-```rust
-#[target_feature(enable = "avx2,fma")]
-fn process_avx2(data: &[f32; 8]) -> f32 {
-    // LLVM generates AVX2 instructions here
-    // _mm256_* intrinsics compile to single instructions
-    let v = _mm256_loadu_ps(data.as_ptr());
-    // ...
-}
-```
+A function annotated with `#[target_feature(enable = "avx2,fma")]` is
+compiled with AVX2 and FMA enabled. Its caller must satisfy that context;
+the annotation alone does not perform runtime detection.
 
 Since Rust 1.86, the function itself isn't `unsafe`. But **calling** it from a context without matching target features requires `unsafe` — because without a `summon()` or CPUID check, there's no proof the CPU supports those instructions. Calling on an unsupported CPU means an illegal instruction fault.
 
