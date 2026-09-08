@@ -724,3 +724,92 @@ fn receivers_and_generic_modes_keep_feature_checks() {
         assert!(out.to_string().contains("requires the `avx512` feature"));
     }
 }
+
+#[test]
+fn tier_modifiers_and_explicit_fallback_gates_keep_their_meaning() {
+    for (names, expected) in [
+        (vec!["v3", "neon", "-neon", "scalar"], vec!["v3", "scalar"]),
+        (
+            vec!["v3", "_neon(custom)", "-_neon", "scalar"],
+            vec!["v3", "scalar"],
+        ),
+        (
+            vec!["+arm_v2", "-wasm128", "-neon", "+default"],
+            vec!["v4", "arm_v2", "v3", "default"],
+        ),
+    ] {
+        let names = names.into_iter().map(String::from).collect::<Vec<_>>();
+        let tiers = resolve_tiers(&names, proc_macro2::Span::call_site(), true).unwrap();
+        assert_eq!(tiers.iter().map(|t| t.name).collect::<Vec<_>>(), expected);
+    }
+    for name in ["magetypes", "autoversion"] {
+        let output = expand(
+            name,
+            quote!(v4, scalar(cfg(custom))),
+            quote!(
+                fn kernel() {}
+            ),
+        )
+        .unwrap();
+        let text = output.to_string();
+        assert!(text.contains("feature = \"custom\""));
+        assert!(text.contains("kernel_scalar"));
+    }
+    // Passthrough must preserve explicit gates as well as the implicit V4 gate.
+    for input in [
+        quote!(f(Token, x) with token, [v4, v3(custom), scalar]),
+        quote!(f(x) with token, [v3, -scalar]),
+    ] {
+        let output = incant_impl(syn::parse2(input).unwrap());
+        syn::parse2::<syn::Expr>(output).unwrap();
+    }
+    for input in [quote!(f(x), [unknown]), quote!(f(x), [v3(nope(custom))])] {
+        let output = match syn::parse2::<IncantInput>(input) {
+            Ok(i) => incant_impl(i).to_string(),
+            Err(e) => e.to_string(),
+        };
+        assert!(output.contains("unknown tier") || output.contains("expected `cfg`"));
+    }
+    let output = expand(
+        "autoversion",
+        quote!(unknown),
+        quote!(
+            fn f() {}
+        ),
+    )
+    .unwrap();
+    assert!(output.to_string().contains("unknown tier"));
+}
+
+#[test]
+fn lint_attributes_and_destructured_dispatch_inputs_are_preserved() {
+    let output = expand(
+        "arcane",
+        quote!(),
+        quote!(
+            #[expect(unused_variables)]
+            #[deny(unused_must_use)]
+            #[warn(dead_code)]
+            #[forbid(unused_unsafe)]
+            fn f(token: X64V3Token) {}
+        ),
+    )
+    .unwrap()
+    .to_string();
+    for lint in ["expect", "deny", "warn", "forbid"] {
+        assert_eq!(output.matches(&format!("# [{lint}")).count(), 2, "{output}");
+    }
+    let output = expand(
+        "autoversion",
+        quote!(scalar),
+        quote!(
+            fn f(&self, _: u8, (x, y): (u8, u8)) {
+                opaque!(x, y);
+            }
+        ),
+    )
+    .unwrap();
+    assert!(output.to_string().contains("__autoversion_wild_"));
+    assert!(output.to_string().contains("self . f_scalar"));
+    syn::parse2::<syn::File>(output).unwrap();
+}

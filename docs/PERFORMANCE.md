@@ -2,7 +2,7 @@
 
 Archmage generates identical assembly to hand-written `#[target_feature]` + `unsafe` code. The safety abstractions compile away. At runtime, you get raw SIMD instructions.
 
-The only thing that costs you performance is calling `#[arcane]` from the wrong place.
+Calling `#[arcane]` across a target-feature boundary can prevent optimization. Compile-time costs are measured separately in the proc-macro section below.
 
 ## Zero overhead: archmage = bare `#[target_feature]`
 
@@ -225,7 +225,11 @@ lexing is outside the measurement. It uses the default unoptimized test profile.
 
 `xtask/macro_perf.py` tests linear-srgb 0.6.12 (with `transfer`) and
 zenpixels-convert 0.2.16 from the same source archives used in earlier consumer
-comparisons. Each configuration has six paired baseline/candidate runs in
+comparisons: linear-srgb `6bae33ee657d0cc29eaae6fd869894ec78a41b1c` and zenpixels
+`03bedaa73ae2b8c013765fd7eef59104fd307127`. The archived manifests and edited
+source files were checked against those commits. The harness records archive
+hashes and resolved lockfiles; set `BENCH_LOCKS_DIR` to that results directory
+to reuse the dependency versions. Each configuration has six paired baseline/candidate runs in
 alternating order. Cold runs start with empty Cargo artifact directories;
 registry sources and OS caches are warm. The script verifies identical dependency
 trees and that source edits rebuild the consumer while keeping archmage,
@@ -258,11 +262,12 @@ significant aggregate expansion-time win or justify replacing syn wholesale.
 ### Correctness and reproduction
 
 The macro library now runs its implementation directly as well as through rustc.
-134 unit/contract tests pass in both feature configurations; the allocation probe
+136 unit/contract tests pass in both feature configurations; the allocation probe
 is deliberately opt-in. Existing expansion snapshots, compilation of both inputs
-and outputs, negative soundness cases, and behavioral tests pass. LLVM's library
-line report is 95.1%, not 100%; coverage is a gap-finding tool, not a soundness
-proof. The ISA comparison found identical resolved instruction bodies in all
+and outputs, negative soundness cases, and behavioral tests pass. LLVM's fresh combined library/compiler-backed line report is 96.9%, not 100%
+(shared helpers and tier resolution: 100%; dispatch rewriter: 99.3%). Remaining
+gaps include thin entry-point error paths, defensive branches, and test-helper
+failure paths. Coverage is a gap-finding tool, not a soundness proof. The ISA comparison found identical resolved instruction bodies in all
 3,155 probes (1,591 x86, 782 ARM, 782 WASM).
 
 ```bash
@@ -270,7 +275,9 @@ cargo test -p archmage-macros --lib
 cargo test -p archmage-macros --lib --features avx512
 cargo test --test macro_expand --test soundness_exploits
 cargo test -p archmage-macros --lib profile_allocations -- --ignored --nocapture
-cargo llvm-cov -p archmage-macros --lib
+cargo llvm-cov -p archmage -p archmage-macros --lib \
+  --test macro_behavioral_contracts --test incant_macro --test tokenless_context \
+  --include-build-script
 python3 xtask/codegen.py 0373579 WORKTREE
 # See the harness docstring for source archive and before/after tree preparation.
 python3 xtask/macro_perf.py "$HOME/tmp/archmage-macro-perf"
