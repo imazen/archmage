@@ -3,7 +3,7 @@
 //! Generates architecture-specific function variants and a runtime
 //! dispatcher from a single annotated function.
 
-use proc_macro::TokenStream;
+use proc_macro2::TokenStream;
 use quote::{format_ident, quote, quote_spanned};
 use syn::{
     Attribute, FnArg, Ident, PatType, Signature, Token, Type,
@@ -165,7 +165,7 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
     // - SimdToken: stripped from dispatcher (legacy, deprecated)
     // - None: auto-inject internally, strip from dispatcher (tokenless)
     let token_param = match find_autoversion_token_param(&input_fn.sig) {
-        Err(e) => return e.to_compile_error().into(),
+        Err(e) => return e.to_compile_error(),
         Ok(Some(p)) => p,
         Ok(None) => {
             let insert_pos = if has_self { 1 } else { 0 };
@@ -203,14 +203,12 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
 
     // Resolve tiers — autoversion always includes v4 in its defaults because it
     // generates scalar code compiled with #[target_feature], not import_intrinsics.
-    let tier_names: Vec<String> = match &args.tiers {
-        Some(names) => names.clone(),
-        None => DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect(),
-    };
-    // autoversion never skips avx512 — it generates scalar code with #[target_feature]
-    let tiers = match resolve_tiers(&tier_names, input_fn.sig.ident.span(), false) {
-        Ok(t) => t,
-        Err(e) => return e.to_compile_error().into(),
+    let tiers = match &args.tiers {
+        None => default_tiers(false),
+        Some(names) => match resolve_tiers(names, input_fn.sig.ident.span(), false) {
+            Ok(t) => t,
+            Err(e) => return e.to_compile_error(),
+        },
     };
 
     // Strip #[arcane] / #[rite] to prevent double-wrapping
@@ -556,5 +554,5 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
         #(#variants)*
     };
 
-    expanded.into()
+    expanded
 }

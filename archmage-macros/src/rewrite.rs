@@ -14,7 +14,7 @@ use quote::{format_ident, quote};
 
 use crate::common::suffix_path;
 use crate::incant::IncantInput;
-use crate::tiers::{self, DEFAULT_TIER_NAMES, ResolvedTier};
+use crate::tiers::{self, ResolvedTier};
 
 /// Context about the caller's tier, used to decide how to rewrite each incant! call.
 #[derive(Clone)]
@@ -41,6 +41,11 @@ pub(crate) struct CallerContext {
 ///
 /// Returns a new TokenStream with incant! calls replaced by direct tier calls.
 pub(crate) fn rewrite_incant_in_body(body: TokenStream, ctx: &CallerContext) -> TokenStream {
+    // Most kernels have no dispatch inside them. Keep their original groups,
+    // spans, and token storage instead of allocating two vectors at every depth.
+    if !crate::common::tokens_contain_ident(&body, &["incant", "dispatch_variant"]) {
+        return body;
+    }
     let tokens: Vec<TokenTree> = body.into_iter().collect();
     let mut result = Vec::new();
     let mut i = 0;
@@ -140,15 +145,11 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<Tok
     let func_path = &input.func_path;
     let args = &input.args;
 
-    // Resolve callee tiers
-    let tier_names: Vec<String> = match &input.tiers {
-        Some((names, _)) => names.clone(),
-        None => DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect(),
-    };
-    let error_span = proc_macro2::Span::call_site();
-    let tiers = match tiers::resolve_tiers(&tier_names, error_span, true) {
-        Ok(t) => t,
-        Err(_) => return None, // parse error — let standalone incant! handle it
+    let tiers = match &input.tiers {
+        None => tiers::default_tiers(true),
+        Some((names, _)) => {
+            tiers::resolve_tiers(names, proc_macro2::Span::call_site(), true).ok()?
+        }
     };
 
     // Partition callee tiers into:
@@ -187,9 +188,7 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<Tok
         }
     }
 
-    // Sort upgrade tiers by priority descending (try highest first)
-    // Highest priority first.
-    upgrade_tiers.sort_by_key(|rt| core::cmp::Reverse(rt.priority));
+    // Filtering preserves resolve_tiers' descending priority order.
 
     let token_ident = &ctx.token_ident;
 
@@ -282,30 +281,26 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<Tok
 /// `from_context()` call against the actual caller attributes. No unsafe code,
 /// runtime detection, hidden token binding, or evaluation of discarded args.
 fn rewrite_tokenless_incant(input: &IncantInput, ctx: &CallerContext) -> Option<TokenStream> {
-    let names = input
-        .tiers
-        .as_ref()
-        .map(|(names, _)| names.clone())
-        .unwrap_or_else(|| DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect());
-    let tiers = tiers::resolve_tiers(&names, proc_macro2::Span::call_site(), true).ok()?;
-    let mut eligible: Vec<_> = tiers
-        .iter()
-        .filter(|tier| {
-            tier.name == "scalar"
-                || tier.name == "default"
-                || (tier.target_arch == ctx.target_arch
-                    && (tier.suffix == ctx.tier_suffix
-                        || crate::generated::can_downgrade_tier(&ctx.tier_suffix, tier.suffix)))
-        })
-        .collect();
-    eligible.sort_by_key(|tier| core::cmp::Reverse(tier.priority));
+    let tiers = match &input.tiers {
+        None => tiers::default_tiers(true),
+        Some((names, _)) => {
+            tiers::resolve_tiers(names, proc_macro2::Span::call_site(), true).ok()?
+        }
+    };
+    let eligible = tiers.iter().filter(|tier| {
+        tier.name == "scalar"
+            || tier.name == "default"
+            || (tier.target_arch == ctx.target_arch
+                && (tier.suffix == ctx.tier_suffix
+                    || crate::generated::can_downgrade_tier(&ctx.tier_suffix, tier.suffix)))
+    });
 
     // Build from the fallback up: cfg-gating a preferred tier must expose the
     // next covered tier, never leave a reference to an omitted function.
     let mut result = quote! {
         compile_error!("incant!: no callee tier is covered by this tokenless context; include a covered tier or scalar/default fallback")
     };
-    for tier in eligible.into_iter().rev() {
+    for tier in eligible.rev() {
         let function = suffix_path(&input.func_path, tier.suffix);
         let call = if tier.name == "default" {
             let args: Vec<_> = input
