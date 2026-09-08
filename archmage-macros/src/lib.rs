@@ -1885,10 +1885,10 @@ mod tests {
             .inputs
             .iter()
             .filter_map(|arg| {
-                if let FnArg::Typed(PatType { pat, .. }) = arg {
-                    if let syn::Pat::Ident(pi) = pat.as_ref() {
-                        return Some(pi.ident.to_string());
-                    }
+                if let FnArg::Typed(PatType { pat, .. }) = arg
+                    && let syn::Pat::Ident(pi) = pat.as_ref()
+                {
+                    return Some(pi.ident.to_string());
                 }
                 None
             })
@@ -1905,18 +1905,18 @@ mod tests {
 
         let mut wild_counter = 0u32;
         for arg in &mut dispatcher_inputs {
-            if let FnArg::Typed(pat_type) = arg {
-                if matches!(pat_type.pat.as_ref(), syn::Pat::Wild(_)) {
-                    let ident = format_ident!("__autoversion_wild_{}", wild_counter);
-                    wild_counter += 1;
-                    *pat_type.pat = syn::Pat::Ident(syn::PatIdent {
-                        attrs: vec![],
-                        by_ref: None,
-                        mutability: None,
-                        ident,
-                        subpat: None,
-                    });
-                }
+            if let FnArg::Typed(pat_type) = arg
+                && matches!(pat_type.pat.as_ref(), syn::Pat::Wild(_))
+            {
+                let ident = format_ident!("__autoversion_wild_{}", wild_counter);
+                wild_counter += 1;
+                *pat_type.pat = syn::Pat::Ident(syn::PatIdent {
+                    attrs: vec![],
+                    by_ref: None,
+                    mutability: None,
+                    ident,
+                    subpat: None,
+                });
             }
         }
 
@@ -1926,10 +1926,10 @@ mod tests {
         let names: Vec<String> = dispatcher_inputs
             .iter()
             .filter_map(|arg| {
-                if let FnArg::Typed(PatType { pat, .. }) = arg {
-                    if let syn::Pat::Ident(pi) = pat.as_ref() {
-                        return Some(pi.ident.to_string());
-                    }
+                if let FnArg::Typed(PatType { pat, .. }) = arg
+                    && let syn::Pat::Ident(pi) = pat.as_ref()
+                {
+                    return Some(pi.ident.to_string());
                 }
                 None
             })

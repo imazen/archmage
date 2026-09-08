@@ -3,6 +3,8 @@
 //! Finds token parameters in function signatures, extracts feature sets,
 //! and diagnoses invalid token types.
 
+use std::borrow::Cow;
+
 use syn::{FnArg, GenericParam, Ident, PatType, Signature, Token, Type, TypeParamBound};
 
 use crate::generated::{
@@ -106,14 +108,20 @@ pub(crate) fn find_generic_bounds(sig: &Signature, type_name: &str) -> Option<Ve
 }
 
 /// Convert trait names to features, collecting all features from all traits.
-pub(crate) fn traits_to_features(trait_names: &[String]) -> Option<Vec<&'static str>> {
-    let mut all_features = Vec::new();
+pub(crate) fn traits_to_features(trait_names: &[String]) -> Option<Cow<'static, [&'static str]>> {
+    // Registry lists are unique (tested); only a union that adds features
+    // needs owned storage. Preserve first-seen order for generated attributes.
+    let mut all_features: Cow<'static, [&'static str]> = Cow::Borrowed(&[]);
 
     for trait_name in trait_names {
         if let Some(features) = trait_to_features(trait_name) {
+            if all_features.is_empty() {
+                all_features = Cow::Borrowed(features);
+                continue;
+            }
             for &feature in features {
                 if !all_features.contains(&feature) {
-                    all_features.push(feature);
+                    all_features.to_mut().push(feature);
                 }
             }
         }
@@ -124,6 +132,15 @@ pub(crate) fn traits_to_features(trait_names: &[String]) -> Option<Vec<&'static 
     } else {
         Some(all_features)
     }
+}
+
+/// Concrete tokens use generated strings; generic bounds may combine feature
+/// sets in arbitrary order, so retain the ordinary join for those.
+pub(crate) fn features_csv(token_name: Option<&str>, features: &[&str]) -> Cow<'static, str> {
+    token_name
+        .and_then(crate::generated::token_to_features_csv)
+        .map(Cow::Borrowed)
+        .unwrap_or_else(|| Cow::Owned(features.join(",")))
 }
 
 /// The archmage tier traits among `trait_names` — i.e. the ones that actually
@@ -202,7 +219,7 @@ pub(crate) struct TokenParamInfo {
     /// The parameter identifier (e.g., `token`)
     pub ident: Ident,
     /// Target features to enable (e.g., `["avx2", "fma"]`)
-    pub features: Vec<&'static str>,
+    pub features: Cow<'static, [&'static str]>,
     /// Target architecture (Some for concrete tokens, None for traits/generics)
     pub target_arch: Option<&'static str>,
     /// Concrete token type name (Some for concrete tokens, None for traits/generics)
@@ -257,7 +274,7 @@ pub(crate) fn find_token_param(sig: &Signature) -> Option<TokenParamInfo> {
                 if let Some(info) = extract_token_type_info(ty) {
                     let (features, arch, token_name, mage_ns, full_type, tier_traits) = match info {
                         TokenTypeInfo::Concrete(ref name) => {
-                            let features = token_to_features(name).map(|f| f.to_vec());
+                            let features = token_to_features(name).map(Cow::Borrowed);
                             let arch = token_to_arch(name);
                             let ns = token_to_magetypes_namespace(name);
                             // Clone the full Type for const tier tag assertion.

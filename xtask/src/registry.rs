@@ -455,6 +455,8 @@ impl Registry {
 
         self.gen_token_to_features(&mut out);
         out.push('\n');
+        self.gen_feature_csv(&mut out);
+        out.push('\n');
         self.gen_trait_to_features(&mut out);
         out.push('\n');
         self.gen_token_to_arch(&mut out);
@@ -508,6 +510,23 @@ impl Registry {
 
         out.push_str("        _ => None,\n");
         out.push_str("    }\n}\n");
+    }
+
+    /// Keep the lookup keyed by token name, like the other registry lookups.
+    /// Matching whole feature slices adds unnecessary comparisons and compiler work.
+    fn gen_feature_csv(&self, out: &mut String) {
+        out.push_str(
+            "/// Precomputed target-feature CSV for concrete tokens, including aliases.\n",
+        );
+        out.push_str("pub(crate) fn token_to_features_csv(name: &str) -> Option<&'static str> {\n    match name {\n");
+        for token in &self.token {
+            out.push_str(&format!(
+                "        {} => Some({:?}),\n",
+                Self::match_pattern(token),
+                token.features.join(",")
+            ));
+        }
+        out.push_str("        \"ScalarToken\" => Some(\"\"),\n        _ => None,\n    }\n}\n");
     }
 
     fn gen_trait_to_features(&self, out: &mut String) {

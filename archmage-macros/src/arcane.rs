@@ -258,11 +258,11 @@ pub(crate) fn arcane_impl(
             has_token: true,
             derive_token: false,
         };
-        input_fn.body = crate::rewrite::rewrite_incant_in_body(input_fn.body.clone(), &ctx);
+        input_fn.body = crate::rewrite::rewrite_incant_in_body(input_fn.body, &ctx);
     }
 
     // Build a single target_feature attribute with all features comma-joined
-    let features_csv = features.join(",");
+    let features_csv = crate::token_discovery::features_csv(token_type_name.as_deref(), &features);
     let target_feature_attrs: Vec<Attribute> =
         vec![parse_quote!(#[target_feature(enable = #features_csv)])];
 

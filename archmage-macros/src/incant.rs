@@ -297,14 +297,14 @@ pub(crate) fn gen_incant_passthrough(
         }
     }
 
+    // Every non-fallback arm binds the same token name.
+    let call_args = build_call_args(args, &quote! { __t });
     for (target_arch, group_tiers) in &arch_groups {
         let mut tier_checks = Vec::new();
         for rt in group_tiers {
             let fn_suffixed = suffix_path(func_path, rt.suffix);
             let as_method = format_ident!("{}", rt.as_method);
 
-            let token_expr = quote! { __t };
-            let call_args = build_call_args(args, &token_expr);
             let check = quote! {
                 if let Some(__t) = __incant_token.#as_method() {
                     break '__incant #fn_suffixed(#call_args);
@@ -401,14 +401,14 @@ pub(crate) fn gen_incant_entry(
         }
     }
 
+    // Every non-fallback arm binds the same token name.
+    let call_args = build_call_args(args, &quote! { __t });
     for (target_arch, group_tiers) in &arch_groups {
         let mut tier_checks = Vec::new();
         for rt in group_tiers {
             let fn_suffixed = suffix_path(func_path, rt.suffix);
             let token_path: syn::Path = syn::parse_str(rt.token_path).unwrap();
 
-            let token_expr = quote! { __t };
-            let call_args = build_call_args(args, &token_expr);
             let check = quote! {
                 if let Some(__t) = #token_path::summon() {
                     break '__incant #fn_suffixed(#call_args);

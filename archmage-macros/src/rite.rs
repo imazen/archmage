@@ -187,13 +187,12 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
         // `default` tier (DEFAULT_TIER_SENTINEL) is tokenless: no features,
         // no arch, no target_feature attribute.
         let is_default = tier_token == DEFAULT_TIER_SENTINEL;
-        let features: Vec<&'static str> = if is_default {
-            Vec::new()
+        let features = std::borrow::Cow::Borrowed(if is_default {
+            &[][..]
         } else {
             token_to_features(tier_token)
                 .expect("tier_to_canonical_token returned invalid token name")
-                .to_vec()
-        };
+        });
         let target_arch = if is_default {
             None
         } else {
@@ -299,14 +298,15 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
         None
     };
     if let Some(ctx) = rewrite_ctx {
-        input_fn.body = crate::rewrite::rewrite_incant_in_body(input_fn.body.clone(), &ctx);
+        input_fn.body = crate::rewrite::rewrite_incant_in_body(input_fn.body, &ctx);
     }
 
     // Build the attribute list. Scalar tier has no features — emit only
     // `#[inline]` without `#[target_feature]` (enable="" is a compile error).
     let mut new_attrs: Vec<Attribute> = Vec::new();
     if !features.is_empty() {
-        let features_csv = features.join(",");
+        let features_csv =
+            crate::token_discovery::features_csv(_token_type_name.as_deref(), &features);
         new_attrs.push(parse_quote!(#[target_feature(enable = #features_csv)]));
     }
     // Always use #[inline] - #[inline(always)] + #[target_feature] requires nightly
@@ -449,14 +449,14 @@ pub(crate) fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenS
                     derive_token: true,
                 },
             };
-            variant_fn.body = crate::rewrite::rewrite_incant_in_body(variant_fn.body.clone(), &ctx);
+            variant_fn.body = crate::rewrite::rewrite_incant_in_body(variant_fn.body, &ctx);
         }
 
         // Build the attribute list. Scalar tier has no features — emit only
         // `#[inline]` without `#[target_feature]` (enable="" is a compile error).
         let mut new_attrs: Vec<Attribute> = Vec::new();
         if !features.is_empty() {
-            let features_csv = features.join(",");
+            let features_csv = crate::token_discovery::features_csv(Some(tier_token), features);
             new_attrs.push(parse_quote!(#[target_feature(enable = #features_csv)]));
         }
         new_attrs.push(parse_quote!(#[inline]));
