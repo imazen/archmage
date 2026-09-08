@@ -26,9 +26,11 @@ pub(crate) struct CallerContext {
     /// The token ident available in the caller's scope (e.g., `token`, `__token`, `_token`)
     pub token_ident: Ident,
     /// Whether a real token is in scope. `false` for tokenless tier bodies
-    /// (tier-based `#[rite(v3, …)]`): only `incant!(.. without token)` is rewritten
-    /// there; plain `incant!`/`with token` are left for standalone expansion.
+    /// (tier-based `#[rite(v3, …)]`). Tokenless callers can construct the
+    /// selected callee's proof with `from_context()` for a covered tier.
     pub has_token: bool,
+    /// Only tokenless rite contexts opt into feature-proved token construction.
+    pub derive_token: bool,
 }
 
 /// Rewrite `incant!()` calls in a function body for a specific tier context.
@@ -63,7 +65,7 @@ pub(crate) fn rewrite_incant_in_body(body: TokenStream, ctx: &CallerContext) -> 
         }
 
         // Check for `incant ! ( ... )` pattern
-        if is_ident(&tokens[i], "incant")
+        if (is_ident(&tokens[i], "incant") || is_ident(&tokens[i], "dispatch_variant"))
             && i + 2 < tokens.len()
             && is_punct(&tokens[i + 1], '!')
             && let Some(TokenTree::Group(group)) = tokens.get(i + 2)
@@ -126,11 +128,13 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<Tok
         return None;
     }
 
-    // Tokenless tier body (no token in scope): only `without token` is rewritten
-    // (handled above). Plain `incant!` is left for standalone expansion (it will
-    // summon its own token), exactly as before this body was scanned.
+    // A tokenless feature context already proves covered tiers. Do not repeat
+    // detection or attempt an implicit upgrade while composing its helpers.
     if !ctx.has_token {
-        return None;
+        return ctx
+            .derive_token
+            .then(|| rewrite_tokenless_incant(input, ctx))
+            .flatten();
     }
 
     let func_path = &input.func_path;
@@ -273,6 +277,68 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<Tok
     })
 }
 
+/// Select only callees covered by the caller's feature context. The registry
+/// DAG determines eligibility, and rustc independently checks the emitted
+/// `from_context()` call against the actual caller attributes. No unsafe code,
+/// runtime detection, hidden token binding, or evaluation of discarded args.
+fn rewrite_tokenless_incant(input: &IncantInput, ctx: &CallerContext) -> Option<TokenStream> {
+    let names = input
+        .tiers
+        .as_ref()
+        .map(|(names, _)| names.clone())
+        .unwrap_or_else(|| DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect());
+    let tiers = tiers::resolve_tiers(&names, proc_macro2::Span::call_site(), true).ok()?;
+    let mut eligible: Vec<_> = tiers
+        .iter()
+        .filter(|tier| {
+            tier.name == "scalar"
+                || tier.name == "default"
+                || (tier.target_arch == ctx.target_arch
+                    && (tier.suffix == ctx.tier_suffix
+                        || crate::generated::can_downgrade_tier(&ctx.tier_suffix, tier.suffix)))
+        })
+        .collect();
+    eligible.sort_by_key(|tier| core::cmp::Reverse(tier.priority));
+
+    // Build from the fallback up: cfg-gating a preferred tier must expose the
+    // next covered tier, never leave a reference to an omitted function.
+    let mut result = quote! {
+        compile_error!("incant!: no callee tier is covered by this tokenless context; include a covered tier or scalar/default fallback")
+    };
+    for tier in eligible.into_iter().rev() {
+        let function = suffix_path(&input.func_path, tier.suffix);
+        let call = if tier.name == "default" {
+            let args: Vec<_> = input
+                .args
+                .iter()
+                .filter(|arg| !crate::common::is_bare_ident_pub(arg, "Token"))
+                .collect();
+            quote! { #function(#(#args),*) }
+        } else {
+            let token = if tier.name == "scalar" {
+                quote! { archmage::ScalarToken }
+            } else {
+                let token_path: syn::Path = syn::parse_str(tier.token_path).ok()?;
+                quote! { #token_path::from_context() }
+            };
+            let args = crate::common::build_call_args(&input.args, &token);
+            quote! { #function(#args) }
+        };
+        result = if let Some(feature) = &tier.feature_gate {
+            let allow = tier
+                .allow_unexpected_cfg
+                .then(|| quote! { #[allow(unexpected_cfgs)] });
+            quote! {{
+                #allow #[cfg(feature = #feature)] { #call }
+                #allow #[cfg(not(feature = #feature))] { #result }
+            }}
+        } else {
+            call
+        };
+    }
+    Some(result)
+}
+
 fn is_ident(tt: &TokenTree, name: &str) -> bool {
     matches!(tt, TokenTree::Ident(id) if *id == name)
 }
@@ -292,6 +358,7 @@ mod tests {
             target_arch: arch,
             token_ident: format_ident!("__token"),
             has_token: true,
+            derive_token: false,
         }
     }
 
@@ -439,5 +506,47 @@ mod tests {
             !result.contains("summon"),
             "should not summon for downgrade, got: {result}"
         );
+    }
+
+    #[test]
+    fn tokenless_context_never_probes_a_stronger_or_unrelated_tier() {
+        let mut ctx = make_ctx("v3", 30, Some("x86_64"));
+        ctx.has_token = false;
+        ctx.derive_token = true;
+        let result = rewrite_incant_in_body(
+            quote! { incant!(work(value, Token), [v4, v3_crypto, neon, v2, -scalar]) },
+            &ctx,
+        )
+        .to_string();
+        assert!(result.contains("work_v2"), "{result}");
+        assert!(result.contains("X64V2Token :: from_context"), "{result}");
+        for absent in [
+            "summon",
+            "work_v4",
+            "work_v3_crypto",
+            "work_neon",
+            "ScalarToken",
+        ] {
+            assert!(!result.contains(absent), "{result}");
+        }
+    }
+
+    #[test]
+    fn tokenless_rewrite_is_opt_in_and_respects_item_boundaries() {
+        let mut ctx = make_ctx("v3", 30, Some("x86_64"));
+        ctx.has_token = false;
+        let body = quote! {
+            fn nested() { incant!(work(x), [v3, scalar]); }
+            dispatch_variant!(work(x), [v3, scalar]);
+        };
+        assert_eq!(
+            rewrite_incant_in_body(body.clone(), &ctx).to_string(),
+            body.to_string()
+        );
+        ctx.derive_token = true;
+        let result = rewrite_incant_in_body(body, &ctx).to_string();
+        assert!(result.contains("fn nested () { incant !"), "{result}");
+        assert!(result.contains("work_v3"), "{result}");
+        assert!(!result.contains("dispatch_variant"), "{result}");
     }
 }

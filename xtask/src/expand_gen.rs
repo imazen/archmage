@@ -640,10 +640,10 @@ fn gen_rewrite_tests(files: &mut Vec<TestFile>) {
             .to_string(),
     });
 
-    // Caller = rite tokenless (should NOT rewrite)
+    // Caller = rite tokenless: construct the callee proof from context.
     files.push(TestFile {
         path: "rewrite/rite_tokenless_passthrough.rs".to_string(),
-        content: "// Rewrite: tokenless rite — incant! NOT rewritten (no token to pass)\n\
+        content: "// Rewrite: tokenless rite — direct covered call using from_context()\n\
                   use archmage::{rite, incant, arcane, X64V3Token, ScalarToken};\n\
                   #[arcane] fn inner_v3(_t: X64V3Token, x: f32) -> f32 { x * 2.0 }\n\
                   fn inner_scalar(_t: ScalarToken, x: f32) -> f32 { x }\n\

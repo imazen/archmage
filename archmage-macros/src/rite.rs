@@ -278,8 +278,8 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
     // Rewrite incant!() calls in the body to direct tier calls.
     // - With a real token param: full rewrite (token-first direct calls +
     //   `without token`). Tokenless rite (`#[rite(v3)]`) has no token to thread,
-    //   so it only rewrites `incant!(.. without token)` (the tokenless variant
-    //   call); plain `incant!`/`with token` are left for standalone expansion.
+    //   so plain incant! constructs proof with from_context() for covered tiers.
+    //   `without token` calls tokenless helpers; `with token` stays explicit.
     let rewrite_ctx = if token_ident != "_"
         && let Some(ref type_name) = _token_type_name
         && let Some(tier_suffix) = crate::generated::canonical_token_to_tier_suffix(type_name)
@@ -290,17 +290,19 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
             target_arch: tier.target_arch,
             token_ident: token_ident.clone(),
             has_token: true,
+            derive_token: false,
         })
     } else if let Some(tier_token) = args.tier_tokens.first()
         && let Some(tier_suffix) = crate::generated::canonical_token_to_tier_suffix(tier_token)
         && let Some(tier) = crate::tiers::find_tier(tier_suffix)
     {
-        // Tokenless tier-based `#[rite(v3)]`: only `without token` is rewritten.
+        // Tokenless tier-based rite can construct proof for covered callees.
         Some(crate::rewrite::CallerContext {
             tier_suffix: tier_suffix.to_string(),
             target_arch: tier.target_arch,
             token_ident: quote::format_ident!("_"),
             has_token: false,
+            derive_token: true,
         })
     } else {
         None
@@ -469,12 +471,14 @@ pub(crate) fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenS
                     target_arch: tier.target_arch,
                     token_ident: token_info.ident,
                     has_token: true,
+                    derive_token: false,
                 },
                 None => crate::rewrite::CallerContext {
                     tier_suffix: suffix.to_string(),
                     target_arch: tier.target_arch,
                     token_ident: quote::format_ident!("_"),
                     has_token: false,
+                    derive_token: true,
                 },
             };
             variant_fn.body = crate::rewrite::rewrite_incant_in_body(variant_fn.body.clone(), &ctx);

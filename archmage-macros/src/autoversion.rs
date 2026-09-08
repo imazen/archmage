@@ -281,6 +281,7 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
             target_arch: tier.target_arch,
             token_ident,
             has_token,
+            derive_token: false,
         };
         variant_fn.body = crate::rewrite::rewrite_incant_in_body(variant_fn.body, &ctx);
 
