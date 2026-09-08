@@ -170,4 +170,51 @@ pub trait I16x8Backend: SimdToken + Sealed + Copy + 'static {
     fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {
         <Self as I16x8Backend>::min(self, <Self as I16x8Backend>::max(self, a, lo), hi)
     }
+
+    /// Widen in natural lane order: result[i] = a[i + 0] as i32.
+    fn widen_low_i16_to_i32(
+        self,
+        a: <Self as super::I16x8Backend>::Repr,
+    ) -> <Self as super::I32x4Backend>::Repr
+    where
+        Self: super::I32x4Backend;
+    /// Widen in natural lane order: result[i] = a[i + 4] as i32.
+    fn widen_high_i16_to_i32(
+        self,
+        a: <Self as super::I16x8Backend>::Repr,
+    ) -> <Self as super::I32x4Backend>::Repr
+    where
+        Self: super::I32x4Backend;
+    /// Clamp to i8's range, then concatenate a's 8 lanes followed by b's.
+    fn narrow_saturating_i16_to_i8(
+        self,
+        a: <Self as super::I16x8Backend>::Repr,
+        b: <Self as super::I16x8Backend>::Repr,
+    ) -> <Self as super::I8x16Backend>::Repr
+    where
+        Self: super::I8x16Backend;
+    /// Clamp to u8's range, then concatenate a's 8 lanes followed by b's.
+    fn narrow_saturating_i16_to_u8(
+        self,
+        a: <Self as super::I16x8Backend>::Repr,
+        b: <Self as super::I16x8Backend>::Repr,
+    ) -> <Self as super::U8x16Backend>::Repr
+    where
+        Self: super::U8x16Backend;
+    /// Exact full-range absolute difference, with unsigned output lanes.
+    fn abs_diff(
+        self,
+        a: <Self as super::I16x8Backend>::Repr,
+        b: <Self as super::I16x8Backend>::Repr,
+    ) -> <Self as super::U16x8Backend>::Repr
+    where
+        Self: super::U16x8Backend;
+    /// Lane k = a[2k]*b[2k] + a[2k+1]*b[2k+1], modulo 2^32.
+    fn madd_adjacent(
+        self,
+        a: <Self as super::I16x8Backend>::Repr,
+        b: <Self as super::I16x8Backend>::Repr,
+    ) -> <Self as super::I32x4Backend>::Repr
+    where
+        Self: super::I32x4Backend;
 }

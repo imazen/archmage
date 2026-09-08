@@ -877,3 +877,122 @@ mod gaussian {
         assert!((result[1] - 0.606).abs() < 0.02);
     }
 }
+
+// magetypes/isa-quirks.md — concrete values in the tables. These assertions
+// record current behavior, including divergences; changes require updating the page.
+mod isa_quirks {
+    use archmage::{ScalarToken, SimdToken};
+    use magetypes::simd::generic::*;
+
+    macro_rules! check_float {
+        ($token:expr, $ty:ident, $lanes:expr, $min_kind:expr, $ordered_ne:expr, $x86_neg:expr, $fused:expr) => {{
+            let token = $token;
+            let a = $ty::from_array(
+                token,
+                core::array::from_fn(|i| [f32::NAN, 1.0, 0.0, -0.0][i % 4]),
+            );
+            let b = $ty::from_array(
+                token,
+                core::array::from_fn(|i| [1.0, f32::NAN, -0.0, 0.0][i % 4]),
+            );
+            for values in [a.min(b).to_array(), a.max(b).to_array()] {
+                for i in (0..$lanes).step_by(4) {
+                    match $min_kind {
+                        0 => {
+                            assert_eq!(values[i], 1.0);
+                            assert!(values[i + 1].is_nan());
+                        }
+                        1 => {
+                            assert!(values[i].is_nan());
+                            assert!(values[i + 1].is_nan());
+                        }
+                        2 => {
+                            assert_eq!(values[i], 1.0);
+                            assert_eq!(values[i + 1], 1.0);
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+            }
+            for (i, mask) in a.simd_ne(b).to_array().iter().enumerate() {
+                let want = if i % 4 < 2 && !$ordered_ne {
+                    u32::MAX
+                } else {
+                    0
+                };
+                assert_eq!(mask.to_bits(), want);
+            }
+            let neg = (-a).to_array();
+            assert_eq!(
+                neg[2].to_bits(),
+                if $x86_neg { 0 } else { (-0.0f32).to_bits() }
+            );
+            assert_eq!(neg[3].to_bits(), 0);
+            let rounding = $ty::from_array(
+                token,
+                core::array::from_fn(|i| [2.5, 3.5, -2.5, -3.5][i % 4]),
+            )
+            .round()
+            .to_array();
+            assert_eq!(&rounding[..4], &[2.0, 4.0, -2.0, -4.0]);
+            // Exact product is 1 - 2^-46. A separate f32 multiply rounds to 1.
+            let x = $ty::splat(token, 1.0 + f32::EPSILON);
+            let y = $ty::splat(token, 1.0 - f32::EPSILON);
+            let z = $ty::splat(token, -1.0);
+            let expected = if $fused {
+                -(f32::EPSILON * f32::EPSILON)
+            } else {
+                0.0
+            };
+            assert_eq!(x.mul_add(y, z).to_array(), [expected; $lanes]);
+        }};
+    }
+
+    #[test]
+    fn scalar_tables() {
+        check_float!(ScalarToken, f32x4, 4, 2, false, false, false);
+        check_float!(ScalarToken, f32x8, 8, 2, false, false, false);
+        #[cfg(feature = "w512")]
+        check_float!(ScalarToken, f32x16, 16, 0, false, false, false);
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn x86_tables() {
+        if let Some(t) = archmage::X64V3Token::summon() {
+            check_float!(t, f32x4, 4, 0, true, true, true);
+            check_float!(t, f32x8, 8, 0, true, true, true);
+            #[cfg(feature = "w512")]
+            check_float!(t, f32x16, 16, 0, true, true, true);
+        }
+        #[cfg(feature = "avx512")]
+        {
+            if let Some(t) = archmage::X64V4Token::summon() {
+                check_float!(t, f32x16, 16, 0, false, true, true);
+            }
+            if let Some(t) = archmage::X64V4xToken::summon() {
+                check_float!(t, f32x16, 16, 0, false, true, true);
+            }
+        }
+    }
+
+    #[cfg(target_arch = "aarch64")]
+    #[test]
+    fn neon_tables() {
+        let t = archmage::NeonToken::summon().expect("NEON test runner");
+        check_float!(t, f32x4, 4, 1, false, false, true);
+        check_float!(t, f32x8, 8, 1, false, false, true);
+        #[cfg(feature = "w512")]
+        check_float!(t, f32x16, 16, 1, false, false, true);
+    }
+
+    #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+    #[test]
+    fn wasm_tables() {
+        let t = archmage::Wasm128Token::summon().expect("SIMD128 test runner");
+        check_float!(t, f32x4, 4, 1, false, false, false);
+        check_float!(t, f32x8, 8, 1, false, false, false);
+        #[cfg(feature = "w512")]
+        check_float!(t, f32x16, 16, 1, false, false, false);
+    }
+}

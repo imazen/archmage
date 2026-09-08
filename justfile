@@ -326,3 +326,10 @@ bench-arm-codegen-macos:
     TMPDIR="$HOME/tmp" CARGO_BUILD_JOBS=4 RAYON_NUM_THREADS=4 OMP_NUM_THREADS=4 \
       nice -n 19 /usr/bin/time -l cargo bench --locked -p magetypes --bench generic_vs_concrete -- --format=llm \
       2>&1 | tee "$audit_log"
+
+# Integer APIs, independent intrinsic references and ARM accumulation fusion.
+integer-codegen:
+    PYTHONDONTWRITEBYTECODE=1 python3 xtask/codegen.py --integer-ops
+
+integer-tests:
+    cargo test -p magetypes --test int_widen_narrow --features "std avx512"

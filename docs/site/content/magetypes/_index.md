@@ -12,6 +12,8 @@ Magetypes provides SIMD vector types — `f32x8`, `i32x4`, `u8x16`, and friends 
 
 **Status: Experimental.** The API is usable and tested across x86-64, AArch64, and WASM, but it may change between minor versions. Pin your dependency version if stability matters.
 
+See [ISA Quirks and Fixups](@/magetypes/isa-quirks.md) for concrete edge-case results, portability limits, and the fixups we apply.
+
 ## Relationship to Archmage
 
 Magetypes depends on [archmage](@/archmage/_index.md) for capability tokens. You cannot construct a magetypes vector without first proving that the CPU supports the required features — this is what "token-gated construction" means.

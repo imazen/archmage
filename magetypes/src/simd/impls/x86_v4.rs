@@ -629,32 +629,6 @@ impl I8x64Backend for archmage::X64V4Token {
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm512_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
-        _mm512_and_si512(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-        _mm512_and_si512(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let byte_mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-        let logical = _mm512_and_si512(shifted, byte_mask);
-        let sign = _mm512_movm_epi8(_mm512_cmplt_epi8_mask(a, _mm512_setzero_si512()));
-        // `count.min(8)` saturates the fill to the whole byte, which
-        // is the contracted sign fill for out-of-range counts.
-        let fill = _mm512_set1_epi8(((0xFF00u16 >> count.min(8)) & 0xFF) as u8 as i8);
-        _mm512_or_si512(logical, _mm512_and_si512(sign, fill))
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
     fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
         _mm512_adds_epi8(a, b)
     }
@@ -681,6 +655,15 @@ impl I8x64Backend for archmage::X64V4Token {
         // Extract high bit of each lane: compare < 0 for signed interpretation
         let zero = _mm512_setzero_si512();
         _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero) as u64
+    }
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn widen_low_i8_to_i16(self, a: __m512i) -> __m512i {
+        _mm512_cvtepi8_epi16(_mm512_castsi512_si256(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn widen_high_i8_to_i16(self, a: __m512i) -> __m512i {
+        _mm512_cvtepi8_epi16(_mm512_extracti64x4_epi64::<1>(a))
     }
 }
 
@@ -845,27 +828,6 @@ impl U8x64Backend for archmage::X64V4Token {
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm512_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
-        _mm512_and_si512(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-        _mm512_and_si512(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-        _mm512_and_si512(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
     fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
         _mm512_adds_epu8(a, b)
     }
@@ -892,6 +854,44 @@ impl U8x64Backend for archmage::X64V4Token {
         // Extract high bit of each lane: compare < 0 for signed interpretation
         let zero = _mm512_setzero_si512();
         _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero) as u64
+    }
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn widen_low_u8_to_u16(self, a: __m512i) -> __m512i {
+        _mm512_cvtepu8_epi16(_mm512_castsi512_si256(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn widen_high_u8_to_u16(self, a: __m512i) -> __m512i {
+        _mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64::<1>(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn abs_diff(self, a: __m512i, b: __m512i) -> __m512i {
+        _mm512_sub_epi8(_mm512_max_epu8(a, b), _mm512_min_epu8(a, b))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn reduce_add_u32(self, a: __m512i) -> u32 {
+        {
+            let s = _mm512_sad_epu8(a, _mm512_setzero_si512());
+            _mm512_reduce_add_epi64(s) as u32
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn sum_abs_diff(self, a: __m512i, b: __m512i) -> u32 {
+        {
+            let s = _mm512_sad_epu8(a, b);
+            _mm512_reduce_add_epi64(s) as u32
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn pairwise_widen_add(self, a: __m512i) -> __m512i {
+        _mm512_add_epi16(
+            _mm512_and_si512(a, _mm512_set1_epi16(255)),
+            _mm512_srli_epi16::<8>(a),
+        )
     }
 }
 
@@ -1097,6 +1097,45 @@ impl I16x32Backend for archmage::X64V4Token {
             zero,
         ) as u64
     }
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn widen_low_i16_to_i32(self, a: __m512i) -> __m512i {
+        _mm512_cvtepi16_epi32(_mm512_castsi512_si256(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn widen_high_i16_to_i32(self, a: __m512i) -> __m512i {
+        _mm512_cvtepi16_epi32(_mm512_extracti64x4_epi64::<1>(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn narrow_saturating_i16_to_i8(self, a: __m512i, b: __m512i) -> __m512i {
+        _mm512_inserti64x4::<1>(
+            _mm512_castsi256_si512(_mm512_cvtsepi16_epi8(a)),
+            _mm512_cvtsepi16_epi8(b),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn narrow_saturating_i16_to_u8(self, a: __m512i, b: __m512i) -> __m512i {
+        // Clamp at zero so the unsigned-source instruction sees
+        // the same value the signed source held; above the
+        // clamp both readings agree.
+        let zero = _mm512_setzero_si512();
+        _mm512_inserti64x4::<1>(
+            _mm512_castsi256_si512(_mm512_cvtusepi16_epi8(_mm512_max_epi16(a, zero))),
+            _mm512_cvtusepi16_epi8(_mm512_max_epi16(b, zero)),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn madd_adjacent(self, a: __m512i, b: __m512i) -> __m512i {
+        _mm512_madd_epi16(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn abs_diff(self, a: __m512i, b: __m512i) -> __m512i {
+        _mm512_sub_epi16(_mm512_max_epi16(a, b), _mm512_min_epi16(a, b))
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -1296,6 +1335,23 @@ impl U16x32Backend for archmage::X64V4Token {
             zero,
         ) as u64
     }
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn widen_low_u16_to_u32(self, a: __m512i) -> __m512i {
+        _mm512_cvtepu16_epi32(_mm512_castsi512_si256(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn widen_high_u16_to_u32(self, a: __m512i) -> __m512i {
+        _mm512_cvtepu16_epi32(_mm512_extracti64x4_epi64::<1>(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn pairwise_widen_add(self, a: __m512i) -> __m512i {
+        _mm512_add_epi32(
+            _mm512_and_si512(a, _mm512_set1_epi32(65535)),
+            _mm512_srli_epi32::<16>(a),
+        )
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -1489,6 +1545,25 @@ impl I32x16Backend for archmage::X64V4Token {
             _mm512_and_si512(a, _mm512_set1_epi32(1_i32 << (32 - 1))),
             zero,
         ) as u64
+    }
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn narrow_saturating_i32_to_i16(self, a: __m512i, b: __m512i) -> __m512i {
+        _mm512_inserti64x4::<1>(
+            _mm512_castsi256_si512(_mm512_cvtsepi32_epi16(a)),
+            _mm512_cvtsepi32_epi16(b),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn narrow_saturating_i32_to_u16(self, a: __m512i, b: __m512i) -> __m512i {
+        // Clamp at zero so the unsigned-source instruction sees
+        // the same value the signed source held; above the
+        // clamp both readings agree.
+        let zero = _mm512_setzero_si512();
+        _mm512_inserti64x4::<1>(
+            _mm512_castsi256_si512(_mm512_cvtusepi32_epi16(_mm512_max_epi32(a, zero))),
+            _mm512_cvtusepi32_epi16(_mm512_max_epi32(b, zero)),
+        )
     }
 }
 
@@ -2626,32 +2701,6 @@ impl I8x64Backend for archmage::X64V4xToken {
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm512_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
-        _mm512_and_si512(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-        _mm512_and_si512(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let byte_mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-        let logical = _mm512_and_si512(shifted, byte_mask);
-        let sign = _mm512_movm_epi8(_mm512_cmplt_epi8_mask(a, _mm512_setzero_si512()));
-        // `count.min(8)` saturates the fill to the whole byte, which
-        // is the contracted sign fill for out-of-range counts.
-        let fill = _mm512_set1_epi8(((0xFF00u16 >> count.min(8)) & 0xFF) as u8 as i8);
-        _mm512_or_si512(logical, _mm512_and_si512(sign, fill))
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
         _mm512_adds_epi8(a, b)
     }
@@ -2678,6 +2727,15 @@ impl I8x64Backend for archmage::X64V4xToken {
         // Extract high bit of each lane: compare < 0 for signed interpretation
         let zero = _mm512_setzero_si512();
         _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero) as u64
+    }
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn widen_low_i8_to_i16(self, a: __m512i) -> __m512i {
+        _mm512_cvtepi8_epi16(_mm512_castsi512_si256(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn widen_high_i8_to_i16(self, a: __m512i) -> __m512i {
+        _mm512_cvtepi8_epi16(_mm512_extracti64x4_epi64::<1>(a))
     }
 }
 
@@ -2842,27 +2900,6 @@ impl U8x64Backend for archmage::X64V4xToken {
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn shl_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm512_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
-        _mm512_and_si512(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn shr_logical_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-        _mm512_and_si512(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn shr_arithmetic_uniform(self, a: __m512i, count: u32) -> __m512i {
-        let shifted = _mm512_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-        let mask = _mm512_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-        _mm512_and_si512(shifted, mask)
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn saturating_add(self, a: __m512i, b: __m512i) -> __m512i {
         _mm512_adds_epu8(a, b)
     }
@@ -2889,6 +2926,44 @@ impl U8x64Backend for archmage::X64V4xToken {
         // Extract high bit of each lane: compare < 0 for signed interpretation
         let zero = _mm512_setzero_si512();
         _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero) as u64
+    }
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn widen_low_u8_to_u16(self, a: __m512i) -> __m512i {
+        _mm512_cvtepu8_epi16(_mm512_castsi512_si256(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn widen_high_u8_to_u16(self, a: __m512i) -> __m512i {
+        _mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64::<1>(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn abs_diff(self, a: __m512i, b: __m512i) -> __m512i {
+        _mm512_sub_epi8(_mm512_max_epu8(a, b), _mm512_min_epu8(a, b))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn reduce_add_u32(self, a: __m512i) -> u32 {
+        {
+            let s = _mm512_sad_epu8(a, _mm512_setzero_si512());
+            _mm512_reduce_add_epi64(s) as u32
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn sum_abs_diff(self, a: __m512i, b: __m512i) -> u32 {
+        {
+            let s = _mm512_sad_epu8(a, b);
+            _mm512_reduce_add_epi64(s) as u32
+        }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn pairwise_widen_add(self, a: __m512i) -> __m512i {
+        _mm512_add_epi16(
+            _mm512_and_si512(a, _mm512_set1_epi16(255)),
+            _mm512_srli_epi16::<8>(a),
+        )
     }
 }
 
@@ -3094,6 +3169,45 @@ impl I16x32Backend for archmage::X64V4xToken {
             zero,
         ) as u64
     }
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn widen_low_i16_to_i32(self, a: __m512i) -> __m512i {
+        _mm512_cvtepi16_epi32(_mm512_castsi512_si256(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn widen_high_i16_to_i32(self, a: __m512i) -> __m512i {
+        _mm512_cvtepi16_epi32(_mm512_extracti64x4_epi64::<1>(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn narrow_saturating_i16_to_i8(self, a: __m512i, b: __m512i) -> __m512i {
+        _mm512_inserti64x4::<1>(
+            _mm512_castsi256_si512(_mm512_cvtsepi16_epi8(a)),
+            _mm512_cvtsepi16_epi8(b),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn narrow_saturating_i16_to_u8(self, a: __m512i, b: __m512i) -> __m512i {
+        // Clamp at zero so the unsigned-source instruction sees
+        // the same value the signed source held; above the
+        // clamp both readings agree.
+        let zero = _mm512_setzero_si512();
+        _mm512_inserti64x4::<1>(
+            _mm512_castsi256_si512(_mm512_cvtusepi16_epi8(_mm512_max_epi16(a, zero))),
+            _mm512_cvtusepi16_epi8(_mm512_max_epi16(b, zero)),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn madd_adjacent(self, a: __m512i, b: __m512i) -> __m512i {
+        _mm512_madd_epi16(a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn abs_diff(self, a: __m512i, b: __m512i) -> __m512i {
+        _mm512_sub_epi16(_mm512_max_epi16(a, b), _mm512_min_epi16(a, b))
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -3293,6 +3407,23 @@ impl U16x32Backend for archmage::X64V4xToken {
             zero,
         ) as u64
     }
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn widen_low_u16_to_u32(self, a: __m512i) -> __m512i {
+        _mm512_cvtepu16_epi32(_mm512_castsi512_si256(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn widen_high_u16_to_u32(self, a: __m512i) -> __m512i {
+        _mm512_cvtepu16_epi32(_mm512_extracti64x4_epi64::<1>(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn pairwise_widen_add(self, a: __m512i) -> __m512i {
+        _mm512_add_epi32(
+            _mm512_and_si512(a, _mm512_set1_epi32(65535)),
+            _mm512_srli_epi32::<16>(a),
+        )
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -3486,6 +3617,25 @@ impl I32x16Backend for archmage::X64V4xToken {
             _mm512_and_si512(a, _mm512_set1_epi32(1_i32 << (32 - 1))),
             zero,
         ) as u64
+    }
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn narrow_saturating_i32_to_i16(self, a: __m512i, b: __m512i) -> __m512i {
+        _mm512_inserti64x4::<1>(
+            _mm512_castsi256_si512(_mm512_cvtsepi32_epi16(a)),
+            _mm512_cvtsepi32_epi16(b),
+        )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn narrow_saturating_i32_to_u16(self, a: __m512i, b: __m512i) -> __m512i {
+        // Clamp at zero so the unsigned-source instruction sees
+        // the same value the signed source held; above the
+        // clamp both readings agree.
+        let zero = _mm512_setzero_si512();
+        _mm512_inserti64x4::<1>(
+            _mm512_castsi256_si512(_mm512_cvtusepi32_epi16(_mm512_max_epi32(a, zero))),
+            _mm512_cvtusepi32_epi16(_mm512_max_epi32(b, zero)),
+        )
     }
 }
 
@@ -4176,213 +4326,5 @@ impl F32x16Convert for archmage::X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn convert_i32_to_f32(self, a: __m512i) -> __m512 {
         _mm512_cvtepi32_ps(a)
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
-impl U8x64Widen for archmage::X64V4Token {
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn widen_low_u8_to_u16(self, a: __m512i) -> __m512i {
-        _mm512_cvtepu8_epi16(_mm512_castsi512_si256(a))
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn widen_high_u8_to_u16(self, a: __m512i) -> __m512i {
-        _mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64::<1>(a))
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
-impl U16x32Widen for archmage::X64V4Token {
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn widen_low_u16_to_u32(self, a: __m512i) -> __m512i {
-        _mm512_cvtepu16_epi32(_mm512_castsi512_si256(a))
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn widen_high_u16_to_u32(self, a: __m512i) -> __m512i {
-        _mm512_cvtepu16_epi32(_mm512_extracti64x4_epi64::<1>(a))
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
-impl I8x64Widen for archmage::X64V4Token {
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn widen_low_i8_to_i16(self, a: __m512i) -> __m512i {
-        _mm512_cvtepi8_epi16(_mm512_castsi512_si256(a))
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn widen_high_i8_to_i16(self, a: __m512i) -> __m512i {
-        _mm512_cvtepi8_epi16(_mm512_extracti64x4_epi64::<1>(a))
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
-impl I16x32Widen for archmage::X64V4Token {
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn widen_low_i16_to_i32(self, a: __m512i) -> __m512i {
-        _mm512_cvtepi16_epi32(_mm512_castsi512_si256(a))
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn widen_high_i16_to_i32(self, a: __m512i) -> __m512i {
-        _mm512_cvtepi16_epi32(_mm512_extracti64x4_epi64::<1>(a))
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
-impl I16x32Narrow for archmage::X64V4Token {
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn narrow_saturating_i16_to_i8(self, a: __m512i, b: __m512i) -> __m512i {
-        _mm512_inserti64x4::<1>(
-            _mm512_castsi256_si512(_mm512_cvtsepi16_epi8(a)),
-            _mm512_cvtsepi16_epi8(b),
-        )
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn narrow_saturating_i16_to_u8(self, a: __m512i, b: __m512i) -> __m512i {
-        // Clamp at zero so the unsigned-source instruction sees
-        // the same value the signed source held; above the
-        // clamp both readings agree.
-        let zero = _mm512_setzero_si512();
-        _mm512_inserti64x4::<1>(
-            _mm512_castsi256_si512(_mm512_cvtusepi16_epi8(_mm512_max_epi16(a, zero))),
-            _mm512_cvtusepi16_epi8(_mm512_max_epi16(b, zero)),
-        )
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
-impl I32x16Narrow for archmage::X64V4Token {
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn narrow_saturating_i32_to_i16(self, a: __m512i, b: __m512i) -> __m512i {
-        _mm512_inserti64x4::<1>(
-            _mm512_castsi256_si512(_mm512_cvtsepi32_epi16(a)),
-            _mm512_cvtsepi32_epi16(b),
-        )
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4Token)]
-    fn narrow_saturating_i32_to_u16(self, a: __m512i, b: __m512i) -> __m512i {
-        // Clamp at zero so the unsigned-source instruction sees
-        // the same value the signed source held; above the
-        // clamp both readings agree.
-        let zero = _mm512_setzero_si512();
-        _mm512_inserti64x4::<1>(
-            _mm512_castsi256_si512(_mm512_cvtusepi32_epi16(_mm512_max_epi32(a, zero))),
-            _mm512_cvtusepi32_epi16(_mm512_max_epi32(b, zero)),
-        )
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
-impl U8x64Widen for archmage::X64V4xToken {
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn widen_low_u8_to_u16(self, a: __m512i) -> __m512i {
-        _mm512_cvtepu8_epi16(_mm512_castsi512_si256(a))
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn widen_high_u8_to_u16(self, a: __m512i) -> __m512i {
-        _mm512_cvtepu8_epi16(_mm512_extracti64x4_epi64::<1>(a))
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
-impl U16x32Widen for archmage::X64V4xToken {
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn widen_low_u16_to_u32(self, a: __m512i) -> __m512i {
-        _mm512_cvtepu16_epi32(_mm512_castsi512_si256(a))
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn widen_high_u16_to_u32(self, a: __m512i) -> __m512i {
-        _mm512_cvtepu16_epi32(_mm512_extracti64x4_epi64::<1>(a))
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
-impl I8x64Widen for archmage::X64V4xToken {
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn widen_low_i8_to_i16(self, a: __m512i) -> __m512i {
-        _mm512_cvtepi8_epi16(_mm512_castsi512_si256(a))
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn widen_high_i8_to_i16(self, a: __m512i) -> __m512i {
-        _mm512_cvtepi8_epi16(_mm512_extracti64x4_epi64::<1>(a))
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
-impl I16x32Widen for archmage::X64V4xToken {
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn widen_low_i16_to_i32(self, a: __m512i) -> __m512i {
-        _mm512_cvtepi16_epi32(_mm512_castsi512_si256(a))
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn widen_high_i16_to_i32(self, a: __m512i) -> __m512i {
-        _mm512_cvtepi16_epi32(_mm512_extracti64x4_epi64::<1>(a))
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
-impl I16x32Narrow for archmage::X64V4xToken {
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn narrow_saturating_i16_to_i8(self, a: __m512i, b: __m512i) -> __m512i {
-        _mm512_inserti64x4::<1>(
-            _mm512_castsi256_si512(_mm512_cvtsepi16_epi8(a)),
-            _mm512_cvtsepi16_epi8(b),
-        )
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn narrow_saturating_i16_to_u8(self, a: __m512i, b: __m512i) -> __m512i {
-        // Clamp at zero so the unsigned-source instruction sees
-        // the same value the signed source held; above the
-        // clamp both readings agree.
-        let zero = _mm512_setzero_si512();
-        _mm512_inserti64x4::<1>(
-            _mm512_castsi256_si512(_mm512_cvtusepi16_epi8(_mm512_max_epi16(a, zero))),
-            _mm512_cvtusepi16_epi8(_mm512_max_epi16(b, zero)),
-        )
-    }
-}
-
-#[cfg(feature = "w512")]
-#[cfg(target_arch = "x86_64")]
-impl I32x16Narrow for archmage::X64V4xToken {
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn narrow_saturating_i32_to_i16(self, a: __m512i, b: __m512i) -> __m512i {
-        _mm512_inserti64x4::<1>(
-            _mm512_castsi256_si512(_mm512_cvtsepi32_epi16(a)),
-            _mm512_cvtsepi32_epi16(b),
-        )
-    }
-
-    #[arcane(suppress_const_test, _self = X64V4xToken)]
-    fn narrow_saturating_i32_to_u16(self, a: __m512i, b: __m512i) -> __m512i {
-        // Clamp at zero so the unsigned-source instruction sees
-        // the same value the signed source held; above the
-        // clamp both readings agree.
-        let zero = _mm512_setzero_si512();
-        _mm512_inserti64x4::<1>(
-            _mm512_castsi256_si512(_mm512_cvtusepi32_epi16(_mm512_max_epi32(a, zero))),
-            _mm512_cvtusepi32_epi16(_mm512_max_epi32(b, zero)),
-        )
     }
 }

@@ -375,6 +375,7 @@ pub(super) fn all_remaining_int_types() -> Vec<IntVecType> {
 // ============================================================================
 
 pub(super) fn generate_int_backend_trait(ty: &IntVecType) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::trait_methods(&ty.name());
     let trait_name = ty.trait_name();
     let elem = ty.elem;
     let lanes = ty.lanes;
@@ -520,7 +521,7 @@ pub(super) fn generate_int_backend_trait(ty: &IntVecType) -> String {
     // Uniform (runtime-count) shifts. See docs/CROSS-ISA-INT-PRIMITIVES.md for
     // why the count is uniform rather than per-lane, and why out-of-range
     // counts are given a defined result instead of being left to the ISA.
-    if ty.has_saturating() {
+    if ty.elem_bits == 16 {
         methods.push_str(&formatdoc! {r#"
 
             // ====== Uniform variable shifts ======
@@ -548,7 +549,8 @@ pub(super) fn generate_int_backend_trait(ty: &IntVecType) -> String {
             fn shr_arithmetic_uniform(self, a: Self::Repr, count: u32) -> Self::Repr;
         "#, elem_bits = ty.elem_bits});
         }
-
+    }
+    if ty.has_saturating() {
         methods.push_str(&formatdoc! {r#"
 
             // ====== Saturating arithmetic ======
@@ -613,6 +615,7 @@ pub(super) fn generate_int_backend_trait(ty: &IntVecType) -> String {
         /// The token proves CPU support was verified via `summon()`.
         pub trait {trait_name}: SimdToken + Sealed + Copy + 'static {{
         {methods}
+        {integer_methods}
         }}
     "#}
 }
@@ -639,6 +642,7 @@ pub(super) fn generate_x86_int_impls(
 }
 
 fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), token);
     let arcane = super::backend_syntax::arcane(token);
     let baseline = super::backend_syntax::sse2_or_arcane(token, ty.width_bits);
     let baseline_end = if ty.width_bits == 128 { "}" } else { "" };
@@ -935,6 +939,7 @@ fn generate_x86_int_impl(ty: &IntVecType, token: &str) -> String {
     formatdoc! {r#"
         impl {trait_name} for archmage::{token} {{
         {body}
+        {integer_methods}
         }}
     "#}
 }
@@ -1052,61 +1057,14 @@ fn generate_x86_int_shifts(ty: &IntVecType) -> String {
 /// to a sign fill. No extra clamp is emitted on x86.
 fn generate_x86_int_uniform_shifts(ty: &IntVecType) -> String {
     let arcane = super::backend_syntax::arcane("X64V3Token");
-    if !ty.has_saturating() {
+    if ty.elem_bits != 16 {
         return String::new();
     }
     let inner = ty.x86_inner_type();
     let p = ty.x86_prefix();
-    let bits = ty.width_bits;
 
-    if ty.elem_bits == 8 {
-        // x86 has no byte shift at any tier (there is no PSLLB), so this is
-        // the same 16-bit-shift + byte-mask polyfill the `*_const` shifts use,
-        // with the mask computed from the runtime count.
-        let mut code = formatdoc! {r#"
-
-            // ====== Uniform variable shifts (8-bit: polyfill via 16-bit) ======
-
-            {arcane}
-            fn shl_uniform(self, a: {inner}, count: u32) -> {inner} {{
-                let shifted = {p}_sll_epi16(a, _mm_cvtsi32_si128(count as i32));
-                // `checked_shl` yields None (-> mask 0) once count >= 8,
-                // which is the all-zero result the contract requires.
-                let mask = {p}_set1_epi8(0xFFu8.checked_shl(count).unwrap_or(0) as i8);
-                {p}_and_si{bits}(shifted, mask)
-            }}
-
-            {arcane}
-            fn shr_logical_uniform(self, a: {inner}, count: u32) -> {inner} {{
-                let shifted = {p}_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-                let mask = {p}_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-                {p}_and_si{bits}(shifted, mask)
-            }}
-        "#};
-
-        if ty.signed {
-            code.push_str(&formatdoc! {r#"
-
-            {arcane}
-            fn shr_arithmetic_uniform(self, a: {inner}, count: u32) -> {inner} {{
-                let shifted = {p}_srl_epi16(a, _mm_cvtsi32_si128(count as i32));
-                let byte_mask = {p}_set1_epi8(0xFFu8.checked_shr(count).unwrap_or(0) as i8);
-                let logical = {p}_and_si{bits}(shifted, byte_mask);
-                let zero = {p}_setzero_si{bits}();
-                let sign = {p}_cmpgt_epi8(zero, a);
-                // High-`count`-bits fill mask. `count.min(8)` saturates the
-                // fill to the whole byte, which is the sign fill the
-                // contract requires for out-of-range counts; a plain
-                // `>> count` would be a u16 overflow at count >= 16.
-                let fill = {p}_set1_epi8(((0xFF00u16 >> count.min(8)) & 0xFF) as u8 as i8);
-                {p}_or_si{bits}(logical, {p}_and_si{bits}(sign, fill))
-            }}
-            "#});
-        }
-        code
-    } else {
-        let suf = if ty.elem_bits == 16 { "epi16" } else { "epi64" };
-        let mut code = formatdoc! {r#"
+    let suf = "epi16";
+    let mut code = formatdoc! {r#"
 
             // ====== Uniform variable shifts ======
 
@@ -1121,17 +1079,16 @@ fn generate_x86_int_uniform_shifts(ty: &IntVecType) -> String {
             }}
         "#};
 
-        if ty.signed {
-            code.push_str(&formatdoc! {r#"
+    if ty.signed {
+        code.push_str(&formatdoc! {r#"
 
             {arcane}
             fn shr_arithmetic_uniform(self, a: {inner}, count: u32) -> {inner} {{
                 {p}_sra_{suf}(a, _mm_cvtsi32_si128(count as i32))
             }}
             "#});
-        }
-        code
     }
+    code
 }
 
 /// Saturating add/sub, x86. Emitted only at 8- and 16-bit, where
@@ -1281,6 +1238,7 @@ pub(super) fn generate_scalar_int_impls(types: &[IntVecType]) -> String {
 }
 
 fn generate_scalar_int_impl(ty: &IntVecType) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "ScalarToken");
     let trait_name = ty.trait_name();
     let array = ty.array_type();
     let elem = ty.elem;
@@ -1533,7 +1491,7 @@ fn generate_scalar_int_impl(ty: &IntVecType) -> String {
     // differential tests compare every other backend against, so it spells the
     // out-of-range contract out literally rather than relying on any
     // `wrapping_*` behaviour.
-    if ty.has_saturating() {
+    if ty.elem_bits == 16 {
         let uelem = ty.unsigned_elem();
         let eb = ty.elem_bits;
         let max_sh = eb - 1;
@@ -1593,6 +1551,7 @@ fn generate_scalar_int_impl(ty: &IntVecType) -> String {
 
             #[inline(always)]
             fn bitmask(self, a: {array}) -> u32 {{ {bitmask_body} }}
+        {integer_methods}
         }}
     "#});
 
@@ -1618,6 +1577,7 @@ pub(super) fn generate_neon_int_impls(types: &[IntVecType]) -> String {
 }
 
 fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "NeonToken");
     let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let array = ty.array_type();
@@ -1876,7 +1836,7 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
     // const forms use; the count is clamped because USHL/SSHL read only the
     // low 8 bits of each shift-amount lane as a signed byte, so an unclamped
     // count of 256 would wrap to a no-op instead of the contracted zero.
-    if ty.has_saturating() {
+    if ty.elem_bits == 16 {
         let eb = ty.elem_bits;
         let us = &ns[1..]; // "8", "16"
         let max_sh = eb - 1;
@@ -1985,6 +1945,7 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
         "#});
     }
 
+    body.push_str(&integer_methods);
     body.push_str("    }\n");
     body
 }
@@ -2039,6 +2000,7 @@ fn generate_neon_bitmask(ty: &IntVecType) -> String {
 }
 
 fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "NeonToken");
     let arcane = super::backend_syntax::arcane("NeonToken");
     let trait_name = ty.trait_name();
     let repr = ty.neon_repr();
@@ -2320,7 +2282,7 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
 
     // Uniform variable shifts + saturating arithmetic, applied per 128-bit
     // sub-vector. Same lowering (and same count clamp) as the native impl.
-    if ty.has_saturating() {
+    if ty.elem_bits == 16 {
         let eb = ty.elem_bits;
         let us = &ns[1..];
         let max_sh = eb - 1;
@@ -2433,6 +2395,7 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
                 }}
                 result
             }}
+        {integer_methods}
         }}
     "#,
         all_true = all_true_items.join(" && "),
@@ -2472,6 +2435,7 @@ pub(super) fn generate_wasm_int_impls(types: &[IntVecType]) -> String {
 }
 
 fn generate_wasm_native_int_impl(ty: &IntVecType) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "Wasm128Token");
     let trait_name = ty.trait_name();
     let array = ty.array_type();
     let elem = ty.elem;
@@ -2728,7 +2692,7 @@ fn generate_wasm_native_int_impl(ty: &IntVecType) -> String {
     // is the one backend that disagrees with the portable contract. A splatted
     // all-ones/all-zero mask restores it; for the arithmetic form clamping the
     // count to lane_bits - 1 already gives the sign fill.
-    if ty.has_saturating() {
+    if ty.elem_bits == 16 {
         let eb = ty.elem_bits;
         let max_sh = eb - 1;
         let selem = ty.signed_elem();
@@ -2785,6 +2749,7 @@ fn generate_wasm_native_int_impl(ty: &IntVecType) -> String {
             fn any_true(self, a: v128) -> bool {{ v128_any_true(a) }}
             #[inline(always)]
             fn bitmask(self, a: v128) -> u32 {{ {bitmask_fn}(a) as u32 }}
+        {integer_methods}
         }}
     "#});
 
@@ -2792,6 +2757,7 @@ fn generate_wasm_native_int_impl(ty: &IntVecType) -> String {
 }
 
 fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
+    let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "Wasm128Token");
     let trait_name = ty.trait_name();
     let repr = ty.wasm_repr();
     let array = ty.array_type();
@@ -3094,7 +3060,7 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
     }
 
     // Uniform variable shifts + saturating arithmetic, per 128-bit sub-vector.
-    if ty.has_saturating() {
+    if ty.elem_bits == 16 {
         let eb = ty.elem_bits;
         let max_sh = eb - 1;
         let selem = ty.signed_elem();
@@ -3187,6 +3153,7 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
                 }}
                 result
             }}
+        {integer_methods}
         }}
     "#,
         all_true = all_true_items.join(" && "),

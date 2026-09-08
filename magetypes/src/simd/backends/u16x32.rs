@@ -171,4 +171,25 @@ pub trait U16x32Backend: SimdToken + Sealed + Copy + 'static {
     fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {
         <Self as U16x32Backend>::min(self, <Self as U16x32Backend>::max(self, a, lo), hi)
     }
+    /// Widen in natural lane order: result[i] = a[i + 0] as u32.
+    fn widen_low_u16_to_u32(
+        self,
+        a: <Self as super::U16x32Backend>::Repr,
+    ) -> <Self as super::U32x16Backend>::Repr
+    where
+        Self: super::U32x16Backend;
+    /// Widen in natural lane order: result[i] = a[i + 16] as u32.
+    fn widen_high_u16_to_u32(
+        self,
+        a: <Self as super::U16x32Backend>::Repr,
+    ) -> <Self as super::U32x16Backend>::Repr
+    where
+        Self: super::U32x16Backend;
+    /// Exact unsigned adjacent sums: output[k] = widened a[2*k] + widened a[2*k+1].
+    fn pairwise_widen_add(
+        self,
+        a: <Self as super::U16x32Backend>::Repr,
+    ) -> <Self as super::U32x16Backend>::Repr
+    where
+        Self: super::U32x16Backend;
 }

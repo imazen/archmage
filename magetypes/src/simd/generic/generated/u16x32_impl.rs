@@ -565,19 +565,30 @@ impl<T: U16x32Backend> core::fmt::Debug for u16x32<T> {
     }
 }
 
+impl<T: crate::simd::backends::I16x32Backend + crate::simd::backends::U16x32Backend> u16x32<T> {
+    /// Reinterpret all 32 lanes as i16x32, preserving every bit.
+    #[inline(always)]
+    pub fn bitcast_i16x32(self) -> super::i16x32<T> {
+        super::i16x32::from_repr_unchecked(self.1, crate::simd_storage::cast(self.0))
+    }
+}
+
 // ============================================================================
 // Widening (u16x32 -> u32x16)
 // ============================================================================
 
-impl<T: crate::simd::backends::U16x32Widen> u16x32<T> {
+impl<T: crate::simd::backends::U16x32Backend + crate::simd::backends::U32x16Backend> u16x32<T> {
     /// Zero-extend the low half of the lanes to `u32x16`.
     ///
     /// Result lane `i` is `self[i] as u32` for `i` in `0..16`.
-    /// One instruction on every backend, in natural lane order —
-    /// see `docs/CROSS-ISA-INT-PRIMITIVES.md`.
+    /// Natural lane order on every backend. Instruction count depends
+    /// on the ISA, vector width, and surrounding loads.
     #[inline(always)]
     pub fn widen_low(self) -> super::u32x16<T> {
-        super::u32x16::from_repr_unchecked(self.1, T::widen_low_u16_to_u32(self.1, self.0))
+        super::u32x16::from_repr_unchecked(
+            self.1,
+            <T as crate::simd::backends::U16x32Backend>::widen_low_u16_to_u32(self.1, self.0),
+        )
     }
 
     /// Zero-extend the high half of the lanes to `u32x16`.
@@ -585,10 +596,32 @@ impl<T: crate::simd::backends::U16x32Widen> u16x32<T> {
     /// Result lane `i` is `self[i + 16] as u32`.
     #[inline(always)]
     pub fn widen_high(self) -> super::u32x16<T> {
-        super::u32x16::from_repr_unchecked(self.1, T::widen_high_u16_to_u32(self.1, self.0))
+        super::u32x16::from_repr_unchecked(
+            self.1,
+            <T as crate::simd::backends::U16x32Backend>::widen_high_u16_to_u32(self.1, self.0),
+        )
     }
 }
 
+impl<T: crate::simd::backends::U16x32Backend> u16x32<T> {
+    /// Sum adjacent pairs into unsigned lanes twice as wide.
+    ///
+    /// Output lane `k` is `self[2*k] + self[2*k+1]`, with both
+    /// inputs widened before addition. The result is exact for the
+    /// full input range; no lane wraps or saturates. Pair ordering
+    /// is unchanged across native and polyfilled widths.
+    /// Subsequent accumulation uses the destination's normal wrapping addition.
+    #[inline(always)]
+    pub fn pairwise_widen_add(self) -> super::u32x16<T>
+    where
+        T: crate::simd::backends::U32x16Backend,
+    {
+        super::u32x16::from_repr_unchecked(
+            self.1,
+            <T as crate::simd::backends::U16x32Backend>::pairwise_widen_add(self.1, self.0),
+        )
+    }
+}
 // ============================================================================
 // Platform-specific concrete impls
 // ============================================================================

@@ -539,7 +539,82 @@ def x86_halves_dataflow(body, size):
     )
 
 
+def neon_widen_mul_operands(body):
+    """Signed widening multiplication is commutative; retain widths and destination."""
+    result = []
+    for line in body:
+        m = re.fullmatch(
+            r"(smull2?)\s+(v\d+\.4s), (v\d+\.(?:4h|8h)), (v\d+\.(?:4h|8h))", line
+        )
+        if m and m[3].split(".")[1] == m[4].split(".")[1] == (
+            "8h" if m[1] == "smull2" else "4h"
+        ):
+            left, right = sorted((m[3], m[4]))
+            line = f"{m[1]}\t{m[2]}, {left}, {right}"
+        result.append(line)
+    return result
+
+
+def retained_reference_casts(ty, before, after):
+    """Keep baseline probes; permit only the four deliberately retired casts."""
+    pattern = r"pub fn (bitcast_(?:ref|mut)_\w+)\(&(mut )?self\) -> &(mut )?super::(\w+)<T>"
+    old = re.findall(pattern, before)
+    new = set(re.findall(pattern, after))
+    retired = {
+        (source, f"bitcast_{kind}_{dest}", mutable, mutable, dest)
+        for source, dest in [("i16x32", "u16x32"), ("u16x32", "i16x32")]
+        for kind, mutable in [("ref", ""), ("mut", "mut ")]
+    }
+    for signature in old:
+        if signature not in new:
+            assert (ty, *signature) in retired, ("unexpected removed cast", ty, signature)
+            assert not any(item[0] == signature[0] for item in new), (
+                "changed cast signature", ty, signature
+            )
+    return [
+        (method, output_mut, dest)
+        for method, input_mut, output_mut, dest in old
+        if (method, input_mut, output_mut, dest) in new
+    ]
+
+
+def reference_cast_source(root, side, ty):
+    directory = root / f"{side}-src" / "magetypes/src/simd/generic/generated"
+    result = (directory / f"{ty}_impl.rs").read_text()
+    block = directory / f"block_ops_{ty}.rs"
+    if block.exists():
+        result += block.read_text()
+    return result
+
+
 def self_test():
+    for source, dest in [("i16x32", "u16x32"), ("u16x32", "i16x32")]:
+        for kind, mutable in [("ref", ""), ("mut", "mut ")]:
+            method = f"bitcast_{kind}_{dest}"
+            declaration = f"pub fn {method}(&{mutable}self) -> &{mutable}super::{dest}<T>"
+            assert retained_reference_casts(source, declaration, declaration) == [
+                (method, mutable, dest)
+            ]
+            assert retained_reference_casts(source, declaration, "") == []
+            for ty, after in [
+                ("wrong_source", ""),
+                (source, declaration.replace(f"super::{dest}", "super::wrong")),
+                (source, declaration.replace("&mut ", "&") if mutable else
+                 declaration.replace("&self", "&mut self")),
+            ]:
+                try:
+                    retained_reference_casts(ty, declaration, after)
+                except AssertionError:
+                    pass
+                else:
+                    raise AssertionError(("unexpected API change accepted", ty, after))
+    try:
+        retained_reference_casts("u8x16", "pub fn bitcast_ref_i8x16(&self) -> &super::i8x16<T>", "")
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError("arbitrary cast removal accepted")
+
     def assembly(body, data=""):
         return (
             "\t.type probe,@function\nprobe:\n"
@@ -672,6 +747,19 @@ def self_test():
             )
             is None
         )
+    mul = ["smull\tv6.4s, v3.4h, v2.4h"]
+    canonical = neon_widen_mul_operands(mul)
+    assert canonical == neon_widen_mul_operands(["smull\tv6.4s, v2.4h, v3.4h"])
+    for old, new in (
+        ("smull", "umull"),
+        ("smull", "smull2"),
+        ("v6.4s", "v5.4s"),
+        ("v2.4h", "v4.4h"),
+        ("v3.4h", "v3.8h"),
+    ):
+        assert canonical != neon_widen_mul_operands(
+            [line.replace(old, new) for line in mul]
+        )
     print("codegen adversarial self-tests passed")
 
 
@@ -760,7 +848,7 @@ def storage_access_equivalent(api, hand, target, name):
         return False
     if api == hand:
         return True
-    if name.endswith("_bytes_roundtrip") and target.startswith("x86"):
+    if name.endswith(("_bytes_roundtrip", "_signed_cast")) and target.startswith("x86"):
         copy_name = name.split("_")[0] + "_" + ty[1] + "_to_array_plain"
         return len(api) == len(hand) and all(
             direct_storage_copy(body, target, copy_name, vector_to_vector=True)
@@ -910,6 +998,21 @@ def storage_access_probes():
                                 "&mut lanes[i]",
                             ),
                         ]
+                        if ty in ("i16x32", "u16x32"):
+                            dest = "u16x32" if elem == "i16" else "i16x32"
+                            dst = f"{dest}<{token}>"
+                            # Same token, same initialized lane bytes and layout.
+                            # The value cast preserves the existing proof.
+                            cases += [
+                                (
+                                    "signed_cast",
+                                    False,
+                                    "",
+                                    dst,
+                                    f"value.bitcast_{dest}()",
+                                    f"unsafe {{core::ptr::from_ref(value).cast::<{dst}>().read()}}",
+                                ),
+                            ]
                         if ty in [
                             "f32x4",
                             "f32x8",
@@ -1034,10 +1137,463 @@ def storage_access_probes():
     assert not failures, failures[:12]
 
 
+def integer_reference(arch, width, op, parts):
+    """Independent handwritten intrinsic kernels, not generator output."""
+    prefix = "_mm" if width == 128 else f"_mm{width}"
+    p = prefix
+
+    def dot(a, b):
+        if arch == "x86":
+            return f"{p}_madd_epi16({a}, {b})"
+        if arch == "neon":
+            return f"vpaddq_s32(vmull_s16(vget_low_s16({a}), vget_low_s16({b})), vmull_high_s16({a}, {b}))"
+        return f"i32x4_dot_i16x8({a}, {b})"
+
+    def diff(a, b, signed):
+        if arch == "x86":
+            suffix = "epi16" if signed else "epu8"
+            return f"{p}_sub_{'epi16' if signed else 'epi8'}({p}_max_{suffix}({a},{b}),{p}_min_{suffix}({a},{b}))"
+        if arch == "neon":
+            return (
+                f"vreinterpretq_u16_s16(vabdq_s16({a},{b}))"
+                if signed
+                else f"vabdq_u8({a},{b})"
+            )
+        lane = "i16x8" if signed else "u8x16"
+        return f"{lane}_sub({lane}_max({a},{b}),{lane}_min({a},{b}))"
+
+    def sum_bytes(a, b=None):
+        if arch == "x86":
+            b = b or f"{p}_setzero_si{width}()"
+            pre = f"let s = {p}_sad_epu8({a},{b});"
+            if width == 512:
+                return "{" + pre + "_mm512_reduce_add_epi64(s) as u32}"
+            if width == 256:
+                pre += "let s = _mm_add_epi64(_mm256_castsi256_si128(s), _mm256_extracti128_si256::<1>(s));"
+            return (
+                "{"
+                + pre
+                + "_mm_cvtsi128_si64(_mm_add_epi64(s,_mm_srli_si128::<8>(s))) as u32}"
+            )
+        if b:
+            a = diff(a, b, False)
+        if arch == "neon":
+            return f"vaddlvq_u8({a}) as u32"
+        return (
+            "{let s = u32x4_extadd_pairwise_u16x8(u16x8_extadd_pairwise_u8x16("
+            + a
+            + ")); u32x4_extract_lane::<0>(s)+u32x4_extract_lane::<1>(s)+u32x4_extract_lane::<2>(s)+u32x4_extract_lane::<3>(s)}"
+        )
+
+    values = []
+    for i in range(parts):
+        a, b = f"a[{i}]", f"b[{i}]"
+        if op in ("madd", "msub"):
+            value = dot(a, b)
+            if op == "msub":
+                sub = (
+                    f"{p}_sub_epi32"
+                    if arch == "x86"
+                    else "vsubq_s32"
+                    if arch == "neon"
+                    else "i32x4_sub"
+                )
+                value = f"{sub}(c[{i}],{value})"
+        elif op.startswith("pair"):
+            bits = 8 if op.endswith("u8") else 16
+            wide = bits * 2
+            if arch == "neon":
+                value = (f"vpadalq_u{bits}(c[{i}],{a})" if op.startswith("pair_acc")
+                         else f"vpaddlq_u{bits}({a})")
+            else:
+                if arch == "x86":
+                    value = f"{p}_add_epi{wide}({p}_and_si{width}({a},{p}_set1_epi{wide}({(1 << bits)-1})),{p}_srli_epi{wide}::<{bits}>({a}))"
+                    add = f"{p}_add_epi{wide}"
+                else:
+                    value = f"u{wide}x{128//wide}_extadd_pairwise_u{bits}x{128//bits}({a})"
+                    add = f"u{wide}x{128//wide}_add"
+                if op.startswith("pair_acc"):
+                    value = f"{add}({value},c[{i}])"
+        elif op.startswith("abs"):
+            value = diff(a, b, op == "abs_i16")
+        else:
+            value = sum_bytes(a, b if op in ("sad_composed", "sum_abs_diff") else None)
+        values.append(value)
+    return (
+        "[" + ", ".join(values) + "]"
+        if op in ("madd", "msub", "abs_i16", "abs_u8") or op.startswith("pair")
+        else " + ".join(f"({x})" for x in values)
+    )
+
+
+def wasm_pairwise_dataflow(body):
+    """Exact vector expressions and destinations, allowing commuted integer add.
+
+    Recognizes only the straight-line pairwise probes; unknown instructions,
+    leftover stack values, changed widths/offsets/alignment or signedness fail.
+    Instruction counts are checked separately at the call site.
+    """
+    stack, stores = [], []
+    try:
+        for line in body:
+            op, _, arg = line.partition("\t")
+            if op == "local.get":
+                stack.append(("arg", arg))
+            elif op == "v128.load":
+                stack.append((op, arg, stack.pop()))
+            elif op in ("i16x8.extadd_pairwise_i8x16_u", "i32x4.extadd_pairwise_i16x8_u"):
+                stack.append((op, stack.pop()))
+            elif op in ("i16x8.add", "i32x4.add"):
+                a, b = stack.pop(), stack.pop()
+                stack.append((op, *sorted((a, b))))
+            elif op == "v128.store":
+                value, address = stack.pop(), stack.pop()
+                stores.append((op, arg, address, value))
+            else:
+                return None
+        return stores if stores and not stack else None
+    except (IndexError, TypeError):
+        return None
+
+
+def test_wasm_pairwise_dataflow():
+    prefix = ["local.get\t0"]
+    a = ["local.get\t1", "v128.load\t0:p2align=0", "i16x8.extadd_pairwise_i8x16_u"]
+    b = ["local.get\t2", "v128.load\t0:p2align=1"]
+    suffix = ["i16x8.add", "v128.store\t0:p2align=1"]
+    original = prefix + a + b + suffix
+    expected = wasm_pairwise_dataflow(original)
+    assert expected is not None
+    assert expected == wasm_pairwise_dataflow(prefix + b + a + suffix)
+    for old, new in [("local.get\t1", "local.get\t3"),
+                     ("v128.load\t0:p2align=0", "v128.load\t16:p2align=0"),
+                     ("i16x8.extadd_pairwise_i8x16_u", "i16x8.extadd_pairwise_i8x16_s"),
+                     ("i16x8.add", "i32x4.add"),
+                     ("v128.store\t0:p2align=1", "v128.store\t16:p2align=1")]:
+        assert expected != wasm_pairwise_dataflow([new if x == old else x for x in original])
+    assert wasm_pairwise_dataflow(original[:-1]) is None
+    assert wasm_pairwise_dataflow(original + ["local.get\t0"]) is None
+
+
+def integer_probes():
+    """Compare public APIs to direct intrinsics in matching feature contexts.
+
+    Raw transmute appears only in these independent reference kernels: equal
+    sized initialized numeric arrays/vectors, never tokens or references.
+    Also expose the cost of composing abs_diff with a widening sum versus SAD.
+    """
+    import tomllib
+
+    repository = pathlib.Path(__file__).resolve().parent.parent
+    (pathlib.Path.home() / "tmp").mkdir(parents=True, exist_ok=True)
+    root = pathlib.Path(
+        tempfile.mkdtemp(
+            prefix="archmage-integer-codegen-", dir=pathlib.Path.home() / "tmp"
+        )
+    )
+    print("Integer codegen artifacts:", root, flush=True)
+    (root / "src").mkdir()
+    (root / "Cargo.toml").write_text(
+        f'[package]\nname="integer_probe"\nversion="0.0.0"\nedition="2024"\n[dependencies]\narchmage={{path="{repository}",features=["avx512"]}}\nmagetypes={{path="{repository}/magetypes",features=["avx512"]}}\n[workspace]\n'
+    )
+    features = {
+        t["name"]: ",".join(t["features"])
+        for t in tomllib.loads((repository / "token-registry.toml").read_text())[
+            "token"
+        ]
+    }
+    targets = {
+        "x86_64-unknown-linux-gnu": (
+            "x86",
+            [
+                ("v3", "X64V3Token", [128, 256, 512]),
+                ("v4", "X64V4Token", [512]),
+                ("v4x", "X64V4xToken", [512]),
+            ],
+        ),
+        "aarch64-unknown-linux-gnu": ("neon", [("neon", "NeonToken", [128, 256, 512])]),
+        "wasm32-unknown-unknown": ("wasm", [("wasm", "Wasm128Token", [128, 256, 512])]),
+    }
+    env = dict(
+        os.environ, TMPDIR=str(pathlib.Path.home() / "tmp"), CARGO_INCREMENTAL="0"
+    )
+    for key in (
+        "RUSTFLAGS",
+        "CARGO_ENCODED_RUSTFLAGS",
+        "CARGO_TARGET_DIR",
+        "CARGO_BUILD_TARGET",
+        "RUSTC_WRAPPER",
+        "RUSTC_WORKSPACE_WRAPPER",
+    ):
+        env.pop(key, None)
+    result = {}
+    failures = []
+    for target, (arch, tiers) in targets.items():
+        source = [
+            f"#![allow(unused_parens)]\nuse core::arch::{'x86_64' if arch == 'x86' else 'aarch64' if arch == 'neon' else 'wasm32'}::*;\nuse archmage::*;\nuse magetypes::simd::generic::*;"
+        ]
+        names = []
+        for tier, token, widths in tiers:
+            for width in widths:
+                native = min(
+                    width,
+                    256 if tier == "v3" else 512 if tier in ("v4", "v4x") else 128,
+                )
+                parts = width // native
+                for op in (
+                    "madd",
+                    "msub",
+                    "abs_i16",
+                    "abs_u8",
+                    "sum_u8",
+                    "sad_composed",
+                    "sum_abs_diff",
+                    "pair_u8", "pair_u16", "pair_acc_u8", "pair_acc_u16",
+                ):
+                    elem = "i16" if op in ("madd", "msub", "abs_i16") else "u16" if op.startswith("pair") and op.endswith("u16") else "u8"
+                    n = width // (16 if elem in ("i16", "u16") else 8)
+                    dst = (
+                        "i32"
+                        if op in ("madd", "msub")
+                        else "u16"
+                        if op == "abs_i16"
+                        else "u8"
+                    )
+                    if op.startswith("pair"):
+                        dst = "u16" if elem == "u8" else "u32"
+                    length = width // (
+                        32 if dst in ("i32", "u32") else 16 if dst == "u16" else 8
+                    )
+                    name = f"{tier}_{width}_{op}"
+                    names.append(name)
+                    args = f"token: {token}, a: [{elem};{n}]"
+                    if op != "sum_u8" and not op.startswith("pair"):
+                        args += f", b: [{elem};{n}]"
+                    if op == "msub":
+                        args += f", accumulator: [i32;{width // 32}]"
+                    if op.startswith("pair_acc"):
+                        args += f", accumulator: [{dst};{length}]"
+                    result_type = (
+                        f"[{dst};{length}]"
+                        if op in ("madd", "msub", "abs_i16", "abs_u8") or op.startswith("pair")
+                        else "u32"
+                    )
+                    api = f"let a = {elem}x{n}::<{token}>::from_array(token,a);"
+                    if op != "sum_u8" and not op.startswith("pair"):
+                        api += f"let b = {elem}x{n}::<{token}>::from_array(token,b);"
+                    api += {
+                        "madd": "a.madd_adjacent(b).to_array()",
+                        "msub": f"(i32x{width // 32}::<{token}>::from_array(token,accumulator) - a.madd_adjacent(b)).to_array()",
+                        "abs_i16": "a.abs_diff(b).to_array()",
+                        "abs_u8": "a.abs_diff(b).to_array()",
+                        "sum_u8": "a.reduce_add_u32()",
+                        "sad_composed": "a.abs_diff(b).reduce_add_u32()",
+                        "sum_abs_diff": "a.sum_abs_diff(b)",
+                        "pair_u8": "a.pairwise_widen_add().to_array()",
+                        "pair_u16": "a.pairwise_widen_add().to_array()",
+                        "pair_acc_u8": f"({dst}x{length}::<{token}>::from_array(token,accumulator) + a.pairwise_widen_add()).to_array()",
+                        "pair_acc_u16": f"({dst}x{length}::<{token}>::from_array(token,accumulator) + a.pairwise_widen_add()).to_array()",
+                    }[op]
+
+                    def raw_type(e):
+                        if arch == "x86":
+                            return f"__m{native}i"
+                        if arch == "wasm":
+                            return "v128"
+                        return {
+                            "i16": "int16x8_t",
+                            "u16": "uint16x8_t",
+                            "i32": "int32x4_t",
+                            "u32": "uint32x4_t",
+                            "u8": "uint8x16_t",
+                        }[e]
+
+                    hand = f"let a: [{raw_type(elem)};{parts}] = unsafe {{core::mem::transmute(a)}};"
+                    if op != "sum_u8" and not op.startswith("pair"):
+                        hand += f"let b: [{raw_type(elem)};{parts}] = unsafe {{core::mem::transmute(b)}};"
+                    if op == "msub":
+                        hand += f"let c: [{raw_type('i32')};{parts}] = unsafe {{core::mem::transmute(accumulator)}};"
+                    if op.startswith("pair_acc"):
+                        hand += f"let c: [{raw_type(dst)};{parts}] = unsafe {{core::mem::transmute(accumulator)}};"
+                    if op.startswith("pair") and arch == "x86":
+                        # Match the primitive's feature boundary, including
+                        # SSE2 at 128 bits. Accumulation remains a separate op.
+                        raw_src, raw_dst = raw_type(elem), raw_type(dst)
+                        primitive = "pair_u8" if elem == "u8" else "pair_u16"
+                        pair_expr = integer_reference(arch, native, primitive, parts)
+                        pair_features = "sse2" if native == 128 else features[token]
+                        hand += f'#[inline] #[target_feature(enable="{pair_features}")] fn pairs(a: [{raw_src};{parts}]) -> [{raw_dst};{parts}] {{ {pair_expr} }} let pairs = pairs(a);'
+                        if op.startswith("pair_acc"):
+                            wide = 16 if elem == "u8" else 32
+                            prefix = "_mm" if native == 128 else f"_mm{native}"
+                            expr = "[" + ",".join(f"{prefix}_add_epi{wide}(pairs[{i}],c[{i}])" for i in range(parts)) + "]"
+                        else:
+                            expr = "pairs"
+                    else:
+                        expr = integer_reference(arch, native, op, parts)
+                    hand += (
+                        f"let r: [{raw_type(dst)};{parts}] = {expr}; unsafe {{core::mem::transmute(r)}}"
+                        if result_type != "u32"
+                        else expr
+                    )
+                    for kind, body in [("api", api), ("hand", hand)]:
+                        source.append(
+                            f'#[unsafe(no_mangle)]\n#[target_feature(enable="{features[token]}")]\n#[inline(never)]\npub fn {kind}_{name}({args}) -> {result_type} {{ {body} }}'
+                        )
+                if width == 512:
+                    # Compare the full chain to the same direct load/widen/dot
+                    # operations. Also report WASM's alternative load8x8_u path:
+                    # LLVM does not currently fuse the shared v128 loads into it.
+                    variants = ["vector_load"] + (
+                        ["load_extend"] if arch == "wasm" else []
+                    )
+                    for half, offset in (("low", 0), ("high", 32)):
+                        for variant in variants:
+                            name = f"{tier}_512_byte_dot_{half}" + (
+                                "_load_extend" if variant == "load_extend" else ""
+                            )
+                            names.append(name)
+                            api = f"u8x64::<{token}>::load(token,a).widen_{half}().bitcast_i16x32().madd_adjacent(i16x32::<{token}>::load(token,b)).to_array()"
+                            loads = []
+                            for part in range(parts):
+                                start = offset + part * (native // 16)
+                                pointer = f"a.as_ptr().add({start})"
+                                if arch == "x86":
+                                    load = (
+                                        f"_mm512_cvtepu8_epi16(_mm256_loadu_si256({pointer}.cast()))"
+                                        if native == 512
+                                        else f"_mm256_cvtepu8_epi16(_mm_loadu_si128({pointer}.cast()))"
+                                    )
+                                elif arch == "neon":
+                                    pointer = (
+                                        f"a.as_ptr().add({offset + (part // 2) * 16})"
+                                    )
+                                    load = (
+                                        f"vmovl_high_u8(vld1q_u8({pointer}))"
+                                        if part % 2
+                                        else f"vmovl_u8(vget_low_u8(vld1q_u8({pointer})))"
+                                    )
+                                    load = f"vreinterpretq_s16_u16({load})"
+                                elif variant == "load_extend":
+                                    load = f"u16x8_load_extend_u8x8({pointer})"
+                                else:
+                                    pointer = (
+                                        f"a.as_ptr().add({offset + (part // 2) * 16})"
+                                    )
+                                    load = f"u16x8_extend_{'high' if part % 2 else 'low'}_u8x16(v128_load({pointer}.cast()))"
+                                loads.append(load)
+                            # Every reference reads exactly [0,32) or [32,64).
+                            hand = f"let a: [{raw_type('i16')};{parts}] = unsafe {{[{', '.join(loads)}]}};"
+                            hand += f"let b: [{raw_type('i16')};{parts}] = unsafe {{core::mem::transmute(*b)}};"
+                            hand += f"let r: [{raw_type('i32')};{parts}] = {integer_reference(arch, native, 'madd', parts)}; unsafe {{core::mem::transmute(r)}}"
+                            for kind, body in (("api", api), ("hand", hand)):
+                                source.append(
+                                    f'#[unsafe(no_mangle)]\n#[target_feature(enable="{features[token]}")]\n#[inline(never)]\npub fn {kind}_{name}(token: {token}, a: &[u8;64], b: &[i16;32]) -> [i32;16] {{ {body} }}'
+                                )
+        code = "\n".join(source)
+        (root / "src/lib.rs").write_text(code)
+        (root / f"{target}.rs").write_text(code)
+        completed = subprocess.run(
+            [
+                "cargo",
+                "+stable",
+                "rustc",
+                "--manifest-path",
+                str(root / "Cargo.toml"),
+                "--release",
+                "--lib",
+                "--target",
+                target,
+                "--",
+                "--emit=asm",
+            ],
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        (root / f"{target}.log").write_text(completed.stdout + completed.stderr)
+        if completed.returncode:
+            raise RuntimeError(completed.stderr)
+        files = list(
+            (root / "target" / target / "release/deps").glob("integer_probe-*.s")
+        )
+        assert len(files) == 1
+        assembly = files[0].read_text()
+        (root / f"{target}.s").write_text(assembly)
+        functions = parse(assembly)
+        assert {n for n in functions if n.startswith(("api_", "hand_"))} == {
+            f"{kind}_{name}" for kind in ("api", "hand") for name in names
+        }
+        rows = []
+        for name in names:
+            api, hand = (
+                expand("api_" + name, functions),
+                expand("hand_" + name, functions),
+            )
+            equal = api == hand
+            pair_equivalent = (
+                arch == "wasm" and "_pair" in name
+                and wasm_pairwise_dataflow(api) is not None
+                and wasm_pairwise_dataflow(api) == wasm_pairwise_dataflow(hand)
+                and collections.Counter(map(opcode, api)) == collections.Counter(map(opcode, hand))
+            )
+            if target.startswith("aarch64") and name in (
+                "neon_512_byte_dot_low",
+                "neon_512_byte_dot_high",
+            ):
+                equal = neon_widen_mul_operands(api) == neon_widen_mul_operands(hand)
+            equal = equal or pair_equivalent
+            exploratory = name.endswith("sad_composed") or (
+                target.startswith("wasm")
+                and name
+                in (
+                    "wasm_512_byte_dot_low_load_extend",
+                    "wasm_512_byte_dot_high_load_extend",
+                )
+            )
+            if not equal and exploratory:
+                print(
+                    "Known composition difference:",
+                    name,
+                    "API",
+                    len(api),
+                    "instructions; alternative",
+                    len(hand),
+                    flush=True,
+                )
+            if not equal and not exploratory:
+                failures.append((target, name, api, hand))
+            rows.append(
+                {
+                    "name": name,
+                    "identical": api == hand,
+                    "pair_dataflow_equal": pair_equivalent,
+                    "matches_reference": equal,
+                    "api": api,
+                    "hand": hand,
+                }
+            )
+        result[target] = rows
+        print(
+            target,
+            sum(r["matches_reference"] for r in rows),
+            "/",
+            len(rows),
+            "match intrinsic references (allowing commuted NEON multiply operands)",
+            flush=True,
+        )
+    (root / "results.json").write_text(json.dumps(result, indent=2))
+    assert not failures, failures
+
+
 def main():
     if not __debug__:
         raise RuntimeError("Run without Python -O: assertions must be enabled")
     self_test()
+    test_wasm_pairwise_dataflow()
+    if sys.argv[1:] == ["--integer-ops"]:
+        integer_probes()
+        return
     if sys.argv[1:] == ["--storage-access"]:
         storage_access_probes()
         return
@@ -1245,21 +1801,11 @@ def main():
                                     f"{ty}::<{token}>::from_bytes_owned(token,value)",
                                 ),
                             ]
-                        impl_text = (
-                            dep
-                            / "magetypes/src/simd/generic/generated"
-                            / f"{ty}_impl.rs"
-                        ).read_text()
-                        block_file = (
-                            dep
-                            / "magetypes/src/simd/generic/generated"
-                            / f"block_ops_{ty}.rs"
-                        )
-                        if block_file.exists():
-                            impl_text += block_file.read_text()
-                        for method, mutable, dest in re.findall(
-                            r"pub fn (bitcast_(?:ref|mut)_\w+)\(&(?:mut )?self\) -> &(mut )?super::(\w+)<T>",
-                            impl_text,
+                        # Newly added casts are checked by --storage-access.
+                        for method, mutable, dest in retained_reference_casts(
+                            ty,
+                            reference_cast_source(root, "before", ty),
+                            reference_cast_source(root, "after", ty),
                         ):
                             borrow = "&mut " if mutable else "&"
                             funcs.append(

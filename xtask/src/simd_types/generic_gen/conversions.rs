@@ -243,6 +243,23 @@ pub(crate) fn gen_unsigned_signed_bitcast(
     "#}
 }
 
+/// W512 signed/unsigned storage has identical lane bits and layout on every
+/// sealed backend. Reuse the checked storage operations instead of introducing
+/// per-ISA bitcast traits: no arithmetic or new unsafe boundary is needed.
+pub(crate) fn gen_w512_i16_bitcast(src: &str, trait_bound: &str) -> String {
+    let target = if src == "u16x32" { "i16x32" } else { "u16x32" };
+    formatdoc! {r#"
+        impl<T: {trait_bound}> {src}<T> {{
+            /// Reinterpret all 32 lanes as {target}, preserving every bit.
+            #[inline(always)]
+            pub fn bitcast_{target}(self) -> super::{target}<T> {{
+                super::{target}::from_repr_unchecked(self.1, crate::simd_storage::cast(self.0))
+            }}
+
+        }}
+    "#}
+}
+
 // ============================================================================
 // u32 -> i32 bitcasts
 // ============================================================================
@@ -392,7 +409,8 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
     let mut code = String::new();
 
     for p in all_widen_pairs().into_iter().filter(|p| p.src == type_name) {
-        let trait_bound = p.trait_name();
+        let trait_bound = p.src_backend();
+        let dst_bound = p.dst_backend();
         let (src, dst, de) = (p.src, p.dst, p.dst_elem);
         let half = p.src_lanes / 2;
         let extend = if p.signed { "Sign" } else { "Zero" };
@@ -401,15 +419,15 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
             // Widening ({src} -> {dst})
             // ============================================================================
 
-            impl<T: crate::simd::backends::{trait_bound}> {src}<T> {{
+            impl<T: crate::simd::backends::{trait_bound} + crate::simd::backends::{dst_bound}> {src}<T> {{
                 /// {extend}-extend the low half of the lanes to `{dst}`.
                 ///
                 /// Result lane `i` is `self[i] as {de}` for `i` in `0..{half}`.
-                /// One instruction on every backend, in natural lane order —
-                /// see `docs/CROSS-ISA-INT-PRIMITIVES.md`.
+                /// Natural lane order on every backend. Instruction count depends
+                /// on the ISA, vector width, and surrounding loads.
                 #[inline(always)]
                 pub fn widen_low(self) -> super::{dst}<T> {{
-                    super::{dst}::from_repr_unchecked(self.1, T::{lo}(self.1, self.0))
+                    super::{dst}::from_repr_unchecked(self.1, <T as crate::simd::backends::{trait_bound}>::{lo}(self.1, self.0))
                 }}
 
                 /// {extend}-extend the high half of the lanes to `{dst}`.
@@ -417,7 +435,7 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
                 /// Result lane `i` is `self[i + {half}] as {de}`.
                 #[inline(always)]
                 pub fn widen_high(self) -> super::{dst}<T> {{
-                    super::{dst}::from_repr_unchecked(self.1, T::{hi}(self.1, self.0))
+                    super::{dst}::from_repr_unchecked(self.1, <T as crate::simd::backends::{trait_bound}>::{hi}(self.1, self.0))
                 }}
             }}
 
@@ -428,7 +446,9 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
         .into_iter()
         .filter(|p| p.src == type_name)
     {
-        let trait_bound = p.trait_name();
+        let trait_bound = p.src_backend();
+        let sdst_bound = p.sdst_backend();
+        let udst_bound = p.udst_backend();
         let src = p.src;
         let n = p.src_lanes;
         let (sdst, sde, udst, ude, se) = (p.sdst, p.sdst_elem, p.udst, p.udst_elem, p.src_elem);
@@ -446,29 +466,32 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
                 /// on every backend (the AVX2 arm pays one
                 /// `permute4x64` to get there).
                 #[inline(always)]
-                pub fn narrow_saturating_{sde}(self, high: Self) -> super::{sdst}<T> {{
-                    super::{sdst}::from_repr_unchecked(self.1, T::{sm}(self.1, self.0, high.0))
+                pub fn narrow_saturating_{sde}(self, high: Self) -> super::{sdst}<T>
+                where T: crate::simd::backends::{sdst_bound} {{
+                    super::{sdst}::from_repr_unchecked(self.1, <T as crate::simd::backends::{trait_bound}>::{sm}(self.1, self.0, high.0))
                 }}
 
                 /// Narrow `self` and `high` to `{udst}`, clamping each lane to
                 /// the `{ude}` range.
                 ///
-                /// The source stays `{se}`: this is the only narrowing shape the
-                /// x86 and wasm instruction sets offer, so a `u{srcw}` source
-                /// (which would return `0` on x86/wasm and `{ude}::MAX` on NEON
-                /// above the signed maximum) is not expressible here.
+                /// The source stays `{se}` to match native signed-source packs on
+                /// x86 and WASM. An unsigned-source operation would require a
+                /// different lowering to preserve its full input range.
                 #[inline(always)]
-                pub fn narrow_saturating_{ude}(self, high: Self) -> super::{udst}<T> {{
-                    super::{udst}::from_repr_unchecked(self.1, T::{um}(self.1, self.0, high.0))
+                pub fn narrow_saturating_{ude}(self, high: Self) -> super::{udst}<T>
+                where T: crate::simd::backends::{udst_bound} {{
+                    super::{udst}::from_repr_unchecked(self.1, <T as crate::simd::backends::{trait_bound}>::{um}(self.1, self.0, high.0))
                 }}
             }}
 
         "#,
             sm = p.method(true),
             um = p.method(false),
-            srcw = p.width_bits / p.src_lanes,
         });
     }
 
+    code.push_str(&crate::simd_types::backend_gen_integer_ops::generic(
+        type_name,
+    ));
     code
 }

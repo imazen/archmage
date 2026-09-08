@@ -1210,6 +1210,8 @@ Found by macro expansion snapshot compilation tests (`tests/expand/*.expanded.rs
 
 ## Pending Work
 
+- **Completed: consolidate the 27 unpublished magetypes operation traits.** Widening, narrowing, pairwise, absolute-difference and byte-reduction methods live on their source backend traits; cross-type destinations use method-level bounds. Published conversion traits remain supported. `source_backend_bounds_are_sufficient` pins the minimal generic bounds, and `xtask/codegen.py` compares downstream assembly across x86, NEON and WASM.
+
 ### API Parity Status (0 issues — complete!)
 
 **Current state:** All W128 types have identical APIs across x86/ARM/WASM. Reduced from 270 → 0 parity issues (100%).
@@ -1218,21 +1220,10 @@ Run `cargo xtask parity` to verify.
 
 ### Known Cross-Architecture Behavioral Differences
 
-These are documented semantic differences between architectures. Tests must account for them; they are not bugs to fix. **Canonical user-facing inventory (incl. what is fixed-up vs natural): `docs/CROSS-ISA-DIVERGENCES.md` — update BOTH when a divergence changes.**
+The canonical tables are in `docs/site/content/magetypes/isa-quirks.md`; update them with the `isa_quirks` tests in `magetypes/tests/doc_examples.rs`. They distinguish enforced portable contracts from current backend/width differences. Do not infer a universal floating-point error bound from one benchmark or carry legacy architecture-specific API differences over to the generic surface.
 
-| Issue | x86 | ARM | WASM | Workaround |
-|-------|-----|-----|------|------------|
-| Bitwise operators (`&`, `\|`, `^`) on integers | Trait impls (operators work) | Methods only | Methods only | Use `.and()`, `.or()`, `.xor()` methods |
-| `shr` for signed integers | Logical (zero-fill) | Arithmetic (sign-extend) | Arithmetic (sign-extend) | Use `shr_arithmetic` for portable sign-extending shift |
-| `blend` signature | `(mask, true, false)` | `(mask, true, false)` | `(self, other, mask)` | Avoid in portable code; use bitcast + comparison verification |
-| `interleave_lo/hi` | f32x4 only | f32x4 only | f32x4 only | Only use on f32x4, not integer types |
-| `neg(0.0)` signed zero | `sub(0,x)` → `+0.0` | `vneg` → `-0.0` | `f32x4_neg` → `-0.0` | If sign of zero matters, use `bitxor` with sign mask |
-| `min`/`max` NaN propagation | Returns second operand when first is NaN | Returns non-NaN operand | Returns non-NaN operand | Filter NaN before min/max, or use comparison + blend |
-| `simd_ne` NaN semantics | Unordered (NaN != x → true) | Ordered on some impls | Ordered | Use `simd_eq` + `not` for portable unordered-NE |
-| `mul_add`/`mul_sub` rounding | FMA (one rounding) | FMA (one rounding) | Separate mul+add (two roundings; scalar tier likewise) | Accept ≤1 ULP difference; avoid near-zero cancellation |
-| `to_i32` on OOR/NaN lanes | `i32::MIN` sentinel (cvttps) | Saturates, NaN→0 (FCVTZS) | Saturates, NaN→0 (trunc_sat; scalar `as` likewise) | Documented natural divergence; `to_i32_saturating` is the uniform form (#80, convert_saturating.rs) |
-| `reduce_add` associativity | Tree reduction | Tree reduction | Tree reduction | Accept small relative error (~1e-6) for large inputs |
-| `round` ties | Ties-to-even (all backends, fixed in 0.9.16) | Ties-to-even | Ties-to-even | Consistent across all backends since 0.9.16 |
+- Open semantic follow-ups: x86 V3 `simd_ne` is ordered while native V4 is unordered; x86 negation loses the sign of positive zero; scalar f32x16 min/max differs from smaller scalar vectors on NaNs. Review fixes and codegen separately before changing published behavior.
+- Runtime byte shifts, `msub_adjacent`, and W512 i16/u16 reference casts are deferred until a concrete caller justifies them. Value casts and terminal byte reductions remain supported.
 
 ### Known Platform Detection Issues
 

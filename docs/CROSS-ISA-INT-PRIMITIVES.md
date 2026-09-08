@@ -322,7 +322,7 @@ disagree across ISAs on every input above `0x7FFF`.
 | Primitive | Universal? | Exposed surface |
 |---|---|---|
 | `saturating_add` / `saturating_sub` | ✅ at 8/16-bit; ❌ at 32/64-bit (x86 + wasm lack it entirely) | `i8xN`, `u8xN`, `i16xN`, `u16xN` |
-| uniform variable shift (`shl_uniform`, `shr_logical_uniform`, `shr_arithmetic_uniform`) | ✅ every tier, every width, with a strict out-of-range contract | 8/16-bit (first pass) + 32-bit (follow-up); 64-bit deliberately out (`sra_epi64` needs AVX-512) |
+| uniform variable shift (`shl_uniform`, `shr_logical_uniform`, `shr_arithmetic_uniform`) | ✅ every tier, every width, with a strict out-of-range contract | 16/32-bit; runtime byte shifts deferred pending a consumer; 64-bit deliberately out (`sra_epi64` needs AVX-512) |
 | per-lane variable shift | ❌ (16-bit needs AVX-512BW+VL; wasm has none at any width) | not exposed |
 | `widen_low` / `widen_high` | ✅ | u8↔u16, i8↔i16, u16↔u32, i16↔i32 — **shipped** |
 | narrowing, signed source, saturating | ✅ with an AVX2 `permute4x64` fixup **and an AVX-512 `pack*` avoidance** | i16→u8, i16→i8, i32→u16, i32→i16 — **shipped** |

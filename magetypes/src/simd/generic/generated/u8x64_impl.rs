@@ -328,31 +328,6 @@ impl<T: U8x64Backend> u8x64<T> {
         self.shr_logical_const::<N>()
     }
 
-    // ====== Uniform variable shifts ======
-
-    /// Shift left by a runtime `count`, applied identically to every lane.
-    ///
-    /// Unlike [`shl_const`](Self::shl_const), `count` is a runtime value.
-    /// `count >= 8` yields all-zero lanes — the same result on every
-    /// backend, by contract (see `docs/CROSS-ISA-INT-PRIMITIVES.md`).
-    ///
-    /// The count is *uniform*: one value for the whole vector. A per-lane
-    /// variable shift is deliberately not offered — at 16-bit it needs
-    /// AVX-512BW+VL, and wasm128 has no per-lane variable shift at all.
-    #[inline(always)]
-    pub fn shl_uniform(self, count: u32) -> Self {
-        Self(T::shl_uniform(self.1, self.0, count), self.1)
-    }
-
-    /// Logical (zero-filling) shift right by a runtime `count`, applied
-    /// identically to every lane.
-    ///
-    /// `count >= 8` yields all-zero lanes on every backend.
-    #[inline(always)]
-    pub fn shr_logical_uniform(self, count: u32) -> Self {
-        Self(T::shr_logical_uniform(self.1, self.0, count), self.1)
-    }
-
     // ====== Saturating arithmetic ======
 
     /// Lane-wise addition that clamps to the `u8` range instead of
@@ -546,15 +521,18 @@ impl<T: U8x64Backend> core::fmt::Debug for u8x64<T> {
 // Widening (u8x64 -> u16x32)
 // ============================================================================
 
-impl<T: crate::simd::backends::U8x64Widen> u8x64<T> {
+impl<T: crate::simd::backends::U8x64Backend + crate::simd::backends::U16x32Backend> u8x64<T> {
     /// Zero-extend the low half of the lanes to `u16x32`.
     ///
     /// Result lane `i` is `self[i] as u16` for `i` in `0..32`.
-    /// One instruction on every backend, in natural lane order —
-    /// see `docs/CROSS-ISA-INT-PRIMITIVES.md`.
+    /// Natural lane order on every backend. Instruction count depends
+    /// on the ISA, vector width, and surrounding loads.
     #[inline(always)]
     pub fn widen_low(self) -> super::u16x32<T> {
-        super::u16x32::from_repr_unchecked(self.1, T::widen_low_u8_to_u16(self.1, self.0))
+        super::u16x32::from_repr_unchecked(
+            self.1,
+            <T as crate::simd::backends::U8x64Backend>::widen_low_u8_to_u16(self.1, self.0),
+        )
     }
 
     /// Zero-extend the high half of the lanes to `u16x32`.
@@ -562,10 +540,58 @@ impl<T: crate::simd::backends::U8x64Widen> u8x64<T> {
     /// Result lane `i` is `self[i + 32] as u16`.
     #[inline(always)]
     pub fn widen_high(self) -> super::u16x32<T> {
-        super::u16x32::from_repr_unchecked(self.1, T::widen_high_u8_to_u16(self.1, self.0))
+        super::u16x32::from_repr_unchecked(
+            self.1,
+            <T as crate::simd::backends::U8x64Backend>::widen_high_u8_to_u16(self.1, self.0),
+        )
     }
 }
 
+impl<T: crate::simd::backends::U8x64Backend> u8x64<T> {
+    /// Exact lane-wise absolute difference, without saturation or wrapping.
+    #[inline(always)]
+    pub fn abs_diff(self, rhs: Self) -> super::u8x64<T> {
+        super::u8x64::from_repr_unchecked(
+            self.1,
+            <T as crate::simd::backends::U8x64Backend>::abs_diff(self.1, self.0, rhs.0),
+        )
+    }
+}
+impl<T: crate::simd::backends::U8x64Backend> u8x64<T> {
+    /// Sum all lanes exactly into u32 (unlike wrapping reduce_add).
+    #[inline(always)]
+    pub fn reduce_add_u32(self) -> u32 {
+        <T as crate::simd::backends::U8x64Backend>::reduce_add_u32(self.1, self.0)
+    }
+
+    /// Exact sum of absolute byte differences (SAD).
+    /// Terminal reduction of one vector pair; x86 can use psadbw.
+    /// For long loops, accumulating vector partial sums and reducing once
+    /// can be faster than returning a scalar sum on every iteration.
+    #[inline(always)]
+    pub fn sum_abs_diff(self, rhs: Self) -> u32 {
+        <T as crate::simd::backends::U8x64Backend>::sum_abs_diff(self.1, self.0, rhs.0)
+    }
+}
+impl<T: crate::simd::backends::U8x64Backend> u8x64<T> {
+    /// Sum adjacent pairs into unsigned lanes twice as wide.
+    ///
+    /// Output lane `k` is `self[2*k] + self[2*k+1]`, with both
+    /// inputs widened before addition. The result is exact for the
+    /// full input range; no lane wraps or saturates. Pair ordering
+    /// is unchanged across native and polyfilled widths.
+    /// Subsequent accumulation uses the destination's normal wrapping addition.
+    #[inline(always)]
+    pub fn pairwise_widen_add(self) -> super::u16x32<T>
+    where
+        T: crate::simd::backends::U16x32Backend,
+    {
+        super::u16x32::from_repr_unchecked(
+            self.1,
+            <T as crate::simd::backends::U8x64Backend>::pairwise_widen_add(self.1, self.0),
+        )
+    }
+}
 // ============================================================================
 // Platform-specific concrete impls
 // ============================================================================

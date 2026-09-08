@@ -350,41 +350,6 @@ impl<T: I8x64Backend> i8x64<T> {
         self.shr_logical_const::<N>()
     }
 
-    // ====== Uniform variable shifts ======
-
-    /// Shift left by a runtime `count`, applied identically to every lane.
-    ///
-    /// Unlike [`shl_const`](Self::shl_const), `count` is a runtime value.
-    /// `count >= 8` yields all-zero lanes — the same result on every
-    /// backend, by contract (see `docs/CROSS-ISA-INT-PRIMITIVES.md`).
-    ///
-    /// The count is *uniform*: one value for the whole vector. A per-lane
-    /// variable shift is deliberately not offered — at 16-bit it needs
-    /// AVX-512BW+VL, and wasm128 has no per-lane variable shift at all.
-    #[inline(always)]
-    pub fn shl_uniform(self, count: u32) -> Self {
-        Self(T::shl_uniform(self.1, self.0, count), self.1)
-    }
-
-    /// Logical (zero-filling) shift right by a runtime `count`, applied
-    /// identically to every lane.
-    ///
-    /// `count >= 8` yields all-zero lanes on every backend.
-    #[inline(always)]
-    pub fn shr_logical_uniform(self, count: u32) -> Self {
-        Self(T::shr_logical_uniform(self.1, self.0, count), self.1)
-    }
-
-    /// Arithmetic (sign-filling) shift right by a runtime `count`,
-    /// applied identically to every lane.
-    ///
-    /// `count >= 8` yields a sign fill (every lane becomes `0` or
-    /// `-1`), equivalent to shifting by 7, on every backend.
-    #[inline(always)]
-    pub fn shr_arithmetic_uniform(self, count: u32) -> Self {
-        Self(T::shr_arithmetic_uniform(self.1, self.0, count), self.1)
-    }
-
     // ====== Saturating arithmetic ======
 
     /// Lane-wise addition that clamps to the `i8` range instead of
@@ -586,15 +551,18 @@ impl<T: I8x64Backend> core::fmt::Debug for i8x64<T> {
 // Widening (i8x64 -> i16x32)
 // ============================================================================
 
-impl<T: crate::simd::backends::I8x64Widen> i8x64<T> {
+impl<T: crate::simd::backends::I8x64Backend + crate::simd::backends::I16x32Backend> i8x64<T> {
     /// Sign-extend the low half of the lanes to `i16x32`.
     ///
     /// Result lane `i` is `self[i] as i16` for `i` in `0..32`.
-    /// One instruction on every backend, in natural lane order —
-    /// see `docs/CROSS-ISA-INT-PRIMITIVES.md`.
+    /// Natural lane order on every backend. Instruction count depends
+    /// on the ISA, vector width, and surrounding loads.
     #[inline(always)]
     pub fn widen_low(self) -> super::i16x32<T> {
-        super::i16x32::from_repr_unchecked(self.1, T::widen_low_i8_to_i16(self.1, self.0))
+        super::i16x32::from_repr_unchecked(
+            self.1,
+            <T as crate::simd::backends::I8x64Backend>::widen_low_i8_to_i16(self.1, self.0),
+        )
     }
 
     /// Sign-extend the high half of the lanes to `i16x32`.
@@ -602,7 +570,10 @@ impl<T: crate::simd::backends::I8x64Widen> i8x64<T> {
     /// Result lane `i` is `self[i + 32] as i16`.
     #[inline(always)]
     pub fn widen_high(self) -> super::i16x32<T> {
-        super::i16x32::from_repr_unchecked(self.1, T::widen_high_i8_to_i16(self.1, self.0))
+        super::i16x32::from_repr_unchecked(
+            self.1,
+            <T as crate::simd::backends::I8x64Backend>::widen_high_i8_to_i16(self.1, self.0),
+        )
     }
 }
 

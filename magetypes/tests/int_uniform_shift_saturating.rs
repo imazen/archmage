@@ -87,6 +87,25 @@ macro_rules! pattern_b {
 // Per-type checks
 // ============================================================================
 
+/// Byte saturation remains available at every width; runtime byte shifts are deferred.
+macro_rules! check_byte_saturation {
+    ($Tok:ty, $t:expr, $ty:ident, $elem:ty, $n:expr) => {{
+        let a: [$elem; $n] = pattern_a!($elem);
+        let b: [$elem; $n] = pattern_b!($elem);
+        let va = $ty::<$Tok>::from_array($t, a);
+        let vb = $ty::<$Tok>::from_array($t, b);
+        assert_eq!(
+            va.saturating_add(vb).to_array(),
+            core::array::from_fn(|i| a[i].saturating_add(b[i]))
+        );
+        assert_eq!(
+            va.saturating_sub(vb).to_array(),
+            core::array::from_fn(|i| a[i].saturating_sub(b[i]))
+        );
+        2usize
+    }};
+}
+
 /// Signed 8/16-bit: all three shift flavours plus saturating add/sub.
 macro_rules! check_signed {
     ($Tok:ty, $t:expr, $ty:ident, $elem:ty, $uelem:ty, $bits:literal, $n:expr) => {{
@@ -364,9 +383,7 @@ macro_rules! lane_order_cases {
 // ============================================================================
 
 /// Every one of the 65 536 `(u8, u8)` operand pairs through `saturating_add`
-/// and `saturating_sub`, and every one of the 256 `u8` values through every
-/// boundary shift count. 8-bit is small enough that "sampled" is not an
-/// excuse.
+/// and `saturating_sub`. Byte runtime shifts are not part of the API.
 macro_rules! exhaustive_u8 {
     ($Tok:ty, $t:expr) => {{
         let t = $t;
@@ -389,25 +406,12 @@ macro_rules! exhaustive_u8 {
                     cases += 2;
                 }
             }
-            for count in counts(8) {
-                let want_shl: [u8; 16] = a.map(|x| if count >= 8 { 0 } else { x << count });
-                let want_shr: [u8; 16] = a.map(|x| if count >= 8 { 0 } else { x >> count });
-                assert_eq!(va.shl_uniform(count).to_array(), want_shl, "u8 shl {count}");
-                assert_eq!(
-                    va.shr_logical_uniform(count).to_array(),
-                    want_shr,
-                    "u8 shr {count}"
-                );
-                cases += 2;
-            }
         }
         cases
     }};
 }
 
-/// The signed twin of [`exhaustive_u8`], including the arithmetic shift (the
-/// flavour with the sign-fill contract and, on x86, the most involved
-/// polyfill).
+/// The signed saturation twin of [`exhaustive_u8`].
 macro_rules! exhaustive_i8 {
     ($Tok:ty, $t:expr) => {{
         let t = $t;
@@ -427,36 +431,6 @@ macro_rules! exhaustive_i8 {
                     cases += 2;
                 }
             }
-            for count in counts(8) {
-                let want_shl: [i8; 16] = a.map(|x| {
-                    if count >= 8 {
-                        0
-                    } else {
-                        ((x as u8) << count) as i8
-                    }
-                });
-                let want_shr_l: [i8; 16] = a.map(|x| {
-                    if count >= 8 {
-                        0
-                    } else {
-                        ((x as u8) >> count) as i8
-                    }
-                });
-                let clamped = if count > 7 { 7 } else { count };
-                let want_shr_a: [i8; 16] = a.map(|x| x >> clamped);
-                assert_eq!(va.shl_uniform(count).to_array(), want_shl, "i8 shl {count}");
-                assert_eq!(
-                    va.shr_logical_uniform(count).to_array(),
-                    want_shr_l,
-                    "i8 shr_l {count}"
-                );
-                assert_eq!(
-                    va.shr_arithmetic_uniform(count).to_array(),
-                    want_shr_a,
-                    "i8 shr_a {count}"
-                );
-                cases += 3;
-            }
         }
         cases
     }};
@@ -471,12 +445,12 @@ macro_rules! run_all {
     ($Tok:ty, $t:expr) => {{
         let t = $t;
         let mut n = 0usize;
-        n += check_signed!($Tok, t, i8x16, i8, u8, 8, 16);
-        n += check_signed!($Tok, t, i8x32, i8, u8, 8, 32);
+        n += check_byte_saturation!($Tok, t, i8x16, i8, 16);
+        n += check_byte_saturation!($Tok, t, i8x32, i8, 32);
         n += check_signed!($Tok, t, i16x8, i16, u16, 16, 8);
         n += check_signed!($Tok, t, i16x16, i16, u16, 16, 16);
-        n += check_unsigned!($Tok, t, u8x16, u8, 8, 16);
-        n += check_unsigned!($Tok, t, u8x32, u8, 8, 32);
+        n += check_byte_saturation!($Tok, t, u8x16, u8, 16);
+        n += check_byte_saturation!($Tok, t, u8x32, u8, 32);
         n += check_unsigned!($Tok, t, u16x8, u16, 16, 8);
         n += check_unsigned!($Tok, t, u16x16, u16, 16, 16);
         n += check_signed_shifts!($Tok, t, i32x4, i32, u32, 32, 4);
@@ -496,9 +470,9 @@ macro_rules! run_all_512 {
     ($Tok:ty, $t:expr) => {{
         let t = $t;
         let mut n = 0usize;
-        n += check_signed!($Tok, t, i8x64, i8, u8, 8, 64);
+        n += check_byte_saturation!($Tok, t, i8x64, i8, 64);
         n += check_signed!($Tok, t, i16x32, i16, u16, 16, 32);
-        n += check_unsigned!($Tok, t, u8x64, u8, 8, 64);
+        n += check_byte_saturation!($Tok, t, u8x64, u8, 64);
         n += check_unsigned!($Tok, t, u16x32, u16, 16, 32);
         n += check_signed_shifts!($Tok, t, i32x16, i32, u32, 32, 16);
         n += check_unsigned_shifts!($Tok, t, u32x16, u32, 32, 16);
@@ -517,20 +491,11 @@ macro_rules! run_all_512 {
 /// Floors for the "did the arm actually run" assertions. Deliberately close to
 /// the real counts so a macro that expands to fewer cases trips them.
 ///
-/// The real counts are deterministic: `run_all!` makes 17_642 comparisons
-/// (4 signed 8/16-bit types x 38 + 4 unsigned x 27 + 2 signed 32-bit
-/// shift-only x 35 + 2 unsigned x 24 + the two exhaustive 8-bit sweeps at
-/// 8_544 and 8_720) and `run_all_512!` makes exactly 189 (38 + 38 signed,
-/// 27 + 27 unsigned, 35 + 24 for the 32-bit shift-only types).
-/// The W512 floor was first shipped as a guessed 250 — the v4/v4x arms are
-/// the only ones that assert it in isolation, and they had never executed
-/// anywhere (the author's box had no AVX-512, the PR's x64 CI runner didn't
-/// summon V4, and the SDE job neither built magetypes tests nor propagated
-/// failures). First native run on real AVX-512 silicon: all comparisons
-/// pass; only the floor was wrong.
-const MIN_CASES_W128: usize = 17_600;
+/// Byte sweeps retain every operand pair for saturation; shift tests cover
+/// 16/32-bit lanes, including oversized counts and distinct lane values.
+const MIN_CASES_W128: usize = 16_600;
 #[cfg(feature = "w512")]
-const MIN_CASES_W512: usize = 185;
+const MIN_CASES_W512: usize = 125;
 #[cfg(not(feature = "w512"))]
 const MIN_CASES_W512: usize = 0;
 
