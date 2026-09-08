@@ -2,7 +2,7 @@
 //!
 //! Sibling mode (default), nested mode, and WASM-safe mode.
 
-use proc_macro::TokenStream;
+use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident, quote};
 use syn::{
     Attribute, FnArg, Ident, Token, Type,
@@ -159,9 +159,7 @@ pub(crate) fn arcane_impl(
              which handles self/Self naturally.",
             macro_name, macro_name
         );
-        return syn::Error::new_spanned(&input_fn.sig, msg)
-            .to_compile_error()
-            .into();
+        return syn::Error::new_spanned(&input_fn.sig, msg).to_compile_error();
     }
 
     // Find the token parameter, its features, target arch, and token type name
@@ -199,9 +197,7 @@ pub(crate) fn arcane_impl(
                      Concrete tokens: X64V3Token, Desktop64, NeonToken, Arm64V2Token, ...\n\
                      Feature traits:  impl HasX64V2, impl HasNeon, impl HasArm64V3, ..."
                 );
-                return syn::Error::new_spanned(&input_fn.sig, msg)
-                    .to_compile_error()
-                    .into();
+                return syn::Error::new_spanned(&input_fn.sig, msg).to_compile_error();
             }
             let msg = format!(
                 "{} requires a token parameter. Supported forms:\n\
@@ -211,9 +207,7 @@ pub(crate) fn arcane_impl(
                  - With self: `#[{}(_self = Type)] fn method(&self, token: impl HasNeon, ...)`",
                 macro_name, macro_name
             );
-            return syn::Error::new_spanned(&input_fn.sig, msg)
-                .to_compile_error()
-                .into();
+            return syn::Error::new_spanned(&input_fn.sig, msg).to_compile_error();
         }
     };
 
@@ -236,9 +230,7 @@ pub(crate) fn arcane_impl(
              Without it, 512-bit safe memory ops (_mm512_loadu_ps etc.) are not available.\n\
              If you only need value intrinsics (no memory ops), remove `import_intrinsics`."
         );
-        return syn::Error::new_spanned(&input_fn.sig, msg)
-            .to_compile_error()
-            .into();
+        return syn::Error::new_spanned(&input_fn.sig, msg).to_compile_error();
     }
 
     // Prepend import statements to body if requested
@@ -454,7 +446,7 @@ pub(crate) fn arcane_impl_wasm_safe(
         #stub
     };
 
-    expanded.into()
+    expanded
 }
 
 /// Sibling expansion (default): generates two functions at the same scope level.
@@ -668,7 +660,7 @@ pub(crate) fn arcane_impl_sibling(
         }
     };
 
-    expanded.into()
+    expanded
 }
 
 /// Nested inner function expansion (opt-in via `nested` or `_self = Type`).
@@ -879,7 +871,7 @@ pub(crate) fn arcane_impl_nested(
         }
     };
 
-    expanded.into()
+    expanded
 }
 
 #[cfg(test)]

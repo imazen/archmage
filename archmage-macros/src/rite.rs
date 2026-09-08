@@ -2,7 +2,7 @@
 //!
 //! Single-tier, multi-tier, and stub modes.
 
-use proc_macro::TokenStream;
+use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{
     Attribute, Ident, Token,
@@ -239,9 +239,7 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
                          Feature traits:  impl HasX64V2, impl HasNeon, impl HasArm64V3, ...\n\
                          Tier names:      #[rite(v3)], #[rite(neon)], #[rite(v4)], ..."
                     );
-                    return syn::Error::new_spanned(&input_fn.sig, msg)
-                        .to_compile_error()
-                        .into();
+                    return syn::Error::new_spanned(&input_fn.sig, msg).to_compile_error();
                 }
                 let msg = "rite requires a token parameter or a tier name. Supported forms:\n\
                      - Tier name: `#[rite(v3)]`, `#[rite(neon)]`\n\
@@ -249,9 +247,7 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
                      - Concrete: `token: X64V3Token`\n\
                      - impl Trait: `token: impl HasX64V2`\n\
                      - Generic: `fn foo<T: HasX64V2>(token: T, ...)`";
-                return syn::Error::new_spanned(&input_fn.sig, msg)
-                    .to_compile_error()
-                    .into();
+                return syn::Error::new_spanned(&input_fn.sig, msg).to_compile_error();
             }
         }
     };
@@ -270,9 +266,7 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
              Without it, 512-bit safe memory ops (_mm512_loadu_ps etc.) are not available.\n\
              If you only need value intrinsics (no memory ops), remove `import_intrinsics`."
         );
-        return syn::Error::new_spanned(&input_fn.sig, msg)
-            .to_compile_error()
-            .into();
+        return syn::Error::new_spanned(&input_fn.sig, msg).to_compile_error();
     }
 
     // Rewrite incant!() calls in the body to direct tier calls.
@@ -381,10 +375,9 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
 
             #stub
         }
-        .into()
     } else {
         // No specific arch (trait bounds) - just emit the annotated function
-        quote!(#input_fn).into()
+        quote!(#input_fn)
     }
 }
 
@@ -414,8 +407,7 @@ pub(crate) fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenS
                         &input_fn.sig,
                         format!("unknown token `{tier_token}` in multi-tier #[rite]"),
                     )
-                    .to_compile_error()
-                    .into();
+                    .to_compile_error();
                 }
             }
         };
@@ -442,9 +434,7 @@ pub(crate) fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenS
                  Without it, 512-bit safe memory ops (_mm512_loadu_ps etc.) are not available.\n\
                  If you only need value intrinsics (no memory ops), remove `import_intrinsics`."
             );
-            return syn::Error::new_spanned(&input_fn.sig, msg)
-                .to_compile_error()
-                .into();
+            return syn::Error::new_spanned(&input_fn.sig, msg).to_compile_error();
         }
 
         let suffix = if is_default {
@@ -554,7 +544,7 @@ pub(crate) fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenS
         }
     }
 
-    variants.into()
+    variants
 }
 
 #[cfg(test)]

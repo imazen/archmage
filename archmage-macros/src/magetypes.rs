@@ -1,6 +1,6 @@
 //! `#[magetypes]` — generate per-tier function variants via text substitution.
 
-use proc_macro::TokenStream;
+use proc_macro2::TokenStream;
 use quote::{ToTokens, quote};
 
 use crate::common::*;
@@ -168,5 +168,5 @@ pub(crate) fn magetypes_impl(
         #(#variants)*
     };
 
-    output.into()
+    output
 }

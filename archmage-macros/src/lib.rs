@@ -12,6 +12,9 @@
 //!
 //! Provides `#[arcane]`, `#[rite]`, `#[autoversion]`, `incant!`, and `#[magetypes]`.
 
+#[cfg(test)]
+mod expansion_tests;
+
 mod arcane;
 mod autoversion;
 mod common;
@@ -206,7 +209,7 @@ use token_discovery::*;
 pub fn arcane(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as ArcaneArgs);
     let input_fn = parse_macro_input!(item as LightFn);
-    arcane_impl(input_fn, "arcane", args)
+    arcane_impl(input_fn, "arcane", args).into()
 }
 
 /// Legacy alias for [`arcane`].
@@ -217,7 +220,7 @@ pub fn arcane(attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn simd_fn(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as ArcaneArgs);
     let input_fn = parse_macro_input!(item as LightFn);
-    arcane_impl(input_fn, "simd_fn", args)
+    arcane_impl(input_fn, "simd_fn", args).into()
 }
 
 /// Descriptive alias for [`arcane`].
@@ -236,7 +239,7 @@ pub fn simd_fn(attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn token_target_features_boundary(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as ArcaneArgs);
     let input_fn = parse_macro_input!(item as LightFn);
-    arcane_impl(input_fn, "token_target_features_boundary", args)
+    arcane_impl(input_fn, "token_target_features_boundary", args).into()
 }
 
 // ============================================================================
@@ -319,7 +322,7 @@ pub fn token_target_features_boundary(attr: TokenStream, item: TokenStream) -> T
 pub fn rite(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as RiteArgs);
     let input_fn = parse_macro_input!(item as LightFn);
-    rite_impl(input_fn, args)
+    rite_impl(input_fn, args).into()
 }
 
 /// Descriptive alias for [`rite`].
@@ -336,7 +339,7 @@ pub fn rite(attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn token_target_features(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as RiteArgs);
     let input_fn = parse_macro_input!(item as LightFn);
-    rite_impl(input_fn, args)
+    rite_impl(input_fn, args).into()
 }
 
 // RiteArgs, rite_impl, rite_single_impl, rite_multi_tier_impl → moved to rite.rs
@@ -441,7 +444,7 @@ pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
         Err(e) => return e.to_compile_error().into(),
     };
 
-    magetypes_impl(input_fn, &tiers, rite_flag, &defines)
+    magetypes_impl(input_fn, &tiers, rite_flag, &defines).into()
 }
 
 /// Parse `#[magetypes]` attributes: `rite` flag, `define(list)`, and tier names.
@@ -609,14 +612,14 @@ fn parse_magetypes_attr(
 #[proc_macro]
 pub fn incant(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as IncantInput);
-    incant_impl(input)
+    incant_impl(input).into()
 }
 
 /// Legacy alias for [`incant!`].
 #[proc_macro]
 pub fn simd_route(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as IncantInput);
-    incant_impl(input)
+    incant_impl(input).into()
 }
 
 /// Descriptive alias for [`incant!`].
@@ -629,7 +632,7 @@ pub fn simd_route(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn dispatch_variant(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as IncantInput);
-    incant_impl(input)
+    incant_impl(input).into()
 }
 
 // =============================================================================
@@ -766,7 +769,7 @@ pub fn dispatch_variant(input: TokenStream) -> TokenStream {
 pub fn autoversion(attr: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(attr as AutoversionArgs);
     let input_fn = parse_macro_input!(item as LightFn);
-    autoversion_impl(input_fn, args)
+    autoversion_impl(input_fn, args).into()
 }
 
 // =============================================================================

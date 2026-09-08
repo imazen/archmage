@@ -1,6 +1,6 @@
 //! `incant!` — runtime dispatch to platform-specific variants.
 
-use proc_macro::TokenStream;
+use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{
     Ident, Token,
@@ -186,8 +186,7 @@ pub(crate) fn incant_impl(input: IncantInput) -> TokenStream {
              (`#[arcane]`, `#[rite]`, `#[magetypes]`, `#[autoversion]`) — there is \
              no caller tier to resolve the variant against in plain code",
         )
-        .to_compile_error()
-        .into();
+        .to_compile_error();
     }
 
     let func_path = &input.func_path;
@@ -253,7 +252,7 @@ pub(crate) fn incant_impl(input: IncantInput) -> TokenStream {
     // Users with unconditional _v4 functions use v4(!) or just don't cfg-gate them.
     let tiers = match resolve_tiers(&tier_names, error_span, true) {
         Ok(t) => t,
-        Err(e) => return e.to_compile_error().into(),
+        Err(e) => return e.to_compile_error(),
     };
 
     // Group tiers by architecture for cfg-guarded blocks
@@ -268,14 +267,13 @@ pub(crate) fn incant_impl(input: IncantInput) -> TokenStream {
         dispatch
     } else {
         // Wrap dispatch in a block that includes the deprecation warning
-        let dispatch2: proc_macro2::TokenStream = dispatch.into();
+        let dispatch2 = dispatch;
         quote! {
             {
                 #scalar_warning
                 #dispatch2
             }
         }
-        .into()
     }
 }
 
@@ -377,7 +375,7 @@ pub(crate) fn gen_incant_passthrough(
             #fallback_arm
         }
     };
-    expanded.into()
+    expanded
 }
 
 /// Generate incant! entry point mode (summon tokens).
@@ -477,5 +475,5 @@ pub(crate) fn gen_incant_entry(
             #fallback_call
         }
     };
-    expanded.into()
+    expanded
 }
