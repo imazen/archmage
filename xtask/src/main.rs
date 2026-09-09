@@ -885,6 +885,7 @@ fn main() -> Result<()> {
             soundness::check_stderr_snapshot_portability()?;
             validate_summon(&reg)?;
             validate_v4_f32_delegation()?;
+            check_compile_budgets()?;
         }
         "validate-registry" => validate_registry()?,
         "parity" => check_api_parity(false)?,
@@ -1027,6 +1028,131 @@ fn validate_v4_f32_delegation() -> Result<()> {
     }
 
     println!("  OK: every f32 backend method is forwarded to X64V3Token");
+    Ok(())
+}
+
+/// Per-target budgets for the generated backend surface that a given
+/// `target_arch` actually compiles.
+///
+/// **Why this check exists.** `magetypes` is a serialization point: dozens of
+/// crates sit above it in the build graph and none of them can start until its
+/// unit finishes. Its own compile time is therefore fully on their critical
+/// path — it does not overlap with anything and does not amortise across
+/// cores. A percentage that looks small against a whole parallel build is paid
+/// in full, serially, by every downstream crate.
+///
+/// **The numbers are calibrated, not invented.** Measured on `r5900xt`
+/// (32 cores, 60 GB, rustc 1.98.1, idle), `magetypes` unit only with
+/// dependencies pre-built, mean of three cold runs, spread +/- 0.02 s:
+///
+/// | x86-compiled lines | magetypes unit |
+/// |---|---|
+/// | 17 928 | 2.52 s |
+/// | 21 174 | 2.70 s |
+///
+/// So +18.1% of compiled source cost +5.8% of serial compile time on that
+/// host. Source lines are used rather than wall-clock because CI wall-clock is
+/// far too noisy to gate on, and because this metric is deterministic — the
+/// same tree always produces the same number.
+///
+/// **These are budgets, not floors.** Exceeding one is not automatically
+/// wrong; it means the growth has to be a deliberate, reviewed edit to the
+/// number below rather than something that lands unnoticed. Note the
+/// asymmetry with `REQUIRED_FILE_FLOORS` in `soundness.rs`, which guards
+/// against generated code *disappearing*; this guards against it *accreting*.
+///
+/// Only files the target actually compiles are counted: `impls/mod.rs`
+/// cfg-gates `arm_neon` and `wasm128` away on x86, so a NEON-only change
+/// costs an x86 build nothing.
+const COMPILE_BUDGETS: &[(&str, &[&str], usize)] = &[
+    (
+        "x86_64",
+        &[
+            "magetypes/src/simd/impls/x86_v3.rs",
+            "magetypes/src/simd/impls/x86_v4.rs",
+            "magetypes/src/simd/impls/x86_v4_f32_delegated.rs",
+            "magetypes/src/simd/impls/scalar.rs",
+            "magetypes/src/simd/backends/",
+        ],
+        31_700, // measured 30 197
+    ),
+    (
+        "aarch64",
+        &[
+            "magetypes/src/simd/impls/arm_neon.rs",
+            "magetypes/src/simd/impls/scalar.rs",
+            "magetypes/src/simd/backends/",
+        ],
+        26_100, // measured 24 890
+    ),
+    (
+        "wasm32",
+        &[
+            "magetypes/src/simd/impls/wasm128.rs",
+            "magetypes/src/simd/impls/scalar.rs",
+            "magetypes/src/simd/backends/",
+        ],
+        25_700, // measured 24 442
+    ),
+];
+
+/// Check the generated backend surface against [`COMPILE_BUDGETS`].
+fn check_compile_budgets() -> Result<()> {
+    println!("\n=== Generated backend surface (compile budget) ===");
+    let count = |spec: &str| -> Result<usize> {
+        let mut files: Vec<PathBuf> = Vec::new();
+        if let Some(dir) = spec.strip_suffix('/') {
+            for entry in std::fs::read_dir(dir)
+                .with_context(|| format!("reading {dir}"))?
+                .flatten()
+            {
+                let p = entry.path();
+                if p.extension().is_some_and(|e| e == "rs") {
+                    files.push(p);
+                }
+            }
+        } else {
+            files.push(PathBuf::from(spec));
+        }
+        files.sort();
+        let mut total = 0usize;
+        for f in files {
+            let text =
+                std::fs::read_to_string(&f).with_context(|| format!("reading {}", f.display()))?;
+            total += text.lines().count();
+        }
+        Ok(total)
+    };
+
+    let mut over: Vec<String> = Vec::new();
+    for (arch, specs, budget) in COMPILE_BUDGETS {
+        let mut lines = 0usize;
+        for spec in *specs {
+            lines += count(spec)?;
+        }
+        let pct = (lines as f64 / *budget as f64) * 100.0;
+        println!("  {arch:<8} {lines:>6} lines / {budget:>6} budget  ({pct:.1}%)");
+        if lines > *budget {
+            over.push(format!(
+                "  {arch}: {lines} lines exceeds the {budget} budget by {}",
+                lines - budget
+            ));
+        }
+    }
+
+    if !over.is_empty() {
+        println!();
+        anyhow::bail!(
+            "generated backend surface over budget:\n{}\n\n\
+             magetypes is a serialization point — dozens of crates wait on its unit, so\n\
+             its compile time lands in full on every downstream build's critical path.\n\
+             If the growth is intended, raise the budget in COMPILE_BUDGETS and say why\n\
+             in the commit message. If it is not, the generator emitted more than you\n\
+             expected — check what changed before raising the number.",
+            over.join("\n")
+        );
+    }
+    println!("  OK: every target's generated surface is within budget");
     Ok(())
 }
 
