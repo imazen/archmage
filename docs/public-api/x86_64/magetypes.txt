@@ -6,15 +6,15 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2422 lines (supported surface) | magetypes.features.txt 75 added (features: avx512,std,w512) | magetypes.internal.txt 34 lines (41 hidden + 0 excluded-feature)
+# files: magetypes.txt 2453 lines (supported surface) | magetypes.features.txt 75 added (features: avx512,std,w512) | magetypes.internal.txt 34 lines (41 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                12
 #   pub types (struct/enum/trait/alias)       377
 #   pub consts/statics                        228
-#   free functions                           3076
-#   inherent methods                         1239
+#   free functions                           3136
+#   inherent methods                         1269
 #   enum variants                               1
 #   re-exports                                  2
 #   trait roster entries (type × trait)       742
@@ -25,10 +25,10 @@
 # per-module pub lines:
 #   (root)                          321
 #   cast                              3
-#   prelude                        2994
-#   simd                           1617
+#   prelude                        3054
+#   simd                           1647
 
-## items (2198 lines)
+## items (2229 lines)
 
 pub mod magetypes
 pub use archmage
@@ -73,6 +73,7 @@ pub fn prelude::f32x4<archmage::tokens::generated::x86::X64V3Token>::from_m128(a
 pub const fn prelude::f32x4<archmage::tokens::generated::x86::X64V3Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::f32x4<archmage::tokens::generated::x86::X64V3Token>::raw(self) -> core::core_arch::x86::__m128 [also: prelude::f32x4<archmage::tokens::generated::x86::X64V3Token>]
 pub fn prelude::f32x4<T>::blend(Self, Self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
+pub fn prelude::f32x4<T>::concat_shift<const N: i32>(self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
 pub fn prelude::f32x4<T>::from_array(T, [f32; 4]) -> Self [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::from_repr(T, <T as simd::backends::F32x4Backend>::Repr) -> Self [also: prelude::f32x4<T>]
 pub fn prelude::f32x4<T>::from_slice(T, &[f32]) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
@@ -744,6 +745,7 @@ pub fn simd::backends::F32x16Backend::bitxor(self, Self::Repr, Self::Repr) -> Se
 pub fn simd::backends::F32x16Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::ceil(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F32x16Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::div(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::floor(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::from_array(self, [f32; 16]) -> Self::Repr
@@ -792,6 +794,7 @@ pub fn simd::backends::F32x4Backend::bitxor(self, Self::Repr, Self::Repr) -> Sel
 pub fn simd::backends::F32x4Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::ceil(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F32x4Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::div(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::floor(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::from_array(self, [f32; 4]) -> Self::Repr
@@ -842,6 +845,7 @@ pub fn simd::backends::F32x8Backend::bitxor(self, Self::Repr, Self::Repr) -> Sel
 pub fn simd::backends::F32x8Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::ceil(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F32x8Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::div(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::floor(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::from_array(self, [f32; 8]) -> Self::Repr
@@ -893,6 +897,7 @@ pub fn simd::backends::F64x2Backend::bitxor(self, Self::Repr, Self::Repr) -> Sel
 pub fn simd::backends::F64x2Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::ceil(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F64x2Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::div(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::floor(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::from_array(self, [f64; 2]) -> Self::Repr
@@ -934,6 +939,7 @@ pub fn simd::backends::F64x4Backend::bitxor(self, Self::Repr, Self::Repr) -> Sel
 pub fn simd::backends::F64x4Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::ceil(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F64x4Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::div(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::floor(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::from_array(self, [f64; 4]) -> Self::Repr
@@ -975,6 +981,7 @@ pub fn simd::backends::F64x8Backend::bitxor(self, Self::Repr, Self::Repr) -> Sel
 pub fn simd::backends::F64x8Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x8Backend::ceil(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x8Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F64x8Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x8Backend::div(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x8Backend::floor(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x8Backend::from_array(self, [f64; 8]) -> Self::Repr
@@ -1019,6 +1026,7 @@ pub fn simd::backends::I16x16Backend::bitor(self, Self::Repr, Self::Repr) -> Sel
 pub fn simd::backends::I16x16Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x16Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x16Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::I16x16Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x16Backend::from_array(self, [i16; 16]) -> Self::Repr
 pub fn simd::backends::I16x16Backend::load(self, &[i16; 16]) -> Self::Repr
 pub fn simd::backends::I16x16Backend::madd_adjacent(self, <Self as simd::backends::I16x16Backend>::Repr, <Self as simd::backends::I16x16Backend>::Repr) -> <Self as simd::backends::I32x8Backend>::Repr where Self: simd::backends::I32x8Backend
@@ -1067,6 +1075,7 @@ pub fn simd::backends::I16x32Backend::bitor(self, Self::Repr, Self::Repr) -> Sel
 pub fn simd::backends::I16x32Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x32Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x32Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::I16x32Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x32Backend::from_array(self, [i16; 32]) -> Self::Repr
 pub fn simd::backends::I16x32Backend::load(self, &[i16; 32]) -> Self::Repr
 pub fn simd::backends::I16x32Backend::madd_adjacent(self, <Self as simd::backends::I16x32Backend>::Repr, <Self as simd::backends::I16x32Backend>::Repr) -> <Self as simd::backends::I32x16Backend>::Repr where Self: simd::backends::I32x16Backend
@@ -1112,6 +1121,7 @@ pub fn simd::backends::I16x8Backend::bitor(self, Self::Repr, Self::Repr) -> Self
 pub fn simd::backends::I16x8Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x8Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x8Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::I16x8Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I16x8Backend::from_array(self, [i16; 8]) -> Self::Repr
 pub fn simd::backends::I16x8Backend::load(self, &[i16; 8]) -> Self::Repr
 pub fn simd::backends::I16x8Backend::madd_adjacent(self, <Self as simd::backends::I16x8Backend>::Repr, <Self as simd::backends::I16x8Backend>::Repr) -> <Self as simd::backends::I32x4Backend>::Repr where Self: simd::backends::I32x4Backend
@@ -1159,6 +1169,7 @@ pub fn simd::backends::I32x16Backend::bitor(self, Self::Repr, Self::Repr) -> Sel
 pub fn simd::backends::I32x16Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x16Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x16Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::I32x16Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x16Backend::from_array(self, [i32; 16]) -> Self::Repr
 pub fn simd::backends::I32x16Backend::load(self, &[i32; 16]) -> Self::Repr
 pub fn simd::backends::I32x16Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1198,6 +1209,7 @@ pub fn simd::backends::I32x4Backend::bitor(self, Self::Repr, Self::Repr) -> Self
 pub fn simd::backends::I32x4Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x4Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x4Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::I32x4Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x4Backend::from_array(self, [i32; 4]) -> Self::Repr
 pub fn simd::backends::I32x4Backend::load(self, &[i32; 4]) -> Self::Repr
 pub fn simd::backends::I32x4Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1237,6 +1249,7 @@ pub fn simd::backends::I32x8Backend::bitor(self, Self::Repr, Self::Repr) -> Self
 pub fn simd::backends::I32x8Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x8Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x8Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::I32x8Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I32x8Backend::from_array(self, [i32; 8]) -> Self::Repr
 pub fn simd::backends::I32x8Backend::load(self, &[i32; 8]) -> Self::Repr
 pub fn simd::backends::I32x8Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1276,6 +1289,7 @@ pub fn simd::backends::I64x2Backend::bitor(self, Self::Repr, Self::Repr) -> Self
 pub fn simd::backends::I64x2Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I64x2Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I64x2Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::I64x2Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I64x2Backend::from_array(self, [i64; 2]) -> Self::Repr
 pub fn simd::backends::I64x2Backend::load(self, &[i64; 2]) -> Self::Repr
 pub fn simd::backends::I64x2Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1312,6 +1326,7 @@ pub fn simd::backends::I64x4Backend::bitor(self, Self::Repr, Self::Repr) -> Self
 pub fn simd::backends::I64x4Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I64x4Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I64x4Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::I64x4Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I64x4Backend::from_array(self, [i64; 4]) -> Self::Repr
 pub fn simd::backends::I64x4Backend::load(self, &[i64; 4]) -> Self::Repr
 pub fn simd::backends::I64x4Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1348,6 +1363,7 @@ pub fn simd::backends::I64x8Backend::bitor(self, Self::Repr, Self::Repr) -> Self
 pub fn simd::backends::I64x8Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I64x8Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I64x8Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::I64x8Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I64x8Backend::from_array(self, [i64; 8]) -> Self::Repr
 pub fn simd::backends::I64x8Backend::load(self, &[i64; 8]) -> Self::Repr
 pub fn simd::backends::I64x8Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1381,6 +1397,7 @@ pub fn simd::backends::I8x16Backend::bitor(self, Self::Repr, Self::Repr) -> Self
 pub fn simd::backends::I8x16Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x16Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x16Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::I8x16Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x16Backend::from_array(self, [i8; 16]) -> Self::Repr
 pub fn simd::backends::I8x16Backend::load(self, &[i8; 16]) -> Self::Repr
 pub fn simd::backends::I8x16Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1421,6 +1438,7 @@ pub fn simd::backends::I8x32Backend::bitor(self, Self::Repr, Self::Repr) -> Self
 pub fn simd::backends::I8x32Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x32Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x32Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::I8x32Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x32Backend::from_array(self, [i8; 32]) -> Self::Repr
 pub fn simd::backends::I8x32Backend::load(self, &[i8; 32]) -> Self::Repr
 pub fn simd::backends::I8x32Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1461,6 +1479,7 @@ pub fn simd::backends::I8x64Backend::bitor(self, Self::Repr, Self::Repr) -> Self
 pub fn simd::backends::I8x64Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x64Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x64Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::I8x64Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::I8x64Backend::from_array(self, [i8; 64]) -> Self::Repr
 pub fn simd::backends::I8x64Backend::load(self, &[i8; 64]) -> Self::Repr
 pub fn simd::backends::I8x64Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1497,6 +1516,7 @@ pub fn simd::backends::U16x16Backend::bitor(self, Self::Repr, Self::Repr) -> Sel
 pub fn simd::backends::U16x16Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x16Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x16Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::U16x16Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x16Backend::from_array(self, [u16; 16]) -> Self::Repr
 pub fn simd::backends::U16x16Backend::load(self, &[u16; 16]) -> Self::Repr
 pub fn simd::backends::U16x16Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1535,6 +1555,7 @@ pub fn simd::backends::U16x32Backend::bitor(self, Self::Repr, Self::Repr) -> Sel
 pub fn simd::backends::U16x32Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x32Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x32Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::U16x32Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x32Backend::from_array(self, [u16; 32]) -> Self::Repr
 pub fn simd::backends::U16x32Backend::load(self, &[u16; 32]) -> Self::Repr
 pub fn simd::backends::U16x32Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1576,6 +1597,7 @@ pub fn simd::backends::U16x8Backend::bitor(self, Self::Repr, Self::Repr) -> Self
 pub fn simd::backends::U16x8Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x8Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x8Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::U16x8Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U16x8Backend::from_array(self, [u16; 8]) -> Self::Repr
 pub fn simd::backends::U16x8Backend::load(self, &[u16; 8]) -> Self::Repr
 pub fn simd::backends::U16x8Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1614,6 +1636,7 @@ pub fn simd::backends::U32x16Backend::bitor(self, Self::Repr, Self::Repr) -> Sel
 pub fn simd::backends::U32x16Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x16Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x16Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::U32x16Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x16Backend::from_array(self, [u32; 16]) -> Self::Repr
 pub fn simd::backends::U32x16Backend::load(self, &[u32; 16]) -> Self::Repr
 pub fn simd::backends::U32x16Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1650,6 +1673,7 @@ pub fn simd::backends::U32x4Backend::bitor(self, Self::Repr, Self::Repr) -> Self
 pub fn simd::backends::U32x4Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x4Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x4Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::U32x4Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x4Backend::from_array(self, [u32; 4]) -> Self::Repr
 pub fn simd::backends::U32x4Backend::load(self, &[u32; 4]) -> Self::Repr
 pub fn simd::backends::U32x4Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1686,6 +1710,7 @@ pub fn simd::backends::U32x8Backend::bitor(self, Self::Repr, Self::Repr) -> Self
 pub fn simd::backends::U32x8Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x8Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x8Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::U32x8Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U32x8Backend::from_array(self, [u32; 8]) -> Self::Repr
 pub fn simd::backends::U32x8Backend::load(self, &[u32; 8]) -> Self::Repr
 pub fn simd::backends::U32x8Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1722,6 +1747,7 @@ pub fn simd::backends::U64x2Backend::bitor(self, Self::Repr, Self::Repr) -> Self
 pub fn simd::backends::U64x2Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U64x2Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U64x2Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::U64x2Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U64x2Backend::from_array(self, [u64; 2]) -> Self::Repr
 pub fn simd::backends::U64x2Backend::load(self, &[u64; 2]) -> Self::Repr
 pub fn simd::backends::U64x2Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1755,6 +1781,7 @@ pub fn simd::backends::U64x4Backend::bitor(self, Self::Repr, Self::Repr) -> Self
 pub fn simd::backends::U64x4Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U64x4Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U64x4Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::U64x4Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U64x4Backend::from_array(self, [u64; 4]) -> Self::Repr
 pub fn simd::backends::U64x4Backend::load(self, &[u64; 4]) -> Self::Repr
 pub fn simd::backends::U64x4Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1788,6 +1815,7 @@ pub fn simd::backends::U64x8Backend::bitor(self, Self::Repr, Self::Repr) -> Self
 pub fn simd::backends::U64x8Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U64x8Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U64x8Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::U64x8Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U64x8Backend::from_array(self, [u64; 8]) -> Self::Repr
 pub fn simd::backends::U64x8Backend::load(self, &[u64; 8]) -> Self::Repr
 pub fn simd::backends::U64x8Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1821,6 +1849,7 @@ pub fn simd::backends::U8x16Backend::bitor(self, Self::Repr, Self::Repr) -> Self
 pub fn simd::backends::U8x16Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x16Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x16Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::U8x16Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x16Backend::from_array(self, [u8; 16]) -> Self::Repr
 pub fn simd::backends::U8x16Backend::load(self, &[u8; 16]) -> Self::Repr
 pub fn simd::backends::U8x16Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1859,6 +1888,7 @@ pub fn simd::backends::U8x32Backend::bitor(self, Self::Repr, Self::Repr) -> Self
 pub fn simd::backends::U8x32Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x32Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x32Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::U8x32Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x32Backend::from_array(self, [u8; 32]) -> Self::Repr
 pub fn simd::backends::U8x32Backend::load(self, &[u8; 32]) -> Self::Repr
 pub fn simd::backends::U8x32Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr
@@ -1897,6 +1927,7 @@ pub fn simd::backends::U8x64Backend::bitor(self, Self::Repr, Self::Repr) -> Self
 pub fn simd::backends::U8x64Backend::bitxor(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x64Backend::blend(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x64Backend::clamp(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::U8x64Backend::concat_shift<const N: i32>(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::U8x64Backend::from_array(self, [u8; 64]) -> Self::Repr
 pub fn simd::backends::U8x64Backend::load(self, &[u8; 64]) -> Self::Repr
 pub fn simd::backends::U8x64Backend::max(self, Self::Repr, Self::Repr) -> Self::Repr

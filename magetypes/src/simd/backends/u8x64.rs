@@ -148,14 +148,14 @@ pub trait U8x64Backend: SimdToken + Sealed + Copy + 'static {
     fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {
         <Self as U8x64Backend>::min(self, <Self as U8x64Backend>::max(self, a, lo), hi)
     }
-    /// Widen in natural lane order: result[i] = a[i + 0] as u16.
+    /// Widen in natural lane order: `result[i] = a[i + 0] as u16`.
     fn widen_low_u8_to_u16(
         self,
         a: <Self as super::U8x64Backend>::Repr,
     ) -> <Self as super::U16x32Backend>::Repr
     where
         Self: super::U16x32Backend;
-    /// Widen in natural lane order: result[i] = a[i + 32] as u16.
+    /// Widen in natural lane order: `result[i] = a[i + 32] as u16`.
     fn widen_high_u8_to_u16(
         self,
         a: <Self as super::U8x64Backend>::Repr,
@@ -176,11 +176,43 @@ pub trait U8x64Backend: SimdToken + Sealed + Copy + 'static {
         a: <Self as super::U8x64Backend>::Repr,
         b: <Self as super::U8x64Backend>::Repr,
     ) -> u32;
-    /// Exact unsigned adjacent sums: output[k] = widened a[2*k] + widened a[2*k+1].
+    /// Exact unsigned adjacent sums: `output[k] = widened a[2*k] + widened a[2*k+1]`.
     fn pairwise_widen_add(
         self,
         a: <Self as super::U8x64Backend>::Repr,
     ) -> <Self as super::U16x32Backend>::Repr
     where
         Self: super::U16x32Backend;
+
+    // ====== Cross-vector element shift ======
+
+    /// Lanes `N..N+64` of the concatenation `[lo, hi]`.
+    ///
+    /// `N == 0` returns `lo`; `N == 64` would return `hi` and is rejected,
+    /// since a caller that wants `hi` should just use it. This is the
+    /// "funnel shift" — `valignd` on AVX-512, `vperm2f128` + `vpalignr` on
+    /// AVX2, `EXT` on NEON, `i8x16.shuffle` on wasm — and it is what a
+    /// 3-tap horizontal filter needs to derive the `x-1` and `x+1` vectors
+    /// from two loads instead of three, and what a byte-shuffling kernel
+    /// needs to slide a window.
+    ///
+    /// `N` is `i32` because that is the type of the ISA immediates it
+    /// forwards to; a const generic cannot be cast in a const position.
+    ///
+    /// The default body is a lane gather, which LLVM does **not** recover
+    /// into a funnel shift (measured 2026-09-08: 6-7 scalar moves where the
+    /// native form is 1-2 instructions). It is the correctness fallback and
+    /// the differential-test reference; every backend whose ISA has the
+    /// instruction overrides it.
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {
+        const { assert!(N >= 0 && N < 64, "concat_shift: N must be in 0..64") };
+        let n = N as usize;
+        let a = <Self as U8x64Backend>::to_array(self, lo);
+        let b = <Self as U8x64Backend>::to_array(self, hi);
+        <Self as U8x64Backend>::from_array(
+            self,
+            core::array::from_fn(|i| if n + i < 64 { a[n + i] } else { b[n + i - 64] }),
+        )
+    }
 }

@@ -273,6 +273,29 @@ impl<T: F32x4Backend> f32x4<T> {
         Self(T::mul_sub(self.1, self.0, a.0, b.0), self.1)
     }
 
+    /// Lanes `N..N+4` of the concatenation `[self, hi]` — the
+    /// cross-vector "funnel shift" (`valignd` / `vperm2f128`+`vpalignr` /
+    /// `EXT` / `i8x16.shuffle`).
+    ///
+    /// A 3-tap horizontal filter uses it to derive the `x-1` and `x+1`
+    /// vectors from two loads instead of three; a byte-shuffling kernel
+    /// uses it to slide a window. `N == 0` returns `self`; `N == 4`
+    /// is rejected at compile time, since a caller that wants `hi` should
+    /// use it directly.    ///
+    /// ```rust
+    /// # use archmage::prelude::*;
+    /// # use magetypes::simd::generic::f32x4;
+    /// # fn demo<T: magetypes::simd::backends::F32x4Backend>(t: T) {
+    /// let lo = f32x4::from_array(t, core::array::from_fn(|i| i as f32));
+    /// let hi = f32x4::from_array(t, core::array::from_fn(|i| (4 + i) as f32));
+    /// assert_eq!(lo.concat_shift::<1>(hi).to_array()[0], 1.0);
+    /// # }
+    /// ```
+    #[inline(always)]
+    pub fn concat_shift<const N: i32>(self, hi: Self) -> Self {
+        Self(T::concat_shift::<N>(self.1, self.0, hi.0), self.1)
+    }
+
     // ====== Comparisons ======
 
     /// Lane-wise equality (returns mask).
@@ -344,12 +367,12 @@ impl<T: F32x4Backend> f32x4<T> {
     /// (estimate + one Newton step), WASM/scalar ~24-bit (exact division —
     /// no hardware estimate exists to undercut it). For the same bits on
     /// *every* machine use [`rcp_approx_portable`](Self::rcp_approx_portable);
-    /// for ≤4 ULP use [`recip`](Self::recip); for 0 ULP + IEEE rails
+    /// for ≤4 ULP use [`Self::recip`](Self::recip); for 0 ULP + IEEE rails
     /// use [`recip_portable`](Self::recip_portable).
     ///
     /// Rails are UNSPECIFIED at this tier (the current lowerings
     /// happen to return IEEE values on x86/NEON/WASM, but only
-    /// [`recip`](Self::recip) and up contract it).
+    /// [`Self::recip`](Self::recip) and up contract it).
     #[inline(always)]
     pub fn rcp_approx(self) -> Self {
         // Each backend owns its >=12-bit estimate (x86 raw rcpps; ARM
@@ -385,10 +408,10 @@ impl<T: F32x4Backend> f32x4<T> {
     }
 
     /// Fast reciprocal square root (1/sqrt(x)), ≥~12-bit floor — see
-    /// [`rcp_approx`](Self::rcp_approx) for the per-platform strategy.
+    /// [`Self::rcp_approx`](Self::rcp_approx) for the per-platform strategy.
     ///
     /// Rails are UNSPECIFIED at this tier (the scalar bit-hack in
-    /// particular returns garbage at `±0`); [`rsqrt`](Self::rsqrt)
+    /// particular returns garbage at `±0`); [`Self::rsqrt`](Self::rsqrt)
     /// and up contract them.
     #[inline(always)]
     pub fn rsqrt_approx(self) -> Self {
@@ -423,7 +446,7 @@ impl<T: F32x4Backend> f32x4<T> {
     // Hardware estimate instructions (`rsqrtps`, `vrsqrte`) are deliberately
     // NOT used here — their bits differ across vendors and generations. For
     // the faster, per-platform (non-deterministic) variants see
-    // [`rsqrt_approx`](Self::rsqrt_approx) / [`recip`](Self::recip).
+    // [`Self::rsqrt_approx`](Self::rsqrt_approx) / [`Self::recip`](Self::recip).
 
     /// Deterministic reciprocal-sqrt estimate (~8-bit), bit-identical on
     /// every platform.
@@ -460,7 +483,7 @@ impl<T: F32x4Backend> f32x4<T> {
     /// Precise reciprocal square root: exact IEEE sqrt + division —
     /// **the 0 ULP tier**, with IEEE rails (`rsqrt(+0) = +inf`,
     /// `rsqrt(+inf) = +0`, negatives give NaN) and bit-identical on
-    /// every arch. Costs ~3.6x the working-tier [`rsqrt`](Self::rsqrt)
+    /// every arch. Costs ~3.6x the working-tier [`Self::rsqrt`](Self::rsqrt)
     /// on Zen-class x86 (and is the faster form on Apple Silicon).
     #[inline(always)]
     pub fn rsqrt_portable(self) -> Self {
@@ -500,7 +523,7 @@ impl<T: F32x4Backend> f32x4<T> {
     /// saturating `exp_midp`, issue #64) and, because correctly-rounded
     /// division is uniquely defined, bit-identical on every arch — the
     /// portable property is free. Costs ~1.9x the working-tier
-    /// [`recip`](Self::recip) on Zen-class x86 (and is the FASTER form
+    /// [`Self::recip`](Self::recip) on Zen-class x86 (and is the FASTER form
     /// on Apple Silicon).
     #[inline(always)]
     pub fn recip_portable(self) -> Self {

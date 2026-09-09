@@ -253,6 +253,14 @@ impl F32x16Backend for archmage::X64V4Token {
     fn bitxor(self, a: __m512, b: __m512) -> __m512 {
         _mm512_xor_ps(a, b)
     }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn concat_shift<const N: i32>(self, lo: __m512, hi: __m512) -> __m512 {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        let a = _mm512_castps_si512(lo);
+        let b = _mm512_castps_si512(hi);
+        _mm512_castsi512_ps(_mm512_alignr_epi32::<N>(b, a))
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -460,6 +468,14 @@ impl F64x8Backend for archmage::X64V4Token {
     fn bitxor(self, a: __m512d, b: __m512d) -> __m512d {
         _mm512_xor_pd(a, b)
     }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn concat_shift<const N: i32>(self, lo: __m512d, hi: __m512d) -> __m512d {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let a = _mm512_castpd_si512(lo);
+        let b = _mm512_castpd_si512(hi);
+        _mm512_castsi512_pd(_mm512_alignr_epi64::<N>(b, a))
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -664,6 +680,170 @@ impl I8x64Backend for archmage::X64V4Token {
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn widen_high_i8_to_i16(self, a: __m512i) -> __m512i {
         _mm512_cvtepi8_epi16(_mm512_extracti64x4_epi64::<1>(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn concat_shift<const N: i32>(self, lo: __m512i, hi: __m512i) -> __m512i {
+        const { assert!(N >= 0 && N < 64, "concat_shift: N must be in 0..64") };
+        let a = lo;
+        let b = hi;
+        match N {
+            0 => a,
+            1 => _mm512_alignr_epi8::<1>(_mm512_alignr_epi32::<4>(b, a), a),
+            2 => _mm512_alignr_epi8::<2>(_mm512_alignr_epi32::<4>(b, a), a),
+            3 => _mm512_alignr_epi8::<3>(_mm512_alignr_epi32::<4>(b, a), a),
+            4 => _mm512_alignr_epi8::<4>(_mm512_alignr_epi32::<4>(b, a), a),
+            5 => _mm512_alignr_epi8::<5>(_mm512_alignr_epi32::<4>(b, a), a),
+            6 => _mm512_alignr_epi8::<6>(_mm512_alignr_epi32::<4>(b, a), a),
+            7 => _mm512_alignr_epi8::<7>(_mm512_alignr_epi32::<4>(b, a), a),
+            8 => _mm512_alignr_epi8::<8>(_mm512_alignr_epi32::<4>(b, a), a),
+            9 => _mm512_alignr_epi8::<9>(_mm512_alignr_epi32::<4>(b, a), a),
+            10 => _mm512_alignr_epi8::<10>(_mm512_alignr_epi32::<4>(b, a), a),
+            11 => _mm512_alignr_epi8::<11>(_mm512_alignr_epi32::<4>(b, a), a),
+            12 => _mm512_alignr_epi8::<12>(_mm512_alignr_epi32::<4>(b, a), a),
+            13 => _mm512_alignr_epi8::<13>(_mm512_alignr_epi32::<4>(b, a), a),
+            14 => _mm512_alignr_epi8::<14>(_mm512_alignr_epi32::<4>(b, a), a),
+            15 => _mm512_alignr_epi8::<15>(_mm512_alignr_epi32::<4>(b, a), a),
+            16 => _mm512_alignr_epi32::<4>(b, a),
+            17 => _mm512_alignr_epi8::<1>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            18 => _mm512_alignr_epi8::<2>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            19 => _mm512_alignr_epi8::<3>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            20 => _mm512_alignr_epi8::<4>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            21 => _mm512_alignr_epi8::<5>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            22 => _mm512_alignr_epi8::<6>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            23 => _mm512_alignr_epi8::<7>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            24 => _mm512_alignr_epi8::<8>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            25 => _mm512_alignr_epi8::<9>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            26 => _mm512_alignr_epi8::<10>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            27 => _mm512_alignr_epi8::<11>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            28 => _mm512_alignr_epi8::<12>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            29 => _mm512_alignr_epi8::<13>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            30 => _mm512_alignr_epi8::<14>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            31 => _mm512_alignr_epi8::<15>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            32 => _mm512_alignr_epi32::<8>(b, a),
+            33 => _mm512_alignr_epi8::<1>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            34 => _mm512_alignr_epi8::<2>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            35 => _mm512_alignr_epi8::<3>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            36 => _mm512_alignr_epi8::<4>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            37 => _mm512_alignr_epi8::<5>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            38 => _mm512_alignr_epi8::<6>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            39 => _mm512_alignr_epi8::<7>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            40 => _mm512_alignr_epi8::<8>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            41 => _mm512_alignr_epi8::<9>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            42 => _mm512_alignr_epi8::<10>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            43 => _mm512_alignr_epi8::<11>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            44 => _mm512_alignr_epi8::<12>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            45 => _mm512_alignr_epi8::<13>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            46 => _mm512_alignr_epi8::<14>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            47 => _mm512_alignr_epi8::<15>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            48 => _mm512_alignr_epi32::<12>(b, a),
+            49 => _mm512_alignr_epi8::<1>(b, _mm512_alignr_epi32::<12>(b, a)),
+            50 => _mm512_alignr_epi8::<2>(b, _mm512_alignr_epi32::<12>(b, a)),
+            51 => _mm512_alignr_epi8::<3>(b, _mm512_alignr_epi32::<12>(b, a)),
+            52 => _mm512_alignr_epi8::<4>(b, _mm512_alignr_epi32::<12>(b, a)),
+            53 => _mm512_alignr_epi8::<5>(b, _mm512_alignr_epi32::<12>(b, a)),
+            54 => _mm512_alignr_epi8::<6>(b, _mm512_alignr_epi32::<12>(b, a)),
+            55 => _mm512_alignr_epi8::<7>(b, _mm512_alignr_epi32::<12>(b, a)),
+            56 => _mm512_alignr_epi8::<8>(b, _mm512_alignr_epi32::<12>(b, a)),
+            57 => _mm512_alignr_epi8::<9>(b, _mm512_alignr_epi32::<12>(b, a)),
+            58 => _mm512_alignr_epi8::<10>(b, _mm512_alignr_epi32::<12>(b, a)),
+            59 => _mm512_alignr_epi8::<11>(b, _mm512_alignr_epi32::<12>(b, a)),
+            60 => _mm512_alignr_epi8::<12>(b, _mm512_alignr_epi32::<12>(b, a)),
+            61 => _mm512_alignr_epi8::<13>(b, _mm512_alignr_epi32::<12>(b, a)),
+            62 => _mm512_alignr_epi8::<14>(b, _mm512_alignr_epi32::<12>(b, a)),
+            63 => _mm512_alignr_epi8::<15>(b, _mm512_alignr_epi32::<12>(b, a)),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -892,6 +1072,170 @@ impl U8x64Backend for archmage::X64V4Token {
             _mm512_and_si512(a, _mm512_set1_epi16(255)),
             _mm512_srli_epi16::<8>(a),
         )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn concat_shift<const N: i32>(self, lo: __m512i, hi: __m512i) -> __m512i {
+        const { assert!(N >= 0 && N < 64, "concat_shift: N must be in 0..64") };
+        let a = lo;
+        let b = hi;
+        match N {
+            0 => a,
+            1 => _mm512_alignr_epi8::<1>(_mm512_alignr_epi32::<4>(b, a), a),
+            2 => _mm512_alignr_epi8::<2>(_mm512_alignr_epi32::<4>(b, a), a),
+            3 => _mm512_alignr_epi8::<3>(_mm512_alignr_epi32::<4>(b, a), a),
+            4 => _mm512_alignr_epi8::<4>(_mm512_alignr_epi32::<4>(b, a), a),
+            5 => _mm512_alignr_epi8::<5>(_mm512_alignr_epi32::<4>(b, a), a),
+            6 => _mm512_alignr_epi8::<6>(_mm512_alignr_epi32::<4>(b, a), a),
+            7 => _mm512_alignr_epi8::<7>(_mm512_alignr_epi32::<4>(b, a), a),
+            8 => _mm512_alignr_epi8::<8>(_mm512_alignr_epi32::<4>(b, a), a),
+            9 => _mm512_alignr_epi8::<9>(_mm512_alignr_epi32::<4>(b, a), a),
+            10 => _mm512_alignr_epi8::<10>(_mm512_alignr_epi32::<4>(b, a), a),
+            11 => _mm512_alignr_epi8::<11>(_mm512_alignr_epi32::<4>(b, a), a),
+            12 => _mm512_alignr_epi8::<12>(_mm512_alignr_epi32::<4>(b, a), a),
+            13 => _mm512_alignr_epi8::<13>(_mm512_alignr_epi32::<4>(b, a), a),
+            14 => _mm512_alignr_epi8::<14>(_mm512_alignr_epi32::<4>(b, a), a),
+            15 => _mm512_alignr_epi8::<15>(_mm512_alignr_epi32::<4>(b, a), a),
+            16 => _mm512_alignr_epi32::<4>(b, a),
+            17 => _mm512_alignr_epi8::<1>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            18 => _mm512_alignr_epi8::<2>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            19 => _mm512_alignr_epi8::<3>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            20 => _mm512_alignr_epi8::<4>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            21 => _mm512_alignr_epi8::<5>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            22 => _mm512_alignr_epi8::<6>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            23 => _mm512_alignr_epi8::<7>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            24 => _mm512_alignr_epi8::<8>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            25 => _mm512_alignr_epi8::<9>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            26 => _mm512_alignr_epi8::<10>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            27 => _mm512_alignr_epi8::<11>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            28 => _mm512_alignr_epi8::<12>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            29 => _mm512_alignr_epi8::<13>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            30 => _mm512_alignr_epi8::<14>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            31 => _mm512_alignr_epi8::<15>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            32 => _mm512_alignr_epi32::<8>(b, a),
+            33 => _mm512_alignr_epi8::<1>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            34 => _mm512_alignr_epi8::<2>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            35 => _mm512_alignr_epi8::<3>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            36 => _mm512_alignr_epi8::<4>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            37 => _mm512_alignr_epi8::<5>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            38 => _mm512_alignr_epi8::<6>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            39 => _mm512_alignr_epi8::<7>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            40 => _mm512_alignr_epi8::<8>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            41 => _mm512_alignr_epi8::<9>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            42 => _mm512_alignr_epi8::<10>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            43 => _mm512_alignr_epi8::<11>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            44 => _mm512_alignr_epi8::<12>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            45 => _mm512_alignr_epi8::<13>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            46 => _mm512_alignr_epi8::<14>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            47 => _mm512_alignr_epi8::<15>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            48 => _mm512_alignr_epi32::<12>(b, a),
+            49 => _mm512_alignr_epi8::<1>(b, _mm512_alignr_epi32::<12>(b, a)),
+            50 => _mm512_alignr_epi8::<2>(b, _mm512_alignr_epi32::<12>(b, a)),
+            51 => _mm512_alignr_epi8::<3>(b, _mm512_alignr_epi32::<12>(b, a)),
+            52 => _mm512_alignr_epi8::<4>(b, _mm512_alignr_epi32::<12>(b, a)),
+            53 => _mm512_alignr_epi8::<5>(b, _mm512_alignr_epi32::<12>(b, a)),
+            54 => _mm512_alignr_epi8::<6>(b, _mm512_alignr_epi32::<12>(b, a)),
+            55 => _mm512_alignr_epi8::<7>(b, _mm512_alignr_epi32::<12>(b, a)),
+            56 => _mm512_alignr_epi8::<8>(b, _mm512_alignr_epi32::<12>(b, a)),
+            57 => _mm512_alignr_epi8::<9>(b, _mm512_alignr_epi32::<12>(b, a)),
+            58 => _mm512_alignr_epi8::<10>(b, _mm512_alignr_epi32::<12>(b, a)),
+            59 => _mm512_alignr_epi8::<11>(b, _mm512_alignr_epi32::<12>(b, a)),
+            60 => _mm512_alignr_epi8::<12>(b, _mm512_alignr_epi32::<12>(b, a)),
+            61 => _mm512_alignr_epi8::<13>(b, _mm512_alignr_epi32::<12>(b, a)),
+            62 => _mm512_alignr_epi8::<14>(b, _mm512_alignr_epi32::<12>(b, a)),
+            63 => _mm512_alignr_epi8::<15>(b, _mm512_alignr_epi32::<12>(b, a)),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -1136,6 +1480,90 @@ impl I16x32Backend for archmage::X64V4Token {
     fn abs_diff(self, a: __m512i, b: __m512i) -> __m512i {
         _mm512_sub_epi16(_mm512_max_epi16(a, b), _mm512_min_epi16(a, b))
     }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn concat_shift<const N: i32>(self, lo: __m512i, hi: __m512i) -> __m512i {
+        const { assert!(N >= 0 && N < 32, "concat_shift: N must be in 0..32") };
+        let a = lo;
+        let b = hi;
+        match N {
+            0 => a,
+            1 => _mm512_alignr_epi8::<2>(_mm512_alignr_epi32::<4>(b, a), a),
+            2 => _mm512_alignr_epi8::<4>(_mm512_alignr_epi32::<4>(b, a), a),
+            3 => _mm512_alignr_epi8::<6>(_mm512_alignr_epi32::<4>(b, a), a),
+            4 => _mm512_alignr_epi8::<8>(_mm512_alignr_epi32::<4>(b, a), a),
+            5 => _mm512_alignr_epi8::<10>(_mm512_alignr_epi32::<4>(b, a), a),
+            6 => _mm512_alignr_epi8::<12>(_mm512_alignr_epi32::<4>(b, a), a),
+            7 => _mm512_alignr_epi8::<14>(_mm512_alignr_epi32::<4>(b, a), a),
+            8 => _mm512_alignr_epi32::<4>(b, a),
+            9 => _mm512_alignr_epi8::<2>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            10 => _mm512_alignr_epi8::<4>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            11 => _mm512_alignr_epi8::<6>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            12 => _mm512_alignr_epi8::<8>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            13 => _mm512_alignr_epi8::<10>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            14 => _mm512_alignr_epi8::<12>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            15 => _mm512_alignr_epi8::<14>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            16 => _mm512_alignr_epi32::<8>(b, a),
+            17 => _mm512_alignr_epi8::<2>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            18 => _mm512_alignr_epi8::<4>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            19 => _mm512_alignr_epi8::<6>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            20 => _mm512_alignr_epi8::<8>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            21 => _mm512_alignr_epi8::<10>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            22 => _mm512_alignr_epi8::<12>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            23 => _mm512_alignr_epi8::<14>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            24 => _mm512_alignr_epi32::<12>(b, a),
+            25 => _mm512_alignr_epi8::<2>(b, _mm512_alignr_epi32::<12>(b, a)),
+            26 => _mm512_alignr_epi8::<4>(b, _mm512_alignr_epi32::<12>(b, a)),
+            27 => _mm512_alignr_epi8::<6>(b, _mm512_alignr_epi32::<12>(b, a)),
+            28 => _mm512_alignr_epi8::<8>(b, _mm512_alignr_epi32::<12>(b, a)),
+            29 => _mm512_alignr_epi8::<10>(b, _mm512_alignr_epi32::<12>(b, a)),
+            30 => _mm512_alignr_epi8::<12>(b, _mm512_alignr_epi32::<12>(b, a)),
+            31 => _mm512_alignr_epi8::<14>(b, _mm512_alignr_epi32::<12>(b, a)),
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -1352,6 +1780,90 @@ impl U16x32Backend for archmage::X64V4Token {
             _mm512_srli_epi32::<16>(a),
         )
     }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn concat_shift<const N: i32>(self, lo: __m512i, hi: __m512i) -> __m512i {
+        const { assert!(N >= 0 && N < 32, "concat_shift: N must be in 0..32") };
+        let a = lo;
+        let b = hi;
+        match N {
+            0 => a,
+            1 => _mm512_alignr_epi8::<2>(_mm512_alignr_epi32::<4>(b, a), a),
+            2 => _mm512_alignr_epi8::<4>(_mm512_alignr_epi32::<4>(b, a), a),
+            3 => _mm512_alignr_epi8::<6>(_mm512_alignr_epi32::<4>(b, a), a),
+            4 => _mm512_alignr_epi8::<8>(_mm512_alignr_epi32::<4>(b, a), a),
+            5 => _mm512_alignr_epi8::<10>(_mm512_alignr_epi32::<4>(b, a), a),
+            6 => _mm512_alignr_epi8::<12>(_mm512_alignr_epi32::<4>(b, a), a),
+            7 => _mm512_alignr_epi8::<14>(_mm512_alignr_epi32::<4>(b, a), a),
+            8 => _mm512_alignr_epi32::<4>(b, a),
+            9 => _mm512_alignr_epi8::<2>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            10 => _mm512_alignr_epi8::<4>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            11 => _mm512_alignr_epi8::<6>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            12 => _mm512_alignr_epi8::<8>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            13 => _mm512_alignr_epi8::<10>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            14 => _mm512_alignr_epi8::<12>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            15 => _mm512_alignr_epi8::<14>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            16 => _mm512_alignr_epi32::<8>(b, a),
+            17 => _mm512_alignr_epi8::<2>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            18 => _mm512_alignr_epi8::<4>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            19 => _mm512_alignr_epi8::<6>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            20 => _mm512_alignr_epi8::<8>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            21 => _mm512_alignr_epi8::<10>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            22 => _mm512_alignr_epi8::<12>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            23 => _mm512_alignr_epi8::<14>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            24 => _mm512_alignr_epi32::<12>(b, a),
+            25 => _mm512_alignr_epi8::<2>(b, _mm512_alignr_epi32::<12>(b, a)),
+            26 => _mm512_alignr_epi8::<4>(b, _mm512_alignr_epi32::<12>(b, a)),
+            27 => _mm512_alignr_epi8::<6>(b, _mm512_alignr_epi32::<12>(b, a)),
+            28 => _mm512_alignr_epi8::<8>(b, _mm512_alignr_epi32::<12>(b, a)),
+            29 => _mm512_alignr_epi8::<10>(b, _mm512_alignr_epi32::<12>(b, a)),
+            30 => _mm512_alignr_epi8::<12>(b, _mm512_alignr_epi32::<12>(b, a)),
+            31 => _mm512_alignr_epi8::<14>(b, _mm512_alignr_epi32::<12>(b, a)),
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -1565,6 +2077,14 @@ impl I32x16Backend for archmage::X64V4Token {
             _mm512_cvtusepi32_epi16(_mm512_max_epi32(b, zero)),
         )
     }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn concat_shift<const N: i32>(self, lo: __m512i, hi: __m512i) -> __m512i {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        let a = lo;
+        let b = hi;
+        _mm512_alignr_epi32::<N>(b, a)
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -1754,6 +2274,14 @@ impl U32x16Backend for archmage::X64V4Token {
             zero,
         ) as u64
     }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn concat_shift<const N: i32>(self, lo: __m512i, hi: __m512i) -> __m512i {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        let a = lo;
+        let b = hi;
+        _mm512_alignr_epi32::<N>(b, a)
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -1928,6 +2456,14 @@ impl I64x8Backend for archmage::X64V4Token {
             zero,
         ) as u64
     }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn concat_shift<const N: i32>(self, lo: __m512i, hi: __m512i) -> __m512i {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let a = lo;
+        let b = hi;
+        _mm512_alignr_epi64::<N>(b, a)
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -2096,6 +2632,14 @@ impl U64x8Backend for archmage::X64V4Token {
             _mm512_and_si512(a, _mm512_set1_epi64(1_i64 << (64 - 1))),
             zero,
         ) as u64
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn concat_shift<const N: i32>(self, lo: __m512i, hi: __m512i) -> __m512i {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let a = lo;
+        let b = hi;
+        _mm512_alignr_epi64::<N>(b, a)
     }
 }
 
@@ -2325,6 +2869,14 @@ impl F32x16Backend for archmage::X64V4xToken {
     fn bitxor(self, a: __m512, b: __m512) -> __m512 {
         _mm512_xor_ps(a, b)
     }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn concat_shift<const N: i32>(self, lo: __m512, hi: __m512) -> __m512 {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        let a = _mm512_castps_si512(lo);
+        let b = _mm512_castps_si512(hi);
+        _mm512_castsi512_ps(_mm512_alignr_epi32::<N>(b, a))
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -2532,6 +3084,14 @@ impl F64x8Backend for archmage::X64V4xToken {
     fn bitxor(self, a: __m512d, b: __m512d) -> __m512d {
         _mm512_xor_pd(a, b)
     }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn concat_shift<const N: i32>(self, lo: __m512d, hi: __m512d) -> __m512d {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let a = _mm512_castpd_si512(lo);
+        let b = _mm512_castpd_si512(hi);
+        _mm512_castsi512_pd(_mm512_alignr_epi64::<N>(b, a))
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -2736,6 +3296,170 @@ impl I8x64Backend for archmage::X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn widen_high_i8_to_i16(self, a: __m512i) -> __m512i {
         _mm512_cvtepi8_epi16(_mm512_extracti64x4_epi64::<1>(a))
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn concat_shift<const N: i32>(self, lo: __m512i, hi: __m512i) -> __m512i {
+        const { assert!(N >= 0 && N < 64, "concat_shift: N must be in 0..64") };
+        let a = lo;
+        let b = hi;
+        match N {
+            0 => a,
+            1 => _mm512_alignr_epi8::<1>(_mm512_alignr_epi32::<4>(b, a), a),
+            2 => _mm512_alignr_epi8::<2>(_mm512_alignr_epi32::<4>(b, a), a),
+            3 => _mm512_alignr_epi8::<3>(_mm512_alignr_epi32::<4>(b, a), a),
+            4 => _mm512_alignr_epi8::<4>(_mm512_alignr_epi32::<4>(b, a), a),
+            5 => _mm512_alignr_epi8::<5>(_mm512_alignr_epi32::<4>(b, a), a),
+            6 => _mm512_alignr_epi8::<6>(_mm512_alignr_epi32::<4>(b, a), a),
+            7 => _mm512_alignr_epi8::<7>(_mm512_alignr_epi32::<4>(b, a), a),
+            8 => _mm512_alignr_epi8::<8>(_mm512_alignr_epi32::<4>(b, a), a),
+            9 => _mm512_alignr_epi8::<9>(_mm512_alignr_epi32::<4>(b, a), a),
+            10 => _mm512_alignr_epi8::<10>(_mm512_alignr_epi32::<4>(b, a), a),
+            11 => _mm512_alignr_epi8::<11>(_mm512_alignr_epi32::<4>(b, a), a),
+            12 => _mm512_alignr_epi8::<12>(_mm512_alignr_epi32::<4>(b, a), a),
+            13 => _mm512_alignr_epi8::<13>(_mm512_alignr_epi32::<4>(b, a), a),
+            14 => _mm512_alignr_epi8::<14>(_mm512_alignr_epi32::<4>(b, a), a),
+            15 => _mm512_alignr_epi8::<15>(_mm512_alignr_epi32::<4>(b, a), a),
+            16 => _mm512_alignr_epi32::<4>(b, a),
+            17 => _mm512_alignr_epi8::<1>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            18 => _mm512_alignr_epi8::<2>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            19 => _mm512_alignr_epi8::<3>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            20 => _mm512_alignr_epi8::<4>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            21 => _mm512_alignr_epi8::<5>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            22 => _mm512_alignr_epi8::<6>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            23 => _mm512_alignr_epi8::<7>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            24 => _mm512_alignr_epi8::<8>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            25 => _mm512_alignr_epi8::<9>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            26 => _mm512_alignr_epi8::<10>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            27 => _mm512_alignr_epi8::<11>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            28 => _mm512_alignr_epi8::<12>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            29 => _mm512_alignr_epi8::<13>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            30 => _mm512_alignr_epi8::<14>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            31 => _mm512_alignr_epi8::<15>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            32 => _mm512_alignr_epi32::<8>(b, a),
+            33 => _mm512_alignr_epi8::<1>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            34 => _mm512_alignr_epi8::<2>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            35 => _mm512_alignr_epi8::<3>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            36 => _mm512_alignr_epi8::<4>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            37 => _mm512_alignr_epi8::<5>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            38 => _mm512_alignr_epi8::<6>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            39 => _mm512_alignr_epi8::<7>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            40 => _mm512_alignr_epi8::<8>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            41 => _mm512_alignr_epi8::<9>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            42 => _mm512_alignr_epi8::<10>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            43 => _mm512_alignr_epi8::<11>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            44 => _mm512_alignr_epi8::<12>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            45 => _mm512_alignr_epi8::<13>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            46 => _mm512_alignr_epi8::<14>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            47 => _mm512_alignr_epi8::<15>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            48 => _mm512_alignr_epi32::<12>(b, a),
+            49 => _mm512_alignr_epi8::<1>(b, _mm512_alignr_epi32::<12>(b, a)),
+            50 => _mm512_alignr_epi8::<2>(b, _mm512_alignr_epi32::<12>(b, a)),
+            51 => _mm512_alignr_epi8::<3>(b, _mm512_alignr_epi32::<12>(b, a)),
+            52 => _mm512_alignr_epi8::<4>(b, _mm512_alignr_epi32::<12>(b, a)),
+            53 => _mm512_alignr_epi8::<5>(b, _mm512_alignr_epi32::<12>(b, a)),
+            54 => _mm512_alignr_epi8::<6>(b, _mm512_alignr_epi32::<12>(b, a)),
+            55 => _mm512_alignr_epi8::<7>(b, _mm512_alignr_epi32::<12>(b, a)),
+            56 => _mm512_alignr_epi8::<8>(b, _mm512_alignr_epi32::<12>(b, a)),
+            57 => _mm512_alignr_epi8::<9>(b, _mm512_alignr_epi32::<12>(b, a)),
+            58 => _mm512_alignr_epi8::<10>(b, _mm512_alignr_epi32::<12>(b, a)),
+            59 => _mm512_alignr_epi8::<11>(b, _mm512_alignr_epi32::<12>(b, a)),
+            60 => _mm512_alignr_epi8::<12>(b, _mm512_alignr_epi32::<12>(b, a)),
+            61 => _mm512_alignr_epi8::<13>(b, _mm512_alignr_epi32::<12>(b, a)),
+            62 => _mm512_alignr_epi8::<14>(b, _mm512_alignr_epi32::<12>(b, a)),
+            63 => _mm512_alignr_epi8::<15>(b, _mm512_alignr_epi32::<12>(b, a)),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -2964,6 +3688,170 @@ impl U8x64Backend for archmage::X64V4xToken {
             _mm512_and_si512(a, _mm512_set1_epi16(255)),
             _mm512_srli_epi16::<8>(a),
         )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn concat_shift<const N: i32>(self, lo: __m512i, hi: __m512i) -> __m512i {
+        const { assert!(N >= 0 && N < 64, "concat_shift: N must be in 0..64") };
+        let a = lo;
+        let b = hi;
+        match N {
+            0 => a,
+            1 => _mm512_alignr_epi8::<1>(_mm512_alignr_epi32::<4>(b, a), a),
+            2 => _mm512_alignr_epi8::<2>(_mm512_alignr_epi32::<4>(b, a), a),
+            3 => _mm512_alignr_epi8::<3>(_mm512_alignr_epi32::<4>(b, a), a),
+            4 => _mm512_alignr_epi8::<4>(_mm512_alignr_epi32::<4>(b, a), a),
+            5 => _mm512_alignr_epi8::<5>(_mm512_alignr_epi32::<4>(b, a), a),
+            6 => _mm512_alignr_epi8::<6>(_mm512_alignr_epi32::<4>(b, a), a),
+            7 => _mm512_alignr_epi8::<7>(_mm512_alignr_epi32::<4>(b, a), a),
+            8 => _mm512_alignr_epi8::<8>(_mm512_alignr_epi32::<4>(b, a), a),
+            9 => _mm512_alignr_epi8::<9>(_mm512_alignr_epi32::<4>(b, a), a),
+            10 => _mm512_alignr_epi8::<10>(_mm512_alignr_epi32::<4>(b, a), a),
+            11 => _mm512_alignr_epi8::<11>(_mm512_alignr_epi32::<4>(b, a), a),
+            12 => _mm512_alignr_epi8::<12>(_mm512_alignr_epi32::<4>(b, a), a),
+            13 => _mm512_alignr_epi8::<13>(_mm512_alignr_epi32::<4>(b, a), a),
+            14 => _mm512_alignr_epi8::<14>(_mm512_alignr_epi32::<4>(b, a), a),
+            15 => _mm512_alignr_epi8::<15>(_mm512_alignr_epi32::<4>(b, a), a),
+            16 => _mm512_alignr_epi32::<4>(b, a),
+            17 => _mm512_alignr_epi8::<1>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            18 => _mm512_alignr_epi8::<2>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            19 => _mm512_alignr_epi8::<3>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            20 => _mm512_alignr_epi8::<4>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            21 => _mm512_alignr_epi8::<5>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            22 => _mm512_alignr_epi8::<6>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            23 => _mm512_alignr_epi8::<7>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            24 => _mm512_alignr_epi8::<8>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            25 => _mm512_alignr_epi8::<9>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            26 => _mm512_alignr_epi8::<10>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            27 => _mm512_alignr_epi8::<11>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            28 => _mm512_alignr_epi8::<12>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            29 => _mm512_alignr_epi8::<13>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            30 => _mm512_alignr_epi8::<14>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            31 => _mm512_alignr_epi8::<15>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            32 => _mm512_alignr_epi32::<8>(b, a),
+            33 => _mm512_alignr_epi8::<1>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            34 => _mm512_alignr_epi8::<2>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            35 => _mm512_alignr_epi8::<3>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            36 => _mm512_alignr_epi8::<4>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            37 => _mm512_alignr_epi8::<5>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            38 => _mm512_alignr_epi8::<6>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            39 => _mm512_alignr_epi8::<7>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            40 => _mm512_alignr_epi8::<8>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            41 => _mm512_alignr_epi8::<9>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            42 => _mm512_alignr_epi8::<10>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            43 => _mm512_alignr_epi8::<11>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            44 => _mm512_alignr_epi8::<12>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            45 => _mm512_alignr_epi8::<13>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            46 => _mm512_alignr_epi8::<14>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            47 => _mm512_alignr_epi8::<15>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            48 => _mm512_alignr_epi32::<12>(b, a),
+            49 => _mm512_alignr_epi8::<1>(b, _mm512_alignr_epi32::<12>(b, a)),
+            50 => _mm512_alignr_epi8::<2>(b, _mm512_alignr_epi32::<12>(b, a)),
+            51 => _mm512_alignr_epi8::<3>(b, _mm512_alignr_epi32::<12>(b, a)),
+            52 => _mm512_alignr_epi8::<4>(b, _mm512_alignr_epi32::<12>(b, a)),
+            53 => _mm512_alignr_epi8::<5>(b, _mm512_alignr_epi32::<12>(b, a)),
+            54 => _mm512_alignr_epi8::<6>(b, _mm512_alignr_epi32::<12>(b, a)),
+            55 => _mm512_alignr_epi8::<7>(b, _mm512_alignr_epi32::<12>(b, a)),
+            56 => _mm512_alignr_epi8::<8>(b, _mm512_alignr_epi32::<12>(b, a)),
+            57 => _mm512_alignr_epi8::<9>(b, _mm512_alignr_epi32::<12>(b, a)),
+            58 => _mm512_alignr_epi8::<10>(b, _mm512_alignr_epi32::<12>(b, a)),
+            59 => _mm512_alignr_epi8::<11>(b, _mm512_alignr_epi32::<12>(b, a)),
+            60 => _mm512_alignr_epi8::<12>(b, _mm512_alignr_epi32::<12>(b, a)),
+            61 => _mm512_alignr_epi8::<13>(b, _mm512_alignr_epi32::<12>(b, a)),
+            62 => _mm512_alignr_epi8::<14>(b, _mm512_alignr_epi32::<12>(b, a)),
+            63 => _mm512_alignr_epi8::<15>(b, _mm512_alignr_epi32::<12>(b, a)),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -3208,6 +4096,90 @@ impl I16x32Backend for archmage::X64V4xToken {
     fn abs_diff(self, a: __m512i, b: __m512i) -> __m512i {
         _mm512_sub_epi16(_mm512_max_epi16(a, b), _mm512_min_epi16(a, b))
     }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn concat_shift<const N: i32>(self, lo: __m512i, hi: __m512i) -> __m512i {
+        const { assert!(N >= 0 && N < 32, "concat_shift: N must be in 0..32") };
+        let a = lo;
+        let b = hi;
+        match N {
+            0 => a,
+            1 => _mm512_alignr_epi8::<2>(_mm512_alignr_epi32::<4>(b, a), a),
+            2 => _mm512_alignr_epi8::<4>(_mm512_alignr_epi32::<4>(b, a), a),
+            3 => _mm512_alignr_epi8::<6>(_mm512_alignr_epi32::<4>(b, a), a),
+            4 => _mm512_alignr_epi8::<8>(_mm512_alignr_epi32::<4>(b, a), a),
+            5 => _mm512_alignr_epi8::<10>(_mm512_alignr_epi32::<4>(b, a), a),
+            6 => _mm512_alignr_epi8::<12>(_mm512_alignr_epi32::<4>(b, a), a),
+            7 => _mm512_alignr_epi8::<14>(_mm512_alignr_epi32::<4>(b, a), a),
+            8 => _mm512_alignr_epi32::<4>(b, a),
+            9 => _mm512_alignr_epi8::<2>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            10 => _mm512_alignr_epi8::<4>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            11 => _mm512_alignr_epi8::<6>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            12 => _mm512_alignr_epi8::<8>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            13 => _mm512_alignr_epi8::<10>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            14 => _mm512_alignr_epi8::<12>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            15 => _mm512_alignr_epi8::<14>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            16 => _mm512_alignr_epi32::<8>(b, a),
+            17 => _mm512_alignr_epi8::<2>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            18 => _mm512_alignr_epi8::<4>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            19 => _mm512_alignr_epi8::<6>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            20 => _mm512_alignr_epi8::<8>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            21 => _mm512_alignr_epi8::<10>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            22 => _mm512_alignr_epi8::<12>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            23 => _mm512_alignr_epi8::<14>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            24 => _mm512_alignr_epi32::<12>(b, a),
+            25 => _mm512_alignr_epi8::<2>(b, _mm512_alignr_epi32::<12>(b, a)),
+            26 => _mm512_alignr_epi8::<4>(b, _mm512_alignr_epi32::<12>(b, a)),
+            27 => _mm512_alignr_epi8::<6>(b, _mm512_alignr_epi32::<12>(b, a)),
+            28 => _mm512_alignr_epi8::<8>(b, _mm512_alignr_epi32::<12>(b, a)),
+            29 => _mm512_alignr_epi8::<10>(b, _mm512_alignr_epi32::<12>(b, a)),
+            30 => _mm512_alignr_epi8::<12>(b, _mm512_alignr_epi32::<12>(b, a)),
+            31 => _mm512_alignr_epi8::<14>(b, _mm512_alignr_epi32::<12>(b, a)),
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -3424,6 +4396,90 @@ impl U16x32Backend for archmage::X64V4xToken {
             _mm512_srli_epi32::<16>(a),
         )
     }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn concat_shift<const N: i32>(self, lo: __m512i, hi: __m512i) -> __m512i {
+        const { assert!(N >= 0 && N < 32, "concat_shift: N must be in 0..32") };
+        let a = lo;
+        let b = hi;
+        match N {
+            0 => a,
+            1 => _mm512_alignr_epi8::<2>(_mm512_alignr_epi32::<4>(b, a), a),
+            2 => _mm512_alignr_epi8::<4>(_mm512_alignr_epi32::<4>(b, a), a),
+            3 => _mm512_alignr_epi8::<6>(_mm512_alignr_epi32::<4>(b, a), a),
+            4 => _mm512_alignr_epi8::<8>(_mm512_alignr_epi32::<4>(b, a), a),
+            5 => _mm512_alignr_epi8::<10>(_mm512_alignr_epi32::<4>(b, a), a),
+            6 => _mm512_alignr_epi8::<12>(_mm512_alignr_epi32::<4>(b, a), a),
+            7 => _mm512_alignr_epi8::<14>(_mm512_alignr_epi32::<4>(b, a), a),
+            8 => _mm512_alignr_epi32::<4>(b, a),
+            9 => _mm512_alignr_epi8::<2>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            10 => _mm512_alignr_epi8::<4>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            11 => _mm512_alignr_epi8::<6>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            12 => _mm512_alignr_epi8::<8>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            13 => _mm512_alignr_epi8::<10>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            14 => _mm512_alignr_epi8::<12>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            15 => _mm512_alignr_epi8::<14>(
+                _mm512_alignr_epi32::<8>(b, a),
+                _mm512_alignr_epi32::<4>(b, a),
+            ),
+            16 => _mm512_alignr_epi32::<8>(b, a),
+            17 => _mm512_alignr_epi8::<2>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            18 => _mm512_alignr_epi8::<4>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            19 => _mm512_alignr_epi8::<6>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            20 => _mm512_alignr_epi8::<8>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            21 => _mm512_alignr_epi8::<10>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            22 => _mm512_alignr_epi8::<12>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            23 => _mm512_alignr_epi8::<14>(
+                _mm512_alignr_epi32::<12>(b, a),
+                _mm512_alignr_epi32::<8>(b, a),
+            ),
+            24 => _mm512_alignr_epi32::<12>(b, a),
+            25 => _mm512_alignr_epi8::<2>(b, _mm512_alignr_epi32::<12>(b, a)),
+            26 => _mm512_alignr_epi8::<4>(b, _mm512_alignr_epi32::<12>(b, a)),
+            27 => _mm512_alignr_epi8::<6>(b, _mm512_alignr_epi32::<12>(b, a)),
+            28 => _mm512_alignr_epi8::<8>(b, _mm512_alignr_epi32::<12>(b, a)),
+            29 => _mm512_alignr_epi8::<10>(b, _mm512_alignr_epi32::<12>(b, a)),
+            30 => _mm512_alignr_epi8::<12>(b, _mm512_alignr_epi32::<12>(b, a)),
+            31 => _mm512_alignr_epi8::<14>(b, _mm512_alignr_epi32::<12>(b, a)),
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -3637,6 +4693,14 @@ impl I32x16Backend for archmage::X64V4xToken {
             _mm512_cvtusepi32_epi16(_mm512_max_epi32(b, zero)),
         )
     }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn concat_shift<const N: i32>(self, lo: __m512i, hi: __m512i) -> __m512i {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        let a = lo;
+        let b = hi;
+        _mm512_alignr_epi32::<N>(b, a)
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -3826,6 +4890,14 @@ impl U32x16Backend for archmage::X64V4xToken {
             zero,
         ) as u64
     }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn concat_shift<const N: i32>(self, lo: __m512i, hi: __m512i) -> __m512i {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        let a = lo;
+        let b = hi;
+        _mm512_alignr_epi32::<N>(b, a)
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -4000,6 +5072,14 @@ impl I64x8Backend for archmage::X64V4xToken {
             zero,
         ) as u64
     }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn concat_shift<const N: i32>(self, lo: __m512i, hi: __m512i) -> __m512i {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let a = lo;
+        let b = hi;
+        _mm512_alignr_epi64::<N>(b, a)
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -4168,6 +5248,14 @@ impl U64x8Backend for archmage::X64V4xToken {
             _mm512_and_si512(a, _mm512_set1_epi64(1_i64 << (64 - 1))),
             zero,
         ) as u64
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn concat_shift<const N: i32>(self, lo: __m512i, hi: __m512i) -> __m512i {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let a = lo;
+        let b = hi;
+        _mm512_alignr_epi64::<N>(b, a)
     }
 }
 

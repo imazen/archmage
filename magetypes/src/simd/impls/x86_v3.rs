@@ -311,6 +311,20 @@ impl F32x4Backend for archmage::X64V3Token {
         let shuf = _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
         crate::simd_storage::cast(_mm_shuffle_epi8(packed, shuf))
     }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn concat_shift<const N: i32>(self, lo: __m128, hi: __m128) -> __m128 {
+        const { assert!(N >= 0 && N < 4, "concat_shift: N must be in 0..4") };
+        let a = _mm_castps_si128(lo);
+        let b = _mm_castps_si128(hi);
+        _mm_castsi128_ps(match N {
+            0 => a,
+            1 => _mm_alignr_epi8::<4>(b, a),
+            2 => _mm_alignr_epi8::<8>(b, a),
+            3 => _mm_alignr_epi8::<12>(b, a),
+            _ => unreachable!(),
+        })
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -629,6 +643,29 @@ impl F32x8Backend for archmage::X64V3Token {
             _mm256_permute2f128_ps::<0x31>(s3, s7),
         ]
     }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn concat_shift<const N: i32>(self, lo: __m256, hi: __m256) -> __m256 {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        // `vpalignr` works within each 128-bit lane, so the operand for the
+        // upper lane must already hold the next 128 bits: build
+        // [lo.hi128, hi.lo128] and align against that.
+        let cross = _mm256_permute2f128_ps::<0x21>(lo, hi);
+        let a = _mm256_castps_si256(lo);
+        let b = _mm256_castps_si256(hi);
+        let c = _mm256_castps_si256(cross);
+        _mm256_castsi256_ps(match N {
+            0 => a,
+            1 => _mm256_alignr_epi8::<4>(c, a),
+            2 => _mm256_alignr_epi8::<8>(c, a),
+            3 => _mm256_alignr_epi8::<12>(c, a),
+            4 => c,
+            5 => _mm256_alignr_epi8::<4>(b, c),
+            6 => _mm256_alignr_epi8::<8>(b, c),
+            7 => _mm256_alignr_epi8::<12>(b, c),
+            _ => unreachable!(),
+        })
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -862,6 +899,18 @@ impl F64x2Backend for archmage::X64V3Token {
     fn bitxor(self, a: __m128d, b: __m128d) -> __m128d {
         _mm_xor_pd(a, b)
     }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn concat_shift<const N: i32>(self, lo: __m128d, hi: __m128d) -> __m128d {
+        const { assert!(N >= 0 && N < 2, "concat_shift: N must be in 0..2") };
+        let a = _mm_castpd_si128(lo);
+        let b = _mm_castpd_si128(hi);
+        _mm_castsi128_pd(match N {
+            0 => a,
+            1 => _mm_alignr_epi8::<8>(b, a),
+            _ => unreachable!(),
+        })
     }
 }
 
@@ -1099,6 +1148,25 @@ impl F64x4Backend for archmage::X64V3Token {
     fn bitxor(self, a: __m256d, b: __m256d) -> __m256d {
         _mm256_xor_pd(a, b)
     }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn concat_shift<const N: i32>(self, lo: __m256d, hi: __m256d) -> __m256d {
+        const { assert!(N >= 0 && N < 4, "concat_shift: N must be in 0..4") };
+        // `vpalignr` works within each 128-bit lane, so the operand for the
+        // upper lane must already hold the next 128 bits: build
+        // [lo.hi128, hi.lo128] and align against that.
+        let cross = _mm256_permute2f128_pd::<0x21>(lo, hi);
+        let a = _mm256_castpd_si256(lo);
+        let b = _mm256_castpd_si256(hi);
+        let c = _mm256_castpd_si256(cross);
+        _mm256_castsi256_pd(match N {
+            0 => a,
+            1 => _mm256_alignr_epi8::<8>(c, a),
+            2 => c,
+            3 => _mm256_alignr_epi8::<8>(b, c),
+            _ => unreachable!(),
+        })
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -1320,6 +1388,20 @@ impl I32x4Backend for archmage::X64V3Token {
     fn narrow_saturating_i32_to_u16(self, a: __m128i, b: __m128i) -> __m128i {
         _mm_packus_epi32(a, b)
     }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn concat_shift<const N: i32>(self, lo: __m128i, hi: __m128i) -> __m128i {
+        const { assert!(N >= 0 && N < 4, "concat_shift: N must be in 0..4") };
+        let a = lo;
+        let b = hi;
+        match N {
+            0 => a,
+            1 => _mm_alignr_epi8::<4>(b, a),
+            2 => _mm_alignr_epi8::<8>(b, a),
+            3 => _mm_alignr_epi8::<12>(b, a),
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -1538,6 +1620,29 @@ impl I32x8Backend for archmage::X64V3Token {
     fn narrow_saturating_i32_to_u16(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi32(a, b))
     }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn concat_shift<const N: i32>(self, lo: __m256i, hi: __m256i) -> __m256i {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        // `vpalignr` works within each 128-bit lane, so the operand for the
+        // upper lane must already hold the next 128 bits: build
+        // [lo.hi128, hi.lo128] and align against that.
+        let cross = _mm256_permute2x128_si256::<0x21>(lo, hi);
+        let a = lo;
+        let b = hi;
+        let c = cross;
+        match N {
+            0 => a,
+            1 => _mm256_alignr_epi8::<4>(c, a),
+            2 => _mm256_alignr_epi8::<8>(c, a),
+            3 => _mm256_alignr_epi8::<12>(c, a),
+            4 => c,
+            5 => _mm256_alignr_epi8::<4>(b, c),
+            6 => _mm256_alignr_epi8::<8>(b, c),
+            7 => _mm256_alignr_epi8::<12>(b, c),
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -1736,6 +1841,20 @@ impl U32x4Backend for archmage::X64V3Token {
     fn bitmask(self, a: __m128i) -> u32 {
         _mm_movemask_ps(_mm_castsi128_ps(a)) as u32
     }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn concat_shift<const N: i32>(self, lo: __m128i, hi: __m128i) -> __m128i {
+        const { assert!(N >= 0 && N < 4, "concat_shift: N must be in 0..4") };
+        let a = lo;
+        let b = hi;
+        match N {
+            0 => a,
+            1 => _mm_alignr_epi8::<4>(b, a),
+            2 => _mm_alignr_epi8::<8>(b, a),
+            3 => _mm_alignr_epi8::<12>(b, a),
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -1930,6 +2049,29 @@ impl U32x8Backend for archmage::X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitmask(self, a: __m256i) -> u32 {
         _mm256_movemask_ps(_mm256_castsi256_ps(a)) as u32
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn concat_shift<const N: i32>(self, lo: __m256i, hi: __m256i) -> __m256i {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        // `vpalignr` works within each 128-bit lane, so the operand for the
+        // upper lane must already hold the next 128 bits: build
+        // [lo.hi128, hi.lo128] and align against that.
+        let cross = _mm256_permute2x128_si256::<0x21>(lo, hi);
+        let a = lo;
+        let b = hi;
+        let c = cross;
+        match N {
+            0 => a,
+            1 => _mm256_alignr_epi8::<4>(c, a),
+            2 => _mm256_alignr_epi8::<8>(c, a),
+            3 => _mm256_alignr_epi8::<12>(c, a),
+            4 => c,
+            5 => _mm256_alignr_epi8::<4>(b, c),
+            6 => _mm256_alignr_epi8::<8>(b, c),
+            7 => _mm256_alignr_epi8::<12>(b, c),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -2140,6 +2282,18 @@ impl I64x2Backend for archmage::X64V3Token {
     fn bitmask(self, a: __m128i) -> u32 {
         _mm_movemask_pd(_mm_castsi128_pd(a)) as u32
     }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn concat_shift<const N: i32>(self, lo: __m128i, hi: __m128i) -> __m128i {
+        const { assert!(N >= 0 && N < 2, "concat_shift: N must be in 0..2") };
+        let a = lo;
+        let b = hi;
+        match N {
+            0 => a,
+            1 => _mm_alignr_epi8::<8>(b, a),
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2344,6 +2498,25 @@ impl I64x4Backend for archmage::X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitmask(self, a: __m256i) -> u32 {
         _mm256_movemask_pd(_mm256_castsi256_pd(a)) as u32
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn concat_shift<const N: i32>(self, lo: __m256i, hi: __m256i) -> __m256i {
+        const { assert!(N >= 0 && N < 4, "concat_shift: N must be in 0..4") };
+        // `vpalignr` works within each 128-bit lane, so the operand for the
+        // upper lane must already hold the next 128 bits: build
+        // [lo.hi128, hi.lo128] and align against that.
+        let cross = _mm256_permute2x128_si256::<0x21>(lo, hi);
+        let a = lo;
+        let b = hi;
+        let c = cross;
+        match N {
+            0 => a,
+            1 => _mm256_alignr_epi8::<8>(c, a),
+            2 => c,
+            3 => _mm256_alignr_epi8::<8>(b, c),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -2559,6 +2732,32 @@ impl I8x16Backend for archmage::X64V3Token {
     fn widen_high_i8_to_i16(self, a: __m128i) -> __m128i {
         _mm_cvtepi8_epi16(_mm_srli_si128::<8>(a))
     }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn concat_shift<const N: i32>(self, lo: __m128i, hi: __m128i) -> __m128i {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        let a = lo;
+        let b = hi;
+        match N {
+            0 => a,
+            1 => _mm_alignr_epi8::<1>(b, a),
+            2 => _mm_alignr_epi8::<2>(b, a),
+            3 => _mm_alignr_epi8::<3>(b, a),
+            4 => _mm_alignr_epi8::<4>(b, a),
+            5 => _mm_alignr_epi8::<5>(b, a),
+            6 => _mm_alignr_epi8::<6>(b, a),
+            7 => _mm_alignr_epi8::<7>(b, a),
+            8 => _mm_alignr_epi8::<8>(b, a),
+            9 => _mm_alignr_epi8::<9>(b, a),
+            10 => _mm_alignr_epi8::<10>(b, a),
+            11 => _mm_alignr_epi8::<11>(b, a),
+            12 => _mm_alignr_epi8::<12>(b, a),
+            13 => _mm_alignr_epi8::<13>(b, a),
+            14 => _mm_alignr_epi8::<14>(b, a),
+            15 => _mm_alignr_epi8::<15>(b, a),
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2768,6 +2967,53 @@ impl I8x32Backend for archmage::X64V3Token {
     fn widen_high_i8_to_i16(self, a: __m256i) -> __m256i {
         _mm256_cvtepi8_epi16(_mm256_extracti128_si256::<1>(a))
     }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn concat_shift<const N: i32>(self, lo: __m256i, hi: __m256i) -> __m256i {
+        const { assert!(N >= 0 && N < 32, "concat_shift: N must be in 0..32") };
+        // `vpalignr` works within each 128-bit lane, so the operand for the
+        // upper lane must already hold the next 128 bits: build
+        // [lo.hi128, hi.lo128] and align against that.
+        let cross = _mm256_permute2x128_si256::<0x21>(lo, hi);
+        let a = lo;
+        let b = hi;
+        let c = cross;
+        match N {
+            0 => a,
+            1 => _mm256_alignr_epi8::<1>(c, a),
+            2 => _mm256_alignr_epi8::<2>(c, a),
+            3 => _mm256_alignr_epi8::<3>(c, a),
+            4 => _mm256_alignr_epi8::<4>(c, a),
+            5 => _mm256_alignr_epi8::<5>(c, a),
+            6 => _mm256_alignr_epi8::<6>(c, a),
+            7 => _mm256_alignr_epi8::<7>(c, a),
+            8 => _mm256_alignr_epi8::<8>(c, a),
+            9 => _mm256_alignr_epi8::<9>(c, a),
+            10 => _mm256_alignr_epi8::<10>(c, a),
+            11 => _mm256_alignr_epi8::<11>(c, a),
+            12 => _mm256_alignr_epi8::<12>(c, a),
+            13 => _mm256_alignr_epi8::<13>(c, a),
+            14 => _mm256_alignr_epi8::<14>(c, a),
+            15 => _mm256_alignr_epi8::<15>(c, a),
+            16 => c,
+            17 => _mm256_alignr_epi8::<1>(b, c),
+            18 => _mm256_alignr_epi8::<2>(b, c),
+            19 => _mm256_alignr_epi8::<3>(b, c),
+            20 => _mm256_alignr_epi8::<4>(b, c),
+            21 => _mm256_alignr_epi8::<5>(b, c),
+            22 => _mm256_alignr_epi8::<6>(b, c),
+            23 => _mm256_alignr_epi8::<7>(b, c),
+            24 => _mm256_alignr_epi8::<8>(b, c),
+            25 => _mm256_alignr_epi8::<9>(b, c),
+            26 => _mm256_alignr_epi8::<10>(b, c),
+            27 => _mm256_alignr_epi8::<11>(b, c),
+            28 => _mm256_alignr_epi8::<12>(b, c),
+            29 => _mm256_alignr_epi8::<13>(b, c),
+            30 => _mm256_alignr_epi8::<14>(b, c),
+            31 => _mm256_alignr_epi8::<15>(b, c),
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -2975,6 +3221,32 @@ impl U8x16Backend for archmage::X64V3Token {
     }
     sse2_baseline! {
     fn pairwise_widen_add(self, a: __m128i) -> __m128i { _mm_add_epi16(_mm_and_si128(a, _mm_set1_epi16(255)), _mm_srli_epi16::<8>(a)) }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn concat_shift<const N: i32>(self, lo: __m128i, hi: __m128i) -> __m128i {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        let a = lo;
+        let b = hi;
+        match N {
+            0 => a,
+            1 => _mm_alignr_epi8::<1>(b, a),
+            2 => _mm_alignr_epi8::<2>(b, a),
+            3 => _mm_alignr_epi8::<3>(b, a),
+            4 => _mm_alignr_epi8::<4>(b, a),
+            5 => _mm_alignr_epi8::<5>(b, a),
+            6 => _mm_alignr_epi8::<6>(b, a),
+            7 => _mm_alignr_epi8::<7>(b, a),
+            8 => _mm_alignr_epi8::<8>(b, a),
+            9 => _mm_alignr_epi8::<9>(b, a),
+            10 => _mm_alignr_epi8::<10>(b, a),
+            11 => _mm_alignr_epi8::<11>(b, a),
+            12 => _mm_alignr_epi8::<12>(b, a),
+            13 => _mm_alignr_epi8::<13>(b, a),
+            14 => _mm_alignr_epi8::<14>(b, a),
+            15 => _mm_alignr_epi8::<15>(b, a),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -3199,6 +3471,53 @@ impl U8x32Backend for archmage::X64V3Token {
             _mm256_and_si256(a, _mm256_set1_epi16(255)),
             _mm256_srli_epi16::<8>(a),
         )
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn concat_shift<const N: i32>(self, lo: __m256i, hi: __m256i) -> __m256i {
+        const { assert!(N >= 0 && N < 32, "concat_shift: N must be in 0..32") };
+        // `vpalignr` works within each 128-bit lane, so the operand for the
+        // upper lane must already hold the next 128 bits: build
+        // [lo.hi128, hi.lo128] and align against that.
+        let cross = _mm256_permute2x128_si256::<0x21>(lo, hi);
+        let a = lo;
+        let b = hi;
+        let c = cross;
+        match N {
+            0 => a,
+            1 => _mm256_alignr_epi8::<1>(c, a),
+            2 => _mm256_alignr_epi8::<2>(c, a),
+            3 => _mm256_alignr_epi8::<3>(c, a),
+            4 => _mm256_alignr_epi8::<4>(c, a),
+            5 => _mm256_alignr_epi8::<5>(c, a),
+            6 => _mm256_alignr_epi8::<6>(c, a),
+            7 => _mm256_alignr_epi8::<7>(c, a),
+            8 => _mm256_alignr_epi8::<8>(c, a),
+            9 => _mm256_alignr_epi8::<9>(c, a),
+            10 => _mm256_alignr_epi8::<10>(c, a),
+            11 => _mm256_alignr_epi8::<11>(c, a),
+            12 => _mm256_alignr_epi8::<12>(c, a),
+            13 => _mm256_alignr_epi8::<13>(c, a),
+            14 => _mm256_alignr_epi8::<14>(c, a),
+            15 => _mm256_alignr_epi8::<15>(c, a),
+            16 => c,
+            17 => _mm256_alignr_epi8::<1>(b, c),
+            18 => _mm256_alignr_epi8::<2>(b, c),
+            19 => _mm256_alignr_epi8::<3>(b, c),
+            20 => _mm256_alignr_epi8::<4>(b, c),
+            21 => _mm256_alignr_epi8::<5>(b, c),
+            22 => _mm256_alignr_epi8::<6>(b, c),
+            23 => _mm256_alignr_epi8::<7>(b, c),
+            24 => _mm256_alignr_epi8::<8>(b, c),
+            25 => _mm256_alignr_epi8::<9>(b, c),
+            26 => _mm256_alignr_epi8::<10>(b, c),
+            27 => _mm256_alignr_epi8::<11>(b, c),
+            28 => _mm256_alignr_epi8::<12>(b, c),
+            29 => _mm256_alignr_epi8::<13>(b, c),
+            30 => _mm256_alignr_epi8::<14>(b, c),
+            31 => _mm256_alignr_epi8::<15>(b, c),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -3441,6 +3760,24 @@ impl I16x8Backend for archmage::X64V3Token {
     sse2_baseline! {
     fn abs_diff(self, a: __m128i, b: __m128i) -> __m128i { _mm_sub_epi16(_mm_max_epi16(a, b), _mm_min_epi16(a, b)) }
     }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn concat_shift<const N: i32>(self, lo: __m128i, hi: __m128i) -> __m128i {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let a = lo;
+        let b = hi;
+        match N {
+            0 => a,
+            1 => _mm_alignr_epi8::<2>(b, a),
+            2 => _mm_alignr_epi8::<4>(b, a),
+            3 => _mm_alignr_epi8::<6>(b, a),
+            4 => _mm_alignr_epi8::<8>(b, a),
+            5 => _mm_alignr_epi8::<10>(b, a),
+            6 => _mm_alignr_epi8::<12>(b, a),
+            7 => _mm_alignr_epi8::<14>(b, a),
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -3682,6 +4019,37 @@ impl I16x16Backend for archmage::X64V3Token {
     fn abs_diff(self, a: __m256i, b: __m256i) -> __m256i {
         _mm256_sub_epi16(_mm256_max_epi16(a, b), _mm256_min_epi16(a, b))
     }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn concat_shift<const N: i32>(self, lo: __m256i, hi: __m256i) -> __m256i {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        // `vpalignr` works within each 128-bit lane, so the operand for the
+        // upper lane must already hold the next 128 bits: build
+        // [lo.hi128, hi.lo128] and align against that.
+        let cross = _mm256_permute2x128_si256::<0x21>(lo, hi);
+        let a = lo;
+        let b = hi;
+        let c = cross;
+        match N {
+            0 => a,
+            1 => _mm256_alignr_epi8::<2>(c, a),
+            2 => _mm256_alignr_epi8::<4>(c, a),
+            3 => _mm256_alignr_epi8::<6>(c, a),
+            4 => _mm256_alignr_epi8::<8>(c, a),
+            5 => _mm256_alignr_epi8::<10>(c, a),
+            6 => _mm256_alignr_epi8::<12>(c, a),
+            7 => _mm256_alignr_epi8::<14>(c, a),
+            8 => c,
+            9 => _mm256_alignr_epi8::<2>(b, c),
+            10 => _mm256_alignr_epi8::<4>(b, c),
+            11 => _mm256_alignr_epi8::<6>(b, c),
+            12 => _mm256_alignr_epi8::<8>(b, c),
+            13 => _mm256_alignr_epi8::<10>(b, c),
+            14 => _mm256_alignr_epi8::<12>(b, c),
+            15 => _mm256_alignr_epi8::<14>(b, c),
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -3894,6 +4262,24 @@ impl U16x8Backend for archmage::X64V3Token {
 
     sse2_baseline! {
     fn pairwise_widen_add(self, a: __m128i) -> __m128i { _mm_add_epi32(_mm_and_si128(a, _mm_set1_epi32(65535)), _mm_srli_epi32::<16>(a)) }
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn concat_shift<const N: i32>(self, lo: __m128i, hi: __m128i) -> __m128i {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let a = lo;
+        let b = hi;
+        match N {
+            0 => a,
+            1 => _mm_alignr_epi8::<2>(b, a),
+            2 => _mm_alignr_epi8::<4>(b, a),
+            3 => _mm_alignr_epi8::<6>(b, a),
+            4 => _mm_alignr_epi8::<8>(b, a),
+            5 => _mm_alignr_epi8::<10>(b, a),
+            6 => _mm_alignr_epi8::<12>(b, a),
+            7 => _mm_alignr_epi8::<14>(b, a),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -4109,6 +4495,37 @@ impl U16x16Backend for archmage::X64V3Token {
             _mm256_srli_epi32::<16>(a),
         )
     }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn concat_shift<const N: i32>(self, lo: __m256i, hi: __m256i) -> __m256i {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        // `vpalignr` works within each 128-bit lane, so the operand for the
+        // upper lane must already hold the next 128 bits: build
+        // [lo.hi128, hi.lo128] and align against that.
+        let cross = _mm256_permute2x128_si256::<0x21>(lo, hi);
+        let a = lo;
+        let b = hi;
+        let c = cross;
+        match N {
+            0 => a,
+            1 => _mm256_alignr_epi8::<2>(c, a),
+            2 => _mm256_alignr_epi8::<4>(c, a),
+            3 => _mm256_alignr_epi8::<6>(c, a),
+            4 => _mm256_alignr_epi8::<8>(c, a),
+            5 => _mm256_alignr_epi8::<10>(c, a),
+            6 => _mm256_alignr_epi8::<12>(c, a),
+            7 => _mm256_alignr_epi8::<14>(c, a),
+            8 => c,
+            9 => _mm256_alignr_epi8::<2>(b, c),
+            10 => _mm256_alignr_epi8::<4>(b, c),
+            11 => _mm256_alignr_epi8::<6>(b, c),
+            12 => _mm256_alignr_epi8::<8>(b, c),
+            13 => _mm256_alignr_epi8::<10>(b, c),
+            14 => _mm256_alignr_epi8::<12>(b, c),
+            15 => _mm256_alignr_epi8::<14>(b, c),
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -4286,6 +4703,18 @@ impl U64x2Backend for archmage::X64V3Token {
     fn bitmask(self, a: __m128i) -> u32 {
         _mm_movemask_pd(_mm_castsi128_pd(a)) as u32
     }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn concat_shift<const N: i32>(self, lo: __m128i, hi: __m128i) -> __m128i {
+        const { assert!(N >= 0 && N < 2, "concat_shift: N must be in 0..2") };
+        let a = lo;
+        let b = hi;
+        match N {
+            0 => a,
+            1 => _mm_alignr_epi8::<8>(b, a),
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -4456,6 +4885,25 @@ impl U64x4Backend for archmage::X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn bitmask(self, a: __m256i) -> u32 {
         _mm256_movemask_pd(_mm256_castsi256_pd(a)) as u32
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn concat_shift<const N: i32>(self, lo: __m256i, hi: __m256i) -> __m256i {
+        const { assert!(N >= 0 && N < 4, "concat_shift: N must be in 0..4") };
+        // `vpalignr` works within each 128-bit lane, so the operand for the
+        // upper lane must already hold the next 128 bits: build
+        // [lo.hi128, hi.lo128] and align against that.
+        let cross = _mm256_permute2x128_si256::<0x21>(lo, hi);
+        let a = lo;
+        let b = hi;
+        let c = cross;
+        match N {
+            0 => a,
+            1 => _mm256_alignr_epi8::<8>(c, a),
+            2 => c,
+            3 => _mm256_alignr_epi8::<8>(b, c),
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -5004,6 +5452,55 @@ impl F32x16Backend for archmage::X64V3Token {
             <archmage::X64V3Token as F32x8Backend>::bitxor(self, a[1], b[1]),
         ]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [__m256; 2], hi: [__m256; 2]) -> [__m256; 2] {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 8;
+        core::array::from_fn(|i| match N % 8 {
+            0 => <archmage::X64V3Token as F32x8Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::X64V3Token as F32x8Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::X64V3Token as F32x8Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::X64V3Token as F32x8Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::X64V3Token as F32x8Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::X64V3Token as F32x8Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::X64V3Token as F32x8Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::X64V3Token as F32x8Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -5317,6 +5814,35 @@ impl F64x8Backend for archmage::X64V3Token {
             <archmage::X64V3Token as F64x4Backend>::bitxor(self, a[1], b[1]),
         ]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [__m256d; 2], hi: [__m256d; 2]) -> [__m256d; 2] {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 4;
+        core::array::from_fn(|i| match N % 4 {
+            0 => <archmage::X64V3Token as F64x4Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::X64V3Token as F64x4Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::X64V3Token as F64x4Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::X64V3Token as F64x4Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -5595,6 +6121,175 @@ impl I8x64Backend for archmage::X64V3Token {
             _mm256_cvtepi8_epi16(_mm256_castsi256_si128(a[1])),
             _mm256_cvtepi8_epi16(_mm256_extracti128_si256::<1>(a[1])),
         ]
+    }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [__m256i; 2], hi: [__m256i; 2]) -> [__m256i; 2] {
+        const { assert!(N >= 0 && N < 64, "concat_shift: N must be in 0..64") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 32;
+        core::array::from_fn(|i| match N % 32 {
+            0 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            7 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            8 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<8>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            9 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<9>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            10 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<10>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            11 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<11>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            12 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<12>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            13 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<13>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            14 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<14>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            15 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<15>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            16 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<16>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            17 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<17>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            18 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<18>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            19 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<19>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            20 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<20>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            21 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<21>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            22 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<22>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            23 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<23>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            24 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<24>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            25 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<25>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            26 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<26>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            27 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<27>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            28 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<28>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            29 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<29>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            30 => <archmage::X64V3Token as I8x32Backend>::concat_shift::<30>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::X64V3Token as I8x32Backend>::concat_shift::<31>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
     }
 }
 
@@ -5923,6 +6618,175 @@ impl U8x64Backend for archmage::X64V3Token {
                 _mm256_srli_epi16::<8>(a[1]),
             ),
         ]
+    }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [__m256i; 2], hi: [__m256i; 2]) -> [__m256i; 2] {
+        const { assert!(N >= 0 && N < 64, "concat_shift: N must be in 0..64") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 32;
+        core::array::from_fn(|i| match N % 32 {
+            0 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            7 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            8 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<8>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            9 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<9>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            10 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<10>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            11 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<11>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            12 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<12>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            13 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<13>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            14 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<14>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            15 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<15>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            16 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<16>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            17 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<17>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            18 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<18>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            19 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<19>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            20 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<20>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            21 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<21>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            22 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<22>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            23 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<23>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            24 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<24>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            25 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<25>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            26 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<26>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            27 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<27>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            28 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<28>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            29 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<29>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            30 => <archmage::X64V3Token as U8x32Backend>::concat_shift::<30>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::X64V3Token as U8x32Backend>::concat_shift::<31>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
     }
 }
 
@@ -6261,6 +7125,95 @@ impl I16x32Backend for archmage::X64V3Token {
             _mm256_sub_epi16(_mm256_max_epi16(a[1], b[1]), _mm256_min_epi16(a[1], b[1])),
         ]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [__m256i; 2], hi: [__m256i; 2]) -> [__m256i; 2] {
+        const { assert!(N >= 0 && N < 32, "concat_shift: N must be in 0..32") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 16;
+        core::array::from_fn(|i| match N % 16 {
+            0 => <archmage::X64V3Token as I16x16Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::X64V3Token as I16x16Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::X64V3Token as I16x16Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::X64V3Token as I16x16Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::X64V3Token as I16x16Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::X64V3Token as I16x16Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::X64V3Token as I16x16Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            7 => <archmage::X64V3Token as I16x16Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            8 => <archmage::X64V3Token as I16x16Backend>::concat_shift::<8>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            9 => <archmage::X64V3Token as I16x16Backend>::concat_shift::<9>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            10 => <archmage::X64V3Token as I16x16Backend>::concat_shift::<10>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            11 => <archmage::X64V3Token as I16x16Backend>::concat_shift::<11>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            12 => <archmage::X64V3Token as I16x16Backend>::concat_shift::<12>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            13 => <archmage::X64V3Token as I16x16Backend>::concat_shift::<13>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            14 => <archmage::X64V3Token as I16x16Backend>::concat_shift::<14>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::X64V3Token as I16x16Backend>::concat_shift::<15>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -6576,6 +7529,95 @@ impl U16x32Backend for archmage::X64V3Token {
             ),
         ]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [__m256i; 2], hi: [__m256i; 2]) -> [__m256i; 2] {
+        const { assert!(N >= 0 && N < 32, "concat_shift: N must be in 0..32") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 16;
+        core::array::from_fn(|i| match N % 16 {
+            0 => <archmage::X64V3Token as U16x16Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::X64V3Token as U16x16Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::X64V3Token as U16x16Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::X64V3Token as U16x16Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::X64V3Token as U16x16Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::X64V3Token as U16x16Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::X64V3Token as U16x16Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            7 => <archmage::X64V3Token as U16x16Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            8 => <archmage::X64V3Token as U16x16Backend>::concat_shift::<8>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            9 => <archmage::X64V3Token as U16x16Backend>::concat_shift::<9>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            10 => <archmage::X64V3Token as U16x16Backend>::concat_shift::<10>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            11 => <archmage::X64V3Token as U16x16Backend>::concat_shift::<11>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            12 => <archmage::X64V3Token as U16x16Backend>::concat_shift::<12>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            13 => <archmage::X64V3Token as U16x16Backend>::concat_shift::<13>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            14 => <archmage::X64V3Token as U16x16Backend>::concat_shift::<14>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::X64V3Token as U16x16Backend>::concat_shift::<15>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -6870,6 +7912,55 @@ impl I32x16Backend for archmage::X64V3Token {
             _mm256_permute4x64_epi64::<0xD8>(_mm256_packus_epi32(b[0], b[1])),
         ]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [__m256i; 2], hi: [__m256i; 2]) -> [__m256i; 2] {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 8;
+        core::array::from_fn(|i| match N % 8 {
+            0 => <archmage::X64V3Token as I32x8Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::X64V3Token as I32x8Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::X64V3Token as I32x8Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::X64V3Token as I32x8Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::X64V3Token as I32x8Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::X64V3Token as I32x8Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::X64V3Token as I32x8Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::X64V3Token as I32x8Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -7142,6 +8233,55 @@ impl U32x16Backend for archmage::X64V3Token {
             <archmage::X64V3Token as U32x8Backend>::bitxor(self, a[1], b[1]),
         ]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [__m256i; 2], hi: [__m256i; 2]) -> [__m256i; 2] {
+        const { assert!(N >= 0 && N < 16, "concat_shift: N must be in 0..16") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 8;
+        core::array::from_fn(|i| match N % 8 {
+            0 => <archmage::X64V3Token as U32x8Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::X64V3Token as U32x8Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::X64V3Token as U32x8Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            3 => <archmage::X64V3Token as U32x8Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            4 => <archmage::X64V3Token as U32x8Backend>::concat_shift::<4>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            5 => <archmage::X64V3Token as U32x8Backend>::concat_shift::<5>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            6 => <archmage::X64V3Token as U32x8Backend>::concat_shift::<6>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::X64V3Token as U32x8Backend>::concat_shift::<7>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -7392,6 +8532,35 @@ impl I64x8Backend for archmage::X64V3Token {
             <archmage::X64V3Token as I64x4Backend>::bitxor(self, a[1], b[1]),
         ]
     }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [__m256i; 2], hi: [__m256i; 2]) -> [__m256i; 2] {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 4;
+        core::array::from_fn(|i| match N % 4 {
+            0 => <archmage::X64V3Token as I64x4Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::X64V3Token as I64x4Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::X64V3Token as I64x4Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::X64V3Token as I64x4Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
+    }
 }
 
 #[cfg(feature = "w512")]
@@ -7634,5 +8803,34 @@ impl U64x8Backend for archmage::X64V3Token {
             <archmage::X64V3Token as U64x4Backend>::bitxor(self, a[0], b[0]),
             <archmage::X64V3Token as U64x4Backend>::bitxor(self, a[1], b[1]),
         ]
+    }
+
+    #[inline(always)]
+    fn concat_shift<const N: i32>(self, lo: [__m256i; 2], hi: [__m256i; 2]) -> [__m256i; 2] {
+        const { assert!(N >= 0 && N < 8, "concat_shift: N must be in 0..8") };
+        let s = [lo[0], lo[1], hi[0], hi[1]];
+        let k = (N as usize) / 4;
+        core::array::from_fn(|i| match N % 4 {
+            0 => <archmage::X64V3Token as U64x4Backend>::concat_shift::<0>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            1 => <archmage::X64V3Token as U64x4Backend>::concat_shift::<1>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            2 => <archmage::X64V3Token as U64x4Backend>::concat_shift::<2>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+            _ => <archmage::X64V3Token as U64x4Backend>::concat_shift::<3>(
+                self,
+                s[k + i],
+                s[k + i + 1],
+            ),
+        })
     }
 }

@@ -509,7 +509,7 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
             #[inline(always)]
             fn rcp_approx(self, a: Self::Repr) -> Self::Repr {{ a }}
 
-            /// Fast reciprocal square root approximation — see [`rcp_approx`].
+            /// Fast reciprocal square root approximation — see [`Self::rcp_approx`].
             #[inline(always)]
             fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {{ a }}
 
@@ -540,13 +540,14 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
             #[inline(always)]
             fn recip(self, a: Self::Repr) -> Self::Repr {{ Self::rcp_approx(self, a) }}
 
-            /// Precise reciprocal square root — see [`recip`].
+            /// Precise reciprocal square root — see [`Self::recip`].
             #[inline(always)]
             fn rsqrt(self, a: Self::Repr) -> Self::Repr {{ Self::rsqrt_approx(self, a) }}
-
+            {concat_shift_trait}
         }}
     "#,
         name = ty.name(),
+        concat_shift_trait = super::concat_shift_gen::trait_decl(elem, lanes, &trait_name),
     }
 }
 
@@ -727,8 +728,11 @@ fn generate_int_backend_trait(ty: &W512Type) -> String {
                 <Self as {trait_name}>::min(self, <Self as {trait_name}>::max(self, a, lo), hi)
             }}
         {integer_methods}
+            {concat_shift_trait}
         }}
-    "#}
+    "#,
+        concat_shift_trait = super::concat_shift_gen::trait_decl(elem, lanes, &trait_name),
+    }
 }
 
 /// Trait declarations for the uniform-variable-shift and saturating-arithmetic
@@ -1803,8 +1807,17 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
                 ]
             }}
         {integer_methods}
+        {concat_shift_poly}
         }}
-    "#});
+    "#,
+        concat_shift_poly = super::concat_shift_gen::polyfill_delegate(
+            lanes,
+            &v3_repr,
+            "X64V3Token",
+            &half_trait,
+            half_lanes,
+        ),
+    });
 
     code
 }
@@ -2246,8 +2259,17 @@ fn generate_4way_polyfill_impl(
                 core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::bitxor(self, a[i], b[i]))
             }}
         {integer_methods}
+        {concat_shift_poly}
         }}
-    "#});
+    "#,
+        concat_shift_poly = super::concat_shift_gen::polyfill_delegate(
+            lanes,
+            &repr,
+            token,
+            quarter_trait,
+            q_lanes,
+        ),
+    });
 
     code
 }
@@ -2547,8 +2569,11 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
             fn bitxor(self, a: {inner}, b: {inner}) -> {inner} {{
                 _mm512_xor_{s}(a, b)
             }}
+            {concat_shift_v4}
         }}
-    "#}
+    "#,
+        concat_shift_v4 = super::concat_shift_gen::avx512_native(elem, ty.lanes, inner, &arcane),
+    }
 }
 
 /// Generate V4 native implementation for a W512 integer type.
@@ -2611,7 +2636,8 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
             fn mul(self, a: __m512i, b: __m512i) -> __m512i {{
                 _mm512_mullo_{epi}(a, b)
             }}
-        "#}
+        "#,
+        }
     } else {
         String::new()
     };
@@ -2826,8 +2852,10 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
                 ) as u64
             }}
         {integer_methods}
+            {concat_shift}
         }}
     "#,
+        concat_shift = super::concat_shift_gen::avx512_native(elem, ty.lanes, "__m512i", &arcane),
         sign_type = match elem_bits {
             8 => "i8",
             16 => "i16",

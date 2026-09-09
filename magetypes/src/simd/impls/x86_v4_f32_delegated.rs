@@ -197,6 +197,15 @@ macro_rules! delegate_f32x4_to_v3 {
             }
 
             // Approximations (override defaults to preserve V3's hardware-rcp/rsqrt)
+            // Cross-vector element shift. Without this the V4 tokens would fall
+            // back to the trait's lane-gather default, which LLVM does not
+            // recover into a funnel shift (measured 2026-09-08: 6-7 scalar
+            // moves against V3's 2-instruction `vperm2f128`+`vpalignr`).
+            #[inline(always)]
+            fn concat_shift<const N: i32>(self, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as F32x4Backend>::concat_shift::<N>(self.v3(), lo, hi)
+            }
+
             #[inline(always)]
             fn rcp_approx(self, a: Self::Repr) -> Self::Repr {
                 <archmage::X64V3Token as F32x4Backend>::rcp_approx(self.v3(), a)
@@ -384,6 +393,15 @@ macro_rules! delegate_f32x8_to_v3 {
             #[inline(always)]
             fn reduce_max(self, a: Self::Repr) -> f32 {
                 <archmage::X64V3Token as F32x8Backend>::reduce_max(self.v3(), a)
+            }
+
+            // Cross-vector element shift. Without this the V4 tokens would fall
+            // back to the trait's lane-gather default, which LLVM does not
+            // recover into a funnel shift (measured 2026-09-08: 6-7 scalar
+            // moves against V3's 2-instruction `vperm2f128`+`vpalignr`).
+            #[inline(always)]
+            fn concat_shift<const N: i32>(self, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as F32x8Backend>::concat_shift::<N>(self.v3(), lo, hi)
             }
 
             #[inline(always)]

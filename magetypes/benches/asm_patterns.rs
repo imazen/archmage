@@ -31,7 +31,7 @@ mod x86_impl {
     /// Slice via .first_chunk() → should produce same vmovups
     #[unsafe(no_mangle)]
     #[arcane(import_intrinsics)]
-    fn load_first_chunk(_t: Desktop64, data: &[f32]) -> __m256 {
+    fn load_first_chunk_256(_t: Desktop64, data: &[f32]) -> __m256 {
         let arr: &[f32; 8] = data.first_chunk().unwrap();
         _mm256_loadu_ps(arr)
     }
@@ -121,8 +121,8 @@ mod x86_impl {
                 b.iter(|| load_array_ref(token, black_box(&data)))
             });
 
-            c.bench_function("load_first_chunk", |b| {
-                b.iter(|| load_first_chunk(token, black_box(slice)))
+            c.bench_function("load_first_chunk_256", |b| {
+                b.iter(|| load_first_chunk_256(token, black_box(slice)))
             });
 
             c.bench_function("load_try_into", |b| {
@@ -147,6 +147,59 @@ mod x86_impl {
         } else {
             eprintln!("Desktop64 not available, skipping benchmarks");
         }
+    }
+
+    // ========================================================================
+    // concat_shift: the funnel shift must reach the native instruction
+    // ========================================================================
+    //
+    // The backend trait carries a portable lane-gather default and every ISA
+    // with a funnel shift overrides it. If an override is ever deleted, moved,
+    // or shadowed by a delegation that forgets to forward it, the code stays
+    // CORRECT and silently loses 5-6 instructions per call. Nothing else in the
+    // suite would notice — which is what these two exist to catch.
+    //
+    // Measured 2026-09-08: the default body is 6 ops (f32x8) / 7 ops (f32x16)
+    // of scalar element moves; the native forms below are 2 and 1.
+
+    /// AVX2 f32x8: expect `vperm2f128`/`vperm2i128` + `vpalignr`.
+    #[unsafe(no_mangle)]
+    #[arcane(import_intrinsics)]
+    fn concat_shift_f32x8_v3(t: archmage::X64V3Token, lo: __m256, hi: __m256) -> __m256 {
+        use magetypes::simd::backends::F32x8Backend;
+        <archmage::X64V3Token as F32x8Backend>::concat_shift::<1>(t, lo, hi)
+    }
+
+    /// AVX-512 f32x16: expect a single `valignd`.
+    #[cfg(feature = "avx512")]
+    #[unsafe(no_mangle)]
+    #[arcane(import_intrinsics)]
+    fn concat_shift_f32x16_v4x(t: archmage::X64V4xToken, lo: __m512, hi: __m512) -> __m512 {
+        use magetypes::simd::backends::F32x16Backend;
+        <archmage::X64V4xToken as F32x16Backend>::concat_shift::<1>(t, lo, hi)
+    }
+
+    /// SSSE3 u8x16: a byte-granular shift, where the immediate IS the lane
+    /// count. The integer types are the ones that most often get hand-rolled
+    /// per-arch, so they are worth a gate of their own.
+    #[unsafe(no_mangle)]
+    #[arcane(import_intrinsics)]
+    fn concat_shift_u8x16_v3(t: archmage::X64V3Token, lo: __m128i, hi: __m128i) -> __m128i {
+        use magetypes::simd::backends::U8x16Backend;
+        <archmage::X64V3Token as U8x16Backend>::concat_shift::<3>(t, lo, hi)
+    }
+
+    /// AVX-512 i16x32 at a shift that crosses a 128-bit lane. This is the one
+    /// case with no single full-width instruction — `vpalignr` is per-lane at
+    /// every width — so it is built from two `valignd` windows plus a per-lane
+    /// `vpalignr`. If that decomposition ever regresses to the gather, this is
+    /// what notices.
+    #[cfg(feature = "avx512")]
+    #[unsafe(no_mangle)]
+    #[arcane(import_intrinsics)]
+    fn concat_shift_i16x32_v4x(t: archmage::X64V4xToken, lo: __m512i, hi: __m512i) -> __m512i {
+        use magetypes::simd::backends::I16x32Backend;
+        <archmage::X64V4xToken as I16x32Backend>::concat_shift::<9>(t, lo, hi)
     }
 
     criterion_group!(benches, bench_load_patterns);

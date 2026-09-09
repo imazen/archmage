@@ -36,7 +36,7 @@ pub trait F32x4Convert: F32x4Backend + I32x4Backend + SimdToken + Sealed + Copy 
     /// lanes clamp to `i32::MIN`/`i32::MAX`, NaN lanes become 0 —
     /// identical on every backend (Rust `as` / NEON FCVTZS / WASM
     /// trunc_sat semantics). Default delegates to
-    /// [`convert_f32_to_i32`] (already conformant on NEON/WASM/
+    /// [`Self::convert_f32_to_i32`] (already conformant on NEON/WASM/
     /// scalar); x86 overrides with a cvttps + compare/blend fixup
     /// (the bare op yields the `i32::MIN` sentinel for overflow AND
     /// NaN there — issue #80).
@@ -75,7 +75,7 @@ pub trait F32x8Convert: F32x8Backend + I32x8Backend + SimdToken + Sealed + Copy 
     /// lanes clamp to `i32::MIN`/`i32::MAX`, NaN lanes become 0 —
     /// identical on every backend (Rust `as` / NEON FCVTZS / WASM
     /// trunc_sat semantics). Default delegates to
-    /// [`convert_f32_to_i32`] (already conformant on NEON/WASM/
+    /// [`Self::convert_f32_to_i32`] (already conformant on NEON/WASM/
     /// scalar); x86 overrides with a cvttps + compare/blend fixup
     /// (the bare op yields the `i32::MIN` sentinel for overflow AND
     /// NaN there — issue #80).
@@ -117,7 +117,7 @@ pub trait F32x16Convert:
     /// lanes clamp to `i32::MIN`/`i32::MAX`, NaN lanes become 0 —
     /// identical on every backend (Rust `as` / NEON FCVTZS / WASM
     /// trunc_sat semantics). Default delegates to
-    /// [`convert_f32_to_i32`] (already conformant on NEON/WASM/
+    /// [`Self::convert_f32_to_i32`] (already conformant on NEON/WASM/
     /// scalar); x86 overrides with a cvttps + compare/blend fixup
     /// (the bare op yields the `i32::MIN` sentinel for overflow AND
     /// NaN there — issue #80).

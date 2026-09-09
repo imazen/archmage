@@ -257,8 +257,10 @@ pub(super) fn generate_i64_backend_trait(ty: &I64VecType) -> String {
             fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {{
                 <Self as {trait_name}>::min(self, <Self as {trait_name}>::max(self, a, lo), hi)
             }}
+            {concat_shift_trait}
         }}
     "#,
+        concat_shift_trait = super::concat_shift_gen::trait_decl("i64", ty.lanes, &trait_name),
         name = ty.name(),
     }
 }
@@ -519,8 +521,11 @@ fn generate_x86_i64_impl(ty: &I64VecType, token: &str) -> String {
             fn bitmask(self, a: {inner}) -> u32 {{
                 {p}_movemask_pd({p}_castsi{bits}_pd(a)) as u32
             }}
+            {concat_shift}
         }}
-    "#}
+    "#,
+        concat_shift = super::concat_shift_gen::x86_native("i64", ty.lanes, ty.width_bits, inner, &arcane),
+    }
 }
 
 fn generate_x86_i64_reduce_add(ty: &I64VecType) -> String {
@@ -1049,8 +1054,11 @@ fn generate_neon_native_i64_impl(ty: &I64VecType) -> String {
                 let signs = vshrq_n_u64::<63>(vreinterpretq_u64_s64(a));
                 ((vgetq_lane_u64::<0>(signs) & 1) | ((vgetq_lane_u64::<1>(signs) & 1) << 1)) as u32
             }}
+            {concat_shift}
         }}
-    "#}
+    "#,
+        concat_shift = super::concat_shift_gen::neon_native("i64", 2, "int64x2_t", &arcane),
+    }
 }
 
 fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
@@ -1204,8 +1212,10 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
             fn bitmask(self, a: {repr}) -> u32 {{
                 {bitmask}
             }}
+            {concat_shift}
         }}
     "#,
+        concat_shift = super::concat_shift_gen::polyfill_delegate(ty.lanes, &repr, "NeonToken", "I64x2Backend", 2),
         v2_copies = (0..sub_count).map(|_| "v2").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
         add = binary_op("vaddq_s64"),
@@ -1446,8 +1456,11 @@ fn generate_wasm_native_i64_impl(ty: &I64VecType) -> String {
             fn any_true(self, a: v128) -> bool {{ v128_any_true(a) }}
             #[inline(always)]
             fn bitmask(self, a: v128) -> u32 {{ i64x2_bitmask(a) as u32 }}
+            {concat_shift}
         }}
-    "#}
+    "#,
+        concat_shift = super::concat_shift_gen::wasm_native("i64", 2),
+    }
 }
 
 fn generate_wasm_polyfill_i64_impl(ty: &I64VecType) -> String {
@@ -1597,8 +1610,10 @@ fn generate_wasm_polyfill_i64_impl(ty: &I64VecType) -> String {
             fn bitmask(self, a: {repr}) -> u32 {{
                 {bitmask}
             }}
+            {concat_shift}
         }}
     "#,
+        concat_shift = super::concat_shift_gen::polyfill_delegate(ty.lanes, &repr, "Wasm128Token", "I64x2Backend", 2),
         v2_copies = (0..sub_count).map(|_| "v2").collect::<Vec<_>>().join(", "),
         z_copies = (0..sub_count).map(|_| "z").collect::<Vec<_>>().join(", "),
         load_lanes = format!("[{}]", (0..sub_count)

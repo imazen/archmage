@@ -32,7 +32,7 @@ pub(super) fn trait_methods(name: &str) -> String {
     if elem == "i16" {
         let m = n / 2;
         out += &formatdoc! {r#"
-            /// Lane k = a[2k]*b[2k] + a[2k+1]*b[2k+1], modulo 2^32.
+            /// `Lane k = a[2k]*b[2k] + a[2k+1]*b[2k+1]`, modulo 2^32.
             fn madd_adjacent(self, a: <Self as super::{sb}>::Repr, b: <Self as super::{sb}>::Repr) -> <Self as super::I32x{m}Backend>::Repr
             where Self: super::I32x{m}Backend;
         "#};

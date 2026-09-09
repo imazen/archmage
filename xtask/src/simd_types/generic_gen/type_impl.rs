@@ -591,11 +591,57 @@ fn gen_accessors(elem: &str, lanes: usize) -> String {
 }
 
 fn gen_math(ty: &SimdType) -> String {
-    if ty.elem.is_float() {
+    let mut code = if ty.elem.is_float() {
         gen_float_math()
     } else {
         gen_int_math(ty)
-    }
+    };
+    // Every element type, float and integer alike — the backend traits all
+    // carry `concat_shift`, so the wrapper must too or the generic types are
+    // strictly less capable than the backends they wrap.
+    code.push_str(&gen_concat_shift(ty));
+    code
+}
+
+/// Wrapper for the backend trait's `concat_shift`, on every element type — the
+/// backend traits all carry it. See `simd_types::concat_shift_gen`.
+fn gen_concat_shift(ty: &SimdType) -> String {
+    let lanes = ty.lanes();
+    let name = ty.name();
+    let backend = backend_trait(ty);
+    // A doctest only where a literal ramp is unambiguous. The other element
+    // types get the same prose without an example rather than a fragile one.
+    let example = if ty.elem == ElementType::F32 {
+        formatdoc! {"
+            \x20   ///
+                /// ```rust
+                /// # use archmage::prelude::*;
+                /// # use magetypes::simd::generic::{name};
+                /// # fn demo<T: magetypes::simd::backends::{backend}>(t: T) {{
+                /// let lo = {name}::from_array(t, core::array::from_fn(|i| i as f32));
+                /// let hi = {name}::from_array(t, core::array::from_fn(|i| ({lanes} + i) as f32));
+                /// assert_eq!(lo.concat_shift::<1>(hi).to_array()[0], 1.0);
+                /// # }}
+                /// ```"}
+    } else {
+        String::new()
+    };
+    formatdoc! {"
+        \x20   /// Lanes `N..N+{lanes}` of the concatenation `[self, hi]` — the
+            /// cross-vector \"funnel shift\" (`valignd` / `vperm2f128`+`vpalignr` /
+            /// `EXT` / `i8x16.shuffle`).
+            ///
+            /// A 3-tap horizontal filter uses it to derive the `x-1` and `x+1`
+            /// vectors from two loads instead of three; a byte-shuffling kernel
+            /// uses it to slide a window. `N == 0` returns `self`; `N == {lanes}`
+            /// is rejected at compile time, since a caller that wants `hi` should
+            /// use it directly.{example}
+            #[inline(always)]
+            pub fn concat_shift<const N: i32>(self, hi: Self) -> Self {{
+                Self(T::concat_shift::<N>(self.1, self.0, hi.0), self.1)
+            }}
+
+    "}
 }
 
 fn gen_float_math() -> String {
@@ -772,12 +818,12 @@ fn gen_approximations(ty: &SimdType) -> String {
                 /// (estimate + one Newton step), WASM/scalar ~24-bit (exact division —
                 /// no hardware estimate exists to undercut it). For the same bits on
                 /// *every* machine use [`rcp_approx_portable`](Self::rcp_approx_portable);
-                /// for ≤4 ULP use [`recip`](Self::recip); for 0 ULP + IEEE rails
+                /// for ≤4 ULP use [`Self::recip`](Self::recip); for 0 ULP + IEEE rails
                 /// use [`recip_portable`](Self::recip_portable).
                 ///
                 /// Rails are UNSPECIFIED at this tier (the current lowerings
                 /// happen to return IEEE values on x86/NEON/WASM, but only
-                /// [`recip`](Self::recip) and up contract it).
+                /// [`Self::recip`](Self::recip) and up contract it).
                 #[inline(always)]
                 pub fn rcp_approx(self) -> Self {{
                     // Each backend owns its >=12-bit estimate (x86 raw rcpps; ARM
@@ -813,10 +859,10 @@ fn gen_approximations(ty: &SimdType) -> String {
                 }}
 
                 /// Fast reciprocal square root (1/sqrt(x)), ≥~12-bit floor — see
-                /// [`rcp_approx`](Self::rcp_approx) for the per-platform strategy.
+                /// [`Self::rcp_approx`](Self::rcp_approx) for the per-platform strategy.
                 ///
                 /// Rails are UNSPECIFIED at this tier (the scalar bit-hack in
-                /// particular returns garbage at `±0`); [`rsqrt`](Self::rsqrt)
+                /// particular returns garbage at `±0`); [`Self::rsqrt`](Self::rsqrt)
                 /// and up contract them.
                 #[inline(always)]
                 pub fn rsqrt_approx(self) -> Self {{
@@ -870,7 +916,7 @@ fn gen_approximations(ty: &SimdType) -> String {
                 }}
 
                 /// Reciprocal square root (1/sqrt(x)), the working tier: ≤4 ULP
-                /// with exact IEEE rails — see [`recip`](Self::recip) for the
+                /// with exact IEEE rails — see [`Self::recip`](Self::recip) for the
                 /// contract shape; [`rsqrt_portable`](Self::rsqrt_portable) adds
                 /// 0 ULP + subnormals + bit-identical.
                 #[inline(always)]
@@ -937,7 +983,7 @@ fn gen_deterministic_reciprocals(ty: &SimdType) -> String {
             // Hardware estimate instructions (`rsqrtps`, `vrsqrte`) are deliberately
             // NOT used here — their bits differ across vendors and generations. For
             // the faster, per-platform (non-deterministic) variants see
-            // [`rsqrt_approx`](Self::rsqrt_approx) / [`recip`](Self::recip).
+            // [`Self::rsqrt_approx`](Self::rsqrt_approx) / [`Self::recip`](Self::recip).
 
             /// Deterministic reciprocal-sqrt estimate (~8-bit), bit-identical on
             /// every platform.
@@ -974,7 +1020,7 @@ fn gen_deterministic_reciprocals(ty: &SimdType) -> String {
             /// Precise reciprocal square root: exact IEEE sqrt + division —
             /// **the 0 ULP tier**, with IEEE rails (`rsqrt(+0) = +inf`,
             /// `rsqrt(+inf) = +0`, negatives give NaN) and bit-identical on
-            /// every arch. Costs ~3.6x the working-tier [`rsqrt`](Self::rsqrt)
+            /// every arch. Costs ~3.6x the working-tier [`Self::rsqrt`](Self::rsqrt)
             /// on Zen-class x86 (and is the faster form on Apple Silicon).
             #[inline(always)]
             pub fn rsqrt_portable(self) -> Self {{
@@ -1017,7 +1063,7 @@ fn gen_deterministic_reciprocals(ty: &SimdType) -> String {
             /// saturating `exp_midp`, issue #64) and, because correctly-rounded
             /// division is uniquely defined, bit-identical on every arch — the
             /// portable property is free. Costs ~1.9x the working-tier
-            /// [`recip`](Self::recip) on Zen-class x86 (and is the FASTER form
+            /// [`Self::recip`](Self::recip) on Zen-class x86 (and is the FASTER form
             /// on Apple Silicon).
             #[inline(always)]
             pub fn recip_portable(self) -> Self {{
