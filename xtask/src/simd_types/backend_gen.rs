@@ -5175,16 +5175,13 @@ fn generate_neon_native_i32_impl(ty: &I32VecType) -> String {
 
             {arcane}
             fn bitmask(self, a: int32x4_t) -> u32 {{
-                // Extract sign bit of each 32-bit lane as 0/1 (LOGICAL shift on
-                // the u32 view — an arithmetic s32 shift would sign-extend to
-                // 0xFFFF_FFFF and corrupt the packed mask).
-                let shift = vshrq_n_u32::<31>(vreinterpretq_u32_s32(a));
-                // Pack: lane0 | (lane1<<1) | (lane2<<2) | (lane3<<3)
-                let lane0 = vgetq_lane_u32::<0>(shift);
-                let lane1 = vgetq_lane_u32::<1>(shift);
-                let lane2 = vgetq_lane_u32::<2>(shift);
-                let lane3 = vgetq_lane_u32::<3>(shift);
-                lane0 | (lane1 << 1) | (lane2 << 2) | (lane3 << 3)
+                // One sign bit per word -> 4-bit mask. Shift each 0/1 lane
+                // into position, then one horizontal add. The shift on the
+                // u32 view must be LOGICAL — an arithmetic s32 shift
+                // sign-extends to 0xFFFF_FFFF and corrupts the mask.
+                let shifts: [i32; 4] = [0, 1, 2, 3];
+                let shift_vec: int32x4_t = crate::simd_storage::copy(&shifts);
+                vaddvq_u32(vshlq_u32(vshrq_n_u32::<31>(vreinterpretq_u32_s32(a)), shift_vec))
             }}
         {integer_methods}
         }}
@@ -7010,14 +7007,13 @@ fn generate_neon_native_u32_impl(ty: &U32VecType) -> String {
 
             {arcane}
             fn bitmask(self, a: uint32x4_t) -> u32 {{
-                // Extract sign bit of each 32-bit lane
-                let shift = vshrq_n_u32::<31>(a);
-                // Pack: lane0 | (lane1<<1) | (lane2<<2) | (lane3<<3)
-                let lane0 = vgetq_lane_u32::<0>(shift);
-                let lane1 = vgetq_lane_u32::<1>(shift);
-                let lane2 = vgetq_lane_u32::<2>(shift);
-                let lane3 = vgetq_lane_u32::<3>(shift);
-                lane0 | (lane1 << 1) | (lane2 << 2) | (lane3 << 3)
+                // One sign bit per word -> 4-bit mask. Shift each 0/1 lane
+                // into position, then one horizontal add. The shift on the
+                // u32 view must be LOGICAL — an arithmetic s32 shift
+                // sign-extends to 0xFFFF_FFFF and corrupts the mask.
+                let shifts: [i32; 4] = [0, 1, 2, 3];
+                let shift_vec: int32x4_t = crate::simd_storage::copy(&shifts);
+                vaddvq_u32(vshlq_u32(vshrq_n_u32::<31>(a), shift_vec))
             }}
         }}
     "#}

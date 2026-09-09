@@ -1321,16 +1321,16 @@ impl I32x4Backend for archmage::NeonToken {
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: int32x4_t) -> u32 {
-        // Extract sign bit of each 32-bit lane as 0/1 (LOGICAL shift on
-        // the u32 view — an arithmetic s32 shift would sign-extend to
-        // 0xFFFF_FFFF and corrupt the packed mask).
-        let shift = vshrq_n_u32::<31>(vreinterpretq_u32_s32(a));
-        // Pack: lane0 | (lane1<<1) | (lane2<<2) | (lane3<<3)
-        let lane0 = vgetq_lane_u32::<0>(shift);
-        let lane1 = vgetq_lane_u32::<1>(shift);
-        let lane2 = vgetq_lane_u32::<2>(shift);
-        let lane3 = vgetq_lane_u32::<3>(shift);
-        lane0 | (lane1 << 1) | (lane2 << 2) | (lane3 << 3)
+        // One sign bit per word -> 4-bit mask. Shift each 0/1 lane
+        // into position, then one horizontal add. The shift on the
+        // u32 view must be LOGICAL — an arithmetic s32 shift
+        // sign-extends to 0xFFFF_FFFF and corrupts the mask.
+        let shifts: [i32; 4] = [0, 1, 2, 3];
+        let shift_vec: int32x4_t = crate::simd_storage::copy(&shifts);
+        vaddvq_u32(vshlq_u32(
+            vshrq_n_u32::<31>(vreinterpretq_u32_s32(a)),
+            shift_vec,
+        ))
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn narrow_saturating_i32_to_i16(self, a: int32x4_t, b: int32x4_t) -> int16x8_t {
@@ -1730,14 +1730,13 @@ impl U32x4Backend for archmage::NeonToken {
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: uint32x4_t) -> u32 {
-        // Extract sign bit of each 32-bit lane
-        let shift = vshrq_n_u32::<31>(a);
-        // Pack: lane0 | (lane1<<1) | (lane2<<2) | (lane3<<3)
-        let lane0 = vgetq_lane_u32::<0>(shift);
-        let lane1 = vgetq_lane_u32::<1>(shift);
-        let lane2 = vgetq_lane_u32::<2>(shift);
-        let lane3 = vgetq_lane_u32::<3>(shift);
-        lane0 | (lane1 << 1) | (lane2 << 2) | (lane3 << 3)
+        // One sign bit per word -> 4-bit mask. Shift each 0/1 lane
+        // into position, then one horizontal add. The shift on the
+        // u32 view must be LOGICAL — an arithmetic s32 shift
+        // sign-extends to 0xFFFF_FFFF and corrupts the mask.
+        let shifts: [i32; 4] = [0, 1, 2, 3];
+        let shift_vec: int32x4_t = crate::simd_storage::copy(&shifts);
+        vaddvq_u32(vshlq_u32(vshrq_n_u32::<31>(a), shift_vec))
     }
 }
 
@@ -2449,21 +2448,13 @@ impl I8x16Backend for archmage::NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: int8x16_t) -> u32 {
         {
-            // Shift each byte right by 7 to isolate sign bit
-            let bits = vshrq_n_s8::<7>(a);
-            // Use polynomial evaluation to pack bits
-            // Each byte is now 0 or 1, multiply by position powers of 2
             let powers: [u8; 16] = [1, 2, 4, 8, 16, 32, 64, 128, 1, 2, 4, 8, 16, 32, 64, 128];
-            let pow_vec = crate::simd_storage::copy(&powers);
-            let weighted = vmulq_u8(vreinterpretq_u8_s8(bits), pow_vec);
-            // Sum pairs: add adjacent bytes
-            let pair_sum = vpaddlq_u8(weighted);
-            let quad_sum = vpaddlq_u16(pair_sum);
-            let oct_sum = vpaddlq_u32(quad_sum);
-            // Extract low and high byte
-            let lo = vgetq_lane_u64::<0>(oct_sum) as u32;
-            let hi = vgetq_lane_u64::<1>(oct_sum) as u32;
-            lo | (hi << 8)
+            let pow_vec: uint8x16_t = crate::simd_storage::copy(&powers);
+            let weighted = vandq_u8(vcltzq_s8(a), pow_vec);
+            let s = vpadd_u8(vget_low_u8(weighted), vget_high_u8(weighted));
+            let s = vpadd_u8(s, s);
+            let s = vpadd_u8(s, s);
+            u32::from(vget_lane_u16::<0>(vreinterpret_u16_u8(s)))
         }
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -2819,21 +2810,13 @@ impl U8x16Backend for archmage::NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: uint8x16_t) -> u32 {
         {
-            // Shift each byte right by 7 to isolate sign bit
-            let bits = vshrq_n_u8::<7>(a);
-            // Use polynomial evaluation to pack bits
-            // Each byte is now 0 or 1, multiply by position powers of 2
             let powers: [u8; 16] = [1, 2, 4, 8, 16, 32, 64, 128, 1, 2, 4, 8, 16, 32, 64, 128];
-            let pow_vec = crate::simd_storage::copy(&powers);
-            let weighted = vmulq_u8(bits, pow_vec);
-            // Sum pairs: add adjacent bytes
-            let pair_sum = vpaddlq_u8(weighted);
-            let quad_sum = vpaddlq_u16(pair_sum);
-            let oct_sum = vpaddlq_u32(quad_sum);
-            // Extract low and high byte
-            let lo = vgetq_lane_u64::<0>(oct_sum) as u32;
-            let hi = vgetq_lane_u64::<1>(oct_sum) as u32;
-            lo | (hi << 8)
+            let pow_vec: uint8x16_t = crate::simd_storage::copy(&powers);
+            let weighted = vandq_u8(vcltzq_s8(vreinterpretq_s8_u8(a)), pow_vec);
+            let s = vpadd_u8(vget_low_u8(weighted), vget_high_u8(weighted));
+            let s = vpadd_u8(s, s);
+            let s = vpadd_u8(s, s);
+            u32::from(vget_lane_u16::<0>(vreinterpret_u16_u8(s)))
         }
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -3234,14 +3217,11 @@ impl I16x8Backend for archmage::NeonToken {
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: int16x8_t) -> u32 {
-        (vgetq_lane_u16::<0>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1)
-            | (vgetq_lane_u16::<1>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 1
-            | (vgetq_lane_u16::<2>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 2
-            | (vgetq_lane_u16::<3>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 3
-            | (vgetq_lane_u16::<4>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 4
-            | (vgetq_lane_u16::<5>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 5
-            | (vgetq_lane_u16::<6>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 6
-            | (vgetq_lane_u16::<7>(vreinterpretq_u16_s16(vshrq_n_s16::<15>(a))) as u32 & 1) << 7
+        {
+            let powers: [u16; 8] = [1, 2, 4, 8, 16, 32, 64, 128];
+            let pow_vec: uint16x8_t = crate::simd_storage::copy(&powers);
+            u32::from(vaddvq_u16(vandq_u16(vcltzq_s16(a), pow_vec)))
+        }
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_i16_to_i32(self, a: int16x8_t) -> int32x4_t {
@@ -3708,14 +3688,14 @@ impl U16x8Backend for archmage::NeonToken {
 
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitmask(self, a: uint16x8_t) -> u32 {
-        (vgetq_lane_u16::<0>(vshrq_n_u16::<15>(a)) as u32 & 1)
-            | (vgetq_lane_u16::<1>(vshrq_n_u16::<15>(a)) as u32 & 1) << 1
-            | (vgetq_lane_u16::<2>(vshrq_n_u16::<15>(a)) as u32 & 1) << 2
-            | (vgetq_lane_u16::<3>(vshrq_n_u16::<15>(a)) as u32 & 1) << 3
-            | (vgetq_lane_u16::<4>(vshrq_n_u16::<15>(a)) as u32 & 1) << 4
-            | (vgetq_lane_u16::<5>(vshrq_n_u16::<15>(a)) as u32 & 1) << 5
-            | (vgetq_lane_u16::<6>(vshrq_n_u16::<15>(a)) as u32 & 1) << 6
-            | (vgetq_lane_u16::<7>(vshrq_n_u16::<15>(a)) as u32 & 1) << 7
+        {
+            let powers: [u16; 8] = [1, 2, 4, 8, 16, 32, 64, 128];
+            let pow_vec: uint16x8_t = crate::simd_storage::copy(&powers);
+            u32::from(vaddvq_u16(vandq_u16(
+                vcltzq_s16(vreinterpretq_s16_u16(a)),
+                pow_vec,
+            )))
+        }
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_u16_to_u32(self, a: uint16x8_t) -> uint32x4_t {
