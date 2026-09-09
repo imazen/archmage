@@ -192,6 +192,26 @@ impl F32x4Backend for archmage::Wasm128Token {
     fn bitxor(self, a: v128, b: v128) -> v128 {
         v128_xor(a, b)
     }
+
+    #[inline(always)]
+    fn to_u8_bytes(self, a: v128) -> [u8; 4] {
+        let i32s = i32x4_trunc_sat_f32x4(f32x4_nearest(a));
+        let i16s = i16x8_narrow_i32x4(i32s, i32s);
+        let u8s = u8x16_narrow_i16x8(i16s, i16s);
+        (u32x4_extract_lane::<0>(u8s)).to_ne_bytes()
+    }
+
+    #[inline(always)]
+    fn store_rgba_bytes(self, r: v128, g: v128, b: v128, a: v128) -> [u8; 16] {
+        let lo = i32x4_splat(0);
+        let hi = i32x4_splat(255);
+        let clamp = |v: v128| i32x4_min(i32x4_max(i32x4_trunc_sat_f32x4(f32x4_nearest(v)), lo), hi);
+        let pixels = v128_or(
+            v128_or(clamp(r), i32x4_shl(clamp(g), 8)),
+            v128_or(i32x4_shl(clamp(b), 16), i32x4_shl(clamp(a), 24)),
+        );
+        crate::simd_storage::cast(pixels)
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -397,6 +417,31 @@ impl F32x8Backend for archmage::Wasm128Token {
     #[inline(always)]
     fn bitxor(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
         [v128_xor(a[0], b[0]), v128_xor(a[1], b[1])]
+    }
+
+    #[inline(always)]
+    fn to_u8_bytes(self, a: [v128; 2]) -> [u8; 8] {
+        let i0 = i32x4_trunc_sat_f32x4(f32x4_nearest(a[0]));
+        let i1 = i32x4_trunc_sat_f32x4(f32x4_nearest(a[1]));
+        let i16s = i16x8_narrow_i32x4(i0, i1);
+        let u8s = u8x16_narrow_i16x8(i16s, i16s);
+        let lo = u32x4_extract_lane::<0>(u8s);
+        let hi = u32x4_extract_lane::<1>(u8s);
+        ((u64::from(hi) << 32) | u64::from(lo)).to_ne_bytes()
+    }
+
+    #[inline(always)]
+    fn store_rgba_bytes(self, r: [v128; 2], g: [v128; 2], b: [v128; 2], a: [v128; 2]) -> [u8; 32] {
+        let lo = i32x4_splat(0);
+        let hi = i32x4_splat(255);
+        let clamp = |v: v128| i32x4_min(i32x4_max(i32x4_trunc_sat_f32x4(f32x4_nearest(v)), lo), hi);
+        let pack = |r: v128, g: v128, b: v128, a: v128| {
+            v128_or(
+                v128_or(clamp(r), i32x4_shl(clamp(g), 8)),
+                v128_or(i32x4_shl(clamp(b), 16), i32x4_shl(clamp(a), 24)),
+            )
+        };
+        crate::simd_storage::cast([pack(r[0], g[0], b[0], a[0]), pack(r[1], g[1], b[1], a[1])])
     }
 }
 
@@ -922,11 +967,11 @@ impl I32x4Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn all_true(self, a: v128) -> bool {
-        i32x4_all_true(a)
+        i32x4_bitmask(a) == 0x0F
     }
     #[inline(always)]
     fn any_true(self, a: v128) -> bool {
-        v128_any_true(a)
+        i32x4_bitmask(a) != 0
     }
     #[inline(always)]
     fn bitmask(self, a: v128) -> u32 {
@@ -1121,12 +1166,12 @@ impl I32x8Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn all_true(self, a: [v128; 2]) -> bool {
-        i32x4_all_true(a[0]) && i32x4_all_true(a[1])
+        i32x4_bitmask(v128_and(a[0], a[1])) == 0x0F
     }
 
     #[inline(always)]
     fn any_true(self, a: [v128; 2]) -> bool {
-        v128_any_true(a[0]) || v128_any_true(a[1])
+        i32x4_bitmask(v128_or(a[0], a[1])) != 0
     }
 
     #[inline(always)]
@@ -1285,11 +1330,11 @@ impl U32x4Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn all_true(self, a: v128) -> bool {
-        i32x4_all_true(a)
+        i32x4_bitmask(a) == 0x0F
     }
     #[inline(always)]
     fn any_true(self, a: v128) -> bool {
-        v128_any_true(a)
+        i32x4_bitmask(a) != 0
     }
     #[inline(always)]
     fn bitmask(self, a: v128) -> u32 {
@@ -1461,12 +1506,12 @@ impl U32x8Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn all_true(self, a: [v128; 2]) -> bool {
-        i32x4_all_true(a[0]) && i32x4_all_true(a[1])
+        i32x4_bitmask(v128_and(a[0], a[1])) == 0x0F
     }
 
     #[inline(always)]
     fn any_true(self, a: [v128; 2]) -> bool {
-        v128_any_true(a[0]) || v128_any_true(a[1])
+        i32x4_bitmask(v128_or(a[0], a[1])) != 0
     }
 
     #[inline(always)]
@@ -1605,11 +1650,11 @@ impl I64x2Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn all_true(self, a: v128) -> bool {
-        i64x2_all_true(a)
+        i64x2_bitmask(a) == 0x03
     }
     #[inline(always)]
     fn any_true(self, a: v128) -> bool {
-        v128_any_true(a)
+        i64x2_bitmask(a) != 0
     }
     #[inline(always)]
     fn bitmask(self, a: v128) -> u32 {
@@ -1792,12 +1837,12 @@ impl I64x4Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn all_true(self, a: [v128; 2]) -> bool {
-        i64x2_all_true(a[0]) && i64x2_all_true(a[1])
+        i64x2_bitmask(v128_and(a[0], a[1])) == 0x03
     }
 
     #[inline(always)]
     fn any_true(self, a: [v128; 2]) -> bool {
-        v128_any_true(a[0]) || v128_any_true(a[1])
+        i64x2_bitmask(v128_or(a[0], a[1])) != 0
     }
 
     #[inline(always)]
@@ -1945,11 +1990,11 @@ impl I8x16Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn all_true(self, a: v128) -> bool {
-        i8x16_all_true(a)
+        i8x16_bitmask(a) as u64 == 65535
     }
     #[inline(always)]
     fn any_true(self, a: v128) -> bool {
-        v128_any_true(a)
+        i8x16_bitmask(a) != 0
     }
     #[inline(always)]
     fn bitmask(self, a: v128) -> u32 {
@@ -2114,12 +2159,12 @@ impl I8x32Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn all_true(self, a: [v128; 2]) -> bool {
-        i8x16_all_true(a[0]) && i8x16_all_true(a[1])
+        i8x16_bitmask(v128_and(a[0], a[1])) as u64 == 65535
     }
 
     #[inline(always)]
     fn any_true(self, a: [v128; 2]) -> bool {
-        v128_any_true(a[0]) || v128_any_true(a[1])
+        i8x16_bitmask(v128_or(a[0], a[1])) != 0
     }
 
     #[inline(always)]
@@ -2270,11 +2315,11 @@ impl U8x16Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn all_true(self, a: v128) -> bool {
-        i8x16_all_true(a)
+        i8x16_bitmask(a) as u64 == 65535
     }
     #[inline(always)]
     fn any_true(self, a: v128) -> bool {
-        v128_any_true(a)
+        i8x16_bitmask(a) != 0
     }
     #[inline(always)]
     fn bitmask(self, a: v128) -> u32 {
@@ -2462,12 +2507,12 @@ impl U8x32Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn all_true(self, a: [v128; 2]) -> bool {
-        i8x16_all_true(a[0]) && i8x16_all_true(a[1])
+        i8x16_bitmask(v128_and(a[0], a[1])) as u64 == 65535
     }
 
     #[inline(always)]
     fn any_true(self, a: [v128; 2]) -> bool {
-        v128_any_true(a[0]) || v128_any_true(a[1])
+        i8x16_bitmask(v128_or(a[0], a[1])) != 0
     }
 
     #[inline(always)]
@@ -2706,11 +2751,11 @@ impl I16x8Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn all_true(self, a: v128) -> bool {
-        i16x8_all_true(a)
+        i16x8_bitmask(a) as u64 == 255
     }
     #[inline(always)]
     fn any_true(self, a: v128) -> bool {
-        v128_any_true(a)
+        i16x8_bitmask(a) != 0
     }
     #[inline(always)]
     fn bitmask(self, a: v128) -> u32 {
@@ -2922,12 +2967,12 @@ impl I16x16Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn all_true(self, a: [v128; 2]) -> bool {
-        i16x8_all_true(a[0]) && i16x8_all_true(a[1])
+        i16x8_bitmask(v128_and(a[0], a[1])) as u64 == 255
     }
 
     #[inline(always)]
     fn any_true(self, a: [v128; 2]) -> bool {
-        v128_any_true(a[0]) || v128_any_true(a[1])
+        i16x8_bitmask(v128_or(a[0], a[1])) != 0
     }
 
     #[inline(always)]
@@ -3123,11 +3168,11 @@ impl U16x8Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn all_true(self, a: v128) -> bool {
-        i16x8_all_true(a)
+        i16x8_bitmask(a) as u64 == 255
     }
     #[inline(always)]
     fn any_true(self, a: v128) -> bool {
-        v128_any_true(a)
+        i16x8_bitmask(a) != 0
     }
     #[inline(always)]
     fn bitmask(self, a: v128) -> u32 {
@@ -3307,12 +3352,12 @@ impl U16x16Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn all_true(self, a: [v128; 2]) -> bool {
-        i16x8_all_true(a[0]) && i16x8_all_true(a[1])
+        i16x8_bitmask(v128_and(a[0], a[1])) as u64 == 255
     }
 
     #[inline(always)]
     fn any_true(self, a: [v128; 2]) -> bool {
-        v128_any_true(a[0]) || v128_any_true(a[1])
+        i16x8_bitmask(v128_or(a[0], a[1])) != 0
     }
 
     #[inline(always)]
@@ -3468,11 +3513,11 @@ impl U64x2Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn all_true(self, a: v128) -> bool {
-        i64x2_all_true(a)
+        i64x2_bitmask(a) as u64 == 3
     }
     #[inline(always)]
     fn any_true(self, a: v128) -> bool {
-        v128_any_true(a)
+        i64x2_bitmask(a) != 0
     }
     #[inline(always)]
     fn bitmask(self, a: v128) -> u32 {
@@ -3624,12 +3669,12 @@ impl U64x4Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn all_true(self, a: [v128; 2]) -> bool {
-        i64x2_all_true(a[0]) && i64x2_all_true(a[1])
+        i64x2_bitmask(v128_and(a[0], a[1])) as u64 == 3
     }
 
     #[inline(always)]
     fn any_true(self, a: [v128; 2]) -> bool {
-        v128_any_true(a[0]) || v128_any_true(a[1])
+        i64x2_bitmask(v128_or(a[0], a[1])) != 0
     }
 
     #[inline(always)]

@@ -254,6 +254,19 @@ impl W512Type {
         !self.is_float() && matches!(self.elem_bits, 16 | 32)
     }
 
+    /// The signed counterpart of this element type. Used by the sign-bit
+    /// boolean contract, which is stated in terms of the sign bit regardless
+    /// of the lane type's own signedness.
+    fn signed_elem(&self) -> &'static str {
+        match self.elem_bits {
+            8 => "i8",
+            16 => "i16",
+            32 => "i32",
+            64 => "i64",
+            _ => unreachable!(),
+        }
+    }
+
     /// The unsigned counterpart of this element type.
     fn unsigned_elem(&self) -> &'static str {
         match self.elem_bits {
@@ -710,10 +723,21 @@ fn generate_int_backend_trait(ty: &W512Type) -> String {
         {new_ops_decls}
             // ====== Boolean ======
 
-            /// True if all lanes have their sign bit set (all-1s mask).
+            /// True if **every** lane has its sign bit set.
+            ///
+            /// This is a sign-bit test, not a "lane is nonzero" test, on
+            /// every backend and at every width. A lane holding `1` is
+            /// false; a lane holding `-1` (or `0x80` in its top bit) is
+            /// true. Comparison results are all-ones or all-zeros per lane,
+            /// so for masks — the intended input — the two readings agree
+            /// and this is the cheap native reduction. They diverge only on
+            /// hand-built vectors, which is where the backends used to
+            /// disagree with each other.
             fn all_true(self, a: Self::Repr) -> bool;
 
-            /// True if any lane has its sign bit set (any all-1s mask lane).
+            /// True if **any** lane has its sign bit set.
+            ///
+            /// Sign-bit test, not "lane is nonzero" — see `all_true`.
             fn any_true(self, a: Self::Repr) -> bool;
 
             /// Extract the high bit of each lane as a bitmask.
@@ -1116,6 +1140,7 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
 
 /// Generate scalar backend implementation for a W512 integer type.
 fn generate_scalar_int_impl(ty: &W512Type) -> String {
+    let signed_elem = ty.signed_elem();
     let integer_methods = super::backend_gen_widen_narrow::methods(&ty.name(), "ScalarToken");
     let trait_name = ty.trait_name();
     let elem = ty.elem;
@@ -1317,10 +1342,10 @@ fn generate_scalar_int_impl(ty: &W512Type) -> String {
 
         {new_ops}
             #[inline(always)]
-            fn all_true(self, a: {array}) -> bool {{ a.iter().all(|&v| v != {zero_lit}) }}
+            fn all_true(self, a: {array}) -> bool {{ a.iter().all(|&v| (v as {signed_elem}) < 0) }}
 
             #[inline(always)]
-            fn any_true(self, a: {array}) -> bool {{ a.iter().any(|&v| v != {zero_lit}) }}
+            fn any_true(self, a: {array}) -> bool {{ a.iter().any(|&v| (v as {signed_elem}) < 0) }}
 
             #[inline(always)]
             fn bitmask(self, a: {array}) -> u64 {{ {bitmask_body} }}
@@ -2806,14 +2831,16 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
         {new_ops}
             {arcane}
             fn all_true(self, a: __m512i) -> bool {{
-                let mask = _mm512_cmpneq_{blend_suffix}_mask(a, _mm512_setzero_si512());
-                mask as u64 == {full_mask}
+                // Sign-bit contract: `movepi*_mask` reads the sign bits
+                // directly. The `cmpneq` form this replaces answered a
+                // different question (lane nonzero) and disagreed with the
+                // V3 movemask backends.
+                _mm512_movepi{elem_bits}_mask(a) as u64 == {full_mask}
             }}
 
             {arcane}
             fn any_true(self, a: __m512i) -> bool {{
-                let mask = _mm512_cmpneq_{blend_suffix}_mask(a, _mm512_setzero_si512());
-                mask as u64 != 0
+                _mm512_movepi{elem_bits}_mask(a) as u64 != 0
             }}
 
             {arcane}

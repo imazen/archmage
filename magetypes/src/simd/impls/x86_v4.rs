@@ -640,14 +640,16 @@ impl I8x64Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi8_mask(a) as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi8_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -839,14 +841,16 @@ impl U8x64Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi8_mask(a) as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi8_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1078,14 +1082,16 @@ impl I16x32Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFF_FFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi16_mask(a) as u64 == 0xFFFF_FFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi16_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1316,14 +1322,16 @@ impl U16x32Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFF_FFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi16_mask(a) as u64 == 0xFFFF_FFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi16_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1527,14 +1535,16 @@ impl I32x16Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi32_mask(a) as u64 == 0xFFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi32_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1735,14 +1745,16 @@ impl U32x16Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi32_mask(a) as u64 == 0xFFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi32_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1909,14 +1921,16 @@ impl I64x8Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi64_mask(a) as u64 == 0xFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi64_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -2078,14 +2092,16 @@ impl U64x8Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi64_mask(a) as u64 == 0xFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi64_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -2712,14 +2728,16 @@ impl I8x64Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi8_mask(a) as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi8_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -2911,14 +2929,16 @@ impl U8x64Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi8_mask(a) as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi8_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3150,14 +3170,16 @@ impl I16x32Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFF_FFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi16_mask(a) as u64 == 0xFFFF_FFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi16_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3388,14 +3410,16 @@ impl U16x32Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFF_FFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi16_mask(a) as u64 == 0xFFFF_FFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi16_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3599,14 +3623,16 @@ impl I32x16Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi32_mask(a) as u64 == 0xFFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi32_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3807,14 +3833,16 @@ impl U32x16Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi32_mask(a) as u64 == 0xFFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi32_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3981,14 +4009,16 @@ impl I64x8Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi64_mask(a) as u64 == 0xFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi64_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -4150,14 +4180,16 @@ impl U64x8Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi64_mask(a) as u64 == 0xFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi64_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]

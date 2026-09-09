@@ -570,10 +570,21 @@ pub(super) fn generate_int_backend_trait(ty: &IntVecType) -> String {
 
             // ====== Boolean ======
 
-            /// True if all lanes have their sign bit set (all-1s mask).
+            /// True if **every** lane has its sign bit set.
+            ///
+            /// This is a sign-bit test, not a "lane is nonzero" test, on
+            /// every backend and at every width. A lane holding `1` is
+            /// false; a lane holding `-1` (or `0x80` in its top bit) is
+            /// true. Comparison results are all-ones or all-zeros per lane,
+            /// so for masks — the intended input — the two readings agree
+            /// and this is the cheap native reduction. They diverge only on
+            /// hand-built vectors, which is where the backends used to
+            /// disagree with each other.
             fn all_true(self, a: Self::Repr) -> bool;
 
-            /// True if any lane has its sign bit set.
+            /// True if **any** lane has its sign bit set.
+            ///
+            /// Sign-bit test, not "lane is nonzero" — see `all_true`.
             fn any_true(self, a: Self::Repr) -> bool;
 
             /// Extract the high bit of each lane as a bitmask.
@@ -1294,10 +1305,16 @@ fn generate_scalar_int_impl(ty: &IntVecType) -> String {
         .collect();
     let blend_body = format!("[{}]", blend_items.join(", "));
 
-    let all_true_check: Vec<String> = (0..lanes).map(|i| format!("a[{i}] != 0")).collect();
+    // Sign-bit contract: top bit set, not merely nonzero.
+    let sign_shift = ty.elem_bits - 1;
+    let all_true_check: Vec<String> = (0..lanes)
+        .map(|i| format!("(a[{i}] >> {sign_shift}) != 0"))
+        .collect();
     let all_true_body = all_true_check.join(" && ");
 
-    let any_true_check: Vec<String> = (0..lanes).map(|i| format!("a[{i}] != 0")).collect();
+    let any_true_check: Vec<String> = (0..lanes)
+        .map(|i| format!("(a[{i}] >> {sign_shift}) != 0"))
+        .collect();
     let any_true_body = any_true_check.join(" || ");
 
     let bitmask_items: Vec<String> = (0..lanes)
@@ -1890,16 +1907,21 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
 
     // Boolean reductions
     if ty.elem_bits <= 16 {
-        // 8-bit and 16-bit: use vminvq/vmaxvq on unsigned interpretation
+        // Sign-bit contract: every lane's sign bit set <=> every lane is
+        // negative when read as signed <=> the signed maximum is negative.
+        // One reduction either way, and measured faster than the unsigned-min
+        // form on M4 Pro.
+        let ss = format!("s{}", ty.elem_bits);
+        let to_s = format!("vreinterpretq_{ss}_{ns}");
         let all_true_body = if ty.signed {
-            format!("vminvq_u{}({to_u}(a)) != 0", &ns[1..])
+            format!("vmaxvq_{ns}(a) < 0")
         } else {
-            format!("vminvq_{ns}(a) != 0")
+            format!("vmaxvq_{ss}({to_s}(a)) < 0")
         };
         let any_true_body = if ty.signed {
-            format!("vmaxvq_u{}({to_u}(a)) != 0", &ns[1..])
+            format!("vminvq_{ns}(a) < 0")
         } else {
-            format!("vmaxvq_{ns}(a) != 0")
+            format!("vminvq_{ss}({to_s}(a)) < 0")
         };
         // Bitmask for 8-bit: extract high bit of each byte
         // Bitmask for 16-bit: extract high bit of each 16-bit lane
@@ -1927,12 +1949,14 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
 
             {arcane}
             fn all_true(self, a: {nt}) -> bool {{
-                vgetq_lane_u64::<0>(a) != 0 && vgetq_lane_u64::<1>(a) != 0
+                // NEON has no 64-bit horizontal reduction; AND the lanes and
+                // test the sign bit once.
+                ((vgetq_lane_u64::<0>(a) & vgetq_lane_u64::<1>(a)) >> 63) != 0
             }}
 
             {arcane}
             fn any_true(self, a: {nt}) -> bool {{
-                vgetq_lane_u64::<0>(a) != 0 || vgetq_lane_u64::<1>(a) != 0
+                ((vgetq_lane_u64::<0>(a) | vgetq_lane_u64::<1>(a)) >> 63) != 0
             }}
 
             {arcane}
@@ -2344,33 +2368,30 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
         });
     }
 
-    // Boolean: delegate to sub-vector operations
-    let all_true_items: Vec<String> = (0..sub_count)
-        .map(|i| {
-            if ty.signed {
-                let us = &ns[1..];
-                format!("vminvq_u{us}(vreinterpretq_u{us}_{ns}(a[{i}])) != 0")
-            } else if ty.elem_bits == 64 {
-                // NEON lacks vminvq_u64 — extract lanes manually
-                format!("vgetq_lane_u64::<0>(a[{i}]) != 0 && vgetq_lane_u64::<1>(a[{i}]) != 0")
-            } else {
-                format!("vminvq_{ns}(a[{i}]) != 0")
-            }
+    // Boolean: sign bits survive AND/OR, so fold every sub-vector together
+    // and reduce once instead of reducing each half.
+    let fold = |op: &str| -> String {
+        (1..sub_count).fold("a[0]".to_string(), |acc, i| {
+            format!("v{op}q_{ns}({acc}, a[{i}])")
         })
-        .collect();
-    let any_true_items: Vec<String> = (0..sub_count)
-        .map(|i| {
-            if ty.signed {
-                let us = &ns[1..];
-                format!("vmaxvq_u{us}(vreinterpretq_u{us}_{ns}(a[{i}])) != 0")
-            } else if ty.elem_bits == 64 {
-                // NEON lacks vmaxvq_u64 — extract lanes manually
-                format!("vgetq_lane_u64::<0>(a[{i}]) != 0 || vgetq_lane_u64::<1>(a[{i}]) != 0")
-            } else {
-                format!("vmaxvq_{ns}(a[{i}]) != 0")
-            }
-        })
-        .collect();
+    };
+    let ss = format!("s{}", ty.elem_bits);
+    let reduce = |folded: &str, red: &str, lane_op: &str| -> String {
+        if ty.elem_bits == 64 {
+            // No 64-bit horizontal reduction on NEON: combine the two lanes
+            // with the same operator used for the fold, then test one sign bit.
+            format!(
+                "((vgetq_lane_u64::<0>({f}) {lane_op} vgetq_lane_u64::<1>({f})) >> 63) != 0",
+                f = folded
+            )
+        } else if ty.signed {
+            format!("v{red}vq_{ns}({folded}) < 0")
+        } else {
+            format!("v{red}vq_{ss}(vreinterpretq_{ss}_{ns}({folded})) < 0")
+        }
+    };
+    let all_true_items = vec![reduce(&fold("and"), "max", "&")];
+    let any_true_items = vec![reduce(&fold("orr"), "min", "|")];
 
     code.push_str(&formatdoc! {r#"
 
@@ -2739,14 +2760,16 @@ fn generate_wasm_native_int_impl(ty: &IntVecType) -> String {
 
     // Boolean
     let bitmask_fn = format!("{signed_wp}_bitmask");
-    let all_true_fn = format!("{signed_wp}_all_true");
+    // Sign-bit contract: the lane bitmask is exactly the set of sign bits.
+    // `iNxM_all_true` tests nonzero, which is a different question.
+    let full_mask = (1u64 << lanes) - 1;
 
     body.push_str(&formatdoc! {r#"
 
             #[inline(always)]
-            fn all_true(self, a: v128) -> bool {{ {all_true_fn}(a) }}
+            fn all_true(self, a: v128) -> bool {{ {bitmask_fn}(a) as u64 == {full_mask} }}
             #[inline(always)]
-            fn any_true(self, a: v128) -> bool {{ v128_any_true(a) }}
+            fn any_true(self, a: v128) -> bool {{ {bitmask_fn}(a) != 0 }}
             #[inline(always)]
             fn bitmask(self, a: v128) -> u32 {{ {bitmask_fn}(a) as u32 }}
         {integer_methods}
@@ -3120,16 +3143,20 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
         });
     }
 
-    // Boolean
-    let all_true_fn = format!("{signed_wp}_all_true");
+    // Boolean: sign bits survive AND/OR, so fold the sub-vectors and take one
+    // bitmask instead of one boolean reduction per half.
     let bitmask_fn = format!("{signed_wp}_bitmask");
-
-    let all_true_items: Vec<String> = (0..sub_count)
-        .map(|i| format!("{all_true_fn}(a[{i}])"))
-        .collect();
-    let any_true_items: Vec<String> = (0..sub_count)
-        .map(|i| format!("v128_any_true(a[{i}])"))
-        .collect();
+    let full_mask = (1u64 << lanes_per_128) - 1;
+    let fold = |op: &str| -> String {
+        (1..sub_count).fold("a[0]".to_string(), |acc, i| {
+            format!("v128_{op}({acc}, a[{i}])")
+        })
+    };
+    let all_true_items = vec![format!(
+        "{bitmask_fn}({}) as u64 == {full_mask}",
+        fold("and")
+    )];
+    let any_true_items = vec![format!("{bitmask_fn}({}) != 0", fold("or"))];
 
     code.push_str(&formatdoc! {r#"
 
