@@ -16,7 +16,7 @@ pub(super) fn trait_methods(name: &str) -> String {
     let src = p.src_backend();
     let dst = p.dst_backend();
     formatdoc! {r#"
-        /// Exact unsigned adjacent sums: output[k] = widened a[2*k] + widened a[2*k+1].
+        /// Exact unsigned adjacent sums: `output[k] = widened a[2*k] + widened a[2*k+1]`.
         fn pairwise_widen_add(self, a: <Self as super::{src}>::Repr) -> <Self as super::{dst}>::Repr
         where Self: super::{dst};
     "#}

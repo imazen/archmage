@@ -424,7 +424,7 @@ impl<T: F32x16Backend> f32x16<T> {
     }
 
     /// Reciprocal square root (1/sqrt(x)), the working tier: ≤4 ULP
-    /// with exact IEEE rails — see [`recip`](Self::recip) for the
+    /// with exact IEEE rails — see [`Self::recip`](Self::recip) for the
     /// contract shape; [`rsqrt_portable`](Self::rsqrt_portable) adds
     /// 0 ULP + subnormals + bit-identical.
     #[inline(always)]
@@ -445,7 +445,7 @@ impl<T: F32x16Backend> f32x16<T> {
     // Hardware estimate instructions (`rsqrtps`, `vrsqrte`) are deliberately
     // NOT used here — their bits differ across vendors and generations. For
     // the faster, per-platform (non-deterministic) variants see
-    // [`rsqrt_approx`](Self::rsqrt_approx) / [`recip`](Self::recip).
+    // [`Self::rsqrt_approx`](Self::rsqrt_approx) / [`Self::recip`](Self::recip).
 
     /// Deterministic reciprocal-sqrt estimate (~8-bit), bit-identical on
     /// every platform.
@@ -482,7 +482,7 @@ impl<T: F32x16Backend> f32x16<T> {
     /// Precise reciprocal square root: exact IEEE sqrt + division —
     /// **the 0 ULP tier**, with IEEE rails (`rsqrt(+0) = +inf`,
     /// `rsqrt(+inf) = +0`, negatives give NaN) and bit-identical on
-    /// every arch. Costs ~3.6x the working-tier [`rsqrt`](Self::rsqrt)
+    /// every arch. Costs ~3.6x the working-tier [`Self::rsqrt`](Self::rsqrt)
     /// on Zen-class x86 (and is the faster form on Apple Silicon).
     #[inline(always)]
     pub fn rsqrt_portable(self) -> Self {
@@ -522,7 +522,7 @@ impl<T: F32x16Backend> f32x16<T> {
     /// saturating `exp_midp`, issue #64) and, because correctly-rounded
     /// division is uniquely defined, bit-identical on every arch — the
     /// portable property is free. Costs ~1.9x the working-tier
-    /// [`recip`](Self::recip) on Zen-class x86 (and is the FASTER form
+    /// [`Self::recip`](Self::recip) on Zen-class x86 (and is the FASTER form
     /// on Apple Silicon).
     #[inline(always)]
     pub fn recip_portable(self) -> Self {

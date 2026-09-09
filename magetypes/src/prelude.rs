@@ -1,5 +1,5 @@
 //! Common magetypes imports: the generic SIMD vector types plus the
-//! [`SimdToken`](archmage::SimdToken) trait.
+//! [`archmage::SimdToken`] trait.
 //!
 //! Pair this with `use archmage::prelude::*;` for the tokens and macros, and
 //! name the token explicitly so the lane width and tier stay visible:

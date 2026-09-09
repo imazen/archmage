@@ -151,14 +151,14 @@ pub trait I8x64Backend: SimdToken + Sealed + Copy + 'static {
     fn clamp(self, a: Self::Repr, lo: Self::Repr, hi: Self::Repr) -> Self::Repr {
         <Self as I8x64Backend>::min(self, <Self as I8x64Backend>::max(self, a, lo), hi)
     }
-    /// Widen in natural lane order: result[i] = a[i + 0] as i16.
+    /// Widen in natural lane order: `result[i] = a[i + 0] as i16`.
     fn widen_low_i8_to_i16(
         self,
         a: <Self as super::I8x64Backend>::Repr,
     ) -> <Self as super::I16x32Backend>::Repr
     where
         Self: super::I16x32Backend;
-    /// Widen in natural lane order: result[i] = a[i + 32] as i16.
+    /// Widen in natural lane order: `result[i] = a[i + 32] as i16`.
     fn widen_high_i8_to_i16(
         self,
         a: <Self as super::I8x64Backend>::Repr,

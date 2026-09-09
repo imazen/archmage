@@ -858,9 +858,9 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             fn rcp_approx(self, a: Self::Repr) -> Self::Repr {{ a }}
 
             /// Fast reciprocal square root approximation: backend-dependent
-            /// (x86 ~12-bit, ARM ~8-bit, WASM full). [`rsqrt`] is full f32 everywhere.
+            /// (x86 ~12-bit, ARM ~8-bit, WASM full). [`Self::rsqrt`] is full f32 everywhere.
             ///
-            /// See [`rcp_approx`] for default-body rationale.
+            /// See [`Self::rcp_approx`] for default-body rationale.
             #[inline(always)]
             fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {{ a }}
 
@@ -887,7 +887,7 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             }}
 
             /// Working-tier reciprocal — defaults to delegating to
-            /// [`rcp_approx`] (which itself defaults to identity), so every
+            /// [`Self::rcp_approx`] (which itself defaults to identity), so every
             /// backend MUST override. Contract: <= 4 ULP by the backend's
             /// fastest conforming path (estimate + Newton on x86/NEON f32,
             /// exact division elsewhere); rails are per-backend and may be
@@ -896,7 +896,7 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn recip(self, a: Self::Repr) -> Self::Repr {{ Self::rcp_approx(self, a) }}
 
-            /// Working-tier reciprocal square root — see [`recip`] for the
+            /// Working-tier reciprocal square root — see [`Self::recip`] for the
             /// contract shape.
             #[inline(always)]
             fn rsqrt(self, a: Self::Repr) -> Self::Repr {{ Self::rsqrt_approx(self, a) }}
@@ -3863,7 +3863,7 @@ fn generate_convert_traits() -> String {
             /// lanes clamp to `i32::MIN`/`i32::MAX`, NaN lanes become 0 —
             /// identical on every backend (Rust `as` / NEON FCVTZS / WASM
             /// trunc_sat semantics). Default delegates to
-            /// [`convert_f32_to_i32`] (already conformant on NEON/WASM/
+            /// [`Self::convert_f32_to_i32`] (already conformant on NEON/WASM/
             /// scalar); x86 overrides with a cvttps + compare/blend fixup
             /// (the bare op yields the `i32::MIN` sentinel for overflow AND
             /// NaN there — issue #80).
@@ -3896,7 +3896,7 @@ fn generate_convert_traits() -> String {
             /// lanes clamp to `i32::MIN`/`i32::MAX`, NaN lanes become 0 —
             /// identical on every backend (Rust `as` / NEON FCVTZS / WASM
             /// trunc_sat semantics). Default delegates to
-            /// [`convert_f32_to_i32`] (already conformant on NEON/WASM/
+            /// [`Self::convert_f32_to_i32`] (already conformant on NEON/WASM/
             /// scalar); x86 overrides with a cvttps + compare/blend fixup
             /// (the bare op yields the `i32::MIN` sentinel for overflow AND
             /// NaN there — issue #80).
@@ -3930,7 +3930,7 @@ fn generate_convert_traits() -> String {
             /// lanes clamp to `i32::MIN`/`i32::MAX`, NaN lanes become 0 —
             /// identical on every backend (Rust `as` / NEON FCVTZS / WASM
             /// trunc_sat semantics). Default delegates to
-            /// [`convert_f32_to_i32`] (already conformant on NEON/WASM/
+            /// [`Self::convert_f32_to_i32`] (already conformant on NEON/WASM/
             /// scalar); x86 overrides with a cvttps + compare/blend fixup
             /// (the bare op yields the `i32::MIN` sentinel for overflow AND
             /// NaN there — issue #80).

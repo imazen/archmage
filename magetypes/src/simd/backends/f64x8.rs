@@ -144,7 +144,7 @@ pub trait F64x8Backend: SimdToken + Sealed + Copy + 'static {
         a
     }
 
-    /// Fast reciprocal square root approximation — see [`rcp_approx`].
+    /// Fast reciprocal square root approximation — see [`Self::rcp_approx`].
     #[inline(always)]
     fn rsqrt_approx(self, a: Self::Repr) -> Self::Repr {
         a
@@ -179,7 +179,7 @@ pub trait F64x8Backend: SimdToken + Sealed + Copy + 'static {
         Self::rcp_approx(self, a)
     }
 
-    /// Precise reciprocal square root — see [`recip`].
+    /// Precise reciprocal square root — see [`Self::recip`].
     #[inline(always)]
     fn rsqrt(self, a: Self::Repr) -> Self::Repr {
         Self::rsqrt_approx(self, a)
