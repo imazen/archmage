@@ -76,10 +76,18 @@ fn tokenless<const ADD: bool, R: ChunkInput>(input: &[R; 8]) -> [i32; 8] {
     incant!(legacy::<ADD, R>(input), [v3, neon, wasm128, scalar])
 }
 
+#[magetypes(rite, v3, neon, wasm128, scalar)]
+fn tokenless_magetypes<const ADD: bool, R: ChunkInput>(input: &[R; 8]) -> [i32; 8] {
+    incant!(legacy::<ADD, R>(input), [v3, neon, wasm128, scalar])
+}
+
 // Tokenful -> tokenless: exact same-tier suffix, no token argument.
 #[magetypes(v3, neon, wasm128, scalar)]
 fn entry<const ADD: bool, R: ChunkInput>(_token: Token, input: &[R; 8]) -> [i32; 8] {
-    incant!(tokenless::<ADD, R>(input) without token)
+    let direct = incant!(tokenless::<ADD, R>(input) without token);
+    let generated = incant!(tokenless_magetypes::<ADD, R>(input) without token);
+    assert_eq!(direct, generated);
+    generated
 }
 
 #[test]
