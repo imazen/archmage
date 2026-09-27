@@ -242,3 +242,24 @@ contexts, legacy inference, all 30 vector shapes, and both alias modes together.
 Cold build measurements use `scripts/measure-local-mode-compile.py`; source
 snapshots and full logs are recorded with the measurement results under
 `benchmarks/`.
+
+## Validation of the implemented modes
+
+The implementation landed in `8ef7db6f`; documentation and test-source cleanup
+landed in `751960ac`. `cargo run -p xtask -- ci` completed successfully on
+2026-09-27, including generation reproducibility, soundness scans, default and
+no_std tests, macro snapshots, bare-metal compilation, API snapshots on three
+targets, and documentation. The script's optional Miri, Docker/cross, and WASM
+runtime stages were unavailable on this host.
+
+Separately, the new constructor and raw-interop tests passed on x86-64 and
+under AArch64 QEMU. All-feature compilation passed for x86-64, AArch64,
+wasm32-unknown-unknown, and i686. The six earlier standalone design-probe cases
+also retained their expected results. The changed library and new tests pass
+Clippy with warnings denied. Broader all-target Clippy has existing failures in
+unchanged examples/tests, recorded in `CLAUDE.md`.
+
+Cold-build results and retained evidence are in
+[the measurement report](../benchmarks/local_mode_compile_2026-09-27.md).
+The full CI log is retained at
+`/home/lilith/data/archmage/local-mode-compile/2026-09-27/validation-ci.log`.

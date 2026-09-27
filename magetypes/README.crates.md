@@ -87,6 +87,19 @@ The reference forms `with token` and `without token` remain implemented; they
 respectively select by the held token's exact type and call a tokenless variant
 in a matching macro-managed context. See [dispatch](https://imazen.github.io/archmage/archmage/dispatch/incant/).
 
+### Constructors from the function's feature context
+
+Use `#[magetypes(local(f32x8), v3, neon, wasm128, scalar)]` to select
+`f32x8::zero()`, `f32x8::splat(value)`, and `f32x8::load(data)` without token
+arguments. Rust checks that the enclosing function enables the required target
+features. `define(f32x8)` keeps the existing token-taking API.
+
+These are fixed-policy aliases over one generic vector core. Operations preserve
+the policy; use `.into()` when passing a local vector to an existing explicit-token
+API, or vice versa. The conversion preserves the stored capability token.
+`local` does not restrict how long a vector lives or prevent returning it.
+See [the constructor-mode design](../docs/TOKEN-CONTEXT-MIGRATION.md#opt-in-alias-selection-define-and-local).
+
 ## Tokens from an existing feature context
 
 When a helper already has target features, `from_context()` constructs a token
@@ -131,6 +144,26 @@ Compile the complete call chain, test supported tiers and scalar tails, and
 inspect optimized code under your supported baseline. See
 [testing](https://imazen.github.io/archmage/archmage/testing/dispatch-testing/) and
 [production coverage](https://imazen.github.io/archmage/magetypes/examples/coverage/).
+
+## Raw SIMD interchange
+
+Existing platform constructors keep their token-taking signatures, such as
+`f32x4::from_float32x4_t(token, raw)` on NEON and
+`f32x8::from_m256(token, raw)` on x86. `raw()` extracts the native value.
+
+Inside a matching `#[rite]` or `#[arcane]` context, `from_raw(raw)` constructs
+without a token argument. The compiler checks the caller's target features;
+the constructor forbids unsafe code and obtains its token with `from_context()`.
+This applies to native 128-bit NEON/WASM, 128/256-bit V3, and 512-bit V4/V4x
+representations. The token-taking `from_repr(token, repr)` remains available
+for backend-generic code and polyfilled widths.
+
+`From<Raw>` cannot provide this context gate: Rust rejects `#[target_feature]`
+on safe trait methods, including `From::from` (verified with rustc 1.98.1).
+Calling `.into()` inside a feature-enabled function does not strengthen the
+trait method's contract. A token-taking `From<(Token, Raw)>` could instead
+carry the proof explicitly; this conversion is not currently implemented.
+See the [Rust target-feature restrictions](https://doc.rust-lang.org/reference/attributes/codegen.html#attributes.codegen.target_feature.allowed-positions).
 
 ## License
 
@@ -217,16 +250,3 @@ MIT OR Apache-2.0
 [imageflow-dotnet]: https://github.com/imazen/imageflow-dotnet
 [imageflow-node]: https://github.com/imazen/imageflow-node
 [imageflow-go]: https://github.com/imazen/imageflow-go
-
-### Constructors from the function's feature context
-
-Use `#[magetypes(local(f32x8), v3, neon, wasm128, scalar)]` to select
-`f32x8::zero()`, `f32x8::splat(value)`, and `f32x8::load(data)` without token
-arguments. Rust checks that the enclosing function enables the required target
-features. `define(f32x8)` keeps the existing token-taking API.
-
-These are fixed-policy aliases over one generic vector core. Operations preserve
-the policy; use `.into()` when passing a local vector to an existing explicit-token
-API, or vice versa. The conversion preserves the stored capability token.
-`local` does not restrict how long a vector lives or prevent returning it.
-See [the constructor-mode design](../docs/TOKEN-CONTEXT-MIGRATION.md#opt-in-alias-selection-define-and-local).

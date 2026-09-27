@@ -87,6 +87,19 @@ The reference forms `with token` and `without token` remain implemented; they
 respectively select by the held token's exact type and call a tokenless variant
 in a matching macro-managed context. See [dispatch](https://imazen.github.io/archmage/archmage/dispatch/incant/).
 
+### Constructors from the function's feature context
+
+Use `#[magetypes(local(f32x8), v3, neon, wasm128, scalar)]` to select
+`f32x8::zero()`, `f32x8::splat(value)`, and `f32x8::load(data)` without token
+arguments. Rust checks that the enclosing function enables the required target
+features. `define(f32x8)` keeps the existing token-taking API.
+
+These are fixed-policy aliases over one generic vector core. Operations preserve
+the policy; use `.into()` when passing a local vector to an existing explicit-token
+API, or vice versa. The conversion preserves the stored capability token.
+`local` does not restrict how long a vector lives or prevent returning it.
+See [the constructor-mode design](../docs/TOKEN-CONTEXT-MIGRATION.md#opt-in-alias-selection-define-and-local).
+
 ## Tokens from an existing feature context
 
 When a helper already has target features, `from_context()` constructs a token
@@ -237,16 +250,3 @@ MIT OR Apache-2.0
 [imageflow-dotnet]: https://github.com/imazen/imageflow-dotnet
 [imageflow-node]: https://github.com/imazen/imageflow-node
 [imageflow-go]: https://github.com/imazen/imageflow-go
-
-### Constructors from the function's feature context
-
-Use `#[magetypes(local(f32x8), v3, neon, wasm128, scalar)]` to select
-`f32x8::zero()`, `f32x8::splat(value)`, and `f32x8::load(data)` without token
-arguments. Rust checks that the enclosing function enables the required target
-features. `define(f32x8)` keeps the existing token-taking API.
-
-These are fixed-policy aliases over one generic vector core. Operations preserve
-the policy; use `.into()` when passing a local vector to an existing explicit-token
-API, or vice versa. The conversion preserves the stored capability token.
-`local` does not restrict how long a vector lives or prevent returning it.
-See [the constructor-mode design](../docs/TOKEN-CONTEXT-MIGRATION.md#opt-in-alias-selection-define-and-local).
