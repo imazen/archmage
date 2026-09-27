@@ -91,3 +91,34 @@ point bit preservation, mutable slice views and tails, and existing `define`
 macro syntax. Default, no-default-feature, and AVX-512 configurations pass the
 focused tests; AArch64 tests also pass under QEMU. WASM and i686 test targets
 compile. These checks cover the additive 0.9 change, not the future 0.10 API.
+
+## Release verification (2026-09-27)
+
+The baseline is the published 0.9.29 packages, not the preserved constructor-mode
+or `use(...)` draft. `cargo-semver-checks 0.50.0` found no breaking API changes in
+archmage, archmage-macros, or magetypes on x86-64, nor in magetypes on AArch64
+or WASM, using a patch-release comparison. This checks source compatibility;
+it does not establish numerical equivalence or future 0.10 compatibility.
+
+For WASM, the tool's automatic rustdoc generation hit
+[cargo-semver-checks #1068](https://github.com/obi1kenobi/cargo-semver-checks/issues/1068).
+Generating both rustdoc JSON inputs with `cargo rustdoc` (without
+`--cap-lints=allow`) and supplying `--current-rustdoc` / `--baseline-rustdoc`
+completed the comparison successfully. The ordinary per-target API snapshots
+remain the CI check.
+
+`just check-packages` builds actual crate archives together without publishing.
+It asserts the normalized manifests retain the exact archmage→archmage-macros
+pin and the ordinary compatible magetypes→archmage version requirement. The
+archives were also checked with `--target x86_64-unknown-linux-gnu`,
+`--target aarch64-unknown-linux-gnu`, and `--target wasm32-wasip1` passed to
+`python3 xtask/check_packages.py` (repeat `--target` to check several).
+
+`just check-jxl-compat` checks the unmodified published jxl-encoder-simd 0.3.0.
+Its x86 build passes. ARM and WASM each retain one conversion-arity error;
+[the fixture](../tests/downstream-compat/jxl-encoder-simd/README.md) explicitly
+pins that known incompatibility. The calling-convention matrix runs on x86,
+ARM/QEMU, and WASM/Wasmtime and covers scalar/default signatures, tokenful and
+tokenless composition, nested dispatch, and const generics.
+
+No package version was bumped and nothing was published by these checks.

@@ -349,3 +349,13 @@ token-migration-check:
 
 token-migration-arm:
     CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER="qemu-aarch64 -L /usr/aarch64-linux-gnu" cargo test -p magetypes --test token_aliases --test raw_interop --target aarch64-unknown-linux-gnu
+
+# Build the actual crate archives together without publishing.
+check-packages:
+    python3 xtask/check_packages.py
+
+# Published consumer: native must compile; ARM/WASM pin the one known #117 error.
+check-jxl-compat:
+    python3 tests/downstream-compat/jxl-encoder-simd/check.py
+    python3 tests/downstream-compat/jxl-encoder-simd/check.py --target aarch64-unknown-linux-gnu
+    python3 tests/downstream-compat/jxl-encoder-simd/check.py --target wasm32-wasip1

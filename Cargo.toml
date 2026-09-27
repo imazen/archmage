@@ -22,7 +22,7 @@ repository.workspace = true
 description = "Safely invoke your intrinsic power, using the tokens granted to you by the CPU. Cast primitive magics faster than any mage alive."
 documentation = "https://docs.rs/archmage"
 # crates.io renders this trimmed, badge-free README (generated from README.md by
-# scripts/gen-readme-crates.sh); GitHub keeps README.md with the full badge row.
+# cargo run -p xtask -- generate); GitHub keeps README.md with the full badge row.
 readme = "README.crates.md"
 keywords = ["simd", "avx", "neon", "wasm", "safe"]
 categories = ["development-tools", "hardware-support", "no-std"]

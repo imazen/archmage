@@ -10,8 +10,8 @@ Use `archmage` with the [magetypes vector crate](https://docs.rs/magetypes/lates
 
 ```toml
 [dependencies]
-archmage = "0.9.28"
-magetypes = "0.9.28"
+archmage = "0.9.29"
+magetypes = "0.9.29"
 ```
 
 Process an image plane (exposure) or an audio buffer (gain), including a short
@@ -94,7 +94,7 @@ fn entry(_token: X64V3Token) -> bool { helper() }
 if let Some(token) = X64V3Token::summon() { assert!(entry(token)); }
 ```
 
-This is a repository addition after 0.9.28. See
+`from_context()` shipped in archmage 0.9.29. See
 [from_context and token extraction](https://imazen.github.io/archmage/archmage/getting-started/tokens/).
 Use `.v3()` to extract a V3 token from a stronger proof; `as_x64v3()` instead
 checks whether the held token is exactly a V3 token.
