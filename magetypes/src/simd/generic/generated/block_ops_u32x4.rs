@@ -1,11 +1,11 @@
-//! Block and view operations for `u32x4<T>`.
+//! Block and view operations for `u32x4<T, M>`.
 //!
 //! Array/byte views, slice casting, and cross-type bitcast to f32x4.
 
 use crate::simd::backends::U32x4Backend;
-use crate::simd::generic::u32x4;
+use crate::simd::generic::core_types::u32x4;
 
-impl<T: U32x4Backend> u32x4<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: U32x4Backend> u32x4<T, M> {
     // ====== Array/Byte Views ======
     //
     // Views borrow only raw storage. Checked helpers enforce size and
@@ -37,14 +37,14 @@ impl<T: U32x4Backend> u32x4<T> {
 
     /// Create from byte array reference (token-gated).
     #[inline(always)]
-    pub fn from_bytes(token: T, bytes: &[u8; 16]) -> Self {
-        Self(crate::simd_storage::copy(bytes), token)
+    pub(crate) fn from_bytes_with_token(token: T, bytes: &[u8; 16]) -> Self {
+        Self::new_repr(crate::simd_storage::copy(bytes), token)
     }
 
     /// Create from owned byte array (token-gated).
     #[inline(always)]
-    pub fn from_bytes_owned(token: T, bytes: [u8; 16]) -> Self {
-        Self(crate::simd_storage::cast(bytes), token)
+    pub(crate) fn from_bytes_owned_with_token(token: T, bytes: [u8; 16]) -> Self {
+        Self::new_repr(crate::simd_storage::cast(bytes), token)
     }
 
     // ====== Slice Casting ======
@@ -53,7 +53,7 @@ impl<T: U32x4Backend> u32x4<T> {
     ///
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[inline(always)]
-    pub fn cast_slice(token: T, slice: &[u32]) -> Option<&[Self]> {
+    pub(crate) fn cast_slice_with_token(token: T, slice: &[u32]) -> Option<&[Self]> {
         crate::simd_storage::vector_slice::<_, Self, 4>(token, slice)
     }
 
@@ -61,7 +61,7 @@ impl<T: U32x4Backend> u32x4<T> {
     ///
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[inline(always)]
-    pub fn cast_slice_mut(token: T, slice: &mut [u32]) -> Option<&mut [Self]> {
+    pub(crate) fn cast_slice_mut_with_token(token: T, slice: &mut [u32]) -> Option<&mut [Self]> {
         crate::simd_storage::vector_slice_mut::<_, Self, 4>(token, slice)
     }
 }
@@ -70,22 +70,170 @@ impl<T: U32x4Backend> u32x4<T> {
 // Cross-type bitcast to f32x4 (requires F32x4Backend)
 // ============================================================================
 
-impl<T: U32x4Backend + crate::simd::backends::F32x4Backend> u32x4<T> {
+impl<
+    M: crate::simd::generic::ConstructorMode,
+    T: U32x4Backend + crate::simd::backends::F32x4Backend,
+> u32x4<T, M>
+{
     /// Bitcast to f32x4 (reinterpret bits, no conversion).
     #[inline(always)]
-    pub fn bitcast_f32x4(self) -> super::f32x4<T> {
-        super::f32x4(crate::simd_storage::cast(self.0), self.1)
+    pub fn bitcast_f32x4(self) -> super::f32x4<T, M> {
+        super::f32x4::new_repr(crate::simd_storage::cast(self.0), self.1)
     }
 
     /// Bitcast to f32x4 by reference (zero-cost pointer cast).
     #[inline(always)]
-    pub fn bitcast_ref_f32x4(&self) -> &super::f32x4<T> {
+    pub fn bitcast_ref_f32x4(&self) -> &super::f32x4<T, M> {
         crate::simd_storage::vector_view(self.1, &self.0)
     }
 
     /// Bitcast to f32x4 by mutable reference (zero-cost pointer cast).
     #[inline(always)]
-    pub fn bitcast_mut_f32x4(&mut self) -> &mut super::f32x4<T> {
+    pub fn bitcast_mut_f32x4(&mut self) -> &mut super::f32x4<T, M> {
         crate::simd_storage::vector_view_mut(self.1, &mut self.0)
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl u32x4<archmage::NeonToken, crate::simd::generic::Context> {
+    /// Create from byte array reference (token-gated).
+    #[forbid(unsafe_code)]
+    #[archmage::rite(neon)]
+    pub fn from_bytes(bytes: &[u8; 16]) -> Self {
+        Self::from_bytes_with_token(archmage::NeonToken::from_context(), bytes)
+    }
+    /// Create from owned byte array (token-gated).
+    #[forbid(unsafe_code)]
+    #[archmage::rite(neon)]
+    pub fn from_bytes_owned(bytes: [u8; 16]) -> Self {
+        Self::from_bytes_owned_with_token(archmage::NeonToken::from_context(), bytes)
+    }
+    /// Reinterpret a scalar slice as a SIMD vector slice (token-gated).
+    /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(neon)]
+    pub fn cast_slice(slice: &[u32]) -> Option<&[Self]> {
+        Self::cast_slice_with_token(archmage::NeonToken::from_context(), slice)
+    }
+    /// Reinterpret a mutable scalar slice as a SIMD vector slice (token-gated).
+    /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(neon)]
+    pub fn cast_slice_mut(slice: &mut [u32]) -> Option<&mut [Self]> {
+        Self::cast_slice_mut_with_token(archmage::NeonToken::from_context(), slice)
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl u32x4<archmage::Wasm128Token, crate::simd::generic::Context> {
+    /// Create from byte array reference (token-gated).
+    #[forbid(unsafe_code)]
+    #[archmage::rite(wasm128)]
+    pub fn from_bytes(bytes: &[u8; 16]) -> Self {
+        Self::from_bytes_with_token(archmage::Wasm128Token::from_context(), bytes)
+    }
+    /// Create from owned byte array (token-gated).
+    #[forbid(unsafe_code)]
+    #[archmage::rite(wasm128)]
+    pub fn from_bytes_owned(bytes: [u8; 16]) -> Self {
+        Self::from_bytes_owned_with_token(archmage::Wasm128Token::from_context(), bytes)
+    }
+    /// Reinterpret a scalar slice as a SIMD vector slice (token-gated).
+    /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(wasm128)]
+    pub fn cast_slice(slice: &[u32]) -> Option<&[Self]> {
+        Self::cast_slice_with_token(archmage::Wasm128Token::from_context(), slice)
+    }
+    /// Reinterpret a mutable scalar slice as a SIMD vector slice (token-gated).
+    /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(wasm128)]
+    pub fn cast_slice_mut(slice: &mut [u32]) -> Option<&mut [Self]> {
+        Self::cast_slice_mut_with_token(archmage::Wasm128Token::from_context(), slice)
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl u32x4<archmage::X64V3Token, crate::simd::generic::Context> {
+    /// Create from byte array reference (token-gated).
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v3)]
+    pub fn from_bytes(bytes: &[u8; 16]) -> Self {
+        Self::from_bytes_with_token(archmage::X64V3Token::from_context(), bytes)
+    }
+    /// Create from owned byte array (token-gated).
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v3)]
+    pub fn from_bytes_owned(bytes: [u8; 16]) -> Self {
+        Self::from_bytes_owned_with_token(archmage::X64V3Token::from_context(), bytes)
+    }
+    /// Reinterpret a scalar slice as a SIMD vector slice (token-gated).
+    /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v3)]
+    pub fn cast_slice(slice: &[u32]) -> Option<&[Self]> {
+        Self::cast_slice_with_token(archmage::X64V3Token::from_context(), slice)
+    }
+    /// Reinterpret a mutable scalar slice as a SIMD vector slice (token-gated).
+    /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v3)]
+    pub fn cast_slice_mut(slice: &mut [u32]) -> Option<&mut [Self]> {
+        Self::cast_slice_mut_with_token(archmage::X64V3Token::from_context(), slice)
+    }
+}
+
+impl<T: U32x4Backend> u32x4<T, crate::simd::generic::Explicit> {
+    /// Create from byte array reference (token-gated).
+    #[inline(always)]
+    pub fn from_bytes(token: T, bytes: &[u8; 16]) -> Self {
+        Self::from_bytes_with_token(token, bytes)
+    }
+    /// Create from owned byte array (token-gated).
+    #[inline(always)]
+    pub fn from_bytes_owned(token: T, bytes: [u8; 16]) -> Self {
+        Self::from_bytes_owned_with_token(token, bytes)
+    }
+    /// Reinterpret a scalar slice as a SIMD vector slice (token-gated).
+    /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
+    #[inline(always)]
+    pub fn cast_slice(token: T, slice: &[u32]) -> Option<&[Self]> {
+        Self::cast_slice_with_token(token, slice)
+    }
+    /// Reinterpret a mutable scalar slice as a SIMD vector slice (token-gated).
+    /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
+    #[inline(always)]
+    pub fn cast_slice_mut(token: T, slice: &mut [u32]) -> Option<&mut [Self]> {
+        Self::cast_slice_mut_with_token(token, slice)
+    }
+}
+
+impl u32x4<archmage::ScalarToken, crate::simd::generic::Context> {
+    /// Create from byte array reference (token-gated).
+    #[forbid(unsafe_code)]
+    #[inline(always)]
+    pub fn from_bytes(bytes: &[u8; 16]) -> Self {
+        Self::from_bytes_with_token(archmage::ScalarToken, bytes)
+    }
+    /// Create from owned byte array (token-gated).
+    #[forbid(unsafe_code)]
+    #[inline(always)]
+    pub fn from_bytes_owned(bytes: [u8; 16]) -> Self {
+        Self::from_bytes_owned_with_token(archmage::ScalarToken, bytes)
+    }
+    /// Reinterpret a scalar slice as a SIMD vector slice (token-gated).
+    /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
+    #[forbid(unsafe_code)]
+    #[inline(always)]
+    pub fn cast_slice(slice: &[u32]) -> Option<&[Self]> {
+        Self::cast_slice_with_token(archmage::ScalarToken, slice)
+    }
+    /// Reinterpret a mutable scalar slice as a SIMD vector slice (token-gated).
+    /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
+    #[forbid(unsafe_code)]
+    #[inline(always)]
+    pub fn cast_slice_mut(slice: &mut [u32]) -> Option<&mut [Self]> {
+        Self::cast_slice_mut_with_token(archmage::ScalarToken, slice)
     }
 }

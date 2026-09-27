@@ -18,7 +18,7 @@
 
 ## items (12 lines)
 
-pub fn prelude::i64x8<T>::popcnt(self) -> Self [also: prelude::i16x32<T>, prelude::i32x16<T>, prelude::i64x8<T>, prelude::i8x64<T>, prelude::u16x32<T>, prelude::u32x16<T>, prelude::u64x8<T>, prelude::u8x64<T>]
+pub fn prelude::core_types::i64x8<T, M>::popcnt(self) -> Self [also: prelude::core_types::i16x32<T, M>, prelude::core_types::i32x16<T, M>, prelude::core_types::i64x8<T, M>, prelude::core_types::i8x64<T, M>, prelude::core_types::u16x32<T, M>, prelude::core_types::u32x16<T, M>, prelude::core_types::u64x8<T, M>, prelude::core_types::u8x64<T, M>]
 pub trait simd::backends::i16x32PopcntBackend: simd::backends::I16x32Backend
 pub trait simd::backends::i32x16PopcntBackend: simd::backends::I32x16Backend
 pub trait simd::backends::i64x8PopcntBackend: simd::backends::I64x8Backend

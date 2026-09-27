@@ -95,7 +95,7 @@
 //! and the module needs no module-level `unsafe`.
 
 use crate::simd::backends::F32x4Convert;
-use crate::simd::generic::{f32x4, i32x4};
+use crate::simd::generic::core_types::{f32x4, i32x4};
 
 // ============================================================================
 // Register-level conversions — inherent methods on the value types
@@ -118,7 +118,7 @@ use crate::simd::generic::{f32x4, i32x4};
 // arithmetic operation is unchanged — verified exhaustively in
 // `tests/convert_f16_exhaustive.rs`.
 
-impl<T: F32x4Convert> i32x4<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: F32x4Convert> i32x4<T, M> {
     /// Decode four IEEE-754 binary16 (`f16`) bit patterns held in the low 16
     /// bits of each lane (`self`) into an [`f32x4`].
     ///
@@ -132,19 +132,19 @@ impl<T: F32x4Convert> i32x4<T> {
     /// subnormal, and infinite input, and reproduces the reference's NaN bit
     /// patterns. Branchless on every backend.
     #[inline]
-    pub fn f16_to_f32(self) -> f32x4<T> {
+    pub fn f16_to_f32(self) -> f32x4<T, M> {
         let token = self.1;
         let h = self;
 
         // 2^112 as f32 bits — rescales the magic-shifted exponent and, in the
         // same multiply, denormalizes f16 subnormals.
-        let magic = f32x4::splat(token, f32::from_bits(0x7780_0000));
+        let magic = f32x4::splat_with_token(token, f32::from_bits(0x7780_0000));
 
-        let mask_sign = i32x4::splat(token, 0x8000);
-        let mask_mag = i32x4::splat(token, 0x7fff);
-        let mask_expmant = i32x4::splat(token, 0x007f_ffff);
-        let inf_exp = i32x4::splat(token, 0x7f80_0000);
-        let f16_expmask = i32x4::splat(token, 0x7c00);
+        let mask_sign = i32x4::splat_with_token(token, 0x8000);
+        let mask_mag = i32x4::splat_with_token(token, 0x7fff);
+        let mask_expmant = i32x4::splat_with_token(token, 0x007f_ffff);
+        let inf_exp = i32x4::splat_with_token(token, 0x7f80_0000);
+        let f16_expmask = i32x4::splat_with_token(token, 0x7c00);
 
         // Sign bit moved to the f32 sign position.
         let sign = (h & mask_sign).shl_const::<16>();
@@ -164,7 +164,7 @@ impl<T: F32x4Convert> i32x4<T> {
     }
 }
 
-impl<T: F32x4Convert> f32x4<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: F32x4Convert> f32x4<T, M> {
     /// Encode this [`f32x4`] (round-to-nearest-even) into four IEEE-754
     /// binary16 (`f16`) bit patterns, returned in the low 16 bits of each
     /// `i32` lane (the upper 16 bits are zero).
@@ -178,7 +178,7 @@ impl<T: F32x4Convert> f32x4<T> {
     /// See [`F16Convert::f32_to_f16_slice`] for the slice-oriented entry point
     /// that stores to `&mut [u16]`.
     #[inline]
-    pub fn to_f16(self) -> i32x4<T> {
+    pub fn to_f16(self) -> i32x4<T, M> {
         let token = self.1;
         let f = self;
 
@@ -191,15 +191,16 @@ impl<T: F32x4Convert> f32x4<T> {
         //   denorm_magic  = ((127 - 15) + (23 - 10) + 1) << 23
         let bits = f.bitcast_i32x4();
 
-        let sign_mask = i32x4::splat(token, 0x8000_0000u32 as i32);
-        let f32infty = i32x4::splat(token, 255 << 23);
-        let f16max = i32x4::splat(token, (127 + 16) << 23);
-        let denorm_cutoff = i32x4::splat(token, 113 << 23);
-        let denorm_magic = i32x4::splat(token, ((127 - 15) + (23 - 10) + 1) << 23);
-        let one = i32x4::splat(token, 1);
-        let bias_bits = i32x4::splat(token, ((15i32.wrapping_sub(127)) << 23).wrapping_add(0xfff));
-        let nan_out = i32x4::splat(token, 0x7e00);
-        let inf_out = i32x4::splat(token, 0x7c00);
+        let sign_mask = i32x4::splat_with_token(token, 0x8000_0000u32 as i32);
+        let f32infty = i32x4::splat_with_token(token, 255 << 23);
+        let f16max = i32x4::splat_with_token(token, (127 + 16) << 23);
+        let denorm_cutoff = i32x4::splat_with_token(token, 113 << 23);
+        let denorm_magic = i32x4::splat_with_token(token, ((127 - 15) + (23 - 10) + 1) << 23);
+        let one = i32x4::splat_with_token(token, 1);
+        let bias_bits =
+            i32x4::splat_with_token(token, ((15i32.wrapping_sub(127)) << 23).wrapping_add(0xfff));
+        let nan_out = i32x4::splat_with_token(token, 0x7e00);
+        let inf_out = i32x4::splat_with_token(token, 0x7c00);
 
         let sign = bits & sign_mask;
         let absf = bits ^ sign;
@@ -862,7 +863,7 @@ fn f16_to_f32_slice_soft<T: F16Convert>(token: T, input: &[u16], output: &mut [f
     let (in_chunks, in_tail) = input.as_chunks::<4>();
     let (out_chunks, out_tail) = output.as_chunks_mut::<4>();
     for (inp, out) in in_chunks.iter().zip(out_chunks.iter_mut()) {
-        let h = i32x4::from_array(
+        let h = crate::simd::generic::i32x4::from_array(
             token,
             [inp[0] as i32, inp[1] as i32, inp[2] as i32, inp[3] as i32],
         );
@@ -871,7 +872,7 @@ fn f16_to_f32_slice_soft<T: F16Convert>(token: T, input: &[u16], output: &mut [f
     for (inp, out) in in_tail.iter().zip(out_tail.iter_mut()) {
         // Single-lane decode reuses the same vector kernel with a splat,
         // keeping one branchless code path (no scalar reference fork).
-        let h = i32x4::splat(token, *inp as i32);
+        let h = crate::simd::generic::i32x4::splat(token, *inp as i32);
         *out = h.f16_to_f32().to_array()[0];
     }
 }
@@ -888,7 +889,7 @@ fn f32_to_f16_slice_soft<T: F16Convert>(token: T, input: &[f32], output: &mut [u
     let (in_chunks, in_tail) = input.as_chunks::<4>();
     let (out_chunks, out_tail) = output.as_chunks_mut::<4>();
     for (inp, out) in in_chunks.iter().zip(out_chunks.iter_mut()) {
-        let f = f32x4::from_array(token, [inp[0], inp[1], inp[2], inp[3]]);
+        let f = crate::simd::generic::f32x4::from_array(token, [inp[0], inp[1], inp[2], inp[3]]);
         let bits = f.to_f16().to_array();
         out[0] = bits[0] as u16;
         out[1] = bits[1] as u16;
@@ -896,7 +897,7 @@ fn f32_to_f16_slice_soft<T: F16Convert>(token: T, input: &[f32], output: &mut [u
         out[3] = bits[3] as u16;
     }
     for (inp, out) in in_tail.iter().zip(out_tail.iter_mut()) {
-        let f = f32x4::splat(token, *inp);
+        let f = crate::simd::generic::f32x4::splat(token, *inp);
         *out = f.to_f16().to_array()[0] as u16;
     }
 }

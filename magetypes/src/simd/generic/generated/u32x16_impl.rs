@@ -28,20 +28,29 @@ use crate::simd::backends::U32x16Backend;
 /// # Layout
 ///
 /// `#[repr(C)]` with a ZST trailing field: `T::Repr` lives at offset 0
-/// and `T` is a 0-byte tail. Bitcasts between `u32x16<T>` values of
+/// and `T` plus the sealed policy marker are zero-sized tails. Bitcasts between `u32x16<T>` values of
 /// different element-types are sound when the Repr types share a layout
 /// (e.g. `__m128` and `__m128i` are both 16-byte aligned 128-bit values).
 /// `#[repr(transparent)]` cannot be used because Rust cannot prove at
 /// the struct definition site that a generic `T` is a 1-ZST.
 ///
-/// Construction requires a token value to prove CPU support at runtime.
+/// Fixed-policy aliases select explicit-token or feature-context constructors.
 #[derive(Clone, Copy)]
 #[repr(C)]
-pub struct u32x16<T: U32x16Backend>(pub(crate) T::Repr, pub(crate) T);
+pub struct u32x16<
+    T: U32x16Backend,
+    M: crate::simd::generic::ConstructorMode = crate::simd::generic::Explicit,
+>(
+    pub(crate) T::Repr,
+    pub(crate) T,
+    pub(crate) core::marker::PhantomData<M>,
+);
 // SAFETY: repr(C) pair of Pod storage and a sealed 1-ZST token.
 // A supplied T proves CPU support; the wrapper adds no bit invariants.
 // Helpers additionally check token size/alignment at monomorphization.
-unsafe impl<T: U32x16Backend> crate::simd_storage::TokenStorage for u32x16<T> {
+unsafe impl<M: crate::simd::generic::ConstructorMode, T: U32x16Backend>
+    crate::simd_storage::TokenStorage for u32x16<T, M>
+{
     type Token = T;
 }
 
@@ -132,7 +141,12 @@ const _: () = {
     );
 };
 
-impl<T: U32x16Backend> u32x16<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: U32x16Backend> u32x16<T, M> {
+    #[inline(always)]
+    pub(crate) fn new_repr(repr: T::Repr, token: T) -> Self {
+        Self(repr, token, core::marker::PhantomData)
+    }
+
     /// Number of u32 lanes.
     pub const LANES: usize = 16;
 
@@ -140,33 +154,33 @@ impl<T: U32x16Backend> u32x16<T> {
 
     /// Broadcast scalar to all 16 lanes.
     #[inline(always)]
-    pub fn splat(token: T, v: u32) -> Self {
-        Self(T::splat(token, v), token)
+    pub(crate) fn splat_with_token(token: T, v: u32) -> Self {
+        Self::new_repr(T::splat(token, v), token)
     }
 
     /// All lanes zero.
     #[inline(always)]
-    pub fn zero(token: T) -> Self {
-        Self(T::zero(token), token)
+    pub(crate) fn zero_with_token(token: T) -> Self {
+        Self::new_repr(T::zero(token), token)
     }
 
     /// Load from a `[u32; 16]` array.
     #[inline(always)]
-    pub fn load(token: T, data: &[u32; 16]) -> Self {
-        Self(T::load(token, data), token)
+    pub(crate) fn load_with_token(token: T, data: &[u32; 16]) -> Self {
+        Self::new_repr(T::load(token, data), token)
     }
 
     /// Create from array (zero-cost where possible).
     #[inline(always)]
-    pub fn from_array(token: T, arr: [u32; 16]) -> Self {
-        Self(T::from_array(token, arr), token)
+    pub(crate) fn from_array_with_token(token: T, arr: [u32; 16]) -> Self {
+        Self::new_repr(T::from_array(token, arr), token)
     }
 
     /// Create from slice. Panics if `slice.len() < 16`.
     #[inline(always)]
-    pub fn from_slice(token: T, slice: &[u32]) -> Self {
+    pub(crate) fn from_slice_with_token(token: T, slice: &[u32]) -> Self {
         let arr: [u32; 16] = slice[..16].try_into().unwrap();
-        Self(T::from_array(token, arr), token)
+        Self::new_repr(T::from_array(token, arr), token)
     }
 
     /// Split a slice into SIMD-width chunks and a scalar remainder.
@@ -174,7 +188,7 @@ impl<T: U32x16Backend> u32x16<T> {
     /// Returns `(&[[u32; 16]], &[u32])` — fixed-size arrays suitable
     /// for [`load`](Self::load), plus any leftover elements.
     #[inline(always)]
-    pub fn partition_slice(_: T, data: &[u32]) -> (&[[u32; 16]], &[u32]) {
+    pub(crate) fn partition_slice_with_token(_token: T, data: &[u32]) -> (&[[u32; 16]], &[u32]) {
         data.as_chunks::<16>()
     }
 
@@ -183,7 +197,10 @@ impl<T: U32x16Backend> u32x16<T> {
     /// Returns `(&mut [[u32; 16]], &mut [u32])` — the bulk portion reinterpreted
     /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
     #[inline(always)]
-    pub fn partition_slice_mut(_: T, data: &mut [u32]) -> (&mut [[u32; 16]], &mut [u32]) {
+    pub(crate) fn partition_slice_mut_with_token(
+        _token: T,
+        data: &mut [u32],
+    ) -> (&mut [[u32; 16]], &mut [u32]) {
         data.as_chunks_mut::<16>()
     }
 
@@ -209,8 +226,8 @@ impl<T: U32x16Backend> u32x16<T> {
 
     /// Wrap a platform representation (token-gated).
     #[inline(always)]
-    pub fn from_repr(token: T, repr: T::Repr) -> Self {
-        Self(repr, token)
+    pub(crate) fn from_repr_with_token(token: T, repr: T::Repr) -> Self {
+        Self::new_repr(repr, token)
     }
 
     /// Wrap a repr with a token. Used by cross-type/cross-width helpers
@@ -219,7 +236,7 @@ impl<T: U32x16Backend> u32x16<T> {
     #[inline(always)]
     #[allow(dead_code)]
     pub(crate) fn from_repr_unchecked(token: T, repr: T::Repr) -> Self {
-        Self(repr, token)
+        Self::new_repr(repr, token)
     }
 
     // ====== Math ======
@@ -227,19 +244,19 @@ impl<T: U32x16Backend> u32x16<T> {
     /// Lane-wise minimum (unsigned).
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
-        Self(T::min(self.1, self.0, other.0), self.1)
+        Self::new_repr(T::min(self.1, self.0, other.0), self.1)
     }
 
     /// Lane-wise maximum (unsigned).
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
-        Self(T::max(self.1, self.0, other.0), self.1)
+        Self::new_repr(T::max(self.1, self.0, other.0), self.1)
     }
 
     /// Clamp between lo and hi.
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
-        Self(T::clamp(self.1, self.0, lo.0, hi.0), self.1)
+        Self::new_repr(T::clamp(self.1, self.0, lo.0, hi.0), self.1)
     }
 
     // ====== Comparisons ======
@@ -247,43 +264,43 @@ impl<T: U32x16Backend> u32x16<T> {
     /// Lane-wise equality (returns mask).
     #[inline(always)]
     pub fn simd_eq(self, other: Self) -> Self {
-        Self(T::simd_eq(self.1, self.0, other.0), self.1)
+        Self::new_repr(T::simd_eq(self.1, self.0, other.0), self.1)
     }
 
     /// Lane-wise inequality (returns mask).
     #[inline(always)]
     pub fn simd_ne(self, other: Self) -> Self {
-        Self(T::simd_ne(self.1, self.0, other.0), self.1)
+        Self::new_repr(T::simd_ne(self.1, self.0, other.0), self.1)
     }
 
     /// Lane-wise less-than, unsigned (returns mask).
     #[inline(always)]
     pub fn simd_lt(self, other: Self) -> Self {
-        Self(T::simd_lt(self.1, self.0, other.0), self.1)
+        Self::new_repr(T::simd_lt(self.1, self.0, other.0), self.1)
     }
 
     /// Lane-wise less-than-or-equal, unsigned (returns mask).
     #[inline(always)]
     pub fn simd_le(self, other: Self) -> Self {
-        Self(T::simd_le(self.1, self.0, other.0), self.1)
+        Self::new_repr(T::simd_le(self.1, self.0, other.0), self.1)
     }
 
     /// Lane-wise greater-than, unsigned (returns mask).
     #[inline(always)]
     pub fn simd_gt(self, other: Self) -> Self {
-        Self(T::simd_gt(self.1, self.0, other.0), self.1)
+        Self::new_repr(T::simd_gt(self.1, self.0, other.0), self.1)
     }
 
     /// Lane-wise greater-than-or-equal, unsigned (returns mask).
     #[inline(always)]
     pub fn simd_ge(self, other: Self) -> Self {
-        Self(T::simd_ge(self.1, self.0, other.0), self.1)
+        Self::new_repr(T::simd_ge(self.1, self.0, other.0), self.1)
     }
 
     /// Select lanes: where mask is all-1s pick `if_true`, else `if_false`.
     #[inline(always)]
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
-        Self(T::blend(mask.1, mask.0, if_true.0, if_false.0), mask.1)
+        Self::new_repr(T::blend(mask.1, mask.0, if_true.0, if_false.0), mask.1)
     }
 
     // ====== Reductions ======
@@ -303,7 +320,7 @@ impl<T: U32x16Backend> u32x16<T> {
     #[inline(always)]
     pub fn shl_const<const N: i32>(self) -> Self {
         const { assert!(N >= 0 && N <= 31, "shift amount out of range") };
-        Self(T::shl_const::<N>(self.1, self.0), self.1)
+        Self::new_repr(T::shl_const::<N>(self.1, self.0), self.1)
     }
 
     /// Logical shift right by constant (zero-filling).
@@ -313,7 +330,7 @@ impl<T: U32x16Backend> u32x16<T> {
     #[inline(always)]
     pub fn shr_logical_const<const N: i32>(self) -> Self {
         const { assert!(N >= 0 && N <= 31, "shift amount out of range") };
-        Self(T::shr_logical_const::<N>(self.1, self.0), self.1)
+        Self::new_repr(T::shr_logical_const::<N>(self.1, self.0), self.1)
     }
 
     /// Alias for [`shl_const`](Self::shl_const).
@@ -341,7 +358,7 @@ impl<T: U32x16Backend> u32x16<T> {
     /// AVX-512BW+VL, and wasm128 has no per-lane variable shift at all.
     #[inline(always)]
     pub fn shl_uniform(self, count: u32) -> Self {
-        Self(T::shl_uniform(self.1, self.0, count), self.1)
+        Self::new_repr(T::shl_uniform(self.1, self.0, count), self.1)
     }
 
     /// Logical (zero-filling) shift right by a runtime `count`, applied
@@ -350,7 +367,7 @@ impl<T: U32x16Backend> u32x16<T> {
     /// `count >= 32` yields all-zero lanes on every backend.
     #[inline(always)]
     pub fn shr_logical_uniform(self, count: u32) -> Self {
-        Self(T::shr_logical_uniform(self.1, self.0, count), self.1)
+        Self::new_repr(T::shr_logical_uniform(self.1, self.0, count), self.1)
     }
 
     // ====== Bitwise ======
@@ -358,7 +375,7 @@ impl<T: U32x16Backend> u32x16<T> {
     /// Bitwise NOT.
     #[inline(always)]
     pub fn not(self) -> Self {
-        Self(T::not(self.1, self.0), self.1)
+        Self::new_repr(T::not(self.1, self.0), self.1)
     }
 
     // ====== Boolean ======
@@ -386,51 +403,51 @@ impl<T: U32x16Backend> u32x16<T> {
 // Operator implementations
 // ============================================================================
 
-impl<T: U32x16Backend> Add for u32x16<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: U32x16Backend> Add for u32x16<T, M> {
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: Self) -> Self {
-        Self(T::add(self.1, self.0, rhs.0), self.1)
+        Self::new_repr(T::add(self.1, self.0, rhs.0), self.1)
     }
 }
 
-impl<T: U32x16Backend> Sub for u32x16<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: U32x16Backend> Sub for u32x16<T, M> {
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
-        Self(T::sub(self.1, self.0, rhs.0), self.1)
+        Self::new_repr(T::sub(self.1, self.0, rhs.0), self.1)
     }
 }
 
-impl<T: U32x16Backend> Mul for u32x16<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: U32x16Backend> Mul for u32x16<T, M> {
     type Output = Self;
     #[inline(always)]
     fn mul(self, rhs: Self) -> Self {
-        Self(T::mul(self.1, self.0, rhs.0), self.1)
+        Self::new_repr(T::mul(self.1, self.0, rhs.0), self.1)
     }
 }
 
-impl<T: U32x16Backend> BitAnd for u32x16<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: U32x16Backend> BitAnd for u32x16<T, M> {
     type Output = Self;
     #[inline(always)]
     fn bitand(self, rhs: Self) -> Self {
-        Self(T::bitand(self.1, self.0, rhs.0), self.1)
+        Self::new_repr(T::bitand(self.1, self.0, rhs.0), self.1)
     }
 }
 
-impl<T: U32x16Backend> BitOr for u32x16<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: U32x16Backend> BitOr for u32x16<T, M> {
     type Output = Self;
     #[inline(always)]
     fn bitor(self, rhs: Self) -> Self {
-        Self(T::bitor(self.1, self.0, rhs.0), self.1)
+        Self::new_repr(T::bitor(self.1, self.0, rhs.0), self.1)
     }
 }
 
-impl<T: U32x16Backend> BitXor for u32x16<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: U32x16Backend> BitXor for u32x16<T, M> {
     type Output = Self;
     #[inline(always)]
     fn bitxor(self, rhs: Self) -> Self {
-        Self(T::bitxor(self.1, self.0, rhs.0), self.1)
+        Self::new_repr(T::bitxor(self.1, self.0, rhs.0), self.1)
     }
 }
 
@@ -438,42 +455,42 @@ impl<T: U32x16Backend> BitXor for u32x16<T> {
 // Assign operators
 // ============================================================================
 
-impl<T: U32x16Backend> AddAssign for u32x16<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: U32x16Backend> AddAssign for u32x16<T, M> {
     #[inline(always)]
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
     }
 }
 
-impl<T: U32x16Backend> SubAssign for u32x16<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: U32x16Backend> SubAssign for u32x16<T, M> {
     #[inline(always)]
     fn sub_assign(&mut self, rhs: Self) {
         *self = *self - rhs;
     }
 }
 
-impl<T: U32x16Backend> MulAssign for u32x16<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: U32x16Backend> MulAssign for u32x16<T, M> {
     #[inline(always)]
     fn mul_assign(&mut self, rhs: Self) {
         *self = *self * rhs;
     }
 }
 
-impl<T: U32x16Backend> BitAndAssign for u32x16<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: U32x16Backend> BitAndAssign for u32x16<T, M> {
     #[inline(always)]
     fn bitand_assign(&mut self, rhs: Self) {
         *self = *self & rhs;
     }
 }
 
-impl<T: U32x16Backend> BitOrAssign for u32x16<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: U32x16Backend> BitOrAssign for u32x16<T, M> {
     #[inline(always)]
     fn bitor_assign(&mut self, rhs: Self) {
         *self = *self | rhs;
     }
 }
 
-impl<T: U32x16Backend> BitXorAssign for u32x16<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: U32x16Backend> BitXorAssign for u32x16<T, M> {
     #[inline(always)]
     fn bitxor_assign(&mut self, rhs: Self) {
         *self = *self ^ rhs;
@@ -484,27 +501,27 @@ impl<T: U32x16Backend> BitXorAssign for u32x16<T> {
 // Scalar broadcast operators (v + 2, v * 3, etc.)
 // ============================================================================
 
-impl<T: U32x16Backend> Add<u32> for u32x16<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: U32x16Backend> Add<u32> for u32x16<T, M> {
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: u32) -> Self {
-        Self(T::add(self.1, self.0, T::splat(self.1, rhs)), self.1)
+        Self::new_repr(T::add(self.1, self.0, T::splat(self.1, rhs)), self.1)
     }
 }
 
-impl<T: U32x16Backend> Sub<u32> for u32x16<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: U32x16Backend> Sub<u32> for u32x16<T, M> {
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: u32) -> Self {
-        Self(T::sub(self.1, self.0, T::splat(self.1, rhs)), self.1)
+        Self::new_repr(T::sub(self.1, self.0, T::splat(self.1, rhs)), self.1)
     }
 }
 
-impl<T: U32x16Backend> Mul<u32> for u32x16<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: U32x16Backend> Mul<u32> for u32x16<T, M> {
     type Output = Self;
     #[inline(always)]
     fn mul(self, rhs: u32) -> Self {
-        Self(T::mul(self.1, self.0, T::splat(self.1, rhs)), self.1)
+        Self::new_repr(T::mul(self.1, self.0, T::splat(self.1, rhs)), self.1)
     }
 }
 
@@ -512,7 +529,7 @@ impl<T: U32x16Backend> Mul<u32> for u32x16<T> {
 // Index
 // ============================================================================
 
-impl<T: U32x16Backend> Index<usize> for u32x16<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: U32x16Backend> Index<usize> for u32x16<T, M> {
     type Output = u32;
     #[inline(always)]
     fn index(&self, i: usize) -> &u32 {
@@ -520,7 +537,7 @@ impl<T: U32x16Backend> Index<usize> for u32x16<T> {
     }
 }
 
-impl<T: U32x16Backend> IndexMut<usize> for u32x16<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: U32x16Backend> IndexMut<usize> for u32x16<T, M> {
     #[inline(always)]
     fn index_mut(&mut self, i: usize) -> &mut u32 {
         &mut crate::simd_storage::view_mut::<_, [u32; 16]>(&mut self.0)[i]
@@ -531,9 +548,9 @@ impl<T: U32x16Backend> IndexMut<usize> for u32x16<T> {
 // Conversions
 // ============================================================================
 
-impl<T: U32x16Backend> From<u32x16<T>> for [u32; 16] {
+impl<M: crate::simd::generic::ConstructorMode, T: U32x16Backend> From<u32x16<T, M>> for [u32; 16] {
     #[inline(always)]
-    fn from(v: u32x16<T>) -> [u32; 16] {
+    fn from(v: u32x16<T, M>) -> [u32; 16] {
         T::to_array(v.1, v.0)
     }
 }
@@ -542,7 +559,7 @@ impl<T: U32x16Backend> From<u32x16<T>> for [u32; 16] {
 // Debug
 // ============================================================================
 
-impl<T: U32x16Backend> core::fmt::Debug for u32x16<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: U32x16Backend> core::fmt::Debug for u32x16<T, M> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let arr = T::to_array(self.1, self.0);
         f.debug_tuple("u32x16").field(&arr).finish()
@@ -553,7 +570,7 @@ impl<T: U32x16Backend> core::fmt::Debug for u32x16<T> {
 // Platform-specific concrete impls
 // ============================================================================
 
-impl u32x16<archmage::ScalarToken> {
+impl<M: crate::simd::generic::ConstructorMode> u32x16<archmage::ScalarToken, M> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
         "scalar::u32x16"
@@ -561,7 +578,7 @@ impl u32x16<archmage::ScalarToken> {
 }
 
 #[cfg(target_arch = "x86_64")]
-impl u32x16<archmage::X64V3Token> {
+impl<M: crate::simd::generic::ConstructorMode> u32x16<archmage::X64V3Token, M> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
         "polyfill::v3_512::u32x16"
@@ -569,7 +586,7 @@ impl u32x16<archmage::X64V3Token> {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl u32x16<archmage::X64V4Token> {
+impl<M: crate::simd::generic::ConstructorMode> u32x16<archmage::X64V4Token, M> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
         "x86::v4::u32x16"
@@ -577,7 +594,7 @@ impl u32x16<archmage::X64V4Token> {
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl u32x16<archmage::X64V4xToken> {
+impl<M: crate::simd::generic::ConstructorMode> u32x16<archmage::X64V4xToken, M> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
         "x86::v4x::u32x16"
@@ -585,7 +602,7 @@ impl u32x16<archmage::X64V4xToken> {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl u32x16<archmage::NeonToken> {
+impl<M: crate::simd::generic::ConstructorMode> u32x16<archmage::NeonToken, M> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
         "polyfill::neon_512::u32x16"
@@ -593,10 +610,64 @@ impl u32x16<archmage::NeonToken> {
 }
 
 #[cfg(target_arch = "wasm32")]
-impl u32x16<archmage::Wasm128Token> {
+impl<M: crate::simd::generic::ConstructorMode> u32x16<archmage::Wasm128Token, M> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
         "polyfill::wasm128_512::u32x16"
+    }
+}
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl<M: crate::simd::generic::ConstructorMode> u32x16<archmage::X64V4Token, M> {
+    /// Get the raw `__m512i` value.
+    #[inline(always)]
+    pub fn raw(self) -> core::arch::x86_64::__m512i {
+        self.0
+    }
+
+    /// Wrap a raw `__m512i` using an existing CPU capability token.
+    #[inline(always)]
+    pub(crate) fn from_m512i_with_token(
+        token: archmage::X64V4Token,
+        value: core::arch::x86_64::__m512i,
+    ) -> Self {
+        Self::new_repr(value, token)
+    }
+
+    /// Wrap a raw `__m512i` in a matching target-feature context.
+    ///
+    /// Rust requires the caller to enable the `v4` tier's features.
+    /// Use an archmage `#[rite(v4)]` helper or `#[arcane]` entry point.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v4)]
+    pub fn from_raw(value: core::arch::x86_64::__m512i) -> Self {
+        Self::new_repr(value, archmage::X64V4Token::from_context())
+    }
+}
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl<M: crate::simd::generic::ConstructorMode> u32x16<archmage::X64V4xToken, M> {
+    /// Get the raw `__m512i` value.
+    #[inline(always)]
+    pub fn raw(self) -> core::arch::x86_64::__m512i {
+        self.0
+    }
+
+    /// Wrap a raw `__m512i` using an existing CPU capability token.
+    #[inline(always)]
+    pub(crate) fn from_m512i_with_token(
+        token: archmage::X64V4xToken,
+        value: core::arch::x86_64::__m512i,
+    ) -> Self {
+        Self::new_repr(value, token)
+    }
+
+    /// Wrap a raw `__m512i` in a matching target-feature context.
+    ///
+    /// Rust requires the caller to enable the `v4x` tier's features.
+    /// Use an archmage `#[rite(v4x)]` helper or `#[arcane]` entry point.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v4x)]
+    pub fn from_raw(value: core::arch::x86_64::__m512i) -> Self {
+        Self::new_repr(value, archmage::X64V4xToken::from_context())
     }
 }
 
@@ -605,7 +676,9 @@ impl u32x16<archmage::Wasm128Token> {
 // ============================================================================
 
 #[cfg(feature = "avx512")]
-impl<T: crate::simd::backends::u32x16PopcntBackend> u32x16<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::backends::u32x16PopcntBackend>
+    u32x16<T, M>
+{
     /// Count set bits in each lane (popcnt).
     ///
     /// Returns a vector where each lane contains the number of 1-bits
@@ -614,6 +687,456 @@ impl<T: crate::simd::backends::u32x16PopcntBackend> u32x16<T> {
     /// Requires AVX-512 Modern token (VPOPCNTDQ or BITALG extension).
     #[inline(always)]
     pub fn popcnt(self) -> Self {
-        Self(T::popcnt(self.1, self.0), self.1)
+        Self::new_repr(T::popcnt(self.1, self.0), self.1)
+    }
+}
+impl<T: U32x16Backend> From<u32x16<T, crate::simd::generic::Explicit>>
+    for u32x16<T, crate::simd::generic::Context>
+{
+    #[inline(always)]
+    fn from(value: u32x16<T, crate::simd::generic::Explicit>) -> Self {
+        Self::new_repr(value.0, value.1)
+    }
+}
+impl<T: U32x16Backend> From<u32x16<T, crate::simd::generic::Context>>
+    for u32x16<T, crate::simd::generic::Explicit>
+{
+    #[inline(always)]
+    fn from(value: u32x16<T, crate::simd::generic::Context>) -> Self {
+        Self::new_repr(value.0, value.1)
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl u32x16<archmage::X64V4Token, crate::simd::generic::Context> {
+    /// Wrap a raw `__m512i` using an existing CPU capability token.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v4)]
+    pub fn from_m512i(value: core::arch::x86_64::__m512i) -> Self {
+        Self::from_m512i_with_token(archmage::X64V4Token::from_context(), value)
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl u32x16<archmage::X64V4xToken, crate::simd::generic::Context> {
+    /// Wrap a raw `__m512i` using an existing CPU capability token.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v4x)]
+    pub fn from_m512i(value: core::arch::x86_64::__m512i) -> Self {
+        Self::from_m512i_with_token(archmage::X64V4xToken::from_context(), value)
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl u32x16<archmage::X64V4Token, crate::simd::generic::Explicit> {
+    /// Wrap a raw `__m512i` using an existing CPU capability token.
+    #[inline(always)]
+    pub fn from_m512i(token: archmage::X64V4Token, value: core::arch::x86_64::__m512i) -> Self {
+        Self::from_m512i_with_token(token, value)
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl u32x16<archmage::X64V4xToken, crate::simd::generic::Explicit> {
+    /// Wrap a raw `__m512i` using an existing CPU capability token.
+    #[inline(always)]
+    pub fn from_m512i(token: archmage::X64V4xToken, value: core::arch::x86_64::__m512i) -> Self {
+        Self::from_m512i_with_token(token, value)
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl u32x16<archmage::X64V4Token, crate::simd::generic::Context> {
+    /// Broadcast scalar to all 16 lanes.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v4)]
+    pub fn splat(v: u32) -> Self {
+        Self::splat_with_token(archmage::X64V4Token::from_context(), v)
+    }
+    /// All lanes zero.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v4)]
+    pub fn zero() -> Self {
+        Self::zero_with_token(archmage::X64V4Token::from_context())
+    }
+    /// Load from a `[u32; 16]` array.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v4)]
+    pub fn load(data: &[u32; 16]) -> Self {
+        Self::load_with_token(archmage::X64V4Token::from_context(), data)
+    }
+    /// Create from array (zero-cost where possible).
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v4)]
+    pub fn from_array(arr: [u32; 16]) -> Self {
+        Self::from_array_with_token(archmage::X64V4Token::from_context(), arr)
+    }
+    /// Create from slice. Panics if `slice.len() < 16`.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v4)]
+    pub fn from_slice(slice: &[u32]) -> Self {
+        Self::from_slice_with_token(archmage::X64V4Token::from_context(), slice)
+    }
+    /// Split a slice into SIMD-width chunks and a scalar remainder.
+    /// Returns `(&[[u32; 16]], &[u32])` — fixed-size arrays suitable
+    /// for [`load`](Self::load), plus any leftover elements.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v4)]
+    pub fn partition_slice(data: &[u32]) -> (&[[u32; 16]], &[u32]) {
+        Self::partition_slice_with_token(archmage::X64V4Token::from_context(), data)
+    }
+    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
+    /// Returns `(&mut [[u32; 16]], &mut [u32])` — the bulk portion reinterpreted
+    /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v4)]
+    pub fn partition_slice_mut(data: &mut [u32]) -> (&mut [[u32; 16]], &mut [u32]) {
+        Self::partition_slice_mut_with_token(archmage::X64V4Token::from_context(), data)
+    }
+    /// Wrap a platform representation (token-gated).
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v4)]
+    pub fn from_repr(
+        repr: <archmage::X64V4Token as crate::simd::backends::U32x16Backend>::Repr,
+    ) -> Self {
+        Self::from_repr_with_token(archmage::X64V4Token::from_context(), repr)
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl u32x16<archmage::X64V4xToken, crate::simd::generic::Context> {
+    /// Broadcast scalar to all 16 lanes.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v4x)]
+    pub fn splat(v: u32) -> Self {
+        Self::splat_with_token(archmage::X64V4xToken::from_context(), v)
+    }
+    /// All lanes zero.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v4x)]
+    pub fn zero() -> Self {
+        Self::zero_with_token(archmage::X64V4xToken::from_context())
+    }
+    /// Load from a `[u32; 16]` array.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v4x)]
+    pub fn load(data: &[u32; 16]) -> Self {
+        Self::load_with_token(archmage::X64V4xToken::from_context(), data)
+    }
+    /// Create from array (zero-cost where possible).
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v4x)]
+    pub fn from_array(arr: [u32; 16]) -> Self {
+        Self::from_array_with_token(archmage::X64V4xToken::from_context(), arr)
+    }
+    /// Create from slice. Panics if `slice.len() < 16`.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v4x)]
+    pub fn from_slice(slice: &[u32]) -> Self {
+        Self::from_slice_with_token(archmage::X64V4xToken::from_context(), slice)
+    }
+    /// Split a slice into SIMD-width chunks and a scalar remainder.
+    /// Returns `(&[[u32; 16]], &[u32])` — fixed-size arrays suitable
+    /// for [`load`](Self::load), plus any leftover elements.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v4x)]
+    pub fn partition_slice(data: &[u32]) -> (&[[u32; 16]], &[u32]) {
+        Self::partition_slice_with_token(archmage::X64V4xToken::from_context(), data)
+    }
+    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
+    /// Returns `(&mut [[u32; 16]], &mut [u32])` — the bulk portion reinterpreted
+    /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v4x)]
+    pub fn partition_slice_mut(data: &mut [u32]) -> (&mut [[u32; 16]], &mut [u32]) {
+        Self::partition_slice_mut_with_token(archmage::X64V4xToken::from_context(), data)
+    }
+    /// Wrap a platform representation (token-gated).
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v4x)]
+    pub fn from_repr(
+        repr: <archmage::X64V4xToken as crate::simd::backends::U32x16Backend>::Repr,
+    ) -> Self {
+        Self::from_repr_with_token(archmage::X64V4xToken::from_context(), repr)
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl u32x16<archmage::NeonToken, crate::simd::generic::Context> {
+    /// Broadcast scalar to all 16 lanes.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(neon)]
+    pub fn splat(v: u32) -> Self {
+        Self::splat_with_token(archmage::NeonToken::from_context(), v)
+    }
+    /// All lanes zero.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(neon)]
+    pub fn zero() -> Self {
+        Self::zero_with_token(archmage::NeonToken::from_context())
+    }
+    /// Load from a `[u32; 16]` array.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(neon)]
+    pub fn load(data: &[u32; 16]) -> Self {
+        Self::load_with_token(archmage::NeonToken::from_context(), data)
+    }
+    /// Create from array (zero-cost where possible).
+    #[forbid(unsafe_code)]
+    #[archmage::rite(neon)]
+    pub fn from_array(arr: [u32; 16]) -> Self {
+        Self::from_array_with_token(archmage::NeonToken::from_context(), arr)
+    }
+    /// Create from slice. Panics if `slice.len() < 16`.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(neon)]
+    pub fn from_slice(slice: &[u32]) -> Self {
+        Self::from_slice_with_token(archmage::NeonToken::from_context(), slice)
+    }
+    /// Split a slice into SIMD-width chunks and a scalar remainder.
+    /// Returns `(&[[u32; 16]], &[u32])` — fixed-size arrays suitable
+    /// for [`load`](Self::load), plus any leftover elements.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(neon)]
+    pub fn partition_slice(data: &[u32]) -> (&[[u32; 16]], &[u32]) {
+        Self::partition_slice_with_token(archmage::NeonToken::from_context(), data)
+    }
+    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
+    /// Returns `(&mut [[u32; 16]], &mut [u32])` — the bulk portion reinterpreted
+    /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(neon)]
+    pub fn partition_slice_mut(data: &mut [u32]) -> (&mut [[u32; 16]], &mut [u32]) {
+        Self::partition_slice_mut_with_token(archmage::NeonToken::from_context(), data)
+    }
+    /// Wrap a platform representation (token-gated).
+    #[forbid(unsafe_code)]
+    #[archmage::rite(neon)]
+    pub fn from_repr(
+        repr: <archmage::NeonToken as crate::simd::backends::U32x16Backend>::Repr,
+    ) -> Self {
+        Self::from_repr_with_token(archmage::NeonToken::from_context(), repr)
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl u32x16<archmage::Wasm128Token, crate::simd::generic::Context> {
+    /// Broadcast scalar to all 16 lanes.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(wasm128)]
+    pub fn splat(v: u32) -> Self {
+        Self::splat_with_token(archmage::Wasm128Token::from_context(), v)
+    }
+    /// All lanes zero.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(wasm128)]
+    pub fn zero() -> Self {
+        Self::zero_with_token(archmage::Wasm128Token::from_context())
+    }
+    /// Load from a `[u32; 16]` array.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(wasm128)]
+    pub fn load(data: &[u32; 16]) -> Self {
+        Self::load_with_token(archmage::Wasm128Token::from_context(), data)
+    }
+    /// Create from array (zero-cost where possible).
+    #[forbid(unsafe_code)]
+    #[archmage::rite(wasm128)]
+    pub fn from_array(arr: [u32; 16]) -> Self {
+        Self::from_array_with_token(archmage::Wasm128Token::from_context(), arr)
+    }
+    /// Create from slice. Panics if `slice.len() < 16`.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(wasm128)]
+    pub fn from_slice(slice: &[u32]) -> Self {
+        Self::from_slice_with_token(archmage::Wasm128Token::from_context(), slice)
+    }
+    /// Split a slice into SIMD-width chunks and a scalar remainder.
+    /// Returns `(&[[u32; 16]], &[u32])` — fixed-size arrays suitable
+    /// for [`load`](Self::load), plus any leftover elements.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(wasm128)]
+    pub fn partition_slice(data: &[u32]) -> (&[[u32; 16]], &[u32]) {
+        Self::partition_slice_with_token(archmage::Wasm128Token::from_context(), data)
+    }
+    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
+    /// Returns `(&mut [[u32; 16]], &mut [u32])` — the bulk portion reinterpreted
+    /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(wasm128)]
+    pub fn partition_slice_mut(data: &mut [u32]) -> (&mut [[u32; 16]], &mut [u32]) {
+        Self::partition_slice_mut_with_token(archmage::Wasm128Token::from_context(), data)
+    }
+    /// Wrap a platform representation (token-gated).
+    #[forbid(unsafe_code)]
+    #[archmage::rite(wasm128)]
+    pub fn from_repr(
+        repr: <archmage::Wasm128Token as crate::simd::backends::U32x16Backend>::Repr,
+    ) -> Self {
+        Self::from_repr_with_token(archmage::Wasm128Token::from_context(), repr)
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl u32x16<archmage::X64V3Token, crate::simd::generic::Context> {
+    /// Broadcast scalar to all 16 lanes.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v3)]
+    pub fn splat(v: u32) -> Self {
+        Self::splat_with_token(archmage::X64V3Token::from_context(), v)
+    }
+    /// All lanes zero.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v3)]
+    pub fn zero() -> Self {
+        Self::zero_with_token(archmage::X64V3Token::from_context())
+    }
+    /// Load from a `[u32; 16]` array.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v3)]
+    pub fn load(data: &[u32; 16]) -> Self {
+        Self::load_with_token(archmage::X64V3Token::from_context(), data)
+    }
+    /// Create from array (zero-cost where possible).
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v3)]
+    pub fn from_array(arr: [u32; 16]) -> Self {
+        Self::from_array_with_token(archmage::X64V3Token::from_context(), arr)
+    }
+    /// Create from slice. Panics if `slice.len() < 16`.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v3)]
+    pub fn from_slice(slice: &[u32]) -> Self {
+        Self::from_slice_with_token(archmage::X64V3Token::from_context(), slice)
+    }
+    /// Split a slice into SIMD-width chunks and a scalar remainder.
+    /// Returns `(&[[u32; 16]], &[u32])` — fixed-size arrays suitable
+    /// for [`load`](Self::load), plus any leftover elements.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v3)]
+    pub fn partition_slice(data: &[u32]) -> (&[[u32; 16]], &[u32]) {
+        Self::partition_slice_with_token(archmage::X64V3Token::from_context(), data)
+    }
+    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
+    /// Returns `(&mut [[u32; 16]], &mut [u32])` — the bulk portion reinterpreted
+    /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v3)]
+    pub fn partition_slice_mut(data: &mut [u32]) -> (&mut [[u32; 16]], &mut [u32]) {
+        Self::partition_slice_mut_with_token(archmage::X64V3Token::from_context(), data)
+    }
+    /// Wrap a platform representation (token-gated).
+    #[forbid(unsafe_code)]
+    #[archmage::rite(v3)]
+    pub fn from_repr(
+        repr: <archmage::X64V3Token as crate::simd::backends::U32x16Backend>::Repr,
+    ) -> Self {
+        Self::from_repr_with_token(archmage::X64V3Token::from_context(), repr)
+    }
+}
+
+impl<T: U32x16Backend> u32x16<T, crate::simd::generic::Explicit> {
+    /// Broadcast scalar to all 16 lanes.
+    #[inline(always)]
+    pub fn splat(token: T, v: u32) -> Self {
+        Self::splat_with_token(token, v)
+    }
+    /// All lanes zero.
+    #[inline(always)]
+    pub fn zero(token: T) -> Self {
+        Self::zero_with_token(token)
+    }
+    /// Load from a `[u32; 16]` array.
+    #[inline(always)]
+    pub fn load(token: T, data: &[u32; 16]) -> Self {
+        Self::load_with_token(token, data)
+    }
+    /// Create from array (zero-cost where possible).
+    #[inline(always)]
+    pub fn from_array(token: T, arr: [u32; 16]) -> Self {
+        Self::from_array_with_token(token, arr)
+    }
+    /// Create from slice. Panics if `slice.len() < 16`.
+    #[inline(always)]
+    pub fn from_slice(token: T, slice: &[u32]) -> Self {
+        Self::from_slice_with_token(token, slice)
+    }
+    /// Split a slice into SIMD-width chunks and a scalar remainder.
+    /// Returns `(&[[u32; 16]], &[u32])` — fixed-size arrays suitable
+    /// for [`load`](Self::load), plus any leftover elements.
+    #[inline(always)]
+    pub fn partition_slice(_token: T, data: &[u32]) -> (&[[u32; 16]], &[u32]) {
+        Self::partition_slice_with_token(_token, data)
+    }
+    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
+    /// Returns `(&mut [[u32; 16]], &mut [u32])` — the bulk portion reinterpreted
+    /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
+    #[inline(always)]
+    pub fn partition_slice_mut(_token: T, data: &mut [u32]) -> (&mut [[u32; 16]], &mut [u32]) {
+        Self::partition_slice_mut_with_token(_token, data)
+    }
+    /// Wrap a platform representation (token-gated).
+    #[inline(always)]
+    pub fn from_repr(token: T, repr: T::Repr) -> Self {
+        Self::from_repr_with_token(token, repr)
+    }
+}
+
+impl u32x16<archmage::ScalarToken, crate::simd::generic::Context> {
+    /// Broadcast scalar to all 16 lanes.
+    #[forbid(unsafe_code)]
+    #[inline(always)]
+    pub fn splat(v: u32) -> Self {
+        Self::splat_with_token(archmage::ScalarToken, v)
+    }
+    /// All lanes zero.
+    #[forbid(unsafe_code)]
+    #[inline(always)]
+    pub fn zero() -> Self {
+        Self::zero_with_token(archmage::ScalarToken)
+    }
+    /// Load from a `[u32; 16]` array.
+    #[forbid(unsafe_code)]
+    #[inline(always)]
+    pub fn load(data: &[u32; 16]) -> Self {
+        Self::load_with_token(archmage::ScalarToken, data)
+    }
+    /// Create from array (zero-cost where possible).
+    #[forbid(unsafe_code)]
+    #[inline(always)]
+    pub fn from_array(arr: [u32; 16]) -> Self {
+        Self::from_array_with_token(archmage::ScalarToken, arr)
+    }
+    /// Create from slice. Panics if `slice.len() < 16`.
+    #[forbid(unsafe_code)]
+    #[inline(always)]
+    pub fn from_slice(slice: &[u32]) -> Self {
+        Self::from_slice_with_token(archmage::ScalarToken, slice)
+    }
+    /// Split a slice into SIMD-width chunks and a scalar remainder.
+    /// Returns `(&[[u32; 16]], &[u32])` — fixed-size arrays suitable
+    /// for [`load`](Self::load), plus any leftover elements.
+    #[forbid(unsafe_code)]
+    #[inline(always)]
+    pub fn partition_slice(data: &[u32]) -> (&[[u32; 16]], &[u32]) {
+        Self::partition_slice_with_token(archmage::ScalarToken, data)
+    }
+    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
+    /// Returns `(&mut [[u32; 16]], &mut [u32])` — the bulk portion reinterpreted
+    /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
+    #[forbid(unsafe_code)]
+    #[inline(always)]
+    pub fn partition_slice_mut(data: &mut [u32]) -> (&mut [[u32; 16]], &mut [u32]) {
+        Self::partition_slice_mut_with_token(archmage::ScalarToken, data)
+    }
+    /// Wrap a platform representation (token-gated).
+    #[forbid(unsafe_code)]
+    #[inline(always)]
+    pub fn from_repr(
+        repr: <archmage::ScalarToken as crate::simd::backends::U32x16Backend>::Repr,
+    ) -> Self {
+        Self::from_repr_with_token(archmage::ScalarToken, repr)
     }
 }

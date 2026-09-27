@@ -9,10 +9,13 @@
 //! purged during regeneration.
 
 mod convert_f16;
+#[path = "generated/mod.rs"]
+pub mod core_types;
 mod cross_width;
-mod generated;
+mod modes;
 pub use convert_f16::F16Convert;
 pub use cross_width::F32x8FromHalves;
 #[cfg(feature = "w512")]
 pub use cross_width::F32x16FromHalves;
-pub use generated::*;
+pub use modes::{ConstructorMode, Context, Explicit};
+include!("generated/aliases.rs");

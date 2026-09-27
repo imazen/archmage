@@ -12,7 +12,7 @@
 #   pub modules                                 2
 #   pub types (struct/enum/trait/alias)         1
 #   free functions                             28
-#   trait roster entries (type × trait)        10
+#   trait roster entries (type × trait)        12
 #
 # per-module pub lines:
 #   (root)                            2
@@ -47,8 +47,10 @@ pub mod bypass_adversarial
 pub mod nostd_math
 pub struct bypass_adversarial::BypassAdversarialProofs
 
-## trait impls (10 types)
+## trait impls (12 types)
 
+prelude::Context: TrivialClone
+prelude::Explicit: TrivialClone
 simd::f32x1: TrivialClone
 simd::f64x1: TrivialClone
 simd::i16x1: TrivialClone

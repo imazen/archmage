@@ -14,13 +14,18 @@ fn expand(name: &str, args: Tokens, item: Tokens) -> syn::Result<Tokens> {
         "rite" | "token_target_features" => rite_impl(syn::parse2(item)?, syn::parse2(args)?),
         "autoversion" => autoversion_impl(syn::parse2(item)?, syn::parse2(args)?),
         "magetypes" => {
-            let (rite, defines, names) = parse_magetypes_attr.parse2(args)?;
+            let MagetypesArgs {
+                rite_flag: rite,
+                defines,
+                locals,
+                tier_names: names,
+            } = parse_magetypes_attr.parse2(args)?;
             let tiers = if names.is_empty() {
                 default_tiers(true)
             } else {
                 resolve_tiers(&names, proc_macro2::Span::call_site(), true)?
             };
-            magetypes::magetypes_impl(syn::parse2(item)?, &tiers, rite, &defines)
+            magetypes::magetypes_impl(syn::parse2(item)?, &tiers, rite, &defines, &locals)
         }
         _ => panic!("unrecognized macro {name}"),
     })
@@ -887,4 +892,38 @@ fn combined_trait_features_preserve_first_seen_order() {
     let csv = crate::token_discovery::features_csv(None, &unusual);
     assert!(matches!(csv, Cow::Owned(_)));
     assert_eq!(csv, unusual.join(","));
+}
+
+#[test]
+fn local_aliases_fix_context_mode_and_reject_duplicates() {
+    let output = expand(
+        "magetypes",
+        quote!(local(f32x8), define(i32x8), scalar),
+        quote!(
+            fn kernel(token: Token) {
+                let _ = f32x8::zero();
+                let _ = i32x8::zero(token);
+            }
+        ),
+    )
+    .unwrap()
+    .to_string();
+    assert!(
+        output.contains("generic :: local :: f32x8 < archmage :: ScalarToken >"),
+        "{output}"
+    );
+    assert!(
+        output.contains("generic :: i32x8 < archmage :: ScalarToken >"),
+        "{output}"
+    );
+    assert!(
+        parse_magetypes_attr
+            .parse2(quote!(define(f32x8), local(f32x8)))
+            .is_err()
+    );
+    assert!(
+        parse_magetypes_attr
+            .parse2(quote!(local(f32x8, f32x8)))
+            .is_err()
+    );
 }

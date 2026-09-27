@@ -338,3 +338,26 @@ integer-codegen:
 
 integer-tests:
     cargo test -p magetypes --test int_widen_narrow --features "std avx512"
+
+# Raw constructors: value preservation and compiler-enforced feature contexts.
+raw-interop-check:
+    cargo test -p xtask raw_context
+    cargo test -p magetypes --test raw_interop
+    cargo test --test soundness_exploits token_assertion_diagnostics
+
+# Execute the published-consumer raw interchange shapes under AArch64 emulation.
+raw-interop-arm:
+    CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER="qemu-aarch64 -L /usr/aarch64-linux-gnu" cargo test -p magetypes --test raw_interop --target aarch64-unknown-linux-gnu
+
+# Validate alias-selected constructor designs without changing the public API.
+context-mode-probe-check:
+    python3 tests/design-probes/context-mode/check.py --log-dir "$HOME/data/archmage/context-mode-probe/latest"
+
+# Shared constructor modes and feature-context enforcement.
+local-mode-check:
+    cargo test -p magetypes --all-features --test magetypes_local_flag --test magetypes_define_flag --test raw_interop
+    cargo test --test soundness_exploits
+
+# Use preserved source snapshots and fresh Cargo targets for each cold build.
+local-mode-compile before after output:
+    python3 scripts/measure-local-mode-compile.py --before {{before}} --after {{after}} --output {{output}}

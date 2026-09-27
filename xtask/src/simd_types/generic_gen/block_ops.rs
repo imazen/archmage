@@ -18,7 +18,7 @@ pub(super) fn gen_block_ops(ty: &SimdType) -> String {
     match name.as_str() {
         "f32x4" | "f32x8" => {
             code.push_str(&formatdoc! {r#"
-                //! Block, view, and image operations for `{name}<T>`.
+                //! Block, view, and image operations for `{name}<T, M>`.
                 //!
                 //! Array/byte views, slice casting, interleave/deinterleave,
                 //! matrix transpose, RGBA pixel operations, and cross-type bitcast references.
@@ -26,14 +26,14 @@ pub(super) fn gen_block_ops(ty: &SimdType) -> String {
         }
         "u32x4" => {
             code.push_str(&formatdoc! {r#"
-                //! Block and view operations for `{name}<T>`.
+                //! Block and view operations for `{name}<T, M>`.
                 //!
                 //! Array/byte views, slice casting, and cross-type bitcast to f32x4.
             "#});
         }
         _ => {
             code.push_str(&formatdoc! {r#"
-                //! Block and view operations for `{name}<T>`.
+                //! Block and view operations for `{name}<T, M>`.
                 //!
                 //! Array/byte views and slice casting.
             "#});
@@ -44,7 +44,7 @@ pub(super) fn gen_block_ops(ty: &SimdType) -> String {
     code.push_str(&formatdoc! {r#"
 
         use crate::simd::backends::{trait_name};
-        use crate::simd::generic::{name};
+        use crate::simd::generic::core_types::{name};
 
     "#});
 
@@ -90,7 +90,7 @@ fn gen_basic_block_ops(
     trait_name: &str,
 ) -> String {
     formatdoc! {r#"
-        impl<T: {trait_name}> {name}<T> {{
+        impl<M: crate::simd::generic::ConstructorMode, T: {trait_name}> {name}<T, M> {{
             // ====== Array/Byte Views ======
             //
             // Views borrow only raw storage. Checked helpers enforce size and
@@ -123,13 +123,13 @@ fn gen_basic_block_ops(
             /// Create from byte array reference (token-gated).
             #[inline(always)]
             pub fn from_bytes(token: T, bytes: &[u8; {byte_size}]) -> Self {{
-                Self(crate::simd_storage::copy(bytes), token)
+                Self::new_repr(crate::simd_storage::copy(bytes), token)
             }}
 
             /// Create from owned byte array (token-gated).
             #[inline(always)]
             pub fn from_bytes_owned(token: T, bytes: [u8; {byte_size}]) -> Self {{
-                Self(crate::simd_storage::cast(bytes), token)
+                Self::new_repr(crate::simd_storage::cast(bytes), token)
             }}
 
             // ====== Slice Casting ======
@@ -511,16 +511,16 @@ fn gen_f32_bitcast_ref_i32(name: &str, lanes: usize) -> String {
         // Cross-type bitcast references (require {convert_trait})
         // ============================================================================
 
-        impl<T: crate::simd::backends::{convert_trait}> {name}<T> {{
-            /// Reinterpret bits as `&{int_type}<T>` (zero-cost pointer cast).
+        impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::backends::{convert_trait}> {name}<T, M> {{
+            /// Reinterpret bits as `&{int_type}<T, M>` (zero-cost pointer cast).
             #[inline(always)]
-            pub fn bitcast_ref_i32(&self) -> &super::{int_type}<T> {{
+            pub fn bitcast_ref_i32(&self) -> &super::{int_type}<T, M> {{
                 crate::simd_storage::vector_view(self.1, &self.0)
             }}
 
-            /// Reinterpret bits as `&mut {int_type}<T>` (zero-cost pointer cast).
+            /// Reinterpret bits as `&mut {int_type}<T, M>` (zero-cost pointer cast).
             #[inline(always)]
-            pub fn bitcast_mut_i32(&mut self) -> &mut super::{int_type}<T> {{
+            pub fn bitcast_mut_i32(&mut self) -> &mut super::{int_type}<T, M> {{
                 crate::simd_storage::vector_view_mut(self.1, &mut self.0)
             }}
         }}
@@ -535,22 +535,22 @@ fn gen_u32x4_bitcast_f32() -> String {
         // Cross-type bitcast to f32x4 (requires F32x4Backend)
         // ============================================================================
 
-        impl<T: U32x4Backend + crate::simd::backends::F32x4Backend> u32x4<T> {{
+        impl<M: crate::simd::generic::ConstructorMode, T: U32x4Backend + crate::simd::backends::F32x4Backend> u32x4<T, M> {{
             /// Bitcast to f32x4 (reinterpret bits, no conversion).
             #[inline(always)]
-            pub fn bitcast_f32x4(self) -> super::f32x4<T> {{
-                super::f32x4(crate::simd_storage::cast(self.0), self.1)
+            pub fn bitcast_f32x4(self) -> super::f32x4<T, M> {{
+                super::f32x4::new_repr(crate::simd_storage::cast(self.0), self.1)
             }}
 
             /// Bitcast to f32x4 by reference (zero-cost pointer cast).
             #[inline(always)]
-            pub fn bitcast_ref_f32x4(&self) -> &super::f32x4<T> {{
+            pub fn bitcast_ref_f32x4(&self) -> &super::f32x4<T, M> {{
                 crate::simd_storage::vector_view(self.1, &self.0)
             }}
 
             /// Bitcast to f32x4 by mutable reference (zero-cost pointer cast).
             #[inline(always)]
-            pub fn bitcast_mut_f32x4(&mut self) -> &mut super::f32x4<T> {{
+            pub fn bitcast_mut_f32x4(&mut self) -> &mut super::f32x4<T, M> {{
                 crate::simd_storage::vector_view_mut(self.1, &mut self.0)
             }}
         }}

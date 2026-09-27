@@ -1,0 +1,18 @@
+[package]
+name = "archmage-context-mode-probe"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+archmage = { path = "../../.." }
+magetypes = { path = "../../../magetypes" }
+
+[features]
+reject-missing-context = []
+reject-weaker-context = []
+reject-implicit-conversion = []
+reject-legacy-inference = []
+reject-local-missing-context = []

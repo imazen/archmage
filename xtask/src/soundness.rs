@@ -90,6 +90,8 @@ use std::path::{Path, PathBuf};
 use crate::IntrinsicEntry;
 use crate::registry::Registry;
 
+mod raw_context;
+
 /// Directories scanned for intrinsic calls, relative to the repo root.
 ///
 /// `src` is the archmage crate itself (detection code), `magetypes/src` is
@@ -325,6 +327,7 @@ impl<'r> Scanner<'r> {
         }
 
         structural_rules(rel, &text, &mut out.errors);
+        raw_context::verify(self.reg, rel, &text, &mut out.errors);
         safety_comment_rules(rel, raw, &mut out.errors);
         out
     }
@@ -498,15 +501,12 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
     let is_backend_impl = rel.starts_with("magetypes/src/simd/impls/");
 
     // Token fabrication routes. Tokens must only come from summon() or an
-    // explicit archmage forge — magetypes has no business creating them.
+    // explicit archmage forge. Safe from_context calls are checked separately
+    // against the enclosing function, never against an impl or token parameter.
     for (pat, why) in [
         (
             r"\bforge_token_dangerously\b",
             "token forging inside magetypes",
-        ),
-        (
-            r"\bfrom_context\b",
-            "token construction from a feature context inside magetypes",
         ),
         (
             r"\bMaybeUninit\b",

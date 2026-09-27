@@ -13,21 +13,27 @@
 //! - `_precise`: Full handling including denormals
 
 use crate::simd::backends::{F32x8Backend, F32x8Convert, I32x8Backend};
-use crate::simd::generic::{f32x8, i32x8};
+use crate::simd::generic::core_types::{f32x8, i32x8};
 
 /// Splat an i32 into i32x8 (disambiguates from f32 splat).
 #[inline(always)]
-fn splat_i32<T: F32x8Convert>(token: T, v: i32) -> i32x8<T> {
+fn splat_i32<T: F32x8Convert, M: crate::simd::generic::ConstructorMode>(
+    token: T,
+    v: i32,
+) -> i32x8<T, M> {
     i32x8::from_repr_unchecked(token, <T as I32x8Backend>::splat(token, v))
 }
 
 /// Splat an f32 into f32x8.
 #[inline(always)]
-fn splat_f32<T: F32x8Convert>(token: T, v: f32) -> f32x8<T> {
+fn splat_f32<T: F32x8Convert, M: crate::simd::generic::ConstructorMode>(
+    token: T,
+    v: f32,
+) -> f32x8<T, M> {
     f32x8::from_repr_unchecked(token, <T as F32x8Backend>::splat(token, v))
 }
 
-impl<T: F32x8Convert> f32x8<T> {
+impl<M: crate::simd::generic::ConstructorMode, T: F32x8Convert> f32x8<T, M> {
     // ====== Low-Precision Transcendentals (~1% error) ======
 
     /// Low-precision base-2 logarithm (~1% max error).
@@ -44,20 +50,20 @@ impl<T: F32x8Convert> f32x8<T> {
         const Q2: f32 = 0.174_093_43;
 
         let x_bits = self.bitcast_to_i32();
-        let offset = splat_i32::<T>(self.1, 0x3f2a_aaab_u32 as i32);
+        let offset = splat_i32::<T, M>(self.1, 0x3f2a_aaab_u32 as i32);
         let exp_bits = x_bits - offset;
         let exp_shifted = exp_bits.shr_arithmetic_const::<23>();
         let mantissa_bits = x_bits - exp_shifted.shl_const::<23>();
         let mantissa = mantissa_bits.bitcast_to_f32();
         let exp_val = exp_shifted.to_f32();
 
-        let m = mantissa - splat_f32::<T>(self.1, 1.0);
+        let m = mantissa - splat_f32::<T, M>(self.1, 1.0);
 
-        let yp = splat_f32::<T>(self.1, P2).mul_add(m, splat_f32::<T>(self.1, P1));
-        let yp = yp.mul_add(m, splat_f32::<T>(self.1, P0));
+        let yp = splat_f32::<T, M>(self.1, P2).mul_add(m, splat_f32::<T, M>(self.1, P1));
+        let yp = yp.mul_add(m, splat_f32::<T, M>(self.1, P0));
 
-        let yq = splat_f32::<T>(self.1, Q2).mul_add(m, splat_f32::<T>(self.1, Q1));
-        let yq = yq.mul_add(m, splat_f32::<T>(self.1, Q0));
+        let yq = splat_f32::<T, M>(self.1, Q2).mul_add(m, splat_f32::<T, M>(self.1, Q1));
+        let yq = yq.mul_add(m, splat_f32::<T, M>(self.1, Q0));
 
         yp / yq + exp_val
     }
@@ -77,17 +83,17 @@ impl<T: F32x8Convert> f32x8<T> {
         const C3: f32 = 0.055_504_11;
 
         let x = self
-            .max(splat_f32::<T>(self.1, -126.0))
-            .min(splat_f32::<T>(self.1, 126.0));
+            .max(splat_f32::<T, M>(self.1, -126.0))
+            .min(splat_f32::<T, M>(self.1, 126.0));
         let xi = x.floor();
         let xf = x - xi;
 
-        let poly = splat_f32::<T>(self.1, C3).mul_add(xf, splat_f32::<T>(self.1, C2));
-        let poly = poly.mul_add(xf, splat_f32::<T>(self.1, C1));
-        let poly = poly.mul_add(xf, splat_f32::<T>(self.1, C0));
+        let poly = splat_f32::<T, M>(self.1, C3).mul_add(xf, splat_f32::<T, M>(self.1, C2));
+        let poly = poly.mul_add(xf, splat_f32::<T, M>(self.1, C1));
+        let poly = poly.mul_add(xf, splat_f32::<T, M>(self.1, C0));
 
         let xi_i32 = xi.to_i32_round();
-        let scale_bits = (xi_i32 + splat_i32::<T>(self.1, 127)).shl_const::<23>();
+        let scale_bits = (xi_i32 + splat_i32::<T, M>(self.1, 127)).shl_const::<23>();
         poly * scale_bits.bitcast_to_f32()
     }
 
@@ -100,7 +106,7 @@ impl<T: F32x8Convert> f32x8<T> {
     /// Low-precision natural logarithm.
     #[inline(always)]
     pub fn ln_lowp(self) -> Self {
-        self.log2_lowp() * splat_f32::<T>(self.1, core::f32::consts::LN_2)
+        self.log2_lowp() * splat_f32::<T, M>(self.1, core::f32::consts::LN_2)
     }
 
     /// Low-precision natural logarithm, no edge case handling.
@@ -112,7 +118,7 @@ impl<T: F32x8Convert> f32x8<T> {
     /// Low-precision natural exponential.
     #[inline(always)]
     pub fn exp_lowp(self) -> Self {
-        (self * splat_f32::<T>(self.1, core::f32::consts::LOG2_E)).exp2_lowp()
+        (self * splat_f32::<T, M>(self.1, core::f32::consts::LOG2_E)).exp2_lowp()
     }
 
     /// Low-precision natural exponential, no edge case handling.
@@ -125,7 +131,7 @@ impl<T: F32x8Convert> f32x8<T> {
     #[inline(always)]
     pub fn log10_lowp(self) -> Self {
         self.log2_lowp()
-            * splat_f32::<T>(self.1, core::f32::consts::LN_2 / core::f32::consts::LN_10)
+            * splat_f32::<T, M>(self.1, core::f32::consts::LN_2 / core::f32::consts::LN_10)
     }
 
     /// Low-precision base-10 logarithm, no edge case handling.
@@ -137,10 +143,10 @@ impl<T: F32x8Convert> f32x8<T> {
     /// Low-precision power function: `self^n`. Returns 0 for zero input.
     #[inline(always)]
     pub fn pow_lowp(self, n: f32) -> Self {
-        let result = (self.log2_lowp() * splat_f32::<T>(self.1, n)).exp2_lowp();
+        let result = (self.log2_lowp() * splat_f32::<T, M>(self.1, n)).exp2_lowp();
         // Zero masking: pow(0, n) = 0 for n > 0
-        let is_zero = self.simd_eq(splat_f32::<T>(self.1, 0.0));
-        Self::blend(is_zero, splat_f32::<T>(self.1, 0.0), result)
+        let is_zero = self.simd_eq(splat_f32::<T, M>(self.1, 0.0));
+        Self::blend(is_zero, splat_f32::<T, M>(self.1, 0.0), result)
     }
 
     /// Low-precision power function, no edge case handling.
@@ -168,22 +174,22 @@ impl<T: F32x8Convert> f32x8<T> {
 
         let x_bits = self.bitcast_to_i32();
 
-        let offset = splat_i32::<T>(self.1, (ONE_BITS - SQRT2_OVER_2) as i32);
+        let offset = splat_i32::<T, M>(self.1, (ONE_BITS - SQRT2_OVER_2) as i32);
         let adjusted = x_bits + offset;
 
         let exp_raw = adjusted.shr_arithmetic_const::<23>();
-        let n = (exp_raw - splat_i32::<T>(self.1, 127)).to_f32();
+        let n = (exp_raw - splat_i32::<T, M>(self.1, 127)).to_f32();
 
-        let mantissa_bits = adjusted & splat_i32::<T>(self.1, MANTISSA_MASK);
-        let a = (mantissa_bits + splat_i32::<T>(self.1, SQRT2_OVER_2 as i32)).bitcast_to_f32();
+        let mantissa_bits = adjusted & splat_i32::<T, M>(self.1, MANTISSA_MASK);
+        let a = (mantissa_bits + splat_i32::<T, M>(self.1, SQRT2_OVER_2 as i32)).bitcast_to_f32();
 
-        let one = splat_f32::<T>(self.1, 1.0);
+        let one = splat_f32::<T, M>(self.1, 1.0);
         let y = (a - one) / (a + one);
         let y2 = y * y;
 
-        let poly = splat_f32::<T>(self.1, C3).mul_add(y2, splat_f32::<T>(self.1, C2));
-        let poly = poly.mul_add(y2, splat_f32::<T>(self.1, C1));
-        let poly = poly.mul_add(y2, splat_f32::<T>(self.1, C0));
+        let poly = splat_f32::<T, M>(self.1, C3).mul_add(y2, splat_f32::<T, M>(self.1, C2));
+        let poly = poly.mul_add(y2, splat_f32::<T, M>(self.1, C1));
+        let poly = poly.mul_add(y2, splat_f32::<T, M>(self.1, C0));
 
         poly.mul_add(y, n)
     }
@@ -194,16 +200,20 @@ impl<T: F32x8Convert> f32x8<T> {
     #[inline(always)]
     pub fn log2_midp(self) -> Self {
         let result = self.log2_midp_unchecked();
-        let zero = splat_f32::<T>(self.1, 0.0);
+        let zero = splat_f32::<T, M>(self.1, 0.0);
         let result = Self::blend(
             self.simd_eq(zero),
-            splat_f32::<T>(self.1, f32::NEG_INFINITY),
+            splat_f32::<T, M>(self.1, f32::NEG_INFINITY),
             result,
         );
-        let result = Self::blend(self.simd_lt(zero), splat_f32::<T>(self.1, f32::NAN), result);
+        let result = Self::blend(
+            self.simd_lt(zero),
+            splat_f32::<T, M>(self.1, f32::NAN),
+            result,
+        );
         // +inf -> +inf; the polynomial otherwise returns inf's raw
         // unbiased exponent (128) for an infinite input.
-        let inf = splat_f32::<T>(self.1, f32::INFINITY);
+        let inf = splat_f32::<T, M>(self.1, f32::INFINITY);
         Self::blend(self.simd_eq(inf), inf, result)
     }
 
@@ -229,18 +239,18 @@ impl<T: F32x8Convert> f32x8<T> {
 
         // Round-to-nearest keeps |frac| <= 0.5 (vs floor's [0,1))
         // Clamp xi to 127 so the bit trick (n+127)<<23 doesn't overflow
-        let xi = self.round().min(splat_f32::<T>(self.1, 127.0));
+        let xi = self.round().min(splat_f32::<T, M>(self.1, 127.0));
         let xf = self - xi;
 
-        let poly = splat_f32::<T>(self.1, C6).mul_add(xf, splat_f32::<T>(self.1, C5));
-        let poly = poly.mul_add(xf, splat_f32::<T>(self.1, C4));
-        let poly = poly.mul_add(xf, splat_f32::<T>(self.1, C3));
-        let poly = poly.mul_add(xf, splat_f32::<T>(self.1, C2));
-        let poly = poly.mul_add(xf, splat_f32::<T>(self.1, C1));
-        let poly = poly.mul_add(xf, splat_f32::<T>(self.1, C0));
+        let poly = splat_f32::<T, M>(self.1, C6).mul_add(xf, splat_f32::<T, M>(self.1, C5));
+        let poly = poly.mul_add(xf, splat_f32::<T, M>(self.1, C4));
+        let poly = poly.mul_add(xf, splat_f32::<T, M>(self.1, C3));
+        let poly = poly.mul_add(xf, splat_f32::<T, M>(self.1, C2));
+        let poly = poly.mul_add(xf, splat_f32::<T, M>(self.1, C1));
+        let poly = poly.mul_add(xf, splat_f32::<T, M>(self.1, C0));
 
         let xi_i32 = xi.to_i32_round();
-        let scale_bits = (xi_i32 + splat_i32::<T>(self.1, 127)).shl_const::<23>();
+        let scale_bits = (xi_i32 + splat_i32::<T, M>(self.1, 127)).shl_const::<23>();
         poly * scale_bits.bitcast_to_f32()
     }
 
@@ -250,8 +260,8 @@ impl<T: F32x8Convert> f32x8<T> {
     /// inf for x >= 128.
     #[inline(always)]
     pub fn exp2_midp(self) -> Self {
-        let underflow_limit = splat_f32::<T>(self.1, -126.0);
-        let overflow_limit = splat_f32::<T>(self.1, 128.0);
+        let underflow_limit = splat_f32::<T, M>(self.1, -126.0);
+        let overflow_limit = splat_f32::<T, M>(self.1, 128.0);
 
         // Clamp to prevent overflow in intermediate calculations
         let clamped = self.max(underflow_limit).min(overflow_limit);
@@ -261,8 +271,8 @@ impl<T: F32x8Convert> f32x8<T> {
         // 2^128 > f32::MAX, so >= 128 must return inf
         let is_underflow = self.simd_lt(underflow_limit);
         let is_overflow = self.simd_ge(overflow_limit);
-        let zero = splat_f32::<T>(self.1, 0.0);
-        let inf = splat_f32::<T>(self.1, f32::INFINITY);
+        let zero = splat_f32::<T, M>(self.1, 0.0);
+        let inf = splat_f32::<T, M>(self.1, f32::INFINITY);
         let result = Self::blend(is_underflow, zero, result);
         Self::blend(is_overflow, inf, result)
     }
@@ -276,13 +286,13 @@ impl<T: F32x8Convert> f32x8<T> {
     /// Mid-precision natural logarithm.
     #[inline(always)]
     pub fn ln_midp(self) -> Self {
-        self.log2_midp() * splat_f32::<T>(self.1, core::f32::consts::LN_2)
+        self.log2_midp() * splat_f32::<T, M>(self.1, core::f32::consts::LN_2)
     }
 
     /// Mid-precision natural logarithm, no edge case handling.
     #[inline(always)]
     pub fn ln_midp_unchecked(self) -> Self {
-        self.log2_midp_unchecked() * splat_f32::<T>(self.1, core::f32::consts::LN_2)
+        self.log2_midp_unchecked() * splat_f32::<T, M>(self.1, core::f32::consts::LN_2)
     }
 
     /// Mid-precision natural logarithm with denormal handling.
@@ -294,13 +304,13 @@ impl<T: F32x8Convert> f32x8<T> {
     /// Mid-precision natural exponential.
     #[inline(always)]
     pub fn exp_midp(self) -> Self {
-        (self * splat_f32::<T>(self.1, core::f32::consts::LOG2_E)).exp2_midp()
+        (self * splat_f32::<T, M>(self.1, core::f32::consts::LOG2_E)).exp2_midp()
     }
 
     /// Mid-precision natural exponential, no edge case handling.
     #[inline(always)]
     pub fn exp_midp_unchecked(self) -> Self {
-        (self * splat_f32::<T>(self.1, core::f32::consts::LOG2_E)).exp2_midp_unchecked()
+        (self * splat_f32::<T, M>(self.1, core::f32::consts::LOG2_E)).exp2_midp_unchecked()
     }
 
     /// Mid-precision natural exponential with full edge case handling.
@@ -319,7 +329,7 @@ impl<T: F32x8Convert> f32x8<T> {
     /// lanes, not NaN.
     #[inline(always)]
     pub fn sigmoid_midp(self) -> Self {
-        let one = splat_f32::<T>(self.1, 1.0);
+        let one = splat_f32::<T, M>(self.1, 1.0);
         // Exact IEEE division, deliberately NOT `.recip()`. recip()'s
         // working tier now carries exact rails too, but its <= 4 ULP
         // slack breaks a pinned nicety: recip(1.0) lands ~1 ULP under
@@ -343,14 +353,14 @@ impl<T: F32x8Convert> f32x8<T> {
     #[inline(always)]
     pub fn log10_midp(self) -> Self {
         self.log2_midp()
-            * splat_f32::<T>(self.1, core::f32::consts::LN_2 / core::f32::consts::LN_10)
+            * splat_f32::<T, M>(self.1, core::f32::consts::LN_2 / core::f32::consts::LN_10)
     }
 
     /// Mid-precision base-10 logarithm, no edge case handling.
     #[inline(always)]
     pub fn log10_midp_unchecked(self) -> Self {
         self.log2_midp_unchecked()
-            * splat_f32::<T>(self.1, core::f32::consts::LN_2 / core::f32::consts::LN_10)
+            * splat_f32::<T, M>(self.1, core::f32::consts::LN_2 / core::f32::consts::LN_10)
     }
 
     /// Mid-precision base-10 logarithm with denormal handling.
@@ -362,13 +372,13 @@ impl<T: F32x8Convert> f32x8<T> {
     /// Mid-precision power function: `self^n`.
     #[inline(always)]
     pub fn pow_midp(self, n: f32) -> Self {
-        (self.log2_midp() * splat_f32::<T>(self.1, n)).exp2_midp()
+        (self.log2_midp() * splat_f32::<T, M>(self.1, n)).exp2_midp()
     }
 
     /// Mid-precision power function, no edge case handling.
     #[inline(always)]
     pub fn pow_midp_unchecked(self, n: f32) -> Self {
-        (self.log2_midp_unchecked() * splat_f32::<T>(self.1, n)).exp2_midp_unchecked()
+        (self.log2_midp_unchecked() * splat_f32::<T, M>(self.1, n)).exp2_midp_unchecked()
     }
 
     /// Mid-precision power function with full edge case handling.
@@ -393,7 +403,7 @@ impl<T: F32x8Convert> f32x8<T> {
     pub fn cbrt_lowp(self) -> Self {
         const MAGIC: u32 = 0x2a50_8c2d;
 
-        let sign_mask = splat_f32::<T>(self.1, -0.0);
+        let sign_mask = splat_f32::<T, M>(self.1, -0.0);
         let sign = self & sign_mask;
         let abs_x = self.abs();
 
@@ -406,14 +416,14 @@ impl<T: F32x8Convert> f32x8<T> {
         // Halley iteration: y *= (y³ + 2x) / (2y³ + x)
         // Compute ratio first to avoid intermediate overflow.
         // Triples bits of precision: ~5 → ~15
-        let two = splat_f32::<T>(self.1, 2.0);
+        let two = splat_f32::<T, M>(self.1, 2.0);
         let y3 = y * y * y;
         y *= (y3 + two * abs_x) / (two * y3 + abs_x);
 
         let result = y | sign;
 
         // Zero masking: cbrt(±0) = ±0 (bit hack gives garbage for zero)
-        let is_zero = self.simd_eq(splat_f32::<T>(self.1, 0.0));
+        let is_zero = self.simd_eq(splat_f32::<T, M>(self.1, 0.0));
         Self::blend(is_zero, self, result)
     }
 
@@ -433,7 +443,7 @@ impl<T: F32x8Convert> f32x8<T> {
     pub fn cbrt_midp(self) -> Self {
         const MAGIC: u32 = 0x2a50_8c2d;
 
-        let sign_mask = splat_f32::<T>(self.1, -0.0);
+        let sign_mask = splat_f32::<T, M>(self.1, -0.0);
         let sign = self & sign_mask;
         let abs_x = self.abs();
 
@@ -445,7 +455,7 @@ impl<T: F32x8Convert> f32x8<T> {
 
         // 2 Halley iterations: y *= (y³ + 2x) / (2y³ + x)
         // Compute ratio first to avoid intermediate overflow.
-        let two = splat_f32::<T>(self.1, 2.0);
+        let two = splat_f32::<T, M>(self.1, 2.0);
         for _ in 0..2 {
             let y3 = y * y * y;
             y *= (y3 + two * abs_x) / (two * y3 + abs_x);
@@ -454,7 +464,7 @@ impl<T: F32x8Convert> f32x8<T> {
         let result = y | sign;
 
         // Zero masking: cbrt(±0) = ±0 (bit hack gives garbage for zero)
-        let is_zero = self.simd_eq(splat_f32::<T>(self.1, 0.0));
+        let is_zero = self.simd_eq(splat_f32::<T, M>(self.1, 0.0));
         Self::blend(is_zero, self, result)
     }
 
@@ -464,18 +474,18 @@ impl<T: F32x8Convert> f32x8<T> {
     /// Handles all edge cases including denormals, zeros, and negative values.
     #[inline(always)]
     pub fn cbrt_midp_precise(self) -> Self {
-        let zero = splat_f32::<T>(self.1, 0.0);
+        let zero = splat_f32::<T, M>(self.1, 0.0);
         let is_zero = self.simd_eq(zero);
 
         let abs_x = self.abs();
-        let is_denorm = abs_x.simd_lt(splat_f32::<T>(self.1, 1.175_494_4e-38));
+        let is_denorm = abs_x.simd_lt(splat_f32::<T, M>(self.1, 1.175_494_4e-38));
 
-        let scaled = self * splat_f32::<T>(self.1, 16_777_216.0);
+        let scaled = self * splat_f32::<T, M>(self.1, 16_777_216.0);
         let x_for_cbrt = Self::blend(is_denorm, scaled, self);
 
         let result = x_for_cbrt.cbrt_midp();
 
-        let scaled_result = result * splat_f32::<T>(self.1, 1.0 / 256.0);
+        let scaled_result = result * splat_f32::<T, M>(self.1, 1.0 / 256.0);
         let result = Self::blend(is_denorm, scaled_result, result);
 
         Self::blend(is_zero, self, result)

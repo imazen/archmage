@@ -7,6 +7,7 @@ use crate::common::*;
 use crate::tiers::*;
 
 /// Generate per-tier variants of the input function.
+/// `locals` selects fixed Context-mode aliases; `defines` selects Explicit mode.
 ///
 /// When `rite_flag` is false (default), non-fallback variants are wrapped
 /// with `#[archmage::arcane]` (safe outer wrapper + `#[target_feature]`
@@ -35,6 +36,7 @@ pub(crate) fn magetypes_impl(
     tiers: &[ResolvedTier],
     rite_flag: bool,
     defines: &[String],
+    locals: &[String],
 ) -> TokenStream {
     // Propagate ordinary attributes once; these macro attributes are consumed
     // or supplied per tier below.
@@ -56,7 +58,14 @@ pub(crate) fn magetypes_impl(
                 type #ident = ::magetypes::simd::generic::#ident<Token>;
             }
         });
-        quote! { #(#aliases)* }
+        let locals = locals.iter().map(|name| {
+            let ident = quote::format_ident!("{name}");
+            quote! {
+                #[allow(non_camel_case_types, dead_code)]
+                type #ident = ::magetypes::simd::generic::local::#ident<Token>;
+            }
+        });
+        quote! { #(#aliases)* #(#locals)* }
     };
 
     // Dispatch presence is independent of the tier. Scan the original body
@@ -72,7 +81,7 @@ pub(crate) fn magetypes_impl(
         // Prepend the `define(...)` type aliases to the body. They appear
         // inside the function scope, shadowing any outer `f32x8`/etc. for
         // this body only.
-        if !defines.is_empty() {
+        if !defines.is_empty() || !locals.is_empty() {
             let original_body = &variant_fn.body;
             variant_fn.body = quote! {
                 #define_preamble
