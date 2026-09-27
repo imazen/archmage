@@ -16,6 +16,9 @@
 
 ### Added
 
+- Body-local `use(f32xN)` natural-width aliases for all ten vector families across `magetypes`, `rite`, `arcane`, `autoversion`, and their attribute aliases; fixed-width `use(...)` and legacy `define(...)` remain compatible (`0833022d`).
+- Tokenless `magetypes(rite, ...)` helpers now receive their generated tier explicitly; `default` contextual aliases use scalar x4 (`0833022d`).
+
 - Public `_with_token` alternatives for all 42 vector constructor method names on both modes, plus native `from_raw_with_token`; existing calls and aliases remain compatible (`ef5d3cf1`).
 
 - `#[magetypes(use(...))]` selects tokenless, target-feature-checked constructors over a shared vector core; `define(...)` retains token arguments and mode conversions preserve stored tokens (`8ef7db6f`, `4ed7c0ce`).

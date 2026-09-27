@@ -1,0 +1,240 @@
+{
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: x86_64-unknown-linux-gnu\nrelease: 1.98.1\nLLVM version: 22.1.8\n",
+  "host": "i265",
+  "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.43",
+  "runs": 6,
+  "jobs": 8,
+  "incremental": false,
+  "profile": "release",
+  "cold": "fresh Cargo target directory; filesystem cache not flushed",
+  "sources": {
+    "before": "/home/lilith/data/archmage/adaptive-before-b79f590d",
+    "after": "/home/lilith/work/archmage"
+  },
+  "experiment": "Actual adaptive use parser versus identical manual per-tier aliases",
+  "cases": {
+    "before_manual": {
+      "source": "/home/lilith/data/archmage/adaptive-before-b79f590d",
+      "local": true
+    },
+    "after_manual": {
+      "source": "/home/lilith/work/archmage",
+      "local": true
+    },
+    "after_adaptive": {
+      "source": "/home/lilith/work/archmage",
+      "local": true
+    }
+  },
+  "before_commit": "b79f590d4eb02018481e3707fabcb9cf72ce84d0",
+  "after_commit": "0833022ddad0c5100c98539eee9ece07a4c83f51",
+  "artifacts": "/home/lilith/data/archmage/adaptive-use/2026-09-27",
+  "summary": [
+    {
+      "features": "default",
+      "label": "before_manual",
+      "total_seconds": {
+        "median": 2.833948103507282,
+        "min": 2.819033210980706,
+        "max": 2.8501625030185096
+      },
+      "macros_seconds": {
+        "median": 0.31,
+        "min": 0.31,
+        "max": 0.31
+      },
+      "magetypes_seconds": {
+        "median": 1.25,
+        "min": 1.24,
+        "max": 1.27
+      },
+      "consumer_seconds": {
+        "median": 0.04,
+        "min": 0.04,
+        "max": 0.05
+      }
+    },
+    {
+      "features": "default",
+      "label": "after_manual",
+      "total_seconds": {
+        "median": 2.8479704884957755,
+        "min": 2.840817069984041,
+        "max": 2.8599774850008544
+      },
+      "macros_seconds": {
+        "median": 0.32,
+        "min": 0.32,
+        "max": 0.32
+      },
+      "magetypes_seconds": {
+        "median": 1.26,
+        "min": 1.24,
+        "max": 1.27
+      },
+      "consumer_seconds": {
+        "median": 0.05,
+        "min": 0.04,
+        "max": 0.05
+      }
+    },
+    {
+      "features": "default",
+      "label": "after_adaptive",
+      "total_seconds": {
+        "median": 2.8386160290101543,
+        "min": 2.8171408659836743,
+        "max": 2.849140513018938
+      },
+      "macros_seconds": {
+        "median": 0.32,
+        "min": 0.31,
+        "max": 0.32
+      },
+      "magetypes_seconds": {
+        "median": 1.25,
+        "min": 1.22,
+        "max": 1.26
+      },
+      "consumer_seconds": {
+        "median": 0.04,
+        "min": 0.04,
+        "max": 0.05
+      }
+    },
+    {
+      "features": "avx512",
+      "label": "before_manual",
+      "total_seconds": {
+        "median": 3.0400674824923044,
+        "min": 3.022883177996846,
+        "max": 3.0460907820088323
+      },
+      "macros_seconds": {
+        "median": 0.31,
+        "min": 0.3,
+        "max": 0.32
+      },
+      "magetypes_seconds": {
+        "median": 1.4649999999999999,
+        "min": 1.44,
+        "max": 1.47
+      },
+      "consumer_seconds": {
+        "median": 0.05,
+        "min": 0.05,
+        "max": 0.05
+      }
+    },
+    {
+      "features": "avx512",
+      "label": "after_manual",
+      "total_seconds": {
+        "median": 3.0611701004963834,
+        "min": 3.0291778890241403,
+        "max": 3.0651321840123273
+      },
+      "macros_seconds": {
+        "median": 0.32,
+        "min": 0.32,
+        "max": 0.33
+      },
+      "magetypes_seconds": {
+        "median": 1.47,
+        "min": 1.45,
+        "max": 1.48
+      },
+      "consumer_seconds": {
+        "median": 0.055,
+        "min": 0.05,
+        "max": 0.06
+      }
+    },
+    {
+      "features": "avx512",
+      "label": "after_adaptive",
+      "total_seconds": {
+        "median": 3.053073549992405,
+        "min": 3.0360664170002565,
+        "max": 3.0627174350083806
+      },
+      "macros_seconds": {
+        "median": 0.32,
+        "min": 0.32,
+        "max": 0.32
+      },
+      "magetypes_seconds": {
+        "median": 1.47,
+        "min": 1.44,
+        "max": 1.48
+      },
+      "consumer_seconds": {
+        "median": 0.06,
+        "min": 0.05,
+        "max": 0.06
+      }
+    }
+  ],
+  "command": "TMPDIR=/home/lilith/tmp /home/lilith/work/zen/scripts/run-heavy --mem 16G --jobs 8 -- python3 scripts/measure-local-mode-compile.py --before /home/lilith/data/archmage/adaptive-before-b79f590d --after /home/lilith/work/archmage --adaptive-use-probe --sde /home/lilith/data/archmage/tools/sde-external-10.8.0-2026-03-15-lin/sde64 --output /home/lilith/data/archmage/adaptive-use/2026-09-27 --runs 6",
+  "resource_guard": "run-heavy: done rc=0 109s | peak-RSS 0.40GiB | min-avail 26414MiB | peak-load 1.66",
+  "log_sha256": {
+    "default-before_manual/resolve.log": "4db8fe50516425de2f9aee55d302dc4d268252dda639c355ebe89a381e9a433e",
+    "default-before_manual/build-0.log": "4d9a4d1339518592ae1e041e44ac6db404501fd3f26c6e9095b7c93978c8d7be",
+    "default-before_manual/build-1.log": "325a1c35920a4fcdbde34e4809b3c3578cade1f95c2afe02069a6382167d63a2",
+    "default-before_manual/build-2.log": "abe1d2c32edf29fd9eed6c85d7692c74afbb9d1ddf0a0cb20e23a6bda6e0e809",
+    "default-before_manual/build-3.log": "b4af0f2872e56b7ee15cb1a83e2c97ff3e2ddf2e0d1de4be119308ce2d7fa729",
+    "default-before_manual/build-4.log": "a194db5d37750b47e2ccea3022f8373e43b03065da272481cc3d1ab2c62f7d79",
+    "default-before_manual/build-5.log": "30befe1a477ccd025ecdfe1389d4051a7c77259bd1a0e30079d3660264cb262c",
+    "default-before_manual/test-build.log": "5713833cee3fdb00795c3b239250f27cbb187b38b3e89ff3916c234edb81d5f7",
+    "default-before_manual/test-run.log": "45a3b0f5115fd7c8b2a95b0c702cef761c88457fca1112cc3f2a36bb63791ad5",
+    "default-after_manual/resolve.log": "4db8fe50516425de2f9aee55d302dc4d268252dda639c355ebe89a381e9a433e",
+    "default-after_manual/build-0.log": "0b35eebff54c81f0245f8e176aa635e9121bdf26f0fbbc786a853a79cf28333b",
+    "default-after_manual/build-1.log": "486e9aa5667d5b60efbfffbf58514463c1380b64c77519eb483ed1f836d43752",
+    "default-after_manual/build-2.log": "25bca98b8c417d43b8d3d0cae4195c05dea9d57a3793a6171a919376c6d90b33",
+    "default-after_manual/build-3.log": "edf7fbbe7b360b9a65d1138f1c27045bdbf69fe6ed1ea7a5a094695b8600e5bb",
+    "default-after_manual/build-4.log": "d0cedae7400532ddecd4743dfa946d387f057a2dc230978a8c76153b7c48c4da",
+    "default-after_manual/build-5.log": "5df95bf7e9ea39f5e6eb745004b2e6f30f97ca5e698c96963c0d5438e85b05a8",
+    "default-after_manual/test-build.log": "52f88ad9a0f0d5e5e13499487b9257e233403c91e93d6f9a513116b7a454bb8a",
+    "default-after_manual/test-run.log": "20f3332691eb69e0938a57373eafaae1f88af62f61681951dac617cf7994f12c",
+    "default-after_adaptive/resolve.log": "4db8fe50516425de2f9aee55d302dc4d268252dda639c355ebe89a381e9a433e",
+    "default-after_adaptive/build-0.log": "89b346615ae5fc07b38103d39a92d675c887a37fb8aef75cefccf59675fbbddf",
+    "default-after_adaptive/build-1.log": "0e30e378d03f1bf84f61163e6d0767fa9e3d32a9a405996c2581b7ac4131c0ca",
+    "default-after_adaptive/build-2.log": "a0743fb32c011bf67eafe86b06a913cee7b0d00640f7d5188be18fb86f9057f8",
+    "default-after_adaptive/build-3.log": "d8ddf55b7e2c0384a70845a6d29b261dd7bb79b695028e776efba4a6bb931eee",
+    "default-after_adaptive/build-4.log": "62b977c57db19d7df5f3bcba9d2345121ce4f489ef382d19ab225e1f62ee7cd4",
+    "default-after_adaptive/build-5.log": "4bd3910312f1d2e6dd0a979fd1cb87d5cb264c7130e12c3c1b0b9a23f5665d79",
+    "default-after_adaptive/test-build.log": "114a834c0a28edc2e17b9544306828e6132e02d7c5821dc9d85fc26dcb7f3e8c",
+    "default-after_adaptive/test-run.log": "b00529441f29f492e6c83c2465a0ccaf3da5722c38d86b345f3951c8c4c941f6",
+    "avx512-before_manual/resolve.log": "4db8fe50516425de2f9aee55d302dc4d268252dda639c355ebe89a381e9a433e",
+    "avx512-before_manual/build-0.log": "52172df303a311af45885e5c7dd240e60b8b2cb4bcc024f5e02c737df4738561",
+    "avx512-before_manual/build-1.log": "640f4804754f0cde1bf0ff775aeaf4560527d2f435ea8c6e65f81cb93e4a071c",
+    "avx512-before_manual/build-2.log": "d885028807373efc115148a36cb8e0686d71b19432947ea5e8e7964fdc8ad62b",
+    "avx512-before_manual/build-3.log": "ac69f9afc0c4c5623ab310a8a78ca0d7f0477acac79de445c3c20cab5780a3a3",
+    "avx512-before_manual/build-4.log": "11bbe82b8696368b00eff11301592a2167668046b32cf160b790cfffc726916f",
+    "avx512-before_manual/build-5.log": "603fca7001817e2a790d442cad2060284bbee6107a5cb707bbcee8d91e36ecab",
+    "avx512-before_manual/test-build.log": "bd953be2054178ddb31b2142cd9c8d07a1a87598e3673745520fdf7757f2ac49",
+    "avx512-before_manual/test-run.log": "128676bd80377e5e10ff3808494c1aa9cfc8e7992e4b2b14213303ccd2a7a22c",
+    "avx512-after_manual/resolve.log": "4db8fe50516425de2f9aee55d302dc4d268252dda639c355ebe89a381e9a433e",
+    "avx512-after_manual/build-0.log": "0886135ae7b4079763a3a551ba2a95225f10f1204b5bfc51004c76ff574e7e7a",
+    "avx512-after_manual/build-1.log": "5311e5564a4fe707eedcbc12feeefeeae5020b2ad69d3b8ca7fbf72631d1e6c0",
+    "avx512-after_manual/build-2.log": "737e32ffdf1b2f76d2a7030ad7c9a3d4ca616cfcfc9a103efa7a07df2d2ab9cd",
+    "avx512-after_manual/build-3.log": "7f34263c8eb2d2f91a2fdc2e4b6123e44f31149b9e5c5a04423e555c8972768d",
+    "avx512-after_manual/build-4.log": "a4625bc607630be623d1e82f596e4900a634af64d172f09abe8eb5f0f0dfccc0",
+    "avx512-after_manual/build-5.log": "4fc1d0949c517c68aac944cadeb8788226f891e57118fdd54cbae1ef33763c80",
+    "avx512-after_manual/test-build.log": "5749cdba65532a06b7bbcab7056eeeb174db0b376bcd2f04f78ca3e8004dfb15",
+    "avx512-after_manual/test-run.log": "7bf79217217af01068ba11793c9e345c18094e894a35550dc4ace41f082a86ff",
+    "avx512-after_adaptive/resolve.log": "4db8fe50516425de2f9aee55d302dc4d268252dda639c355ebe89a381e9a433e",
+    "avx512-after_adaptive/build-0.log": "2207e022da144cac68aeeae2b2ec6fc3a8b9329ccb03e7e0a94d53ebfcc2dc38",
+    "avx512-after_adaptive/build-1.log": "1347fcf3933d92d509b67a8bcc5e4090020fcd4a3878e61e7bd9d9b374c73492",
+    "avx512-after_adaptive/build-2.log": "6359b8a980d4bdaf210930f52a3c524a33de2b620420362abf806b656a64aea1",
+    "avx512-after_adaptive/build-3.log": "5b90da9a458280304d0595aca9e79fd7154144263580e5b4ef8fec58bbe88101",
+    "avx512-after_adaptive/build-4.log": "44bb54324abf3f9d7666d7199acb973d5a7ac2f55d29d64d706342371249ebd4",
+    "avx512-after_adaptive/build-5.log": "c4cb88c9ce029f6ff7dd66d8e24b3bb3be64d6426ae0af31121ce543adb36e33",
+    "avx512-after_adaptive/test-build.log": "c1828d3f9868608faca18a3051716ce0e65ade5c6f3a2622be547303b1193da9",
+    "avx512-after_adaptive/test-run.log": "7100b83a937d025ffdadd2a19032a7318f5f883fad99c25ba85e19c60d40a57e",
+    "validation-baseline.log": "b7f3efe9d8621a57a0084f317769bb38ff55f36c31246817eb029927aa188949",
+    "validation-tests3.log": "e1e2bbad666582c6b8c44475c3028077078090f1f5511b2b11a3b1a42c5b5699",
+    "validation-cross.log": "bb33df24372bcb4c5d24c9a2fd8c736947ba0db92f8fdd87781d382141691500",
+    "validation-review.log": "916aee5fa15fe28201b3f858b149b3091036e26ab3c79dcfaa7f16232493d0d4"
+  }
+}

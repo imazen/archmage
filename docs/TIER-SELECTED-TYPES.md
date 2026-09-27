@@ -52,7 +52,7 @@ APIs; `use(f32xN)` extends their convention.
   tier namespace through `generate_imports` in `archmage-macros/src/common.rs`.
 - **Also present:** `magetypes::SimdTypes` in `magetypes/src/types.rs`, associating
   tokens with vector types and lane constants. Its scalar mapping uses the
-  standalone x1 wrappers, unlike the scalar namespace's x4 aliases. Its
+  standalone x1 wrappers, unlike the generator's shadowed scalar-x4 aliases. Its
   associated types have no operation bounds, so `T: SimdTypes` alone does not
   expose a uniform generic constructor API. Its V2 mapping currently refers to
   V3-backed vectors; it must not be blindly reused as a capability resolver.
@@ -174,6 +174,13 @@ token fails. CI selects V3/V4/V4x in its SDE lanes. Compiler rejection tests in
 ambiguous generic backend selection; matching/superset contexts are accepted.
 
 ## Compile-time cost
+
+The [actual implementation comparison](../benchmarks/adaptive_use_compile_2026-09-27.md)
+measures manual natural-width aliases before/after and implemented
+`rite(use(f32xN))`: six-run cold release medians were 2.834 → 2.839 s (default)
+and 3.040 → 3.053 s (AVX-512), with overlapping ranges. This adds no public trait
+family or vector implementation. The measurements are specific to that consumer.
+
 
 See the [measured expansion-shape comparison](../benchmarks/tier_width_compile_2026-09-27.md).
 The implementation adds name parsing and a per-tier lookup to existing
