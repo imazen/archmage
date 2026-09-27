@@ -77,5 +77,13 @@
       "flat_scalar_proofs": 172
     }
   },
-  "command": "TMPDIR=/home/lilith/tmp /home/lilith/work/zen/scripts/run-heavy --mem 16G --jobs 8 -- python3 scripts/measure-local-mode-compile.py --before /home/lilith/data/archmage/constructor-compile-optimization/2026-09-27/before --middle /home/lilith/data/archmage/constructor-compile-optimization/2026-09-27/direct --after /home/lilith/data/archmage/constructor-compile-optimization/2026-09-27/after --before-local --output /home/lilith/data/archmage/constructor-compile-optimization/2026-09-27/results --runs 6"
+  "command": "TMPDIR=/home/lilith/tmp /home/lilith/work/zen/scripts/run-heavy --mem 16G --jobs 8 -- python3 scripts/measure-local-mode-compile.py --before /home/lilith/data/archmage/constructor-compile-optimization/2026-09-27/before --middle /home/lilith/data/archmage/constructor-compile-optimization/2026-09-27/direct --after /home/lilith/data/archmage/constructor-compile-optimization/2026-09-27/after --before-local --output /home/lilith/data/archmage/constructor-compile-optimization/2026-09-27/results --runs 6",
+  "implementation_commit": "777932eb0dba4e8221198cfe59f6e848eaf529ac",
+  "validation_logs": {
+    "validation-ci.log": "5040c722aba0cec3a4e90ebf58954f2e47cdd8035f418840443cce52857d9187",
+    "validation-cross-tests.log": "e5c21472651809341b6cbb4233a5c48ec603b0ac6323739379b17122e385d0b0",
+    "validation-generator-tests.log": "fe94e82e70f02c002a45b7ab5d83bac8aa5e55064bb5af9fd837a584495283c1",
+    "validation-clippy.log": "add8841e8d31005bf46a4cd8d05c89c1802c6ab618c15f89cc04b5cc141ebd48"
+  },
+  "measured_generated_files_match_final": 44
 }

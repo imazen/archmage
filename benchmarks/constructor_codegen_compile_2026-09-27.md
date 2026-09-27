@@ -68,7 +68,15 @@ same supported backend contexts; this change does not add public signatures.
 Generator tests cover full registry feature sets, local proof placement,
 qualified backend calls, and rejected flattening shapes. x86 runtime constructor
 and raw-interop tests passed; AArch64 equivalents passed under QEMU. All-feature
-library checks passed for AArch64, WASM32, and i686.
+library checks passed for AArch64, WASM32, and i686. The full local
+`cargo run -p xtask -- ci` command passed, including soundness/negative-context
+checks, no_std tests, unchanged x86/ARM/WASM public-API snapshots, and docs.
+Its optional Miri, Docker/cross, and wasmtime execution paths were unavailable;
+the separately run AArch64 QEMU tests above cover the changed constructor paths.
+This host has no AVX-512F, so native AVX-512 constructors were compiled but not
+executed. All 44 generated files match the measured final snapshot byte-for-byte.
+Full CI took 146 s under run-heavy (peak RSS 0.73 GiB, minimum available RAM
+25,925 MiB, peak load 2.13).
 
 ## Reproduction and retained artifacts
 
