@@ -89,7 +89,7 @@ in a matching macro-managed context. See [dispatch](https://imazen.github.io/arc
 
 ### Constructors from the function's feature context
 
-Use `#[magetypes(local(f32x8), v3, neon, wasm128, scalar)]` to select
+Use `#[magetypes(use(f32x8), v3, neon, wasm128, scalar)]` to select
 `f32x8::zero()`, `f32x8::splat(value)`, and `f32x8::load(data)` without token
 arguments. Rust checks that the enclosing function enables the required target
 features. `define(f32x8)` keeps the existing token-taking API.

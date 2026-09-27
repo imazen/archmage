@@ -10,7 +10,7 @@ current `Token`; it does not replace Rust's function generics.
 
 ## Choosing constructor proofs
 
-`define(f32x8)` keeps `f32x8::zero(token)`. `local(f32x8)` selects the
+`define(f32x8)` keeps `f32x8::zero(token)`. `use(f32x8)` selects the
 contextual alias and permits `f32x8::zero()` in a matching feature context.
 Both aliases offer `f32x8::zero_with_token(token)`, `splat_with_token(token, x)`,
 and corresponding token alternatives for the supported construction methods.

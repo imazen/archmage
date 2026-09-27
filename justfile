@@ -361,3 +361,8 @@ local-mode-check:
 # Use preserved source snapshots and fresh Cargo targets for each cold build.
 local-mode-compile before after output:
     python3 scripts/measure-local-mode-compile.py --before {{before}} --after {{after}} --output {{output}}
+
+# Contextual constructor syntax, compatibility, and macro expansion regressions.
+test-context-constructors:
+    cargo test -p archmage-macros
+    cargo test -p magetypes --all-features --test magetypes_use_flag --test magetypes_define_flag

@@ -23,7 +23,7 @@ unchanged. No old method or type is deprecated in this change.
 | Migration step | Before | After | Feature annotation needed? |
 |---|---|---|---|
 | Prepare existing code; keep its types | `f32x8::splat(token, x)` | `f32x8::splat_with_token(token, x)` | No |
-| Select the contextual aliases | `define(f32x8)` | `local(f32x8)` | Token alternatives still need none |
+| Select the contextual aliases | `define(f32x8)` | `use(f32x8)` | Token alternatives still need none |
 | Use short constructors in covered contexts | `f32x8::splat_with_token(token, x)` | `f32x8::splat(x)` | Matching or stronger features |
 | Raw interchange with a token | `f32x8::from_m256(token, raw)` | `f32x8::from_raw_with_token(token, raw)` | No |
 
@@ -77,7 +77,7 @@ Two representative pinned sources make the difference concrete:
 
 The type migration needs more than method renames:
 
-- In macro kernels, change the relevant `define(...)` entries to `local(...)`.
+- In macro kernels, change the relevant `define(...)` entries to `use(...)`.
   Plain helpers and explicit annotations need the matching `generic::local`
   paths. Keep tokens needed by dispatch, other calls, or `_with_token` methods.
 - Vector-to-vector constructors preserve mode. When changing a float type,
@@ -121,20 +121,18 @@ checksums are retained at `/home/lilith/data/archmage/with-token/2026-09-27/`.
 No downstream repositories were modified or rebuilt; the downstream review
 uses the pinned source inventory and representative helper inspection.
 
-### `use(...)` versus `local(...)`
+### Contextual alias spelling: `use(...)`
 
-`use(f32x8)` is the recommended future spelling: it describes bringing a
-backend-specific type name into the function. Both current alias modes create
-function-local aliases, and contextual vectors can escape the function or be
-constructed with a token outside a feature context, so `local` does not uniquely
-describe their semantics.
+`#[magetypes(use(f32x8), ...)]` selects contextual aliases. The unpublished
+`local(...)` attribute spelling has been removed, with a diagnostic pointing
+to `use(...)`. `define(...)` still selects the legacy token-taking aliases.
+The explicit Rust module path `magetypes::simd::generic::local` remains available;
+this rename concerns the attribute option, not that module.
 
-Rust accepts `#[attribute(use(f32x8))]`: attribute macros receive the keyword in
-their argument token stream. The maintained [keyword probe](../tests/design-probes/context-mode/keyword_use.rs)
-compiles that exact form through a procedural macro. The current magetypes
-parser recognizes only `define(...)` and `local(...)`; adding `use(...)` would
-need explicit keyword parsing. If adopted, it should alias `local(...)` while
-preserving the existing spelling. **`use(...)` is not added by this change.**
+The name describes bringing a backend-specific type into the function. Both
+constructor modes create function-local aliases, and contextual vectors can
+escape the function or be constructed with a token outside a feature context.
+The parser consumes Rust's `use` keyword explicitly; no raw identifier is needed.
 
 ### Proposed `rite(use(...))` resolution
 
@@ -353,16 +351,16 @@ closure flag is source-context metadata, not evidence that those calls need
 new annotations. Nested function items are a separate case. See
 [closure inheritance](https://doc.rust-lang.org/reference/attributes/codegen.html#attributes.codegen.target_feature.closures).
 
-## Opt-in alias selection: `define(...)` and `local(...)`
+## Opt-in alias selection: `define(...)` and `use(...)`
 
 `define(f32x8)` retains the explicit-token alias and `f32x8::zero(token)`.
-`local(f32x8)` selects `magetypes::simd::generic::local::f32x8<Token>` and
+`use(f32x8)` selects `magetypes::simd::generic::local::f32x8<Token>` and
 `f32x8::zero()`. Both aliases fix a constructor policy on the same generic
 core. The policy is a sealed, zero-sized marker; arithmetic, storage, casts,
 transcendentals, and width conversions share their implementations.
 
 ```rust
-#[archmage::magetypes(local(f32x8), v3, neon, wasm128, scalar)]
+#[archmage::magetypes(use(f32x8), v3, neon, wasm128, scalar)]
 fn scale(_token: Token, input: &[f32; 8]) -> [f32; 8] {
     (f32x8::load(input) * f32x8::splat(2.0)).to_array()
 }
@@ -384,7 +382,7 @@ backend bounds. See the [optimization measurements](../benchmarks/constructor_co
 The fixed alias matters: adding only a defaulted mode parameter makes inferred
 `Vector::zero(token)` ambiguous (E0034). Fixing `Explicit` in the existing public
 alias preserves that call. This was verified in the standalone compiler matrix
-and in `magetypes/tests/magetypes_local_flag.rs`. A second vector implementation
+and in `magetypes/tests/magetypes_use_flag.rs`. A second vector implementation
 is not necessary. The core is exposed under `generic::core_types` for code that
 intentionally abstracts over the sealed `ConstructorMode` parameter.
 

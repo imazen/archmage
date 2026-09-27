@@ -3,7 +3,7 @@
 use archmage::{ScalarToken, incant, magetypes};
 use magetypes::simd::generic::{self, local};
 
-#[magetypes(local(f32x4, f32x8, i32x4, i32x8), v3, neon, wasm128, scalar)]
+#[magetypes(use(f32x4, f32x8, i32x4, i32x8), v3, neon, wasm128, scalar)]
 fn exercise(_token: Token, data: &[f32; 8]) -> [f32; 8] {
     let zero = f32x8::zero();
     let v = f32x8::load(data) + f32x8::splat(2.0) + zero;
@@ -43,7 +43,7 @@ fn local_dispatch_and_mode_preserving_operations() {
     );
 }
 
-#[magetypes(rite, local(f32x8), define(i32x8), v3, scalar)]
+#[magetypes(rite, use(f32x8), define(i32x8), v3, scalar)]
 fn mixed(token: Token) -> [f32; 8] {
     let explicit = i32x8::splat(token, 7);
     let contextual: local::i32x8<Token> = explicit.into();
@@ -178,7 +178,7 @@ fn construct_generic<T: magetypes::simd::backends::F32x8Backend>(
     local + local::f32x8::zero_with_token(token)
 }
 
-#[magetypes(local(f32x8), v3, neon, wasm128, scalar)]
+#[magetypes(use(f32x8), v3, neon, wasm128, scalar)]
 fn generic_token_entry(token: Token, data: &[f32; 8]) -> [f32; 8] {
     let v: f32x8 = construct_generic(token, data);
     v.to_array()

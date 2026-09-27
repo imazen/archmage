@@ -1,5 +1,5 @@
 //! Design probe only: distinct constructor modes, using existing magetypes storage.
-//! This does not implement the proposed `#[magetypes(local(...))]` syntax.
+//! This does not implement the proposed `#[magetypes(use(...))]` syntax.
 #![forbid(unsafe_code)]
 
 use archmage::ScalarToken;
@@ -73,7 +73,7 @@ pub fn accepts_existing_generic<T: F32x8Backend>(value: Existing<T>) -> [f32; 8]
 #[cfg(target_arch = "x86_64")]
 #[archmage::arcane]
 pub fn context_variant(token: archmage::X64V3Token) -> [f32; 8] {
-    // Equivalent to the proposed local(f32x8) alias for a V3 expansion.
+    // Equivalent to the proposed use(f32x8) alias for a V3 expansion.
     #[allow(non_camel_case_types)]
     type f32x8 = Vector<archmage::X64V3Token, Context>;
     let a = f32x8::zero();

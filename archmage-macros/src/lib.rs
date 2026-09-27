@@ -403,7 +403,7 @@ pub fn token_target_features(attr: TokenStream, item: TokenStream) -> TokenStrea
 /// }
 /// ```
 ///
-/// `local(f32x8, ...)` injects aliases with context-checked constructors:
+/// `use(f32x8, ...)` injects aliases with context-checked constructors:
 /// `f32x8::zero()`, `f32x8::splat(value)`, and `f32x8::load(data)`.
 /// `define(...)` retains explicit token arguments. Both modes share vector
 /// operations; use `.into()` to cross a boundary between their value types.
@@ -424,14 +424,14 @@ pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
     //           (e.g., `type f32x8 = ::magetypes::simd::generic::f32x8<Token>;`).
     //           `Token` in the alias RHS is substituted per tier.
     //
-    // `local(name1, ...)` selects context constructors on the shared vector core.
-    // Assumption: `rite`, `define`, and `local` are reserved option names.
+    // `use(name1, ...)` selects context constructors on the shared vector core.
+    // Assumption: `rite`, `define`, and `use` are reserved option names.
     // `token-registry.toml` must not declare `short_name = "rite"` or
     // `short_name = "define"`.
     let MagetypesArgs {
         rite_flag,
         defines,
-        locals,
+        uses,
         tier_names,
     } = match syn::parse::Parser::parse(parse_magetypes_attr, attr) {
         Ok(parsed) => parsed,
@@ -447,17 +447,17 @@ pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     };
 
-    magetypes_impl(input_fn, &tiers, rite_flag, &defines, &locals).into()
+    magetypes_impl(input_fn, &tiers, rite_flag, &defines, &uses).into()
 }
 
 /// Parse `#[magetypes]` attributes: `rite` flag, `define(list)`, and tier names.
 ///
-/// Returns `(rite_flag, defines, locals, tier_names)`. Tier names preserve the
+/// Returns `(rite_flag, defines, uses, tier_names)`. Tier names preserve the
 /// `+`/`-` modifier prefixes and `(cfg(feat))` gates for the tier resolver.
 struct MagetypesArgs {
     rite_flag: bool,
     defines: Vec<String>,
-    locals: Vec<String>,
+    uses: Vec<String>,
     tier_names: Vec<String>,
 }
 
@@ -465,7 +465,7 @@ fn parse_magetypes_attr(input: syn::parse::ParseStream) -> syn::Result<Magetypes
     use syn::Token;
     let mut rite_flag = false;
     let mut defines = Vec::new();
-    let mut locals = Vec::new();
+    let mut uses = Vec::new();
     let mut tier_names = Vec::new();
 
     while !input.is_empty() {
@@ -479,26 +479,32 @@ fn parse_magetypes_attr(input: syn::parse::ParseStream) -> syn::Result<Magetypes
         let peek_define = input.peek(syn::Ident) && {
             let fork = input.fork();
             fork.parse::<syn::Ident>()
-                .is_ok_and(|i| (i == "define" || i == "local") && fork.peek(syn::token::Paren))
+                .is_ok_and(|i| i == "define" && fork.peek(syn::token::Paren))
         };
 
         if peek_rite {
             let _: syn::Ident = input.parse()?;
             rite_flag = true;
-        } else if peek_define {
-            let keyword: syn::Ident = input.parse()?;
+        } else if input.peek(Token![use]) || peek_define {
+            let contextual = if input.peek(Token![use]) {
+                let _: Token![use] = input.parse()?;
+                true
+            } else {
+                let _: syn::Ident = input.parse()?;
+                false
+            };
             let content;
             syn::parenthesized!(content in input);
             while !content.is_empty() {
                 let ty: syn::Ident = content.parse()?;
-                if defines.contains(&ty.to_string()) || locals.contains(&ty.to_string()) {
+                if defines.contains(&ty.to_string()) || uses.contains(&ty.to_string()) {
                     return Err(syn::Error::new(
                         ty.span(),
-                        "duplicate type alias in define/local",
+                        "duplicate type alias in define/use",
                     ));
                 }
-                if keyword == "local" {
-                    locals.push(ty.to_string());
+                if contextual {
+                    uses.push(ty.to_string());
                 } else {
                     defines.push(ty.to_string());
                 }
@@ -507,6 +513,9 @@ fn parse_magetypes_attr(input: syn::parse::ParseStream) -> syn::Result<Magetypes
                 }
             }
         } else {
+            if input.peek(syn::Ident) && input.fork().parse::<syn::Ident>()? == "local" {
+                return Err(input.error("`local(...)` was replaced before release; use `use(...)`"));
+            }
             // Fall through to tier-name parsing (preserves +/- prefix and cfg gates).
             tier_names.push(parse_one_tier(input)?);
         }
@@ -519,7 +528,7 @@ fn parse_magetypes_attr(input: syn::parse::ParseStream) -> syn::Result<Magetypes
     Ok(MagetypesArgs {
         rite_flag,
         defines,
-        locals,
+        uses,
         tier_names,
     })
 }

@@ -1,6 +1,6 @@
 # Context constructor design probe
 
-This is a standalone compile probe, not an implementation of `local(...)`.
+This is a standalone compile probe, not an implementation of `use(...)`.
 Coverage: one vector shape (`f32x8`), zero construction, addition, conversions,
 V3 feature-context checks, and scalar construction. It does not implement the
 30-vector API, the macro syntax, NEON/WASM variants, or measure compile-time
@@ -35,12 +35,13 @@ The API-selection proposal is documented in
 The subsequent 29-case standalone matrix identified the compatible shared-core
 solution: public aliases must **fix** their mode parameter, rather than default
 it. That solution is now implemented by the generator and tested in
-`magetypes/tests/magetypes_local_flag.rs`. The defaulted-mode ambiguity above
+`magetypes/tests/magetypes_use_flag.rs`. The defaulted-mode ambiguity above
 remains a regression probe for the rejected alias shape.
 
 The harness also compiles a small procedural attribute macro and applies it as
 `#[keyword_attribute::accept(use(f32x8))]`. This confirms that Rust permits the
 keyword in an attribute's token stream; it does not add `use(...)` to magetypes.
 The keyword macro and consumer are separate compiler invocations with saved
-logs. Both passed on rustc 1.98.1. The production parser still recognizes
-`define(...)` and `local(...)` only.
+logs. Both passed on rustc 1.98.1. The production parser recognizes
+`define(...)` and `use(...)`. The real macro integration is tested in
+`magetypes/tests/magetypes_use_flag.rs`.

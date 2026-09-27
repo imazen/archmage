@@ -17,7 +17,7 @@ fn expand(name: &str, args: Tokens, item: Tokens) -> syn::Result<Tokens> {
             let MagetypesArgs {
                 rite_flag: rite,
                 defines,
-                locals,
+                uses,
                 tier_names: names,
             } = parse_magetypes_attr.parse2(args)?;
             let tiers = if names.is_empty() {
@@ -25,7 +25,7 @@ fn expand(name: &str, args: Tokens, item: Tokens) -> syn::Result<Tokens> {
             } else {
                 resolve_tiers(&names, proc_macro2::Span::call_site(), true)?
             };
-            magetypes::magetypes_impl(syn::parse2(item)?, &tiers, rite, &defines, &locals)
+            magetypes::magetypes_impl(syn::parse2(item)?, &tiers, rite, &defines, &uses)
         }
         _ => panic!("unrecognized macro {name}"),
     })
@@ -895,10 +895,10 @@ fn combined_trait_features_preserve_first_seen_order() {
 }
 
 #[test]
-fn local_aliases_fix_context_mode_and_reject_duplicates() {
+fn use_aliases_fix_context_mode_and_reject_duplicates() {
     let output = expand(
         "magetypes",
-        quote!(local(f32x8), define(i32x8), scalar),
+        quote!(use(f32x8), define(i32x8), scalar),
         quote!(
             fn kernel(token: Token) {
                 let _ = f32x8::zero();
@@ -918,12 +918,21 @@ fn local_aliases_fix_context_mode_and_reject_duplicates() {
     );
     assert!(
         parse_magetypes_attr
-            .parse2(quote!(define(f32x8), local(f32x8)))
+            .parse2(quote!(define(f32x8), use(f32x8)))
             .is_err()
     );
     assert!(
         parse_magetypes_attr
-            .parse2(quote!(local(f32x8, f32x8)))
+            .parse2(quote!(use(f32x8, f32x8)))
             .is_err()
     );
+}
+
+#[test]
+fn unpublished_local_spelling_is_rejected() {
+    let err = parse_magetypes_attr
+        .parse2(quote!(local(f32x8), scalar))
+        .err()
+        .unwrap();
+    assert!(err.to_string().contains("use(...)"), "{err}");
 }
