@@ -96,8 +96,11 @@ compile. These checks cover the additive 0.9 change, not the future 0.10 API.
 
 The baseline is the published 0.9.29 packages, not the preserved constructor-mode
 or `use(...)` draft. `cargo-semver-checks 0.50.0` found no breaking API changes in
-archmage, archmage-macros, or magetypes on x86-64, nor in magetypes on AArch64
-or WASM, using a patch-release comparison. This checks source compatibility;
+archmage or magetypes on x86-64, nor in magetypes on AArch64 or WASM, using
+a patch-release comparison. The tool excludes proc-macro crates: selecting
+archmage-macros alone reports no checkable library target. Its compatibility
+is covered by expansion snapshots and downstream compilation fixtures, not
+by semver-checks. The API check addresses source compatibility;
 it does not establish numerical equivalence or future 0.10 compatibility.
 
 For WASM, the tool's automatic rustdoc generation hit

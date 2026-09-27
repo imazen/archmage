@@ -47,6 +47,10 @@
 - Native `from_raw_t(token, raw)` supports ordinary callers; `from_raw(raw)` requires a matching feature context (772ef504).
 - [Complete constructor signatures](docs/constructors/README.md) are generated for all 40 vector types; native names already ending in `_t` use `from_raw_t` without redundant `_t_t` aliases (e619c59a).
 
+#### Changed
+
+- `mul_add` and `mul_sub` now round once on scalar and strict WASM for f32/f64 at every width; software fusion changes results and costs more than separate multiply/add on those tiers. Relaxed WASM emits native madd directly and follows engine rounding, without a runtime probe ([#116](https://github.com/imazen/archmage/issues/116); 11a35a8b).
+
 #### Fixed
 
 - Restore NEON/WASM and native AVX-512 raw accessors and constructors; published jxl-encoder-simd 0.3.0 still needs a token argument on its ARM/WASM `from_i32x4` calls ([#117](https://github.com/imazen/archmage/issues/117); 772ef504, c766c238).

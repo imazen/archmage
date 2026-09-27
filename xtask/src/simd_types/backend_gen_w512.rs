@@ -468,7 +468,7 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
 
             /// Multiply-add: `a * b + c`.
             ///
-            /// Fused with one rounding on every backend. Uses software FMA
+            /// Fused except where relaxed WASM engines choose two roundings. Uses software FMA
             /// where hardware fusion is unavailable. NaN payload/sign are unspecified.
             fn mul_add(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
 

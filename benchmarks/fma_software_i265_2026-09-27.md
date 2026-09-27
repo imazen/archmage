@@ -1,6 +1,7 @@
 # Software fused multiply-add cost
 
-Source snapshot: `33b122526c79b879ed9ec1b385b48459917aa766` (unlanded FMA work).
+Source snapshot: `33b122526c79b879ed9ec1b385b48459917aa766` (measurement-time draft).
+The measured helpers and benchmark are unchanged in implementation commit `11a35a8b`.
 Host: i265, Intel Core Ultra 7 265K, Linux x86_64, Rust 1.98.1.
 
 Command: `TMPDIR=/home/lilith/tmp ~/work/zen/scripts/run-heavy --mem 16G --jobs 8 -- cargo bench -p magetypes --bench nostd_math_perf -- --group=fma --format=json`.
