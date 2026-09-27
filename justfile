@@ -390,3 +390,10 @@ macro-matrix-inventory output:
 # Consumer migration patterns: mixed calls, type/const generics, borrowed modes.
 test-mixed-token-generics:
     cargo test -p magetypes --test mixed_token_generics
+
+# Scalar dispatch and vector-backend Cargo gates (run both feature sets).
+test-tier-gates:
+    cargo test -p archmage --test magetypes_scalar_dispatch
+    cargo test -p archmage-macros autoversion_vector_backend_gates
+    cargo test -p magetypes --test adaptive_use --test mixed_token_generics
+    cargo test -p magetypes --test adaptive_use --test mixed_token_generics --features avx512

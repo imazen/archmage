@@ -732,6 +732,54 @@ fn receivers_and_generic_modes_keep_feature_checks() {
 }
 
 #[test]
+fn autoversion_vector_backend_gates_preserve_plain_code_and_overrides() {
+    for (args, expected_gate) in [
+        (quote!(), None),
+        (quote!(v4, scalar), None),
+        (quote!(use(f32xN)), Some("avx512")),
+        (quote!(use(f32x8)), Some("avx512")),
+        (quote!(use(f32xN), v4, scalar), Some("avx512")),
+        (quote!(use(f32xN), -neon), Some("avx512")),
+        (quote!(use(f32xN), +v4), None),
+        (quote!(use(f32xN), v4(cfg(custom)), scalar), Some("custom")),
+        (quote!(use(f32xN), +v4(cfg(custom))), Some("custom")),
+    ] {
+        let output = expand(
+            "autoversion",
+            args.clone(),
+            quote!(
+                fn kernel() {}
+            ),
+        )
+        .unwrap();
+        let file = syn::parse2::<syn::File>(output).unwrap();
+        let function = |name: &str| {
+            file.items
+                .iter()
+                .find_map(|item| match item {
+                    syn::Item::Fn(f) if f.sig.ident == name => Some(f),
+                    _ => None,
+                })
+                .unwrap()
+        };
+        // Definitions and dispatch must agree. An absent backend cannot leave
+        // either a compiled definition or a dangling call in the dispatcher.
+        let attrs = &function("kernel_v4").attrs;
+        let variant = quote!(#(#attrs)*).to_string();
+        let dispatcher = function("kernel").block.to_token_stream().to_string();
+        for text in [variant, dispatcher] {
+            match expected_gate {
+                Some(gate) => assert!(
+                    text.contains(&format!("feature = \"{gate}\"")),
+                    "{args}: {text}"
+                ),
+                None => assert!(!text.contains("feature ="), "{args}: {text}"),
+            }
+        }
+    }
+}
+
+#[test]
 fn tier_modifiers_and_explicit_fallback_gates_keep_their_meaning() {
     for (names, expected) in [
         (vec!["v3", "neon", "-neon", "scalar"], vec!["v3", "scalar"]),

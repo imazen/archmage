@@ -67,6 +67,41 @@ fn auto(values: &mut [f32]) {
     }
 }
 
+// Default and explicit tier lists must gate unavailable vector backends in
+// both generated definitions and dispatcher calls, including fixed aliases.
+#[autoversion(use(f32xN))]
+fn auto_default_dispatch() -> usize {
+    f32xN::splat(1.0).to_array().len()
+}
+
+#[autoversion(v4, v3, neon, wasm128, scalar, use(f32xN))]
+fn auto_explicit() -> usize {
+    f32xN::splat(1.0).to_array().len()
+}
+
+#[autoversion(use(f32x8))]
+fn auto_fixed() -> [f32; 8] {
+    f32x8::splat(3.0).to_array()
+}
+
+#[autoversion(+v4x(cfg(avx512)), use(f32xN))]
+fn auto_additive() -> usize {
+    f32xN::splat(1.0).to_array().len()
+}
+
+#[test]
+fn autoversion_vector_gates() {
+    assert_eq!(auto_default_dispatch_scalar(ScalarToken), 4);
+    assert_eq!(auto_explicit_scalar(ScalarToken), 4);
+    assert_eq!(auto_additive_scalar(ScalarToken), 4);
+    assert_eq!(auto_fixed(), [3.0; 8]);
+    for n in [auto_default_dispatch(), auto_explicit(), auto_additive()] {
+        assert!(matches!(n, 4 | 8 | 16));
+        #[cfg(not(feature = "avx512"))]
+        assert_ne!(n, 16);
+    }
+}
+
 #[autoversion(use(f32xN), cfg(avx512), v3, scalar)]
 fn gated() -> usize {
     f32xN::splat(1.0).to_array().len()
@@ -183,6 +218,9 @@ mod x86 {
         assert_eq!(Methods.nested(token), 8);
         assert_eq!(descriptive(token), 8);
         assert_eq!(legacy(token), 8);
+        assert_eq!(auto_default_dispatch_v3(token), 8);
+        assert_eq!(auto_explicit_v3(token), 8);
+        assert_eq!(auto_fixed_v3(token), [3.0; 8]);
         exercise(|v| apply_v3(token, v));
     }
 }
@@ -210,12 +248,16 @@ mod wide {
     pub(super) fn v4_required() {
         let token = archmage::X64V4Token::summon().expect("run with V4 CPU or SDE -skx");
         assert_eq!(families_v4(token), magetypes::simd::v4::f32xN::LANES);
+        assert_eq!(auto_default_dispatch_v4(token), 16);
+        assert_eq!(auto_explicit_v4(token), 16);
+        assert_eq!(auto_fixed_v4(token), [3.0; 8]);
         exercise(|v| apply_v4(token, v));
     }
 
     pub(super) fn v4x_required() {
         let token = archmage::X64V4xToken::summon().expect("run with V4x CPU or SDE -spr");
         assert_eq!(families_v4x(token), 16);
+        assert_eq!(auto_additive_v4x(token), 16);
         assert_eq!(extended_v4x(token), magetypes::simd::v4x::f32xN::LANES);
     }
 }

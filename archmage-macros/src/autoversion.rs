@@ -212,14 +212,18 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
     // SimdToken and AutoInjected → strip (can't compile / internal).
     let keep_token_in_dispatcher = token_param.kind == AutoversionTokenKind::ScalarToken;
 
-    // Resolve tiers — autoversion always includes v4 in its defaults because it
-    // generates scalar code compiled with #[target_feature], not import_intrinsics.
+    // Plain auto-vectorized Rust needs no magetypes backend. Contextual aliases
+    // do, so use the same registry gates as magetypes for their variants AND
+    // dispatcher. Explicit gates and +tier overrides retain resolver semantics.
+    let vector_feature_gates = !args.uses.is_empty();
     let tiers = match &args.tiers {
-        None => default_tiers(false),
-        Some(names) => match resolve_tiers(names, input_fn.sig.ident.span(), false) {
-            Ok(t) => t,
-            Err(e) => return e.to_compile_error(),
-        },
+        None => default_tiers(vector_feature_gates),
+        Some(names) => {
+            match resolve_tiers(names, input_fn.sig.ident.span(), vector_feature_gates) {
+                Ok(t) => t,
+                Err(e) => return e.to_compile_error(),
+            }
+        }
     };
 
     // Strip #[arcane] / #[rite] to prevent double-wrapping
