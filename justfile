@@ -386,3 +386,7 @@ adaptive-use-compile before output sde:
 # Compile-only acceptance inventory for the four SIMD attributes (x86_64 host).
 macro-matrix-inventory output:
     python3 tests/design-probes/macro-matrix/inventory.py --output {{output}}
+
+# Consumer migration patterns: mixed calls, type/const generics, borrowed modes.
+test-mixed-token-generics:
+    cargo test -p magetypes --test mixed_token_generics

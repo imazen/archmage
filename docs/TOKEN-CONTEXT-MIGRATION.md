@@ -5,6 +5,9 @@ This analysis concerns the 42 public vector-method names listed in
 The source inventory below records the earlier migration analysis; later sections
 describe the implemented constructor modes and token alternatives.
 
+For mixed tokenful/tokenless call chains and the hardest inspected generic
+consumers, see [Mixed token calls and generic consumers](MIXED-TOKEN-GENERICS.md).
+
 
 ## Current migration: token alternatives are additive
 
