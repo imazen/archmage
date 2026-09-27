@@ -5,6 +5,42 @@
 not implement them. The [constructor migration](TOKEN-CONTEXT-MIGRATION.md)
 describes the implemented fixed-width API.
 
+## Existing mechanisms and history
+
+Adaptive widths are not a new concept here. The initial review omitted surviving
+APIs; `use(f32x)` should extend their convention rather than invent another one.
+
+- [`2ef97cd`](https://github.com/imazen/archmage/commit/2ef97cd8f2e82bb4d7789b9b87b3b1c3ad3b79d5)
+  introduced module-level `#[multiwidth]` with width-specific namespaces and
+  dispatchers only for signatures independent of width. It was removed in
+  [`88428cd`](https://github.com/imazen/archmage/commit/88428cd8d76f7c78f38ef5f80f7ec5cfcfde0e62).
+- [`0d97db9`](https://github.com/imazen/archmage/commit/0d97db914d57c49efdc94b85cc1d97ef3d02961a)
+  introduced function-level `#[magetypes]` substitution of `f32xN`, other vector
+  families, and `LANES` constants. Those substitutions were removed on February
+  5, 2026 in [`36c8caf`](https://github.com/imazen/archmage/commit/36c8caf56274959a5ac5ea9cf5c23d5f47c4ace1),
+  which retained `Token` substitution and moved toward explicit fixed widths.
+- The platform-selected prelude `F32Vec`, `RecommendedToken`, and lane constants
+  were separately removed in 0.9.27 by
+  [`9ac462d`](https://github.com/imazen/archmage/commit/9ac462d32b3d52f17f9fc1d13ad55ca5a68ca850).
+  That selection used target architecture and Cargo features, not each runtime
+  dispatched variant's tier.
+- **Still present:** `magetypes::simd::{v3,v4,v4x,neon,wasm128,scalar}::f32xN`
+  and the other `xN` families. Their widths are 8/16/16/4/4/4 f32 lanes.
+  These are ordinary explicit-token aliases generated in
+  `magetypes/src/simd/generated/mod.rs` by `xtask/src/simd_types/mod.rs`.
+  `rite(import_magetypes)` and `arcane(import_magetypes)` import the resolved
+  tier namespace through `generate_imports` in `archmage-macros/src/common.rs`.
+- **Also present:** `magetypes::SimdTypes` in `magetypes/src/types.rs`, associating
+  tokens with vector types and lane constants. Its scalar mapping uses the
+  standalone x1 wrappers, unlike the scalar namespace's x4 aliases. Its
+  associated types have no operation bounds, so `T: SimdTypes` alone does not
+  expose a uniform generic constructor API. Its V2 mapping currently refers to
+  V3-backed vectors; it must not be blindly reused as a capability resolver.
+
+The proposed contextual `use(f32x)` spelling is still unimplemented. Existing
+natural-width aliases already establish the scalar-x4 policy in the table below;
+new support should share that mapping and select Context rather than Explicit.
+
 ## Select existing types at macro expansion
 
 Use the variant's declared tier, not the build host or runtime slice length.
