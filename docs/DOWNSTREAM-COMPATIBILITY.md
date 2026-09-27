@@ -8,8 +8,9 @@ compiled against the local changes using their latest non-yanked stable releases
 `linear-srgb`, `garb`, and `jxl-encoder-simd` also compiled: **23/23 libraries**.
 There were no confirmed compiler regressions in these checks.
 
-This is native `cargo check` with default consumer features and normal warning
-settings, not runtime tests, all-features testing, or an ARM/WASM consumer audit.
+This is native `cargo check` with default consumer features, the additional SIMD
+feature checks listed below, and normal warning settings. It is not runtime
+testing, an exhaustive feature matrix, or an ARM/WASM consumer audit.
 The deprecations still require migration for callers using `deny(deprecated)` or
 `deny(warnings)`. This does not supersede the known ARM/WASM published
 jxl-encoder-simd conversion incompatibility documented in
@@ -57,6 +58,13 @@ The remaining package, `zenwebp 0.4.4`, cannot freshly resolve its yanked
 crate depending on `zenwebp = "=0.4.4"` compiled in both configurations. Its
 normal library dependency graph is therefore covered; its standalone dev graph
 is not a passing check.
+
+The optional SIMD paths were checked explicitly against both published and
+local crates: `zenbitmaps --features all`,
+`zenjxl-decoder-simd --features all-simd`, and
+`zensim-regress --features archmage` all passed. Compiler-artifact JSON verified
+the local archmage dependencies were active; zenbitmaps' default empty feature
+set alone would not exercise archmage.
 
 ## Local committed sources
 
@@ -167,4 +175,5 @@ e3706396589aafdcb1f2e68cdf03289eb27ec7caa6c684002882c3151c4597bc  direct-results
 0f79e84e289af0ef3a8d4a2267e6c8f1c0886afd8aec9af84a6602ee69caab5f  non-yanked/copter-report/report.json
 cfb40d9754690e267d1c4158a86508f9c037a6a8a198b23a89a3b07eacdccad1  local-magetypes/copter-report/report.json
 b4966ca9a4e630e4674a68687d35bc4d4767187d09bd7e48d6fefaf86fd69c90  local-archmage/copter-report/report.json
+4d7fefa6b442ac55de5d74da5e842da7d004063c9cbefda4edb52b6959602a9a  feature-results.json
 ```
