@@ -16,6 +16,8 @@
 
 ### Added
 
+- Public `_with_token` alternatives for all 42 vector constructor method names on both modes, plus native `from_raw_with_token`; existing calls and aliases remain compatible (`ef5d3cf1`).
+
 - `#[magetypes(local(...))]` selects tokenless, target-feature-checked constructors over a shared vector core; `define(...)` retains token arguments and mode conversions preserve stored tokens (`8ef7db6f`).
 - Safe native `from_raw` constructors and restored NEON/WASM/AVX-512 raw interop methods (`8ef7db6f`).
 - Reproducible cold-build comparison: this consumer's default release build rose 0.189 s, and its AVX-512 build rose 0.253 s; full settings and raw results are in `benchmarks/local_mode_compile_2026-09-27.md` (`8ef7db6f`).
