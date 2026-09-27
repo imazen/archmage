@@ -382,3 +382,7 @@ test-adaptive-use tier="scalar":
 # Actual macro cost versus manual aliases; fresh target directories per build.
 adaptive-use-compile before output sde:
     python3 scripts/measure-local-mode-compile.py --before {{before}} --after . --adaptive-use-probe --sde {{sde}} --output {{output}} --runs 6
+
+# Compile-only acceptance inventory for the four SIMD attributes (x86_64 host).
+macro-matrix-inventory output:
+    python3 tests/design-probes/macro-matrix/inventory.py --output {{output}}

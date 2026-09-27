@@ -1055,6 +1055,8 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+- **Adaptive autoversion default Cargo gate (verified 2026-09-27):** on x86_64, `#[autoversion(use(f32xN))]` emits an ungated V4 variant; without `avx512`, construction fails because `X64V4Token` lacks `F32x16Backend`. Explicit `v4(cfg(avx512)), v3, neon, wasm128, scalar` works, as does enabling `avx512`. `magetypes` gates default V4; `rite` does not parse per-tier gates yet. See `docs/TIER-SELECTED-TYPES.md` and `tests/design-probes/macro-matrix/` for the verified capability matrix and reproduction.
+
 - **Shadowed scalar namespace (verified 2026-09-27):** `simd/generated/mod.rs` emits scalar-x4 `xN` aliases, but the private generated module's `scalar` re-export is shadowed by `pub mod scalar` in `simd/mod.rs`. Public `simd::scalar::f32xN` does not resolve. Contextual `use(f32xN)` selects the generic scalar-x4 backend directly and does not depend on this namespace. The public standalone x1 types are unaffected.
 
 - **Legacy `SimdTypes` V2 mapping (verified 2026-09-27):** `magetypes/src/types.rs` maps `X64V2Token::F32` and the other vector families to V3-backed generic types. The associated types have no operation bounds; the mapping does not let a V2 token construct those vectors. Do not reuse it as the contextual alias capability resolver without correcting the mismatch. `SimdTypes` selects scalar x1; contextual `use(f32xN)` selects scalar x4. These are distinct existing width policies, documented in `docs/TIER-SELECTED-TYPES.md`.

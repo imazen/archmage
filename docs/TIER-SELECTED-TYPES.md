@@ -162,6 +162,132 @@ A runtime dispatcher must have a tier-independent signature: scalar values,
 slices, fixed arrays independent of the tier, or another uniform representation.
 Rust's built-in attributes are not extended by this crate.
 
+## Capability matrix and unification review (2026-09-27)
+
+Token-free constructors remove the need to thread a token value through a kernel.
+They do not remove the concrete backend type or the proof needed to enter SIMD
+code. A tier annotation specifies which features a function requires; it does
+not test the executing CPU. Today the four attributes divide that work as follows.
+
+| Capability | `autoversion` | `rite` | `arcane` | `magetypes` |
+|---|---|---|---|---|
+| Main job | Runtime dispatcher plus private variants | Feature-annotated helper(s) | Token-proven entry wrapper | Variant generation; dispatch supplied separately |
+| Select tier explicitly in attribute | Yes, tier list | Yes, one or several | No; reads token parameter / feature bound | Yes, tier list |
+| `use(f32x8)` / `use(f32xN)` | Yes | Yes | Yes, recognized concrete token | Yes |
+| Short constructors without a token argument | Yes | Yes | Yes inside the wrapper's feature-enabled body | Yes |
+| Omit a token parameter in user function | Yes; generator injects internal proof parameter | Yes with explicit tier | No, ordinary form needs proof parameter | With `rite`; ordinary mode still needs proof parameter |
+| Safe call from an ordinary caller | Yes; detects and dispatches | No for SIMD tiers; caller must enable sufficient features | Yes with valid token | Ordinary variants: yes with token; `rite` variants: matching context only |
+| Built-in runtime dispatcher | Yes | No | No | No; use `incant!` with ordinary variants |
+| Multiple generated tiers | Yes | Yes when multiple tiers requested | No | Yes |
+| Naming / visibility | Named dispatcher; suffixed private variants | One tier keeps name; several get suffixes; original visibility | Named wrapper; implementation helper | Suffixed variants; original visibility |
+| `define(...)` option | No | No | No | Yes, legacy token-taking aliases |
+| Substitute `Token` in signature/body | No; special token parameter handling only | No | No | Yes, except tokenless `default` |
+| `use` alias usable in signature | No | No | No | No; explicit generic paths can use `Token` |
+| Other type/const parameters | Preserved and forwarded | Preserved | Preserved and forwarded | Preserved |
+| Per-tier `v4(cfg(avx512))` syntax | Yes | No; only whole-function `cfg(...)` option | No tier list; whole-function `cfg(...)` option | Yes |
+| Automatic Cargo gate on default V4 | No | No automatic per-tier gate | No; configure caller/build explicitly | Yes |
+
+In the `rite` column, a token argument does **not** waive the caller-feature
+requirement: the function itself has `target_feature`. `arcane` is the wrapper
+that uses a valid proof to enter such a function from ordinary code.
+
+The same operation surface is available once a `use` alias resolves: construction,
+loads/stores, arithmetic, conversions, `LANES`, partitions, and `_with_token`
+alternatives. Aliasing does not add missing backend operations. Ten adaptive
+families are supported for V3/V4/V4x/NEON/WASM SIMD128/scalar. Partitions choose the
+selected width, but none of the four attributes automatically processes tails or
+strided rows, or makes floating-point reductions width-independent.
+
+A genuine generic backend `T` is separate from ordinary algorithm generics.
+`arcane` and `rite` can derive feature requirements from suitable token bounds,
+but `use(...)` cannot choose a backend from a feature bound alone. Explicitly
+typed generic helpers can retain `T` and call `_with_token`; a concrete tier can
+select a fixed backend independently of unrelated type/const parameters.
+
+Inherent methods are supported. For a single method in an ordinary trait impl,
+`arcane`'s nested form is the existing route; direct safe trait methods cannot
+carry `rite`'s target-feature contract, and variant-producing attributes add
+methods the trait did not declare. An inherent helper plus delegation works.
+
+### Confirmed default/gating mismatch
+
+On x86_64 without the `avx512` Cargo feature:
+
+```text
+#[autoversion(use(f32xN))]             // rejected: no F32x16Backend for X64V4Token
+#[autoversion(v4(cfg(avx512)), v3, neon, wasm128, scalar, use(f32xN))] // accepted
+#[magetypes(use(f32xN))]               // default V4 is Cargo-gated; still needs Token parameter
+#[rite(v4(cfg(avx512)), v3, use(f32xN))] // rejected: per-tier gates not parsed
+```
+
+`autoversion`'s ungated V4 default suited scalar auto-vectorization: enabling
+AVX-512 compiler features does not itself require the magetypes AVX-512 backend.
+Contextual vectors expose that mismatch. Enabling `avx512` makes the first form
+compile; an explicit gated list keeps the fallback-only build working too.
+These are current limitations, not changes implemented by this review.
+
+The [compile-only inventory](../tests/design-probes/macro-matrix/README.md)
+records nine accepted/rejected cases on Rust 1.98.1. Source references:
+[alias resolver](../archmage-macros/src/vector_aliases.rs),
+[autoversion generation](../archmage-macros/src/autoversion.rs),
+[rite generation](../archmage-macros/src/rite.rs),
+[arcane proof/wrapping](../archmage-macros/src/arcane.rs),
+[magetypes substitution](../archmage-macros/src/magetypes.rs), and
+[tier defaults](../archmage-macros/src/tiers.rs).
+
+### What can be unified next (proposals, not implemented)
+
+1. **One tier resolver and variant generator.** Share selected tier, feature set,
+   backend type, Cargo gate, suffix, alias emission, and boundary mode. Keep the
+   four public spellings compatible while removing independent plumbing.
+   `magetypes(rite, ...)` already substantially overlaps multi-tier `rite`.
+   `autoversion` can reuse the same variants and add its dispatcher.
+
+2. **One tier/gate grammar and coherent defaults.** Add per-tier gates to `rite`
+   and decide how vector-using `autoversion` gates V4. This is the first user-visible
+   inconsistency to fix. A named/shared tier set could then be used by dispatcher,
+   helper variants, and `incant!`. Preserve existing scalar-code dispatch behavior
+   deliberately rather than silently changing every `autoversion` default.
+
+3. **Tokenless source signatures for generated kernels.** Ordinary `magetypes`
+   can inject an internal boundary proof parameter, as `autoversion` already does.
+   Keep existing explicit-token signatures and `define(...)` working. Align helper
+   call conventions so users do not need `without token` solely to compensate for
+   which generator created the callee. Macros need declared calling conventions;
+   an attribute on one function cannot inspect another function's expanded ABI.
+
+4. **Signature aliases in type positions.** Resolve `f32xN` in parameters/results
+   using the same per-tier mapping, preserving qualified paths and real generic
+   bindings. This would allow tokenless vector-in/vector-out helpers. It cannot
+   give a runtime dispatcher different public Rust return types per CPU: its
+   input/output representation must stay uniform. That remains a real constraint.
+
+5. **A scope that owns tier propagation.** A future module/impl-level generator
+   could declare the tier set and aliases once, generate each scope per tier, and
+   annotate each helper with that tier. Scope-level aliases could also be visible
+   in signatures. Ordinary nested functions do not inherit target features;
+   macros do not discover a parent's tier from a separately expanded attribute.
+   Explicit scope ownership is how “specify a tier somewhere” can work reliably.
+
+6. **Separate feature tier from vector backend policy.** A stronger feature tier
+   can use a covered existing backend rather than requiring a duplicate backend
+   impl for every crypto/ARM extension token. Generate an explicit verified mapping
+   and preserve the distinction between the original proof type and the selected
+   vector type. This is also a possible policy for feature-bound generics; it must
+   not silently replace an arbitrary `T` or assume that a namespace proves features.
+
+Retain three safety roles even if implementation is shared: runtime detection
+(`autoversion`), token-proven entry (`arcane`), and a caller-required feature region
+(`rite`). Tier-only, freely callable `arcane(v3)` would need detection and defined
+failure/fallback behavior; an annotation alone cannot supply its runtime proof.
+`magetypes` can remain a compatible variant-generation facade over that common
+engine. No new public vector trait hierarchy is needed for these proposals.
+
+The existing compile measurements cover the current alias implementation only.
+Signature rewriting and scope generation need their own measurements. Parse type
+positions where possible, reuse registry metadata, and generate only requested
+variants; do not assume an expanded scope is free at compile time.
+
 ## Verification
 
 `magetypes/tests/adaptive_use.rs` checks all ten families, shared f32/i32 lane
@@ -192,5 +318,6 @@ select exactly one width per requested family per variant.
 
 That earlier measurement compares fixed-x8 and tier-selected existing aliases. It does
 not quantify parser changes, signature rewriting, scalar-x1 parity, or adding
-support to every attribute. Measure those changes when implemented; do not
-extrapolate a universal compile-time overhead from this small kernel.
+support to every attribute. The actual implementation comparison above covers
+the current parser change; signature rewriting and scalar-x1 parity remain
+unimplemented. Do not extrapolate a universal overhead from this small kernel.
