@@ -47,6 +47,10 @@
 - Native `from_raw_t(token, raw)` supports ordinary callers; `from_raw(raw)` requires a matching feature context (772ef504).
 - [Complete constructor signatures](docs/constructors/README.md) are generated for all 40 vector types; native names already ending in `_t` use `from_raw_t` without redundant `_t_t` aliases (e619c59a).
 
+#### Deprecated
+
+- Legacy token-taking constructor and helper names now warn with the corresponding `_t(token, ...)` spelling; `_t` remains supported when 0.10 makes the short names tokenless. Existing signatures still work; native NEON names already ending in `_t` and feature-context `from_raw(raw)` are unchanged (d53d425d).
+
 #### Changed
 
 - `mul_add` and `mul_sub` now round once on scalar and strict WASM for f32/f64 at every width; software fusion changes results and costs more than separate multiply/add on those tiers. Relaxed WASM emits native madd directly and follows engine rounding, without a runtime probe ([#116](https://github.com/imazen/archmage/issues/116); 11a35a8b).
