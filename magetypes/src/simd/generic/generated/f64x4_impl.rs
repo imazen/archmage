@@ -135,31 +135,51 @@ impl<M: crate::simd::generic::ConstructorMode, T: F64x4Backend> f64x4<T, M> {
 
     /// Broadcast scalar to all 4 lanes.
     #[inline(always)]
-    pub(crate) fn splat_with_token(token: T, v: f64) -> Self {
+    ///
+    /// Use an explicit CPU capability token with either constructor mode.
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    pub fn splat_with_token(token: T, v: f64) -> Self {
         Self::new_repr(T::splat(token, v), token)
     }
 
     /// All lanes zero.
     #[inline(always)]
-    pub(crate) fn zero_with_token(token: T) -> Self {
+    ///
+    /// Use an explicit CPU capability token with either constructor mode.
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    pub fn zero_with_token(token: T) -> Self {
         Self::new_repr(T::zero(token), token)
     }
 
     /// Load from a `[f64; 4]` array.
     #[inline(always)]
-    pub(crate) fn load_with_token(token: T, data: &[f64; 4]) -> Self {
+    ///
+    /// Use an explicit CPU capability token with either constructor mode.
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    pub fn load_with_token(token: T, data: &[f64; 4]) -> Self {
         Self::new_repr(T::load(token, data), token)
     }
 
     /// Create from array (zero-cost where possible).
     #[inline(always)]
-    pub(crate) fn from_array_with_token(token: T, arr: [f64; 4]) -> Self {
+    ///
+    /// Use an explicit CPU capability token with either constructor mode.
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    pub fn from_array_with_token(token: T, arr: [f64; 4]) -> Self {
         Self::new_repr(T::from_array(token, arr), token)
     }
 
     /// Create from slice. Panics if `slice.len() < 4`.
     #[inline(always)]
-    pub(crate) fn from_slice_with_token(token: T, slice: &[f64]) -> Self {
+    ///
+    /// Use an explicit CPU capability token with either constructor mode.
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    pub fn from_slice_with_token(token: T, slice: &[f64]) -> Self {
         let arr: [f64; 4] = slice[..4].try_into().unwrap();
         Self::new_repr(T::from_array(token, arr), token)
     }
@@ -169,7 +189,11 @@ impl<M: crate::simd::generic::ConstructorMode, T: F64x4Backend> f64x4<T, M> {
     /// Returns `(&[[f64; 4]], &[f64])` — fixed-size arrays suitable
     /// for [`load`](Self::load), plus any leftover elements.
     #[inline(always)]
-    pub(crate) fn partition_slice_with_token(_token: T, data: &[f64]) -> (&[[f64; 4]], &[f64]) {
+    ///
+    /// Use an explicit CPU capability token with either constructor mode.
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    pub fn partition_slice_with_token(_token: T, data: &[f64]) -> (&[[f64; 4]], &[f64]) {
         data.as_chunks::<4>()
     }
 
@@ -178,7 +202,11 @@ impl<M: crate::simd::generic::ConstructorMode, T: F64x4Backend> f64x4<T, M> {
     /// Returns `(&mut [[f64; 4]], &mut [f64])` — the bulk portion reinterpreted
     /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
     #[inline(always)]
-    pub(crate) fn partition_slice_mut_with_token(
+    ///
+    /// Use an explicit CPU capability token with either constructor mode.
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    pub fn partition_slice_mut_with_token(
         _token: T,
         data: &mut [f64],
     ) -> (&mut [[f64; 4]], &mut [f64]) {
@@ -207,7 +235,11 @@ impl<M: crate::simd::generic::ConstructorMode, T: F64x4Backend> f64x4<T, M> {
 
     /// Wrap a platform representation (token-gated).
     #[inline(always)]
-    pub(crate) fn from_repr_with_token(token: T, repr: T::Repr) -> Self {
+    ///
+    /// Use an explicit CPU capability token with either constructor mode.
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    pub fn from_repr_with_token(token: T, repr: T::Repr) -> Self {
         Self::new_repr(repr, token)
     }
 
@@ -621,7 +653,11 @@ impl<M: crate::simd::generic::ConstructorMode> f64x4<archmage::X64V3Token, M> {
 
     /// Create from a raw `__m256d` (token-gated, zero-cost).
     #[inline(always)]
-    pub(crate) fn from_m256d_with_token(
+    ///
+    /// Use an explicit CPU capability token with either constructor mode.
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    pub fn from_m256d_with_token(
         token: archmage::X64V3Token,
         v: core::arch::x86_64::__m256d,
     ) -> Self {
@@ -646,6 +682,19 @@ impl<M: crate::simd::generic::ConstructorMode> f64x4<archmage::Wasm128Token, M> 
 }
 #[cfg(target_arch = "x86_64")]
 impl<M: crate::simd::generic::ConstructorMode> f64x4<archmage::X64V3Token, M> {
+    /// Wrap a raw `__m256d` using an explicit CPU capability token.
+    ///
+    /// Available in either constructor mode. The caller does not
+    /// need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    #[inline(always)]
+    pub fn from_raw_with_token(
+        token: archmage::X64V3Token,
+        value: core::arch::x86_64::__m256d,
+    ) -> Self {
+        Self::new_repr(value, token)
+    }
+
     /// Wrap a raw `__m256d` in a matching target-feature context.
     ///
     /// Rust requires the caller to enable the `v3` tier's features.

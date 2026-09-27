@@ -1706,6 +1706,16 @@ fn gen_raw_interop(ty: &SimdType) -> String {
             #[cfg({cfg})]
             impl<M: crate::simd::generic::ConstructorMode> {name}<archmage::{token}, M> {{
                 {legacy}
+                /// Wrap a raw `{raw}` using an explicit CPU capability token.
+                ///
+                /// Available in either constructor mode. The caller does not
+                /// need a target-feature annotation.
+                #[forbid(unsafe_code)]
+                #[inline(always)]
+                pub fn from_raw_with_token(token: archmage::{token}, value: core::arch::{arch}::{raw}) -> Self {{
+                    Self::new_repr(value, token)
+                }}
+
                 /// Wrap a raw `{raw}` in a matching target-feature context.
                 ///
                 /// Rust requires the caller to enable the `{tier}` tier's features.

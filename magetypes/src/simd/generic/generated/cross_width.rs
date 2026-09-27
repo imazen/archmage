@@ -8,7 +8,11 @@ impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::generic::F32x8Fro
     ///
     /// The wider backend determines the required CPU features.
     #[inline(always)]
-    pub(crate) fn from_halves_with_token(token: T, lo: f32x4<T, M>, hi: f32x4<T, M>) -> Self {
+    ///
+    /// Use an explicit CPU capability token with either constructor mode.
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    pub fn from_halves_with_token(token: T, lo: f32x4<T, M>, hi: f32x4<T, M>) -> Self {
         Self::from_repr_unchecked(
             token,
             <T as crate::simd::generic::F32x8FromHalves>::from_halves(
@@ -47,7 +51,11 @@ impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::generic::F32x16Fr
 {
     /// Combine two `f32x8<T, M>` halves into one `f32x16<T, M>`.
     #[inline(always)]
-    pub(crate) fn from_halves_with_token(token: T, lo: f32x8<T, M>, hi: f32x8<T, M>) -> Self {
+    ///
+    /// Use an explicit CPU capability token with either constructor mode.
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    pub fn from_halves_with_token(token: T, lo: f32x8<T, M>, hi: f32x8<T, M>) -> Self {
         Self::from_repr_unchecked(
             token,
             <T as crate::simd::generic::F32x16FromHalves>::from_halves(

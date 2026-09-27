@@ -66,6 +66,38 @@ macro_rules! shape {
         assert_eq!(V::from_array(values).to_array(), values);
         assert_eq!(V::from_slice(&values).to_array(), values);
         assert_eq!(V::splat(3 as $element).to_array(), values);
+        assert_eq!(
+            V::zero_with_token(ScalarToken).to_array(),
+            [0 as $element; $lanes]
+        );
+        assert_eq!(
+            V::splat_with_token(ScalarToken, 3 as $element).to_array(),
+            values
+        );
+        assert_eq!(V::load_with_token(ScalarToken, &values).to_array(), values);
+        assert_eq!(
+            V::from_array_with_token(ScalarToken, values).to_array(),
+            values
+        );
+        assert_eq!(
+            V::from_slice_with_token(ScalarToken, &values).to_array(),
+            values
+        );
+        assert_eq!(
+            V::from_repr_with_token(ScalarToken, v.into_repr()).to_array(),
+            values
+        );
+        assert_eq!(
+            generic::$name::splat_with_token(ScalarToken, 3 as $element).to_array(),
+            values
+        );
+        let (chunks, tail) = V::partition_slice_with_token(ScalarToken, &values);
+        assert_eq!(chunks, &[values]);
+        assert!(tail.is_empty());
+        let mut copied = values;
+        let (chunks, tail) = V::partition_slice_mut_with_token(ScalarToken, &mut copied);
+        assert_eq!(chunks, &[values]);
+        assert!(tail.is_empty());
         let token_vector: generic::$name<ScalarToken> = v.into();
         let roundtrip: V = token_vector.into();
         assert_eq!(roundtrip.to_array(), values);
@@ -132,4 +164,71 @@ fn borrowed_views_and_integer_widths_preserve_context() {
     let hi: local::u16x8<ScalarToken> = bytes.widen_high();
     assert_eq!(lo.to_array(), [255; 8]);
     assert_eq!(hi.to_array(), [255; 8]);
+}
+
+// No feature annotation: a generic backend bound plus a value token is enough.
+fn construct_generic<T: magetypes::simd::backends::F32x8Backend>(
+    token: T,
+    data: &[f32; 8],
+) -> local::f32x8<T> {
+    let ctor: fn(T, &[f32; 8]) -> local::f32x8<T> = local::f32x8::load_with_token;
+    let v = ctor(token, data);
+    let explicit = generic::f32x8::from_array_with_token(token, v.to_array());
+    let local: local::f32x8<T> = explicit.into();
+    local + local::f32x8::zero_with_token(token)
+}
+
+#[magetypes(local(f32x8), v3, neon, wasm128, scalar)]
+fn generic_token_entry(token: Token, data: &[f32; 8]) -> [f32; 8] {
+    let v: f32x8 = construct_generic(token, data);
+    v.to_array()
+}
+
+#[test]
+fn token_construction_in_plain_generic_functions() {
+    let data = [1., -2., 3., 4., 5., 6., 7., 8.];
+    assert_eq!(construct_generic(ScalarToken, &data).to_array(), data);
+    assert_eq!(
+        incant!(generic_token_entry(&data), [v3, neon, wasm128, scalar]),
+        data
+    );
+}
+
+#[test]
+fn token_view_conversion_and_block_methods() {
+    let token = ScalarToken;
+    type F = local::f32x4<ScalarToken>;
+    type F8 = local::f32x8<ScalarToken>;
+    type I = local::i32x4<ScalarToken>;
+    let ints = I::from_array_with_token(token, [1, 2, 3, 4]);
+    let v = F::from_i32_with_token(token, ints);
+    assert_eq!(v.to_array(), [1., 2., 3., 4.]);
+    assert_eq!(
+        F::from_i32x4_with_token(token, ints).to_array(),
+        v.to_array()
+    );
+    let bits = I::from_array_with_token(token, [1f32.to_bits() as i32; 4]);
+    assert_eq!(
+        F::from_i32_bitcast_with_token(token, bits).to_array(),
+        [1.; 4]
+    );
+    assert_eq!(
+        F::from_bytes_with_token(token, v.as_bytes()).to_array(),
+        v.to_array()
+    );
+    assert_eq!(
+        F::from_bytes_owned_with_token(token, *v.as_bytes()).to_array(),
+        v.to_array()
+    );
+    let mut values = v.to_array();
+    assert_eq!(
+        F::cast_slice_with_token(token, &values).unwrap()[0].to_array(),
+        values
+    );
+    F::cast_slice_mut_with_token(token, &mut values).unwrap()[0] += F::splat_with_token(token, 1.);
+    assert_eq!(values, [2., 3., 4., 5.]);
+    assert_eq!(
+        F8::from_halves_with_token(token, v, v).to_array(),
+        [1., 2., 3., 4., 1., 2., 3., 4.]
+    );
 }

@@ -37,3 +37,10 @@ solution: public aliases must **fix** their mode parameter, rather than default
 it. That solution is now implemented by the generator and tested in
 `magetypes/tests/magetypes_local_flag.rs`. The defaulted-mode ambiguity above
 remains a regression probe for the rejected alias shape.
+
+The harness also compiles a small procedural attribute macro and applies it as
+`#[keyword_attribute::accept(use(f32x8))]`. This confirms that Rust permits the
+keyword in an attribute's token stream; it does not add `use(...)` to magetypes.
+The keyword macro and consumer are separate compiler invocations with saved
+logs. Both passed on rustc 1.98.1. The production parser still recognizes
+`define(...)` and `local(...)` only.

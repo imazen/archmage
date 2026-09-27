@@ -2,7 +2,117 @@
 
 This analysis concerns the 42 public vector-method names listed in
 [TOKEN-PARAMETERS.md](TOKEN-PARAMETERS.md), plus token-receiver traits.
-It evaluates a possible API change; it does not implement that change.
+The source inventory below records the earlier migration analysis; later sections
+describe the implemented constructor modes and token alternatives.
+
+
+## Current migration: token alternatives are additive
+
+All 42 inventoried method names now have public `_with_token` alternatives on
+both constructor modes, across the 30 generic vector shapes wherever their
+backends support the operation. Native raw constructors additionally provide
+`from_raw_with_token(token, raw)`. The generator exposes the existing shared
+implementations; it does not add a parallel set of forwarding wrappers.
+Standalone scalar-only x1 wrappers and backend token-receiver traits are outside
+this change.
+
+Existing users need **zero edits** to adopt this additive change. Existing aliases,
+`define(...)`, constructor arguments, and feature-context requirements remain
+unchanged. No old method or type is deprecated in this change.
+
+| Migration step | Before | After | Feature annotation needed? |
+|---|---|---|---|
+| Prepare existing code; keep its types | `f32x8::splat(token, x)` | `f32x8::splat_with_token(token, x)` | No |
+| Select the contextual aliases | `define(f32x8)` | `local(f32x8)` | Token alternatives still need none |
+| Use short constructors in covered contexts | `f32x8::splat_with_token(token, x)` | `f32x8::splat(x)` | Matching or stronger features |
+| Raw interchange with a token | `f32x8::from_m256(token, raw)` | `f32x8::from_raw_with_token(token, raw)` | No |
+
+The same suffix rule applies to loads, array/slice/byte construction, partitions,
+borrowed slice views, conversions, width assembly, and block loads. Existing
+platform spellings also get suffix alternatives, so `from_m256_with_token`
+remains an available mechanical migration before choosing `from_raw_with_token`.
+A supplied token must match the vector's backend, just as before.
+
+A plain generic helper can construct contextual vectors without knowing a
+concrete feature tier:
+
+```rust
+use magetypes::simd::{backends::F32x8Backend, generic::local};
+
+fn load<T: F32x8Backend>(token: T, values: &[f32; 8]) -> local::f32x8<T> {
+    local::f32x8::load_with_token(token, values)
+}
+```
+
+Its caller's attributes do not need to propagate into this helper. The value
+token supplies the proof. The token-taking methods can also be ordinary safe
+function pointers; short feature-context constructors retain their existing
+restrictions. Integration tests cover both cases with `forbid(unsafe_code)`.
+
+### What the recorded downstream call sites would require
+
+The preserved inventory contains 4,570 calls across 13 used method names
+(3,245 in primary zen repositories; 1,325 in jxl-encoder). Each used name has a
+suffix alternative. Preparing those calls for either alias mode means changing
+the method name while preserving the argument list and token expression.
+These are source-expression counts, not newly compiled downstream migrations.
+
+Of those calls, 351 occur in plain functions and 48 in macro definitions whose
+expansion contexts need review. `_with_token` lets these retain explicit proof;
+there is no need to add feature attributes solely to migrate construction.
+The remaining 4,171 have recognized feature annotations, but switching them to
+short constructors still requires checking that the annotation covers the
+actual backend token. Keep token argument evaluation if it has side effects or
+performs a detection step that the program still needs.
+
+Two representative pinned sources make the difference concrete:
+
+- [jxl-encoder load helper](https://github.com/imazen/jxl-encoder/blob/cd9a7325f97f5e178863d867c81b694cd8b169aa/jxl-encoder-simd/src/lib.rs#L145):
+  `load_f32x8` is a plain function returning `magetypes::simd::f32x8`.
+  Changing `from_slice` to `from_slice_with_token` preserves that return type.
+  Returning the contextual type is a separate signature migration.
+- [zenav1-aom generic clamp](https://github.com/imazen/zenav1-aom/blob/66f0661e79590cee2a7055bfb028a216bb61c239/crates/aom-dsp/src/transform/simd/prims.rs#L74):
+  a backend-generic helper already takes `T` as a value token. Its splats can
+  become `splat_with_token` without choosing a concrete target-feature tier.
+
+The type migration needs more than method renames:
+
+- In macro kernels, change the relevant `define(...)` entries to `local(...)`.
+  Plain helpers and explicit annotations need the matching `generic::local`
+  paths. Keep tokens needed by dispatch, other calls, or `_with_token` methods.
+- Vector-to-vector constructors preserve mode. When changing a float type,
+  check integer conversion inputs and half-width types too; use `.into()` for
+  owned vectors crossing an old/new boundary.
+- The existing `From` conversions are by value. They do not automatically
+  convert borrowed vectors, vector slices, or containers. Migrate borrowed
+  interfaces together or keep the old type at those boundaries.
+- Public vector signatures change Rust type identity when their mode changes.
+  Coordinate those changes with callers. Token-only signatures do not change
+  merely because construction inside the function uses a different mode.
+  The [public exposure audit](ARCHMAGE-PUBLIC-TYPE-EXPOSURE.md) found token APIs
+  in linear-srgb, not exported vector types, and no such exposure in garb's
+  inspected signatures. Those are pinned audit findings, not a fresh exhaustive
+  audit of their latest heads.
+
+After consumers migrate, a single planned breaking release can make the ordinary
+aliases contextual and remove the compatibility mode machinery. This change
+only supplies the additive preparation step; it does not flip defaults or remove
+`Explicit`, `Context`, or `ConstructorMode`.
+
+### `use(...)` versus `local(...)`
+
+`use(f32x8)` is the recommended future spelling: it describes bringing a
+backend-specific type name into the function. Both current alias modes create
+function-local aliases, and contextual vectors can escape the function or be
+constructed with a token outside a feature context, so `local` does not uniquely
+describe their semantics.
+
+Rust accepts `#[attribute(use(f32x8))]`: attribute macros receive the keyword in
+their argument token stream. The maintained [keyword probe](../tests/design-probes/context-mode/keyword_use.rs)
+compiles that exact form through a procedural macro. The current magetypes
+parser recognizes only `define(...)` and `local(...)`; adding `use(...)` would
+need explicit keyword parsing. If adopted, it should alias `local(...)` while
+preserving the existing spelling. **`use(...)` is not added by this change.**
 
 ## Source inventory, 2026-09-27
 

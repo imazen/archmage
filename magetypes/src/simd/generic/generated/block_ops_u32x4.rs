@@ -37,13 +37,21 @@ impl<M: crate::simd::generic::ConstructorMode, T: U32x4Backend> u32x4<T, M> {
 
     /// Create from byte array reference (token-gated).
     #[inline(always)]
-    pub(crate) fn from_bytes_with_token(token: T, bytes: &[u8; 16]) -> Self {
+    ///
+    /// Use an explicit CPU capability token with either constructor mode.
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    pub fn from_bytes_with_token(token: T, bytes: &[u8; 16]) -> Self {
         Self::new_repr(crate::simd_storage::copy(bytes), token)
     }
 
     /// Create from owned byte array (token-gated).
     #[inline(always)]
-    pub(crate) fn from_bytes_owned_with_token(token: T, bytes: [u8; 16]) -> Self {
+    ///
+    /// Use an explicit CPU capability token with either constructor mode.
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    pub fn from_bytes_owned_with_token(token: T, bytes: [u8; 16]) -> Self {
         Self::new_repr(crate::simd_storage::cast(bytes), token)
     }
 
@@ -53,7 +61,11 @@ impl<M: crate::simd::generic::ConstructorMode, T: U32x4Backend> u32x4<T, M> {
     ///
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[inline(always)]
-    pub(crate) fn cast_slice_with_token(token: T, slice: &[u32]) -> Option<&[Self]> {
+    ///
+    /// Use an explicit CPU capability token with either constructor mode.
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    pub fn cast_slice_with_token(token: T, slice: &[u32]) -> Option<&[Self]> {
         crate::simd_storage::vector_slice::<_, Self, 4>(token, slice)
     }
 
@@ -61,7 +73,11 @@ impl<M: crate::simd::generic::ConstructorMode, T: U32x4Backend> u32x4<T, M> {
     ///
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[inline(always)]
-    pub(crate) fn cast_slice_mut_with_token(token: T, slice: &mut [u32]) -> Option<&mut [Self]> {
+    ///
+    /// Use an explicit CPU capability token with either constructor mode.
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    pub fn cast_slice_mut_with_token(token: T, slice: &mut [u32]) -> Option<&mut [Self]> {
         crate::simd_storage::vector_slice_mut::<_, Self, 4>(token, slice)
     }
 }

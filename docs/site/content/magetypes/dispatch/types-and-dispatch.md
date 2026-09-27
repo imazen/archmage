@@ -8,6 +8,30 @@ Use Rust generics for data representation and algorithm parameters, and
 `define(f32x8)` is optional shorthand for the generic vector type with the
 current `Token`; it does not replace Rust's function generics.
 
+## Choosing constructor proofs
+
+`define(f32x8)` keeps `f32x8::zero(token)`. `local(f32x8)` selects the
+contextual alias and permits `f32x8::zero()` in a matching feature context.
+Both aliases offer `f32x8::zero_with_token(token)`, `splat_with_token(token, x)`,
+and corresponding token alternatives for the supported construction methods.
+
+Use `_with_token` in ordinary generic helpers: the token supplies the proof,
+so the helper does not need a concrete target-feature annotation.
+
+```rust
+use magetypes::simd::{backends::F32x8Backend, generic::local};
+
+fn load<T: F32x8Backend>(token: T, data: &[f32; 8]) -> local::f32x8<T> {
+    local::f32x8::load_with_token(token, data)
+}
+```
+
+Existing code needs no changes. A staged migration can first add `_with_token`
+to constructor names while keeping arguments and aliases unchanged, then
+switch aliases and related vector annotations together. Owned vectors cross
+old/new boundaries with `.into()`; borrowed interfaces need coordinated type
+changes. Contextual vectors can leave their construction function.
+
 ## A generic input type and a const mode
 
 This teaching extraction follows `zenanalyze/src/tier1.rs`:

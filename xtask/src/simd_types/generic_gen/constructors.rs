@@ -1,7 +1,7 @@
-//! Derive both constructor APIs from the token-taking implementation signatures.
+//! Derive constructor APIs from one token-taking implementation per method.
 //!
 //! A constructor body is written once in the ordinary generators. This pass
-//! retains it as a crate-private helper, then emits explicit-token and
+//! exposes it as a mode-generic `_with_token` method, then emits legacy and
 //! feature-context entry points. Context entry points flatten simple value
 //! construction; multi-step bodies and memory views keep the shared helper.
 //! Arithmetic kernels are not duplicated.
@@ -46,7 +46,9 @@ pub(super) fn names(source: &str) -> Vec<String> {
         .flat_map(|i| i.items)
         .filter_map(|i| {
             let ImplItem::Fn(f) = i else { return None };
-            if !matches!(f.vis, syn::Visibility::Public(_)) {
+            if !matches!(f.vis, syn::Visibility::Public(_))
+                || f.sig.ident.to_string().ends_with("_with_token")
+            {
                 return None;
             }
             let Some(FnArg::Typed(arg)) = f.sig.inputs.first() else {
@@ -76,7 +78,9 @@ pub(super) fn generate(
         }
         for item in &imp.items {
             let ImplItem::Fn(method) = item else { continue };
-            if !matches!(method.vis, syn::Visibility::Public(_)) {
+            if !matches!(method.vis, syn::Visibility::Public(_))
+                || method.sig.ident.to_string().ends_with("_with_token")
+            {
                 continue;
             }
             let Some(FnArg::Typed(first)) = method.sig.inputs.first() else {
@@ -246,7 +250,7 @@ pub(super) fn generate(
     for name in names {
         core = core.replace(
             &format!("pub fn {name}("),
-            &format!("pub(crate) fn {name}_with_token("),
+            &format!("///\n/// Use an explicit CPU capability token with either constructor mode.\n/// The caller does not need a target-feature annotation.\n#[forbid(unsafe_code)]\npub fn {name}_with_token("),
         );
     }
     // Shared methods use the helper, whose token comes from an existing vector.
@@ -349,6 +353,76 @@ mod tests {
             &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../token-registry.toml"),
         )
         .unwrap()
+    }
+
+    #[test]
+    fn every_legacy_constructor_has_a_public_token_alternative() {
+        use std::collections::BTreeSet;
+        let mut legacy = BTreeSet::new();
+        let mut alternatives = BTreeSet::new();
+        let mut raw = 0;
+        for (file, source) in super::super::generate_generic_files(&registry()) {
+            let parsed = syn::parse_file(&source).unwrap();
+            for item in parsed.items {
+                let Item::Impl(imp) = item else { continue };
+                if imp.trait_.is_some() {
+                    continue;
+                }
+                let syn::Type::Path(ty) = &*imp.self_ty else {
+                    continue;
+                };
+                let shape = ty.path.segments.last().unwrap().ident.to_string();
+                for item in imp.items {
+                    let ImplItem::Fn(f) = item else { continue };
+                    let name = f.sig.ident.to_string();
+                    if let Some(base) = name.strip_suffix("_with_token") {
+                        assert!(!base.ends_with("_with_token"), "{file}: {name}");
+                        assert!(
+                            matches!(f.vis, syn::Visibility::Public(_)),
+                            "{file}: {name}"
+                        );
+                        assert!(
+                            !matches!(f.sig.safety, syn::Safety::Unsafe(_)),
+                            "{file}: {name}"
+                        );
+                        assert!(
+                            !f.attrs.iter().any(|a| a.path().is_ident("target_feature")),
+                            "{file}: {name}"
+                        );
+                        assert!(
+                            f.attrs.iter().any(|a| a
+                                .to_token_stream()
+                                .to_string()
+                                .contains("forbid (unsafe_code)")),
+                            "{file}: {name}"
+                        );
+                        assert!(
+                            imp.generics.type_params().any(|p| p.ident == "M"),
+                            "{file}: {name}"
+                        );
+                        alternatives.insert((shape.clone(), base.to_owned()));
+                        if base == "from_raw" {
+                            raw += 1;
+                        }
+                    } else if matches!(f.vis, syn::Visibility::Public(_)) {
+                        let Some(FnArg::Typed(arg)) = f.sig.inputs.first() else {
+                            continue;
+                        };
+                        let Pat::Ident(pat) = &*arg.pat else { continue };
+                        if matches!(pat.ident.to_string().as_str(), "token" | "_token") {
+                            legacy.insert((shape.clone(), name));
+                        }
+                    }
+                }
+            }
+        }
+        assert!(!legacy.is_empty());
+        assert!(
+            legacy.is_subset(&alternatives),
+            "missing {:?}",
+            legacy.difference(&alternatives).collect::<Vec<_>>()
+        );
+        assert!(raw > 0);
     }
 
     #[test]

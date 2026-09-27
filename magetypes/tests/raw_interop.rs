@@ -12,6 +12,16 @@ macro_rules! roundtrip {
         let original = $ty::<$token>::from_array(token, values);
         let restored = $ty::<$token>::from_raw(original.raw());
         assert_eq!(restored.to_array(), values);
+        // Nested functions do not inherit the surrounding target features.
+        fn plain(token: $token, value: $ty<$token>) -> local::$ty<$token> {
+            let ctor: fn($token, _) -> local::$ty<$token> = local::$ty::from_raw_with_token;
+            ctor(token, value.raw())
+        }
+        assert_eq!(plain(token, original).to_array(), values);
+        assert_eq!(
+            $ty::<$token>::from_raw_with_token(token, original.raw()).to_array(),
+            values
+        );
     }};
 }
 
