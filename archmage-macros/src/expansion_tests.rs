@@ -936,3 +936,90 @@ fn unpublished_local_spelling_is_rejected() {
         .unwrap();
     assert!(err.to_string().contains("use(...)"), "{err}");
 }
+
+#[test]
+fn contextual_aliases_across_all_attributes() {
+    for name in [
+        "arcane",
+        "simd_fn",
+        "token_target_features_boundary",
+        "rite",
+        "token_target_features",
+    ] {
+        let result = expand(
+            name,
+            quote!(use(f32xN, i32xN, f32x8)),
+            quote!(
+                fn f(_: archmage::X64V3Token) {}
+            ),
+        )
+        .unwrap()
+        .to_string();
+        assert!(result.contains("type f32xN = :: magetypes :: simd :: generic :: local :: f32x8 < archmage :: X64V3Token >"), "{name}: {result}");
+        assert!(
+            result.contains("type i32xN = :: magetypes :: simd :: generic :: local :: i32x8"),
+            "{name}: {result}"
+        );
+        assert!(!result.contains("compile_error"), "{name}: {result}");
+        assert!(
+            expand(
+                name,
+                quote!(use(f32x)),
+                quote!(
+                    fn f() {}
+                )
+            )
+            .is_err()
+        );
+        assert!(
+            expand(
+                name,
+                quote!(use(f32xN, f32xN)),
+                quote!(
+                    fn f() {}
+                )
+            )
+            .is_err()
+        );
+    }
+    for name in ["magetypes", "autoversion", "rite"] {
+        for (tier, token, shape) in [
+            ("v3", "X64V3Token", "f32x8"),
+            ("v4", "X64V4Token", "f32x16"),
+            ("v4x", "X64V4xToken", "f32x16"),
+            ("neon", "NeonToken", "f32x4"),
+            ("wasm128", "Wasm128Token", "f32x4"),
+            ("scalar", "ScalarToken", "f32x4"),
+            ("default", "ScalarToken", "f32x4"),
+        ] {
+            let tier = quote::format_ident!("{tier}");
+            let result = expand(
+                name,
+                quote!(use(f32xN), #tier),
+                quote!(
+                    fn f() {}
+                ),
+            )
+            .unwrap()
+            .to_string();
+            assert!(
+                result.contains(&format!("local :: {shape} < archmage :: {token} >")),
+                "{name}: {result}"
+            );
+            assert!(!result.contains("compile_error"), "{name}: {result}");
+        }
+        let result = expand(
+            name,
+            quote!(use(f32xN), v2),
+            quote!(
+                fn f() {}
+            ),
+        )
+        .unwrap()
+        .to_string();
+        assert!(
+            result.contains("has no vector backend for X64V2Token"),
+            "{name}: {result}"
+        );
+    }
+}

@@ -56,6 +56,20 @@ That's it. One algorithm, every platform. `#[magetypes]` generates five `#[arcan
 
 The vector types live under `magetypes::simd::*` — there are no root re-exports (the surface is kept stable during development), so reach for `magetypes::simd::f32x8`, not `magetypes::f32x8`.
 
+### Contextual and natural-width aliases
+
+`#[magetypes(use(f32xN, i32xN), ...)]` selects contextual vectors with the tier's
+natural width: V3 has eight f32 lanes, V4/V4x sixteen, NEON/WASM/scalar four.
+`f32xN::splat(1.0)` and `f32xN::load(chunk)` need no token inside that feature
+context. `use(f32x8)` keeps eight lanes; `define(f32x8)` keeps token arguments.
+All ten float/integer families support `xN`.
+
+The same `use(...)` option works on `rite`, `arcane`, `autoversion`, and their
+attribute aliases. `rite(v3, use(f32xN))` needs no token parameter. Aliases are
+body-local; signatures use explicit types. Unsupported adaptive tiers produce a
+diagnostic. Use `partition_slice[_mut]` for full chunks and handle the tail
+explicitly, per logical row when buffers are strided.
+
 ### Load / store are **unaligned**
 
 `f32x8::load(token, &[f32; 8])` and `.store(&mut [f32; 8])` take **fixed-size array references** and perform an **unaligned** transfer — on x86-64 they lower to `_mm256_loadu_ps` / `_mm256_storeu_ps`. A `&[f32; 8]` only guarantees 4-byte (`f32`) alignment, and that's all that's required; there is **no 32-byte SIMD-alignment precondition**. Consequently `partition_slice_mut` (which reinterprets an arbitrary `&mut [f32]` as `&mut [[f32; 8]]` chunks) is sound on any slice — the bulk chunks feed straight into `load`/`store`. Don't reach for aligned allocators or hand-padded buffers; window your slice and go.

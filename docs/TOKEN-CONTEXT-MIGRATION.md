@@ -134,26 +134,20 @@ constructor modes create function-local aliases, and contextual vectors can
 escape the function or be constructed with a token outside a feature context.
 The parser consumes Rust's `use` keyword explicitly; no raw identifier is needed.
 
-### Proposed `rite(use(...))` resolution
+### `rite(use(...))` resolution
 
-This syntax is a proposal, not an implemented parser option. `rite_single_impl`
-already resolves features from an explicit tier or a recognized token parameter;
-`rite_multi_tier_impl` has a concrete token name for every non-default variant.
-These are sufficient inputs for contextual alias selection without a token value.
+Both fixed and adaptive names are supported by `rite`, `arcane`, `autoversion`,
+`magetypes`, and their attribute aliases. `rite(v3, use(f32xN))` needs no token
+parameter; `rite(use(f32xN))` resolves a recognized concrete token parameter.
+Multiple tiers select aliases independently. `default` uses ScalarToken and
+four f32 lanes, with no token parameter or target-feature requirement.
 
-| Function form | Proposed backend selection |
-|---|---|
-| `#[rite(v3, use(f32x8))]`, no token parameter | `X64V3Token` |
-| `#[rite(use(f32x8))]`, concrete V3 token parameter | That concrete token type |
-| Generated V3/NEON/scalar variants | Each variant's concrete token type |
-| Generic `T: HasX64V3 + F32x8Backend` | Keep `T`; the bound does not identify a unique backend |
-
-`magetypes_impl` already substitutes the `Token` placeholder throughout the
-function signature and body. `rite` could reuse that mechanism for generated
-variants. A body-local alias alone does not put the short type name in scope in
-parameters or return types: those need an explicit generic path or deliberate
-signature rewriting. A real Rust generic parameter must not be replaced merely
-because one bound guarantees a minimum feature tier.
+A generic feature bound alone does not identify a backend and receives a
+`use(...)` diagnostic. An explicit tier selects its concrete backend even when
+other function parameters are generic. Body-local aliases do not scope into
+parameters or return types; signatures continue to use explicit types.
+`magetypes` retains its existing `Token` substitution. `rite` does not add that
+substitution, and it does not rewrite real Rust generic parameters.
 
 The current short contextual constructors have concrete per-token inherent
 implementations. Arbitrary backend-generic functions use the mode-generic
@@ -166,7 +160,7 @@ inherit the caller's target features.
 For the prelude correction and structural API changes, see the
 [constructor API audit](CONSTRUCTOR-API-AUDIT.md). Width-adaptive aliases,
 partition/tail semantics, and all attribute entry points are covered in the
-[tier-selected type proposal](TIER-SELECTED-TYPES.md).
+[tier-selected type guide](TIER-SELECTED-TYPES.md).
 
 ## Source inventory, 2026-09-27
 

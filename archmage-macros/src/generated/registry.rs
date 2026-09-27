@@ -485,6 +485,56 @@ pub(crate) fn token_to_arch(token_name: &str) -> Option<&'static str> {
     }
 }
 
+/// Natural width only for implemented vector backends.
+pub(crate) fn token_to_vector_width(name: &str) -> Option<u32> {
+    match name {
+        "X64V3Token" | "Desktop64" | "Avx2FmaToken" => Some(256),
+        "X64V4Token" | "Avx512Token" | "Server64" => Some(512),
+        "X64V4xToken" | "Avx512ModernToken" => Some(512),
+        "NeonToken" | "Arm64" => Some(128),
+        "Wasm128Token" => Some(128),
+        "ScalarToken" => Some(128),
+        _ => None,
+    }
+}
+
+/// Fixed shapes and adaptive families share the SIMD generator's roster.
+pub(crate) fn resolve_vector_name(name: &str, width: u32) -> Option<&'static str> {
+    match (name, width) {
+        ("f32x4", _) | ("f32xN", 128) => Some("f32x4"),
+        ("f64x2", _) | ("f64xN", 128) => Some("f64x2"),
+        ("i8x16", _) | ("i8xN", 128) => Some("i8x16"),
+        ("u8x16", _) | ("u8xN", 128) => Some("u8x16"),
+        ("i16x8", _) | ("i16xN", 128) => Some("i16x8"),
+        ("u16x8", _) | ("u16xN", 128) => Some("u16x8"),
+        ("i32x4", _) | ("i32xN", 128) => Some("i32x4"),
+        ("u32x4", _) | ("u32xN", 128) => Some("u32x4"),
+        ("i64x2", _) | ("i64xN", 128) => Some("i64x2"),
+        ("u64x2", _) | ("u64xN", 128) => Some("u64x2"),
+        ("f32x8", _) | ("f32xN", 256) => Some("f32x8"),
+        ("f64x4", _) | ("f64xN", 256) => Some("f64x4"),
+        ("i8x32", _) | ("i8xN", 256) => Some("i8x32"),
+        ("u8x32", _) | ("u8xN", 256) => Some("u8x32"),
+        ("i16x16", _) | ("i16xN", 256) => Some("i16x16"),
+        ("u16x16", _) | ("u16xN", 256) => Some("u16x16"),
+        ("i32x8", _) | ("i32xN", 256) => Some("i32x8"),
+        ("u32x8", _) | ("u32xN", 256) => Some("u32x8"),
+        ("i64x4", _) | ("i64xN", 256) => Some("i64x4"),
+        ("u64x4", _) | ("u64xN", 256) => Some("u64x4"),
+        ("f32x16", _) | ("f32xN", 512) => Some("f32x16"),
+        ("f64x8", _) | ("f64xN", 512) => Some("f64x8"),
+        ("i8x64", _) | ("i8xN", 512) => Some("i8x64"),
+        ("u8x64", _) | ("u8xN", 512) => Some("u8x64"),
+        ("i16x32", _) | ("i16xN", 512) => Some("i16x32"),
+        ("u16x32", _) | ("u16xN", 512) => Some("u16x32"),
+        ("i32x16", _) | ("i32xN", 512) => Some("i32x16"),
+        ("u32x16", _) | ("u32xN", 512) => Some("u32x16"),
+        ("i64x8", _) | ("i64xN", 512) => Some("i64x8"),
+        ("u64x8", _) | ("u64xN", 512) => Some("u64x8"),
+        _ => None,
+    }
+}
+
 /// Maps a token type name to its magetypes width namespace.
 ///
 /// Returns the namespace name (e.g., "v3", "v4", "neon", "wasm128", "scalar").

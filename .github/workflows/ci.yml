@@ -879,6 +879,14 @@ jobs:
               case "$name:$cpu_flag" in
                 raw_interop-*:-nhm) cpu_flag="-hsw" ;;
               esac
+              # Adaptive aliases: the caller selects a mandatory backend path.
+              # A missing token fails, rather than silently skipping that tier.
+              export ARCHMAGE_ADAPTIVE_TEST_TIER=scalar
+              case "$name:$cpu_flag" in
+                adaptive_use-*:-hsw) export ARCHMAGE_ADAPTIVE_TEST_TIER=v3 ;;
+                adaptive_use-*:-skx) export ARCHMAGE_ADAPTIVE_TEST_TIER=v4 ;;
+                adaptive_use-*:-icl) export ARCHMAGE_ADAPTIVE_TEST_TIER=v4x ;;
+              esac
               echo "Running: sde64 $cpu_flag -- $test"
               sde64 "$cpu_flag" -- "$test" || fails="$fails $name"
             fi

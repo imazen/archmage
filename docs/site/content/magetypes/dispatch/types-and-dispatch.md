@@ -32,6 +32,35 @@ switch aliases and related vector annotations together. Owned vectors cross
 old/new boundaries with `.into()`; borrowed interfaces need coordinated type
 changes. Contextual vectors can leave their construction function.
 
+## Natural-width contextual aliases
+
+`use(f32xN, i32xN)` selects equal lane counts for those families: eight on V3,
+sixteen on V4/V4x, four on NEON/WASM/scalar. `N` is macro syntax, not a const
+generic. The ten float/integer families share the same bit width.
+`use(f32x8)` remains fixed-width. These are body-local aliases.
+
+```rust
+use archmage::autoversion;
+
+#[autoversion(v3, neon, wasm128, scalar, use(f32xN))]
+fn add_row(row: &mut [f32], amount: f32) {
+    let add = f32xN::splat(amount);
+    let (chunks, tail) = f32xN::partition_slice_mut(row);
+    for chunk in chunks { (f32xN::load(chunk) + add).store(chunk); }
+    for value in tail { *value += amount; }
+}
+```
+
+`rite(v3, use(f32xN))` works without a token parameter; `arcane(use(f32xN))`
+selects from its concrete token parameter. Their descriptive attribute aliases
+support the same option. `magetypes(rite, use(f32xN), ...)` also supports tokenless
+helpers. Generic backend helpers still use explicit types and `_with_token`.
+
+Partition each logical row separately for strided buffers, leaving padding
+untouched. Handle the scalar remainder explicitly: `from_slice` requires a
+full vector and is not a masked tail load. Adaptive widths can change reduction
+order; width selection alone does not promise identical floating-point sums.
+
 ## A generic input type and a const mode
 
 This teaching extraction follows `zenanalyze/src/tier1.rs`:

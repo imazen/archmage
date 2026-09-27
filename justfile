@@ -374,3 +374,11 @@ tier-width-compile output sde:
 # Check the original prelude name set against the current API snapshots.
 constructor-api-audit:
     python3 scripts/audit-constructor-api.py --output benchmarks/constructor_api_audit_2026-09-27.json
+
+# Mandatory backend tests: caller selects CPU proof, unsupported requests fail.
+test-adaptive-use tier="scalar":
+    ARCHMAGE_ADAPTIVE_TEST_TIER={{tier}} cargo test -p magetypes --all-features --test adaptive_use
+
+# Actual macro cost versus manual aliases; fresh target directories per build.
+adaptive-use-compile before output sde:
+    python3 scripts/measure-local-mode-compile.py --before {{before}} --after . --adaptive-use-probe --sde {{sde}} --output {{output}} --runs 6

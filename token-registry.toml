@@ -67,6 +67,7 @@ doc = "Proof that PCLMULQDQ + AES-NI are available (on top of x86-64-v2).\n\nPCL
 
 [[token]]
 name = "X64V3Token"
+magetypes_width = 256
 arch = "x86"
 aliases = ["Desktop64", "Avx2FmaToken"]
 deprecated_aliases = { Avx2FmaToken = "Use X64V3Token or Desktop64 instead. Avx2FmaToken is misleading — V3 includes BMI1/2, F16C, and more, not just AVX2+FMA." }
@@ -119,6 +120,7 @@ doc = "Proof that AVX2 + GFNI + VPCLMULQDQ + VAES are available.\n\nGFNI provide
 
 [[token]]
 name = "X64V4Token"
+magetypes_width = 512
 arch = "x86"
 aliases = ["Avx512Token", "Server64"]
 features = [
@@ -138,6 +140,7 @@ doc = "Proof that AVX-512 (F + CD + VL + DQ + BW) is available.\n\nThis is the c
 
 [[token]]
 name = "X64V4xToken"
+magetypes_width = 512
 aliases = ["Avx512ModernToken"]
 arch = "x86"
 features = [
@@ -179,6 +182,7 @@ doc = "Proof that AVX-512 FP16 (half-precision) is available.\n\nAVX-512 FP16 pr
 
 [[token]]
 name = "NeonToken"
+magetypes_width = 128
 arch = "aarch64"
 aliases = ["Arm64"]
 features = ["neon"]
@@ -247,6 +251,7 @@ doc = "Proof that the full modern ARM SIMD feature set is available (Arm64-v3).\
 
 [[token]]
 name = "Wasm128Token"
+magetypes_width = 128
 arch = "wasm"
 features = ["simd128"]
 traits = ["Has128BitSimd"]

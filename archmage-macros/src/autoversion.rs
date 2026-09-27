@@ -17,6 +17,7 @@ use crate::tiers::*;
 
 /// Arguments to the `#[autoversion]` macro.
 pub(crate) struct AutoversionArgs {
+    pub(crate) uses: Vec<String>,
     /// The concrete type to use for `self` receiver (inherent methods only).
     pub(crate) self_type: Option<Type>,
     /// Explicit tier names (None = default tiers).
@@ -29,11 +30,20 @@ pub(crate) struct AutoversionArgs {
 
 impl Parse for AutoversionArgs {
     fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut uses = Vec::new();
         let mut self_type = None;
         let mut tier_names = Vec::new();
         let mut cfg_feature = None;
 
         while !input.is_empty() {
+            if input.peek(Token![use]) {
+                crate::vector_aliases::parse_use(input, &mut uses)?;
+                if input.peek(Token![,]) {
+                    input.parse::<Token![,]>()?;
+                }
+                continue;
+            }
+
             // Check for +tier/-tier (modify defaults) before consuming ident
             if input.peek(Token![+]) || input.peek(Token![-]) {
                 tier_names.push(crate::tiers::parse_one_tier(input)?);
@@ -58,6 +68,7 @@ impl Parse for AutoversionArgs {
         }
 
         Ok(AutoversionArgs {
+            uses,
             self_type,
             tiers: if tier_names.is_empty() {
                 None
@@ -241,6 +252,13 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
 
         // Rename: process → process_v3
         variant_fn.sig.ident = format_ident!("{}_{}", fn_name, tier.suffix);
+        if let Err(error) = crate::vector_aliases::prepend(
+            &mut variant_fn,
+            &args.uses,
+            Some(crate::vector_aliases::tier_token(tier)),
+        ) {
+            return error.to_compile_error();
+        }
 
         // Replace token param type with concrete token type.
         // For "default" tier: remove the token param entirely (tokenless variant).

@@ -25,6 +25,7 @@ mod rewrite;
 mod rite;
 mod tiers;
 mod token_discovery;
+mod vector_aliases;
 
 use proc_macro::TokenStream;
 use syn::parse_macro_input;
@@ -403,6 +404,17 @@ pub fn token_target_features(attr: TokenStream, item: TokenStream) -> TokenStrea
 /// }
 /// ```
 ///
+/// `use(f32xN, i32xN, ...)` selects each tier's natural width (V3: 256 bits,
+/// V4/V4x: 512, NEON/WASM/scalar: 128). `use(f32x8)` keeps eight lanes.
+/// All ten float/integer families support `xN`. These aliases are body-local;
+/// signatures still use explicit types. `partition_slice[_mut]` and `LANES`
+/// follow the selected width; process the remainder explicitly.
+///
+/// `use(...)` also works on `rite`, `arcane`, `autoversion`, and their attribute
+/// aliases. `rite` can select a tier without a token parameter. Generic feature
+/// bounds alone do not select a backend. V1/V2 and extension-only tokens have no
+/// adaptive mapping and produce a diagnostic.
+///
 /// `use(f32x8, ...)` injects aliases with context-checked constructors:
 /// `f32x8::zero()`, `f32x8::splat(value)`, and `f32x8::load(data)`.
 /// `define(...)` retains explicit token arguments. Both modes share vector
@@ -504,6 +516,7 @@ fn parse_magetypes_attr(input: syn::parse::ParseStream) -> syn::Result<Magetypes
                     ));
                 }
                 if contextual {
+                    vector_aliases::validate_name(&ty.to_string(), ty.span())?;
                     uses.push(ty.to_string());
                 } else {
                     defines.push(ty.to_string());

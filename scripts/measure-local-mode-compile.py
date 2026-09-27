@@ -21,11 +21,14 @@ p.add_argument('--middle', type=Path, help='Optional attribute-only candidate')
 p.add_argument('--before-local', action='store_true', help='Baseline already supports local constructors')
 p.add_argument('--tier-width-probe', action='store_true',
                help='Compare fixed f32x8 with per-tier existing types; does not implement use(f32x)')
+p.add_argument('--adaptive-use-probe', action='store_true',
+               help='Compare manual natural-width aliases before/after with implemented use(f32xN)')
 p.add_argument('--sde', type=Path, help='SDE executable for mandatory AVX-512 width-probe tests')
 p.add_argument('--runs', type=int, default=3)
 a = p.parse_args()
-if a.tier_width_probe and (not a.sde or not a.sde.is_file()):
-    p.error('--tier-width-probe requires --sde for AVX-512 execution')
+width_probe = a.tier_width_probe or a.adaptive_use_probe
+if width_probe and (not a.sde or not a.sde.is_file()):
+    p.error('width probes require --sde for AVX-512 execution')
 a.output.mkdir(parents=True, exist_ok=False)
 env = os.environ.copy()
 for key in ('RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'RUSTC_WRAPPER', 'RUSTC_WORKSPACE_WRAPPER'):
@@ -46,6 +49,9 @@ cases.extend([('after_explicit', a.after, False), ('after_local', a.after, True)
 if a.tier_width_probe:
     cases = [('fixed8', a.after, False), ('tier_width', a.after, True)]
     metadata['experiment'] = 'Width selection expansion shape; parser cost and scalar x1 are not measured'
+if a.adaptive_use_probe:
+    cases = [('before_manual', a.before, True), ('after_manual', a.after, True), ('after_adaptive', a.after, True)]
+    metadata['experiment'] = 'Actual adaptive use parser versus identical manual per-tier aliases'
 metadata['cases'] = {label: {'source': str(source.resolve()), 'local': local} for label, source, local in cases}
 (a.output / 'metadata.json').write_text(json.dumps(metadata, indent=2))
 rows = []
@@ -67,7 +73,7 @@ archmage = {{ path = "{deps}", features = {feature_list} }}
 magetypes = {{ path = "{deps}/magetypes", features = {feature_list} }}
 [workspace]
 ''')
-        if a.tier_width_probe:
+        if width_probe:
             manifest = project / 'Cargo.toml'
             defaults = '["avx512"]' if features == 'avx512' else '[]'
             manifest.write_text(manifest.read_text().replace('[workspace]',
@@ -91,7 +97,7 @@ pub fn run(values: &[f32]) -> f32 {{ incant!(kernel(values), [v3, scalar]) }}
 '''
         if local:
             source_text = source_text.replace('fn kernel(token:', 'fn kernel(_token:')
-        if a.tier_width_probe:
+        if width_probe:
             source_text = (Path(__file__).resolve().parent.parent /
                            'tests/design-probes/context-mode/width_kernel.in.rs').read_text()
             widths = {'V3': 8, 'NEON': 4 if local else 8,
@@ -111,6 +117,9 @@ pub fn run(values: &[f32]) -> f32 {{ incant!(kernel(values), [v3, scalar]) }}
     }
 """ if features == 'avx512' else '')
             source_text = source_text.replace('@TIERS@', 'v4, v3, ' if features == 'avx512' else 'v3, ')
+        if a.adaptive_use_probe and label == 'after_adaptive':
+            source_text = source_text.replace('#[archmage::rite($tier)]', '#[archmage::rite($tier, use(f32xN))]')
+            source_text = source_text.replace('type V = magetypes::simd::generic::local::$vector<$token>;', 'type V = f32xN;')
         (project / 'src/lib.rs').write_text(source_text)
         shutil.copy2(source / 'Cargo.lock', project / 'Cargo.lock')
         with (project / 'resolve.log').open('w') as log:
@@ -141,7 +150,7 @@ pub fn run(values: &[f32]) -> f32 {{ incant!(kernel(values), [v3, scalar]) }}
             with (a.output / 'results.csv').open('w') as f:
                 writer = csv.DictWriter(f, fieldnames=list(row)); writer.writeheader(); writer.writerows(rows)
             print(f'END {features} {label} total={elapsed:.3f}s magetypes={times["magetypes"]:.3f}s', flush=True)
-    if a.tier_width_probe:
+    if width_probe:
         for label, project in consumers.items():
             print(f'TEST {features} {label}', flush=True)
             cmd = ['cargo', 'test', '--release', '--locked', '--offline', '--no-run',

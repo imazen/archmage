@@ -7,7 +7,7 @@ use crate::common::*;
 use crate::tiers::*;
 
 /// Generate per-tier variants of the input function.
-/// `uses` selects fixed Context-mode aliases; `defines` selects Explicit mode.
+/// `uses` selects fixed or adaptive Context-mode aliases; `defines` selects Explicit mode.
 ///
 /// When `rite_flag` is false (default), non-fallback variants are wrapped
 /// with `#[archmage::arcane]` (safe outer wrapper + `#[target_feature]`
@@ -58,14 +58,7 @@ pub(crate) fn magetypes_impl(
                 type #ident = ::magetypes::simd::generic::#ident<Token>;
             }
         });
-        let uses = uses.iter().map(|name| {
-            let ident = quote::format_ident!("{name}");
-            quote! {
-                #[allow(non_camel_case_types, dead_code)]
-                type #ident = ::magetypes::simd::generic::local::#ident<Token>;
-            }
-        });
-        quote! { #(#aliases)* #(#uses)* }
+        quote! { #(#aliases)* }
     };
 
     // Dispatch presence is independent of the tier. Scan the original body
@@ -81,12 +74,20 @@ pub(crate) fn magetypes_impl(
         // Prepend the `define(...)` type aliases to the body. They appear
         // inside the function scope, shadowing any outer `f32x8`/etc. for
         // this body only.
-        if !defines.is_empty() || !uses.is_empty() {
+        if !defines.is_empty() {
             let original_body = &variant_fn.body;
             variant_fn.body = quote! {
                 #define_preamble
                 #original_body
             };
+        }
+
+        if let Err(error) = crate::vector_aliases::prepend(
+            &mut variant_fn,
+            uses,
+            Some(crate::vector_aliases::tier_token(tier)),
+        ) {
+            return error.to_compile_error();
         }
 
         // Resolve `incant!(.. without token)` to this tier's tokenless variant
@@ -149,7 +150,8 @@ pub(crate) fn magetypes_impl(
             //     + #[inline], no wrapper (only callable from matching-feature
             //     contexts, e.g. via `incant!` rewriting from another tier body)
             let wrapper = if rite_flag {
-                quote! { #[archmage::rite(import_intrinsics)] }
+                let tier_name = quote::format_ident!("{}", tier.name);
+                quote! { #[archmage::rite(#tier_name, import_intrinsics)] }
             } else {
                 quote! { #[archmage::arcane] }
             };
