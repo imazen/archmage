@@ -42,3 +42,31 @@ and safe conversions between policies. Arithmetic implementations are shared.
 
 Large artifacts are retained outside git; no cloud/NAS mirror is configured on
 this host. No target directories or pre-existing caches were deleted.
+
+## Follow-up inspection
+
+The saved Cargo unit timings locate the increase primarily in frontend work.
+Median magetypes frontend duration was 1.05 → 1.22 s with default features,
+and 1.20 → 1.44 s with AVX-512; codegen was 0.03 → 0.04 s and
+0.04 → 0.05 s, respectively. These are sections from the same three-run
+measurement, not a new benchmark.
+
+Inspection of the generated public signatures confirms all 42 inventoried
+explicit-token method names also have Context-mode signatures. Coverage is the
+30 generic vector shapes where their existing backends provide each operation;
+backend token traits and standalone scalar-only x1 wrappers were not migrated.
+
+The first optimization experiment should emit `#[target_feature]` and `#[inline]`
+from the token registry during xtask generation, instead of invoking `#[rite]`
+for each generated context constructor during a consumer build. The tier-only
+rite implementation currently emits those attributes and the architecture cfg;
+the generated constructor impl already carries the architecture cfg. Preserve
+`#[forbid(unsafe_code)]`, compiler rejection tests, and the soundness validator.
+The registry must remain the source of feature sets. Savings are not measured.
+
+Other experiments are flattening trivial constructor forwarding layers while
+keeping one generator template, and isolating the cost of extra mode trait
+bounds. Feature-gating contextual constructors could reduce the surface for
+users of only the old API, but introduces a Cargo configuration requirement;
+it does not make local-mode users' builds cheaper. None of these alternatives
+has been implemented or benchmarked here.
