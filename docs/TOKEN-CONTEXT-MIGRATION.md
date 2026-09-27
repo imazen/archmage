@@ -131,6 +131,35 @@ parser recognizes only `define(...)` and `local(...)`; adding `use(...)` would
 need explicit keyword parsing. If adopted, it should alias `local(...)` while
 preserving the existing spelling. **`use(...)` is not added by this change.**
 
+### Proposed `rite(use(...))` resolution
+
+This syntax is a proposal, not an implemented parser option. `rite_single_impl`
+already resolves features from an explicit tier or a recognized token parameter;
+`rite_multi_tier_impl` has a concrete token name for every non-default variant.
+These are sufficient inputs for contextual alias selection without a token value.
+
+| Function form | Proposed backend selection |
+|---|---|
+| `#[rite(v3, use(f32x8))]`, no token parameter | `X64V3Token` |
+| `#[rite(use(f32x8))]`, concrete V3 token parameter | That concrete token type |
+| Generated V3/NEON/scalar variants | Each variant's concrete token type |
+| Generic `T: HasX64V3 + F32x8Backend` | Keep `T`; the bound does not identify a unique backend |
+
+`magetypes_impl` already substitutes the `Token` placeholder throughout the
+function signature and body. `rite` could reuse that mechanism for generated
+variants. A body-local alias alone does not put the short type name in scope in
+parameters or return types: those need an explicit generic path or deliberate
+signature rewriting. A real Rust generic parameter must not be replaced merely
+because one bound guarantees a minimum feature tier.
+
+The current short contextual constructors have concrete per-token inherent
+implementations. Arbitrary backend-generic functions use the mode-generic
+`*_with_token` methods instead. Other type parameters and const generics can
+remain generic while the macro fixes only the SIMD backend. A tokenless function
+with neither an explicit tier nor a recognized token parameter has no tier for
+`rite` to resolve; macros do not inspect a caller's monomorphized types or
+inherit the caller's target features.
+
 ## Source inventory, 2026-09-27
 
 A Sol agent used ripgrep 15.2.0 and a Rust tree-sitter parser to inventory

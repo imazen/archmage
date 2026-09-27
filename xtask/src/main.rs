@@ -803,56 +803,76 @@ fn verify_intrinsic_soundness() -> Result<()> {
     soundness::verify(&reg)
 }
 
-/// Run tests under Miri to detect undefined behavior.
-///
-/// Runs magetypes tests under Miri with full SIMD support enabled.
-/// This catches UB in SIMD operations, memory handling, and type conversions.
+fn miri_toolchain() -> String {
+    std::env::var("ARCHMAGE_MIRI_TOOLCHAIN").unwrap_or_else(|_| "nightly".into())
+}
+
+/// Run native raw tests with their required virtual CPU, then the baseline suite.
 fn run_miri() -> Result<()> {
     use std::process::Command;
-
-    println!("=== Running Miri on magetypes ===\n");
-
-    // Check if miri is installed
-    let miri_check = Command::new("cargo")
-        .args(["+nightly", "miri", "--version"])
-        .output();
-
-    match miri_check {
-        Err(_) => {
-            eprintln!("Miri not installed. Install with:");
-            eprintln!("  rustup +nightly component add miri");
-            eprintln!("  cargo +nightly miri setup");
-            bail!("Miri not available");
-        }
-        Ok(ref out) if !out.status.success() => {
-            eprintln!("Miri not installed. Install with:");
-            eprintln!("  rustup +nightly component add miri");
-            eprintln!("  cargo +nightly miri setup");
-            bail!("Miri not available");
-        }
-        _ => {}
+    let toolchain = format!("+{}", miri_toolchain());
+    println!("=== Running Miri on magetypes ({toolchain}) ===");
+    let check = Command::new("cargo")
+        .args([&toolchain, "miri", "--version"])
+        .status()?;
+    if !check.success() {
+        bail!("Miri is unavailable for {toolchain}; install its miri component");
     }
 
-    // Run miri on magetypes with full SIMD support
-    let status = Command::new("cargo")
-        .args([
-            "+nightly",
+    let mut baseline = Command::new("cargo");
+    baseline.args([
+        &toolchain,
+        "miri",
+        "test",
+        "-p",
+        "magetypes",
+        "--features",
+        "avx512",
+    ]);
+    if cfg!(target_arch = "x86_64") {
+        // This test deliberately requires a native V3 token. Give the interpreter
+        // that virtual CPU; retain every roundtrip assertion. Run it first so a
+        // failure cannot hide behind the much longer baseline suite.
+        let mut raw = Command::new("cargo");
+        raw.args([
+            &toolchain,
             "miri",
             "test",
             "-p",
             "magetypes",
             "--features",
-            "magetypes/avx512",
-        ])
-        .status()
-        .context("Failed to run miri")?;
-
-    if status.success() {
-        println!("\n✓ Miri found no undefined behavior in magetypes!");
-        Ok(())
-    } else {
-        bail!("Miri detected undefined behavior")
+            "avx512",
+            "--test",
+            "raw_interop",
+        ]);
+        if let Ok(flags) = std::env::var("CARGO_ENCODED_RUSTFLAGS") {
+            raw.env(
+                "CARGO_ENCODED_RUSTFLAGS",
+                format!("{flags}\x1f-Ctarget-cpu=x86-64-v3"),
+            );
+        } else {
+            let flags = std::env::var("RUSTFLAGS").unwrap_or_default();
+            raw.env("RUSTFLAGS", format!("{flags} -Ctarget-cpu=x86-64-v3"));
+        }
+        if !raw
+            .status()
+            .context("Failed to run native raw Miri tests")?
+            .success()
+        {
+            bail!("Native raw Miri tests failed; see diagnostics above");
+        }
+        // The named raw test has already executed above. All other tests retain
+        // the baseline virtual CPU. Non-x86 hosts run their entire native suite.
+        baseline.args(["--", "--skip", "native_raw_roundtrips"]);
     }
+    let baseline = baseline
+        .status()
+        .context("Failed to run baseline Miri tests")?;
+    if !baseline.success() {
+        bail!("Baseline Miri tests failed; see diagnostics above");
+    }
+    println!("Miri tests passed for native raw interop and the baseline suite");
+    Ok(())
 }
 
 fn main() -> Result<()> {
@@ -2273,7 +2293,11 @@ fn run_ci() -> Result<()> {
     println!("┌─ Step 15/18: Running Miri (UB detection) ──────────────────────────┐");
     // Check if Miri is available
     let miri_available = std::process::Command::new("cargo")
-        .args(["+nightly", "miri", "--version"])
+        .args([
+            format!("+{}", miri_toolchain()),
+            "miri".into(),
+            "--version".into(),
+        ])
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false);
@@ -2282,22 +2306,7 @@ fn run_ci() -> Result<()> {
         println!("  ⚠ Miri not available, skipping UB checks");
         println!("  Install with: rustup +nightly component add miri");
     } else {
-        let miri = std::process::Command::new("cargo")
-            .args([
-                "+nightly",
-                "miri",
-                "test",
-                "-p",
-                "magetypes",
-                "--features",
-                "magetypes/avx512",
-            ])
-            .status()
-            .context("Failed to run Miri")?;
-        if !miri.success() {
-            bail!("Miri detected undefined behavior!");
-        }
-        println!("  ✓ Miri found no undefined behavior");
+        run_miri()?;
     }
     println!("└─ Miri check complete ──────────────────────────────────────────────┘\n");
 

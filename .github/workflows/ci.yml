@@ -515,8 +515,10 @@ jobs:
       - name: Setup Miri
         run: cargo miri setup
 
-      - name: Run Miri on magetypes
-        run: cargo miri test -p magetypes --features avx512
+      - name: Run Miri on magetypes (native V3 raw tests + baseline suite)
+        env:
+          ARCHMAGE_MIRI_TOOLCHAIN: nightly-2026-02-03
+        run: cargo run -p xtask -- miri
 
       - name: Run Miri on archmage
         run: cargo miri test -p archmage --lib --features avx512
@@ -871,8 +873,14 @@ jobs:
               case "$name" in
                 macro_expand-*|compile_fail-*|soundness_exploits-*|lib*.so) echo "Skipping: $name (not CPU-specific)"; continue ;;
               esac
-              echo "Running: $test"
-              sde64 ${{ matrix.cpu.flag }} -- "$test" || fails="$fails $name"
+              cpu_flag="${{ matrix.cpu.flag }}"
+              # Raw native roundtrips require V3; execute them on Haswell even
+              # in the baseline lane. Every assertion runs; no test is omitted.
+              case "$name:$cpu_flag" in
+                raw_interop-*:-nhm) cpu_flag="-hsw" ;;
+              esac
+              echo "Running: sde64 $cpu_flag -- $test"
+              sde64 "$cpu_flag" -- "$test" || fails="$fails $name"
             fi
           done
           if [ -n "$fails" ]; then
