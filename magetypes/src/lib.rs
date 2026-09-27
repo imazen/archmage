@@ -86,3 +86,6 @@ pub mod bypass_adversarial;
 
 // Types are accessed via magetypes::simd::* - no root re-exports
 // This keeps the API stable during development
+
+#[cfg(target_arch = "wasm32")]
+mod wasm_fma;

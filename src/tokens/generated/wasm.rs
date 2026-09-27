@@ -107,7 +107,10 @@ impl Wasm128Token {
 /// cross-platform determinism for performance: FMA, relaxed lane-select,
 /// relaxed min/max, dot products, and relaxed truncation.
 ///
-/// Supported by Chrome 114+, Firefox 145+, Safari 16.4+, and Wasmtime 14+.
+/// This token proves instruction availability, not single-rounding FMA.
+/// Relaxed multiply-add may round once or twice, depending on the engine.
+/// Modules containing relaxed instructions require relaxed-SIMD support at load
+/// time; select a compatible build with WebAssembly.validate.
 /// Stable in Rust since 1.82.
 #[derive(Clone, Copy, Debug)]
 pub struct Wasm128RelaxedToken {

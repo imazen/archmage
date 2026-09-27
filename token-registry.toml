@@ -264,7 +264,7 @@ parents = ["Wasm128Token"]
 display_name = "WASM Relaxed SIMD"
 short_name = "wasm128_relaxed"
 magetypes_namespace = "wasm128"
-doc = "Proof that WASM Relaxed SIMD is available.\n\nRelaxed SIMD (Wasm 3.0) provides 28 instructions that trade strict\ncross-platform determinism for performance: FMA, relaxed lane-select,\nrelaxed min/max, dot products, and relaxed truncation.\n\nSupported by Chrome 114+, Firefox 145+, Safari 16.4+, and Wasmtime 14+.\nStable in Rust since 1.82."
+doc = "Proof that WASM Relaxed SIMD is available.\n\nRelaxed SIMD (Wasm 3.0) provides 28 instructions that trade strict\ncross-platform determinism for performance: FMA, relaxed lane-select,\nrelaxed min/max, dot products, and relaxed truncation.\n\nThis token proves instruction availability, not single-rounding FMA.\nRelaxed multiply-add may round once or twice, depending on the engine.\nModules containing relaxed instructions require relaxed-SIMD support at load\ntime; select a compatible build with WebAssembly.validate.\nStable in Rust since 1.82."
 
 # ──── Traits ────
 #

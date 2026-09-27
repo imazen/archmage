@@ -798,9 +798,8 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
 
             /// Multiply-add: `a * b + c`.
             ///
-            /// Fused with a single rounding on backends with hardware FMA
-            /// (x86 v3/v4, NEON); unfused `mul` + `add` (two roundings) on
-            /// the scalar and WASM backends — lanes can differ by 1 ULP.
+            /// Fused except where relaxed WASM engines choose two roundings. Uses software FMA
+            /// where hardware fusion is unavailable. NaN payload/sign are unspecified.
             fn mul_add(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
 
             /// Multiply-sub: `a * b - c`. Same fusion contract as
@@ -1988,14 +1987,24 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
 
     let mul_add_lanes = || -> String {
         let items: Vec<String> = (0..lanes)
-            .map(|i| format!("a[{i}] * b[{i}] + c[{i}]"))
+            .map(|i| {
+                format!(
+                    "crate::nostd_math::{}(a[{i}], b[{i}], c[{i}])",
+                    if elem == "f32" { "fmaf" } else { "fma" }
+                )
+            })
             .collect();
         format!("[{}]", items.join(", "))
     };
 
     let mul_sub_lanes = || -> String {
         let items: Vec<String> = (0..lanes)
-            .map(|i| format!("a[{i}] * b[{i}] - c[{i}]"))
+            .map(|i| {
+                format!(
+                    "crate::nostd_math::{}(a[{i}], b[{i}], -c[{i}])",
+                    if elem == "f32" { "fmaf" } else { "fma" }
+                )
+            })
             .collect();
         format!("[{}]", items.join(", "))
     };
@@ -3350,7 +3359,7 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
 
             #[inline(always)]
             fn mul_add(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
-                // WASM has no native FMA
+                // Share the native-width fused implementation.
                 [{mul_add_lanes}]
             }}
 
@@ -3444,10 +3453,10 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
         ceil = unary_op(&format!("{wp}_ceil")),
         round = unary_op(&format!("{wp}_nearest")),
         mul_add_lanes = (0..sub_count)
-            .map(|i| format!("{wp}_add({wp}_mul(a[{i}], b[{i}]), c[{i}])"))
+            .map(|i| format!("crate::wasm_fma::{wp}(self, a[{i}], b[{i}], c[{i}])"))
             .collect::<Vec<_>>().join(", "),
         mul_sub_lanes = (0..sub_count)
-            .map(|i| format!("{wp}_sub({wp}_mul(a[{i}], b[{i}]), c[{i}])"))
+            .map(|i| format!("crate::wasm_fma::{wp}(self, a[{i}], b[{i}], {wp}_neg(c[{i}]))"))
             .collect::<Vec<_>>().join(", "),
         eq = binary_op(&format!("{wp}_eq")),
         ne = binary_op(&format!("{wp}_ne")),
@@ -3629,9 +3638,9 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn round(self, a: v128) -> v128 {{ {wp}_nearest(a) }}
             #[inline(always)]
-            fn mul_add(self, a: v128, b: v128, c: v128) -> v128 {{ {wp}_add({wp}_mul(a, b), c) }}
+            fn mul_add(self, a: v128, b: v128, c: v128) -> v128 {{ crate::wasm_fma::{wp}(self, a, b, c) }}
             #[inline(always)]
-            fn mul_sub(self, a: v128, b: v128, c: v128) -> v128 {{ {wp}_sub({wp}_mul(a, b), c) }}
+            fn mul_sub(self, a: v128, b: v128, c: v128) -> v128 {{ crate::wasm_fma::{wp}(self, a, b, {wp}_neg(c)) }}
             #[inline(always)]
             fn simd_eq(self, a: v128, b: v128) -> v128 {{ {wp}_eq(a, b) }}
             #[inline(always)]

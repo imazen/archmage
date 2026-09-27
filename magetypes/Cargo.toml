@@ -41,6 +41,8 @@ archmage = { version = "0.9.29", path = "..", default-features = false }
 # `core::arch` intrinsics above the crate MSRV — gates the aarch64 NEON-f16
 # hardware path (`vcvt_*`, stable since 1.94) without raising the 1.89 floor.
 # See `simd::generic::convert_f16` and `MSRV.md`.
+# Correctly rounded f64 software FMA for scalar and strict WASM, including no_std.
+libm = { version = "0.2.16", default-features = false }
 rustversion = "1.0.23"
 
 # proptest and zenbench don't support WASM; trybuild/macrotest require host execution

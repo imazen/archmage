@@ -88,9 +88,8 @@ pub trait F32x16Backend: SimdToken + Sealed + Copy + 'static {
 
     /// Multiply-add: `a * b + c`.
     ///
-    /// Fused with a single rounding on backends with hardware FMA
-    /// (x86 v3/v4, NEON); unfused `mul` + `add` (two roundings) on
-    /// the scalar and WASM backends — lanes can differ by 1 ULP.
+    /// Fused with one rounding on every backend. Uses software FMA
+    /// where hardware fusion is unavailable. NaN payload/sign are unspecified.
     fn mul_add(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
 
     /// Multiply-sub: `a * b - c`. Same fusion contract as

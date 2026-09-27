@@ -380,6 +380,18 @@ jobs:
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
         run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1
 
+      - name: Test relaxed WASM arithmetic
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128,+relaxed-simd"
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
+        run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --test fused_arithmetic --test doc_examples --test scalar_parity
+
+      - name: Test relaxed WASM arithmetic without host FMA
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128,+relaxed-simd"
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime -W relaxed-simd-deterministic=n -C cranelift-has-fma=false --env ARCHMAGE_EXPECT_RELAXED_FUSION=no"
+        run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --test fused_arithmetic --test doc_examples --test scalar_parity
+
       - name: Run arch exercise (WASM)
         if: always()
         env:

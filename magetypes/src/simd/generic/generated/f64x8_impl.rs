@@ -291,10 +291,12 @@ impl<T: F64x8Backend> f64x8<T> {
 
     /// Multiply-add: `self * a + b`.
     ///
-    /// Fused with a single rounding on backends with hardware FMA
-    /// (x86 v3/v4, NEON). The scalar and WASM backends compute an
-    /// unfused `mul` + `add` (two roundings), so lanes can differ
-    /// from the fused backends by 1 ULP.
+    /// Fused with one rounding, including scalar and strict WASM software
+    /// fallbacks. Builds with `relaxed-simd` use the engine's native madd
+    /// directly, which may round twice on non-fusing engines.
+    /// NaN payload/sign are unspecified.
+    /// This can cost more than separate multiplication and addition on
+    /// platforms without hardware FMA. Use `self * a + b` for two roundings.
     #[inline(always)]
     pub fn mul_add(self, a: Self, b: Self) -> Self {
         Self(T::mul_add(self.1, self.0, a.0, b.0), self.1)
@@ -302,8 +304,8 @@ impl<T: F64x8Backend> f64x8<T> {
 
     /// Multiply-sub: `self * a - b`.
     ///
-    /// Same fusion contract as [`mul_add`](Self::mul_add): fused on
-    /// x86 v3/v4 and NEON, unfused (two roundings) on scalar and WASM.
+    /// Same rounding contract as [`mul_add`](Self::mul_add),
+    /// computed as `self.mul_add(a, -b)`.
     #[inline(always)]
     pub fn mul_sub(self, a: Self, b: Self) -> Self {
         Self(T::mul_sub(self.1, self.0, a.0, b.0), self.1)

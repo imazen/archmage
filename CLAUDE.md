@@ -1068,6 +1068,16 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+- Fixed #116: `mul_add`/`mul_sub` now fuse on scalar and strict WASM as well as
+  native SIMD. Relaxed WASM emits madd directly (user decision 2026-09-27),
+  with no probe/load/branch; engines may round twice. Exact tests cover strict,
+  fusing relaxed, forced-unfused relaxed, and NEON/QEMU configurations.
+  `tests/common/fma_expected.rs` corrects the Rust 1.98.1 WASM std oracle's
+  signed-zero discrepancy for `min_subnormal * -min_subnormal + 0`: the exact
+  negative product rounds to -0, while that std implementation returns +0.
+  Test expectations were explicitly approved on 2026-09-27.
+  Benchmark source and results: `benchmarks/fma_software_i265_2026-09-27.md`.
+
 - Fixed 2026-09-27: `#[arcane]` on `ScalarToken` emitted an invalid empty
   target-feature attribute. Scalar now keeps its signature without a feature boundary.
 - Fixed 2026-09-27: `#[magetypes]` replaced explicit `Token` argument markers
@@ -1248,7 +1258,7 @@ Found during pal.rs refactoring to use `#[arcane]` + `safe_unaligned_simd`:
 - ~~**WASM token-gated casting methods**~~: Done. Added cast_slice, cast_slice_mut, as_bytes, as_bytes_mut, from_bytes, from_bytes_owned (token-gated replacements for bytemuck, NOT actual Pod/Zeroable implementations).
 - ~~**ARM reduce_add for unsigned**~~: Done. Extended reduce_add to all integer types including unsigned.
 - ~~**Approximations (rcp, rsqrt) for ARM/WASM**~~: Done. ARM uses native vrecpe/vrsqrte, WASM uses division.
-- ~~**mul_sub for ARM/WASM**~~: Done. ARM uses vfma with negation, WASM uses mul+sub.
+- ~~**mul_sub for ARM/WASM**~~: Done. ARM uses vfma with negation; WASM uses its multiply-add helper with a negated addend (relaxed SIMD follows engine rounding).
 - ~~**Type conversions for ARM/WASM**~~: Done. Added to_i32x4, to_i32x4_round, from_i32x4, to_f32x4, to_i32x4_low.
 - ~~**shr_arithmetic for ARM/WASM**~~: Done. Added for i8x16, i16x8, i32x4.
 

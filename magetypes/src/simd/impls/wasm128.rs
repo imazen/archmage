@@ -95,11 +95,11 @@ impl F32x4Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn mul_add(self, a: v128, b: v128, c: v128) -> v128 {
-        f32x4_add(f32x4_mul(a, b), c)
+        crate::wasm_fma::f32x4(self, a, b, c)
     }
     #[inline(always)]
     fn mul_sub(self, a: v128, b: v128, c: v128) -> v128 {
-        f32x4_sub(f32x4_mul(a, b), c)
+        crate::wasm_fma::f32x4(self, a, b, f32x4_neg(c))
     }
     #[inline(always)]
     fn simd_eq(self, a: v128, b: v128) -> v128 {
@@ -307,18 +307,18 @@ impl F32x8Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn mul_add(self, a: [v128; 2], b: [v128; 2], c: [v128; 2]) -> [v128; 2] {
-        // WASM has no native FMA
+        // Share the native-width fused implementation.
         [
-            f32x4_add(f32x4_mul(a[0], b[0]), c[0]),
-            f32x4_add(f32x4_mul(a[1], b[1]), c[1]),
+            crate::wasm_fma::f32x4(self, a[0], b[0], c[0]),
+            crate::wasm_fma::f32x4(self, a[1], b[1], c[1]),
         ]
     }
 
     #[inline(always)]
     fn mul_sub(self, a: [v128; 2], b: [v128; 2], c: [v128; 2]) -> [v128; 2] {
         [
-            f32x4_sub(f32x4_mul(a[0], b[0]), c[0]),
-            f32x4_sub(f32x4_mul(a[1], b[1]), c[1]),
+            crate::wasm_fma::f32x4(self, a[0], b[0], f32x4_neg(c[0])),
+            crate::wasm_fma::f32x4(self, a[1], b[1], f32x4_neg(c[1])),
         ]
     }
 
@@ -526,11 +526,11 @@ impl F64x2Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn mul_add(self, a: v128, b: v128, c: v128) -> v128 {
-        f64x2_add(f64x2_mul(a, b), c)
+        crate::wasm_fma::f64x2(self, a, b, c)
     }
     #[inline(always)]
     fn mul_sub(self, a: v128, b: v128, c: v128) -> v128 {
-        f64x2_sub(f64x2_mul(a, b), c)
+        crate::wasm_fma::f64x2(self, a, b, f64x2_neg(c))
     }
     #[inline(always)]
     fn simd_eq(self, a: v128, b: v128) -> v128 {
@@ -706,18 +706,18 @@ impl F64x4Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn mul_add(self, a: [v128; 2], b: [v128; 2], c: [v128; 2]) -> [v128; 2] {
-        // WASM has no native FMA
+        // Share the native-width fused implementation.
         [
-            f64x2_add(f64x2_mul(a[0], b[0]), c[0]),
-            f64x2_add(f64x2_mul(a[1], b[1]), c[1]),
+            crate::wasm_fma::f64x2(self, a[0], b[0], c[0]),
+            crate::wasm_fma::f64x2(self, a[1], b[1], c[1]),
         ]
     }
 
     #[inline(always)]
     fn mul_sub(self, a: [v128; 2], b: [v128; 2], c: [v128; 2]) -> [v128; 2] {
         [
-            f64x2_sub(f64x2_mul(a[0], b[0]), c[0]),
-            f64x2_sub(f64x2_mul(a[1], b[1]), c[1]),
+            crate::wasm_fma::f64x2(self, a[0], b[0], f64x2_neg(c[0])),
+            crate::wasm_fma::f64x2(self, a[1], b[1], f64x2_neg(c[1])),
         ]
     }
 

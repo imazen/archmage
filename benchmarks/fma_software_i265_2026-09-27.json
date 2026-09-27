@@ -1,0 +1,255 @@
+{
+  "run_id": "1790527038-1532a3",
+  "timestamp": "2026-09-27T16:37:27Z",
+  "git_hash": "33b122526c79b879ed9ec1b385b48459917aa766",
+  "ci_environment": null,
+  "comparisons": [
+    {
+      "group_name": "fma",
+      "benchmarks": [
+        {
+          "name": "fma/f32_unfused_1024",
+          "summary": {
+            "n": 200,
+            "min": 370.8182751540041,
+            "max": 504.6182857142857,
+            "mean": 400.18035967329246,
+            "variance": 507.47336052363306,
+            "median": 395.76351165980793,
+            "mad": 20.552804085126866
+          },
+          "cold_start_ns": 712.0,
+          "mean_ci": {
+            "lower": 397.138698373944,
+            "median": 400.17938992399803,
+            "upper": 403.35960298938494
+          },
+          "timer_ticks_per_sample": 11392.634614449045
+        },
+        {
+          "name": "fma/f32_fused_software_1024",
+          "summary": {
+            "n": 200,
+            "min": 1086.9441340782123,
+            "max": 1281.2249208025344,
+            "mean": 1135.5815691912255,
+            "variance": 1339.0334048647499,
+            "median": 1130.1175904288984,
+            "mad": 35.55815112675905
+          },
+          "cold_start_ns": 1123.0,
+          "mean_ci": {
+            "lower": 1130.6972356300614,
+            "median": 1135.6177351819442,
+            "upper": 1140.6952456178478
+          },
+          "timer_ticks_per_sample": 32328.5877979127
+        },
+        {
+          "name": "fma/f64_unfused_1024",
+          "summary": {
+            "n": 200,
+            "min": 371.30139720558884,
+            "max": 540.1219758064516,
+            "mean": 405.5782158335907,
+            "variance": 845.1203039650195,
+            "median": 399.0072921110617,
+            "mad": 21.444492840864868
+          },
+          "cold_start_ns": 1589.0,
+          "mean_ci": {
+            "lower": 401.663330909296,
+            "median": 405.54957865701044,
+            "upper": 409.59450319764073
+          },
+          "timer_ticks_per_sample": 11546.304832012536
+        },
+        {
+          "name": "fma/f64_fused_software_1024",
+          "summary": {
+            "n": 200,
+            "min": 4845.673469387755,
+            "max": 5584.435041716329,
+            "mean": 5025.676713511369,
+            "variance": 16050.563597242566,
+            "median": 5005.162257334696,
+            "mad": 147.14213815009853
+          },
+          "cold_start_ns": 4900.0,
+          "mean_ci": {
+            "lower": 5008.517188795431,
+            "median": 5025.743069301269,
+            "upper": 5043.706552187232
+          },
+          "timer_ticks_per_sample": 143074.73393777676
+        }
+      ],
+      "analyses": [
+        [
+          "fma/f32_unfused_1024",
+          "fma/f32_fused_software_1024",
+          {
+            "baseline": {
+              "n": 196,
+              "min": 370.8182751540041,
+              "max": 482.73525377229083,
+              "mean": 399.7559415026574,
+              "variance": 458.5643404233517,
+              "median": 395.76351165980793,
+              "mad": 20.468147347835828
+            },
+            "candidate": {
+              "n": 196,
+              "min": 1086.9441340782123,
+              "max": 1266.497020262217,
+              "mean": 1133.8955185225052,
+              "variance": 1160.8388527406785,
+              "median": 1130.040243902439,
+              "mad": 35.285212656436094
+            },
+            "diff": {
+              "n": 196,
+              "min": 643.4914285714285,
+              "max": 830.6408775981524,
+              "mean": 734.1395770198482,
+              "variance": 1371.1650708005886,
+              "median": 730.9402880062016,
+              "mad": 36.000624178006255
+            },
+            "pct_change": 183.6469457490147,
+            "significant": true,
+            "cohens_d": 25.799788125641708,
+            "n_samples": 200,
+            "n_outliers": 4,
+            "ci_lower": 729.0047743658332,
+            "ci_median": 734.1164736008951,
+            "ci_upper": 739.3193612373809,
+            "drift_correlation": -0.059877758209882836,
+            "wilcoxon_p": 6.759472965330926e-34,
+            "resolution_limited": false
+          }
+        ],
+        [
+          "fma/f32_unfused_1024",
+          "fma/f64_unfused_1024",
+          {
+            "baseline": {
+              "n": 193,
+              "min": 370.8182751540041,
+              "max": 464.16577540106954,
+              "mean": 399.46802070382205,
+              "variance": 424.0742173762263,
+              "median": 395.8,
+              "mad": 20.39782547511317
+            },
+            "candidate": {
+              "n": 193,
+              "min": 371.30139720558884,
+              "max": 531.1410118406889,
+              "mean": 403.1808014103374,
+              "variance": 631.0175363926628,
+              "median": 398.3219512195122,
+              "mad": 20.45260325336806
+            },
+            "diff": {
+              "n": 193,
+              "min": -62.213316892725004,
+              "max": 79.44373284537971,
+              "mean": 3.7127807065153045,
+              "variance": 936.8084156209475,
+              "median": 3.1827515400410675,
+              "mad": 26.735861718979223
+            },
+            "pct_change": 0.9294312721137883,
+            "significant": false,
+            "cohens_d": 0.16164757062581622,
+            "n_samples": 200,
+            "n_outliers": 7,
+            "ci_lower": -0.6537417843162417,
+            "ci_median": 3.706348576343067,
+            "ci_upper": 8.096577587674894,
+            "drift_correlation": 0.024197425351209834,
+            "wilcoxon_p": 0.1637685521582173,
+            "resolution_limited": false
+          }
+        ],
+        [
+          "fma/f32_unfused_1024",
+          "fma/f64_fused_software_1024",
+          {
+            "baseline": {
+              "n": 197,
+              "min": 370.8182751540041,
+              "max": 504.6182857142857,
+              "mean": 399.87442099887085,
+              "variance": 503.6860206793996,
+              "median": 395.55555555555554,
+              "mad": 20.453564588144747
+            },
+            "candidate": {
+              "n": 197,
+              "min": 4845.673469387755,
+              "max": 5366.366962305987,
+              "mean": 5018.887899823484,
+              "variance": 13101.762119270115,
+              "median": 5002.0027100271,
+              "mad": 142.81275081300757
+            },
+            "diff": {
+              "n": 197,
+              "min": 4439.215666327569,
+              "max": 4971.422394678492,
+              "mean": 4619.0134788246105,
+              "variance": 11852.550718714034,
+              "median": 4599.976602238047,
+              "mad": 127.85858768552173
+            },
+            "pct_change": 1155.1160154946879,
+            "significant": true,
+            "cohens_d": 56.00254991061431,
+            "n_samples": 200,
+            "n_outliers": 3,
+            "ci_lower": 4604.268526813916,
+            "ci_median": 4618.917414949882,
+            "ci_upper": 4634.41959822152,
+            "drift_correlation": -0.07614213197969533,
+            "wilcoxon_p": 4.634722423947207e-34,
+            "resolution_limited": false
+          }
+        ]
+      ],
+      "completed_rounds": 200,
+      "cache_firewall": false,
+      "cache_firewall_bytes": 2097152,
+      "baseline_only": true,
+      "sort_by_speed": false,
+      "expect_sub_ns": false,
+      "cold_start": false,
+      "iterations_per_sample": 911
+    }
+  ],
+  "standalones": [],
+  "total_time": {
+    "millis": 9060
+  },
+  "gate_waits": 1,
+  "gate_wait_time": {
+    "millis": 0
+  },
+  "unreliable": false,
+  "timer_resolution_ns": 32,
+  "loop_overhead_ns": 0.1577,
+  "testbed": {
+    "cpu_model": "Intel(R) Core(TM) Ultra 7 265K",
+    "arch": "x86_64",
+    "os": "linux",
+    "logical_cores": 20,
+    "physical_cores": 20
+  },
+  "calibration": {
+    "integer_ns": 0.1854402,
+    "memory_bw_gibps": 93.86413879277201,
+    "memory_lat_ns": 7.517128
+  },
+  "provenance_note": "Harness reported colocated Git HEAD 6a2563ae; source was the unlanded jj working copy. Snapshot 33b12252 contains the measured implementation and benchmark; only documentation changed between measurement and snapshot."
+}

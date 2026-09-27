@@ -164,12 +164,29 @@ codegen review rather than silently changing a published operation here.
 
 | Example | x86 / NEON | WASM / scalar | What we fix up |
 |---|---|---|---|
-| `a.mul_add(b, -1)` where `a = 1 + 2^-23`, `b = 1 - 2^-23` | `-2^-46` (fused) | `0` (separate multiply/add) | Nothing: the existing method uses native FMA where available. |
+| `a.mul_add(b, -1)` where `a = 1 + 2^-23`, `b = 1 - 2^-23` | `-2^-46` (fused) | `-2^-46` (fused) | Software single-rounding fallback where hardware fusion is unavailable. |
 | Floating-point `reduce_add` | Association depends on backend and vector shape | Association depends on backend and vector shape | Nothing: no universal cross-backend ULP or relative-error bound. |
 
-Fused versus unfused arithmetic can disagree substantially near cancellation or
-intermediate overflow. “Within 1 ULP” is not a general cross-backend guarantee.
-Choose the arithmetic formulation according to the application's error budget.
+`mul_add` and `mul_sub` round once on native SIMD, scalar, and strict WASM.
+Relaxed WASM follows the engine's rounding choice. NaN payloads and signs remain unspecified. Separate `a * b + c` still
+rounds twice and can differ near cancellation or intermediate overflow.
+
+On relaxed WASM, magetypes emits relaxed multiply-add directly, without a
+probe, cached load, or runtime branch. A non-fusing engine may round twice. A relaxed-SIMD
+token proves instruction availability, not fusion; the
+[relaxed-SIMD specification](https://github.com/WebAssembly/relaxed-simd/blob/main/proposals/relaxed-simd/Overview.md)
+permits either rounding behavior. Modules built with relaxed SIMD still require
+an engine that supports those instructions; the arithmetic fallback does not
+make such modules loadable on older engines.
+
+V8's [x86 QFMA lowering](https://github.com/v8/v8/blob/main/src/codegen/shared-ia32-x64/macro-assembler-shared-ia32-x64.h)
+selects hardware FMA when the CPU exposes FMA3, otherwise separate multiply and
+add (source checked 2026-09-27). This choice occurs during code generation, not
+as a per-operation branch in the generated kernel. Thus relaxed-SIMD support
+alone does not imply fusion on older CPUs or VMs that hide FMA.
+
+Floating-point reductions retain backend-dependent association. Single-rounding
+multiply-add does not make an entire algorithm independent of reduction order.
 
 ## Reciprocal and reciprocal square root
 

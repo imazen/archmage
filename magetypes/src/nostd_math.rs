@@ -398,20 +398,43 @@ pub fn roundeven(x: f64) -> f64 {
     }
 }
 
-/// f32 fused multiply-add (non-fused fallback: `a * b + c`).
+/// Correctly rounded f32 fused multiply-add, including subnormals and signed zero.
 ///
-/// In a scalar no_std context there's no hardware FMA instruction to use,
-/// so this is just the unfused version. The precision difference vs true FMA
-/// is acceptable for a fallback path.
+/// The product is exact in f64 (48 significant bits, exponent range fits).
+/// TwoSum recovers the exact addition error. If the rounded sum is even and
+/// inexact, move one f64 ULP toward the exact result to round to odd. Narrowing
+/// that odd result to f32 avoids double rounding, including at underflow.
+/// All finite f32 products and residuals are normal in f64, so TwoSum cannot
+/// overflow or underflow. NaN payload and sign follow ordinary Rust semantics.
 #[inline(always)]
+#[forbid(unsafe_code)]
 pub fn fmaf(a: f32, b: f32, c: f32) -> f32 {
-    a * b + c
+    let product = f64::from(a) * f64::from(b);
+    let addend = f64::from(c);
+    let sum = product + addend;
+    if !sum.is_finite() {
+        return sum as f32;
+    }
+    let virtual_addend = sum - product;
+    let error = (product - (sum - virtual_addend)) + (addend - virtual_addend);
+    let bits = sum.to_bits();
+    if error != 0.0 && bits & 1 == 0 {
+        let odd = if (error > 0.0) == (sum > 0.0) {
+            bits + 1
+        } else {
+            bits - 1
+        };
+        f64::from_bits(odd) as f32
+    } else {
+        sum as f32
+    }
 }
 
-/// f64 fused multiply-add (non-fused fallback: `a * b + c`).
+/// Correctly rounded f64 fused multiply-add using libm's no_std implementation.
 #[inline(always)]
+#[forbid(unsafe_code)]
 pub fn fma(a: f64, b: f64, c: f64) -> f64 {
-    a * b + c
+    libm::fma(a, b, c)
 }
 
 // ============================================================================

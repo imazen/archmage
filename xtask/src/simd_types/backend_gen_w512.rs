@@ -468,9 +468,8 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
 
             /// Multiply-add: `a * b + c`.
             ///
-            /// Fused with a single rounding on backends with hardware FMA
-            /// (x86 v3/v4, NEON); unfused `mul` + `add` (two roundings) on
-            /// the scalar and WASM backends — lanes can differ by 1 ULP.
+            /// Fused with one rounding on every backend. Uses software FMA
+            /// where hardware fusion is unavailable. NaN payload/sign are unspecified.
             fn mul_add(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
 
             /// Multiply-sub: `a * b - c`. Same fusion contract as
@@ -963,6 +962,7 @@ pub(super) fn generate_w512_backend_trait(ty: &W512Type) -> String {
 
 /// Generate scalar backend implementation for a W512 float type.
 fn generate_scalar_float_impl(ty: &W512Type) -> String {
+    let fma_fn = if ty.elem == "f32" { "fmaf" } else { "fma" };
     let trait_name = ty.trait_name();
     let elem = ty.elem;
     let lanes = ty.lanes;
@@ -1079,10 +1079,10 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
             }}
 
             #[inline(always)]
-            fn mul_add(self, a: {array}, b: {array}, c: {array}) -> {array} {{ core::array::from_fn(|i| a[i] * b[i] + c[i]) }}
+            fn mul_add(self, a: {array}, b: {array}, c: {array}) -> {array} {{ core::array::from_fn(|i| crate::nostd_math::{fma_fn}(a[i], b[i], c[i])) }}
 
             #[inline(always)]
-            fn mul_sub(self, a: {array}, b: {array}, c: {array}) -> {array} {{ core::array::from_fn(|i| a[i] * b[i] - c[i]) }}
+            fn mul_sub(self, a: {array}, b: {array}, c: {array}) -> {array} {{ core::array::from_fn(|i| crate::nostd_math::{fma_fn}(a[i], b[i], -c[i])) }}
 
             #[inline(always)]
             fn simd_eq(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] == b[i] {{ {elem}::from_bits(!0{uint}) }} else {{ {zero_lit} }}) }}
