@@ -109,7 +109,12 @@ helpers and safe function pointers, byte/slice views, integer conversion, width
 assembly, and native raw interchange. x86 tests and AArch64 QEMU tests passed;
 all-feature builds passed for AArch64, WASM32, and i686. Regenerated public-API
 snapshots retain every previous public signature across x86, ARM, and WASM.
-Native AVX-512 and WASM execution are not covered by these local runs.
+Native AVX-512 and WASM execution are not covered by these local runs. The
+native raw test also passed under Miri `nightly-2026-02-03` with its required V3
+virtual CPU and SDE 10.8 Haswell; the six contextual-constructor tests passed
+under baseline Miri. The CI runner routes the native raw test to a capable CPU
+before running the remaining baseline suite; no raw assertion is removed.
+
 
 Full command output, compiler-probe results, toolchain/commit metadata, and log
 checksums are retained at `/home/lilith/data/archmage/with-token/2026-09-27/`.
