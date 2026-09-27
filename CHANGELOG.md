@@ -33,6 +33,9 @@
 
 ### Fixed
 
+- Tokenless `magetypes(rite, ...)` scalar/default fallbacks now dispatch only to covered tiers; token-taking fallback dispatch is preserved (`3aef13f0`).
+- `autoversion(use(...))` now gates vector backends using the shared tier Cargo-feature policy; plain-code autoversion and explicit gate overrides retain their behavior (`b7353c1b`).
+
 - Keep the original 34 magetypes prelude names; constructor modes and implementation modules no longer leak through its wildcard re-export (`cd6cdc40`).
 
 - Run native raw-interchange tests with V3 CPU support under Miri and SDE, preserving baseline coverage for the remaining suite (`7165ed48`).

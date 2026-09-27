@@ -397,3 +397,4 @@ test-tier-gates:
     cargo test -p archmage-macros autoversion_vector_backend_gates
     cargo test -p magetypes --test adaptive_use --test mixed_token_generics
     cargo test -p magetypes --test adaptive_use --test mixed_token_generics --features avx512
+    cargo test -p magetypes --test adaptive_use --test mixed_token_generics --no-default-features

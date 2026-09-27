@@ -185,7 +185,7 @@ not test the executing CPU. Today the four attributes divide that work as follow
 | `use` alias usable in signature | No | No | No | No; explicit generic paths can use `Token` |
 | Other type/const parameters | Preserved and forwarded | Preserved | Preserved and forwarded | Preserved |
 | Per-tier `v4(cfg(avx512))` syntax | Yes | No; only whole-function `cfg(...)` option | No tier list; whole-function `cfg(...)` option | Yes |
-| Automatic Cargo gate on default V4 | No | No automatic per-tier gate | No; configure caller/build explicitly | Yes |
+| Automatic Cargo gate on default V4 | With `use(...)`; plain-code default remains ungated | No automatic per-tier gate | No; configure caller/build explicitly | Yes |
 
 In the `rite` column, a token argument does **not** waive the caller-feature
 requirement: the function itself has `target_feature`. `arcane` is the wrapper
@@ -209,22 +209,26 @@ Inherent methods are supported. For a single method in an ordinary trait impl,
 carry `rite`'s target-feature contract, and variant-producing attributes add
 methods the trait did not declare. An inherent helper plus delegation works.
 
-### Confirmed default/gating mismatch
+### Vector backend gates (fixed 2026-09-27)
 
 On x86_64 without the `avx512` Cargo feature:
 
 ```text
-#[autoversion(use(f32xN))]             // rejected: no F32x16Backend for X64V4Token
+#[autoversion(use(f32xN))]             // accepted: default V4 now Cargo-gated
 #[autoversion(v4(cfg(avx512)), v3, neon, wasm128, scalar, use(f32xN))] // accepted
 #[magetypes(use(f32xN))]               // default V4 is Cargo-gated; still needs Token parameter
 #[rite(v4(cfg(avx512)), v3, use(f32xN))] // rejected: per-tier gates not parsed
 ```
 
-`autoversion`'s ungated V4 default suited scalar auto-vectorization: enabling
-AVX-512 compiler features does not itself require the magetypes AVX-512 backend.
-Contextual vectors expose that mismatch. Enabling `avx512` makes the first form
-compile; an explicit gated list keeps the fallback-only build working too.
-These are current limitations, not changes implemented by this review.
+`autoversion` without `use(...)` keeps its ungated V4 default: enabling AVX-512
+compiler features does not itself require a magetypes backend. With vector
+aliases, it now applies the shared tier Cargo gates to both definitions and
+dispatcher calls (`b7353c1b`). This fixes the earlier missing `F32x16Backend`
+error without `avx512`, including fixed aliases that need V4 backends too.
+Forward the consumer's `avx512` feature to magetypes to enable that backend.
+Explicit custom gates are respected; `+v4` still requests an unconditional
+variant and requires its backend to be available. Per-tier rite gate syntax
+remains unsupported.
 
 The [compile-only inventory](../tests/design-probes/macro-matrix/README.md)
 records nine accepted/rejected cases on Rust 1.98.1. Source references:
@@ -243,11 +247,10 @@ records nine accepted/rejected cases on Rust 1.98.1. Source references:
    `magetypes(rite, ...)` already substantially overlaps multi-tier `rite`.
    `autoversion` can reuse the same variants and add its dispatcher.
 
-2. **One tier/gate grammar and coherent defaults.** Add per-tier gates to `rite`
-   and decide how vector-using `autoversion` gates V4. This is the first user-visible
-   inconsistency to fix. A named/shared tier set could then be used by dispatcher,
-   helper variants, and `incant!`. Preserve existing scalar-code dispatch behavior
-   deliberately rather than silently changing every `autoversion` default.
+2. **One tier/gate grammar and coherent defaults.** Vector-using autoversion now
+   shares magetypes' gate policy while preserving plain-code defaults. Add
+   per-tier gates to `rite`; a named/shared tier set could then be used by
+   dispatcher, helper variants, and `incant!`.
 
 3. **Tokenless source signatures for generated kernels.** Ordinary `magetypes`
    can inject an internal boundary proof parameter, as `autoversion` already does.

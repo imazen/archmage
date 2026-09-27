@@ -1,6 +1,7 @@
 # Mixed token calls and generic consumers
 
-Source review: 2026-09-27, archmage baseline `24857c15`. Consumer links below
+Source review: 2026-09-27, archmage baseline `24857c15`; scalar dispatch fixed
+in `3aef13f0`. Consumer links below
 identify the pinned snapshots inspected, not a fresh fetch of downstream main.
 The [token inventory](TOKEN-AUDIT-2026-09-27.pointer.md) preserves those sources;
 zenfilters uses the separate export-audit snapshot at
@@ -44,14 +45,16 @@ fn tokenless<const ADD: bool, R: ChunkInput>(input: &[R; 8]) -> [i32; 8] {
 }
 ```
 
-**Current fallback gap:** replacing the second attribute above with
-`#[magetypes(rite, v3, neon, wasm128, scalar)]` fails on x86_64 when `legacy`
-is rite-based. Its scalar variant has no rite expansion, so ordinary `incant!`
-remains runtime dispatch and attempts to call `legacy_v3` without the required
-context (E0133). This was compiled and rejected on Rust 1.98.1. The successful
-test uses direct multi-tier rite. This is a macro consistency gap, not a reason
-to introduce user `unsafe`. A future fix should give magetypes' scalar/default
-fallbacks the same covered-tier rewrite as rite, with regression coverage.
+**Resolved fallback gap (`3aef13f0`):** replacing the second attribute above
+with `#[magetypes(rite, v3, neon, wasm128, scalar)]` now works too. Previously,
+its scalar variant bypassed rite processing, leaving runtime dispatch that
+attempted to call `legacy_v3` without the required context (E0133). Tokenless
+rite scalar/default fallbacks now use the shared covered-tier rewrite; token
+proof parameters retain their existing runtime boundary dispatch. Both forms
+are exercised by the integration test. The vector-free regression in
+[`magetypes_scalar_dispatch.rs`](../tests/magetypes_scalar_dispatch.rs) also
+checks scalar/default fallbacks, the descriptive dispatch macro, and preserved
+token-taking dispatch. No user unsafe is needed.
 
 ## Hard case 1: zenanalyze's pixel generic also selects a token-based trait
 
@@ -164,3 +167,8 @@ assembly comparisons, and compile-time changes are not measured by this test.
 The extraction passed on x86_64 with default features and with `avx512`, and
 on AArch64 under QEMU. WASM compiled with `cargo check --test`; no WASM runtime
 was available. Logs: `~/tmp/archmage-mixed-{test,platforms}.log` on the audit host.
+
+After the fallback/gating fixes, both rite spellings passed on x86_64 and
+AArch64/QEMU. The adaptive tests additionally executed forced V3/V4/V4x paths
+under SDE, and WASM compiled. Reproduce with `just test-tier-gates`; audit-host
+logs are `~/tmp/archmage-two-fixes-{checks,platforms}.log`.
