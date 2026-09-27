@@ -1974,52 +1974,47 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
     body
 }
 
+/// NEON has no `movemask`. How best to pack one sign bit per lane into an
+/// integer depends on the lane count — measured on an Apple M4 Pro, isolated
+/// (`benchmarks/neon_bitmask_apple-m4-pro_2026-09-08.md`):
+///
+/// - **16 lanes (8-bit):** weight the lanes, then a *narrow* `vpadd_u8` tree.
+///   A single `vaddv` over 16 bytes is the worst option measured (1.37x).
+/// - **8 lanes (16-bit):** weight the lanes, then one `vaddvq_u16`.
+/// - **4 lanes (32-bit):** shift each lane to 0/1, shift into position, then
+///   one `vaddvq_u32`. Handled by the caller for the 32-bit types.
+/// - **2 lanes (64-bit):** two `umov`s win; the vector setup does not pay for
+///   itself. Handled separately.
+///
+/// `vcltzq_*` ("lane < 0") is what makes the AND-with-weights form correct:
+/// it yields an all-ones lane, so `AND` selects the weight. An arithmetic
+/// shift to 0/1 cannot be ANDed with the weights — `1 & 2 == 0`.
 fn generate_neon_bitmask(ty: &IntVecType) -> String {
     let ns = ty.neon_suffix();
+    let signed_suffix = format!("s{}", ty.elem_bits);
+    let as_signed = if ty.signed {
+        "a".to_string()
+    } else {
+        format!("vreinterpretq_{signed_suffix}_{ns}(a)")
+    };
     match ty.elem_bits {
-        8 => {
-            // Extract high bit of each byte.
-            // Use vshrq_n to get sign bit, then narrow+compress.
-            // For NEON, we use a scalar-ish approach: shift right by 7, then
-            // pack down and extract.
-            formatdoc! {r#"
-                {{
-                    // Shift each byte right by 7 to isolate sign bit
-                    let bits = vshrq_n_{ns}::<7>(a);
-                    // Use polynomial evaluation to pack bits
-                    // Each byte is now 0 or 1, multiply by position powers of 2
-                    let powers: [u8; 16] = [1,2,4,8,16,32,64,128, 1,2,4,8,16,32,64,128];
-                    let pow_vec = crate::simd_storage::copy(&powers);
-                    let weighted = vmulq_u8({reinterpret}bits{rparen}, pow_vec);
-                    // Sum pairs: add adjacent bytes
-                    let pair_sum = vpaddlq_u8(weighted);
-                    let quad_sum = vpaddlq_u16(pair_sum);
-                    let oct_sum = vpaddlq_u32(quad_sum);
-                    // Extract low and high byte
-                    let lo = vgetq_lane_u64::<0>(oct_sum) as u32;
-                    let hi = vgetq_lane_u64::<1>(oct_sum) as u32;
-                    lo | (hi << 8)
-                }}"#,
-                reinterpret = if ty.signed { format!("vreinterpretq_u8_{ns}(") } else { String::new() },
-                rparen = if ty.signed { ")" } else { "" },
-            }
-        }
-        16 => {
-            let lanes = ty.lanes_per_128();
-            let items: Vec<String> = (0..lanes)
-                .map(|i| {
-                    let shift = if i == 0 { String::new() } else { format!(" << {i}") };
-                    if ty.signed {
-                        let us = &ns[1..]; // "16"
-                        format!("(vgetq_lane_u{us}::<{i}>(vreinterpretq_u{us}_{ns}(vshrq_n_{ns}::<15>(a))) as u32 & 1){shift}")
-                    } else {
-                        format!("(vgetq_lane_{ns}::<{i}>(vshrq_n_{ns}::<15>(a)) as u32 & 1){shift}")
-                    }
-                })
-                .collect();
-            items.join(" | ")
-        }
-        _ => unreachable!("bitmask for 64-bit handled separately"),
+        8 => formatdoc! {r#"
+            {{
+                let powers: [u8; 16] = [1,2,4,8,16,32,64,128, 1,2,4,8,16,32,64,128];
+                let pow_vec: uint8x16_t = crate::simd_storage::copy(&powers);
+                let weighted = vandq_u8(vcltzq_s8({as_signed}), pow_vec);
+                let s = vpadd_u8(vget_low_u8(weighted), vget_high_u8(weighted));
+                let s = vpadd_u8(s, s);
+                let s = vpadd_u8(s, s);
+                u32::from(vget_lane_u16::<0>(vreinterpret_u16_u8(s)))
+            }}"#},
+        16 => formatdoc! {r#"
+            {{
+                let powers: [u16; 8] = [1,2,4,8,16,32,64,128];
+                let pow_vec: uint16x8_t = crate::simd_storage::copy(&powers);
+                u32::from(vaddvq_u16(vandq_u16(vcltzq_s16({as_signed}), pow_vec)))
+            }}"#},
+        _ => unreachable!("bitmask for 32/64-bit handled separately"),
     }
 }
 
