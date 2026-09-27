@@ -883,7 +883,7 @@ impl u16x8<archmage::NeonToken, crate::simd::generic::Context> {
     pub fn partition_slice_mut(data: &mut [u16]) -> (&mut [[u16; 8]], &mut [u16]) {
         Self::partition_slice_mut_with_token(archmage::NeonToken::from_context(), data)
     }
-    /// Wrap a platform representation (token-gated).
+    /// Wrap a platform representation (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(neon)]
     pub fn from_repr(
@@ -941,7 +941,7 @@ impl u16x8<archmage::Wasm128Token, crate::simd::generic::Context> {
     pub fn partition_slice_mut(data: &mut [u16]) -> (&mut [[u16; 8]], &mut [u16]) {
         Self::partition_slice_mut_with_token(archmage::Wasm128Token::from_context(), data)
     }
-    /// Wrap a platform representation (token-gated).
+    /// Wrap a platform representation (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(wasm128)]
     pub fn from_repr(
@@ -999,7 +999,7 @@ impl u16x8<archmage::X64V3Token, crate::simd::generic::Context> {
     pub fn partition_slice_mut(data: &mut [u16]) -> (&mut [[u16; 8]], &mut [u16]) {
         Self::partition_slice_mut_with_token(archmage::X64V3Token::from_context(), data)
     }
-    /// Wrap a platform representation (token-gated).
+    /// Wrap a platform representation (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(v3)]
     pub fn from_repr(
@@ -1103,7 +1103,7 @@ impl u16x8<archmage::ScalarToken, crate::simd::generic::Context> {
     pub fn partition_slice_mut(data: &mut [u16]) -> (&mut [[u16; 8]], &mut [u16]) {
         Self::partition_slice_mut_with_token(archmage::ScalarToken, data)
     }
-    /// Wrap a platform representation (token-gated).
+    /// Wrap a platform representation (requires matching target features).
     #[forbid(unsafe_code)]
     #[inline(always)]
     pub fn from_repr(

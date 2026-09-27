@@ -68,26 +68,26 @@ impl<M: crate::simd::generic::ConstructorMode, T: I8x16Backend> i8x16<T, M> {
 
 #[cfg(target_arch = "aarch64")]
 impl i8x16<archmage::NeonToken, crate::simd::generic::Context> {
-    /// Create from byte array reference (token-gated).
+    /// Create from byte array reference (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(neon)]
     pub fn from_bytes(bytes: &[u8; 16]) -> Self {
         Self::from_bytes_with_token(archmage::NeonToken::from_context(), bytes)
     }
-    /// Create from owned byte array (token-gated).
+    /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(neon)]
     pub fn from_bytes_owned(bytes: [u8; 16]) -> Self {
         Self::from_bytes_owned_with_token(archmage::NeonToken::from_context(), bytes)
     }
-    /// Reinterpret a scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 16 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[archmage::rite(neon)]
     pub fn cast_slice(slice: &[i8]) -> Option<&[Self]> {
         Self::cast_slice_with_token(archmage::NeonToken::from_context(), slice)
     }
-    /// Reinterpret a mutable scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 16 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[archmage::rite(neon)]
@@ -98,26 +98,26 @@ impl i8x16<archmage::NeonToken, crate::simd::generic::Context> {
 
 #[cfg(target_arch = "wasm32")]
 impl i8x16<archmage::Wasm128Token, crate::simd::generic::Context> {
-    /// Create from byte array reference (token-gated).
+    /// Create from byte array reference (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(wasm128)]
     pub fn from_bytes(bytes: &[u8; 16]) -> Self {
         Self::from_bytes_with_token(archmage::Wasm128Token::from_context(), bytes)
     }
-    /// Create from owned byte array (token-gated).
+    /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(wasm128)]
     pub fn from_bytes_owned(bytes: [u8; 16]) -> Self {
         Self::from_bytes_owned_with_token(archmage::Wasm128Token::from_context(), bytes)
     }
-    /// Reinterpret a scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 16 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[archmage::rite(wasm128)]
     pub fn cast_slice(slice: &[i8]) -> Option<&[Self]> {
         Self::cast_slice_with_token(archmage::Wasm128Token::from_context(), slice)
     }
-    /// Reinterpret a mutable scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 16 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[archmage::rite(wasm128)]
@@ -128,26 +128,26 @@ impl i8x16<archmage::Wasm128Token, crate::simd::generic::Context> {
 
 #[cfg(target_arch = "x86_64")]
 impl i8x16<archmage::X64V3Token, crate::simd::generic::Context> {
-    /// Create from byte array reference (token-gated).
+    /// Create from byte array reference (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(v3)]
     pub fn from_bytes(bytes: &[u8; 16]) -> Self {
         Self::from_bytes_with_token(archmage::X64V3Token::from_context(), bytes)
     }
-    /// Create from owned byte array (token-gated).
+    /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(v3)]
     pub fn from_bytes_owned(bytes: [u8; 16]) -> Self {
         Self::from_bytes_owned_with_token(archmage::X64V3Token::from_context(), bytes)
     }
-    /// Reinterpret a scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 16 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[archmage::rite(v3)]
     pub fn cast_slice(slice: &[i8]) -> Option<&[Self]> {
         Self::cast_slice_with_token(archmage::X64V3Token::from_context(), slice)
     }
-    /// Reinterpret a mutable scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 16 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[archmage::rite(v3)]
@@ -182,26 +182,26 @@ impl<T: I8x16Backend> i8x16<T, crate::simd::generic::Explicit> {
 }
 
 impl i8x16<archmage::ScalarToken, crate::simd::generic::Context> {
-    /// Create from byte array reference (token-gated).
+    /// Create from byte array reference (requires matching target features).
     #[forbid(unsafe_code)]
     #[inline(always)]
     pub fn from_bytes(bytes: &[u8; 16]) -> Self {
         Self::from_bytes_with_token(archmage::ScalarToken, bytes)
     }
-    /// Create from owned byte array (token-gated).
+    /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
     #[inline(always)]
     pub fn from_bytes_owned(bytes: [u8; 16]) -> Self {
         Self::from_bytes_owned_with_token(archmage::ScalarToken, bytes)
     }
-    /// Reinterpret a scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 16 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[inline(always)]
     pub fn cast_slice(slice: &[i8]) -> Option<&[Self]> {
         Self::cast_slice_with_token(archmage::ScalarToken, slice)
     }
-    /// Reinterpret a mutable scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 16 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[inline(always)]

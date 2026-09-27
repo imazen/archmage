@@ -227,40 +227,40 @@ impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::backends::F32x4Co
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl f32x4<archmage::Avx512Fp16Token, crate::simd::generic::Context> {
-    /// Create from byte array reference (token-gated).
+    /// Create from byte array reference (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(fp16)]
     pub fn from_bytes(bytes: &[u8; 16]) -> Self {
         Self::from_bytes_with_token(archmage::Avx512Fp16Token::from_context(), bytes)
     }
-    /// Create from owned byte array (token-gated).
+    /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(fp16)]
     pub fn from_bytes_owned(bytes: [u8; 16]) -> Self {
         Self::from_bytes_owned_with_token(archmage::Avx512Fp16Token::from_context(), bytes)
     }
-    /// Reinterpret a scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[archmage::rite(fp16)]
     pub fn cast_slice(slice: &[f32]) -> Option<&[Self]> {
         Self::cast_slice_with_token(archmage::Avx512Fp16Token::from_context(), slice)
     }
-    /// Reinterpret a mutable scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[archmage::rite(fp16)]
     pub fn cast_slice_mut(slice: &mut [f32]) -> Option<&mut [Self]> {
         Self::cast_slice_mut_with_token(archmage::Avx512Fp16Token::from_context(), slice)
     }
-    /// Load 4 u8 values and convert to f32x4 (token-gated).
+    /// Load 4 u8 values and convert to f32x4 (requires matching target features).
     /// Values are in `[0.0, 255.0]`. Useful for image processing.
     #[forbid(unsafe_code)]
     #[archmage::rite(fp16)]
     pub fn from_u8(bytes: &[u8; 4]) -> Self {
         Self::from_u8_with_token(archmage::Avx512Fp16Token::from_context(), bytes)
     }
-    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors (token-gated).
+    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors (requires matching target features).
     /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
     /// Output: `(R, G, B, A)` where each is f32x4 with values in `[0.0, 255.0]`.
     #[forbid(unsafe_code)]
@@ -272,40 +272,40 @@ impl f32x4<archmage::Avx512Fp16Token, crate::simd::generic::Context> {
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl f32x4<archmage::X64V4Token, crate::simd::generic::Context> {
-    /// Create from byte array reference (token-gated).
+    /// Create from byte array reference (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(v4)]
     pub fn from_bytes(bytes: &[u8; 16]) -> Self {
         Self::from_bytes_with_token(archmage::X64V4Token::from_context(), bytes)
     }
-    /// Create from owned byte array (token-gated).
+    /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(v4)]
     pub fn from_bytes_owned(bytes: [u8; 16]) -> Self {
         Self::from_bytes_owned_with_token(archmage::X64V4Token::from_context(), bytes)
     }
-    /// Reinterpret a scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[archmage::rite(v4)]
     pub fn cast_slice(slice: &[f32]) -> Option<&[Self]> {
         Self::cast_slice_with_token(archmage::X64V4Token::from_context(), slice)
     }
-    /// Reinterpret a mutable scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[archmage::rite(v4)]
     pub fn cast_slice_mut(slice: &mut [f32]) -> Option<&mut [Self]> {
         Self::cast_slice_mut_with_token(archmage::X64V4Token::from_context(), slice)
     }
-    /// Load 4 u8 values and convert to f32x4 (token-gated).
+    /// Load 4 u8 values and convert to f32x4 (requires matching target features).
     /// Values are in `[0.0, 255.0]`. Useful for image processing.
     #[forbid(unsafe_code)]
     #[archmage::rite(v4)]
     pub fn from_u8(bytes: &[u8; 4]) -> Self {
         Self::from_u8_with_token(archmage::X64V4Token::from_context(), bytes)
     }
-    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors (token-gated).
+    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors (requires matching target features).
     /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
     /// Output: `(R, G, B, A)` where each is f32x4 with values in `[0.0, 255.0]`.
     #[forbid(unsafe_code)]
@@ -317,40 +317,40 @@ impl f32x4<archmage::X64V4Token, crate::simd::generic::Context> {
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl f32x4<archmage::X64V4xToken, crate::simd::generic::Context> {
-    /// Create from byte array reference (token-gated).
+    /// Create from byte array reference (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(v4x)]
     pub fn from_bytes(bytes: &[u8; 16]) -> Self {
         Self::from_bytes_with_token(archmage::X64V4xToken::from_context(), bytes)
     }
-    /// Create from owned byte array (token-gated).
+    /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(v4x)]
     pub fn from_bytes_owned(bytes: [u8; 16]) -> Self {
         Self::from_bytes_owned_with_token(archmage::X64V4xToken::from_context(), bytes)
     }
-    /// Reinterpret a scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[archmage::rite(v4x)]
     pub fn cast_slice(slice: &[f32]) -> Option<&[Self]> {
         Self::cast_slice_with_token(archmage::X64V4xToken::from_context(), slice)
     }
-    /// Reinterpret a mutable scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[archmage::rite(v4x)]
     pub fn cast_slice_mut(slice: &mut [f32]) -> Option<&mut [Self]> {
         Self::cast_slice_mut_with_token(archmage::X64V4xToken::from_context(), slice)
     }
-    /// Load 4 u8 values and convert to f32x4 (token-gated).
+    /// Load 4 u8 values and convert to f32x4 (requires matching target features).
     /// Values are in `[0.0, 255.0]`. Useful for image processing.
     #[forbid(unsafe_code)]
     #[archmage::rite(v4x)]
     pub fn from_u8(bytes: &[u8; 4]) -> Self {
         Self::from_u8_with_token(archmage::X64V4xToken::from_context(), bytes)
     }
-    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors (token-gated).
+    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors (requires matching target features).
     /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
     /// Output: `(R, G, B, A)` where each is f32x4 with values in `[0.0, 255.0]`.
     #[forbid(unsafe_code)]
@@ -362,40 +362,40 @@ impl f32x4<archmage::X64V4xToken, crate::simd::generic::Context> {
 
 #[cfg(target_arch = "aarch64")]
 impl f32x4<archmage::NeonToken, crate::simd::generic::Context> {
-    /// Create from byte array reference (token-gated).
+    /// Create from byte array reference (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(neon)]
     pub fn from_bytes(bytes: &[u8; 16]) -> Self {
         Self::from_bytes_with_token(archmage::NeonToken::from_context(), bytes)
     }
-    /// Create from owned byte array (token-gated).
+    /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(neon)]
     pub fn from_bytes_owned(bytes: [u8; 16]) -> Self {
         Self::from_bytes_owned_with_token(archmage::NeonToken::from_context(), bytes)
     }
-    /// Reinterpret a scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[archmage::rite(neon)]
     pub fn cast_slice(slice: &[f32]) -> Option<&[Self]> {
         Self::cast_slice_with_token(archmage::NeonToken::from_context(), slice)
     }
-    /// Reinterpret a mutable scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[archmage::rite(neon)]
     pub fn cast_slice_mut(slice: &mut [f32]) -> Option<&mut [Self]> {
         Self::cast_slice_mut_with_token(archmage::NeonToken::from_context(), slice)
     }
-    /// Load 4 u8 values and convert to f32x4 (token-gated).
+    /// Load 4 u8 values and convert to f32x4 (requires matching target features).
     /// Values are in `[0.0, 255.0]`. Useful for image processing.
     #[forbid(unsafe_code)]
     #[archmage::rite(neon)]
     pub fn from_u8(bytes: &[u8; 4]) -> Self {
         Self::from_u8_with_token(archmage::NeonToken::from_context(), bytes)
     }
-    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors (token-gated).
+    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors (requires matching target features).
     /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
     /// Output: `(R, G, B, A)` where each is f32x4 with values in `[0.0, 255.0]`.
     #[forbid(unsafe_code)]
@@ -407,40 +407,40 @@ impl f32x4<archmage::NeonToken, crate::simd::generic::Context> {
 
 #[cfg(target_arch = "wasm32")]
 impl f32x4<archmage::Wasm128Token, crate::simd::generic::Context> {
-    /// Create from byte array reference (token-gated).
+    /// Create from byte array reference (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(wasm128)]
     pub fn from_bytes(bytes: &[u8; 16]) -> Self {
         Self::from_bytes_with_token(archmage::Wasm128Token::from_context(), bytes)
     }
-    /// Create from owned byte array (token-gated).
+    /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(wasm128)]
     pub fn from_bytes_owned(bytes: [u8; 16]) -> Self {
         Self::from_bytes_owned_with_token(archmage::Wasm128Token::from_context(), bytes)
     }
-    /// Reinterpret a scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[archmage::rite(wasm128)]
     pub fn cast_slice(slice: &[f32]) -> Option<&[Self]> {
         Self::cast_slice_with_token(archmage::Wasm128Token::from_context(), slice)
     }
-    /// Reinterpret a mutable scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[archmage::rite(wasm128)]
     pub fn cast_slice_mut(slice: &mut [f32]) -> Option<&mut [Self]> {
         Self::cast_slice_mut_with_token(archmage::Wasm128Token::from_context(), slice)
     }
-    /// Load 4 u8 values and convert to f32x4 (token-gated).
+    /// Load 4 u8 values and convert to f32x4 (requires matching target features).
     /// Values are in `[0.0, 255.0]`. Useful for image processing.
     #[forbid(unsafe_code)]
     #[archmage::rite(wasm128)]
     pub fn from_u8(bytes: &[u8; 4]) -> Self {
         Self::from_u8_with_token(archmage::Wasm128Token::from_context(), bytes)
     }
-    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors (token-gated).
+    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors (requires matching target features).
     /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
     /// Output: `(R, G, B, A)` where each is f32x4 with values in `[0.0, 255.0]`.
     #[forbid(unsafe_code)]
@@ -452,40 +452,40 @@ impl f32x4<archmage::Wasm128Token, crate::simd::generic::Context> {
 
 #[cfg(target_arch = "x86_64")]
 impl f32x4<archmage::X64V3Token, crate::simd::generic::Context> {
-    /// Create from byte array reference (token-gated).
+    /// Create from byte array reference (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(v3)]
     pub fn from_bytes(bytes: &[u8; 16]) -> Self {
         Self::from_bytes_with_token(archmage::X64V3Token::from_context(), bytes)
     }
-    /// Create from owned byte array (token-gated).
+    /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(v3)]
     pub fn from_bytes_owned(bytes: [u8; 16]) -> Self {
         Self::from_bytes_owned_with_token(archmage::X64V3Token::from_context(), bytes)
     }
-    /// Reinterpret a scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[archmage::rite(v3)]
     pub fn cast_slice(slice: &[f32]) -> Option<&[Self]> {
         Self::cast_slice_with_token(archmage::X64V3Token::from_context(), slice)
     }
-    /// Reinterpret a mutable scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[archmage::rite(v3)]
     pub fn cast_slice_mut(slice: &mut [f32]) -> Option<&mut [Self]> {
         Self::cast_slice_mut_with_token(archmage::X64V3Token::from_context(), slice)
     }
-    /// Load 4 u8 values and convert to f32x4 (token-gated).
+    /// Load 4 u8 values and convert to f32x4 (requires matching target features).
     /// Values are in `[0.0, 255.0]`. Useful for image processing.
     #[forbid(unsafe_code)]
     #[archmage::rite(v3)]
     pub fn from_u8(bytes: &[u8; 4]) -> Self {
         Self::from_u8_with_token(archmage::X64V3Token::from_context(), bytes)
     }
-    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors (token-gated).
+    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors (requires matching target features).
     /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
     /// Output: `(R, G, B, A)` where each is f32x4 with values in `[0.0, 255.0]`.
     #[forbid(unsafe_code)]
@@ -534,40 +534,40 @@ impl<T: F32x4Backend> f32x4<T, crate::simd::generic::Explicit> {
 }
 
 impl f32x4<archmage::ScalarToken, crate::simd::generic::Context> {
-    /// Create from byte array reference (token-gated).
+    /// Create from byte array reference (requires matching target features).
     #[forbid(unsafe_code)]
     #[inline(always)]
     pub fn from_bytes(bytes: &[u8; 16]) -> Self {
         Self::from_bytes_with_token(archmage::ScalarToken, bytes)
     }
-    /// Create from owned byte array (token-gated).
+    /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
     #[inline(always)]
     pub fn from_bytes_owned(bytes: [u8; 16]) -> Self {
         Self::from_bytes_owned_with_token(archmage::ScalarToken, bytes)
     }
-    /// Reinterpret a scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[inline(always)]
     pub fn cast_slice(slice: &[f32]) -> Option<&[Self]> {
         Self::cast_slice_with_token(archmage::ScalarToken, slice)
     }
-    /// Reinterpret a mutable scalar slice as a SIMD vector slice (token-gated).
+    /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[forbid(unsafe_code)]
     #[inline(always)]
     pub fn cast_slice_mut(slice: &mut [f32]) -> Option<&mut [Self]> {
         Self::cast_slice_mut_with_token(archmage::ScalarToken, slice)
     }
-    /// Load 4 u8 values and convert to f32x4 (token-gated).
+    /// Load 4 u8 values and convert to f32x4 (requires matching target features).
     /// Values are in `[0.0, 255.0]`. Useful for image processing.
     #[forbid(unsafe_code)]
     #[inline(always)]
     pub fn from_u8(bytes: &[u8; 4]) -> Self {
         Self::from_u8_with_token(archmage::ScalarToken, bytes)
     }
-    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors (token-gated).
+    /// Load 4 RGBA u8 pixels and deinterleave to 4 f32x4 channel vectors (requires matching target features).
     /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
     /// Output: `(R, G, B, A)` where each is f32x4 with values in `[0.0, 255.0]`.
     #[forbid(unsafe_code)]

@@ -210,7 +210,8 @@ pub(super) fn generate(source: &str, constructor_names: &[String]) -> String {
                     .filter(|a| a.path().is_ident("doc"))
                     .cloned()
                     .collect();
-                let docs = attributes(&docs);
+                let docs = attributes(&docs)
+                    .replace("(token-gated)", "(requires matching target features)");
                 let proof = if tier.is_empty() {
                     token_path.clone()
                 } else {

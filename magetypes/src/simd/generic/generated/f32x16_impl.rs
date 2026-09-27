@@ -1025,7 +1025,7 @@ impl f32x16<archmage::X64V4Token, crate::simd::generic::Context> {
     pub fn partition_slice_mut(data: &mut [f32]) -> (&mut [[f32; 16]], &mut [f32]) {
         Self::partition_slice_mut_with_token(archmage::X64V4Token::from_context(), data)
     }
-    /// Wrap a platform representation (token-gated).
+    /// Wrap a platform representation (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(v4)]
     pub fn from_repr(
@@ -1105,7 +1105,7 @@ impl f32x16<archmage::X64V4xToken, crate::simd::generic::Context> {
     pub fn partition_slice_mut(data: &mut [f32]) -> (&mut [[f32; 16]], &mut [f32]) {
         Self::partition_slice_mut_with_token(archmage::X64V4xToken::from_context(), data)
     }
-    /// Wrap a platform representation (token-gated).
+    /// Wrap a platform representation (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(v4x)]
     pub fn from_repr(
@@ -1187,7 +1187,7 @@ impl f32x16<archmage::NeonToken, crate::simd::generic::Context> {
     pub fn partition_slice_mut(data: &mut [f32]) -> (&mut [[f32; 16]], &mut [f32]) {
         Self::partition_slice_mut_with_token(archmage::NeonToken::from_context(), data)
     }
-    /// Wrap a platform representation (token-gated).
+    /// Wrap a platform representation (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(neon)]
     pub fn from_repr(
@@ -1267,7 +1267,7 @@ impl f32x16<archmage::Wasm128Token, crate::simd::generic::Context> {
     pub fn partition_slice_mut(data: &mut [f32]) -> (&mut [[f32; 16]], &mut [f32]) {
         Self::partition_slice_mut_with_token(archmage::Wasm128Token::from_context(), data)
     }
-    /// Wrap a platform representation (token-gated).
+    /// Wrap a platform representation (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(wasm128)]
     pub fn from_repr(
@@ -1349,7 +1349,7 @@ impl f32x16<archmage::X64V3Token, crate::simd::generic::Context> {
     pub fn partition_slice_mut(data: &mut [f32]) -> (&mut [[f32; 16]], &mut [f32]) {
         Self::partition_slice_mut_with_token(archmage::X64V3Token::from_context(), data)
     }
-    /// Wrap a platform representation (token-gated).
+    /// Wrap a platform representation (requires matching target features).
     #[forbid(unsafe_code)]
     #[archmage::rite(v3)]
     pub fn from_repr(
@@ -1493,7 +1493,7 @@ impl f32x16<archmage::ScalarToken, crate::simd::generic::Context> {
     pub fn partition_slice_mut(data: &mut [f32]) -> (&mut [[f32; 16]], &mut [f32]) {
         Self::partition_slice_mut_with_token(archmage::ScalarToken, data)
     }
-    /// Wrap a platform representation (token-gated).
+    /// Wrap a platform representation (requires matching target features).
     #[forbid(unsafe_code)]
     #[inline(always)]
     pub fn from_repr(

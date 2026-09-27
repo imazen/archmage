@@ -4,8 +4,7 @@ use super::f32x16;
 impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::generic::F32x8FromHalves> f32x8<T, M> {
     /// Combine two `f32x4<T, M>` halves into one `f32x8<T, M>`.
     ///
-    /// The token is load-bearing on x86 (proves AVX); a no-op on other
-    /// tiers but kept in the signature for uniform use.
+    /// The wider backend determines the required CPU features.
     #[inline(always)]
     pub fn from_halves(token: T, lo: f32x4<T, M>, hi: f32x4<T, M>) -> Self {
         Self::from_repr_unchecked(

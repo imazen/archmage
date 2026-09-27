@@ -6,8 +6,7 @@ impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::generic::F32x8Fro
 {
     /// Combine two `f32x4<T, M>` halves into one `f32x8<T, M>`.
     ///
-    /// The token is load-bearing on x86 (proves AVX); a no-op on other
-    /// tiers but kept in the signature for uniform use.
+    /// The wider backend determines the required CPU features.
     #[inline(always)]
     pub(crate) fn from_halves_with_token(token: T, lo: f32x4<T, M>, hi: f32x4<T, M>) -> Self {
         Self::from_repr_unchecked(
@@ -179,8 +178,7 @@ impl f32x16<archmage::ScalarToken, crate::simd::generic::Context> {
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl f32x8<archmage::Avx512Fp16Token, crate::simd::generic::Context> {
     /// Combine two `f32x4<T, M>` halves into one `f32x8<T, M>`.
-    /// The token is load-bearing on x86 (proves AVX); a no-op on other
-    /// tiers but kept in the signature for uniform use.
+    /// The wider backend determines the required CPU features.
     #[forbid(unsafe_code)]
     #[archmage::rite(fp16)]
     pub fn from_halves(
@@ -194,8 +192,7 @@ impl f32x8<archmage::Avx512Fp16Token, crate::simd::generic::Context> {
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl f32x8<archmage::X64V4Token, crate::simd::generic::Context> {
     /// Combine two `f32x4<T, M>` halves into one `f32x8<T, M>`.
-    /// The token is load-bearing on x86 (proves AVX); a no-op on other
-    /// tiers but kept in the signature for uniform use.
+    /// The wider backend determines the required CPU features.
     #[forbid(unsafe_code)]
     #[archmage::rite(v4)]
     pub fn from_halves(
@@ -209,8 +206,7 @@ impl f32x8<archmage::X64V4Token, crate::simd::generic::Context> {
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 impl f32x8<archmage::X64V4xToken, crate::simd::generic::Context> {
     /// Combine two `f32x4<T, M>` halves into one `f32x8<T, M>`.
-    /// The token is load-bearing on x86 (proves AVX); a no-op on other
-    /// tiers but kept in the signature for uniform use.
+    /// The wider backend determines the required CPU features.
     #[forbid(unsafe_code)]
     #[archmage::rite(v4x)]
     pub fn from_halves(
@@ -224,8 +220,7 @@ impl f32x8<archmage::X64V4xToken, crate::simd::generic::Context> {
 #[cfg(target_arch = "aarch64")]
 impl f32x8<archmage::NeonToken, crate::simd::generic::Context> {
     /// Combine two `f32x4<T, M>` halves into one `f32x8<T, M>`.
-    /// The token is load-bearing on x86 (proves AVX); a no-op on other
-    /// tiers but kept in the signature for uniform use.
+    /// The wider backend determines the required CPU features.
     #[forbid(unsafe_code)]
     #[archmage::rite(neon)]
     pub fn from_halves(
@@ -239,8 +234,7 @@ impl f32x8<archmage::NeonToken, crate::simd::generic::Context> {
 #[cfg(target_arch = "wasm32")]
 impl f32x8<archmage::Wasm128Token, crate::simd::generic::Context> {
     /// Combine two `f32x4<T, M>` halves into one `f32x8<T, M>`.
-    /// The token is load-bearing on x86 (proves AVX); a no-op on other
-    /// tiers but kept in the signature for uniform use.
+    /// The wider backend determines the required CPU features.
     #[forbid(unsafe_code)]
     #[archmage::rite(wasm128)]
     pub fn from_halves(
@@ -254,8 +248,7 @@ impl f32x8<archmage::Wasm128Token, crate::simd::generic::Context> {
 #[cfg(target_arch = "x86_64")]
 impl f32x8<archmage::X64V3Token, crate::simd::generic::Context> {
     /// Combine two `f32x4<T, M>` halves into one `f32x8<T, M>`.
-    /// The token is load-bearing on x86 (proves AVX); a no-op on other
-    /// tiers but kept in the signature for uniform use.
+    /// The wider backend determines the required CPU features.
     #[forbid(unsafe_code)]
     #[archmage::rite(v3)]
     pub fn from_halves(
@@ -268,8 +261,7 @@ impl f32x8<archmage::X64V3Token, crate::simd::generic::Context> {
 
 impl<T: crate::simd::generic::F32x8FromHalves> f32x8<T, crate::simd::generic::Explicit> {
     /// Combine two `f32x4<T, M>` halves into one `f32x8<T, M>`.
-    /// The token is load-bearing on x86 (proves AVX); a no-op on other
-    /// tiers but kept in the signature for uniform use.
+    /// The wider backend determines the required CPU features.
     #[inline(always)]
     pub fn from_halves(
         token: T,
@@ -282,8 +274,7 @@ impl<T: crate::simd::generic::F32x8FromHalves> f32x8<T, crate::simd::generic::Ex
 
 impl f32x8<archmage::ScalarToken, crate::simd::generic::Context> {
     /// Combine two `f32x4<T, M>` halves into one `f32x8<T, M>`.
-    /// The token is load-bearing on x86 (proves AVX); a no-op on other
-    /// tiers but kept in the signature for uniform use.
+    /// The wider backend determines the required CPU features.
     #[forbid(unsafe_code)]
     #[inline(always)]
     pub fn from_halves(

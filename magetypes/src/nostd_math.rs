@@ -770,18 +770,18 @@ mod tests {
 
     /// Test f64 across critical ranges: denorms, small, medium, large, special
     fn f64_test_values() -> impl Iterator<Item = f64> {
-        let mut values = alloc::vec::Vec::new();
-
         // Special values
-        values.push(0.0);
-        values.push(-0.0);
-        values.push(f64::NAN);
-        values.push(f64::INFINITY);
-        values.push(f64::NEG_INFINITY);
-        values.push(f64::MIN);
-        values.push(f64::MAX);
-        values.push(f64::MIN_POSITIVE);
-        values.push(f64::EPSILON);
+        let mut values = alloc::vec![
+            0.0,
+            -0.0,
+            f64::NAN,
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+            f64::MIN,
+            f64::MAX,
+            f64::MIN_POSITIVE,
+            f64::EPSILON,
+        ];
 
         // Small integers and near-integers
         for i in -1000..=1000 {
@@ -791,7 +791,7 @@ mod tests {
             values.push(f + 0.25);
             values.push(f + 0.49999999999999994);
             values.push(f + 0.5);
-            values.push(f + 0.50000000000000006);
+            values.push(f + 0.500_000_000_000_000_1);
             values.push(f + 0.75);
             values.push(f + 0.9);
             values.push(f - 0.1);

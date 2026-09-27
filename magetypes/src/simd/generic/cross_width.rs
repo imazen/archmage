@@ -89,7 +89,7 @@ pub trait F32x8FromHalves:
 {
     /// Combine two 128-bit halves into a 256-bit representation.
     ///
-    /// The generic exposure on [`f32x8`] takes a token; this trait
+    /// The generic exposure on [`crate::simd::generic::f32x8`] takes a token; this trait
     /// method takes `self` (the token) so soundness flows through every
     /// call — each impl can only be entered via a proven token.
     fn from_halves(
