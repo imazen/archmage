@@ -49,10 +49,10 @@ pub struct bypass_adversarial::BypassAdversarialProofs
 
 ## trait impls (12 types)
 
-prelude::Context: TrivialClone
-prelude::Explicit: TrivialClone
 simd::f32x1: TrivialClone
 simd::f64x1: TrivialClone
+simd::generic::Context: TrivialClone
+simd::generic::Explicit: TrivialClone
 simd::i16x1: TrivialClone
 simd::i32x1: TrivialClone
 simd::i64x1: TrivialClone

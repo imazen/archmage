@@ -434,6 +434,7 @@ pub fn generate_generic_files(registry: &crate::registry::Registry) -> BTreeMap<
     );
 
     let mut aliases = String::from("// Generated fixed-policy aliases. Do not edit.\n");
+    let mut prelude = String::from("// Generated prelude vector exports. Do not edit.\n");
     let mut local = String::from(
         "/// Vectors constructed in a matching target-feature context.\npub mod local {\n",
     );
@@ -444,6 +445,7 @@ pub fn generate_generic_files(registry: &crate::registry::Registry) -> BTreeMap<
         } else {
             ""
         };
+        prelude.push_str(&format!("{cfg}pub use crate::simd::generic::{name};\n"));
         aliases.push_str(&format!("{cfg}/// {name} vector constructed with an explicit CPU capability token.\n#[allow(non_camel_case_types)]\npub type {name}<T> = core_types::{name}<T, Explicit>;\n"));
         local.push_str(&format!("{cfg}/// {name} vector constructed in a matching target-feature context.\n#[allow(non_camel_case_types)]\npub type {name}<T> = super::core_types::{name}<T, super::Context>;\n"));
         let backend = backend_trait(ty);
@@ -467,6 +469,7 @@ pub fn generate_generic_files(registry: &crate::registry::Registry) -> BTreeMap<
         }
     }
     files.insert("generic/generated/aliases.rs".into(), aliases);
+    files.insert("generic/generated/prelude.rs".into(), prelude);
     files
 }
 
