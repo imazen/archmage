@@ -40,7 +40,11 @@ macro_rules! sse2_baseline {
 mod tests {
     #[test]
     fn generic_storage_uses_checked_helpers_before_formatting() {
-        for (file, source) in super::super::generic_gen::generate_generic_files() {
+        let registry = crate::registry::Registry::load(
+            &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../token-registry.toml"),
+        )
+        .unwrap();
+        for (file, source) in super::super::generic_gen::generate_generic_files(&registry) {
             for line in source
                 .lines()
                 .filter(|line| !line.trim_start().starts_with("//"))

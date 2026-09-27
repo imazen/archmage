@@ -17,6 +17,8 @@ p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--before', type=Path, required=True)
 p.add_argument('--after', type=Path, required=True)
 p.add_argument('--output', type=Path, required=True)
+p.add_argument('--middle', type=Path, help='Optional attribute-only candidate')
+p.add_argument('--before-local', action='store_true', help='Baseline already supports local constructors')
 p.add_argument('--runs', type=int, default=3)
 a = p.parse_args()
 a.output.mkdir(parents=True, exist_ok=False)
@@ -30,10 +32,18 @@ metadata = {'rustc': subprocess.check_output(['rustc', '-vV'], text=True),
             'cold': 'fresh Cargo target directory; filesystem cache not flushed',
             'sources': {k: str(v.resolve()) for k, v in [('before', a.before), ('after', a.after)]}}
 (a.output / 'metadata.json').write_text(json.dumps(metadata, indent=2))
+cases = [('before', a.before, False)]
+if a.before_local:
+    cases.append(('before_local', a.before, True))
+if a.middle:
+    cases.extend([('middle_explicit', a.middle, False), ('middle_local', a.middle, True)])
+cases.extend([('after_explicit', a.after, False), ('after_local', a.after, True)])
+metadata['cases'] = {label: {'source': str(source.resolve()), 'local': local} for label, source, local in cases}
+(a.output / 'metadata.json').write_text(json.dumps(metadata, indent=2))
 rows = []
 for features in ['default', 'avx512']:
     consumers = {}
-    for label, source, local in [('before', a.before, False), ('after_explicit', a.after, False), ('after_local', a.after, True)]:
+    for label, source, local in cases:
         project = a.output / f'{features}-{label}'
         (project / 'src').mkdir(parents=True)
         deps = source.resolve()
@@ -75,7 +85,7 @@ pub fn run(values: &[f32]) -> f32 {{ incant!(kernel(values), [v3, scalar]) }}
     for run in range(a.runs):
         # Rotate first position to reduce ordering effects while keeping jobs serial.
         labels = list(consumers)
-        labels = labels[run % 3:] + labels[:run % 3]
+        labels = labels[run % len(labels):] + labels[:run % len(labels)]
         for label in labels:
             project = consumers[label]
             target = project / f'target-{run}'
@@ -99,7 +109,7 @@ pub fn run(values: &[f32]) -> f32 {{ incant!(kernel(values), [v3, scalar]) }}
             print(f'END {features} {label} total={elapsed:.3f}s magetypes={times["magetypes"]:.3f}s', flush=True)
 summary = []
 for features in ['default', 'avx512']:
-    for label in ['before', 'after_explicit', 'after_local']:
+    for label, _, _ in cases:
         matches = [r for r in rows if r['features'] == features and r['label'] == label]
         summary.append(dict(features=features, label=label, **{
             key: {'median': statistics.median(r[key] for r in matches),

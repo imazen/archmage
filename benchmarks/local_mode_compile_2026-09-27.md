@@ -70,3 +70,7 @@ bounds. Feature-gating contextual constructors could reduce the surface for
 users of only the old API, but introduces a Cargo configuration requirement;
 it does not make local-mode users' builds cheaper. None of these alternatives
 has been implemented or benchmarked here.
+
+The direct-attribute and forwarding experiments were subsequently implemented
+and measured separately. See [the follow-up comparison](constructor_codegen_compile_2026-09-27.md)
+for the current generator, retained safety checks, and measured results.

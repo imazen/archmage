@@ -367,7 +367,7 @@ pub(crate) fn all_conversions() -> Vec<Conversion> {
 /// Generate all files for `magetypes/src/simd/generic/generated/`.
 ///
 /// Returns a map from relative path (e.g., `"generic/generated/f32x4_impl.rs"`) to file content.
-pub fn generate_generic_files() -> BTreeMap<String, String> {
+pub fn generate_generic_files(registry: &crate::registry::Registry) -> BTreeMap<String, String> {
     let mut files = BTreeMap::new();
     let all_types = all_simd_types();
 
@@ -463,7 +463,7 @@ pub fn generate_generic_files() -> BTreeMap<String, String> {
     names.dedup();
     for (path, source) in &mut files {
         if !path.ends_with("/mod.rs") {
-            *source = constructors::generate(source, &names);
+            *source = constructors::generate(source, &names, registry);
         }
     }
     files.insert("generic/generated/aliases.rs".into(), aliases);

@@ -659,7 +659,13 @@ impl<M: crate::simd::generic::ConstructorMode> i8x32<archmage::X64V3Token, M> {
     /// Rust requires the caller to enable the `v3` tier's features.
     /// Use an archmage `#[rite(v3)]` helper or `#[arcane]` entry point.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn from_raw(value: core::arch::x86_64::__m256i) -> Self {
         Self::new_repr(value, archmage::X64V3Token::from_context())
     }
@@ -686,9 +692,16 @@ impl<T: I8x32Backend> From<i8x32<T, crate::simd::generic::Context>>
 impl i8x32<archmage::X64V3Token, crate::simd::generic::Context> {
     /// Create from a raw `__m256i` (token-gated, zero-cost).
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn from_m256i(v: core::arch::x86_64::__m256i) -> Self {
-        Self::from_m256i_with_token(archmage::X64V3Token::from_context(), v)
+        let token = archmage::X64V3Token::from_context();
+        Self::new_repr(v, token)
     }
 }
 
@@ -705,31 +718,64 @@ impl i8x32<archmage::X64V3Token, crate::simd::generic::Explicit> {
 impl i8x32<archmage::NeonToken, crate::simd::generic::Context> {
     /// Broadcast scalar to all 32 lanes.
     #[forbid(unsafe_code)]
-    #[archmage::rite(neon)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
     pub fn splat(v: i8) -> Self {
-        Self::splat_with_token(archmage::NeonToken::from_context(), v)
+        let token = archmage::NeonToken::from_context();
+        Self::new_repr(
+            <archmage::NeonToken as I8x32Backend>::splat(token, v),
+            token,
+        )
     }
     /// All lanes zero.
     #[forbid(unsafe_code)]
-    #[archmage::rite(neon)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
     pub fn zero() -> Self {
-        Self::zero_with_token(archmage::NeonToken::from_context())
+        let token = archmage::NeonToken::from_context();
+        Self::new_repr(<archmage::NeonToken as I8x32Backend>::zero(token), token)
     }
     /// Load from a `[i8; 32]` array.
     #[forbid(unsafe_code)]
-    #[archmage::rite(neon)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
     pub fn load(data: &[i8; 32]) -> Self {
-        Self::load_with_token(archmage::NeonToken::from_context(), data)
+        let token = archmage::NeonToken::from_context();
+        Self::new_repr(
+            <archmage::NeonToken as I8x32Backend>::load(token, data),
+            token,
+        )
     }
     /// Create from array (zero-cost where possible).
     #[forbid(unsafe_code)]
-    #[archmage::rite(neon)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
     pub fn from_array(arr: [i8; 32]) -> Self {
-        Self::from_array_with_token(archmage::NeonToken::from_context(), arr)
+        let token = archmage::NeonToken::from_context();
+        Self::new_repr(
+            <archmage::NeonToken as I8x32Backend>::from_array(token, arr),
+            token,
+        )
     }
     /// Create from slice. Panics if `slice.len() < 32`.
     #[forbid(unsafe_code)]
-    #[archmage::rite(neon)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
     pub fn from_slice(slice: &[i8]) -> Self {
         Self::from_slice_with_token(archmage::NeonToken::from_context(), slice)
     }
@@ -737,7 +783,11 @@ impl i8x32<archmage::NeonToken, crate::simd::generic::Context> {
     /// Returns `(&[[i8; 32]], &[i8])` — fixed-size arrays suitable
     /// for [`load`](Self::load), plus any leftover elements.
     #[forbid(unsafe_code)]
-    #[archmage::rite(neon)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
     pub fn partition_slice(data: &[i8]) -> (&[[i8; 32]], &[i8]) {
         Self::partition_slice_with_token(archmage::NeonToken::from_context(), data)
     }
@@ -745,17 +795,26 @@ impl i8x32<archmage::NeonToken, crate::simd::generic::Context> {
     /// Returns `(&mut [[i8; 32]], &mut [i8])` — the bulk portion reinterpreted
     /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
     #[forbid(unsafe_code)]
-    #[archmage::rite(neon)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
     pub fn partition_slice_mut(data: &mut [i8]) -> (&mut [[i8; 32]], &mut [i8]) {
         Self::partition_slice_mut_with_token(archmage::NeonToken::from_context(), data)
     }
     /// Wrap a platform representation (requires matching target features).
     #[forbid(unsafe_code)]
-    #[archmage::rite(neon)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
     pub fn from_repr(
         repr: <archmage::NeonToken as crate::simd::backends::I8x32Backend>::Repr,
     ) -> Self {
-        Self::from_repr_with_token(archmage::NeonToken::from_context(), repr)
+        let token = archmage::NeonToken::from_context();
+        Self::new_repr(repr, token)
     }
 }
 
@@ -763,31 +822,64 @@ impl i8x32<archmage::NeonToken, crate::simd::generic::Context> {
 impl i8x32<archmage::Wasm128Token, crate::simd::generic::Context> {
     /// Broadcast scalar to all 32 lanes.
     #[forbid(unsafe_code)]
-    #[archmage::rite(wasm128)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
     pub fn splat(v: i8) -> Self {
-        Self::splat_with_token(archmage::Wasm128Token::from_context(), v)
+        let token = archmage::Wasm128Token::from_context();
+        Self::new_repr(
+            <archmage::Wasm128Token as I8x32Backend>::splat(token, v),
+            token,
+        )
     }
     /// All lanes zero.
     #[forbid(unsafe_code)]
-    #[archmage::rite(wasm128)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
     pub fn zero() -> Self {
-        Self::zero_with_token(archmage::Wasm128Token::from_context())
+        let token = archmage::Wasm128Token::from_context();
+        Self::new_repr(<archmage::Wasm128Token as I8x32Backend>::zero(token), token)
     }
     /// Load from a `[i8; 32]` array.
     #[forbid(unsafe_code)]
-    #[archmage::rite(wasm128)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
     pub fn load(data: &[i8; 32]) -> Self {
-        Self::load_with_token(archmage::Wasm128Token::from_context(), data)
+        let token = archmage::Wasm128Token::from_context();
+        Self::new_repr(
+            <archmage::Wasm128Token as I8x32Backend>::load(token, data),
+            token,
+        )
     }
     /// Create from array (zero-cost where possible).
     #[forbid(unsafe_code)]
-    #[archmage::rite(wasm128)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
     pub fn from_array(arr: [i8; 32]) -> Self {
-        Self::from_array_with_token(archmage::Wasm128Token::from_context(), arr)
+        let token = archmage::Wasm128Token::from_context();
+        Self::new_repr(
+            <archmage::Wasm128Token as I8x32Backend>::from_array(token, arr),
+            token,
+        )
     }
     /// Create from slice. Panics if `slice.len() < 32`.
     #[forbid(unsafe_code)]
-    #[archmage::rite(wasm128)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
     pub fn from_slice(slice: &[i8]) -> Self {
         Self::from_slice_with_token(archmage::Wasm128Token::from_context(), slice)
     }
@@ -795,7 +887,11 @@ impl i8x32<archmage::Wasm128Token, crate::simd::generic::Context> {
     /// Returns `(&[[i8; 32]], &[i8])` — fixed-size arrays suitable
     /// for [`load`](Self::load), plus any leftover elements.
     #[forbid(unsafe_code)]
-    #[archmage::rite(wasm128)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
     pub fn partition_slice(data: &[i8]) -> (&[[i8; 32]], &[i8]) {
         Self::partition_slice_with_token(archmage::Wasm128Token::from_context(), data)
     }
@@ -803,17 +899,26 @@ impl i8x32<archmage::Wasm128Token, crate::simd::generic::Context> {
     /// Returns `(&mut [[i8; 32]], &mut [i8])` — the bulk portion reinterpreted
     /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
     #[forbid(unsafe_code)]
-    #[archmage::rite(wasm128)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
     pub fn partition_slice_mut(data: &mut [i8]) -> (&mut [[i8; 32]], &mut [i8]) {
         Self::partition_slice_mut_with_token(archmage::Wasm128Token::from_context(), data)
     }
     /// Wrap a platform representation (requires matching target features).
     #[forbid(unsafe_code)]
-    #[archmage::rite(wasm128)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
     pub fn from_repr(
         repr: <archmage::Wasm128Token as crate::simd::backends::I8x32Backend>::Repr,
     ) -> Self {
-        Self::from_repr_with_token(archmage::Wasm128Token::from_context(), repr)
+        let token = archmage::Wasm128Token::from_context();
+        Self::new_repr(repr, token)
     }
 }
 
@@ -821,31 +926,74 @@ impl i8x32<archmage::Wasm128Token, crate::simd::generic::Context> {
 impl i8x32<archmage::X64V3Token, crate::simd::generic::Context> {
     /// Broadcast scalar to all 32 lanes.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn splat(v: i8) -> Self {
-        Self::splat_with_token(archmage::X64V3Token::from_context(), v)
+        let token = archmage::X64V3Token::from_context();
+        Self::new_repr(
+            <archmage::X64V3Token as I8x32Backend>::splat(token, v),
+            token,
+        )
     }
     /// All lanes zero.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn zero() -> Self {
-        Self::zero_with_token(archmage::X64V3Token::from_context())
+        let token = archmage::X64V3Token::from_context();
+        Self::new_repr(<archmage::X64V3Token as I8x32Backend>::zero(token), token)
     }
     /// Load from a `[i8; 32]` array.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn load(data: &[i8; 32]) -> Self {
-        Self::load_with_token(archmage::X64V3Token::from_context(), data)
+        let token = archmage::X64V3Token::from_context();
+        Self::new_repr(
+            <archmage::X64V3Token as I8x32Backend>::load(token, data),
+            token,
+        )
     }
     /// Create from array (zero-cost where possible).
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn from_array(arr: [i8; 32]) -> Self {
-        Self::from_array_with_token(archmage::X64V3Token::from_context(), arr)
+        let token = archmage::X64V3Token::from_context();
+        Self::new_repr(
+            <archmage::X64V3Token as I8x32Backend>::from_array(token, arr),
+            token,
+        )
     }
     /// Create from slice. Panics if `slice.len() < 32`.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn from_slice(slice: &[i8]) -> Self {
         Self::from_slice_with_token(archmage::X64V3Token::from_context(), slice)
     }
@@ -853,7 +1001,13 @@ impl i8x32<archmage::X64V3Token, crate::simd::generic::Context> {
     /// Returns `(&[[i8; 32]], &[i8])` — fixed-size arrays suitable
     /// for [`load`](Self::load), plus any leftover elements.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn partition_slice(data: &[i8]) -> (&[[i8; 32]], &[i8]) {
         Self::partition_slice_with_token(archmage::X64V3Token::from_context(), data)
     }
@@ -861,17 +1015,30 @@ impl i8x32<archmage::X64V3Token, crate::simd::generic::Context> {
     /// Returns `(&mut [[i8; 32]], &mut [i8])` — the bulk portion reinterpreted
     /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn partition_slice_mut(data: &mut [i8]) -> (&mut [[i8; 32]], &mut [i8]) {
         Self::partition_slice_mut_with_token(archmage::X64V3Token::from_context(), data)
     }
     /// Wrap a platform representation (requires matching target features).
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn from_repr(
         repr: <archmage::X64V3Token as crate::simd::backends::I8x32Backend>::Repr,
     ) -> Self {
-        Self::from_repr_with_token(archmage::X64V3Token::from_context(), repr)
+        let token = archmage::X64V3Token::from_context();
+        Self::new_repr(repr, token)
     }
 }
 
@@ -927,25 +1094,38 @@ impl i8x32<archmage::ScalarToken, crate::simd::generic::Context> {
     #[forbid(unsafe_code)]
     #[inline(always)]
     pub fn splat(v: i8) -> Self {
-        Self::splat_with_token(archmage::ScalarToken, v)
+        let token = archmage::ScalarToken;
+        Self::new_repr(
+            <archmage::ScalarToken as I8x32Backend>::splat(token, v),
+            token,
+        )
     }
     /// All lanes zero.
     #[forbid(unsafe_code)]
     #[inline(always)]
     pub fn zero() -> Self {
-        Self::zero_with_token(archmage::ScalarToken)
+        let token = archmage::ScalarToken;
+        Self::new_repr(<archmage::ScalarToken as I8x32Backend>::zero(token), token)
     }
     /// Load from a `[i8; 32]` array.
     #[forbid(unsafe_code)]
     #[inline(always)]
     pub fn load(data: &[i8; 32]) -> Self {
-        Self::load_with_token(archmage::ScalarToken, data)
+        let token = archmage::ScalarToken;
+        Self::new_repr(
+            <archmage::ScalarToken as I8x32Backend>::load(token, data),
+            token,
+        )
     }
     /// Create from array (zero-cost where possible).
     #[forbid(unsafe_code)]
     #[inline(always)]
     pub fn from_array(arr: [i8; 32]) -> Self {
-        Self::from_array_with_token(archmage::ScalarToken, arr)
+        let token = archmage::ScalarToken;
+        Self::new_repr(
+            <archmage::ScalarToken as I8x32Backend>::from_array(token, arr),
+            token,
+        )
     }
     /// Create from slice. Panics if `slice.len() < 32`.
     #[forbid(unsafe_code)]
@@ -975,6 +1155,7 @@ impl i8x32<archmage::ScalarToken, crate::simd::generic::Context> {
     pub fn from_repr(
         repr: <archmage::ScalarToken as crate::simd::backends::I8x32Backend>::Repr,
     ) -> Self {
-        Self::from_repr_with_token(archmage::ScalarToken, repr)
+        let token = archmage::ScalarToken;
+        Self::new_repr(repr, token)
     }
 }

@@ -84,7 +84,13 @@ impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::generic::F32x16Fr
 impl f32x16<archmage::X64V4Token, crate::simd::generic::Context> {
     /// Combine two `f32x8<T, M>` halves into one `f32x16<T, M>`.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v4)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+    )]
+    #[inline]
     pub fn from_halves(
         lo: f32x8<archmage::X64V4Token, crate::simd::generic::Context>,
         hi: f32x8<archmage::X64V4Token, crate::simd::generic::Context>,
@@ -98,7 +104,13 @@ impl f32x16<archmage::X64V4Token, crate::simd::generic::Context> {
 impl f32x16<archmage::X64V4xToken, crate::simd::generic::Context> {
     /// Combine two `f32x8<T, M>` halves into one `f32x16<T, M>`.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v4x)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+    )]
+    #[inline]
     pub fn from_halves(
         lo: f32x8<archmage::X64V4xToken, crate::simd::generic::Context>,
         hi: f32x8<archmage::X64V4xToken, crate::simd::generic::Context>,
@@ -112,7 +124,11 @@ impl f32x16<archmage::X64V4xToken, crate::simd::generic::Context> {
 impl f32x16<archmage::NeonToken, crate::simd::generic::Context> {
     /// Combine two `f32x8<T, M>` halves into one `f32x16<T, M>`.
     #[forbid(unsafe_code)]
-    #[archmage::rite(neon)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
     pub fn from_halves(
         lo: f32x8<archmage::NeonToken, crate::simd::generic::Context>,
         hi: f32x8<archmage::NeonToken, crate::simd::generic::Context>,
@@ -126,7 +142,11 @@ impl f32x16<archmage::NeonToken, crate::simd::generic::Context> {
 impl f32x16<archmage::Wasm128Token, crate::simd::generic::Context> {
     /// Combine two `f32x8<T, M>` halves into one `f32x16<T, M>`.
     #[forbid(unsafe_code)]
-    #[archmage::rite(wasm128)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
     pub fn from_halves(
         lo: f32x8<archmage::Wasm128Token, crate::simd::generic::Context>,
         hi: f32x8<archmage::Wasm128Token, crate::simd::generic::Context>,
@@ -140,7 +160,13 @@ impl f32x16<archmage::Wasm128Token, crate::simd::generic::Context> {
 impl f32x16<archmage::X64V3Token, crate::simd::generic::Context> {
     /// Combine two `f32x8<T, M>` halves into one `f32x16<T, M>`.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn from_halves(
         lo: f32x8<archmage::X64V3Token, crate::simd::generic::Context>,
         hi: f32x8<archmage::X64V3Token, crate::simd::generic::Context>,
@@ -180,7 +206,13 @@ impl f32x8<archmage::Avx512Fp16Token, crate::simd::generic::Context> {
     /// Combine two `f32x4<T, M>` halves into one `f32x8<T, M>`.
     /// The wider backend determines the required CPU features.
     #[forbid(unsafe_code)]
-    #[archmage::rite(fp16)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16"
+    )]
+    #[inline]
     pub fn from_halves(
         lo: f32x4<archmage::Avx512Fp16Token, crate::simd::generic::Context>,
         hi: f32x4<archmage::Avx512Fp16Token, crate::simd::generic::Context>,
@@ -194,7 +226,13 @@ impl f32x8<archmage::X64V4Token, crate::simd::generic::Context> {
     /// Combine two `f32x4<T, M>` halves into one `f32x8<T, M>`.
     /// The wider backend determines the required CPU features.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v4)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+    )]
+    #[inline]
     pub fn from_halves(
         lo: f32x4<archmage::X64V4Token, crate::simd::generic::Context>,
         hi: f32x4<archmage::X64V4Token, crate::simd::generic::Context>,
@@ -208,7 +246,13 @@ impl f32x8<archmage::X64V4xToken, crate::simd::generic::Context> {
     /// Combine two `f32x4<T, M>` halves into one `f32x8<T, M>`.
     /// The wider backend determines the required CPU features.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v4x)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+    )]
+    #[inline]
     pub fn from_halves(
         lo: f32x4<archmage::X64V4xToken, crate::simd::generic::Context>,
         hi: f32x4<archmage::X64V4xToken, crate::simd::generic::Context>,
@@ -222,7 +266,11 @@ impl f32x8<archmage::NeonToken, crate::simd::generic::Context> {
     /// Combine two `f32x4<T, M>` halves into one `f32x8<T, M>`.
     /// The wider backend determines the required CPU features.
     #[forbid(unsafe_code)]
-    #[archmage::rite(neon)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
     pub fn from_halves(
         lo: f32x4<archmage::NeonToken, crate::simd::generic::Context>,
         hi: f32x4<archmage::NeonToken, crate::simd::generic::Context>,
@@ -236,7 +284,11 @@ impl f32x8<archmage::Wasm128Token, crate::simd::generic::Context> {
     /// Combine two `f32x4<T, M>` halves into one `f32x8<T, M>`.
     /// The wider backend determines the required CPU features.
     #[forbid(unsafe_code)]
-    #[archmage::rite(wasm128)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
     pub fn from_halves(
         lo: f32x4<archmage::Wasm128Token, crate::simd::generic::Context>,
         hi: f32x4<archmage::Wasm128Token, crate::simd::generic::Context>,
@@ -250,7 +302,13 @@ impl f32x8<archmage::X64V3Token, crate::simd::generic::Context> {
     /// Combine two `f32x4<T, M>` halves into one `f32x8<T, M>`.
     /// The wider backend determines the required CPU features.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn from_halves(
         lo: f32x4<archmage::X64V3Token, crate::simd::generic::Context>,
         hi: f32x4<archmage::X64V3Token, crate::simd::generic::Context>,

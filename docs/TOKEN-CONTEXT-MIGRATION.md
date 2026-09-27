@@ -209,11 +209,16 @@ fn scale(_token: Token, input: &[f32; 8]) -> [f32; 8] {
 
 The generator derives both public constructor signatures from one token-taking
 implementation. Existing constructors keep their arguments. Context constructors
-are concrete-token inherent functions with `#[rite(tier)]` and
-`#[forbid(unsafe_code)]`; their bodies obtain the token through its checked
+are concrete-token inherent functions with registry-derived `#[target_feature]`,
+`#[inline]`, and `#[forbid(unsafe_code)]`; their bodies obtain the token through its checked
 `from_context()`. Scalar constructors use `ScalarToken` directly. The available
 tiers follow the existing backend implementations; a mode does not add backend
-capabilities that a token previously lacked.
+capabilities that a token previously lacked. Simple contextual value constructors
+call the backend directly and retain `new_repr` as the shared storage constructor.
+Multi-step loaders and memory views keep their shared token-taking helpers, as
+do explicit constructors and shared operations. The generator writes each
+algorithm once; its structural flattening pass rejects blocks and ambiguous
+backend bounds. See the [optimization measurements](../benchmarks/constructor_codegen_compile_2026-09-27.md).
 
 The fixed alias matters: adding only a defaulted mode parameter makes inferred
 `Vector::zero(token)` ambiguous (E0034). Fixing `Explicit` in the existing public

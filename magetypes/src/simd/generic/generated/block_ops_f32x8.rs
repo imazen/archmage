@@ -296,34 +296,66 @@ impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::backends::F32x8Co
 impl f32x8<archmage::Avx512Fp16Token, crate::simd::generic::Context> {
     /// Create from byte array reference (requires matching target features).
     #[forbid(unsafe_code)]
-    #[archmage::rite(fp16)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16"
+    )]
+    #[inline]
     pub fn from_bytes(bytes: &[u8; 32]) -> Self {
-        Self::from_bytes_with_token(archmage::Avx512Fp16Token::from_context(), bytes)
+        let token = archmage::Avx512Fp16Token::from_context();
+        Self::new_repr(crate::simd_storage::copy(bytes), token)
     }
     /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
-    #[archmage::rite(fp16)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16"
+    )]
+    #[inline]
     pub fn from_bytes_owned(bytes: [u8; 32]) -> Self {
-        Self::from_bytes_owned_with_token(archmage::Avx512Fp16Token::from_context(), bytes)
+        let token = archmage::Avx512Fp16Token::from_context();
+        Self::new_repr(crate::simd_storage::cast(bytes), token)
     }
     /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 8 or alignment is wrong.
     #[forbid(unsafe_code)]
-    #[archmage::rite(fp16)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16"
+    )]
+    #[inline]
     pub fn cast_slice(slice: &[f32]) -> Option<&[Self]> {
         Self::cast_slice_with_token(archmage::Avx512Fp16Token::from_context(), slice)
     }
     /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 8 or alignment is wrong.
     #[forbid(unsafe_code)]
-    #[archmage::rite(fp16)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16"
+    )]
+    #[inline]
     pub fn cast_slice_mut(slice: &mut [f32]) -> Option<&mut [Self]> {
         Self::cast_slice_mut_with_token(archmage::Avx512Fp16Token::from_context(), slice)
     }
     /// Load 8 u8 values and convert to f32x8 (requires matching target features).
     /// Values are in `[0.0, 255.0]`. Useful for image processing.
     #[forbid(unsafe_code)]
-    #[archmage::rite(fp16)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16"
+    )]
+    #[inline]
     pub fn from_u8(bytes: &[u8; 8]) -> Self {
         Self::from_u8_with_token(archmage::Avx512Fp16Token::from_context(), bytes)
     }
@@ -331,13 +363,25 @@ impl f32x8<archmage::Avx512Fp16Token, crate::simd::generic::Context> {
     /// Input: 32 bytes = 8 RGBA pixels in interleaved format.
     /// Output: `(R, G, B, A)` where each is f32x8 with values in `[0.0, 255.0]`.
     #[forbid(unsafe_code)]
-    #[archmage::rite(fp16)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16"
+    )]
+    #[inline]
     pub fn load_8_rgba_u8(rgba: &[u8; 32]) -> (Self, Self, Self, Self) {
         Self::load_8_rgba_u8_with_token(archmage::Avx512Fp16Token::from_context(), rgba)
     }
     /// Load an 8x8 f32 block from a contiguous array into 8 row vectors.
     #[forbid(unsafe_code)]
-    #[archmage::rite(fp16)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16"
+    )]
+    #[inline]
     pub fn load_8x8(block: &[f32; 64]) -> [Self; 8] {
         Self::load_8x8_with_token(archmage::Avx512Fp16Token::from_context(), block)
     }
@@ -347,34 +391,66 @@ impl f32x8<archmage::Avx512Fp16Token, crate::simd::generic::Context> {
 impl f32x8<archmage::X64V4Token, crate::simd::generic::Context> {
     /// Create from byte array reference (requires matching target features).
     #[forbid(unsafe_code)]
-    #[archmage::rite(v4)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+    )]
+    #[inline]
     pub fn from_bytes(bytes: &[u8; 32]) -> Self {
-        Self::from_bytes_with_token(archmage::X64V4Token::from_context(), bytes)
+        let token = archmage::X64V4Token::from_context();
+        Self::new_repr(crate::simd_storage::copy(bytes), token)
     }
     /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
-    #[archmage::rite(v4)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+    )]
+    #[inline]
     pub fn from_bytes_owned(bytes: [u8; 32]) -> Self {
-        Self::from_bytes_owned_with_token(archmage::X64V4Token::from_context(), bytes)
+        let token = archmage::X64V4Token::from_context();
+        Self::new_repr(crate::simd_storage::cast(bytes), token)
     }
     /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 8 or alignment is wrong.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v4)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+    )]
+    #[inline]
     pub fn cast_slice(slice: &[f32]) -> Option<&[Self]> {
         Self::cast_slice_with_token(archmage::X64V4Token::from_context(), slice)
     }
     /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 8 or alignment is wrong.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v4)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+    )]
+    #[inline]
     pub fn cast_slice_mut(slice: &mut [f32]) -> Option<&mut [Self]> {
         Self::cast_slice_mut_with_token(archmage::X64V4Token::from_context(), slice)
     }
     /// Load 8 u8 values and convert to f32x8 (requires matching target features).
     /// Values are in `[0.0, 255.0]`. Useful for image processing.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v4)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+    )]
+    #[inline]
     pub fn from_u8(bytes: &[u8; 8]) -> Self {
         Self::from_u8_with_token(archmage::X64V4Token::from_context(), bytes)
     }
@@ -382,13 +458,25 @@ impl f32x8<archmage::X64V4Token, crate::simd::generic::Context> {
     /// Input: 32 bytes = 8 RGBA pixels in interleaved format.
     /// Output: `(R, G, B, A)` where each is f32x8 with values in `[0.0, 255.0]`.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v4)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+    )]
+    #[inline]
     pub fn load_8_rgba_u8(rgba: &[u8; 32]) -> (Self, Self, Self, Self) {
         Self::load_8_rgba_u8_with_token(archmage::X64V4Token::from_context(), rgba)
     }
     /// Load an 8x8 f32 block from a contiguous array into 8 row vectors.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v4)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+    )]
+    #[inline]
     pub fn load_8x8(block: &[f32; 64]) -> [Self; 8] {
         Self::load_8x8_with_token(archmage::X64V4Token::from_context(), block)
     }
@@ -398,34 +486,66 @@ impl f32x8<archmage::X64V4Token, crate::simd::generic::Context> {
 impl f32x8<archmage::X64V4xToken, crate::simd::generic::Context> {
     /// Create from byte array reference (requires matching target features).
     #[forbid(unsafe_code)]
-    #[archmage::rite(v4x)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+    )]
+    #[inline]
     pub fn from_bytes(bytes: &[u8; 32]) -> Self {
-        Self::from_bytes_with_token(archmage::X64V4xToken::from_context(), bytes)
+        let token = archmage::X64V4xToken::from_context();
+        Self::new_repr(crate::simd_storage::copy(bytes), token)
     }
     /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
-    #[archmage::rite(v4x)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+    )]
+    #[inline]
     pub fn from_bytes_owned(bytes: [u8; 32]) -> Self {
-        Self::from_bytes_owned_with_token(archmage::X64V4xToken::from_context(), bytes)
+        let token = archmage::X64V4xToken::from_context();
+        Self::new_repr(crate::simd_storage::cast(bytes), token)
     }
     /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 8 or alignment is wrong.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v4x)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+    )]
+    #[inline]
     pub fn cast_slice(slice: &[f32]) -> Option<&[Self]> {
         Self::cast_slice_with_token(archmage::X64V4xToken::from_context(), slice)
     }
     /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 8 or alignment is wrong.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v4x)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+    )]
+    #[inline]
     pub fn cast_slice_mut(slice: &mut [f32]) -> Option<&mut [Self]> {
         Self::cast_slice_mut_with_token(archmage::X64V4xToken::from_context(), slice)
     }
     /// Load 8 u8 values and convert to f32x8 (requires matching target features).
     /// Values are in `[0.0, 255.0]`. Useful for image processing.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v4x)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+    )]
+    #[inline]
     pub fn from_u8(bytes: &[u8; 8]) -> Self {
         Self::from_u8_with_token(archmage::X64V4xToken::from_context(), bytes)
     }
@@ -433,13 +553,25 @@ impl f32x8<archmage::X64V4xToken, crate::simd::generic::Context> {
     /// Input: 32 bytes = 8 RGBA pixels in interleaved format.
     /// Output: `(R, G, B, A)` where each is f32x8 with values in `[0.0, 255.0]`.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v4x)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+    )]
+    #[inline]
     pub fn load_8_rgba_u8(rgba: &[u8; 32]) -> (Self, Self, Self, Self) {
         Self::load_8_rgba_u8_with_token(archmage::X64V4xToken::from_context(), rgba)
     }
     /// Load an 8x8 f32 block from a contiguous array into 8 row vectors.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v4x)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+    )]
+    #[inline]
     pub fn load_8x8(block: &[f32; 64]) -> [Self; 8] {
         Self::load_8x8_with_token(archmage::X64V4xToken::from_context(), block)
     }
@@ -449,34 +581,56 @@ impl f32x8<archmage::X64V4xToken, crate::simd::generic::Context> {
 impl f32x8<archmage::NeonToken, crate::simd::generic::Context> {
     /// Create from byte array reference (requires matching target features).
     #[forbid(unsafe_code)]
-    #[archmage::rite(neon)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
     pub fn from_bytes(bytes: &[u8; 32]) -> Self {
-        Self::from_bytes_with_token(archmage::NeonToken::from_context(), bytes)
+        let token = archmage::NeonToken::from_context();
+        Self::new_repr(crate::simd_storage::copy(bytes), token)
     }
     /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
-    #[archmage::rite(neon)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
     pub fn from_bytes_owned(bytes: [u8; 32]) -> Self {
-        Self::from_bytes_owned_with_token(archmage::NeonToken::from_context(), bytes)
+        let token = archmage::NeonToken::from_context();
+        Self::new_repr(crate::simd_storage::cast(bytes), token)
     }
     /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 8 or alignment is wrong.
     #[forbid(unsafe_code)]
-    #[archmage::rite(neon)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
     pub fn cast_slice(slice: &[f32]) -> Option<&[Self]> {
         Self::cast_slice_with_token(archmage::NeonToken::from_context(), slice)
     }
     /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 8 or alignment is wrong.
     #[forbid(unsafe_code)]
-    #[archmage::rite(neon)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
     pub fn cast_slice_mut(slice: &mut [f32]) -> Option<&mut [Self]> {
         Self::cast_slice_mut_with_token(archmage::NeonToken::from_context(), slice)
     }
     /// Load 8 u8 values and convert to f32x8 (requires matching target features).
     /// Values are in `[0.0, 255.0]`. Useful for image processing.
     #[forbid(unsafe_code)]
-    #[archmage::rite(neon)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
     pub fn from_u8(bytes: &[u8; 8]) -> Self {
         Self::from_u8_with_token(archmage::NeonToken::from_context(), bytes)
     }
@@ -484,13 +638,21 @@ impl f32x8<archmage::NeonToken, crate::simd::generic::Context> {
     /// Input: 32 bytes = 8 RGBA pixels in interleaved format.
     /// Output: `(R, G, B, A)` where each is f32x8 with values in `[0.0, 255.0]`.
     #[forbid(unsafe_code)]
-    #[archmage::rite(neon)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
     pub fn load_8_rgba_u8(rgba: &[u8; 32]) -> (Self, Self, Self, Self) {
         Self::load_8_rgba_u8_with_token(archmage::NeonToken::from_context(), rgba)
     }
     /// Load an 8x8 f32 block from a contiguous array into 8 row vectors.
     #[forbid(unsafe_code)]
-    #[archmage::rite(neon)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
     pub fn load_8x8(block: &[f32; 64]) -> [Self; 8] {
         Self::load_8x8_with_token(archmage::NeonToken::from_context(), block)
     }
@@ -500,34 +662,56 @@ impl f32x8<archmage::NeonToken, crate::simd::generic::Context> {
 impl f32x8<archmage::Wasm128Token, crate::simd::generic::Context> {
     /// Create from byte array reference (requires matching target features).
     #[forbid(unsafe_code)]
-    #[archmage::rite(wasm128)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
     pub fn from_bytes(bytes: &[u8; 32]) -> Self {
-        Self::from_bytes_with_token(archmage::Wasm128Token::from_context(), bytes)
+        let token = archmage::Wasm128Token::from_context();
+        Self::new_repr(crate::simd_storage::copy(bytes), token)
     }
     /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
-    #[archmage::rite(wasm128)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
     pub fn from_bytes_owned(bytes: [u8; 32]) -> Self {
-        Self::from_bytes_owned_with_token(archmage::Wasm128Token::from_context(), bytes)
+        let token = archmage::Wasm128Token::from_context();
+        Self::new_repr(crate::simd_storage::cast(bytes), token)
     }
     /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 8 or alignment is wrong.
     #[forbid(unsafe_code)]
-    #[archmage::rite(wasm128)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
     pub fn cast_slice(slice: &[f32]) -> Option<&[Self]> {
         Self::cast_slice_with_token(archmage::Wasm128Token::from_context(), slice)
     }
     /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 8 or alignment is wrong.
     #[forbid(unsafe_code)]
-    #[archmage::rite(wasm128)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
     pub fn cast_slice_mut(slice: &mut [f32]) -> Option<&mut [Self]> {
         Self::cast_slice_mut_with_token(archmage::Wasm128Token::from_context(), slice)
     }
     /// Load 8 u8 values and convert to f32x8 (requires matching target features).
     /// Values are in `[0.0, 255.0]`. Useful for image processing.
     #[forbid(unsafe_code)]
-    #[archmage::rite(wasm128)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
     pub fn from_u8(bytes: &[u8; 8]) -> Self {
         Self::from_u8_with_token(archmage::Wasm128Token::from_context(), bytes)
     }
@@ -535,13 +719,21 @@ impl f32x8<archmage::Wasm128Token, crate::simd::generic::Context> {
     /// Input: 32 bytes = 8 RGBA pixels in interleaved format.
     /// Output: `(R, G, B, A)` where each is f32x8 with values in `[0.0, 255.0]`.
     #[forbid(unsafe_code)]
-    #[archmage::rite(wasm128)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
     pub fn load_8_rgba_u8(rgba: &[u8; 32]) -> (Self, Self, Self, Self) {
         Self::load_8_rgba_u8_with_token(archmage::Wasm128Token::from_context(), rgba)
     }
     /// Load an 8x8 f32 block from a contiguous array into 8 row vectors.
     #[forbid(unsafe_code)]
-    #[archmage::rite(wasm128)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
     pub fn load_8x8(block: &[f32; 64]) -> [Self; 8] {
         Self::load_8x8_with_token(archmage::Wasm128Token::from_context(), block)
     }
@@ -551,34 +743,66 @@ impl f32x8<archmage::Wasm128Token, crate::simd::generic::Context> {
 impl f32x8<archmage::X64V3Token, crate::simd::generic::Context> {
     /// Create from byte array reference (requires matching target features).
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn from_bytes(bytes: &[u8; 32]) -> Self {
-        Self::from_bytes_with_token(archmage::X64V3Token::from_context(), bytes)
+        let token = archmage::X64V3Token::from_context();
+        Self::new_repr(crate::simd_storage::copy(bytes), token)
     }
     /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn from_bytes_owned(bytes: [u8; 32]) -> Self {
-        Self::from_bytes_owned_with_token(archmage::X64V3Token::from_context(), bytes)
+        let token = archmage::X64V3Token::from_context();
+        Self::new_repr(crate::simd_storage::cast(bytes), token)
     }
     /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 8 or alignment is wrong.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn cast_slice(slice: &[f32]) -> Option<&[Self]> {
         Self::cast_slice_with_token(archmage::X64V3Token::from_context(), slice)
     }
     /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 8 or alignment is wrong.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn cast_slice_mut(slice: &mut [f32]) -> Option<&mut [Self]> {
         Self::cast_slice_mut_with_token(archmage::X64V3Token::from_context(), slice)
     }
     /// Load 8 u8 values and convert to f32x8 (requires matching target features).
     /// Values are in `[0.0, 255.0]`. Useful for image processing.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn from_u8(bytes: &[u8; 8]) -> Self {
         Self::from_u8_with_token(archmage::X64V3Token::from_context(), bytes)
     }
@@ -586,13 +810,25 @@ impl f32x8<archmage::X64V3Token, crate::simd::generic::Context> {
     /// Input: 32 bytes = 8 RGBA pixels in interleaved format.
     /// Output: `(R, G, B, A)` where each is f32x8 with values in `[0.0, 255.0]`.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn load_8_rgba_u8(rgba: &[u8; 32]) -> (Self, Self, Self, Self) {
         Self::load_8_rgba_u8_with_token(archmage::X64V3Token::from_context(), rgba)
     }
     /// Load an 8x8 f32 block from a contiguous array into 8 row vectors.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn load_8x8(block: &[f32; 64]) -> [Self; 8] {
         Self::load_8x8_with_token(archmage::X64V3Token::from_context(), block)
     }
@@ -646,13 +882,15 @@ impl f32x8<archmage::ScalarToken, crate::simd::generic::Context> {
     #[forbid(unsafe_code)]
     #[inline(always)]
     pub fn from_bytes(bytes: &[u8; 32]) -> Self {
-        Self::from_bytes_with_token(archmage::ScalarToken, bytes)
+        let token = archmage::ScalarToken;
+        Self::new_repr(crate::simd_storage::copy(bytes), token)
     }
     /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
     #[inline(always)]
     pub fn from_bytes_owned(bytes: [u8; 32]) -> Self {
-        Self::from_bytes_owned_with_token(archmage::ScalarToken, bytes)
+        let token = archmage::ScalarToken;
+        Self::new_repr(crate::simd_storage::cast(bytes), token)
     }
     /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 8 or alignment is wrong.

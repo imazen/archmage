@@ -70,27 +70,45 @@ impl<M: crate::simd::generic::ConstructorMode, T: F64x4Backend> f64x4<T, M> {
 impl f64x4<archmage::NeonToken, crate::simd::generic::Context> {
     /// Create from byte array reference (requires matching target features).
     #[forbid(unsafe_code)]
-    #[archmage::rite(neon)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
     pub fn from_bytes(bytes: &[u8; 32]) -> Self {
-        Self::from_bytes_with_token(archmage::NeonToken::from_context(), bytes)
+        let token = archmage::NeonToken::from_context();
+        Self::new_repr(crate::simd_storage::copy(bytes), token)
     }
     /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
-    #[archmage::rite(neon)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
     pub fn from_bytes_owned(bytes: [u8; 32]) -> Self {
-        Self::from_bytes_owned_with_token(archmage::NeonToken::from_context(), bytes)
+        let token = archmage::NeonToken::from_context();
+        Self::new_repr(crate::simd_storage::cast(bytes), token)
     }
     /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[forbid(unsafe_code)]
-    #[archmage::rite(neon)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
     pub fn cast_slice(slice: &[f64]) -> Option<&[Self]> {
         Self::cast_slice_with_token(archmage::NeonToken::from_context(), slice)
     }
     /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[forbid(unsafe_code)]
-    #[archmage::rite(neon)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
     pub fn cast_slice_mut(slice: &mut [f64]) -> Option<&mut [Self]> {
         Self::cast_slice_mut_with_token(archmage::NeonToken::from_context(), slice)
     }
@@ -100,27 +118,45 @@ impl f64x4<archmage::NeonToken, crate::simd::generic::Context> {
 impl f64x4<archmage::Wasm128Token, crate::simd::generic::Context> {
     /// Create from byte array reference (requires matching target features).
     #[forbid(unsafe_code)]
-    #[archmage::rite(wasm128)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
     pub fn from_bytes(bytes: &[u8; 32]) -> Self {
-        Self::from_bytes_with_token(archmage::Wasm128Token::from_context(), bytes)
+        let token = archmage::Wasm128Token::from_context();
+        Self::new_repr(crate::simd_storage::copy(bytes), token)
     }
     /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
-    #[archmage::rite(wasm128)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
     pub fn from_bytes_owned(bytes: [u8; 32]) -> Self {
-        Self::from_bytes_owned_with_token(archmage::Wasm128Token::from_context(), bytes)
+        let token = archmage::Wasm128Token::from_context();
+        Self::new_repr(crate::simd_storage::cast(bytes), token)
     }
     /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[forbid(unsafe_code)]
-    #[archmage::rite(wasm128)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
     pub fn cast_slice(slice: &[f64]) -> Option<&[Self]> {
         Self::cast_slice_with_token(archmage::Wasm128Token::from_context(), slice)
     }
     /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[forbid(unsafe_code)]
-    #[archmage::rite(wasm128)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
     pub fn cast_slice_mut(slice: &mut [f64]) -> Option<&mut [Self]> {
         Self::cast_slice_mut_with_token(archmage::Wasm128Token::from_context(), slice)
     }
@@ -130,27 +166,53 @@ impl f64x4<archmage::Wasm128Token, crate::simd::generic::Context> {
 impl f64x4<archmage::X64V3Token, crate::simd::generic::Context> {
     /// Create from byte array reference (requires matching target features).
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn from_bytes(bytes: &[u8; 32]) -> Self {
-        Self::from_bytes_with_token(archmage::X64V3Token::from_context(), bytes)
+        let token = archmage::X64V3Token::from_context();
+        Self::new_repr(crate::simd_storage::copy(bytes), token)
     }
     /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn from_bytes_owned(bytes: [u8; 32]) -> Self {
-        Self::from_bytes_owned_with_token(archmage::X64V3Token::from_context(), bytes)
+        let token = archmage::X64V3Token::from_context();
+        Self::new_repr(crate::simd_storage::cast(bytes), token)
     }
     /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn cast_slice(slice: &[f64]) -> Option<&[Self]> {
         Self::cast_slice_with_token(archmage::X64V3Token::from_context(), slice)
     }
     /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[forbid(unsafe_code)]
-    #[archmage::rite(v3)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger target-feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
     pub fn cast_slice_mut(slice: &mut [f64]) -> Option<&mut [Self]> {
         Self::cast_slice_mut_with_token(archmage::X64V3Token::from_context(), slice)
     }
@@ -186,13 +248,15 @@ impl f64x4<archmage::ScalarToken, crate::simd::generic::Context> {
     #[forbid(unsafe_code)]
     #[inline(always)]
     pub fn from_bytes(bytes: &[u8; 32]) -> Self {
-        Self::from_bytes_with_token(archmage::ScalarToken, bytes)
+        let token = archmage::ScalarToken;
+        Self::new_repr(crate::simd_storage::copy(bytes), token)
     }
     /// Create from owned byte array (requires matching target features).
     #[forbid(unsafe_code)]
     #[inline(always)]
     pub fn from_bytes_owned(bytes: [u8; 32]) -> Self {
-        Self::from_bytes_owned_with_token(archmage::ScalarToken, bytes)
+        let token = archmage::ScalarToken;
+        Self::new_repr(crate::simd_storage::cast(bytes), token)
     }
     /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
