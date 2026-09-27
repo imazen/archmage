@@ -2,6 +2,19 @@
 
 > Safely invoke your intrinsic power, using the tokens granted to you by the CPU. Cast primitive magics faster than any mage alive.
 
+## Release discipline
+
+Experiments and draft APIs must stay off main. Only reviewed, validated
+implementation changes land on main; release-to-release diffs must contain no
+experimental APIs or measurement scaffolding. Preserve design work separately
+and review the diff against the last published release before pushing.
+
+The unpublished constructor modes and `use(...)` / adaptive-alias experiments
+are preserved at bookmark `draft/context-constructors-2026-09-27` (commit
+`3ae7b632`). They are not the compatibility baseline. The migration API is the
+single-token vector family plus additive `_t(token, ...)` methods; see
+[the migration guide](docs/TOKEN-CONSTRUCTOR-MIGRATION.md).
+
 ## CRITICAL: Every Conversation Health Check
 
 **Run these checks at the start of every conversation, even if the user doesn't ask:**
@@ -1055,18 +1068,15 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
-- **Resolved tokenless magetypes(rite) scalar dispatch (2026-09-27, `3aef13f0`):** scalar/default fallbacks now apply the shared covered-tier rewrite when the function has no token proof parameter. Previously they could attempt a stronger rite call and fail with E0133. Token-taking and ordinary boundary fallback dispatch is preserved. Regressions: `tests/magetypes_scalar_dispatch.rs` and `magetypes/tests/mixed_token_generics.rs`; explanation: `docs/MIXED-TOKEN-GENERICS.md`.
-
-- **Resolved autoversion vector Cargo gates (2026-09-27, `b7353c1b`):** `autoversion(use(...))` now uses the same tier gate resolver as magetypes for both definitions and dispatch. Default V4 is gated on the consumer's `avx512` feature; fixed aliases also follow this rule. Plain-code autoversion remains ungated, and explicit gates / `+v4` overrides retain their existing meaning. `rite` still does not parse per-tier gates. Regressions: `magetypes/tests/adaptive_use.rs` and `archmage-macros/src/expansion_tests.rs`; matrix: `docs/TIER-SELECTED-TYPES.md`.
-
-- **Shadowed scalar namespace (verified 2026-09-27):** `simd/generated/mod.rs` emits scalar-x4 `xN` aliases, but the private generated module's `scalar` re-export is shadowed by `pub mod scalar` in `simd/mod.rs`. Public `simd::scalar::f32xN` does not resolve. Contextual `use(f32xN)` selects the generic scalar-x4 backend directly and does not depend on this namespace. The public standalone x1 types are unaffected.
-
-- **Legacy `SimdTypes` V2 mapping (verified 2026-09-27):** `magetypes/src/types.rs` maps `X64V2Token::F32` and the other vector families to V3-backed generic types. The associated types have no operation bounds; the mapping does not let a V2 token construct those vectors. Do not reuse it as the contextual alias capability resolver without correcting the mismatch. `SimdTypes` selects scalar x1; contextual `use(f32xN)` selects scalar x4. These are distinct existing width policies, documented in `docs/TIER-SELECTED-TYPES.md`.
-
-- **Resolved native raw test CPU mismatch (2026-09-27):** `raw_interop::native_raw_roundtrips` requires V3 and failed at token detection under SDE Nehalem and default Miri ([CI run](https://github.com/imazen/archmage/actions/runs/36308731245)). The SDE runner now runs that binary under Haswell in its Nehalem lane; every other binary keeps its selected CPU. `cargo xtask miri` runs the raw binary first with `-Ctarget-cpu=x86-64-v3`, then the remaining suite at baseline. All raw assertions still execute. Non-x86 hosts keep their native Miri suite. `ARCHMAGE_MIRI_TOOLCHAIN` selects a dated toolchain, defaulting to `nightly`. Reproduced Nehalem failure and Haswell success with SDE 10.8; the raw test and contextual constructor tests passed under CI's Miri `nightly-2026-02-03`. Full logs: `/home/lilith/data/archmage/with-token/2026-09-27/`. Miri's [target-feature controls](https://github.com/rust-lang/miri#controlling-target-features) apply to its virtual CPU as well as compilation.
-
-- **Broad all-target Clippy on rustc 1.98.1 (2026-09-27):** `cargo clippy -p magetypes -p archmage-macros --all-features --all-targets -- -D warnings` rejects pre-existing constant-chunk loops in `magetypes/examples/{cross_platform,u32_shift_anomaly}.rs` and `magetypes/tests/archmage_doc_examples.rs`, the old token alias in `cross_platform.rs`, unused imports in `bitmask_correctness.rs`, and immediately invoked closure test expressions in `shift_const_exhaustive.rs`. Those five files are byte-identical to the pre-local-mode source snapshot. This broader lint command is separate from xtask CI's library Clippy gates. Diagnostics: `/home/lilith/tmp/archmage-local-arm-and-clippy.log`.
-- **Published jxl-encoder-simd 0.3.0 compatibility ([#117](https://github.com/imazen/archmage/issues/117))** — Reproduced on 2026-09-27 with local main patched into a fresh AArch64 resolve: 44 errors from missing NEON raw accessors/constructors and the one-argument `f32x4::from_i32x4` call in `src/dequant.rs:421`. Restoring the raw methods removes 43 errors; the published argument-count mismatch remains. Rust cannot overload inherent methods by argument count. jxl-encoder main already supplies the token at commit [`f647070b`](https://github.com/imazen/jxl-encoder/blob/f647070b6db1a83dd60c6e5caaf556a8f323b8cf/jxl-encoder-simd/src/dequant.rs#L421); a downstream release is needed for that fix to reach crates.io without breaking the current generic API. The soundness validator now permits explicitly qualified `archmage::Token::from_context()` only in safe functions whose own `#[rite(tier)]`, `#[token_target_features(tier)]`, or `#[target_feature]` attributes cover that token. It rejects unsafe functions/blocks, weaker or absent contexts, nested functions without their own proof, and macro-hidden construction. Context-only `from_raw(raw)` constructors also use `#[forbid(unsafe_code)]`; token-taking platform constructors keep their signatures.
+- Fixed: tokenless scalar/default `#[magetypes(rite, ...)]` fallbacks previously
+  retained runtime dispatch to SIMD-only rite helpers. They now rewrite covered
+  scalar calls; tokenful fallbacks retain runtime boundary dispatch. Regression:
+  `tests/magetypes_scalar_dispatch.rs`.
+- Raw interchange restoration retains native token-taking constructors and adds
+  `from_raw` with compiler-checked features plus baseline-callable `from_raw_t`.
+  `xtask/src/soundness/raw_context.rs` validates explicit token construction in
+  safe matching-feature functions. Regressions: `magetypes/tests/raw_interop.rs`
+  and `tests/soundness/raw_*.rs`.
 
 Found by macro expansion snapshot compilation tests (`tests/expand/*.expanded.rs`):
 

@@ -1,11 +1,11 @@
-//! Block and view operations for `f64x4<T, M>`.
+//! Block and view operations for `f64x4<T>`.
 //!
 //! Array/byte views and slice casting.
 
 use crate::simd::backends::F64x4Backend;
-use crate::simd::generic::core_types::f64x4;
+use crate::simd::generic::f64x4;
 
-impl<M: crate::simd::generic::ConstructorMode, T: F64x4Backend> f64x4<T, M> {
+impl<T: F64x4Backend> f64x4<T> {
     // ====== Array/Byte Views ======
     //
     // Views borrow only raw storage. Checked helpers enforce size and
@@ -37,22 +37,14 @@ impl<M: crate::simd::generic::ConstructorMode, T: F64x4Backend> f64x4<T, M> {
 
     /// Create from byte array reference (token-gated).
     #[inline(always)]
-    ///
-    /// Use an explicit CPU capability token with either constructor mode.
-    /// The caller does not need a target-feature annotation.
-    #[forbid(unsafe_code)]
-    pub fn from_bytes_with_token(token: T, bytes: &[u8; 32]) -> Self {
-        Self::new_repr(crate::simd_storage::copy(bytes), token)
+    pub fn from_bytes(token: T, bytes: &[u8; 32]) -> Self {
+        Self(crate::simd_storage::copy(bytes), token)
     }
 
     /// Create from owned byte array (token-gated).
     #[inline(always)]
-    ///
-    /// Use an explicit CPU capability token with either constructor mode.
-    /// The caller does not need a target-feature annotation.
-    #[forbid(unsafe_code)]
-    pub fn from_bytes_owned_with_token(token: T, bytes: [u8; 32]) -> Self {
-        Self::new_repr(crate::simd_storage::cast(bytes), token)
+    pub fn from_bytes_owned(token: T, bytes: [u8; 32]) -> Self {
+        Self(crate::simd_storage::cast(bytes), token)
     }
 
     // ====== Slice Casting ======
@@ -61,11 +53,7 @@ impl<M: crate::simd::generic::ConstructorMode, T: F64x4Backend> f64x4<T, M> {
     ///
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[inline(always)]
-    ///
-    /// Use an explicit CPU capability token with either constructor mode.
-    /// The caller does not need a target-feature annotation.
-    #[forbid(unsafe_code)]
-    pub fn cast_slice_with_token(token: T, slice: &[f64]) -> Option<&[Self]> {
+    pub fn cast_slice(token: T, slice: &[f64]) -> Option<&[Self]> {
         crate::simd_storage::vector_slice::<_, Self, 4>(token, slice)
     }
 
@@ -73,219 +61,34 @@ impl<M: crate::simd::generic::ConstructorMode, T: F64x4Backend> f64x4<T, M> {
     ///
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[inline(always)]
-    ///
-    /// Use an explicit CPU capability token with either constructor mode.
-    /// The caller does not need a target-feature annotation.
-    #[forbid(unsafe_code)]
-    pub fn cast_slice_mut_with_token(token: T, slice: &mut [f64]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut(token: T, slice: &mut [f64]) -> Option<&mut [Self]> {
         crate::simd_storage::vector_slice_mut::<_, Self, 4>(token, slice)
     }
 }
-
-#[cfg(target_arch = "aarch64")]
-impl f64x4<archmage::NeonToken, crate::simd::generic::Context> {
-    /// Create from byte array reference (requires matching target features).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "neon")]
-    #[inline]
-    pub fn from_bytes(bytes: &[u8; 32]) -> Self {
-        let token = archmage::NeonToken::from_context();
-        Self::new_repr(crate::simd_storage::copy(bytes), token)
-    }
-    /// Create from owned byte array (requires matching target features).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "neon")]
-    #[inline]
-    pub fn from_bytes_owned(bytes: [u8; 32]) -> Self {
-        let token = archmage::NeonToken::from_context();
-        Self::new_repr(crate::simd_storage::cast(bytes), token)
-    }
-    /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
-    /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "neon")]
-    #[inline]
-    pub fn cast_slice(slice: &[f64]) -> Option<&[Self]> {
-        Self::cast_slice_with_token(archmage::NeonToken::from_context(), slice)
-    }
-    /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
-    /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "neon")]
-    #[inline]
-    pub fn cast_slice_mut(slice: &mut [f64]) -> Option<&mut [Self]> {
-        Self::cast_slice_mut_with_token(archmage::NeonToken::from_context(), slice)
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl f64x4<archmage::Wasm128Token, crate::simd::generic::Context> {
-    /// Create from byte array reference (requires matching target features).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "simd128")]
-    #[inline]
-    pub fn from_bytes(bytes: &[u8; 32]) -> Self {
-        let token = archmage::Wasm128Token::from_context();
-        Self::new_repr(crate::simd_storage::copy(bytes), token)
-    }
-    /// Create from owned byte array (requires matching target features).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "simd128")]
-    #[inline]
-    pub fn from_bytes_owned(bytes: [u8; 32]) -> Self {
-        let token = archmage::Wasm128Token::from_context();
-        Self::new_repr(crate::simd_storage::cast(bytes), token)
-    }
-    /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
-    /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "simd128")]
-    #[inline]
-    pub fn cast_slice(slice: &[f64]) -> Option<&[Self]> {
-        Self::cast_slice_with_token(archmage::Wasm128Token::from_context(), slice)
-    }
-    /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
-    /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "simd128")]
-    #[inline]
-    pub fn cast_slice_mut(slice: &mut [f64]) -> Option<&mut [Self]> {
-        Self::cast_slice_mut_with_token(archmage::Wasm128Token::from_context(), slice)
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl f64x4<archmage::X64V3Token, crate::simd::generic::Context> {
-    /// Create from byte array reference (requires matching target features).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
-    )]
-    #[inline]
-    pub fn from_bytes(bytes: &[u8; 32]) -> Self {
-        let token = archmage::X64V3Token::from_context();
-        Self::new_repr(crate::simd_storage::copy(bytes), token)
-    }
-    /// Create from owned byte array (requires matching target features).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
-    )]
-    #[inline]
-    pub fn from_bytes_owned(bytes: [u8; 32]) -> Self {
-        let token = archmage::X64V3Token::from_context();
-        Self::new_repr(crate::simd_storage::cast(bytes), token)
-    }
-    /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
-    /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
-    )]
-    #[inline]
-    pub fn cast_slice(slice: &[f64]) -> Option<&[Self]> {
-        Self::cast_slice_with_token(archmage::X64V3Token::from_context(), slice)
-    }
-    /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
-    /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
-    )]
-    #[inline]
-    pub fn cast_slice_mut(slice: &mut [f64]) -> Option<&mut [Self]> {
-        Self::cast_slice_mut_with_token(archmage::X64V3Token::from_context(), slice)
-    }
-}
-
-impl<T: F64x4Backend> f64x4<T, crate::simd::generic::Explicit> {
-    /// Create from byte array reference (token-gated).
+// Generated explicit-token migration aliases. Do not edit.
+impl<T: F64x4Backend> f64x4<T> {
     #[inline(always)]
-    pub fn from_bytes(token: T, bytes: &[u8; 32]) -> Self {
-        Self::from_bytes_with_token(token, bytes)
-    }
-    /// Create from owned byte array (token-gated).
-    #[inline(always)]
-    pub fn from_bytes_owned(token: T, bytes: [u8; 32]) -> Self {
-        Self::from_bytes_owned_with_token(token, bytes)
-    }
-    /// Reinterpret a scalar slice as a SIMD vector slice (token-gated).
-    /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
-    #[inline(always)]
-    pub fn cast_slice(token: T, slice: &[f64]) -> Option<&[Self]> {
-        Self::cast_slice_with_token(token, slice)
-    }
-    /// Reinterpret a mutable scalar slice as a SIMD vector slice (token-gated).
-    /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
-    #[inline(always)]
-    pub fn cast_slice_mut(token: T, slice: &mut [f64]) -> Option<&mut [Self]> {
-        Self::cast_slice_mut_with_token(token, slice)
-    }
-}
-
-impl f64x4<archmage::ScalarToken, crate::simd::generic::Context> {
-    /// Create from byte array reference (requires matching target features).
+    #[doc = "Explicit-token alias of [`Self::from_bytes`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
     #[forbid(unsafe_code)]
-    #[inline(always)]
-    pub fn from_bytes(bytes: &[u8; 32]) -> Self {
-        let token = archmage::ScalarToken;
-        Self::new_repr(crate::simd_storage::copy(bytes), token)
+    pub fn from_bytes_t(token: T, bytes: &[u8; 32]) -> Self {
+        Self::from_bytes(token, bytes)
     }
-    /// Create from owned byte array (requires matching target features).
-    #[forbid(unsafe_code)]
     #[inline(always)]
-    pub fn from_bytes_owned(bytes: [u8; 32]) -> Self {
-        let token = archmage::ScalarToken;
-        Self::new_repr(crate::simd_storage::cast(bytes), token)
+    #[doc = "Explicit-token alias of [`Self::from_bytes_owned`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[forbid(unsafe_code)]
+    pub fn from_bytes_owned_t(token: T, bytes: [u8; 32]) -> Self {
+        Self::from_bytes_owned(token, bytes)
     }
-    /// Reinterpret a scalar slice as a SIMD vector slice (requires matching target features).
-    /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
-    #[forbid(unsafe_code)]
     #[inline(always)]
-    pub fn cast_slice(slice: &[f64]) -> Option<&[Self]> {
-        Self::cast_slice_with_token(archmage::ScalarToken, slice)
+    #[doc = "Explicit-token alias of [`Self::cast_slice`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[forbid(unsafe_code)]
+    pub fn cast_slice_t(token: T, slice: &[f64]) -> Option<&[Self]> {
+        Self::cast_slice(token, slice)
     }
-    /// Reinterpret a mutable scalar slice as a SIMD vector slice (requires matching target features).
-    /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
-    #[forbid(unsafe_code)]
     #[inline(always)]
-    pub fn cast_slice_mut(slice: &mut [f64]) -> Option<&mut [Self]> {
-        Self::cast_slice_mut_with_token(archmage::ScalarToken, slice)
+    #[doc = "Explicit-token alias of [`Self::cast_slice_mut`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[forbid(unsafe_code)]
+    pub fn cast_slice_mut_t(token: T, slice: &mut [f64]) -> Option<&mut [Self]> {
+        Self::cast_slice_mut(token, slice)
     }
 }

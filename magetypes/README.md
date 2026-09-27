@@ -56,24 +56,20 @@ That's it. One algorithm, every platform. `#[magetypes]` generates five `#[arcan
 
 The vector types live under `magetypes::simd::*` — there are no root re-exports (the surface is kept stable during development), so reach for `magetypes::simd::f32x8`, not `magetypes::f32x8`.
 
-### Contextual and natural-width aliases
-
-`#[magetypes(use(f32xN, i32xN), ...)]` selects contextual vectors with the tier's
-natural width: V3 has eight f32 lanes, V4/V4x sixteen, NEON/WASM/scalar four.
-`f32xN::splat(1.0)` and `f32xN::load(chunk)` need no token inside that feature
-context. `use(f32x8)` keeps eight lanes; `define(f32x8)` keeps token arguments.
-All ten float/integer families support `xN`.
-
-The same `use(...)` option works on `rite`, `arcane`, `autoversion`, and their
-attribute aliases. `rite(v3, use(f32xN))` needs no token parameter. Aliases are
-body-local; signatures use explicit types. Unsupported adaptive tiers produce a
-diagnostic. Use `partition_slice[_mut]` for full chunks and handle the tail
-explicitly, per logical row when buffers are strided.
-
 ### Load / store are **unaligned**
 
 `f32x8::load(token, &[f32; 8])` and `.store(&mut [f32; 8])` take **fixed-size array references** and perform an **unaligned** transfer — on x86-64 they lower to `_mm256_loadu_ps` / `_mm256_storeu_ps`. A `&[f32; 8]` only guarantees 4-byte (`f32`) alignment, and that's all that's required; there is **no 32-byte SIMD-alignment precondition**. Consequently `partition_slice_mut` (which reinterprets an arbitrary `&mut [f32]` as `&mut [[f32; 8]]` chunks) is sound on any slice — the bulk chunks feed straight into `load`/`store`. Don't reach for aligned allocators or hand-padded buffers; window your slice and go.
 
+
+## Preparing for token constructor migration
+
+The next 0.9 patch adds explicit-token `_t` spellings, such as
+`f32x8::splat_t(token, value)` and `f32x8::load_t(token, data)`. Existing names
+remain supported without deprecation warnings. These aliases prepare callers
+for the planned 0.10 constructor change while keeping argument order, vector
+widths, and function token parameters unchanged. Generic helpers can use `_t`
+without target-feature annotations. See the
+[migration guide](https://github.com/imazen/archmage/blob/main/docs/TOKEN-CONSTRUCTOR-MIGRATION.md).
 
 ## Generics and generated variants
 
@@ -100,19 +96,6 @@ an inline attribute or token argument alone does not enable that context.
 The reference forms `with token` and `without token` remain implemented; they
 respectively select by the held token's exact type and call a tokenless variant
 in a matching macro-managed context. See [dispatch](https://imazen.github.io/archmage/archmage/dispatch/incant/).
-
-### Constructors from the function's feature context
-
-Use `#[magetypes(use(f32x8), v3, neon, wasm128, scalar)]` to select
-`f32x8::zero()`, `f32x8::splat(value)`, and `f32x8::load(data)` without token
-arguments. Rust checks that the enclosing function enables the required target
-features. `define(f32x8)` keeps the existing token-taking API.
-
-These are fixed-policy aliases over one generic vector core. Operations preserve
-the policy; use `.into()` when passing a local vector to an existing explicit-token
-API, or vice versa. The conversion preserves the stored capability token.
-`local` does not restrict how long a vector lives or prevent returning it.
-See [the constructor-mode design](../docs/TOKEN-CONTEXT-MIGRATION.md#opt-in-alias-selection-define-and-local).
 
 ## Tokens from an existing feature context
 
@@ -158,26 +141,6 @@ Compile the complete call chain, test supported tiers and scalar tails, and
 inspect optimized code under your supported baseline. See
 [testing](https://imazen.github.io/archmage/archmage/testing/dispatch-testing/) and
 [production coverage](https://imazen.github.io/archmage/magetypes/examples/coverage/).
-
-## Raw SIMD interchange
-
-Existing platform constructors keep their token-taking signatures, such as
-`f32x4::from_float32x4_t(token, raw)` on NEON and
-`f32x8::from_m256(token, raw)` on x86. `raw()` extracts the native value.
-
-Inside a matching `#[rite]` or `#[arcane]` context, `from_raw(raw)` constructs
-without a token argument. The compiler checks the caller's target features;
-the constructor forbids unsafe code and obtains its token with `from_context()`.
-This applies to native 128-bit NEON/WASM, 128/256-bit V3, and 512-bit V4/V4x
-representations. The token-taking `from_repr(token, repr)` remains available
-for backend-generic code and polyfilled widths.
-
-`From<Raw>` cannot provide this context gate: Rust rejects `#[target_feature]`
-on safe trait methods, including `From::from` (verified with rustc 1.98.1).
-Calling `.into()` inside a feature-enabled function does not strengthen the
-trait method's contract. A token-taking `From<(Token, Raw)>` could instead
-carry the proof explicitly; this conversion is not currently implemented.
-See the [Rust target-feature restrictions](https://doc.rust-lang.org/reference/attributes/codegen.html#attributes.codegen.target_feature.allowed-positions).
 
 ## License
 

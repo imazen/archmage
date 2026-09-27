@@ -12,12 +12,6 @@ vector types such as [`f32x4<T>`](https://docs.rs/magetypes/latest/magetypes/sim
 The `#[magetypes]` attribute generates variants; the magetypes crate supplies
 their vector operations.
 
-All four function attributes accept body-local `use(f32xN, i32xN)` aliases
-with natural widths and context-checked constructors. `use(f32x8)` stays fixed
-width; `define(...)` on `magetypes` retains explicit-token construction.
-`rite(v3, use(f32xN))` works without a token parameter. Signatures still use
-explicit types. See [width selection and tails](../docs/TIER-SELECTED-TYPES.md).
-
 Start with the [complete SIMD call chain](https://imazen.github.io/archmage/archmage/getting-started/first-simd/),
 then [type and const generics](https://imazen.github.io/archmage/magetypes/dispatch/types-and-dispatch/).
 For internal feature-enabled helpers, see [rite and from_context()](https://imazen.github.io/archmage/archmage/concepts/rite/).

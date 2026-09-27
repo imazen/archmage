@@ -31,8 +31,9 @@
 //!    function, so a safe call requires rustc to verify the caller's own
 //!    feature context covers the tier, and any other call is `unsafe`
 //!    with the obligation on the caller. magetypes never forges: the
-//!    soundness scanner's structural rules reject both
-//!    `from_context` and `forge_token_dangerously` in this crate.
+//!    soundness scanner permits explicit `archmage::Token::from_context()`
+//!    only in safe functions with matching target features, and rejects
+//!    `forge_token_dangerously` in this crate.
 //!
 //! 2. **The repr-construction operation is sound under those features.**
 //!    For native intrinsic paths, the chosen instruction is documented
@@ -75,6 +76,9 @@ use archmage::SimdToken;
 use crate::simd::backends::F32x16Backend;
 use crate::simd::backends::sealed::Sealed;
 use crate::simd::backends::{F32x4Backend, F32x8Backend};
+#[cfg(feature = "w512")]
+use crate::simd::generic::f32x16;
+use crate::simd::generic::{f32x4, f32x8};
 
 // ============================================================================
 // W128 ↔ W256 — `f32x4` ↔ `f32x8`
@@ -89,7 +93,7 @@ pub trait F32x8FromHalves:
 {
     /// Combine two 128-bit halves into a 256-bit representation.
     ///
-    /// The generic exposure on [`crate::simd::generic::f32x8`] takes a token; this trait
+    /// The generic exposure on [`f32x8`] takes a token; this trait
     /// method takes `self` (the token) so soundness flows through every
     /// call — each impl can only be entered via a proven token.
     fn from_halves(
@@ -269,6 +273,41 @@ impl F32x8FromHalves for archmage::ScalarToken {
     fn high(self, wide: [f32; 8]) -> [f32; 4] {
         let _ = self;
         [wide[4], wide[5], wide[6], wide[7]]
+    }
+}
+
+impl<T: F32x8FromHalves> f32x8<T> {
+    /// Combine two `f32x4<T>` halves into one `f32x8<T>`.
+    ///
+    /// The token is load-bearing on x86 (proves AVX); a no-op on other
+    /// tiers but kept in the signature for uniform use.
+    #[inline(always)]
+    pub fn from_halves(token: T, lo: f32x4<T>, hi: f32x4<T>) -> Self {
+        Self::from_repr_unchecked(
+            token,
+            <T as F32x8FromHalves>::from_halves(token, lo.into_repr(), hi.into_repr()),
+        )
+    }
+    /// Extract the low 128-bit half.
+    #[inline(always)]
+    pub fn low(self) -> f32x4<T> {
+        f32x4::from_repr_unchecked(
+            self.1,
+            <T as F32x8FromHalves>::low(self.1, self.into_repr()),
+        )
+    }
+    /// Extract the high 128-bit half.
+    #[inline(always)]
+    pub fn high(self) -> f32x4<T> {
+        f32x4::from_repr_unchecked(
+            self.1,
+            <T as F32x8FromHalves>::high(self.1, self.into_repr()),
+        )
+    }
+    /// Split into `(low, high)` halves.
+    #[inline(always)]
+    pub fn split(self) -> (f32x4<T>, f32x4<T>) {
+        (self.low(), self.high())
     }
 }
 
@@ -471,3 +510,38 @@ impl F32x16FromHalves for archmage::ScalarToken {
         out
     }
 }
+
+#[cfg(feature = "w512")]
+impl<T: F32x16FromHalves> f32x16<T> {
+    /// Combine two `f32x8<T>` halves into one `f32x16<T>`.
+    #[inline(always)]
+    pub fn from_halves(token: T, lo: f32x8<T>, hi: f32x8<T>) -> Self {
+        Self::from_repr_unchecked(
+            token,
+            <T as F32x16FromHalves>::from_halves(token, lo.into_repr(), hi.into_repr()),
+        )
+    }
+    /// Extract the low 256-bit half.
+    #[inline(always)]
+    pub fn low(self) -> f32x8<T> {
+        f32x8::from_repr_unchecked(
+            self.1,
+            <T as F32x16FromHalves>::low(self.1, self.into_repr()),
+        )
+    }
+    /// Extract the high 256-bit half.
+    #[inline(always)]
+    pub fn high(self) -> f32x8<T> {
+        f32x8::from_repr_unchecked(
+            self.1,
+            <T as F32x16FromHalves>::high(self.1, self.into_repr()),
+        )
+    }
+    /// Split into `(low, high)` halves.
+    #[inline(always)]
+    pub fn split(self) -> (f32x8<T>, f32x8<T>) {
+        (self.low(), self.high())
+    }
+}
+
+include!("generated/cross_width_token_aliases.rs");

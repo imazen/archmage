@@ -4,8 +4,8 @@
 //! 3 `transcendentals_*.rs`, and 1 `mod.rs`.
 
 mod block_ops;
-mod constructors;
 mod conversions;
+mod token_aliases;
 mod transcendentals;
 mod type_impl;
 
@@ -375,7 +375,7 @@ pub fn generate_generic_files(registry: &crate::registry::Registry) -> BTreeMap<
     for ty in &all_types {
         let name = ty.name();
         let path = format!("generic/generated/{name}_impl.rs");
-        let content = type_impl::gen_type_impl(ty);
+        let content = type_impl::gen_type_impl(ty) + &type_impl::gen_raw_interop(ty, registry);
         files.insert(path, content);
     }
 
@@ -422,54 +422,30 @@ pub fn generate_generic_files(registry: &crate::registry::Registry) -> BTreeMap<
         ),
     );
 
-    files.insert(
-        "generic/generated/cross_width.rs".into(),
-        include_str!("cross_width.in.rs").into(),
-    );
-
     // Generate mod.rs
     files.insert(
         "generic/generated/mod.rs".to_string(),
-        transcendentals::gen_mod_rs(&all_types) + "\nmod cross_width;\n",
+        transcendentals::gen_mod_rs(&all_types),
     );
 
-    let mut aliases = String::from("// Generated fixed-policy aliases. Do not edit.\n");
-    let mut prelude = String::from("// Generated prelude vector exports. Do not edit.\n");
-    let mut local = String::from(
-        "/// Vectors constructed in a matching target-feature context.\npub mod local {\n",
-    );
-    for ty in &all_types {
-        let name = ty.name();
-        let cfg = if ty.width == SimdWidth::W512 {
-            "#[cfg(feature = \"w512\")]\n"
-        } else {
-            ""
-        };
-        prelude.push_str(&format!("{cfg}pub use crate::simd::generic::{name};\n"));
-        aliases.push_str(&format!("{cfg}/// {name} vector constructed with an explicit CPU capability token.\n#[allow(non_camel_case_types)]\npub type {name}<T> = core_types::{name}<T, Explicit>;\n"));
-        local.push_str(&format!("{cfg}/// {name} vector constructed in a matching target-feature context.\n#[allow(non_camel_case_types)]\npub type {name}<T> = super::core_types::{name}<T, super::Context>;\n"));
-        let backend = backend_trait(ty);
-        let path = format!("generic/generated/{name}_impl.rs");
-        let source = files.get_mut(&path).unwrap();
-        for (from, to) in [("Explicit", "Context"), ("Context", "Explicit")] {
-            source.push_str(&format!("impl<T: {backend}> From<{name}<T, crate::simd::generic::{from}>> for {name}<T, crate::simd::generic::{to}> {{ #[inline(always)] fn from(value: {name}<T, crate::simd::generic::{from}>) -> Self {{ Self::new_repr(value.0, value.1) }} }}\n"));
-        }
-    }
-    local.push_str("}\n");
-    aliases.push_str(&local);
-    let mut names: Vec<_> = files
-        .values()
-        .flat_map(|s| constructors::names(s))
-        .collect();
-    names.sort();
-    names.dedup();
     for (path, source) in &mut files {
         if !path.ends_with("/mod.rs") {
-            *source = constructors::generate(source, &names, registry);
+            source.push_str(&token_aliases::generate(source));
         }
     }
-    files.insert("generic/generated/aliases.rs".into(), aliases);
-    files.insert("generic/generated/prelude.rs".into(), prelude);
+    // These modules contain handwritten implementations. Only their aliases
+    // are generated, using the same signature-driven pass as the vector files.
+    files.insert(
+        "generic/generated/scalar_token_aliases.rs".into(),
+        token_aliases::generate(include_str!("../../../../magetypes/src/simd/scalar.rs")),
+    );
+    files.insert(
+        "generic/generated/cross_width_token_aliases.rs".into(),
+        token_aliases::generate(include_str!(
+            "../../../../magetypes/src/simd/generic/cross_width.rs"
+        )),
+    );
+
     files
 }
 

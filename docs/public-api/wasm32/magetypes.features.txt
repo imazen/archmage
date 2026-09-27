@@ -10,13 +10,15 @@
 ## summary
 #
 #   pub types (struct/enum/trait/alias)        10
-#   free functions                             16
+#   free functions                             24
 #
 # per-module pub lines:
-#   simd                             26
+#   prelude                          16
+#   simd                             18
 
 ## items (12 lines)
 
+pub fn prelude::i64x8<T>::popcnt(self) -> Self [also: prelude::i16x32<T>, prelude::i32x16<T>, prelude::i64x8<T>, prelude::i8x64<T>, prelude::u16x32<T>, prelude::u32x16<T>, prelude::u64x8<T>, prelude::u8x64<T>]
 pub trait simd::backends::i16x32PopcntBackend: simd::backends::I16x32Backend
 pub trait simd::backends::i32x16PopcntBackend: simd::backends::I32x16Backend
 pub trait simd::backends::i64x8PopcntBackend: simd::backends::I64x8Backend
@@ -26,6 +28,5 @@ pub trait simd::backends::u16x32PopcntBackend: simd::backends::U16x32Backend
 pub trait simd::backends::u32x16PopcntBackend: simd::backends::U32x16Backend
 pub trait simd::backends::u64x8PopcntBackend: simd::backends::U64x8Backend
 pub trait simd::backends::u8x64PopcntBackend: simd::backends::U8x64Backend
-pub fn simd::generic::core_types::i64x8<T, M>::popcnt(self) -> Self [also: simd::generic::core_types::i16x32<T, M>, simd::generic::core_types::i32x16<T, M>, simd::generic::core_types::i8x64<T, M>, simd::generic::core_types::u16x32<T, M>, simd::generic::core_types::u32x16<T, M>, simd::generic::core_types::u64x8<T, M>, simd::generic::core_types::u8x64<T, M>]
 pub type simd::v4::Token = archmage::tokens::generated::x86_stubs::X64V4Token
 pub type simd::v4x::Token = archmage::tokens::generated::x86_stubs::X64V4xToken

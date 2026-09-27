@@ -39,7 +39,6 @@ fn gen_token_assertion(
 
 #[derive(Default)]
 pub(crate) struct ArcaneArgs {
-    pub(crate) uses: Vec<String>,
     /// Trusted generators may omit the accidental token-name mismatch check.
     /// Intrinsic feature checking remains enabled.
     suppress_const_test: bool,
@@ -70,14 +69,6 @@ impl Parse for ArcaneArgs {
         let mut args = ArcaneArgs::default();
 
         while !input.is_empty() {
-            if input.peek(Token![use]) {
-                crate::vector_aliases::parse_use(input, &mut args.uses)?;
-                if input.peek(Token![,]) {
-                    input.parse::<Token![,]>()?;
-                }
-                continue;
-            }
-
             let ident: Ident = input.parse()?;
             match ident.to_string().as_str() {
                 "suppress_const_test" => args.suppress_const_test = true,
@@ -216,12 +207,6 @@ pub(crate) fn arcane_impl(
             return syn::Error::new_spanned(&input_fn.sig, msg).to_compile_error();
         }
     };
-
-    if let Err(error) =
-        crate::vector_aliases::prepend(&mut input_fn, &args.uses, token_type_name.as_deref())
-    {
-        return error.to_compile_error();
-    }
 
     // Check: import_intrinsics with AVX-512 features requires the avx512 cargo feature
     // on archmage (propagated to archmage-macros). Without it, 512-bit safe memory ops

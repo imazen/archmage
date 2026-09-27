@@ -19,7 +19,6 @@ use crate::token_discovery::*;
 
 #[derive(Default)]
 pub(crate) struct RiteArgs {
-    pub(crate) uses: Vec<String>,
     /// Inject `use archmage::intrinsics::{arch}::*;` (includes safe memory ops).
     pub(crate) import_intrinsics: bool,
     /// Inject `use magetypes::simd::{ns}::*;`, `use magetypes::simd::generic::*;`,
@@ -68,14 +67,6 @@ impl Parse for RiteArgs {
         };
 
         while !input.is_empty() {
-            if input.peek(Token![use]) {
-                crate::vector_aliases::parse_use(input, &mut args.uses)?;
-                if input.peek(Token![,]) {
-                    input.parse::<Token![,]>()?;
-                }
-                continue;
-            }
-
             // A `+`/`-` prefix is only valid before a tier name (never a keyword).
             if input.peek(Token![+]) || input.peek(Token![-]) {
                 let is_removal = input.peek(Token![-]);
@@ -257,15 +248,6 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
         }
     };
 
-    let alias_token = if args.tier_tokens.first().is_some_and(|t| t.is_empty()) {
-        Some("ScalarToken")
-    } else {
-        _token_type_name.as_deref()
-    };
-    if let Err(error) = crate::vector_aliases::prepend(&mut input_fn, &args.uses, alias_token) {
-        return error.to_compile_error();
-    }
-
     // Check: import_intrinsics with AVX-512 features requires the avx512 cargo feature.
     // Check resolved features (not token name) for uniform handling of concrete/trait/generic.
     #[cfg(not(feature = "avx512"))]
@@ -446,16 +428,6 @@ pub(crate) fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenS
         // Clone and rename the function
         let mut variant_fn = input_fn.clone();
         variant_fn.sig.ident = suffixed_ident;
-        let alias_token = if is_default {
-            "ScalarToken"
-        } else {
-            tier_token.as_str()
-        };
-        if let Err(error) =
-            crate::vector_aliases::prepend(&mut variant_fn, &args.uses, Some(alias_token))
-        {
-            return error.to_compile_error();
-        }
 
         // Rewrite incant!() calls in the variant body. With a token param: full
         // rewrite. Tokenless variant: only `incant!(.. without token)` (the

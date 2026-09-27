@@ -199,10 +199,7 @@ These historical prelude aliases were removed in 0.9.27 and must not appear in c
 Fixed-width examples should make the lane count explicit. `#[magetypes]` substitutes
 `Token`; its old `f32xN` and `LANES` substitutions were removed in `36c8caf`.
 Tier namespaces still provide natural-width `f32xN` aliases and `LANES_F32`
-constants. These use explicit-token constructors and can be imported with
-`rite(import_magetypes)` or `arcane(import_magetypes)`. See the
-[adaptive-width history and proposal](TIER-SELECTED-TYPES.md) for the distinction
-between these existing aliases and the proposed contextual `use(f32x)` option.
+constants, imported with `rite(import_magetypes)` or `arcane(import_magetypes)`.
 
 ## Cross-Architecture
 

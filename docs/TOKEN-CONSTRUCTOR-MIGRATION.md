@@ -1,0 +1,80 @@
+# Token constructor migration
+
+The next magetypes 0.9 patch adds `_t` methods alongside the existing token-first
+methods. Both spellings take the token first and have the same behavior:
+
+```rust
+use archmage::ScalarToken;
+use magetypes::simd::generic::f32x8;
+
+let old = f32x8::splat(ScalarToken, 2.0);
+let prepared = f32x8::splat_t(ScalarToken, 2.0);
+assert_eq!(old.to_array(), prepared.to_array());
+```
+
+Existing names remain supported without deprecation warnings. Vector types stay
+generic over one token parameter. No constructor modes or new function-attribute
+syntax are part of this change.
+
+## Migrate names before changing contexts
+
+Rename token-taking calls while preserving their arguments and vector widths:
+
+| Existing spelling | Migration spelling |
+|---|---|
+| `splat(token, value)` | `splat_t(token, value)` |
+| `zero(token)` | `zero_t(token)` |
+| `load(token, data)` | `load_t(token, data)` |
+| `from_array(token, values)` | `from_array_t(token, values)` |
+| `partition_slice_mut(token, data)` | `partition_slice_mut_t(token, data)` |
+| `from_halves(token, lo, hi)` | `from_halves_t(token, lo, hi)` |
+
+The aliases cover all public inherent methods with an explicit first token,
+including conversions, byte loads, block loads, borrowed slice views, native raw
+constructors, and the single-lane scalar types. Trait methods whose receiver is
+the token do not gain aliases. Existing target and Cargo feature gates still
+apply.
+
+Native raw values have a uniform `from_raw_t(token, raw)` entry point. Platform
+names also receive the mechanical suffix: for example,
+`from_float32x4_t_t(token, raw)` aliases the NEON constructor
+`from_float32x4_t(token, raw)`. Prefer `from_raw_t` for new raw interchange code.
+The separate `from_raw(raw)` method requires a matching target-feature context.
+
+Ordinary functions and backend-generic helpers can call `_t` methods without
+target-feature annotations:
+
+```rust
+use magetypes::simd::backends::F32x8Backend;
+use magetypes::simd::generic::f32x8;
+
+fn broadcast<T: F32x8Backend>(token: T, value: f32) -> f32x8<T> {
+    f32x8::splat_t(token, value)
+}
+```
+
+Keep function token parameters, dispatch calls, and public vector signatures
+unchanged during this rename. Existing `#[magetypes(define(...), ...)]` aliases
+refer to the same types and support both method spellings.
+
+## Planned 0.10 boundary
+
+The proposed magetypes 0.10 design retains `_t(token, ...)` and gives the short
+constructor names to compiler-checked feature-context construction. That change
+is not implemented by this migration release. Consumers can adopt `_t` on 0.9,
+upgrade later, and then simplify calls inside concrete feature contexts as a
+separate step. A generic backend bound alone does not enable target features.
+
+The published archmage 0.9 macro contract uses
+`magetypes::simd::generic::TYPE<Token>` for `define(...)`, and tier/backends
+namespaces for `import_magetypes`. Preserving those paths avoids requiring a
+macro syntax migration for the constructor change. Compatibility with an actual
+0.10 package must be compiled before that release.
+
+## Maintenance
+
+`xtask/src/simd_types/generic_gen/token_aliases.rs` derives aliases from the
+implementation signatures, preserving argument order, bounds, lifetimes,
+attributes, and feature gates. It handles generated vectors and the handwritten
+cross-width and scalar modules. Regenerate with `cargo run -p xtask -- generate`;
+do not maintain separate constructor lists or hand-edit the generated aliases.

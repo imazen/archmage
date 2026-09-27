@@ -14,18 +14,13 @@ fn expand(name: &str, args: Tokens, item: Tokens) -> syn::Result<Tokens> {
         "rite" | "token_target_features" => rite_impl(syn::parse2(item)?, syn::parse2(args)?),
         "autoversion" => autoversion_impl(syn::parse2(item)?, syn::parse2(args)?),
         "magetypes" => {
-            let MagetypesArgs {
-                rite_flag: rite,
-                defines,
-                uses,
-                tier_names: names,
-            } = parse_magetypes_attr.parse2(args)?;
+            let (rite, defines, names) = parse_magetypes_attr.parse2(args)?;
             let tiers = if names.is_empty() {
                 default_tiers(true)
             } else {
                 resolve_tiers(&names, proc_macro2::Span::call_site(), true)?
             };
-            magetypes::magetypes_impl(syn::parse2(item)?, &tiers, rite, &defines, &uses)
+            magetypes::magetypes_impl(syn::parse2(item)?, &tiers, rite, &defines)
         }
         _ => panic!("unrecognized macro {name}"),
     })
@@ -732,54 +727,6 @@ fn receivers_and_generic_modes_keep_feature_checks() {
 }
 
 #[test]
-fn autoversion_vector_backend_gates_preserve_plain_code_and_overrides() {
-    for (args, expected_gate) in [
-        (quote!(), None),
-        (quote!(v4, scalar), None),
-        (quote!(use(f32xN)), Some("avx512")),
-        (quote!(use(f32x8)), Some("avx512")),
-        (quote!(use(f32xN), v4, scalar), Some("avx512")),
-        (quote!(use(f32xN), -neon), Some("avx512")),
-        (quote!(use(f32xN), +v4), None),
-        (quote!(use(f32xN), v4(cfg(custom)), scalar), Some("custom")),
-        (quote!(use(f32xN), +v4(cfg(custom))), Some("custom")),
-    ] {
-        let output = expand(
-            "autoversion",
-            args.clone(),
-            quote!(
-                fn kernel() {}
-            ),
-        )
-        .unwrap();
-        let file = syn::parse2::<syn::File>(output).unwrap();
-        let function = |name: &str| {
-            file.items
-                .iter()
-                .find_map(|item| match item {
-                    syn::Item::Fn(f) if f.sig.ident == name => Some(f),
-                    _ => None,
-                })
-                .unwrap()
-        };
-        // Definitions and dispatch must agree. An absent backend cannot leave
-        // either a compiled definition or a dangling call in the dispatcher.
-        let attrs = &function("kernel_v4").attrs;
-        let variant = quote!(#(#attrs)*).to_string();
-        let dispatcher = function("kernel").block.to_token_stream().to_string();
-        for text in [variant, dispatcher] {
-            match expected_gate {
-                Some(gate) => assert!(
-                    text.contains(&format!("feature = \"{gate}\"")),
-                    "{args}: {text}"
-                ),
-                None => assert!(!text.contains("feature ="), "{args}: {text}"),
-            }
-        }
-    }
-}
-
-#[test]
 fn tier_modifiers_and_explicit_fallback_gates_keep_their_meaning() {
     for (names, expected) in [
         (vec!["v3", "neon", "-neon", "scalar"], vec!["v3", "scalar"]),
@@ -940,134 +887,4 @@ fn combined_trait_features_preserve_first_seen_order() {
     let csv = crate::token_discovery::features_csv(None, &unusual);
     assert!(matches!(csv, Cow::Owned(_)));
     assert_eq!(csv, unusual.join(","));
-}
-
-#[test]
-fn use_aliases_fix_context_mode_and_reject_duplicates() {
-    let output = expand(
-        "magetypes",
-        quote!(use(f32x8), define(i32x8), scalar),
-        quote!(
-            fn kernel(token: Token) {
-                let _ = f32x8::zero();
-                let _ = i32x8::zero(token);
-            }
-        ),
-    )
-    .unwrap()
-    .to_string();
-    assert!(
-        output.contains("generic :: local :: f32x8 < archmage :: ScalarToken >"),
-        "{output}"
-    );
-    assert!(
-        output.contains("generic :: i32x8 < archmage :: ScalarToken >"),
-        "{output}"
-    );
-    assert!(
-        parse_magetypes_attr
-            .parse2(quote!(define(f32x8), use(f32x8)))
-            .is_err()
-    );
-    assert!(
-        parse_magetypes_attr
-            .parse2(quote!(use(f32x8, f32x8)))
-            .is_err()
-    );
-}
-
-#[test]
-fn unpublished_local_spelling_is_rejected() {
-    let err = parse_magetypes_attr
-        .parse2(quote!(local(f32x8), scalar))
-        .err()
-        .unwrap();
-    assert!(err.to_string().contains("use(...)"), "{err}");
-}
-
-#[test]
-fn contextual_aliases_across_all_attributes() {
-    for name in [
-        "arcane",
-        "simd_fn",
-        "token_target_features_boundary",
-        "rite",
-        "token_target_features",
-    ] {
-        let result = expand(
-            name,
-            quote!(use(f32xN, i32xN, f32x8)),
-            quote!(
-                fn f(_: archmage::X64V3Token) {}
-            ),
-        )
-        .unwrap()
-        .to_string();
-        assert!(result.contains("type f32xN = :: magetypes :: simd :: generic :: local :: f32x8 < archmage :: X64V3Token >"), "{name}: {result}");
-        assert!(
-            result.contains("type i32xN = :: magetypes :: simd :: generic :: local :: i32x8"),
-            "{name}: {result}"
-        );
-        assert!(!result.contains("compile_error"), "{name}: {result}");
-        assert!(
-            expand(
-                name,
-                quote!(use(f32x)),
-                quote!(
-                    fn f() {}
-                )
-            )
-            .is_err()
-        );
-        assert!(
-            expand(
-                name,
-                quote!(use(f32xN, f32xN)),
-                quote!(
-                    fn f() {}
-                )
-            )
-            .is_err()
-        );
-    }
-    for name in ["magetypes", "autoversion", "rite"] {
-        for (tier, token, shape) in [
-            ("v3", "X64V3Token", "f32x8"),
-            ("v4", "X64V4Token", "f32x16"),
-            ("v4x", "X64V4xToken", "f32x16"),
-            ("neon", "NeonToken", "f32x4"),
-            ("wasm128", "Wasm128Token", "f32x4"),
-            ("scalar", "ScalarToken", "f32x4"),
-            ("default", "ScalarToken", "f32x4"),
-        ] {
-            let tier = quote::format_ident!("{tier}");
-            let result = expand(
-                name,
-                quote!(use(f32xN), #tier),
-                quote!(
-                    fn f() {}
-                ),
-            )
-            .unwrap()
-            .to_string();
-            assert!(
-                result.contains(&format!("local :: {shape} < archmage :: {token} >")),
-                "{name}: {result}"
-            );
-            assert!(!result.contains("compile_error"), "{name}: {result}");
-        }
-        let result = expand(
-            name,
-            quote!(use(f32xN), v2),
-            quote!(
-                fn f() {}
-            ),
-        )
-        .unwrap()
-        .to_string();
-        assert!(
-            result.contains("has no vector backend for X64V2Token"),
-            "{name}: {result}"
-        );
-    }
 }

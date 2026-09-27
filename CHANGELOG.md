@@ -14,31 +14,7 @@
 - Remove the six no-op `*_midp_precise` aliases (`exp2`/`exp`/`ln`/`log2`/`log10`/`pow` — each is literally `self.*_midp()`); `cbrt_midp_precise` stays, it does real denormal/zero handling. With the reciprocal tiers settling on `_portable` as the precise tier, a `_precise` suffix that does nothing is a naming lie.
 - Make `w512` non-default in magetypes — users who need 512-bit types add `features = ["w512"]`; saves ~25% build time for the majority who don't
 
-### Added
-
-- Body-local `use(f32xN)` natural-width aliases for all ten vector families across `magetypes`, `rite`, `arcane`, `autoversion`, and their attribute aliases; fixed-width `use(...)` and legacy `define(...)` remain compatible (`0833022d`).
-- Tokenless `magetypes(rite, ...)` helpers now receive their generated tier explicitly; `default` contextual aliases use scalar x4 (`0833022d`).
-
-- Public `_with_token` alternatives for all 42 vector constructor method names on both modes, plus native `from_raw_with_token`; existing calls and aliases remain compatible (`ef5d3cf1`).
-
-- `#[magetypes(use(...))]` selects tokenless, target-feature-checked constructors over a shared vector core; `define(...)` retains token arguments and mode conversions preserve stored tokens (`8ef7db6f`, `4ed7c0ce`).
-- Safe native `from_raw` constructors and restored NEON/WASM/AVX-512 raw interop methods (`8ef7db6f`).
-- Reproducible cold-build comparison: this consumer's default release build rose 0.189 s, and its AVX-512 build rose 0.253 s; full settings and raw results are in `benchmarks/local_mode_compile_2026-09-27.md` (`8ef7db6f`).
-
-### Changed
-
-- Replace the unpublished `#[magetypes(local(...))]` option with `use(...)`; the old spelling now reports the replacement, while `define(...)` and the explicit `generic::local` module remain available (`4ed7c0ce`).
-
-- Generated contextual constructors use registry-derived target-feature attributes and flatten simple value forwarding while retaining checked token proofs and shared memory helpers (`777932eb`); six-run cold-build medians are recorded in `benchmarks/constructor_codegen_compile_2026-09-27.md`.
-
 ### Fixed
-
-- Tokenless `magetypes(rite, ...)` scalar/default fallbacks now dispatch only to covered tiers; token-taking fallback dispatch is preserved (`3aef13f0`).
-- `autoversion(use(...))` now gates vector backends using the shared tier Cargo-feature policy; plain-code autoversion and explicit gate overrides retain their behavior (`b7353c1b`).
-
-- Keep the original 34 magetypes prelude names; constructor modes and implementation modules no longer leak through its wildcard re-export (`cd6cdc40`).
-
-- Run native raw-interchange tests with V3 CPU support under Miri and SDE, preserving baseline coverage for the remaining suite (`7165ed48`).
 
 - **magetypes: AVX-512 tokens regained the native f32 block-op codegen they had silently lost.** `magetypes/src/simd/impls/x86_v4_f32_delegated.rs` — the one backend impl the generator does not emit — forwards each `F32x4Backend` / `F32x8Backend` method to `X64V3Token`, but it was written before the concrete-type retirement restored `to_u8_bytes` / `store_rgba_bytes` / `transpose_8x8_repr` (issue [#60](https://github.com/imazen/archmage/issues/60)). Those three arrived with scalar **default** bodies, so the delegation compiled without them and every AVX-512 token (`X64V4Token`, `X64V4xToken`, `Avx512Fp16Token`) fell through to a per-lane `roundevenf` / gather instead of V3's `vcvtps2dq`+`vpackssdw`+`vpackuswb` and `vunpck`+`vshufps`+`vperm2f128`. Measured on the generic types with `cargo asm` (x86-64, release): `f32x8::<X64V4Token>::transpose_8x8` 198 instructions vs V3's 32, `store_8_rgba_u8` 217 vs 34, `f32x4::to_u8` 227 vs 7 — and the V4 `to_u8` body was an out-of-line call into `core::array::try_from_fn` over the software round-and-clamp. With the five missing forwards added, each V4 entry point compiles to code byte-identical to its V3 counterpart (the linker folds them into aliases). Value results were always correct; only the instruction selection was lost.
 - **`cargo xtask validate` now fails when that delegation misses a method.** A trait method with a default body that the delegation forgets is invisible to the compiler — it just silently drops the hardware path. The new check parses both backend traits and both delegation macros and requires every declared method to be forwarded (41/41 and 42/42 today).

@@ -717,3 +717,5 @@ impl Sub for u64x1 {
         Self(self.0.wrapping_sub(rhs.0))
     }
 }
+
+include!("generic/generated/scalar_token_aliases.rs");

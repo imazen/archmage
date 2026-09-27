@@ -25,7 +25,6 @@ mod rewrite;
 mod rite;
 mod tiers;
 mod token_discovery;
-mod vector_aliases;
 
 use proc_macro::TokenStream;
 use syn::parse_macro_input;
@@ -403,22 +402,6 @@ pub fn token_target_features(attr: TokenStream, item: TokenStream) -> TokenStrea
 ///     incant!(process(data), [v1, v3, neon, scalar])
 /// }
 /// ```
-///
-/// `use(f32xN, i32xN, ...)` selects each tier's natural width (V3: 256 bits,
-/// V4/V4x: 512, NEON/WASM/scalar: 128). `use(f32x8)` keeps eight lanes.
-/// All ten float/integer families support `xN`. These aliases are body-local;
-/// signatures still use explicit types. `partition_slice[_mut]` and `LANES`
-/// follow the selected width; process the remainder explicitly.
-///
-/// `use(...)` also works on `rite`, `arcane`, `autoversion`, and their attribute
-/// aliases. `rite` can select a tier without a token parameter. Generic feature
-/// bounds alone do not select a backend. V1/V2 and extension-only tokens have no
-/// adaptive mapping and produce a diagnostic.
-///
-/// `use(f32x8, ...)` injects aliases with context-checked constructors:
-/// `f32x8::zero()`, `f32x8::splat(value)`, and `f32x8::load(data)`.
-/// `define(...)` retains explicit token arguments. Both modes share vector
-/// operations; use `.into()` to cross a boundary between their value types.
 #[proc_macro_attribute]
 pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(item as LightFn);
@@ -436,19 +419,14 @@ pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
     //           (e.g., `type f32x8 = ::magetypes::simd::generic::f32x8<Token>;`).
     //           `Token` in the alias RHS is substituted per tier.
     //
-    // `use(name1, ...)` selects context constructors on the shared vector core.
-    // Assumption: `rite`, `define`, and `use` are reserved option names.
+    // Assumption: neither `rite` nor `define` is or will become a tier name.
     // `token-registry.toml` must not declare `short_name = "rite"` or
     // `short_name = "define"`.
-    let MagetypesArgs {
-        rite_flag,
-        defines,
-        uses,
-        tier_names,
-    } = match syn::parse::Parser::parse(parse_magetypes_attr, attr) {
-        Ok(parsed) => parsed,
-        Err(e) => return e.to_compile_error().into(),
-    };
+    let (rite_flag, defines, tier_names) =
+        match syn::parse::Parser::parse(parse_magetypes_attr, attr) {
+            Ok(parsed) => parsed,
+            Err(e) => return e.to_compile_error().into(),
+        };
 
     let tiers = if tier_names.is_empty() {
         default_tiers(true)
@@ -459,25 +437,19 @@ pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     };
 
-    magetypes_impl(input_fn, &tiers, rite_flag, &defines, &uses).into()
+    magetypes_impl(input_fn, &tiers, rite_flag, &defines).into()
 }
 
 /// Parse `#[magetypes]` attributes: `rite` flag, `define(list)`, and tier names.
 ///
-/// Returns `(rite_flag, defines, uses, tier_names)`. Tier names preserve the
+/// Returns `(rite_flag, defines, tier_names)`. Tier names preserve the
 /// `+`/`-` modifier prefixes and `(cfg(feat))` gates for the tier resolver.
-struct MagetypesArgs {
-    rite_flag: bool,
-    defines: Vec<String>,
-    uses: Vec<String>,
-    tier_names: Vec<String>,
-}
-
-fn parse_magetypes_attr(input: syn::parse::ParseStream) -> syn::Result<MagetypesArgs> {
+fn parse_magetypes_attr(
+    input: syn::parse::ParseStream,
+) -> syn::Result<(bool, Vec<String>, Vec<String>)> {
     use syn::Token;
     let mut rite_flag = false;
     let mut defines = Vec::new();
-    let mut uses = Vec::new();
     let mut tier_names = Vec::new();
 
     while !input.is_empty() {
@@ -497,38 +469,18 @@ fn parse_magetypes_attr(input: syn::parse::ParseStream) -> syn::Result<Magetypes
         if peek_rite {
             let _: syn::Ident = input.parse()?;
             rite_flag = true;
-        } else if input.peek(Token![use]) || peek_define {
-            let contextual = if input.peek(Token![use]) {
-                let _: Token![use] = input.parse()?;
-                true
-            } else {
-                let _: syn::Ident = input.parse()?;
-                false
-            };
+        } else if peek_define {
+            let _: syn::Ident = input.parse()?;
             let content;
             syn::parenthesized!(content in input);
             while !content.is_empty() {
                 let ty: syn::Ident = content.parse()?;
-                if defines.contains(&ty.to_string()) || uses.contains(&ty.to_string()) {
-                    return Err(syn::Error::new(
-                        ty.span(),
-                        "duplicate type alias in define/use",
-                    ));
-                }
-                if contextual {
-                    vector_aliases::validate_name(&ty.to_string(), ty.span())?;
-                    uses.push(ty.to_string());
-                } else {
-                    defines.push(ty.to_string());
-                }
+                defines.push(ty.to_string());
                 if content.peek(Token![,]) {
                     let _: Token![,] = content.parse()?;
                 }
             }
         } else {
-            if input.peek(syn::Ident) && input.fork().parse::<syn::Ident>()? == "local" {
-                return Err(input.error("`local(...)` was replaced before release; use `use(...)`"));
-            }
             // Fall through to tier-name parsing (preserves +/- prefix and cfg gates).
             tier_names.push(parse_one_tier(input)?);
         }
@@ -538,12 +490,7 @@ fn parse_magetypes_attr(input: syn::parse::ParseStream) -> syn::Result<Magetypes
         }
     }
 
-    Ok(MagetypesArgs {
-        rite_flag,
-        defines,
-        uses,
-        tier_names,
-    })
+    Ok((rite_flag, defines, tier_names))
 }
 
 // =============================================================================

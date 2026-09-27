@@ -7,7 +7,6 @@ use crate::common::*;
 use crate::tiers::*;
 
 /// Generate per-tier variants of the input function.
-/// `uses` selects fixed or adaptive Context-mode aliases; `defines` selects Explicit mode.
 ///
 /// When `rite_flag` is false (default), non-fallback variants are wrapped
 /// with `#[archmage::arcane]` (safe outer wrapper + `#[target_feature]`
@@ -36,7 +35,6 @@ pub(crate) fn magetypes_impl(
     tiers: &[ResolvedTier],
     rite_flag: bool,
     defines: &[String],
-    uses: &[String],
 ) -> TokenStream {
     // Propagate ordinary attributes once; these macro attributes are consumed
     // or supplied per tier below.
@@ -97,19 +95,10 @@ pub(crate) fn magetypes_impl(
             };
         }
 
-        if let Err(error) = crate::vector_aliases::prepend(
-            &mut variant_fn,
-            uses,
-            Some(crate::vector_aliases::tier_token(tier)),
-        ) {
-            return error.to_compile_error();
-        }
-
-        // Resolve `incant!(.. without token)` to this tier's tokenless variant
-        // call (`f_<suffix>(args)`). SIMD variants get their remaining rewrite
-        // from arcane/rite. Scalar/default variants have no wrapper: tokenless
-        // rite fallbacks must select covered callees here as well. Tokenful and
-        // ordinary boundary fallbacks retain their runtime dispatch behavior.
+        // SIMD variants receive the remaining call rewrite from arcane/rite.
+        // Scalar/default variants have no wrapper: tokenless rite fallbacks
+        // must also select covered callees here. Tokenful and ordinary boundary
+        // fallbacks retain runtime dispatch.
         if has_dispatch {
             let ctx = crate::rewrite::CallerContext {
                 tier_suffix: tier.suffix.to_string(),

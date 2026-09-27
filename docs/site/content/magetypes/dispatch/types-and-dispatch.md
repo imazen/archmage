@@ -8,59 +8,6 @@ Use Rust generics for data representation and algorithm parameters, and
 `define(f32x8)` is optional shorthand for the generic vector type with the
 current `Token`; it does not replace Rust's function generics.
 
-## Choosing constructor proofs
-
-`define(f32x8)` keeps `f32x8::zero(token)`. `use(f32x8)` selects the
-contextual alias and permits `f32x8::zero()` in a matching feature context.
-Both aliases offer `f32x8::zero_with_token(token)`, `splat_with_token(token, x)`,
-and corresponding token alternatives for the supported construction methods.
-
-Use `_with_token` in ordinary generic helpers: the token supplies the proof,
-so the helper does not need a concrete target-feature annotation.
-
-```rust
-use magetypes::simd::{backends::F32x8Backend, generic::local};
-
-fn load<T: F32x8Backend>(token: T, data: &[f32; 8]) -> local::f32x8<T> {
-    local::f32x8::load_with_token(token, data)
-}
-```
-
-Existing code needs no changes. A staged migration can first add `_with_token`
-to constructor names while keeping arguments and aliases unchanged, then
-switch aliases and related vector annotations together. Owned vectors cross
-old/new boundaries with `.into()`; borrowed interfaces need coordinated type
-changes. Contextual vectors can leave their construction function.
-
-## Natural-width contextual aliases
-
-`use(f32xN, i32xN)` selects equal lane counts for those families: eight on V3,
-sixteen on V4/V4x, four on NEON/WASM/scalar. `N` is macro syntax, not a const
-generic. The ten float/integer families share the same bit width.
-`use(f32x8)` remains fixed-width. These are body-local aliases.
-
-```rust
-use archmage::autoversion;
-
-#[autoversion(v3, neon, wasm128, scalar, use(f32xN))]
-fn add_row(row: &mut [f32], amount: f32) {
-    let add = f32xN::splat(amount);
-    let (chunks, tail) = f32xN::partition_slice_mut(row);
-    for chunk in chunks { (f32xN::load(chunk) + add).store(chunk); }
-    for value in tail { *value += amount; }
-}
-```
-
-`rite(v3, use(f32xN))` works without a token parameter; `arcane(use(f32xN))`
-selects from its concrete token parameter. Their descriptive attribute aliases
-support the same option. `magetypes(rite, use(f32xN), ...)` also supports tokenless
-helpers. Generic backend helpers still use explicit types and `_with_token`.
-
-Partition each logical row separately for strided buffers, leaving padding
-untouched. Handle the scalar remainder explicitly: `from_slice` requires a
-full vector and is not a masked tail load. Adaptive widths can change reduction
-order; width selection alone does not promise identical floating-point sums.
-
 ## A generic input type and a const mode
 
 This teaching extraction follows `zenanalyze/src/tier1.rs`:

@@ -25,10 +25,5 @@
 //! code, the token-bound `simd::v3` / `simd::neon` / `simd::wasm128` aliases are
 //! also available.
 
-// Keep the original prelude names: adding generic modules or constructor modes
-// must not silently export them through the prelude's common import path.
-include!("simd/generic/generated/prelude.rs");
-#[cfg(feature = "w512")]
-pub use crate::simd::generic::F32x16FromHalves;
-pub use crate::simd::generic::{F16Convert, F32x8FromHalves};
+pub use crate::simd::generic::*;
 pub use archmage::SimdToken;

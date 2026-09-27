@@ -339,62 +339,13 @@ integer-codegen:
 integer-tests:
     cargo test -p magetypes --test int_widen_narrow --features "std avx512"
 
-# Raw constructors: value preservation and compiler-enforced feature contexts.
-raw-interop-check:
-    cargo test -p xtask raw_context
-    cargo test -p magetypes --test raw_interop
-    cargo test --test soundness_exploits token_assertion_diagnostics
+# Explicit-token migration aliases and independent raw/context safety coverage.
+token-migration-check:
+    cargo test -p xtask token_aliases
+    cargo test -p magetypes --test token_aliases --test raw_interop
+    cargo test -p magetypes --test token_aliases --no-default-features
+    cargo test -p magetypes --test token_aliases --features avx512
+    cargo test -p archmage --test magetypes_scalar_dispatch --test soundness_exploits
 
-# Execute the published-consumer raw interchange shapes under AArch64 emulation.
-raw-interop-arm:
-    CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER="qemu-aarch64 -L /usr/aarch64-linux-gnu" cargo test -p magetypes --test raw_interop --target aarch64-unknown-linux-gnu
-
-# Validate alias-selected constructor designs without changing the public API.
-context-mode-probe-check:
-    python3 tests/design-probes/context-mode/check.py --log-dir "$HOME/data/archmage/context-mode-probe/latest"
-
-# Shared constructor modes and feature-context enforcement.
-local-mode-check:
-    cargo test -p magetypes --all-features --test magetypes_use_flag --test magetypes_define_flag --test raw_interop
-    cargo test --test soundness_exploits
-
-# Use preserved source snapshots and fresh Cargo targets for each cold build.
-local-mode-compile before after output:
-    python3 scripts/measure-local-mode-compile.py --before {{before}} --after {{after}} --output {{output}}
-
-# Contextual constructor syntax, compatibility, and macro expansion regressions.
-test-context-constructors:
-    cargo test -p archmage-macros
-    cargo test -p magetypes --all-features --test magetypes_use_flag --test magetypes_define_flag
-
-# Compare concrete expansion shapes for tier-selected vector widths.
-tier-width-compile output sde:
-    python3 scripts/measure-local-mode-compile.py --before . --after . --tier-width-probe --sde {{sde}} --output {{output}} --runs 6
-
-# Check the original prelude name set against the current API snapshots.
-constructor-api-audit:
-    python3 scripts/audit-constructor-api.py --output benchmarks/constructor_api_audit_2026-09-27.json
-
-# Mandatory backend tests: caller selects CPU proof, unsupported requests fail.
-test-adaptive-use tier="scalar":
-    ARCHMAGE_ADAPTIVE_TEST_TIER={{tier}} cargo test -p magetypes --all-features --test adaptive_use
-
-# Actual macro cost versus manual aliases; fresh target directories per build.
-adaptive-use-compile before output sde:
-    python3 scripts/measure-local-mode-compile.py --before {{before}} --after . --adaptive-use-probe --sde {{sde}} --output {{output}} --runs 6
-
-# Compile-only acceptance inventory for the four SIMD attributes (x86_64 host).
-macro-matrix-inventory output:
-    python3 tests/design-probes/macro-matrix/inventory.py --output {{output}}
-
-# Consumer migration patterns: mixed calls, type/const generics, borrowed modes.
-test-mixed-token-generics:
-    cargo test -p magetypes --test mixed_token_generics
-
-# Scalar dispatch and vector-backend Cargo gates (run both feature sets).
-test-tier-gates:
-    cargo test -p archmage --test magetypes_scalar_dispatch
-    cargo test -p archmage-macros autoversion_vector_backend_gates
-    cargo test -p magetypes --test adaptive_use --test mixed_token_generics
-    cargo test -p magetypes --test adaptive_use --test mixed_token_generics --features avx512
-    cargo test -p magetypes --test adaptive_use --test mixed_token_generics --no-default-features
+token-migration-arm:
+    CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER="qemu-aarch64 -L /usr/aarch64-linux-gnu" cargo test -p magetypes --test token_aliases --test raw_interop --target aarch64-unknown-linux-gnu

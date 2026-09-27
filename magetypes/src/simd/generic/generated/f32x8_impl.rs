@@ -11,9 +11,9 @@
 //! use magetypes::simd::generic::f32x8;
 //!
 //! fn sum<T: F32x8Backend>(token: T, data: &[f32]) -> f32 {
-//!     let mut acc = f32x8::<T>::zero_with_token(token);
+//!     let mut acc = f32x8::<T>::zero(token);
 //!     for chunk in data.chunks_exact(8) {
-//!         acc = acc + f32x8::<T>::load_with_token(token, chunk.try_into().unwrap());
+//!         acc = acc + f32x8::<T>::load(token, chunk.try_into().unwrap());
 //!     }
 //!     acc.reduce_add()
 //! }
@@ -43,33 +43,24 @@ use crate::simd::backends::F32x8Backend;
 /// # Layout
 ///
 /// `#[repr(C)]` with a ZST trailing field: `T::Repr` lives at offset 0
-/// and `T` plus the sealed policy marker are zero-sized tails. Bitcasts between `f32x8<T>` values of
+/// and `T` is a 0-byte tail. Bitcasts between `f32x8<T>` values of
 /// different element-types are sound when the Repr types share a layout
 /// (e.g. `__m128` and `__m128i` are both 16-byte aligned 128-bit values).
 /// `#[repr(transparent)]` cannot be used because Rust cannot prove at
 /// the struct definition site that a generic `T` is a 1-ZST.
 ///
-/// Fixed-policy aliases select explicit-token or feature-context constructors.
+/// Construction requires a token value to prove CPU support at runtime.
 #[derive(Clone, Copy)]
 #[repr(C)]
-pub struct f32x8<
-    T: F32x8Backend,
-    M: crate::simd::generic::ConstructorMode = crate::simd::generic::Explicit,
->(
-    pub(crate) T::Repr,
-    pub(crate) T,
-    pub(crate) core::marker::PhantomData<M>,
-);
+pub struct f32x8<T: F32x8Backend>(pub(crate) T::Repr, pub(crate) T);
 // SAFETY: repr(C) pair of Pod storage and a sealed 1-ZST token.
 // A supplied T proves CPU support; the wrapper adds no bit invariants.
 // Helpers additionally check token size/alignment at monomorphization.
-unsafe impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend>
-    crate::simd_storage::TokenStorage for f32x8<T, M>
-{
+unsafe impl<T: F32x8Backend> crate::simd_storage::TokenStorage for f32x8<T> {
     type Token = T;
 }
 
-// PhantomData is ZST, so f32x8<T, M> has the same size as T::Repr.
+// PhantomData is ZST, so f32x8<T> has the same size as T::Repr.
 
 // Layout invariant: struct is `#[repr(C)]` with a trailing ZST `T`
 // field, so `sizeof/alignof(f32x8<T>) == sizeof/alignof(T::Repr)`
@@ -139,12 +130,7 @@ const _: () = {
     );
 };
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
-    #[inline(always)]
-    pub(crate) fn new_repr(repr: T::Repr, token: T) -> Self {
-        Self(repr, token, core::marker::PhantomData)
-    }
-
+impl<T: F32x8Backend> f32x8<T> {
     /// Number of f32 lanes.
     pub const LANES: usize = 8;
 
@@ -152,53 +138,33 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
 
     /// Broadcast scalar to all 8 lanes.
     #[inline(always)]
-    ///
-    /// Use an explicit CPU capability token with either constructor mode.
-    /// The caller does not need a target-feature annotation.
-    #[forbid(unsafe_code)]
-    pub fn splat_with_token(token: T, v: f32) -> Self {
-        Self::new_repr(T::splat(token, v), token)
+    pub fn splat(token: T, v: f32) -> Self {
+        Self(T::splat(token, v), token)
     }
 
     /// All lanes zero.
     #[inline(always)]
-    ///
-    /// Use an explicit CPU capability token with either constructor mode.
-    /// The caller does not need a target-feature annotation.
-    #[forbid(unsafe_code)]
-    pub fn zero_with_token(token: T) -> Self {
-        Self::new_repr(T::zero(token), token)
+    pub fn zero(token: T) -> Self {
+        Self(T::zero(token), token)
     }
 
     /// Load from a `[f32; 8]` array.
     #[inline(always)]
-    ///
-    /// Use an explicit CPU capability token with either constructor mode.
-    /// The caller does not need a target-feature annotation.
-    #[forbid(unsafe_code)]
-    pub fn load_with_token(token: T, data: &[f32; 8]) -> Self {
-        Self::new_repr(T::load(token, data), token)
+    pub fn load(token: T, data: &[f32; 8]) -> Self {
+        Self(T::load(token, data), token)
     }
 
     /// Create from array (zero-cost where possible).
     #[inline(always)]
-    ///
-    /// Use an explicit CPU capability token with either constructor mode.
-    /// The caller does not need a target-feature annotation.
-    #[forbid(unsafe_code)]
-    pub fn from_array_with_token(token: T, arr: [f32; 8]) -> Self {
-        Self::new_repr(T::from_array(token, arr), token)
+    pub fn from_array(token: T, arr: [f32; 8]) -> Self {
+        Self(T::from_array(token, arr), token)
     }
 
     /// Create from slice. Panics if `slice.len() < 8`.
     #[inline(always)]
-    ///
-    /// Use an explicit CPU capability token with either constructor mode.
-    /// The caller does not need a target-feature annotation.
-    #[forbid(unsafe_code)]
-    pub fn from_slice_with_token(token: T, slice: &[f32]) -> Self {
+    pub fn from_slice(token: T, slice: &[f32]) -> Self {
         let arr: [f32; 8] = slice[..8].try_into().unwrap();
-        Self::new_repr(T::from_array(token, arr), token)
+        Self(T::from_array(token, arr), token)
     }
 
     /// Split a slice into SIMD-width chunks and a scalar remainder.
@@ -206,11 +172,7 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
     /// Returns `(&[[f32; 8]], &[f32])` — fixed-size arrays suitable
     /// for [`load`](Self::load), plus any leftover elements.
     #[inline(always)]
-    ///
-    /// Use an explicit CPU capability token with either constructor mode.
-    /// The caller does not need a target-feature annotation.
-    #[forbid(unsafe_code)]
-    pub fn partition_slice_with_token(_token: T, data: &[f32]) -> (&[[f32; 8]], &[f32]) {
+    pub fn partition_slice(_: T, data: &[f32]) -> (&[[f32; 8]], &[f32]) {
         data.as_chunks::<8>()
     }
 
@@ -219,14 +181,7 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
     /// Returns `(&mut [[f32; 8]], &mut [f32])` — the bulk portion reinterpreted
     /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
     #[inline(always)]
-    ///
-    /// Use an explicit CPU capability token with either constructor mode.
-    /// The caller does not need a target-feature annotation.
-    #[forbid(unsafe_code)]
-    pub fn partition_slice_mut_with_token(
-        _token: T,
-        data: &mut [f32],
-    ) -> (&mut [[f32; 8]], &mut [f32]) {
+    pub fn partition_slice_mut(_: T, data: &mut [f32]) -> (&mut [[f32; 8]], &mut [f32]) {
         data.as_chunks_mut::<8>()
     }
 
@@ -252,12 +207,8 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
 
     /// Wrap a platform representation (token-gated).
     #[inline(always)]
-    ///
-    /// Use an explicit CPU capability token with either constructor mode.
-    /// The caller does not need a target-feature annotation.
-    #[forbid(unsafe_code)]
-    pub fn from_repr_with_token(token: T, repr: T::Repr) -> Self {
-        Self::new_repr(repr, token)
+    pub fn from_repr(token: T, repr: T::Repr) -> Self {
+        Self(repr, token)
     }
 
     /// Wrap a repr with a token. Used by cross-type/cross-width helpers
@@ -266,7 +217,7 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
     #[inline(always)]
     #[allow(dead_code)]
     pub(crate) fn from_repr_unchecked(token: T, repr: T::Repr) -> Self {
-        Self::new_repr(repr, token)
+        Self(repr, token)
     }
 
     // ====== Math ======
@@ -274,49 +225,49 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
     /// Lane-wise minimum.
     #[inline(always)]
     pub fn min(self, other: Self) -> Self {
-        Self::new_repr(T::min(self.1, self.0, other.0), self.1)
+        Self(T::min(self.1, self.0, other.0), self.1)
     }
 
     /// Lane-wise maximum.
     #[inline(always)]
     pub fn max(self, other: Self) -> Self {
-        Self::new_repr(T::max(self.1, self.0, other.0), self.1)
+        Self(T::max(self.1, self.0, other.0), self.1)
     }
 
     /// Clamp between lo and hi.
     #[inline(always)]
     pub fn clamp(self, lo: Self, hi: Self) -> Self {
-        Self::new_repr(T::clamp(self.1, self.0, lo.0, hi.0), self.1)
+        Self(T::clamp(self.1, self.0, lo.0, hi.0), self.1)
     }
 
     /// Square root.
     #[inline(always)]
     pub fn sqrt(self) -> Self {
-        Self::new_repr(T::sqrt(self.1, self.0), self.1)
+        Self(T::sqrt(self.1, self.0), self.1)
     }
 
     /// Absolute value.
     #[inline(always)]
     pub fn abs(self) -> Self {
-        Self::new_repr(T::abs(self.1, self.0), self.1)
+        Self(T::abs(self.1, self.0), self.1)
     }
 
     /// Round toward negative infinity.
     #[inline(always)]
     pub fn floor(self) -> Self {
-        Self::new_repr(T::floor(self.1, self.0), self.1)
+        Self(T::floor(self.1, self.0), self.1)
     }
 
     /// Round toward positive infinity.
     #[inline(always)]
     pub fn ceil(self) -> Self {
-        Self::new_repr(T::ceil(self.1, self.0), self.1)
+        Self(T::ceil(self.1, self.0), self.1)
     }
 
     /// Round to nearest integer.
     #[inline(always)]
     pub fn round(self) -> Self {
-        Self::new_repr(T::round(self.1, self.0), self.1)
+        Self(T::round(self.1, self.0), self.1)
     }
 
     /// Multiply-add: `self * a + b`.
@@ -327,7 +278,7 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
     /// from the fused backends by 1 ULP.
     #[inline(always)]
     pub fn mul_add(self, a: Self, b: Self) -> Self {
-        Self::new_repr(T::mul_add(self.1, self.0, a.0, b.0), self.1)
+        Self(T::mul_add(self.1, self.0, a.0, b.0), self.1)
     }
 
     /// Multiply-sub: `self * a - b`.
@@ -336,7 +287,7 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
     /// x86 v3/v4 and NEON, unfused (two roundings) on scalar and WASM.
     #[inline(always)]
     pub fn mul_sub(self, a: Self, b: Self) -> Self {
-        Self::new_repr(T::mul_sub(self.1, self.0, a.0, b.0), self.1)
+        Self(T::mul_sub(self.1, self.0, a.0, b.0), self.1)
     }
 
     // ====== Comparisons ======
@@ -344,43 +295,43 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
     /// Lane-wise equality (returns mask).
     #[inline(always)]
     pub fn simd_eq(self, other: Self) -> Self {
-        Self::new_repr(T::simd_eq(self.1, self.0, other.0), self.1)
+        Self(T::simd_eq(self.1, self.0, other.0), self.1)
     }
 
     /// Lane-wise inequality (returns mask).
     #[inline(always)]
     pub fn simd_ne(self, other: Self) -> Self {
-        Self::new_repr(T::simd_ne(self.1, self.0, other.0), self.1)
+        Self(T::simd_ne(self.1, self.0, other.0), self.1)
     }
 
     /// Lane-wise less-than (returns mask).
     #[inline(always)]
     pub fn simd_lt(self, other: Self) -> Self {
-        Self::new_repr(T::simd_lt(self.1, self.0, other.0), self.1)
+        Self(T::simd_lt(self.1, self.0, other.0), self.1)
     }
 
     /// Lane-wise less-than-or-equal (returns mask).
     #[inline(always)]
     pub fn simd_le(self, other: Self) -> Self {
-        Self::new_repr(T::simd_le(self.1, self.0, other.0), self.1)
+        Self(T::simd_le(self.1, self.0, other.0), self.1)
     }
 
     /// Lane-wise greater-than (returns mask).
     #[inline(always)]
     pub fn simd_gt(self, other: Self) -> Self {
-        Self::new_repr(T::simd_gt(self.1, self.0, other.0), self.1)
+        Self(T::simd_gt(self.1, self.0, other.0), self.1)
     }
 
     /// Lane-wise greater-than-or-equal (returns mask).
     #[inline(always)]
     pub fn simd_ge(self, other: Self) -> Self {
-        Self::new_repr(T::simd_ge(self.1, self.0, other.0), self.1)
+        Self(T::simd_ge(self.1, self.0, other.0), self.1)
     }
 
     /// Select lanes: where mask is all-1s pick `if_true`, else `if_false`.
     #[inline(always)]
     pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {
-        Self::new_repr(T::blend(mask.1, mask.0, if_true.0, if_false.0), mask.1)
+        Self(T::blend(mask.1, mask.0, if_true.0, if_false.0), mask.1)
     }
 
     // ====== Reductions ======
@@ -420,7 +371,7 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
     pub fn rcp_approx(self) -> Self {
         // Each backend owns its >=12-bit estimate (x86 raw rcpps; ARM
         // raw vrecpe + 1 fused FRECPS; WASM/scalar exact division).
-        Self::new_repr(T::rcp_approx(self.1, self.0), self.1)
+        Self(T::rcp_approx(self.1, self.0), self.1)
     }
 
     /// Reciprocal (1/x), the working tier: at least ~22 correct bits
@@ -447,7 +398,7 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
     /// [`recip_portable`](Self::recip_portable).
     #[inline(always)]
     pub fn recip(self) -> Self {
-        Self::new_repr(T::recip(self.1, self.0), self.1)
+        Self(T::recip(self.1, self.0), self.1)
     }
 
     /// Fast reciprocal square root (1/sqrt(x)), ≥~12-bit floor — see
@@ -460,7 +411,7 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
     pub fn rsqrt_approx(self) -> Self {
         // ARM uses raw vrsqrte + 1 fused FRSQRTS; WASM/scalar a bit-hack
         // seed + 2 Newton steps; x86 the raw rsqrtps estimate.
-        Self::new_repr(T::rsqrt_approx(self.1, self.0), self.1)
+        Self(T::rsqrt_approx(self.1, self.0), self.1)
     }
 
     /// Reciprocal square root (1/sqrt(x)), the working tier: ≤4 ULP
@@ -473,7 +424,7 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
     /// 0 ULP + subnormals + bit-identical.
     #[inline(always)]
     pub fn rsqrt(self) -> Self {
-        Self::new_repr(T::rsqrt(self.1, self.0), self.1)
+        Self(T::rsqrt(self.1, self.0), self.1)
     }
 
     // ====== Deterministic (cross-platform bit-identical) reciprocals ======
@@ -505,9 +456,9 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
     {
         let t = self.1;
         let bits = self.bitcast_to_i32();
-        let seed = Self::from_i32_bitcast_with_token(
+        let seed = Self::from_i32_bitcast(
             t,
-            super::i32x8::splat_with_token(t, 0x5f3759df_i32) - bits.shr_logical_const::<1>(),
+            super::i32x8::splat(t, 0x5f3759df_i32) - bits.shr_logical_const::<1>(),
         );
         seed.rsqrt_newton_portable(self)
     }
@@ -518,8 +469,8 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
     #[inline(always)]
     pub fn rsqrt_newton_portable(self, x: Self) -> Self {
         let t = self.1;
-        let half = Self::splat_with_token(t, 0.5);
-        let three_halves = Self::splat_with_token(t, 1.5);
+        let half = Self::splat(t, 0.5);
+        let three_halves = Self::splat(t, 1.5);
         self * (three_halves - half * x * self * self)
     }
 
@@ -530,7 +481,7 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
     /// on Zen-class x86 (and is the faster form on Apple Silicon).
     #[inline(always)]
     pub fn rsqrt_portable(self) -> Self {
-        Self::splat_with_token(self.1, 1.0) / self.sqrt()
+        Self::splat(self.1, 1.0) / self.sqrt()
     }
 
     /// Deterministic reciprocal estimate (~8-bit), bit-identical on every
@@ -546,10 +497,7 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
     {
         let t = self.1;
         let bits = self.bitcast_to_i32();
-        let seed = Self::from_i32_bitcast_with_token(
-            t,
-            super::i32x8::splat_with_token(t, 0x7ef127ea_i32) - bits,
-        );
+        let seed = Self::from_i32_bitcast(t, super::i32x8::splat(t, 0x7ef127ea_i32) - bits);
         seed.recip_newton_portable(self)
     }
 
@@ -558,7 +506,7 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
     #[inline(always)]
     pub fn recip_newton_portable(self, x: Self) -> Self {
         let t = self.1;
-        let two = Self::splat_with_token(t, 2.0);
+        let two = Self::splat(t, 2.0);
         self * (two - x * self)
     }
 
@@ -573,7 +521,7 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
     /// on Apple Silicon).
     #[inline(always)]
     pub fn recip_portable(self) -> Self {
-        Self::splat_with_token(self.1, 1.0) / self
+        Self::splat(self.1, 1.0) / self
     }
 
     // ====== Bitwise ======
@@ -581,7 +529,7 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
     /// Bitwise NOT.
     #[inline(always)]
     pub fn not(self) -> Self {
-        Self::new_repr(T::not(self.1, self.0), self.1)
+        Self(T::not(self.1, self.0), self.1)
     }
 }
 
@@ -589,67 +537,67 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> f32x8<T, M> {
 // Operator implementations
 // ============================================================================
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> Add for f32x8<T, M> {
+impl<T: F32x8Backend> Add for f32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: Self) -> Self {
-        Self::new_repr(T::add(self.1, self.0, rhs.0), self.1)
+        Self(T::add(self.1, self.0, rhs.0), self.1)
     }
 }
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> Sub for f32x8<T, M> {
+impl<T: F32x8Backend> Sub for f32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
-        Self::new_repr(T::sub(self.1, self.0, rhs.0), self.1)
+        Self(T::sub(self.1, self.0, rhs.0), self.1)
     }
 }
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> Mul for f32x8<T, M> {
+impl<T: F32x8Backend> Mul for f32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn mul(self, rhs: Self) -> Self {
-        Self::new_repr(T::mul(self.1, self.0, rhs.0), self.1)
+        Self(T::mul(self.1, self.0, rhs.0), self.1)
     }
 }
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> Div for f32x8<T, M> {
+impl<T: F32x8Backend> Div for f32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn div(self, rhs: Self) -> Self {
-        Self::new_repr(T::div(self.1, self.0, rhs.0), self.1)
+        Self(T::div(self.1, self.0, rhs.0), self.1)
     }
 }
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> Neg for f32x8<T, M> {
+impl<T: F32x8Backend> Neg for f32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn neg(self) -> Self {
-        Self::new_repr(T::neg(self.1, self.0), self.1)
+        Self(T::neg(self.1, self.0), self.1)
     }
 }
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> BitAnd for f32x8<T, M> {
+impl<T: F32x8Backend> BitAnd for f32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn bitand(self, rhs: Self) -> Self {
-        Self::new_repr(T::bitand(self.1, self.0, rhs.0), self.1)
+        Self(T::bitand(self.1, self.0, rhs.0), self.1)
     }
 }
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> BitOr for f32x8<T, M> {
+impl<T: F32x8Backend> BitOr for f32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn bitor(self, rhs: Self) -> Self {
-        Self::new_repr(T::bitor(self.1, self.0, rhs.0), self.1)
+        Self(T::bitor(self.1, self.0, rhs.0), self.1)
     }
 }
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> BitXor for f32x8<T, M> {
+impl<T: F32x8Backend> BitXor for f32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn bitxor(self, rhs: Self) -> Self {
-        Self::new_repr(T::bitxor(self.1, self.0, rhs.0), self.1)
+        Self(T::bitxor(self.1, self.0, rhs.0), self.1)
     }
 }
 
@@ -657,49 +605,49 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> BitXor for f32x8
 // Assign operators
 // ============================================================================
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> AddAssign for f32x8<T, M> {
+impl<T: F32x8Backend> AddAssign for f32x8<T> {
     #[inline(always)]
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
     }
 }
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> SubAssign for f32x8<T, M> {
+impl<T: F32x8Backend> SubAssign for f32x8<T> {
     #[inline(always)]
     fn sub_assign(&mut self, rhs: Self) {
         *self = *self - rhs;
     }
 }
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> MulAssign for f32x8<T, M> {
+impl<T: F32x8Backend> MulAssign for f32x8<T> {
     #[inline(always)]
     fn mul_assign(&mut self, rhs: Self) {
         *self = *self * rhs;
     }
 }
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> DivAssign for f32x8<T, M> {
+impl<T: F32x8Backend> DivAssign for f32x8<T> {
     #[inline(always)]
     fn div_assign(&mut self, rhs: Self) {
         *self = *self / rhs;
     }
 }
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> BitAndAssign for f32x8<T, M> {
+impl<T: F32x8Backend> BitAndAssign for f32x8<T> {
     #[inline(always)]
     fn bitand_assign(&mut self, rhs: Self) {
         *self = *self & rhs;
     }
 }
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> BitOrAssign for f32x8<T, M> {
+impl<T: F32x8Backend> BitOrAssign for f32x8<T> {
     #[inline(always)]
     fn bitor_assign(&mut self, rhs: Self) {
         *self = *self | rhs;
     }
 }
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> BitXorAssign for f32x8<T, M> {
+impl<T: F32x8Backend> BitXorAssign for f32x8<T> {
     #[inline(always)]
     fn bitxor_assign(&mut self, rhs: Self) {
         *self = *self ^ rhs;
@@ -710,35 +658,35 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> BitXorAssign for
 // Scalar broadcast operators (v + 2.0, v * 0.5, etc.)
 // ============================================================================
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> Add<f32> for f32x8<T, M> {
+impl<T: F32x8Backend> Add<f32> for f32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn add(self, rhs: f32) -> Self {
-        Self::new_repr(T::add(self.1, self.0, T::splat(self.1, rhs)), self.1)
+        Self(T::add(self.1, self.0, T::splat(self.1, rhs)), self.1)
     }
 }
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> Sub<f32> for f32x8<T, M> {
+impl<T: F32x8Backend> Sub<f32> for f32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn sub(self, rhs: f32) -> Self {
-        Self::new_repr(T::sub(self.1, self.0, T::splat(self.1, rhs)), self.1)
+        Self(T::sub(self.1, self.0, T::splat(self.1, rhs)), self.1)
     }
 }
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> Mul<f32> for f32x8<T, M> {
+impl<T: F32x8Backend> Mul<f32> for f32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn mul(self, rhs: f32) -> Self {
-        Self::new_repr(T::mul(self.1, self.0, T::splat(self.1, rhs)), self.1)
+        Self(T::mul(self.1, self.0, T::splat(self.1, rhs)), self.1)
     }
 }
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> Div<f32> for f32x8<T, M> {
+impl<T: F32x8Backend> Div<f32> for f32x8<T> {
     type Output = Self;
     #[inline(always)]
     fn div(self, rhs: f32) -> Self {
-        Self::new_repr(T::div(self.1, self.0, T::splat(self.1, rhs)), self.1)
+        Self(T::div(self.1, self.0, T::splat(self.1, rhs)), self.1)
     }
 }
 
@@ -746,7 +694,7 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> Div<f32> for f32
 // Index
 // ============================================================================
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> Index<usize> for f32x8<T, M> {
+impl<T: F32x8Backend> Index<usize> for f32x8<T> {
     type Output = f32;
     #[inline(always)]
     fn index(&self, i: usize) -> &f32 {
@@ -754,7 +702,7 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> Index<usize> for
     }
 }
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> IndexMut<usize> for f32x8<T, M> {
+impl<T: F32x8Backend> IndexMut<usize> for f32x8<T> {
     #[inline(always)]
     fn index_mut(&mut self, i: usize) -> &mut f32 {
         &mut crate::simd_storage::view_mut::<_, [f32; 8]>(&mut self.0)[i]
@@ -765,9 +713,9 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> IndexMut<usize> 
 // Conversions
 // ============================================================================
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> From<f32x8<T, M>> for [f32; 8] {
+impl<T: F32x8Backend> From<f32x8<T>> for [f32; 8] {
     #[inline(always)]
-    fn from(v: f32x8<T, M>) -> [f32; 8] {
+    fn from(v: f32x8<T>) -> [f32; 8] {
         T::to_array(v.1, v.0)
     }
 }
@@ -776,7 +724,7 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> From<f32x8<T, M>
 // Debug
 // ============================================================================
 
-impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> core::fmt::Debug for f32x8<T, M> {
+impl<T: F32x8Backend> core::fmt::Debug for f32x8<T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let arr = T::to_array(self.1, self.0);
         f.debug_tuple("f32x8").field(&arr).finish()
@@ -787,21 +735,17 @@ impl<M: crate::simd::generic::ConstructorMode, T: F32x8Backend> core::fmt::Debug
 // Cross-type conversions (available when T implements conversion traits)
 // ============================================================================
 
-impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::backends::F32x8Convert> f32x8<T, M> {
+impl<T: crate::simd::backends::F32x8Convert> f32x8<T> {
     /// Bitcast to i32x8 (reinterpret bits, no conversion).
     #[inline(always)]
-    pub fn bitcast_to_i32(self) -> super::i32x8<T, M> {
+    pub fn bitcast_to_i32(self) -> super::i32x8<T> {
         super::i32x8::from_repr_unchecked(self.1, T::bitcast_f32_to_i32(self.1, self.0))
     }
 
     /// Create from i32x8 via bitcast (reinterpret bits, no conversion).
     #[inline(always)]
-    ///
-    /// Use an explicit CPU capability token with either constructor mode.
-    /// The caller does not need a target-feature annotation.
-    #[forbid(unsafe_code)]
-    pub fn from_i32_bitcast_with_token(token: T, v: super::i32x8<T, M>) -> Self {
-        Self::new_repr(T::bitcast_i32_to_f32(token, v.into_repr()), token)
+    pub fn from_i32_bitcast(token: T, v: super::i32x8<T>) -> Self {
+        Self(T::bitcast_i32_to_f32(token, v.into_repr()), token)
     }
 
     /// Convert to i32x8 with truncation toward zero.
@@ -815,7 +759,7 @@ impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::backends::F32x8Co
     /// [`to_i32_saturating`](Self::to_i32_saturating) for uniform
     /// semantics.
     #[inline(always)]
-    pub fn to_i32(self) -> super::i32x8<T, M> {
+    pub fn to_i32(self) -> super::i32x8<T> {
         super::i32x8::from_repr_unchecked(self.1, T::convert_f32_to_i32(self.1, self.0))
     }
 
@@ -825,65 +769,57 @@ impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::backends::F32x8Co
     /// of Rust scalar `as`. Native on NEON/WASM/scalar; on x86 a
     /// 4-op compare/blend fixup over `cvttps` (issue #80).
     #[inline(always)]
-    pub fn to_i32_saturating(self) -> super::i32x8<T, M> {
+    pub fn to_i32_saturating(self) -> super::i32x8<T> {
         super::i32x8::from_repr_unchecked(self.1, T::convert_f32_to_i32_saturating(self.1, self.0))
     }
 
     /// Convert to i32x8 with rounding to nearest.
     #[inline(always)]
-    pub fn to_i32_round(self) -> super::i32x8<T, M> {
+    pub fn to_i32_round(self) -> super::i32x8<T> {
         super::i32x8::from_repr_unchecked(self.1, T::convert_f32_to_i32_round(self.1, self.0))
     }
 
     /// Create from i32x8 via numeric conversion.
     #[inline(always)]
-    ///
-    /// Use an explicit CPU capability token with either constructor mode.
-    /// The caller does not need a target-feature annotation.
-    #[forbid(unsafe_code)]
-    pub fn from_i32_with_token(token: T, v: super::i32x8<T, M>) -> Self {
-        Self::new_repr(T::convert_i32_to_f32(token, v.into_repr()), token)
+    pub fn from_i32(token: T, v: super::i32x8<T>) -> Self {
+        Self(T::convert_i32_to_f32(token, v.into_repr()), token)
     }
 
     // ====== Backward-compatible aliases (old generated API names) ======
 
     /// Alias for [`bitcast_to_i32`](Self::bitcast_to_i32).
     #[inline(always)]
-    pub fn bitcast_i32x8(self) -> super::i32x8<T, M> {
+    pub fn bitcast_i32x8(self) -> super::i32x8<T> {
         self.bitcast_to_i32()
     }
 
     /// Alias for [`to_i32`](Self::to_i32).
     #[inline(always)]
-    pub fn to_i32x8(self) -> super::i32x8<T, M> {
+    pub fn to_i32x8(self) -> super::i32x8<T> {
         self.to_i32()
     }
 
     /// Alias for [`to_i32_round`](Self::to_i32_round).
     #[inline(always)]
-    pub fn to_i32x8_round(self) -> super::i32x8<T, M> {
+    pub fn to_i32x8_round(self) -> super::i32x8<T> {
         self.to_i32_round()
     }
 
     /// Alias for [`from_i32`](Self::from_i32).
     #[inline(always)]
-    ///
-    /// Use an explicit CPU capability token with either constructor mode.
-    /// The caller does not need a target-feature annotation.
-    #[forbid(unsafe_code)]
-    pub fn from_i32x8_with_token(token: T, v: super::i32x8<T, M>) -> Self {
-        Self::from_i32_with_token(token, v)
+    pub fn from_i32x8(token: T, v: super::i32x8<T>) -> Self {
+        Self::from_i32(token, v)
     }
 
     /// Alias for [`bitcast_ref_i32`](Self::bitcast_ref_i32) (from block_ops).
     #[inline(always)]
-    pub fn bitcast_ref_i32x8(&self) -> &super::i32x8<T, M> {
+    pub fn bitcast_ref_i32x8(&self) -> &super::i32x8<T> {
         self.bitcast_ref_i32()
     }
 
     /// Alias for [`bitcast_mut_i32`](Self::bitcast_mut_i32) (from block_ops).
     #[inline(always)]
-    pub fn bitcast_mut_i32x8(&mut self) -> &mut super::i32x8<T, M> {
+    pub fn bitcast_mut_i32x8(&mut self) -> &mut super::i32x8<T> {
         self.bitcast_mut_i32()
     }
 }
@@ -892,7 +828,7 @@ impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::backends::F32x8Co
 // Platform-specific concrete impls
 // ============================================================================
 
-impl<M: crate::simd::generic::ConstructorMode> f32x8<archmage::ScalarToken, M> {
+impl f32x8<archmage::ScalarToken> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
         "scalar::f32x8"
@@ -900,7 +836,7 @@ impl<M: crate::simd::generic::ConstructorMode> f32x8<archmage::ScalarToken, M> {
 }
 
 #[cfg(target_arch = "x86_64")]
-impl<M: crate::simd::generic::ConstructorMode> f32x8<archmage::X64V3Token, M> {
+impl f32x8<archmage::X64V3Token> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
         "x86::v3::f32x8"
@@ -914,20 +850,13 @@ impl<M: crate::simd::generic::ConstructorMode> f32x8<archmage::X64V3Token, M> {
 
     /// Create from a raw `__m256` (token-gated, zero-cost).
     #[inline(always)]
-    ///
-    /// Use an explicit CPU capability token with either constructor mode.
-    /// The caller does not need a target-feature annotation.
-    #[forbid(unsafe_code)]
-    pub fn from_m256_with_token(
-        token: archmage::X64V3Token,
-        v: core::arch::x86_64::__m256,
-    ) -> Self {
-        Self::new_repr(v, token)
+    pub fn from_m256(token: archmage::X64V3Token, v: core::arch::x86_64::__m256) -> Self {
+        Self(v, token)
     }
 }
 
 #[cfg(target_arch = "aarch64")]
-impl<M: crate::simd::generic::ConstructorMode> f32x8<archmage::NeonToken, M> {
+impl f32x8<archmage::NeonToken> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
         "polyfill::neon::f32x8"
@@ -935,25 +864,21 @@ impl<M: crate::simd::generic::ConstructorMode> f32x8<archmage::NeonToken, M> {
 }
 
 #[cfg(target_arch = "wasm32")]
-impl<M: crate::simd::generic::ConstructorMode> f32x8<archmage::Wasm128Token, M> {
+impl f32x8<archmage::Wasm128Token> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
         "polyfill::wasm128::f32x8"
     }
 }
 #[cfg(target_arch = "x86_64")]
-impl<M: crate::simd::generic::ConstructorMode> f32x8<archmage::X64V3Token, M> {
+impl f32x8<archmage::X64V3Token> {
     /// Wrap a raw `__m256` using an explicit CPU capability token.
     ///
-    /// Available in either constructor mode. The caller does not
-    /// need a target-feature annotation.
+    /// The caller does not need a target-feature annotation.
     #[forbid(unsafe_code)]
     #[inline(always)]
-    pub fn from_raw_with_token(
-        token: archmage::X64V3Token,
-        value: core::arch::x86_64::__m256,
-    ) -> Self {
-        Self::new_repr(value, token)
+    pub fn from_raw_t(token: archmage::X64V3Token, value: core::arch::x86_64::__m256) -> Self {
+        Self(value, token)
     }
 
     /// Wrap a raw `__m256` in a matching target-feature context.
@@ -963,1068 +888,92 @@ impl<M: crate::simd::generic::ConstructorMode> f32x8<archmage::X64V3Token, M> {
     #[forbid(unsafe_code)]
     /// # Safety
     /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
+    /// matching or stronger feature context, which Rust checks.
     #[target_feature(
         enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
     )]
     #[inline]
     pub fn from_raw(value: core::arch::x86_64::__m256) -> Self {
-        Self::new_repr(value, archmage::X64V3Token::from_context())
+        Self(value, archmage::X64V3Token::from_context())
     }
 }
-impl<T: F32x8Backend> From<f32x8<T, crate::simd::generic::Explicit>>
-    for f32x8<T, crate::simd::generic::Context>
-{
+// Generated explicit-token migration aliases. Do not edit.
+impl<T: F32x8Backend> f32x8<T> {
     #[inline(always)]
-    fn from(value: f32x8<T, crate::simd::generic::Explicit>) -> Self {
-        Self::new_repr(value.0, value.1)
+    #[doc = "Explicit-token alias of [`Self::splat`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[forbid(unsafe_code)]
+    pub fn splat_t(token: T, v: f32) -> Self {
+        Self::splat(token, v)
     }
-}
-impl<T: F32x8Backend> From<f32x8<T, crate::simd::generic::Context>>
-    for f32x8<T, crate::simd::generic::Explicit>
-{
     #[inline(always)]
-    fn from(value: f32x8<T, crate::simd::generic::Context>) -> Self {
-        Self::new_repr(value.0, value.1)
+    #[doc = "Explicit-token alias of [`Self::zero`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[forbid(unsafe_code)]
+    pub fn zero_t(token: T) -> Self {
+        Self::zero(token)
+    }
+    #[inline(always)]
+    #[doc = "Explicit-token alias of [`Self::load`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[forbid(unsafe_code)]
+    pub fn load_t(token: T, data: &[f32; 8]) -> Self {
+        Self::load(token, data)
+    }
+    #[inline(always)]
+    #[doc = "Explicit-token alias of [`Self::from_array`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[forbid(unsafe_code)]
+    pub fn from_array_t(token: T, arr: [f32; 8]) -> Self {
+        Self::from_array(token, arr)
+    }
+    #[inline(always)]
+    #[doc = "Explicit-token alias of [`Self::from_slice`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[forbid(unsafe_code)]
+    pub fn from_slice_t(token: T, slice: &[f32]) -> Self {
+        Self::from_slice(token, slice)
+    }
+    #[inline(always)]
+    #[doc = "Explicit-token alias of [`Self::partition_slice`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[forbid(unsafe_code)]
+    pub fn partition_slice_t(argument_0: T, data: &[f32]) -> (&[[f32; 8]], &[f32]) {
+        Self::partition_slice(argument_0, data)
+    }
+    #[inline(always)]
+    #[doc = "Explicit-token alias of [`Self::partition_slice_mut`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[forbid(unsafe_code)]
+    pub fn partition_slice_mut_t(argument_0: T, data: &mut [f32]) -> (&mut [[f32; 8]], &mut [f32]) {
+        Self::partition_slice_mut(argument_0, data)
+    }
+    #[inline(always)]
+    #[doc = "Explicit-token alias of [`Self::from_repr`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[forbid(unsafe_code)]
+    pub fn from_repr_t(token: T, repr: T::Repr) -> Self {
+        Self::from_repr(token, repr)
     }
 }
-
+impl<T: crate::simd::backends::F32x8Convert> f32x8<T> {
+    #[inline(always)]
+    #[doc = "Explicit-token alias of [`Self::from_i32_bitcast`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[forbid(unsafe_code)]
+    pub fn from_i32_bitcast_t(token: T, v: super::i32x8<T>) -> Self {
+        Self::from_i32_bitcast(token, v)
+    }
+    #[inline(always)]
+    #[doc = "Explicit-token alias of [`Self::from_i32`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[forbid(unsafe_code)]
+    pub fn from_i32_t(token: T, v: super::i32x8<T>) -> Self {
+        Self::from_i32(token, v)
+    }
+    #[inline(always)]
+    #[doc = "Explicit-token alias of [`Self::from_i32x8`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[forbid(unsafe_code)]
+    pub fn from_i32x8_t(token: T, v: super::i32x8<T>) -> Self {
+        Self::from_i32x8(token, v)
+    }
+}
 #[cfg(target_arch = "x86_64")]
-#[cfg(target_arch = "x86_64")]
-impl f32x8<archmage::X64V3Token, crate::simd::generic::Context> {
-    /// Create from a raw `__m256` (token-gated, zero-cost).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
-    )]
-    #[inline]
-    pub fn from_m256(v: core::arch::x86_64::__m256) -> Self {
-        let token = archmage::X64V3Token::from_context();
-        Self::new_repr(v, token)
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl f32x8<archmage::X64V3Token, crate::simd::generic::Explicit> {
-    /// Create from a raw `__m256` (token-gated, zero-cost).
+impl f32x8<archmage::X64V3Token> {
     #[inline(always)]
-    pub fn from_m256(token: archmage::X64V3Token, v: core::arch::x86_64::__m256) -> Self {
-        Self::from_m256_with_token(token, v)
-    }
-}
-
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl f32x8<archmage::Avx512Fp16Token, crate::simd::generic::Context> {
-    /// Broadcast scalar to all 8 lanes.
+    #[doc = "Explicit-token alias of [`Self::from_m256`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
     #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16"
-    )]
-    #[inline]
-    pub fn splat(v: f32) -> Self {
-        let token = archmage::Avx512Fp16Token::from_context();
-        Self::new_repr(
-            <archmage::Avx512Fp16Token as F32x8Backend>::splat(token, v),
-            token,
-        )
-    }
-    /// All lanes zero.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16"
-    )]
-    #[inline]
-    pub fn zero() -> Self {
-        let token = archmage::Avx512Fp16Token::from_context();
-        Self::new_repr(
-            <archmage::Avx512Fp16Token as F32x8Backend>::zero(token),
-            token,
-        )
-    }
-    /// Load from a `[f32; 8]` array.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16"
-    )]
-    #[inline]
-    pub fn load(data: &[f32; 8]) -> Self {
-        let token = archmage::Avx512Fp16Token::from_context();
-        Self::new_repr(
-            <archmage::Avx512Fp16Token as F32x8Backend>::load(token, data),
-            token,
-        )
-    }
-    /// Create from array (zero-cost where possible).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16"
-    )]
-    #[inline]
-    pub fn from_array(arr: [f32; 8]) -> Self {
-        let token = archmage::Avx512Fp16Token::from_context();
-        Self::new_repr(
-            <archmage::Avx512Fp16Token as F32x8Backend>::from_array(token, arr),
-            token,
-        )
-    }
-    /// Create from slice. Panics if `slice.len() < 8`.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16"
-    )]
-    #[inline]
-    pub fn from_slice(slice: &[f32]) -> Self {
-        Self::from_slice_with_token(archmage::Avx512Fp16Token::from_context(), slice)
-    }
-    /// Split a slice into SIMD-width chunks and a scalar remainder.
-    /// Returns `(&[[f32; 8]], &[f32])` — fixed-size arrays suitable
-    /// for [`load`](Self::load), plus any leftover elements.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16"
-    )]
-    #[inline]
-    pub fn partition_slice(data: &[f32]) -> (&[[f32; 8]], &[f32]) {
-        Self::partition_slice_with_token(archmage::Avx512Fp16Token::from_context(), data)
-    }
-    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
-    /// Returns `(&mut [[f32; 8]], &mut [f32])` — the bulk portion reinterpreted
-    /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16"
-    )]
-    #[inline]
-    pub fn partition_slice_mut(data: &mut [f32]) -> (&mut [[f32; 8]], &mut [f32]) {
-        Self::partition_slice_mut_with_token(archmage::Avx512Fp16Token::from_context(), data)
-    }
-    /// Wrap a platform representation (requires matching target features).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512fp16"
-    )]
-    #[inline]
-    pub fn from_repr(
-        repr: <archmage::Avx512Fp16Token as crate::simd::backends::F32x8Backend>::Repr,
-    ) -> Self {
-        let token = archmage::Avx512Fp16Token::from_context();
-        Self::new_repr(repr, token)
-    }
-}
-
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl f32x8<archmage::X64V4Token, crate::simd::generic::Context> {
-    /// Broadcast scalar to all 8 lanes.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
-    )]
-    #[inline]
-    pub fn splat(v: f32) -> Self {
-        let token = archmage::X64V4Token::from_context();
-        Self::new_repr(
-            <archmage::X64V4Token as F32x8Backend>::splat(token, v),
-            token,
-        )
-    }
-    /// All lanes zero.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
-    )]
-    #[inline]
-    pub fn zero() -> Self {
-        let token = archmage::X64V4Token::from_context();
-        Self::new_repr(<archmage::X64V4Token as F32x8Backend>::zero(token), token)
-    }
-    /// Load from a `[f32; 8]` array.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
-    )]
-    #[inline]
-    pub fn load(data: &[f32; 8]) -> Self {
-        let token = archmage::X64V4Token::from_context();
-        Self::new_repr(
-            <archmage::X64V4Token as F32x8Backend>::load(token, data),
-            token,
-        )
-    }
-    /// Create from array (zero-cost where possible).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
-    )]
-    #[inline]
-    pub fn from_array(arr: [f32; 8]) -> Self {
-        let token = archmage::X64V4Token::from_context();
-        Self::new_repr(
-            <archmage::X64V4Token as F32x8Backend>::from_array(token, arr),
-            token,
-        )
-    }
-    /// Create from slice. Panics if `slice.len() < 8`.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
-    )]
-    #[inline]
-    pub fn from_slice(slice: &[f32]) -> Self {
-        Self::from_slice_with_token(archmage::X64V4Token::from_context(), slice)
-    }
-    /// Split a slice into SIMD-width chunks and a scalar remainder.
-    /// Returns `(&[[f32; 8]], &[f32])` — fixed-size arrays suitable
-    /// for [`load`](Self::load), plus any leftover elements.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
-    )]
-    #[inline]
-    pub fn partition_slice(data: &[f32]) -> (&[[f32; 8]], &[f32]) {
-        Self::partition_slice_with_token(archmage::X64V4Token::from_context(), data)
-    }
-    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
-    /// Returns `(&mut [[f32; 8]], &mut [f32])` — the bulk portion reinterpreted
-    /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
-    )]
-    #[inline]
-    pub fn partition_slice_mut(data: &mut [f32]) -> (&mut [[f32; 8]], &mut [f32]) {
-        Self::partition_slice_mut_with_token(archmage::X64V4Token::from_context(), data)
-    }
-    /// Wrap a platform representation (requires matching target features).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
-    )]
-    #[inline]
-    pub fn from_repr(
-        repr: <archmage::X64V4Token as crate::simd::backends::F32x8Backend>::Repr,
-    ) -> Self {
-        let token = archmage::X64V4Token::from_context();
-        Self::new_repr(repr, token)
-    }
-}
-
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl f32x8<archmage::X64V4xToken, crate::simd::generic::Context> {
-    /// Broadcast scalar to all 8 lanes.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
-    )]
-    #[inline]
-    pub fn splat(v: f32) -> Self {
-        let token = archmage::X64V4xToken::from_context();
-        Self::new_repr(
-            <archmage::X64V4xToken as F32x8Backend>::splat(token, v),
-            token,
-        )
-    }
-    /// All lanes zero.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
-    )]
-    #[inline]
-    pub fn zero() -> Self {
-        let token = archmage::X64V4xToken::from_context();
-        Self::new_repr(<archmage::X64V4xToken as F32x8Backend>::zero(token), token)
-    }
-    /// Load from a `[f32; 8]` array.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
-    )]
-    #[inline]
-    pub fn load(data: &[f32; 8]) -> Self {
-        let token = archmage::X64V4xToken::from_context();
-        Self::new_repr(
-            <archmage::X64V4xToken as F32x8Backend>::load(token, data),
-            token,
-        )
-    }
-    /// Create from array (zero-cost where possible).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
-    )]
-    #[inline]
-    pub fn from_array(arr: [f32; 8]) -> Self {
-        let token = archmage::X64V4xToken::from_context();
-        Self::new_repr(
-            <archmage::X64V4xToken as F32x8Backend>::from_array(token, arr),
-            token,
-        )
-    }
-    /// Create from slice. Panics if `slice.len() < 8`.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
-    )]
-    #[inline]
-    pub fn from_slice(slice: &[f32]) -> Self {
-        Self::from_slice_with_token(archmage::X64V4xToken::from_context(), slice)
-    }
-    /// Split a slice into SIMD-width chunks and a scalar remainder.
-    /// Returns `(&[[f32; 8]], &[f32])` — fixed-size arrays suitable
-    /// for [`load`](Self::load), plus any leftover elements.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
-    )]
-    #[inline]
-    pub fn partition_slice(data: &[f32]) -> (&[[f32; 8]], &[f32]) {
-        Self::partition_slice_with_token(archmage::X64V4xToken::from_context(), data)
-    }
-    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
-    /// Returns `(&mut [[f32; 8]], &mut [f32])` — the bulk portion reinterpreted
-    /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
-    )]
-    #[inline]
-    pub fn partition_slice_mut(data: &mut [f32]) -> (&mut [[f32; 8]], &mut [f32]) {
-        Self::partition_slice_mut_with_token(archmage::X64V4xToken::from_context(), data)
-    }
-    /// Wrap a platform representation (requires matching target features).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
-    )]
-    #[inline]
-    pub fn from_repr(
-        repr: <archmage::X64V4xToken as crate::simd::backends::F32x8Backend>::Repr,
-    ) -> Self {
-        let token = archmage::X64V4xToken::from_context();
-        Self::new_repr(repr, token)
-    }
-}
-
-#[cfg(target_arch = "aarch64")]
-impl f32x8<archmage::NeonToken, crate::simd::generic::Context> {
-    /// Broadcast scalar to all 8 lanes.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "neon")]
-    #[inline]
-    pub fn splat(v: f32) -> Self {
-        let token = archmage::NeonToken::from_context();
-        Self::new_repr(
-            <archmage::NeonToken as F32x8Backend>::splat(token, v),
-            token,
-        )
-    }
-    /// All lanes zero.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "neon")]
-    #[inline]
-    pub fn zero() -> Self {
-        let token = archmage::NeonToken::from_context();
-        Self::new_repr(<archmage::NeonToken as F32x8Backend>::zero(token), token)
-    }
-    /// Load from a `[f32; 8]` array.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "neon")]
-    #[inline]
-    pub fn load(data: &[f32; 8]) -> Self {
-        let token = archmage::NeonToken::from_context();
-        Self::new_repr(
-            <archmage::NeonToken as F32x8Backend>::load(token, data),
-            token,
-        )
-    }
-    /// Create from array (zero-cost where possible).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "neon")]
-    #[inline]
-    pub fn from_array(arr: [f32; 8]) -> Self {
-        let token = archmage::NeonToken::from_context();
-        Self::new_repr(
-            <archmage::NeonToken as F32x8Backend>::from_array(token, arr),
-            token,
-        )
-    }
-    /// Create from slice. Panics if `slice.len() < 8`.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "neon")]
-    #[inline]
-    pub fn from_slice(slice: &[f32]) -> Self {
-        Self::from_slice_with_token(archmage::NeonToken::from_context(), slice)
-    }
-    /// Split a slice into SIMD-width chunks and a scalar remainder.
-    /// Returns `(&[[f32; 8]], &[f32])` — fixed-size arrays suitable
-    /// for [`load`](Self::load), plus any leftover elements.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "neon")]
-    #[inline]
-    pub fn partition_slice(data: &[f32]) -> (&[[f32; 8]], &[f32]) {
-        Self::partition_slice_with_token(archmage::NeonToken::from_context(), data)
-    }
-    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
-    /// Returns `(&mut [[f32; 8]], &mut [f32])` — the bulk portion reinterpreted
-    /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "neon")]
-    #[inline]
-    pub fn partition_slice_mut(data: &mut [f32]) -> (&mut [[f32; 8]], &mut [f32]) {
-        Self::partition_slice_mut_with_token(archmage::NeonToken::from_context(), data)
-    }
-    /// Wrap a platform representation (requires matching target features).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "neon")]
-    #[inline]
-    pub fn from_repr(
-        repr: <archmage::NeonToken as crate::simd::backends::F32x8Backend>::Repr,
-    ) -> Self {
-        let token = archmage::NeonToken::from_context();
-        Self::new_repr(repr, token)
-    }
-    /// Create from i32x8 via bitcast (reinterpret bits, no conversion).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "neon")]
-    #[inline]
-    pub fn from_i32_bitcast(
-        v: super::i32x8<archmage::NeonToken, crate::simd::generic::Context>,
-    ) -> Self {
-        let token = archmage::NeonToken::from_context();
-        Self::new_repr(
-            <archmage::NeonToken as crate::simd::backends::F32x8Convert>::bitcast_i32_to_f32(
-                token,
-                v.into_repr(),
-            ),
-            token,
-        )
-    }
-    /// Create from i32x8 via numeric conversion.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "neon")]
-    #[inline]
-    pub fn from_i32(v: super::i32x8<archmage::NeonToken, crate::simd::generic::Context>) -> Self {
-        let token = archmage::NeonToken::from_context();
-        Self::new_repr(
-            <archmage::NeonToken as crate::simd::backends::F32x8Convert>::convert_i32_to_f32(
-                token,
-                v.into_repr(),
-            ),
-            token,
-        )
-    }
-    /// Alias for [`from_i32`](Self::from_i32).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "neon")]
-    #[inline]
-    pub fn from_i32x8(v: super::i32x8<archmage::NeonToken, crate::simd::generic::Context>) -> Self {
-        Self::from_i32x8_with_token(archmage::NeonToken::from_context(), v)
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-impl f32x8<archmage::Wasm128Token, crate::simd::generic::Context> {
-    /// Broadcast scalar to all 8 lanes.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "simd128")]
-    #[inline]
-    pub fn splat(v: f32) -> Self {
-        let token = archmage::Wasm128Token::from_context();
-        Self::new_repr(
-            <archmage::Wasm128Token as F32x8Backend>::splat(token, v),
-            token,
-        )
-    }
-    /// All lanes zero.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "simd128")]
-    #[inline]
-    pub fn zero() -> Self {
-        let token = archmage::Wasm128Token::from_context();
-        Self::new_repr(<archmage::Wasm128Token as F32x8Backend>::zero(token), token)
-    }
-    /// Load from a `[f32; 8]` array.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "simd128")]
-    #[inline]
-    pub fn load(data: &[f32; 8]) -> Self {
-        let token = archmage::Wasm128Token::from_context();
-        Self::new_repr(
-            <archmage::Wasm128Token as F32x8Backend>::load(token, data),
-            token,
-        )
-    }
-    /// Create from array (zero-cost where possible).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "simd128")]
-    #[inline]
-    pub fn from_array(arr: [f32; 8]) -> Self {
-        let token = archmage::Wasm128Token::from_context();
-        Self::new_repr(
-            <archmage::Wasm128Token as F32x8Backend>::from_array(token, arr),
-            token,
-        )
-    }
-    /// Create from slice. Panics if `slice.len() < 8`.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "simd128")]
-    #[inline]
-    pub fn from_slice(slice: &[f32]) -> Self {
-        Self::from_slice_with_token(archmage::Wasm128Token::from_context(), slice)
-    }
-    /// Split a slice into SIMD-width chunks and a scalar remainder.
-    /// Returns `(&[[f32; 8]], &[f32])` — fixed-size arrays suitable
-    /// for [`load`](Self::load), plus any leftover elements.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "simd128")]
-    #[inline]
-    pub fn partition_slice(data: &[f32]) -> (&[[f32; 8]], &[f32]) {
-        Self::partition_slice_with_token(archmage::Wasm128Token::from_context(), data)
-    }
-    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
-    /// Returns `(&mut [[f32; 8]], &mut [f32])` — the bulk portion reinterpreted
-    /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "simd128")]
-    #[inline]
-    pub fn partition_slice_mut(data: &mut [f32]) -> (&mut [[f32; 8]], &mut [f32]) {
-        Self::partition_slice_mut_with_token(archmage::Wasm128Token::from_context(), data)
-    }
-    /// Wrap a platform representation (requires matching target features).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "simd128")]
-    #[inline]
-    pub fn from_repr(
-        repr: <archmage::Wasm128Token as crate::simd::backends::F32x8Backend>::Repr,
-    ) -> Self {
-        let token = archmage::Wasm128Token::from_context();
-        Self::new_repr(repr, token)
-    }
-    /// Create from i32x8 via bitcast (reinterpret bits, no conversion).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "simd128")]
-    #[inline]
-    pub fn from_i32_bitcast(
-        v: super::i32x8<archmage::Wasm128Token, crate::simd::generic::Context>,
-    ) -> Self {
-        let token = archmage::Wasm128Token::from_context();
-        Self::new_repr(
-            <archmage::Wasm128Token as crate::simd::backends::F32x8Convert>::bitcast_i32_to_f32(
-                token,
-                v.into_repr(),
-            ),
-            token,
-        )
-    }
-    /// Create from i32x8 via numeric conversion.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "simd128")]
-    #[inline]
-    pub fn from_i32(
-        v: super::i32x8<archmage::Wasm128Token, crate::simd::generic::Context>,
-    ) -> Self {
-        let token = archmage::Wasm128Token::from_context();
-        Self::new_repr(
-            <archmage::Wasm128Token as crate::simd::backends::F32x8Convert>::convert_i32_to_f32(
-                token,
-                v.into_repr(),
-            ),
-            token,
-        )
-    }
-    /// Alias for [`from_i32`](Self::from_i32).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(enable = "simd128")]
-    #[inline]
-    pub fn from_i32x8(
-        v: super::i32x8<archmage::Wasm128Token, crate::simd::generic::Context>,
-    ) -> Self {
-        Self::from_i32x8_with_token(archmage::Wasm128Token::from_context(), v)
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
-impl f32x8<archmage::X64V3Token, crate::simd::generic::Context> {
-    /// Broadcast scalar to all 8 lanes.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
-    )]
-    #[inline]
-    pub fn splat(v: f32) -> Self {
-        let token = archmage::X64V3Token::from_context();
-        Self::new_repr(
-            <archmage::X64V3Token as F32x8Backend>::splat(token, v),
-            token,
-        )
-    }
-    /// All lanes zero.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
-    )]
-    #[inline]
-    pub fn zero() -> Self {
-        let token = archmage::X64V3Token::from_context();
-        Self::new_repr(<archmage::X64V3Token as F32x8Backend>::zero(token), token)
-    }
-    /// Load from a `[f32; 8]` array.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
-    )]
-    #[inline]
-    pub fn load(data: &[f32; 8]) -> Self {
-        let token = archmage::X64V3Token::from_context();
-        Self::new_repr(
-            <archmage::X64V3Token as F32x8Backend>::load(token, data),
-            token,
-        )
-    }
-    /// Create from array (zero-cost where possible).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
-    )]
-    #[inline]
-    pub fn from_array(arr: [f32; 8]) -> Self {
-        let token = archmage::X64V3Token::from_context();
-        Self::new_repr(
-            <archmage::X64V3Token as F32x8Backend>::from_array(token, arr),
-            token,
-        )
-    }
-    /// Create from slice. Panics if `slice.len() < 8`.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
-    )]
-    #[inline]
-    pub fn from_slice(slice: &[f32]) -> Self {
-        Self::from_slice_with_token(archmage::X64V3Token::from_context(), slice)
-    }
-    /// Split a slice into SIMD-width chunks and a scalar remainder.
-    /// Returns `(&[[f32; 8]], &[f32])` — fixed-size arrays suitable
-    /// for [`load`](Self::load), plus any leftover elements.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
-    )]
-    #[inline]
-    pub fn partition_slice(data: &[f32]) -> (&[[f32; 8]], &[f32]) {
-        Self::partition_slice_with_token(archmage::X64V3Token::from_context(), data)
-    }
-    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
-    /// Returns `(&mut [[f32; 8]], &mut [f32])` — the bulk portion reinterpreted
-    /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
-    )]
-    #[inline]
-    pub fn partition_slice_mut(data: &mut [f32]) -> (&mut [[f32; 8]], &mut [f32]) {
-        Self::partition_slice_mut_with_token(archmage::X64V3Token::from_context(), data)
-    }
-    /// Wrap a platform representation (requires matching target features).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
-    )]
-    #[inline]
-    pub fn from_repr(
-        repr: <archmage::X64V3Token as crate::simd::backends::F32x8Backend>::Repr,
-    ) -> Self {
-        let token = archmage::X64V3Token::from_context();
-        Self::new_repr(repr, token)
-    }
-    /// Create from i32x8 via bitcast (reinterpret bits, no conversion).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
-    )]
-    #[inline]
-    pub fn from_i32_bitcast(
-        v: super::i32x8<archmage::X64V3Token, crate::simd::generic::Context>,
-    ) -> Self {
-        let token = archmage::X64V3Token::from_context();
-        Self::new_repr(
-            <archmage::X64V3Token as crate::simd::backends::F32x8Convert>::bitcast_i32_to_f32(
-                token,
-                v.into_repr(),
-            ),
-            token,
-        )
-    }
-    /// Create from i32x8 via numeric conversion.
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
-    )]
-    #[inline]
-    pub fn from_i32(v: super::i32x8<archmage::X64V3Token, crate::simd::generic::Context>) -> Self {
-        let token = archmage::X64V3Token::from_context();
-        Self::new_repr(
-            <archmage::X64V3Token as crate::simd::backends::F32x8Convert>::convert_i32_to_f32(
-                token,
-                v.into_repr(),
-            ),
-            token,
-        )
-    }
-    /// Alias for [`from_i32`](Self::from_i32).
-    #[forbid(unsafe_code)]
-    /// # Safety
-    /// The CPU must support the enabled target features. Safe calls require a
-    /// matching or stronger target-feature context, which Rust checks.
-    #[target_feature(
-        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
-    )]
-    #[inline]
-    pub fn from_i32x8(
-        v: super::i32x8<archmage::X64V3Token, crate::simd::generic::Context>,
-    ) -> Self {
-        Self::from_i32x8_with_token(archmage::X64V3Token::from_context(), v)
-    }
-}
-
-impl<T: F32x8Backend> f32x8<T, crate::simd::generic::Explicit> {
-    /// Broadcast scalar to all 8 lanes.
-    #[inline(always)]
-    pub fn splat(token: T, v: f32) -> Self {
-        Self::splat_with_token(token, v)
-    }
-    /// All lanes zero.
-    #[inline(always)]
-    pub fn zero(token: T) -> Self {
-        Self::zero_with_token(token)
-    }
-    /// Load from a `[f32; 8]` array.
-    #[inline(always)]
-    pub fn load(token: T, data: &[f32; 8]) -> Self {
-        Self::load_with_token(token, data)
-    }
-    /// Create from array (zero-cost where possible).
-    #[inline(always)]
-    pub fn from_array(token: T, arr: [f32; 8]) -> Self {
-        Self::from_array_with_token(token, arr)
-    }
-    /// Create from slice. Panics if `slice.len() < 8`.
-    #[inline(always)]
-    pub fn from_slice(token: T, slice: &[f32]) -> Self {
-        Self::from_slice_with_token(token, slice)
-    }
-    /// Split a slice into SIMD-width chunks and a scalar remainder.
-    /// Returns `(&[[f32; 8]], &[f32])` — fixed-size arrays suitable
-    /// for [`load`](Self::load), plus any leftover elements.
-    #[inline(always)]
-    pub fn partition_slice(_token: T, data: &[f32]) -> (&[[f32; 8]], &[f32]) {
-        Self::partition_slice_with_token(_token, data)
-    }
-    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
-    /// Returns `(&mut [[f32; 8]], &mut [f32])` — the bulk portion reinterpreted
-    /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
-    #[inline(always)]
-    pub fn partition_slice_mut(_token: T, data: &mut [f32]) -> (&mut [[f32; 8]], &mut [f32]) {
-        Self::partition_slice_mut_with_token(_token, data)
-    }
-    /// Wrap a platform representation (token-gated).
-    #[inline(always)]
-    pub fn from_repr(token: T, repr: T::Repr) -> Self {
-        Self::from_repr_with_token(token, repr)
-    }
-}
-
-impl<T: crate::simd::backends::F32x8Convert> f32x8<T, crate::simd::generic::Explicit> {
-    /// Create from i32x8 via bitcast (reinterpret bits, no conversion).
-    #[inline(always)]
-    pub fn from_i32_bitcast(token: T, v: super::i32x8<T, crate::simd::generic::Explicit>) -> Self {
-        Self::from_i32_bitcast_with_token(token, v)
-    }
-    /// Create from i32x8 via numeric conversion.
-    #[inline(always)]
-    pub fn from_i32(token: T, v: super::i32x8<T, crate::simd::generic::Explicit>) -> Self {
-        Self::from_i32_with_token(token, v)
-    }
-    /// Alias for [`from_i32`](Self::from_i32).
-    #[inline(always)]
-    pub fn from_i32x8(token: T, v: super::i32x8<T, crate::simd::generic::Explicit>) -> Self {
-        Self::from_i32x8_with_token(token, v)
-    }
-}
-
-impl f32x8<archmage::ScalarToken, crate::simd::generic::Context> {
-    /// Broadcast scalar to all 8 lanes.
-    #[forbid(unsafe_code)]
-    #[inline(always)]
-    pub fn splat(v: f32) -> Self {
-        let token = archmage::ScalarToken;
-        Self::new_repr(
-            <archmage::ScalarToken as F32x8Backend>::splat(token, v),
-            token,
-        )
-    }
-    /// All lanes zero.
-    #[forbid(unsafe_code)]
-    #[inline(always)]
-    pub fn zero() -> Self {
-        let token = archmage::ScalarToken;
-        Self::new_repr(<archmage::ScalarToken as F32x8Backend>::zero(token), token)
-    }
-    /// Load from a `[f32; 8]` array.
-    #[forbid(unsafe_code)]
-    #[inline(always)]
-    pub fn load(data: &[f32; 8]) -> Self {
-        let token = archmage::ScalarToken;
-        Self::new_repr(
-            <archmage::ScalarToken as F32x8Backend>::load(token, data),
-            token,
-        )
-    }
-    /// Create from array (zero-cost where possible).
-    #[forbid(unsafe_code)]
-    #[inline(always)]
-    pub fn from_array(arr: [f32; 8]) -> Self {
-        let token = archmage::ScalarToken;
-        Self::new_repr(
-            <archmage::ScalarToken as F32x8Backend>::from_array(token, arr),
-            token,
-        )
-    }
-    /// Create from slice. Panics if `slice.len() < 8`.
-    #[forbid(unsafe_code)]
-    #[inline(always)]
-    pub fn from_slice(slice: &[f32]) -> Self {
-        Self::from_slice_with_token(archmage::ScalarToken, slice)
-    }
-    /// Split a slice into SIMD-width chunks and a scalar remainder.
-    /// Returns `(&[[f32; 8]], &[f32])` — fixed-size arrays suitable
-    /// for [`load`](Self::load), plus any leftover elements.
-    #[forbid(unsafe_code)]
-    #[inline(always)]
-    pub fn partition_slice(data: &[f32]) -> (&[[f32; 8]], &[f32]) {
-        Self::partition_slice_with_token(archmage::ScalarToken, data)
-    }
-    /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
-    /// Returns `(&mut [[f32; 8]], &mut [f32])` — the bulk portion reinterpreted
-    /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
-    #[forbid(unsafe_code)]
-    #[inline(always)]
-    pub fn partition_slice_mut(data: &mut [f32]) -> (&mut [[f32; 8]], &mut [f32]) {
-        Self::partition_slice_mut_with_token(archmage::ScalarToken, data)
-    }
-    /// Wrap a platform representation (requires matching target features).
-    #[forbid(unsafe_code)]
-    #[inline(always)]
-    pub fn from_repr(
-        repr: <archmage::ScalarToken as crate::simd::backends::F32x8Backend>::Repr,
-    ) -> Self {
-        let token = archmage::ScalarToken;
-        Self::new_repr(repr, token)
-    }
-    /// Create from i32x8 via bitcast (reinterpret bits, no conversion).
-    #[forbid(unsafe_code)]
-    #[inline(always)]
-    pub fn from_i32_bitcast(
-        v: super::i32x8<archmage::ScalarToken, crate::simd::generic::Context>,
-    ) -> Self {
-        let token = archmage::ScalarToken;
-        Self::new_repr(
-            <archmage::ScalarToken as crate::simd::backends::F32x8Convert>::bitcast_i32_to_f32(
-                token,
-                v.into_repr(),
-            ),
-            token,
-        )
-    }
-    /// Create from i32x8 via numeric conversion.
-    #[forbid(unsafe_code)]
-    #[inline(always)]
-    pub fn from_i32(v: super::i32x8<archmage::ScalarToken, crate::simd::generic::Context>) -> Self {
-        let token = archmage::ScalarToken;
-        Self::new_repr(
-            <archmage::ScalarToken as crate::simd::backends::F32x8Convert>::convert_i32_to_f32(
-                token,
-                v.into_repr(),
-            ),
-            token,
-        )
-    }
-    /// Alias for [`from_i32`](Self::from_i32).
-    #[forbid(unsafe_code)]
-    #[inline(always)]
-    pub fn from_i32x8(
-        v: super::i32x8<archmage::ScalarToken, crate::simd::generic::Context>,
-    ) -> Self {
-        Self::from_i32x8_with_token(archmage::ScalarToken, v)
+    pub fn from_m256_t(token: archmage::X64V3Token, v: core::arch::x86_64::__m256) -> Self {
+        Self::from_m256(token, v)
     }
 }

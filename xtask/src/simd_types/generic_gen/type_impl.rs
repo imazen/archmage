@@ -23,7 +23,6 @@ pub(super) fn gen_type_impl(ty: &SimdType) -> String {
     code.push_str(&gen_cross_type(ty));
     code.push_str(&conversions::gen_widen_narrow(&ty.name()));
     code.push_str(&gen_platform(ty));
-    code.push_str(&gen_raw_interop(ty));
     code.push_str(&gen_popcnt(ty));
     code
 }
@@ -198,7 +197,7 @@ fn gen_struct(ty: &SimdType) -> String {
     };
 
     let phantom_comment = if ty.elem.is_float() && lanes >= 8 {
-        format!("\n// PhantomData is ZST, so {name}<T, M> has the same size as T::Repr.\n")
+        format!("\n// PhantomData is ZST, so {name}<T> has the same size as T::Repr.\n")
     } else {
         String::new()
     };
@@ -221,20 +220,20 @@ fn gen_struct(ty: &SimdType) -> String {
         /// # Layout
         ///
         /// `#[repr(C)]` with a ZST trailing field: `T::Repr` lives at offset 0
-        /// and `T` plus the sealed policy marker are zero-sized tails. Bitcasts between `{name}<T>` values of
+        /// and `T` is a 0-byte tail. Bitcasts between `{name}<T>` values of
         /// different element-types are sound when the Repr types share a layout
         /// (e.g. `__m128` and `__m128i` are both 16-byte aligned 128-bit values).
         /// `#[repr(transparent)]` cannot be used because Rust cannot prove at
         /// the struct definition site that a generic `T` is a 1-ZST.
         ///
-        /// Fixed-policy aliases select explicit-token or feature-context constructors.
+        /// Construction requires a token value to prove CPU support at runtime.
         {note_section}#[derive(Clone, Copy)]
         #[repr(C)]
-        pub struct {name}<T: {backend}, M: crate::simd::generic::ConstructorMode = crate::simd::generic::Explicit>(pub(crate) T::Repr, pub(crate) T, pub(crate) core::marker::PhantomData<M>);
+        pub struct {name}<T: {backend}>(pub(crate) T::Repr, pub(crate) T);
         // SAFETY: repr(C) pair of Pod storage and a sealed 1-ZST token.
         // A supplied T proves CPU support; the wrapper adds no bit invariants.
         // Helpers additionally check token size/alignment at monomorphization.
-        unsafe impl<M: crate::simd::generic::ConstructorMode, T: {backend}> crate::simd_storage::TokenStorage for {name}<T, M> {{
+        unsafe impl<T: {backend}> crate::simd_storage::TokenStorage for {name}<T> {{
             type Token = T;
         }}
         {phantom_comment}{layout_asserts}
@@ -390,14 +389,7 @@ fn gen_methods(ty: &SimdType) -> String {
     let elem_bits = ty.elem.size_bytes() * 8;
     let high_bit = high_bit_doc(ty.elem);
 
-    let mut code = format!(
-        "impl<M: crate::simd::generic::ConstructorMode, T: {backend}> {name}<T, M> {{
-            #[inline(always)]
-            pub(crate) fn new_repr(repr: T::Repr, token: T) -> Self {{
-                Self(repr, token, core::marker::PhantomData)
-            }}
-\n"
-    );
+    let mut code = format!("impl<T: {backend}> {name}<T> {{\n");
 
     code.push_str(&formatdoc! {"
         \x20   /// Number of {elem} lanes.
@@ -487,7 +479,7 @@ fn gen_methods(ty: &SimdType) -> String {
         \x20   /// Bitwise NOT.
             #[inline(always)]
             pub fn not(self) -> Self {{
-                Self::new_repr(T::not(self.1, self.0), self.1)
+                Self(T::not(self.1, self.0), self.1)
             }}
 
     "});
@@ -529,32 +521,32 @@ fn gen_construction(elem: &str, lanes: usize) -> String {
         \x20   /// Broadcast scalar to all {lanes} lanes.
             #[inline(always)]
             pub fn splat(token: T, v: {elem}) -> Self {{
-                Self::new_repr(T::splat(token, v), token)
+                Self(T::splat(token, v), token)
             }}
 
             /// All lanes zero.
             #[inline(always)]
             pub fn zero(token: T) -> Self {{
-                Self::new_repr(T::zero(token), token)
+                Self(T::zero(token), token)
             }}
 
             /// Load from a `[{elem}; {lanes}]` array.
             #[inline(always)]
             pub fn load(token: T, data: &[{elem}; {lanes}]) -> Self {{
-                Self::new_repr(T::load(token, data), token)
+                Self(T::load(token, data), token)
             }}
 
             /// Create from array (zero-cost where possible).
             #[inline(always)]
             pub fn from_array(token: T, arr: [{elem}; {lanes}]) -> Self {{
-                Self::new_repr(T::from_array(token, arr), token)
+                Self(T::from_array(token, arr), token)
             }}
 
             /// Create from slice. Panics if `slice.len() < {lanes}`.
             #[inline(always)]
             pub fn from_slice(token: T, slice: &[{elem}]) -> Self {{
                 let arr: [{elem}; {lanes}] = slice[..{lanes}].try_into().unwrap();
-                Self::new_repr(T::from_array(token, arr), token)
+                Self(T::from_array(token, arr), token)
             }}
 
     "}
@@ -583,7 +575,7 @@ fn gen_accessors(elem: &str, lanes: usize) -> String {
             /// Wrap a platform representation (token-gated).
             #[inline(always)]
             pub fn from_repr(token: T, repr: T::Repr) -> Self {{
-                Self::new_repr(repr, token)
+                Self(repr, token)
             }}
 
             /// Wrap a repr with a token. Used by cross-type/cross-width helpers
@@ -592,7 +584,7 @@ fn gen_accessors(elem: &str, lanes: usize) -> String {
             #[inline(always)]
             #[allow(dead_code)]
             pub(crate) fn from_repr_unchecked(token: T, repr: T::Repr) -> Self {{
-                Self::new_repr(repr, token)
+                Self(repr, token)
             }}
 
     "}
@@ -611,49 +603,49 @@ fn gen_float_math() -> String {
         \x20   /// Lane-wise minimum.
             #[inline(always)]
             pub fn min(self, other: Self) -> Self {{
-                Self::new_repr(T::min(self.1, self.0, other.0), self.1)
+                Self(T::min(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise maximum.
             #[inline(always)]
             pub fn max(self, other: Self) -> Self {{
-                Self::new_repr(T::max(self.1, self.0, other.0), self.1)
+                Self(T::max(self.1, self.0, other.0), self.1)
             }}
 
             /// Clamp between lo and hi.
             #[inline(always)]
             pub fn clamp(self, lo: Self, hi: Self) -> Self {{
-                Self::new_repr(T::clamp(self.1, self.0, lo.0, hi.0), self.1)
+                Self(T::clamp(self.1, self.0, lo.0, hi.0), self.1)
             }}
 
             /// Square root.
             #[inline(always)]
             pub fn sqrt(self) -> Self {{
-                Self::new_repr(T::sqrt(self.1, self.0), self.1)
+                Self(T::sqrt(self.1, self.0), self.1)
             }}
 
             /// Absolute value.
             #[inline(always)]
             pub fn abs(self) -> Self {{
-                Self::new_repr(T::abs(self.1, self.0), self.1)
+                Self(T::abs(self.1, self.0), self.1)
             }}
 
             /// Round toward negative infinity.
             #[inline(always)]
             pub fn floor(self) -> Self {{
-                Self::new_repr(T::floor(self.1, self.0), self.1)
+                Self(T::floor(self.1, self.0), self.1)
             }}
 
             /// Round toward positive infinity.
             #[inline(always)]
             pub fn ceil(self) -> Self {{
-                Self::new_repr(T::ceil(self.1, self.0), self.1)
+                Self(T::ceil(self.1, self.0), self.1)
             }}
 
             /// Round to nearest integer.
             #[inline(always)]
             pub fn round(self) -> Self {{
-                Self::new_repr(T::round(self.1, self.0), self.1)
+                Self(T::round(self.1, self.0), self.1)
             }}
 
             /// Multiply-add: `self * a + b`.
@@ -664,7 +656,7 @@ fn gen_float_math() -> String {
             /// from the fused backends by 1 ULP.
             #[inline(always)]
             pub fn mul_add(self, a: Self, b: Self) -> Self {{
-                Self::new_repr(T::mul_add(self.1, self.0, a.0, b.0), self.1)
+                Self(T::mul_add(self.1, self.0, a.0, b.0), self.1)
             }}
 
             /// Multiply-sub: `self * a - b`.
@@ -673,7 +665,7 @@ fn gen_float_math() -> String {
             /// x86 v3/v4 and NEON, unfused (two roundings) on scalar and WASM.
             #[inline(always)]
             pub fn mul_sub(self, a: Self, b: Self) -> Self {{
-                Self::new_repr(T::mul_sub(self.1, self.0, a.0, b.0), self.1)
+                Self(T::mul_sub(self.1, self.0, a.0, b.0), self.1)
             }}
 
     "}
@@ -690,13 +682,13 @@ fn gen_int_math(ty: &SimdType) -> String {
         \x20   /// Lane-wise minimum{unsigned_suffix}.
             #[inline(always)]
             pub fn min(self, other: Self) -> Self {{
-                Self::new_repr(T::min(self.1, self.0, other.0), self.1)
+                Self(T::min(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise maximum{unsigned_suffix}.
             #[inline(always)]
             pub fn max(self, other: Self) -> Self {{
-                Self::new_repr(T::max(self.1, self.0, other.0), self.1)
+                Self(T::max(self.1, self.0, other.0), self.1)
             }}
 
     "};
@@ -706,7 +698,7 @@ fn gen_int_math(ty: &SimdType) -> String {
             \x20   /// Lane-wise absolute value.
                 #[inline(always)]
                 pub fn abs(self) -> Self {{
-                    Self::new_repr(T::abs(self.1, self.0), self.1)
+                    Self(T::abs(self.1, self.0), self.1)
                 }}
 
         "});
@@ -716,7 +708,7 @@ fn gen_int_math(ty: &SimdType) -> String {
         \x20   /// Clamp between lo and hi.
             #[inline(always)]
             pub fn clamp(self, lo: Self, hi: Self) -> Self {{
-                Self::new_repr(T::clamp(self.1, self.0, lo.0, hi.0), self.1)
+                Self(T::clamp(self.1, self.0, lo.0, hi.0), self.1)
             }}
 
     "});
@@ -729,43 +721,43 @@ fn gen_comparisons(signedness: &str) -> String {
         \x20   /// Lane-wise equality (returns mask).
             #[inline(always)]
             pub fn simd_eq(self, other: Self) -> Self {{
-                Self::new_repr(T::simd_eq(self.1, self.0, other.0), self.1)
+                Self(T::simd_eq(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise inequality (returns mask).
             #[inline(always)]
             pub fn simd_ne(self, other: Self) -> Self {{
-                Self::new_repr(T::simd_ne(self.1, self.0, other.0), self.1)
+                Self(T::simd_ne(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise less-than{signedness} (returns mask).
             #[inline(always)]
             pub fn simd_lt(self, other: Self) -> Self {{
-                Self::new_repr(T::simd_lt(self.1, self.0, other.0), self.1)
+                Self(T::simd_lt(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise less-than-or-equal{signedness} (returns mask).
             #[inline(always)]
             pub fn simd_le(self, other: Self) -> Self {{
-                Self::new_repr(T::simd_le(self.1, self.0, other.0), self.1)
+                Self(T::simd_le(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise greater-than{signedness} (returns mask).
             #[inline(always)]
             pub fn simd_gt(self, other: Self) -> Self {{
-                Self::new_repr(T::simd_gt(self.1, self.0, other.0), self.1)
+                Self(T::simd_gt(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise greater-than-or-equal{signedness} (returns mask).
             #[inline(always)]
             pub fn simd_ge(self, other: Self) -> Self {{
-                Self::new_repr(T::simd_ge(self.1, self.0, other.0), self.1)
+                Self(T::simd_ge(self.1, self.0, other.0), self.1)
             }}
 
             /// Select lanes: where mask is all-1s pick `if_true`, else `if_false`.
             #[inline(always)]
             pub fn blend(mask: Self, if_true: Self, if_false: Self) -> Self {{
-                Self::new_repr(T::blend(mask.1, mask.0, if_true.0, if_false.0), mask.1)
+                Self(T::blend(mask.1, mask.0, if_true.0, if_false.0), mask.1)
             }}
 
     "}
@@ -790,7 +782,7 @@ fn gen_approximations(ty: &SimdType) -> String {
                 pub fn rcp_approx(self) -> Self {{
                     // Each backend owns its >=12-bit estimate (x86 raw rcpps; ARM
                     // raw vrecpe + 1 fused FRECPS; WASM/scalar exact division).
-                    Self::new_repr(T::rcp_approx(self.1, self.0), self.1)
+                    Self(T::rcp_approx(self.1, self.0), self.1)
                 }}
 
                 /// Reciprocal (1/x), the working tier: at least ~22 correct bits
@@ -817,7 +809,7 @@ fn gen_approximations(ty: &SimdType) -> String {
                 /// [`recip_portable`](Self::recip_portable).
                 #[inline(always)]
                 pub fn recip(self) -> Self {{
-                    Self::new_repr(T::recip(self.1, self.0), self.1)
+                    Self(T::recip(self.1, self.0), self.1)
                 }}
 
                 /// Fast reciprocal square root (1/sqrt(x)), ≥~12-bit floor — see
@@ -830,7 +822,7 @@ fn gen_approximations(ty: &SimdType) -> String {
                 pub fn rsqrt_approx(self) -> Self {{
                     // ARM uses raw vrsqrte + 1 fused FRSQRTS; WASM/scalar a bit-hack
                     // seed + 2 Newton steps; x86 the raw rsqrtps estimate.
-                    Self::new_repr(T::rsqrt_approx(self.1, self.0), self.1)
+                    Self(T::rsqrt_approx(self.1, self.0), self.1)
                 }}
 
                 /// Reciprocal square root (1/sqrt(x)), the working tier: ≤4 ULP
@@ -843,7 +835,7 @@ fn gen_approximations(ty: &SimdType) -> String {
                 /// 0 ULP + subnormals + bit-identical.
                 #[inline(always)]
                 pub fn rsqrt(self) -> Self {{
-                    Self::new_repr(T::rsqrt(self.1, self.0), self.1)
+                    Self(T::rsqrt(self.1, self.0), self.1)
                 }}
 
         "}
@@ -855,7 +847,7 @@ fn gen_approximations(ty: &SimdType) -> String {
             \x20   /// Fast reciprocal approximation (1/x): the backend's native estimate.
                 #[inline(always)]
                 pub fn rcp_approx(self) -> Self {{
-                    Self::new_repr(T::rcp_approx(self.1, self.0), self.1)
+                    Self(T::rcp_approx(self.1, self.0), self.1)
                 }}
 
                 /// Reciprocal (1/x), the working tier: ≤4 ULP **with exact IEEE
@@ -866,7 +858,7 @@ fn gen_approximations(ty: &SimdType) -> String {
                 /// 0 ULP + subnormals + bit-identical.
                 #[inline(always)]
                 pub fn recip(self) -> Self {{
-                    Self::new_repr(T::recip(self.1, self.0), self.1)
+                    Self(T::recip(self.1, self.0), self.1)
                 }}
 
                 /// Fast reciprocal square root approximation: the backend's native
@@ -874,7 +866,7 @@ fn gen_approximations(ty: &SimdType) -> String {
                 /// backends.
                 #[inline(always)]
                 pub fn rsqrt_approx(self) -> Self {{
-                    Self::new_repr(T::rsqrt_approx(self.1, self.0), self.1)
+                    Self(T::rsqrt_approx(self.1, self.0), self.1)
                 }}
 
                 /// Reciprocal square root (1/sqrt(x)), the working tier: ≤4 ULP
@@ -883,7 +875,7 @@ fn gen_approximations(ty: &SimdType) -> String {
                 /// 0 ULP + subnormals + bit-identical.
                 #[inline(always)]
                 pub fn rsqrt(self) -> Self {{
-                    Self::new_repr(T::rsqrt(self.1, self.0), self.1)
+                    Self(T::rsqrt(self.1, self.0), self.1)
                 }}
 
         "}
@@ -895,7 +887,7 @@ fn gen_approximations(ty: &SimdType) -> String {
                 /// (exact division on f64 — no hardware estimate exists).
                 #[inline(always)]
                 pub fn rcp_approx(self) -> Self {{
-                    Self::new_repr(T::rcp_approx(self.1, self.0), self.1)
+                    Self(T::rcp_approx(self.1, self.0), self.1)
                 }}
 
                 /// Precise reciprocal (1/x): exact IEEE division on every backend.
@@ -905,14 +897,14 @@ fn gen_approximations(ty: &SimdType) -> String {
                 /// the working tier and the exact tier coincide.
                 #[inline(always)]
                 pub fn recip(self) -> Self {{
-                    Self::new_repr(T::recip(self.1, self.0), self.1)
+                    Self(T::recip(self.1, self.0), self.1)
                 }}
 
                 /// Fast reciprocal square root approximation (exact division +
                 /// sqrt on f64 — no hardware estimate exists).
                 #[inline(always)]
                 pub fn rsqrt_approx(self) -> Self {{
-                    Self::new_repr(T::rsqrt_approx(self.1, self.0), self.1)
+                    Self(T::rsqrt_approx(self.1, self.0), self.1)
                 }}
 
                 /// Precise reciprocal square root (1/sqrt(x)): exact IEEE division
@@ -920,7 +912,7 @@ fn gen_approximations(ty: &SimdType) -> String {
                 /// `1.0 / x.sqrt()`, rails included.
                 #[inline(always)]
                 pub fn rsqrt(self) -> Self {{
-                    Self::new_repr(T::rsqrt(self.1, self.0), self.1)
+                    Self(T::rsqrt(self.1, self.0), self.1)
                 }}
 
         "}
@@ -1045,7 +1037,7 @@ fn gen_shifts(ty: &SimdType) -> String {
             #[inline(always)]
             pub fn shl_const<const N: i32>(self) -> Self {{
                 const {{ assert!(N >= 0 && N <= {max_sh}, \"shift amount out of range\") }};
-                Self::new_repr(T::shl_const::<N>(self.1, self.0), self.1)
+                Self(T::shl_const::<N>(self.1, self.0), self.1)
             }}
 
     "};
@@ -1059,7 +1051,7 @@ fn gen_shifts(ty: &SimdType) -> String {
                 #[inline(always)]
                 pub fn shr_arithmetic_const<const N: i32>(self) -> Self {{
                     const {{ assert!(N >= 0 && N <= {max_sh}, \"shift amount out of range\") }};
-                    Self::new_repr(T::shr_arithmetic_const::<N>(self.1, self.0), self.1)
+                    Self(T::shr_arithmetic_const::<N>(self.1, self.0), self.1)
                 }}
 
         "});
@@ -1073,7 +1065,7 @@ fn gen_shifts(ty: &SimdType) -> String {
             #[inline(always)]
             pub fn shr_logical_const<const N: i32>(self) -> Self {{
                 const {{ assert!(N >= 0 && N <= {max_sh}, \"shift amount out of range\") }};
-                Self::new_repr(T::shr_logical_const::<N>(self.1, self.0), self.1)
+                Self(T::shr_logical_const::<N>(self.1, self.0), self.1)
             }}
 
             /// Alias for [`shl_const`](Self::shl_const).
@@ -1125,7 +1117,7 @@ fn gen_uniform_shifts(ty: &SimdType) -> String {
             /// AVX-512BW+VL, and wasm128 has no per-lane variable shift at all.
             #[inline(always)]
             pub fn shl_uniform(self, count: u32) -> Self {{
-                Self::new_repr(T::shl_uniform(self.1, self.0, count), self.1)
+                Self(T::shl_uniform(self.1, self.0, count), self.1)
             }}
 
             /// Logical (zero-filling) shift right by a runtime `count`, applied
@@ -1134,7 +1126,7 @@ fn gen_uniform_shifts(ty: &SimdType) -> String {
             /// `count >= {bits}` yields all-zero lanes on every backend.
             #[inline(always)]
             pub fn shr_logical_uniform(self, count: u32) -> Self {{
-                Self::new_repr(T::shr_logical_uniform(self.1, self.0, count), self.1)
+                Self(T::shr_logical_uniform(self.1, self.0, count), self.1)
             }}
 
     ", bits = bits};
@@ -1148,7 +1140,7 @@ fn gen_uniform_shifts(ty: &SimdType) -> String {
                 /// `-1`), equivalent to shifting by {max_sh}, on every backend.
                 #[inline(always)]
                 pub fn shr_arithmetic_uniform(self, count: u32) -> Self {{
-                    Self::new_repr(T::shr_arithmetic_uniform(self.1, self.0, count), self.1)
+                    Self(T::shr_arithmetic_uniform(self.1, self.0, count), self.1)
                 }}
 
         ", bits = bits, max_sh = max_sh});
@@ -1167,14 +1159,14 @@ fn gen_saturating_arith(ty: &SimdType) -> String {
             /// wrapping — `{elem}::saturating_add`, per lane.
             #[inline(always)]
             pub fn saturating_add(self, other: Self) -> Self {{
-                Self::new_repr(T::saturating_add(self.1, self.0, other.0), self.1)
+                Self(T::saturating_add(self.1, self.0, other.0), self.1)
             }}
 
             /// Lane-wise subtraction that clamps to the `{elem}` range instead of
             /// wrapping — `{elem}::saturating_sub`, per lane.
             #[inline(always)]
             pub fn saturating_sub(self, other: Self) -> Self {{
-                Self::new_repr(T::saturating_sub(self.1, self.0, other.0), self.1)
+                Self(T::saturating_sub(self.1, self.0, other.0), self.1)
             }}
 
     ", elem = elem}
@@ -1189,7 +1181,7 @@ fn gen_partition_slice(ty: &SimdType) -> String {
             /// Returns `(&[[{elem}; {lanes}]], &[{elem}])` — fixed-size arrays suitable
             /// for [`load`](Self::load), plus any leftover elements.
             #[inline(always)]
-            pub fn partition_slice(_token: T, data: &[{elem}]) -> (&[[{elem}; {lanes}]], &[{elem}]) {{
+            pub fn partition_slice(_: T, data: &[{elem}]) -> (&[[{elem}; {lanes}]], &[{elem}]) {{
                 data.as_chunks::<{lanes}>()
             }}
 
@@ -1206,7 +1198,7 @@ fn gen_partition_slice_mut(ty: &SimdType) -> String {
             /// Returns `(&mut [[{elem}; {lanes}]], &mut [{elem}])` — the bulk portion reinterpreted
             /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
             #[inline(always)]
-            pub fn partition_slice_mut(_token: T, data: &mut [{elem}]) -> (&mut [[{elem}; {lanes}]], &mut [{elem}]) {{
+            pub fn partition_slice_mut(_: T, data: &mut [{elem}]) -> (&mut [[{elem}; {lanes}]], &mut [{elem}]) {{
                 data.as_chunks_mut::<{lanes}>()
             }}
 
@@ -1238,11 +1230,11 @@ fn gen_operators(ty: &SimdType) -> String {
     }
     if has_neg(ty.elem) {
         code.push_str(&formatdoc! {"
-            impl<M: crate::simd::generic::ConstructorMode, T: {backend}> Neg for {name}<T, M> {{
+            impl<T: {backend}> Neg for {name}<T> {{
                 type Output = Self;
                 #[inline(always)]
                 fn neg(self) -> Self {{
-                    Self::new_repr(T::neg(self.1, self.0), self.1)
+                    Self(T::neg(self.1, self.0), self.1)
                 }}
             }}
 
@@ -1256,11 +1248,11 @@ fn gen_operators(ty: &SimdType) -> String {
 
 fn gen_binary_op(name: &str, backend: &str, trait_name: &str, method: &str) -> String {
     formatdoc! {"
-        impl<M: crate::simd::generic::ConstructorMode, T: {backend}> {trait_name} for {name}<T, M> {{
+        impl<T: {backend}> {trait_name} for {name}<T> {{
             type Output = Self;
             #[inline(always)]
             fn {method}(self, rhs: Self) -> Self {{
-                Self::new_repr(T::{method}(self.1, self.0, rhs.0), self.1)
+                Self(T::{method}(self.1, self.0, rhs.0), self.1)
             }}
         }}
 
@@ -1336,7 +1328,7 @@ fn gen_assign_operators(ty: &SimdType) -> String {
 
 fn gen_assign_op(name: &str, backend: &str, trait_name: &str, method: &str, op: &str) -> String {
     formatdoc! {"
-        impl<M: crate::simd::generic::ConstructorMode, T: {backend}> {trait_name} for {name}<T, M> {{
+        impl<T: {backend}> {trait_name} for {name}<T> {{
             #[inline(always)]
             fn {method}(&mut self, rhs: Self) {{
                 *self = *self {op} rhs;
@@ -1379,11 +1371,11 @@ fn gen_scalar_broadcast(ty: &SimdType) -> String {
 
 fn gen_scalar_op(name: &str, backend: &str, elem: &str, trait_name: &str, method: &str) -> String {
     formatdoc! {"
-        impl<M: crate::simd::generic::ConstructorMode, T: {backend}> {trait_name}<{elem}> for {name}<T, M> {{
+        impl<T: {backend}> {trait_name}<{elem}> for {name}<T> {{
             type Output = Self;
             #[inline(always)]
             fn {method}(self, rhs: {elem}) -> Self {{
-                Self::new_repr(T::{method}(self.1, self.0, T::splat(self.1, rhs)), self.1)
+                Self(T::{method}(self.1, self.0, T::splat(self.1, rhs)), self.1)
             }}
         }}
 
@@ -1403,7 +1395,7 @@ fn gen_index(ty: &SimdType) -> String {
         // Index
         // ============================================================================
 
-        impl<M: crate::simd::generic::ConstructorMode, T: {backend}> Index<usize> for {name}<T, M> {{
+        impl<T: {backend}> Index<usize> for {name}<T> {{
             type Output = {elem};
             #[inline(always)]
             fn index(&self, i: usize) -> &{elem} {{
@@ -1411,7 +1403,7 @@ fn gen_index(ty: &SimdType) -> String {
             }}
         }}
 
-        impl<M: crate::simd::generic::ConstructorMode, T: {backend}> IndexMut<usize> for {name}<T, M> {{
+        impl<T: {backend}> IndexMut<usize> for {name}<T> {{
             #[inline(always)]
             fn index_mut(&mut self, i: usize) -> &mut {elem} {{
                 &mut crate::simd_storage::view_mut::<_, [{elem}; {lanes}]>(&mut self.0)[i]
@@ -1432,9 +1424,9 @@ fn gen_from_array(ty: &SimdType) -> String {
         // Conversions
         // ============================================================================
 
-        impl<M: crate::simd::generic::ConstructorMode, T: {backend}> From<{name}<T, M>> for [{elem}; {lanes}] {{
+        impl<T: {backend}> From<{name}<T>> for [{elem}; {lanes}] {{
             #[inline(always)]
-            fn from(v: {name}<T, M>) -> [{elem}; {lanes}] {{
+            fn from(v: {name}<T>) -> [{elem}; {lanes}] {{
                 T::to_array(v.1, v.0)
             }}
         }}
@@ -1451,7 +1443,7 @@ fn gen_debug(ty: &SimdType) -> String {
         // Debug
         // ============================================================================
 
-        impl<M: crate::simd::generic::ConstructorMode, T: {backend}> core::fmt::Debug for {name}<T, M> {{
+        impl<T: {backend}> core::fmt::Debug for {name}<T> {{
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {{
                 let arr = T::to_array(self.1, self.0);
                 f.debug_tuple(\"{name}\").field(&arr).finish()
@@ -1489,7 +1481,7 @@ fn gen_platform(ty: &SimdType) -> String {
         // Platform-specific concrete impls
         // ============================================================================
 
-        impl<M: crate::simd::generic::ConstructorMode> {name}<archmage::ScalarToken, M> {{
+        impl {name}<archmage::ScalarToken> {{
             /// Implementation identifier for this backend.
             pub const fn implementation_name() -> &'static str {{
                 \"scalar::{name}\"
@@ -1506,7 +1498,7 @@ fn gen_platform(ty: &SimdType) -> String {
             formatdoc! {"
                 {scalar_block}
                 #[cfg(target_arch = \"x86_64\")]
-                impl<M: crate::simd::generic::ConstructorMode> {name}<archmage::X64V3Token, M> {{
+                impl {name}<archmage::X64V3Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
                         \"x86::v3::{name}\"
@@ -1521,12 +1513,12 @@ fn gen_platform(ty: &SimdType) -> String {
                     /// Create from a raw `{raw_type}` (token-gated, zero-cost).
                     #[inline(always)]
                     pub fn {from_fn}(token: archmage::X64V3Token, v: core::arch::x86_64::{raw_type}) -> Self {{
-                        Self::new_repr(v, token)
+                        Self(v, token)
                     }}
                 }}
 
                 #[cfg(target_arch = \"aarch64\")]
-                impl<M: crate::simd::generic::ConstructorMode> {name}<archmage::NeonToken, M> {{
+                impl {name}<archmage::NeonToken> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
                         \"arm::neon::{name}\"
@@ -1534,7 +1526,7 @@ fn gen_platform(ty: &SimdType) -> String {
                 }}
 
                 #[cfg(target_arch = \"wasm32\")]
-                impl<M: crate::simd::generic::ConstructorMode> {name}<archmage::Wasm128Token, M> {{
+                impl {name}<archmage::Wasm128Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
                         \"wasm::wasm128::{name}\"
@@ -1550,7 +1542,7 @@ fn gen_platform(ty: &SimdType) -> String {
             formatdoc! {"
                 {scalar_block}
                 #[cfg(target_arch = \"x86_64\")]
-                impl<M: crate::simd::generic::ConstructorMode> {name}<archmage::X64V3Token, M> {{
+                impl {name}<archmage::X64V3Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
                         \"x86::v3::{name}\"
@@ -1565,12 +1557,12 @@ fn gen_platform(ty: &SimdType) -> String {
                     /// Create from a raw `{raw_type}` (token-gated, zero-cost).
                     #[inline(always)]
                     pub fn {from_fn}(token: archmage::X64V3Token, v: core::arch::x86_64::{raw_type}) -> Self {{
-                        Self::new_repr(v, token)
+                        Self(v, token)
                     }}
                 }}
 
                 #[cfg(target_arch = \"aarch64\")]
-                impl<M: crate::simd::generic::ConstructorMode> {name}<archmage::NeonToken, M> {{
+                impl {name}<archmage::NeonToken> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
                         \"polyfill::neon::{name}\"
@@ -1578,7 +1570,7 @@ fn gen_platform(ty: &SimdType) -> String {
                 }}
 
                 #[cfg(target_arch = \"wasm32\")]
-                impl<M: crate::simd::generic::ConstructorMode> {name}<archmage::Wasm128Token, M> {{
+                impl {name}<archmage::Wasm128Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
                         \"polyfill::wasm128::{name}\"
@@ -1595,7 +1587,7 @@ fn gen_platform(ty: &SimdType) -> String {
                 // Platform-specific concrete impls
                 // ============================================================================
 
-                impl<M: crate::simd::generic::ConstructorMode> {name}<archmage::ScalarToken, M> {{
+                impl {name}<archmage::ScalarToken> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
                         \"scalar::{name}\"
@@ -1603,7 +1595,7 @@ fn gen_platform(ty: &SimdType) -> String {
                 }}
 
                 #[cfg(target_arch = \"x86_64\")]
-                impl<M: crate::simd::generic::ConstructorMode> {name}<archmage::X64V3Token, M> {{
+                impl {name}<archmage::X64V3Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
                         \"polyfill::v3_512::{name}\"
@@ -1611,7 +1603,7 @@ fn gen_platform(ty: &SimdType) -> String {
                 }}
 
                 #[cfg(all(target_arch = \"x86_64\", feature = \"avx512\"))]
-                impl<M: crate::simd::generic::ConstructorMode> {name}<archmage::X64V4Token, M> {{
+                impl {name}<archmage::X64V4Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
                         \"x86::v4::{name}\"
@@ -1619,7 +1611,7 @@ fn gen_platform(ty: &SimdType) -> String {
                 }}
 
                 #[cfg(all(target_arch = \"x86_64\", feature = \"avx512\"))]
-                impl<M: crate::simd::generic::ConstructorMode> {name}<archmage::X64V4xToken, M> {{
+                impl {name}<archmage::X64V4xToken> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
                         \"x86::v4x::{name}\"
@@ -1627,7 +1619,7 @@ fn gen_platform(ty: &SimdType) -> String {
                 }}
 
                 #[cfg(target_arch = \"aarch64\")]
-                impl<M: crate::simd::generic::ConstructorMode> {name}<archmage::NeonToken, M> {{
+                impl {name}<archmage::NeonToken> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
                         \"polyfill::neon_512::{name}\"
@@ -1635,7 +1627,7 @@ fn gen_platform(ty: &SimdType) -> String {
                 }}
 
                 #[cfg(target_arch = \"wasm32\")]
-                impl<M: crate::simd::generic::ConstructorMode> {name}<archmage::Wasm128Token, M> {{
+                impl {name}<archmage::Wasm128Token> {{
                     /// Implementation identifier for this backend.
                     pub const fn implementation_name() -> &'static str {{
                         \"polyfill::wasm128_512::{name}\"
@@ -1648,7 +1640,7 @@ fn gen_platform(ty: &SimdType) -> String {
 
 /// Native raw construction without a token requires a compiler-checked context.
 /// Existing token-taking constructors retain their signatures and proof source.
-fn gen_raw_interop(ty: &SimdType) -> String {
+pub(super) fn gen_raw_interop(ty: &SimdType, registry: &crate::registry::Registry) -> String {
     let name = ty.name();
     let mut code = String::new();
     let mut platforms = Vec::new();
@@ -1679,6 +1671,11 @@ fn gen_raw_interop(ty: &SimdType) -> String {
         }
     }
     for (arch, token, tier, raw, feature) in platforms {
+        let features = registry
+            .find_token(token)
+            .expect("registered raw backend")
+            .features
+            .join(",");
         let cfg = if feature.is_empty() {
             format!("target_arch = \"{arch}\"")
         } else {
@@ -1696,7 +1693,7 @@ fn gen_raw_interop(ty: &SimdType) -> String {
                 /// Wrap a raw `{raw}` using an existing CPU capability token.
                 #[inline(always)]
                 pub fn {from_fn}(token: archmage::{token}, value: core::arch::{arch}::{raw}) -> Self {{
-                    Self::new_repr(value, token)
+                    Self(value, token)
                 }}
             "#}
         } else {
@@ -1704,16 +1701,15 @@ fn gen_raw_interop(ty: &SimdType) -> String {
         };
         code.push_str(&formatdoc! {r#"
             #[cfg({cfg})]
-            impl<M: crate::simd::generic::ConstructorMode> {name}<archmage::{token}, M> {{
+            impl {name}<archmage::{token}> {{
                 {legacy}
                 /// Wrap a raw `{raw}` using an explicit CPU capability token.
                 ///
-                /// Available in either constructor mode. The caller does not
-                /// need a target-feature annotation.
+                /// The caller does not need a target-feature annotation.
                 #[forbid(unsafe_code)]
                 #[inline(always)]
-                pub fn from_raw_with_token(token: archmage::{token}, value: core::arch::{arch}::{raw}) -> Self {{
-                    Self::new_repr(value, token)
+                pub fn from_raw_t(token: archmage::{token}, value: core::arch::{arch}::{raw}) -> Self {{
+                    Self(value, token)
                 }}
 
                 /// Wrap a raw `{raw}` in a matching target-feature context.
@@ -1721,9 +1717,13 @@ fn gen_raw_interop(ty: &SimdType) -> String {
                 /// Rust requires the caller to enable the `{tier}` tier's features.
                 /// Use an archmage `#[rite({tier})]` helper or `#[arcane]` entry point.
                 #[forbid(unsafe_code)]
-                #[archmage::rite({tier})]
+                /// # Safety
+                /// The CPU must support the enabled target features. Safe calls require a
+                /// matching or stronger feature context, which Rust checks.
+                #[target_feature(enable = "{features}")]
+                #[inline]
                 pub fn from_raw(value: core::arch::{arch}::{raw}) -> Self {{
-                    Self::new_repr(value, archmage::{token}::from_context())
+                    Self(value, archmage::{token}::from_context())
                 }}
             }}
         "#});
@@ -1745,7 +1745,7 @@ fn gen_popcnt(ty: &SimdType) -> String {
         // ============================================================================
 
         #[cfg(feature = \"avx512\")]
-        impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::backends::{name}PopcntBackend> {name}<T, M> {{
+        impl<T: crate::simd::backends::{name}PopcntBackend> {name}<T> {{
             /// Count set bits in each lane (popcnt).
             ///
             /// Returns a vector where each lane contains the number of 1-bits
@@ -1754,7 +1754,7 @@ fn gen_popcnt(ty: &SimdType) -> String {
             /// Requires AVX-512 Modern token (VPOPCNTDQ or BITALG extension).
             #[inline(always)]
             pub fn popcnt(self) -> Self {{
-                Self::new_repr(T::popcnt(self.1, self.0), self.1)
+                Self(T::popcnt(self.1, self.0), self.1)
             }}
         }}
     "}

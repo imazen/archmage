@@ -115,5 +115,3 @@ pub use u16x32_impl::u16x32;
 pub use u32x16_impl::u32x16;
 #[cfg(feature = "w512")]
 pub use u64x8_impl::u64x8;
-
-mod cross_width;

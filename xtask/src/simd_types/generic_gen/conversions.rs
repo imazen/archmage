@@ -24,13 +24,13 @@ pub(crate) fn gen_f32_i32_convert_on_float(src: &str, trait_bound: &str) -> Stri
 
             /// Alias for [`bitcast_ref_i32`](Self::bitcast_ref_i32) (from block_ops).
             #[inline(always)]
-            pub fn bitcast_ref_{int_type}(&self) -> &super::{int_type}<T, M> {{
+            pub fn bitcast_ref_{int_type}(&self) -> &super::{int_type}<T> {{
                 self.bitcast_ref_i32()
             }}
 
             /// Alias for [`bitcast_mut_i32`](Self::bitcast_mut_i32) (from block_ops).
             #[inline(always)]
-            pub fn bitcast_mut_{int_type}(&mut self) -> &mut super::{int_type}<T, M> {{
+            pub fn bitcast_mut_{int_type}(&mut self) -> &mut super::{int_type}<T> {{
                 self.bitcast_mut_i32()
             }}
         "#}
@@ -43,17 +43,17 @@ pub(crate) fn gen_f32_i32_convert_on_float(src: &str, trait_bound: &str) -> Stri
         // Cross-type conversions (available when T implements conversion traits)
         // ============================================================================
 
-        impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::backends::{trait_bound}> {src}<T, M> {{
+        impl<T: crate::simd::backends::{trait_bound}> {src}<T> {{
             /// Bitcast to {int_type} (reinterpret bits, no conversion).
             #[inline(always)]
-            pub fn bitcast_to_i32(self) -> super::{int_type}<T, M> {{
+            pub fn bitcast_to_i32(self) -> super::{int_type}<T> {{
                 super::{int_type}::from_repr_unchecked(self.1, T::bitcast_f32_to_i32(self.1, self.0))
             }}
 
             /// Create from {int_type} via bitcast (reinterpret bits, no conversion).
             #[inline(always)]
-            pub fn from_i32_bitcast(token: T, v: super::{int_type}<T, M>) -> Self {{
-                Self::new_repr(T::bitcast_i32_to_f32(token, v.into_repr()), token)
+            pub fn from_i32_bitcast(token: T, v: super::{int_type}<T>) -> Self {{
+                Self(T::bitcast_i32_to_f32(token, v.into_repr()), token)
             }}
 
             /// Convert to {int_type} with truncation toward zero.
@@ -67,7 +67,7 @@ pub(crate) fn gen_f32_i32_convert_on_float(src: &str, trait_bound: &str) -> Stri
             /// [`to_i32_saturating`](Self::to_i32_saturating) for uniform
             /// semantics.
             #[inline(always)]
-            pub fn to_i32(self) -> super::{int_type}<T, M> {{
+            pub fn to_i32(self) -> super::{int_type}<T> {{
                 super::{int_type}::from_repr_unchecked(self.1, T::convert_f32_to_i32(self.1, self.0))
             }}
 
@@ -77,45 +77,45 @@ pub(crate) fn gen_f32_i32_convert_on_float(src: &str, trait_bound: &str) -> Stri
             /// of Rust scalar `as`. Native on NEON/WASM/scalar; on x86 a
             /// 4-op compare/blend fixup over `cvttps` (issue #80).
             #[inline(always)]
-            pub fn to_i32_saturating(self) -> super::{int_type}<T, M> {{
+            pub fn to_i32_saturating(self) -> super::{int_type}<T> {{
                 super::{int_type}::from_repr_unchecked(self.1, T::convert_f32_to_i32_saturating(self.1, self.0))
             }}
 
             /// Convert to {int_type} with rounding to nearest.
             #[inline(always)]
-            pub fn to_i32_round(self) -> super::{int_type}<T, M> {{
+            pub fn to_i32_round(self) -> super::{int_type}<T> {{
                 super::{int_type}::from_repr_unchecked(self.1, T::convert_f32_to_i32_round(self.1, self.0))
             }}
 
             /// Create from {int_type} via numeric conversion.
             #[inline(always)]
-            pub fn from_i32(token: T, v: super::{int_type}<T, M>) -> Self {{
-                Self::new_repr(T::convert_i32_to_f32(token, v.into_repr()), token)
+            pub fn from_i32(token: T, v: super::{int_type}<T>) -> Self {{
+                Self(T::convert_i32_to_f32(token, v.into_repr()), token)
             }}
 
             // ====== Backward-compatible aliases (old generated API names) ======
 
             /// Alias for [`bitcast_to_i32`](Self::bitcast_to_i32).
             #[inline(always)]
-            pub fn bitcast_{int_type}(self) -> super::{int_type}<T, M> {{
+            pub fn bitcast_{int_type}(self) -> super::{int_type}<T> {{
                 self.bitcast_to_i32()
             }}
 
             /// Alias for [`to_i32`](Self::to_i32).
             #[inline(always)]
-            pub fn to_{int_type}(self) -> super::{int_type}<T, M> {{
+            pub fn to_{int_type}(self) -> super::{int_type}<T> {{
                 self.to_i32()
             }}
 
             /// Alias for [`to_i32_round`](Self::to_i32_round).
             #[inline(always)]
-            pub fn to_{int_type}_round(self) -> super::{int_type}<T, M> {{
+            pub fn to_{int_type}_round(self) -> super::{int_type}<T> {{
                 self.to_i32_round()
             }}
 
             /// Alias for [`from_i32`](Self::from_i32).
             #[inline(always)]
-            pub fn from_{int_type}(token: T, v: super::{int_type}<T, M>) -> Self {{
+            pub fn from_{int_type}(token: T, v: super::{int_type}<T>) -> Self {{
                 Self::from_i32(token, v)
             }}
             {ref_aliases}
@@ -133,16 +133,16 @@ pub(crate) fn gen_f32_i32_convert_on_int(src: &str, trait_bound: &str) -> String
         // Cross-type conversions (available when T implements conversion traits)
         // ============================================================================
 
-        impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::backends::{trait_bound}> {src}<T, M> {{
+        impl<T: crate::simd::backends::{trait_bound}> {src}<T> {{
             /// Bitcast to {float_type} (reinterpret bits, no conversion).
             #[inline(always)]
-            pub fn bitcast_to_f32(self) -> super::{float_type}<T, M> {{
+            pub fn bitcast_to_f32(self) -> super::{float_type}<T> {{
                 super::{float_type}::from_repr_unchecked(self.1, T::bitcast_i32_to_f32(self.1, self.0))
             }}
 
             /// Convert to {float_type} (numeric conversion).
             #[inline(always)]
-            pub fn to_f32(self) -> super::{float_type}<T, M> {{
+            pub fn to_f32(self) -> super::{float_type}<T> {{
                 super::{float_type}::from_repr_unchecked(self.1, T::convert_i32_to_f32(self.1, self.0))
             }}
 
@@ -150,13 +150,13 @@ pub(crate) fn gen_f32_i32_convert_on_int(src: &str, trait_bound: &str) -> String
 
             /// Alias for [`bitcast_to_f32`](Self::bitcast_to_f32).
             #[inline(always)]
-            pub fn bitcast_{float_type}(self) -> super::{float_type}<T, M> {{
+            pub fn bitcast_{float_type}(self) -> super::{float_type}<T> {{
                 self.bitcast_to_f32()
             }}
 
             /// Alias for [`to_f32`](Self::to_f32).
             #[inline(always)]
-            pub fn to_{float_type}(self) -> super::{float_type}<T, M> {{
+            pub fn to_{float_type}(self) -> super::{float_type}<T> {{
                 self.to_f32()
             }}
         }}
@@ -183,22 +183,22 @@ pub(crate) fn gen_signed_unsigned_bitcast(
         // Cross-type conversions ({src_elem} ↔ {target_elem} bitcast)
         // ============================================================================
 
-        impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::backends::{trait_bound}> {src}<T, M> {{
+        impl<T: crate::simd::backends::{trait_bound}> {src}<T> {{
             /// Bitcast to {target} (reinterpret bits, no conversion).
             #[inline(always)]
-            pub fn bitcast_{target}(self) -> super::{target}<T, M> {{
+            pub fn bitcast_{target}(self) -> super::{target}<T> {{
                 super::{target}::from_repr_unchecked(self.1, T::bitcast_{to_method}(self.1, self.0))
             }}
 
             /// Bitcast to {target} by reference (zero-cost).
             #[inline(always)]
-            pub fn bitcast_ref_{target}(&self) -> &super::{target}<T, M> {{
+            pub fn bitcast_ref_{target}(&self) -> &super::{target}<T> {{
                 crate::simd_storage::vector_view(self.1, &self.0)
             }}
 
             /// Bitcast to {target} by mutable reference (zero-cost).
             #[inline(always)]
-            pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T, M> {{
+            pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T> {{
                 crate::simd_storage::vector_view_mut(self.1, &mut self.0)
             }}
         }}
@@ -221,22 +221,22 @@ pub(crate) fn gen_unsigned_signed_bitcast(
         // Cross-type conversions ({src_elem} ↔ {target_elem} bitcast)
         // ============================================================================
 
-        impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::backends::{trait_bound}> {src}<T, M> {{
+        impl<T: crate::simd::backends::{trait_bound}> {src}<T> {{
             /// Bitcast to {target} (reinterpret bits, no conversion).
             #[inline(always)]
-            pub fn bitcast_{target}(self) -> super::{target}<T, M> {{
+            pub fn bitcast_{target}(self) -> super::{target}<T> {{
                 super::{target}::from_repr_unchecked(self.1, T::bitcast_{from_method}(self.1, self.0))
             }}
 
             /// Bitcast to {target} by reference (zero-cost).
             #[inline(always)]
-            pub fn bitcast_ref_{target}(&self) -> &super::{target}<T, M> {{
+            pub fn bitcast_ref_{target}(&self) -> &super::{target}<T> {{
                 crate::simd_storage::vector_view(self.1, &self.0)
             }}
 
             /// Bitcast to {target} by mutable reference (zero-cost).
             #[inline(always)]
-            pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T, M> {{
+            pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T> {{
                 crate::simd_storage::vector_view_mut(self.1, &mut self.0)
             }}
         }}
@@ -249,10 +249,10 @@ pub(crate) fn gen_unsigned_signed_bitcast(
 pub(crate) fn gen_w512_i16_bitcast(src: &str, trait_bound: &str) -> String {
     let target = if src == "u16x32" { "i16x32" } else { "u16x32" };
     formatdoc! {r#"
-        impl<M: crate::simd::generic::ConstructorMode, T: {trait_bound}> {src}<T, M> {{
+        impl<T: {trait_bound}> {src}<T> {{
             /// Reinterpret all 32 lanes as {target}, preserving every bit.
             #[inline(always)]
-            pub fn bitcast_{target}(self) -> super::{target}<T, M> {{
+            pub fn bitcast_{target}(self) -> super::{target}<T> {{
                 super::{target}::from_repr_unchecked(self.1, crate::simd_storage::cast(self.0))
             }}
 
@@ -275,22 +275,22 @@ pub(crate) fn gen_u32_i32_bitcast(src: &str, target: &str, method: &str) -> Stri
         // Cross-type conversions ({target_elem} ↔ {src_elem} bitcast)
         // ============================================================================
 
-        impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::backends::{trait_bound}> {src}<T, M> {{
+        impl<T: crate::simd::backends::{trait_bound}> {src}<T> {{
             /// Bitcast to {target} (reinterpret bits, no conversion).
             #[inline(always)]
-            pub fn bitcast_to_i32(self) -> super::{target}<T, M> {{
+            pub fn bitcast_to_i32(self) -> super::{target}<T> {{
                 super::{target}::from_repr_unchecked(self.1, T::bitcast_{method}(self.1, self.0))
             }}
 
             /// Bitcast to {target} by reference (zero-cost).
             #[inline(always)]
-            pub fn bitcast_ref_{target}(&self) -> &super::{target}<T, M> {{
+            pub fn bitcast_ref_{target}(&self) -> &super::{target}<T> {{
                 crate::simd_storage::vector_view(self.1, &self.0)
             }}
 
             /// Bitcast to {target} by mutable reference (zero-cost).
             #[inline(always)]
-            pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T, M> {{
+            pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T> {{
                 crate::simd_storage::vector_view_mut(self.1, &mut self.0)
             }}
 
@@ -298,7 +298,7 @@ pub(crate) fn gen_u32_i32_bitcast(src: &str, target: &str, method: &str) -> Stri
 
             /// Alias for [`bitcast_to_i32`](Self::bitcast_to_i32).
             #[inline(always)]
-            pub fn bitcast_{target}(self) -> super::{target}<T, M> {{
+            pub fn bitcast_{target}(self) -> super::{target}<T> {{
                 self.bitcast_to_i32()
             }}
         }}
@@ -320,22 +320,22 @@ pub(crate) fn gen_u64_i64_bitcast(src: &str, target: &str, method: &str) -> Stri
         // Cross-type conversions ({src_elem} ↔ {target_elem} bitcast)
         // ============================================================================
 
-        impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::backends::{trait_bound}> {src}<T, M> {{
+        impl<T: crate::simd::backends::{trait_bound}> {src}<T> {{
             /// Bitcast to {target} (reinterpret bits, no conversion).
             #[inline(always)]
-            pub fn bitcast_{target}(self) -> super::{target}<T, M> {{
+            pub fn bitcast_{target}(self) -> super::{target}<T> {{
                 super::{target}::from_repr_unchecked(self.1, T::bitcast_{method}(self.1, self.0))
             }}
 
             /// Bitcast to {target} by reference (zero-cost).
             #[inline(always)]
-            pub fn bitcast_ref_{target}(&self) -> &super::{target}<T, M> {{
+            pub fn bitcast_ref_{target}(&self) -> &super::{target}<T> {{
                 crate::simd_storage::vector_view(self.1, &self.0)
             }}
 
             /// Bitcast to {target} by mutable reference (zero-cost).
             #[inline(always)]
-            pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T, M> {{
+            pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T> {{
                 crate::simd_storage::vector_view_mut(self.1, &mut self.0)
             }}
         }}
@@ -362,22 +362,22 @@ pub(crate) fn gen_i64_f64_bitcast(
         // Cross-type conversions ({src_elem} ↔ {target_elem} bitcast)
         // ============================================================================
 
-        impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::backends::{trait_bound}> {src}<T, M> {{
+        impl<T: crate::simd::backends::{trait_bound}> {src}<T> {{
             /// Bitcast to {target} (reinterpret bits, no conversion).
             #[inline(always)]
-            pub fn bitcast_to_f64(self) -> super::{target}<T, M> {{
+            pub fn bitcast_to_f64(self) -> super::{target}<T> {{
                 super::{target}::from_repr_unchecked(self.1, T::bitcast_{method}(self.1, self.0))
             }}
 
             /// Bitcast to {target} by reference (zero-cost).
             #[inline(always)]
-            pub fn bitcast_ref_{target}(&self) -> &super::{target}<T, M> {{
+            pub fn bitcast_ref_{target}(&self) -> &super::{target}<T> {{
                 crate::simd_storage::vector_view(self.1, &self.0)
             }}
 
             /// Bitcast to {target} by mutable reference (zero-cost).
             #[inline(always)]
-            pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T, M> {{
+            pub fn bitcast_mut_{target}(&mut self) -> &mut super::{target}<T> {{
                 crate::simd_storage::vector_view_mut(self.1, &mut self.0)
             }}
 
@@ -385,7 +385,7 @@ pub(crate) fn gen_i64_f64_bitcast(
 
             /// Alias for [`bitcast_to_f64`](Self::bitcast_to_f64).
             #[inline(always)]
-            pub fn bitcast_{target}(self) -> super::{target}<T, M> {{
+            pub fn bitcast_{target}(self) -> super::{target}<T> {{
                 self.bitcast_to_f64()
             }}
         }}
@@ -419,14 +419,14 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
             // Widening ({src} -> {dst})
             // ============================================================================
 
-            impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::backends::{trait_bound} + crate::simd::backends::{dst_bound}> {src}<T, M> {{
+            impl<T: crate::simd::backends::{trait_bound} + crate::simd::backends::{dst_bound}> {src}<T> {{
                 /// {extend}-extend the low half of the lanes to `{dst}`.
                 ///
                 /// Result lane `i` is `self[i] as {de}` for `i` in `0..{half}`.
                 /// Natural lane order on every backend. Instruction count depends
                 /// on the ISA, vector width, and surrounding loads.
                 #[inline(always)]
-                pub fn widen_low(self) -> super::{dst}<T, M> {{
+                pub fn widen_low(self) -> super::{dst}<T> {{
                     super::{dst}::from_repr_unchecked(self.1, <T as crate::simd::backends::{trait_bound}>::{lo}(self.1, self.0))
                 }}
 
@@ -434,7 +434,7 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
                 ///
                 /// Result lane `i` is `self[i + {half}] as {de}`.
                 #[inline(always)]
-                pub fn widen_high(self) -> super::{dst}<T, M> {{
+                pub fn widen_high(self) -> super::{dst}<T> {{
                     super::{dst}::from_repr_unchecked(self.1, <T as crate::simd::backends::{trait_bound}>::{hi}(self.1, self.0))
                 }}
             }}
@@ -457,7 +457,7 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
             // Saturating narrowing ({src} -> {sdst} / {udst})
             // ============================================================================
 
-            impl<M: crate::simd::generic::ConstructorMode, T: crate::simd::backends::{trait_bound}> {src}<T, M> {{
+            impl<T: crate::simd::backends::{trait_bound}> {src}<T> {{
                 /// Narrow `self` and `high` to `{sdst}`, clamping each lane to
                 /// the `{sde}` range.
                 ///
@@ -466,7 +466,7 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
                 /// on every backend (the AVX2 arm pays one
                 /// `permute4x64` to get there).
                 #[inline(always)]
-                pub fn narrow_saturating_{sde}(self, high: Self) -> super::{sdst}<T, M>
+                pub fn narrow_saturating_{sde}(self, high: Self) -> super::{sdst}<T>
                 where T: crate::simd::backends::{sdst_bound} {{
                     super::{sdst}::from_repr_unchecked(self.1, <T as crate::simd::backends::{trait_bound}>::{sm}(self.1, self.0, high.0))
                 }}
@@ -478,7 +478,7 @@ pub(crate) fn gen_widen_narrow(type_name: &str) -> String {
                 /// x86 and WASM. An unsigned-source operation would require a
                 /// different lowering to preserve its full input range.
                 #[inline(always)]
-                pub fn narrow_saturating_{ude}(self, high: Self) -> super::{udst}<T, M>
+                pub fn narrow_saturating_{ude}(self, high: Self) -> super::{udst}<T>
                 where T: crate::simd::backends::{udst_bound} {{
                     super::{udst}::from_repr_unchecked(self.1, <T as crate::simd::backends::{trait_bound}>::{um}(self.1, self.0, high.0))
                 }}

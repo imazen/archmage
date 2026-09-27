@@ -63,10 +63,6 @@ pub struct TokenDef {
     /// Used by `import_magetypes` parameter in `#[arcane]`/`#[rite]`.
     #[serde(default)]
     pub magetypes_namespace: Option<String>,
-    /// Natural width for tokens implementing all vector families at that width.
-    /// Unlike namespace imports, this never implies an unsupported backend.
-    #[serde(default)]
-    pub magetypes_width: Option<u32>,
 }
 
 /// A trait definition.
@@ -465,8 +461,6 @@ impl Registry {
         out.push('\n');
         self.gen_token_to_arch(&mut out);
         out.push('\n');
-        self.gen_contextual_vectors(&mut out);
-        out.push('\n');
         self.gen_token_to_magetypes_namespace(&mut out);
         out.push('\n');
         self.gen_trait_to_magetypes_namespace(&mut out);
@@ -600,34 +594,6 @@ impl Registry {
 
         out.push_str("        _ => None,\n");
         out.push_str("    }\n}\n");
-    }
-
-    fn gen_contextual_vectors(&self, out: &mut String) {
-        out.push_str("/// Natural width only for implemented vector backends.\n");
-        out.push_str(
-            "pub(crate) fn token_to_vector_width(name: &str) -> Option<u32> {\n    match name {\n",
-        );
-        for token in &self.token {
-            if let Some(width) = token.magetypes_width {
-                assert!(matches!(width, 128 | 256 | 512));
-                out.push_str(&format!(
-                    "        {} => Some({width}),\n",
-                    Self::match_pattern(token)
-                ));
-            }
-        }
-        out.push_str("        \"ScalarToken\" => Some(128),\n        _ => None,\n    }\n}\n\n");
-        out.push_str("/// Fixed shapes and adaptive families share the SIMD generator's roster.\n");
-        out.push_str("pub(crate) fn resolve_vector_name(name: &str, width: u32) -> Option<&'static str> {\n    match (name, width) {\n");
-        for ty in crate::simd_types::all_simd_types() {
-            let name = ty.name();
-            let family = ty.elem.name();
-            let width = ty.width.bits();
-            out.push_str(&format!(
-                "        (\"{name}\", _) | (\"{family}xN\", {width}) => Some(\"{name}\"),\n"
-            ));
-        }
-        out.push_str("        _ => None,\n    }\n}\n\n");
     }
 
     fn gen_token_to_magetypes_namespace(&self, out: &mut String) {
