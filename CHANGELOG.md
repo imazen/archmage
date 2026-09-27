@@ -18,15 +18,19 @@
 
 - Public `_with_token` alternatives for all 42 vector constructor method names on both modes, plus native `from_raw_with_token`; existing calls and aliases remain compatible (`ef5d3cf1`).
 
-- `#[magetypes(use(...))]` selects tokenless, target-feature-checked constructors over a shared vector core; `define(...)` retains token arguments and mode conversions preserve stored tokens (`8ef7db6f`).
+- `#[magetypes(use(...))]` selects tokenless, target-feature-checked constructors over a shared vector core; `define(...)` retains token arguments and mode conversions preserve stored tokens (`8ef7db6f`, `4ed7c0ce`).
 - Safe native `from_raw` constructors and restored NEON/WASM/AVX-512 raw interop methods (`8ef7db6f`).
 - Reproducible cold-build comparison: this consumer's default release build rose 0.189 s, and its AVX-512 build rose 0.253 s; full settings and raw results are in `benchmarks/local_mode_compile_2026-09-27.md` (`8ef7db6f`).
 
 ### Changed
 
+- Replace the unpublished `#[magetypes(local(...))]` option with `use(...)`; the old spelling now reports the replacement, while `define(...)` and the explicit `generic::local` module remain available (`4ed7c0ce`).
+
 - Generated contextual constructors use registry-derived target-feature attributes and flatten simple value forwarding while retaining checked token proofs and shared memory helpers (`777932eb`); six-run cold-build medians are recorded in `benchmarks/constructor_codegen_compile_2026-09-27.md`.
 
 ### Fixed
+
+- Keep the original 34 magetypes prelude names; constructor modes and implementation modules no longer leak through its wildcard re-export (`cd6cdc40`).
 
 - Run native raw-interchange tests with V3 CPU support under Miri and SDE, preserving baseline coverage for the remaining suite (`7165ed48`).
 

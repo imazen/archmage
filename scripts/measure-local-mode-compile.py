@@ -19,8 +19,13 @@ p.add_argument('--after', type=Path, required=True)
 p.add_argument('--output', type=Path, required=True)
 p.add_argument('--middle', type=Path, help='Optional attribute-only candidate')
 p.add_argument('--before-local', action='store_true', help='Baseline already supports local constructors')
+p.add_argument('--tier-width-probe', action='store_true',
+               help='Compare fixed f32x8 with per-tier existing types; does not implement use(f32x)')
+p.add_argument('--sde', type=Path, help='SDE executable for mandatory AVX-512 width-probe tests')
 p.add_argument('--runs', type=int, default=3)
 a = p.parse_args()
+if a.tier_width_probe and (not a.sde or not a.sde.is_file()):
+    p.error('--tier-width-probe requires --sde for AVX-512 execution')
 a.output.mkdir(parents=True, exist_ok=False)
 env = os.environ.copy()
 for key in ('RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'RUSTC_WRAPPER', 'RUSTC_WORKSPACE_WRAPPER'):
@@ -38,6 +43,9 @@ if a.before_local:
 if a.middle:
     cases.extend([('middle_explicit', a.middle, False), ('middle_local', a.middle, True)])
 cases.extend([('after_explicit', a.after, False), ('after_local', a.after, True)])
+if a.tier_width_probe:
+    cases = [('fixed8', a.after, False), ('tier_width', a.after, True)]
+    metadata['experiment'] = 'Width selection expansion shape; parser cost and scalar x1 are not measured'
 metadata['cases'] = {label: {'source': str(source.resolve()), 'local': local} for label, source, local in cases}
 (a.output / 'metadata.json').write_text(json.dumps(metadata, indent=2))
 rows = []
@@ -59,7 +67,13 @@ archmage = {{ path = "{deps}", features = {feature_list} }}
 magetypes = {{ path = "{deps}/magetypes", features = {feature_list} }}
 [workspace]
 ''')
-        mode, token = ('local', '') if local else ('define', 'token, ')
+        if a.tier_width_probe:
+            manifest = project / 'Cargo.toml'
+            defaults = '["avx512"]' if features == 'avx512' else '[]'
+            manifest.write_text(manifest.read_text().replace('[workspace]',
+                '[features]\ndefault = ' + defaults + '\navx512 = ["archmage/avx512", "magetypes/avx512"]\n[workspace]'))
+        context_option = 'use' if 'Token![use]' in (source / 'archmage-macros/src/lib.rs').read_text() else 'local'
+        mode, token = (context_option, '') if local else ('define', 'token, ')
         source_text = f'''use archmage::{{magetypes, incant}};
 #[magetypes({mode}(f32x8, i32x8), v3, scalar)]
 fn kernel(token: Token, values: &[f32]) -> f32 {{
@@ -77,6 +91,26 @@ pub fn run(values: &[f32]) -> f32 {{ incant!(kernel(values), [v3, scalar]) }}
 '''
         if local:
             source_text = source_text.replace('fn kernel(token:', 'fn kernel(_token:')
+        if a.tier_width_probe:
+            source_text = (Path(__file__).resolve().parent.parent /
+                           'tests/design-probes/context-mode/width_kernel.in.rs').read_text()
+            widths = {'V3': 8, 'NEON': 4 if local else 8,
+                      'WASM': 4 if local else 8, 'SCALAR': 4 if local else 8}
+            for tier, width in widths.items():
+                source_text = source_text.replace(f'@{tier}@', f'f32x{width}')
+            v4_width = 16 if local else 8
+            source_text = source_text.replace('@V4_KERNEL@',
+                f'kernel!(kernel_v4, v4, archmage::X64V4Token, f32x{v4_width});' if features == 'avx512' else '')
+            source_text = source_text.replace('@V4_ENTRY@',
+                '#[arcane] fn apply_v4(_: archmage::X64V4Token, v: &mut [f32]) { kernel_v4(v); }' if features == 'avx512' else '')
+            source_text = source_text.replace('@V4_TEST@', """
+    #[cfg(target_arch="x86_64")]
+    #[test] fn v4_tails_and_rows() {
+        let token = archmage::X64V4Token::summon().expect("caller must provide a V4 CPU");
+        exercise(|v| apply_v4(token, v));
+    }
+""" if features == 'avx512' else '')
+            source_text = source_text.replace('@TIERS@', 'v4, v3, ' if features == 'avx512' else 'v3, ')
         (project / 'src/lib.rs').write_text(source_text)
         shutil.copy2(source / 'Cargo.lock', project / 'Cargo.lock')
         with (project / 'resolve.log').open('w') as log:
@@ -102,11 +136,27 @@ pub fn run(values: &[f32]) -> f32 {{ incant!(kernel(values), [v3, scalar]) }}
             (project / f'units-{run}.json').write_text(json.dumps(units, indent=2))
             times = {u['name']: u['duration'] for u in units}
             row = dict(features=features, label=label, run=run+1, total_seconds=elapsed,
-                       magetypes_seconds=times['magetypes'], consumer_seconds=times['local-mode-consumer'])
+                       macros_seconds=times['archmage-macros'], magetypes_seconds=times['magetypes'], consumer_seconds=times['local-mode-consumer'])
             rows.append(row)
             with (a.output / 'results.csv').open('w') as f:
                 writer = csv.DictWriter(f, fieldnames=list(row)); writer.writeheader(); writer.writerows(rows)
             print(f'END {features} {label} total={elapsed:.3f}s magetypes={times["magetypes"]:.3f}s', flush=True)
+    if a.tier_width_probe:
+        for label, project in consumers.items():
+            print(f'TEST {features} {label}', flush=True)
+            cmd = ['cargo', 'test', '--release', '--locked', '--offline', '--no-run',
+                   '--message-format=json', '--target-dir', str(project / 'target-0')]
+            built = subprocess.run(cmd, cwd=project, env=env, text=True, stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT)
+            (project / 'test-build.log').write_text(built.stdout)
+            built.check_returncode()
+            binaries = [d['executable'] for line in built.stdout.splitlines() if line.startswith('{')
+                        for d in [json.loads(line)] if d.get('executable') and d.get('profile', {}).get('test')]
+            assert binaries
+            with (project / 'test-run.log').open('w') as log:
+                for binary in binaries:
+                    command = [str(a.sde), '-skx', '--', binary] if features == 'avx512' else [binary]
+                    subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
 summary = []
 for features in ['default', 'avx512']:
     for label, _, _ in cases:
@@ -114,6 +164,6 @@ for features in ['default', 'avx512']:
         summary.append(dict(features=features, label=label, **{
             key: {'median': statistics.median(r[key] for r in matches),
                   'min': min(r[key] for r in matches), 'max': max(r[key] for r in matches)}
-            for key in ['total_seconds', 'magetypes_seconds', 'consumer_seconds']}))
+            for key in ['total_seconds', 'macros_seconds', 'magetypes_seconds', 'consumer_seconds']}))
 (a.output / 'summary.json').write_text(json.dumps(summary, indent=2))
 print(json.dumps(summary, indent=2), flush=True)

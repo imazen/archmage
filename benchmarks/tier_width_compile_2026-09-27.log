@@ -1,0 +1,152 @@
+run-heavy: mem-cap=16G (cgroup, hard) jobs=8/20 avail=26993MiB :: python3 scripts/measure-local-mode-compile.py --before /home/lilith/work/archmage --after /home/lilith/work/archmage --tier-width-probe --sde /home/lilith/data/archmage/tools/sde-external-10.8.0-2026-03-15-lin/sde64 --output /home/lilith/data/archmage/tier-width/2026-09-27-verified --runs 6
+START default fixed8 run=1
+END default fixed8 total=2.832s magetypes=1.250s
+START default tier_width run=1
+END default tier_width total=2.846s magetypes=1.260s
+START default tier_width run=2
+END default tier_width total=2.832s magetypes=1.250s
+START default fixed8 run=2
+END default fixed8 total=2.814s magetypes=1.240s
+START default fixed8 run=3
+END default fixed8 total=2.830s magetypes=1.260s
+START default tier_width run=3
+END default tier_width total=2.845s magetypes=1.260s
+START default tier_width run=4
+END default tier_width total=2.822s magetypes=1.240s
+START default fixed8 run=4
+END default fixed8 total=2.831s magetypes=1.230s
+START default fixed8 run=5
+END default fixed8 total=2.842s magetypes=1.260s
+START default tier_width run=5
+END default tier_width total=2.826s magetypes=1.250s
+START default tier_width run=6
+END default tier_width total=2.851s magetypes=1.250s
+START default fixed8 run=6
+END default fixed8 total=2.836s magetypes=1.250s
+TEST default fixed8
+TEST default tier_width
+START avx512 fixed8 run=1
+END avx512 fixed8 total=3.056s magetypes=1.460s
+START avx512 tier_width run=1
+END avx512 tier_width total=3.042s magetypes=1.450s
+START avx512 tier_width run=2
+END avx512 tier_width total=3.032s magetypes=1.440s
+START avx512 fixed8 run=2
+END avx512 fixed8 total=3.033s magetypes=1.450s
+START avx512 fixed8 run=3
+END avx512 fixed8 total=3.062s magetypes=1.470s
+START avx512 tier_width run=3
+END avx512 tier_width total=3.074s magetypes=1.470s
+START avx512 tier_width run=4
+END avx512 tier_width total=3.060s magetypes=1.460s
+START avx512 fixed8 run=4
+END avx512 fixed8 total=3.059s magetypes=1.460s
+START avx512 fixed8 run=5
+END avx512 fixed8 total=3.036s magetypes=1.450s
+START avx512 tier_width run=5
+END avx512 tier_width total=3.060s magetypes=1.460s
+START avx512 tier_width run=6
+END avx512 tier_width total=3.054s magetypes=1.460s
+START avx512 fixed8 run=6
+END avx512 fixed8 total=3.055s magetypes=1.470s
+TEST avx512 fixed8
+TEST avx512 tier_width
+[
+  {
+    "features": "default",
+    "label": "fixed8",
+    "total_seconds": {
+      "median": 2.831380612013163,
+      "min": 2.814377708011307,
+      "max": 2.8424437120265793
+    },
+    "macros_seconds": {
+      "median": 0.31,
+      "min": 0.31,
+      "max": 0.32
+    },
+    "magetypes_seconds": {
+      "median": 1.25,
+      "min": 1.23,
+      "max": 1.26
+    },
+    "consumer_seconds": {
+      "median": 0.05,
+      "min": 0.04,
+      "max": 0.05
+    }
+  },
+  {
+    "features": "default",
+    "label": "tier_width",
+    "total_seconds": {
+      "median": 2.8386658060044283,
+      "min": 2.8221367910155095,
+      "max": 2.851316375017632
+    },
+    "macros_seconds": {
+      "median": 0.315,
+      "min": 0.31,
+      "max": 0.32
+    },
+    "magetypes_seconds": {
+      "median": 1.25,
+      "min": 1.24,
+      "max": 1.26
+    },
+    "consumer_seconds": {
+      "median": 0.045,
+      "min": 0.04,
+      "max": 0.05
+    }
+  },
+  {
+    "features": "avx512",
+    "label": "fixed8",
+    "total_seconds": {
+      "median": 3.0557096205011476,
+      "min": 3.0331948940001894,
+      "max": 3.061683141015237
+    },
+    "macros_seconds": {
+      "median": 0.31,
+      "min": 0.31,
+      "max": 0.31
+    },
+    "magetypes_seconds": {
+      "median": 1.46,
+      "min": 1.45,
+      "max": 1.47
+    },
+    "consumer_seconds": {
+      "median": 0.05,
+      "min": 0.05,
+      "max": 0.06
+    }
+  },
+  {
+    "features": "avx512",
+    "label": "tier_width",
+    "total_seconds": {
+      "median": 3.0566570760129252,
+      "min": 3.0324058659898583,
+      "max": 3.0739819429873023
+    },
+    "macros_seconds": {
+      "median": 0.315,
+      "min": 0.31,
+      "max": 0.32
+    },
+    "magetypes_seconds": {
+      "median": 1.46,
+      "min": 1.44,
+      "max": 1.47
+    },
+    "consumer_seconds": {
+      "median": 0.05,
+      "min": 0.05,
+      "max": 0.06
+    }
+  }
+]
+run-heavy: done rc=0 73s | peak-RSS 0.40GiB | min-avail 26341MiB | peak-load 1.19

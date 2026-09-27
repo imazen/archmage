@@ -232,3 +232,25 @@ fn token_view_conversion_and_block_methods() {
         [1., 2., 3., 4., 1., 2., 3., 4.]
     );
 }
+
+// Glob imports must not reserve the constructor implementation's names in users'
+// modules. Two globs make accidental new exports ambiguous at compile time.
+#[allow(non_camel_case_types, dead_code)]
+mod downstream_names {
+    pub struct Context;
+    pub struct Explicit;
+    pub struct ConstructorMode;
+    pub struct core_types;
+    pub struct local;
+}
+
+#[test]
+fn prelude_retains_legacy_types_without_constructor_machinery() {
+    use downstream_names::*;
+    use magetypes::prelude::*;
+    let _: Option<(Context, Explicit, ConstructorMode, core_types, local)> = None;
+    let token = ScalarToken::summon().unwrap();
+    let value = f32x8::<ScalarToken>::splat(token, 3.0);
+    assert_eq!(f32x8::<ScalarToken>::LANES, 8);
+    assert_eq!(value.to_array(), [3.0; 8]);
+}

@@ -355,7 +355,7 @@ context-mode-probe-check:
 
 # Shared constructor modes and feature-context enforcement.
 local-mode-check:
-    cargo test -p magetypes --all-features --test magetypes_local_flag --test magetypes_define_flag --test raw_interop
+    cargo test -p magetypes --all-features --test magetypes_use_flag --test magetypes_define_flag --test raw_interop
     cargo test --test soundness_exploits
 
 # Use preserved source snapshots and fresh Cargo targets for each cold build.
@@ -366,3 +366,11 @@ local-mode-compile before after output:
 test-context-constructors:
     cargo test -p archmage-macros
     cargo test -p magetypes --all-features --test magetypes_use_flag --test magetypes_define_flag
+
+# Compare concrete expansion shapes for tier-selected vector widths.
+tier-width-compile output sde:
+    python3 scripts/measure-local-mode-compile.py --before . --after . --tier-width-probe --sde {{sde}} --output {{output}} --runs 6
+
+# Check the original prelude name set against the current API snapshots.
+constructor-api-audit:
+    python3 scripts/audit-constructor-api.py --output benchmarks/constructor_api_audit_2026-09-27.json

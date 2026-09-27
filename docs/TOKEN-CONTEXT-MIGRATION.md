@@ -163,6 +163,11 @@ with neither an explicit tier nor a recognized token parameter has no tier for
 `rite` to resolve; macros do not inspect a caller's monomorphized types or
 inherit the caller's target features.
 
+For the prelude correction and structural API changes, see the
+[constructor API audit](CONSTRUCTOR-API-AUDIT.md). Width-adaptive aliases,
+partition/tail semantics, and all attribute entry points are covered in the
+[tier-selected type proposal](TIER-SELECTED-TYPES.md).
+
 ## Source inventory, 2026-09-27
 
 A Sol agent used ripgrep 15.2.0 and a Rust tree-sitter parser to inventory
