@@ -72,15 +72,15 @@ mod dispatch_targets {
     // ---- arcane variants (the canonical token-based, safe-wrapped target) ----
     #[arcane]
     fn mixed_v3(token: X64V3Token, d: &[f32; 8]) -> f32 {
-        f32x8::from_array(token, *d).reduce_add()
+        f32x8::from_array_t(token, *d).reduce_add()
     }
     #[arcane]
     fn mixed_neon(token: NeonToken, d: &[f32; 8]) -> f32 {
-        f32x8::from_array(token, *d).reduce_add()
+        f32x8::from_array_t(token, *d).reduce_add()
     }
     #[arcane]
     fn mixed_wasm128(token: Wasm128Token, d: &[f32; 8]) -> f32 {
-        f32x8::from_array(token, *d).reduce_add()
+        f32x8::from_array_t(token, *d).reduce_add()
     }
     fn mixed_scalar(_: ScalarToken, d: &[f32; 8]) -> f32 {
         leaf_sum(d)
@@ -92,7 +92,7 @@ mod dispatch_targets {
     // ---- all variants from one #[magetypes] (token-based, safe-wrapped) ----
     #[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
     fn mt(token: Token, d: &[f32; 8]) -> f32 {
-        f32x8::from_array(token, *d).reduce_add()
+        f32x8::from_array_t(token, *d).reduce_add()
     }
     pub fn via_magetypes(d: &[f32; 8]) -> f32 {
         incant!(mt(d), [v3, neon, wasm128, scalar])
@@ -126,7 +126,7 @@ mod dispatch_targets {
     //
     //   #[rite(import_intrinsics)]
     //   fn r_v3(token: X64V3Token, d: &[f32; 8]) -> f32 {
-    //       f32x8::from_array(token, *d).reduce_add()
+    //       f32x8::from_array_t(token, *d).reduce_add()
     //   }
     //   fn r_scalar(_: ScalarToken, d: &[f32; 8]) -> f32 { super::leaf_sum(d) }
     //   pub fn via_rite(d: &[f32; 8]) -> f32 {
@@ -146,15 +146,15 @@ mod incant_nested_in_each {
 
     #[arcane]
     fn leaf_v3(token: X64V3Token, d: &[f32; 8]) -> f32 {
-        f32x8::from_array(token, *d).reduce_add()
+        f32x8::from_array_t(token, *d).reduce_add()
     }
     #[arcane]
     fn leaf_neon(token: NeonToken, d: &[f32; 8]) -> f32 {
-        f32x8::from_array(token, *d).reduce_add()
+        f32x8::from_array_t(token, *d).reduce_add()
     }
     #[arcane]
     fn leaf_wasm128(token: Wasm128Token, d: &[f32; 8]) -> f32 {
-        f32x8::from_array(token, *d).reduce_add()
+        f32x8::from_array_t(token, *d).reduce_add()
     }
     fn leaf_scalar(_: ScalarToken, d: &[f32; 8]) -> f32 {
         leaf_sum(d)
@@ -219,7 +219,7 @@ mod cross_kind_chains {
     // it adopts the rite caller's features and inlines.
     #[rite(import_intrinsics)]
     fn chain_rite_v3(token: X64V3Token, d: &[f32; 8]) -> f32 {
-        let v = f32x8::from_array(token, *d).reduce_add();
+        let v = f32x8::from_array_t(token, *d).reduce_add();
         let p = plain_helper(d); // rite → plain, inlines
         v + p - leaf_sum(d) // == v
     }
@@ -241,7 +241,7 @@ mod cross_kind_chains {
     // token for SIMD work, then bottoms out in a plain fn).
     #[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
     fn chain_mt(token: Token, d: &[f32; 8]) -> f32 {
-        let _ = f32x8::splat(token, 0.0);
+        let _ = f32x8::splat_t(token, 0.0);
         plain_helper(d)
     }
     pub fn chain_mt_dispatch(d: &[f32; 8]) -> f32 {

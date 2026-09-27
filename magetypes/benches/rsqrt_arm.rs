@@ -44,29 +44,29 @@ fn bench_rsqrt(c: &mut Criterion) {
         F: Fn(f32x4<NeonToken>) -> f32x4<NeonToken>,
     {
         for (ci, co) in input.chunks_exact(4).zip(out.chunks_exact_mut(4)) {
-            let v = f32x4::<NeonToken>::from_array(token, ci.try_into().unwrap());
+            let v = f32x4::<NeonToken>::from_array_t(token, ci.try_into().unwrap());
             op(v).store(co.try_into().unwrap());
         }
     }
 
     // --- "original" kernels (raw hardware seed; full = + 2 manual Newton steps) ---
     let rsqrt_orig = |v: f32x4<NeonToken>| {
-        let seed = f32x4::from_repr(token, unsafe { vrsqrteq_f32(v.into_repr()) });
-        let half = f32x4::splat(token, 0.5);
-        let three = f32x4::splat(token, 3.0);
+        let seed = f32x4::from_repr_t(token, unsafe { vrsqrteq_f32(v.into_repr()) });
+        let half = f32x4::splat_t(token, 0.5);
+        let three = f32x4::splat_t(token, 3.0);
         let step = |y: f32x4<NeonToken>| half * y * (three - v * y * y);
         step(step(seed))
     };
     let recip_orig = |v: f32x4<NeonToken>| {
-        let seed = f32x4::from_repr(token, unsafe { vrecpeq_f32(v.into_repr()) });
-        let two = f32x4::splat(token, 2.0);
+        let seed = f32x4::from_repr_t(token, unsafe { vrecpeq_f32(v.into_repr()) });
+        let two = f32x4::splat_t(token, 2.0);
         let step = |r: f32x4<NeonToken>| r * (two - v * r);
         step(step(seed))
     };
     let rsqrt_orig_approx =
-        |v: f32x4<NeonToken>| f32x4::from_repr(token, unsafe { vrsqrteq_f32(v.into_repr()) });
+        |v: f32x4<NeonToken>| f32x4::from_repr_t(token, unsafe { vrsqrteq_f32(v.into_repr()) });
     let recip_orig_approx =
-        |v: f32x4<NeonToken>| f32x4::from_repr(token, unsafe { vrecpeq_f32(v.into_repr()) });
+        |v: f32x4<NeonToken>| f32x4::from_repr_t(token, unsafe { vrecpeq_f32(v.into_repr()) });
 
     macro_rules! bench {
         ($name:expr, $op:expr) => {
@@ -138,7 +138,7 @@ fn bench_rsqrt_f64(c: &mut Criterion) {
         F: Fn(f64x2<NeonToken>) -> f64x2<NeonToken>,
     {
         for (ci, co) in input.chunks_exact(2).zip(out.chunks_exact_mut(2)) {
-            let v = f64x2::<NeonToken>::from_array(token, ci.try_into().unwrap());
+            let v = f64x2::<NeonToken>::from_array_t(token, ci.try_into().unwrap());
             op(v).store(co.try_into().unwrap());
         }
     }
@@ -146,7 +146,7 @@ fn bench_rsqrt_f64(c: &mut Criterion) {
     // The replaced bodies, reproduced exactly: raw estimate + 3 fused steps.
     let recip_3step = |v: f64x2<NeonToken>| {
         let a = v.into_repr();
-        f64x2::from_repr(token, unsafe {
+        f64x2::from_repr_t(token, unsafe {
             let y = vrecpeq_f64(a);
             let y = vmulq_f64(vrecpsq_f64(a, y), y);
             let y = vmulq_f64(vrecpsq_f64(a, y), y);
@@ -155,7 +155,7 @@ fn bench_rsqrt_f64(c: &mut Criterion) {
     };
     let rsqrt_3step = |v: f64x2<NeonToken>| {
         let a = v.into_repr();
-        f64x2::from_repr(token, unsafe {
+        f64x2::from_repr_t(token, unsafe {
             let y = vrsqrteq_f64(a);
             let y = vmulq_f64(vrsqrtsq_f64(vmulq_f64(a, y), y), y);
             let y = vmulq_f64(vrsqrtsq_f64(vmulq_f64(a, y), y), y);

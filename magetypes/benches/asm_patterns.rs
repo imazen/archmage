@@ -89,7 +89,7 @@ mod x86_impl {
     #[arcane(import_intrinsics)]
     fn load_f32x8_from_slice(_t: Desktop64, data: &[f32]) -> __m256 {
         use magetypes::simd::f32x8;
-        let v = f32x8::from_slice(_t, data);
+        let v = f32x8::from_slice_t(_t, data);
         v.raw()
     }
 
@@ -99,7 +99,7 @@ mod x86_impl {
     fn load_f32x8_first_chunk(_t: Desktop64, data: &[f32]) -> __m256 {
         use magetypes::simd::f32x8;
         let arr: &[f32; 8] = data.first_chunk().unwrap();
-        let v = f32x8::load(_t, arr);
+        let v = f32x8::load_t(_t, arr);
         v.raw()
     }
 

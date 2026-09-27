@@ -11,8 +11,8 @@
 //! # #[cfg(target_arch = "x86_64")]
 //! # fn example() {
 //! if let Some(token) = X64V3Token::summon() {
-//!     let a = f32x8::<X64V3Token>::splat(token, 1.0);
-//!     let b = f32x8::<X64V3Token>::splat(token, 2.0);
+//!     let a = f32x8::<X64V3Token>::splat_t(token, 1.0);
+//!     let b = f32x8::<X64V3Token>::splat_t(token, 2.0);
 //!     let _c = a + b;
 //! }
 //! # }

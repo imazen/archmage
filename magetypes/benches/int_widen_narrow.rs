@@ -59,7 +59,7 @@ fn i16_input(n: usize) -> Vec<i16> {
 fn widen_slice<T: U8x16Backend + U16x8Backend>(t: T, src: &[u8], dst: &mut [u16]) {
     for (s, d) in src.chunks_exact(16).zip(dst.chunks_exact_mut(16)) {
         let arr: [u8; 16] = s.try_into().unwrap();
-        let v = u8x16::<T>::from_array(t, arr);
+        let v = u8x16::<T>::from_array_t(t, arr);
         d[..8].copy_from_slice(&v.widen_low().to_array());
         d[8..].copy_from_slice(&v.widen_high().to_array());
     }
@@ -70,10 +70,10 @@ fn widen_slice<T: U8x16Backend + U16x8Backend>(t: T, src: &[u8], dst: &mut [u16]
 fn widen_via_array_slice<T: U8x16Backend + U16x8Backend>(t: T, src: &[u8], dst: &mut [u16]) {
     for (s, d) in src.chunks_exact(16).zip(dst.chunks_exact_mut(16)) {
         let arr: [u8; 16] = s.try_into().unwrap();
-        let v = u8x16::<T>::from_array(t, arr);
+        let v = u8x16::<T>::from_array_t(t, arr);
         let a = v.to_array();
-        let lo = u16x8::<T>::from_array(t, core::array::from_fn(|i| a[i] as u16));
-        let hi = u16x8::<T>::from_array(t, core::array::from_fn(|i| a[i + 8] as u16));
+        let lo = u16x8::<T>::from_array_t(t, core::array::from_fn(|i| a[i] as u16));
+        let hi = u16x8::<T>::from_array_t(t, core::array::from_fn(|i| a[i + 8] as u16));
         d[..8].copy_from_slice(&lo.to_array());
         d[8..].copy_from_slice(&hi.to_array());
     }
@@ -85,10 +85,10 @@ fn widen_chain_slice<T>(t: T, src: &[u8]) -> u32
 where
     T: U8x16Backend + U16x8Backend + U32x4Backend,
 {
-    let mut acc = u32x4::<T>::zero(t);
+    let mut acc = u32x4::<T>::zero_t(t);
     for s in src.chunks_exact(16) {
         let arr: [u8; 16] = s.try_into().unwrap();
-        let v = u8x16::<T>::from_array(t, arr);
+        let v = u8x16::<T>::from_array_t(t, arr);
         for half in [v.widen_low(), v.widen_high()] {
             acc = acc + half.widen_low() + half.widen_high();
         }
@@ -102,15 +102,15 @@ fn widen_chain_via_array_slice<T>(t: T, src: &[u8]) -> u32
 where
     T: U8x16Backend + U16x8Backend + U32x4Backend,
 {
-    let mut acc = u32x4::<T>::zero(t);
+    let mut acc = u32x4::<T>::zero_t(t);
     for s in src.chunks_exact(16) {
         let arr: [u8; 16] = s.try_into().unwrap();
-        let a = u8x16::<T>::from_array(t, arr).to_array();
+        let a = u8x16::<T>::from_array_t(t, arr).to_array();
         for off8 in [0usize, 8] {
-            let h =
-                u16x8::<T>::from_array(t, core::array::from_fn(|i| a[i + off8] as u16)).to_array();
+            let h = u16x8::<T>::from_array_t(t, core::array::from_fn(|i| a[i + off8] as u16))
+                .to_array();
             for off4 in [0usize, 4] {
-                acc += u32x4::<T>::from_array(t, core::array::from_fn(|i| h[i + off4] as u32));
+                acc += u32x4::<T>::from_array_t(t, core::array::from_fn(|i| h[i + off4] as u32));
             }
         }
     }
@@ -125,8 +125,8 @@ where
 #[inline(always)]
 fn narrow_slice<T: I16x8Backend + U8x16Backend>(t: T, src: &[i16], dst: &mut [u8]) {
     for (s, d) in src.chunks_exact(16).zip(dst.chunks_exact_mut(16)) {
-        let lo = i16x8::<T>::from_array(t, s[..8].try_into().unwrap());
-        let hi = i16x8::<T>::from_array(t, s[8..].try_into().unwrap());
+        let lo = i16x8::<T>::from_array_t(t, s[..8].try_into().unwrap());
+        let hi = i16x8::<T>::from_array_t(t, s[8..].try_into().unwrap());
         d.copy_from_slice(&lo.narrow_saturating_u8(hi).to_array());
     }
 }
@@ -135,14 +135,14 @@ fn narrow_slice<T: I16x8Backend + U8x16Backend>(t: T, src: &[i16], dst: &mut [u8
 #[inline(always)]
 fn narrow_via_array_slice<T: I16x8Backend + U8x16Backend>(t: T, src: &[i16], dst: &mut [u8]) {
     for (s, d) in src.chunks_exact(16).zip(dst.chunks_exact_mut(16)) {
-        let lo = i16x8::<T>::from_array(t, s[..8].try_into().unwrap());
-        let hi = i16x8::<T>::from_array(t, s[8..].try_into().unwrap());
+        let lo = i16x8::<T>::from_array_t(t, s[..8].try_into().unwrap());
+        let hi = i16x8::<T>::from_array_t(t, s[8..].try_into().unwrap());
         let (a, b) = (lo.to_array(), hi.to_array());
         let out: [u8; 16] = core::array::from_fn(|i| {
             let x = if i < 8 { a[i] } else { b[i - 8] };
             x.clamp(0, 255) as u8
         });
-        d.copy_from_slice(&u8x16::<T>::from_array(t, out).to_array());
+        d.copy_from_slice(&u8x16::<T>::from_array_t(t, out).to_array());
     }
 }
 
@@ -168,8 +168,8 @@ mod v3_arcane {
     #[inline(always)]
     fn narrow256_slice<T: I16x16Backend + U8x32Backend>(t: T, src: &[i16], dst: &mut [u8]) {
         for (s, d) in src.chunks_exact(32).zip(dst.chunks_exact_mut(32)) {
-            let lo = i16x16::<T>::from_array(t, s[..16].try_into().unwrap());
-            let hi = i16x16::<T>::from_array(t, s[16..].try_into().unwrap());
+            let lo = i16x16::<T>::from_array_t(t, s[..16].try_into().unwrap());
+            let hi = i16x16::<T>::from_array_t(t, s[16..].try_into().unwrap());
             d.copy_from_slice(&lo.narrow_saturating_u8(hi).to_array());
         }
     }
@@ -181,8 +181,8 @@ mod v3_arcane {
         dst: &mut [u8],
     ) {
         for (s, d) in src.chunks_exact(32).zip(dst.chunks_exact_mut(32)) {
-            let lo = i16x16::<T>::from_array(t, s[..16].try_into().unwrap());
-            let hi = i16x16::<T>::from_array(t, s[16..].try_into().unwrap());
+            let lo = i16x16::<T>::from_array_t(t, s[..16].try_into().unwrap());
+            let hi = i16x16::<T>::from_array_t(t, s[16..].try_into().unwrap());
             let (a, b) = (lo.to_array(), hi.to_array());
             let out: [u8; 32] = core::array::from_fn(|i| {
                 let x = if i < 16 { a[i] } else { b[i - 16] };

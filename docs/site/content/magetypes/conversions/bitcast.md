@@ -15,7 +15,7 @@ this roundtrip is an API test rather than a production algorithm.
 use archmage::prelude::*;
 #[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
 fn bits_impl(token: Token, input: [f32; 8]) -> ([i32; 8], [f32; 8]) {
-    let v = f32x8::from_array(token, input);
+    let v = f32x8::from_array_t(token, input);
     let bits = v.bitcast_to_i32();
     (bits.to_array(), bits.bitcast_to_f32().to_array())
 }

@@ -12,7 +12,10 @@ let prepared = f32x8::splat_t(ScalarToken, 2.0);
 assert_eq!(old.to_array(), prepared.to_array());
 ```
 
-Existing names remain supported without deprecation warnings. Vector types stay
+Existing token-taking names remain callable but are deprecated, with diagnostics
+pointing to the corresponding `_t` method. Projects using `deny(deprecated)` or
+`deny(warnings)` must migrate those calls or explicitly allow the warnings.
+Vector types stay
 generic over one token parameter. No constructor modes or new function-attribute
 syntax are part of this change.
 
@@ -37,9 +40,10 @@ apply.
 
 Native raw values have a uniform `from_raw_t(token, raw)` entry point. Platform
 names that already end in `_t`, such as `from_float32x4_t(token, raw)`,
-remain available without a redundant `_t_t` alias. Prefer `from_raw_t` for
+remain available without deprecation or a redundant `_t_t` alias. Prefer `from_raw_t` for
 new raw interchange code.
-The separate `from_raw(raw)` method requires a matching target-feature context.
+The separate `from_raw(raw)` method requires a matching target-feature context
+and is not deprecated.
 
 Ordinary functions and backend-generic helpers can call `_t` methods without
 target-feature annotations:
@@ -61,7 +65,8 @@ refer to the same types and support both method spellings.
 
 The proposed magetypes 0.10 design retains `_t(token, ...)` and gives the short
 constructor names to compiler-checked feature-context construction. That change
-is not implemented by this migration release. Consumers can adopt `_t` on 0.9,
+is not implemented by this migration release. The new tokenless short names
+will not be deprecated; the explicit-token `_t` methods will remain supported. Consumers can adopt `_t` on 0.9,
 upgrade later, and then simplify calls inside concrete feature contexts as a
 separate step. A generic backend bound alone does not enable target features.
 
@@ -76,7 +81,7 @@ new constructor, bound, and platform gate for all 40 vector types.
 
 ## Maintenance
 
-`xtask/src/simd_types/generic_gen/token_aliases.rs` derives aliases from the
+`xtask/src/simd_types/generic_gen/token_aliases.rs` derives deprecated legacy forwarders from the canonical `_t`
 implementation signatures, preserving argument order, bounds, lifetimes,
 attributes, and feature gates. It handles generated vectors and the handwritten
 cross-width and scalar modules. Regenerate with `cargo run -p xtask -- generate`;
@@ -97,7 +102,11 @@ compile. These checks cover the additive 0.9 change, not the future 0.10 API.
 The baseline is the published 0.9.29 packages, not the preserved constructor-mode
 or `use(...)` draft. `cargo-semver-checks 0.50.0` found no breaking API changes in
 archmage or magetypes on x86-64, nor in magetypes on AArch64 or WASM, using
-a patch-release comparison. The tool excludes proc-macro crates: selecting
+a patch-release comparison. That result predates the deprecation step. With legacy-name deprecations enabled,
+the x86-64 patch comparison flags only `type_method_marked_deprecated` (222
+checks pass); no signatures were removed. This is the intentional warning
+change described above, not an unconditional clean semver-check result.
+The tool excludes proc-macro crates: selecting
 archmage-macros alone reports no checkable library target. Its compatibility
 is covered by expansion snapshots and downstream compilation fixtures, not
 by semver-checks. The API check addresses source compatibility;

@@ -2,10 +2,11 @@
 
 Each page contains every public inherent method whose first argument is a token,
 plus the feature-context `from_raw` constructor. Signatures, bounds, and explicit
-`cfg` / `target_feature` attributes are extracted by the alias generator.
+`cfg` / `target_feature` / `deprecated` attributes are extracted by the alias generator.
 `Self` refers to the surrounding impl. These are declarations, not compilable impl bodies.
 
-The existing names retain their arguments. Migration methods append `_t` and
+The existing token-taking names retain their arguments but are deprecated.
+Migration methods append `_t` and
 **keep the token first**: `splat_t(token, value)`, not `splat_t(value, token)`.
 Native names already ending in `_t` use the uniform `from_raw_t(token, raw)`;
 there are no `_t_t` methods. `from_raw(raw)` alone requires the displayed CPU

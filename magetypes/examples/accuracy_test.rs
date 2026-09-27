@@ -117,25 +117,25 @@ mod x86_impl {
     /// Process a single chunk of 8 floats with exp2_lowp
     #[arcane]
     fn exp2_lowp_chunk(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-        f32x8::load(token, input).exp2_lowp().to_array()
+        f32x8::load_t(token, input).exp2_lowp().to_array()
     }
 
     /// Process a single chunk of 8 floats with log2_lowp
     #[arcane]
     fn log2_lowp_chunk(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-        f32x8::load(token, input).log2_lowp().to_array()
+        f32x8::load_t(token, input).log2_lowp().to_array()
     }
 
     /// Process a single chunk of 8 floats with pow_lowp
     #[arcane]
     fn pow_lowp_chunk(token: X64V3Token, input: &[f32; 8], exp: f32) -> [f32; 8] {
-        f32x8::load(token, input).pow_lowp(exp).to_array()
+        f32x8::load_t(token, input).pow_lowp(exp).to_array()
     }
 
     /// Process a single chunk of 8 floats with pow_midp
     #[arcane]
     fn pow_midp_chunk(token: X64V3Token, input: &[f32; 8], exp: f32) -> [f32; 8] {
-        f32x8::load(token, input).pow_midp(exp).to_array()
+        f32x8::load_t(token, input).pow_midp(exp).to_array()
     }
 
     // ============================================================================

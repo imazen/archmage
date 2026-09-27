@@ -29,9 +29,9 @@ const F32X8_HI: [f32; 8] = [9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0];
 /// for every backend. A regression where the halves swap or interleave
 /// would corrupt downstream math without crashing.
 fn lane_order_f32x8<T: F32x8FromHalves>(token: T) {
-    let lo = f32x4::<T>::from_array(token, F32X4_A);
-    let hi = f32x4::<T>::from_array(token, F32X4_B);
-    let wide = f32x8::<T>::from_halves(token, lo, hi);
+    let lo = f32x4::<T>::from_array_t(token, F32X4_A);
+    let hi = f32x4::<T>::from_array_t(token, F32X4_B);
+    let wide = f32x8::<T>::from_halves_t(token, lo, hi);
     let actual = wide.to_array();
     let expected = [
         F32X4_A[0], F32X4_A[1], F32X4_A[2], F32X4_A[3], F32X4_B[0], F32X4_B[1], F32X4_B[2],
@@ -42,9 +42,9 @@ fn lane_order_f32x8<T: F32x8FromHalves>(token: T) {
 
 /// Round-trip: split-after-from is identity.
 fn roundtrip_f32x8<T: F32x8FromHalves>(token: T) {
-    let lo = f32x4::<T>::from_array(token, F32X4_A);
-    let hi = f32x4::<T>::from_array(token, F32X4_B);
-    let wide = f32x8::<T>::from_halves(token, lo, hi);
+    let lo = f32x4::<T>::from_array_t(token, F32X4_A);
+    let hi = f32x4::<T>::from_array_t(token, F32X4_B);
+    let wide = f32x8::<T>::from_halves_t(token, lo, hi);
     let (back_lo, back_hi) = wide.split();
     assert_eq!(back_lo.to_array(), F32X4_A);
     assert_eq!(back_hi.to_array(), F32X4_B);
@@ -56,9 +56,9 @@ fn reverse_roundtrip_f32x8<T: F32x8FromHalves>(token: T) {
         F32X4_A[0], F32X4_A[1], F32X4_A[2], F32X4_A[3], F32X4_B[0], F32X4_B[1], F32X4_B[2],
         F32X4_B[3],
     ];
-    let original = f32x8::<T>::from_array(token, original_lanes);
+    let original = f32x8::<T>::from_array_t(token, original_lanes);
     let (lo, hi) = original.split();
-    let rebuilt = f32x8::<T>::from_halves(token, lo, hi);
+    let rebuilt = f32x8::<T>::from_halves_t(token, lo, hi);
     assert_eq!(rebuilt.to_array(), original_lanes, "from(split(x)) ≠ x");
 }
 
@@ -66,12 +66,12 @@ fn reverse_roundtrip_f32x8<T: F32x8FromHalves>(token: T) {
 /// Catches the case where a polyfill / native-intrinsic disagree on lane order.
 fn parity_with_scalar_f32x8<T: F32x8FromHalves>(token: T) {
     let scalar_token = ScalarToken::summon().unwrap();
-    let lo_t = f32x4::<T>::from_array(token, F32X4_A);
-    let hi_t = f32x4::<T>::from_array(token, F32X4_B);
-    let lo_s = f32x4::<ScalarToken>::from_array(scalar_token, F32X4_A);
-    let hi_s = f32x4::<ScalarToken>::from_array(scalar_token, F32X4_B);
-    let wide_t = f32x8::<T>::from_halves(token, lo_t, hi_t);
-    let wide_s = f32x8::<ScalarToken>::from_halves(scalar_token, lo_s, hi_s);
+    let lo_t = f32x4::<T>::from_array_t(token, F32X4_A);
+    let hi_t = f32x4::<T>::from_array_t(token, F32X4_B);
+    let lo_s = f32x4::<ScalarToken>::from_array_t(scalar_token, F32X4_A);
+    let hi_s = f32x4::<ScalarToken>::from_array_t(scalar_token, F32X4_B);
+    let wide_t = f32x8::<T>::from_halves_t(token, lo_t, hi_t);
+    let wide_s = f32x8::<ScalarToken>::from_halves_t(scalar_token, lo_s, hi_s);
     assert_eq!(
         wide_t.to_array(),
         wide_s.to_array(),
@@ -87,9 +87,9 @@ fn parity_with_scalar_f32x8<T: F32x8FromHalves>(token: T) {
 
 #[cfg(feature = "w512")]
 fn lane_order_f32x16<T: F32x16FromHalves>(token: T) {
-    let lo = f32x8::<T>::from_array(token, F32X8_LO);
-    let hi = f32x8::<T>::from_array(token, F32X8_HI);
-    let wide = f32x16::<T>::from_halves(token, lo, hi);
+    let lo = f32x8::<T>::from_array_t(token, F32X8_LO);
+    let hi = f32x8::<T>::from_array_t(token, F32X8_HI);
+    let wide = f32x16::<T>::from_halves_t(token, lo, hi);
     let actual = wide.to_array();
     let expected = [
         F32X8_LO[0],
@@ -114,9 +114,9 @@ fn lane_order_f32x16<T: F32x16FromHalves>(token: T) {
 
 #[cfg(feature = "w512")]
 fn roundtrip_f32x16<T: F32x16FromHalves>(token: T) {
-    let lo = f32x8::<T>::from_array(token, F32X8_LO);
-    let hi = f32x8::<T>::from_array(token, F32X8_HI);
-    let wide = f32x16::<T>::from_halves(token, lo, hi);
+    let lo = f32x8::<T>::from_array_t(token, F32X8_LO);
+    let hi = f32x8::<T>::from_array_t(token, F32X8_HI);
+    let wide = f32x16::<T>::from_halves_t(token, lo, hi);
     let (back_lo, back_hi) = wide.split();
     assert_eq!(back_lo.to_array(), F32X8_LO);
     assert_eq!(back_hi.to_array(), F32X8_HI);
@@ -127,21 +127,21 @@ fn reverse_roundtrip_f32x16<T: F32x16FromHalves>(token: T) {
     let mut original_lanes = [0f32; 16];
     original_lanes[..8].copy_from_slice(&F32X8_LO);
     original_lanes[8..].copy_from_slice(&F32X8_HI);
-    let original = f32x16::<T>::from_array(token, original_lanes);
+    let original = f32x16::<T>::from_array_t(token, original_lanes);
     let (lo, hi) = original.split();
-    let rebuilt = f32x16::<T>::from_halves(token, lo, hi);
+    let rebuilt = f32x16::<T>::from_halves_t(token, lo, hi);
     assert_eq!(rebuilt.to_array(), original_lanes);
 }
 
 #[cfg(feature = "w512")]
 fn parity_with_scalar_f32x16<T: F32x16FromHalves>(token: T) {
     let scalar_token = ScalarToken::summon().unwrap();
-    let lo_t = f32x8::<T>::from_array(token, F32X8_LO);
-    let hi_t = f32x8::<T>::from_array(token, F32X8_HI);
-    let lo_s = f32x8::<ScalarToken>::from_array(scalar_token, F32X8_LO);
-    let hi_s = f32x8::<ScalarToken>::from_array(scalar_token, F32X8_HI);
-    let wide_t = f32x16::<T>::from_halves(token, lo_t, hi_t);
-    let wide_s = f32x16::<ScalarToken>::from_halves(scalar_token, lo_s, hi_s);
+    let lo_t = f32x8::<T>::from_array_t(token, F32X8_LO);
+    let hi_t = f32x8::<T>::from_array_t(token, F32X8_HI);
+    let lo_s = f32x8::<ScalarToken>::from_array_t(scalar_token, F32X8_LO);
+    let hi_s = f32x8::<ScalarToken>::from_array_t(scalar_token, F32X8_HI);
+    let wide_t = f32x16::<T>::from_halves_t(token, lo_t, hi_t);
+    let wide_s = f32x16::<ScalarToken>::from_halves_t(scalar_token, lo_s, hi_s);
     assert_eq!(wide_t.to_array(), wide_s.to_array());
     assert_eq!(wide_t.low().to_array(), wide_s.low().to_array());
     assert_eq!(wide_t.high().to_array(), wide_s.high().to_array());
@@ -235,13 +235,13 @@ fn v4_native_matches_v3_polyfill() {
     };
     let v3 = archmage::X64V3Token::summon().expect("V4 implies V3");
 
-    let lo_v4 = f32x8::<archmage::X64V4Token>::from_array(v4, F32X8_LO);
-    let hi_v4 = f32x8::<archmage::X64V4Token>::from_array(v4, F32X8_HI);
-    let wide_v4 = f32x16::<archmage::X64V4Token>::from_halves(v4, lo_v4, hi_v4);
+    let lo_v4 = f32x8::<archmage::X64V4Token>::from_array_t(v4, F32X8_LO);
+    let hi_v4 = f32x8::<archmage::X64V4Token>::from_array_t(v4, F32X8_HI);
+    let wide_v4 = f32x16::<archmage::X64V4Token>::from_halves_t(v4, lo_v4, hi_v4);
 
-    let lo_v3 = f32x8::<archmage::X64V3Token>::from_array(v3, F32X8_LO);
-    let hi_v3 = f32x8::<archmage::X64V3Token>::from_array(v3, F32X8_HI);
-    let wide_v3 = f32x16::<archmage::X64V3Token>::from_halves(v3, lo_v3, hi_v3);
+    let lo_v3 = f32x8::<archmage::X64V3Token>::from_array_t(v3, F32X8_LO);
+    let hi_v3 = f32x8::<archmage::X64V3Token>::from_array_t(v3, F32X8_HI);
+    let wide_v3 = f32x16::<archmage::X64V3Token>::from_halves_t(v3, lo_v3, hi_v3);
 
     assert_eq!(
         wide_v4.to_array(),
@@ -310,9 +310,9 @@ const EDGE_LANES_4B: [f32; 4] = [-0.0, f32::EPSILON, f32::MAX, f32::MIN];
 /// payloads, flush denormals, or otherwise transform lane bits. Verify
 /// every lane survives the round-trip bitwise.
 fn bitwise_round_trip_f32x8<T: F32x8FromHalves>(token: T) {
-    let lo = f32x4::<T>::from_array(token, EDGE_LANES_4);
-    let hi = f32x4::<T>::from_array(token, EDGE_LANES_4B);
-    let wide = f32x8::<T>::from_halves(token, lo, hi);
+    let lo = f32x4::<T>::from_array_t(token, EDGE_LANES_4);
+    let hi = f32x4::<T>::from_array_t(token, EDGE_LANES_4B);
+    let wide = f32x8::<T>::from_halves_t(token, lo, hi);
     let arr = wide.to_array();
     for i in 0..4 {
         assert_eq!(
@@ -364,7 +364,7 @@ fn wasm128_bit_precise() {
 // ============================================================================
 
 fn idempotent_extraction_f32x8<T: F32x8FromHalves>(token: T) {
-    let wide = f32x8::<T>::from_array(token, F32X8_LO);
+    let wide = f32x8::<T>::from_array_t(token, F32X8_LO);
     assert_eq!(wide.low().to_array(), wide.low().to_array());
     assert_eq!(wide.high().to_array(), wide.high().to_array());
     let (a_lo, a_hi) = wide.split();
@@ -400,9 +400,9 @@ fn permutation_test_f32x8<T: F32x8FromHalves>(token: T) {
             lo[i] = f32::from_bits(0x4000_0000 | (seed << 16) | (i as u32));
             hi[i] = f32::from_bits(0x4080_0000 | (seed << 16) | (i as u32));
         }
-        let lo_v = f32x4::<T>::from_array(token, lo);
-        let hi_v = f32x4::<T>::from_array(token, hi);
-        let wide = f32x8::<T>::from_halves(token, lo_v, hi_v).to_array();
+        let lo_v = f32x4::<T>::from_array_t(token, lo);
+        let hi_v = f32x4::<T>::from_array_t(token, hi);
+        let wide = f32x8::<T>::from_halves_t(token, lo_v, hi_v).to_array();
         for i in 0..4 {
             assert_eq!(
                 wide[i].to_bits(),

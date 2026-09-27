@@ -73,12 +73,12 @@ use archmage::prelude::*;
 #[magetypes(define(i32x8), v3, neon, wasm128, -scalar)]
 fn levels_impl(token: Token, input: &[i32], output: &mut [u8]) {
     assert_eq!(input.len(), output.len());
-    let zero = i32x8::zero(token);
-    let cap = i32x8::splat(token, 127);
+    let zero = i32x8::zero_t(token);
+    let cap = i32x8::splat_t(token, 127);
     let (chunks, tail) = input.as_chunks::<8>();
     let (dst, dst_tail) = output.as_chunks_mut::<8>();
     for (chunk, out) in chunks.iter().zip(dst) {
-        let x = i32x8::load(token, chunk);
+        let x = i32x8::load_t(token, chunk);
         let sign = x.shr_arithmetic_const::<31>();
         let abs = (x ^ sign) - sign;
         // Only MIN remains negative after wrapping absolute value.

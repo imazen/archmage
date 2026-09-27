@@ -25,7 +25,7 @@ mod x86_tests {
     #[arcane(import_magetypes)]
     fn arcane_magetypes_basic(token: X64V3Token, data: &[f32; 8]) -> f32 {
         // f32x8 comes from magetypes::simd::v3::* — pre-specialized for X64V3Token
-        let v = f32x8::load(token, data);
+        let v = f32x8::load_t(token, data);
         v.reduce_add()
     }
 
@@ -50,7 +50,7 @@ mod x86_tests {
         let _ = _mm256_add_ps(zero, zero);
 
         // Magetypes for higher-level operations
-        let v = f32x8::load(token, data);
+        let v = f32x8::load_t(token, data);
         v.reduce_add()
     }
 
@@ -69,7 +69,7 @@ mod x86_tests {
 
     #[rite(import_magetypes)]
     fn rite_magetypes(token: X64V3Token, data: &[f32; 8]) -> f32 {
-        let v = f32x8::load(token, data);
+        let v = f32x8::load_t(token, data);
         v.reduce_add()
     }
 
@@ -77,7 +77,7 @@ mod x86_tests {
     fn rite_both(token: X64V3Token, data: &[f32; 8]) -> f32 {
         let zero = _mm256_setzero_ps();
         let _ = _mm256_add_ps(zero, zero);
-        let v = f32x8::load(token, data);
+        let v = f32x8::load_t(token, data);
         v.reduce_add()
     }
 
@@ -128,8 +128,8 @@ mod x86_tests {
         // Helper — only needs magetypes, no raw intrinsics
         #[rite(import_magetypes)]
         fn scale_chunk(token: X64V3Token, data: &[f32; 8]) -> f32 {
-            let v = f32x8::load(token, data);
-            let two = f32x8::splat(token, 2.0);
+            let v = f32x8::load_t(token, data);
+            let two = f32x8::splat_t(token, 2.0);
             (v * two).reduce_add()
         }
 
@@ -166,7 +166,7 @@ mod x86_tests {
             // Store back, then use magetypes for reduction
             let mut tmp = [0.0f32; 8];
             _mm256_storeu_ps(&mut tmp, fma_result);
-            let v = f32x8::load(token, &tmp);
+            let v = f32x8::load_t(token, &tmp);
             v.reduce_add()
         }
 
@@ -192,11 +192,11 @@ mod x86_tests {
     #[arcane(import_magetypes)]
     fn multi_width_types(token: X64V3Token, data4: &[f32; 4], data8: &[f32; 8]) -> f32 {
         // 128-bit (native on V3)
-        let v4 = f32x4::load(token, data4);
+        let v4 = f32x4::load_t(token, data4);
         let sum4 = v4.reduce_add();
 
         // 256-bit (native on V3)
-        let v8 = f32x8::load(token, data8);
+        let v8 = f32x8::load_t(token, data8);
         let sum8 = v8.reduce_add();
 
         sum4 + sum8
@@ -218,7 +218,7 @@ mod x86_tests {
 
     #[arcane(import_magetypes)]
     fn integer_types(token: X64V3Token, data: &[i32; 8]) -> i32 {
-        let v = i32x8::load(token, data);
+        let v = i32x8::load_t(token, data);
         v.reduce_add()
     }
 
@@ -242,8 +242,8 @@ mod x86_tests {
     impl Processor {
         #[arcane(import_intrinsics, import_magetypes)]
         fn process(&self, token: X64V3Token, data: &[f32; 8]) -> f32 {
-            let v = f32x8::load(token, data);
-            let scale = f32x8::splat(token, self.scale);
+            let v = f32x8::load_t(token, data);
+            let scale = f32x8::splat_t(token, self.scale);
             let scaled = v * scale;
             scaled.reduce_add()
         }
@@ -272,7 +272,7 @@ mod x86_tests {
     impl SimdReduce for Reducer {
         #[arcane(_self = Reducer, import_magetypes)]
         fn reduce_sum(&self, token: X64V3Token, data: &[f32; 8]) -> f32 {
-            let v = f32x8::load(token, data);
+            let v = f32x8::load_t(token, data);
             v.reduce_add()
         }
     }
@@ -300,16 +300,16 @@ mod x86_tests {
 
         #[rite(import_magetypes)]
         fn normalize(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-            let v = f32x8::load(token, data);
+            let v = f32x8::load_t(token, data);
             let sum = v.reduce_add();
-            let inv = f32x8::splat(token, 1.0 / sum);
+            let inv = f32x8::splat_t(token, 1.0 / sum);
             (v * inv).to_array()
         }
 
         #[rite(import_magetypes)]
         fn scale(token: X64V3Token, data: &[f32; 8], factor: f32) -> [f32; 8] {
-            let v = f32x8::load(token, data);
-            let s = f32x8::splat(token, factor);
+            let v = f32x8::load_t(token, data);
+            let s = f32x8::splat_t(token, factor);
             (v * s).to_array()
         }
 
@@ -352,7 +352,7 @@ mod x86_tests {
             // Can write a generic inner helper that's #[inline(always)]
             #[inline(always)]
             fn inner<T: F32x8Backend>(t: T, d: &[f32; 8]) -> f32 {
-                magetypes::simd::generic::f32x8::<T>::load(t, d).reduce_add()
+                magetypes::simd::generic::f32x8::<T>::load_t(t, d).reduce_add()
             }
             inner(token, data)
         }
@@ -395,7 +395,7 @@ mod x86_tests {
     #[arcane(import_magetypes)]
     fn use_natural_width(token: X64V3Token, data: &[f32; 8]) -> f32 {
         // f32xN is a type alias for the natural width — f32x8 on V3
-        let v = f32xN::load(token, data);
+        let v = f32xN::load_t(token, data);
         v.reduce_add()
     }
 
@@ -440,13 +440,13 @@ mod arm_tests {
     #[arcane(import_magetypes)]
     fn neon_magetypes(token: NeonToken, data: &[f32; 4]) -> f32 {
         // magetypes::simd::neon::* in scope
-        let v = f32x4::load(token, data);
+        let v = f32x4::load_t(token, data);
         v.reduce_add()
     }
 
     #[rite(import_intrinsics, import_magetypes)]
     fn neon_helper(token: NeonToken, data: &[f32; 4]) -> f32 {
-        let v = f32x4::load(token, data);
+        let v = f32x4::load_t(token, data);
         v.reduce_add()
     }
 
@@ -471,7 +471,7 @@ mod wasm_tests {
     #[arcane(import_magetypes)]
     fn wasm_magetypes(token: Wasm128Token, data: &[f32; 4]) -> f32 {
         // magetypes::simd::wasm128::* in scope
-        let v = f32x4::load(token, data);
+        let v = f32x4::load_t(token, data);
         v.reduce_add()
     }
 

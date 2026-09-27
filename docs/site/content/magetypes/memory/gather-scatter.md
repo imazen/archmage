@@ -12,8 +12,8 @@ use archmage::prelude::*;
 #[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
 fn lookup_impl(token: Token, table: &[f32], indices: &[usize; 8], gain: f32) -> [f32; 8] {
     let values = core::array::from_fn(|lane| table[indices[lane]]);
-    let v = f32x8::from_array(token, values);
-    (v * f32x8::splat(token, gain)).to_array()
+    let v = f32x8::from_array_t(token, values);
+    (v * f32x8::splat_t(token, gain)).to_array()
 }
 
 pub fn lookup(table: &[f32], indices: &[usize; 8], gain: f32) -> [f32; 8] {

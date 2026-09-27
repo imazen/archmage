@@ -7,7 +7,7 @@ use magetypes::simd::generic::f32x8 as GenericF32x8;
 #[magetypes(rite, v3, scalar)]
 fn kernel(token: Token, data: &[f32; 8]) -> f32 {
     type Vec8 = GenericF32x8<Token>;
-    Vec8::load(token, data).reduce_add()
+    Vec8::load_t(token, data).reduce_add()
 }
 
 fn main() {}

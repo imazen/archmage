@@ -21,7 +21,7 @@ This reference check exercises values for which the distinction matters:
 use archmage::prelude::*;
 #[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
 fn convert_impl(token: Token, values: [f32; 8]) -> [i32; 8] {
-    f32x8::from_array(token, values).to_i32_saturating().to_array()
+    f32x8::from_array_t(token, values).to_i32_saturating().to_array()
 }
 pub fn convert(values: [f32; 8]) -> [i32; 8] {
     incant!(convert_impl(values), [v3, neon, wasm128, scalar])

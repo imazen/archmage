@@ -1,4 +1,5 @@
 //! Raw interchange must retain bits and preserve the backend's capability proof.
+#![allow(deprecated)] // Compatibility coverage for published native constructor names.
 #![forbid(unsafe_code)]
 #![cfg(all(feature = "std", any(target_arch = "x86_64", target_arch = "aarch64")))]
 

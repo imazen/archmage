@@ -54,7 +54,7 @@ mod x86_impl {
         let result = _mm256_blendv_ps(premul, raw, blend_mask);
 
         // SAFETY: We're inside #[arcane] which guarantees AVX2 support
-        f32x8::from_m256(token, result)
+        f32x8::from_m256_t(token, result)
     }
 
     /// Premultiply alpha for a slice of RGBA pixels
@@ -65,7 +65,7 @@ mod x86_impl {
         // Process 2 pixels (8 floats) at a time
         for chunk in data.chunks_exact_mut(8) {
             let arr: &[f32; 8] = (&*chunk).try_into().unwrap();
-            let pixels = f32x8::load(token, arr);
+            let pixels = f32x8::load_t(token, arr);
             let result = premultiply_2px(token, pixels);
             let out: &mut [f32; 8] = chunk.try_into().unwrap();
             result.store(out);
@@ -97,21 +97,21 @@ mod x86_impl {
         const ALPHA_EPSILON: f32 = 1.0 / 255.0;
 
         let raw = pixels.raw();
-        let epsilon = f32x8::splat(token, ALPHA_EPSILON);
-        let zero = f32x8::zero(token);
-        let one = f32x8::splat(token, 1.0);
+        let epsilon = f32x8::splat_t(token, ALPHA_EPSILON);
+        let zero = f32x8::zero_t(token);
+        let one = f32x8::splat_t(token, 1.0);
 
         // Broadcast alpha
         let alpha_broadcast =
             _mm256_permutevar8x32_ps(raw, _mm256_set_epi32(7, 7, 7, 7, 3, 3, 3, 3));
-        let alpha_vec = f32x8::from_m256(token, alpha_broadcast);
+        let alpha_vec = f32x8::from_m256_t(token, alpha_broadcast);
 
         // Compute safe 1/alpha (clamp alpha to epsilon to avoid div by zero)
         let safe_alpha = alpha_vec.max(epsilon);
         let inv_alpha = one / safe_alpha;
 
         // Divide RGB by alpha
-        let pixels_vec = f32x8::from_m256(token, raw);
+        let pixels_vec = f32x8::from_m256_t(token, raw);
         let divided = pixels_vec * inv_alpha;
 
         // Zero out RGB where alpha < epsilon using blendv
@@ -120,13 +120,13 @@ mod x86_impl {
         // Blend: use divided where alpha_ok, zero otherwise
         // blendv selects divided where mask bits are set, zero where not
         let rgb_result_raw = _mm256_blendv_ps(zero.raw(), divided.raw(), alpha_ok_mask.raw());
-        let rgb_result = f32x8::from_m256(token, rgb_result_raw);
+        let rgb_result = f32x8::from_m256_t(token, rgb_result_raw);
 
         // Restore original alpha values
         let blend_mask = _mm256_set_ps(-0.0, 0.0, 0.0, 0.0, -0.0, 0.0, 0.0, 0.0);
         let result = _mm256_blendv_ps(rgb_result.raw(), raw, blend_mask);
 
-        f32x8::from_m256(token, result)
+        f32x8::from_m256_t(token, result)
     }
 
     /// Unpremultiply alpha for a slice of RGBA pixels
@@ -139,7 +139,7 @@ mod x86_impl {
         // Process 2 pixels (8 floats) at a time
         for chunk in data.chunks_exact_mut(8) {
             let arr: &[f32; 8] = (&*chunk).try_into().unwrap();
-            let pixels = f32x8::load(token, arr);
+            let pixels = f32x8::load_t(token, arr);
             let result = unpremultiply_2px(token, pixels);
             let out: &mut [f32; 8] = chunk.try_into().unwrap();
             result.store(out);
@@ -172,13 +172,13 @@ mod x86_impl {
     /// Both src and dst must be premultiplied.
     #[arcane]
     fn composite_over_2px(token: X64V3Token, src: f32x8, dst: f32x8) -> f32x8 {
-        let one = f32x8::splat(token, 1.0);
+        let one = f32x8::splat_t(token, 1.0);
         let src_raw = src.raw();
 
         // Broadcast src alpha
         let src_alpha_broadcast =
             _mm256_permutevar8x32_ps(src_raw, _mm256_set_epi32(7, 7, 7, 7, 3, 3, 3, 3));
-        let src_alpha = f32x8::from_m256(token, src_alpha_broadcast);
+        let src_alpha = f32x8::from_m256_t(token, src_alpha_broadcast);
 
         // 1 - src_alpha
         let inv_src_alpha = one - src_alpha;
@@ -202,8 +202,8 @@ mod x86_impl {
         for (src_chunk, dst_chunk) in src.chunks_exact(8).zip(dst.chunks_exact_mut(8)) {
             let src_arr: &[f32; 8] = src_chunk.try_into().unwrap();
             let dst_arr: &[f32; 8] = (&*dst_chunk).try_into().unwrap();
-            let s = f32x8::load(token, src_arr);
-            let d = f32x8::load(token, dst_arr);
+            let s = f32x8::load_t(token, src_arr);
+            let d = f32x8::load_t(token, dst_arr);
             let result = composite_over_2px(token, s, d);
             let out: &mut [f32; 8] = dst_chunk.try_into().unwrap();
             result.store(out);

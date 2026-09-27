@@ -343,7 +343,7 @@ mod generic_magetypes_dispatch {
     // Instead: write a generic function and wire up incant! manually.
 
     fn sum_generic<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
-        f32x8::<T>::from_array(token, *data).reduce_add()
+        f32x8::<T>::from_array_t(token, *data).reduce_add()
     }
 
     #[cfg(target_arch = "x86_64")]

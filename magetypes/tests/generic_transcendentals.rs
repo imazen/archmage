@@ -48,7 +48,7 @@ mod tests {
     #[test]
     fn f32x8_log2_lowp_exact_powers() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x8::from_array(t, [1.0, 2.0, 4.0, 8.0, 0.5, 0.25, 16.0, 64.0]);
+            let input = f32x8::from_array_t(t, [1.0, 2.0, 4.0, 8.0, 0.5, 0.25, 16.0, 64.0]);
             let result = input.log2_lowp().to_array();
             let expected = [0.0, 1.0, 2.0, 3.0, -1.0, -2.0, 4.0, 6.0];
             assert_close_8(result, expected, 0.02, "log2_lowp powers of 2");
@@ -58,7 +58,7 @@ mod tests {
     #[test]
     fn f32x8_log2_lowp_general() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x8::from_array(t, [1.5, 3.0, 10.0, 100.0, 0.1, 0.01, 7.0, 42.0]);
+            let input = f32x8::from_array_t(t, [1.5, 3.0, 10.0, 100.0, 0.1, 0.01, 7.0, 42.0]);
             let result = input.log2_lowp().to_array();
             let expected: [f32; 8] = core::array::from_fn(|i| {
                 [1.5_f32, 3.0, 10.0, 100.0, 0.1, 0.01, 7.0, 42.0][i].log2()
@@ -70,7 +70,7 @@ mod tests {
     #[test]
     fn f32x8_exp2_lowp_exact() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x8::from_array(t, [0.0, 1.0, 2.0, 3.0, -1.0, -2.0, 4.0, 7.0]);
+            let input = f32x8::from_array_t(t, [0.0, 1.0, 2.0, 3.0, -1.0, -2.0, 4.0, 7.0]);
             let result = input.exp2_lowp().to_array();
             let expected = [1.0, 2.0, 4.0, 8.0, 0.5, 0.25, 16.0, 128.0];
             assert_close_8(result, expected, 0.02, "exp2_lowp exact");
@@ -80,7 +80,7 @@ mod tests {
     #[test]
     fn f32x8_exp2_lowp_fractional() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x8::from_array(t, [0.5, 1.5, -0.5, 2.5, 0.1, 0.9, -3.5, 10.0]);
+            let input = f32x8::from_array_t(t, [0.5, 1.5, -0.5, 2.5, 0.1, 0.9, -3.5, 10.0]);
             let result = input.exp2_lowp().to_array();
             let expected: [f32; 8] =
                 core::array::from_fn(|i| [0.5_f32, 1.5, -0.5, 2.5, 0.1, 0.9, -3.5, 10.0][i].exp2());
@@ -92,7 +92,7 @@ mod tests {
     fn f32x8_ln_lowp() {
         if let Some(t) = X64V3Token::summon() {
             let vals = [1.0, 2.718_281_8, 10.0, 0.5, 100.0, 0.1, 7.389, 20.0];
-            let input = f32x8::from_array(t, vals);
+            let input = f32x8::from_array_t(t, vals);
             let result = input.ln_lowp().to_array();
             let expected: [f32; 8] = core::array::from_fn(|i| vals[i].ln());
             assert_close_8(result, expected, 0.02, "ln_lowp");
@@ -103,7 +103,7 @@ mod tests {
     fn f32x8_exp_lowp() {
         if let Some(t) = X64V3Token::summon() {
             let vals = [0.0, 1.0, -1.0, 2.0, 0.5, -2.0, 3.0, -0.5];
-            let input = f32x8::from_array(t, vals);
+            let input = f32x8::from_array_t(t, vals);
             let result = input.exp_lowp().to_array();
             let expected: [f32; 8] = core::array::from_fn(|i| vals[i].exp());
             assert_close_8(result, expected, 0.02, "exp_lowp");
@@ -114,7 +114,7 @@ mod tests {
     fn f32x8_log10_lowp() {
         if let Some(t) = X64V3Token::summon() {
             let vals = [1.0, 10.0, 100.0, 1000.0, 0.1, 0.01, 50.0, 7.0];
-            let input = f32x8::from_array(t, vals);
+            let input = f32x8::from_array_t(t, vals);
             let result = input.log10_lowp().to_array();
             let expected: [f32; 8] = core::array::from_fn(|i| vals[i].log10());
             assert_close_8(result, expected, 0.02, "log10_lowp");
@@ -125,7 +125,7 @@ mod tests {
     fn f32x8_pow_lowp() {
         if let Some(t) = X64V3Token::summon() {
             let vals = [1.0, 2.0, 4.0, 8.0, 3.0, 10.0, 0.5, 100.0];
-            let input = f32x8::from_array(t, vals);
+            let input = f32x8::from_array_t(t, vals);
             let result = input.pow_lowp(0.5).to_array();
             let expected: [f32; 8] = core::array::from_fn(|i| vals[i].sqrt());
             assert_close_8(result, expected, 0.02, "pow_lowp(0.5) ≈ sqrt");
@@ -137,7 +137,7 @@ mod tests {
     #[test]
     fn f32x8_log2_midp_exact_powers() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x8::from_array(t, [1.0, 2.0, 4.0, 8.0, 0.5, 0.25, 16.0, 64.0]);
+            let input = f32x8::from_array_t(t, [1.0, 2.0, 4.0, 8.0, 0.5, 0.25, 16.0, 64.0]);
             let result = input.log2_midp_unchecked().to_array();
             let expected = [0.0, 1.0, 2.0, 3.0, -1.0, -2.0, 4.0, 6.0];
             assert_close_8(result, expected, 1e-5, "log2_midp powers of 2");
@@ -148,7 +148,7 @@ mod tests {
     fn f32x8_log2_midp_general() {
         if let Some(t) = X64V3Token::summon() {
             let vals = [1.5, 3.0, 10.0, 100.0, 0.1, 0.01, 7.0, 42.0];
-            let input = f32x8::from_array(t, vals);
+            let input = f32x8::from_array_t(t, vals);
             let result = input.log2_midp_unchecked().to_array();
             let expected: [f32; 8] = core::array::from_fn(|i| vals[i].log2());
             assert_close_8(result, expected, 5e-6, "log2_midp general");
@@ -158,7 +158,7 @@ mod tests {
     #[test]
     fn f32x8_log2_midp_edge_cases() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x8::from_array(t, [0.0, -1.0, 1.0, 2.0, 0.0, -0.5, 4.0, 8.0]);
+            let input = f32x8::from_array_t(t, [0.0, -1.0, 1.0, 2.0, 0.0, -0.5, 4.0, 8.0]);
             let result = input.log2_midp().to_array();
 
             // 0 -> -inf
@@ -184,7 +184,7 @@ mod tests {
     #[test]
     fn f32x8_exp2_midp_exact() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x8::from_array(t, [0.0, 1.0, 2.0, 3.0, -1.0, -2.0, 4.0, 7.0]);
+            let input = f32x8::from_array_t(t, [0.0, 1.0, 2.0, 3.0, -1.0, -2.0, 4.0, 7.0]);
             let result = input.exp2_midp().to_array();
             let expected = [1.0, 2.0, 4.0, 8.0, 0.5, 0.25, 16.0, 128.0];
             assert_close_8(result, expected, 1e-5, "exp2_midp exact");
@@ -195,7 +195,7 @@ mod tests {
     fn f32x8_exp2_midp_fractional() {
         if let Some(t) = X64V3Token::summon() {
             let vals = [0.5, 1.5, -0.5, 2.5, 0.1, 0.9, -3.5, 10.0];
-            let input = f32x8::from_array(t, vals);
+            let input = f32x8::from_array_t(t, vals);
             let result = input.exp2_midp().to_array();
             let expected: [f32; 8] = core::array::from_fn(|i| vals[i].exp2());
             assert_close_8(result, expected, 5e-6, "exp2_midp fractional");
@@ -215,7 +215,7 @@ mod tests {
                 7.389,
                 20.0,
             ];
-            let input = f32x8::from_array(t, vals);
+            let input = f32x8::from_array_t(t, vals);
             let result = input.ln_midp().to_array();
             let expected: [f32; 8] = core::array::from_fn(|i| vals[i].ln());
             assert_close_8(result, expected, 5e-6, "ln_midp");
@@ -226,7 +226,7 @@ mod tests {
     fn f32x8_exp_midp() {
         if let Some(t) = X64V3Token::summon() {
             let vals = [0.0, 1.0, -1.0, 2.0, 0.5, -2.0, 3.0, -0.5];
-            let input = f32x8::from_array(t, vals);
+            let input = f32x8::from_array_t(t, vals);
             let result = input.exp_midp().to_array();
             let expected: [f32; 8] = core::array::from_fn(|i| vals[i].exp());
             assert_close_8(result, expected, 5e-6, "exp_midp");
@@ -237,7 +237,7 @@ mod tests {
     fn f32x8_log10_midp() {
         if let Some(t) = X64V3Token::summon() {
             let vals = [1.0, 10.0, 100.0, 1000.0, 0.1, 0.01, 50.0, 7.0];
-            let input = f32x8::from_array(t, vals);
+            let input = f32x8::from_array_t(t, vals);
             let result = input.log10_midp().to_array();
             let expected: [f32; 8] = core::array::from_fn(|i| vals[i].log10());
             assert_close_8(result, expected, 5e-6, "log10_midp");
@@ -248,7 +248,7 @@ mod tests {
     fn f32x8_pow_midp() {
         if let Some(t) = X64V3Token::summon() {
             let vals = [1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0];
-            let input = f32x8::from_array(t, vals);
+            let input = f32x8::from_array_t(t, vals);
             let result = input.pow_midp(0.5).to_array();
             let expected: [f32; 8] = core::array::from_fn(|i| vals[i].sqrt());
             assert_close_8(result, expected, 5e-6, "pow_midp(0.5)");
@@ -259,7 +259,7 @@ mod tests {
     fn f32x8_pow_midp_cube() {
         if let Some(t) = X64V3Token::summon() {
             let vals = [1.0, 2.0, 3.0, 4.0, 5.0, 10.0, 0.5, 0.1];
-            let input = f32x8::from_array(t, vals);
+            let input = f32x8::from_array_t(t, vals);
             let result = input.pow_midp(3.0).to_array();
             let expected: [f32; 8] = core::array::from_fn(|i| vals[i].powi(3));
             assert_close_8(result, expected, 5e-5, "pow_midp(3.0)");
@@ -271,7 +271,7 @@ mod tests {
     #[test]
     fn f32x8_cbrt_midp_perfect_cubes() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x8::from_array(t, [1.0, 8.0, 27.0, 64.0, 125.0, 216.0, 343.0, 512.0]);
+            let input = f32x8::from_array_t(t, [1.0, 8.0, 27.0, 64.0, 125.0, 216.0, 343.0, 512.0]);
             let result = input.cbrt_midp().to_array();
             let expected = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
             assert_close_8(result, expected, 1e-5, "cbrt_midp perfect cubes");
@@ -282,7 +282,7 @@ mod tests {
     fn f32x8_cbrt_midp_negative() {
         if let Some(t) = X64V3Token::summon() {
             let input =
-                f32x8::from_array(t, [-1.0, -8.0, -27.0, -64.0, -0.001, -1000.0, -0.125, -1e6]);
+                f32x8::from_array_t(t, [-1.0, -8.0, -27.0, -64.0, -0.001, -1000.0, -0.125, -1e6]);
             let result = input.cbrt_midp().to_array();
             let expected: [f32; 8] = core::array::from_fn(|i| {
                 let v = [-1.0_f32, -8.0, -27.0, -64.0, -0.001, -1000.0, -0.125, -1e6][i];
@@ -296,7 +296,7 @@ mod tests {
     fn f32x8_cbrt_midp_general() {
         if let Some(t) = X64V3Token::summon() {
             let vals = [0.001, 0.1, 0.5, 2.0, 10.0, 100.0, 1000.0, 1e6];
-            let input = f32x8::from_array(t, vals);
+            let input = f32x8::from_array_t(t, vals);
             let result = input.cbrt_midp().to_array();
             let expected: [f32; 8] = core::array::from_fn(|i| vals[i].cbrt());
             assert_close_8(result, expected, 1e-5, "cbrt_midp general");
@@ -306,7 +306,7 @@ mod tests {
     #[test]
     fn f32x8_cbrt_midp_precise_zero() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x8::from_array(t, [0.0, 0.0, 1.0, 8.0, -8.0, 0.0, 27.0, 0.0]);
+            let input = f32x8::from_array_t(t, [0.0, 0.0, 1.0, 8.0, -8.0, 0.0, 27.0, 0.0]);
             let result = input.cbrt_midp_precise().to_array();
             assert_eq!(result[0], 0.0, "cbrt_precise(0) = 0");
             assert_eq!(result[1], 0.0, "cbrt_precise(0) = 0");
@@ -323,7 +323,7 @@ mod tests {
     fn f32x8_log2_exp2_roundtrip() {
         if let Some(t) = X64V3Token::summon() {
             let vals = [0.5, 1.0, 2.0, 4.0, 10.0, 0.1, 50.0, 100.0];
-            let input = f32x8::from_array(t, vals);
+            let input = f32x8::from_array_t(t, vals);
             let roundtrip = input.log2_midp_unchecked().exp2_midp().to_array();
             assert_close_8(roundtrip, vals, 1e-4, "log2 -> exp2 roundtrip");
         }
@@ -333,7 +333,7 @@ mod tests {
     fn f32x8_ln_exp_roundtrip() {
         if let Some(t) = X64V3Token::summon() {
             let vals = [0.5, 1.0, 2.0, 4.0, 10.0, 0.1, 50.0, 100.0];
-            let input = f32x8::from_array(t, vals);
+            let input = f32x8::from_array_t(t, vals);
             let roundtrip = input.ln_midp_unchecked().exp_midp().to_array();
             assert_close_8(roundtrip, vals, 1e-4, "ln -> exp roundtrip");
         }
@@ -345,7 +345,7 @@ mod tests {
     fn f32x8_unchecked_variants_match() {
         if let Some(t) = X64V3Token::summon() {
             let vals = [1.0, 2.0, 4.0, 8.0, 0.5, 0.25, 16.0, 64.0];
-            let input = f32x8::from_array(t, vals);
+            let input = f32x8::from_array_t(t, vals);
 
             // _unchecked and normal should agree on valid inputs
             let log2_normal = input.log2_lowp().to_array();
@@ -356,7 +356,7 @@ mod tests {
             );
 
             let exp_vals = [0.0, 1.0, 2.0, -1.0, 0.5, -0.5, 3.0, -2.0];
-            let exp_input = f32x8::from_array(t, exp_vals);
+            let exp_input = f32x8::from_array_t(t, exp_vals);
             let exp_normal = exp_input.exp2_lowp().to_array();
             let exp_unchecked = exp_input.exp2_lowp_unchecked().to_array();
             assert_eq!(
@@ -371,7 +371,7 @@ mod tests {
     #[test]
     fn f32x4_log2_lowp() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x4::from_array(t, [1.0, 2.0, 4.0, 8.0]);
+            let input = f32x4::from_array_t(t, [1.0, 2.0, 4.0, 8.0]);
             let result = input.log2_lowp().to_array();
             let expected = [0.0, 1.0, 2.0, 3.0];
             assert_close_4(result, expected, 0.02, "f32x4 log2_lowp");
@@ -381,7 +381,7 @@ mod tests {
     #[test]
     fn f32x4_exp2_lowp() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x4::from_array(t, [0.0, 1.0, 2.0, -1.0]);
+            let input = f32x4::from_array_t(t, [0.0, 1.0, 2.0, -1.0]);
             let result = input.exp2_lowp().to_array();
             let expected = [1.0, 2.0, 4.0, 0.5];
             assert_close_4(result, expected, 0.02, "f32x4 exp2_lowp");
@@ -392,7 +392,7 @@ mod tests {
     fn f32x4_log2_midp() {
         if let Some(t) = X64V3Token::summon() {
             let vals = [1.5, 3.0, 10.0, 100.0];
-            let input = f32x4::from_array(t, vals);
+            let input = f32x4::from_array_t(t, vals);
             let result = input.log2_midp_unchecked().to_array();
             let expected: [f32; 4] = core::array::from_fn(|i| vals[i].log2());
             assert_close_4(result, expected, 5e-6, "f32x4 log2_midp");
@@ -403,7 +403,7 @@ mod tests {
     fn f32x4_exp2_midp() {
         if let Some(t) = X64V3Token::summon() {
             let vals = [0.5, 1.5, -0.5, 2.5];
-            let input = f32x4::from_array(t, vals);
+            let input = f32x4::from_array_t(t, vals);
             let result = input.exp2_midp().to_array();
             let expected: [f32; 4] = core::array::from_fn(|i| vals[i].exp2());
             assert_close_4(result, expected, 5e-6, "f32x4 exp2_midp");
@@ -414,7 +414,7 @@ mod tests {
     fn f32x4_ln_midp() {
         if let Some(t) = X64V3Token::summon() {
             let vals = [1.0, core::f32::consts::E, 10.0, 0.5];
-            let input = f32x4::from_array(t, vals);
+            let input = f32x4::from_array_t(t, vals);
             let result = input.ln_midp().to_array();
             let expected: [f32; 4] = core::array::from_fn(|i| vals[i].ln());
             assert_close_4(result, expected, 5e-6, "f32x4 ln_midp");
@@ -424,7 +424,7 @@ mod tests {
     #[test]
     fn f32x4_cbrt_midp() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x4::from_array(t, [1.0, 8.0, 27.0, 64.0]);
+            let input = f32x4::from_array_t(t, [1.0, 8.0, 27.0, 64.0]);
             let result = input.cbrt_midp().to_array();
             let expected = [1.0, 2.0, 3.0, 4.0];
             assert_close_4(result, expected, 1e-5, "f32x4 cbrt_midp");
@@ -434,7 +434,7 @@ mod tests {
     #[test]
     fn f32x4_cbrt_midp_negative() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x4::from_array(t, [-1.0, -8.0, -27.0, -64.0]);
+            let input = f32x4::from_array_t(t, [-1.0, -8.0, -27.0, -64.0]);
             let result = input.cbrt_midp().to_array();
             let expected = [-1.0, -2.0, -3.0, -4.0];
             assert_close_4(result, expected, 1e-5, "f32x4 cbrt_midp negative");
@@ -444,7 +444,7 @@ mod tests {
     #[test]
     fn f32x4_log2_midp_edge_cases() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x4::from_array(t, [0.0, -1.0, 1.0, 2.0]);
+            let input = f32x4::from_array_t(t, [0.0, -1.0, 1.0, 2.0]);
             let result = input.log2_midp().to_array();
             assert!(result[0].is_infinite() && result[0].is_sign_negative());
             assert!(result[1].is_nan());
@@ -456,7 +456,7 @@ mod tests {
     #[test]
     fn f32x4_pow_midp() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x4::from_array(t, [4.0, 9.0, 16.0, 25.0]);
+            let input = f32x4::from_array_t(t, [4.0, 9.0, 16.0, 25.0]);
             let result = input.pow_midp(0.5).to_array();
             let expected = [2.0, 3.0, 4.0, 5.0];
             assert_close_4(result, expected, 5e-6, "f32x4 pow_midp(0.5)");
@@ -468,7 +468,7 @@ mod tests {
     #[test]
     fn f32x8_scalar_log2_lowp() {
         let t = ScalarToken;
-        let input = f32x8::from_array(t, [1.0, 2.0, 4.0, 8.0, 0.5, 0.25, 16.0, 64.0]);
+        let input = f32x8::from_array_t(t, [1.0, 2.0, 4.0, 8.0, 0.5, 0.25, 16.0, 64.0]);
         let result = input.log2_lowp().to_array();
         let expected = [0.0, 1.0, 2.0, 3.0, -1.0, -2.0, 4.0, 6.0];
         assert_close_8(result, expected, 0.02, "scalar log2_lowp");
@@ -477,7 +477,7 @@ mod tests {
     #[test]
     fn f32x8_scalar_exp2_lowp() {
         let t = ScalarToken;
-        let input = f32x8::from_array(t, [0.0, 1.0, 2.0, 3.0, -1.0, -2.0, 4.0, 7.0]);
+        let input = f32x8::from_array_t(t, [0.0, 1.0, 2.0, 3.0, -1.0, -2.0, 4.0, 7.0]);
         let result = input.exp2_lowp().to_array();
         let expected = [1.0, 2.0, 4.0, 8.0, 0.5, 0.25, 16.0, 128.0];
         assert_close_8(result, expected, 0.02, "scalar exp2_lowp");
@@ -487,7 +487,7 @@ mod tests {
     fn f32x8_scalar_log2_midp() {
         let t = ScalarToken;
         let vals = [1.5, 3.0, 10.0, 100.0, 0.1, 0.01, 7.0, 42.0];
-        let input = f32x8::from_array(t, vals);
+        let input = f32x8::from_array_t(t, vals);
         let result = input.log2_midp_unchecked().to_array();
         let expected: [f32; 8] = core::array::from_fn(|i| vals[i].log2());
         assert_close_8(result, expected, 5e-6, "scalar log2_midp");
@@ -497,7 +497,7 @@ mod tests {
     fn f32x8_scalar_exp2_midp() {
         let t = ScalarToken;
         let vals = [0.5, 1.5, -0.5, 2.5, 0.1, 0.9, -3.5, 10.0];
-        let input = f32x8::from_array(t, vals);
+        let input = f32x8::from_array_t(t, vals);
         let result = input.exp2_midp().to_array();
         let expected: [f32; 8] = core::array::from_fn(|i| vals[i].exp2());
         assert_close_8(result, expected, 5e-6, "scalar exp2_midp");
@@ -506,7 +506,7 @@ mod tests {
     #[test]
     fn f32x8_scalar_cbrt_midp() {
         let t = ScalarToken;
-        let input = f32x8::from_array(t, [1.0, 8.0, 27.0, 64.0, 125.0, 216.0, 343.0, 512.0]);
+        let input = f32x8::from_array_t(t, [1.0, 8.0, 27.0, 64.0, 125.0, 216.0, 343.0, 512.0]);
         let result = input.cbrt_midp().to_array();
         let expected = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         assert_close_8(result, expected, 1e-5, "scalar cbrt_midp");
@@ -516,7 +516,7 @@ mod tests {
     fn f32x4_scalar_log2_midp() {
         let t = ScalarToken;
         let vals = [1.5, 3.0, 10.0, 100.0];
-        let input = f32x4::from_array(t, vals);
+        let input = f32x4::from_array_t(t, vals);
         let result = input.log2_midp_unchecked().to_array();
         let expected: [f32; 4] = core::array::from_fn(|i| vals[i].log2());
         assert_close_4(result, expected, 5e-6, "scalar f32x4 log2_midp");
@@ -525,7 +525,7 @@ mod tests {
     #[test]
     fn f32x4_scalar_cbrt_midp() {
         let t = ScalarToken;
-        let input = f32x4::from_array(t, [1.0, 8.0, 27.0, -8.0]);
+        let input = f32x4::from_array_t(t, [1.0, 8.0, 27.0, -8.0]);
         let result = input.cbrt_midp().to_array();
         assert!((result[0] - 1.0).abs() < 1e-5);
         assert!((result[1] - 2.0).abs() < 1e-5);
@@ -541,10 +541,10 @@ mod tests {
             let scalar_t = ScalarToken;
             let vals = [1.5, 3.0, 10.0, 100.0, 0.1, 0.01, 7.0, 42.0];
 
-            let x86_result = f32x8::from_array(x86_t, vals)
+            let x86_result = f32x8::from_array_t(x86_t, vals)
                 .log2_midp_unchecked()
                 .to_array();
-            let scalar_result = f32x8::from_array(scalar_t, vals)
+            let scalar_result = f32x8::from_array_t(scalar_t, vals)
                 .log2_midp_unchecked()
                 .to_array();
 
@@ -561,8 +561,8 @@ mod tests {
             let scalar_t = ScalarToken;
             let vals = [0.5, 1.5, -0.5, 2.5, 0.1, 0.9, -3.5, 10.0];
 
-            let x86_result = f32x8::from_array(x86_t, vals).exp2_midp().to_array();
-            let scalar_result = f32x8::from_array(scalar_t, vals).exp2_midp().to_array();
+            let x86_result = f32x8::from_array_t(x86_t, vals).exp2_midp().to_array();
+            let scalar_result = f32x8::from_array_t(scalar_t, vals).exp2_midp().to_array();
 
             let expected: [f32; 8] = core::array::from_fn(|i| vals[i].exp2());
             assert_close_8(x86_result, expected, 5e-6, "x86 exp2_midp");
@@ -578,7 +578,7 @@ mod tests {
         linear: &[f32; 8],
         gamma: f32,
     ) -> [f32; 8] {
-        f32x8::<T>::from_array(token, *linear)
+        f32x8::<T>::from_array_t(token, *linear)
             .pow_midp(1.0 / gamma)
             .to_array()
     }
@@ -612,7 +612,7 @@ mod tests {
         if let Some(t) = X64V3Token::summon() {
             // Test across the representable range
             let vals = [-100.0, -50.0, -10.0, -1.0, 1.0, 10.0, 50.0, 100.0];
-            let input = f32x8::from_array(t, vals);
+            let input = f32x8::from_array_t(t, vals);
             let result = input.exp2_midp().to_array();
             let expected: [f32; 8] = core::array::from_fn(|i| vals[i].exp2());
             assert_close_8(result, expected, 5e-5, "exp2_midp large range");
@@ -623,7 +623,7 @@ mod tests {
     fn f32x8_log2_midp_large_range() {
         if let Some(t) = X64V3Token::summon() {
             let vals = [1e-30, 1e-10, 0.001, 1.0, 1000.0, 1e10, 1e30, 1e38];
-            let input = f32x8::from_array(t, vals);
+            let input = f32x8::from_array_t(t, vals);
             let result = input.log2_midp_unchecked().to_array();
             let expected: [f32; 8] = core::array::from_fn(|i| vals[i].log2());
             assert_close_8(result, expected, 5e-5, "log2_midp large range");
@@ -640,8 +640,8 @@ mod tests {
         if let Some(t) = X64V3Token::summon() {
             let vals = [1.5, 3.0, 10.0, 100.0, 0.1, 0.01, 7.0, 42.0];
 
-            let old_result = OldF32x8::from_array(t, vals).log2_lowp().to_array();
-            let new_result = f32x8::<X64V3Token>::from_array(t, vals)
+            let old_result = OldF32x8::from_array_t(t, vals).log2_lowp().to_array();
+            let new_result = f32x8::<X64V3Token>::from_array_t(t, vals)
                 .log2_lowp()
                 .to_array();
 
@@ -664,8 +664,8 @@ mod tests {
         if let Some(t) = X64V3Token::summon() {
             let vals = [0.5, 1.5, -0.5, 2.5, 0.1, 0.9, -3.5, 10.0];
 
-            let old_result = OldF32x8::from_array(t, vals).exp2_lowp().to_array();
-            let new_result = f32x8::<X64V3Token>::from_array(t, vals)
+            let old_result = OldF32x8::from_array_t(t, vals).exp2_lowp().to_array();
+            let new_result = f32x8::<X64V3Token>::from_array_t(t, vals)
                 .exp2_lowp()
                 .to_array();
 
@@ -687,10 +687,10 @@ mod tests {
         if let Some(t) = X64V3Token::summon() {
             let vals = [1.5, 3.0, 10.0, 100.0, 0.1, 0.01, 7.0, 42.0];
 
-            let old_result = OldF32x8::from_array(t, vals)
+            let old_result = OldF32x8::from_array_t(t, vals)
                 .log2_midp_unchecked()
                 .to_array();
-            let new_result = f32x8::<X64V3Token>::from_array(t, vals)
+            let new_result = f32x8::<X64V3Token>::from_array_t(t, vals)
                 .log2_midp_unchecked()
                 .to_array();
 
@@ -712,8 +712,8 @@ mod tests {
         if let Some(t) = X64V3Token::summon() {
             let vals = [1.0, 8.0, 27.0, 64.0, 0.001, 1000.0, 0.5, 100.0];
 
-            let old_result = OldF32x8::from_array(t, vals).cbrt_midp().to_array();
-            let new_result = f32x8::<X64V3Token>::from_array(t, vals)
+            let old_result = OldF32x8::from_array_t(t, vals).cbrt_midp().to_array();
+            let new_result = f32x8::<X64V3Token>::from_array_t(t, vals)
                 .cbrt_midp()
                 .to_array();
 
@@ -738,7 +738,7 @@ mod tests {
     #[test]
     fn f32x16_log2_lowp() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x16::from_array(t, F16_VALS);
+            let input = f32x16::from_array_t(t, F16_VALS);
             let result = input.log2_lowp().to_array();
             let expected: [f32; 16] = core::array::from_fn(|i| F16_VALS[i].log2());
             assert_close_16(result, expected, 0.02, "f32x16 log2_lowp");
@@ -752,7 +752,7 @@ mod tests {
             let vals: [f32; 16] = [
                 0.0, 1.0, 2.0, 3.0, -1.0, -2.0, 4.0, 7.0, 0.5, 1.5, -0.5, 2.5, 0.1, 0.9, -3.5, 10.0,
             ];
-            let input = f32x16::from_array(t, vals);
+            let input = f32x16::from_array_t(t, vals);
             let result = input.exp2_lowp().to_array();
             let expected: [f32; 16] = core::array::from_fn(|i| vals[i].exp2());
             assert_close_16(result, expected, 0.02, "f32x16 exp2_lowp");
@@ -763,7 +763,7 @@ mod tests {
     #[test]
     fn f32x16_ln_lowp() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x16::from_array(t, F16_VALS);
+            let input = f32x16::from_array_t(t, F16_VALS);
             let result = input.ln_lowp().to_array();
             let expected: [f32; 16] = core::array::from_fn(|i| F16_VALS[i].ln());
             assert_close_16(result, expected, 0.02, "f32x16 ln_lowp");
@@ -778,7 +778,7 @@ mod tests {
                 0.0, 1.0, -1.0, 2.0, 0.5, -2.0, 3.0, -0.5, -3.0, 0.1, -0.1, 1.5, -1.5, 0.25, -0.25,
                 4.0,
             ];
-            let input = f32x16::from_array(t, vals);
+            let input = f32x16::from_array_t(t, vals);
             let result = input.exp_lowp().to_array();
             let expected: [f32; 16] = core::array::from_fn(|i| vals[i].exp());
             assert_close_16(result, expected, 0.02, "f32x16 exp_lowp");
@@ -789,7 +789,7 @@ mod tests {
     #[test]
     fn f32x16_log10_lowp() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x16::from_array(t, F16_VALS);
+            let input = f32x16::from_array_t(t, F16_VALS);
             let result = input.log10_lowp().to_array();
             let expected: [f32; 16] = core::array::from_fn(|i| F16_VALS[i].log10());
             assert_close_16(result, expected, 0.02, "f32x16 log10_lowp");
@@ -800,7 +800,7 @@ mod tests {
     #[test]
     fn f32x16_pow_lowp() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x16::from_array(t, F16_VALS);
+            let input = f32x16::from_array_t(t, F16_VALS);
             let result = input.pow_lowp(0.5).to_array();
             let expected: [f32; 16] = core::array::from_fn(|i| F16_VALS[i].sqrt());
             assert_close_16(result, expected, 0.02, "f32x16 pow_lowp(0.5)");
@@ -813,7 +813,7 @@ mod tests {
     #[test]
     fn f32x16_log2_midp() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x16::from_array(t, F16_VALS);
+            let input = f32x16::from_array_t(t, F16_VALS);
             let result = input.log2_midp_unchecked().to_array();
             let expected: [f32; 16] = core::array::from_fn(|i| F16_VALS[i].log2());
             assert_close_16(result, expected, 5e-6, "f32x16 log2_midp");
@@ -828,7 +828,7 @@ mod tests {
                 0.0, -1.0, 1.0, 2.0, 0.0, -0.5, 4.0, 8.0, 0.0, -2.0, 16.0, 32.0, 0.5, -10.0, 0.25,
                 64.0,
             ];
-            let input = f32x16::from_array(t, vals);
+            let input = f32x16::from_array_t(t, vals);
             let result = input.log2_midp().to_array();
 
             // 0 -> -inf
@@ -856,7 +856,7 @@ mod tests {
             let vals: [f32; 16] = [
                 0.0, 1.0, 2.0, 3.0, -1.0, -2.0, 4.0, 7.0, 0.5, 1.5, -0.5, 2.5, 0.1, 0.9, -3.5, 10.0,
             ];
-            let input = f32x16::from_array(t, vals);
+            let input = f32x16::from_array_t(t, vals);
             let result = input.exp2_midp().to_array();
             let expected: [f32; 16] = core::array::from_fn(|i| vals[i].exp2());
             assert_close_16(result, expected, 5e-6, "f32x16 exp2_midp");
@@ -867,7 +867,7 @@ mod tests {
     #[test]
     fn f32x16_ln_midp() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x16::from_array(t, F16_VALS);
+            let input = f32x16::from_array_t(t, F16_VALS);
             let result = input.ln_midp().to_array();
             let expected: [f32; 16] = core::array::from_fn(|i| F16_VALS[i].ln());
             assert_close_16(result, expected, 5e-6, "f32x16 ln_midp");
@@ -882,7 +882,7 @@ mod tests {
                 0.0, 1.0, -1.0, 2.0, 0.5, -2.0, 3.0, -0.5, -3.0, 0.1, -0.1, 1.5, -1.5, 0.25, -0.25,
                 4.0,
             ];
-            let input = f32x16::from_array(t, vals);
+            let input = f32x16::from_array_t(t, vals);
             let result = input.exp_midp().to_array();
             let expected: [f32; 16] = core::array::from_fn(|i| vals[i].exp());
             assert_close_16(result, expected, 5e-6, "f32x16 exp_midp");
@@ -893,7 +893,7 @@ mod tests {
     #[test]
     fn f32x16_log10_midp() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x16::from_array(t, F16_VALS);
+            let input = f32x16::from_array_t(t, F16_VALS);
             let result = input.log10_midp().to_array();
             let expected: [f32; 16] = core::array::from_fn(|i| F16_VALS[i].log10());
             assert_close_16(result, expected, 5e-6, "f32x16 log10_midp");
@@ -908,7 +908,7 @@ mod tests {
                 1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0, 81.0, 100.0, 121.0, 144.0, 169.0,
                 196.0, 225.0, 256.0,
             ];
-            let input = f32x16::from_array(t, vals);
+            let input = f32x16::from_array_t(t, vals);
             let result = input.pow_midp(0.5).to_array();
             let expected: [f32; 16] = core::array::from_fn(|i| vals[i].sqrt());
             assert_close_16(result, expected, 5e-6, "f32x16 pow_midp(0.5)");
@@ -922,7 +922,7 @@ mod tests {
             let vals: [f32; 16] = [
                 1.0, 2.0, 3.0, 4.0, 5.0, 10.0, 0.5, 0.1, 0.2, 0.3, 6.0, 7.0, 8.0, 9.0, 0.25, 20.0,
             ];
-            let input = f32x16::from_array(t, vals);
+            let input = f32x16::from_array_t(t, vals);
             let result = input.pow_midp(3.0).to_array();
             let expected: [f32; 16] = core::array::from_fn(|i| vals[i].powi(3));
             assert_close_16(result, expected, 5e-5, "f32x16 pow_midp(3.0)");
@@ -939,7 +939,7 @@ mod tests {
                 1.0, 8.0, 27.0, 64.0, 125.0, 216.0, 343.0, 512.0, 0.001, 0.1, 0.5, 2.0, 10.0,
                 100.0, 1000.0, 1e6,
             ];
-            let input = f32x16::from_array(t, vals);
+            let input = f32x16::from_array_t(t, vals);
             let result = input.cbrt_midp().to_array();
             let expected: [f32; 16] = core::array::from_fn(|i| vals[i].cbrt());
             assert_close_16(result, expected, 1e-5, "f32x16 cbrt_midp");
@@ -954,7 +954,7 @@ mod tests {
                 -1.0, -8.0, -27.0, -64.0, -0.001, -1000.0, -0.125, -1e6, -125.0, -216.0, -343.0,
                 -512.0, -0.5, -2.0, -10.0, -100.0,
             ];
-            let input = f32x16::from_array(t, vals);
+            let input = f32x16::from_array_t(t, vals);
             let result = input.cbrt_midp().to_array();
             let expected: [f32; 16] = core::array::from_fn(|i| -vals[i].abs().cbrt());
             assert_close_16(result, expected, 1e-5, "f32x16 cbrt_midp negative");
@@ -969,7 +969,7 @@ mod tests {
                 0.0, 0.0, 1.0, 8.0, -8.0, 0.0, 27.0, 0.0, 64.0, 0.0, -27.0, 125.0, 0.0, 216.0, 0.0,
                 -1.0,
             ];
-            let input = f32x16::from_array(t, vals);
+            let input = f32x16::from_array_t(t, vals);
             let result = input.cbrt_midp_precise().to_array();
             for &i in &[0, 1, 5, 7, 9, 12, 14] {
                 assert_eq!(result[i], 0.0, "cbrt_precise(0) = 0 at lane {i}");
@@ -985,7 +985,7 @@ mod tests {
     #[test]
     fn f32x16_log2_exp2_roundtrip() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x16::from_array(t, F16_VALS);
+            let input = f32x16::from_array_t(t, F16_VALS);
             let roundtrip = input.log2_midp_unchecked().exp2_midp().to_array();
             assert_close_16(roundtrip, F16_VALS, 1e-4, "f32x16 log2 -> exp2 roundtrip");
         }
@@ -995,7 +995,7 @@ mod tests {
     #[test]
     fn f32x16_ln_exp_roundtrip() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x16::from_array(t, F16_VALS);
+            let input = f32x16::from_array_t(t, F16_VALS);
             let roundtrip = input.ln_midp_unchecked().exp_midp().to_array();
             assert_close_16(roundtrip, F16_VALS, 1e-4, "f32x16 ln -> exp roundtrip");
         }
@@ -1007,7 +1007,7 @@ mod tests {
     #[test]
     fn f32x16_unchecked_variants_match() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x16::from_array(t, F16_VALS);
+            let input = f32x16::from_array_t(t, F16_VALS);
 
             let log2_normal = input.log2_lowp().to_array();
             let log2_unchecked = input.log2_lowp_unchecked().to_array();
@@ -1031,7 +1031,7 @@ mod tests {
     #[test]
     fn f32x16_scalar_log2_midp() {
         let t = ScalarToken;
-        let input = f32x16::from_array(t, F16_VALS);
+        let input = f32x16::from_array_t(t, F16_VALS);
         let result = input.log2_midp_unchecked().to_array();
         let expected: [f32; 16] = core::array::from_fn(|i| F16_VALS[i].log2());
         assert_close_16(result, expected, 5e-6, "scalar f32x16 log2_midp");
@@ -1044,7 +1044,7 @@ mod tests {
         let vals: [f32; 16] = [
             0.5, 1.5, -0.5, 2.5, 0.1, 0.9, -3.5, 10.0, 0.0, 1.0, 2.0, 3.0, -1.0, -2.0, 4.0, 7.0,
         ];
-        let input = f32x16::from_array(t, vals);
+        let input = f32x16::from_array_t(t, vals);
         let result = input.exp2_midp().to_array();
         let expected: [f32; 16] = core::array::from_fn(|i| vals[i].exp2());
         assert_close_16(result, expected, 5e-6, "scalar f32x16 exp2_midp");
@@ -1058,7 +1058,7 @@ mod tests {
             1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0, 81.0, 100.0, 121.0, 144.0, 169.0, 196.0,
             225.0, 256.0,
         ];
-        let input = f32x16::from_array(t, vals);
+        let input = f32x16::from_array_t(t, vals);
         let result = input.pow_midp(0.5).to_array();
         let expected: [f32; 16] = core::array::from_fn(|i| vals[i].sqrt());
         assert_close_16(result, expected, 5e-6, "scalar f32x16 pow_midp(0.5)");
@@ -1072,7 +1072,7 @@ mod tests {
             1.0, 8.0, 27.0, 64.0, 125.0, 216.0, 343.0, 512.0, 0.001, 0.1, 0.5, 2.0, 10.0, 100.0,
             1000.0, 1e6,
         ];
-        let input = f32x16::from_array(t, vals);
+        let input = f32x16::from_array_t(t, vals);
         let result = input.cbrt_midp().to_array();
         let expected: [f32; 16] = core::array::from_fn(|i| vals[i].cbrt());
         assert_close_16(result, expected, 1e-5, "scalar f32x16 cbrt_midp");
@@ -1086,10 +1086,10 @@ mod tests {
         if let Some(x86_t) = X64V3Token::summon() {
             let scalar_t = ScalarToken;
 
-            let x86_result = f32x16::from_array(x86_t, F16_VALS)
+            let x86_result = f32x16::from_array_t(x86_t, F16_VALS)
                 .log2_midp_unchecked()
                 .to_array();
-            let scalar_result = f32x16::from_array(scalar_t, F16_VALS)
+            let scalar_result = f32x16::from_array_t(scalar_t, F16_VALS)
                 .log2_midp_unchecked()
                 .to_array();
 
@@ -1108,8 +1108,8 @@ mod tests {
                 0.5, 1.5, -0.5, 2.5, 0.1, 0.9, -3.5, 10.0, 0.0, 1.0, 2.0, 3.0, -1.0, -2.0, 4.0, 7.0,
             ];
 
-            let x86_result = f32x16::from_array(x86_t, vals).exp2_midp().to_array();
-            let scalar_result = f32x16::from_array(scalar_t, vals).exp2_midp().to_array();
+            let x86_result = f32x16::from_array_t(x86_t, vals).exp2_midp().to_array();
+            let scalar_result = f32x16::from_array_t(scalar_t, vals).exp2_midp().to_array();
 
             let expected: [f32; 16] = core::array::from_fn(|i| vals[i].exp2());
             assert_close_16(x86_result, expected, 5e-6, "x86 f32x16 exp2_midp");
@@ -1123,8 +1123,10 @@ mod tests {
         if let Some(x86_t) = X64V3Token::summon() {
             let scalar_t = ScalarToken;
 
-            let x86_result = f32x16::from_array(x86_t, F16_VALS).pow_midp(0.5).to_array();
-            let scalar_result = f32x16::from_array(scalar_t, F16_VALS)
+            let x86_result = f32x16::from_array_t(x86_t, F16_VALS)
+                .pow_midp(0.5)
+                .to_array();
+            let scalar_result = f32x16::from_array_t(scalar_t, F16_VALS)
                 .pow_midp(0.5)
                 .to_array();
 
@@ -1142,7 +1144,7 @@ mod tests {
         linear: &[f32; 16],
         gamma: f32,
     ) -> [f32; 16] {
-        f32x16::<T>::from_array(token, *linear)
+        f32x16::<T>::from_array_t(token, *linear)
             .pow_midp(1.0 / gamma)
             .to_array()
     }
@@ -1178,7 +1180,7 @@ mod tests {
                 -100.0, -50.0, -10.0, -1.0, 1.0, 10.0, 50.0, 100.0, -80.0, -20.0, -5.0, 0.0, 5.0,
                 20.0, 80.0, 120.0,
             ];
-            let input = f32x16::from_array(t, vals);
+            let input = f32x16::from_array_t(t, vals);
             let result = input.exp2_midp().to_array();
             let expected: [f32; 16] = core::array::from_fn(|i| vals[i].exp2());
             assert_close_16(result, expected, 5e-5, "f32x16 exp2_midp large range");
@@ -1193,7 +1195,7 @@ mod tests {
                 1e-30, 1e-20, 1e-10, 0.001, 0.1, 1.0, 10.0, 1000.0, 1e6, 1e10, 1e15, 1e20, 1e25,
                 1e30, 1e35, 1e38,
             ];
-            let input = f32x16::from_array(t, vals);
+            let input = f32x16::from_array_t(t, vals);
             let result = input.log2_midp_unchecked().to_array();
             let expected: [f32; 16] = core::array::from_fn(|i| vals[i].log2());
             assert_close_16(result, expected, 5e-5, "f32x16 log2_midp large range");
@@ -1206,9 +1208,9 @@ mod tests {
     #[test]
     fn f32x16_bitcast_roundtrip() {
         if let Some(t) = X64V3Token::summon() {
-            let input = f32x16::from_array(t, F16_VALS);
+            let input = f32x16::from_array_t(t, F16_VALS);
             let as_int = input.bitcast_to_i32();
-            let back = f32x16::from_i32_bitcast(t, as_int);
+            let back = f32x16::from_i32_bitcast_t(t, as_int);
             assert_eq!(back.to_array(), F16_VALS, "bitcast roundtrip");
         }
     }
@@ -1222,9 +1224,9 @@ mod tests {
                 0.0, 1.0, -1.0, 2.0, -2.0, 100.0, -100.0, 42.0, 7.0, -7.0, 255.0, -128.0, 50.0,
                 -50.0, 1000.0, -1000.0,
             ];
-            let input = f32x16::from_array(t, vals);
+            let input = f32x16::from_array_t(t, vals);
             let as_int = input.to_i32();
-            let back = f32x16::from_i32(t, as_int);
+            let back = f32x16::from_i32_t(t, as_int);
             assert_eq!(back.to_array(), vals, "convert roundtrip");
         }
     }
@@ -1237,7 +1239,7 @@ mod tests {
                 0.5, 1.5, 2.5, 3.5, -0.5, -1.5, -2.5, -3.5, 0.4, 0.6, 1.4, 1.6, -0.4, -0.6, -1.4,
                 -1.6,
             ];
-            let input = f32x16::from_array(t, vals);
+            let input = f32x16::from_array_t(t, vals);
             let result = input.to_i32_round();
             let arr = result.to_array();
             // Banker's rounding (round to even)
@@ -1252,9 +1254,9 @@ mod tests {
     #[test]
     fn f32x16_scalar_bitcast_roundtrip() {
         let t = ScalarToken;
-        let input = f32x16::from_array(t, F16_VALS);
+        let input = f32x16::from_array_t(t, F16_VALS);
         let as_int = input.bitcast_to_i32();
-        let back = f32x16::from_i32_bitcast(t, as_int);
+        let back = f32x16::from_i32_bitcast_t(t, as_int);
         assert_eq!(back.to_array(), F16_VALS, "scalar bitcast roundtrip");
     }
 }

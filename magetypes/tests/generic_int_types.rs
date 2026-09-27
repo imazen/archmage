@@ -29,8 +29,8 @@ fn i32x4_scalar_size() {
 #[test]
 fn i32x4_basic_arithmetic() {
     if let Some(t) = X64V3Token::summon() {
-        let a = i32x4::<X64V3Token>::from_array(t, [1, 2, 3, 4]);
-        let b = i32x4::<X64V3Token>::from_array(t, [10, 20, 30, 40]);
+        let a = i32x4::<X64V3Token>::from_array_t(t, [1, 2, 3, 4]);
+        let b = i32x4::<X64V3Token>::from_array_t(t, [10, 20, 30, 40]);
 
         assert_eq!((a + b).to_array(), [11, 22, 33, 44]);
         assert_eq!((b - a).to_array(), [9, 18, 27, 36]);
@@ -43,7 +43,7 @@ fn i32x4_basic_arithmetic() {
 fn i32x4_load_store_roundtrip() {
     if let Some(t) = X64V3Token::summon() {
         let data = [100, -200, 300, -400];
-        let v = i32x4::<X64V3Token>::load(t, &data);
+        let v = i32x4::<X64V3Token>::load_t(t, &data);
         let mut out = [0i32; 4];
         v.store(&mut out);
         assert_eq!(out, data);
@@ -54,8 +54,8 @@ fn i32x4_load_store_roundtrip() {
 #[test]
 fn i32x4_min_max_abs() {
     if let Some(t) = X64V3Token::summon() {
-        let a = i32x4::<X64V3Token>::from_array(t, [-5, 10, -15, 20]);
-        let b = i32x4::<X64V3Token>::from_array(t, [5, -10, 15, -20]);
+        let a = i32x4::<X64V3Token>::from_array_t(t, [-5, 10, -15, 20]);
+        let b = i32x4::<X64V3Token>::from_array_t(t, [5, -10, 15, -20]);
 
         assert_eq!(a.min(b).to_array(), [-5, -10, -15, -20]);
         assert_eq!(a.max(b).to_array(), [5, 10, 15, 20]);
@@ -66,9 +66,9 @@ fn i32x4_min_max_abs() {
 #[test]
 fn i32x4_clamp() {
     if let Some(t) = X64V3Token::summon() {
-        let v = i32x4::<X64V3Token>::from_array(t, [-100, 50, 200, 0]);
-        let lo = i32x4::<X64V3Token>::splat(t, -10);
-        let hi = i32x4::<X64V3Token>::splat(t, 100);
+        let v = i32x4::<X64V3Token>::from_array_t(t, [-100, 50, 200, 0]);
+        let lo = i32x4::<X64V3Token>::splat_t(t, -10);
+        let hi = i32x4::<X64V3Token>::splat_t(t, 100);
         assert_eq!(v.clamp(lo, hi).to_array(), [-10, 50, 100, 0]);
     }
 }
@@ -76,8 +76,8 @@ fn i32x4_clamp() {
 #[test]
 fn i32x4_comparisons() {
     if let Some(t) = X64V3Token::summon() {
-        let a = i32x4::<X64V3Token>::from_array(t, [1, 2, 3, 4]);
-        let b = i32x4::<X64V3Token>::from_array(t, [1, 3, 2, 4]);
+        let a = i32x4::<X64V3Token>::from_array_t(t, [1, 2, 3, 4]);
+        let b = i32x4::<X64V3Token>::from_array_t(t, [1, 3, 2, 4]);
 
         let eq = a.simd_eq(b);
         assert_eq!(eq.to_array(), [-1, 0, 0, -1]); // all-1s = -1 in i32
@@ -93,9 +93,9 @@ fn i32x4_comparisons() {
 #[test]
 fn i32x4_blend() {
     if let Some(t) = X64V3Token::summon() {
-        let a = i32x4::<X64V3Token>::from_array(t, [1, 2, 3, 4]);
-        let b = i32x4::<X64V3Token>::from_array(t, [10, 20, 30, 40]);
-        let mask = i32x4::<X64V3Token>::from_array(t, [-1, 0, -1, 0]); // pick a[0], b[1], a[2], b[3]
+        let a = i32x4::<X64V3Token>::from_array_t(t, [1, 2, 3, 4]);
+        let b = i32x4::<X64V3Token>::from_array_t(t, [10, 20, 30, 40]);
+        let mask = i32x4::<X64V3Token>::from_array_t(t, [-1, 0, -1, 0]); // pick a[0], b[1], a[2], b[3]
 
         let result = i32x4::blend(mask, a, b);
         assert_eq!(result.to_array(), [1, 20, 3, 40]);
@@ -105,7 +105,7 @@ fn i32x4_blend() {
 #[test]
 fn i32x4_reduce_add() {
     if let Some(t) = X64V3Token::summon() {
-        let v = i32x4::<X64V3Token>::from_array(t, [1, 2, 3, 4]);
+        let v = i32x4::<X64V3Token>::from_array_t(t, [1, 2, 3, 4]);
         assert_eq!(v.reduce_add(), 10);
     }
 }
@@ -113,7 +113,7 @@ fn i32x4_reduce_add() {
 #[test]
 fn i32x4_shifts() {
     if let Some(t) = X64V3Token::summon() {
-        let v = i32x4::<X64V3Token>::from_array(t, [1, 4, -8, 16]);
+        let v = i32x4::<X64V3Token>::from_array_t(t, [1, 4, -8, 16]);
 
         assert_eq!(v.shl_const::<2>().to_array(), [4, 16, -32, 64]);
         assert_eq!(v.shr_arithmetic_const::<1>().to_array(), [0, 2, -4, 8]);
@@ -127,8 +127,8 @@ fn i32x4_shifts() {
 #[test]
 fn i32x4_bitwise() {
     if let Some(t) = X64V3Token::summon() {
-        let a = i32x4::<X64V3Token>::from_array(t, [0xFF, 0x0F, 0xF0, 0x00]);
-        let b = i32x4::<X64V3Token>::from_array(t, [0x0F, 0x0F, 0x0F, 0x0F]);
+        let a = i32x4::<X64V3Token>::from_array_t(t, [0xFF, 0x0F, 0xF0, 0x00]);
+        let b = i32x4::<X64V3Token>::from_array_t(t, [0x0F, 0x0F, 0x0F, 0x0F]);
 
         assert_eq!((a & b).to_array(), [0x0F, 0x0F, 0x00, 0x00]);
         assert_eq!((a | b).to_array(), [0xFF, 0x0F, 0xFF, 0x0F]);
@@ -139,9 +139,9 @@ fn i32x4_bitwise() {
 #[test]
 fn i32x4_boolean_reductions() {
     if let Some(t) = X64V3Token::summon() {
-        let all_set = i32x4::<X64V3Token>::from_array(t, [-1, -1, -1, -1]);
-        let none_set = i32x4::<X64V3Token>::from_array(t, [0, 0, 0, 0]);
-        let some_set = i32x4::<X64V3Token>::from_array(t, [-1, 0, -1, 0]);
+        let all_set = i32x4::<X64V3Token>::from_array_t(t, [-1, -1, -1, -1]);
+        let none_set = i32x4::<X64V3Token>::from_array_t(t, [0, 0, 0, 0]);
+        let some_set = i32x4::<X64V3Token>::from_array_t(t, [-1, 0, -1, 0]);
 
         assert!(all_set.all_true());
         assert!(all_set.any_true());
@@ -155,10 +155,10 @@ fn i32x4_boolean_reductions() {
 #[test]
 fn i32x4_bitmask() {
     if let Some(t) = X64V3Token::summon() {
-        let v = i32x4::<X64V3Token>::from_array(t, [-1, 0, -1, 0]);
+        let v = i32x4::<X64V3Token>::from_array_t(t, [-1, 0, -1, 0]);
         assert_eq!(v.bitmask(), 0b0101);
 
-        let v2 = i32x4::<X64V3Token>::from_array(t, [0, -1, 0, -1]);
+        let v2 = i32x4::<X64V3Token>::from_array_t(t, [0, -1, 0, -1]);
         assert_eq!(v2.bitmask(), 0b1010);
     }
 }
@@ -166,7 +166,7 @@ fn i32x4_bitmask() {
 #[test]
 fn i32x4_scalar_broadcast_ops() {
     if let Some(t) = X64V3Token::summon() {
-        let v = i32x4::<X64V3Token>::from_array(t, [10, 20, 30, 40]);
+        let v = i32x4::<X64V3Token>::from_array_t(t, [10, 20, 30, 40]);
         assert_eq!((v + 5).to_array(), [15, 25, 35, 45]);
         assert_eq!((v - 5).to_array(), [5, 15, 25, 35]);
         assert_eq!((v * 2).to_array(), [20, 40, 60, 80]);
@@ -176,7 +176,7 @@ fn i32x4_scalar_broadcast_ops() {
 #[test]
 fn i32x4_indexing() {
     if let Some(t) = X64V3Token::summon() {
-        let mut v = i32x4::<X64V3Token>::from_array(t, [1, 2, 3, 4]);
+        let mut v = i32x4::<X64V3Token>::from_array_t(t, [1, 2, 3, 4]);
         assert_eq!(v[0], 1);
         assert_eq!(v[3], 4);
         v[2] = 99;
@@ -187,9 +187,9 @@ fn i32x4_indexing() {
 #[test]
 fn i32x4_raw_m128i_roundtrip() {
     if let Some(t) = X64V3Token::summon() {
-        let v = i32x4::<X64V3Token>::from_array(t, [11, 22, 33, 44]);
+        let v = i32x4::<X64V3Token>::from_array_t(t, [11, 22, 33, 44]);
         let raw = v.raw();
-        let v2 = i32x4::from_m128i(t, raw);
+        let v2 = i32x4::from_m128i_t(t, raw);
         assert_eq!(v2.to_array(), [11, 22, 33, 44]);
     }
 }
@@ -209,8 +209,8 @@ fn i32x8_size_matches_m256i() {
 #[test]
 fn i32x8_basic_arithmetic() {
     if let Some(t) = X64V3Token::summon() {
-        let a = i32x8::<X64V3Token>::from_array(t, [1, 2, 3, 4, 5, 6, 7, 8]);
-        let b = i32x8::<X64V3Token>::from_array(t, [10, 20, 30, 40, 50, 60, 70, 80]);
+        let a = i32x8::<X64V3Token>::from_array_t(t, [1, 2, 3, 4, 5, 6, 7, 8]);
+        let b = i32x8::<X64V3Token>::from_array_t(t, [10, 20, 30, 40, 50, 60, 70, 80]);
 
         assert_eq!((a + b).to_array(), [11, 22, 33, 44, 55, 66, 77, 88]);
         assert_eq!((b - a).to_array(), [9, 18, 27, 36, 45, 54, 63, 72]);
@@ -221,7 +221,7 @@ fn i32x8_basic_arithmetic() {
 #[test]
 fn i32x8_reduce_add() {
     if let Some(t) = X64V3Token::summon() {
-        let v = i32x8::<X64V3Token>::from_array(t, [1, 2, 3, 4, 5, 6, 7, 8]);
+        let v = i32x8::<X64V3Token>::from_array_t(t, [1, 2, 3, 4, 5, 6, 7, 8]);
         assert_eq!(v.reduce_add(), 36);
     }
 }
@@ -229,7 +229,7 @@ fn i32x8_reduce_add() {
 #[test]
 fn i32x8_shifts() {
     if let Some(t) = X64V3Token::summon() {
-        let v = i32x8::<X64V3Token>::from_array(t, [1, 2, 4, 8, -1, -2, -4, -8]);
+        let v = i32x8::<X64V3Token>::from_array_t(t, [1, 2, 4, 8, -1, -2, -4, -8]);
         assert_eq!(
             v.shl_const::<1>().to_array(),
             [2, 4, 8, 16, -2, -4, -8, -16]
@@ -240,9 +240,9 @@ fn i32x8_shifts() {
 #[test]
 fn i32x8_raw_m256i_roundtrip() {
     if let Some(t) = X64V3Token::summon() {
-        let v = i32x8::<X64V3Token>::from_array(t, [1, 2, 3, 4, 5, 6, 7, 8]);
+        let v = i32x8::<X64V3Token>::from_array_t(t, [1, 2, 3, 4, 5, 6, 7, 8]);
         let raw = v.raw();
-        let v2 = i32x8::from_m256i(t, raw);
+        let v2 = i32x8::from_m256i_t(t, raw);
         assert_eq!(v2.to_array(), [1, 2, 3, 4, 5, 6, 7, 8]);
     }
 }
@@ -254,8 +254,8 @@ fn i32x8_raw_m256i_roundtrip() {
 #[test]
 fn i32x4_scalar_basic() {
     let t = ScalarToken;
-    let a = i32x4::<ScalarToken>::from_array(t, [1, 2, 3, 4]);
-    let b = i32x4::<ScalarToken>::from_array(t, [10, 20, 30, 40]);
+    let a = i32x4::<ScalarToken>::from_array_t(t, [1, 2, 3, 4]);
+    let b = i32x4::<ScalarToken>::from_array_t(t, [10, 20, 30, 40]);
 
     assert_eq!((a + b).to_array(), [11, 22, 33, 44]);
     assert_eq!(a.min(b).to_array(), [1, 2, 3, 4]);
@@ -267,7 +267,7 @@ fn i32x4_scalar_basic() {
 #[test]
 fn i32x8_scalar_basic() {
     let t = ScalarToken;
-    let a = i32x8::<ScalarToken>::from_array(t, [1, -2, 3, -4, 5, -6, 7, -8]);
+    let a = i32x8::<ScalarToken>::from_array_t(t, [1, -2, 3, -4, 5, -6, 7, -8]);
     assert_eq!(a.abs().to_array(), [1, 2, 3, 4, 5, 6, 7, 8]);
     assert_eq!(a.reduce_add(), -4);
 }
@@ -277,7 +277,7 @@ fn i32x8_scalar_basic() {
 // ============================================================================
 
 fn sum_generic<T: I32x4Backend>(token: T, data: &[i32; 4]) -> i32 {
-    let v = i32x4::<T>::load(token, data);
+    let v = i32x4::<T>::load_t(token, data);
     v.reduce_add()
 }
 
@@ -304,8 +304,8 @@ fn i32x4_x86_scalar_agree() {
         let t_scalar = ScalarToken;
 
         let data = [-42, 17, i32::MAX, i32::MIN + 1]; // avoid abs(MIN) overflow
-        let x86 = i32x4::<X64V3Token>::from_array(t_x86, data);
-        let scalar = i32x4::<ScalarToken>::from_array(t_scalar, data);
+        let x86 = i32x4::<X64V3Token>::from_array_t(t_x86, data);
+        let scalar = i32x4::<ScalarToken>::from_array_t(t_scalar, data);
 
         assert_eq!(x86.abs().to_array(), scalar.abs().to_array());
         assert_eq!(x86.reduce_add(), scalar.reduce_add());
@@ -328,7 +328,7 @@ fn i32x4_x86_scalar_agree() {
 fn f32x4_to_i32_truncate() {
     if let Some(t) = X64V3Token::summon() {
         let f =
-            magetypes::simd::generic::f32x4::<X64V3Token>::from_array(t, [1.9, -2.7, 3.1, -4.5]);
+            magetypes::simd::generic::f32x4::<X64V3Token>::from_array_t(t, [1.9, -2.7, 3.1, -4.5]);
         let i = f.to_i32();
         assert_eq!(i.to_array(), [1, -2, 3, -4]);
     }
@@ -338,7 +338,7 @@ fn f32x4_to_i32_truncate() {
 fn f32x4_to_i32_round() {
     if let Some(t) = X64V3Token::summon() {
         let f =
-            magetypes::simd::generic::f32x4::<X64V3Token>::from_array(t, [1.5, -2.5, 3.7, -4.3]);
+            magetypes::simd::generic::f32x4::<X64V3Token>::from_array_t(t, [1.5, -2.5, 3.7, -4.3]);
         let i = f.to_i32_round();
         assert_eq!(i.to_array(), [2, -2, 4, -4]); // banker's rounding
     }
@@ -347,7 +347,7 @@ fn f32x4_to_i32_round() {
 #[test]
 fn i32x4_to_f32() {
     if let Some(t) = X64V3Token::summon() {
-        let i = i32x4::<X64V3Token>::from_array(t, [1, -2, 3, -4]);
+        let i = i32x4::<X64V3Token>::from_array_t(t, [1, -2, 3, -4]);
         let f = i.to_f32();
         assert_eq!(f.to_array(), [1.0, -2.0, 3.0, -4.0]);
     }
@@ -357,7 +357,7 @@ fn i32x4_to_f32() {
 fn f32x4_i32x4_bitcast_roundtrip() {
     if let Some(t) = X64V3Token::summon() {
         let f =
-            magetypes::simd::generic::f32x4::<X64V3Token>::from_array(t, [1.0, -2.0, 3.0, -4.0]);
+            magetypes::simd::generic::f32x4::<X64V3Token>::from_array_t(t, [1.0, -2.0, 3.0, -4.0]);
         let i = f.bitcast_to_i32();
         let f2 = i.bitcast_to_f32();
         assert_eq!(f2.to_array(), [1.0, -2.0, 3.0, -4.0]);
@@ -367,7 +367,7 @@ fn f32x4_i32x4_bitcast_roundtrip() {
 #[test]
 fn f32x8_to_i32_truncate() {
     if let Some(t) = X64V3Token::summon() {
-        let f = magetypes::simd::generic::f32x8::<X64V3Token>::from_array(
+        let f = magetypes::simd::generic::f32x8::<X64V3Token>::from_array_t(
             t,
             [1.9, -2.7, 3.1, -4.5, 5.5, -6.1, 7.9, -8.2],
         );
@@ -379,7 +379,7 @@ fn f32x8_to_i32_truncate() {
 #[test]
 fn f32x8_i32x8_bitcast_roundtrip() {
     if let Some(t) = X64V3Token::summon() {
-        let f = magetypes::simd::generic::f32x8::<X64V3Token>::from_array(
+        let f = magetypes::simd::generic::f32x8::<X64V3Token>::from_array_t(
             t,
             [1.0, -2.0, 3.0, -4.0, 5.0, -6.0, 7.0, -8.0],
         );
@@ -392,7 +392,7 @@ fn f32x8_i32x8_bitcast_roundtrip() {
 #[test]
 fn i32x8_to_f32() {
     if let Some(t) = X64V3Token::summon() {
-        let i = i32x8::<X64V3Token>::from_array(t, [1, -2, 3, -4, 5, -6, 7, -8]);
+        let i = i32x8::<X64V3Token>::from_array_t(t, [1, -2, 3, -4, 5, -6, 7, -8]);
         let f = i.to_f32();
         assert_eq!(f.to_array(), [1.0, -2.0, 3.0, -4.0, 5.0, -6.0, 7.0, -8.0]);
     }
@@ -402,7 +402,7 @@ fn i32x8_to_f32() {
 #[test]
 fn f32x4_i32x4_scalar_conversion() {
     let t = ScalarToken;
-    let f = magetypes::simd::generic::f32x4::<ScalarToken>::from_array(t, [1.9, -2.7, 3.1, -4.5]);
+    let f = magetypes::simd::generic::f32x4::<ScalarToken>::from_array_t(t, [1.9, -2.7, 3.1, -4.5]);
     let i = f.to_i32();
     assert_eq!(i.to_array(), [1, -2, 3, -4]);
 
@@ -417,7 +417,7 @@ fn f32x4_i32x4_scalar_conversion() {
 #[test]
 fn i32x4_debug_format() {
     if let Some(t) = X64V3Token::summon() {
-        let v = i32x4::<X64V3Token>::from_array(t, [1, 2, 3, 4]);
+        let v = i32x4::<X64V3Token>::from_array_t(t, [1, 2, 3, 4]);
         let s = format!("{v:?}");
         assert!(s.contains("i32x4"));
         assert!(s.contains("1"));

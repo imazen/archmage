@@ -80,9 +80,9 @@ mod x86_impl {
 
     #[arcane(import_intrinsics)]
     fn magetypes_load_loop_inner(token: Desktop64, data: &[[f32; 8]]) -> f32 {
-        let mut acc = f32x8::splat(token, 0.0);
+        let mut acc = f32x8::splat_t(token, 0.0);
         for chunk in data {
-            let v = f32x8::load(token, chunk);
+            let v = f32x8::load_t(token, chunk);
             acc = acc + v * v;
         }
         acc.reduce_add()

@@ -121,31 +121,31 @@ impl<T: U8x16Backend> u8x16<T> {
 
     /// Broadcast scalar to all 16 lanes.
     #[inline(always)]
-    pub fn splat(token: T, v: u8) -> Self {
+    pub fn splat_t(token: T, v: u8) -> Self {
         Self(T::splat(token, v), token)
     }
 
     /// All lanes zero.
     #[inline(always)]
-    pub fn zero(token: T) -> Self {
+    pub fn zero_t(token: T) -> Self {
         Self(T::zero(token), token)
     }
 
     /// Load from a `[u8; 16]` array.
     #[inline(always)]
-    pub fn load(token: T, data: &[u8; 16]) -> Self {
+    pub fn load_t(token: T, data: &[u8; 16]) -> Self {
         Self(T::load(token, data), token)
     }
 
     /// Create from array (zero-cost where possible).
     #[inline(always)]
-    pub fn from_array(token: T, arr: [u8; 16]) -> Self {
+    pub fn from_array_t(token: T, arr: [u8; 16]) -> Self {
         Self(T::from_array(token, arr), token)
     }
 
     /// Create from slice. Panics if `slice.len() < 16`.
     #[inline(always)]
-    pub fn from_slice(token: T, slice: &[u8]) -> Self {
+    pub fn from_slice_t(token: T, slice: &[u8]) -> Self {
         let arr: [u8; 16] = slice[..16].try_into().unwrap();
         Self(T::from_array(token, arr), token)
     }
@@ -153,18 +153,18 @@ impl<T: U8x16Backend> u8x16<T> {
     /// Split a slice into SIMD-width chunks and a scalar remainder.
     ///
     /// Returns `(&[[u8; 16]], &[u8])` — fixed-size arrays suitable
-    /// for [`load`](Self::load), plus any leftover elements.
+    /// for [`load_t`](Self::load_t), plus any leftover elements.
     #[inline(always)]
-    pub fn partition_slice(_: T, data: &[u8]) -> (&[[u8; 16]], &[u8]) {
+    pub fn partition_slice_t(_: T, data: &[u8]) -> (&[[u8; 16]], &[u8]) {
         data.as_chunks::<16>()
     }
 
     /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
     ///
     /// Returns `(&mut [[u8; 16]], &mut [u8])` — the bulk portion reinterpreted
-    /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
+    /// as fixed-size arrays suitable for [`load_t`](Self::load_t), plus any leftover elements.
     #[inline(always)]
-    pub fn partition_slice_mut(_: T, data: &mut [u8]) -> (&mut [[u8; 16]], &mut [u8]) {
+    pub fn partition_slice_mut_t(_: T, data: &mut [u8]) -> (&mut [[u8; 16]], &mut [u8]) {
         data.as_chunks_mut::<16>()
     }
 
@@ -190,7 +190,7 @@ impl<T: U8x16Backend> u8x16<T> {
 
     /// Wrap a platform representation (token-gated).
     #[inline(always)]
-    pub fn from_repr(token: T, repr: T::Repr) -> Self {
+    pub fn from_repr_t(token: T, repr: T::Repr) -> Self {
         Self(repr, token)
     }
 
@@ -623,7 +623,7 @@ impl u8x16<archmage::X64V3Token> {
 
     /// Create from a raw `__m128i` (token-gated, zero-cost).
     #[inline(always)]
-    pub fn from_m128i(token: archmage::X64V3Token, v: core::arch::x86_64::__m128i) -> Self {
+    pub fn from_m128i_t(token: archmage::X64V3Token, v: core::arch::x86_64::__m128i) -> Self {
         Self(v, token)
     }
 }
@@ -720,7 +720,7 @@ impl u8x16<archmage::Wasm128Token> {
 
     /// Wrap a raw `v128` using an existing CPU capability token.
     #[inline(always)]
-    pub fn from_v128(token: archmage::Wasm128Token, value: core::arch::wasm32::v128) -> Self {
+    pub fn from_v128_t(token: archmage::Wasm128Token, value: core::arch::wasm32::v128) -> Self {
         Self(value, token)
     }
 
@@ -747,72 +747,96 @@ impl u8x16<archmage::Wasm128Token> {
         Self(value, archmage::Wasm128Token::from_context())
     }
 }
-// Generated explicit-token migration aliases. Do not edit.
+// Generated deprecated token-constructor forwarders. Do not edit.
 impl<T: U8x16Backend> u8x16<T> {
     #[inline(always)]
-    #[doc = "Explicit-token alias of [`Self::splat`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[doc = "Deprecated token-taking spelling of [`Self::splat_t`].\n\nUse `splat_t` to keep explicit-token construction when `splat` becomes tokenless in magetypes 0.10."]
+    #[deprecated(note = "Use splat_t(token, v); splat becomes tokenless in magetypes 0.10.")]
     #[forbid(unsafe_code)]
-    pub fn splat_t(token: T, v: u8) -> Self {
-        Self::splat(token, v)
+    pub fn splat(token: T, v: u8) -> Self {
+        Self::splat_t(token, v)
     }
     #[inline(always)]
-    #[doc = "Explicit-token alias of [`Self::zero`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[doc = "Deprecated token-taking spelling of [`Self::zero_t`].\n\nUse `zero_t` to keep explicit-token construction when `zero` becomes tokenless in magetypes 0.10."]
+    #[deprecated(note = "Use zero_t(token); zero becomes tokenless in magetypes 0.10.")]
     #[forbid(unsafe_code)]
-    pub fn zero_t(token: T) -> Self {
-        Self::zero(token)
+    pub fn zero(token: T) -> Self {
+        Self::zero_t(token)
     }
     #[inline(always)]
-    #[doc = "Explicit-token alias of [`Self::load`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[doc = "Deprecated token-taking spelling of [`Self::load_t`].\n\nUse `load_t` to keep explicit-token construction when `load` becomes tokenless in magetypes 0.10."]
+    #[deprecated(note = "Use load_t(token, data); load becomes tokenless in magetypes 0.10.")]
     #[forbid(unsafe_code)]
-    pub fn load_t(token: T, data: &[u8; 16]) -> Self {
-        Self::load(token, data)
+    pub fn load(token: T, data: &[u8; 16]) -> Self {
+        Self::load_t(token, data)
     }
     #[inline(always)]
-    #[doc = "Explicit-token alias of [`Self::from_array`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_array_t`].\n\nUse `from_array_t` to keep explicit-token construction when `from_array` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_array_t(token, arr); from_array becomes tokenless in magetypes 0.10."
+    )]
     #[forbid(unsafe_code)]
-    pub fn from_array_t(token: T, arr: [u8; 16]) -> Self {
-        Self::from_array(token, arr)
+    pub fn from_array(token: T, arr: [u8; 16]) -> Self {
+        Self::from_array_t(token, arr)
     }
     #[inline(always)]
-    #[doc = "Explicit-token alias of [`Self::from_slice`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_slice_t`].\n\nUse `from_slice_t` to keep explicit-token construction when `from_slice` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_slice_t(token, slice); from_slice becomes tokenless in magetypes 0.10."
+    )]
     #[forbid(unsafe_code)]
-    pub fn from_slice_t(token: T, slice: &[u8]) -> Self {
-        Self::from_slice(token, slice)
+    pub fn from_slice(token: T, slice: &[u8]) -> Self {
+        Self::from_slice_t(token, slice)
     }
     #[inline(always)]
-    #[doc = "Explicit-token alias of [`Self::partition_slice`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[doc = "Deprecated token-taking spelling of [`Self::partition_slice_t`].\n\nUse `partition_slice_t` to keep explicit-token construction when `partition_slice` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use partition_slice_t(token, data); partition_slice becomes tokenless in magetypes 0.10."
+    )]
     #[forbid(unsafe_code)]
-    pub fn partition_slice_t(argument_0: T, data: &[u8]) -> (&[[u8; 16]], &[u8]) {
-        Self::partition_slice(argument_0, data)
+    pub fn partition_slice(token: T, data: &[u8]) -> (&[[u8; 16]], &[u8]) {
+        Self::partition_slice_t(token, data)
     }
     #[inline(always)]
-    #[doc = "Explicit-token alias of [`Self::partition_slice_mut`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[doc = "Deprecated token-taking spelling of [`Self::partition_slice_mut_t`].\n\nUse `partition_slice_mut_t` to keep explicit-token construction when `partition_slice_mut` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use partition_slice_mut_t(token, data); partition_slice_mut becomes tokenless in magetypes 0.10."
+    )]
     #[forbid(unsafe_code)]
-    pub fn partition_slice_mut_t(argument_0: T, data: &mut [u8]) -> (&mut [[u8; 16]], &mut [u8]) {
-        Self::partition_slice_mut(argument_0, data)
+    pub fn partition_slice_mut(token: T, data: &mut [u8]) -> (&mut [[u8; 16]], &mut [u8]) {
+        Self::partition_slice_mut_t(token, data)
     }
     #[inline(always)]
-    #[doc = "Explicit-token alias of [`Self::from_repr`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_repr_t`].\n\nUse `from_repr_t` to keep explicit-token construction when `from_repr` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_repr_t(token, repr); from_repr becomes tokenless in magetypes 0.10."
+    )]
     #[forbid(unsafe_code)]
-    pub fn from_repr_t(token: T, repr: T::Repr) -> Self {
-        Self::from_repr(token, repr)
+    pub fn from_repr(token: T, repr: T::Repr) -> Self {
+        Self::from_repr_t(token, repr)
     }
 }
 #[cfg(target_arch = "x86_64")]
 impl u8x16<archmage::X64V3Token> {
     #[inline(always)]
-    #[doc = "Explicit-token alias of [`Self::from_m128i`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_m128i_t`].\n\nUse `from_m128i_t` to keep explicit-token construction when `from_m128i` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_m128i_t(token, v); from_m128i becomes tokenless in magetypes 0.10."
+    )]
     #[forbid(unsafe_code)]
-    pub fn from_m128i_t(token: archmage::X64V3Token, v: core::arch::x86_64::__m128i) -> Self {
-        Self::from_m128i(token, v)
+    pub fn from_m128i(token: archmage::X64V3Token, v: core::arch::x86_64::__m128i) -> Self {
+        Self::from_m128i_t(token, v)
     }
 }
 #[cfg(target_arch = "wasm32")]
 impl u8x16<archmage::Wasm128Token> {
     #[inline(always)]
-    #[doc = "Explicit-token alias of [`Self::from_v128`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_v128_t`].\n\nUse `from_v128_t` to keep explicit-token construction when `from_v128` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_v128_t(token, value); from_v128 becomes tokenless in magetypes 0.10."
+    )]
     #[forbid(unsafe_code)]
-    pub fn from_v128_t(token: archmage::Wasm128Token, value: core::arch::wasm32::v128) -> Self {
-        Self::from_v128(token, value)
+    pub fn from_v128(token: archmage::Wasm128Token, value: core::arch::wasm32::v128) -> Self {
+        Self::from_v128_t(token, value)
     }
 }

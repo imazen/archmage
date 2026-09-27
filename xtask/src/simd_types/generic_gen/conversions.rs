@@ -52,7 +52,7 @@ pub(crate) fn gen_f32_i32_convert_on_float(src: &str, trait_bound: &str) -> Stri
 
             /// Create from {int_type} via bitcast (reinterpret bits, no conversion).
             #[inline(always)]
-            pub fn from_i32_bitcast(token: T, v: super::{int_type}<T>) -> Self {{
+            pub fn from_i32_bitcast_t(token: T, v: super::{int_type}<T>) -> Self {{
                 Self(T::bitcast_i32_to_f32(token, v.into_repr()), token)
             }}
 
@@ -89,7 +89,7 @@ pub(crate) fn gen_f32_i32_convert_on_float(src: &str, trait_bound: &str) -> Stri
 
             /// Create from {int_type} via numeric conversion.
             #[inline(always)]
-            pub fn from_i32(token: T, v: super::{int_type}<T>) -> Self {{
+            pub fn from_i32_t(token: T, v: super::{int_type}<T>) -> Self {{
                 Self(T::convert_i32_to_f32(token, v.into_repr()), token)
             }}
 
@@ -113,10 +113,10 @@ pub(crate) fn gen_f32_i32_convert_on_float(src: &str, trait_bound: &str) -> Stri
                 self.to_i32_round()
             }}
 
-            /// Alias for [`from_i32`](Self::from_i32).
+            /// Alias for [`from_i32_t`](Self::from_i32_t).
             #[inline(always)]
-            pub fn from_{int_type}(token: T, v: super::{int_type}<T>) -> Self {{
-                Self::from_i32(token, v)
+            pub fn from_{int_type}_t(token: T, v: super::{int_type}<T>) -> Self {{
+                Self::from_i32_t(token, v)
             }}
             {ref_aliases}
         }}

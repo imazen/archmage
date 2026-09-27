@@ -49,10 +49,10 @@ use magetypes::simd::{backends::F32x8Backend, generic::f32x8 as GenericF32x8};
 
 #[magetypes(define(f32x8), v4, v3, neon, wasm128, scalar)]
 fn scale_plane_impl(token: Token, plane: &mut [f32], factor: f32) {
-    let factor_v = f32x8::splat(token, factor);
-    let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+    let factor_v = f32x8::splat_t(token, factor);
+    let (chunks, tail) = f32x8::partition_slice_mut_t(token, plane);
     for chunk in chunks {
-        (f32x8::load(token, chunk) * factor_v).store(chunk);
+        (f32x8::load_t(token, chunk) * factor_v).store(chunk);
     }
     for v in tail {
         *v *= factor;
@@ -84,11 +84,11 @@ pub fn scale_plane(plane: &mut [f32], factor: f32) {
 #[inline(always)]
 fn dot_kernel<T: F32x8Backend>(token: T, a: &[f32], b: &[f32]) -> f32 {
     assert_eq!(a.len(), b.len());
-    let mut acc = GenericF32x8::<T>::zero(token);
+    let mut acc = GenericF32x8::<T>::zero_t(token);
     let chunks = a.len() / 8;
     for i in 0..chunks {
-        let va = GenericF32x8::<T>::load(token, a[i * 8..][..8].try_into().unwrap());
-        let vb = GenericF32x8::<T>::load(token, b[i * 8..][..8].try_into().unwrap());
+        let va = GenericF32x8::<T>::load_t(token, a[i * 8..][..8].try_into().unwrap());
+        let vb = GenericF32x8::<T>::load_t(token, b[i * 8..][..8].try_into().unwrap());
         acc = va.mul_add(vb, acc);
     }
     let mut total = acc.reduce_add();
@@ -133,10 +133,10 @@ pub fn dot(a: &[f32], b: &[f32]) -> f32 {
 fn scale_plane_impl_v4x(token: X64V4xToken, plane: &mut [f32], factor: f32) {
     use magetypes::simd::generic::f32x16 as GenericF32x16;
 
-    let factor_v = GenericF32x16::<X64V4xToken>::splat(token, factor);
-    let (chunks, tail) = GenericF32x16::<X64V4xToken>::partition_slice_mut(token, plane);
+    let factor_v = GenericF32x16::<X64V4xToken>::splat_t(token, factor);
+    let (chunks, tail) = GenericF32x16::<X64V4xToken>::partition_slice_mut_t(token, plane);
     for chunk in chunks {
-        (GenericF32x16::<X64V4xToken>::load(token, chunk) * factor_v).store(chunk);
+        (GenericF32x16::<X64V4xToken>::load_t(token, chunk) * factor_v).store(chunk);
     }
     for v in tail {
         *v *= factor;
@@ -152,11 +152,11 @@ fn scale_plane_impl_v4x(token: X64V4xToken, plane: &mut [f32], factor: f32) {
 
 #[magetypes(define(f32x8), v4, v3, neon, wasm128, scalar)]
 fn clamp01_impl(token: Token, plane: &mut [f32]) {
-    let lo = f32x8::splat(token, 0.0);
-    let hi = f32x8::splat(token, 1.0);
-    let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+    let lo = f32x8::splat_t(token, 0.0);
+    let hi = f32x8::splat_t(token, 1.0);
+    let (chunks, tail) = f32x8::partition_slice_mut_t(token, plane);
     for chunk in chunks {
-        f32x8::load(token, chunk).max(lo).min(hi).store(chunk);
+        f32x8::load_t(token, chunk).max(lo).min(hi).store(chunk);
     }
     for v in tail {
         *v = v.clamp(0.0, 1.0);
@@ -193,10 +193,10 @@ fn apply_color_matrix(rgb: &mut [f32], mat: [[f32; 3]; 3]) {
 #[magetypes(define(f32x8), v4, v3, neon, wasm128, scalar)]
 fn pipeline_impl(token: Token, plane: &mut [f32], bias: f32, factor: f32) {
     // Step 1: add bias in-place.
-    let bias_v = f32x8::splat(token, bias);
-    let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+    let bias_v = f32x8::splat_t(token, bias);
+    let (chunks, tail) = f32x8::partition_slice_mut_t(token, plane);
     for chunk in chunks {
-        (f32x8::load(token, chunk) + bias_v).store(chunk);
+        (f32x8::load_t(token, chunk) + bias_v).store(chunk);
     }
     for v in tail {
         *v += bias;

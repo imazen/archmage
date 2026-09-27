@@ -16,9 +16,9 @@ fn __arcane_kernel_v3(
     type f32x4 = ::magetypes::simd::generic::f32x4<archmage::X64V3Token>;
     #[allow(non_camel_case_types, dead_code)]
     type u8x16 = ::magetypes::simd::generic::u8x16<archmage::X64V3Token>;
-    let a = f32x8::load(token, data_8).reduce_add();
-    let b = f32x4::load(token, data_4).reduce_add();
-    let _c = u8x16::load(token, bytes);
+    let a = f32x8::load_t(token, data_8).reduce_add();
+    let b = f32x4::load_t(token, data_4).reduce_add();
+    let _c = u8x16::load_t(token, bytes);
     a + b
 }
 #[inline(always)]
@@ -43,9 +43,9 @@ fn kernel_scalar(
     type f32x4 = ::magetypes::simd::generic::f32x4<archmage::ScalarToken>;
     #[allow(non_camel_case_types, dead_code)]
     type u8x16 = ::magetypes::simd::generic::u8x16<archmage::ScalarToken>;
-    let a = f32x8::load(token, data_8).reduce_add();
-    let b = f32x4::load(token, data_4).reduce_add();
-    let _c = u8x16::load(token, bytes);
+    let a = f32x8::load_t(token, data_8).reduce_add();
+    let b = f32x4::load_t(token, data_4).reduce_add();
+    let _c = u8x16::load_t(token, bytes);
     a + b
 }
 fn main() {}

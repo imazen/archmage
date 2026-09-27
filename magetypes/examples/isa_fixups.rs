@@ -120,8 +120,8 @@ mod v3 {
             .iter()
             .zip(output.as_chunks_mut::<4>().0.iter_mut())
         {
-            let v = V::from_array(token, core::array::from_fn(|i| f32::from_bits(a[i])));
-            let one = V::splat(token, 1.0);
+            let v = V::from_array_t(token, core::array::from_fn(|i| f32::from_bits(a[i])));
+            let one = V::splat_t(token, 1.0);
             let result = match OP {
                 0 => {
                     let i = if FIX {
@@ -141,7 +141,7 @@ mod v3 {
                         let refined = _mm_fmadd_ps(r, e, r);
                         let mut output = [0.0; 4];
                         _mm_storeu_ps(&mut output, refined);
-                        V::from_array(token, output)
+                        V::from_array_t(token, output)
                     };
                     r.to_array().map(f32::to_bits)
                 }
@@ -156,7 +156,7 @@ mod v3 {
                             _mm_mul_ps(y, _mm_fnmadd_ps(_mm_set1_ps(0.5), t, _mm_set1_ps(1.5)));
                         let mut output = [0.0; 4];
                         _mm_storeu_ps(&mut output, refined);
-                        V::from_array(token, output)
+                        V::from_array_t(token, output)
                     };
                     r.to_array().map(f32::to_bits)
                 }
@@ -193,8 +193,8 @@ mod v4 {
             .iter()
             .zip(output.as_chunks_mut::<16>().0.iter_mut())
         {
-            let v = V::from_array(token, core::array::from_fn(|i| f32::from_bits(a[i])));
-            let one = V::splat(token, 1.0);
+            let v = V::from_array_t(token, core::array::from_fn(|i| f32::from_bits(a[i])));
+            let one = V::splat_t(token, 1.0);
             let result = match OP {
                 0 => {
                     let i = if FIX {
@@ -214,7 +214,7 @@ mod v4 {
                         let refined = _mm512_fmadd_ps(r, e, r);
                         let mut output = [0.0; 16];
                         _mm512_storeu_ps(&mut output, refined);
-                        V::from_array(token, output)
+                        V::from_array_t(token, output)
                     };
                     r.to_array().map(f32::to_bits)
                 }
@@ -231,7 +231,7 @@ mod v4 {
                         );
                         let mut output = [0.0; 16];
                         _mm512_storeu_ps(&mut output, refined);
-                        V::from_array(token, output)
+                        V::from_array_t(token, output)
                     };
                     r.to_array().map(f32::to_bits)
                 }
@@ -367,8 +367,8 @@ mod scalar {
             .iter()
             .zip(output.as_chunks_mut::<4>().0.iter_mut())
         {
-            let v = V::from_array(token, core::array::from_fn(|i| f32::from_bits(a[i])));
-            let one = V::splat(token, 1.0);
+            let v = V::from_array_t(token, core::array::from_fn(|i| f32::from_bits(a[i])));
+            let one = V::splat_t(token, 1.0);
             let result = match OP {
                 0 => {
                     let i = if FIX {
@@ -419,8 +419,8 @@ mod scalar16 {
             .iter()
             .zip(output.as_chunks_mut::<16>().0.iter_mut())
         {
-            let v = V::from_array(token, core::array::from_fn(|i| f32::from_bits(a[i])));
-            let one = V::splat(token, 1.0);
+            let v = V::from_array_t(token, core::array::from_fn(|i| f32::from_bits(a[i])));
+            let one = V::splat_t(token, 1.0);
             let result = match OP {
                 0 => {
                     let i = if FIX {

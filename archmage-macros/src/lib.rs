@@ -146,7 +146,7 @@ use token_discovery::*;
 ///
 /// #[arcane]
 /// fn process(token: X64V3Token, data: &[f32; 8]) -> f32 {
-///     let v = f32x8::load(token, data);
+///     let v = f32x8::load_t(token, data);
 ///     let zero = _mm256_setzero_ps();
 ///     // ...
 /// }
@@ -154,7 +154,7 @@ use token_discovery::*;
 /// // With auto-imports — clean:
 /// #[arcane(import_intrinsics, import_magetypes)]
 /// fn process(token: X64V3Token, data: &[f32; 8]) -> f32 {
-///     let v = f32x8::load(token, data);
+///     let v = f32x8::load_t(token, data);
 ///     let zero = _mm256_setzero_ps();
 ///     // ...
 /// }

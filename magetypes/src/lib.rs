@@ -11,10 +11,10 @@
 //!
 //! #[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
 //! fn gain_impl(token: Token, plane: &mut [f32], gain: f32) {
-//!     let factor = f32x8::splat(token, gain);
-//!     let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+//!     let factor = f32x8::splat_t(token, gain);
+//!     let (chunks, tail) = f32x8::partition_slice_mut_t(token, plane);
 //!     for chunk in chunks {
-//!         (f32x8::load(token, chunk) * factor).store(chunk);
+//!         (f32x8::load_t(token, chunk) * factor).store(chunk);
 //!     }
 //!     for value in tail {
 //!         *value *= gain;
@@ -29,6 +29,25 @@
 //! let mut plane = [2.0; 11];
 //! apply_gain(&mut plane, 0.5);
 //! assert_eq!(plane, [1.0; 11]);
+//! ```
+//!
+//! Explicit-token constructors use `_t` spellings. The old token-taking names
+//! are deprecated in 0.9 so callers can migrate before the 0.10 signature change:
+//!
+//! ```compile_fail
+//! #![deny(deprecated)]
+//! use archmage::ScalarToken;
+//! use magetypes::simd::generic::f32x8;
+//! let _ = f32x8::splat(ScalarToken, 1.0);
+//! ```
+//!
+//! ```
+//! #![deny(deprecated)]
+//! #![forbid(unsafe_code)]
+//! use archmage::ScalarToken;
+//! use magetypes::simd::generic::f32x8;
+//! let value = f32x8::splat_t(ScalarToken, 1.0);
+//! assert_eq!(value.to_array(), [1.0; 8]);
 //! ```
 //!
 //! Use [generic functions and const modes](https://imazen.github.io/archmage/magetypes/dispatch/types-and-dispatch/)

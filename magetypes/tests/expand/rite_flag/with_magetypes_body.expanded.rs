@@ -8,10 +8,10 @@ fn kernel_v3(token: archmage::X64V3Token, data: &[f32; 8]) -> f32 {
     #[allow(unused_imports)]
     use archmage::intrinsics::x86_64::*;
     type Vec8 = GenericF32x8<archmage::X64V3Token>;
-    Vec8::load(token, data).reduce_add()
+    Vec8::load_t(token, data).reduce_add()
 }
 fn kernel_scalar(token: archmage::ScalarToken, data: &[f32; 8]) -> f32 {
     type Vec8 = GenericF32x8<archmage::ScalarToken>;
-    Vec8::load(token, data).reduce_add()
+    Vec8::load_t(token, data).reduce_add()
 }
 fn main() {}

@@ -24,13 +24,13 @@ mod x86_impl {
     /// Sum using polyfilled f32x8 on SSE
     #[arcane]
     fn sum_polyfill(token: X64V3Token, data: &[f32]) -> f32 {
-        let mut acc = poly::f32xN::zero(token);
+        let mut acc = poly::f32xN::zero_t(token);
         let chunks = data.chunks_exact(poly::LANES_F32);
         let remainder = chunks.remainder();
 
         for chunk in chunks {
             let arr: &[f32; 8] = chunk.try_into().unwrap();
-            let v = poly::f32xN::load(token, arr);
+            let v = poly::f32xN::load_t(token, arr);
             acc += v;
         }
 
@@ -46,13 +46,13 @@ mod x86_impl {
     fn sum_native_sse(token: archmage::X64V3Token, data: &[f32]) -> f32 {
         use magetypes::simd::f32x4;
 
-        let mut acc = f32x4::zero(token);
+        let mut acc = f32x4::zero_t(token);
         let chunks = data.chunks_exact(4);
         let remainder = chunks.remainder();
 
         for chunk in chunks {
             let arr: &[f32; 4] = chunk.try_into().unwrap();
-            let v = f32x4::load(token, arr);
+            let v = f32x4::load_t(token, arr);
             acc += v;
         }
 
@@ -68,13 +68,13 @@ mod x86_impl {
     fn sum_native_avx2(token: archmage::X64V3Token, data: &[f32]) -> f32 {
         use magetypes::simd::f32x8;
 
-        let mut acc = f32x8::zero(token);
+        let mut acc = f32x8::zero_t(token);
         let chunks = data.chunks_exact(8);
         let remainder = chunks.remainder();
 
         for chunk in chunks {
             let arr: &[f32; 8] = chunk.try_into().unwrap();
-            let v = f32x8::load(token, arr);
+            let v = f32x8::load_t(token, arr);
             acc += v;
         }
 

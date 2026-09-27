@@ -43,7 +43,7 @@
 
 #### Added
 
-- Generated `_t(token, ...)` aliases cover token-taking constructors, loads, conversions, slice helpers, and single-lane scalar types; old names remain supported without deprecation (772ef504).
+- Generated `_t(token, ...)` aliases cover token-taking constructors, loads, conversions, slice helpers, and single-lane scalar types; old names remain callable (772ef504).
 - Native `from_raw_t(token, raw)` supports ordinary callers; `from_raw(raw)` requires a matching feature context (772ef504).
 - [Complete constructor signatures](docs/constructors/README.md) are generated for all 40 vector types; native names already ending in `_t` use `from_raw_t` without redundant `_t_t` aliases (e619c59a).
 

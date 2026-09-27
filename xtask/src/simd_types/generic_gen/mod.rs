@@ -433,7 +433,7 @@ pub fn generate_generic_files(registry: &crate::registry::Registry) -> BTreeMap<
             source.push_str(&token_aliases::generate(source));
         }
     }
-    // These modules contain handwritten implementations. Only their aliases
+    // These modules contain handwritten implementations. Only their deprecated forwarders
     // are generated, using the same signature-driven pass as the vector files.
     files.insert(
         "generic/generated/scalar_token_aliases.rs".into(),

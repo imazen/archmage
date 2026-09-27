@@ -46,7 +46,7 @@ macro_rules! check_saturating {
         for chunk in inputs().chunks($lanes) {
             let mut arr = [0.0f32; $lanes];
             arr[..chunk.len()].copy_from_slice(chunk);
-            let got = $ty::from_array(t, arr).to_i32_saturating().to_array();
+            let got = $ty::from_array_t(t, arr).to_i32_saturating().to_array();
             for (i, &x) in arr.iter().enumerate() {
                 let want = x as i32; // Rust `as` IS the contract
                 assert_eq!(
@@ -59,7 +59,7 @@ macro_rules! check_saturating {
             }
             // Bare to_i32 must AGREE with saturating wherever lanes are
             // in-range — the divergence is confined to OOR/NaN lanes.
-            let bare = $ty::from_array(t, arr).to_i32().to_array();
+            let bare = $ty::from_array_t(t, arr).to_i32().to_array();
             for (i, &x) in arr.iter().enumerate() {
                 if x.is_finite() && (-2_147_483_648.0..2_147_483_648.0).contains(&x) {
                     assert_eq!(
@@ -95,7 +95,7 @@ fn x64v3_backend_saturating() {
 
             // Pin the DOCUMENTED bare-op divergence so it cannot drift: x86
             // cvttps gives the i32::MIN sentinel for +overflow AND NaN.
-            let v = f32x4::from_array(t, [3.0e9, -3.0e9, f32::NAN, 1.5]);
+            let v = f32x4::from_array_t(t, [3.0e9, -3.0e9, f32::NAN, 1.5]);
             assert_eq!(v.to_i32().to_array(), [i32::MIN, i32::MIN, i32::MIN, 1]);
         }
         None => {
@@ -129,7 +129,7 @@ fn neon_backend_saturating() {
         check_saturating!(f32x16, 16, t, "neon");
 
         // NEON's native op already saturates with NaN→0 — bare == saturating.
-        let v = f32x4::from_array(t, [3.0e9, -3.0e9, f32::NAN, 1.5]);
+        let v = f32x4::from_array_t(t, [3.0e9, -3.0e9, f32::NAN, 1.5]);
         assert_eq!(v.to_i32().to_array(), [i32::MAX, i32::MIN, 0, 1]);
     }
 }

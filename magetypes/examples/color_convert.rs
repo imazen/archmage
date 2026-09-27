@@ -43,19 +43,19 @@ mod x86_impl {
     /// Output: 3 vectors for R, G, B channels.
     #[arcane]
     fn yuv_to_rgb_f32x8(token: X64V3Token, y: f32x8, u: f32x8, v: f32x8) -> (f32x8, f32x8, f32x8) {
-        let offset = f32x8::splat(token, bt601::OFFSET);
-        let zero = f32x8::splat(token, 0.0);
-        let max = f32x8::splat(token, 255.0);
+        let offset = f32x8::splat_t(token, bt601::OFFSET);
+        let zero = f32x8::splat_t(token, 0.0);
+        let max = f32x8::splat_t(token, 255.0);
 
         // Shift U and V from [0,255] to [-128,127]
         let u_shifted = u - offset;
         let v_shifted = v - offset;
 
         // Load coefficients
-        let kr_v = f32x8::splat(token, bt601::KR_V);
-        let kg_u = f32x8::splat(token, bt601::KG_U);
-        let kg_v = f32x8::splat(token, bt601::KG_V);
-        let kb_u = f32x8::splat(token, bt601::KB_U);
+        let kr_v = f32x8::splat_t(token, bt601::KR_V);
+        let kg_u = f32x8::splat_t(token, bt601::KG_U);
+        let kg_v = f32x8::splat_t(token, bt601::KG_V);
+        let kb_u = f32x8::splat_t(token, bt601::KB_U);
 
         // R = Y + 1.402 * V'
         let r = y + v_shifted * kr_v;
@@ -78,24 +78,24 @@ mod x86_impl {
     /// V = 0.5*R - 0.419*G - 0.081*B + 128
     #[arcane]
     fn rgb_to_yuv_f32x8(token: X64V3Token, r: f32x8, g: f32x8, b: f32x8) -> (f32x8, f32x8, f32x8) {
-        let offset = f32x8::splat(token, 128.0);
-        let zero = f32x8::splat(token, 0.0);
-        let max = f32x8::splat(token, 255.0);
+        let offset = f32x8::splat_t(token, 128.0);
+        let zero = f32x8::splat_t(token, 0.0);
+        let max = f32x8::splat_t(token, 255.0);
 
         // Y coefficients
-        let ky_r = f32x8::splat(token, 0.299);
-        let ky_g = f32x8::splat(token, 0.587);
-        let ky_b = f32x8::splat(token, 0.114);
+        let ky_r = f32x8::splat_t(token, 0.299);
+        let ky_g = f32x8::splat_t(token, 0.587);
+        let ky_b = f32x8::splat_t(token, 0.114);
 
         // U coefficients
-        let ku_r = f32x8::splat(token, -0.168736);
-        let ku_g = f32x8::splat(token, -0.331264);
-        let ku_b = f32x8::splat(token, 0.5);
+        let ku_r = f32x8::splat_t(token, -0.168736);
+        let ku_g = f32x8::splat_t(token, -0.331264);
+        let ku_b = f32x8::splat_t(token, 0.5);
 
         // V coefficients
-        let kv_r = f32x8::splat(token, 0.5);
-        let kv_g = f32x8::splat(token, -0.418688);
-        let kv_b = f32x8::splat(token, -0.081312);
+        let kv_r = f32x8::splat_t(token, 0.5);
+        let kv_g = f32x8::splat_t(token, -0.418688);
+        let kv_b = f32x8::splat_t(token, -0.081312);
 
         // Y = 0.299*R + 0.587*G + 0.114*B
         let y = r.mul_add(ky_r, g.mul_add(ky_g, b * ky_b));
@@ -288,9 +288,9 @@ mod x86_impl {
             let u_vals = [128.0, 128.0, 128.0, 90.0, 180.0, 200.0, 60.0, 150.0];
             let v_vals = [128.0, 128.0, 128.0, 200.0, 60.0, 100.0, 180.0, 80.0];
 
-            let y = f32x8::from_array(token, y_vals);
-            let u = f32x8::from_array(token, u_vals);
-            let v = f32x8::from_array(token, v_vals);
+            let y = f32x8::from_array_t(token, y_vals);
+            let u = f32x8::from_array_t(token, u_vals);
+            let v = f32x8::from_array_t(token, v_vals);
 
             let (r_simd, g_simd, b_simd) = yuv_to_rgb_f32x8(token, y, u, v);
             let r_arr = r_simd.to_array();
@@ -346,9 +346,9 @@ mod x86_impl {
             let g_orig = [0.0, 255.0, 0.0, 128.0, 128.0, 64.0, 150.0, 100.0];
             let b_orig = [0.0, 0.0, 255.0, 128.0, 192.0, 128.0, 50.0, 150.0];
 
-            let r = f32x8::from_array(token, r_orig);
-            let g = f32x8::from_array(token, g_orig);
-            let b = f32x8::from_array(token, b_orig);
+            let r = f32x8::from_array_t(token, r_orig);
+            let g = f32x8::from_array_t(token, g_orig);
+            let b = f32x8::from_array_t(token, b_orig);
 
             let (y, u, v) = rgb_to_yuv_f32x8(token, r, g, b);
             let (r_back, g_back, b_back) = yuv_to_rgb_f32x8(token, y, u, v);
@@ -423,15 +423,15 @@ mod x86_impl {
             for _ in 0..ITERATIONS {
                 for chunk_start in (0..PIXELS).step_by(8) {
                     if chunk_start + 8 <= PIXELS {
-                        let y = f32x8::load(
+                        let y = f32x8::load_t(
                             token,
                             (&y_data[chunk_start..chunk_start + 8]).try_into().unwrap(),
                         );
-                        let u = f32x8::load(
+                        let u = f32x8::load_t(
                             token,
                             (&u_data[chunk_start..chunk_start + 8]).try_into().unwrap(),
                         );
-                        let v = f32x8::load(
+                        let v = f32x8::load_t(
                             token,
                             (&v_data[chunk_start..chunk_start + 8]).try_into().unwrap(),
                         );

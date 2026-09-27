@@ -55,21 +55,21 @@ mod x86_impl {
         v7: f32x8,
     ) -> [f32x8; 8] {
         // DCT coefficients (truncated to f32 precision)
-        let c0 = f32x8::splat(token, 0.353_553_4);
-        let c10 = f32x8::splat(token, 0.490_392_6);
-        let c11 = f32x8::splat(token, 0.415_734_8);
-        let c12 = f32x8::splat(token, 0.277_785_1);
-        let c13 = f32x8::splat(token, 0.097_545_16);
-        let c20 = f32x8::splat(token, 0.461_939_8);
-        let c21 = f32x8::splat(token, 0.191_341_7);
+        let c0 = f32x8::splat_t(token, 0.353_553_4);
+        let c10 = f32x8::splat_t(token, 0.490_392_6);
+        let c11 = f32x8::splat_t(token, 0.415_734_8);
+        let c12 = f32x8::splat_t(token, 0.277_785_1);
+        let c13 = f32x8::splat_t(token, 0.097_545_16);
+        let c20 = f32x8::splat_t(token, 0.461_939_8);
+        let c21 = f32x8::splat_t(token, 0.191_341_7);
 
         // Negative versions for mul_sub patterns
-        let nc10 = f32x8::splat(token, -0.490_392_6);
-        let nc11 = f32x8::splat(token, -0.415_734_8);
-        let nc12 = f32x8::splat(token, -0.277_785_1);
-        let nc13 = f32x8::splat(token, -0.097_545_16);
-        let nc20 = f32x8::splat(token, -0.461_939_8);
-        let nc21 = f32x8::splat(token, -0.191_341_7);
+        let nc10 = f32x8::splat_t(token, -0.490_392_6);
+        let nc11 = f32x8::splat_t(token, -0.415_734_8);
+        let nc12 = f32x8::splat_t(token, -0.277_785_1);
+        let nc13 = f32x8::splat_t(token, -0.097_545_16);
+        let nc20 = f32x8::splat_t(token, -0.461_939_8);
+        let nc21 = f32x8::splat_t(token, -0.191_341_7);
 
         // Row 0: all same coefficient - just sum and scale
         let out0 = (v0 + v1 + v2 + v3 + v4 + v5 + v6 + v7) * c0;
@@ -216,14 +216,14 @@ mod x86_impl {
         let c7 = _mm256_permute2f128_ps::<0x31>(s3, s7);
 
         [
-            f32x8::from_m256(token, c0),
-            f32x8::from_m256(token, c1),
-            f32x8::from_m256(token, c2),
-            f32x8::from_m256(token, c3),
-            f32x8::from_m256(token, c4),
-            f32x8::from_m256(token, c5),
-            f32x8::from_m256(token, c6),
-            f32x8::from_m256(token, c7),
+            f32x8::from_m256_t(token, c0),
+            f32x8::from_m256_t(token, c1),
+            f32x8::from_m256_t(token, c2),
+            f32x8::from_m256_t(token, c3),
+            f32x8::from_m256_t(token, c4),
+            f32x8::from_m256_t(token, c5),
+            f32x8::from_m256_t(token, c6),
+            f32x8::from_m256_t(token, c7),
         ]
     }
 
@@ -231,14 +231,14 @@ mod x86_impl {
     #[arcane]
     fn load_block(token: X64V3Token, block: &[f32; 64]) -> [f32x8; 8] {
         [
-            f32x8::load(token, block[0..8].try_into().unwrap()),
-            f32x8::load(token, block[8..16].try_into().unwrap()),
-            f32x8::load(token, block[16..24].try_into().unwrap()),
-            f32x8::load(token, block[24..32].try_into().unwrap()),
-            f32x8::load(token, block[32..40].try_into().unwrap()),
-            f32x8::load(token, block[40..48].try_into().unwrap()),
-            f32x8::load(token, block[48..56].try_into().unwrap()),
-            f32x8::load(token, block[56..64].try_into().unwrap()),
+            f32x8::load_t(token, block[0..8].try_into().unwrap()),
+            f32x8::load_t(token, block[8..16].try_into().unwrap()),
+            f32x8::load_t(token, block[16..24].try_into().unwrap()),
+            f32x8::load_t(token, block[24..32].try_into().unwrap()),
+            f32x8::load_t(token, block[32..40].try_into().unwrap()),
+            f32x8::load_t(token, block[40..48].try_into().unwrap()),
+            f32x8::load_t(token, block[48..56].try_into().unwrap()),
+            f32x8::load_t(token, block[56..64].try_into().unwrap()),
         ]
     }
 

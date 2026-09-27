@@ -1,4 +1,4 @@
-//! Add migration spellings without changing the original token-first API.
+//! Generate deprecated compatibility forwarders from canonical `_t` methods.
 //!
 //! Inspect the generated signatures rather than maintaining a second method
 //! roster. Handwritten scalar and cross-width methods use this same pass.
@@ -21,12 +21,19 @@ pub(super) fn generate(source: &str) -> String {
                 continue;
             }
             let name = &method.sig.ident;
-            // This uniform raw entry point is generated directly, since the
-            // existing from_raw method has no token argument. Native NEON
-            // names already end in `_t`; use from_raw_t, not an `_t_t` alias.
-            if name.to_string().ends_with("_t") {
+            // Raw-context construction and legacy native NEON names already
+            // use their stable spelling; they have no deprecated short twin.
+            let spelling = name.to_string();
+            if spelling == "from_raw_t"
+                || ["from_float", "from_int", "from_uint"]
+                    .iter()
+                    .any(|prefix| spelling.starts_with(prefix))
+            {
                 continue;
             }
+            let Some(legacy) = spelling.strip_suffix("_t") else {
+                continue;
+            };
             let Some(FnArg::Typed(first)) = method.sig.inputs.first() else {
                 continue;
             };
@@ -42,14 +49,18 @@ pub(super) fn generate(source: &str) -> String {
                 "unsafe constructor: {name}"
             );
             let mut alias = method.clone();
-            alias.sig.ident = format_ident!("{name}_t");
+            alias.sig.ident = format_ident!("{legacy}");
             let mut arguments = Vec::new();
             for (index, arg) in alias.sig.inputs.iter_mut().enumerate() {
                 let FnArg::Typed(arg) = arg else {
                     panic!("constructor with receiver")
                 };
                 if matches!(*arg.pat, Pat::Wild(_)) {
-                    let ident = format_ident!("argument_{index}");
+                    let ident = if index == 0 {
+                        format_ident!("token")
+                    } else {
+                        format_ident!("argument_{index}")
+                    };
                     arg.pat = Box::new(syn::parse_quote!(#ident));
                 }
                 let Pat::Ident(pat) = &*arg.pat else {
@@ -76,9 +87,18 @@ pub(super) fn generate(source: &str) -> String {
             alias.block = syn::parse_quote!({ #call });
             alias.attrs.retain(|a| !a.path().is_ident("doc"));
             let doc = format!(
-                "Explicit-token alias of [`Self::{name}`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."
+                "Deprecated token-taking spelling of [`Self::{name}`].\n\nUse `{name}` to keep explicit-token construction when `{legacy}` becomes tokenless in magetypes 0.10."
             );
+            let args = arguments
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(", ");
+            let note = format!("Use {name}({args}); {legacy} becomes tokenless in magetypes 0.10.");
             alias.attrs.push(syn::parse_quote!(#[doc = #doc]));
+            alias
+                .attrs
+                .push(syn::parse_quote!(#[deprecated(note = #note)]));
             alias.attrs.push(syn::parse_quote!(#[forbid(unsafe_code)]));
             aliases.push(ImplItem::Fn(alias));
         }
@@ -91,7 +111,7 @@ pub(super) fn generate(source: &str) -> String {
     if output.is_empty() {
         output
     } else {
-        "// Generated explicit-token migration aliases. Do not edit.\n".to_owned() + &output
+        "// Generated deprecated token-constructor forwarders. Do not edit.\n".to_owned() + &output
     }
 }
 
@@ -141,7 +161,11 @@ pub(super) fn inventory(
                 let attrs: Vec<_> = method
                     .attrs
                     .iter()
-                    .filter(|a| a.path().is_ident("cfg") || a.path().is_ident("target_feature"))
+                    .filter(|a| {
+                        a.path().is_ident("cfg")
+                            || a.path().is_ident("target_feature")
+                            || a.path().is_ident("deprecated")
+                    })
                     .collect();
                 let sig = &method.sig;
                 let code =
@@ -187,7 +211,7 @@ mod tests {
             impl<T: Backend> Vector<T> where T::Repr: Copy {
                 #[cfg(target_arch = "wasm32")]
                 #[inline(always)]
-                pub fn partition<'a, const N: usize>(_: T, values: &'a mut [u8])
+                pub fn partition_t<'a, const N: usize>(_: T, values: &'a mut [u8])
                     -> &'a mut [[u8; N]] where T: Other { todo!() }
                 pub fn value(self) -> i32 { 0 }
                 pub(crate) fn internal(token: T) -> Self { todo!() }
@@ -203,12 +227,13 @@ mod tests {
         let ImplItem::Fn(method) = &imp.items[0] else {
             panic!()
         };
-        assert_eq!(method.sig.ident, "partition_t");
+        assert_eq!(method.sig.ident, "partition");
+        assert!(method.attrs.iter().any(|a| a.path().is_ident("deprecated")));
         assert!(method.sig.generics.where_clause.is_some());
         assert!(method.attrs.iter().any(|a| a.path().is_ident("cfg")));
         assert_eq!(
             method.block.to_token_stream().to_string(),
-            "{ Self :: partition :: < N > (argument_0 , values) }"
+            "{ Self :: partition_t :: < N > (token , values) }"
         );
     }
 }

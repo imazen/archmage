@@ -24,11 +24,11 @@ use archmage::X64V3Token;
 /// This function works identically with X64V3Token (AVX2), NeonToken (polyfill),
 /// or ScalarToken (array ops). The compiler monomorphizes per backend.
 fn sum_f32x8<T: F32x8Backend>(token: T, data: &[f32]) -> f32 {
-    let mut acc = f32x8::<T>::zero(token);
+    let mut acc = f32x8::<T>::zero_t(token);
     let (chunks, remainder) = data.split_at(data.len() - data.len() % 8);
 
     for chunk in chunks.chunks_exact(8) {
-        let v = f32x8::<T>::load(token, chunk.try_into().unwrap());
+        let v = f32x8::<T>::load_t(token, chunk.try_into().unwrap());
         acc = acc + v;
     }
 
@@ -74,12 +74,12 @@ fn example_sum_cross_backend() {
 fn dot_product<T: F32x8Backend>(token: T, a: &[f32], b: &[f32]) -> f32 {
     assert_eq!(a.len(), b.len());
     let n = a.len();
-    let mut acc = f32x8::<T>::zero(token);
+    let mut acc = f32x8::<T>::zero_t(token);
     let chunks = n / 8;
 
     for i in 0..chunks {
-        let va = f32x8::<T>::load(token, a[i * 8..][..8].try_into().unwrap());
-        let vb = f32x8::<T>::load(token, b[i * 8..][..8].try_into().unwrap());
+        let va = f32x8::<T>::load_t(token, a[i * 8..][..8].try_into().unwrap());
+        let vb = f32x8::<T>::load_t(token, b[i * 8..][..8].try_into().unwrap());
         acc = va.mul_add(vb, acc); // FMA: acc += va * vb
     }
 
@@ -111,13 +111,13 @@ fn example_dot_product() {
 // ============================================================================
 
 fn adjust_brightness<T: F32x8Backend>(token: T, pixels: &mut [f32], amount: f32) {
-    let zero = f32x8::<T>::zero(token);
-    let max = f32x8::<T>::splat(token, 255.0);
+    let zero = f32x8::<T>::zero_t(token);
+    let max = f32x8::<T>::splat_t(token, 255.0);
 
     let chunks = pixels.len() / 8;
     for i in 0..chunks {
         let chunk: &mut [f32; 8] = (&mut pixels[i * 8..i * 8 + 8]).try_into().unwrap();
-        let v = f32x8::<T>::load(token, chunk);
+        let v = f32x8::<T>::load_t(token, chunk);
         let adjusted = (v + amount).clamp(zero, max); // scalar broadcast!
         adjusted.store(chunk);
     }
@@ -142,10 +142,10 @@ fn example_brightness() {
 // ============================================================================
 
 fn apply_gamma_correction<T: F32x8Backend + F32x8Convert>(token: T, rgba_pixels: &mut [u8; 32]) {
-    let (r, g, b, a) = f32x8::<T>::load_8_rgba_u8(token, rgba_pixels);
+    let (r, g, b, a) = f32x8::<T>::load_8_rgba_u8_t(token, rgba_pixels);
 
     // Normalize to [0, 1]
-    let inv255 = f32x8::<T>::splat(token, 1.0 / 255.0);
+    let inv255 = f32x8::<T>::splat_t(token, 1.0 / 255.0);
     let r = r * inv255;
     let g = g * inv255;
     let b = b * inv255;
@@ -157,7 +157,7 @@ fn apply_gamma_correction<T: F32x8Backend + F32x8Convert>(token: T, rgba_pixels:
     let b = b.sqrt();
 
     // Back to [0, 255]
-    let scale = f32x8::<T>::splat(token, 255.0);
+    let scale = f32x8::<T>::splat_t(token, 255.0);
     let r = r * scale;
     let g = g * scale;
     let b = b * scale;
@@ -189,7 +189,7 @@ fn example_gamma_correction() {
 // ============================================================================
 
 fn transpose_8x8_generic<T: F32x8Backend>(token: T, matrix: &[f32; 64]) -> [f32; 64] {
-    let rows = f32x8::<T>::load_8x8(token, matrix);
+    let rows = f32x8::<T>::load_8x8_t(token, matrix);
     let transposed = f32x8::<T>::transpose_8x8_copy(rows);
     let mut out = [0.0f32; 64];
     f32x8::<T>::store_8x8(&transposed, &mut out);
@@ -221,8 +221,8 @@ fn example_transpose() {
 // ============================================================================
 
 fn clamp_negatives_to_zero<T: F32x8Backend>(token: T, data: &[f32; 8]) -> [f32; 8] {
-    let v = f32x8::<T>::load(token, data);
-    let zero = f32x8::<T>::zero(token);
+    let v = f32x8::<T>::load_t(token, data);
+    let zero = f32x8::<T>::zero_t(token);
     let mask = v.simd_lt(zero); // true where v < 0
     let result = f32x8::<T>::blend(mask, zero, v); // select zero where negative
     result.to_array()
@@ -246,14 +246,14 @@ fn example_clamp_negatives() {
 // ============================================================================
 
 fn quantize_to_int<T: F32x8Convert>(token: T, values: &[f32; 8], scale: f32) -> [i32; 8] {
-    let v = f32x8::<T>::load(token, values);
+    let v = f32x8::<T>::load_t(token, values);
     let scaled = v * scale;
     scaled.to_i32_round().to_array()
 }
 
 fn dequantize_from_int<T: F32x8Convert>(token: T, values: &[i32; 8], scale: f32) -> [f32; 8] {
-    let v = i32x8::<T>::load(token, values);
-    let f = f32x8::<T>::from_i32(token, v);
+    let v = i32x8::<T>::load_t(token, values);
+    let f = f32x8::<T>::from_i32_t(token, v);
     (f / scale).to_array()
 }
 
@@ -274,7 +274,7 @@ fn example_quantize() {
 // ============================================================================
 
 fn normalize_vec4<T: F32x4Backend>(token: T, v: &[f32; 4]) -> [f32; 4] {
-    let vec = f32x4::<T>::load(token, v);
+    let vec = f32x4::<T>::load_t(token, v);
     let sq = vec * vec;
     let len_sq = sq.reduce_add();
     if len_sq < 1e-10 {
@@ -299,7 +299,7 @@ fn example_normalize() {
 // ============================================================================
 
 fn separate_channels<T: F32x8Backend>(token: T, interleaved: &[[f32; 8]; 4]) -> [[f32; 8]; 4] {
-    let vecs: [f32x8<T>; 4] = core::array::from_fn(|i| f32x8::<T>::load(token, &interleaved[i]));
+    let vecs: [f32x8<T>; 4] = core::array::from_fn(|i| f32x8::<T>::load_t(token, &interleaved[i]));
     let channels = f32x8::<T>::deinterleave_4ch(vecs);
     core::array::from_fn(|i| channels[i].to_array())
 }
@@ -361,13 +361,13 @@ fn example_dispatch() {
 #[test]
 fn example_raw_access() {
     if let Some(t) = X64V3Token::summon() {
-        let v = f32x8::<X64V3Token>::splat(t, 42.0);
+        let v = f32x8::<X64V3Token>::splat_t(t, 42.0);
 
         // Get the raw __m256 for manual intrinsic use
         let raw: core::arch::x86_64::__m256 = v.raw();
 
         // Create from raw __m256
-        let back = f32x8::from_m256(t, raw);
+        let back = f32x8::from_m256_t(t, raw);
         assert_eq!(back.to_array(), [42.0; 8]);
     }
 }
@@ -377,7 +377,7 @@ fn example_raw_access() {
 // ============================================================================
 
 fn float_sign_bits<T: F32x8Convert>(token: T, values: &[f32; 8]) -> [bool; 8] {
-    let v = f32x8::<T>::load(token, values);
+    let v = f32x8::<T>::load_t(token, values);
     let bits = v.bitcast_to_i32();
     let arr = bits.to_array();
     core::array::from_fn(|i| arr[i] < 0)
@@ -408,13 +408,13 @@ fn serialize_vector<T: F32x8Backend>(v: f32x8<T>) -> [u8; 32] {
 }
 
 fn deserialize_vector<T: F32x8Backend>(token: T, bytes: &[u8; 32]) -> f32x8<T> {
-    f32x8::<T>::from_bytes(token, bytes)
+    f32x8::<T>::from_bytes_t(token, bytes)
 }
 
 #[test]
 fn example_serialization() {
     let original = [1.0_f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-    let v = f32x8::<ScalarToken>::load(ScalarToken, &original);
+    let v = f32x8::<ScalarToken>::load_t(ScalarToken, &original);
     let bytes = serialize_vector(v);
     let restored = deserialize_vector(ScalarToken, &bytes);
     assert_eq!(restored.to_array(), original);
@@ -430,7 +430,7 @@ fn example_cast_slice() {
     let data: Vec<f32> = (0..64).map(|i| i as f32).collect();
 
     // Try to cast the slice as a slice of f32x8 vectors
-    if let Some(vectors) = f32x8::<ScalarToken>::cast_slice(ScalarToken, &data) {
+    if let Some(vectors) = f32x8::<ScalarToken>::cast_slice_t(ScalarToken, &data) {
         assert_eq!(vectors.len(), 8); // 64 / 8 = 8 vectors
         assert_eq!(
             vectors[0].to_array(),
@@ -451,12 +451,12 @@ fn example_cast_slice() {
 fn mat4_mul<T: F32x4Backend>(token: T, a: &[f32; 16], b: &[f32; 16]) -> [f32; 16] {
     // Load B as column vectors
     let b_cols: [f32x4<T>; 4] = core::array::from_fn(|j| {
-        f32x4::<T>::from_array(token, [b[j], b[4 + j], b[8 + j], b[12 + j]])
+        f32x4::<T>::from_array_t(token, [b[j], b[4 + j], b[8 + j], b[12 + j]])
     });
 
     let mut result = [0.0f32; 16];
     for i in 0..4 {
-        let row = f32x4::<T>::load(token, a[i * 4..][..4].try_into().unwrap());
+        let row = f32x4::<T>::load_t(token, a[i * 4..][..4].try_into().unwrap());
         for j in 0..4 {
             result[i * 4 + j] = (row * b_cols[j]).reduce_add();
         }
@@ -493,10 +493,10 @@ fn example_mat4_mul() {
 // ============================================================================
 
 fn softmax_f32x8<T: F32x8Convert>(token: T, logits: &[f32; 8]) -> [f32; 8] {
-    let v = f32x8::<T>::load(token, logits);
+    let v = f32x8::<T>::load_t(token, logits);
 
     // Subtract max for numerical stability
-    let max_val = f32x8::<T>::splat(token, v.reduce_max());
+    let max_val = f32x8::<T>::splat_t(token, v.reduce_max());
     let shifted = v - max_val;
 
     // exp(shifted)
@@ -537,8 +537,8 @@ fn example_softmax() {
 // ============================================================================
 
 fn invert_pixels<T: F32x8Backend>(token: T, pixels: &[u8; 8]) -> [u8; 8] {
-    let v = f32x8::<T>::from_u8(token, pixels);
-    let max = f32x8::<T>::splat(token, 255.0);
+    let v = f32x8::<T>::from_u8_t(token, pixels);
+    let max = f32x8::<T>::splat_t(token, 255.0);
     let inverted = max - v;
     inverted.to_u8()
 }
@@ -558,7 +558,7 @@ fn example_invert_pixels() {
 fn example_indexing() {
     let t = ScalarToken;
     let mut v =
-        f32x8::<ScalarToken>::from_array(t, [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0]);
+        f32x8::<ScalarToken>::from_array_t(t, [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0]);
 
     // Read individual lanes
     assert_eq!(v[0], 10.0);
@@ -579,7 +579,8 @@ fn example_indexing() {
 
 #[test]
 fn example_debug() {
-    let v = f32x8::<ScalarToken>::from_array(ScalarToken, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+    let v =
+        f32x8::<ScalarToken>::from_array_t(ScalarToken, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
     let dbg = format!("{v:?}");
     assert!(dbg.contains("f32x8"));
     assert!(dbg.contains("1.0"));
@@ -593,7 +594,7 @@ fn example_debug() {
 #[test]
 fn example_as_array() {
     let mut v =
-        f32x8::<ScalarToken>::from_array(ScalarToken, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+        f32x8::<ScalarToken>::from_array_t(ScalarToken, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
 
     // Borrow as slice — no copy
     let arr: &[f32; 8] = v.as_array();
@@ -610,7 +611,7 @@ fn example_as_array() {
 // ============================================================================
 
 fn stats<T: F32x8Backend>(token: T, data: &[f32; 8]) -> (f32, f32, f32) {
-    let v = f32x8::<T>::load(token, data);
+    let v = f32x8::<T>::load_t(token, data);
     (v.reduce_min(), v.reduce_max(), v.reduce_add())
 }
 
@@ -628,9 +629,9 @@ fn example_reductions() {
 // ============================================================================
 
 fn fast_normalize<T: F32x8Backend>(token: T, data: &[f32; 8]) -> [f32; 8] {
-    let v = f32x8::<T>::load(token, data);
+    let v = f32x8::<T>::load_t(token, data);
     let sq = v * v;
-    let sum = f32x8::<T>::splat(token, sq.reduce_add());
+    let sum = f32x8::<T>::splat_t(token, sq.reduce_add());
     let inv_len = sum.rsqrt_approx(); // ~12-bit accuracy
     (v * inv_len).to_array()
 }

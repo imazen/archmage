@@ -16,10 +16,10 @@ range so the intermediate i16 addition cannot overflow.
 use archmage::prelude::*;
 #[magetypes(define(u8x16, i16x8), v3, neon, wasm128, scalar)]
 fn brighten_impl(token: Token, input: [u8; 16], amount: u8) -> [u8; 16] {
-    let bytes = u8x16::from_array(token, input);
+    let bytes = u8x16::from_array_t(token, input);
     let lo = bytes.widen_low().bitcast_i16x8();
     let hi = bytes.widen_high().bitcast_i16x8();
-    let offset = i16x8::splat(token, i16::from(amount));
+    let offset = i16x8::splat_t(token, i16::from(amount));
     (lo + offset).narrow_saturating_u8(hi + offset).to_array()
 }
 pub fn brighten(input: [u8; 16], amount: u8) -> [u8; 16] {

@@ -216,7 +216,7 @@ fn foo<D: SimdDescriptor>(d: D, ...) { D::F32Vec::load(d, ...); }
 magetypes uses separate backend traits per type:
 ```rust
 fn foo<T: F32x8Backend + I32x8Backend + F32x8Convert>(t: T, ...) {
-    f32x8::load(t, ...);
+    f32x8::load_t(t, ...);
 }
 ```
 

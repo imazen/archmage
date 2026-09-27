@@ -14,9 +14,9 @@ use archmage::prelude::*;
 use archmage::testing::{for_each_token_permutation, CompileTimePolicy};
 #[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
 fn gain_impl(token: Token, data: &mut [f32], gain: f32) {
-    let (chunks, tail) = f32x8::partition_slice_mut(token, data);
-    let factor = f32x8::splat(token, gain);
-    for chunk in chunks { (f32x8::load(token, chunk) * factor).store(chunk); }
+    let (chunks, tail) = f32x8::partition_slice_mut_t(token, data);
+    let factor = f32x8::splat_t(token, gain);
+    for chunk in chunks { (f32x8::load_t(token, chunk) * factor).store(chunk); }
     for value in tail { *value *= gain; }
 }
 fn gain(data: &mut [f32], factor: f32) {

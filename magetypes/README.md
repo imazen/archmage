@@ -28,10 +28,10 @@ fn scale_plane_impl(token: Token, plane: &mut [f32], factor: f32) {
     // `f32x8` is in scope via `define` — resolves to `f32x8<X64V3Token>` in
     // the v3 variant, `f32x8<NeonToken>` in neon, etc. `Token` is likewise
     // substituted per tier for parameters and return types.
-    let factor_v = f32x8::splat(token, factor);
-    let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+    let factor_v = f32x8::splat_t(token, factor);
+    let (chunks, tail) = f32x8::partition_slice_mut_t(token, plane);
     for chunk in chunks {
-        (f32x8::load(token, chunk) * factor_v).store(chunk);
+        (f32x8::load_t(token, chunk) * factor_v).store(chunk);
     }
     for v in tail { *v *= factor; }
 }
@@ -58,14 +58,15 @@ The vector types live under `magetypes::simd::*` — there are no root re-export
 
 ### Load / store are **unaligned**
 
-`f32x8::load(token, &[f32; 8])` and `.store(&mut [f32; 8])` take **fixed-size array references** and perform an **unaligned** transfer — on x86-64 they lower to `_mm256_loadu_ps` / `_mm256_storeu_ps`. A `&[f32; 8]` only guarantees 4-byte (`f32`) alignment, and that's all that's required; there is **no 32-byte SIMD-alignment precondition**. Consequently `partition_slice_mut` (which reinterprets an arbitrary `&mut [f32]` as `&mut [[f32; 8]]` chunks) is sound on any slice — the bulk chunks feed straight into `load`/`store`. Don't reach for aligned allocators or hand-padded buffers; window your slice and go.
+`f32x8::load_t(token, &[f32; 8])` and `.store(&mut [f32; 8])` take **fixed-size array references** and perform an **unaligned** transfer — on x86-64 they lower to `_mm256_loadu_ps` / `_mm256_storeu_ps`. A `&[f32; 8]` only guarantees 4-byte (`f32`) alignment, and that's all that's required; there is **no 32-byte SIMD-alignment precondition**. Consequently `partition_slice_mut` (which reinterprets an arbitrary `&mut [f32]` as `&mut [[f32; 8]]` chunks) is sound on any slice — the bulk chunks feed straight into `load`/`store`. Don't reach for aligned allocators or hand-padded buffers; window your slice and go.
 
 
 ## Preparing for token constructor migration
 
 The next 0.9 patch adds explicit-token `_t` spellings, such as
 `f32x8::splat_t(token, value)` and `f32x8::load_t(token, data)`. Existing names
-remain supported without deprecation warnings. These aliases prepare callers
+remain callable but are deprecated, with warnings directing callers to `_t`.
+These spellings prepare callers
 for the planned 0.10 constructor change while keeping argument order, vector
 widths, and function token parameters unchanged. Generic helpers can use `_t`
 without target-feature annotations. See the

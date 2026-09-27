@@ -1,18 +1,24 @@
-// Generated explicit-token migration aliases. Do not edit.
+// Generated deprecated token-constructor forwarders. Do not edit.
 impl<T: F32x8FromHalves> f32x8<T> {
     #[inline(always)]
-    #[doc = "Explicit-token alias of [`Self::from_halves`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_halves_t`].\n\nUse `from_halves_t` to keep explicit-token construction when `from_halves` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_halves_t(token, lo, hi); from_halves becomes tokenless in magetypes 0.10."
+    )]
     #[forbid(unsafe_code)]
-    pub fn from_halves_t(token: T, lo: f32x4<T>, hi: f32x4<T>) -> Self {
-        Self::from_halves(token, lo, hi)
+    pub fn from_halves(token: T, lo: f32x4<T>, hi: f32x4<T>) -> Self {
+        Self::from_halves_t(token, lo, hi)
     }
 }
 #[cfg(feature = "w512")]
 impl<T: F32x16FromHalves> f32x16<T> {
     #[inline(always)]
-    #[doc = "Explicit-token alias of [`Self::from_halves`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_halves_t`].\n\nUse `from_halves_t` to keep explicit-token construction when `from_halves` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_halves_t(token, lo, hi); from_halves becomes tokenless in magetypes 0.10."
+    )]
     #[forbid(unsafe_code)]
-    pub fn from_halves_t(token: T, lo: f32x8<T>, hi: f32x8<T>) -> Self {
-        Self::from_halves(token, lo, hi)
+    pub fn from_halves(token: T, lo: f32x8<T>, hi: f32x8<T>) -> Self {
+        Self::from_halves_t(token, lo, hi)
     }
 }

@@ -43,7 +43,7 @@ where
 {
     for (s, d) in src.chunks_exact(8).zip(dst.chunks_exact_mut(8)) {
         let arr: [u16; 8] = s.try_into().unwrap();
-        let v = u16x8::<T>::from_array(t, arr);
+        let v = u16x8::<T>::from_array_t(t, arr);
         d.copy_from_slice(&v.shr_logical_const::<3>().to_array());
     }
 }
@@ -55,7 +55,7 @@ where
 {
     for (s, d) in src.chunks_exact(8).zip(dst.chunks_exact_mut(8)) {
         let arr: [u16; 8] = s.try_into().unwrap();
-        let v = u16x8::<T>::from_array(t, arr);
+        let v = u16x8::<T>::from_array_t(t, arr);
         d.copy_from_slice(&v.shr_logical_uniform(count).to_array());
     }
 }
@@ -65,10 +65,10 @@ fn cdef_const_slice<T>(t: T, src: &[u16], dst: &mut [u16], thr: u16)
 where
     T: magetypes::simd::backends::U16x8Backend,
 {
-    let vthr = u16x8::<T>::splat(t, thr);
+    let vthr = u16x8::<T>::splat_t(t, thr);
     for (s, d) in src.chunks_exact(8).zip(dst.chunks_exact_mut(8)) {
         let arr: [u16; 8] = s.try_into().unwrap();
-        let v = u16x8::<T>::from_array(t, arr);
+        let v = u16x8::<T>::from_array_t(t, arr);
         d.copy_from_slice(&vthr.saturating_sub(v.shr_logical_const::<3>()).to_array());
     }
 }
@@ -78,10 +78,10 @@ fn cdef_uniform_slice<T>(t: T, src: &[u16], dst: &mut [u16], thr: u16, count: u3
 where
     T: magetypes::simd::backends::U16x8Backend,
 {
-    let vthr = u16x8::<T>::splat(t, thr);
+    let vthr = u16x8::<T>::splat_t(t, thr);
     for (s, d) in src.chunks_exact(8).zip(dst.chunks_exact_mut(8)) {
         let arr: [u16; 8] = s.try_into().unwrap();
-        let v = u16x8::<T>::from_array(t, arr);
+        let v = u16x8::<T>::from_array_t(t, arr);
         d.copy_from_slice(&vthr.saturating_sub(v.shr_logical_uniform(count)).to_array());
     }
 }
@@ -90,10 +90,10 @@ fn wrapping_sub_slice<T>(t: T, src: &[u16], dst: &mut [u16], thr: u16)
 where
     T: magetypes::simd::backends::U16x8Backend,
 {
-    let vthr = u16x8::<T>::splat(t, thr);
+    let vthr = u16x8::<T>::splat_t(t, thr);
     for (s, d) in src.chunks_exact(8).zip(dst.chunks_exact_mut(8)) {
         let arr: [u16; 8] = s.try_into().unwrap();
-        let v = u16x8::<T>::from_array(t, arr);
+        let v = u16x8::<T>::from_array_t(t, arr);
         d.copy_from_slice(&(vthr - v).to_array());
     }
 }
@@ -102,10 +102,10 @@ fn saturating_sub_slice<T>(t: T, src: &[u16], dst: &mut [u16], thr: u16)
 where
     T: magetypes::simd::backends::U16x8Backend,
 {
-    let vthr = u16x8::<T>::splat(t, thr);
+    let vthr = u16x8::<T>::splat_t(t, thr);
     for (s, d) in src.chunks_exact(8).zip(dst.chunks_exact_mut(8)) {
         let arr: [u16; 8] = s.try_into().unwrap();
-        let v = u16x8::<T>::from_array(t, arr);
+        let v = u16x8::<T>::from_array_t(t, arr);
         d.copy_from_slice(&vthr.saturating_sub(v).to_array());
     }
 }
@@ -118,7 +118,7 @@ where
 {
     for (s, d) in src.chunks_exact(4).zip(dst.chunks_exact_mut(4)) {
         let arr: [u32; 4] = s.try_into().unwrap();
-        let v = u32x4::<T>::from_array(t, arr);
+        let v = u32x4::<T>::from_array_t(t, arr);
         d.copy_from_slice(&v.shr_logical_const::<3>().to_array());
     }
 }
@@ -129,7 +129,7 @@ where
 {
     for (s, d) in src.chunks_exact(4).zip(dst.chunks_exact_mut(4)) {
         let arr: [u32; 4] = s.try_into().unwrap();
-        let v = u32x4::<T>::from_array(t, arr);
+        let v = u32x4::<T>::from_array_t(t, arr);
         d.copy_from_slice(&v.shr_logical_uniform(count).to_array());
     }
 }

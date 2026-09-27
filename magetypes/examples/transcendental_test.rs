@@ -13,37 +13,37 @@ mod x86_impl {
 
     #[arcane]
     pub fn test_log2(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-        f32x8::load(token, input).log2_lowp().to_array()
+        f32x8::load_t(token, input).log2_lowp().to_array()
     }
 
     #[arcane]
     pub fn test_exp2(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-        f32x8::load(token, input).exp2_lowp().to_array()
+        f32x8::load_t(token, input).exp2_lowp().to_array()
     }
 
     #[arcane]
     pub fn test_pow(token: X64V3Token, input: &[f32; 8], n: f32) -> [f32; 8] {
-        f32x8::load(token, input).pow_lowp(n).to_array()
+        f32x8::load_t(token, input).pow_lowp(n).to_array()
     }
 
     #[arcane]
     pub fn test_ln(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-        f32x8::load(token, input).ln_lowp().to_array()
+        f32x8::load_t(token, input).ln_lowp().to_array()
     }
 
     #[arcane]
     pub fn test_exp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-        f32x8::load(token, input).exp_lowp().to_array()
+        f32x8::load_t(token, input).exp_lowp().to_array()
     }
 
     #[arcane]
     pub fn test_log10(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-        f32x8::load(token, input).log10_lowp().to_array()
+        f32x8::load_t(token, input).log10_lowp().to_array()
     }
 
     #[arcane]
     pub fn test_cbrt_midp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-        f32x8::load(token, input).cbrt_midp().to_array()
+        f32x8::load_t(token, input).cbrt_midp().to_array()
     }
 
     pub fn main() {

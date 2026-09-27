@@ -1,6 +1,7 @@
 //! Migration spellings are usable without target-feature attributes, including
 //! in backend-generic helpers. Existing spellings continue to compile alongside.
 #![forbid(unsafe_code)]
+#![deny(deprecated)]
 
 use archmage::ScalarToken;
 use magetypes::simd::backends::F32x8Backend;
@@ -52,8 +53,10 @@ macro_rules! family {
             $name::splat_t(token, 3 as $elem).to_array(),
             [3 as $elem; $lanes]
         );
+        #[allow(deprecated)] // Only this call deliberately uses the old spelling.
+        let legacy = $name::splat(token, 3 as $elem);
         assert_eq!(
-            $name::splat(token, 3 as $elem).to_array(),
+            legacy.to_array(),
             $name::splat_t(token, 3 as $elem).to_array()
         );
     }};
@@ -172,6 +175,7 @@ fn conversion_and_block_aliases() {
 
 // Exercise the published define syntax, with both spellings in the same body.
 #[archmage::magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+#[allow(deprecated)] // Published macro syntax must retain legacy calls too.
 fn defined(token: Token) -> [f32; 8] {
     generic_bits_and_views(token);
     (f32x8::splat_t(token, 2.0) + f32x8::splat(token, 3.0)).to_array()

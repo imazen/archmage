@@ -41,7 +41,7 @@ macro_rules! bitmask_tests {
 
             fn make(arr: [$elem_ty; $lanes]) -> Option<$ty<$token_ty>> {
                 let token = $token_fn()?;
-                Some($ty::from_array(token, arr))
+                Some($ty::from_array_t(token, arr))
             }
 
             #[test]

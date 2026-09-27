@@ -19,9 +19,9 @@ array chunks and value loads rather than vector-reference slice casts.
 use archmage::prelude::*;
 #[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
 fn roundtrip_impl(token: Token) -> [f32; 8] {
-    let v = f32x8::splat(token, 1.0);
+    let v = f32x8::splat_t(token, 1.0);
     let bytes = *v.as_bytes();
-    f32x8::from_bytes(token, &bytes).to_array()
+    f32x8::from_bytes_t(token, &bytes).to_array()
 }
 pub fn roundtrip() -> [f32; 8] {
     incant!(roundtrip_impl(), [v3, neon, wasm128, scalar])

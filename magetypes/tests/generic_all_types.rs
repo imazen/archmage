@@ -23,11 +23,11 @@ macro_rules! float_tests {
             fn construction() {
                 let t = ScalarToken;
                 assert_eq!(
-                    $ty::<ScalarToken>::zero(t).to_array(),
+                    $ty::<ScalarToken>::zero_t(t).to_array(),
                     [0.0 as $elem; $lanes]
                 );
                 assert_eq!(
-                    $ty::<ScalarToken>::splat(t, 5.0 as $elem).to_array(),
+                    $ty::<ScalarToken>::splat_t(t, 5.0 as $elem).to_array(),
                     [5.0 as $elem; $lanes]
                 );
             }
@@ -35,10 +35,10 @@ macro_rules! float_tests {
             #[test]
             fn load_store_roundtrip() {
                 let t = ScalarToken;
-                let v = $ty::<ScalarToken>::splat(t, 42.0 as $elem);
+                let v = $ty::<ScalarToken>::splat_t(t, 42.0 as $elem);
                 let arr = v.to_array();
                 assert_eq!(arr, [42.0 as $elem; $lanes]);
-                let v2 = $ty::<ScalarToken>::from_array(t, arr);
+                let v2 = $ty::<ScalarToken>::from_array_t(t, arr);
                 let mut out = [0.0 as $elem; $lanes];
                 v2.store(&mut out);
                 assert_eq!(out, [42.0 as $elem; $lanes]);
@@ -48,7 +48,7 @@ macro_rules! float_tests {
             fn from_slice() {
                 let t = ScalarToken;
                 let data: Vec<$elem> = (0..($lanes + 2)).map(|i| (i as $elem) + 1.0).collect();
-                let v = $ty::<ScalarToken>::from_slice(t, &data);
+                let v = $ty::<ScalarToken>::from_slice_t(t, &data);
                 for i in 0..$lanes {
                     assert_eq!(v[i], (i as $elem) + 1.0);
                 }
@@ -57,8 +57,8 @@ macro_rules! float_tests {
             #[test]
             fn arithmetic() {
                 let t = ScalarToken;
-                let a = $ty::<ScalarToken>::splat(t, 6.0 as $elem);
-                let b = $ty::<ScalarToken>::splat(t, 2.0 as $elem);
+                let a = $ty::<ScalarToken>::splat_t(t, 6.0 as $elem);
+                let b = $ty::<ScalarToken>::splat_t(t, 2.0 as $elem);
                 assert_eq!((a + b).to_array(), [8.0 as $elem; $lanes]);
                 assert_eq!((a - b).to_array(), [4.0 as $elem; $lanes]);
                 assert_eq!((a * b).to_array(), [12.0 as $elem; $lanes]);
@@ -69,12 +69,12 @@ macro_rules! float_tests {
             #[test]
             fn math() {
                 let t = ScalarToken;
-                let v = $ty::<ScalarToken>::splat(t, 4.0 as $elem);
+                let v = $ty::<ScalarToken>::splat_t(t, 4.0 as $elem);
                 assert_eq!(v.sqrt().to_array(), [2.0 as $elem; $lanes]);
                 assert_eq!(v.abs().to_array(), [4.0 as $elem; $lanes]);
                 assert_eq!((-v).abs().to_array(), [4.0 as $elem; $lanes]);
 
-                let w = $ty::<ScalarToken>::splat(t, 2.7 as $elem);
+                let w = $ty::<ScalarToken>::splat_t(t, 2.7 as $elem);
                 assert_eq!(w.floor().to_array(), [2.0 as $elem; $lanes]);
                 assert_eq!(w.ceil().to_array(), [3.0 as $elem; $lanes]);
             }
@@ -82,9 +82,9 @@ macro_rules! float_tests {
             #[test]
             fn mul_add_sub() {
                 let t = ScalarToken;
-                let a = $ty::<ScalarToken>::splat(t, 2.0 as $elem);
-                let b = $ty::<ScalarToken>::splat(t, 3.0 as $elem);
-                let c = $ty::<ScalarToken>::splat(t, 1.0 as $elem);
+                let a = $ty::<ScalarToken>::splat_t(t, 2.0 as $elem);
+                let b = $ty::<ScalarToken>::splat_t(t, 3.0 as $elem);
+                let c = $ty::<ScalarToken>::splat_t(t, 1.0 as $elem);
                 assert_eq!(a.mul_add(b, c).to_array(), [7.0 as $elem; $lanes]);
                 assert_eq!(a.mul_sub(b, c).to_array(), [5.0 as $elem; $lanes]);
             }
@@ -92,11 +92,11 @@ macro_rules! float_tests {
             #[test]
             fn comparisons_and_blend() {
                 let t = ScalarToken;
-                let a = $ty::<ScalarToken>::splat(t, 3.0 as $elem);
-                let b = $ty::<ScalarToken>::splat(t, 5.0 as $elem);
+                let a = $ty::<ScalarToken>::splat_t(t, 3.0 as $elem);
+                let b = $ty::<ScalarToken>::splat_t(t, 5.0 as $elem);
                 let mask = a.simd_lt(b);
-                let one = $ty::<ScalarToken>::splat(t, 1.0 as $elem);
-                let zero = $ty::<ScalarToken>::zero(t);
+                let one = $ty::<ScalarToken>::splat_t(t, 1.0 as $elem);
+                let zero = $ty::<ScalarToken>::zero_t(t);
                 // a < b is all-true → blend picks `one`
                 assert_eq!(
                     $ty::blend(mask, one, zero).to_array(),
@@ -113,10 +113,10 @@ macro_rules! float_tests {
             #[test]
             fn all_six_comparisons() {
                 let t = ScalarToken;
-                let lo = $ty::<ScalarToken>::splat(t, 1.0 as $elem);
-                let hi = $ty::<ScalarToken>::splat(t, 2.0 as $elem);
-                let one = $ty::<ScalarToken>::splat(t, 1.0 as $elem);
-                let zero = $ty::<ScalarToken>::zero(t);
+                let lo = $ty::<ScalarToken>::splat_t(t, 1.0 as $elem);
+                let hi = $ty::<ScalarToken>::splat_t(t, 2.0 as $elem);
+                let one = $ty::<ScalarToken>::splat_t(t, 1.0 as $elem);
+                let zero = $ty::<ScalarToken>::zero_t(t);
 
                 // eq/ne
                 assert_eq!(
@@ -149,7 +149,7 @@ macro_rules! float_tests {
             #[test]
             fn reductions() {
                 let t = ScalarToken;
-                let v = $ty::<ScalarToken>::splat(t, 1.0 as $elem);
+                let v = $ty::<ScalarToken>::splat_t(t, 1.0 as $elem);
                 assert_eq!(v.reduce_add(), $lanes as $elem);
                 assert_eq!(v.reduce_min(), 1.0 as $elem);
                 assert_eq!(v.reduce_max(), 1.0 as $elem);
@@ -158,19 +158,19 @@ macro_rules! float_tests {
             #[test]
             fn clamp() {
                 let t = ScalarToken;
-                let v = $ty::<ScalarToken>::splat(t, 10.0 as $elem);
-                let lo = $ty::<ScalarToken>::splat(t, 0.0 as $elem);
-                let hi = $ty::<ScalarToken>::splat(t, 5.0 as $elem);
+                let v = $ty::<ScalarToken>::splat_t(t, 10.0 as $elem);
+                let lo = $ty::<ScalarToken>::splat_t(t, 0.0 as $elem);
+                let hi = $ty::<ScalarToken>::splat_t(t, 5.0 as $elem);
                 assert_eq!(v.clamp(lo, hi).to_array(), [5.0 as $elem; $lanes]);
 
-                let v2 = $ty::<ScalarToken>::splat(t, -1.0 as $elem);
+                let v2 = $ty::<ScalarToken>::splat_t(t, -1.0 as $elem);
                 assert_eq!(v2.clamp(lo, hi).to_array(), [0.0 as $elem; $lanes]);
             }
 
             #[test]
             fn indexing() {
                 let t = ScalarToken;
-                let mut v = $ty::<ScalarToken>::splat(t, 1.0 as $elem);
+                let mut v = $ty::<ScalarToken>::splat_t(t, 1.0 as $elem);
                 assert_eq!(v[0], 1.0 as $elem);
                 v[0] = 99.0 as $elem;
                 assert_eq!(v[0], 99.0 as $elem);
@@ -181,21 +181,21 @@ macro_rules! float_tests {
             #[test]
             fn assign_ops() {
                 let t = ScalarToken;
-                let mut v = $ty::<ScalarToken>::splat(t, 2.0 as $elem);
-                v += $ty::<ScalarToken>::splat(t, 3.0 as $elem);
+                let mut v = $ty::<ScalarToken>::splat_t(t, 2.0 as $elem);
+                v += $ty::<ScalarToken>::splat_t(t, 3.0 as $elem);
                 assert_eq!(v.to_array(), [5.0 as $elem; $lanes]);
-                v -= $ty::<ScalarToken>::splat(t, 1.0 as $elem);
+                v -= $ty::<ScalarToken>::splat_t(t, 1.0 as $elem);
                 assert_eq!(v.to_array(), [4.0 as $elem; $lanes]);
-                v *= $ty::<ScalarToken>::splat(t, 2.0 as $elem);
+                v *= $ty::<ScalarToken>::splat_t(t, 2.0 as $elem);
                 assert_eq!(v.to_array(), [8.0 as $elem; $lanes]);
-                v /= $ty::<ScalarToken>::splat(t, 4.0 as $elem);
+                v /= $ty::<ScalarToken>::splat_t(t, 4.0 as $elem);
                 assert_eq!(v.to_array(), [2.0 as $elem; $lanes]);
             }
 
             #[test]
             fn scalar_broadcast() {
                 let t = ScalarToken;
-                let v = $ty::<ScalarToken>::splat(t, 10.0 as $elem);
+                let v = $ty::<ScalarToken>::splat_t(t, 10.0 as $elem);
                 assert_eq!((v + 5.0 as $elem).to_array(), [15.0 as $elem; $lanes]);
                 assert_eq!((v - 3.0 as $elem).to_array(), [7.0 as $elem; $lanes]);
                 assert_eq!((v * 2.0 as $elem).to_array(), [20.0 as $elem; $lanes]);
@@ -205,7 +205,7 @@ macro_rules! float_tests {
             #[test]
             fn into_array() {
                 let t = ScalarToken;
-                let v = $ty::<ScalarToken>::splat(t, 7.0 as $elem);
+                let v = $ty::<ScalarToken>::splat_t(t, 7.0 as $elem);
                 let arr: [$elem; $lanes] = v.into();
                 assert_eq!(arr, [7.0 as $elem; $lanes]);
             }
@@ -213,7 +213,7 @@ macro_rules! float_tests {
             #[test]
             fn debug_format() {
                 let t = ScalarToken;
-                let v = $ty::<ScalarToken>::splat(t, 1.0 as $elem);
+                let v = $ty::<ScalarToken>::splat_t(t, 1.0 as $elem);
                 let s = format!("{v:?}");
                 assert!(
                     s.contains(stringify!($ty)),
@@ -226,7 +226,7 @@ macro_rules! float_tests {
             #[test]
             fn not_bitwise() {
                 let t = ScalarToken;
-                let z = $ty::<ScalarToken>::zero(t);
+                let z = $ty::<ScalarToken>::zero_t(t);
                 // NOT of all-zeros gives NaN (all bits set)
                 for &val in &z.not().to_array() {
                     assert!(val.is_nan(), "NOT(0.0) should be NaN");
@@ -255,9 +255,12 @@ macro_rules! common_int_tests {
         #[test]
         fn construction() {
             let t = ScalarToken;
-            assert_eq!($ty::<ScalarToken>::zero(t).to_array(), [0 as $elem; $lanes]);
             assert_eq!(
-                $ty::<ScalarToken>::splat(t, 5 as $elem).to_array(),
+                $ty::<ScalarToken>::zero_t(t).to_array(),
+                [0 as $elem; $lanes]
+            );
+            assert_eq!(
+                $ty::<ScalarToken>::splat_t(t, 5 as $elem).to_array(),
                 [5 as $elem; $lanes]
             );
         }
@@ -265,10 +268,10 @@ macro_rules! common_int_tests {
         #[test]
         fn load_store_roundtrip() {
             let t = ScalarToken;
-            let v = $ty::<ScalarToken>::splat(t, 42 as $elem);
+            let v = $ty::<ScalarToken>::splat_t(t, 42 as $elem);
             let arr = v.to_array();
             assert_eq!(arr, [42 as $elem; $lanes]);
-            let v2 = $ty::<ScalarToken>::from_array(t, arr);
+            let v2 = $ty::<ScalarToken>::from_array_t(t, arr);
             let mut out = [0 as $elem; $lanes];
             v2.store(&mut out);
             assert_eq!(out, [42 as $elem; $lanes]);
@@ -277,8 +280,8 @@ macro_rules! common_int_tests {
         #[test]
         fn add_sub() {
             let t = ScalarToken;
-            let a = $ty::<ScalarToken>::splat(t, 10 as $elem);
-            let b = $ty::<ScalarToken>::splat(t, 3 as $elem);
+            let a = $ty::<ScalarToken>::splat_t(t, 10 as $elem);
+            let b = $ty::<ScalarToken>::splat_t(t, 3 as $elem);
             assert_eq!((a + b).to_array(), [13 as $elem; $lanes]);
             assert_eq!((a - b).to_array(), [7 as $elem; $lanes]);
         }
@@ -286,19 +289,19 @@ macro_rules! common_int_tests {
         #[test]
         fn min_max_clamp() {
             let t = ScalarToken;
-            let a = $ty::<ScalarToken>::splat(t, 3 as $elem);
-            let b = $ty::<ScalarToken>::splat(t, 7 as $elem);
+            let a = $ty::<ScalarToken>::splat_t(t, 3 as $elem);
+            let b = $ty::<ScalarToken>::splat_t(t, 7 as $elem);
             assert_eq!(a.min(b).to_array(), [3 as $elem; $lanes]);
             assert_eq!(a.max(b).to_array(), [7 as $elem; $lanes]);
-            let v = $ty::<ScalarToken>::splat(t, 10 as $elem);
+            let v = $ty::<ScalarToken>::splat_t(t, 10 as $elem);
             assert_eq!(v.clamp(a, b).to_array(), [7 as $elem; $lanes]);
         }
 
         #[test]
         fn comparisons() {
             let t = ScalarToken;
-            let a = $ty::<ScalarToken>::splat(t, 3 as $elem);
-            let b = $ty::<ScalarToken>::splat(t, 5 as $elem);
+            let a = $ty::<ScalarToken>::splat_t(t, 3 as $elem);
+            let b = $ty::<ScalarToken>::splat_t(t, 5 as $elem);
             // a < b → all true
             assert!(a.simd_lt(b).all_true());
             // a == a → all true
@@ -316,27 +319,27 @@ macro_rules! common_int_tests {
         #[test]
         fn blend() {
             let t = ScalarToken;
-            let a = $ty::<ScalarToken>::splat(t, 10 as $elem);
-            let b = $ty::<ScalarToken>::splat(t, 20 as $elem);
+            let a = $ty::<ScalarToken>::splat_t(t, 10 as $elem);
+            let b = $ty::<ScalarToken>::splat_t(t, 20 as $elem);
             // All-1s mask → pick a
-            let mask = $ty::<ScalarToken>::splat(t, !0 as $elem);
+            let mask = $ty::<ScalarToken>::splat_t(t, !0 as $elem);
             assert_eq!($ty::blend(mask, a, b).to_array(), [10 as $elem; $lanes]);
             // All-0s mask → pick b
-            let no_mask = $ty::<ScalarToken>::zero(t);
+            let no_mask = $ty::<ScalarToken>::zero_t(t);
             assert_eq!($ty::blend(no_mask, a, b).to_array(), [20 as $elem; $lanes]);
         }
 
         #[test]
         fn reduce_add() {
             let t = ScalarToken;
-            let v = $ty::<ScalarToken>::splat(t, 1 as $elem);
+            let v = $ty::<ScalarToken>::splat_t(t, 1 as $elem);
             assert_eq!(v.reduce_add(), $lanes as $elem);
         }
 
         #[test]
         fn shifts() {
             let t = ScalarToken;
-            let v = $ty::<ScalarToken>::splat(t, 4 as $elem);
+            let v = $ty::<ScalarToken>::splat_t(t, 4 as $elem);
             assert_eq!(v.shl_const::<1>().to_array(), [8 as $elem; $lanes]);
             assert_eq!(v.shr_logical_const::<1>().to_array(), [2 as $elem; $lanes]);
         }
@@ -344,8 +347,8 @@ macro_rules! common_int_tests {
         #[test]
         fn bitwise_ops() {
             let t = ScalarToken;
-            let a = $ty::<ScalarToken>::splat(t, 0x0F as $elem);
-            let b = $ty::<ScalarToken>::splat(t, 0x03 as $elem);
+            let a = $ty::<ScalarToken>::splat_t(t, 0x0F as $elem);
+            let b = $ty::<ScalarToken>::splat_t(t, 0x03 as $elem);
             assert_eq!((a & b).to_array(), [0x03 as $elem; $lanes]);
             assert_eq!((a | b).to_array(), [0x0F as $elem; $lanes]);
             assert_eq!((a ^ b).to_array(), [0x0C as $elem; $lanes]);
@@ -354,15 +357,15 @@ macro_rules! common_int_tests {
         #[test]
         fn not_op() {
             let t = ScalarToken;
-            let z = $ty::<ScalarToken>::zero(t);
+            let z = $ty::<ScalarToken>::zero_t(t);
             assert_eq!(z.not().to_array(), [!0 as $elem; $lanes]);
         }
 
         #[test]
         fn boolean_reductions() {
             let t = ScalarToken;
-            let all = $ty::<ScalarToken>::splat(t, !0 as $elem);
-            let none = $ty::<ScalarToken>::zero(t);
+            let all = $ty::<ScalarToken>::splat_t(t, !0 as $elem);
+            let none = $ty::<ScalarToken>::zero_t(t);
             assert!(all.all_true());
             assert!(all.any_true());
             assert!(!none.all_true());
@@ -372,8 +375,8 @@ macro_rules! common_int_tests {
         #[test]
         fn bitmask() {
             let t = ScalarToken;
-            let all = $ty::<ScalarToken>::splat(t, !0 as $elem);
-            let none = $ty::<ScalarToken>::zero(t);
+            let all = $ty::<ScalarToken>::splat_t(t, !0 as $elem);
+            let none = $ty::<ScalarToken>::zero_t(t);
             let expected: u64 = if $lanes >= 64 {
                 !0u64
             } else {
@@ -386,7 +389,7 @@ macro_rules! common_int_tests {
         #[test]
         fn indexing() {
             let t = ScalarToken;
-            let mut v = $ty::<ScalarToken>::splat(t, 1 as $elem);
+            let mut v = $ty::<ScalarToken>::splat_t(t, 1 as $elem);
             assert_eq!(v[0], 1 as $elem);
             v[0] = 99 as $elem;
             assert_eq!(v[0], 99 as $elem);
@@ -396,7 +399,7 @@ macro_rules! common_int_tests {
         #[test]
         fn scalar_broadcast_add_sub() {
             let t = ScalarToken;
-            let v = $ty::<ScalarToken>::splat(t, 10 as $elem);
+            let v = $ty::<ScalarToken>::splat_t(t, 10 as $elem);
             assert_eq!((v + 5 as $elem).to_array(), [15 as $elem; $lanes]);
             assert_eq!((v - 3 as $elem).to_array(), [7 as $elem; $lanes]);
         }
@@ -404,17 +407,17 @@ macro_rules! common_int_tests {
         #[test]
         fn assign_add_sub() {
             let t = ScalarToken;
-            let mut v = $ty::<ScalarToken>::splat(t, 2 as $elem);
-            v += $ty::<ScalarToken>::splat(t, 3 as $elem);
+            let mut v = $ty::<ScalarToken>::splat_t(t, 2 as $elem);
+            v += $ty::<ScalarToken>::splat_t(t, 3 as $elem);
             assert_eq!(v.to_array(), [5 as $elem; $lanes]);
-            v -= $ty::<ScalarToken>::splat(t, 1 as $elem);
+            v -= $ty::<ScalarToken>::splat_t(t, 1 as $elem);
             assert_eq!(v.to_array(), [4 as $elem; $lanes]);
         }
 
         #[test]
         fn debug_format() {
             let t = ScalarToken;
-            let v = $ty::<ScalarToken>::splat(t, 1 as $elem);
+            let v = $ty::<ScalarToken>::splat_t(t, 1 as $elem);
             let s = format!("{v:?}");
             assert!(
                 s.contains(stringify!($ty)),
@@ -427,7 +430,7 @@ macro_rules! common_int_tests {
         #[test]
         fn into_array() {
             let t = ScalarToken;
-            let v = $ty::<ScalarToken>::splat(t, 7 as $elem);
+            let v = $ty::<ScalarToken>::splat_t(t, 7 as $elem);
             let arr: [$elem; $lanes] = v.into();
             assert_eq!(arr, [7 as $elem; $lanes]);
         }
@@ -440,21 +443,21 @@ macro_rules! signed_extras {
         #[test]
         fn neg() {
             let t = ScalarToken;
-            let v = $ty::<ScalarToken>::splat(t, 5 as $elem);
+            let v = $ty::<ScalarToken>::splat_t(t, 5 as $elem);
             assert_eq!((-v).to_array(), [-5 as $elem; $lanes]);
         }
 
         #[test]
         fn abs() {
             let t = ScalarToken;
-            let v = $ty::<ScalarToken>::splat(t, -5 as $elem);
+            let v = $ty::<ScalarToken>::splat_t(t, -5 as $elem);
             assert_eq!(v.abs().to_array(), [5 as $elem; $lanes]);
         }
 
         #[test]
         fn shr_arithmetic() {
             let t = ScalarToken;
-            let v = $ty::<ScalarToken>::splat(t, -8 as $elem);
+            let v = $ty::<ScalarToken>::splat_t(t, -8 as $elem);
             assert_eq!(
                 v.shr_arithmetic_const::<1>().to_array(),
                 [-4 as $elem; $lanes]
@@ -469,23 +472,23 @@ macro_rules! mul_extras {
         #[test]
         fn mul() {
             let t = ScalarToken;
-            let a = $ty::<ScalarToken>::splat(t, 3 as $elem);
-            let b = $ty::<ScalarToken>::splat(t, 4 as $elem);
+            let a = $ty::<ScalarToken>::splat_t(t, 3 as $elem);
+            let b = $ty::<ScalarToken>::splat_t(t, 4 as $elem);
             assert_eq!((a * b).to_array(), [12 as $elem; $lanes]);
         }
 
         #[test]
         fn mul_assign() {
             let t = ScalarToken;
-            let mut v = $ty::<ScalarToken>::splat(t, 3 as $elem);
-            v *= $ty::<ScalarToken>::splat(t, 2 as $elem);
+            let mut v = $ty::<ScalarToken>::splat_t(t, 3 as $elem);
+            v *= $ty::<ScalarToken>::splat_t(t, 2 as $elem);
             assert_eq!(v.to_array(), [6 as $elem; $lanes]);
         }
 
         #[test]
         fn scalar_mul() {
             let t = ScalarToken;
-            let v = $ty::<ScalarToken>::splat(t, 5 as $elem);
+            let v = $ty::<ScalarToken>::splat_t(t, 5 as $elem);
             assert_eq!((v * 3 as $elem).to_array(), [15 as $elem; $lanes]);
         }
     };
@@ -583,23 +586,23 @@ use magetypes::simd::backends::{F32x4Backend, F32x8Backend, I32x4Backend};
 use magetypes::simd::generic::{f32x4, f32x8, i32x4};
 
 fn generic_sum_f32x8<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
-    let v = f32x8::<T>::load(token, data);
+    let v = f32x8::<T>::load_t(token, data);
     v.reduce_add()
 }
 
 fn generic_dot_f32x8<T: F32x8Backend>(token: T, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    let va = f32x8::<T>::load(token, a);
-    let vb = f32x8::<T>::load(token, b);
+    let va = f32x8::<T>::load_t(token, a);
+    let vb = f32x8::<T>::load_t(token, b);
     (va * vb).reduce_add()
 }
 
 fn generic_sum_f32x4<T: F32x4Backend>(token: T, data: &[f32; 4]) -> f32 {
-    let v = f32x4::<T>::load(token, data);
+    let v = f32x4::<T>::load_t(token, data);
     v.reduce_add()
 }
 
 fn generic_sum_i32x4<T: I32x4Backend>(token: T, data: &[i32; 4]) -> i32 {
-    let v = i32x4::<T>::load(token, data);
+    let v = i32x4::<T>::load_t(token, data);
     v.reduce_add()
 }
 
@@ -642,10 +645,10 @@ fn generic_functions_cross_backend() {
 // ============================================================================
 
 fn generic_euclidean_dist_sq<T: F32x8Backend>(token: T, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-    let va = f32x8::<T>::load(token, a);
-    let vb = f32x8::<T>::load(token, b);
+    let va = f32x8::<T>::load_t(token, a);
+    let vb = f32x8::<T>::load_t(token, b);
     let diff = va - vb;
-    diff.mul_add(diff, f32x8::<T>::zero(token)).reduce_add()
+    diff.mul_add(diff, f32x8::<T>::zero_t(token)).reduce_add()
 }
 
 #[test]

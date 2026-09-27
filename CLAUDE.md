@@ -12,7 +12,9 @@ and review the diff against the last published release before pushing.
 The unpublished constructor modes and `use(...)` / adaptive-alias experiments
 are preserved at bookmark `draft/context-constructors-2026-09-27` (commit
 `3ae7b632`). They are not the compatibility baseline. The migration API is the
-single-token vector family plus additive `_t(token, ...)` methods; see
+single-token vector family plus `_t(token, ...)` methods. Legacy token-taking
+names are deprecated in the next 0.9 patch; `_t` remains supported in 0.10,
+where the short names become non-deprecated feature-context constructors. See
 [the migration guide](docs/TOKEN-CONSTRUCTOR-MIGRATION.md).
 
 ## CRITICAL: Every Conversation Health Check

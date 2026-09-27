@@ -1071,7 +1071,7 @@ mod tests {
         // magetypes width traits name methods after WASM intrinsics.
         let scan = scan(
             "impl WidthDispatch for archmage::NeonToken {\n\
-             fn f32x4_splat(self, v: f32) -> Self::F32x4 { f32x4::splat(self, v) }\n\
+             fn f32x4_splat(self, v: f32) -> Self::F32x4 { f32x4::splat_t(self, v) }\n\
              fn call_it(self) { let _ = self.f32x4_splat(1.0); }\n\
              }\n",
         );

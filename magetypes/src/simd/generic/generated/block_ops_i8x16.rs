@@ -37,13 +37,13 @@ impl<T: I8x16Backend> i8x16<T> {
 
     /// Create from byte array reference (token-gated).
     #[inline(always)]
-    pub fn from_bytes(token: T, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes_t(token: T, bytes: &[u8; 16]) -> Self {
         Self(crate::simd_storage::copy(bytes), token)
     }
 
     /// Create from owned byte array (token-gated).
     #[inline(always)]
-    pub fn from_bytes_owned(token: T, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned_t(token: T, bytes: [u8; 16]) -> Self {
         Self(crate::simd_storage::cast(bytes), token)
     }
 
@@ -53,7 +53,7 @@ impl<T: I8x16Backend> i8x16<T> {
     ///
     /// Returns `None` if length is not a multiple of 16 or alignment is wrong.
     #[inline(always)]
-    pub fn cast_slice(token: T, slice: &[i8]) -> Option<&[Self]> {
+    pub fn cast_slice_t(token: T, slice: &[i8]) -> Option<&[Self]> {
         crate::simd_storage::vector_slice::<_, Self, 16>(token, slice)
     }
 
@@ -61,34 +61,46 @@ impl<T: I8x16Backend> i8x16<T> {
     ///
     /// Returns `None` if length is not a multiple of 16 or alignment is wrong.
     #[inline(always)]
-    pub fn cast_slice_mut(token: T, slice: &mut [i8]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut_t(token: T, slice: &mut [i8]) -> Option<&mut [Self]> {
         crate::simd_storage::vector_slice_mut::<_, Self, 16>(token, slice)
     }
 }
-// Generated explicit-token migration aliases. Do not edit.
+// Generated deprecated token-constructor forwarders. Do not edit.
 impl<T: I8x16Backend> i8x16<T> {
     #[inline(always)]
-    #[doc = "Explicit-token alias of [`Self::from_bytes`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_bytes_t`].\n\nUse `from_bytes_t` to keep explicit-token construction when `from_bytes` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_bytes_t(token, bytes); from_bytes becomes tokenless in magetypes 0.10."
+    )]
     #[forbid(unsafe_code)]
-    pub fn from_bytes_t(token: T, bytes: &[u8; 16]) -> Self {
-        Self::from_bytes(token, bytes)
+    pub fn from_bytes(token: T, bytes: &[u8; 16]) -> Self {
+        Self::from_bytes_t(token, bytes)
     }
     #[inline(always)]
-    #[doc = "Explicit-token alias of [`Self::from_bytes_owned`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_bytes_owned_t`].\n\nUse `from_bytes_owned_t` to keep explicit-token construction when `from_bytes_owned` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_bytes_owned_t(token, bytes); from_bytes_owned becomes tokenless in magetypes 0.10."
+    )]
     #[forbid(unsafe_code)]
-    pub fn from_bytes_owned_t(token: T, bytes: [u8; 16]) -> Self {
-        Self::from_bytes_owned(token, bytes)
+    pub fn from_bytes_owned(token: T, bytes: [u8; 16]) -> Self {
+        Self::from_bytes_owned_t(token, bytes)
     }
     #[inline(always)]
-    #[doc = "Explicit-token alias of [`Self::cast_slice`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[doc = "Deprecated token-taking spelling of [`Self::cast_slice_t`].\n\nUse `cast_slice_t` to keep explicit-token construction when `cast_slice` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use cast_slice_t(token, slice); cast_slice becomes tokenless in magetypes 0.10."
+    )]
     #[forbid(unsafe_code)]
-    pub fn cast_slice_t(token: T, slice: &[i8]) -> Option<&[Self]> {
-        Self::cast_slice(token, slice)
+    pub fn cast_slice(token: T, slice: &[i8]) -> Option<&[Self]> {
+        Self::cast_slice_t(token, slice)
     }
     #[inline(always)]
-    #[doc = "Explicit-token alias of [`Self::cast_slice_mut`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
+    #[doc = "Deprecated token-taking spelling of [`Self::cast_slice_mut_t`].\n\nUse `cast_slice_mut_t` to keep explicit-token construction when `cast_slice_mut` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use cast_slice_mut_t(token, slice); cast_slice_mut becomes tokenless in magetypes 0.10."
+    )]
     #[forbid(unsafe_code)]
-    pub fn cast_slice_mut_t(token: T, slice: &mut [i8]) -> Option<&mut [Self]> {
-        Self::cast_slice_mut(token, slice)
+    pub fn cast_slice_mut(token: T, slice: &mut [i8]) -> Option<&mut [Self]> {
+        Self::cast_slice_mut_t(token, slice)
     }
 }

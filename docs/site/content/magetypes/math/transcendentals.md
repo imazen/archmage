@@ -31,8 +31,8 @@ fn gamma_to_linear_scalar(encoded: f32, gamma: f32) -> f32 {
 fn gamma_to_linear_slice_tier(token: Token, values: &mut [f32], gamma: f32) {
     let (chunks, remainder) = values.as_chunks_mut::<16>();
     for chunk in chunks {
-        let v = f32x16::from_array(token, *chunk);
-        let clamped = v.max(f32x16::zero(token)).min(f32x16::splat(token, 1.0));
+        let v = f32x16::from_array_t(token, *chunk);
+        let clamped = v.max(f32x16::zero_t(token)).min(f32x16::splat_t(token, 1.0));
         *chunk = clamped.pow_midp(gamma).to_array();
     }
     for v in remainder {

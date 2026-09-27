@@ -32,7 +32,7 @@ use magetypes::simd::generic::{i8x16, i16x8, i32x4, i32x8, i64x2, u8x16, u32x4};
 /// Nonzero rule: true.
 macro_rules! assert_nonzero_is_not_true {
     ($ty:ident, $tok:expr, $one:expr) => {{
-        let v = $ty::splat($tok, $one);
+        let v = $ty::splat_t($tok, $one);
         assert!(
             !v.all_true(),
             concat!(
@@ -53,10 +53,10 @@ macro_rules! assert_nonzero_is_not_true {
 /// A real comparison mask still behaves.
 macro_rules! assert_mask_behaves {
     ($ty:ident, $tok:expr, $ones:expr, $zero:expr) => {{
-        assert!($ty::splat($tok, $ones).all_true());
-        assert!($ty::splat($tok, $ones).any_true());
-        assert!(!$ty::splat($tok, $zero).all_true());
-        assert!(!$ty::splat($tok, $zero).any_true());
+        assert!($ty::splat_t($tok, $ones).all_true());
+        assert!($ty::splat_t($tok, $ones).any_true());
+        assert!(!$ty::splat_t($tok, $zero).all_true());
+        assert!(!$ty::splat_t($tok, $zero).any_true());
     }};
 }
 
@@ -80,8 +80,8 @@ where
     // `== MAX` that NEON's `u32x4` used to apply.
     assert_nonzero_is_not_true!(u32x4, token, 1u32);
     assert_nonzero_is_not_true!(u8x16, token, 1u8);
-    assert!(u32x4::splat(token, 0x8000_0000u32).all_true());
-    assert!(u8x16::splat(token, 0x80u8).all_true());
+    assert!(u32x4::splat_t(token, 0x8000_0000u32).all_true());
+    assert!(u8x16::splat_t(token, 0x80u8).all_true());
 
     assert_mask_behaves!(i32x4, token, -1i32, 0i32);
     assert_mask_behaves!(i32x8, token, -1i32, 0i32);
@@ -96,8 +96,8 @@ fn check_cross_width<T>(token: T)
 where
     T: Copy + I32x4Backend + I32x8Backend,
 {
-    let a4 = i32x4::from_array(token, [0b01; 4]);
-    let a8 = i32x8::from_array(
+    let a4 = i32x4::from_array_t(token, [0b01; 4]);
+    let a8 = i32x8::from_array_t(
         token,
         core::array::from_fn(|i| if i < 4 { 0b01 } else { 0b10 }),
     );
@@ -106,7 +106,7 @@ where
     assert_eq!(a4.any_true(), a8.any_true(), "i32x4 and i32x8 disagree");
 
     // Sign bits set in one half only: `any_true` true, `all_true` false.
-    let b8 = i32x8::from_array(token, core::array::from_fn(|i| if i < 4 { -1 } else { 1 }));
+    let b8 = i32x8::from_array_t(token, core::array::from_fn(|i| if i < 4 { -1 } else { 1 }));
     assert!(b8.any_true() && !b8.all_true());
 }
 
@@ -120,18 +120,18 @@ where
     assert_nonzero_is_not_true!(i32x16, token, 1i32);
     assert_mask_behaves!(i32x16, token, -1i32, 0i32);
 
-    let a8 = i32x8::from_array(
+    let a8 = i32x8::from_array_t(
         token,
         core::array::from_fn(|i| if i < 4 { 0b01 } else { 0b10 }),
     );
-    let a16 = i32x16::from_array(
+    let a16 = i32x16::from_array_t(
         token,
         core::array::from_fn(|i| if i / 4 < 2 { 0b01 } else { 0b10 }),
     );
     assert_eq!(a8.all_true(), a16.all_true(), "i32x8 and i32x16 disagree");
     assert_eq!(a8.any_true(), a16.any_true(), "i32x8 and i32x16 disagree");
 
-    let b16 = i32x16::from_array(token, core::array::from_fn(|i| if i < 8 { -1 } else { 1 }));
+    let b16 = i32x16::from_array_t(token, core::array::from_fn(|i| if i < 8 { -1 } else { 1 }));
     assert!(b16.any_true() && !b16.all_true());
 }
 
@@ -147,14 +147,14 @@ where
     assert_mask_behaves!(i32x16, token, -1i32, 0i32);
 
     // Disjoint nonzero bits across the folded halves, sign bits clear.
-    let a16 = i32x16::from_array(
+    let a16 = i32x16::from_array_t(
         token,
         core::array::from_fn(|i| if i / 4 < 2 { 0b01 } else { 0b10 }),
     );
     assert!(!a16.all_true());
     assert!(!a16.any_true());
 
-    let b16 = i32x16::from_array(token, core::array::from_fn(|i| if i < 8 { -1 } else { 1 }));
+    let b16 = i32x16::from_array_t(token, core::array::from_fn(|i| if i < 8 { -1 } else { 1 }));
     assert!(b16.any_true() && !b16.all_true());
 }
 

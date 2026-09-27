@@ -11,7 +11,7 @@ mod x86_tests {
     fn partition_exact_multiple() {
         if let Some(token) = archmage::X64V3Token::summon() {
             let data: Vec<f32> = (0..24).map(|i| i as f32).collect();
-            let (chunks, remainder) = f32x8::partition_slice(token, &data);
+            let (chunks, remainder) = f32x8::partition_slice_t(token, &data);
             assert_eq!(chunks.len(), 3); // 24 / 8 = 3
             assert_eq!(remainder.len(), 0);
             assert_eq!(chunks[0], [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]);
@@ -24,7 +24,7 @@ mod x86_tests {
     fn partition_with_remainder() {
         if let Some(token) = archmage::X64V3Token::summon() {
             let data: Vec<f32> = (0..19).map(|i| i as f32).collect();
-            let (chunks, remainder) = f32x8::partition_slice(token, &data);
+            let (chunks, remainder) = f32x8::partition_slice_t(token, &data);
             assert_eq!(chunks.len(), 2); // 19 / 8 = 2
             assert_eq!(remainder.len(), 3); // 19 % 8 = 3
             assert_eq!(chunks[0], [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]);
@@ -37,7 +37,7 @@ mod x86_tests {
     fn partition_smaller_than_lanes() {
         if let Some(token) = archmage::X64V3Token::summon() {
             let data = [1.0f32, 2.0, 3.0];
-            let (chunks, remainder) = f32x8::partition_slice(token, &data);
+            let (chunks, remainder) = f32x8::partition_slice_t(token, &data);
             assert_eq!(chunks.len(), 0);
             assert_eq!(remainder.len(), 3);
             assert_eq!(remainder, &[1.0, 2.0, 3.0]);
@@ -48,7 +48,7 @@ mod x86_tests {
     fn partition_empty() {
         if let Some(token) = archmage::X64V3Token::summon() {
             let data: &[f32] = &[];
-            let (chunks, remainder) = f32x8::partition_slice(token, data);
+            let (chunks, remainder) = f32x8::partition_slice_t(token, data);
             assert_eq!(chunks.len(), 0);
             assert_eq!(remainder.len(), 0);
         }
@@ -58,7 +58,7 @@ mod x86_tests {
     fn partition_mut_modifies_in_place() {
         if let Some(token) = archmage::X64V3Token::summon() {
             let mut data: Vec<f32> = (0..20).map(|i| i as f32).collect();
-            let (chunks, remainder) = f32x8::partition_slice_mut(token, &mut data);
+            let (chunks, remainder) = f32x8::partition_slice_mut_t(token, &mut data);
 
             // Modify first chunk
             for x in chunks[0].iter_mut() {
@@ -83,10 +83,10 @@ mod x86_tests {
     fn partition_chunks_loadable() {
         if let Some(token) = archmage::X64V3Token::summon() {
             let data: Vec<f32> = (0..16).map(|i| i as f32).collect();
-            let (chunks, _) = f32x8::partition_slice(token, &data);
+            let (chunks, _) = f32x8::partition_slice_t(token, &data);
 
-            // Each chunk can be passed directly to f32x8::load
-            let v = f32x8::load(token, &chunks[0]);
+            // Each chunk can be passed directly to f32x8::load_t
+            let v = f32x8::load_t(token, &chunks[0]);
             let arr = v.to_array();
             assert_eq!(arr, [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]);
         }
@@ -97,7 +97,7 @@ mod x86_tests {
         if let Some(token) = archmage::X64V3Token::summon() {
             use magetypes::simd::i32x8;
             let data: Vec<i32> = (0..20).collect();
-            let (chunks, remainder) = i32x8::partition_slice(token, &data);
+            let (chunks, remainder) = i32x8::partition_slice_t(token, &data);
             assert_eq!(chunks.len(), 2);
             assert_eq!(remainder.len(), 4);
             assert_eq!(chunks[0], [0, 1, 2, 3, 4, 5, 6, 7]);
@@ -109,7 +109,7 @@ mod x86_tests {
         if let Some(token) = archmage::X64V3Token::summon() {
             use magetypes::simd::f32x4;
             let data: Vec<f32> = (0..10).map(|i| i as f32).collect();
-            let (chunks, remainder) = f32x4::partition_slice(token, &data);
+            let (chunks, remainder) = f32x4::partition_slice_t(token, &data);
             assert_eq!(chunks.len(), 2); // 10 / 4 = 2
             assert_eq!(remainder.len(), 2); // 10 % 4 = 2
             assert_eq!(chunks[0], [0.0, 1.0, 2.0, 3.0]);
@@ -127,11 +127,11 @@ fn scalar_partitions_preserve_extents_and_mutation() {
             use magetypes::simd::generic::$ty;
             for len in 0..=2 * $lanes + 1 {
                 let mut data: Vec<f32> = (0..len).map(|i| i as f32).collect();
-                let (chunks, tail) = $ty::partition_slice(archmage::ScalarToken, &data);
+                let (chunks, tail) = $ty::partition_slice_t(archmage::ScalarToken, &data);
                 assert_eq!(chunks.as_flattened().len() + tail.len(), len);
                 assert!(tail.len() < $lanes);
                 assert_eq!([chunks.as_flattened(), tail].concat(), data);
-                let (chunks, tail) = $ty::partition_slice_mut(archmage::ScalarToken, &mut data);
+                let (chunks, tail) = $ty::partition_slice_mut_t(archmage::ScalarToken, &mut data);
                 let bulk_len = chunks.len() * $lanes;
                 chunks.as_flattened_mut().fill(-1.0);
                 assert_eq!(tail, (bulk_len..len).map(|i| i as f32).collect::<Vec<_>>());

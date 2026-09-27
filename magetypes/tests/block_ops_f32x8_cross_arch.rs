@@ -25,7 +25,7 @@ type Tok = archmage::Wasm128Token;
 fn f32x8_to_u8_clamp_and_round() {
     if let Some(t) = Tok::summon() {
         // Clamp (neg->0, >255->255) + round-half-to-even (128.5->128, 0.5->0, 2.5->2).
-        let v = f32x8::<Tok>::from_array(t, [0.0, 127.6, 255.0, -5.0, 300.0, 128.5, 0.5, 2.5]);
+        let v = f32x8::<Tok>::from_array_t(t, [0.0, 127.6, 255.0, -5.0, 300.0, 128.5, 0.5, 2.5]);
         assert_eq!(v.to_u8(), [0, 128, 255, 0, 255, 128, 0, 2]);
     }
 }
@@ -38,10 +38,10 @@ fn f32x8_to_u8_clamp_and_round() {
 #[test]
 fn f32x8_store_8_rgba_u8_interleave() {
     if let Some(t) = Tok::summon() {
-        let r = f32x8::<Tok>::from_array(t, [0.0, 64.0, 128.0, 255.0, 1.0, 2.0, 3.0, 4.0]);
-        let g = f32x8::<Tok>::from_array(t, [10.0, 74.0, 138.0, 245.0, 11.0, 12.0, 13.0, 14.0]);
-        let b = f32x8::<Tok>::from_array(t, [20.0, 84.0, 148.0, 235.0, 21.0, 22.0, 23.0, 24.0]);
-        let a = f32x8::<Tok>::from_array(t, [255.0, 300.0, -5.0, 128.5, 31.0, 32.0, 33.0, 34.0]);
+        let r = f32x8::<Tok>::from_array_t(t, [0.0, 64.0, 128.0, 255.0, 1.0, 2.0, 3.0, 4.0]);
+        let g = f32x8::<Tok>::from_array_t(t, [10.0, 74.0, 138.0, 245.0, 11.0, 12.0, 13.0, 14.0]);
+        let b = f32x8::<Tok>::from_array_t(t, [20.0, 84.0, 148.0, 235.0, 21.0, 22.0, 23.0, 24.0]);
+        let a = f32x8::<Tok>::from_array_t(t, [255.0, 300.0, -5.0, 128.5, 31.0, 32.0, 33.0, 34.0]);
         let want: [u8; 32] = [
             0, 10, 20, 255, 64, 74, 84, 255, 128, 138, 148, 0, 255, 245, 235, 128, 1, 11, 21, 31,
             2, 12, 22, 32, 3, 13, 23, 33, 4, 14, 24, 34,
@@ -62,7 +62,7 @@ fn f32x8_transpose_8x8() {
         let inp: [[f32; 8]; 8] =
             core::array::from_fn(|i| core::array::from_fn(|j| (i * 8 + j) as f32));
         let mut rows: [f32x8<Tok>; 8] =
-            core::array::from_fn(|i| f32x8::<Tok>::from_array(t, inp[i]));
+            core::array::from_fn(|i| f32x8::<Tok>::from_array_t(t, inp[i]));
         f32x8::<Tok>::transpose_8x8(&mut rows);
         for i in 0..8 {
             let got = rows[i].to_array();

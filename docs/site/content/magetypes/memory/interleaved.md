@@ -16,7 +16,7 @@ same lane count. This reference exercise pins the channel order:
 use archmage::prelude::*;
 #[magetypes(define(f32x4), v3, neon, wasm128, scalar)]
 fn channels_impl(token: Token, pixels: [[f32; 4]; 4]) -> [[f32; 4]; 4] {
-    let vectors = pixels.map(|p| f32x4::from_array(token, p));
+    let vectors = pixels.map(|p| f32x4::from_array_t(token, p));
     f32x4::deinterleave_4ch(vectors).map(|v| v.to_array())
 }
 pub fn channels(pixels: [[f32; 4]; 4]) -> [[f32; 4]; 4] {

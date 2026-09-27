@@ -122,13 +122,13 @@ fn gen_basic_block_ops(
 
             /// Create from byte array reference (token-gated).
             #[inline(always)]
-            pub fn from_bytes(token: T, bytes: &[u8; {byte_size}]) -> Self {{
+            pub fn from_bytes_t(token: T, bytes: &[u8; {byte_size}]) -> Self {{
                 Self(crate::simd_storage::copy(bytes), token)
             }}
 
             /// Create from owned byte array (token-gated).
             #[inline(always)]
-            pub fn from_bytes_owned(token: T, bytes: [u8; {byte_size}]) -> Self {{
+            pub fn from_bytes_owned_t(token: T, bytes: [u8; {byte_size}]) -> Self {{
                 Self(crate::simd_storage::cast(bytes), token)
             }}
 
@@ -138,7 +138,7 @@ fn gen_basic_block_ops(
             ///
             /// Returns `None` if length is not a multiple of {lanes} or alignment is wrong.
             #[inline(always)]
-            pub fn cast_slice(token: T, slice: &[{elem}]) -> Option<&[Self]> {{
+            pub fn cast_slice_t(token: T, slice: &[{elem}]) -> Option<&[Self]> {{
                 crate::simd_storage::vector_slice::<_, Self, {lanes}>(token, slice)
             }}
 
@@ -146,7 +146,7 @@ fn gen_basic_block_ops(
             ///
             /// Returns `None` if length is not a multiple of {lanes} or alignment is wrong.
             #[inline(always)]
-            pub fn cast_slice_mut(token: T, slice: &mut [{elem}]) -> Option<&mut [Self]> {{
+            pub fn cast_slice_mut_t(token: T, slice: &mut [{elem}]) -> Option<&mut [Self]> {{
                 crate::simd_storage::vector_slice_mut::<_, Self, {lanes}>(token, slice)
             }}
     "#}
@@ -163,7 +163,7 @@ fn gen_f32x4_extras() -> String {
             ///
             /// Values are in `[0.0, 255.0]`. Useful for image processing.
             #[inline(always)]
-            pub fn from_u8(token: T, bytes: &[u8; 4]) -> Self {{
+            pub fn from_u8_t(token: T, bytes: &[u8; 4]) -> Self {{
                 Self::from_repr_unchecked(token, T::from_array(token, core::array::from_fn(|i| bytes[i] as f32)))
             }}
 
@@ -246,7 +246,7 @@ fn gen_f32x4_extras() -> String {
             /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
             /// Output: `(R, G, B, A)` where each is f32x4 with values in `[0.0, 255.0]`.
             #[inline(always)]
-            pub fn load_4_rgba_u8(token: T, rgba: &[u8; 16]) -> (Self, Self, Self, Self) {{
+            pub fn load_4_rgba_u8_t(token: T, rgba: &[u8; 16]) -> (Self, Self, Self, Self) {{
                 let r: [f32; 4] = core::array::from_fn(|i| rgba[i * 4] as f32);
                 let g: [f32; 4] = core::array::from_fn(|i| rgba[i * 4 + 1] as f32);
                 let b: [f32; 4] = core::array::from_fn(|i| rgba[i * 4 + 2] as f32);
@@ -309,7 +309,7 @@ fn gen_f32x8_extras() -> String {
             ///
             /// Values are in `[0.0, 255.0]`. Useful for image processing.
             #[inline(always)]
-            pub fn from_u8(token: T, bytes: &[u8; 8]) -> Self {{
+            pub fn from_u8_t(token: T, bytes: &[u8; 8]) -> Self {{
                 Self::from_repr_unchecked(token, T::from_array(token, core::array::from_fn(|i| bytes[i] as f32)))
             }}
 
@@ -435,7 +435,7 @@ fn gen_f32x8_extras() -> String {
             /// Input: 32 bytes = 8 RGBA pixels in interleaved format.
             /// Output: `(R, G, B, A)` where each is f32x8 with values in `[0.0, 255.0]`.
             #[inline(always)]
-            pub fn load_8_rgba_u8(token: T, rgba: &[u8; 32]) -> (Self, Self, Self, Self) {{
+            pub fn load_8_rgba_u8_t(token: T, rgba: &[u8; 32]) -> (Self, Self, Self, Self) {{
                 let r: [f32; 8] = core::array::from_fn(|i| rgba[i * 4] as f32);
                 let g: [f32; 8] = core::array::from_fn(|i| rgba[i * 4 + 1] as f32);
                 let b: [f32; 8] = core::array::from_fn(|i| rgba[i * 4 + 2] as f32);
@@ -481,7 +481,7 @@ fn gen_f32x8_extras() -> String {
 
             /// Load an 8x8 f32 block from a contiguous array into 8 row vectors.
             #[inline(always)]
-            pub fn load_8x8(token: T, block: &[f32; 64]) -> [Self; 8] {{
+            pub fn load_8x8_t(token: T, block: &[f32; 64]) -> [Self; 8] {{
                 core::array::from_fn(|i| {{
                     let arr: [f32; 8] = block[i * 8..][..8].try_into().unwrap();
                     Self::from_repr_unchecked(token, T::from_array(token, arr))

@@ -24,8 +24,8 @@ shape used by zen color kernels. It is not a complete tone-mapping algorithm.
 use archmage::prelude::*;
 #[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
 fn positive_impl(token: Token, values: [f32; 8]) -> [f32; 8] {
-    let v = f32x8::from_array(token, values);
-    let zero = f32x8::zero(token);
+    let v = f32x8::from_array_t(token, values);
+    let zero = f32x8::zero_t(token);
     f32x8::blend(v.simd_gt(zero), v, zero).to_array()
 }
 pub fn positive(values: [f32; 8]) -> [f32; 8] {

@@ -13,27 +13,27 @@ mod x86_impl {
 
     #[arcane]
     fn test_exp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-        f32x8::load(token, input).exp_midp().to_array()
+        f32x8::load_t(token, input).exp_midp().to_array()
     }
 
     #[arcane]
     fn test_exp2(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-        f32x8::load(token, input).exp2_midp().to_array()
+        f32x8::load_t(token, input).exp2_midp().to_array()
     }
 
     #[arcane]
     fn test_log2(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-        f32x8::load(token, input).log2_midp().to_array()
+        f32x8::load_t(token, input).log2_midp().to_array()
     }
 
     #[arcane]
     fn test_ln(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-        f32x8::load(token, input).ln_midp().to_array()
+        f32x8::load_t(token, input).ln_midp().to_array()
     }
 
     #[arcane]
     fn test_cbrt(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-        f32x8::load(token, input).cbrt_midp().to_array()
+        f32x8::load_t(token, input).cbrt_midp().to_array()
     }
 
     fn compare(name: &str, input: f32, std_result: f32, our_result: f32) {

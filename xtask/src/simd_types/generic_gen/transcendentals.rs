@@ -516,8 +516,8 @@ pub(super) fn gen_mod_rs(all_types: &[SimdType]) -> String {
         //! use magetypes::simd::generic::f32x8;
         //!
         //! fn dot<T: F32x8Backend>(token: T, a: &[f32; 8], b: &[f32; 8]) -> f32 {{
-        //!     let va = f32x8::<T>::load(token, a);
-        //!     let vb = f32x8::<T>::load(token, b);
+        //!     let va = f32x8::<T>::load_t(token, a);
+        //!     let vb = f32x8::<T>::load_t(token, b);
         //!     (va * vb).reduce_add()
         //! }}
         //! ```

@@ -535,8 +535,8 @@ mod f32x4_parity {
         if let Some(token_n) = <$native_token>::summon() {
             for chunk in super::F32_EDGE_A.chunks_exact(4) {
                 let input: [f32; 4] = chunk.try_into().unwrap();
-                let vs = generic::f32x4::<ScalarToken>::from_array(token_s, input);
-                let vn = generic::f32x4::<$native_token>::from_array(token_n, input);
+                let vs = generic::f32x4::<ScalarToken>::from_array_t(token_s, input);
+                let vn = generic::f32x4::<$native_token>::from_array_t(token_n, input);
                 let (s, n) = f(vs, vn);
                 cmp(&s, &n, op, &input);
             }
@@ -556,8 +556,8 @@ mod f32x4_parity {
             for chunk in super::F32_EDGE_A.chunks_exact(4) {
                 let input: [f32; 4] = chunk.try_into().unwrap();
                 if super::has_nan_or_inf_f32(&input) { continue; }
-                let vs = generic::f32x4::<ScalarToken>::from_array(token_s, input);
-                let vn = generic::f32x4::<$native_token>::from_array(token_n, input);
+                let vs = generic::f32x4::<ScalarToken>::from_array_t(token_s, input);
+                let vn = generic::f32x4::<$native_token>::from_array_t(token_n, input);
                 let (s, n) = f(vs, vn);
                 cmp(&s, &n, op, &input);
             }
@@ -577,10 +577,10 @@ mod f32x4_parity {
             for (ca, cb) in super::F32_EDGE_A.chunks_exact(4).zip(super::F32_EDGE_B.chunks_exact(4)) {
                 let a: [f32; 4] = ca.try_into().unwrap();
                 let b: [f32; 4] = cb.try_into().unwrap();
-                let as_ = generic::f32x4::<ScalarToken>::from_array(token_s, a);
-                let bs = generic::f32x4::<ScalarToken>::from_array(token_s, b);
-                let an = generic::f32x4::<$native_token>::from_array(token_n, a);
-                let bn = generic::f32x4::<$native_token>::from_array(token_n, b);
+                let as_ = generic::f32x4::<ScalarToken>::from_array_t(token_s, a);
+                let bs = generic::f32x4::<ScalarToken>::from_array_t(token_s, b);
+                let an = generic::f32x4::<$native_token>::from_array_t(token_n, a);
+                let bn = generic::f32x4::<$native_token>::from_array_t(token_n, b);
                 let (s, n) = f(as_, bs, an, bn);
                 cmp(&s, &n, op, &a);
             }
@@ -602,10 +602,10 @@ mod f32x4_parity {
                 let a: [f32; 4] = ca.try_into().unwrap();
                 let b: [f32; 4] = cb.try_into().unwrap();
                 if super::has_nan_or_inf_f32(&a) || super::has_nan_or_inf_f32(&b) { continue; }
-                let as_ = generic::f32x4::<ScalarToken>::from_array(token_s, a);
-                let bs = generic::f32x4::<ScalarToken>::from_array(token_s, b);
-                let an = generic::f32x4::<$native_token>::from_array(token_n, a);
-                let bn = generic::f32x4::<$native_token>::from_array(token_n, b);
+                let as_ = generic::f32x4::<ScalarToken>::from_array_t(token_s, a);
+                let bs = generic::f32x4::<ScalarToken>::from_array_t(token_s, b);
+                let an = generic::f32x4::<$native_token>::from_array_t(token_n, a);
+                let bn = generic::f32x4::<$native_token>::from_array_t(token_n, b);
                 let (s, n) = f(as_, bs, an, bn);
                 cmp(&s, &n, op, &a);
             }
@@ -735,12 +735,12 @@ fn mul_add() {
             let a: [f32; 4] = ca.try_into().unwrap();
             let b: [f32; 4] = cb.try_into().unwrap();
             let c: [f32; 4] = cc.try_into().unwrap();
-            let as_ = generic::f32x4::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::f32x4::<ScalarToken>::from_array(token_s, b);
-            let cs = generic::f32x4::<ScalarToken>::from_array(token_s, c);
-            let an = generic::f32x4::<$native_token>::from_array(token_n, a);
-            let bn = generic::f32x4::<$native_token>::from_array(token_n, b);
-            let cn = generic::f32x4::<$native_token>::from_array(token_n, c);
+            let as_ = generic::f32x4::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f32x4::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f32x4::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f32x4::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f32x4::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f32x4::<$native_token>::from_array_t(token_n, c);
             let s = as_.mul_add(bs, cs).to_array();
             let n = an.mul_add(bn, cn).to_array();
             let expected_s: [f32; 4] = core::array::from_fn(|i|
@@ -764,12 +764,12 @@ fn mul_sub() {
             let a: [f32; 4] = ca.try_into().unwrap();
             let b: [f32; 4] = cb.try_into().unwrap();
             let c: [f32; 4] = cc.try_into().unwrap();
-            let as_ = generic::f32x4::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::f32x4::<ScalarToken>::from_array(token_s, b);
-            let cs = generic::f32x4::<ScalarToken>::from_array(token_s, c);
-            let an = generic::f32x4::<$native_token>::from_array(token_n, a);
-            let bn = generic::f32x4::<$native_token>::from_array(token_n, b);
-            let cn = generic::f32x4::<$native_token>::from_array(token_n, c);
+            let as_ = generic::f32x4::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f32x4::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f32x4::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f32x4::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f32x4::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f32x4::<$native_token>::from_array_t(token_n, c);
             let s = as_.mul_sub(bs, cs).to_array();
             let n = an.mul_sub(bn, cn).to_array();
             let expected_s: [f32; 4] = core::array::from_fn(|i|
@@ -791,8 +791,8 @@ fn reduce_add() {
             // Skip chunks with NaN/Inf or extreme magnitudes (catastrophic cancellation
             // from different FP associativity between tree and left-fold reduction)
             if input.iter().any(|x| x.is_nan() || x.is_infinite() || x.abs() > 1e9) { continue; }
-            let s = generic::f32x4::<ScalarToken>::from_array(token_s, input).reduce_add();
-            let n = generic::f32x4::<$native_token>::from_array(token_n, input).reduce_add();
+            let s = generic::f32x4::<ScalarToken>::from_array_t(token_s, input).reduce_add();
+            let n = generic::f32x4::<$native_token>::from_array_t(token_n, input).reduce_add();
             if s.is_nan() && n.is_nan() { continue; }
             if s.to_bits() != n.to_bits() {
                 // Allow relative tolerance for FP associativity
@@ -812,8 +812,8 @@ fn reduce_min() {
         for chunk in super::F32_EDGE_A.chunks_exact(4) {
             let input: [f32; 4] = chunk.try_into().unwrap();
             if super::has_nan_or_inf_f32(&input) { continue; }
-            let s = generic::f32x4::<ScalarToken>::from_array(token_s, input).reduce_min();
-            let n = generic::f32x4::<$native_token>::from_array(token_n, input).reduce_min();
+            let s = generic::f32x4::<ScalarToken>::from_array_t(token_s, input).reduce_min();
+            let n = generic::f32x4::<$native_token>::from_array_t(token_n, input).reduce_min();
             // Allow ±0 difference (hardware min may return different zero sign)
             if s == 0.0 && n == 0.0 { continue; }
             assert_eq!(s.to_bits(), n.to_bits(),
@@ -829,8 +829,8 @@ fn reduce_max() {
         for chunk in super::F32_EDGE_A.chunks_exact(4) {
             let input: [f32; 4] = chunk.try_into().unwrap();
             if super::has_nan_or_inf_f32(&input) { continue; }
-            let s = generic::f32x4::<ScalarToken>::from_array(token_s, input).reduce_max();
-            let n = generic::f32x4::<$native_token>::from_array(token_n, input).reduce_max();
+            let s = generic::f32x4::<ScalarToken>::from_array_t(token_s, input).reduce_max();
+            let n = generic::f32x4::<$native_token>::from_array_t(token_n, input).reduce_max();
             if s == 0.0 && n == 0.0 { continue; }
             assert_eq!(s.to_bits(), n.to_bits(),
                 "f32x4::reduce_max divergence: scalar={s} native={n} input={input:?}");
@@ -891,8 +891,8 @@ fn rcp_approx() {
             .collect();
         for chunk in safe_inputs.chunks_exact(4) {
             let input: [f32; 4] = chunk.try_into().unwrap();
-            let s = generic::f32x4::<ScalarToken>::from_array(token_s, input).rcp_approx().to_array();
-            let n = generic::f32x4::<$native_token>::from_array(token_n, input).rcp_approx().to_array();
+            let s = generic::f32x4::<ScalarToken>::from_array_t(token_s, input).rcp_approx().to_array();
+            let n = generic::f32x4::<$native_token>::from_array_t(token_n, input).rcp_approx().to_array();
             super::assert_f32_approx(&s, &n, "f32x4::rcp_approx", &input, 4e-3);
         }
     }
@@ -909,8 +909,8 @@ fn rsqrt_approx() {
             .collect();
         for chunk in safe_inputs.chunks_exact(4) {
             let input: [f32; 4] = chunk.try_into().unwrap();
-            let s = generic::f32x4::<ScalarToken>::from_array(token_s, input).rsqrt_approx().to_array();
-            let n = generic::f32x4::<$native_token>::from_array(token_n, input).rsqrt_approx().to_array();
+            let s = generic::f32x4::<ScalarToken>::from_array_t(token_s, input).rsqrt_approx().to_array();
+            let n = generic::f32x4::<$native_token>::from_array_t(token_n, input).rsqrt_approx().to_array();
             super::assert_f32_approx(&s, &n, "f32x4::rsqrt_approx", &input, 4e-3);
         }
     }
@@ -927,8 +927,8 @@ fn recip() {
             .collect();
         for chunk in safe_inputs.chunks_exact(4) {
             let input: [f32; 4] = chunk.try_into().unwrap();
-            let s = generic::f32x4::<ScalarToken>::from_array(token_s, input).recip().to_array();
-            let n = generic::f32x4::<$native_token>::from_array(token_n, input).recip().to_array();
+            let s = generic::f32x4::<ScalarToken>::from_array_t(token_s, input).recip().to_array();
+            let n = generic::f32x4::<$native_token>::from_array_t(token_n, input).recip().to_array();
             super::assert_f32_approx(&s, &n, "f32x4::recip", &input, 1e-5);
         }
     }
@@ -945,8 +945,8 @@ fn rsqrt() {
             .collect();
         for chunk in safe_inputs.chunks_exact(4) {
             let input: [f32; 4] = chunk.try_into().unwrap();
-            let s = generic::f32x4::<ScalarToken>::from_array(token_s, input).rsqrt().to_array();
-            let n = generic::f32x4::<$native_token>::from_array(token_n, input).rsqrt().to_array();
+            let s = generic::f32x4::<ScalarToken>::from_array_t(token_s, input).rsqrt().to_array();
+            let n = generic::f32x4::<$native_token>::from_array_t(token_n, input).rsqrt().to_array();
             super::assert_f32_approx(&s, &n, "f32x4::rsqrt", &input, 1e-5);
         }
     }
@@ -968,8 +968,8 @@ mod f32x8_parity {
         if let Some(token_n) = <$native_token>::summon() {
             for chunk in super::F32_EDGE_A.chunks_exact(8) {
                 let input: [f32; 8] = chunk.try_into().unwrap();
-                let vs = generic::f32x8::<ScalarToken>::from_array(token_s, input);
-                let vn = generic::f32x8::<$native_token>::from_array(token_n, input);
+                let vs = generic::f32x8::<ScalarToken>::from_array_t(token_s, input);
+                let vn = generic::f32x8::<$native_token>::from_array_t(token_n, input);
                 let (s, n) = f(vs, vn);
                 cmp(&s, &n, op, &input);
             }
@@ -989,8 +989,8 @@ mod f32x8_parity {
             for chunk in super::F32_EDGE_A.chunks_exact(8) {
                 let input: [f32; 8] = chunk.try_into().unwrap();
                 if super::has_nan_or_inf_f32(&input) { continue; }
-                let vs = generic::f32x8::<ScalarToken>::from_array(token_s, input);
-                let vn = generic::f32x8::<$native_token>::from_array(token_n, input);
+                let vs = generic::f32x8::<ScalarToken>::from_array_t(token_s, input);
+                let vn = generic::f32x8::<$native_token>::from_array_t(token_n, input);
                 let (s, n) = f(vs, vn);
                 cmp(&s, &n, op, &input);
             }
@@ -1010,10 +1010,10 @@ mod f32x8_parity {
             for (ca, cb) in super::F32_EDGE_A.chunks_exact(8).zip(super::F32_EDGE_B.chunks_exact(8)) {
                 let a: [f32; 8] = ca.try_into().unwrap();
                 let b: [f32; 8] = cb.try_into().unwrap();
-                let as_ = generic::f32x8::<ScalarToken>::from_array(token_s, a);
-                let bs = generic::f32x8::<ScalarToken>::from_array(token_s, b);
-                let an = generic::f32x8::<$native_token>::from_array(token_n, a);
-                let bn = generic::f32x8::<$native_token>::from_array(token_n, b);
+                let as_ = generic::f32x8::<ScalarToken>::from_array_t(token_s, a);
+                let bs = generic::f32x8::<ScalarToken>::from_array_t(token_s, b);
+                let an = generic::f32x8::<$native_token>::from_array_t(token_n, a);
+                let bn = generic::f32x8::<$native_token>::from_array_t(token_n, b);
                 let (s, n) = f(as_, bs, an, bn);
                 cmp(&s, &n, op, &a);
             }
@@ -1035,10 +1035,10 @@ mod f32x8_parity {
                 let a: [f32; 8] = ca.try_into().unwrap();
                 let b: [f32; 8] = cb.try_into().unwrap();
                 if super::has_nan_or_inf_f32(&a) || super::has_nan_or_inf_f32(&b) { continue; }
-                let as_ = generic::f32x8::<ScalarToken>::from_array(token_s, a);
-                let bs = generic::f32x8::<ScalarToken>::from_array(token_s, b);
-                let an = generic::f32x8::<$native_token>::from_array(token_n, a);
-                let bn = generic::f32x8::<$native_token>::from_array(token_n, b);
+                let as_ = generic::f32x8::<ScalarToken>::from_array_t(token_s, a);
+                let bs = generic::f32x8::<ScalarToken>::from_array_t(token_s, b);
+                let an = generic::f32x8::<$native_token>::from_array_t(token_n, a);
+                let bn = generic::f32x8::<$native_token>::from_array_t(token_n, b);
                 let (s, n) = f(as_, bs, an, bn);
                 cmp(&s, &n, op, &a);
             }
@@ -1168,12 +1168,12 @@ fn mul_add() {
             let a: [f32; 8] = ca.try_into().unwrap();
             let b: [f32; 8] = cb.try_into().unwrap();
             let c: [f32; 8] = cc.try_into().unwrap();
-            let as_ = generic::f32x8::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::f32x8::<ScalarToken>::from_array(token_s, b);
-            let cs = generic::f32x8::<ScalarToken>::from_array(token_s, c);
-            let an = generic::f32x8::<$native_token>::from_array(token_n, a);
-            let bn = generic::f32x8::<$native_token>::from_array(token_n, b);
-            let cn = generic::f32x8::<$native_token>::from_array(token_n, c);
+            let as_ = generic::f32x8::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f32x8::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f32x8::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f32x8::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f32x8::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f32x8::<$native_token>::from_array_t(token_n, c);
             let s = as_.mul_add(bs, cs).to_array();
             let n = an.mul_add(bn, cn).to_array();
             let expected_s: [f32; 8] = core::array::from_fn(|i|
@@ -1197,12 +1197,12 @@ fn mul_sub() {
             let a: [f32; 8] = ca.try_into().unwrap();
             let b: [f32; 8] = cb.try_into().unwrap();
             let c: [f32; 8] = cc.try_into().unwrap();
-            let as_ = generic::f32x8::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::f32x8::<ScalarToken>::from_array(token_s, b);
-            let cs = generic::f32x8::<ScalarToken>::from_array(token_s, c);
-            let an = generic::f32x8::<$native_token>::from_array(token_n, a);
-            let bn = generic::f32x8::<$native_token>::from_array(token_n, b);
-            let cn = generic::f32x8::<$native_token>::from_array(token_n, c);
+            let as_ = generic::f32x8::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f32x8::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f32x8::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f32x8::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f32x8::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f32x8::<$native_token>::from_array_t(token_n, c);
             let s = as_.mul_sub(bs, cs).to_array();
             let n = an.mul_sub(bn, cn).to_array();
             let expected_s: [f32; 8] = core::array::from_fn(|i|
@@ -1224,8 +1224,8 @@ fn reduce_add() {
             // Skip chunks with NaN/Inf or extreme magnitudes (catastrophic cancellation
             // from different FP associativity between tree and left-fold reduction)
             if input.iter().any(|x| x.is_nan() || x.is_infinite() || x.abs() > 1e9) { continue; }
-            let s = generic::f32x8::<ScalarToken>::from_array(token_s, input).reduce_add();
-            let n = generic::f32x8::<$native_token>::from_array(token_n, input).reduce_add();
+            let s = generic::f32x8::<ScalarToken>::from_array_t(token_s, input).reduce_add();
+            let n = generic::f32x8::<$native_token>::from_array_t(token_n, input).reduce_add();
             if s.is_nan() && n.is_nan() { continue; }
             if s.to_bits() != n.to_bits() {
                 // Allow relative tolerance for FP associativity
@@ -1245,8 +1245,8 @@ fn reduce_min() {
         for chunk in super::F32_EDGE_A.chunks_exact(8) {
             let input: [f32; 8] = chunk.try_into().unwrap();
             if super::has_nan_or_inf_f32(&input) { continue; }
-            let s = generic::f32x8::<ScalarToken>::from_array(token_s, input).reduce_min();
-            let n = generic::f32x8::<$native_token>::from_array(token_n, input).reduce_min();
+            let s = generic::f32x8::<ScalarToken>::from_array_t(token_s, input).reduce_min();
+            let n = generic::f32x8::<$native_token>::from_array_t(token_n, input).reduce_min();
             // Allow ±0 difference (hardware min may return different zero sign)
             if s == 0.0 && n == 0.0 { continue; }
             assert_eq!(s.to_bits(), n.to_bits(),
@@ -1262,8 +1262,8 @@ fn reduce_max() {
         for chunk in super::F32_EDGE_A.chunks_exact(8) {
             let input: [f32; 8] = chunk.try_into().unwrap();
             if super::has_nan_or_inf_f32(&input) { continue; }
-            let s = generic::f32x8::<ScalarToken>::from_array(token_s, input).reduce_max();
-            let n = generic::f32x8::<$native_token>::from_array(token_n, input).reduce_max();
+            let s = generic::f32x8::<ScalarToken>::from_array_t(token_s, input).reduce_max();
+            let n = generic::f32x8::<$native_token>::from_array_t(token_n, input).reduce_max();
             if s == 0.0 && n == 0.0 { continue; }
             assert_eq!(s.to_bits(), n.to_bits(),
                 "f32x8::reduce_max divergence: scalar={s} native={n} input={input:?}");
@@ -1324,8 +1324,8 @@ fn rcp_approx() {
             .collect();
         for chunk in safe_inputs.chunks_exact(8) {
             let input: [f32; 8] = chunk.try_into().unwrap();
-            let s = generic::f32x8::<ScalarToken>::from_array(token_s, input).rcp_approx().to_array();
-            let n = generic::f32x8::<$native_token>::from_array(token_n, input).rcp_approx().to_array();
+            let s = generic::f32x8::<ScalarToken>::from_array_t(token_s, input).rcp_approx().to_array();
+            let n = generic::f32x8::<$native_token>::from_array_t(token_n, input).rcp_approx().to_array();
             super::assert_f32_approx(&s, &n, "f32x8::rcp_approx", &input, 4e-3);
         }
     }
@@ -1342,8 +1342,8 @@ fn rsqrt_approx() {
             .collect();
         for chunk in safe_inputs.chunks_exact(8) {
             let input: [f32; 8] = chunk.try_into().unwrap();
-            let s = generic::f32x8::<ScalarToken>::from_array(token_s, input).rsqrt_approx().to_array();
-            let n = generic::f32x8::<$native_token>::from_array(token_n, input).rsqrt_approx().to_array();
+            let s = generic::f32x8::<ScalarToken>::from_array_t(token_s, input).rsqrt_approx().to_array();
+            let n = generic::f32x8::<$native_token>::from_array_t(token_n, input).rsqrt_approx().to_array();
             super::assert_f32_approx(&s, &n, "f32x8::rsqrt_approx", &input, 4e-3);
         }
     }
@@ -1360,8 +1360,8 @@ fn recip() {
             .collect();
         for chunk in safe_inputs.chunks_exact(8) {
             let input: [f32; 8] = chunk.try_into().unwrap();
-            let s = generic::f32x8::<ScalarToken>::from_array(token_s, input).recip().to_array();
-            let n = generic::f32x8::<$native_token>::from_array(token_n, input).recip().to_array();
+            let s = generic::f32x8::<ScalarToken>::from_array_t(token_s, input).recip().to_array();
+            let n = generic::f32x8::<$native_token>::from_array_t(token_n, input).recip().to_array();
             super::assert_f32_approx(&s, &n, "f32x8::recip", &input, 1e-5);
         }
     }
@@ -1378,8 +1378,8 @@ fn rsqrt() {
             .collect();
         for chunk in safe_inputs.chunks_exact(8) {
             let input: [f32; 8] = chunk.try_into().unwrap();
-            let s = generic::f32x8::<ScalarToken>::from_array(token_s, input).rsqrt().to_array();
-            let n = generic::f32x8::<$native_token>::from_array(token_n, input).rsqrt().to_array();
+            let s = generic::f32x8::<ScalarToken>::from_array_t(token_s, input).rsqrt().to_array();
+            let n = generic::f32x8::<$native_token>::from_array_t(token_n, input).rsqrt().to_array();
             super::assert_f32_approx(&s, &n, "f32x8::rsqrt", &input, 1e-5);
         }
     }
@@ -1401,8 +1401,8 @@ mod f64x2_parity {
         if let Some(token_n) = <$native_token>::summon() {
             for chunk in super::F64_EDGE_A.chunks_exact(2) {
                 let input: [f64; 2] = chunk.try_into().unwrap();
-                let vs = generic::f64x2::<ScalarToken>::from_array(token_s, input);
-                let vn = generic::f64x2::<$native_token>::from_array(token_n, input);
+                let vs = generic::f64x2::<ScalarToken>::from_array_t(token_s, input);
+                let vn = generic::f64x2::<$native_token>::from_array_t(token_n, input);
                 let (s, n) = f(vs, vn);
                 cmp(&s, &n, op, &input);
             }
@@ -1422,8 +1422,8 @@ mod f64x2_parity {
             for chunk in super::F64_EDGE_A.chunks_exact(2) {
                 let input: [f64; 2] = chunk.try_into().unwrap();
                 if super::has_nan_or_inf_f64(&input) { continue; }
-                let vs = generic::f64x2::<ScalarToken>::from_array(token_s, input);
-                let vn = generic::f64x2::<$native_token>::from_array(token_n, input);
+                let vs = generic::f64x2::<ScalarToken>::from_array_t(token_s, input);
+                let vn = generic::f64x2::<$native_token>::from_array_t(token_n, input);
                 let (s, n) = f(vs, vn);
                 cmp(&s, &n, op, &input);
             }
@@ -1443,10 +1443,10 @@ mod f64x2_parity {
             for (ca, cb) in super::F64_EDGE_A.chunks_exact(2).zip(super::F64_EDGE_B.chunks_exact(2)) {
                 let a: [f64; 2] = ca.try_into().unwrap();
                 let b: [f64; 2] = cb.try_into().unwrap();
-                let as_ = generic::f64x2::<ScalarToken>::from_array(token_s, a);
-                let bs = generic::f64x2::<ScalarToken>::from_array(token_s, b);
-                let an = generic::f64x2::<$native_token>::from_array(token_n, a);
-                let bn = generic::f64x2::<$native_token>::from_array(token_n, b);
+                let as_ = generic::f64x2::<ScalarToken>::from_array_t(token_s, a);
+                let bs = generic::f64x2::<ScalarToken>::from_array_t(token_s, b);
+                let an = generic::f64x2::<$native_token>::from_array_t(token_n, a);
+                let bn = generic::f64x2::<$native_token>::from_array_t(token_n, b);
                 let (s, n) = f(as_, bs, an, bn);
                 cmp(&s, &n, op, &a);
             }
@@ -1468,10 +1468,10 @@ mod f64x2_parity {
                 let a: [f64; 2] = ca.try_into().unwrap();
                 let b: [f64; 2] = cb.try_into().unwrap();
                 if super::has_nan_or_inf_f64(&a) || super::has_nan_or_inf_f64(&b) { continue; }
-                let as_ = generic::f64x2::<ScalarToken>::from_array(token_s, a);
-                let bs = generic::f64x2::<ScalarToken>::from_array(token_s, b);
-                let an = generic::f64x2::<$native_token>::from_array(token_n, a);
-                let bn = generic::f64x2::<$native_token>::from_array(token_n, b);
+                let as_ = generic::f64x2::<ScalarToken>::from_array_t(token_s, a);
+                let bs = generic::f64x2::<ScalarToken>::from_array_t(token_s, b);
+                let an = generic::f64x2::<$native_token>::from_array_t(token_n, a);
+                let bn = generic::f64x2::<$native_token>::from_array_t(token_n, b);
                 let (s, n) = f(as_, bs, an, bn);
                 cmp(&s, &n, op, &a);
             }
@@ -1601,12 +1601,12 @@ fn mul_add() {
             let a: [f64; 2] = ca.try_into().unwrap();
             let b: [f64; 2] = cb.try_into().unwrap();
             let c: [f64; 2] = cc.try_into().unwrap();
-            let as_ = generic::f64x2::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::f64x2::<ScalarToken>::from_array(token_s, b);
-            let cs = generic::f64x2::<ScalarToken>::from_array(token_s, c);
-            let an = generic::f64x2::<$native_token>::from_array(token_n, a);
-            let bn = generic::f64x2::<$native_token>::from_array(token_n, b);
-            let cn = generic::f64x2::<$native_token>::from_array(token_n, c);
+            let as_ = generic::f64x2::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f64x2::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f64x2::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f64x2::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f64x2::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f64x2::<$native_token>::from_array_t(token_n, c);
             let s = as_.mul_add(bs, cs).to_array();
             let n = an.mul_add(bn, cn).to_array();
             let expected_s: [f64; 2] = core::array::from_fn(|i|
@@ -1630,12 +1630,12 @@ fn mul_sub() {
             let a: [f64; 2] = ca.try_into().unwrap();
             let b: [f64; 2] = cb.try_into().unwrap();
             let c: [f64; 2] = cc.try_into().unwrap();
-            let as_ = generic::f64x2::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::f64x2::<ScalarToken>::from_array(token_s, b);
-            let cs = generic::f64x2::<ScalarToken>::from_array(token_s, c);
-            let an = generic::f64x2::<$native_token>::from_array(token_n, a);
-            let bn = generic::f64x2::<$native_token>::from_array(token_n, b);
-            let cn = generic::f64x2::<$native_token>::from_array(token_n, c);
+            let as_ = generic::f64x2::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f64x2::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f64x2::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f64x2::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f64x2::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f64x2::<$native_token>::from_array_t(token_n, c);
             let s = as_.mul_sub(bs, cs).to_array();
             let n = an.mul_sub(bn, cn).to_array();
             let expected_s: [f64; 2] = core::array::from_fn(|i|
@@ -1657,8 +1657,8 @@ fn reduce_add() {
             // Skip chunks with NaN/Inf or extreme magnitudes (catastrophic cancellation
             // from different FP associativity between tree and left-fold reduction)
             if input.iter().any(|x| x.is_nan() || x.is_infinite() || x.abs() > 1e9) { continue; }
-            let s = generic::f64x2::<ScalarToken>::from_array(token_s, input).reduce_add();
-            let n = generic::f64x2::<$native_token>::from_array(token_n, input).reduce_add();
+            let s = generic::f64x2::<ScalarToken>::from_array_t(token_s, input).reduce_add();
+            let n = generic::f64x2::<$native_token>::from_array_t(token_n, input).reduce_add();
             if s.is_nan() && n.is_nan() { continue; }
             if s.to_bits() != n.to_bits() {
                 // Allow relative tolerance for FP associativity
@@ -1678,8 +1678,8 @@ fn reduce_min() {
         for chunk in super::F64_EDGE_A.chunks_exact(2) {
             let input: [f64; 2] = chunk.try_into().unwrap();
             if super::has_nan_or_inf_f64(&input) { continue; }
-            let s = generic::f64x2::<ScalarToken>::from_array(token_s, input).reduce_min();
-            let n = generic::f64x2::<$native_token>::from_array(token_n, input).reduce_min();
+            let s = generic::f64x2::<ScalarToken>::from_array_t(token_s, input).reduce_min();
+            let n = generic::f64x2::<$native_token>::from_array_t(token_n, input).reduce_min();
             // Allow ±0 difference (hardware min may return different zero sign)
             if s == 0.0 && n == 0.0 { continue; }
             assert_eq!(s.to_bits(), n.to_bits(),
@@ -1695,8 +1695,8 @@ fn reduce_max() {
         for chunk in super::F64_EDGE_A.chunks_exact(2) {
             let input: [f64; 2] = chunk.try_into().unwrap();
             if super::has_nan_or_inf_f64(&input) { continue; }
-            let s = generic::f64x2::<ScalarToken>::from_array(token_s, input).reduce_max();
-            let n = generic::f64x2::<$native_token>::from_array(token_n, input).reduce_max();
+            let s = generic::f64x2::<ScalarToken>::from_array_t(token_s, input).reduce_max();
+            let n = generic::f64x2::<$native_token>::from_array_t(token_n, input).reduce_max();
             if s == 0.0 && n == 0.0 { continue; }
             assert_eq!(s.to_bits(), n.to_bits(),
                 "f64x2::reduce_max divergence: scalar={s} native={n} input={input:?}");
@@ -1762,8 +1762,8 @@ mod f64x4_parity {
         if let Some(token_n) = <$native_token>::summon() {
             for chunk in super::F64_EDGE_A.chunks_exact(4) {
                 let input: [f64; 4] = chunk.try_into().unwrap();
-                let vs = generic::f64x4::<ScalarToken>::from_array(token_s, input);
-                let vn = generic::f64x4::<$native_token>::from_array(token_n, input);
+                let vs = generic::f64x4::<ScalarToken>::from_array_t(token_s, input);
+                let vn = generic::f64x4::<$native_token>::from_array_t(token_n, input);
                 let (s, n) = f(vs, vn);
                 cmp(&s, &n, op, &input);
             }
@@ -1783,8 +1783,8 @@ mod f64x4_parity {
             for chunk in super::F64_EDGE_A.chunks_exact(4) {
                 let input: [f64; 4] = chunk.try_into().unwrap();
                 if super::has_nan_or_inf_f64(&input) { continue; }
-                let vs = generic::f64x4::<ScalarToken>::from_array(token_s, input);
-                let vn = generic::f64x4::<$native_token>::from_array(token_n, input);
+                let vs = generic::f64x4::<ScalarToken>::from_array_t(token_s, input);
+                let vn = generic::f64x4::<$native_token>::from_array_t(token_n, input);
                 let (s, n) = f(vs, vn);
                 cmp(&s, &n, op, &input);
             }
@@ -1804,10 +1804,10 @@ mod f64x4_parity {
             for (ca, cb) in super::F64_EDGE_A.chunks_exact(4).zip(super::F64_EDGE_B.chunks_exact(4)) {
                 let a: [f64; 4] = ca.try_into().unwrap();
                 let b: [f64; 4] = cb.try_into().unwrap();
-                let as_ = generic::f64x4::<ScalarToken>::from_array(token_s, a);
-                let bs = generic::f64x4::<ScalarToken>::from_array(token_s, b);
-                let an = generic::f64x4::<$native_token>::from_array(token_n, a);
-                let bn = generic::f64x4::<$native_token>::from_array(token_n, b);
+                let as_ = generic::f64x4::<ScalarToken>::from_array_t(token_s, a);
+                let bs = generic::f64x4::<ScalarToken>::from_array_t(token_s, b);
+                let an = generic::f64x4::<$native_token>::from_array_t(token_n, a);
+                let bn = generic::f64x4::<$native_token>::from_array_t(token_n, b);
                 let (s, n) = f(as_, bs, an, bn);
                 cmp(&s, &n, op, &a);
             }
@@ -1829,10 +1829,10 @@ mod f64x4_parity {
                 let a: [f64; 4] = ca.try_into().unwrap();
                 let b: [f64; 4] = cb.try_into().unwrap();
                 if super::has_nan_or_inf_f64(&a) || super::has_nan_or_inf_f64(&b) { continue; }
-                let as_ = generic::f64x4::<ScalarToken>::from_array(token_s, a);
-                let bs = generic::f64x4::<ScalarToken>::from_array(token_s, b);
-                let an = generic::f64x4::<$native_token>::from_array(token_n, a);
-                let bn = generic::f64x4::<$native_token>::from_array(token_n, b);
+                let as_ = generic::f64x4::<ScalarToken>::from_array_t(token_s, a);
+                let bs = generic::f64x4::<ScalarToken>::from_array_t(token_s, b);
+                let an = generic::f64x4::<$native_token>::from_array_t(token_n, a);
+                let bn = generic::f64x4::<$native_token>::from_array_t(token_n, b);
                 let (s, n) = f(as_, bs, an, bn);
                 cmp(&s, &n, op, &a);
             }
@@ -1962,12 +1962,12 @@ fn mul_add() {
             let a: [f64; 4] = ca.try_into().unwrap();
             let b: [f64; 4] = cb.try_into().unwrap();
             let c: [f64; 4] = cc.try_into().unwrap();
-            let as_ = generic::f64x4::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::f64x4::<ScalarToken>::from_array(token_s, b);
-            let cs = generic::f64x4::<ScalarToken>::from_array(token_s, c);
-            let an = generic::f64x4::<$native_token>::from_array(token_n, a);
-            let bn = generic::f64x4::<$native_token>::from_array(token_n, b);
-            let cn = generic::f64x4::<$native_token>::from_array(token_n, c);
+            let as_ = generic::f64x4::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f64x4::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f64x4::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f64x4::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f64x4::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f64x4::<$native_token>::from_array_t(token_n, c);
             let s = as_.mul_add(bs, cs).to_array();
             let n = an.mul_add(bn, cn).to_array();
             let expected_s: [f64; 4] = core::array::from_fn(|i|
@@ -1991,12 +1991,12 @@ fn mul_sub() {
             let a: [f64; 4] = ca.try_into().unwrap();
             let b: [f64; 4] = cb.try_into().unwrap();
             let c: [f64; 4] = cc.try_into().unwrap();
-            let as_ = generic::f64x4::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::f64x4::<ScalarToken>::from_array(token_s, b);
-            let cs = generic::f64x4::<ScalarToken>::from_array(token_s, c);
-            let an = generic::f64x4::<$native_token>::from_array(token_n, a);
-            let bn = generic::f64x4::<$native_token>::from_array(token_n, b);
-            let cn = generic::f64x4::<$native_token>::from_array(token_n, c);
+            let as_ = generic::f64x4::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f64x4::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f64x4::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f64x4::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f64x4::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f64x4::<$native_token>::from_array_t(token_n, c);
             let s = as_.mul_sub(bs, cs).to_array();
             let n = an.mul_sub(bn, cn).to_array();
             let expected_s: [f64; 4] = core::array::from_fn(|i|
@@ -2018,8 +2018,8 @@ fn reduce_add() {
             // Skip chunks with NaN/Inf or extreme magnitudes (catastrophic cancellation
             // from different FP associativity between tree and left-fold reduction)
             if input.iter().any(|x| x.is_nan() || x.is_infinite() || x.abs() > 1e9) { continue; }
-            let s = generic::f64x4::<ScalarToken>::from_array(token_s, input).reduce_add();
-            let n = generic::f64x4::<$native_token>::from_array(token_n, input).reduce_add();
+            let s = generic::f64x4::<ScalarToken>::from_array_t(token_s, input).reduce_add();
+            let n = generic::f64x4::<$native_token>::from_array_t(token_n, input).reduce_add();
             if s.is_nan() && n.is_nan() { continue; }
             if s.to_bits() != n.to_bits() {
                 // Allow relative tolerance for FP associativity
@@ -2039,8 +2039,8 @@ fn reduce_min() {
         for chunk in super::F64_EDGE_A.chunks_exact(4) {
             let input: [f64; 4] = chunk.try_into().unwrap();
             if super::has_nan_or_inf_f64(&input) { continue; }
-            let s = generic::f64x4::<ScalarToken>::from_array(token_s, input).reduce_min();
-            let n = generic::f64x4::<$native_token>::from_array(token_n, input).reduce_min();
+            let s = generic::f64x4::<ScalarToken>::from_array_t(token_s, input).reduce_min();
+            let n = generic::f64x4::<$native_token>::from_array_t(token_n, input).reduce_min();
             // Allow ±0 difference (hardware min may return different zero sign)
             if s == 0.0 && n == 0.0 { continue; }
             assert_eq!(s.to_bits(), n.to_bits(),
@@ -2056,8 +2056,8 @@ fn reduce_max() {
         for chunk in super::F64_EDGE_A.chunks_exact(4) {
             let input: [f64; 4] = chunk.try_into().unwrap();
             if super::has_nan_or_inf_f64(&input) { continue; }
-            let s = generic::f64x4::<ScalarToken>::from_array(token_s, input).reduce_max();
-            let n = generic::f64x4::<$native_token>::from_array(token_n, input).reduce_max();
+            let s = generic::f64x4::<ScalarToken>::from_array_t(token_s, input).reduce_max();
+            let n = generic::f64x4::<$native_token>::from_array_t(token_n, input).reduce_max();
             if s == 0.0 && n == 0.0 { continue; }
             assert_eq!(s.to_bits(), n.to_bits(),
                 "f64x4::reduce_max divergence: scalar={s} native={n} input={input:?}");
@@ -2121,10 +2121,10 @@ fn add() {
         for (ca, cb) in edge_a.chunks_exact(4).zip(edge_b.chunks_exact(4)) {
             let a: [i32; 4] = ca.try_into().unwrap();
             let b: [i32; 4] = cb.try_into().unwrap();
-            let as_ = generic::i32x4::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::i32x4::<ScalarToken>::from_array(token_s, b);
-            let an = generic::i32x4::<$native_token>::from_array(token_n, a);
-            let bn = generic::i32x4::<$native_token>::from_array(token_n, b);
+            let as_ = generic::i32x4::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::i32x4::<ScalarToken>::from_array_t(token_s, b);
+            let an = generic::i32x4::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::i32x4::<$native_token>::from_array_t(token_n, b);
             let s = (as_ + bs).to_array();
             let n = (an + bn).to_array();
             super::assert_i32_exact(&s, &n, "i32x4::add", &a);
@@ -2141,10 +2141,10 @@ fn sub() {
         for (ca, cb) in edge_a.chunks_exact(4).zip(edge_b.chunks_exact(4)) {
             let a: [i32; 4] = ca.try_into().unwrap();
             let b: [i32; 4] = cb.try_into().unwrap();
-            let as_ = generic::i32x4::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::i32x4::<ScalarToken>::from_array(token_s, b);
-            let an = generic::i32x4::<$native_token>::from_array(token_n, a);
-            let bn = generic::i32x4::<$native_token>::from_array(token_n, b);
+            let as_ = generic::i32x4::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::i32x4::<ScalarToken>::from_array_t(token_s, b);
+            let an = generic::i32x4::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::i32x4::<$native_token>::from_array_t(token_n, b);
             let s = (as_ - bs).to_array();
             let n = (an - bn).to_array();
             super::assert_i32_exact(&s, &n, "i32x4::sub", &a);
@@ -2161,11 +2161,11 @@ fn min() {
         for (ca, cb) in edge_a.chunks_exact(4).zip(edge_b.chunks_exact(4)) {
             let a: [i32; 4] = ca.try_into().unwrap();
             let b: [i32; 4] = cb.try_into().unwrap();
-            let s = generic::i32x4::<ScalarToken>::from_array(token_s, a).min(
-                generic::i32x4::<ScalarToken>::from_array(token_s, b)
+            let s = generic::i32x4::<ScalarToken>::from_array_t(token_s, a).min(
+                generic::i32x4::<ScalarToken>::from_array_t(token_s, b)
             ).to_array();
-            let n = generic::i32x4::<$native_token>::from_array(token_n, a).min(
-                generic::i32x4::<$native_token>::from_array(token_n, b)
+            let n = generic::i32x4::<$native_token>::from_array_t(token_n, a).min(
+                generic::i32x4::<$native_token>::from_array_t(token_n, b)
             ).to_array();
             super::assert_i32_exact(&s, &n, "i32x4::min", &a);
         }
@@ -2181,11 +2181,11 @@ fn max() {
         for (ca, cb) in edge_a.chunks_exact(4).zip(edge_b.chunks_exact(4)) {
             let a: [i32; 4] = ca.try_into().unwrap();
             let b: [i32; 4] = cb.try_into().unwrap();
-            let s = generic::i32x4::<ScalarToken>::from_array(token_s, a).max(
-                generic::i32x4::<ScalarToken>::from_array(token_s, b)
+            let s = generic::i32x4::<ScalarToken>::from_array_t(token_s, a).max(
+                generic::i32x4::<ScalarToken>::from_array_t(token_s, b)
             ).to_array();
-            let n = generic::i32x4::<$native_token>::from_array(token_n, a).max(
-                generic::i32x4::<$native_token>::from_array(token_n, b)
+            let n = generic::i32x4::<$native_token>::from_array_t(token_n, a).max(
+                generic::i32x4::<$native_token>::from_array_t(token_n, b)
             ).to_array();
             super::assert_i32_exact(&s, &n, "i32x4::max", &a);
         }
@@ -2199,8 +2199,8 @@ fn abs() {
     if let Some(token_n) = <$native_token>::summon() {
         for chunk in edge_a.chunks_exact(4) {
             let input: [i32; 4] = chunk.try_into().unwrap();
-            let s = generic::i32x4::<ScalarToken>::from_array(token_s, input).abs().to_array();
-            let n = generic::i32x4::<$native_token>::from_array(token_n, input).abs().to_array();
+            let s = generic::i32x4::<ScalarToken>::from_array_t(token_s, input).abs().to_array();
+            let n = generic::i32x4::<$native_token>::from_array_t(token_n, input).abs().to_array();
             super::assert_i32_exact(&s, &n, "i32x4::abs", &input);
         }
     }
@@ -2213,8 +2213,8 @@ fn neg() {
     if let Some(token_n) = <$native_token>::summon() {
         for chunk in edge_a.chunks_exact(4) {
             let input: [i32; 4] = chunk.try_into().unwrap();
-            let s = (-generic::i32x4::<ScalarToken>::from_array(token_s, input)).to_array();
-            let n = (-generic::i32x4::<$native_token>::from_array(token_n, input)).to_array();
+            let s = (-generic::i32x4::<ScalarToken>::from_array_t(token_s, input)).to_array();
+            let n = (-generic::i32x4::<$native_token>::from_array_t(token_n, input)).to_array();
             super::assert_i32_exact(&s, &n, "i32x4::neg", &input);
         }
     }
@@ -2227,8 +2227,8 @@ fn not() {
     if let Some(token_n) = <$native_token>::summon() {
         for chunk in edge_a.chunks_exact(4) {
             let input: [i32; 4] = chunk.try_into().unwrap();
-            let s = generic::i32x4::<ScalarToken>::from_array(token_s, input).not().to_array();
-            let n = generic::i32x4::<$native_token>::from_array(token_n, input).not().to_array();
+            let s = generic::i32x4::<ScalarToken>::from_array_t(token_s, input).not().to_array();
+            let n = generic::i32x4::<$native_token>::from_array_t(token_n, input).not().to_array();
             super::assert_i32_exact(&s, &n, "i32x4::not", &input);
         }
     }
@@ -2248,10 +2248,10 @@ fn add() {
         for (ca, cb) in edge_a.chunks_exact(8).zip(edge_b.chunks_exact(8)) {
             let a: [i32; 8] = ca.try_into().unwrap();
             let b: [i32; 8] = cb.try_into().unwrap();
-            let as_ = generic::i32x8::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::i32x8::<ScalarToken>::from_array(token_s, b);
-            let an = generic::i32x8::<$native_token>::from_array(token_n, a);
-            let bn = generic::i32x8::<$native_token>::from_array(token_n, b);
+            let as_ = generic::i32x8::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::i32x8::<ScalarToken>::from_array_t(token_s, b);
+            let an = generic::i32x8::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::i32x8::<$native_token>::from_array_t(token_n, b);
             let s = (as_ + bs).to_array();
             let n = (an + bn).to_array();
             super::assert_i32_exact(&s, &n, "i32x8::add", &a);
@@ -2268,10 +2268,10 @@ fn sub() {
         for (ca, cb) in edge_a.chunks_exact(8).zip(edge_b.chunks_exact(8)) {
             let a: [i32; 8] = ca.try_into().unwrap();
             let b: [i32; 8] = cb.try_into().unwrap();
-            let as_ = generic::i32x8::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::i32x8::<ScalarToken>::from_array(token_s, b);
-            let an = generic::i32x8::<$native_token>::from_array(token_n, a);
-            let bn = generic::i32x8::<$native_token>::from_array(token_n, b);
+            let as_ = generic::i32x8::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::i32x8::<ScalarToken>::from_array_t(token_s, b);
+            let an = generic::i32x8::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::i32x8::<$native_token>::from_array_t(token_n, b);
             let s = (as_ - bs).to_array();
             let n = (an - bn).to_array();
             super::assert_i32_exact(&s, &n, "i32x8::sub", &a);
@@ -2288,11 +2288,11 @@ fn min() {
         for (ca, cb) in edge_a.chunks_exact(8).zip(edge_b.chunks_exact(8)) {
             let a: [i32; 8] = ca.try_into().unwrap();
             let b: [i32; 8] = cb.try_into().unwrap();
-            let s = generic::i32x8::<ScalarToken>::from_array(token_s, a).min(
-                generic::i32x8::<ScalarToken>::from_array(token_s, b)
+            let s = generic::i32x8::<ScalarToken>::from_array_t(token_s, a).min(
+                generic::i32x8::<ScalarToken>::from_array_t(token_s, b)
             ).to_array();
-            let n = generic::i32x8::<$native_token>::from_array(token_n, a).min(
-                generic::i32x8::<$native_token>::from_array(token_n, b)
+            let n = generic::i32x8::<$native_token>::from_array_t(token_n, a).min(
+                generic::i32x8::<$native_token>::from_array_t(token_n, b)
             ).to_array();
             super::assert_i32_exact(&s, &n, "i32x8::min", &a);
         }
@@ -2308,11 +2308,11 @@ fn max() {
         for (ca, cb) in edge_a.chunks_exact(8).zip(edge_b.chunks_exact(8)) {
             let a: [i32; 8] = ca.try_into().unwrap();
             let b: [i32; 8] = cb.try_into().unwrap();
-            let s = generic::i32x8::<ScalarToken>::from_array(token_s, a).max(
-                generic::i32x8::<ScalarToken>::from_array(token_s, b)
+            let s = generic::i32x8::<ScalarToken>::from_array_t(token_s, a).max(
+                generic::i32x8::<ScalarToken>::from_array_t(token_s, b)
             ).to_array();
-            let n = generic::i32x8::<$native_token>::from_array(token_n, a).max(
-                generic::i32x8::<$native_token>::from_array(token_n, b)
+            let n = generic::i32x8::<$native_token>::from_array_t(token_n, a).max(
+                generic::i32x8::<$native_token>::from_array_t(token_n, b)
             ).to_array();
             super::assert_i32_exact(&s, &n, "i32x8::max", &a);
         }
@@ -2326,8 +2326,8 @@ fn abs() {
     if let Some(token_n) = <$native_token>::summon() {
         for chunk in edge_a.chunks_exact(8) {
             let input: [i32; 8] = chunk.try_into().unwrap();
-            let s = generic::i32x8::<ScalarToken>::from_array(token_s, input).abs().to_array();
-            let n = generic::i32x8::<$native_token>::from_array(token_n, input).abs().to_array();
+            let s = generic::i32x8::<ScalarToken>::from_array_t(token_s, input).abs().to_array();
+            let n = generic::i32x8::<$native_token>::from_array_t(token_n, input).abs().to_array();
             super::assert_i32_exact(&s, &n, "i32x8::abs", &input);
         }
     }
@@ -2340,8 +2340,8 @@ fn neg() {
     if let Some(token_n) = <$native_token>::summon() {
         for chunk in edge_a.chunks_exact(8) {
             let input: [i32; 8] = chunk.try_into().unwrap();
-            let s = (-generic::i32x8::<ScalarToken>::from_array(token_s, input)).to_array();
-            let n = (-generic::i32x8::<$native_token>::from_array(token_n, input)).to_array();
+            let s = (-generic::i32x8::<ScalarToken>::from_array_t(token_s, input)).to_array();
+            let n = (-generic::i32x8::<$native_token>::from_array_t(token_n, input)).to_array();
             super::assert_i32_exact(&s, &n, "i32x8::neg", &input);
         }
     }
@@ -2354,8 +2354,8 @@ fn not() {
     if let Some(token_n) = <$native_token>::summon() {
         for chunk in edge_a.chunks_exact(8) {
             let input: [i32; 8] = chunk.try_into().unwrap();
-            let s = generic::i32x8::<ScalarToken>::from_array(token_s, input).not().to_array();
-            let n = generic::i32x8::<$native_token>::from_array(token_n, input).not().to_array();
+            let s = generic::i32x8::<ScalarToken>::from_array_t(token_s, input).not().to_array();
+            let n = generic::i32x8::<$native_token>::from_array_t(token_n, input).not().to_array();
             super::assert_i32_exact(&s, &n, "i32x8::not", &input);
         }
     }
@@ -2375,10 +2375,10 @@ fn add() {
         for (ca, cb) in edge_a.chunks_exact(8).zip(edge_b.chunks_exact(8)) {
             let a: [i16; 8] = ca.try_into().unwrap();
             let b: [i16; 8] = cb.try_into().unwrap();
-            let as_ = generic::i16x8::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::i16x8::<ScalarToken>::from_array(token_s, b);
-            let an = generic::i16x8::<$native_token>::from_array(token_n, a);
-            let bn = generic::i16x8::<$native_token>::from_array(token_n, b);
+            let as_ = generic::i16x8::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::i16x8::<ScalarToken>::from_array_t(token_s, b);
+            let an = generic::i16x8::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::i16x8::<$native_token>::from_array_t(token_n, b);
             let s = (as_ + bs).to_array();
             let n = (an + bn).to_array();
             super::assert_i16_exact(&s, &n, "i16x8::add", &a);
@@ -2395,10 +2395,10 @@ fn sub() {
         for (ca, cb) in edge_a.chunks_exact(8).zip(edge_b.chunks_exact(8)) {
             let a: [i16; 8] = ca.try_into().unwrap();
             let b: [i16; 8] = cb.try_into().unwrap();
-            let as_ = generic::i16x8::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::i16x8::<ScalarToken>::from_array(token_s, b);
-            let an = generic::i16x8::<$native_token>::from_array(token_n, a);
-            let bn = generic::i16x8::<$native_token>::from_array(token_n, b);
+            let as_ = generic::i16x8::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::i16x8::<ScalarToken>::from_array_t(token_s, b);
+            let an = generic::i16x8::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::i16x8::<$native_token>::from_array_t(token_n, b);
             let s = (as_ - bs).to_array();
             let n = (an - bn).to_array();
             super::assert_i16_exact(&s, &n, "i16x8::sub", &a);
@@ -2415,11 +2415,11 @@ fn min() {
         for (ca, cb) in edge_a.chunks_exact(8).zip(edge_b.chunks_exact(8)) {
             let a: [i16; 8] = ca.try_into().unwrap();
             let b: [i16; 8] = cb.try_into().unwrap();
-            let s = generic::i16x8::<ScalarToken>::from_array(token_s, a).min(
-                generic::i16x8::<ScalarToken>::from_array(token_s, b)
+            let s = generic::i16x8::<ScalarToken>::from_array_t(token_s, a).min(
+                generic::i16x8::<ScalarToken>::from_array_t(token_s, b)
             ).to_array();
-            let n = generic::i16x8::<$native_token>::from_array(token_n, a).min(
-                generic::i16x8::<$native_token>::from_array(token_n, b)
+            let n = generic::i16x8::<$native_token>::from_array_t(token_n, a).min(
+                generic::i16x8::<$native_token>::from_array_t(token_n, b)
             ).to_array();
             super::assert_i16_exact(&s, &n, "i16x8::min", &a);
         }
@@ -2435,11 +2435,11 @@ fn max() {
         for (ca, cb) in edge_a.chunks_exact(8).zip(edge_b.chunks_exact(8)) {
             let a: [i16; 8] = ca.try_into().unwrap();
             let b: [i16; 8] = cb.try_into().unwrap();
-            let s = generic::i16x8::<ScalarToken>::from_array(token_s, a).max(
-                generic::i16x8::<ScalarToken>::from_array(token_s, b)
+            let s = generic::i16x8::<ScalarToken>::from_array_t(token_s, a).max(
+                generic::i16x8::<ScalarToken>::from_array_t(token_s, b)
             ).to_array();
-            let n = generic::i16x8::<$native_token>::from_array(token_n, a).max(
-                generic::i16x8::<$native_token>::from_array(token_n, b)
+            let n = generic::i16x8::<$native_token>::from_array_t(token_n, a).max(
+                generic::i16x8::<$native_token>::from_array_t(token_n, b)
             ).to_array();
             super::assert_i16_exact(&s, &n, "i16x8::max", &a);
         }
@@ -2453,8 +2453,8 @@ fn abs() {
     if let Some(token_n) = <$native_token>::summon() {
         for chunk in edge_a.chunks_exact(8) {
             let input: [i16; 8] = chunk.try_into().unwrap();
-            let s = generic::i16x8::<ScalarToken>::from_array(token_s, input).abs().to_array();
-            let n = generic::i16x8::<$native_token>::from_array(token_n, input).abs().to_array();
+            let s = generic::i16x8::<ScalarToken>::from_array_t(token_s, input).abs().to_array();
+            let n = generic::i16x8::<$native_token>::from_array_t(token_n, input).abs().to_array();
             super::assert_i16_exact(&s, &n, "i16x8::abs", &input);
         }
     }
@@ -2467,8 +2467,8 @@ fn neg() {
     if let Some(token_n) = <$native_token>::summon() {
         for chunk in edge_a.chunks_exact(8) {
             let input: [i16; 8] = chunk.try_into().unwrap();
-            let s = (-generic::i16x8::<ScalarToken>::from_array(token_s, input)).to_array();
-            let n = (-generic::i16x8::<$native_token>::from_array(token_n, input)).to_array();
+            let s = (-generic::i16x8::<ScalarToken>::from_array_t(token_s, input)).to_array();
+            let n = (-generic::i16x8::<$native_token>::from_array_t(token_n, input)).to_array();
             super::assert_i16_exact(&s, &n, "i16x8::neg", &input);
         }
     }
@@ -2481,8 +2481,8 @@ fn not() {
     if let Some(token_n) = <$native_token>::summon() {
         for chunk in edge_a.chunks_exact(8) {
             let input: [i16; 8] = chunk.try_into().unwrap();
-            let s = generic::i16x8::<ScalarToken>::from_array(token_s, input).not().to_array();
-            let n = generic::i16x8::<$native_token>::from_array(token_n, input).not().to_array();
+            let s = generic::i16x8::<ScalarToken>::from_array_t(token_s, input).not().to_array();
+            let n = generic::i16x8::<$native_token>::from_array_t(token_n, input).not().to_array();
             super::assert_i16_exact(&s, &n, "i16x8::not", &input);
         }
     }
@@ -2502,10 +2502,10 @@ fn add() {
         for (ca, cb) in edge_a.chunks_exact(16).zip(edge_b.chunks_exact(16)) {
             let a: [i16; 16] = ca.try_into().unwrap();
             let b: [i16; 16] = cb.try_into().unwrap();
-            let as_ = generic::i16x16::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::i16x16::<ScalarToken>::from_array(token_s, b);
-            let an = generic::i16x16::<$native_token>::from_array(token_n, a);
-            let bn = generic::i16x16::<$native_token>::from_array(token_n, b);
+            let as_ = generic::i16x16::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::i16x16::<ScalarToken>::from_array_t(token_s, b);
+            let an = generic::i16x16::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::i16x16::<$native_token>::from_array_t(token_n, b);
             let s = (as_ + bs).to_array();
             let n = (an + bn).to_array();
             super::assert_i16_exact(&s, &n, "i16x16::add", &a);
@@ -2522,10 +2522,10 @@ fn sub() {
         for (ca, cb) in edge_a.chunks_exact(16).zip(edge_b.chunks_exact(16)) {
             let a: [i16; 16] = ca.try_into().unwrap();
             let b: [i16; 16] = cb.try_into().unwrap();
-            let as_ = generic::i16x16::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::i16x16::<ScalarToken>::from_array(token_s, b);
-            let an = generic::i16x16::<$native_token>::from_array(token_n, a);
-            let bn = generic::i16x16::<$native_token>::from_array(token_n, b);
+            let as_ = generic::i16x16::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::i16x16::<ScalarToken>::from_array_t(token_s, b);
+            let an = generic::i16x16::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::i16x16::<$native_token>::from_array_t(token_n, b);
             let s = (as_ - bs).to_array();
             let n = (an - bn).to_array();
             super::assert_i16_exact(&s, &n, "i16x16::sub", &a);
@@ -2542,11 +2542,11 @@ fn min() {
         for (ca, cb) in edge_a.chunks_exact(16).zip(edge_b.chunks_exact(16)) {
             let a: [i16; 16] = ca.try_into().unwrap();
             let b: [i16; 16] = cb.try_into().unwrap();
-            let s = generic::i16x16::<ScalarToken>::from_array(token_s, a).min(
-                generic::i16x16::<ScalarToken>::from_array(token_s, b)
+            let s = generic::i16x16::<ScalarToken>::from_array_t(token_s, a).min(
+                generic::i16x16::<ScalarToken>::from_array_t(token_s, b)
             ).to_array();
-            let n = generic::i16x16::<$native_token>::from_array(token_n, a).min(
-                generic::i16x16::<$native_token>::from_array(token_n, b)
+            let n = generic::i16x16::<$native_token>::from_array_t(token_n, a).min(
+                generic::i16x16::<$native_token>::from_array_t(token_n, b)
             ).to_array();
             super::assert_i16_exact(&s, &n, "i16x16::min", &a);
         }
@@ -2562,11 +2562,11 @@ fn max() {
         for (ca, cb) in edge_a.chunks_exact(16).zip(edge_b.chunks_exact(16)) {
             let a: [i16; 16] = ca.try_into().unwrap();
             let b: [i16; 16] = cb.try_into().unwrap();
-            let s = generic::i16x16::<ScalarToken>::from_array(token_s, a).max(
-                generic::i16x16::<ScalarToken>::from_array(token_s, b)
+            let s = generic::i16x16::<ScalarToken>::from_array_t(token_s, a).max(
+                generic::i16x16::<ScalarToken>::from_array_t(token_s, b)
             ).to_array();
-            let n = generic::i16x16::<$native_token>::from_array(token_n, a).max(
-                generic::i16x16::<$native_token>::from_array(token_n, b)
+            let n = generic::i16x16::<$native_token>::from_array_t(token_n, a).max(
+                generic::i16x16::<$native_token>::from_array_t(token_n, b)
             ).to_array();
             super::assert_i16_exact(&s, &n, "i16x16::max", &a);
         }
@@ -2580,8 +2580,8 @@ fn abs() {
     if let Some(token_n) = <$native_token>::summon() {
         for chunk in edge_a.chunks_exact(16) {
             let input: [i16; 16] = chunk.try_into().unwrap();
-            let s = generic::i16x16::<ScalarToken>::from_array(token_s, input).abs().to_array();
-            let n = generic::i16x16::<$native_token>::from_array(token_n, input).abs().to_array();
+            let s = generic::i16x16::<ScalarToken>::from_array_t(token_s, input).abs().to_array();
+            let n = generic::i16x16::<$native_token>::from_array_t(token_n, input).abs().to_array();
             super::assert_i16_exact(&s, &n, "i16x16::abs", &input);
         }
     }
@@ -2594,8 +2594,8 @@ fn neg() {
     if let Some(token_n) = <$native_token>::summon() {
         for chunk in edge_a.chunks_exact(16) {
             let input: [i16; 16] = chunk.try_into().unwrap();
-            let s = (-generic::i16x16::<ScalarToken>::from_array(token_s, input)).to_array();
-            let n = (-generic::i16x16::<$native_token>::from_array(token_n, input)).to_array();
+            let s = (-generic::i16x16::<ScalarToken>::from_array_t(token_s, input)).to_array();
+            let n = (-generic::i16x16::<$native_token>::from_array_t(token_n, input)).to_array();
             super::assert_i16_exact(&s, &n, "i16x16::neg", &input);
         }
     }
@@ -2608,8 +2608,8 @@ fn not() {
     if let Some(token_n) = <$native_token>::summon() {
         for chunk in edge_a.chunks_exact(16) {
             let input: [i16; 16] = chunk.try_into().unwrap();
-            let s = generic::i16x16::<ScalarToken>::from_array(token_s, input).not().to_array();
-            let n = generic::i16x16::<$native_token>::from_array(token_n, input).not().to_array();
+            let s = generic::i16x16::<ScalarToken>::from_array_t(token_s, input).not().to_array();
+            let n = generic::i16x16::<$native_token>::from_array_t(token_n, input).not().to_array();
             super::assert_i16_exact(&s, &n, "i16x16::not", &input);
         }
     }
@@ -2629,10 +2629,10 @@ fn add() {
         for (ca, cb) in edge_a.chunks_exact(4).zip(edge_b.chunks_exact(4)) {
             let a: [u32; 4] = ca.try_into().unwrap();
             let b: [u32; 4] = cb.try_into().unwrap();
-            let as_ = generic::u32x4::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::u32x4::<ScalarToken>::from_array(token_s, b);
-            let an = generic::u32x4::<$native_token>::from_array(token_n, a);
-            let bn = generic::u32x4::<$native_token>::from_array(token_n, b);
+            let as_ = generic::u32x4::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::u32x4::<ScalarToken>::from_array_t(token_s, b);
+            let an = generic::u32x4::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::u32x4::<$native_token>::from_array_t(token_n, b);
             let s = (as_ + bs).to_array();
             let n = (an + bn).to_array();
             super::assert_u32_exact(&s, &n, "u32x4::add", &a);
@@ -2649,10 +2649,10 @@ fn sub() {
         for (ca, cb) in edge_a.chunks_exact(4).zip(edge_b.chunks_exact(4)) {
             let a: [u32; 4] = ca.try_into().unwrap();
             let b: [u32; 4] = cb.try_into().unwrap();
-            let as_ = generic::u32x4::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::u32x4::<ScalarToken>::from_array(token_s, b);
-            let an = generic::u32x4::<$native_token>::from_array(token_n, a);
-            let bn = generic::u32x4::<$native_token>::from_array(token_n, b);
+            let as_ = generic::u32x4::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::u32x4::<ScalarToken>::from_array_t(token_s, b);
+            let an = generic::u32x4::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::u32x4::<$native_token>::from_array_t(token_n, b);
             let s = (as_ - bs).to_array();
             let n = (an - bn).to_array();
             super::assert_u32_exact(&s, &n, "u32x4::sub", &a);
@@ -2669,11 +2669,11 @@ fn min() {
         for (ca, cb) in edge_a.chunks_exact(4).zip(edge_b.chunks_exact(4)) {
             let a: [u32; 4] = ca.try_into().unwrap();
             let b: [u32; 4] = cb.try_into().unwrap();
-            let s = generic::u32x4::<ScalarToken>::from_array(token_s, a).min(
-                generic::u32x4::<ScalarToken>::from_array(token_s, b)
+            let s = generic::u32x4::<ScalarToken>::from_array_t(token_s, a).min(
+                generic::u32x4::<ScalarToken>::from_array_t(token_s, b)
             ).to_array();
-            let n = generic::u32x4::<$native_token>::from_array(token_n, a).min(
-                generic::u32x4::<$native_token>::from_array(token_n, b)
+            let n = generic::u32x4::<$native_token>::from_array_t(token_n, a).min(
+                generic::u32x4::<$native_token>::from_array_t(token_n, b)
             ).to_array();
             super::assert_u32_exact(&s, &n, "u32x4::min", &a);
         }
@@ -2689,11 +2689,11 @@ fn max() {
         for (ca, cb) in edge_a.chunks_exact(4).zip(edge_b.chunks_exact(4)) {
             let a: [u32; 4] = ca.try_into().unwrap();
             let b: [u32; 4] = cb.try_into().unwrap();
-            let s = generic::u32x4::<ScalarToken>::from_array(token_s, a).max(
-                generic::u32x4::<ScalarToken>::from_array(token_s, b)
+            let s = generic::u32x4::<ScalarToken>::from_array_t(token_s, a).max(
+                generic::u32x4::<ScalarToken>::from_array_t(token_s, b)
             ).to_array();
-            let n = generic::u32x4::<$native_token>::from_array(token_n, a).max(
-                generic::u32x4::<$native_token>::from_array(token_n, b)
+            let n = generic::u32x4::<$native_token>::from_array_t(token_n, a).max(
+                generic::u32x4::<$native_token>::from_array_t(token_n, b)
             ).to_array();
             super::assert_u32_exact(&s, &n, "u32x4::max", &a);
         }
@@ -2707,8 +2707,8 @@ fn not() {
     if let Some(token_n) = <$native_token>::summon() {
         for chunk in edge_a.chunks_exact(4) {
             let input: [u32; 4] = chunk.try_into().unwrap();
-            let s = generic::u32x4::<ScalarToken>::from_array(token_s, input).not().to_array();
-            let n = generic::u32x4::<$native_token>::from_array(token_n, input).not().to_array();
+            let s = generic::u32x4::<ScalarToken>::from_array_t(token_s, input).not().to_array();
+            let n = generic::u32x4::<$native_token>::from_array_t(token_n, input).not().to_array();
             super::assert_u32_exact(&s, &n, "u32x4::not", &input);
         }
     }
@@ -2728,10 +2728,10 @@ fn add() {
         for (ca, cb) in edge_a.chunks_exact(8).zip(edge_b.chunks_exact(8)) {
             let a: [u32; 8] = ca.try_into().unwrap();
             let b: [u32; 8] = cb.try_into().unwrap();
-            let as_ = generic::u32x8::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::u32x8::<ScalarToken>::from_array(token_s, b);
-            let an = generic::u32x8::<$native_token>::from_array(token_n, a);
-            let bn = generic::u32x8::<$native_token>::from_array(token_n, b);
+            let as_ = generic::u32x8::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::u32x8::<ScalarToken>::from_array_t(token_s, b);
+            let an = generic::u32x8::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::u32x8::<$native_token>::from_array_t(token_n, b);
             let s = (as_ + bs).to_array();
             let n = (an + bn).to_array();
             super::assert_u32_exact(&s, &n, "u32x8::add", &a);
@@ -2748,10 +2748,10 @@ fn sub() {
         for (ca, cb) in edge_a.chunks_exact(8).zip(edge_b.chunks_exact(8)) {
             let a: [u32; 8] = ca.try_into().unwrap();
             let b: [u32; 8] = cb.try_into().unwrap();
-            let as_ = generic::u32x8::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::u32x8::<ScalarToken>::from_array(token_s, b);
-            let an = generic::u32x8::<$native_token>::from_array(token_n, a);
-            let bn = generic::u32x8::<$native_token>::from_array(token_n, b);
+            let as_ = generic::u32x8::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::u32x8::<ScalarToken>::from_array_t(token_s, b);
+            let an = generic::u32x8::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::u32x8::<$native_token>::from_array_t(token_n, b);
             let s = (as_ - bs).to_array();
             let n = (an - bn).to_array();
             super::assert_u32_exact(&s, &n, "u32x8::sub", &a);
@@ -2768,11 +2768,11 @@ fn min() {
         for (ca, cb) in edge_a.chunks_exact(8).zip(edge_b.chunks_exact(8)) {
             let a: [u32; 8] = ca.try_into().unwrap();
             let b: [u32; 8] = cb.try_into().unwrap();
-            let s = generic::u32x8::<ScalarToken>::from_array(token_s, a).min(
-                generic::u32x8::<ScalarToken>::from_array(token_s, b)
+            let s = generic::u32x8::<ScalarToken>::from_array_t(token_s, a).min(
+                generic::u32x8::<ScalarToken>::from_array_t(token_s, b)
             ).to_array();
-            let n = generic::u32x8::<$native_token>::from_array(token_n, a).min(
-                generic::u32x8::<$native_token>::from_array(token_n, b)
+            let n = generic::u32x8::<$native_token>::from_array_t(token_n, a).min(
+                generic::u32x8::<$native_token>::from_array_t(token_n, b)
             ).to_array();
             super::assert_u32_exact(&s, &n, "u32x8::min", &a);
         }
@@ -2788,11 +2788,11 @@ fn max() {
         for (ca, cb) in edge_a.chunks_exact(8).zip(edge_b.chunks_exact(8)) {
             let a: [u32; 8] = ca.try_into().unwrap();
             let b: [u32; 8] = cb.try_into().unwrap();
-            let s = generic::u32x8::<ScalarToken>::from_array(token_s, a).max(
-                generic::u32x8::<ScalarToken>::from_array(token_s, b)
+            let s = generic::u32x8::<ScalarToken>::from_array_t(token_s, a).max(
+                generic::u32x8::<ScalarToken>::from_array_t(token_s, b)
             ).to_array();
-            let n = generic::u32x8::<$native_token>::from_array(token_n, a).max(
-                generic::u32x8::<$native_token>::from_array(token_n, b)
+            let n = generic::u32x8::<$native_token>::from_array_t(token_n, a).max(
+                generic::u32x8::<$native_token>::from_array_t(token_n, b)
             ).to_array();
             super::assert_u32_exact(&s, &n, "u32x8::max", &a);
         }
@@ -2806,8 +2806,8 @@ fn not() {
     if let Some(token_n) = <$native_token>::summon() {
         for chunk in edge_a.chunks_exact(8) {
             let input: [u32; 8] = chunk.try_into().unwrap();
-            let s = generic::u32x8::<ScalarToken>::from_array(token_s, input).not().to_array();
-            let n = generic::u32x8::<$native_token>::from_array(token_n, input).not().to_array();
+            let s = generic::u32x8::<ScalarToken>::from_array_t(token_s, input).not().to_array();
+            let n = generic::u32x8::<$native_token>::from_array_t(token_n, input).not().to_array();
             super::assert_u32_exact(&s, &n, "u32x8::not", &input);
         }
     }
@@ -2830,9 +2830,9 @@ mod convert_f32x4_parity {
                 .collect();
             for chunk in safe_f32.chunks_exact(4) {
                 let input: [f32; 4] = chunk.try_into().unwrap();
-                let s = generic::f32x4::<ScalarToken>::from_array(token_s, input)
+                let s = generic::f32x4::<ScalarToken>::from_array_t(token_s, input)
                     .to_i32_round().to_array();
-                let n = generic::f32x4::<$native_token>::from_array(token_n, input)
+                let n = generic::f32x4::<$native_token>::from_array_t(token_n, input)
                     .to_i32_round().to_array();
                 super::assert_i32_exact(&s, &n, "f32x4::to_i32_round", &input.map(|x| x as i32));
             }
@@ -2849,9 +2849,9 @@ mod convert_f32x4_parity {
                 .collect();
             for chunk in safe_f32.chunks_exact(4) {
                 let input: [f32; 4] = chunk.try_into().unwrap();
-                let s = generic::f32x4::<ScalarToken>::from_array(token_s, input)
+                let s = generic::f32x4::<ScalarToken>::from_array_t(token_s, input)
                     .to_i32().to_array();
-                let n = generic::f32x4::<$native_token>::from_array(token_n, input)
+                let n = generic::f32x4::<$native_token>::from_array_t(token_n, input)
                     .to_i32().to_array();
                 super::assert_i32_exact(&s, &n, "f32x4::to_i32", &input.map(|x| x as i32));
             }
@@ -2864,15 +2864,15 @@ mod convert_f32x4_parity {
         if let Some(token_n) = <$native_token>::summon() {
             for chunk in super::I32_EDGE_A.chunks_exact(4) {
                 let input: [i32; 4] = chunk.try_into().unwrap();
-                let s = generic::f32x4::<ScalarToken>::from_i32(
+                let s = generic::f32x4::<ScalarToken>::from_i32_t(
                     token_s,
-                    generic::i32x4::<ScalarToken>::from_array(token_s, input)
+                    generic::i32x4::<ScalarToken>::from_array_t(token_s, input)
                 ).to_array();
-                let n = generic::f32x4::<$native_token>::from_i32(
+                let n = generic::f32x4::<$native_token>::from_i32_t(
                     token_n,
-                    generic::i32x4::<$native_token>::from_array(token_n, input)
+                    generic::i32x4::<$native_token>::from_array_t(token_n, input)
                 ).to_array();
-                super::assert_f32_exact(&s, &n, "f32x4::from_i32", &s);
+                super::assert_f32_exact(&s, &n, "f32x4::from_i32_t", &s);
             }
         }
     }
@@ -2884,13 +2884,13 @@ mod convert_f32x4_parity {
             for chunk in super::F32_EDGE_A.chunks_exact(4) {
                 let input: [f32; 4] = chunk.try_into().unwrap();
                 // f32 → i32 bitcast → f32 bitcast should be identity
-                let s = generic::f32x4::<ScalarToken>::from_i32_bitcast(
+                let s = generic::f32x4::<ScalarToken>::from_i32_bitcast_t(
                     token_s,
-                    generic::f32x4::<ScalarToken>::from_array(token_s, input).bitcast_to_i32()
+                    generic::f32x4::<ScalarToken>::from_array_t(token_s, input).bitcast_to_i32()
                 ).to_array();
-                let n = generic::f32x4::<$native_token>::from_i32_bitcast(
+                let n = generic::f32x4::<$native_token>::from_i32_bitcast_t(
                     token_n,
-                    generic::f32x4::<$native_token>::from_array(token_n, input).bitcast_to_i32()
+                    generic::f32x4::<$native_token>::from_array_t(token_n, input).bitcast_to_i32()
                 ).to_array();
                 // Compare bit patterns (NaN payload must survive roundtrip)
                 for i in 0..4 {
@@ -2918,9 +2918,9 @@ mod convert_f32x8_parity {
                 .collect();
             for chunk in safe_f32.chunks_exact(8) {
                 let input: [f32; 8] = chunk.try_into().unwrap();
-                let s = generic::f32x8::<ScalarToken>::from_array(token_s, input)
+                let s = generic::f32x8::<ScalarToken>::from_array_t(token_s, input)
                     .to_i32_round().to_array();
-                let n = generic::f32x8::<$native_token>::from_array(token_n, input)
+                let n = generic::f32x8::<$native_token>::from_array_t(token_n, input)
                     .to_i32_round().to_array();
                 super::assert_i32_exact(&s, &n, "f32x8::to_i32_round", &input.map(|x| x as i32));
             }
@@ -2937,9 +2937,9 @@ mod convert_f32x8_parity {
                 .collect();
             for chunk in safe_f32.chunks_exact(8) {
                 let input: [f32; 8] = chunk.try_into().unwrap();
-                let s = generic::f32x8::<ScalarToken>::from_array(token_s, input)
+                let s = generic::f32x8::<ScalarToken>::from_array_t(token_s, input)
                     .to_i32().to_array();
-                let n = generic::f32x8::<$native_token>::from_array(token_n, input)
+                let n = generic::f32x8::<$native_token>::from_array_t(token_n, input)
                     .to_i32().to_array();
                 super::assert_i32_exact(&s, &n, "f32x8::to_i32", &input.map(|x| x as i32));
             }
@@ -2952,15 +2952,15 @@ mod convert_f32x8_parity {
         if let Some(token_n) = <$native_token>::summon() {
             for chunk in super::I32_EDGE_A.chunks_exact(8) {
                 let input: [i32; 8] = chunk.try_into().unwrap();
-                let s = generic::f32x8::<ScalarToken>::from_i32(
+                let s = generic::f32x8::<ScalarToken>::from_i32_t(
                     token_s,
-                    generic::i32x8::<ScalarToken>::from_array(token_s, input)
+                    generic::i32x8::<ScalarToken>::from_array_t(token_s, input)
                 ).to_array();
-                let n = generic::f32x8::<$native_token>::from_i32(
+                let n = generic::f32x8::<$native_token>::from_i32_t(
                     token_n,
-                    generic::i32x8::<$native_token>::from_array(token_n, input)
+                    generic::i32x8::<$native_token>::from_array_t(token_n, input)
                 ).to_array();
-                super::assert_f32_exact(&s, &n, "f32x8::from_i32", &s);
+                super::assert_f32_exact(&s, &n, "f32x8::from_i32_t", &s);
             }
         }
     }
@@ -2972,13 +2972,13 @@ mod convert_f32x8_parity {
             for chunk in super::F32_EDGE_A.chunks_exact(8) {
                 let input: [f32; 8] = chunk.try_into().unwrap();
                 // f32 → i32 bitcast → f32 bitcast should be identity
-                let s = generic::f32x8::<ScalarToken>::from_i32_bitcast(
+                let s = generic::f32x8::<ScalarToken>::from_i32_bitcast_t(
                     token_s,
-                    generic::f32x8::<ScalarToken>::from_array(token_s, input).bitcast_to_i32()
+                    generic::f32x8::<ScalarToken>::from_array_t(token_s, input).bitcast_to_i32()
                 ).to_array();
-                let n = generic::f32x8::<$native_token>::from_i32_bitcast(
+                let n = generic::f32x8::<$native_token>::from_i32_bitcast_t(
                     token_n,
-                    generic::f32x8::<$native_token>::from_array(token_n, input).bitcast_to_i32()
+                    generic::f32x8::<$native_token>::from_array_t(token_n, input).bitcast_to_i32()
                 ).to_array();
                 // Compare bit patterns (NaN payload must survive roundtrip)
                 for i in 0..8 {

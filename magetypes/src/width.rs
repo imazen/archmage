@@ -193,288 +193,288 @@ mod x86_impl {
 
         #[inline(always)]
         fn f32x4_splat(self, v: f32) -> Self::F32x4 {
-            f32x4::splat(self, v)
+            f32x4::splat_t(self, v)
         }
 
         #[inline(always)]
         fn f32x4_zero(self) -> Self::F32x4 {
-            f32x4::zero(self)
+            f32x4::zero_t(self)
         }
 
         #[inline(always)]
         fn f32x4_load(self, data: &[f32; 4]) -> Self::F32x4 {
-            f32x4::load(self, data)
+            f32x4::load_t(self, data)
         }
         #[inline(always)]
         fn f64x2_splat(self, v: f64) -> Self::F64x2 {
-            f64x2::splat(self, v)
+            f64x2::splat_t(self, v)
         }
 
         #[inline(always)]
         fn f64x2_zero(self) -> Self::F64x2 {
-            f64x2::zero(self)
+            f64x2::zero_t(self)
         }
 
         #[inline(always)]
         fn f64x2_load(self, data: &[f64; 2]) -> Self::F64x2 {
-            f64x2::load(self, data)
+            f64x2::load_t(self, data)
         }
         #[inline(always)]
         fn i8x16_splat(self, v: i8) -> Self::I8x16 {
-            i8x16::splat(self, v)
+            i8x16::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i8x16_zero(self) -> Self::I8x16 {
-            i8x16::zero(self)
+            i8x16::zero_t(self)
         }
 
         #[inline(always)]
         fn i8x16_load(self, data: &[i8; 16]) -> Self::I8x16 {
-            i8x16::load(self, data)
+            i8x16::load_t(self, data)
         }
         #[inline(always)]
         fn u8x16_splat(self, v: u8) -> Self::U8x16 {
-            u8x16::splat(self, v)
+            u8x16::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u8x16_zero(self) -> Self::U8x16 {
-            u8x16::zero(self)
+            u8x16::zero_t(self)
         }
 
         #[inline(always)]
         fn u8x16_load(self, data: &[u8; 16]) -> Self::U8x16 {
-            u8x16::load(self, data)
+            u8x16::load_t(self, data)
         }
         #[inline(always)]
         fn i16x8_splat(self, v: i16) -> Self::I16x8 {
-            i16x8::splat(self, v)
+            i16x8::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i16x8_zero(self) -> Self::I16x8 {
-            i16x8::zero(self)
+            i16x8::zero_t(self)
         }
 
         #[inline(always)]
         fn i16x8_load(self, data: &[i16; 8]) -> Self::I16x8 {
-            i16x8::load(self, data)
+            i16x8::load_t(self, data)
         }
         #[inline(always)]
         fn u16x8_splat(self, v: u16) -> Self::U16x8 {
-            u16x8::splat(self, v)
+            u16x8::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u16x8_zero(self) -> Self::U16x8 {
-            u16x8::zero(self)
+            u16x8::zero_t(self)
         }
 
         #[inline(always)]
         fn u16x8_load(self, data: &[u16; 8]) -> Self::U16x8 {
-            u16x8::load(self, data)
+            u16x8::load_t(self, data)
         }
         #[inline(always)]
         fn i32x4_splat(self, v: i32) -> Self::I32x4 {
-            i32x4::splat(self, v)
+            i32x4::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i32x4_zero(self) -> Self::I32x4 {
-            i32x4::zero(self)
+            i32x4::zero_t(self)
         }
 
         #[inline(always)]
         fn i32x4_load(self, data: &[i32; 4]) -> Self::I32x4 {
-            i32x4::load(self, data)
+            i32x4::load_t(self, data)
         }
         #[inline(always)]
         fn u32x4_splat(self, v: u32) -> Self::U32x4 {
-            u32x4::splat(self, v)
+            u32x4::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u32x4_zero(self) -> Self::U32x4 {
-            u32x4::zero(self)
+            u32x4::zero_t(self)
         }
 
         #[inline(always)]
         fn u32x4_load(self, data: &[u32; 4]) -> Self::U32x4 {
-            u32x4::load(self, data)
+            u32x4::load_t(self, data)
         }
         #[inline(always)]
         fn i64x2_splat(self, v: i64) -> Self::I64x2 {
-            i64x2::splat(self, v)
+            i64x2::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i64x2_zero(self) -> Self::I64x2 {
-            i64x2::zero(self)
+            i64x2::zero_t(self)
         }
 
         #[inline(always)]
         fn i64x2_load(self, data: &[i64; 2]) -> Self::I64x2 {
-            i64x2::load(self, data)
+            i64x2::load_t(self, data)
         }
         #[inline(always)]
         fn u64x2_splat(self, v: u64) -> Self::U64x2 {
-            u64x2::splat(self, v)
+            u64x2::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u64x2_zero(self) -> Self::U64x2 {
-            u64x2::zero(self)
+            u64x2::zero_t(self)
         }
 
         #[inline(always)]
         fn u64x2_load(self, data: &[u64; 2]) -> Self::U64x2 {
-            u64x2::load(self, data)
+            u64x2::load_t(self, data)
         }
         #[inline(always)]
         fn f32x8_splat(self, v: f32) -> Self::F32x8 {
-            f32x8::splat(self, v)
+            f32x8::splat_t(self, v)
         }
 
         #[inline(always)]
         fn f32x8_zero(self) -> Self::F32x8 {
-            f32x8::zero(self)
+            f32x8::zero_t(self)
         }
 
         #[inline(always)]
         fn f32x8_load(self, data: &[f32; 8]) -> Self::F32x8 {
-            f32x8::load(self, data)
+            f32x8::load_t(self, data)
         }
         #[inline(always)]
         fn f64x4_splat(self, v: f64) -> Self::F64x4 {
-            f64x4::splat(self, v)
+            f64x4::splat_t(self, v)
         }
 
         #[inline(always)]
         fn f64x4_zero(self) -> Self::F64x4 {
-            f64x4::zero(self)
+            f64x4::zero_t(self)
         }
 
         #[inline(always)]
         fn f64x4_load(self, data: &[f64; 4]) -> Self::F64x4 {
-            f64x4::load(self, data)
+            f64x4::load_t(self, data)
         }
         #[inline(always)]
         fn i8x32_splat(self, v: i8) -> Self::I8x32 {
-            i8x32::splat(self, v)
+            i8x32::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i8x32_zero(self) -> Self::I8x32 {
-            i8x32::zero(self)
+            i8x32::zero_t(self)
         }
 
         #[inline(always)]
         fn i8x32_load(self, data: &[i8; 32]) -> Self::I8x32 {
-            i8x32::load(self, data)
+            i8x32::load_t(self, data)
         }
         #[inline(always)]
         fn u8x32_splat(self, v: u8) -> Self::U8x32 {
-            u8x32::splat(self, v)
+            u8x32::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u8x32_zero(self) -> Self::U8x32 {
-            u8x32::zero(self)
+            u8x32::zero_t(self)
         }
 
         #[inline(always)]
         fn u8x32_load(self, data: &[u8; 32]) -> Self::U8x32 {
-            u8x32::load(self, data)
+            u8x32::load_t(self, data)
         }
         #[inline(always)]
         fn i16x16_splat(self, v: i16) -> Self::I16x16 {
-            i16x16::splat(self, v)
+            i16x16::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i16x16_zero(self) -> Self::I16x16 {
-            i16x16::zero(self)
+            i16x16::zero_t(self)
         }
 
         #[inline(always)]
         fn i16x16_load(self, data: &[i16; 16]) -> Self::I16x16 {
-            i16x16::load(self, data)
+            i16x16::load_t(self, data)
         }
         #[inline(always)]
         fn u16x16_splat(self, v: u16) -> Self::U16x16 {
-            u16x16::splat(self, v)
+            u16x16::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u16x16_zero(self) -> Self::U16x16 {
-            u16x16::zero(self)
+            u16x16::zero_t(self)
         }
 
         #[inline(always)]
         fn u16x16_load(self, data: &[u16; 16]) -> Self::U16x16 {
-            u16x16::load(self, data)
+            u16x16::load_t(self, data)
         }
         #[inline(always)]
         fn i32x8_splat(self, v: i32) -> Self::I32x8 {
-            i32x8::splat(self, v)
+            i32x8::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i32x8_zero(self) -> Self::I32x8 {
-            i32x8::zero(self)
+            i32x8::zero_t(self)
         }
 
         #[inline(always)]
         fn i32x8_load(self, data: &[i32; 8]) -> Self::I32x8 {
-            i32x8::load(self, data)
+            i32x8::load_t(self, data)
         }
         #[inline(always)]
         fn u32x8_splat(self, v: u32) -> Self::U32x8 {
-            u32x8::splat(self, v)
+            u32x8::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u32x8_zero(self) -> Self::U32x8 {
-            u32x8::zero(self)
+            u32x8::zero_t(self)
         }
 
         #[inline(always)]
         fn u32x8_load(self, data: &[u32; 8]) -> Self::U32x8 {
-            u32x8::load(self, data)
+            u32x8::load_t(self, data)
         }
         #[inline(always)]
         fn i64x4_splat(self, v: i64) -> Self::I64x4 {
-            i64x4::splat(self, v)
+            i64x4::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i64x4_zero(self) -> Self::I64x4 {
-            i64x4::zero(self)
+            i64x4::zero_t(self)
         }
 
         #[inline(always)]
         fn i64x4_load(self, data: &[i64; 4]) -> Self::I64x4 {
-            i64x4::load(self, data)
+            i64x4::load_t(self, data)
         }
         #[inline(always)]
         fn u64x4_splat(self, v: u64) -> Self::U64x4 {
-            u64x4::splat(self, v)
+            u64x4::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u64x4_zero(self) -> Self::U64x4 {
-            u64x4::zero(self)
+            u64x4::zero_t(self)
         }
 
         #[inline(always)]
         fn u64x4_load(self, data: &[u64; 4]) -> Self::U64x4 {
-            u64x4::load(self, data)
+            u64x4::load_t(self, data)
         }
         #[inline(always)]
         fn f32x16_splat(self, v: f32) -> Self::F32x16 {
             {
-                let part = f32x4::splat(self, v);
+                let part = f32x4::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -482,7 +482,7 @@ mod x86_impl {
         #[inline(always)]
         fn f32x16_zero(self) -> Self::F32x16 {
             {
-                let part = f32x4::zero(self);
+                let part = f32x4::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -491,17 +491,17 @@ mod x86_impl {
         fn f32x16_load(self, data: &[f32; 16]) -> Self::F32x16 {
             {
                 [
-                    f32x4::load(self, data[0..4].try_into().unwrap()),
-                    f32x4::load(self, data[4..8].try_into().unwrap()),
-                    f32x4::load(self, data[8..12].try_into().unwrap()),
-                    f32x4::load(self, data[12..16].try_into().unwrap()),
+                    f32x4::load_t(self, data[0..4].try_into().unwrap()),
+                    f32x4::load_t(self, data[4..8].try_into().unwrap()),
+                    f32x4::load_t(self, data[8..12].try_into().unwrap()),
+                    f32x4::load_t(self, data[12..16].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn f64x8_splat(self, v: f64) -> Self::F64x8 {
             {
-                let part = f64x2::splat(self, v);
+                let part = f64x2::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -509,7 +509,7 @@ mod x86_impl {
         #[inline(always)]
         fn f64x8_zero(self) -> Self::F64x8 {
             {
-                let part = f64x2::zero(self);
+                let part = f64x2::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -518,17 +518,17 @@ mod x86_impl {
         fn f64x8_load(self, data: &[f64; 8]) -> Self::F64x8 {
             {
                 [
-                    f64x2::load(self, data[0..2].try_into().unwrap()),
-                    f64x2::load(self, data[2..4].try_into().unwrap()),
-                    f64x2::load(self, data[4..6].try_into().unwrap()),
-                    f64x2::load(self, data[6..8].try_into().unwrap()),
+                    f64x2::load_t(self, data[0..2].try_into().unwrap()),
+                    f64x2::load_t(self, data[2..4].try_into().unwrap()),
+                    f64x2::load_t(self, data[4..6].try_into().unwrap()),
+                    f64x2::load_t(self, data[6..8].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn i8x64_splat(self, v: i8) -> Self::I8x64 {
             {
-                let part = i8x16::splat(self, v);
+                let part = i8x16::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -536,7 +536,7 @@ mod x86_impl {
         #[inline(always)]
         fn i8x64_zero(self) -> Self::I8x64 {
             {
-                let part = i8x16::zero(self);
+                let part = i8x16::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -545,17 +545,17 @@ mod x86_impl {
         fn i8x64_load(self, data: &[i8; 64]) -> Self::I8x64 {
             {
                 [
-                    i8x16::load(self, data[0..16].try_into().unwrap()),
-                    i8x16::load(self, data[16..32].try_into().unwrap()),
-                    i8x16::load(self, data[32..48].try_into().unwrap()),
-                    i8x16::load(self, data[48..64].try_into().unwrap()),
+                    i8x16::load_t(self, data[0..16].try_into().unwrap()),
+                    i8x16::load_t(self, data[16..32].try_into().unwrap()),
+                    i8x16::load_t(self, data[32..48].try_into().unwrap()),
+                    i8x16::load_t(self, data[48..64].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn u8x64_splat(self, v: u8) -> Self::U8x64 {
             {
-                let part = u8x16::splat(self, v);
+                let part = u8x16::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -563,7 +563,7 @@ mod x86_impl {
         #[inline(always)]
         fn u8x64_zero(self) -> Self::U8x64 {
             {
-                let part = u8x16::zero(self);
+                let part = u8x16::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -572,17 +572,17 @@ mod x86_impl {
         fn u8x64_load(self, data: &[u8; 64]) -> Self::U8x64 {
             {
                 [
-                    u8x16::load(self, data[0..16].try_into().unwrap()),
-                    u8x16::load(self, data[16..32].try_into().unwrap()),
-                    u8x16::load(self, data[32..48].try_into().unwrap()),
-                    u8x16::load(self, data[48..64].try_into().unwrap()),
+                    u8x16::load_t(self, data[0..16].try_into().unwrap()),
+                    u8x16::load_t(self, data[16..32].try_into().unwrap()),
+                    u8x16::load_t(self, data[32..48].try_into().unwrap()),
+                    u8x16::load_t(self, data[48..64].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn i16x32_splat(self, v: i16) -> Self::I16x32 {
             {
-                let part = i16x8::splat(self, v);
+                let part = i16x8::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -590,7 +590,7 @@ mod x86_impl {
         #[inline(always)]
         fn i16x32_zero(self) -> Self::I16x32 {
             {
-                let part = i16x8::zero(self);
+                let part = i16x8::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -599,17 +599,17 @@ mod x86_impl {
         fn i16x32_load(self, data: &[i16; 32]) -> Self::I16x32 {
             {
                 [
-                    i16x8::load(self, data[0..8].try_into().unwrap()),
-                    i16x8::load(self, data[8..16].try_into().unwrap()),
-                    i16x8::load(self, data[16..24].try_into().unwrap()),
-                    i16x8::load(self, data[24..32].try_into().unwrap()),
+                    i16x8::load_t(self, data[0..8].try_into().unwrap()),
+                    i16x8::load_t(self, data[8..16].try_into().unwrap()),
+                    i16x8::load_t(self, data[16..24].try_into().unwrap()),
+                    i16x8::load_t(self, data[24..32].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn u16x32_splat(self, v: u16) -> Self::U16x32 {
             {
-                let part = u16x8::splat(self, v);
+                let part = u16x8::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -617,7 +617,7 @@ mod x86_impl {
         #[inline(always)]
         fn u16x32_zero(self) -> Self::U16x32 {
             {
-                let part = u16x8::zero(self);
+                let part = u16x8::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -626,17 +626,17 @@ mod x86_impl {
         fn u16x32_load(self, data: &[u16; 32]) -> Self::U16x32 {
             {
                 [
-                    u16x8::load(self, data[0..8].try_into().unwrap()),
-                    u16x8::load(self, data[8..16].try_into().unwrap()),
-                    u16x8::load(self, data[16..24].try_into().unwrap()),
-                    u16x8::load(self, data[24..32].try_into().unwrap()),
+                    u16x8::load_t(self, data[0..8].try_into().unwrap()),
+                    u16x8::load_t(self, data[8..16].try_into().unwrap()),
+                    u16x8::load_t(self, data[16..24].try_into().unwrap()),
+                    u16x8::load_t(self, data[24..32].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn i32x16_splat(self, v: i32) -> Self::I32x16 {
             {
-                let part = i32x4::splat(self, v);
+                let part = i32x4::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -644,7 +644,7 @@ mod x86_impl {
         #[inline(always)]
         fn i32x16_zero(self) -> Self::I32x16 {
             {
-                let part = i32x4::zero(self);
+                let part = i32x4::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -653,17 +653,17 @@ mod x86_impl {
         fn i32x16_load(self, data: &[i32; 16]) -> Self::I32x16 {
             {
                 [
-                    i32x4::load(self, data[0..4].try_into().unwrap()),
-                    i32x4::load(self, data[4..8].try_into().unwrap()),
-                    i32x4::load(self, data[8..12].try_into().unwrap()),
-                    i32x4::load(self, data[12..16].try_into().unwrap()),
+                    i32x4::load_t(self, data[0..4].try_into().unwrap()),
+                    i32x4::load_t(self, data[4..8].try_into().unwrap()),
+                    i32x4::load_t(self, data[8..12].try_into().unwrap()),
+                    i32x4::load_t(self, data[12..16].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn u32x16_splat(self, v: u32) -> Self::U32x16 {
             {
-                let part = u32x4::splat(self, v);
+                let part = u32x4::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -671,7 +671,7 @@ mod x86_impl {
         #[inline(always)]
         fn u32x16_zero(self) -> Self::U32x16 {
             {
-                let part = u32x4::zero(self);
+                let part = u32x4::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -680,17 +680,17 @@ mod x86_impl {
         fn u32x16_load(self, data: &[u32; 16]) -> Self::U32x16 {
             {
                 [
-                    u32x4::load(self, data[0..4].try_into().unwrap()),
-                    u32x4::load(self, data[4..8].try_into().unwrap()),
-                    u32x4::load(self, data[8..12].try_into().unwrap()),
-                    u32x4::load(self, data[12..16].try_into().unwrap()),
+                    u32x4::load_t(self, data[0..4].try_into().unwrap()),
+                    u32x4::load_t(self, data[4..8].try_into().unwrap()),
+                    u32x4::load_t(self, data[8..12].try_into().unwrap()),
+                    u32x4::load_t(self, data[12..16].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn i64x8_splat(self, v: i64) -> Self::I64x8 {
             {
-                let part = i64x2::splat(self, v);
+                let part = i64x2::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -698,7 +698,7 @@ mod x86_impl {
         #[inline(always)]
         fn i64x8_zero(self) -> Self::I64x8 {
             {
-                let part = i64x2::zero(self);
+                let part = i64x2::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -707,17 +707,17 @@ mod x86_impl {
         fn i64x8_load(self, data: &[i64; 8]) -> Self::I64x8 {
             {
                 [
-                    i64x2::load(self, data[0..2].try_into().unwrap()),
-                    i64x2::load(self, data[2..4].try_into().unwrap()),
-                    i64x2::load(self, data[4..6].try_into().unwrap()),
-                    i64x2::load(self, data[6..8].try_into().unwrap()),
+                    i64x2::load_t(self, data[0..2].try_into().unwrap()),
+                    i64x2::load_t(self, data[2..4].try_into().unwrap()),
+                    i64x2::load_t(self, data[4..6].try_into().unwrap()),
+                    i64x2::load_t(self, data[6..8].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn u64x8_splat(self, v: u64) -> Self::U64x8 {
             {
-                let part = u64x2::splat(self, v);
+                let part = u64x2::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -725,7 +725,7 @@ mod x86_impl {
         #[inline(always)]
         fn u64x8_zero(self) -> Self::U64x8 {
             {
-                let part = u64x2::zero(self);
+                let part = u64x2::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -734,10 +734,10 @@ mod x86_impl {
         fn u64x8_load(self, data: &[u64; 8]) -> Self::U64x8 {
             {
                 [
-                    u64x2::load(self, data[0..2].try_into().unwrap()),
-                    u64x2::load(self, data[2..4].try_into().unwrap()),
-                    u64x2::load(self, data[4..6].try_into().unwrap()),
-                    u64x2::load(self, data[6..8].try_into().unwrap()),
+                    u64x2::load_t(self, data[0..2].try_into().unwrap()),
+                    u64x2::load_t(self, data[2..4].try_into().unwrap()),
+                    u64x2::load_t(self, data[4..6].try_into().unwrap()),
+                    u64x2::load_t(self, data[6..8].try_into().unwrap()),
                 ]
             }
         }
@@ -790,288 +790,288 @@ mod arm_impl {
 
         #[inline(always)]
         fn f32x4_splat(self, v: f32) -> Self::F32x4 {
-            f32x4::splat(self, v)
+            f32x4::splat_t(self, v)
         }
 
         #[inline(always)]
         fn f32x4_zero(self) -> Self::F32x4 {
-            f32x4::zero(self)
+            f32x4::zero_t(self)
         }
 
         #[inline(always)]
         fn f32x4_load(self, data: &[f32; 4]) -> Self::F32x4 {
-            f32x4::load(self, data)
+            f32x4::load_t(self, data)
         }
         #[inline(always)]
         fn f64x2_splat(self, v: f64) -> Self::F64x2 {
-            f64x2::splat(self, v)
+            f64x2::splat_t(self, v)
         }
 
         #[inline(always)]
         fn f64x2_zero(self) -> Self::F64x2 {
-            f64x2::zero(self)
+            f64x2::zero_t(self)
         }
 
         #[inline(always)]
         fn f64x2_load(self, data: &[f64; 2]) -> Self::F64x2 {
-            f64x2::load(self, data)
+            f64x2::load_t(self, data)
         }
         #[inline(always)]
         fn i8x16_splat(self, v: i8) -> Self::I8x16 {
-            i8x16::splat(self, v)
+            i8x16::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i8x16_zero(self) -> Self::I8x16 {
-            i8x16::zero(self)
+            i8x16::zero_t(self)
         }
 
         #[inline(always)]
         fn i8x16_load(self, data: &[i8; 16]) -> Self::I8x16 {
-            i8x16::load(self, data)
+            i8x16::load_t(self, data)
         }
         #[inline(always)]
         fn u8x16_splat(self, v: u8) -> Self::U8x16 {
-            u8x16::splat(self, v)
+            u8x16::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u8x16_zero(self) -> Self::U8x16 {
-            u8x16::zero(self)
+            u8x16::zero_t(self)
         }
 
         #[inline(always)]
         fn u8x16_load(self, data: &[u8; 16]) -> Self::U8x16 {
-            u8x16::load(self, data)
+            u8x16::load_t(self, data)
         }
         #[inline(always)]
         fn i16x8_splat(self, v: i16) -> Self::I16x8 {
-            i16x8::splat(self, v)
+            i16x8::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i16x8_zero(self) -> Self::I16x8 {
-            i16x8::zero(self)
+            i16x8::zero_t(self)
         }
 
         #[inline(always)]
         fn i16x8_load(self, data: &[i16; 8]) -> Self::I16x8 {
-            i16x8::load(self, data)
+            i16x8::load_t(self, data)
         }
         #[inline(always)]
         fn u16x8_splat(self, v: u16) -> Self::U16x8 {
-            u16x8::splat(self, v)
+            u16x8::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u16x8_zero(self) -> Self::U16x8 {
-            u16x8::zero(self)
+            u16x8::zero_t(self)
         }
 
         #[inline(always)]
         fn u16x8_load(self, data: &[u16; 8]) -> Self::U16x8 {
-            u16x8::load(self, data)
+            u16x8::load_t(self, data)
         }
         #[inline(always)]
         fn i32x4_splat(self, v: i32) -> Self::I32x4 {
-            i32x4::splat(self, v)
+            i32x4::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i32x4_zero(self) -> Self::I32x4 {
-            i32x4::zero(self)
+            i32x4::zero_t(self)
         }
 
         #[inline(always)]
         fn i32x4_load(self, data: &[i32; 4]) -> Self::I32x4 {
-            i32x4::load(self, data)
+            i32x4::load_t(self, data)
         }
         #[inline(always)]
         fn u32x4_splat(self, v: u32) -> Self::U32x4 {
-            u32x4::splat(self, v)
+            u32x4::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u32x4_zero(self) -> Self::U32x4 {
-            u32x4::zero(self)
+            u32x4::zero_t(self)
         }
 
         #[inline(always)]
         fn u32x4_load(self, data: &[u32; 4]) -> Self::U32x4 {
-            u32x4::load(self, data)
+            u32x4::load_t(self, data)
         }
         #[inline(always)]
         fn i64x2_splat(self, v: i64) -> Self::I64x2 {
-            i64x2::splat(self, v)
+            i64x2::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i64x2_zero(self) -> Self::I64x2 {
-            i64x2::zero(self)
+            i64x2::zero_t(self)
         }
 
         #[inline(always)]
         fn i64x2_load(self, data: &[i64; 2]) -> Self::I64x2 {
-            i64x2::load(self, data)
+            i64x2::load_t(self, data)
         }
         #[inline(always)]
         fn u64x2_splat(self, v: u64) -> Self::U64x2 {
-            u64x2::splat(self, v)
+            u64x2::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u64x2_zero(self) -> Self::U64x2 {
-            u64x2::zero(self)
+            u64x2::zero_t(self)
         }
 
         #[inline(always)]
         fn u64x2_load(self, data: &[u64; 2]) -> Self::U64x2 {
-            u64x2::load(self, data)
+            u64x2::load_t(self, data)
         }
         #[inline(always)]
         fn f32x8_splat(self, v: f32) -> Self::F32x8 {
-            crate::simd::neon::f32x8::splat(self, v)
+            crate::simd::neon::f32x8::splat_t(self, v)
         }
 
         #[inline(always)]
         fn f32x8_zero(self) -> Self::F32x8 {
-            crate::simd::neon::f32x8::zero(self)
+            crate::simd::neon::f32x8::zero_t(self)
         }
 
         #[inline(always)]
         fn f32x8_load(self, data: &[f32; 8]) -> Self::F32x8 {
-            crate::simd::neon::f32x8::load(self, data)
+            crate::simd::neon::f32x8::load_t(self, data)
         }
         #[inline(always)]
         fn f64x4_splat(self, v: f64) -> Self::F64x4 {
-            crate::simd::neon::f64x4::splat(self, v)
+            crate::simd::neon::f64x4::splat_t(self, v)
         }
 
         #[inline(always)]
         fn f64x4_zero(self) -> Self::F64x4 {
-            crate::simd::neon::f64x4::zero(self)
+            crate::simd::neon::f64x4::zero_t(self)
         }
 
         #[inline(always)]
         fn f64x4_load(self, data: &[f64; 4]) -> Self::F64x4 {
-            crate::simd::neon::f64x4::load(self, data)
+            crate::simd::neon::f64x4::load_t(self, data)
         }
         #[inline(always)]
         fn i8x32_splat(self, v: i8) -> Self::I8x32 {
-            crate::simd::neon::i8x32::splat(self, v)
+            crate::simd::neon::i8x32::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i8x32_zero(self) -> Self::I8x32 {
-            crate::simd::neon::i8x32::zero(self)
+            crate::simd::neon::i8x32::zero_t(self)
         }
 
         #[inline(always)]
         fn i8x32_load(self, data: &[i8; 32]) -> Self::I8x32 {
-            crate::simd::neon::i8x32::load(self, data)
+            crate::simd::neon::i8x32::load_t(self, data)
         }
         #[inline(always)]
         fn u8x32_splat(self, v: u8) -> Self::U8x32 {
-            crate::simd::neon::u8x32::splat(self, v)
+            crate::simd::neon::u8x32::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u8x32_zero(self) -> Self::U8x32 {
-            crate::simd::neon::u8x32::zero(self)
+            crate::simd::neon::u8x32::zero_t(self)
         }
 
         #[inline(always)]
         fn u8x32_load(self, data: &[u8; 32]) -> Self::U8x32 {
-            crate::simd::neon::u8x32::load(self, data)
+            crate::simd::neon::u8x32::load_t(self, data)
         }
         #[inline(always)]
         fn i16x16_splat(self, v: i16) -> Self::I16x16 {
-            crate::simd::neon::i16x16::splat(self, v)
+            crate::simd::neon::i16x16::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i16x16_zero(self) -> Self::I16x16 {
-            crate::simd::neon::i16x16::zero(self)
+            crate::simd::neon::i16x16::zero_t(self)
         }
 
         #[inline(always)]
         fn i16x16_load(self, data: &[i16; 16]) -> Self::I16x16 {
-            crate::simd::neon::i16x16::load(self, data)
+            crate::simd::neon::i16x16::load_t(self, data)
         }
         #[inline(always)]
         fn u16x16_splat(self, v: u16) -> Self::U16x16 {
-            crate::simd::neon::u16x16::splat(self, v)
+            crate::simd::neon::u16x16::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u16x16_zero(self) -> Self::U16x16 {
-            crate::simd::neon::u16x16::zero(self)
+            crate::simd::neon::u16x16::zero_t(self)
         }
 
         #[inline(always)]
         fn u16x16_load(self, data: &[u16; 16]) -> Self::U16x16 {
-            crate::simd::neon::u16x16::load(self, data)
+            crate::simd::neon::u16x16::load_t(self, data)
         }
         #[inline(always)]
         fn i32x8_splat(self, v: i32) -> Self::I32x8 {
-            crate::simd::neon::i32x8::splat(self, v)
+            crate::simd::neon::i32x8::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i32x8_zero(self) -> Self::I32x8 {
-            crate::simd::neon::i32x8::zero(self)
+            crate::simd::neon::i32x8::zero_t(self)
         }
 
         #[inline(always)]
         fn i32x8_load(self, data: &[i32; 8]) -> Self::I32x8 {
-            crate::simd::neon::i32x8::load(self, data)
+            crate::simd::neon::i32x8::load_t(self, data)
         }
         #[inline(always)]
         fn u32x8_splat(self, v: u32) -> Self::U32x8 {
-            crate::simd::neon::u32x8::splat(self, v)
+            crate::simd::neon::u32x8::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u32x8_zero(self) -> Self::U32x8 {
-            crate::simd::neon::u32x8::zero(self)
+            crate::simd::neon::u32x8::zero_t(self)
         }
 
         #[inline(always)]
         fn u32x8_load(self, data: &[u32; 8]) -> Self::U32x8 {
-            crate::simd::neon::u32x8::load(self, data)
+            crate::simd::neon::u32x8::load_t(self, data)
         }
         #[inline(always)]
         fn i64x4_splat(self, v: i64) -> Self::I64x4 {
-            crate::simd::neon::i64x4::splat(self, v)
+            crate::simd::neon::i64x4::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i64x4_zero(self) -> Self::I64x4 {
-            crate::simd::neon::i64x4::zero(self)
+            crate::simd::neon::i64x4::zero_t(self)
         }
 
         #[inline(always)]
         fn i64x4_load(self, data: &[i64; 4]) -> Self::I64x4 {
-            crate::simd::neon::i64x4::load(self, data)
+            crate::simd::neon::i64x4::load_t(self, data)
         }
         #[inline(always)]
         fn u64x4_splat(self, v: u64) -> Self::U64x4 {
-            crate::simd::neon::u64x4::splat(self, v)
+            crate::simd::neon::u64x4::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u64x4_zero(self) -> Self::U64x4 {
-            crate::simd::neon::u64x4::zero(self)
+            crate::simd::neon::u64x4::zero_t(self)
         }
 
         #[inline(always)]
         fn u64x4_load(self, data: &[u64; 4]) -> Self::U64x4 {
-            crate::simd::neon::u64x4::load(self, data)
+            crate::simd::neon::u64x4::load_t(self, data)
         }
         #[inline(always)]
         fn f32x16_splat(self, v: f32) -> Self::F32x16 {
             {
-                let part = f32x4::splat(self, v);
+                let part = f32x4::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -1079,7 +1079,7 @@ mod arm_impl {
         #[inline(always)]
         fn f32x16_zero(self) -> Self::F32x16 {
             {
-                let part = f32x4::zero(self);
+                let part = f32x4::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -1088,17 +1088,17 @@ mod arm_impl {
         fn f32x16_load(self, data: &[f32; 16]) -> Self::F32x16 {
             {
                 [
-                    f32x4::load(self, data[0..4].try_into().unwrap()),
-                    f32x4::load(self, data[4..8].try_into().unwrap()),
-                    f32x4::load(self, data[8..12].try_into().unwrap()),
-                    f32x4::load(self, data[12..16].try_into().unwrap()),
+                    f32x4::load_t(self, data[0..4].try_into().unwrap()),
+                    f32x4::load_t(self, data[4..8].try_into().unwrap()),
+                    f32x4::load_t(self, data[8..12].try_into().unwrap()),
+                    f32x4::load_t(self, data[12..16].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn f64x8_splat(self, v: f64) -> Self::F64x8 {
             {
-                let part = f64x2::splat(self, v);
+                let part = f64x2::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -1106,7 +1106,7 @@ mod arm_impl {
         #[inline(always)]
         fn f64x8_zero(self) -> Self::F64x8 {
             {
-                let part = f64x2::zero(self);
+                let part = f64x2::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -1115,17 +1115,17 @@ mod arm_impl {
         fn f64x8_load(self, data: &[f64; 8]) -> Self::F64x8 {
             {
                 [
-                    f64x2::load(self, data[0..2].try_into().unwrap()),
-                    f64x2::load(self, data[2..4].try_into().unwrap()),
-                    f64x2::load(self, data[4..6].try_into().unwrap()),
-                    f64x2::load(self, data[6..8].try_into().unwrap()),
+                    f64x2::load_t(self, data[0..2].try_into().unwrap()),
+                    f64x2::load_t(self, data[2..4].try_into().unwrap()),
+                    f64x2::load_t(self, data[4..6].try_into().unwrap()),
+                    f64x2::load_t(self, data[6..8].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn i8x64_splat(self, v: i8) -> Self::I8x64 {
             {
-                let part = i8x16::splat(self, v);
+                let part = i8x16::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -1133,7 +1133,7 @@ mod arm_impl {
         #[inline(always)]
         fn i8x64_zero(self) -> Self::I8x64 {
             {
-                let part = i8x16::zero(self);
+                let part = i8x16::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -1142,17 +1142,17 @@ mod arm_impl {
         fn i8x64_load(self, data: &[i8; 64]) -> Self::I8x64 {
             {
                 [
-                    i8x16::load(self, data[0..16].try_into().unwrap()),
-                    i8x16::load(self, data[16..32].try_into().unwrap()),
-                    i8x16::load(self, data[32..48].try_into().unwrap()),
-                    i8x16::load(self, data[48..64].try_into().unwrap()),
+                    i8x16::load_t(self, data[0..16].try_into().unwrap()),
+                    i8x16::load_t(self, data[16..32].try_into().unwrap()),
+                    i8x16::load_t(self, data[32..48].try_into().unwrap()),
+                    i8x16::load_t(self, data[48..64].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn u8x64_splat(self, v: u8) -> Self::U8x64 {
             {
-                let part = u8x16::splat(self, v);
+                let part = u8x16::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -1160,7 +1160,7 @@ mod arm_impl {
         #[inline(always)]
         fn u8x64_zero(self) -> Self::U8x64 {
             {
-                let part = u8x16::zero(self);
+                let part = u8x16::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -1169,17 +1169,17 @@ mod arm_impl {
         fn u8x64_load(self, data: &[u8; 64]) -> Self::U8x64 {
             {
                 [
-                    u8x16::load(self, data[0..16].try_into().unwrap()),
-                    u8x16::load(self, data[16..32].try_into().unwrap()),
-                    u8x16::load(self, data[32..48].try_into().unwrap()),
-                    u8x16::load(self, data[48..64].try_into().unwrap()),
+                    u8x16::load_t(self, data[0..16].try_into().unwrap()),
+                    u8x16::load_t(self, data[16..32].try_into().unwrap()),
+                    u8x16::load_t(self, data[32..48].try_into().unwrap()),
+                    u8x16::load_t(self, data[48..64].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn i16x32_splat(self, v: i16) -> Self::I16x32 {
             {
-                let part = i16x8::splat(self, v);
+                let part = i16x8::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -1187,7 +1187,7 @@ mod arm_impl {
         #[inline(always)]
         fn i16x32_zero(self) -> Self::I16x32 {
             {
-                let part = i16x8::zero(self);
+                let part = i16x8::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -1196,17 +1196,17 @@ mod arm_impl {
         fn i16x32_load(self, data: &[i16; 32]) -> Self::I16x32 {
             {
                 [
-                    i16x8::load(self, data[0..8].try_into().unwrap()),
-                    i16x8::load(self, data[8..16].try_into().unwrap()),
-                    i16x8::load(self, data[16..24].try_into().unwrap()),
-                    i16x8::load(self, data[24..32].try_into().unwrap()),
+                    i16x8::load_t(self, data[0..8].try_into().unwrap()),
+                    i16x8::load_t(self, data[8..16].try_into().unwrap()),
+                    i16x8::load_t(self, data[16..24].try_into().unwrap()),
+                    i16x8::load_t(self, data[24..32].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn u16x32_splat(self, v: u16) -> Self::U16x32 {
             {
-                let part = u16x8::splat(self, v);
+                let part = u16x8::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -1214,7 +1214,7 @@ mod arm_impl {
         #[inline(always)]
         fn u16x32_zero(self) -> Self::U16x32 {
             {
-                let part = u16x8::zero(self);
+                let part = u16x8::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -1223,17 +1223,17 @@ mod arm_impl {
         fn u16x32_load(self, data: &[u16; 32]) -> Self::U16x32 {
             {
                 [
-                    u16x8::load(self, data[0..8].try_into().unwrap()),
-                    u16x8::load(self, data[8..16].try_into().unwrap()),
-                    u16x8::load(self, data[16..24].try_into().unwrap()),
-                    u16x8::load(self, data[24..32].try_into().unwrap()),
+                    u16x8::load_t(self, data[0..8].try_into().unwrap()),
+                    u16x8::load_t(self, data[8..16].try_into().unwrap()),
+                    u16x8::load_t(self, data[16..24].try_into().unwrap()),
+                    u16x8::load_t(self, data[24..32].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn i32x16_splat(self, v: i32) -> Self::I32x16 {
             {
-                let part = i32x4::splat(self, v);
+                let part = i32x4::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -1241,7 +1241,7 @@ mod arm_impl {
         #[inline(always)]
         fn i32x16_zero(self) -> Self::I32x16 {
             {
-                let part = i32x4::zero(self);
+                let part = i32x4::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -1250,17 +1250,17 @@ mod arm_impl {
         fn i32x16_load(self, data: &[i32; 16]) -> Self::I32x16 {
             {
                 [
-                    i32x4::load(self, data[0..4].try_into().unwrap()),
-                    i32x4::load(self, data[4..8].try_into().unwrap()),
-                    i32x4::load(self, data[8..12].try_into().unwrap()),
-                    i32x4::load(self, data[12..16].try_into().unwrap()),
+                    i32x4::load_t(self, data[0..4].try_into().unwrap()),
+                    i32x4::load_t(self, data[4..8].try_into().unwrap()),
+                    i32x4::load_t(self, data[8..12].try_into().unwrap()),
+                    i32x4::load_t(self, data[12..16].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn u32x16_splat(self, v: u32) -> Self::U32x16 {
             {
-                let part = u32x4::splat(self, v);
+                let part = u32x4::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -1268,7 +1268,7 @@ mod arm_impl {
         #[inline(always)]
         fn u32x16_zero(self) -> Self::U32x16 {
             {
-                let part = u32x4::zero(self);
+                let part = u32x4::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -1277,17 +1277,17 @@ mod arm_impl {
         fn u32x16_load(self, data: &[u32; 16]) -> Self::U32x16 {
             {
                 [
-                    u32x4::load(self, data[0..4].try_into().unwrap()),
-                    u32x4::load(self, data[4..8].try_into().unwrap()),
-                    u32x4::load(self, data[8..12].try_into().unwrap()),
-                    u32x4::load(self, data[12..16].try_into().unwrap()),
+                    u32x4::load_t(self, data[0..4].try_into().unwrap()),
+                    u32x4::load_t(self, data[4..8].try_into().unwrap()),
+                    u32x4::load_t(self, data[8..12].try_into().unwrap()),
+                    u32x4::load_t(self, data[12..16].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn i64x8_splat(self, v: i64) -> Self::I64x8 {
             {
-                let part = i64x2::splat(self, v);
+                let part = i64x2::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -1295,7 +1295,7 @@ mod arm_impl {
         #[inline(always)]
         fn i64x8_zero(self) -> Self::I64x8 {
             {
-                let part = i64x2::zero(self);
+                let part = i64x2::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -1304,17 +1304,17 @@ mod arm_impl {
         fn i64x8_load(self, data: &[i64; 8]) -> Self::I64x8 {
             {
                 [
-                    i64x2::load(self, data[0..2].try_into().unwrap()),
-                    i64x2::load(self, data[2..4].try_into().unwrap()),
-                    i64x2::load(self, data[4..6].try_into().unwrap()),
-                    i64x2::load(self, data[6..8].try_into().unwrap()),
+                    i64x2::load_t(self, data[0..2].try_into().unwrap()),
+                    i64x2::load_t(self, data[2..4].try_into().unwrap()),
+                    i64x2::load_t(self, data[4..6].try_into().unwrap()),
+                    i64x2::load_t(self, data[6..8].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn u64x8_splat(self, v: u64) -> Self::U64x8 {
             {
-                let part = u64x2::splat(self, v);
+                let part = u64x2::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -1322,7 +1322,7 @@ mod arm_impl {
         #[inline(always)]
         fn u64x8_zero(self) -> Self::U64x8 {
             {
-                let part = u64x2::zero(self);
+                let part = u64x2::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -1331,10 +1331,10 @@ mod arm_impl {
         fn u64x8_load(self, data: &[u64; 8]) -> Self::U64x8 {
             {
                 [
-                    u64x2::load(self, data[0..2].try_into().unwrap()),
-                    u64x2::load(self, data[2..4].try_into().unwrap()),
-                    u64x2::load(self, data[4..6].try_into().unwrap()),
-                    u64x2::load(self, data[6..8].try_into().unwrap()),
+                    u64x2::load_t(self, data[0..2].try_into().unwrap()),
+                    u64x2::load_t(self, data[2..4].try_into().unwrap()),
+                    u64x2::load_t(self, data[4..6].try_into().unwrap()),
+                    u64x2::load_t(self, data[6..8].try_into().unwrap()),
                 ]
             }
         }
@@ -1387,288 +1387,288 @@ mod wasm_impl {
 
         #[inline(always)]
         fn f32x4_splat(self, v: f32) -> Self::F32x4 {
-            f32x4::splat(self, v)
+            f32x4::splat_t(self, v)
         }
 
         #[inline(always)]
         fn f32x4_zero(self) -> Self::F32x4 {
-            f32x4::zero(self)
+            f32x4::zero_t(self)
         }
 
         #[inline(always)]
         fn f32x4_load(self, data: &[f32; 4]) -> Self::F32x4 {
-            f32x4::load(self, data)
+            f32x4::load_t(self, data)
         }
         #[inline(always)]
         fn f64x2_splat(self, v: f64) -> Self::F64x2 {
-            f64x2::splat(self, v)
+            f64x2::splat_t(self, v)
         }
 
         #[inline(always)]
         fn f64x2_zero(self) -> Self::F64x2 {
-            f64x2::zero(self)
+            f64x2::zero_t(self)
         }
 
         #[inline(always)]
         fn f64x2_load(self, data: &[f64; 2]) -> Self::F64x2 {
-            f64x2::load(self, data)
+            f64x2::load_t(self, data)
         }
         #[inline(always)]
         fn i8x16_splat(self, v: i8) -> Self::I8x16 {
-            i8x16::splat(self, v)
+            i8x16::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i8x16_zero(self) -> Self::I8x16 {
-            i8x16::zero(self)
+            i8x16::zero_t(self)
         }
 
         #[inline(always)]
         fn i8x16_load(self, data: &[i8; 16]) -> Self::I8x16 {
-            i8x16::load(self, data)
+            i8x16::load_t(self, data)
         }
         #[inline(always)]
         fn u8x16_splat(self, v: u8) -> Self::U8x16 {
-            u8x16::splat(self, v)
+            u8x16::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u8x16_zero(self) -> Self::U8x16 {
-            u8x16::zero(self)
+            u8x16::zero_t(self)
         }
 
         #[inline(always)]
         fn u8x16_load(self, data: &[u8; 16]) -> Self::U8x16 {
-            u8x16::load(self, data)
+            u8x16::load_t(self, data)
         }
         #[inline(always)]
         fn i16x8_splat(self, v: i16) -> Self::I16x8 {
-            i16x8::splat(self, v)
+            i16x8::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i16x8_zero(self) -> Self::I16x8 {
-            i16x8::zero(self)
+            i16x8::zero_t(self)
         }
 
         #[inline(always)]
         fn i16x8_load(self, data: &[i16; 8]) -> Self::I16x8 {
-            i16x8::load(self, data)
+            i16x8::load_t(self, data)
         }
         #[inline(always)]
         fn u16x8_splat(self, v: u16) -> Self::U16x8 {
-            u16x8::splat(self, v)
+            u16x8::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u16x8_zero(self) -> Self::U16x8 {
-            u16x8::zero(self)
+            u16x8::zero_t(self)
         }
 
         #[inline(always)]
         fn u16x8_load(self, data: &[u16; 8]) -> Self::U16x8 {
-            u16x8::load(self, data)
+            u16x8::load_t(self, data)
         }
         #[inline(always)]
         fn i32x4_splat(self, v: i32) -> Self::I32x4 {
-            i32x4::splat(self, v)
+            i32x4::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i32x4_zero(self) -> Self::I32x4 {
-            i32x4::zero(self)
+            i32x4::zero_t(self)
         }
 
         #[inline(always)]
         fn i32x4_load(self, data: &[i32; 4]) -> Self::I32x4 {
-            i32x4::load(self, data)
+            i32x4::load_t(self, data)
         }
         #[inline(always)]
         fn u32x4_splat(self, v: u32) -> Self::U32x4 {
-            u32x4::splat(self, v)
+            u32x4::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u32x4_zero(self) -> Self::U32x4 {
-            u32x4::zero(self)
+            u32x4::zero_t(self)
         }
 
         #[inline(always)]
         fn u32x4_load(self, data: &[u32; 4]) -> Self::U32x4 {
-            u32x4::load(self, data)
+            u32x4::load_t(self, data)
         }
         #[inline(always)]
         fn i64x2_splat(self, v: i64) -> Self::I64x2 {
-            i64x2::splat(self, v)
+            i64x2::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i64x2_zero(self) -> Self::I64x2 {
-            i64x2::zero(self)
+            i64x2::zero_t(self)
         }
 
         #[inline(always)]
         fn i64x2_load(self, data: &[i64; 2]) -> Self::I64x2 {
-            i64x2::load(self, data)
+            i64x2::load_t(self, data)
         }
         #[inline(always)]
         fn u64x2_splat(self, v: u64) -> Self::U64x2 {
-            u64x2::splat(self, v)
+            u64x2::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u64x2_zero(self) -> Self::U64x2 {
-            u64x2::zero(self)
+            u64x2::zero_t(self)
         }
 
         #[inline(always)]
         fn u64x2_load(self, data: &[u64; 2]) -> Self::U64x2 {
-            u64x2::load(self, data)
+            u64x2::load_t(self, data)
         }
         #[inline(always)]
         fn f32x8_splat(self, v: f32) -> Self::F32x8 {
-            crate::simd::wasm128::f32x8::splat(self, v)
+            crate::simd::wasm128::f32x8::splat_t(self, v)
         }
 
         #[inline(always)]
         fn f32x8_zero(self) -> Self::F32x8 {
-            crate::simd::wasm128::f32x8::zero(self)
+            crate::simd::wasm128::f32x8::zero_t(self)
         }
 
         #[inline(always)]
         fn f32x8_load(self, data: &[f32; 8]) -> Self::F32x8 {
-            crate::simd::wasm128::f32x8::load(self, data)
+            crate::simd::wasm128::f32x8::load_t(self, data)
         }
         #[inline(always)]
         fn f64x4_splat(self, v: f64) -> Self::F64x4 {
-            crate::simd::wasm128::f64x4::splat(self, v)
+            crate::simd::wasm128::f64x4::splat_t(self, v)
         }
 
         #[inline(always)]
         fn f64x4_zero(self) -> Self::F64x4 {
-            crate::simd::wasm128::f64x4::zero(self)
+            crate::simd::wasm128::f64x4::zero_t(self)
         }
 
         #[inline(always)]
         fn f64x4_load(self, data: &[f64; 4]) -> Self::F64x4 {
-            crate::simd::wasm128::f64x4::load(self, data)
+            crate::simd::wasm128::f64x4::load_t(self, data)
         }
         #[inline(always)]
         fn i8x32_splat(self, v: i8) -> Self::I8x32 {
-            crate::simd::wasm128::i8x32::splat(self, v)
+            crate::simd::wasm128::i8x32::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i8x32_zero(self) -> Self::I8x32 {
-            crate::simd::wasm128::i8x32::zero(self)
+            crate::simd::wasm128::i8x32::zero_t(self)
         }
 
         #[inline(always)]
         fn i8x32_load(self, data: &[i8; 32]) -> Self::I8x32 {
-            crate::simd::wasm128::i8x32::load(self, data)
+            crate::simd::wasm128::i8x32::load_t(self, data)
         }
         #[inline(always)]
         fn u8x32_splat(self, v: u8) -> Self::U8x32 {
-            crate::simd::wasm128::u8x32::splat(self, v)
+            crate::simd::wasm128::u8x32::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u8x32_zero(self) -> Self::U8x32 {
-            crate::simd::wasm128::u8x32::zero(self)
+            crate::simd::wasm128::u8x32::zero_t(self)
         }
 
         #[inline(always)]
         fn u8x32_load(self, data: &[u8; 32]) -> Self::U8x32 {
-            crate::simd::wasm128::u8x32::load(self, data)
+            crate::simd::wasm128::u8x32::load_t(self, data)
         }
         #[inline(always)]
         fn i16x16_splat(self, v: i16) -> Self::I16x16 {
-            crate::simd::wasm128::i16x16::splat(self, v)
+            crate::simd::wasm128::i16x16::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i16x16_zero(self) -> Self::I16x16 {
-            crate::simd::wasm128::i16x16::zero(self)
+            crate::simd::wasm128::i16x16::zero_t(self)
         }
 
         #[inline(always)]
         fn i16x16_load(self, data: &[i16; 16]) -> Self::I16x16 {
-            crate::simd::wasm128::i16x16::load(self, data)
+            crate::simd::wasm128::i16x16::load_t(self, data)
         }
         #[inline(always)]
         fn u16x16_splat(self, v: u16) -> Self::U16x16 {
-            crate::simd::wasm128::u16x16::splat(self, v)
+            crate::simd::wasm128::u16x16::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u16x16_zero(self) -> Self::U16x16 {
-            crate::simd::wasm128::u16x16::zero(self)
+            crate::simd::wasm128::u16x16::zero_t(self)
         }
 
         #[inline(always)]
         fn u16x16_load(self, data: &[u16; 16]) -> Self::U16x16 {
-            crate::simd::wasm128::u16x16::load(self, data)
+            crate::simd::wasm128::u16x16::load_t(self, data)
         }
         #[inline(always)]
         fn i32x8_splat(self, v: i32) -> Self::I32x8 {
-            crate::simd::wasm128::i32x8::splat(self, v)
+            crate::simd::wasm128::i32x8::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i32x8_zero(self) -> Self::I32x8 {
-            crate::simd::wasm128::i32x8::zero(self)
+            crate::simd::wasm128::i32x8::zero_t(self)
         }
 
         #[inline(always)]
         fn i32x8_load(self, data: &[i32; 8]) -> Self::I32x8 {
-            crate::simd::wasm128::i32x8::load(self, data)
+            crate::simd::wasm128::i32x8::load_t(self, data)
         }
         #[inline(always)]
         fn u32x8_splat(self, v: u32) -> Self::U32x8 {
-            crate::simd::wasm128::u32x8::splat(self, v)
+            crate::simd::wasm128::u32x8::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u32x8_zero(self) -> Self::U32x8 {
-            crate::simd::wasm128::u32x8::zero(self)
+            crate::simd::wasm128::u32x8::zero_t(self)
         }
 
         #[inline(always)]
         fn u32x8_load(self, data: &[u32; 8]) -> Self::U32x8 {
-            crate::simd::wasm128::u32x8::load(self, data)
+            crate::simd::wasm128::u32x8::load_t(self, data)
         }
         #[inline(always)]
         fn i64x4_splat(self, v: i64) -> Self::I64x4 {
-            crate::simd::wasm128::i64x4::splat(self, v)
+            crate::simd::wasm128::i64x4::splat_t(self, v)
         }
 
         #[inline(always)]
         fn i64x4_zero(self) -> Self::I64x4 {
-            crate::simd::wasm128::i64x4::zero(self)
+            crate::simd::wasm128::i64x4::zero_t(self)
         }
 
         #[inline(always)]
         fn i64x4_load(self, data: &[i64; 4]) -> Self::I64x4 {
-            crate::simd::wasm128::i64x4::load(self, data)
+            crate::simd::wasm128::i64x4::load_t(self, data)
         }
         #[inline(always)]
         fn u64x4_splat(self, v: u64) -> Self::U64x4 {
-            crate::simd::wasm128::u64x4::splat(self, v)
+            crate::simd::wasm128::u64x4::splat_t(self, v)
         }
 
         #[inline(always)]
         fn u64x4_zero(self) -> Self::U64x4 {
-            crate::simd::wasm128::u64x4::zero(self)
+            crate::simd::wasm128::u64x4::zero_t(self)
         }
 
         #[inline(always)]
         fn u64x4_load(self, data: &[u64; 4]) -> Self::U64x4 {
-            crate::simd::wasm128::u64x4::load(self, data)
+            crate::simd::wasm128::u64x4::load_t(self, data)
         }
         #[inline(always)]
         fn f32x16_splat(self, v: f32) -> Self::F32x16 {
             {
-                let part = f32x4::splat(self, v);
+                let part = f32x4::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -1676,7 +1676,7 @@ mod wasm_impl {
         #[inline(always)]
         fn f32x16_zero(self) -> Self::F32x16 {
             {
-                let part = f32x4::zero(self);
+                let part = f32x4::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -1685,17 +1685,17 @@ mod wasm_impl {
         fn f32x16_load(self, data: &[f32; 16]) -> Self::F32x16 {
             {
                 [
-                    f32x4::load(self, data[0..4].try_into().unwrap()),
-                    f32x4::load(self, data[4..8].try_into().unwrap()),
-                    f32x4::load(self, data[8..12].try_into().unwrap()),
-                    f32x4::load(self, data[12..16].try_into().unwrap()),
+                    f32x4::load_t(self, data[0..4].try_into().unwrap()),
+                    f32x4::load_t(self, data[4..8].try_into().unwrap()),
+                    f32x4::load_t(self, data[8..12].try_into().unwrap()),
+                    f32x4::load_t(self, data[12..16].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn f64x8_splat(self, v: f64) -> Self::F64x8 {
             {
-                let part = f64x2::splat(self, v);
+                let part = f64x2::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -1703,7 +1703,7 @@ mod wasm_impl {
         #[inline(always)]
         fn f64x8_zero(self) -> Self::F64x8 {
             {
-                let part = f64x2::zero(self);
+                let part = f64x2::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -1712,17 +1712,17 @@ mod wasm_impl {
         fn f64x8_load(self, data: &[f64; 8]) -> Self::F64x8 {
             {
                 [
-                    f64x2::load(self, data[0..2].try_into().unwrap()),
-                    f64x2::load(self, data[2..4].try_into().unwrap()),
-                    f64x2::load(self, data[4..6].try_into().unwrap()),
-                    f64x2::load(self, data[6..8].try_into().unwrap()),
+                    f64x2::load_t(self, data[0..2].try_into().unwrap()),
+                    f64x2::load_t(self, data[2..4].try_into().unwrap()),
+                    f64x2::load_t(self, data[4..6].try_into().unwrap()),
+                    f64x2::load_t(self, data[6..8].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn i8x64_splat(self, v: i8) -> Self::I8x64 {
             {
-                let part = i8x16::splat(self, v);
+                let part = i8x16::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -1730,7 +1730,7 @@ mod wasm_impl {
         #[inline(always)]
         fn i8x64_zero(self) -> Self::I8x64 {
             {
-                let part = i8x16::zero(self);
+                let part = i8x16::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -1739,17 +1739,17 @@ mod wasm_impl {
         fn i8x64_load(self, data: &[i8; 64]) -> Self::I8x64 {
             {
                 [
-                    i8x16::load(self, data[0..16].try_into().unwrap()),
-                    i8x16::load(self, data[16..32].try_into().unwrap()),
-                    i8x16::load(self, data[32..48].try_into().unwrap()),
-                    i8x16::load(self, data[48..64].try_into().unwrap()),
+                    i8x16::load_t(self, data[0..16].try_into().unwrap()),
+                    i8x16::load_t(self, data[16..32].try_into().unwrap()),
+                    i8x16::load_t(self, data[32..48].try_into().unwrap()),
+                    i8x16::load_t(self, data[48..64].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn u8x64_splat(self, v: u8) -> Self::U8x64 {
             {
-                let part = u8x16::splat(self, v);
+                let part = u8x16::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -1757,7 +1757,7 @@ mod wasm_impl {
         #[inline(always)]
         fn u8x64_zero(self) -> Self::U8x64 {
             {
-                let part = u8x16::zero(self);
+                let part = u8x16::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -1766,17 +1766,17 @@ mod wasm_impl {
         fn u8x64_load(self, data: &[u8; 64]) -> Self::U8x64 {
             {
                 [
-                    u8x16::load(self, data[0..16].try_into().unwrap()),
-                    u8x16::load(self, data[16..32].try_into().unwrap()),
-                    u8x16::load(self, data[32..48].try_into().unwrap()),
-                    u8x16::load(self, data[48..64].try_into().unwrap()),
+                    u8x16::load_t(self, data[0..16].try_into().unwrap()),
+                    u8x16::load_t(self, data[16..32].try_into().unwrap()),
+                    u8x16::load_t(self, data[32..48].try_into().unwrap()),
+                    u8x16::load_t(self, data[48..64].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn i16x32_splat(self, v: i16) -> Self::I16x32 {
             {
-                let part = i16x8::splat(self, v);
+                let part = i16x8::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -1784,7 +1784,7 @@ mod wasm_impl {
         #[inline(always)]
         fn i16x32_zero(self) -> Self::I16x32 {
             {
-                let part = i16x8::zero(self);
+                let part = i16x8::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -1793,17 +1793,17 @@ mod wasm_impl {
         fn i16x32_load(self, data: &[i16; 32]) -> Self::I16x32 {
             {
                 [
-                    i16x8::load(self, data[0..8].try_into().unwrap()),
-                    i16x8::load(self, data[8..16].try_into().unwrap()),
-                    i16x8::load(self, data[16..24].try_into().unwrap()),
-                    i16x8::load(self, data[24..32].try_into().unwrap()),
+                    i16x8::load_t(self, data[0..8].try_into().unwrap()),
+                    i16x8::load_t(self, data[8..16].try_into().unwrap()),
+                    i16x8::load_t(self, data[16..24].try_into().unwrap()),
+                    i16x8::load_t(self, data[24..32].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn u16x32_splat(self, v: u16) -> Self::U16x32 {
             {
-                let part = u16x8::splat(self, v);
+                let part = u16x8::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -1811,7 +1811,7 @@ mod wasm_impl {
         #[inline(always)]
         fn u16x32_zero(self) -> Self::U16x32 {
             {
-                let part = u16x8::zero(self);
+                let part = u16x8::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -1820,17 +1820,17 @@ mod wasm_impl {
         fn u16x32_load(self, data: &[u16; 32]) -> Self::U16x32 {
             {
                 [
-                    u16x8::load(self, data[0..8].try_into().unwrap()),
-                    u16x8::load(self, data[8..16].try_into().unwrap()),
-                    u16x8::load(self, data[16..24].try_into().unwrap()),
-                    u16x8::load(self, data[24..32].try_into().unwrap()),
+                    u16x8::load_t(self, data[0..8].try_into().unwrap()),
+                    u16x8::load_t(self, data[8..16].try_into().unwrap()),
+                    u16x8::load_t(self, data[16..24].try_into().unwrap()),
+                    u16x8::load_t(self, data[24..32].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn i32x16_splat(self, v: i32) -> Self::I32x16 {
             {
-                let part = i32x4::splat(self, v);
+                let part = i32x4::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -1838,7 +1838,7 @@ mod wasm_impl {
         #[inline(always)]
         fn i32x16_zero(self) -> Self::I32x16 {
             {
-                let part = i32x4::zero(self);
+                let part = i32x4::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -1847,17 +1847,17 @@ mod wasm_impl {
         fn i32x16_load(self, data: &[i32; 16]) -> Self::I32x16 {
             {
                 [
-                    i32x4::load(self, data[0..4].try_into().unwrap()),
-                    i32x4::load(self, data[4..8].try_into().unwrap()),
-                    i32x4::load(self, data[8..12].try_into().unwrap()),
-                    i32x4::load(self, data[12..16].try_into().unwrap()),
+                    i32x4::load_t(self, data[0..4].try_into().unwrap()),
+                    i32x4::load_t(self, data[4..8].try_into().unwrap()),
+                    i32x4::load_t(self, data[8..12].try_into().unwrap()),
+                    i32x4::load_t(self, data[12..16].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn u32x16_splat(self, v: u32) -> Self::U32x16 {
             {
-                let part = u32x4::splat(self, v);
+                let part = u32x4::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -1865,7 +1865,7 @@ mod wasm_impl {
         #[inline(always)]
         fn u32x16_zero(self) -> Self::U32x16 {
             {
-                let part = u32x4::zero(self);
+                let part = u32x4::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -1874,17 +1874,17 @@ mod wasm_impl {
         fn u32x16_load(self, data: &[u32; 16]) -> Self::U32x16 {
             {
                 [
-                    u32x4::load(self, data[0..4].try_into().unwrap()),
-                    u32x4::load(self, data[4..8].try_into().unwrap()),
-                    u32x4::load(self, data[8..12].try_into().unwrap()),
-                    u32x4::load(self, data[12..16].try_into().unwrap()),
+                    u32x4::load_t(self, data[0..4].try_into().unwrap()),
+                    u32x4::load_t(self, data[4..8].try_into().unwrap()),
+                    u32x4::load_t(self, data[8..12].try_into().unwrap()),
+                    u32x4::load_t(self, data[12..16].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn i64x8_splat(self, v: i64) -> Self::I64x8 {
             {
-                let part = i64x2::splat(self, v);
+                let part = i64x2::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -1892,7 +1892,7 @@ mod wasm_impl {
         #[inline(always)]
         fn i64x8_zero(self) -> Self::I64x8 {
             {
-                let part = i64x2::zero(self);
+                let part = i64x2::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -1901,17 +1901,17 @@ mod wasm_impl {
         fn i64x8_load(self, data: &[i64; 8]) -> Self::I64x8 {
             {
                 [
-                    i64x2::load(self, data[0..2].try_into().unwrap()),
-                    i64x2::load(self, data[2..4].try_into().unwrap()),
-                    i64x2::load(self, data[4..6].try_into().unwrap()),
-                    i64x2::load(self, data[6..8].try_into().unwrap()),
+                    i64x2::load_t(self, data[0..2].try_into().unwrap()),
+                    i64x2::load_t(self, data[2..4].try_into().unwrap()),
+                    i64x2::load_t(self, data[4..6].try_into().unwrap()),
+                    i64x2::load_t(self, data[6..8].try_into().unwrap()),
                 ]
             }
         }
         #[inline(always)]
         fn u64x8_splat(self, v: u64) -> Self::U64x8 {
             {
-                let part = u64x2::splat(self, v);
+                let part = u64x2::splat_t(self, v);
                 [part, part, part, part]
             }
         }
@@ -1919,7 +1919,7 @@ mod wasm_impl {
         #[inline(always)]
         fn u64x8_zero(self) -> Self::U64x8 {
             {
-                let part = u64x2::zero(self);
+                let part = u64x2::zero_t(self);
                 [part, part, part, part]
             }
         }
@@ -1928,10 +1928,10 @@ mod wasm_impl {
         fn u64x8_load(self, data: &[u64; 8]) -> Self::U64x8 {
             {
                 [
-                    u64x2::load(self, data[0..2].try_into().unwrap()),
-                    u64x2::load(self, data[2..4].try_into().unwrap()),
-                    u64x2::load(self, data[4..6].try_into().unwrap()),
-                    u64x2::load(self, data[6..8].try_into().unwrap()),
+                    u64x2::load_t(self, data[0..2].try_into().unwrap()),
+                    u64x2::load_t(self, data[2..4].try_into().unwrap()),
+                    u64x2::load_t(self, data[4..6].try_into().unwrap()),
+                    u64x2::load_t(self, data[6..8].try_into().unwrap()),
                 ]
             }
         }

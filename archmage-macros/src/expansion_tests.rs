@@ -471,8 +471,8 @@ fn profile_allocations() {
     let simple = quote!(
         fn kernel(token: X64V3Token, data: &mut [f32], factor: f32) {
             for chunk in data.as_chunks_mut::<8>().0 {
-                let a = f32x8::load(token, chunk);
-                (a * f32x8::splat(token, factor)).store(chunk);
+                let a = f32x8::load_t(token, chunk);
+                (a * f32x8::splat_t(token, factor)).store(chunk);
             }
         }
     );
@@ -490,7 +490,7 @@ fn profile_allocations() {
             quote!(define(f32x8)),
             quote!(
                 fn kernel(token: Token, data: &mut [f32; 8]) {
-                    f32x8::load(token, data).sqrt().store(data);
+                    f32x8::load_t(token, data).sqrt().store(data);
                 }
             ),
         ),
