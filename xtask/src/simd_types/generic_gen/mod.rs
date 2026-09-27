@@ -462,3 +462,11 @@ fn block_ops_types() -> Vec<(&'static str, ElementType, SimdWidth)> {
         ("u32x4", ElementType::U32, SimdWidth::W128),
     ]
 }
+
+/// Documentation derives from the complete generated source and handwritten originals.
+pub fn constructor_inventory(files: &BTreeMap<String, String>) -> BTreeMap<String, String> {
+    token_aliases::inventory(files.values().cloned().chain([
+        include_str!("../../../../magetypes/src/simd/scalar.rs").to_owned(),
+        include_str!("../../../../magetypes/src/simd/generic/cross_width.rs").to_owned(),
+    ]))
+}

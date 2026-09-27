@@ -857,18 +857,6 @@ impl i32x4<archmage::X64V3Token> {
         Self::from_m128i(token, v)
     }
 }
-#[cfg(target_arch = "aarch64")]
-impl i32x4<archmage::NeonToken> {
-    #[inline(always)]
-    #[doc = "Explicit-token alias of [`Self::from_int32x4_t`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
-    #[forbid(unsafe_code)]
-    pub fn from_int32x4_t_t(
-        token: archmage::NeonToken,
-        value: core::arch::aarch64::int32x4_t,
-    ) -> Self {
-        Self::from_int32x4_t(token, value)
-    }
-}
 #[cfg(target_arch = "wasm32")]
 impl i32x4<archmage::Wasm128Token> {
     #[inline(always)]

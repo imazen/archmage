@@ -807,18 +807,6 @@ impl u8x16<archmage::X64V3Token> {
         Self::from_m128i(token, v)
     }
 }
-#[cfg(target_arch = "aarch64")]
-impl u8x16<archmage::NeonToken> {
-    #[inline(always)]
-    #[doc = "Explicit-token alias of [`Self::from_uint8x16_t`], with identical arguments and behavior.\n\nThe `_t` spelling is intended for migration to magetypes 0.10.\nThe caller does not need a target-feature annotation."]
-    #[forbid(unsafe_code)]
-    pub fn from_uint8x16_t_t(
-        token: archmage::NeonToken,
-        value: core::arch::aarch64::uint8x16_t,
-    ) -> Self {
-        Self::from_uint8x16_t(token, value)
-    }
-}
 #[cfg(target_arch = "wasm32")]
 impl u8x16<archmage::Wasm128Token> {
     #[inline(always)]

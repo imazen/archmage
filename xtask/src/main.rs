@@ -1548,6 +1548,10 @@ pub(crate) use registry::*;
     println!("\n=== Generating Generic Wrapper Types ===");
     fs::create_dir_all(simd_dir.join("generic/generated"))?;
     let generic_files = simd_types::generic_gen::generate_generic_files(&reg);
+    fs::create_dir_all("docs/constructors")?;
+    for (name, signatures) in simd_types::generic_gen::constructor_inventory(&generic_files) {
+        fs::write(format!("docs/constructors/{name}.md"), signatures)?;
+    }
     let mut generic_total_bytes = 0;
     for (rel_path, content) in &generic_files {
         let full_path = simd_dir.join(rel_path);

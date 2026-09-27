@@ -36,9 +36,9 @@ the token do not gain aliases. Existing target and Cargo feature gates still
 apply.
 
 Native raw values have a uniform `from_raw_t(token, raw)` entry point. Platform
-names also receive the mechanical suffix: for example,
-`from_float32x4_t_t(token, raw)` aliases the NEON constructor
-`from_float32x4_t(token, raw)`. Prefer `from_raw_t` for new raw interchange code.
+names that already end in `_t`, such as `from_float32x4_t(token, raw)`,
+remain available without a redundant `_t_t` alias. Prefer `from_raw_t` for
+new raw interchange code.
 The separate `from_raw(raw)` method requires a matching target-feature context.
 
 Ordinary functions and backend-generic helpers can call `_t` methods without
@@ -70,6 +70,9 @@ The published archmage 0.9 macro contract uses
 namespaces for `import_magetypes`. Preserving those paths avoids requiring a
 macro syntax migration for the constructor change. Compatibility with an actual
 0.10 package must be compiled before that release.
+
+The [complete signature inventory](constructors/README.md) lists every old and
+new constructor, bound, and platform gate for all 40 vector types.
 
 ## Maintenance
 
