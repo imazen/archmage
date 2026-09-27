@@ -133,7 +133,48 @@ pub(crate) fn replace_ident_in_tokens(
     replacement: &proc_macro2::TokenStream,
 ) -> proc_macro2::TokenStream {
     let mut result = proc_macro2::TokenStream::new();
-    for tt in tokens {
+    let mut tokens = tokens.into_iter().peekable();
+    while let Some(tt) = tokens.next() {
+        // A bare Token in an incant argument list is syntax, not a type.
+        // Preserve only that marker; substitute Token in generic arguments,
+        // type paths, and nested expressions normally.
+        if target == "Token"
+            && matches!(&tt, proc_macro2::TokenTree::Ident(id) if id == "incant" || id == "dispatch_variant")
+            && matches!(tokens.peek(), Some(proc_macro2::TokenTree::Punct(p)) if p.as_char() == '!')
+        {
+            result.extend([tt, tokens.next().unwrap()]);
+            if let Some(proc_macro2::TokenTree::Group(group)) = tokens.peek() {
+                let group = group.clone();
+                tokens.next();
+                let parser =
+                    |input: syn::parse::ParseStream| -> syn::Result<proc_macro2::TokenStream> {
+                        let path: syn::Path = input.parse()?;
+                        let args;
+                        syn::parenthesized!(args in input);
+                        let args = args.parse_terminated(syn::Expr::parse, syn::Token![,])?;
+                        let rest: proc_macro2::TokenStream = input.parse()?;
+                        let path =
+                            replace_ident_in_tokens(path.to_token_stream(), target, replacement);
+                        let args = args.iter().map(|arg| {
+                            if matches!(arg, syn::Expr::Path(p) if p.path.is_ident("Token")) {
+                                arg.to_token_stream()
+                            } else {
+                                replace_ident_in_tokens(arg.to_token_stream(), target, replacement)
+                            }
+                        });
+                        let rest = replace_ident_in_tokens(rest, target, replacement);
+                        Ok(quote! { #path(#(#args),*) #rest })
+                    };
+                use syn::parse::{Parse, Parser};
+                let replaced = parser
+                    .parse2(group.stream())
+                    .unwrap_or_else(|_| group.stream());
+                let mut new_group = proc_macro2::Group::new(group.delimiter(), replaced);
+                new_group.set_span(group.span());
+                result.extend([proc_macro2::TokenTree::Group(new_group)]);
+            }
+            continue;
+        }
         match tt {
             proc_macro2::TokenTree::Ident(ref ident) if *ident == target => {
                 result.extend(replacement.clone());
@@ -372,5 +413,30 @@ pub(crate) fn gen_tier_trait_assertion(
             const fn __archmage_assert_tier_trait<__T: ?Sized #(#bounds)*>(_: &__T) {}
             __archmage_assert_tier_trait(&#token_ident);
         }
+    }
+}
+
+#[cfg(test)]
+mod dispatch_marker_tests {
+    use super::*;
+
+    #[test]
+    fn substitutes_types_but_preserves_dispatch_markers() {
+        let source = quote! {
+            fn f(t: Token) {
+                archmage::incant!(callee::<Token>(Token, Token::from_context(), wrap::<Token>()), [scalar]);
+                dispatch_variant!(other(value, Token) with t);
+            }
+        };
+        let expected = quote! {
+            fn f(t: archmage::ScalarToken) {
+                archmage::incant!(callee::<archmage::ScalarToken>(Token, archmage::ScalarToken::from_context(), wrap::<archmage::ScalarToken>()), [scalar]);
+                dispatch_variant!(other(value, Token) with t);
+            }
+        };
+        assert_eq!(
+            replace_ident_in_tokens(source, "Token", &quote!(archmage::ScalarToken)).to_string(),
+            expected.to_string()
+        );
     }
 }

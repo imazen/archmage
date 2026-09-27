@@ -1,0 +1,15 @@
+[package]
+name = "archmage-compat-jxl-encoder-simd"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+jxl-encoder-simd = "=0.3.0"
+
+[patch.crates-io]
+archmage = { path = "../../.." }
+archmage-macros = { path = "../../../archmage-macros" }
+magetypes = { path = "../../../magetypes" }
+
+[workspace]
