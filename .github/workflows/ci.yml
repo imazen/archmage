@@ -143,7 +143,7 @@ jobs:
       - name: Downstream compat (linear-srgb, with avx512)
         run: cargo check --manifest-path tests/downstream-compat/linear-srgb/Cargo.toml --features avx512
       - name: Published jxl-encoder-simd compatibility
-        run: python3 tests/downstream-compat/jxl-encoder-simd/check.py --target x86_64-unknown-linux-gnu
+        run: python3 tests/downstream-compat/jxl-encoder-simd/check.py
       - name: Published jxl-encoder-simd WASM known incompatibility
         run: |
           rustup target add wasm32-wasip1
