@@ -1070,6 +1070,14 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
+- Downstream audit tooling (2026-09-27): cargo-copter `2d50bf89` selects yanked
+  releases as "latest" and drops workspace-inherited features when forcing a
+  dependency to a path. It also leaves local manifests rewritten. Use explicit
+  non-yanked versions and isolated snapshots; for local workspaces preserve
+  manifests and apply root Cargo configuration patches. The zensim-train-core
+  AVX-512 failure was a tool artifact, verified by a passing configuration-only
+  patch with inherited features intact. See [the consumer audit](docs/DOWNSTREAM-COMPATIBILITY.md).
+
 - Fixed #116: `mul_add`/`mul_sub` now fuse on scalar and strict WASM as well as
   native SIMD. Relaxed WASM emits madd directly (user decision 2026-09-27),
   with no probe/load/branch; engines may round twice. Exact tests cover strict,

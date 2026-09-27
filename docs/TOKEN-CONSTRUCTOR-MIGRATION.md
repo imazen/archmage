@@ -134,3 +134,10 @@ ARM/QEMU, and WASM/Wasmtime and covers scalar/default signatures, tokenful and
 tokenless composition, nested dispatch, and const generics.
 
 No package version was bumped and nothing was published by these checks.
+
+## Downstream compilation after deprecation
+
+The [2026-09-27 consumer audit](DOWNSTREAM-COMPATIBILITY.md) covers 20 published
+zen-prefixed consumers, linear-srgb, garb, jxl-encoder-simd, and 14 local
+packages. It records exact versions, baseline comparisons, coverage limits,
+and cargo-copter workarounds for yanked-version selection and inherited features.
