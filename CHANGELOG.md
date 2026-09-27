@@ -20,6 +20,10 @@
 - Safe native `from_raw` constructors and restored NEON/WASM/AVX-512 raw interop methods (`8ef7db6f`).
 - Reproducible cold-build comparison: this consumer's default release build rose 0.189 s, and its AVX-512 build rose 0.253 s; full settings and raw results are in `benchmarks/local_mode_compile_2026-09-27.md` (`8ef7db6f`).
 
+### Changed
+
+- Generated contextual constructors use registry-derived target-feature attributes and flatten simple value forwarding while retaining checked token proofs and shared memory helpers (`777932eb`); six-run cold-build medians are recorded in `benchmarks/constructor_codegen_compile_2026-09-27.md`.
+
 ### Fixed
 
 - **magetypes: AVX-512 tokens regained the native f32 block-op codegen they had silently lost.** `magetypes/src/simd/impls/x86_v4_f32_delegated.rs` — the one backend impl the generator does not emit — forwards each `F32x4Backend` / `F32x8Backend` method to `X64V3Token`, but it was written before the concrete-type retirement restored `to_u8_bytes` / `store_rgba_bytes` / `transpose_8x8_repr` (issue [#60](https://github.com/imazen/archmage/issues/60)). Those three arrived with scalar **default** bodies, so the delegation compiled without them and every AVX-512 token (`X64V4Token`, `X64V4xToken`, `Avx512Fp16Token`) fell through to a per-lane `roundevenf` / gather instead of V3's `vcvtps2dq`+`vpackssdw`+`vpackuswb` and `vunpck`+`vshufps`+`vperm2f128`. Measured on the generic types with `cargo asm` (x86-64, release): `f32x8::<X64V4Token>::transpose_8x8` 198 instructions vs V3's 32, `store_8_rgba_u8` 217 vs 34, `f32x4::to_u8` 227 vs 7 — and the V4 `to_u8` body was an out-of-line call into `core::array::try_from_fn` over the software round-and-clamp. With the five missing forwards added, each V4 entry point compiles to code byte-identical to its V3 counterpart (the linker folds them into aliases). Value results were always correct; only the instruction selection was lost.

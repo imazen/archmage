@@ -44,7 +44,8 @@ Direct attributes alone have lower median total times than the final version in
 all four cells. Flattening removes a source-level forwarding call but adds
 concrete function-body tokens for rustc to process. The CSV includes Cargo's
 frontend and codegen sections; they are reported at 10 ms precision per build.
-The consumer unit remains 0.05 s in all 72 builds at that precision.
+Consumer-unit medians remain 0.05 s in every cell; individual builds span
+0.04–0.06 s at that precision.
 No runtime-speed change was measured.
 
 ## Safety and maintenance
