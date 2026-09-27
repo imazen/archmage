@@ -78,3 +78,13 @@ implementation signatures, preserving argument order, bounds, lifetimes,
 attributes, and feature gates. It handles generated vectors and the handwritten
 cross-width and scalar modules. Regenerate with `cargo run -p xtask -- generate`;
 do not maintain separate constructor lists or hand-edit the generated aliases.
+
+## Compatibility checks
+
+Against the published 0.9.29 API snapshots, the x86-64, AArch64, and WASM
+surfaces retain every existing public line. The migration tests exercise both
+spellings, baseline-callable function pointers, generic token bounds, floating
+point bit preservation, mutable slice views and tails, and existing `define`
+macro syntax. Default, no-default-feature, and AVX-512 configurations pass the
+focused tests; AArch64 tests also pass under QEMU. WASM and i686 test targets
+compile. These checks cover the additive 0.9 change, not the future 0.10 API.
