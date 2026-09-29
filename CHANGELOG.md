@@ -39,27 +39,28 @@
 
 - Planned magetypes 0.10: reserve short constructor names for matching feature contexts; `_t(token, ...)` provides the preparatory migration spelling in 0.9. No constructor signatures change in this patch (772ef504).
 - Remove the six no-op `*_midp_precise` aliases (`exp2`/`exp`/`ln`/`log2`/`log10`/`pow` — each is literally `self.*_midp()`); `cbrt_midp_precise` stays, it does real denormal/zero handling. With the reciprocal tiers settling on `_portable` as the precise tier, a `_precise` suffix that does nothing is a naming lie.
-- Make `w512` non-default in magetypes — users who need 512-bit types add `features = ["w512"]`; saves ~25% build time for the majority who don't
+- Planned: make `w512` non-default in magetypes; users who need 512-bit types would add `features = ["w512"]`. This patch keeps the existing default features.
 
 #### Added
 
-- Generated `_t(token, ...)` aliases cover token-taking constructors, loads, conversions, slice helpers, and single-lane scalar types; old names remain callable (772ef504).
-- Native `from_raw_t(token, raw)` supports ordinary callers; `from_raw(raw)` requires a matching feature context (772ef504).
+- Add magetypes inherent methods such as `splat_t(token, value)`, `zero_t(token)`, and `load_t(token, data)` across token-taking constructors, conversions, slice helpers, and single-lane scalar types. The `_t` methods hold the implementations; existing names retain their signatures as deprecated forwarders (772ef504, d53d425d).
+- Add native raw constructors: `from_raw_t(token, raw)` is callable without caller target-feature annotations; `from_raw(raw)` requires a matching or stronger target-feature context for safe calls (772ef504).
 - [Complete constructor signatures](docs/constructors/README.md) are generated for all 40 vector types; native names already ending in `_t` use `from_raw_t` without redundant `_t_t` aliases (e619c59a).
 
 #### Deprecated
 
-- Legacy token-taking constructor and helper names now warn with the corresponding `_t(token, ...)` spelling; `_t` remains supported when 0.10 makes the short names tokenless. Existing signatures still work; native NEON names already ending in `_t` and feature-context `from_raw(raw)` are unchanged (d53d425d).
+- Deprecate legacy token-taking constructor and helper names in favor of `_t(token, ...)`, preserving argument order and signatures. Builds using `deny(deprecated)` or `deny(warnings)` must migrate those calls or allow the warnings. `_t` remains supported in the planned 0.10 transition; native NEON names already ending in `_t` and feature-context `from_raw(raw)` are not deprecated (d53d425d).
 
 #### Changed
 
 - `mul_add` and `mul_sub` now round once on scalar and strict WASM for f32/f64 at every width; software fusion changes results and costs more than separate multiply/add on those tiers. Relaxed WASM emits native madd directly and follows engine rounding, without a runtime probe ([#116](https://github.com/imazen/archmage/issues/116); 11a35a8b).
+- Make `all_true` and `any_true` consistently test lane sign bits across backends and widths. Comparison-mask results are unchanged; arbitrary non-mask inputs can change results (for example, a lane containing `1` is false under this contract) (050e25c1).
 
 #### Fixed
 
-- Restore NEON/WASM and native AVX-512 raw accessors and constructors; published jxl-encoder-simd 0.3.0 still needs a token argument on its ARM/WASM `from_i32x4` calls ([#117](https://github.com/imazen/archmage/issues/117); 772ef504, c766c238).
+- Restore NEON/WASM and native AVX-512 raw accessors and constructors ([#117](https://github.com/imazen/archmage/issues/117); 772ef504, c766c238).
 - AVX-512 f32 block operations forward to the existing native V3 implementations instead of scalar defaults ([#60](https://github.com/imazen/archmage/issues/60); 3999a29d).
-- WASM byte packing uses native rounding and saturation; boolean reductions consistently test lane nonzeroness (050e25c1).
+- Use native WASM SIMD rounding, saturating conversion, and packing for f32 byte output (050e25c1).
 
 ## Workspace
 
@@ -68,7 +69,9 @@
 #### Added
 
 - Validate all V4 f32 delegation methods and enforce generated-backend size budgets to detect missing forwards and unintended growth (3999a29d, a97decd1).
-- Cover published consumer compatibility and tokenful/tokenless calling conventions on native, ARM, and WASM targets (c766c238, 595d13e0).
+- Add tokenful/tokenless calling-convention fixtures on x86, ARM/QEMU, and WASM/Wasmtime (c766c238, 595d13e0).
+- Record [native compilation checks for 23 published consumer libraries](docs/DOWNSTREAM-COMPATIBILITY.md), including optional SIMD feature checks; this audit does not establish ARM/WASM consumer compatibility or runtime equivalence (5bfae758, aac61604).
+- Add published jxl-encoder-simd 0.3.0 compatibility checks: x86 passes; ARM and WASM retain a known missing-token argument error in `from_i32x4`, recorded by the fixture (c766c238, 595d13e0).
 - Record [generic-vs-intrinsic codegen and compile-cost measurements](benchmarks/magetypes_vs_intrinsics_r5900xt_2026-09-08.md) (1a0ea59a).
 
 Historical entries below describe bundled releases of archmage, archmage-macros,
