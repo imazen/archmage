@@ -1,0 +1,14 @@
+date: 2026-10-03
+host: AMD Ryzen 9 9950X3D (32 threads), Linux 7.0.0-34-generic
+rustc: 1.99.0 (b940084d7 2026-09-28)
+harness: zenbench 0.1.7 (interleaved groups, native API)
+base commit: f209b89472 (main + package trim + semver gate); runs 1-4 measured the
+  V3-delegated AVX-512 path; run 5 measured the AVX-512 vpmovusdb overrides committed
+  together with this file.
+command (runs 1-3, 5): ~/work/zen/scripts/run-heavy --mem 16G -- \
+  cargo bench -p magetypes --bench pixel_pack --features avx512
+command (run 4, layout redraw): RUSTFLAGS="--cfg pixel_pack_redraw" \
+  CARGO_TARGET_DIR=~/tmp/archmage-redraw-target ~/work/zen/scripts/run-heavy --mem 20G -- \
+  cargo bench -p magetypes --bench pixel_pack --features avx512
+load during runs: 1.8-5.5 (1-minute average), box otherwise idle
+run logs (local): ~/tmp/pixel-bench-run{1,2,3,4-redraw,5}.log

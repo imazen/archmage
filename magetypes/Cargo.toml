@@ -63,6 +63,15 @@ name = "f16_convert"
 harness = false
 
 [[bench]]
+name = "pixel_pack"
+harness = false
+
+[lints.rust]
+# `--cfg pixel_pack_redraw` shifts code layout in benches/pixel_pack.rs so a
+# second run draws a different placement (Zen 5 layout-sensitivity check).
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(pixel_pack_redraw)"] }
+
+[[bench]]
 name = "asm_patterns"
 harness = false
 
