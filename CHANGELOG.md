@@ -78,7 +78,7 @@
 
 #### Changed
 
-- Miri skips `int_widen_narrow::scalar_backend` and the `fused_arithmetic` binary: under Miri they reach no `unsafe` code, yet they were about 95% of its work. The rest of `int_widen_narrow`, including its unsafe bitcast test, still runs under Miri, and native, SDE and cross-arch CI run everything. The local Miri run takes 255–394 s, depending on load (ec9c66b7, d570aa9b).
+- Miri skips `int_widen_narrow::scalar_backend` and the `fused_arithmetic` binary, about 95% of its work. `scalar_backend`'s exhaustive loops reach the same `unsafe` bitcast path as `scalar_w512_bitcast_values`, which still runs under Miri; `fused_arithmetic` is safe code only. Native, SDE and cross-arch CI run everything. The local Miri run takes 255–394 s, depending on load (ec9c66b7, d570aa9b, 4d486072).
 
 Historical entries below describe bundled releases of archmage, archmage-macros,
 and magetypes. Their original content is preserved.
