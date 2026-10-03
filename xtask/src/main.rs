@@ -807,23 +807,28 @@ fn miri_toolchain() -> String {
     std::env::var("ARCHMAGE_MIRI_TOOLCHAIN").unwrap_or_else(|_| "nightly".into())
 }
 
-/// magetypes integration tests that Miri does not run. Under Miri they reach no
-/// `unsafe` code, so it cannot find undefined behavior in them, yet together
-/// they were about 95% of its interpreted work (measured 2026-10-03). Native,
-/// SDE and cross-architecture CI still run them in full.
-const MIRI_SKIPPED_TESTS: &[(&str, &str)] = &[
+/// Heavy magetypes tests that Miri does not run: under Miri they reach no
+/// `unsafe` code, so it cannot find undefined behavior in them. Each entry names
+/// a test binary and, with `Some`, one test in it; `None` skips the whole
+/// binary. Together they were about 95% of Miri's interpreted work (measured
+/// 2026-10-03). Native, SDE and cross-architecture CI still run them in full.
+const MIRI_SKIPPED_TESTS: &[(&str, Option<&str>, &str)] = &[
     (
         "int_widen_narrow",
-        "exhaustive i16/u16 loops; under Miri only the scalar backend runs, and it has no unsafe",
+        Some("scalar_backend"),
+        "exhaustive i16/u16 loops through the scalar backend's safe arithmetic; \
+         the binary's other tests, including its unsafe bitcast path, still run",
     ),
     (
         "fused_arithmetic",
-        "a million software-FMA cases checked against std; safe code only",
+        None,
+        "software-FMA comparisons against std; safe code only",
     ),
 ];
 
-/// magetypes integration-test targets, minus [`MIRI_SKIPPED_TESTS`]. Fails if a
-/// skip entry no longer names a real target, so a rename cannot leave it stale.
+/// magetypes integration-test targets, minus the binaries [`MIRI_SKIPPED_TESTS`]
+/// skips whole. Fails if an entry no longer names a real target or a test that
+/// target defines, so a rename cannot leave it stale.
 fn miri_test_targets() -> Result<Vec<String>> {
     let out = std::process::Command::new("cargo")
         .args(["metadata", "--no-deps", "--format-version", "1"])
@@ -837,7 +842,7 @@ fn miri_test_targets() -> Result<Vec<String>> {
         .as_array()
         .and_then(|packages| packages.iter().find(|p| p["name"] == "magetypes"))
         .context("magetypes is missing from cargo metadata")?;
-    let tests: Vec<String> = package["targets"]
+    let tests: Vec<(String, String)> = package["targets"]
         .as_array()
         .context("magetypes has no targets in cargo metadata")?
         .iter()
@@ -846,22 +851,39 @@ fn miri_test_targets() -> Result<Vec<String>> {
                 .as_array()
                 .is_some_and(|k| k.iter().any(|k| k == "test"))
         })
-        .filter_map(|t| t["name"].as_str().map(str::to_owned))
+        .filter_map(|t| {
+            Some((
+                t["name"].as_str()?.to_owned(),
+                t["src_path"].as_str()?.to_owned(),
+            ))
+        })
         .collect();
-    for (name, _) in MIRI_SKIPPED_TESTS {
-        if !tests.iter().any(|t| t == name) {
+    for (name, test, _) in MIRI_SKIPPED_TESTS {
+        let Some((_, src_path)) = tests.iter().find(|(t, _)| t == name) else {
             bail!("MIRI_SKIPPED_TESTS names `{name}`, which is not a magetypes test target");
+        };
+        if let Some(test) = test {
+            let src = std::fs::read_to_string(src_path)
+                .with_context(|| format!("Failed to read {src_path}"))?;
+            if !src.contains(&format!("fn {test}(")) {
+                bail!("MIRI_SKIPPED_TESTS names test `{test}`, which {src_path} does not define");
+            }
         }
     }
     Ok(tests
         .into_iter()
-        .filter(|t| !MIRI_SKIPPED_TESTS.iter().any(|(skip, _)| skip == t))
+        .map(|(name, _)| name)
+        .filter(|t| {
+            !MIRI_SKIPPED_TESTS
+                .iter()
+                .any(|(skip, test, _)| skip == t && test.is_none())
+        })
         .collect())
 }
 
 /// Run native raw tests with their required virtual CPU, then the baseline
-/// suite (unit tests, the integration tests outside [`MIRI_SKIPPED_TESTS`]),
-/// then the doctests.
+/// suite (unit tests and the integration tests [`MIRI_SKIPPED_TESTS`] does not
+/// skip), then the doctests.
 fn run_miri() -> Result<()> {
     use std::process::Command;
     let toolchain = format!("+{}", miri_toolchain());
@@ -875,8 +897,22 @@ fn run_miri() -> Result<()> {
 
     let targets = miri_test_targets()?;
     println!("Not run under Miri (no unsafe reached; native CI runs them):");
-    for (name, why) in MIRI_SKIPPED_TESTS {
-        println!("  {name}: {why}");
+    for (bin, test, why) in MIRI_SKIPPED_TESTS {
+        match test {
+            Some(test) => println!("  {bin}::{test}: {why}"),
+            None => println!("  {bin} (whole binary): {why}"),
+        }
+    }
+    // A binary with per-test skips runs on its own: libtest's --skip applies to
+    // every binary in one cargo invocation.
+    let mut partial: Vec<(&str, Vec<&str>)> = Vec::new();
+    for (bin, test, _) in MIRI_SKIPPED_TESTS {
+        if let Some(test) = test {
+            match partial.iter_mut().find(|(b, _)| b == bin) {
+                Some((_, skips)) => skips.push(test),
+                None => partial.push((bin, vec![test])),
+            }
+        }
     }
     let mut baseline = Command::new("cargo");
     baseline.args([
@@ -889,7 +925,10 @@ fn run_miri() -> Result<()> {
         "avx512",
         "--lib",
     ]);
-    for target in &targets {
+    for target in targets
+        .iter()
+        .filter(|t| !partial.iter().any(|(b, _)| b == t))
+    {
         baseline.args(["--test", target]);
     }
     if cfg!(target_arch = "x86_64") {
@@ -933,6 +972,32 @@ fn run_miri() -> Result<()> {
         .context("Failed to run baseline Miri tests")?;
     if !baseline.success() {
         bail!("Baseline Miri tests failed; see diagnostics above");
+    }
+    for (bin, skips) in &partial {
+        let mut run = Command::new("cargo");
+        run.args([
+            &toolchain,
+            "miri",
+            "test",
+            "-p",
+            "magetypes",
+            "--features",
+            "avx512",
+            "--test",
+            bin,
+            "--",
+            "--exact",
+        ]);
+        for test in skips {
+            run.args(["--skip", test]);
+        }
+        if !run
+            .status()
+            .with_context(|| format!("Failed to run Miri on {bin}"))?
+            .success()
+        {
+            bail!("Miri tests in {bin} failed; see diagnostics above");
+        }
     }
     // Cargo cannot mix --doc with explicit targets, so the doctests that the
     // former all-targets invocation covered get their own run.

@@ -111,8 +111,11 @@ instead — and the fragments are our own identifiers, not rustc prose, so a
 reworded diagnostic cannot break them either. `cargo xtask validate` enforces
 the boundary: it rejects any committed trybuild `.stderr` that names target
 features, quotes the build configuration, embeds an absolute or toolchain path,
-carries a rustc version, or depends on pointer width. The soundness scanner's structural rules ban both `from_context` and
-`forge_token_dangerously` from magetypes.
+carries a rustc version, or depends on pointer width. The soundness scanner's structural rules ban
+`forge_token_dangerously` from magetypes. `from_context()` is allowed there only
+inside a safe function whose own `#[target_feature]` set covers the token's
+features (the generated `from_raw` constructors); `xtask/src/soundness/raw_context.rs`
+checks every such call against its enclosing function.
 
 **The feature gate is free.** `#[inline(always)]` is not permitted on a
 `#[target_feature]` function, so `from_context()` is plain `#[inline]`, and
@@ -150,8 +153,9 @@ feature requirements inside each generated body.
 | `archmage-macros` emitted code (`#[arcane]` wrappers etc.) | 1 `unsafe` block per wrapper | the token parameter (tier-tag const-asserted) proves the sibling's `#[target_feature]` set | justified in macro source; expansion snapshots under `tests/expand/` are re-verified by the intrinsic scanner (comments cannot survive tokenization, so snapshots carry no SAFETY text) |
 
 Notable absences, enforced by structural rules: no `MaybeUninit`, no
-`mem::zeroed`, no token construction (neither `from_context` nor
-`forge_token_dangerously`), no bare `transmute` outside the backend impls,
+`mem::zeroed`, no forged tokens (`forge_token_dangerously`), no `from_context()`
+outside a safe function whose target features cover the token (checked by
+`raw_context.rs`), no bare `transmute` outside the backend impls,
 no `unsafe` blocks outside `simd_storage.rs` and the generated impls, no
 gather/scatter intrinsics outside `simd_storage.rs`, no `Default`/serde/bytemuck
 construction of SIMD wrappers anywhere in magetypes.
@@ -202,7 +206,7 @@ Run everything with `just ci`. Individually:
 | `cargo test -p xtask` (CI step 6) | The verifiers themselves: unit tests plant every violation class (feature mismatch, ungated intrinsic, trait-default-body intrinsic, unknown intrinsic, structural-rule breaches, missing SAFETY comments) and assert the scanner fires; plus a full-repo scan meeting the floors. |
 | `just validate-tokens` | Every token's `summon()` checks exactly the features the registry declares (parses the generated detection code). |
 | `just parity` | API parity across x86/ARM/WASM backends (0 issues). |
-| `just miri` | UB detection over magetypes under Miri (layout casts, transmutes, pointer ops — the obligations the intrinsic scanner does *not* prove). It skips `int_widen_narrow` and `fused_arithmetic`, which reach no `unsafe` code under Miri; `MIRI_SKIPPED_TESTS` in `xtask/src/main.rs` lists the reasons, and native, SDE and cross-arch runs still execute both. |
+| `just miri` | UB detection over magetypes under Miri (layout casts, transmutes, pointer ops — the obligations the intrinsic scanner does *not* prove). It skips `int_widen_narrow::scalar_backend` and the `fused_arithmetic` binary, which reach no `unsafe` code under Miri; `MIRI_SKIPPED_TESTS` in `xtask/src/main.rs` lists the reasons, and native, SDE and cross-arch runs still execute them. |
 | `just audit` | Scans the safety-critical non-generated areas listed in `docs/SAFETY-CRITICAL.md`. |
 | `cargo test` (all platforms in CI) | Exercise tests: every token's claimed features drive real intrinsics on x86-64, ARM64 (cross/QEMU), WASM (wasmtime), Windows ARM64, macOS — see `tests/*_intrinsics*.rs`, `tests/feature_consistency.rs`. |
 | Compile-fail suites (`tests/compile_fail.rs`, `magetypes/tests/bypass_adversarial.rs`, `tests/soundness/*`) | Negative space: tokenless UFCS calls, token shadowing/aliasing around `#[arcane]`, raw-pointer intrinsics without `unsafe` — all fail to compile. |
