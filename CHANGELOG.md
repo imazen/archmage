@@ -55,12 +55,13 @@
 #### Changed
 
 - `mul_add` and `mul_sub` now round once on scalar and strict WASM for f32/f64 at every width; software fusion changes results and costs more than separate multiply/add on those tiers. Relaxed WASM emits native madd directly and follows engine rounding, without a runtime probe ([#116](https://github.com/imazen/archmage/issues/116); 11a35a8b).
-- Make `all_true` and `any_true` consistently test lane sign bits across backends and widths. Comparison-mask results are unchanged; arbitrary non-mask inputs can change results (for example, a lane containing `1` is false under this contract) (050e25c1).
+- Make `all_true` and `any_true` consistently test lane sign bits across backends and widths. Comparison-mask results are unchanged; arbitrary non-mask inputs can change results (for example, a lane containing `1` is false under this contract) (050e25c1, 8014e94a).
 
 #### Fixed
 
 - Restore NEON/WASM and native AVX-512 raw accessors and constructors ([#117](https://github.com/imazen/archmage/issues/117); 772ef504, c766c238).
 - AVX-512 f32 block operations forward to the existing native V3 implementations instead of scalar defaults ([#60](https://github.com/imazen/archmage/issues/60); 3999a29d).
+- x86 `to_u8` and `store_*_rgba_u8` returned 0 for `+inf` and values at or above 2^31; they now saturate to 255 like the other backends, and NaN still gives 0. AVX2 has had this since the native pack restoration; AVX-512 picked it up through the forwarding above (ff9e0a50).
 - Use native WASM SIMD rounding, saturating conversion, and packing for f32 byte output (050e25c1).
 
 ## Workspace
@@ -77,7 +78,7 @@
 
 #### Changed
 
-- Miri skips `int_widen_narrow` and `fused_arithmetic`: under Miri they reach no `unsafe` code, yet they were about 95% of its work. Native, SDE and cross-arch CI still run both; the local Miri run now takes 255 s (ec9c66b7).
+- Miri skips `int_widen_narrow::scalar_backend` and the `fused_arithmetic` binary: under Miri they reach no `unsafe` code, yet they were about 95% of its work. The rest of `int_widen_narrow`, including its unsafe bitcast test, still runs under Miri, and native, SDE and cross-arch CI run everything. The local Miri run takes 255–394 s, depending on load (ec9c66b7, d570aa9b).
 
 Historical entries below describe bundled releases of archmage, archmage-macros,
 and magetypes. Their original content is preserved.
