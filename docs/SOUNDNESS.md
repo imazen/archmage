@@ -202,7 +202,7 @@ Run everything with `just ci`. Individually:
 | `cargo test -p xtask` (CI step 6) | The verifiers themselves: unit tests plant every violation class (feature mismatch, ungated intrinsic, trait-default-body intrinsic, unknown intrinsic, structural-rule breaches, missing SAFETY comments) and assert the scanner fires; plus a full-repo scan meeting the floors. |
 | `just validate-tokens` | Every token's `summon()` checks exactly the features the registry declares (parses the generated detection code). |
 | `just parity` | API parity across x86/ARM/WASM backends (0 issues). |
-| `just miri` | UB detection over magetypes under Miri (layout casts, transmutes, pointer ops — the obligations the intrinsic scanner does *not* prove). |
+| `just miri` | UB detection over magetypes under Miri (layout casts, transmutes, pointer ops — the obligations the intrinsic scanner does *not* prove). It skips `int_widen_narrow` and `fused_arithmetic`, which reach no `unsafe` code under Miri; `MIRI_SKIPPED_TESTS` in `xtask/src/main.rs` lists the reasons, and native, SDE and cross-arch runs still execute both. |
 | `just audit` | Scans the safety-critical non-generated areas listed in `docs/SAFETY-CRITICAL.md`. |
 | `cargo test` (all platforms in CI) | Exercise tests: every token's claimed features drive real intrinsics on x86-64, ARM64 (cross/QEMU), WASM (wasmtime), Windows ARM64, macOS — see `tests/*_intrinsics*.rs`, `tests/feature_consistency.rs`. |
 | Compile-fail suites (`tests/compile_fail.rs`, `magetypes/tests/bypass_adversarial.rs`, `tests/soundness/*`) | Negative space: tokenless UFCS calls, token shadowing/aliasing around `#[arcane]`, raw-pointer intrinsics without `unsafe` — all fail to compile. |

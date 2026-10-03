@@ -600,7 +600,10 @@ CI checks (all must pass):
 11. `cargo fmt --check` — code is formatted
 12. **Public-API snapshot check** — `ZEN_API_DOC=check` on the apidoc runner; if a public-API change makes `docs/public-api/` stale, run `just api-doc` and commit the regenerated snapshots
 13. `cargo doc --features "std avx512" --no-deps` with `RUSTDOCFLAGS=-Dwarnings` — no broken doc links
-14. Miri UB detection (skipped if not installed)
+14. Miri UB detection (skipped if not installed). `MIRI_SKIPPED_TESTS` in
+    `xtask/src/main.rs` keeps safe-only exhaustive tests out of Miri; they were
+    about 95% of its work while reaching no `unsafe`. Add new heavy safe-only
+    tests there rather than letting Miri time grow.
 15. **ARM64 cross-compilation + tests** (requires `cross` + Docker)
 16. **WASM cross-compilation + tests** (requires `wasmtime` + `wasm32-wasip1` target)
 17. **ARM64 clippy** (requires `cross` + Docker)

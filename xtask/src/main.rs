@@ -807,7 +807,61 @@ fn miri_toolchain() -> String {
     std::env::var("ARCHMAGE_MIRI_TOOLCHAIN").unwrap_or_else(|_| "nightly".into())
 }
 
-/// Run native raw tests with their required virtual CPU, then the baseline suite.
+/// magetypes integration tests that Miri does not run. Under Miri they reach no
+/// `unsafe` code, so it cannot find undefined behavior in them, yet together
+/// they were about 95% of its interpreted work (measured 2026-10-03). Native,
+/// SDE and cross-architecture CI still run them in full.
+const MIRI_SKIPPED_TESTS: &[(&str, &str)] = &[
+    (
+        "int_widen_narrow",
+        "exhaustive i16/u16 loops; under Miri only the scalar backend runs, and it has no unsafe",
+    ),
+    (
+        "fused_arithmetic",
+        "a million software-FMA cases checked against std; safe code only",
+    ),
+];
+
+/// magetypes integration-test targets, minus [`MIRI_SKIPPED_TESTS`]. Fails if a
+/// skip entry no longer names a real target, so a rename cannot leave it stale.
+fn miri_test_targets() -> Result<Vec<String>> {
+    let out = std::process::Command::new("cargo")
+        .args(["metadata", "--no-deps", "--format-version", "1"])
+        .output()
+        .context("Failed to run cargo metadata")?;
+    if !out.status.success() {
+        bail!("cargo metadata failed");
+    }
+    let meta: serde_json::Value = serde_json::from_slice(&out.stdout)?;
+    let package = meta["packages"]
+        .as_array()
+        .and_then(|packages| packages.iter().find(|p| p["name"] == "magetypes"))
+        .context("magetypes is missing from cargo metadata")?;
+    let tests: Vec<String> = package["targets"]
+        .as_array()
+        .context("magetypes has no targets in cargo metadata")?
+        .iter()
+        .filter(|t| {
+            t["kind"]
+                .as_array()
+                .is_some_and(|k| k.iter().any(|k| k == "test"))
+        })
+        .filter_map(|t| t["name"].as_str().map(str::to_owned))
+        .collect();
+    for (name, _) in MIRI_SKIPPED_TESTS {
+        if !tests.iter().any(|t| t == name) {
+            bail!("MIRI_SKIPPED_TESTS names `{name}`, which is not a magetypes test target");
+        }
+    }
+    Ok(tests
+        .into_iter()
+        .filter(|t| !MIRI_SKIPPED_TESTS.iter().any(|(skip, _)| skip == t))
+        .collect())
+}
+
+/// Run native raw tests with their required virtual CPU, then the baseline
+/// suite (unit tests, the integration tests outside [`MIRI_SKIPPED_TESTS`]),
+/// then the doctests.
 fn run_miri() -> Result<()> {
     use std::process::Command;
     let toolchain = format!("+{}", miri_toolchain());
@@ -819,6 +873,11 @@ fn run_miri() -> Result<()> {
         bail!("Miri is unavailable for {toolchain}; install its miri component");
     }
 
+    let targets = miri_test_targets()?;
+    println!("Not run under Miri (no unsafe reached; native CI runs them):");
+    for (name, why) in MIRI_SKIPPED_TESTS {
+        println!("  {name}: {why}");
+    }
     let mut baseline = Command::new("cargo");
     baseline.args([
         &toolchain,
@@ -828,7 +887,11 @@ fn run_miri() -> Result<()> {
         "magetypes",
         "--features",
         "avx512",
+        "--lib",
     ]);
+    for target in &targets {
+        baseline.args(["--test", target]);
+    }
     if cfg!(target_arch = "x86_64") {
         // This test deliberately requires a native V3 token. Give the interpreter
         // that virtual CPU; retain every roundtrip assertion. Run it first so a
@@ -871,7 +934,25 @@ fn run_miri() -> Result<()> {
     if !baseline.success() {
         bail!("Baseline Miri tests failed; see diagnostics above");
     }
-    println!("Miri tests passed for native raw interop and the baseline suite");
+    // Cargo cannot mix --doc with explicit targets, so the doctests that the
+    // former all-targets invocation covered get their own run.
+    let doc = Command::new("cargo")
+        .args([
+            &toolchain,
+            "miri",
+            "test",
+            "-p",
+            "magetypes",
+            "--features",
+            "avx512",
+            "--doc",
+        ])
+        .status()
+        .context("Failed to run Miri doctests")?;
+    if !doc.success() {
+        bail!("Miri doctests failed; see diagnostics above");
+    }
+    println!("Miri tests passed for native raw interop, the baseline suite, and the doctests");
     Ok(())
 }
 
