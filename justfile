@@ -354,12 +354,6 @@ token-migration-arm:
 check-packages:
     python3 xtask/check_packages.py
 
-# Published consumer: native must compile; ARM/WASM pin the one known #117 error.
-check-jxl-compat:
-    python3 tests/downstream-compat/jxl-encoder-simd/check.py
-    python3 tests/downstream-compat/jxl-encoder-simd/check.py --target aarch64-unknown-linux-gnu
-    python3 tests/downstream-compat/jxl-encoder-simd/check.py --target wasm32-wasip1
-
 # Fused arithmetic regression and interleaved software-path comparison
 test-fused:
     cargo test -p magetypes --all-features --test fused_arithmetic

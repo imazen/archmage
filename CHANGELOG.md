@@ -72,7 +72,6 @@
 - Validate all V4 f32 delegation methods and enforce generated-backend size budgets to detect missing forwards and unintended growth (3999a29d, a97decd1).
 - Add tokenful/tokenless calling-convention fixtures on x86, ARM/QEMU, and WASM/Wasmtime (c766c238, 595d13e0).
 - Record [native compilation checks for 23 published consumer libraries](docs/DOWNSTREAM-COMPATIBILITY.md), including optional SIMD feature checks; this audit does not establish ARM/WASM consumer compatibility or runtime equivalence (5bfae758, aac61604).
-- Add published jxl-encoder-simd 0.3.0 compatibility checks: x86 passes; ARM and WASM retain a known missing-token argument error in `from_i32x4`, recorded by the fixture (c766c238, 595d13e0).
 - Record [generic-vs-intrinsic codegen and compile-cost measurements](benchmarks/magetypes_vs_intrinsics_r5900xt_2026-09-08.md) (1a0ea59a).
 - `xtask soundness` rejects gather/scatter intrinsics anywhere in magetypes outside `simd/generic/gather.rs`, where every lane offset is bounded against the borrowed slice (e3543634).
 

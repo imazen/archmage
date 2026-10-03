@@ -35,6 +35,3 @@ Cargo.toml.original.txt
 perf.data
 perf.data.old
 fuzz-*.log
-
-# Keep build caches ignored when experimental source is shelved.
-/tests/design-probes/**/target/

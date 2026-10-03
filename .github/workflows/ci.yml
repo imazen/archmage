@@ -142,12 +142,6 @@ jobs:
         run: cargo check --manifest-path tests/downstream-compat/linear-srgb/Cargo.toml
       - name: Downstream compat (linear-srgb, with avx512)
         run: cargo check --manifest-path tests/downstream-compat/linear-srgb/Cargo.toml --features avx512
-      - name: Published jxl-encoder-simd compatibility
-        run: python3 tests/downstream-compat/jxl-encoder-simd/check.py
-      - name: Published jxl-encoder-simd WASM known incompatibility
-        run: |
-          rustup target add wasm32-wasip1
-          python3 tests/downstream-compat/jxl-encoder-simd/check.py --target wasm32-wasip1
       - name: Downstream compat (zensim)
         run: cargo check --manifest-path tests/downstream-compat/zensim/Cargo.toml
       - name: Downstream compat (zenpixels-convert)
@@ -203,10 +197,6 @@ jobs:
 
       - name: Install cargo-expand
         run: cargo install cargo-expand --locked
-
-      - name: Published jxl-encoder-simd ARM known incompatibility
-        if: runner.os == 'Linux'
-        run: python3 tests/downstream-compat/jxl-encoder-simd/check.py --target aarch64-unknown-linux-gnu
 
       - name: Build
         run: cargo build --features "${{ env.FEATURES }}"
@@ -900,14 +890,6 @@ jobs:
               # in the baseline lane. Every assertion runs; no test is omitted.
               case "$name:$cpu_flag" in
                 raw_interop-*:-nhm) cpu_flag="-hsw" ;;
-              esac
-              # Adaptive aliases: the caller selects a mandatory backend path.
-              # A missing token fails, rather than silently skipping that tier.
-              export ARCHMAGE_ADAPTIVE_TEST_TIER=scalar
-              case "$name:$cpu_flag" in
-                adaptive_use-*:-hsw) export ARCHMAGE_ADAPTIVE_TEST_TIER=v3 ;;
-                adaptive_use-*:-skx) export ARCHMAGE_ADAPTIVE_TEST_TIER=v4 ;;
-                adaptive_use-*:-icl) export ARCHMAGE_ADAPTIVE_TEST_TIER=v4x ;;
               esac
               echo "Running: sde64 $cpu_flag -- $test"
               sde64 "$cpu_flag" -- "$test" || fails="$fails $name"

@@ -1094,10 +1094,10 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
   inside nested `incant!` before dispatch could consume them. Type substitution
   now preserves bare dispatch markers, including non-first token placement.
   Regression coverage: `tests/calling_convention_matrix.rs`.
-- Open #117: published `jxl-encoder-simd 0.3.0` still has one-argument
-  `from_i32x4` calls on ARM and WASM. Native raw APIs are restored, but the
-  consumer must pass its token to that conversion. The downstream fixture
-  asserts this precise remaining incompatibility; it is not a compatibility pass.
+- #117: published `jxl-encoder-simd 0.3.0` still has one-argument
+  `from_i32x4` calls on ARM and WASM. Native raw APIs are restored; the rest is
+  the consumer's fix (pass its token to that conversion). Archmage keeps the
+  published two-argument form, and its CI does not track the consumer's failure.
 
 - Fixed: tokenless scalar/default `#[magetypes(rite, ...)]` fallbacks previously
   retained runtime dispatch to SIMD-only rite helpers. They now rewrite covered

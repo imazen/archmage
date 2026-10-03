@@ -126,10 +126,10 @@ archives were also checked with `--target x86_64-unknown-linux-gnu`,
 `--target aarch64-unknown-linux-gnu`, and `--target wasm32-wasip1` passed to
 `python3 xtask/check_packages.py` (repeat `--target` to check several).
 
-`just check-jxl-compat` checks the unmodified published jxl-encoder-simd 0.3.0.
-Its x86 build passes. ARM and WASM each retain one conversion-arity error;
-[the fixture](../tests/downstream-compat/jxl-encoder-simd/README.md) explicitly
-pins that known incompatibility. The calling-convention matrix runs on x86,
+Published jxl-encoder-simd 0.3.0 still calls `f32x4::from_i32x4(vector)` on ARM
+and WASM, so it does not compile there
+([#117](https://github.com/imazen/archmage/issues/117)). The fix belongs in that
+crate: pass the token, `f32x4::from_i32x4(token, vector)`. The calling-convention matrix runs on x86,
 ARM/QEMU, and WASM/Wasmtime and covers scalar/default signatures, tokenful and
 tokenless composition, nested dispatch, and const generics.
 
