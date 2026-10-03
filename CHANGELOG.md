@@ -46,6 +46,7 @@
 - Add magetypes inherent methods such as `splat_t(token, value)`, `zero_t(token)`, and `load_t(token, data)` across token-taking constructors, conversions, slice helpers, and single-lane scalar types. The `_t` methods hold the implementations; existing names retain their signatures as deprecated forwarders (772ef504, d53d425d).
 - Add native raw constructors: `from_raw_t(token, raw)` is callable without caller target-feature annotations; `from_raw(raw)` requires a matching or stronger target-feature context for safe calls (772ef504).
 - [Complete constructor signatures](docs/constructors/README.md) are generated for all 40 vector types; native names already ending in `_t` use `from_raw_t` without redundant `_t_t` aliases (e619c59a).
+- Add bounds-safe AVX-512 gather and scatter to `u32x16`, `i32x16` and `f32x16` with `X64V4Token`, indexed by a `u32x16`: `gather_wrapping` reads a power-of-two table with wrapping indices, `gather_or` reads a slice and leaves out-of-range lanes at a fallback, and `scatter_select` writes enabled, in-range lanes. None of them panics; there are no versions for other widths or backends ([guide](docs/site/content/magetypes/memory/gather-scatter.md); e3543634).
 
 #### Deprecated
 
@@ -73,6 +74,7 @@
 - Record [native compilation checks for 23 published consumer libraries](docs/DOWNSTREAM-COMPATIBILITY.md), including optional SIMD feature checks; this audit does not establish ARM/WASM consumer compatibility or runtime equivalence (5bfae758, aac61604).
 - Add published jxl-encoder-simd 0.3.0 compatibility checks: x86 passes; ARM and WASM retain a known missing-token argument error in `from_i32x4`, recorded by the fixture (c766c238, 595d13e0).
 - Record [generic-vs-intrinsic codegen and compile-cost measurements](benchmarks/magetypes_vs_intrinsics_r5900xt_2026-09-08.md) (1a0ea59a).
+- `xtask soundness` rejects gather/scatter intrinsics anywhere in magetypes outside `simd/generic/gather.rs`, where every lane offset is bounded against the borrowed slice (e3543634).
 
 Historical entries below describe bundled releases of archmage, archmage-macros,
 and magetypes. Their original content is preserved.
