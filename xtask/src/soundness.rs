@@ -118,12 +118,14 @@ const REQUIRED_FILE_FLOORS: &[(&str, usize)] = &[
     ("magetypes/src/simd/impls/wasm128.rs", 700), // measured 942
     ("magetypes/src/simd/generic/cross_width.rs", 6), // measured 8
     ("magetypes/src/simd/generic/convert_f16.rs", 18), // measured 26
-    ("magetypes/src/simd/generic/gather.rs", 13), // measured 18
+    ("magetypes/src/simd_storage.rs", 13),       // measured 18 (gather/scatter)
 ];
 
-/// The only magetypes file allowed to call gather/scatter intrinsics: every
-/// call there bounds its lane offsets against the borrowed slice first.
-const GATHER_HOME: &str = "magetypes/src/simd/generic/gather.rs";
+/// The one magetypes file allowed hand-written `unsafe` blocks, `unsafe impl
+/// Pod`, and gather/scatter intrinsics. Each block there states its invariant
+/// next to the others, so auditing magetypes' hand-written unsafe means reading
+/// one file. The generated backend impls carry their own audit contract.
+const STORAGE_HOME: &str = "magetypes/src/simd_storage.rs";
 
 /// Identifiers that look like intrinsics but are deliberately not verified.
 /// Every entry must carry a justification. Keep this list short — it is
@@ -539,6 +541,23 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
         }
     }
 
+    // Hand-written `unsafe` blocks live in the storage file, where each states
+    // its invariant next to the others; the generated backend impls carry their
+    // own audit contract. Code that needs `unsafe` gets a storage helper
+    // instead of a block at the call site.
+    if rel != STORAGE_HOME && !is_backend_impl {
+        let re = Regex::new(r"\bunsafe\s*\{").expect("unsafe block regex");
+        for m in re.find_iter(text) {
+            errors.push(format!(
+                "{}:{}: STRUCTURAL RULE: `unsafe` block outside {} — magetypes keeps its \
+                 hand-written unsafe in that file; add a helper there instead.",
+                rel,
+                line_of(text, m.start()),
+                STORAGE_HOME
+            ));
+        }
+    }
+
     // `transmute` is allowed only inside the backend impls (array <-> Repr
     // bitcasts inside impl-for-token blocks, verified by the intrinsic
     // scanner's context machinery + Miri). Elsewhere in magetypes the
@@ -588,9 +607,10 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
 
     // Gather/scatter intrinsics address memory at `base + offset * scale`
     // for per-lane offsets, so a borrowed slice proves nothing about the
-    // lanes. Their bounds proof is the index masking or clamping in
-    // gather.rs; anywhere else the offsets would be unchecked.
-    if rel != GATHER_HOME {
+    // lanes. Their bounds proof is the offset masking or lane enabling in the
+    // storage helpers; anywhere else, including the generated impls, the
+    // offsets would be unchecked.
+    if rel != STORAGE_HOME {
         let re =
             Regex::new(r"\b_mm\w*_i(?:32|64)(?:lo)?(?:gather|scatter)_\w+").expect("gather regex");
         for m in re.find_iter(text) {
@@ -600,7 +620,7 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
                 rel,
                 line_of(text, m.start()),
                 m.as_str(),
-                GATHER_HOME
+                STORAGE_HOME
             ));
         }
     }
@@ -609,7 +629,7 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
     // token-bearing wrapper would let `copy`/`cast`/`view` manufacture a
     // proof out of arbitrary bytes. The only legitimate impls are the
     // `impl_pod!` ones on raw scalars and stdarch vector types.
-    if rel != "magetypes/src/simd_storage.rs" {
+    if rel != STORAGE_HOME {
         let re =
             Regex::new(r"unsafe\s+impl(?:\s*<[^>{]*>)?\s+(?:\w+::)*Pod\b").expect("pod impl regex");
         for m in re.find_iter(text) {
@@ -1156,9 +1176,10 @@ mod tests {
             "{:?}",
             scan.errors
         );
-        // transmute_copy is the audited idiom and stays allowed.
+        // transmute_copy is the audited idiom and stays allowed (in the one
+        // file where hand-written unsafe blocks may live).
         let ok = scan_at(
-            "magetypes/src/simd/generic/foo.rs",
+            STORAGE_HOME,
             "fn f(x: &[u8; 16]) -> Y { unsafe { core::mem::transmute_copy(x) } }\n",
         );
         assert!(
@@ -1181,7 +1202,7 @@ mod tests {
     }
 
     #[test]
-    fn structural_rule_gather_scatter_only_in_gather_home() {
+    fn structural_rule_gather_scatter_only_in_storage_home() {
         let gather = "fn f(t: X64V4Token, i: __m512i, p: &[i32]) -> __m512i {\n\
                       unsafe { _mm512_i32gather_epi32::<4>(i, p.as_ptr()) } }\n";
         let bad = scan_at("magetypes/src/simd/generic/foo.rs", gather);
@@ -1204,11 +1225,39 @@ mod tests {
             "{:?}",
             scatter.errors
         );
-        let ok = scan_at(GATHER_HOME, gather);
+        let ok = scan_at(STORAGE_HOME, gather);
         assert!(
             !ok.errors.iter().any(|e| e.contains("STRUCTURAL RULE")),
             "{:?}",
             ok.errors
+        );
+    }
+
+    #[test]
+    fn structural_rule_unsafe_blocks_only_in_storage_home() {
+        let src = "fn f(x: &[u8; 4]) -> u32 {\n\
+                   // SAFETY: test fixture.\n\
+                   unsafe { core::mem::transmute_copy(x) }\n\
+                   }\n";
+        let bad = scan_at("magetypes/src/simd/generic/foo.rs", src);
+        assert!(
+            bad.errors
+                .iter()
+                .any(|e| e.contains("STRUCTURAL RULE") && e.contains("`unsafe` block outside")),
+            "{:?}",
+            bad.errors
+        );
+        let ok = scan_at(STORAGE_HOME, src);
+        assert!(ok.errors.is_empty(), "{:?}", ok.errors);
+        // Generated backend impls carry their own audit contract instead.
+        let impls = scan_at("magetypes/src/simd/impls/x86_v3.rs", src);
+        assert!(
+            !impls
+                .errors
+                .iter()
+                .any(|e| e.contains("`unsafe` block outside")),
+            "{:?}",
+            impls.errors
         );
     }
 
@@ -1241,7 +1290,7 @@ mod tests {
             scan.errors
         );
         let ok = scan_at(
-            "magetypes/src/simd/generic/foo.rs",
+            STORAGE_HOME,
             "fn f(x: u32) -> f32 {\n\
              // SAFETY: u32 and f32 are the same size; all bit patterns valid.\n\
              unsafe { core::mem::transmute_copy(&x) }\n\

@@ -119,7 +119,8 @@ silently produce wrong results.
 
 ### 8. AVX-512 Gather/Scatter (CRITICAL)
 
-**File**: `magetypes/src/simd/generic/gather.rs`
+**File**: `magetypes/src/simd_storage.rs` (module `gather`; the public methods in
+`magetypes/src/simd/generic/gather.rs` are safe code)
 
 Gather and scatter address memory at `base + 4 * offset` for per-lane 32-bit
 signed offsets. A borrowed slice proves nothing about those addresses, so an

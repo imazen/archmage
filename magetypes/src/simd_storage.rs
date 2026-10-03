@@ -240,6 +240,135 @@ pub(crate) fn store<Src: Pod, Dst: Pod>(src: Src, dest: &mut Dst) {
     unsafe { core::ptr::write_unaligned((dest as *mut Dst).cast::<Src>(), src) }
 }
 
+/// AVX-512 gather and scatter: the pointer-taking half of the `u32x16`,
+/// `i32x16` and `f32x16` methods in `simd/generic/gather.rs`.
+///
+/// The intrinsics access `base + 4 * offset` for per-lane signed 32-bit
+/// offsets, so the borrow alone proves nothing about the addresses. Every
+/// helper bounds the offsets against the borrow first, so each lane the
+/// instruction accesses has `0 <= offset < len`:
+///
+/// - Wrapping gathers mask with `N - 1`, where `N` is a power of two no larger
+///   than 2^31 (const-asserted). Every offset is in `0..N`.
+/// - Slice gathers and scatters enable only lanes whose unsigned index is below
+///   `min(len, 2^31)`. Masked-off lanes access no memory, so an empty slice is
+///   fine, and enabled offsets stay non-negative after sign extension.
+/// - Elements are 4-byte `Pod`: reads see only initialized bytes, and scatters
+///   (through `&mut`) may write any bit pattern.
+/// - Each helper is an `#[arcane]` region for the `X64V4Token` it takes.
+///
+/// `cargo xtask soundness` rejects gather and scatter intrinsics anywhere else
+/// in magetypes.
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+pub(crate) mod gather {
+    use super::Pod;
+    use archmage::X64V4Token;
+    use core::arch::x86_64::{__m512, __m512i};
+
+    const fn assert_wrapping_table<const N: usize>() {
+        assert!(
+            N.is_power_of_two() && N <= 1 << 31,
+            "gather_wrapping: the table length must be a power of two no larger than 2^31"
+        );
+    }
+
+    const fn assert_lane<E>() {
+        assert!(size_of::<E>() == 4, "gather/scatter elements are 4 bytes");
+    }
+
+    /// Exclusive bound on enabled indices for a slice of `len` elements:
+    /// `min(len, 2^31)`, as the bit pattern of the unsigned compare operand.
+    #[inline(always)]
+    fn lane_bound(len: usize) -> i32 {
+        len.min(1 << 31) as u32 as i32
+    }
+
+    #[archmage::arcane(import_intrinsics)]
+    pub(crate) fn gather_wrapping_epi32<E: Pod, const N: usize>(
+        _token: X64V4Token,
+        table: &[E; N],
+        idx: __m512i,
+    ) -> __m512i {
+        const { assert_wrapping_table::<N>() };
+        const { assert_lane::<E>() };
+        let off = _mm512_and_si512(idx, _mm512_set1_epi32((N - 1) as i32));
+        // SAFETY: every offset is `idx & (N - 1)`, in `0..N` because `N` is a
+        // power of two no larger than 2^31, so each lane reads 4 bytes of `table`.
+        unsafe { _mm512_i32gather_epi32::<4>(off, table.as_ptr().cast()) }
+    }
+
+    #[archmage::arcane(import_intrinsics)]
+    pub(crate) fn gather_wrapping_ps<const N: usize>(
+        _token: X64V4Token,
+        table: &[f32; N],
+        idx: __m512i,
+    ) -> __m512 {
+        const { assert_wrapping_table::<N>() };
+        let off = _mm512_and_si512(idx, _mm512_set1_epi32((N - 1) as i32));
+        // SAFETY: every offset is `idx & (N - 1)`, in `0..N` because `N` is a
+        // power of two no larger than 2^31, so each lane reads 4 bytes of `table`.
+        unsafe { _mm512_i32gather_ps::<4>(off, table.as_ptr()) }
+    }
+
+    #[archmage::arcane(import_intrinsics)]
+    pub(crate) fn gather_or_epi32<E: Pod>(
+        _token: X64V4Token,
+        table: &[E],
+        idx: __m512i,
+        or: __m512i,
+    ) -> __m512i {
+        const { assert_lane::<E>() };
+        let live = _mm512_cmplt_epu32_mask(idx, _mm512_set1_epi32(lane_bound(table.len())));
+        // SAFETY: only lanes with `idx < min(len, 2^31)` (unsigned) are enabled;
+        // each reads 4 bytes of `table`. Masked-off lanes read nothing and keep `or`.
+        unsafe { _mm512_mask_i32gather_epi32::<4>(or, live, idx, table.as_ptr().cast()) }
+    }
+
+    #[archmage::arcane(import_intrinsics)]
+    pub(crate) fn gather_or_ps(
+        _token: X64V4Token,
+        table: &[f32],
+        idx: __m512i,
+        or: __m512,
+    ) -> __m512 {
+        let live = _mm512_cmplt_epu32_mask(idx, _mm512_set1_epi32(lane_bound(table.len())));
+        // SAFETY: only lanes with `idx < min(len, 2^31)` (unsigned) are enabled;
+        // each reads 4 bytes of `table`. Masked-off lanes read nothing and keep `or`.
+        unsafe { _mm512_mask_i32gather_ps::<4>(or, live, idx, table.as_ptr()) }
+    }
+
+    #[archmage::arcane(import_intrinsics)]
+    pub(crate) fn scatter_select_epi32<E: Pod>(
+        _token: X64V4Token,
+        dst: &mut [E],
+        enable: u16,
+        idx: __m512i,
+        v: __m512i,
+    ) {
+        const { assert_lane::<E>() };
+        let live = enable & _mm512_cmplt_epu32_mask(idx, _mm512_set1_epi32(lane_bound(dst.len())));
+        // SAFETY: only enabled lanes with `idx < min(len, 2^31)` (unsigned) write,
+        // each 4 bytes inside `dst`, which this call borrows exclusively. `E` is
+        // Pod, so any written bit pattern is a valid `E`.
+        unsafe { _mm512_mask_i32scatter_epi32::<4>(dst.as_mut_ptr().cast(), live, idx, v) }
+    }
+
+    #[archmage::arcane(import_intrinsics)]
+    pub(crate) fn scatter_select_ps(
+        _token: X64V4Token,
+        dst: &mut [f32],
+        enable: u16,
+        idx: __m512i,
+        v: __m512,
+    ) {
+        let live = enable & _mm512_cmplt_epu32_mask(idx, _mm512_set1_epi32(lane_bound(dst.len())));
+        // SAFETY: only enabled lanes with `idx < min(len, 2^31)` (unsigned) write,
+        // each 4 bytes inside `dst`, which this call borrows exclusively. Any bit
+        // pattern is a valid `f32`.
+        unsafe { _mm512_mask_i32scatter_ps::<4>(dst.as_mut_ptr(), live, idx, v) }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
