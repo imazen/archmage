@@ -118,7 +118,12 @@ const REQUIRED_FILE_FLOORS: &[(&str, usize)] = &[
     ("magetypes/src/simd/impls/wasm128.rs", 700), // measured 942
     ("magetypes/src/simd/generic/cross_width.rs", 6), // measured 8
     ("magetypes/src/simd/generic/convert_f16.rs", 18), // measured 26
+    ("magetypes/src/simd/generic/gather.rs", 13), // measured 18
 ];
+
+/// The only magetypes file allowed to call gather/scatter intrinsics: every
+/// call there bounds its lane offsets against the borrowed slice first.
+const GATHER_HOME: &str = "magetypes/src/simd/generic/gather.rs";
 
 /// Identifiers that look like intrinsics but are deliberately not verified.
 /// Every entry must carry a justification. Keep this list short — it is
@@ -577,6 +582,25 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
                 line_of(text, m.start()),
                 m.as_str().trim(),
                 why
+            ));
+        }
+    }
+
+    // Gather/scatter intrinsics address memory at `base + offset * scale`
+    // for per-lane offsets, so a borrowed slice proves nothing about the
+    // lanes. Their bounds proof is the index masking or clamping in
+    // gather.rs; anywhere else the offsets would be unchecked.
+    if rel != GATHER_HOME {
+        let re =
+            Regex::new(r"\b_mm\w*_i(?:32|64)(?:lo)?(?:gather|scatter)_\w+").expect("gather regex");
+        for m in re.find_iter(text) {
+            errors.push(format!(
+                "{}:{}: STRUCTURAL RULE: `{}` outside {} — gather/scatter offsets \
+                 must be bounded against the borrowed slice, which only that file does.",
+                rel,
+                line_of(text, m.start()),
+                m.as_str(),
+                GATHER_HOME
             ));
         }
     }
@@ -1154,6 +1178,38 @@ mod tests {
              }\n",
         );
         assert!(scan.errors.is_empty(), "{:?}", scan.errors);
+    }
+
+    #[test]
+    fn structural_rule_gather_scatter_only_in_gather_home() {
+        let gather = "fn f(t: X64V4Token, i: __m512i, p: &[i32]) -> __m512i {\n\
+                      unsafe { _mm512_i32gather_epi32::<4>(i, p.as_ptr()) } }\n";
+        let bad = scan_at("magetypes/src/simd/generic/foo.rs", gather);
+        assert!(
+            bad.errors
+                .iter()
+                .any(|e| e.contains("STRUCTURAL RULE") && e.contains("_mm512_i32gather_epi32")),
+            "{:?}",
+            bad.errors
+        );
+        let scatter = scan_at(
+            "magetypes/src/simd/impls/x86_v4.rs",
+            "fn f(t: X64V4Token) { unsafe { _mm512_mask_i32scatter_ps::<4>(p, k, i, v) } }\n",
+        );
+        assert!(
+            scatter
+                .errors
+                .iter()
+                .any(|e| e.contains("STRUCTURAL RULE") && e.contains("_mm512_mask_i32scatter_ps")),
+            "{:?}",
+            scatter.errors
+        );
+        let ok = scan_at(GATHER_HOME, gather);
+        assert!(
+            !ok.errors.iter().any(|e| e.contains("STRUCTURAL RULE")),
+            "{:?}",
+            ok.errors
+        );
     }
 
     #[test]

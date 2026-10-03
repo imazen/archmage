@@ -117,6 +117,25 @@ silently produce wrong results.
 
 ---
 
+### 8. AVX-512 Gather/Scatter (CRITICAL)
+
+**File**: `magetypes/src/simd/generic/gather.rs`
+
+Gather and scatter address memory at `base + 4 * offset` for per-lane 32-bit
+signed offsets. A borrowed slice proves nothing about those addresses, so an
+unbounded offset reads or writes outside the borrow.
+
+**Invariant**: Every lane the instruction accesses has an offset in
+`0..len`. Wrapping gathers mask the offsets with `N - 1` (`N` a power of two,
+`N <= 2^31`, const-asserted); slice gathers and scatters enable only lanes
+whose unsigned index is below `min(len, 2^31)`.
+
+**Verified by**: `magetypes/tests/gather_scatter_v4.rs` (hostile indices
+against scalar indexing); `cargo xtask soundness` bans gather/scatter
+intrinsics anywhere else in magetypes.
+
+---
+
 ## Audit Markers
 
 Use these comments to mark safety-critical code:

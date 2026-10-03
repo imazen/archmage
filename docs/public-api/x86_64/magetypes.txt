@@ -6,7 +6,7 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2664 lines (supported surface) | magetypes.features.txt 99 added (features: avx512,std,w512) | magetypes.internal.txt 34 lines (41 hidden + 0 excluded-feature)
+# files: magetypes.txt 2664 lines (supported surface) | magetypes.features.txt 108 added (features: avx512,std,w512) | magetypes.internal.txt 34 lines (41 hidden + 0 excluded-feature)
 
 ## summary
 #

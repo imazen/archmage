@@ -11,21 +11,24 @@
 #
 #   pub types (struct/enum/trait/alias)        50
 #   pub consts/statics                         40
-#   free functions                            224
+#   free functions                            242
 #   trait roster entries (type × trait)        43
 #
 # per-module pub lines:
 #   (root)                           40
-#   prelude                         216
+#   prelude                         234
 #   simd                             58
 
-## items (96 lines)
+## items (105 lines)
 
 pub fn prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>::from_m512(archmage::tokens::generated::x86::X64V4Token, core::core_arch::x86::__m512) -> Self [also: prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>]
 pub fn prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>::from_m512_t(archmage::tokens::generated::x86::X64V4Token, core::core_arch::x86::__m512) -> Self [also: prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>]
 pub fn prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>::from_raw(core::core_arch::x86::__m512) -> Self [also: prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>, prelude::f32x16<archmage::tokens::generated::x86::X64V4xToken>]
 pub fn prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>::from_raw_t(archmage::tokens::generated::x86::X64V4Token, core::core_arch::x86::__m512) -> Self [also: prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>]
 pub fn prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>::raw(self) -> core::core_arch::x86::__m512 [also: prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>, prelude::f32x16<archmage::tokens::generated::x86::X64V4xToken>]
+pub fn prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>::gather_or(&[f32], prelude::u32x16<archmage::tokens::generated::x86::X64V4Token>, Self) -> Self [also: prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>]
+pub fn prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>::gather_wrapping<const N: usize>(&[f32; N], prelude::u32x16<archmage::tokens::generated::x86::X64V4Token>) -> Self [also: prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>]
+pub fn prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>::scatter_select(self, &mut [f32], u16, prelude::u32x16<archmage::tokens::generated::x86::X64V4Token>) [also: prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>]
 pub const fn prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::f32x16<archmage::tokens::generated::x86::X64V4xToken>::from_m512(archmage::tokens::generated::x86::X64V4xToken, core::core_arch::x86::__m512) -> Self [also: prelude::f32x16<archmage::tokens::generated::x86::X64V4xToken>]
 pub fn prelude::f32x16<archmage::tokens::generated::x86::X64V4xToken>::from_m512_t(archmage::tokens::generated::x86::X64V4xToken, core::core_arch::x86::__m512) -> Self [also: prelude::f32x16<archmage::tokens::generated::x86::X64V4xToken>]
@@ -43,6 +46,9 @@ pub fn prelude::f64x8<archmage::tokens::generated::x86::X64V4xToken>::from_raw_t
 pub const fn prelude::f64x8<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str [also: (root)]
 pub const fn prelude::i16x32<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str [also: (root)]
 pub const fn prelude::i16x32<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str [also: (root)]
+pub fn prelude::i32x16<archmage::tokens::generated::x86::X64V4Token>::gather_or(&[i32], prelude::u32x16<archmage::tokens::generated::x86::X64V4Token>, Self) -> Self [also: prelude::i32x16<archmage::tokens::generated::x86::X64V4Token>]
+pub fn prelude::i32x16<archmage::tokens::generated::x86::X64V4Token>::gather_wrapping<const N: usize>(&[i32; N], prelude::u32x16<archmage::tokens::generated::x86::X64V4Token>) -> Self [also: prelude::i32x16<archmage::tokens::generated::x86::X64V4Token>]
+pub fn prelude::i32x16<archmage::tokens::generated::x86::X64V4Token>::scatter_select(self, &mut [i32], u16, prelude::u32x16<archmage::tokens::generated::x86::X64V4Token>) [also: prelude::i32x16<archmage::tokens::generated::x86::X64V4Token>]
 pub const fn prelude::i32x16<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str [also: (root)]
 pub const fn prelude::i32x16<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::i64x8<archmage::tokens::generated::x86::X64V4Token>::from_m512i(archmage::tokens::generated::x86::X64V4Token, core::core_arch::x86::__m512i) -> Self [also: prelude::i16x32<archmage::tokens::generated::x86::X64V4Token>, prelude::i32x16<archmage::tokens::generated::x86::X64V4Token>, prelude::i64x8<archmage::tokens::generated::x86::X64V4Token>, prelude::i8x64<archmage::tokens::generated::x86::X64V4Token>, prelude::u16x32<archmage::tokens::generated::x86::X64V4Token>, prelude::u32x16<archmage::tokens::generated::x86::X64V4Token>, prelude::u64x8<archmage::tokens::generated::x86::X64V4Token>, prelude::u8x64<archmage::tokens::generated::x86::X64V4Token>]
@@ -60,6 +66,9 @@ pub const fn prelude::i8x64<archmage::tokens::generated::x86::X64V4Token>::imple
 pub const fn prelude::i8x64<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str [also: (root)]
 pub const fn prelude::u16x32<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str [also: (root)]
 pub const fn prelude::u16x32<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str [also: (root)]
+pub fn prelude::u32x16<archmage::tokens::generated::x86::X64V4Token>::gather_or(&[u32], prelude::u32x16<archmage::tokens::generated::x86::X64V4Token>, Self) -> Self [also: prelude::u32x16<archmage::tokens::generated::x86::X64V4Token>]
+pub fn prelude::u32x16<archmage::tokens::generated::x86::X64V4Token>::gather_wrapping<const N: usize>(&[u32; N], prelude::u32x16<archmage::tokens::generated::x86::X64V4Token>) -> Self [also: prelude::u32x16<archmage::tokens::generated::x86::X64V4Token>]
+pub fn prelude::u32x16<archmage::tokens::generated::x86::X64V4Token>::scatter_select(self, &mut [u32], u16, prelude::u32x16<archmage::tokens::generated::x86::X64V4Token>) [also: prelude::u32x16<archmage::tokens::generated::x86::X64V4Token>]
 pub const fn prelude::u32x16<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str [also: (root)]
 pub const fn prelude::u32x16<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str [also: (root)]
 pub const fn prelude::u64x8<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str [also: (root)]
