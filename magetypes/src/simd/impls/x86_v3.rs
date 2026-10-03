@@ -3419,12 +3419,12 @@ impl I16x8Backend for archmage::X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn all_true(self, a: __m128i) -> bool {
-        _mm_movemask_epi8(a) == 0xFFFF_u32 as i32
+        ((_mm_movemask_epi8(a) as u32) & 0xAAAA_u32) == 0xAAAA_u32
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn any_true(self, a: __m128i) -> bool {
-        _mm_movemask_epi8(a) != 0
+        ((_mm_movemask_epi8(a) as u32) & 0xAAAA_u32) != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -3655,12 +3655,12 @@ impl I16x16Backend for archmage::X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn all_true(self, a: __m256i) -> bool {
-        _mm256_movemask_epi8(a) == -1_i32
+        ((_mm256_movemask_epi8(a) as u32) & 0xAAAA_AAAA_u32) == 0xAAAA_AAAA_u32
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn any_true(self, a: __m256i) -> bool {
-        _mm256_movemask_epi8(a) != 0
+        ((_mm256_movemask_epi8(a) as u32) & 0xAAAA_AAAA_u32) != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -3886,12 +3886,12 @@ impl U16x8Backend for archmage::X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn all_true(self, a: __m128i) -> bool {
-        _mm_movemask_epi8(a) == 0xFFFF_u32 as i32
+        ((_mm_movemask_epi8(a) as u32) & 0xAAAA_u32) == 0xAAAA_u32
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn any_true(self, a: __m128i) -> bool {
-        _mm_movemask_epi8(a) != 0
+        ((_mm_movemask_epi8(a) as u32) & 0xAAAA_u32) != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -4094,12 +4094,12 @@ impl U16x16Backend for archmage::X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn all_true(self, a: __m256i) -> bool {
-        _mm256_movemask_epi8(a) == -1_i32
+        ((_mm256_movemask_epi8(a) as u32) & 0xAAAA_AAAA_u32) == 0xAAAA_AAAA_u32
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn any_true(self, a: __m256i) -> bool {
-        _mm256_movemask_epi8(a) != 0
+        ((_mm256_movemask_epi8(a) as u32) & 0xAAAA_AAAA_u32) != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V3Token)]

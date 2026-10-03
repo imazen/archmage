@@ -18,15 +18,17 @@
 //! that is the only place the rules differ — an all-ones or all-zeros vector
 //! cannot tell them apart, and every pre-existing test used exactly those.
 use archmage::SimdToken;
-#[cfg(feature = "w512")]
-use magetypes::simd::backends::I32x16Backend;
 use magetypes::simd::backends::{
-    I8x16Backend, I16x8Backend, I32x4Backend, I32x8Backend, I64x2Backend, U8x16Backend,
-    U32x4Backend,
+    I8x16Backend, I16x8Backend, I16x16Backend, I32x4Backend, I32x8Backend, I64x2Backend,
+    U8x16Backend, U16x8Backend, U16x16Backend, U32x4Backend,
 };
 #[cfg(feature = "w512")]
-use magetypes::simd::generic::i32x16;
-use magetypes::simd::generic::{i8x16, i16x8, i32x4, i32x8, i64x2, u8x16, u32x4};
+use magetypes::simd::backends::{I16x32Backend, I32x16Backend, U16x32Backend};
+use magetypes::simd::generic::{
+    i8x16, i16x8, i16x16, i32x4, i32x8, i64x2, u8x16, u16x8, u16x16, u32x4,
+};
+#[cfg(feature = "w512")]
+use magetypes::simd::generic::{i16x32, i32x16, u16x32};
 
 /// Lanes that are nonzero with the sign bit clear. Sign-bit rule: false.
 /// Nonzero rule: true.
@@ -50,6 +52,38 @@ macro_rules! assert_nonzero_is_not_true {
     }};
 }
 
+/// 16-bit lanes: only the top bit of each lane's high byte counts. A byte-wise
+/// movemask also sees bit 7 of the low byte, so `0x0080` lanes must read false
+/// and `0x8000` lanes true. Mask inputs cannot tell the two readings apart.
+macro_rules! assert_16bit_sign_bit {
+    ($ty:ident, $tok:expr, $elem:ty) => {{
+        let hi = $ty::splat_t($tok, 0x8000u16 as $elem);
+        assert!(
+            hi.all_true() && hi.any_true(),
+            concat!(stringify!($ty), ": 0x8000 lanes have the sign bit set")
+        );
+        let lo = $ty::splat_t($tok, 0x0080u16 as $elem);
+        assert!(
+            !lo.all_true() && !lo.any_true(),
+            concat!(stringify!($ty), ": 0x0080 lanes have the sign bit clear")
+        );
+        let mixed = $ty::from_array_t(
+            $tok,
+            core::array::from_fn(|i| {
+                if i % 2 == 0 {
+                    0x8000u16 as $elem
+                } else {
+                    0x0080u16 as $elem
+                }
+            }),
+        );
+        assert!(
+            mixed.any_true() && !mixed.all_true(),
+            concat!(stringify!($ty), ": half the lanes have the sign bit set")
+        );
+    }};
+}
+
 /// A real comparison mask still behaves.
 macro_rules! assert_mask_behaves {
     ($ty:ident, $tok:expr, $ones:expr, $zero:expr) => {{
@@ -67,7 +101,10 @@ where
         + I32x8Backend
         + I8x16Backend
         + I16x8Backend
+        + I16x16Backend
         + I64x2Backend
+        + U16x8Backend
+        + U16x16Backend
         + U32x4Backend
         + U8x16Backend,
 {
@@ -82,6 +119,10 @@ where
     assert_nonzero_is_not_true!(u8x16, token, 1u8);
     assert!(u32x4::splat_t(token, 0x8000_0000u32).all_true());
     assert!(u8x16::splat_t(token, 0x80u8).all_true());
+    assert_16bit_sign_bit!(i16x8, token, i16);
+    assert_16bit_sign_bit!(i16x16, token, i16);
+    assert_16bit_sign_bit!(u16x8, token, u16);
+    assert_16bit_sign_bit!(u16x16, token, u16);
 
     assert_mask_behaves!(i32x4, token, -1i32, 0i32);
     assert_mask_behaves!(i32x8, token, -1i32, 0i32);
@@ -115,9 +156,11 @@ where
 #[cfg(feature = "w512")]
 fn check_w512<T>(token: T)
 where
-    T: Copy + I32x4Backend + I32x8Backend + I32x16Backend,
+    T: Copy + I32x4Backend + I32x8Backend + I32x16Backend + I16x32Backend + U16x32Backend,
 {
     assert_nonzero_is_not_true!(i32x16, token, 1i32);
+    assert_16bit_sign_bit!(i16x32, token, i16);
+    assert_16bit_sign_bit!(u16x32, token, u16);
     assert_mask_behaves!(i32x16, token, -1i32, 0i32);
 
     let a8 = i32x8::from_array_t(
@@ -141,9 +184,11 @@ where
 #[cfg(feature = "w512")]
 fn check_w512_only<T>(token: T)
 where
-    T: Copy + I32x16Backend,
+    T: Copy + I32x16Backend + I16x32Backend + U16x32Backend,
 {
     assert_nonzero_is_not_true!(i32x16, token, 1i32);
+    assert_16bit_sign_bit!(i16x32, token, i16);
+    assert_16bit_sign_bit!(u16x32, token, u16);
     assert_mask_behaves!(i32x16, token, -1i32, 0i32);
 
     // Disjoint nonzero bits across the folded halves, sign bits clear.

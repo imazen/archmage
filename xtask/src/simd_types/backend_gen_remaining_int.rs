@@ -1164,12 +1164,14 @@ fn generate_x86_int_boolean(ty: &IntVecType) -> String {
             "#}
         }
         16 => {
-            // 16-bit: all_true/any_true can use byte-level movemask (all bytes set = all 16-bit lanes set)
-            // bitmask needs to extract one bit per 16-bit lane
-            let all_mask_bytes = if ty.width_bits == 128 {
-                "0xFFFF_u32 as i32".to_string()
+            // 16-bit: the byte movemask has one bit per byte. A lane's sign bit is
+            // bit 7 of its high byte, which lands on the odd bits (little-endian),
+            // so all_true/any_true look only at those. The low byte's bit 7 is
+            // not a sign bit. bitmask extracts one bit per 16-bit lane.
+            let hi_bytes = if ty.width_bits == 128 {
+                "0xAAAA_u32"
             } else {
-                "-1_i32".to_string()
+                "0xAAAA_AAAA_u32"
             };
             let bitmask_body = if ty.width_bits == 128 {
                 formatdoc! {r#"
@@ -1194,12 +1196,12 @@ fn generate_x86_int_boolean(ty: &IntVecType) -> String {
 
             {arcane}
             fn all_true(self, a: {inner}) -> bool {{
-                {p}_movemask_epi8(a) == {all_mask_bytes}
+                (({p}_movemask_epi8(a) as u32) & {hi_bytes}) == {hi_bytes}
             }}
 
             {arcane}
             fn any_true(self, a: {inner}) -> bool {{
-                {p}_movemask_epi8(a) != 0
+                (({p}_movemask_epi8(a) as u32) & {hi_bytes}) != 0
             }}
 
             {arcane}
