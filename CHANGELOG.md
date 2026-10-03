@@ -56,6 +56,8 @@
 
 - `mul_add` and `mul_sub` now round once on scalar and strict WASM for f32/f64 at every width; software fusion changes results and costs more than separate multiply/add on those tiers. Relaxed WASM emits native madd directly and follows engine rounding, without a runtime probe ([#116](https://github.com/imazen/archmage/issues/116); 11a35a8b).
 - Make `all_true` and `any_true` consistently test lane sign bits across backends and widths. Comparison-mask results are unchanged; arbitrary non-mask inputs can change results (for example, a lane containing `1` is false under this contract) (050e25c1, 8014e94a).
+- On AVX-512, `to_u8` (both widths) and `f32x4::store_4_rgba_u8` narrow with `vpmovusdb`, 22–40% faster on Zen 5 than the AVX2 form they used before; `f32x8::store_8_rgba_u8` keeps the AVX2 form. On AVX2 the saturation fix below costs 20–37% against the old, incorrect form ([benchmark](benchmarks/pixel_pack_zen5-9950x3d_2026-10-03.md); 2bc19d85).
+- The published magetypes crate no longer includes tests, benches or examples: 234 KiB instead of 443 KiB (877a3e61).
 
 #### Fixed
 
@@ -79,6 +81,7 @@
 #### Changed
 
 - Miri skips `int_widen_narrow::scalar_backend` and the `fused_arithmetic` binary, about 95% of its work. `scalar_backend`'s exhaustive loops reach the same `unsafe` bitcast path as `scalar_w512_bitcast_values`, which still runs under Miri; `fused_arithmetic` is safe code only. Native, SDE and cross-arch CI run everything. The local Miri run takes 255–394 s, depending on load (ec9c66b7, d570aa9b, 4d486072).
+- CI runs `cargo-semver-checks` for archmage and magetypes on every push and in the release gate; the separate PR-only workflow is removed (f209b894).
 
 Historical entries below describe bundled releases of archmage, archmage-macros,
 and magetypes. Their original content is preserved.
