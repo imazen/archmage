@@ -1020,6 +1020,36 @@ jobs:
           printf "  %s\n" "${FILES[@]}"
           cargo run -p xtask -- compare-arch-results "${FILES[@]}"
 
+  # ==========================================================================
+  # Semver - public API against the latest crates.io release
+  # ==========================================================================
+  # Part of the CI that publish.yml runs at the release commit, so a release
+  # cannot ship an unannounced break. Before the version bump the current and
+  # published versions match, and cargo-semver-checks assumes the smallest
+  # bump (0.y.z -> 0.y.(z+1), its "minor"): additions and deprecations pass,
+  # breaking changes fail. archmage-macros is a proc-macro crate, which the
+  # tool cannot check.
+  semver:
+    name: Semver (${{ matrix.crate }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        crate: [archmage, magetypes]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check semver
+        uses: obi1kenobi/cargo-semver-checks-action@v2
+        with:
+          package: ${{ matrix.crate }}
+
   ci-gate:
     name: Complete CI matrix
     if: ${{ always() }}
@@ -1049,6 +1079,7 @@ jobs:
       - coverage
       - coverage-aarch64
       - compare-arch-results
+      - semver
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
