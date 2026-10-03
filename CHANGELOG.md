@@ -75,6 +75,10 @@
 - Record [generic-vs-intrinsic codegen and compile-cost measurements](benchmarks/magetypes_vs_intrinsics_r5900xt_2026-09-08.md) (1a0ea59a).
 - `xtask soundness` keeps magetypes' hand-written `unsafe` in `simd_storage.rs`: it rejects `unsafe` blocks elsewhere (outside the generated backend impls) and gather/scatter intrinsics anywhere else, so every gather/scatter lane offset is bounded against the borrowed slice in that one file (e3543634, 3fb0c910).
 
+#### Changed
+
+- Miri skips `int_widen_narrow` and `fused_arithmetic`: under Miri they reach no `unsafe` code, yet they were about 95% of its work. Native, SDE and cross-arch CI still run both; the local Miri run now takes 255 s (ec9c66b7).
+
 Historical entries below describe bundled releases of archmage, archmage-macros,
 and magetypes. Their original content is preserved.
 
