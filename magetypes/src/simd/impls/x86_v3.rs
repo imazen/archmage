@@ -296,7 +296,11 @@ impl F32x4Backend for archmage::X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn to_u8_bytes(self, a: __m128) -> [u8; 4] {
-        let i32s = _mm_cvtps_epi32(a);
+        // Clamp above at 255 first: cvtps turns +inf and anything past
+        // i32::MAX into i32::MIN, which the packs would saturate to 0.
+        // `min(255, a)` keeps NaN (minps returns its second operand),
+        // and NaN still converts to 0, as in the scalar reference.
+        let i32s = _mm_cvtps_epi32(_mm_min_ps(_mm_set1_ps(255.0), a));
         let i16s = _mm_packs_epi32(i32s, i32s);
         let u8s = _mm_packus_epi16(i16s, i16s);
         (_mm_cvtsi128_si32(u8s) as u32).to_ne_bytes()
@@ -304,8 +308,15 @@ impl F32x4Backend for archmage::X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn store_rgba_bytes(self, r: __m128, g: __m128, b: __m128, a: __m128) -> [u8; 16] {
-        let rg = _mm_packs_epi32(_mm_cvtps_epi32(r), _mm_cvtps_epi32(g));
-        let ba = _mm_packs_epi32(_mm_cvtps_epi32(b), _mm_cvtps_epi32(a));
+        let max = _mm_set1_ps(255.0);
+        let rg = _mm_packs_epi32(
+            _mm_cvtps_epi32(_mm_min_ps(max, r)),
+            _mm_cvtps_epi32(_mm_min_ps(max, g)),
+        );
+        let ba = _mm_packs_epi32(
+            _mm_cvtps_epi32(_mm_min_ps(max, b)),
+            _mm_cvtps_epi32(_mm_min_ps(max, a)),
+        );
         // [R0-3,G0-3,B0-3,A0-3] -> interleaved RGBA pixels 0-3.
         let packed = _mm_packus_epi16(rg, ba);
         let shuf = _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
@@ -579,7 +590,8 @@ impl F32x8Backend for archmage::X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn to_u8_bytes(self, a: __m256) -> [u8; 8] {
-        let i32s = _mm256_cvtps_epi32(a);
+        // Clamp above at 255 before cvtps; see the 128-bit form.
+        let i32s = _mm256_cvtps_epi32(_mm256_min_ps(_mm256_set1_ps(255.0), a));
         let lo = _mm256_castsi256_si128(i32s);
         let hi = _mm256_extracti128_si256::<1>(i32s);
         let i16s = _mm_packs_epi32(lo, hi);
@@ -590,8 +602,15 @@ impl F32x8Backend for archmage::X64V3Token {
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn store_rgba_bytes(self, r: __m256, g: __m256, b: __m256, a: __m256) -> [u8; 32] {
         // AVX2 packs are lane-wise: lane0 holds pixels 0-3, lane1 4-7.
-        let rg = _mm256_packs_epi32(_mm256_cvtps_epi32(r), _mm256_cvtps_epi32(g));
-        let ba = _mm256_packs_epi32(_mm256_cvtps_epi32(b), _mm256_cvtps_epi32(a));
+        let max = _mm256_set1_ps(255.0);
+        let rg = _mm256_packs_epi32(
+            _mm256_cvtps_epi32(_mm256_min_ps(max, r)),
+            _mm256_cvtps_epi32(_mm256_min_ps(max, g)),
+        );
+        let ba = _mm256_packs_epi32(
+            _mm256_cvtps_epi32(_mm256_min_ps(max, b)),
+            _mm256_cvtps_epi32(_mm256_min_ps(max, a)),
+        );
         let packed = _mm256_packus_epi16(rg, ba);
         let shuf = _mm256_setr_epi8(
             0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15, 0, 4, 8, 12, 1, 5, 9, 13, 2, 6,
