@@ -12,11 +12,10 @@ documentation = "https://docs.rs/magetypes"
 readme = "README.crates.md"
 keywords = ["simd", "avx", "neon", "wasm", "safe"]
 categories = ["development-tools", "hardware-support", "no-std"]
+# Tests, benches and examples stay in the repository; shipping them pushed the
+# crate past the 300 KiB package budget (443 KiB at 0.9.30-pre).
 include = [
     "src/**",
-    "benches/**",
-    "tests/**",
-    "examples/**",
     "Cargo.toml",
     "README.crates.md",
     "LICENSE*",
