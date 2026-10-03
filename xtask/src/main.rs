@@ -807,17 +807,19 @@ fn miri_toolchain() -> String {
     std::env::var("ARCHMAGE_MIRI_TOOLCHAIN").unwrap_or_else(|_| "nightly".into())
 }
 
-/// Heavy magetypes tests that Miri does not run: under Miri they reach no
-/// `unsafe` code, so it cannot find undefined behavior in them. Each entry names
-/// a test binary and, with `Some`, one test in it; `None` skips the whole
-/// binary. Together they were about 95% of Miri's interpreted work (measured
-/// 2026-10-03). Native, SDE and cross-architecture CI still run them in full.
+/// Expensive magetypes tests that Miri does not run. Each one either reaches no
+/// `unsafe` code or reaches only paths that a cheaper test, still run under
+/// Miri, already covers, so skipping it loses no undefined-behavior coverage.
+/// Each entry names a test binary and, with `Some`, one test in it; `None`
+/// skips the whole binary. Together they were about 95% of Miri's interpreted
+/// work (measured 2026-10-03). Native, SDE and cross-architecture CI still run
+/// them in full.
 const MIRI_SKIPPED_TESTS: &[(&str, Option<&str>, &str)] = &[
     (
         "int_widen_narrow",
         Some("scalar_backend"),
-        "exhaustive i16/u16 loops through the scalar backend's safe arithmetic; \
-         the binary's other tests, including its unsafe bitcast path, still run",
+        "exhaustive i16/u16 loops; the unsafe bitcast path they reach is covered \
+         by scalar_w512_bitcast_values, which still runs under Miri",
     ),
     (
         "fused_arithmetic",
@@ -896,7 +898,7 @@ fn run_miri() -> Result<()> {
     }
 
     let targets = miri_test_targets()?;
-    println!("Not run under Miri (no unsafe reached; native CI runs them):");
+    println!("Not run under Miri (unsafe paths covered by retained tests; native CI runs them):");
     for (bin, test, why) in MIRI_SKIPPED_TESTS {
         match test {
             Some(test) => println!("  {bin}::{test}: {why}"),

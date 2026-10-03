@@ -601,11 +601,12 @@ CI checks (all must pass):
 12. **Public-API snapshot check** — `ZEN_API_DOC=check` on the apidoc runner; if a public-API change makes `docs/public-api/` stale, run `just api-doc` and commit the regenerated snapshots
 13. `cargo doc --features "std avx512" --no-deps` with `RUSTDOCFLAGS=-Dwarnings` — no broken doc links
 14. Miri UB detection (skipped if not installed). `MIRI_SKIPPED_TESTS` in
-    `xtask/src/main.rs` keeps safe-only exhaustive tests out of Miri; they were
-    about 95% of its work while reaching no `unsafe`. Add new heavy safe-only
-    tests there rather than letting Miri time grow, at the narrowest level: skip
-    one test, not its binary, when other tests in that binary reach `unsafe`
-    (`int_widen_narrow`'s bitcast test does, through `simd_storage::cast`).
+    `xtask/src/main.rs` keeps expensive exhaustive tests out of Miri (about 95%
+    of its work) when they reach no `unsafe`, or only paths a cheaper test still
+    covers under Miri. Skip at the narrowest level, one test rather than its
+    binary, and name the retained test that covers its `unsafe` path
+    (`scalar_w512_bitcast_values` covers `int_widen_narrow::scalar_backend`'s
+    bitcasts through `simd_storage::cast`).
 15. **ARM64 cross-compilation + tests** (requires `cross` + Docker)
 16. **WASM cross-compilation + tests** (requires `wasmtime` + `wasm32-wasip1` target)
 17. **ARM64 clippy** (requires `cross` + Docker)
