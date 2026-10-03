@@ -280,6 +280,11 @@ bench-edge-cases:
 # and benchmarks will show archmage being 4-5x slower than wide.
 # With native CPU targeting, archmage is 1.2-1.4x faster than wide.
 
+# Time cold builds of the magetypes crate. ROOT holds before/ and after/ source
+# trees, e.g. `git archive v0.9.29 | tar -x -C ROOT/before`.
+magetypes-compile-perf ROOT PAIRS="6":
+    python3 xtask/magetypes_compile_perf.py {{ROOT}} {{PAIRS}}
+
 # ============================================================================
 # ASM Verification (requires cargo-show-asm)
 # Install: cargo install cargo-show-asm
