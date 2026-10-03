@@ -56,7 +56,7 @@
 
 - `mul_add` and `mul_sub` now round once on scalar and strict WASM for f32/f64 at every width; software fusion changes results and costs more than separate multiply/add on those tiers. Relaxed WASM emits native madd directly and follows engine rounding, without a runtime probe ([#116](https://github.com/imazen/archmage/issues/116); 11a35a8b).
 - Make `all_true` and `any_true` consistently test lane sign bits across backends and widths. Comparison-mask results are unchanged; arbitrary non-mask inputs can change results (for example, a lane containing `1` is false under this contract) (050e25c1, 8014e94a).
-- On AVX-512, `to_u8` (both widths) and `f32x4::store_4_rgba_u8` narrow with `vpmovusdb`, 22–40% faster on Zen 5 than the AVX2 form they used before; `f32x8::store_8_rgba_u8` keeps the AVX2 form. On AVX2 the saturation fix below costs 20–37% against the old, incorrect form ([benchmark](benchmarks/pixel_pack_zen5-9950x3d_2026-10-03.md); 2bc19d85).
+- On AVX-512, `to_u8` (both widths) and `f32x4::store_4_rgba_u8` narrow with `vpmovusdb`. On Zen 5 they took 0–43% less time than the AVX2 form they used before, depending on code layout, and were never slower; `f32x8::store_8_rgba_u8` keeps the AVX2 form. On AVX2 the saturation fix below makes these calls take 1.25–1.6× as long as the old, incorrect form ([benchmark](benchmarks/pixel_pack_zen5-9950x3d_2026-10-03.md); 2bc19d85).
 - The published magetypes crate no longer includes tests, benches or examples: 234 KiB instead of 443 KiB (877a3e61).
 
 #### Fixed
