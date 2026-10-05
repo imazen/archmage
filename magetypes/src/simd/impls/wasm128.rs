@@ -95,11 +95,19 @@ impl F32x4Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn mul_add(self, a: v128, b: v128, c: v128) -> v128 {
-        crate::wasm_fma::f32x4(self, a, b, c)
+        crate::wasm_fma::madd_f32x4(self, a, b, c)
     }
     #[inline(always)]
     fn mul_sub(self, a: v128, b: v128, c: v128) -> v128 {
-        crate::wasm_fma::f32x4(self, a, b, f32x4_neg(c))
+        crate::wasm_fma::msub_f32x4(self, a, b, c)
+    }
+    #[inline(always)]
+    fn mul_add_portable(self, a: v128, b: v128, c: v128) -> v128 {
+        crate::wasm_fma::fused_f32x4(self, a, b, c)
+    }
+    #[inline(always)]
+    fn mul_sub_portable(self, a: v128, b: v128, c: v128) -> v128 {
+        crate::wasm_fma::fused_f32x4(self, a, b, f32x4_neg(c))
     }
     #[inline(always)]
     fn simd_eq(self, a: v128, b: v128) -> v128 {
@@ -307,18 +315,34 @@ impl F32x8Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn mul_add(self, a: [v128; 2], b: [v128; 2], c: [v128; 2]) -> [v128; 2] {
-        // Share the native-width fused implementation.
+        // Share the native-width implementations.
         [
-            crate::wasm_fma::f32x4(self, a[0], b[0], c[0]),
-            crate::wasm_fma::f32x4(self, a[1], b[1], c[1]),
+            crate::wasm_fma::madd_f32x4(self, a[0], b[0], c[0]),
+            crate::wasm_fma::madd_f32x4(self, a[1], b[1], c[1]),
         ]
     }
 
     #[inline(always)]
     fn mul_sub(self, a: [v128; 2], b: [v128; 2], c: [v128; 2]) -> [v128; 2] {
         [
-            crate::wasm_fma::f32x4(self, a[0], b[0], f32x4_neg(c[0])),
-            crate::wasm_fma::f32x4(self, a[1], b[1], f32x4_neg(c[1])),
+            crate::wasm_fma::msub_f32x4(self, a[0], b[0], c[0]),
+            crate::wasm_fma::msub_f32x4(self, a[1], b[1], c[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn mul_add_portable(self, a: [v128; 2], b: [v128; 2], c: [v128; 2]) -> [v128; 2] {
+        [
+            crate::wasm_fma::fused_f32x4(self, a[0], b[0], c[0]),
+            crate::wasm_fma::fused_f32x4(self, a[1], b[1], c[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn mul_sub_portable(self, a: [v128; 2], b: [v128; 2], c: [v128; 2]) -> [v128; 2] {
+        [
+            crate::wasm_fma::fused_f32x4(self, a[0], b[0], f32x4_neg(c[0])),
+            crate::wasm_fma::fused_f32x4(self, a[1], b[1], f32x4_neg(c[1])),
         ]
     }
 
@@ -526,11 +550,19 @@ impl F64x2Backend for archmage::Wasm128Token {
     }
     #[inline(always)]
     fn mul_add(self, a: v128, b: v128, c: v128) -> v128 {
-        crate::wasm_fma::f64x2(self, a, b, c)
+        crate::wasm_fma::madd_f64x2(self, a, b, c)
     }
     #[inline(always)]
     fn mul_sub(self, a: v128, b: v128, c: v128) -> v128 {
-        crate::wasm_fma::f64x2(self, a, b, f64x2_neg(c))
+        crate::wasm_fma::msub_f64x2(self, a, b, c)
+    }
+    #[inline(always)]
+    fn mul_add_portable(self, a: v128, b: v128, c: v128) -> v128 {
+        crate::wasm_fma::fused_f64x2(self, a, b, c)
+    }
+    #[inline(always)]
+    fn mul_sub_portable(self, a: v128, b: v128, c: v128) -> v128 {
+        crate::wasm_fma::fused_f64x2(self, a, b, f64x2_neg(c))
     }
     #[inline(always)]
     fn simd_eq(self, a: v128, b: v128) -> v128 {
@@ -706,18 +738,34 @@ impl F64x4Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn mul_add(self, a: [v128; 2], b: [v128; 2], c: [v128; 2]) -> [v128; 2] {
-        // Share the native-width fused implementation.
+        // Share the native-width implementations.
         [
-            crate::wasm_fma::f64x2(self, a[0], b[0], c[0]),
-            crate::wasm_fma::f64x2(self, a[1], b[1], c[1]),
+            crate::wasm_fma::madd_f64x2(self, a[0], b[0], c[0]),
+            crate::wasm_fma::madd_f64x2(self, a[1], b[1], c[1]),
         ]
     }
 
     #[inline(always)]
     fn mul_sub(self, a: [v128; 2], b: [v128; 2], c: [v128; 2]) -> [v128; 2] {
         [
-            crate::wasm_fma::f64x2(self, a[0], b[0], f64x2_neg(c[0])),
-            crate::wasm_fma::f64x2(self, a[1], b[1], f64x2_neg(c[1])),
+            crate::wasm_fma::msub_f64x2(self, a[0], b[0], c[0]),
+            crate::wasm_fma::msub_f64x2(self, a[1], b[1], c[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn mul_add_portable(self, a: [v128; 2], b: [v128; 2], c: [v128; 2]) -> [v128; 2] {
+        [
+            crate::wasm_fma::fused_f64x2(self, a[0], b[0], c[0]),
+            crate::wasm_fma::fused_f64x2(self, a[1], b[1], c[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn mul_sub_portable(self, a: [v128; 2], b: [v128; 2], c: [v128; 2]) -> [v128; 2] {
+        [
+            crate::wasm_fma::fused_f64x2(self, a[0], b[0], f64x2_neg(c[0])),
+            crate::wasm_fma::fused_f64x2(self, a[1], b[1], f64x2_neg(c[1])),
         ]
     }
 
@@ -4082,6 +4130,20 @@ impl F32x16Backend for archmage::Wasm128Token {
     }
 
     #[inline(always)]
+    fn mul_add_portable(self, a: [v128; 4], b: [v128; 4], c: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F32x4Backend>::mul_add_portable(self, a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn mul_sub_portable(self, a: [v128; 4], b: [v128; 4], c: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F32x4Backend>::mul_sub_portable(self, a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
     fn reduce_add(self, a: [v128; 4]) -> f32 {
         <archmage::Wasm128Token as F32x4Backend>::reduce_add(self, a[0])
             + <archmage::Wasm128Token as F32x4Backend>::reduce_add(self, a[1])
@@ -4353,6 +4415,20 @@ impl F64x8Backend for archmage::Wasm128Token {
     fn mul_sub(self, a: [v128; 4], b: [v128; 4], c: [v128; 4]) -> [v128; 4] {
         core::array::from_fn(|i| {
             <archmage::Wasm128Token as F64x2Backend>::mul_sub(self, a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn mul_add_portable(self, a: [v128; 4], b: [v128; 4], c: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F64x2Backend>::mul_add_portable(self, a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn mul_sub_portable(self, a: [v128; 4], b: [v128; 4], c: [v128; 4]) -> [v128; 4] {
+        core::array::from_fn(|i| {
+            <archmage::Wasm128Token as F64x2Backend>::mul_sub_portable(self, a[i], b[i], c[i])
         })
     }
 

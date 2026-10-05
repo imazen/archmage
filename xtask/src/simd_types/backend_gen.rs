@@ -796,15 +796,26 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             /// Round to nearest integer.
             fn round(self, a: Self::Repr) -> Self::Repr;
 
-            /// Multiply-add: `a * b + c`.
+            /// Multiply-add: `a * b + c`, fused where the hardware fuses.
             ///
-            /// Fused except where relaxed WASM engines choose two roundings. Uses software FMA
-            /// where hardware fusion is unavailable. NaN payload/sign are unspecified.
+            /// One rounding on x86 v3/v4 and NEON. Two roundings (multiply,
+            /// then add) on the scalar backend and on WASM without
+            /// `relaxed-simd`; relaxed WASM uses the engine's madd, which may
+            /// round either way. NaN payload/sign are unspecified.
             fn mul_add(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
 
-            /// Multiply-sub: `a * b - c`. Same fusion contract as
+            /// Multiply-sub: `a * b - c`. Same rounding contract as
             /// [`mul_add`](Self::mul_add).
             fn mul_sub(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
+
+            /// Multiply-add with one rounding on every backend: `a * b + c`.
+            ///
+            /// The same result everywhere, NaN payload/sign aside. Software
+            /// FMA where the hardware cannot fuse.
+            fn mul_add_portable(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
+
+            /// Multiply-sub with one rounding on every backend: `a * b - c`.
+            fn mul_sub_portable(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
 
             // ====== Comparisons ======
             // Return masks where each lane is all-1s (true) or all-0s (false).
@@ -1647,6 +1658,16 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
                 {p}_fmsub_{s}(a, b, c)
             }}
 
+            {arcane}
+            fn mul_add_portable(self, a: {inner}, b: {inner}, c: {inner}) -> {inner} {{
+                {p}_fmadd_{s}(a, b, c)
+            }}
+
+            {arcane}
+            fn mul_sub_portable(self, a: {inner}, b: {inner}, c: {inner}) -> {inner} {{
+                {p}_fmsub_{s}(a, b, c)
+            }}
+
             // ====== Comparisons ======
 
             {arcane}
@@ -2006,23 +2027,27 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
         format!("[{}]", items.join(", "))
     };
 
+    // mul_add/mul_sub round twice here (multiply, then add); the _portable
+    // forms round once through the correctly rounded software FMA.
     let mul_add_lanes = || -> String {
         let items: Vec<String> = (0..lanes)
-            .map(|i| {
-                format!(
-                    "crate::nostd_math::{}(a[{i}], b[{i}], c[{i}])",
-                    if elem == "f32" { "fmaf" } else { "fma" }
-                )
-            })
+            .map(|i| format!("a[{i}] * b[{i}] + c[{i}]"))
             .collect();
         format!("[{}]", items.join(", "))
     };
 
     let mul_sub_lanes = || -> String {
         let items: Vec<String> = (0..lanes)
+            .map(|i| format!("a[{i}] * b[{i}] - c[{i}]"))
+            .collect();
+        format!("[{}]", items.join(", "))
+    };
+
+    let fused_lanes = |negate: &str| -> String {
+        let items: Vec<String> = (0..lanes)
             .map(|i| {
                 format!(
-                    "crate::nostd_math::{}(a[{i}], b[{i}], -c[{i}])",
+                    "crate::nostd_math::{}(a[{i}], b[{i}], {negate}c[{i}])",
                     if elem == "f32" { "fmaf" } else { "fma" }
                 )
             })
@@ -2249,6 +2274,16 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
                 {mul_sub}
             }}
 
+            #[inline(always)]
+            fn mul_add_portable(self, a: {array}, b: {array}, c: {array}) -> {array} {{
+                {mul_add_portable}
+            }}
+
+            #[inline(always)]
+            fn mul_sub_portable(self, a: {array}, b: {array}, c: {array}) -> {array} {{
+                {mul_sub_portable}
+            }}
+
             // ====== Comparisons ======
 
             #[inline(always)]
@@ -2380,6 +2415,8 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
         abs = abs_lanes(),
         mul_add = mul_add_lanes(),
         mul_sub = mul_sub_lanes(),
+        mul_add_portable = fused_lanes(""),
+        mul_sub_portable = fused_lanes("-"),
         reduce_add = reduce_add(),
         not_lanes = bitwise_unary_lanes("!"),
         and_lanes = bitwise_binary_lanes("&"),
@@ -2709,6 +2746,16 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             {arcane}
             fn mul_sub(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
                 // a*b - c => vfmaq(-c, a, b) = -c + a*b
+                {mul_sub_body}
+            }}
+
+            {arcane}
+            fn mul_add_portable(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
+                {mul_add_body}
+            }}
+
+            {arcane}
+            fn mul_sub_portable(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
                 {mul_sub_body}
             }}
 
@@ -3061,6 +3108,16 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             }}
 
             {arcane}
+            fn mul_add_portable(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
+                vfmaq_{ns}(c, a, b)
+            }}
+
+            {arcane}
+            fn mul_sub_portable(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
+                vfmaq_{ns}(vnegq_{ns}(c), a, b)
+            }}
+
+            {arcane}
             fn simd_eq(self, a: {repr}, b: {repr}) -> {repr} {{
                 vreinterpretq_{ns}_u{eb}(vceqq_{ns}(a, b))
             }}
@@ -3380,13 +3437,23 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
 
             #[inline(always)]
             fn mul_add(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
-                // Share the native-width fused implementation.
+                // Share the native-width implementations.
                 [{mul_add_lanes}]
             }}
 
             #[inline(always)]
             fn mul_sub(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
                 [{mul_sub_lanes}]
+            }}
+
+            #[inline(always)]
+            fn mul_add_portable(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
+                [{mul_add_portable_lanes}]
+            }}
+
+            #[inline(always)]
+            fn mul_sub_portable(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
+                [{mul_sub_portable_lanes}]
             }}
 
             #[inline(always)]
@@ -3474,10 +3541,16 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
         ceil = unary_op(&format!("{wp}_ceil")),
         round = unary_op(&format!("{wp}_nearest")),
         mul_add_lanes = (0..sub_count)
-            .map(|i| format!("crate::wasm_fma::{wp}(self, a[{i}], b[{i}], c[{i}])"))
+            .map(|i| format!("crate::wasm_fma::madd_{wp}(self, a[{i}], b[{i}], c[{i}])"))
             .collect::<Vec<_>>().join(", "),
         mul_sub_lanes = (0..sub_count)
-            .map(|i| format!("crate::wasm_fma::{wp}(self, a[{i}], b[{i}], {wp}_neg(c[{i}]))"))
+            .map(|i| format!("crate::wasm_fma::msub_{wp}(self, a[{i}], b[{i}], c[{i}])"))
+            .collect::<Vec<_>>().join(", "),
+        mul_add_portable_lanes = (0..sub_count)
+            .map(|i| format!("crate::wasm_fma::fused_{wp}(self, a[{i}], b[{i}], c[{i}])"))
+            .collect::<Vec<_>>().join(", "),
+        mul_sub_portable_lanes = (0..sub_count)
+            .map(|i| format!("crate::wasm_fma::fused_{wp}(self, a[{i}], b[{i}], {wp}_neg(c[{i}]))"))
             .collect::<Vec<_>>().join(", "),
         eq = binary_op(&format!("{wp}_eq")),
         ne = binary_op(&format!("{wp}_ne")),
@@ -3659,9 +3732,13 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn round(self, a: v128) -> v128 {{ {wp}_nearest(a) }}
             #[inline(always)]
-            fn mul_add(self, a: v128, b: v128, c: v128) -> v128 {{ crate::wasm_fma::{wp}(self, a, b, c) }}
+            fn mul_add(self, a: v128, b: v128, c: v128) -> v128 {{ crate::wasm_fma::madd_{wp}(self, a, b, c) }}
             #[inline(always)]
-            fn mul_sub(self, a: v128, b: v128, c: v128) -> v128 {{ crate::wasm_fma::{wp}(self, a, b, {wp}_neg(c)) }}
+            fn mul_sub(self, a: v128, b: v128, c: v128) -> v128 {{ crate::wasm_fma::msub_{wp}(self, a, b, c) }}
+            #[inline(always)]
+            fn mul_add_portable(self, a: v128, b: v128, c: v128) -> v128 {{ crate::wasm_fma::fused_{wp}(self, a, b, c) }}
+            #[inline(always)]
+            fn mul_sub_portable(self, a: v128, b: v128, c: v128) -> v128 {{ crate::wasm_fma::fused_{wp}(self, a, b, {wp}_neg(c)) }}
             #[inline(always)]
             fn simd_eq(self, a: v128, b: v128) -> v128 {{ {wp}_eq(a, b) }}
             #[inline(always)]

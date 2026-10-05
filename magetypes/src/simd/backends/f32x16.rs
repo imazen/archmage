@@ -86,15 +86,26 @@ pub trait F32x16Backend: SimdToken + Sealed + Copy + 'static {
     /// Round to nearest integer.
     fn round(self, a: Self::Repr) -> Self::Repr;
 
-    /// Multiply-add: `a * b + c`.
+    /// Multiply-add: `a * b + c`, fused where the hardware fuses.
     ///
-    /// Fused except where relaxed WASM engines choose two roundings. Uses software FMA
-    /// where hardware fusion is unavailable. NaN payload/sign are unspecified.
+    /// One rounding on x86 v3/v4 and NEON. Two roundings (multiply,
+    /// then add) on the scalar backend and on WASM without
+    /// `relaxed-simd`; relaxed WASM uses the engine's madd, which may
+    /// round either way. NaN payload/sign are unspecified.
     fn mul_add(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
 
-    /// Multiply-sub: `a * b - c`. Same fusion contract as
+    /// Multiply-sub: `a * b - c`. Same rounding contract as
     /// [`mul_add`](Self::mul_add).
     fn mul_sub(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
+
+    /// Multiply-add with one rounding on every backend: `a * b + c`.
+    ///
+    /// The same result everywhere, NaN payload/sign aside. Software
+    /// FMA where the hardware cannot fuse.
+    fn mul_add_portable(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
+
+    /// Multiply-sub with one rounding on every backend: `a * b - c`.
+    fn mul_sub_portable(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
 
     // ====== Comparisons ======
     // Return masks where each lane is all-1s (true) or all-0s (false).

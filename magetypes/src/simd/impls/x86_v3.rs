@@ -146,6 +146,16 @@ impl F32x4Backend for archmage::X64V3Token {
         _mm_fmsub_ps(a, b, c)
     }
 
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_add_portable(self, a: __m128, b: __m128, c: __m128) -> __m128 {
+        _mm_fmadd_ps(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_sub_portable(self, a: __m128, b: __m128, c: __m128) -> __m128 {
+        _mm_fmsub_ps(a, b, c)
+    }
+
     // ====== Comparisons ======
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -432,6 +442,16 @@ impl F32x8Backend for archmage::X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn mul_sub(self, a: __m256, b: __m256, c: __m256) -> __m256 {
+        _mm256_fmsub_ps(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_add_portable(self, a: __m256, b: __m256, c: __m256) -> __m256 {
+        _mm256_fmadd_ps(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_sub_portable(self, a: __m256, b: __m256, c: __m256) -> __m256 {
         _mm256_fmsub_ps(a, b, c)
     }
 
@@ -764,6 +784,16 @@ impl F64x2Backend for archmage::X64V3Token {
         _mm_fmsub_pd(a, b, c)
     }
 
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_add_portable(self, a: __m128d, b: __m128d, c: __m128d) -> __m128d {
+        _mm_fmadd_pd(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_sub_portable(self, a: __m128d, b: __m128d, c: __m128d) -> __m128d {
+        _mm_fmsub_pd(a, b, c)
+    }
+
     // ====== Comparisons ======
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
@@ -992,6 +1022,16 @@ impl F64x4Backend for archmage::X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn mul_sub(self, a: __m256d, b: __m256d, c: __m256d) -> __m256d {
+        _mm256_fmsub_pd(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_add_portable(self, a: __m256d, b: __m256d, c: __m256d) -> __m256d {
+        _mm256_fmadd_pd(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V3Token)]
+    fn mul_sub_portable(self, a: __m256d, b: __m256d, c: __m256d) -> __m256d {
         _mm256_fmsub_pd(a, b, c)
     }
 
@@ -4885,6 +4925,22 @@ impl F32x16Backend for archmage::X64V3Token {
     }
 
     #[inline(always)]
+    fn mul_add_portable(self, a: [__m256; 2], b: [__m256; 2], c: [__m256; 2]) -> [__m256; 2] {
+        [
+            <archmage::X64V3Token as F32x8Backend>::mul_add_portable(self, a[0], b[0], c[0]),
+            <archmage::X64V3Token as F32x8Backend>::mul_add_portable(self, a[1], b[1], c[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn mul_sub_portable(self, a: [__m256; 2], b: [__m256; 2], c: [__m256; 2]) -> [__m256; 2] {
+        [
+            <archmage::X64V3Token as F32x8Backend>::mul_sub_portable(self, a[0], b[0], c[0]),
+            <archmage::X64V3Token as F32x8Backend>::mul_sub_portable(self, a[1], b[1], c[1]),
+        ]
+    }
+
+    #[inline(always)]
     fn reduce_add(self, a: [__m256; 2]) -> f32 {
         <archmage::X64V3Token as F32x8Backend>::reduce_add(self, a[0])
             + <archmage::X64V3Token as F32x8Backend>::reduce_add(self, a[1])
@@ -5189,6 +5245,22 @@ impl F64x8Backend for archmage::X64V3Token {
         [
             <archmage::X64V3Token as F64x4Backend>::mul_sub(self, a[0], b[0], c[0]),
             <archmage::X64V3Token as F64x4Backend>::mul_sub(self, a[1], b[1], c[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn mul_add_portable(self, a: [__m256d; 2], b: [__m256d; 2], c: [__m256d; 2]) -> [__m256d; 2] {
+        [
+            <archmage::X64V3Token as F64x4Backend>::mul_add_portable(self, a[0], b[0], c[0]),
+            <archmage::X64V3Token as F64x4Backend>::mul_add_portable(self, a[1], b[1], c[1]),
+        ]
+    }
+
+    #[inline(always)]
+    fn mul_sub_portable(self, a: [__m256d; 2], b: [__m256d; 2], c: [__m256d; 2]) -> [__m256d; 2] {
+        [
+            <archmage::X64V3Token as F64x4Backend>::mul_sub_portable(self, a[0], b[0], c[0]),
+            <archmage::X64V3Token as F64x4Backend>::mul_sub_portable(self, a[1], b[1], c[1]),
         ]
     }
 

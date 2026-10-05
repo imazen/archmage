@@ -229,6 +229,14 @@ macro_rules! delegate_f32x4_to_v3 {
             fn mul_sub(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
                 <archmage::X64V3Token as F32x4Backend>::mul_sub(self.v3(), a, b, c)
             }
+            #[inline(always)]
+            fn mul_add_portable(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as F32x4Backend>::mul_add_portable(self.v3(), a, b, c)
+            }
+            #[inline(always)]
+            fn mul_sub_portable(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as F32x4Backend>::mul_sub_portable(self.v3(), a, b, c)
+            }
 
             // Comparisons
             #[inline(always)]
@@ -420,6 +428,14 @@ macro_rules! delegate_f32x8_to_v3 {
             #[inline(always)]
             fn mul_sub(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
                 <archmage::X64V3Token as F32x8Backend>::mul_sub(self.v3(), a, b, c)
+            }
+            #[inline(always)]
+            fn mul_add_portable(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as F32x8Backend>::mul_add_portable(self.v3(), a, b, c)
+            }
+            #[inline(always)]
+            fn mul_sub_portable(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr {
+                <archmage::X64V3Token as F32x8Backend>::mul_sub_portable(self.v3(), a, b, c)
             }
 
             #[inline(always)]

@@ -648,18 +648,18 @@ fn gen_float_math() -> String {
                 Self(T::round(self.1, self.0), self.1)
             }}
 
-            /// Multiply-add: `self * a + b`, rounded once.
+            /// Multiply-add: `self * a + b`, fused where the hardware fuses.
             ///
-            /// x86 v3/v4 and NEON use hardware FMA: within a few percent of
-            /// `self * a + b` in streaming loops, and 23–38% faster in dependency
-            /// chains such as Horner polynomials. The scalar backend and WASM
-            /// built without `relaxed-simd` fuse in software, which is much slower
-            /// than `self * a + b`: 2.6–29× on the scalar backend, and 8.7×
-            /// (`f32x4`) to 25× (`f64x2`) under wasmtime. Write `self * a + b`
-            /// there when two roundings are acceptable. Builds with `relaxed-simd`
-            /// use the engine's native madd, which may round twice.
-            /// NaN payload/sign are unspecified.
-            /// [Measurements](https://github.com/imazen/archmage/blob/main/benchmarks/mul_add_cost_zen5-m4pro_2026-10-05.md).
+            /// For one rounding on every backend, use
+            /// [`mul_add_portable`](Self::mul_add_portable).
+            ///
+            /// x86 v3/v4 and NEON use FMA, one rounding: as fast as `self * a + b`
+            /// in streaming loops and 23–38% faster in dependency chains such as
+            /// Horner polynomials. The scalar backend and WASM built without
+            /// `relaxed-simd` multiply, round, add and round again, at the speed of
+            /// `self * a + b`. Builds with `relaxed-simd` use the engine's madd,
+            /// which may round either way. Results can therefore differ between
+            /// backends in the last bit. NaN payload/sign are unspecified.
             #[inline(always)]
             pub fn mul_add(self, a: Self, b: Self) -> Self {{
                 Self(T::mul_add(self.1, self.0, a.0, b.0), self.1)
@@ -667,11 +667,36 @@ fn gen_float_math() -> String {
 
             /// Multiply-sub: `self * a - b`.
             ///
-            /// Same rounding contract as [`mul_add`](Self::mul_add),
-            /// computed as `self.mul_add(a, -b)`.
+            /// Same rounding contract as [`mul_add`](Self::mul_add). For one
+            /// rounding on every backend, use
+            /// [`mul_sub_portable`](Self::mul_sub_portable).
             #[inline(always)]
             pub fn mul_sub(self, a: Self, b: Self) -> Self {{
                 Self(T::mul_sub(self.1, self.0, a.0, b.0), self.1)
+            }}
+
+            /// Multiply-add with one rounding on every backend: `self * a + b`.
+            ///
+            /// The same result on every backend, NaN payload/sign aside, as
+            /// `f32::mul_add` and `f64::mul_add` give in std. x86 v3/v4 and NEON
+            /// use FMA, at the cost of [`mul_add`](Self::mul_add). The scalar
+            /// backend and WASM fuse in software, relaxed SIMD included because
+            /// relaxed madd may round twice. That costs 2.6–29× the time of
+            /// `self * a + b` on the scalar backend and 8.7× (`f32x4`) to 25×
+            /// (`f64x2`) under wasmtime.
+            /// [Measurements](https://github.com/imazen/archmage/blob/main/benchmarks/mul_add_cost_zen5-m4pro_2026-10-05.md).
+            #[inline(always)]
+            pub fn mul_add_portable(self, a: Self, b: Self) -> Self {{
+                Self(T::mul_add_portable(self.1, self.0, a.0, b.0), self.1)
+            }}
+
+            /// Multiply-sub with one rounding on every backend: `self * a - b`.
+            ///
+            /// Same contract and cost as
+            /// [`mul_add_portable`](Self::mul_add_portable).
+            #[inline(always)]
+            pub fn mul_sub_portable(self, a: Self, b: Self) -> Self {{
+                Self(T::mul_sub_portable(self.1, self.0, a.0, b.0), self.1)
             }}
 
     "}

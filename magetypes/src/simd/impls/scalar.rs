@@ -188,6 +188,26 @@ impl F32x4Backend for archmage::ScalarToken {
     #[inline(always)]
     fn mul_add(self, a: [f32; 4], b: [f32; 4], c: [f32; 4]) -> [f32; 4] {
         [
+            a[0] * b[0] + c[0],
+            a[1] * b[1] + c[1],
+            a[2] * b[2] + c[2],
+            a[3] * b[3] + c[3],
+        ]
+    }
+
+    #[inline(always)]
+    fn mul_sub(self, a: [f32; 4], b: [f32; 4], c: [f32; 4]) -> [f32; 4] {
+        [
+            a[0] * b[0] - c[0],
+            a[1] * b[1] - c[1],
+            a[2] * b[2] - c[2],
+            a[3] * b[3] - c[3],
+        ]
+    }
+
+    #[inline(always)]
+    fn mul_add_portable(self, a: [f32; 4], b: [f32; 4], c: [f32; 4]) -> [f32; 4] {
+        [
             crate::nostd_math::fmaf(a[0], b[0], c[0]),
             crate::nostd_math::fmaf(a[1], b[1], c[1]),
             crate::nostd_math::fmaf(a[2], b[2], c[2]),
@@ -196,7 +216,7 @@ impl F32x4Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn mul_sub(self, a: [f32; 4], b: [f32; 4], c: [f32; 4]) -> [f32; 4] {
+    fn mul_sub_portable(self, a: [f32; 4], b: [f32; 4], c: [f32; 4]) -> [f32; 4] {
         [
             crate::nostd_math::fmaf(a[0], b[0], -c[0]),
             crate::nostd_math::fmaf(a[1], b[1], -c[1]),
@@ -572,6 +592,34 @@ impl F32x8Backend for archmage::ScalarToken {
     #[inline(always)]
     fn mul_add(self, a: [f32; 8], b: [f32; 8], c: [f32; 8]) -> [f32; 8] {
         [
+            a[0] * b[0] + c[0],
+            a[1] * b[1] + c[1],
+            a[2] * b[2] + c[2],
+            a[3] * b[3] + c[3],
+            a[4] * b[4] + c[4],
+            a[5] * b[5] + c[5],
+            a[6] * b[6] + c[6],
+            a[7] * b[7] + c[7],
+        ]
+    }
+
+    #[inline(always)]
+    fn mul_sub(self, a: [f32; 8], b: [f32; 8], c: [f32; 8]) -> [f32; 8] {
+        [
+            a[0] * b[0] - c[0],
+            a[1] * b[1] - c[1],
+            a[2] * b[2] - c[2],
+            a[3] * b[3] - c[3],
+            a[4] * b[4] - c[4],
+            a[5] * b[5] - c[5],
+            a[6] * b[6] - c[6],
+            a[7] * b[7] - c[7],
+        ]
+    }
+
+    #[inline(always)]
+    fn mul_add_portable(self, a: [f32; 8], b: [f32; 8], c: [f32; 8]) -> [f32; 8] {
+        [
             crate::nostd_math::fmaf(a[0], b[0], c[0]),
             crate::nostd_math::fmaf(a[1], b[1], c[1]),
             crate::nostd_math::fmaf(a[2], b[2], c[2]),
@@ -584,7 +632,7 @@ impl F32x8Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn mul_sub(self, a: [f32; 8], b: [f32; 8], c: [f32; 8]) -> [f32; 8] {
+    fn mul_sub_portable(self, a: [f32; 8], b: [f32; 8], c: [f32; 8]) -> [f32; 8] {
         [
             crate::nostd_math::fmaf(a[0], b[0], -c[0]),
             crate::nostd_math::fmaf(a[1], b[1], -c[1]),
@@ -919,6 +967,16 @@ impl F64x2Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn mul_add(self, a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> [f64; 2] {
+        [a[0] * b[0] + c[0], a[1] * b[1] + c[1]]
+    }
+
+    #[inline(always)]
+    fn mul_sub(self, a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> [f64; 2] {
+        [a[0] * b[0] - c[0], a[1] * b[1] - c[1]]
+    }
+
+    #[inline(always)]
+    fn mul_add_portable(self, a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> [f64; 2] {
         [
             crate::nostd_math::fma(a[0], b[0], c[0]),
             crate::nostd_math::fma(a[1], b[1], c[1]),
@@ -926,7 +984,7 @@ impl F64x2Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn mul_sub(self, a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> [f64; 2] {
+    fn mul_sub_portable(self, a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> [f64; 2] {
         [
             crate::nostd_math::fma(a[0], b[0], -c[0]),
             crate::nostd_math::fma(a[1], b[1], -c[1]),
@@ -1238,6 +1296,26 @@ impl F64x4Backend for archmage::ScalarToken {
     #[inline(always)]
     fn mul_add(self, a: [f64; 4], b: [f64; 4], c: [f64; 4]) -> [f64; 4] {
         [
+            a[0] * b[0] + c[0],
+            a[1] * b[1] + c[1],
+            a[2] * b[2] + c[2],
+            a[3] * b[3] + c[3],
+        ]
+    }
+
+    #[inline(always)]
+    fn mul_sub(self, a: [f64; 4], b: [f64; 4], c: [f64; 4]) -> [f64; 4] {
+        [
+            a[0] * b[0] - c[0],
+            a[1] * b[1] - c[1],
+            a[2] * b[2] - c[2],
+            a[3] * b[3] - c[3],
+        ]
+    }
+
+    #[inline(always)]
+    fn mul_add_portable(self, a: [f64; 4], b: [f64; 4], c: [f64; 4]) -> [f64; 4] {
+        [
             crate::nostd_math::fma(a[0], b[0], c[0]),
             crate::nostd_math::fma(a[1], b[1], c[1]),
             crate::nostd_math::fma(a[2], b[2], c[2]),
@@ -1246,7 +1324,7 @@ impl F64x4Backend for archmage::ScalarToken {
     }
 
     #[inline(always)]
-    fn mul_sub(self, a: [f64; 4], b: [f64; 4], c: [f64; 4]) -> [f64; 4] {
+    fn mul_sub_portable(self, a: [f64; 4], b: [f64; 4], c: [f64; 4]) -> [f64; 4] {
         [
             crate::nostd_math::fma(a[0], b[0], -c[0]),
             crate::nostd_math::fma(a[1], b[1], -c[1]),
@@ -9392,11 +9470,21 @@ impl F32x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn mul_add(self, a: [f32; 16], b: [f32; 16], c: [f32; 16]) -> [f32; 16] {
-        core::array::from_fn(|i| crate::nostd_math::fmaf(a[i], b[i], c[i]))
+        core::array::from_fn(|i| a[i] * b[i] + c[i])
     }
 
     #[inline(always)]
     fn mul_sub(self, a: [f32; 16], b: [f32; 16], c: [f32; 16]) -> [f32; 16] {
+        core::array::from_fn(|i| a[i] * b[i] - c[i])
+    }
+
+    #[inline(always)]
+    fn mul_add_portable(self, a: [f32; 16], b: [f32; 16], c: [f32; 16]) -> [f32; 16] {
+        core::array::from_fn(|i| crate::nostd_math::fmaf(a[i], b[i], c[i]))
+    }
+
+    #[inline(always)]
+    fn mul_sub_portable(self, a: [f32; 16], b: [f32; 16], c: [f32; 16]) -> [f32; 16] {
         core::array::from_fn(|i| crate::nostd_math::fmaf(a[i], b[i], -c[i]))
     }
 
@@ -9626,11 +9714,21 @@ impl F64x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn mul_add(self, a: [f64; 8], b: [f64; 8], c: [f64; 8]) -> [f64; 8] {
-        core::array::from_fn(|i| crate::nostd_math::fma(a[i], b[i], c[i]))
+        core::array::from_fn(|i| a[i] * b[i] + c[i])
     }
 
     #[inline(always)]
     fn mul_sub(self, a: [f64; 8], b: [f64; 8], c: [f64; 8]) -> [f64; 8] {
+        core::array::from_fn(|i| a[i] * b[i] - c[i])
+    }
+
+    #[inline(always)]
+    fn mul_add_portable(self, a: [f64; 8], b: [f64; 8], c: [f64; 8]) -> [f64; 8] {
+        core::array::from_fn(|i| crate::nostd_math::fma(a[i], b[i], c[i]))
+    }
+
+    #[inline(always)]
+    fn mul_sub_portable(self, a: [f64; 8], b: [f64; 8], c: [f64; 8]) -> [f64; 8] {
         core::array::from_fn(|i| crate::nostd_math::fma(a[i], b[i], -c[i]))
     }
 

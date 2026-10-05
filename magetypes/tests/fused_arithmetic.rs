@@ -1,4 +1,6 @@
-//! Exact fused rounding, or the engine result for relaxed WASM; NaNs are unspecified.
+//! `mul_add_portable`/`mul_sub_portable` round once on every backend. `mul_add`/`mul_sub`
+//! round once with hardware FMA, twice on the scalar backend and strict WASM, and as the
+//! engine chooses with relaxed WASM. NaN payloads are unspecified.
 #![forbid(unsafe_code)]
 use archmage::{ScalarToken, SimdToken, incant, magetypes};
 use magetypes::nostd_math;
@@ -191,19 +193,21 @@ macro_rules! check {
             let c = magetypes::simd::generic::$ty::from_array_t($token, cases.map(|v| v[2]));
             let add = a.mul_add(b, c).to_array();
             let sub = a.mul_sub(b, c).to_array();
+            let add_portable = a.mul_add_portable(b, c).to_array();
+            let sub_portable = a.mul_sub_portable(b, c).to_array();
             for i in 0..$n {
                 let [x, y, z] = cases[i];
-                if !add[i].is_nan() && add[i].to_bits() != x.vector_expected(y, z, $token).to_bits()
-                {
-                    eprintln!("{} mul_add input {:?}", stringify!($ty), cases[i]);
+                for (got, want, op) in [
+                    (add[i], x.mul_add_expected(y, z, $token), "mul_add"),
+                    (sub[i], x.mul_add_expected(y, -z, $token), "mul_sub"),
+                    (add_portable[i], x.fused_expected(y, z), "mul_add_portable"),
+                    (sub_portable[i], x.fused_expected(y, -z), "mul_sub_portable"),
+                ] {
+                    if !got.is_nan() && got.to_bits() != want.to_bits() {
+                        eprintln!("{} {op} input {:?}", stringify!($ty), cases[i]);
+                    }
+                    $same(got, want);
                 }
-                if !sub[i].is_nan()
-                    && sub[i].to_bits() != x.vector_expected(y, -z, $token).to_bits()
-                {
-                    eprintln!("{} mul_sub input {:?}", stringify!($ty), cases[i]);
-                }
-                $same(add[i], x.vector_expected(y, z, $token));
-                $same(sub[i], x.vector_expected(y, -z, $token));
             }
         }
     };
@@ -236,19 +240,24 @@ fn rounding_contract_across_widths_and_tokens() {
     narrow_f64_scalar(ScalarToken, &b);
     for &[x, y, z] in &a {
         use magetypes::simd::f32x1 as V;
+        let s = |v| V::splat_t(ScalarToken, v);
+        same32(s(x).mul_add(s(y), s(z)).to_array()[0], x * y + z);
+        same32(s(x).mul_sub(s(y), s(z)).to_array()[0], x * y - z);
         same32(
-            V::splat_t(ScalarToken, x)
-                .mul_add(V::splat_t(ScalarToken, y), V::splat_t(ScalarToken, z))
-                .to_array()[0],
+            s(x).mul_add_portable(s(y), s(z)).to_array()[0],
             x.fused_expected(y, z),
+        );
+        same32(
+            s(x).mul_sub_portable(s(y), s(z)).to_array()[0],
+            x.fused_expected(y, -z),
         );
     }
     for &[x, y, z] in &b {
         use magetypes::simd::f64x1 as V;
+        let s = |v| V::splat_t(ScalarToken, v);
+        same64(s(x).mul_add(s(y), s(z)).to_array()[0], x * y + z);
         same64(
-            V::splat_t(ScalarToken, x)
-                .mul_add(V::splat_t(ScalarToken, y), V::splat_t(ScalarToken, z))
-                .to_array()[0],
+            s(x).mul_add_portable(s(y), s(z)).to_array()[0],
             x.fused_expected(y, z),
         );
     }

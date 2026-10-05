@@ -595,9 +595,21 @@ fn gen_float_type_tests(code: &mut String, elem: &str, lanes: usize) {
         "#});
     }
 
-    // Exact fused scalar oracle; native oracle follows relaxed WASM when enabled.
-    for op in &["mul_add", "mul_sub"] {
-        let sign = if *op == "mul_sub" { "-" } else { "" };
+    // mul_add/mul_sub follow each token's rounding contract (mul_add_expected);
+    // the _portable forms round once on every backend (fused_expected).
+    for op in &["mul_add", "mul_sub", "mul_add_portable", "mul_sub_portable"] {
+        let sign = if op.starts_with("mul_sub") { "-" } else { "" };
+        let (oracle_s, oracle_n) = if op.ends_with("_portable") {
+            (
+                format!("fused_expected(b[i], {sign}c[i])"),
+                format!("fused_expected(b[i], {sign}c[i])"),
+            )
+        } else {
+            (
+                format!("mul_add_expected(b[i], {sign}c[i], token_s)"),
+                format!("mul_add_expected(b[i], {sign}c[i], token_n)"),
+            )
+        };
         code.push_str(&formatdoc! {r#"
             #[test]
             fn {op}() {{
@@ -619,9 +631,9 @@ fn gen_float_type_tests(code: &mut String, elem: &str, lanes: usize) {
                         let s = as_.{op}(bs, cs).to_array();
                         let n = an.{op}(bn, cn).to_array();
                         let expected_s: [{elem}; {lanes}] = core::array::from_fn(|i|
-                            a[i].fused_expected(b[i], {sign}c[i]));
+                            a[i].{oracle_s});
                         let expected_n: [{elem}; {lanes}] = core::array::from_fn(|i|
-                            a[i].vector_expected(b[i], {sign}c[i], token_n));
+                            a[i].{oracle_n});
                         super::{assert_exact}(&s, &expected_s, "scalar {type_name}::{op}", &a);
                         super::{assert_exact}(&n, &expected_n, "native {type_name}::{op}", &a);
                     }}

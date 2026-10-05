@@ -3,8 +3,12 @@
 use archmage::SimdToken;
 
 pub trait FmaExpected: Copy {
+    /// One rounding: what `mul_add_portable` returns on every backend.
     fn fused_expected(self, b: Self, c: Self) -> Self;
-    fn vector_expected<T: SimdToken>(self, b: Self, c: Self, token: T) -> Self;
+    /// What `mul_add` returns for `token`: one rounding with hardware FMA (x86,
+    /// NEON), the engine's choice with relaxed WASM, and two roundings on the
+    /// scalar backend and strict WASM.
+    fn mul_add_expected<T: SimdToken>(self, b: Self, c: Self, token: T) -> Self;
 }
 
 macro_rules! oracle {
@@ -22,11 +26,17 @@ macro_rules! oracle {
                     self.mul_add(b, c)
                 }
             }
-            fn vector_expected<T: SimdToken>(self, b: Self, c: Self, _token: T) -> Self {
-                #[cfg(all(target_arch = "wasm32", target_feature = "relaxed-simd"))]
-                if core::any::TypeId::of::<T>() == core::any::TypeId::of::<archmage::Wasm128Token>()
-                {
+            fn mul_add_expected<T: SimdToken>(self, b: Self, c: Self, _token: T) -> Self {
+                use core::any::TypeId;
+                if TypeId::of::<T>() == TypeId::of::<archmage::ScalarToken>() {
+                    return self * b + c;
+                }
+                #[cfg(target_arch = "wasm32")]
+                if TypeId::of::<T>() == TypeId::of::<archmage::Wasm128Token>() {
+                    #[cfg(target_feature = "relaxed-simd")]
                     return relaxed::$raw(self, b, c);
+                    #[cfg(not(target_feature = "relaxed-simd"))]
+                    return self * b + c;
                 }
                 self.fused_expected(b, c)
             }
