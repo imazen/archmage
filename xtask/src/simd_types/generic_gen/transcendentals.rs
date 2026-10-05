@@ -419,8 +419,10 @@ pub(super) fn gen_transcendentals(
             /// Low-precision cube root (~15 bits, ~4.5 decimal digits).
             ///
             /// Uses Kahan's bit-hack initial approximation followed by 1 Halley
-            /// iteration. Max error ~259 ULP vs `std::f32::cbrt`, uniform across
-            /// all magnitudes (1e-38..1e38). Average ~58 ULP, median ~40 ULP.
+            /// iteration. Over every positive normal f32 below `f32::MAX / 3`: max
+            /// 259 ULP vs `std::f32::cbrt` (relative error 3e-5), mean 56 ULP.
+            /// Larger magnitudes overflow an intermediate and return ±inf; use
+            /// `cbrt_midp_precise` for the whole range.
             ///
             /// Fastest cbrt variant — 1.8x faster than `cbrt_midp` (1 division
             /// vs 2). Suitable for perceptual color (Oklab/XYB) targeting 8-bit
@@ -442,7 +444,7 @@ pub(super) fn gen_transcendentals(
                 let mut y = {float_type}::from_repr_unchecked(self.1, <T as {float_backend}>::from_array(self.1, approx_arr));
 
                 // Halley iteration: y *= (y³ + 2x) / (2y³ + x)
-                // Compute ratio first to avoid intermediate overflow.
+                // y³ + 2x reaches 3x, so this overflows above f32::MAX / 3.
                 // Triples bits of precision: ~5 → ~15
                 let two = splat_f32::<T>(self.1,2.0);
                 let y3 = y * y * y;
@@ -455,18 +457,19 @@ pub(super) fn gen_transcendentals(
                 Self::blend(is_zero, self, result)
             }}
 
-            /// Mid-precision cube root (max 3 ULP vs `std::f32::cbrt`).
+            /// Mid-precision cube root (max 3.2 ULP vs `std::f32::cbrt`).
             ///
             /// Uses Kahan's bit-hack initial approximation followed by 2 Halley
             /// iterations. Each Halley step triples precision: ~5 → ~15 → ~45
-            /// bits, saturating f32's 24-bit mantissa. Error is uniform across
-            /// all magnitudes (1e-38..1e38): max 3 ULP, average 0.47 ULP.
+            /// bits, saturating f32's 24-bit mantissa. Over every positive normal
+            /// f32 below `f32::MAX / 3`: max 3.2 ULP, mean 0.53 ULP.
             ///
             /// Uses 2 divisions (vs 3 for Newton-Raphson at equivalent accuracy),
             /// making it ~35% faster at equal or better precision.
             ///
-            /// Returns ±0 for ±0 input. Does not handle denormals or infinity — use
-            /// `cbrt_midp_precise` for those.
+            /// Returns ±0 for ±0 input. Magnitudes above `f32::MAX / 3` (1.13e38)
+            /// overflow an intermediate and return ±inf, and denormals and infinity
+            /// are not handled: use `cbrt_midp_precise` for those.
             #[inline(always)]
             pub fn cbrt_midp(self) -> Self {{
                 const MAGIC: u32 = 0x2a50_8c2d;
@@ -481,7 +484,8 @@ pub(super) fn gen_transcendentals(
                 let mut y = {float_type}::from_repr_unchecked(self.1, <T as {float_backend}>::from_array(self.1, approx_arr));
 
                 // 2 Halley iterations: y *= (y³ + 2x) / (2y³ + x)
-                // Compute ratio first to avoid intermediate overflow.
+                // y³ + 2x reaches 3x, so this overflows above f32::MAX / 3;
+                // cbrt_midp_precise rescales those inputs.
                 let two = splat_f32::<T>(self.1,2.0);
                 for _ in 0..2 {{
                     let y3 = y * y * y;
@@ -495,27 +499,36 @@ pub(super) fn gen_transcendentals(
                 Self::blend(is_zero, self, result)
             }}
 
-            /// Mid-precision cube root with denormal and zero handling (max 3 ULP).
+            /// Mid-precision cube root over the whole f32 range (max 3.2 ULP).
             ///
-            /// Wraps `cbrt_midp()` with denormal scaling and zero masking.
-            /// Handles all edge cases including denormals, zeros, and negative values.
+            /// Wraps `cbrt_midp()`: denormals are scaled up first, magnitudes from
+            /// 1e36 up run on x/8 with the result doubled so the Halley step cannot
+            /// overflow, and ±0 and ±inf return themselves.
             #[inline(always)]
             pub fn cbrt_midp_precise(self) -> Self {{
                 let zero = splat_f32::<T>(self.1,0.0);
-                let is_zero = self.simd_eq(zero);
-
+                let one = splat_f32::<T>(self.1,1.0);
                 let abs_x = self.abs();
+                // ±0 and ±inf are their own cube roots.
+                let keep = self.simd_eq(zero) | abs_x.simd_eq(splat_f32::<T>(self.1,f32::INFINITY));
                 let is_denorm = abs_x.simd_lt(splat_f32::<T>(self.1,1.175_494_4e-38));
+                // cbrt_midp overflows above f32::MAX / 3, so magnitudes from 1e36 up
+                // run on x/8 and get doubled; denormals run on x * 2^24 and get
+                // scaled by 2^-8. All four scalings are exact.
+                let is_big = abs_x.simd_ge(splat_f32::<T>(self.1,1.0e36));
+                let pre = Self::blend(
+                    is_denorm,
+                    splat_f32::<T>(self.1,16_777_216.0),
+                    Self::blend(is_big, splat_f32::<T>(self.1,0.125), one),
+                );
+                let post = Self::blend(
+                    is_denorm,
+                    splat_f32::<T>(self.1,1.0 / 256.0),
+                    Self::blend(is_big, splat_f32::<T>(self.1,2.0), one),
+                );
 
-                let scaled = self * splat_f32::<T>(self.1,16_777_216.0);
-                let x_for_cbrt = Self::blend(is_denorm, scaled, self);
-
-                let result = x_for_cbrt.cbrt_midp();
-
-                let scaled_result = result * splat_f32::<T>(self.1,1.0 / 256.0);
-                let result = Self::blend(is_denorm, scaled_result, result);
-
-                Self::blend(is_zero, self, result)
+                let result = (self * pre).cbrt_midp() * post;
+                Self::blend(keep, self, result)
             }}
         }}
     "#}
