@@ -30,6 +30,7 @@
 - Tokenless scalar/default `#[magetypes(rite, ...)]` fallbacks select covered scalar callees; tokenful fallbacks retain runtime dispatch (772ef504).
 - `#[arcane]` with `ScalarToken` no longer emits an empty target-feature attribute (c766c238).
 - `#[magetypes]` preserves explicit `Token` dispatch markers while substituting token types, including token parameters after other arguments (c766c238).
+- The package includes the MIT and Apache-2.0 license texts (683bef73).
 
 ## magetypes
 
@@ -65,6 +66,7 @@
 - AVX-512 f32 block operations forward to the existing native V3 implementations instead of scalar defaults ([#60](https://github.com/imazen/archmage/issues/60); 3999a29d).
 - x86 `to_u8` and `store_*_rgba_u8` returned 0 for `+inf` and values at or above 2^31; they now saturate to 255 like the other backends, and NaN still gives 0. AVX2 has had this since the native pack restoration; AVX-512 picked it up through the forwarding above (ff9e0a50).
 - Use native WASM SIMD rounding, saturating conversion, and packing for f32 byte output (050e25c1).
+- The package includes the MIT and Apache-2.0 license texts (683bef73).
 
 ## Workspace
 
@@ -78,6 +80,7 @@
 - Record [generic-vs-intrinsic codegen and compile-cost measurements](benchmarks/magetypes_vs_intrinsics_r5900xt_2026-09-08.md) (1a0ea59a).
 - Record [magetypes cold-build time against 0.9.29](benchmarks/magetypes_compile_zen5-9950x3d_2026-10-03.md): 3.6–6.7% longer, about 40–60 ms on a Ryzen 9 9950X3D, measured with the new `xtask/magetypes_compile_perf.py` harness (ee27ecc7).
 - `xtask soundness` keeps magetypes' hand-written `unsafe` in `simd_storage.rs`: it rejects `unsafe` blocks elsewhere (outside the generated backend impls) and gather/scatter intrinsics anywhere else, so every gather/scatter lane offset is bounded against the borrowed slice in that one file (e3543634, 3fb0c910).
+- `cargo xtask validate` fails when archmage-macros or magetypes lacks a license text or its copy differs from the root file (683bef73).
 
 #### Changed
 
