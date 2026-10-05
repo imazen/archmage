@@ -76,9 +76,11 @@ impl<T: F32x16Convert> f32x16<T> {
         const C2: f32 = 0.240_226_5;
         const C3: f32 = 0.055_504_11;
 
+        // floor(x) <= 127 keeps the bit trick (n+127)<<23 in range; at 127.99
+        // the result stays below f32::MAX despite the polynomial's error.
         let x = self
             .max(splat_f32::<T>(self.1, -126.0))
-            .min(splat_f32::<T>(self.1, 126.0));
+            .min(splat_f32::<T>(self.1, 127.99));
         let xi = x.floor();
         let xf = x - xi;
 
@@ -228,7 +230,10 @@ impl<T: F32x16Convert> f32x16<T> {
         const C6: f32 = 0.000_154_47;
 
         // Round-to-nearest keeps |frac| <= 0.5 (vs floor's [0,1))
-        // Clamp xi to 127 so the bit trick (n+127)<<23 doesn't overflow
+        // Clamp xi to 127 so the bit trick (n+127)<<23 doesn't overflow.
+        // For x in [127.5, 128) that leaves |frac| up to 1, outside the
+        // polynomial's range: up to 63 ULP there. Folding in the missing
+        // factor of two measured 7-12% slower for every exp2/exp/pow call.
         let xi = self.round().min(splat_f32::<T>(self.1, 127.0));
         let xf = self - xi;
 
