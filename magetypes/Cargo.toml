@@ -66,10 +66,15 @@ harness = false
 name = "pixel_pack"
 harness = false
 
+[[bench]]
+name = "mul_add_cost"
+harness = false
+
 [lints.rust]
-# `--cfg pixel_pack_redraw` shifts code layout in benches/pixel_pack.rs so a
-# second run draws a different placement (Zen 5 layout-sensitivity check).
-unexpected_cfgs = { level = "warn", check-cfg = ["cfg(pixel_pack_redraw)"] }
+# `--cfg pixel_pack_redraw` and `--cfg mul_add_cost_redraw` shift code layout in
+# those benches so a second run draws a different placement (Zen 5
+# layout-sensitivity check).
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(pixel_pack_redraw)", "cfg(mul_add_cost_redraw)"] }
 
 [[bench]]
 name = "asm_patterns"
