@@ -3,9 +3,18 @@
 //! Generic implementations using IEEE 754 bit manipulation and polynomial
 //! approximation. Available when `T: F32x16Convert` (float↔int conversion).
 //!
-//! Two precision tiers:
-//! - **lowp** (~1% max error): Fast, suitable for perceptual/audio work
-//! - **midp** (~3 ULP): Accurate, suitable for most numerical work
+//! Two precision tiers. Errors are maxima measured over every f32 in each
+//! function's normal range against an f64 reference, on backends with and
+//! without hardware FMA:
+//! - **lowp**: fast, for perceptual and audio work. `exp2`, `exp` and `pow`
+//!   stay within 0.56% relative error, 1.23% for results above 2^127.99;
+//!   `log2`, `ln` and `log10` within 8.5e-6 absolute error, so their
+//!   relative error grows without bound near x = 1; `cbrt` within 3e-5
+//!   relative error.
+//! - **midp**: for most numerical work. `log2`, `ln` and `log10` at most
+//!   4.5 ULP, `cbrt` 3.2 ULP, `exp2` 1.9 ULP below x = 127.5 and 134.1
+//!   ULP above. `exp` and `pow` lose accuracy as the exponent grows; each
+//!   function gives its figures.
 //!
 //! Variant suffixes:
 //! - `_unchecked`: No edge case handling (fastest, undefined for ≤0/NaN/Inf)
@@ -28,9 +37,9 @@ fn splat_f32<T: F32x16Convert>(token: T, v: f32) -> f32x16<T> {
 }
 
 impl<T: F32x16Convert> f32x16<T> {
-    // ====== Low-Precision Transcendentals (~1% error) ======
+    // ====== Low-Precision Transcendentals ======
 
-    /// Low-precision base-2 logarithm (~1% max error).
+    /// Low-precision base-2 logarithm (absolute error at most 6.4e-6).
     ///
     /// Uses rational polynomial approximation on the mantissa.
     /// Result is undefined for x <= 0.
@@ -68,7 +77,8 @@ impl<T: F32x16Convert> f32x16<T> {
         self.log2_lowp()
     }
 
-    /// Low-precision base-2 exponential (~1% max error).
+    /// Low-precision base-2 exponential: relative error at most 0.56% for x up
+    /// to 127.99 and 1.23% above, where the input is clamped to 127.99.
     #[inline(always)]
     pub fn exp2_lowp(self) -> Self {
         const C0: f32 = 1.0;
@@ -151,9 +161,9 @@ impl<T: F32x16Convert> f32x16<T> {
         self.pow_lowp(n)
     }
 
-    // ====== Mid-Precision Transcendentals (~3 ULP) ======
+    // ====== Mid-Precision Transcendentals ======
 
-    /// Mid-precision base-2 logarithm (~3 ULP).
+    /// Mid-precision base-2 logarithm (at most 4.5 ULP).
     ///
     /// Uses (a-1)/(a+1) transform with odd polynomial evaluation.
     /// Result is undefined for x <= 0.
@@ -215,7 +225,8 @@ impl<T: F32x16Convert> f32x16<T> {
         self.log2_midp()
     }
 
-    /// Mid-precision base-2 exponential (~1 ULP). Undefined for extreme inputs.
+    /// Mid-precision base-2 exponential: at most 1.9 ULP for x below 127.5 and
+    /// up to 134.1 ULP in [127.5, 128). Undefined outside [-126, 128).
     ///
     /// Uses round-to-nearest splitting to keep |frac| <= 0.5, giving
     /// ~1000x less polynomial truncation error than floor-based splitting.
@@ -232,8 +243,9 @@ impl<T: F32x16Convert> f32x16<T> {
         // Round-to-nearest keeps |frac| <= 0.5 (vs floor's [0,1))
         // Clamp xi to 127 so the bit trick (n+127)<<23 doesn't overflow.
         // For x in [127.5, 128) that leaves |frac| up to 1, outside the
-        // polynomial's range: up to 63 ULP there. Folding in the missing
-        // factor of two measured 7-12% slower for every exp2/exp/pow call.
+        // polynomial's range: up to 134.1 ULP there. Folding in the missing
+        // factor of two measured 7-12% slower for exp2/exp/pow with AVX2 and
+        // 4-8% slower on the scalar backend.
         let xi = self.round().min(splat_f32::<T>(self.1, 127.0));
         let xf = self - xi;
 
@@ -251,6 +263,7 @@ impl<T: F32x16Convert> f32x16<T> {
 
     /// Mid-precision base-2 exponential with clamping.
     ///
+    /// At most 1.9 ULP for x below 127.5 and up to 134.1 ULP in [127.5, 128).
     /// Returns 0 for x < -126 (denormal results can't be constructed),
     /// inf for x >= 128.
     #[inline(always)]
@@ -278,7 +291,7 @@ impl<T: F32x16Convert> f32x16<T> {
         self.exp2_midp()
     }
 
-    /// Mid-precision natural logarithm.
+    /// Mid-precision natural logarithm (at most 4.1 ULP).
     #[inline(always)]
     pub fn ln_midp(self) -> Self {
         self.log2_midp() * splat_f32::<T>(self.1, core::f32::consts::LN_2)
@@ -297,6 +310,11 @@ impl<T: F32x16Convert> f32x16<T> {
     }
 
     /// Mid-precision natural exponential.
+    ///
+    /// Computed as `exp2(x * log2(e))`, so the rounding of that product grows
+    /// with |x|: at most 2.0 ULP for |x| <= 1, 8.2 ULP for |x| <= 10,
+    /// 31.3 ULP for |x| <= 40, 64.1 ULP over [-87, 88.5] and 197.1 ULP above
+    /// 88.5, where the product nears 128 (see `exp2_midp`).
     #[inline(always)]
     pub fn exp_midp(self) -> Self {
         (self * splat_f32::<T>(self.1, core::f32::consts::LOG2_E)).exp2_midp()
@@ -344,7 +362,7 @@ impl<T: F32x16Convert> f32x16<T> {
         self * self.sigmoid_midp()
     }
 
-    /// Mid-precision base-10 logarithm.
+    /// Mid-precision base-10 logarithm (at most 4.5 ULP).
     #[inline(always)]
     pub fn log10_midp(self) -> Self {
         self.log2_midp()
@@ -365,6 +383,10 @@ impl<T: F32x16Convert> f32x16<T> {
     }
 
     /// Mid-precision power function: `self^n`.
+    ///
+    /// Computed as `exp2(n * log2(self))`, so the error grows with
+    /// |n * log2(self)|. Measured for n = 2.4: at most 27.8 ULP (mean 3.7) on
+    /// [2^-8, 2^8], 64.8 ULP on [2^-20, 2^20] and 144.9 ULP on [2^-50, 2^50].
     #[inline(always)]
     pub fn pow_midp(self, n: f32) -> Self {
         (self.log2_midp() * splat_f32::<T>(self.1, n)).exp2_midp()
