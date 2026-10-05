@@ -1050,11 +1050,7 @@ fn main() -> Result<()> {
         "validate" => {
             let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
             soundness::verify(&reg)?;
-            soundness::check_stderr_snapshot_portability()?;
-            validate_summon(&reg)?;
-            validate_v4_f32_delegation()?;
-            check_compile_budgets()?;
-            check_package_licenses()?;
+            validate_after_soundness(&reg)?;
         }
         "validate-registry" => validate_registry()?,
         "parity" => check_api_parity(false)?,
@@ -1322,6 +1318,17 @@ fn check_compile_budgets() -> Result<()> {
         );
     }
     println!("  OK: every target's generated surface is within budget");
+    Ok(())
+}
+
+/// Every check `cargo xtask validate` runs after the soundness scan. `just ci`
+/// calls this too, so the local gate matches CI's Validate Token Safety job.
+fn validate_after_soundness(reg: &registry::Registry) -> Result<()> {
+    soundness::check_stderr_snapshot_portability()?;
+    validate_summon(reg)?;
+    validate_v4_f32_delegation()?;
+    check_compile_budgets()?;
+    check_package_licenses()?;
     Ok(())
 }
 
@@ -2248,9 +2255,9 @@ fn run_ci() -> Result<()> {
     soundness::verify(&reg)?;
     println!("└─ Soundness verification passed ────────────────────────────────────┘\n");
 
-    println!("┌─ Step 4/18: Validating summon() features ──────────────────────────┐");
-    validate_summon(&reg)?;
-    println!("└─ summon() validation passed ──────────────────────────────────────┘\n");
+    println!("┌─ Step 4/18: Validating tokens, delegation, budgets, licenses ──────┐");
+    validate_after_soundness(&reg)?;
+    println!("└─ Validation passed ───────────────────────────────────────────────┘\n");
 
     // Step 5: Parity check (strict mode - fails on any issues)
     println!("┌─ Step 5/18: Checking API parity (strict) ──────────────────────────┐");
