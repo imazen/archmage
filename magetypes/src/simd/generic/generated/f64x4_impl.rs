@@ -253,14 +253,18 @@ impl<T: F64x4Backend> f64x4<T> {
         Self(T::round(self.1, self.0), self.1)
     }
 
-    /// Multiply-add: `self * a + b`.
+    /// Multiply-add: `self * a + b`, rounded once.
     ///
-    /// Fused with one rounding, including scalar and strict WASM software
-    /// fallbacks. Builds with `relaxed-simd` use the engine's native madd
-    /// directly, which may round twice on non-fusing engines.
+    /// x86 v3/v4 and NEON use hardware FMA: within a few percent of
+    /// `self * a + b` in streaming loops, and 23–38% faster in dependency
+    /// chains such as Horner polynomials. The scalar backend and WASM
+    /// built without `relaxed-simd` fuse in software, which is much slower
+    /// than `self * a + b`: 2.6–29× on the scalar backend, and 8.7×
+    /// (`f32x4`) to 25× (`f64x2`) under wasmtime. Write `self * a + b`
+    /// there when two roundings are acceptable. Builds with `relaxed-simd`
+    /// use the engine's native madd, which may round twice.
     /// NaN payload/sign are unspecified.
-    /// This can cost more than separate multiplication and addition on
-    /// platforms without hardware FMA. Use `self * a + b` for two roundings.
+    /// [Measurements](https://github.com/imazen/archmage/blob/main/benchmarks/mul_add_cost_zen5-m4pro_2026-10-05.md).
     #[inline(always)]
     pub fn mul_add(self, a: Self, b: Self) -> Self {
         Self(T::mul_add(self.1, self.0, a.0, b.0), self.1)

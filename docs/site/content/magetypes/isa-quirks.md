@@ -39,6 +39,7 @@ CPU, width, compiler, baseline, and workload.
 | Same narrowing methods on [`i16x32`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i16x32.html) / [`i32x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i32x16.html) | Native AVX-512 | Narrow each input to a half and insert/concatenate. Unsigned destinations clamp signed inputs to zero before unsigned conversion. | Two zero clamps for unsigned output, plus the two conversions and concatenation needed for the operation. |
 | Same narrowing families at 128 bits; NEON / WASM widths | Native halves | Native signed-source saturating narrows already have the desired lane order. | No AVX2-style lane-order repair; polyfills still require composition. |
 | `v.shl_const::<N>()`, `v.shr_logical_const::<N>()`, `v.shr_arithmetic_const::<N>()` | Every backend | Const assertions reject invalid counts before execution. | **No runtime assertion.** Constant byte shifts can still require shift/mask emulation. |
+| `a.mul_add(b, c)` / `a.mul_sub(b, c)` on every float type | Scalar backend; WASM without `relaxed-simd` | Hardware backends use one FMA instruction. Software fusion instead: f32 lanes widen to f64 and run TwoSum with round-to-odd (on WASM per `f64x2` half), f64 lanes call `libm::fma` one at a time. | Every call. Measured at 2.6–29× (scalar) and 8.7–25× (WASM) the time of `a * b + c`; see [Fused arithmetic](#fused-arithmetic-and-reductions). |
 
 `abs_diff`, `madd_adjacent`, `pairwise_widen_add`, saturating arithmetic, and
 `reduce_add_u32` sometimes need several instructions because an ISA lacks that
@@ -184,6 +185,33 @@ selects hardware FMA when the CPU exposes FMA3, otherwise separate multiply and
 add (source checked 2026-09-27). This choice occurs during code generation, not
 as a per-operation branch in the generated kernel. Thus relaxed-SIMD support
 alone does not imply fusion on older CPUs or VMs that hide FMA.
+
+Single rounding has a price where the hardware cannot fuse. Measured against
+`a * b + c` on 1,024 L1-resident vectors (stream) and on 1,024 dependent steps
+(chain); records:
+[per backend](https://github.com/imazen/archmage/blob/main/benchmarks/mul_add_cost_zen5-m4pro_2026-10-05.md),
+[WASM](https://github.com/imazen/archmage/blob/main/benchmarks/mul_add_wasm_wasmtime_zen5-9950x3d_2026-10-05.md).
+
+| Backend, machine | Stream | Chain |
+|---|---|---|
+| AVX2, Ryzen 9 9950X3D | `f32x8` 5–9% slower, `f64x4` 0–7% faster | 26–38% faster |
+| AVX-512, Ryzen 9 9950X3D | within 6% | 23–36% faster |
+| NEON, Apple M4 Pro | within 3% | 23–30% faster |
+| Scalar backend, Ryzen 9 9950X3D | 3.1–3.5× (f32), 11–13× (f64) slower | 5.8–6.7× (f32), 10–13× (f64) slower |
+| Scalar backend, Apple M4 Pro | 10–12× (f32), 26–29× (f64) slower | 2.6–3.0× (f32), 7.9–8.6× (f64) slower |
+| WASM SIMD128, wasmtime on the 9950X3D | 8.7× (`f32x4`), 25× (`f64x2`) slower | not measured |
+| WASM relaxed SIMD, same | 2–3% faster | not measured |
+
+With hardware FMA, `mul_add` is the faster choice for dependency chains such as
+Horner polynomials. On the scalar backend and in strict WASM builds, write
+`a * b + c` wherever two roundings are acceptable.
+
+The generic transcendentals (`exp2_midp`, `log2_midp`, `pow_midp` and the rest)
+evaluate their polynomials with `mul_add`, so they carry this cost on the scalar
+backend and in strict WASM. Compared with 0.9.29, which used `a * b + c` there,
+they take 1.5–3.0× as long on the M4 Pro's scalar backend, 4.6–7.2× on the
+9950X3D's, and 9–23× in strict WASM under wasmtime
+([record](https://github.com/imazen/archmage/blob/main/benchmarks/transcendentals_fused_mul_add_2026-10-05.md)).
 
 Floating-point reductions retain backend-dependent association. Single-rounding
 multiply-add does not make an entire algorithm independent of reduction order.
