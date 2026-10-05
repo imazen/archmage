@@ -1054,6 +1054,7 @@ fn main() -> Result<()> {
             validate_summon(&reg)?;
             validate_v4_f32_delegation()?;
             check_compile_budgets()?;
+            check_package_licenses()?;
         }
         "validate-registry" => validate_registry()?,
         "parity" => check_api_parity(false)?,
@@ -1321,6 +1322,33 @@ fn check_compile_budgets() -> Result<()> {
         );
     }
     println!("  OK: every target's generated surface is within budget");
+    Ok(())
+}
+
+/// Check that the sub-crates ship both license texts, identical to the root copies.
+///
+/// A package's `include` list only reaches files inside its own directory, so
+/// archmage-macros and magetypes keep copies; the root crate includes `/LICENSE*`.
+fn check_package_licenses() -> Result<()> {
+    println!("\n=== License texts in the published sub-crates ===");
+    for crate_dir in ["archmage-macros", "magetypes"] {
+        for name in ["LICENSE-MIT", "LICENSE-APACHE"] {
+            let root = std::fs::read(name).with_context(|| format!("reading {name}"))?;
+            let copy = PathBuf::from(crate_dir).join(name);
+            let packaged = std::fs::read(&copy).with_context(|| {
+                format!(
+                    "{} is missing; copy {name} from the repository root",
+                    copy.display()
+                )
+            })?;
+            anyhow::ensure!(
+                packaged == root,
+                "{} differs from the root {name}; copy the root file over it",
+                copy.display()
+            );
+        }
+    }
+    println!("  OK: archmage-macros and magetypes carry LICENSE-MIT and LICENSE-APACHE");
     Ok(())
 }
 
