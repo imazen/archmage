@@ -50,8 +50,8 @@ mod x86_impl {
     // Cross-tier casting between same-width vectors (e.g. an SSE-context f32x4
     // used inside an AVX2 region) is a no-op on the generic types: the value
     // already carries its token, so there is nothing to convert. Width changes
-    // (half extraction / combination) are not currently exposed on the generic
-    // types.
+    // go through `low()`, `high()`, `split()` and `from_halves_t()` in
+    // `simd::generic::cross_width`.
 }
 
 #[cfg(test)]
