@@ -11,7 +11,7 @@ or ULP guarantee for every function, backend, and exceptional input.
 |---|---|
 | `_lowp` | Lower-cost approximation where its measured domain error is acceptable |
 | `_midp` | More accurate approximation family; validate the relevant function and range |
-| `_midp_precise` where provided | Additional correction; inspect its documented domain and cost |
+| `_midp_precise` | Only `cbrt_midp_precise` adds anything: subnormal inputs and the whole range. The other `_midp_precise` names are aliases of the plain `_midp` forms, queued for removal |
 | `_unchecked` where provided | Omits domain repair under documented numerical preconditions |
 
 Unchecked numerical methods remain memory-safe. Out-of-domain values have

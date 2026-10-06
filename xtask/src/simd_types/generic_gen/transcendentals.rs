@@ -34,7 +34,9 @@ pub(super) fn gen_transcendentals(
         //! Variant suffixes:
         //! - `_unchecked`: No edge case handling (fastest, undefined for ≤0/NaN/Inf)
         //! - (normal): Basic edge case handling (0→-inf, negative→NaN for log)
-        //! - `_precise`: Full handling including denormals
+        //! - `_precise`: `cbrt_midp_precise` also handles subnormal inputs and the
+        //!   whole range; the other `_midp_precise` names are aliases of the plain
+        //!   forms, queued for removal
 
         use crate::simd::backends::{{{float_backend}, {convert_trait}, {int_backend}}};
         use crate::simd::generic::{{{float_type}, {int_type}}};
@@ -232,7 +234,9 @@ pub(super) fn gen_transcendentals(
                 Self::blend(self.simd_eq(inf), inf, result)
             }}
 
-            /// Mid-precision base-2 logarithm with denormal handling.
+            /// Same as [`log2_midp`](Self::log2_midp). Subnormal inputs are **not**
+            /// handled: they return about -127 (for 1e-42 the true value is -139.5).
+            /// Queued for removal.
             #[inline(always)]
             pub fn log2_midp_precise(self) -> Self {{
                 self.log2_midp()
@@ -298,7 +302,8 @@ pub(super) fn gen_transcendentals(
                 Self::blend(is_overflow, inf, result)
             }}
 
-            /// Mid-precision base-2 exponential with full edge case handling.
+            /// Same as [`exp2_midp`](Self::exp2_midp), which covers every input:
+            /// a subnormal input is just close to zero. Queued for removal.
             #[inline(always)]
             pub fn exp2_midp_precise(self) -> Self {{
                 self.exp2_midp()
@@ -316,7 +321,9 @@ pub(super) fn gen_transcendentals(
                 self.log2_midp_unchecked() * splat_f32::<T>(self.1,core::f32::consts::LN_2)
             }}
 
-            /// Mid-precision natural logarithm with denormal handling.
+            /// Same as [`ln_midp`](Self::ln_midp). Subnormal inputs are **not**
+            /// handled: they return about -88 (for 1e-42 the true value is -96.7).
+            /// Queued for removal.
             #[inline(always)]
             pub fn ln_midp_precise(self) -> Self {{
                 self.ln_midp()
@@ -339,7 +346,8 @@ pub(super) fn gen_transcendentals(
                 (self * splat_f32::<T>(self.1,core::f32::consts::LOG2_E)).exp2_midp_unchecked()
             }}
 
-            /// Mid-precision natural exponential with full edge case handling.
+            /// Same as [`exp_midp`](Self::exp_midp), which covers every input:
+            /// a subnormal input is just close to zero. Queued for removal.
             #[inline(always)]
             pub fn exp_midp_precise(self) -> Self {{
                 self.exp_midp()
@@ -388,7 +396,9 @@ pub(super) fn gen_transcendentals(
                     * splat_f32::<T>(self.1,core::f32::consts::LN_2 / core::f32::consts::LN_10)
             }}
 
-            /// Mid-precision base-10 logarithm with denormal handling.
+            /// Same as [`log10_midp`](Self::log10_midp). Subnormal inputs are **not**
+            /// handled: they return about -38.2 (for 1e-42 the true value is -42.0).
+            /// Queued for removal.
             #[inline(always)]
             pub fn log10_midp_precise(self) -> Self {{
                 self.log10_midp()
@@ -410,7 +420,9 @@ pub(super) fn gen_transcendentals(
                 (self.log2_midp_unchecked() * splat_f32::<T>(self.1,n)).exp2_midp_unchecked()
             }}
 
-            /// Mid-precision power function with full edge case handling.
+            /// Same as [`pow_midp`](Self::pow_midp). Subnormal inputs are **not**
+            /// handled: `pow_midp_precise(1e-42, 0.5)` returns about 7.7e-20, not
+            /// 1.0e-21. Queued for removal.
             #[inline(always)]
             pub fn pow_midp_precise(self, n: f32) -> Self {{
                 self.pow_midp(n)

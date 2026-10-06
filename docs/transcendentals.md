@@ -114,11 +114,11 @@ log and pow functions also have `_unchecked`; the midp tier adds `_precise`.
 |--------|------------|-----------|----------|
 | `_unchecked` | No | No | Hot loops with known-valid inputs |
 | (none) | Yes | No | General use |
-| `_precise` | Yes | Yes | Inputs that may be subnormal |
+| `_precise` | Yes | `cbrt` only | `cbrt_midp_precise`; the other names are aliases |
 
 **Edge cases**: 0 → -inf, negative → NaN, +inf → +inf, NaN → NaN (for log functions)
 
-**Denormals**: Very small numbers (< 1.17e-38 for f32) handled via 2^24 scale-up trick
+**Denormals**: only `cbrt_midp_precise` handles subnormal inputs, by rescaling. The other `_midp_precise` functions are the plain forms under another name, queued for removal, and do not: for 1e-42, `log2_midp_precise` returns about -127 instead of -139.5.
 
 #### Low-Precision Tier (`_lowp`)
 
@@ -142,7 +142,7 @@ Functions: `log2_midp`, `exp2_midp`, `ln_midp`, `exp_midp`, `log10_midp`, `pow_m
 
 Unchecked: `log2_midp_unchecked`, `exp2_midp_unchecked`, `ln_midp_unchecked`, `exp_midp_unchecked`, `log10_midp_unchecked`, `pow_midp_unchecked`
 
-Precise (denormal-safe): `log2_midp_precise`, `ln_midp_precise`, `log10_midp_precise`, `pow_midp_precise`, `cbrt_midp_precise`; `exp2_midp_precise` and `exp_midp_precise` are the plain forms under the same name, since a subnormal input to an exponential is just close to zero
+Precise: `cbrt_midp_precise` handles subnormal inputs and the whole range. `log2_midp_precise`, `ln_midp_precise`, `log10_midp_precise`, `pow_midp_precise`, `exp2_midp_precise` and `exp_midp_precise` are aliases of the plain forms and handle nothing more (queued for removal)
 
 Activations: `sigmoid_midp` and `silu_midp`, built on `exp_midp` with an exact division, so saturated inputs give 0 or 1 rather than NaN
 
@@ -172,12 +172,12 @@ transcendentals.
 | 10-bit HDR | midp | 100% exact round-trip | `pow_midp`, `exp2_midp`, `log2_midp` |
 | 12-bit | midp | 100% exact round-trip | `pow_midp`, `exp2_midp`, `log2_midp` |
 | 16-bit | midp | 97% exact, 3% off-by-1 | `pow_midp`, `exp2_midp`, `log2_midp` |
-| Subnormal inputs | _precise | midp accuracy, subnormals included | `log2_midp_precise`, `ln_midp_precise`, `log10_midp_precise`, `pow_midp_precise`, `cbrt_midp_precise` |
+| Subnormal inputs | `cbrt_midp_precise` only | midp accuracy, subnormals included | `cbrt_midp_precise` |
 
 **Recommendations:**
 - Use midp functions for all color processing work
 - Use `_unchecked` variants in hot loops when inputs are guaranteed valid (e.g., already clamped to [0, 1])
-- Use `_precise` variants only when processing may include denormal values (~50% slower)
+- Use `cbrt_midp_precise` when inputs may be subnormal or above `f32::MAX / 3`; the other `_precise` names add nothing
 - For perfect precision, use std::f32 (scalar) at ~4-5x slower throughput
 
 ## Algorithms
