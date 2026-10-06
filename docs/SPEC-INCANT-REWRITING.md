@@ -1,5 +1,14 @@
 # Spec: Zero-Overhead Cross-Macro Calls via incant! Rewriting
 
+> **Status (2026-10-05): implemented, with one change from this plan.** Nested
+> `incant!` rewriting ships in `#[autoversion]`, `#[arcane]`, `#[rite]` and
+> `#[magetypes]` (`archmage-macros/src/rewrite.rs`; expansion snapshots in
+> `tests/expand/rewrite/`). Tokenless `#[rite(v3)]` was not deprecated (step 7
+> below): an `incant!` in a tokenless body selects the callee tiers its features
+> cover and builds the callee's token with `from_context()`
+> (`tests/tokenless_context.rs`), and `incant!(f(x) without token)` calls
+> tokenless callees. The rest of this file is the original design record.
+
 ## Problem
 
 When one `#[autoversion]` function calls another, the inner call goes through
