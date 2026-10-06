@@ -149,14 +149,38 @@ fn exercise_dotprod(token: Arm64V2Token) {
 
     // Lane forms broadcast one 4-byte group of the last operand; with uniform
     // inputs the sums are unchanged.
-    assert_eq!(vget_lane_s32::<0>(vdot_lane_s32::<1>(s32x2, s8x8, t8x8)), -23);
-    assert_eq!(vgetq_lane_s32::<0>(vdotq_lane_s32::<1>(s32x4, s8x16, t8x8)), -23);
-    assert_eq!(vget_lane_s32::<0>(vdot_laneq_s32::<3>(s32x2, s8x8, t8x16)), -23);
-    assert_eq!(vgetq_lane_s32::<0>(vdotq_laneq_s32::<3>(s32x4, s8x16, t8x16)), -23);
-    assert_eq!(vget_lane_u32::<0>(vdot_lane_u32::<1>(u32x2, u8x8, v8x8)), 1601);
-    assert_eq!(vgetq_lane_u32::<0>(vdotq_lane_u32::<1>(u32x4, u8x16, v8x8)), 1601);
-    assert_eq!(vget_lane_u32::<0>(vdot_laneq_u32::<3>(u32x2, u8x8, v8x16)), 1601);
-    assert_eq!(vgetq_lane_u32::<0>(vdotq_laneq_u32::<3>(u32x4, u8x16, v8x16)), 1601);
+    assert_eq!(
+        vget_lane_s32::<0>(vdot_lane_s32::<1>(s32x2, s8x8, t8x8)),
+        -23
+    );
+    assert_eq!(
+        vgetq_lane_s32::<0>(vdotq_lane_s32::<1>(s32x4, s8x16, t8x8)),
+        -23
+    );
+    assert_eq!(
+        vget_lane_s32::<0>(vdot_laneq_s32::<3>(s32x2, s8x8, t8x16)),
+        -23
+    );
+    assert_eq!(
+        vgetq_lane_s32::<0>(vdotq_laneq_s32::<3>(s32x4, s8x16, t8x16)),
+        -23
+    );
+    assert_eq!(
+        vget_lane_u32::<0>(vdot_lane_u32::<1>(u32x2, u8x8, v8x8)),
+        1601
+    );
+    assert_eq!(
+        vgetq_lane_u32::<0>(vdotq_lane_u32::<1>(u32x4, u8x16, v8x8)),
+        1601
+    );
+    assert_eq!(
+        vget_lane_u32::<0>(vdot_laneq_u32::<3>(u32x2, u8x8, v8x16)),
+        1601
+    );
+    assert_eq!(
+        vgetq_lane_u32::<0>(vdotq_laneq_u32::<3>(u32x4, u8x16, v8x16)),
+        1601
+    );
 }
 
 // =============================================================================
@@ -230,28 +254,76 @@ fn exercise_fhm(token: Arm64V3Token) {
     assert_eq!(vget_lane_f32::<1>(vfmlal_high_f16(r2, a4, b4)), 4.0);
     assert_eq!(vgetq_lane_f32::<0>(vfmlalq_low_f16(r4, a8, b8)), 4.0);
     assert_eq!(vgetq_lane_f32::<3>(vfmlalq_high_f16(r4, a8, b8)), 4.0);
-    assert_eq!(vget_lane_f32::<0>(vfmlal_lane_low_f16::<3>(r2, a4, b4)), 4.0);
-    assert_eq!(vget_lane_f32::<0>(vfmlal_lane_high_f16::<3>(r2, a4, b4)), 4.0);
-    assert_eq!(vget_lane_f32::<0>(vfmlal_laneq_low_f16::<7>(r2, a4, b8)), 4.0);
-    assert_eq!(vget_lane_f32::<0>(vfmlal_laneq_high_f16::<7>(r2, a4, b8)), 4.0);
-    assert_eq!(vgetq_lane_f32::<0>(vfmlalq_lane_low_f16::<3>(r4, a8, b4)), 4.0);
-    assert_eq!(vgetq_lane_f32::<0>(vfmlalq_lane_high_f16::<3>(r4, a8, b4)), 4.0);
-    assert_eq!(vgetq_lane_f32::<0>(vfmlalq_laneq_low_f16::<7>(r4, a8, b8)), 4.0);
-    assert_eq!(vgetq_lane_f32::<0>(vfmlalq_laneq_high_f16::<7>(r4, a8, b8)), 4.0);
+    assert_eq!(
+        vget_lane_f32::<0>(vfmlal_lane_low_f16::<3>(r2, a4, b4)),
+        4.0
+    );
+    assert_eq!(
+        vget_lane_f32::<0>(vfmlal_lane_high_f16::<3>(r2, a4, b4)),
+        4.0
+    );
+    assert_eq!(
+        vget_lane_f32::<0>(vfmlal_laneq_low_f16::<7>(r2, a4, b8)),
+        4.0
+    );
+    assert_eq!(
+        vget_lane_f32::<0>(vfmlal_laneq_high_f16::<7>(r2, a4, b8)),
+        4.0
+    );
+    assert_eq!(
+        vgetq_lane_f32::<0>(vfmlalq_lane_low_f16::<3>(r4, a8, b4)),
+        4.0
+    );
+    assert_eq!(
+        vgetq_lane_f32::<0>(vfmlalq_lane_high_f16::<3>(r4, a8, b4)),
+        4.0
+    );
+    assert_eq!(
+        vgetq_lane_f32::<0>(vfmlalq_laneq_low_f16::<7>(r4, a8, b8)),
+        4.0
+    );
+    assert_eq!(
+        vgetq_lane_f32::<0>(vfmlalq_laneq_high_f16::<7>(r4, a8, b8)),
+        4.0
+    );
 
     // FMLSL: 1.0 - 1.5 * 2.0 = -2.0.
     assert_eq!(vget_lane_f32::<0>(vfmlsl_low_f16(r2, a4, b4)), -2.0);
     assert_eq!(vget_lane_f32::<1>(vfmlsl_high_f16(r2, a4, b4)), -2.0);
     assert_eq!(vgetq_lane_f32::<0>(vfmlslq_low_f16(r4, a8, b8)), -2.0);
     assert_eq!(vgetq_lane_f32::<3>(vfmlslq_high_f16(r4, a8, b8)), -2.0);
-    assert_eq!(vget_lane_f32::<0>(vfmlsl_lane_low_f16::<3>(r2, a4, b4)), -2.0);
-    assert_eq!(vget_lane_f32::<0>(vfmlsl_lane_high_f16::<3>(r2, a4, b4)), -2.0);
-    assert_eq!(vget_lane_f32::<0>(vfmlsl_laneq_low_f16::<7>(r2, a4, b8)), -2.0);
-    assert_eq!(vget_lane_f32::<0>(vfmlsl_laneq_high_f16::<7>(r2, a4, b8)), -2.0);
-    assert_eq!(vgetq_lane_f32::<0>(vfmlslq_lane_low_f16::<3>(r4, a8, b4)), -2.0);
-    assert_eq!(vgetq_lane_f32::<0>(vfmlslq_lane_high_f16::<3>(r4, a8, b4)), -2.0);
-    assert_eq!(vgetq_lane_f32::<0>(vfmlslq_laneq_low_f16::<7>(r4, a8, b8)), -2.0);
-    assert_eq!(vgetq_lane_f32::<0>(vfmlslq_laneq_high_f16::<7>(r4, a8, b8)), -2.0);
+    assert_eq!(
+        vget_lane_f32::<0>(vfmlsl_lane_low_f16::<3>(r2, a4, b4)),
+        -2.0
+    );
+    assert_eq!(
+        vget_lane_f32::<0>(vfmlsl_lane_high_f16::<3>(r2, a4, b4)),
+        -2.0
+    );
+    assert_eq!(
+        vget_lane_f32::<0>(vfmlsl_laneq_low_f16::<7>(r2, a4, b8)),
+        -2.0
+    );
+    assert_eq!(
+        vget_lane_f32::<0>(vfmlsl_laneq_high_f16::<7>(r2, a4, b8)),
+        -2.0
+    );
+    assert_eq!(
+        vgetq_lane_f32::<0>(vfmlslq_lane_low_f16::<3>(r4, a8, b4)),
+        -2.0
+    );
+    assert_eq!(
+        vgetq_lane_f32::<0>(vfmlslq_lane_high_f16::<3>(r4, a8, b4)),
+        -2.0
+    );
+    assert_eq!(
+        vgetq_lane_f32::<0>(vfmlslq_laneq_low_f16::<7>(r4, a8, b8)),
+        -2.0
+    );
+    assert_eq!(
+        vgetq_lane_f32::<0>(vfmlslq_laneq_high_f16::<7>(r4, a8, b8)),
+        -2.0
+    );
 }
 
 // =============================================================================
@@ -605,4 +677,3 @@ fn cobalt100_runner_must_summon_full_arm64_v3() {
 //
 // BF16 (bf16): ZERO intrinsics in Rust stdarch.
 // BFloat16 support. The hardware feature exists but Rust has no bindings yet.
-

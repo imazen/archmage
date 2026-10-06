@@ -90,7 +90,10 @@ fn splat512(_t: Avx512Fp16Token, bits: u16) -> __m512h {
 #[rite]
 fn low_lanes512(_t: Avx512Fp16Token, v: __m512h) -> [f32; 2] {
     let w = _mm512_castps512_ps128(_mm512_cvtxph_ps(_mm512_castph512_ph256(v)));
-    [_mm_cvtss_f32(w), f32::from_bits(_mm_extract_ps::<1>(w) as u32)]
+    [
+        _mm_cvtss_f32(w),
+        f32::from_bits(_mm_extract_ps::<1>(w) as u32),
+    ]
 }
 
 #[rustversion::since(1.94)]
