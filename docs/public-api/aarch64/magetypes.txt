@@ -6,15 +6,15 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2663 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 34 lines (41 hidden + 0 excluded-feature)
+# files: magetypes.txt 2677 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 34 lines (41 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                12
 #   pub types (struct/enum/trait/alias)       287
 #   pub consts/statics                        228
-#   free functions                           3716
-#   inherent methods                         1239
+#   free functions                           3746
+#   inherent methods                         1251
 #   enum variants                               1
 #   re-exports                                  2
 #   trait roster entries (type × trait)       741
@@ -25,10 +25,10 @@
 # per-module pub lines:
 #   (root)                          321
 #   cast                              3
-#   prelude                        3570
-#   simd                           1591
+#   prelude                        3594
+#   simd                           1609
 
-## items (2440 lines)
+## items (2454 lines)
 
 pub mod magetypes
 pub use archmage
@@ -981,7 +981,9 @@ pub fn simd::backends::F32x16Backend::max(self, Self::Repr, Self::Repr) -> Self:
 pub fn simd::backends::F32x16Backend::min(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::mul(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::mul_add(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F32x16Backend::mul_add_portable(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::mul_sub(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F32x16Backend::mul_sub_portable(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::neg(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x16Backend::rcp_approx(self, Self::Repr) -> Self::Repr
@@ -1029,7 +1031,9 @@ pub fn simd::backends::F32x4Backend::max(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::F32x4Backend::min(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::mul(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::mul_add(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F32x4Backend::mul_add_portable(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::mul_sub(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F32x4Backend::mul_sub_portable(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::neg(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x4Backend::rcp_approx(self, Self::Repr) -> Self::Repr
@@ -1079,7 +1083,9 @@ pub fn simd::backends::F32x8Backend::max(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::F32x8Backend::min(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::mul(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::mul_add(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F32x8Backend::mul_add_portable(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::mul_sub(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F32x8Backend::mul_sub_portable(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::neg(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F32x8Backend::rcp_approx(self, Self::Repr) -> Self::Repr
@@ -1130,7 +1136,9 @@ pub fn simd::backends::F64x2Backend::max(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::F64x2Backend::min(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::mul(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::mul_add(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F64x2Backend::mul_add_portable(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::mul_sub(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F64x2Backend::mul_sub_portable(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::neg(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x2Backend::rcp_approx(self, Self::Repr) -> Self::Repr
@@ -1171,7 +1179,9 @@ pub fn simd::backends::F64x4Backend::max(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::F64x4Backend::min(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::mul(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::mul_add(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F64x4Backend::mul_add_portable(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::mul_sub(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F64x4Backend::mul_sub_portable(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::neg(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x4Backend::rcp_approx(self, Self::Repr) -> Self::Repr
@@ -1212,7 +1222,9 @@ pub fn simd::backends::F64x8Backend::max(self, Self::Repr, Self::Repr) -> Self::
 pub fn simd::backends::F64x8Backend::min(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x8Backend::mul(self, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x8Backend::mul_add(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F64x8Backend::mul_add_portable(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x8Backend::mul_sub(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
+pub fn simd::backends::F64x8Backend::mul_sub_portable(self, Self::Repr, Self::Repr, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x8Backend::neg(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x8Backend::not(self, Self::Repr) -> Self::Repr
 pub fn simd::backends::F64x8Backend::rcp_approx(self, Self::Repr) -> Self::Repr
@@ -2195,7 +2207,9 @@ pub fn simd::f32x1::load_t(archmage::tokens::ScalarToken, &[f32; 1]) -> Self [al
 pub fn simd::f32x1::max(self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>, simd::f32x1]
 pub fn simd::f32x1::min(self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>, simd::f32x1]
 pub fn simd::f32x1::mul_add(self, Self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1, simd::f64x1]
+pub fn simd::f32x1::mul_add_portable(self, Self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1, simd::f64x1]
 pub fn simd::f32x1::mul_sub(self, Self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1]
+pub fn simd::f32x1::mul_sub_portable(self, Self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1]
 pub fn simd::f32x1::reduce_add(self) -> f32 [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, simd::f32x1]
 pub fn simd::f32x1::reduce_max(self) -> f32 [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, simd::f32x1]
 pub fn simd::f32x1::reduce_min(self) -> f32 [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, simd::f32x1]
