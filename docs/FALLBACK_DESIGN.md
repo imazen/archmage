@@ -18,42 +18,48 @@ bitwise and, or, xor, not   → lo.op() + hi.op()
 comparisons (simd_eq, etc.) → lo.op() + hi.op()
 ```
 
-**Polyfill implementation pattern:**
+**Polyfill implementation pattern** (from the generated `x86_v3.rs`, where
+`f32x16` on `X64V3Token` is two `__m256` halves):
 ```rust
-pub fn abs(self) -> Self {
-    Self { lo: self.lo.abs(), hi: self.hi.abs() }
+#[inline(always)]
+fn abs(self, a: [__m256; 2]) -> [__m256; 2] {
+    [
+        <archmage::X64V3Token as F32x8Backend>::abs(self, a[0]),
+        <archmage::X64V3Token as F32x8Backend>::abs(self, a[1]),
+    ]
 }
 ```
 
 ### Category B: Cross-Lane Reductions (Prefer SIMD, Accept Scalar)
 
-Horizontal operations that combine lanes:
+Horizontal operations that combine lanes. Every type has `reduce_add` (integer
+types wrap); the float types also have `reduce_min` and `reduce_max`. There are
+no integer min/max or bitwise reductions. How the generated backends implement
+`reduce_add`:
 
-| Operation | Floats | Integers |
-|-----------|--------|----------|
-| reduce_add | SIMD shuffle tree | Scalar fallback |
-| reduce_min | SIMD shuffle tree | Scalar fallback |
-| reduce_max | SIMD shuffle tree | Scalar fallback |
-| reduce_and | SIMD available | SIMD available |
-| reduce_or  | SIMD available | SIMD available |
+| Lanes | x86 V3 | x86 V4 (512-bit) | NEON | WASM |
+|-------|--------|------------------|------|------|
+| f32, f64 | extract + shuffle + add | `_mm512_reduce_add_ps`/`_pd` | `vpaddq`/`vaddvq` | lane extracts |
+| i32, u32, i64 | extract + shuffle + add | scalar fold | `vaddvq` | lane extracts |
+| i8, u8, i16, u16, u64 | scalar fold | scalar fold | `vaddvq` | scalar fold |
 
-**Float SIMD pattern (AVX2):**
-Current implementations are emitted by the backend generators inside
-token-matched `#[arcane]` contexts. Use the generic vector operation from a
-`#[magetypes]` kernel; the old manually wrapped implementation is obsolete.
+`_mm512_reduce_add_ps` is a compiler-provided sequence, not one instruction.
 
-**Integer scalar fallback pattern:**
+**Integer scalar fallback pattern** (from the generated `x86_v3.rs`):
 ```rust
-pub fn reduce_add(self) -> i8 {
-    // Uses as_array() for zero-copy access (not to_array() which copies)
-    self.as_array().iter().copied().fold(0_i8, i8::wrapping_add)
+#[arcane(suppress_const_test, _self = X64V3Token)]
+fn reduce_add(self, a: __m128i) -> i8 {
+    let arr = <Self as I8x16Backend>::to_array(_self, a);
+    arr.iter().copied().fold(0i8, i8::wrapping_add)
 }
 ```
 
 **Polyfill composition pattern:**
 ```rust
-pub fn reduce_add(self) -> f32 {
-    self.lo.reduce_add() + self.hi.reduce_add()
+#[inline(always)]
+fn reduce_add(self, a: [__m256; 2]) -> f32 {
+    <archmage::X64V3Token as F32x8Backend>::reduce_add(self, a[0])
+        + <archmage::X64V3Token as F32x8Backend>::reduce_add(self, a[1])
 }
 ```
 
@@ -63,33 +69,35 @@ Operations with no hardware support requiring mathematical computation:
 
 | Function | Implementation | Max Error |
 |----------|---------------|-----------|
-| exp2_lowp | Degree-3 polynomial | ~5.5e-3 |
-| exp2_midp | Degree-6 polynomial | ~1e-6 |
-| log2_lowp | Mantissa polynomial | ~3e-4 |
-| ln_lowp | log2_lowp * LN_2 | ~3e-4 |
-| sin_lowp | Range-reduced Chebyshev | varies |
+| exp2_lowp | Degree-3 polynomial | 5.57e-3 relative (x ≤ 127.99) |
+| exp2_midp | Degree-6 polynomial | 1.9 ULP for x < 127.5; up to 134.1 ULP in [127.5, 128) |
+| log2_lowp | Mantissa polynomial | 6.4e-6 absolute |
+| ln_lowp | log2_lowp * LN_2 | 8.5e-6 absolute |
 
-**Pattern:**
-Current implementations are emitted by the backend generators inside
-token-matched `#[arcane]` contexts. Use the generic vector operation from a
-`#[magetypes]` kernel; the old manually wrapped implementation is obsolete.
+There are no trigonometric functions. [transcendentals.md](transcendentals.md)
+has the measured accuracy for every function and domain.
+
+**Pattern:** the transcendentals are written once, in
+`xtask/src/simd_types/generic_gen/transcendentals.rs`, against the generic
+vector API (`mul_add`, `round`, `shl_const`, bit casts), so every backend gets
+the same polynomial.
 
 ## Platform-Specific Considerations
 
 ### x86-64 SSE (w128)
-- Has hadd_ps for float reductions
-- No hadd for integer types → scalar fallback
+- Horizontal adds (`hadd_ps`, SSSE3 `hadd_epi32`) exist but are slow; the
+  backends reduce with shuffles and adds instead
 - Has floor/ceil via SSE4.1
 
 ### x86-64 AVX2 (w256)
-- Has _mm256_hadd_ps for floats
-- No efficient 256-bit integer hadd → extract + 128-bit or scalar
+- 256-bit horizontal adds work within each 128-bit lane, so reductions extract
+  the high half and continue at 128 bits
 - Has FMA for polynomial evaluation
 
 ### x86-64 AVX-512 (w512)
-- Has _mm512_reduce_add_ps (single instruction!)
-- Has _mm512_reduce_min_ps, _mm512_reduce_max_ps
-- Use these when available, polyfill with extract + 256-bit otherwise
+- `_mm512_reduce_add_ps`, `_mm512_reduce_min_ps` and `_mm512_reduce_max_ps`
+  are compiler-provided sequences, used for the float types
+- Without `X64V4Token`, 512-bit types are two 256-bit halves (see Category A)
 
 ### ARM NEON (w128) — Implemented
 - Has vaddvq_f32 for float horizontal add (single instruction)
@@ -104,7 +112,9 @@ token-matched `#[arcane]` contexts. Use the generic vector operation from a
 ### WASM SIMD128 (w128) — Implemented
 - Uses `v128` type for all element types
 - Has `f32x4_add`, `i32x4_add`, etc.
-- Relaxed SIMD for FMA (`f32x4_relaxed_madd`)
+- No FMA in SIMD128: `mul_add` is a multiply then an add (two roundings), and
+  `mul_add_portable` fuses in software. With relaxed SIMD enabled, `mul_add`
+  emits `f32x4_relaxed_madd`, which an engine may or may not fuse.
 
 ### WASM SIMD128 Polyfill (256-bit) — Implemented
 - Uses two 128-bit WASM vectors
@@ -168,9 +178,9 @@ use archmage::{arcane, rite, X64V3Token, SimdToken};
 use magetypes::simd::generic::f32x8;
 
 // Entry point — called from non-SIMD code
-#[arcane(import_intrinsics)]
+#[arcane]
 fn process_vectors(token: X64V3Token, input: &[[f32; 8]]) -> f32 {
-    let mut sum = f32x8::zero(token);
+    let mut sum = f32x8::zero_t(token);
     for arr in input {
         sum = add_chunk(token, sum, arr);  // #[rite] inlines here
     }
@@ -178,16 +188,12 @@ fn process_vectors(token: X64V3Token, input: &[[f32; 8]]) -> f32 {
 }
 
 // Internal helper — inlines into #[arcane] caller
-#[rite(import_intrinsics)]
+#[rite]
 fn add_chunk(token: X64V3Token, acc: f32x8<X64V3Token>, arr: &[f32; 8]) -> f32x8<X64V3Token> {
-    let v: f32x8<X64V3Token> = (*arr).into();
-    acc + v  // Compiles to a single vaddps
+    acc + f32x8::load_t(token, arr)  // a load and one vaddps
 }
 ```
 
-### Note on `unsafe` in intrinsic examples
-
-As of Rust 1.87+, value-based intrinsics (arithmetic, comparison, shuffle, etc.) are safe
-inside `#[target_feature]` functions. The `unsafe` blocks in the examples above (Category C)
-reflect the pre-1.87 style. Inside `#[arcane]`/`#[rite]` functions, only memory operations
-(raw pointers) still require `unsafe`. Use `import_intrinsics` for safe memory ops.
+Value-based intrinsics have been safe inside `#[target_feature]` functions
+since Rust 1.87; only raw-pointer memory operations still need `unsafe`, and
+`import_intrinsics` replaces those with reference-based versions.
