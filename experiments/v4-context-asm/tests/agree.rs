@@ -1,3 +1,4 @@
+#![cfg(feature = "avx512")]
 //! Each kernel is run on a fixed input in the v3 tier, the v4 tier and the
 //! scalar tier (or a plain-Rust reference for groups B and C). Exact equality
 //! unless the test says otherwise: A10 and A11 compare against the scalar

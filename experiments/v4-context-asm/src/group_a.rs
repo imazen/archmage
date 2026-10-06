@@ -130,9 +130,11 @@ pub fn a7_impl(token: Token, input: &[f32], coef: &[f32; A7_TAPS], out: &mut [f3
     let (chunks, tail) = f32x8::partition_slice_mut_t(token, out);
     let mut i = 0;
     for chunk in chunks {
+        // One bounds check per chunk; the 20 tap windows index a fixed-size array.
+        let win: &[f32; A7_TAPS + 7] = input[i..i + A7_TAPS + 7].try_into().unwrap();
         let mut acc = f32x8::zero_t(token);
         for k in 0..A7_TAPS {
-            acc = f32x8::from_slice_t(token, &input[i + k..i + k + 8]).mul_add(c[k], acc);
+            acc = f32x8::from_slice_t(token, &win[k..k + 8]).mul_add(c[k], acc);
         }
         acc.store(chunk);
         i += 8;

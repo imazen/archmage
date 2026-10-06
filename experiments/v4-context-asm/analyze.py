@@ -106,3 +106,42 @@ for i in ids:
     if not same:
         print(f"  mnemonic count delta  v4-v3: {only4}")
         print(f"                        v3-v4: {only3}")
+
+# ---- hot-loop table ---------------------------------------------------------
+# File line ranges (in the dumps, 1-based, symbol line = 1) of the loop that
+# runs the kernel's vector body, chosen by reading each dump: (v3 range, v4 range).
+HOT = {
+    "a1": ((26, 45), (27, 46)), "a2": ((28, 47), (28, 47)), "a3": ((24, 43), (24, 43)),
+    "a4": ((31, 54), (33, 60)), "a5": ((15, 26), (15, 23)), "a6": ((43, 68), (35, 60)),
+    "a7": ((94, 128), (78, 106)), "a8_round": ((28, 51), (29, 52)),
+    "a8_sat": ((18, 36), (18, 38)), "a8_u8": ((17, 33), (17, 31)),
+    "a9_sum": ((33, 44), (33, 44)), "a9_max": ((33, 44), (34, 45)),
+    "a10_recip": ((25, 44), (26, 47)), "a10_rsqrt": ((28, 51), (28, 53)),
+    "a11_exp2": ((29, 56), (29, 55)), "a11_ln": ((27, 58), (30, 60)),
+    "a12": ((28, 47), (26, 45)), "b1": ((23, 34), (23, 34)), "b2": ((35, 62), (35, 62)),
+    "c1": ((18, 26), (18, 27)), "c2": ((14, 22), (14, 21)), "c3": ((18, 32), (18, 34)),
+    "c4": ((16, 30), (16, 24)), "c5": ((17, 29), (16, 24)), "c6": ((21, 37), (21, 31)),
+}
+FLOAT_OPS = re.compile(r"^v(mul|add|sub|fmadd|fnmadd|fmsub|max|min|round|rndscale|rcp|rsqrt|sqrt|div|and|or|xor|pternlog|cmp|blend|cvt|pmov|pabs|prol|pand|por|pcmp|psll|psrl|psub|padd|pmin|pmax)")
+
+def hot_rows():
+    print("\n#### HOT LOOPS (file line ranges are in the dump named in the first column)")
+    for i, (r3, r4) in HOT.items():
+        p4 = f"{D}/{i}_v4.s" if os.path.exists(f"{D}/{i}_v4.s") else f"{D}/{i}_v4_via_v3.s"
+        res = []
+        for path, (a, b) in ((f"{D}/{i}_v3.s", r3), (p4, r4)):
+            raw = [l.rstrip("\n") for l in open(path)]
+            body = [l for l in raw[a - 1:b]]
+            ins = [l.strip() for l in body if mnemonic(l) and not LABEL.match(l)]
+            m = collections.Counter(mnemonic(l) for l in ins)
+            k = avx512_markers(body)
+            vspill = [l for l in ins if VREG.search(l) and re.search(r"\[(rsp|rbp)", l)]
+            stride = [l for l in ins if re.match(r"(add|sub) \w+, -?\d+$", l)]
+            res.append(dict(n=len(ins), w=widest(body), mk=dict(k), m=m, vspill=len(vspill), calls=[l for l in ins if l.startswith("call")], stride=stride, a=a, b=b, p=os.path.basename(path)))
+        v3, v4 = res
+        d4 = sorted(set(v4["m"]) - set(v3["m"]))
+        d3 = sorted(set(v3["m"]) - set(v4["m"]))
+        print(f"{i}: v3 {v3['p']}:{v3['a']}-{v3['b']} n={v3['n']} w={v3['w']} vspill={v3['vspill']} calls={len(v3['calls'])} stride={v3['stride']}")
+        print(f"    v4 {v4['p']}:{v4['a']}-{v4['b']} n={v4['n']} w={v4['w']} vspill={v4['vspill']} calls={len(v4['calls'])} stride={v4['stride']} avx512={v4['mk']}")
+        print(f"    mnemonics only in v4 loop: {d4}   only in v3 loop: {d3}")
+hot_rows()
