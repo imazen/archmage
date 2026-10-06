@@ -53,12 +53,8 @@ use crate::simd::backends::F32x16Backend;
 #[derive(Clone, Copy)]
 #[repr(C)]
 pub struct f32x16<T: F32x16Backend>(pub(crate) T::Repr, pub(crate) T);
-// SAFETY: repr(C) pair of Pod storage and a sealed 1-ZST token.
-// A supplied T proves CPU support; the wrapper adds no bit invariants.
-// Helpers additionally check token size/alignment at monomorphization.
-unsafe impl<T: F32x16Backend> crate::simd_storage::TokenStorage for f32x16<T> {
-    type Token = T;
-}
+// The `unsafe impl` and the checks behind it live in `simd_storage`.
+crate::simd_storage::impl_token_storage!(f32x16, F32x16Backend);
 
 // PhantomData is ZST, so f32x16<T> has the same size as T::Repr.
 

@@ -38,12 +38,8 @@ use crate::simd::backends::I32x4Backend;
 #[derive(Clone, Copy)]
 #[repr(C)]
 pub struct i32x4<T: I32x4Backend>(pub(crate) T::Repr, pub(crate) T);
-// SAFETY: repr(C) pair of Pod storage and a sealed 1-ZST token.
-// A supplied T proves CPU support; the wrapper adds no bit invariants.
-// Helpers additionally check token size/alignment at monomorphization.
-unsafe impl<T: I32x4Backend> crate::simd_storage::TokenStorage for i32x4<T> {
-    type Token = T;
-}
+// The `unsafe impl` and the checks behind it live in `simd_storage`.
+crate::simd_storage::impl_token_storage!(i32x4, I32x4Backend);
 
 // Layout invariant: struct is `#[repr(C)]` with a trailing ZST `T`
 // field, so `sizeof/alignof(i32x4<T>) == sizeof/alignof(T::Repr)`

@@ -12,7 +12,8 @@
 //! # Safety (audit contract — checked backend boundaries)
 //!
 //! `#[arcane]` checks value intrinsics against the receiver token's features.
-//! SSE2-only arithmetic uses the checked x86-64 baseline boundary.
+//! SSE2-only arithmetic runs in `#[arcane]` regions for `X64V1Token`, the
+//! x86-64 baseline, so it inlines into callers without AVX.
 //! Whole-array loads/stores and bit casts use `crate::simd_storage` helpers,
 //! which require POD storage and enforce equal sizes at compile time.
 //! Token-bearing wrappers never implement the storage POD trait.

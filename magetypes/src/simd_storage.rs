@@ -3,6 +3,11 @@
 //!
 //! Only raw scalar/vector storage implements Pod. Never implement it for tokens
 //! or token-bearing SIMD wrappers: arbitrary bytes must not manufacture proofs.
+//!
+//! This is the only module in magetypes that may contain `unsafe`. The crate
+//! root denies `unsafe_code` and allows it for this module alone, and
+//! `cargo xtask soundness` rejects the `unsafe` keyword and any other
+//! `allow(unsafe_code)` elsewhere in `magetypes/src`.
 
 use core::mem::{align_of, size_of};
 
@@ -105,9 +110,13 @@ const _: () = {
 /// bit pattern must be valid as Self. Self must have no additional invariants,
 /// padding, pointers, interior mutability, or drop behavior. Mutable writes to
 /// Self must preserve arbitrary-bit validity of its storage. Implement only for
-/// the generated SIMD wrappers over sealed backend implementations.
+/// the generated SIMD wrappers over sealed backend implementations, and only
+/// through [`impl_token_storage!`], which checks the layout.
 pub(crate) unsafe trait TokenStorage: Copy {
     type Token: archmage::SimdToken;
+
+    /// Layout assertions for Self; every helper below evaluates them.
+    const LAYOUT: ();
 }
 
 #[inline(always)]
@@ -115,7 +124,73 @@ fn check_token_layout<Dst: TokenStorage>() {
     const {
         assert!(size_of::<Dst::Token>() == 0);
         assert!(align_of::<Dst::Token>() == 1);
+        Dst::LAYOUT
     }
+}
+
+/// Implement [`TokenStorage`] for a generated vector wrapper `$ty<T>`.
+///
+/// Every obligation of the impl that the compiler can check, it checks:
+///
+/// - `$ty(repr, token)` must build the wrapper from exactly a `T::Repr` and a
+///   `T`, in that order, so the wrapper has those two fields and no others.
+///   This fails at expansion.
+/// - `T::Repr` must sit at offset 0, and the wrapper must be exactly as large
+///   as `T::Repr` (`LAYOUT`). With the token zero-sized and alignment 1
+///   (`check_token_layout`), that leaves no padding. These fail when a helper
+///   instantiates the impl.
+///
+/// What remains is what the backend traits and `archmage` already guarantee:
+/// `T::Repr: Pod` is a bound on every backend's `Repr`, and the token types
+/// are sealed zero-sized proofs. The invocations sit next to each struct in
+/// `simd/generic/generated/`; the `allow(unsafe_code)` below is what lets the
+/// expansion compile there, so this macro is the only way to write the impl.
+macro_rules! impl_token_storage {
+    ($ty:ident, $backend:ident) => {
+        // SAFETY: the checks in this expansion pin the layout TokenStorage
+        // requires: exactly a Pod `T::Repr` at offset 0 followed by the sealed
+        // zero-sized token `T`. A supplied `T` proves CPU support, and the
+        // wrapper adds no invariants of its own to the representation's bits.
+        #[allow(unsafe_code)]
+        unsafe impl<T: crate::simd::backends::$backend> crate::simd_storage::TokenStorage
+            for $ty<T>
+        {
+            type Token = T;
+            const LAYOUT: () = {
+                assert!(core::mem::offset_of!($ty<T>, 0) == 0);
+                assert!(core::mem::size_of::<$ty<T>>() == core::mem::size_of::<T::Repr>());
+            };
+        }
+        const _: () = {
+            // Compiles only if the wrapper is exactly `(T::Repr, T)`.
+            #[allow(dead_code)]
+            fn fields_are_repr_then_token<T: crate::simd::backends::$backend>(
+                repr: T::Repr,
+                token: T,
+            ) -> $ty<T> {
+                $ty(repr, token)
+            }
+        };
+    };
+}
+pub(crate) use impl_token_storage;
+
+/// Marker trait for types that can be upcast with proof of context.
+///
+/// Upcasting requires being in the appropriate context (inside `#[arcane]`
+/// with the right token).
+///
+/// Public as `magetypes::cast::Upcast`. It is defined here only because it
+/// declares an `unsafe fn`, and this module is the one place in magetypes
+/// allowed to; nothing in magetypes implements it.
+pub trait Upcast<T> {
+    /// Upcast to a wider context type.
+    ///
+    /// # Safety
+    ///
+    /// Caller must ensure they are in an appropriate SIMD context
+    /// (inside `#[arcane]` function with matching token).
+    unsafe fn upcast(self) -> T;
 }
 
 /// Borrow raw storage as a vector, carrying an existing feature proof.

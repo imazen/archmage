@@ -27,19 +27,9 @@ pub trait Downcast<T> {
     fn downcast(self) -> T;
 }
 
-/// Marker trait for types that can be upcast with proof of context.
-///
-/// Upcasting requires being in the appropriate context (inside `#[arcane]`
-/// with the right token).
-pub trait Upcast<T> {
-    /// Upcast to a wider context type.
-    ///
-    /// # Safety
-    ///
-    /// Caller must ensure they are in an appropriate SIMD context
-    /// (inside `#[arcane]` function with matching token).
-    unsafe fn upcast(self) -> T;
-}
+// `Upcast` declares an `unsafe fn`, so its definition lives in `simd_storage`,
+// the only module allowed `unsafe`; this re-export keeps its public path.
+pub use crate::simd_storage::Upcast;
 
 // =============================================================================
 // x86 implementations

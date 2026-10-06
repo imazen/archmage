@@ -18,19 +18,19 @@ pub(super) fn sse2_or_arcane(token: &str, width_bits: usize) -> String {
     }
 }
 
-/// One auditable unsafe call for baseline arithmetic. Used only for value
-/// parameters; raw-pointer memory operations do not belong here.
+/// Baseline arithmetic in an `#[arcane]` region for `X64V1Token` (SSE, SSE2).
+/// The body is checked against exactly those features, and the region inlines
+/// into any x86-64 caller, AVX or not. The boundary's `unsafe` is archmage's,
+/// so the generated file contains none. Used only for value parameters;
+/// raw-pointer memory operations do not belong here.
 pub(super) const SSE2_BOUNDARY: &str = r#"
 macro_rules! sse2_baseline {
     (fn $name:ident(self, $($arg:ident: $ty:ty),* $(,)?) -> $ret:ty $body:block) => {
         #[inline(always)]
         fn $name(self, $($arg: $ty),*) -> $ret {
-            #[target_feature(enable = "sse2")]
-            #[inline]
-            fn inner($($arg: $ty),*) -> $ret $body
-            // SAFETY: SSE2 is guaranteed by the x86-64 architecture. The inner
-            // body is safe Rust checked with precisely SSE2, not the AVX tier.
-            unsafe { inner($($arg),*) }
+            #[arcane(suppress_const_test)]
+            fn inner(_token: archmage::X64V1Token, $($arg: $ty),*) -> $ret $body
+            inner(self.v1(), $($arg),*)
         }
     };
 }

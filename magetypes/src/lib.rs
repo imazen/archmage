@@ -59,6 +59,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(unsafe_op_in_unsafe_fn)]
+#![deny(unsafe_code)]
 #![warn(missing_docs)]
 // Every backend trait method that accepts `self` threads the CPU-feature
 // token through the call. The clippy `from_*` / `to_*` self-convention rule
@@ -79,8 +80,12 @@ pub use archmage;
 #[doc(hidden)]
 pub mod nostd_math;
 
-// SimdTypes trait - associates SIMD types with tokens
+// Every `unsafe` in magetypes lives in this module: the crate root denies
+// `unsafe_code`, and this is the only module that allows it.
+#[allow(unsafe_code)]
 mod simd_storage;
+
+// SimdTypes trait - associates SIMD types with tokens
 mod types;
 pub use types::SimdTypes;
 

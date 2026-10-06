@@ -38,12 +38,8 @@ use crate::simd::backends::F64x2Backend;
 #[derive(Clone, Copy)]
 #[repr(C)]
 pub struct f64x2<T: F64x2Backend>(pub(crate) T::Repr, pub(crate) T);
-// SAFETY: repr(C) pair of Pod storage and a sealed 1-ZST token.
-// A supplied T proves CPU support; the wrapper adds no bit invariants.
-// Helpers additionally check token size/alignment at monomorphization.
-unsafe impl<T: F64x2Backend> crate::simd_storage::TokenStorage for f64x2<T> {
-    type Token = T;
-}
+// The `unsafe impl` and the checks behind it live in `simd_storage`.
+crate::simd_storage::impl_token_storage!(f64x2, F64x2Backend);
 
 // Layout invariant: struct is `#[repr(C)]` with a trailing ZST `T`
 // field, so `sizeof/alignof(f64x2<T>) == sizeof/alignof(T::Repr)`
