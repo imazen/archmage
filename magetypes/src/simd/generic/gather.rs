@@ -21,6 +21,8 @@
 //! This file is safe code. The pointer-taking intrinsic calls, and the argument
 //! that every access stays inside the borrow, live in `simd_storage.rs`
 //! (`simd_storage::gather`) with the rest of magetypes' hand-written `unsafe`.
+//! That module's docs quote the Intel Intrinsics Guide's description and
+//! pseudocode for every intrinsic these methods use.
 
 #![forbid(unsafe_code)]
 
@@ -35,6 +37,15 @@ macro_rules! gather_scatter_methods {
             ///
             /// `N` must be a power of two no larger than 2^31; other lengths
             /// fail to compile.
+            ///
+            /// Wraps the indices with [`_mm512_and_si512`], then gathers at
+            /// scale 4 with [`_mm512_i32gather_epi32`] (`VPGATHERDD`) for
+            /// `u32x16` and `i32x16`, or [`_mm512_i32gather_ps`] (`VGATHERDPS`)
+            /// for `f32x16`.
+            ///
+            /// [`_mm512_and_si512`]: https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_and_si512
+            /// [`_mm512_i32gather_epi32`]: https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_i32gather_epi32
+            /// [`_mm512_i32gather_ps`]: https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_i32gather_ps
             #[inline(always)]
             pub fn gather_wrapping<const N: usize>(
                 table: &[$elem; N],
@@ -49,6 +60,16 @@ macro_rules! gather_scatter_methods {
             /// Indices are unsigned. Indices at or above 2^31 count as out of
             /// range even when `table` is longer. Never panics; out-of-range
             /// lanes read no memory.
+            ///
+            /// Enables the lanes where [`_mm512_cmplt_epu32_mask`] finds
+            /// `idx[i] < min(table.len(), 2^31)`, then gathers them at scale 4
+            /// with [`_mm512_mask_i32gather_epi32`] (`VPGATHERDD`) for `u32x16`
+            /// and `i32x16`, or [`_mm512_mask_i32gather_ps`] (`VGATHERDPS`) for
+            /// `f32x16`.
+            ///
+            /// [`_mm512_cmplt_epu32_mask`]: https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_cmplt_epu32_mask
+            /// [`_mm512_mask_i32gather_epi32`]: https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_mask_i32gather_epi32
+            /// [`_mm512_mask_i32gather_ps`]: https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_mask_i32gather_ps
             #[inline(always)]
             pub fn gather_or(table: &[$elem], idx: u32x16<X64V4Token>, or: Self) -> Self {
                 Self(raw::$or(idx.1, table, idx.0, or.0), idx.1)
@@ -60,6 +81,17 @@ macro_rules! gather_scatter_methods {
             /// Indices are unsigned, and indices at or above 2^31 count as out
             /// of range. Lanes are written in order, so when lanes share an
             /// index the highest one wins. Never panics.
+            ///
+            /// Enables the lanes set in `enable` where
+            /// [`_mm512_cmplt_epu32_mask`] finds `idx[i] < min(dst.len(), 2^31)`,
+            /// then scatters them at scale 4 with
+            /// [`_mm512_mask_i32scatter_epi32`] (`VPSCATTERDD`) for `u32x16` and
+            /// `i32x16`, or [`_mm512_mask_i32scatter_ps`] (`VSCATTERDPS`) for
+            /// `f32x16`.
+            ///
+            /// [`_mm512_cmplt_epu32_mask`]: https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_cmplt_epu32_mask
+            /// [`_mm512_mask_i32scatter_epi32`]: https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_mask_i32scatter_epi32
+            /// [`_mm512_mask_i32scatter_ps`]: https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_mask_i32scatter_ps
             #[inline(always)]
             pub fn scatter_select(self, dst: &mut [$elem], enable: u16, idx: u32x16<X64V4Token>) {
                 raw::$scatter(self.1, dst, enable, idx.0, self.0)

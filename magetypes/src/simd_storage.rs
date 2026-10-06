@@ -334,6 +334,282 @@ pub(crate) fn store<Src: Pod, Dst: Pod>(src: Src, dest: &mut Dst) {
 ///
 /// `cargo xtask soundness` rejects gather and scatter intrinsics anywhere else
 /// in magetypes.
+///
+/// # The intrinsics, as Intel specifies them
+///
+/// Each entry quotes the Intel Intrinsics Guide (data version 3.6.9, 2024-07-12,
+/// the copy Rust's stdarch vendors as `library/stdarch/intrinsics_data/x86-intel.xml`)
+/// and links to the live guide. Reading the pseudocode:
+///
+/// - `MEM` is addressed in bits: `MEM[addr+31:addr]` is the 32 bits starting at
+///   `addr`, and an offset from an address is written in bits. That is what the
+///   `* 8` in the gather and scatter `addr` lines does (the guide's compress-store
+///   entries likewise advance their address by `size := 32` per 32-bit element).
+///   In bytes, lane `j` accesses the 4 bytes at
+///   `base_addr + SignExtend64(vindex[j]) * scale`.
+/// - In the masked forms `MEM` appears only inside `IF k[j]`, so a lane whose
+///   mask bit is clear reads or writes nothing.
+/// - The loops run `j` from 0 to 15. When scatter lanes share an index, the
+///   highest lane's value is the one left in memory, which `scatter_select`
+///   documents and `tests/gather_scatter_v4.rs` checks.
+/// - Every call here passes scale 4, the element size, so a lane with a
+///   non-negative index `v` accesses element `v` of the slice.
+/// - Rust takes `scale` as the const parameter `SCALE` and renames the arguments:
+///   `slice` is `base_addr`, `offsets` is `vindex`, `mask` is `k`, and a scatter's
+///   `src` is `a`. The Rust signatures are Rust 1.99's `core::arch::x86_64`.
+///
+/// ## `_mm512_set1_epi32`
+///
+/// [Intel's entry](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_set1_epi32)
+///
+/// - Synopsis: `__m512i _mm512_set1_epi32(int a)`
+/// - Instruction: `VPBROADCASTD zmm, r32`
+/// - CPUID flags: AVX512F
+/// - Rust: `pub const fn _mm512_set1_epi32(a: i32) -> __m512i`
+///
+/// Description:
+///
+/// > Broadcast 32-bit integer "a" to all elements of "dst".
+///
+/// Operation:
+///
+/// ```text
+/// FOR j := 0 to 15
+///     i := j*32
+///     dst[i+31:i] := a[31:0]
+/// ENDFOR
+/// dst[MAX:512] := 0
+/// ```
+///
+/// ## `_mm512_and_si512`
+///
+/// [Intel's entry](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_and_si512)
+///
+/// - Synopsis: `__m512i _mm512_and_si512(__m512i a, __m512i b)`
+/// - Instruction: `VPANDD zmm, zmm, zmm`
+/// - CPUID flags: AVX512F
+/// - Rust: `pub const fn _mm512_and_si512(a: __m512i, b: __m512i) -> __m512i`
+///
+/// Description:
+///
+/// > Compute the bitwise AND of 512 bits (representing integer data) in "a" and
+/// > "b", and store the result in "dst".
+///
+/// Operation:
+///
+/// ```text
+/// dst[511:0] := (a[511:0] AND b[511:0])
+/// dst[MAX:512] := 0
+/// ```
+///
+/// ## `_mm512_cmplt_epu32_mask`
+///
+/// [Intel's entry](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_cmplt_epu32_mask)
+///
+/// - Synopsis: `__mmask16 _mm512_cmplt_epu32_mask(__m512i a, __m512i b)`
+/// - Instruction: `VPCMPUD k, zmm, zmm, imm8`
+/// - CPUID flags: AVX512F
+/// - Rust: `pub const fn _mm512_cmplt_epu32_mask(a: __m512i, b: __m512i) -> __mmask16`
+///
+/// Description:
+///
+/// > Compare packed unsigned 32-bit integers in "a" and "b" for less-than, and
+/// > store the results in mask vector "k".
+///
+/// Operation:
+///
+/// ```text
+/// FOR j := 0 to 15
+///     i := j*32
+///     k[j] := ( a[i+31:i] < b[i+31:i] ) ? 1 : 0
+/// ENDFOR
+/// k[MAX:16] := 0
+/// ```
+///
+/// ## `_mm512_i32gather_epi32`
+///
+/// [Intel's entry](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_i32gather_epi32)
+///
+/// - Synopsis: `__m512i _mm512_i32gather_epi32(__m512i vindex, void const* base_addr, int scale)`
+/// - Instruction: `VPGATHERDD zmm, vm32z`
+/// - CPUID flags: AVX512F
+/// - Rust: `pub unsafe fn _mm512_i32gather_epi32<const SCALE: i32>(offsets: __m512i, slice: *const i32) -> __m512i`
+///
+/// Description:
+///
+/// > Gather 32-bit integers from memory using 32-bit indices. 32-bit elements are
+/// > loaded from addresses starting at "base_addr" and offset by each 32-bit
+/// > element in "vindex" (each index is scaled by the factor in "scale"). Gathered
+/// > elements are merged into "dst". "scale" should be 1, 2, 4 or 8.
+///
+/// Operation:
+///
+/// ```text
+/// FOR j := 0 to 15
+///     i := j*32
+///     m := j*32
+///     addr := base_addr + SignExtend64(vindex[m+31:m]) * ZeroExtend64(scale) * 8
+///     dst[i+31:i] := MEM[addr+31:addr]
+/// ENDFOR
+/// dst[MAX:512] := 0
+/// ```
+///
+/// ## `_mm512_i32gather_ps`
+///
+/// [Intel's entry](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_i32gather_ps)
+///
+/// - Synopsis: `__m512 _mm512_i32gather_ps(__m512i vindex, void const* base_addr, int scale)`
+/// - Instruction: `VGATHERDPS zmm, vm32z`
+/// - CPUID flags: AVX512F
+/// - Rust: `pub unsafe fn _mm512_i32gather_ps<const SCALE: i32>(offsets: __m512i, slice: *const f32) -> __m512`
+///
+/// Description:
+///
+/// > Gather single-precision (32-bit) floating-point elements from memory using
+/// > 32-bit indices. 32-bit elements are loaded from addresses starting at
+/// > "base_addr" and offset by each 32-bit element in "vindex" (each index is
+/// > scaled by the factor in "scale"). Gathered elements are merged into "dst".
+/// > "scale" should be 1, 2, 4 or 8.
+///
+/// Operation:
+///
+/// ```text
+/// FOR j := 0 to 15
+///     i := j*32
+///     m := j*32
+///     addr := base_addr + SignExtend64(vindex[m+31:m]) * ZeroExtend64(scale) * 8
+///     dst[i+31:i] := MEM[addr+31:addr]
+/// ENDFOR
+/// dst[MAX:512] := 0
+/// ```
+///
+/// ## `_mm512_mask_i32gather_epi32`
+///
+/// [Intel's entry](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_mask_i32gather_epi32)
+///
+/// - Synopsis: `__m512i _mm512_mask_i32gather_epi32(__m512i src, __mmask16 k, __m512i vindex, void const* base_addr, int scale)`
+/// - Instruction: `VPGATHERDD zmm {k}, vm32z`
+/// - CPUID flags: AVX512F
+/// - Rust: `pub unsafe fn _mm512_mask_i32gather_epi32<const SCALE: i32>(src: __m512i, mask: __mmask16, offsets: __m512i, slice: *const i32) -> __m512i`
+///
+/// Description:
+///
+/// > Gather 32-bit integers from memory using 32-bit indices. 32-bit elements are
+/// > loaded from addresses starting at "base_addr" and offset by each 32-bit
+/// > element in "vindex" (each index is scaled by the factor in "scale"). Gathered
+/// > elements are merged into "dst" using writemask "k" (elements are copied from
+/// > "src" when the corresponding mask bit is not set). "scale" should be 1, 2, 4
+/// > or 8.
+///
+/// Operation:
+///
+/// ```text
+/// FOR j := 0 to 15
+///     i := j*32
+///     m := j*32
+///     IF k[j]
+///         addr := base_addr + SignExtend64(vindex[m+31:m]) * ZeroExtend64(scale) * 8
+///         dst[i+31:i] := MEM[addr+31:addr]
+///     ELSE
+///         dst[i+31:i] := src[i+31:i]
+///     FI
+/// ENDFOR
+/// dst[MAX:512] := 0
+/// ```
+///
+/// ## `_mm512_mask_i32gather_ps`
+///
+/// [Intel's entry](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_mask_i32gather_ps)
+///
+/// - Synopsis: `__m512 _mm512_mask_i32gather_ps(__m512 src, __mmask16 k, __m512i vindex, void const* base_addr, int scale)`
+/// - Instruction: `VGATHERDPS zmm {k}, vm32z`
+/// - CPUID flags: AVX512F
+/// - Rust: `pub unsafe fn _mm512_mask_i32gather_ps<const SCALE: i32>(src: __m512, mask: __mmask16, offsets: __m512i, slice: *const f32) -> __m512`
+///
+/// Description:
+///
+/// > Gather single-precision (32-bit) floating-point elements from memory using
+/// > 32-bit indices. 32-bit elements are loaded from addresses starting at
+/// > "base_addr" and offset by each 32-bit element in "vindex" (each index is
+/// > scaled by the factor in "scale"). Gathered elements are merged into "dst"
+/// > using writemask "k" (elements are copied from "src" when the corresponding
+/// > mask bit is not set). "scale" should be 1, 2, 4 or 8.
+///
+/// Operation:
+///
+/// ```text
+/// FOR j := 0 to 15
+///     i := j*32
+///     m := j*32
+///     IF k[j]
+///         addr := base_addr + SignExtend64(vindex[m+31:m]) * ZeroExtend64(scale) * 8
+///         dst[i+31:i] := MEM[addr+31:addr]
+///     ELSE
+///         dst[i+31:i] := src[i+31:i]
+///     FI
+/// ENDFOR
+/// dst[MAX:512] := 0
+/// ```
+///
+/// ## `_mm512_mask_i32scatter_epi32`
+///
+/// [Intel's entry](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_mask_i32scatter_epi32)
+///
+/// - Synopsis: `void _mm512_mask_i32scatter_epi32(void* base_addr, __mmask16 k, __m512i vindex, __m512i a, int scale)`
+/// - Instruction: `VPSCATTERDD vm32z {k}, zmm`
+/// - CPUID flags: AVX512F
+/// - Rust: `pub unsafe fn _mm512_mask_i32scatter_epi32<const SCALE: i32>(slice: *mut i32, mask: __mmask16, offsets: __m512i, src: __m512i)`
+///
+/// Description:
+///
+/// > Scatter 32-bit integers from "a" into memory using 32-bit indices. 32-bit
+/// > elements are stored at addresses starting at "base_addr" and offset by each
+/// > 32-bit element in "vindex" (each index is scaled by the factor in "scale")
+/// > subject to mask "k" (elements are not stored when the corresponding mask bit
+/// > is not set). "scale" should be 1, 2, 4 or 8.
+///
+/// Operation:
+///
+/// ```text
+/// FOR j := 0 to 15
+///     i := j*32
+///     m := j*32
+///     IF k[j]
+///         addr := base_addr + SignExtend64(vindex[m+31:m]) * ZeroExtend64(scale) * 8
+///         MEM[addr+31:addr] := a[i+31:i]
+///     FI
+/// ENDFOR
+/// ```
+///
+/// ## `_mm512_mask_i32scatter_ps`
+///
+/// [Intel's entry](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_mask_i32scatter_ps)
+///
+/// - Synopsis: `void _mm512_mask_i32scatter_ps(void* base_addr, __mmask16 k, __m512i vindex, __m512 a, int scale)`
+/// - Instruction: `VSCATTERDPS vm32z {k}, zmm`
+/// - CPUID flags: AVX512F
+/// - Rust: `pub unsafe fn _mm512_mask_i32scatter_ps<const SCALE: i32>(slice: *mut f32, mask: __mmask16, offsets: __m512i, src: __m512)`
+///
+/// Description:
+///
+/// > Scatter single-precision (32-bit) floating-point elements from "a" into memory
+/// > using 32-bit indices. 32-bit elements are stored at addresses starting at
+/// > "base_addr" and offset by each 32-bit element in "vindex" (each index is
+/// > scaled by the factor in "scale") subject to mask "k" (elements are not stored
+/// > when the corresponding mask bit is not set). "scale" should be 1, 2, 4 or 8.
+///
+/// Operation:
+///
+/// ```text
+/// FOR j := 0 to 15
+///     i := j*32
+///     m := j*32
+///     IF k[j]
+///         addr := base_addr + SignExtend64(vindex[m+31:m]) * ZeroExtend64(scale) * 8
+///         MEM[addr+31:addr] := a[i+31:i]
+///     FI
+/// ENDFOR
+/// ```
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 pub(crate) mod gather {
     use super::Pod;
@@ -367,8 +643,10 @@ pub(crate) mod gather {
         const { assert_wrapping_table::<N>() };
         const { assert_lane::<E>() };
         let off = _mm512_and_si512(idx, _mm512_set1_epi32((N - 1) as i32));
-        // SAFETY: every offset is `idx & (N - 1)`, in `0..N` because `N` is a
-        // power of two no larger than 2^31, so each lane reads 4 bytes of `table`.
+        // SAFETY: per the `_mm512_i32gather_epi32` Operation above, lane `j` reads
+        // 4 bytes at `table + SignExtend64(off[j]) * 4`. `off[j] = idx[j] & (N - 1)`
+        // is in `0..N` (`N` a power of two <= 2^31), so sign extension keeps it
+        // and the read is `table[off[j]]`.
         unsafe { _mm512_i32gather_epi32::<4>(off, table.as_ptr().cast()) }
     }
 
@@ -380,8 +658,10 @@ pub(crate) mod gather {
     ) -> __m512 {
         const { assert_wrapping_table::<N>() };
         let off = _mm512_and_si512(idx, _mm512_set1_epi32((N - 1) as i32));
-        // SAFETY: every offset is `idx & (N - 1)`, in `0..N` because `N` is a
-        // power of two no larger than 2^31, so each lane reads 4 bytes of `table`.
+        // SAFETY: per the `_mm512_i32gather_ps` Operation above, lane `j` reads
+        // 4 bytes at `table + SignExtend64(off[j]) * 4`. `off[j] = idx[j] & (N - 1)`
+        // is in `0..N` (`N` a power of two <= 2^31), so sign extension keeps it
+        // and the read is `table[off[j]]`.
         unsafe { _mm512_i32gather_ps::<4>(off, table.as_ptr()) }
     }
 
@@ -394,8 +674,10 @@ pub(crate) mod gather {
     ) -> __m512i {
         const { assert_lane::<E>() };
         let live = _mm512_cmplt_epu32_mask(idx, _mm512_set1_epi32(lane_bound(table.len())));
-        // SAFETY: only lanes with `idx < min(len, 2^31)` (unsigned) are enabled;
-        // each reads 4 bytes of `table`. Masked-off lanes read nothing and keep `or`.
+        // SAFETY: per the `_mm512_mask_i32gather_epi32` Operation above, lanes with
+        // `live[j]` clear read nothing and copy `or[j]`; the rest read 4 bytes at
+        // `table + SignExtend64(idx[j]) * 4`. `live[j]` means `idx[j] < min(len, 2^31)`
+        // unsigned, so sign extension keeps `idx[j]` and the read is `table[idx[j]]`.
         unsafe { _mm512_mask_i32gather_epi32::<4>(or, live, idx, table.as_ptr().cast()) }
     }
 
@@ -407,8 +689,10 @@ pub(crate) mod gather {
         or: __m512,
     ) -> __m512 {
         let live = _mm512_cmplt_epu32_mask(idx, _mm512_set1_epi32(lane_bound(table.len())));
-        // SAFETY: only lanes with `idx < min(len, 2^31)` (unsigned) are enabled;
-        // each reads 4 bytes of `table`. Masked-off lanes read nothing and keep `or`.
+        // SAFETY: per the `_mm512_mask_i32gather_ps` Operation above, lanes with
+        // `live[j]` clear read nothing and copy `or[j]`; the rest read 4 bytes at
+        // `table + SignExtend64(idx[j]) * 4`. `live[j]` means `idx[j] < min(len, 2^31)`
+        // unsigned, so sign extension keeps `idx[j]` and the read is `table[idx[j]]`.
         unsafe { _mm512_mask_i32gather_ps::<4>(or, live, idx, table.as_ptr()) }
     }
 
@@ -422,9 +706,10 @@ pub(crate) mod gather {
     ) {
         const { assert_lane::<E>() };
         let live = enable & _mm512_cmplt_epu32_mask(idx, _mm512_set1_epi32(lane_bound(dst.len())));
-        // SAFETY: only enabled lanes with `idx < min(len, 2^31)` (unsigned) write,
-        // each 4 bytes inside `dst`, which this call borrows exclusively. `E` is
-        // Pod, so any written bit pattern is a valid `E`.
+        // SAFETY: per the `_mm512_mask_i32scatter_epi32` Operation above, only lanes
+        // with `live[j]` set write: 4 bytes at `dst + SignExtend64(idx[j]) * 4`.
+        // `live[j]` implies unsigned `idx[j] < min(len, 2^31)`, so that is `dst[idx[j]]`,
+        // exclusively borrowed here. `E` is Pod, so any written bit pattern is valid.
         unsafe { _mm512_mask_i32scatter_epi32::<4>(dst.as_mut_ptr().cast(), live, idx, v) }
     }
 
@@ -437,9 +722,10 @@ pub(crate) mod gather {
         v: __m512,
     ) {
         let live = enable & _mm512_cmplt_epu32_mask(idx, _mm512_set1_epi32(lane_bound(dst.len())));
-        // SAFETY: only enabled lanes with `idx < min(len, 2^31)` (unsigned) write,
-        // each 4 bytes inside `dst`, which this call borrows exclusively. Any bit
-        // pattern is a valid `f32`.
+        // SAFETY: per the `_mm512_mask_i32scatter_ps` Operation above, only lanes
+        // with `live[j]` set write: 4 bytes at `dst + SignExtend64(idx[j]) * 4`.
+        // `live[j]` implies unsigned `idx[j] < min(len, 2^31)`, so that is `dst[idx[j]]`,
+        // exclusively borrowed here. Any written bit pattern is a valid `f32`.
         unsafe { _mm512_mask_i32scatter_ps::<4>(dst.as_mut_ptr(), live, idx, v) }
     }
 }
