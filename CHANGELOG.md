@@ -11,7 +11,7 @@
 
 #### Fixed
 
-- Scalar/default dispatch and explicit token-marker fixes are supplied by the exactly pinned archmage-macros release (772ef504, c766c238).
+- archmage depends on archmage-macros at an exact version, so the archmage-macros changes below arrive with this release.
 
 ## archmage-macros
 
@@ -25,11 +25,14 @@
 - Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with deprecation warning)
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 
+#### Added
+
+- `#[magetypes(rite, ...)]` accepts functions without a token parameter, which 0.9.29 rejected ("rite requires a token parameter or a tier name"). Each SIMD variant becomes a tier-based `#[rite(<tier>)]` function, and the scalar and default variants call the covered scalar callees directly. Token-taking fallbacks keep runtime dispatch (0833022, 3aef13f).
+
 #### Fixed
 
-- Tokenless scalar/default `#[magetypes(rite, ...)]` fallbacks select covered scalar callees; tokenful fallbacks retain runtime dispatch (3aef13f, 772ef504).
-- `#[arcane]` with `ScalarToken` no longer emits an empty target-feature attribute (c766c238).
-- `#[magetypes]` preserves explicit `Token` dispatch markers while substituting token types, including token parameters after other arguments (c766c238).
+- `#[arcane]` on a function that takes `ScalarToken` compiles; 0.9.29 emitted `#[target_feature(enable = "")]`, which rustc rejects (c766c238).
+- `#[magetypes]` no longer replaces the `Token` marker in a nested `incant!` or `dispatch_variant!` argument list with the tier's token type, which broke those calls in 0.9.29 (c766c238).
 - The package includes the MIT and Apache-2.0 license texts (683bef73).
 - The `#[rite]` unknown-argument error no longer lists `stub`, which the parser rejects as removed (6f2bd1c3).
 
@@ -47,8 +50,8 @@
 #### Added
 
 - Add magetypes inherent methods such as `splat_t(token, value)`, `zero_t(token)`, and `load_t(token, data)` across token-taking constructors, conversions, slice helpers, and single-lane scalar types. The `_t` methods hold the implementations; existing names retain their signatures as deprecated forwarders (772ef504, d53d425d).
-- Add raw-register interop to the generic types: `raw()` returns the platform register, `from_raw_t(token, raw)` wraps one without caller target-feature annotations, and `from_raw(raw)` requires a matching or stronger target-feature context for safe calls. They exist on every native-backend vector type: all NEON and WASM types, all AVX-512 types (`X64V4Token` and `X64V4xToken`), and the x86 V3 128- and 256-bit types, which already had `raw()`. The WASM and AVX-512 types also regain `from_v128` and `from_m512`/`from_m512d`/`from_m512i`, and NEON `f32x4`, `f64x2` and `i32x4` regain `from_float32x4_t`, `from_float64x2_t` and `from_int32x4_t`, names that 0.9.27 removed with the concrete types. This does not fix [#117](https://github.com/imazen/archmage/issues/117): published `jxl-encoder-simd` 0.3.0 still fails on aarch64 and wasm32 at one one-argument `from_i32x4` call, where the published generic form takes a token (8ef7db6, 772ef504, e619c59).
-- [Complete constructor signatures](docs/constructors/README.md) are generated for all 40 vector types; native names already ending in `_t` use `from_raw_t` without redundant `_t_t` aliases (e619c59a).
+- Add raw-register interop to every native-backend vector type: `raw()` returns the platform register, `from_raw_t(token, raw)` wraps one without caller target-feature annotations, and `from_raw(raw)` wraps one inside a matching or stronger target-feature context. That covers all NEON and WASM types, all AVX-512 types (`X64V4Token`, `X64V4xToken`) and the x86 V3 128- and 256-bit types, which already had `raw()`. The platform-named constructors that 0.9.27 removed with the concrete types are back: `from_v128` on WASM and `from_m512`/`from_m512d`/`from_m512i` on AVX-512, as deprecated spellings of their `_t` forms, and `from_float32x4_t`, `from_float64x2_t` and `from_int32x4_t` on NEON `f32x4`, `f64x2` and `i32x4` (772ef504).
+- The [constructor inventory](docs/constructors/README.md) lists the old and new signature, bounds and platform gates of every token-taking constructor for all 40 vector types (e619c59a).
 - Add `mul_add_portable` and `mul_sub_portable` to every float vector type and to `f32x1`/`f64x1`: one rounding on every backend, the same result as `f32::mul_add`/`f64::mul_add` apart from NaN payload and sign. x86 v3/v4 and NEON use FMA, the same instruction as `mul_add`; the scalar backend and WASM fuse in software, relaxed SIMD included because relaxed madd may round twice. That costs 2.7–29.5× the time of `a * b + c` on the scalar backend and 8.2–24× under wasmtime ([#116](https://github.com/imazen/archmage/issues/116); 66986145; [benchmark](benchmarks/mul_add_portable_zen5-m4pro_2026-10-05.md), [WASM](benchmarks/mul_add_wasm_wasmtime_zen5-9950x3d_2026-10-05.md)).
 - Add bounds-safe AVX-512 gather and scatter to `u32x16`, `i32x16` and `f32x16` with `X64V4Token`, indexed by a `u32x16`: `gather_wrapping` reads a power-of-two table with wrapping indices, `gather_or` reads a slice and leaves out-of-range lanes at a fallback, and `scatter_select` writes enabled, in-range lanes. None of them panics; there are no versions for other widths or backends ([guide](docs/site/content/magetypes/memory/gather-scatter.md); e3543634). Their docs and the guide name each intrinsic they use and link to Intel's entry for it; the guide and `simd_storage.rs` quote Intel's description and pseudocode (5b5fd7a9).
 
@@ -59,21 +62,20 @@
 
 #### Changed
 
-- Every `unsafe` in magetypes lives in `simd_storage.rs`, and the crate denies `unsafe_code` everywhere else: `TokenStorage` impls come from a macro there that checks each wrapper's layout at compile time, SSE2-only backend operations run in `#[arcane]` regions for `X64V1Token`, and `Upcast` is defined there (still public as `magetypes::cast::Upcast`). Generated code is unchanged on x86_64, aarch64 and wasm32 (7e49ccac).
+- magetypes keeps all of its `unsafe` in one module, `simd_storage.rs`, and denies `unsafe_code` everywhere else; the `TokenStorage` impls there check each wrapper's layout at compile time. Generated code is unchanged on x86_64, aarch64 and wasm32 (7e49ccac).
 - On WASM built with `relaxed-simd`, `mul_add` and `mul_sub` use the engine's relaxed madd, which may round once or twice; 0.9.29 multiplied and then added. There is no runtime probe. Under wasmtime it takes 0.96–1.06× the time of `a * b + c` ([#116](https://github.com/imazen/archmage/issues/116); 11a35a8b, 66986145). The generic transcendentals use `mul_add`, so in relaxed builds their last bits can differ from 0.9.29. Every other backend keeps the 0.9.29 contract: one rounding with hardware FMA (x86 v3/v4, NEON), multiply then add on the scalar backend and strict WASM.
 - The `mul_add` documentation and the ISA quirks page state what each multiply-add form costs on each backend: with hardware FMA, `mul_add` takes 24–38% less time than `a * b + c` in dependency chains and about the same in streams (d652f728, ea6e5e75).
 - The transcendental docs state accuracy measured over every f32 input instead of sampled estimates. midp: `log2`, `ln` and `log10` at most 4.5 ULP, `cbrt` 3.2, `exp2` 1.9 below x = 127.5 and 134.1 above it, `exp` and `pow` growing with the exponent. lowp: `exp2`, `exp` and `pow` within 0.56% relative error, `log2`, `ln` and `log10` within 8.5e-6 absolute error ([record](benchmarks/transcendental_precision_2026-10-05.md); eeb58da8, 2819d03d).
-- Make `all_true` and `any_true` consistently test lane sign bits across backends and widths. Comparison-mask results are unchanged; arbitrary non-mask inputs can change results (for example, a lane containing `1` is false under this contract) (050e25c1, 8014e94a).
-- On AVX-512, `to_u8` (both widths) and `f32x4::store_4_rgba_u8` narrow with `vpmovusdb`. On Zen 5 they took 0–43% less time than the AVX2 form they used before, depending on code layout, and were never slower; `f32x8::store_8_rgba_u8` keeps the AVX2 form. On AVX2 the saturation fix below makes these calls take 1.25–1.6× as long as the old, incorrect form ([benchmark](benchmarks/pixel_pack_zen5-9950x3d_2026-10-03.md); 2bc19d85).
-- The published magetypes crate no longer includes tests, benches or examples: 234 KiB instead of 443 KiB (877a3e61).
+- `all_true` and `any_true` test each lane's sign bit on every backend and width, as their documentation always said. In 0.9.29, AVX-512, NEON and WASM tested for nonzero lanes (NEON `u32x4` for all-ones), and x86 V3 `i16`/`u16` vectors tested the sign bit of every byte. Comparison masks give the same results as before; other inputs can change, for example a lane holding `1` is now false (050e25c1, 8014e94a).
+- On WASM, `to_u8` and the RGBA stores use native rounding, saturating conversion and narrowing instead of the scalar default. Results are unchanged (050e25c1).
+- The published magetypes crate no longer includes tests, benches or examples: 245 KiB instead of 0.9.29's 393 KiB (877a3e61).
 
 #### Fixed
 
-- AVX-512 f32 block operations forward to the existing native V3 implementations instead of scalar defaults ([#60](https://github.com/imazen/archmage/issues/60); 3999a29d).
-- x86 `to_u8` and `store_*_rgba_u8` returned 0 for `+inf` and values at or above 2^31; they now saturate to 255 like the other backends, and NaN still gives 0. AVX2 has had this since the native pack restoration; AVX-512 picked it up through the forwarding above (ff9e0a50).
-- Use native WASM SIMD rounding, saturating conversion, and packing for f32 byte output (050e25c1).
+- On AVX-512, the f32 block operations ran the scalar default instead of native code ([#60](https://github.com/imazen/archmage/issues/60)). `to_u8` (both widths) and `f32x4::store_4_rgba_u8` now narrow with `vpmovusdb`, and the rest use the AVX2 implementations; results are unchanged. On Zen 5, `f32x8::to_u8` took 118 ns per 4096 values instead of 6,042 ns, and `store_8_rgba_u8` 113 ns per 1024 pixels instead of 8,273 ns ([benchmark](benchmarks/pixel_pack_zen5-9950x3d_2026-10-03.md); 3999a29d, 2bc19d85).
+- On x86 V3 (AVX2), `to_u8` and `store_*_rgba_u8` returned 0 for `+inf` and for values at or above 2^31; they now saturate to 255 like the other backends, and NaN still gives 0. The clamp makes these calls take 1.25–1.6× as long as the 0.9.29 form ([benchmark](benchmarks/pixel_pack_zen5-9950x3d_2026-10-03.md); ff9e0a50).
 - `exp2_lowp` clamped its input to 126, so every x in [126, 128) returned 2^126, up to 75% low; `exp_lowp` and `pow_lowp` inherited it. The clamp is now 127.99: at most 0.56% relative error below it and 1.23% above, at the same speed (64ae008f).
-- `cbrt_midp_precise` returned NaN, or +inf for a few inputs, for every input from 1.1342859e38 up (also in 0.9.29). It now covers the whole f32 range at 3.2 ULP and takes 15–17% longer with AVX2, 8–9% on the scalar backend. `cbrt_midp` and `cbrt_lowp` keep their speed and document that above `f32::MAX / 3` they return NaN, or ±inf near the limit; every fix measured 8–47% slower (2f856d2c, 96f85cd8).
+- `cbrt_midp_precise` returned NaN, or +inf for a few inputs, for every input from 1.1342859e38 up. It now covers the whole f32 range at 3.2 ULP and takes 15–17% longer with AVX2, 8–9% on the scalar backend. `cbrt_midp` and `cbrt_lowp` keep their speed and document that above `f32::MAX / 3` they return NaN, or ±inf near the limit; every fix measured 8–47% slower (2f856d2c, 96f85cd8).
 - The package includes the MIT and Apache-2.0 license texts (683bef73).
 - The docs of `log2_midp_precise`, `ln_midp_precise`, `log10_midp_precise` and `pow_midp_precise` promised subnormal handling that they do not have: each is its plain `_midp` form, so `log2_midp_precise(1e-42)` returns about -127 (true -139.5). The docs now say so; only `cbrt_midp_precise` handles subnormal inputs. Behavior is unchanged (780e205c).
 
@@ -103,7 +105,7 @@
 - Miri skips `int_widen_narrow::scalar_backend` and the `fused_arithmetic` binary, about 95% of its work, and the new `cbrt_range` sweep, which took 432 s under Miri on its own and runs only safe code there. `scalar_backend`'s exhaustive loops reach the same `unsafe` bitcast path as `scalar_w512_bitcast_values`, which still runs under Miri; `fused_arithmetic` is safe code only. Native, SDE and cross-arch CI run everything. The local Miri run takes 255–394 s, depending on load (ec9c66b7, d570aa9b, 4d486072, 69061859).
 - The publish workflow runs the complete CI matrix at the release commit, as a reusable workflow, and publishes only if every job passed; a missing, skipped or cancelled job fails the gate, except the PR-only codegen comparison (8444c63).
 - CI runs `cargo-semver-checks` for archmage and magetypes on every push and in the release gate; the separate PR-only workflow is removed (f209b894).
-- `just ci` runs every check that `cargo xtask validate` runs; it had skipped the AVX-512 delegation, compile-budget, license and stderr-portability checks that CI's Validate Token Safety job enforces (f4cd76e6).
+- `just ci` runs the full `cargo xtask validate` set, the same checks as CI's Validate Token Safety job (f4cd76e6).
 
 Historical entries below describe bundled releases of archmage, archmage-macros,
 and magetypes. Their original content is preserved.
