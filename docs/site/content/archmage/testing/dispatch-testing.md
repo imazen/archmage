@@ -6,19 +6,27 @@ weight = 1
 Test the public call chain, not only a generic helper invoked with `ScalarToken`.
 Otherwise a missing feature-enabled entry or broken dispatcher can escape tests.
 
-Enable `archmage/testable_dispatch` for tests only: in `[dev-dependencies]`, or
-behind a dev-only feature such as `_dev = ["archmage/testable_dispatch"]`. It
-lets tests disable tiers the build guarantees at compile time, such as SSE2 on
-x86-64 or NEON on AArch64. It also makes every `summon()` read a cache,
-including `X64V1Token`'s on x86-64, which is otherwise a constant, and stops
-`-Ctarget-cpu` from compiling detection away.
+Enable `archmage/testable_dispatch` for tests only:
 
-Cargo unifies features across the build graph, so a crate that enables it under
-`[dependencies]` or `[workspace.dependencies]` turns it on for every build that
-includes that crate, published releases included. Dev-dependency features also
-apply to `cargo bench` and examples. Before profiling, check with
-`cargo tree -e features -i archmage` (add `@<version>` if two archmage versions
-are in the graph).
+```toml
+[dev-dependencies]
+archmage = { version = "0.9", features = ["testable_dispatch"] }
+```
+
+It lets tests disable tiers the build guarantees at compile time, such as SSE2
+on x86-64 or NEON on AArch64.
+
+Keep it out of `[dependencies]` and `[workspace.dependencies]`. With it on,
+every `summon()` reads a cache, even `X64V1Token`'s on x86-64, which is
+otherwise a constant. `-Ctarget-cpu` no longer compiles detection away. Cargo
+turns a feature on for the whole build once any crate in it asks, so a library
+that enables it there slows `summon()` for every user.
+
+Dev-dependency features also apply to `cargo bench` and examples. To keep it
+out of those, put it behind a feature of your own, such as
+`_dev = ["archmage/testable_dispatch"]`, and pass `--features _dev` to the runs
+that need it. To see what enables it in a build, run
+`cargo tree -e features -i archmage`.
 
 This example exercises the gain loop under the available tier permutations on
 the current machine:
