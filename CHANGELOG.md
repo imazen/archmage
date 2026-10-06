@@ -66,7 +66,7 @@
 
 #### Changed
 
-- magetypes keeps all of its `unsafe` in one module, `simd_storage.rs`, and denies `unsafe_code` everywhere else; the `TokenStorage` impls there check each wrapper's layout at compile time. Generated code is unchanged on x86_64, aarch64 and wasm32 (7e49ccac).
+- magetypes keeps all of its `unsafe` in one module, `simd_storage.rs`, and denies `unsafe_code` everywhere else; the `TokenStorage` impls there check each wrapper's layout at compile time. Generated code is unchanged on x86_64, aarch64 and wasm32, except that four V3 128-bit pairwise-widen-add kernels name the two operands of their final add in the other order: same instructions, same results (7e49ccac).
 - On WASM built with `relaxed-simd`, `mul_add` and `mul_sub` use the engine's relaxed madd, which may round once or twice; 0.9.29 multiplied and then added. There is no runtime probe. Under wasmtime it takes 0.96–1.06× the time of `a * b + c` ([#116](https://github.com/imazen/archmage/issues/116); 11a35a8b, 66986145). The generic transcendentals use `mul_add`, so in relaxed builds their last bits can differ from 0.9.29. Every other backend keeps the 0.9.29 contract: one rounding with hardware FMA (x86 v3/v4, NEON), multiply then add on the scalar backend and strict WASM.
 - The `mul_add` documentation and the ISA quirks page state what each multiply-add form costs on each backend: with hardware FMA, `mul_add` takes 24–38% less time than `a * b + c` in dependency chains and about the same in streams (d652f728, ea6e5e75).
 - The transcendental docs state accuracy measured over every f32 input instead of sampled estimates. midp: `log2`, `ln` and `log10` at most 4.5 ULP, `cbrt` 3.2, `exp2` 1.9 below x = 127.5 and 134.1 above it, `exp` and `pow` growing with the exponent. lowp: `exp2`, `exp` and `pow` within 0.56% relative error, `log2`, `ln` and `log10` within 8.5e-6 absolute error ([record](benchmarks/transcendental_precision_2026-10-05.md); eeb58da8, 2819d03d).
@@ -108,6 +108,7 @@
 #### Changed
 
 - The archmage and magetypes READMEs open with what each crate does, run their examples, add a direct-intrinsics example, Limits and (magetypes) What's included sections, and move release history to the migration guide (56d2dfb7).
+- The integer codegen probe (`xtask/codegen.py --integer-ops`) treats swapped source operands of x86 instructions that commute bit-exactly as equal, like its NEON multiply rule (f287f3b3).
 - Miri skips `int_widen_narrow::scalar_backend` and the `fused_arithmetic` binary, about 95% of its work, and the new `cbrt_range` sweep, which took 432 s under Miri on its own and runs only safe code there. `scalar_backend`'s exhaustive loops reach the same `unsafe` bitcast path as `scalar_w512_bitcast_values`, which still runs under Miri; `fused_arithmetic` is safe code only. Native, SDE and cross-arch CI run everything. The local Miri run takes 255–394 s, depending on load (ec9c66b7, d570aa9b, 4d486072, 69061859).
 - The publish workflow runs the complete CI matrix at the release commit, as a reusable workflow, and publishes only if every job passed; a missing, skipped or cancelled job fails the gate, except the PR-only codegen comparison (8444c63).
 - CI runs `cargo-semver-checks` for archmage and magetypes on every push and in the release gate; the separate PR-only workflow is removed (f209b894).
