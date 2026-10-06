@@ -510,7 +510,6 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
     if !in_magetypes {
         return;
     }
-    let is_backend_impl = rel.starts_with("magetypes/src/simd/impls/");
 
     // Token fabrication routes. Tokens must only come from summon() or an
     // explicit archmage forge. Safe from_context calls are checked separately
