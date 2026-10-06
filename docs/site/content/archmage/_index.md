@@ -8,12 +8,11 @@ weight = 1
 sidebar = true
 +++
 
-Process an image plane (exposure) or an audio buffer (gain), including a short
-scalar tail. The vector type is generic over the token selected by `#[magetypes]`;
-`incant!` chooses the CPU tier once outside the loop. No manual per-tier wrappers
-or raw pointers are needed.
+Archmage lets you write SIMD code in Rust without `unsafe`. You prove a CPU
+tier is present once, and the type system keeps every intrinsic call sound.
 
-Adapted from the `zenfilters` plane-scaling kernel; the [complete production call chain and adaptation notes](https://imazen.github.io/archmage/magetypes/examples/generic-kernels/) include pinned source links.
+This kernel multiplies a buffer by a gain, using AVX2, NEON or WASM SIMD where
+available:
 
 ```rust
 #![forbid(unsafe_code)]
@@ -40,8 +39,15 @@ apply_gain(&mut data, 0.5);
 assert_eq!(data, [1.0; 11]);
 ```
 
+`#[magetypes]` compiles `gain_impl` once per tier in its list, and `incant!`
+runs the best one the CPU supports. Call it around your loop, as here, not
+inside it.
+
 The example compiles under `#![forbid(unsafe_code)]`; the
-[safety model](@/archmage/concepts/safety.md) explains why that holds.
+[safety model](@/archmage/concepts/safety.md) explains why that holds. It is
+adapted from `zenfilters`:
+[Reusable generic kernels](@/magetypes/examples/generic-kernels.md) links the
+production source.
 
 ## Continue with the production patterns
 

@@ -16,7 +16,7 @@ archmage = "0.9.30"
 magetypes = "0.9.30"   # vector types such as f32x8
 ```
 
-Multiply a buffer by a gain, using AVX2, NEON or WASM SIMD where the CPU has it:
+Multiply a buffer by a gain, using AVX2, NEON or WASM SIMD where available:
 
 ```rust
 #![forbid(unsafe_code)]

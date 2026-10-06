@@ -18,7 +18,7 @@ magetypes = "0.9.30"
 archmage  = "0.9.30"   # the macros and tokens
 ```
 
-Multiply a buffer by a factor, using AVX2, NEON or WASM SIMD where the CPU has it:
+Multiply a buffer by a factor, using AVX2, NEON or WASM SIMD where available:
 
 ```rust
 use archmage::prelude::*;

@@ -8,12 +8,11 @@ weight = 2
 sidebar = true
 +++
 
-Process an image plane (exposure) or an audio buffer (gain), including a short
-scalar tail. The vector type is generic over the token selected by `#[magetypes]`;
-`incant!` chooses the CPU tier once outside the loop. No manual per-tier wrappers
-or raw pointers are needed.
+magetypes provides SIMD vector types with ordinary Rust operators. You write a
+kernel once, and it compiles for AVX2, AVX-512, NEON, WASM SIMD128 and scalar.
 
-Adapted from the `zenfilters` plane-scaling kernel; the [complete production call chain and adaptation notes](https://imazen.github.io/archmage/magetypes/examples/generic-kernels/) include pinned source links.
+This kernel multiplies a buffer by a gain, using AVX2, NEON or WASM SIMD where
+available:
 
 ```rust
 #![forbid(unsafe_code)]
@@ -39,6 +38,12 @@ let mut data = [2.0; 11];
 apply_gain(&mut data, 0.5);
 assert_eq!(data, [1.0; 11]);
 ```
+
+`#[magetypes]` compiles `gain_impl` once per tier in its list, and `incant!`
+runs the best one the CPU supports. Call it around your loop, as here, not
+inside it. The kernel is adapted from `zenfilters`:
+[Reusable generic kernels](@/magetypes/examples/generic-kernels.md) links the
+production source.
 
 ## Continue with the production patterns
 
