@@ -1,6 +1,6 @@
 # Token constructor migration
 
-The next magetypes 0.9 patch adds `_t` methods alongside the existing token-first
+magetypes 0.9.30 adds `_t` methods alongside the existing token-first
 methods. Both spellings take the token first and have the same behavior:
 
 ```rust
