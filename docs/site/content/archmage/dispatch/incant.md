@@ -27,8 +27,11 @@ use `scalar`; ordinary scalar fallback functions can use `default`.
 
 List tiers deliberately, keeping generation and dispatch in sync. Include a
 fallback explicitly rather than relying on the current auto-append behavior.
-`v4(cfg(avx512))` gates a variant on the caller's feature; forward that feature
-to the dependencies. See [features](@/archmage/getting-started/installation.md).
+`v4` and `v4x` arms compile only when the calling crate has a feature named
+`avx512`, whether or not the list says so: `v4(cfg(avx512))` spells the default
+out, `v4(cfg(other))` gates on another feature, and `+v4` makes the arm
+unconditional. Forward that feature to the dependencies. See
+[features](@/archmage/getting-started/installation.md).
 
 ## Calls inside a tier
 

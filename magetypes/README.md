@@ -14,7 +14,7 @@ archmage  = "0.9.30"   # required: provides the macros + tokens magetypes uses
 
 **Why both?** The vector *types* ([`f32x8`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html), [`u8x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.u8x16.html), …) come from `magetypes`, but the macros (`#[magetypes]`, `incant!`, `#[arcane]`, `#[autoversion]`, `#[rite]`) and the tokens (`X64V3Token`, `NeonToken`, `ScalarToken`, …) come from `archmage`; `Token` is the placeholder `#[magetypes]` replaces with each tier's token. Every example here opens with `use archmage::prelude::*;`, so add `archmage` as a direct dependency. (`magetypes` re-exports it, which covers the types and tokens, but the macros' expansions name `archmage::` paths and need the direct dependency.)
 
-Default features (`std`, `w512`) are on. For `no_std + alloc`, set `default-features = false` on both `magetypes` and `archmage`. For native AVX-512 on x86-64, give your crate an `avx512` feature that forwards to `magetypes/avx512` (which implies `w512` and `archmage/avx512`): the macros compile `v4` variants and dispatch arms only when your crate's `avx512` feature is on. See [Features and numerical contracts](#features-and-numerical-contracts).
+Default features (`std`, `w512`) are on. For `no_std + alloc`, set `default-features = false` on both `magetypes` and `archmage`. For native AVX-512 on x86-64, give your crate an `avx512` feature that forwards to `magetypes/avx512` (which implies `w512` and `archmage/avx512`): `#[magetypes]` and `incant!` compile `v4` variants and dispatch arms only when your crate's `avx512` feature is on. See [Features and numerical contracts](#features-and-numerical-contracts).
 
 Then write **one** kernel that runs on AVX2, AVX-512, NEON, WASM SIMD128, or scalar — `#[magetypes]` generates the per-tier `#[target_feature]` contexts and `incant!` picks the best at runtime, all `#![forbid(unsafe_code)]`-compatible:
 
@@ -129,8 +129,9 @@ Rust 1.89 is the minimum supported version. Archmage macros are always included;
 its `macros` feature is a compatibility no-op. `std` is enabled by default.
 Magetypes also defaults to `w512`, which supplies logical 512-bit types and
 polyfills. Optional `avx512` adds native AVX-512 support; it does not detect the
-running CPU. The macros compile `v4` and `v4x` variants and dispatch arms only
-when your own crate has a feature named `avx512`; follow the
+running CPU. `incant!` and `#[magetypes]` compile their `v4` and `v4x` variants
+and dispatch arms only when your own crate has a feature named `avx512`
+(`#[autoversion]` always generates its `v4` variant); follow the
 [feature-forwarding example](https://imazen.github.io/archmage/archmage/getting-started/installation/)
 to define one.
 

@@ -109,8 +109,9 @@ Rust 1.89 is the minimum supported version. Archmage macros are always included;
 its `macros` feature is a compatibility no-op. `std` is enabled by default.
 Magetypes also defaults to `w512`, which supplies logical 512-bit types and
 polyfills. Optional `avx512` adds native AVX-512 support; it does not detect the
-running CPU. The macros compile `v4` and `v4x` variants and dispatch arms only
-when your own crate has a feature named `avx512`; follow the
+running CPU. `incant!` and `#[magetypes]` compile their `v4` and `v4x` variants
+and dispatch arms only when your own crate has a feature named `avx512`
+(`#[autoversion]` always generates its `v4` variant); follow the
 [feature-forwarding example](https://imazen.github.io/archmage/archmage/getting-started/installation/)
 to define one.
 
