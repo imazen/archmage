@@ -147,16 +147,23 @@ AVX-512 is opt-in from your own crate. Give it an `avx512` feature:
 avx512 = ["archmage/avx512", "magetypes/avx512"]
 ```
 
-Then name the tier in both lists. Its copy is compiled only when that feature
-is on:
+Then write the kernel with a 512-bit type and name the tier in both lists. Its
+copy is compiled only when that feature is on:
 
 ```text
-#[magetypes(define(f32x8), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+#[magetypes(define(f32x16), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
 incant!(gain_impl(plane, gain), [v4(cfg(avx512)), v3, neon, wasm128, scalar])
 ```
 
-`f32x8` stays eight lanes in the `v4` copy and has fewer methods there (see
-[Limits](#limits)). For 512-bit vectors, use `f32x16`.
+The other tiers run the same `f32x16` as a polyfill: two 256-bit operations on
+AVX2, four 128-bit operations on NEON and WASM. In the two kernels we
+inspected, each polyfilled operation compiled to those native operations and
+nothing else ([assembly results](https://github.com/imazen/archmage/blob/main/benchmarks/polyfill_asm_2026-10-06.md)). The
+[magetypes README](https://github.com/imazen/archmage/tree/main/magetypes#avx-512)
+has the runnable example and what polyfills cost.
+
+Listing `v4` on an `f32x8` kernel does not widen it: `f32x8` stays eight lanes
+there.
 
 [Installation](https://imazen.github.io/archmage/archmage/getting-started/installation/)
 has the `no_std` setup and the remaining features.
@@ -189,8 +196,10 @@ lists every `unsafe` in both crates.
   kernels it measured 4.1× and 6.2× slower than one call around the whole loop
   ([docs/PERFORMANCE.md](https://github.com/imazen/archmage/blob/main/docs/PERFORMANCE.md)).
   Dispatch once, outside the loop.
-- A vector wider than the CPU's registers runs as two or four native
-  operations: an `f32x8` on NEON is two `f32x4`s.
+- A vector wider than the CPU's registers is a polyfill. It runs as two or
+  four native operations, and each value takes that many registers: an `f32x8`
+  on NEON is two `f32x4`s.
+  [Polyfills](https://imazen.github.io/archmage/magetypes/cross-platform/polyfills/) has the measured costs.
 - With `v4` in a `#[magetypes]` tier list, use the 512-bit types. The AVX-512
   tokens implement only part of the narrower ones: `f32x4` and `f32x8` without
   their transcendentals, integer conversions and raw interop, and no other

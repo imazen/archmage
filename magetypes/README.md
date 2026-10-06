@@ -16,18 +16,14 @@ token proving its CPU features, so using it takes no `unsafe` in your code.
 [dependencies]
 magetypes = "0.9.30"
 archmage  = "0.9.30"   # the macros and tokens
-
-[features]
-avx512 = ["archmage/avx512", "magetypes/avx512"]   # opt in to AVX-512
 ```
 
-Multiply a buffer by a factor, using AVX-512, AVX2, NEON or WASM SIMD where
-available:
+Multiply a buffer by a factor, using AVX2, NEON or WASM SIMD where available:
 
 ```rust
 use archmage::prelude::*;
 
-#[magetypes(define(f32x8), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
 fn scale_plane_impl(token: Token, plane: &mut [f32], factor: f32) {
     // `define(f32x8)` makes `f32x8` mean `f32x8<X64V3Token>` in the v3
     // variant, `f32x8<NeonToken>` in neon, and so on. `Token` is replaced
@@ -41,7 +37,7 @@ fn scale_plane_impl(token: Token, plane: &mut [f32], factor: f32) {
 }
 
 pub fn scale_plane(plane: &mut [f32], factor: f32) {
-    incant!(scale_plane_impl(plane, factor), [v4(cfg(avx512)), v3, neon, wasm128, scalar])
+    incant!(scale_plane_impl(plane, factor), [v3, neon, wasm128, scalar])
 }
 
 let mut plane = [2.0; 11];
@@ -50,13 +46,9 @@ assert_eq!(plane, [1.0; 11]);
 ```
 
 - `#[magetypes]` compiles `scale_plane_impl` once per tier in its list and
-  names each copy for its tier: `scale_plane_impl_v4` (AVX-512),
-  `scale_plane_impl_v3` (AVX2 and FMA), `_neon`, `_wasm128` and `_scalar`. List
-  several vector types as `define(f32x8, u8x16, i16x8)`.
-- `v4(cfg(avx512))` compiles the AVX-512 copy only when your crate's `avx512`
-  feature is on: the opt-in from the `Cargo.toml` above. `f32x8` stays eight
-  lanes in that copy and has fewer methods there (see [Limits](#limits)). For
-  512-bit vectors, use `f32x16`.
+  names each copy for its tier: `scale_plane_impl_v3` (AVX2 and FMA), `_neon`,
+  `_wasm128` and `_scalar`. List several vector types as
+  `define(f32x8, u8x16, i16x8)`.
 - `incant!` finds the copies by those names. It calls `summon()` for each tier,
   best first, and runs the first copy the CPU supports. Call it around your
   loop, as here, not inside it.
@@ -146,13 +138,63 @@ covers kernels that are also generic over a pixel type or a constant.
 | `w512` | on | The 512-bit vector types. They run as narrower vectors where native AVX-512 is not in use. |
 | `avx512` | off | Native AVX-512 vectors. Implies `w512` and `archmage/avx512`. |
 
-AVX-512 is opt-in from your own crate, as in the quick start. Give your crate
-an `avx512` feature that forwards to both crates, and write the tier as
-`v4(cfg(avx512))` or `v4x(cfg(avx512))`.
-
 For `no_std + alloc`, set `default-features = false` on both crates.
 [Installation](https://imazen.github.io/archmage/archmage/getting-started/installation/)
 has the full setup.
+
+### AVX-512
+
+AVX-512 is opt-in from your own crate. Give it an `avx512` feature that
+forwards to both crates:
+
+```toml
+[features]
+avx512 = ["archmage/avx512", "magetypes/avx512"]
+```
+
+Then write the kernel with a 512-bit type and list `v4(cfg(avx512))`:
+
+```rust
+use archmage::prelude::*;
+
+#[magetypes(define(f32x16), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+fn scale_wide_impl(token: Token, plane: &mut [f32], factor: f32) {
+    let factor_v = f32x16::splat_t(token, factor);
+    let (chunks, tail) = f32x16::partition_slice_mut_t(token, plane);
+    for chunk in chunks {
+        (f32x16::load_t(token, chunk) * factor_v).store(chunk);
+    }
+    for v in tail { *v *= factor; }
+}
+
+pub fn scale_wide(plane: &mut [f32], factor: f32) {
+    incant!(scale_wide_impl(plane, factor), [v4(cfg(avx512)), v3, neon, wasm128, scalar])
+}
+
+let mut plane = [2.0; 37];
+scale_wide(&mut plane, 0.5);
+assert_eq!(plane, [1.0; 37]);
+```
+
+The `v4` copy runs each `f32x16` operation as one 512-bit instruction. It is
+compiled only when your crate's `avx512` feature is on. Listing `v4` on an
+`f32x8` kernel does not widen it: `f32x8` stays eight lanes there.
+
+### Polyfills
+
+Every other tier runs the same `f32x16` as a polyfill: two 256-bit operations
+on AVX2, four 128-bit operations on NEON and WASM. An `f32x8` is two 128-bit
+operations on NEON and WASM.
+
+In the kernel above and a sum kernel, each polyfilled operation compiled to
+those native operations and nothing else. The AVX2 and NEON loops have no stack
+traffic and no extra moves. The AVX2 `f32x16` loop costs the same per float as
+the `f32x8` one ([assembly results](https://github.com/imazen/archmage/blob/main/benchmarks/polyfill_asm_2026-10-06.md); instruction counts, not timings).
+
+Three costs remain. Each `f32x16` value takes two registers on AVX2 and four on
+NEON. Reductions such as `reduce_add` run once per part. A wider chunk leaves a
+longer scalar tail. [Polyfills](https://imazen.github.io/archmage/magetypes/cross-platform/polyfills/) has the
+numbers.
 
 ## Safety
 
@@ -175,8 +217,9 @@ has the details.
 
 ## Limits
 
-- A vector wider than the CPU's registers runs as two or four native
-  operations: an `f32x8` on NEON is two `f32x4`s.
+- A vector wider than the CPU's registers is a polyfill. It runs as two or
+  four native operations, and each value takes that many registers: see
+  [Polyfills](#polyfills).
 - SIMD tiers cover x86-64, AArch64 and WASM. Other targets run the scalar
   backend.
 - With `v4` in a `#[magetypes]` tier list, use the 512-bit types. The AVX-512
