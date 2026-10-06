@@ -1,0 +1,15 @@
+[package]
+name = "v4-context-asm"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Assembly probe: what the AVX-512 target-feature context changes for 256-bit kernels"
+
+[workspace]
+
+[features]
+avx512 = ["archmage/avx512", "magetypes/avx512"]
+
+[dependencies]
+archmage = { path = "../..", default-features = false, features = ["std"] }
+magetypes = { path = "../../magetypes" }
