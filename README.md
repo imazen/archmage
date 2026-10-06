@@ -119,14 +119,22 @@ and [AVX-512](https://imazen.github.io/archmage/archmage/advanced/avx512/).
 | `avx512` | both | off | archmage: AVX-512 intrinsics through `import_intrinsics`. magetypes: native AVX-512 vectors. |
 | `w512` | magetypes | on | The 512-bit vector types. They run as narrower vectors where native AVX-512 is not in use. |
 
-AVX-512 dispatch also needs a feature in your own crate. `incant!` and
-`#[magetypes]` compile their `v4` and `v4x` tiers only when your crate has an
-`avx512` feature and it is on:
+AVX-512 is opt-in from your own crate. Give it an `avx512` feature:
 
 ```toml
 [features]
 avx512 = ["archmage/avx512", "magetypes/avx512"]
 ```
+
+Then name the tier in both lists. Its copy is compiled only when that feature
+is on:
+
+```text
+#[magetypes(define(f32x8), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+incant!(gain_impl(plane, gain), [v4(cfg(avx512)), v3, neon, wasm128, scalar])
+```
+
+`f32x8` stays eight lanes in the `v4` copy. For 512-bit vectors, use `f32x16`.
 
 [Installation](https://imazen.github.io/archmage/archmage/getting-started/installation/)
 has the `no_std` setup and the remaining features.

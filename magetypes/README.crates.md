@@ -16,14 +16,18 @@ token proving its CPU features, so using it takes no `unsafe` in your code.
 [dependencies]
 magetypes = "0.9.30"
 archmage  = "0.9.30"   # the macros and tokens
+
+[features]
+avx512 = ["archmage/avx512", "magetypes/avx512"]   # opt in to AVX-512
 ```
 
-Multiply a buffer by a factor, using AVX2, NEON or WASM SIMD where available:
+Multiply a buffer by a factor, using AVX-512, AVX2, NEON or WASM SIMD where
+available:
 
 ```rust
 use archmage::prelude::*;
 
-#[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+#[magetypes(define(f32x8), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
 fn scale_plane_impl(token: Token, plane: &mut [f32], factor: f32) {
     // `define(f32x8)` makes `f32x8` mean `f32x8<X64V3Token>` in the v3
     // variant, `f32x8<NeonToken>` in neon, and so on. `Token` is replaced
@@ -37,7 +41,7 @@ fn scale_plane_impl(token: Token, plane: &mut [f32], factor: f32) {
 }
 
 pub fn scale_plane(plane: &mut [f32], factor: f32) {
-    incant!(scale_plane_impl(plane, factor), [v3, neon, wasm128, scalar])
+    incant!(scale_plane_impl(plane, factor), [v4(cfg(avx512)), v3, neon, wasm128, scalar])
 }
 
 let mut plane = [2.0; 11];
@@ -45,9 +49,12 @@ scale_plane(&mut plane, 0.5);
 assert_eq!(plane, [1.0; 11]);
 ```
 
-- `#[magetypes]` compiles `scale_plane_impl` once per tier in its list: `v3`
-  (AVX2 and FMA), `neon`, `wasm128` and `scalar`. List several vector types as
-  `define(f32x8, u8x16, i16x8)`.
+- `#[magetypes]` compiles `scale_plane_impl` once per tier in its list: `v4`
+  (AVX-512), `v3` (AVX2 and FMA), `neon`, `wasm128` and `scalar`. List several
+  vector types as `define(f32x8, u8x16, i16x8)`.
+- `v4(cfg(avx512))` compiles the AVX-512 copy only when your crate's `avx512`
+  feature is on: the opt-in from the `Cargo.toml` above. `f32x8` stays eight
+  lanes in that copy. For 512-bit vectors, use `f32x16`.
 - `incant!` calls `summon()` for each tier, best first, and runs the first copy
   the CPU supports. Call it around your loop, as here, not inside it.
 - Constructors ending in `_t` take the token as their first argument.
@@ -118,14 +125,9 @@ covers kernels that are also generic over a pixel type or a constant.
 | `w512` | on | The 512-bit vector types. They run as narrower vectors where native AVX-512 is not in use. |
 | `avx512` | off | Native AVX-512 vectors. Implies `w512` and `archmage/avx512`. |
 
-AVX-512 dispatch also needs a feature in your own crate. `incant!` and
-`#[magetypes]` compile their `v4` and `v4x` tiers only when your crate has an
-`avx512` feature and it is on:
-
-```toml
-[features]
-avx512 = ["archmage/avx512", "magetypes/avx512"]
-```
+AVX-512 is opt-in from your own crate, as in the quick start. Give your crate
+an `avx512` feature that forwards to both crates, and write the tier as
+`v4(cfg(avx512))` or `v4x(cfg(avx512))`.
 
 For `no_std + alloc`, set `default-features = false` on both crates.
 [Installation](https://imazen.github.io/archmage/archmage/getting-started/installation/)
