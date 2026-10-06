@@ -107,6 +107,7 @@
 
 #### Changed
 
+- The archmage and magetypes READMEs open with what each crate does, run their examples, add a direct-intrinsics example, Limits and (magetypes) What's included sections, and move release history to the migration guide (56d2dfb7).
 - Miri skips `int_widen_narrow::scalar_backend` and the `fused_arithmetic` binary, about 95% of its work, and the new `cbrt_range` sweep, which took 432 s under Miri on its own and runs only safe code there. `scalar_backend`'s exhaustive loops reach the same `unsafe` bitcast path as `scalar_w512_bitcast_values`, which still runs under Miri; `fused_arithmetic` is safe code only. Native, SDE and cross-arch CI run everything. The local Miri run takes 255–394 s, depending on load (ec9c66b7, d570aa9b, 4d486072, 69061859).
 - The publish workflow runs the complete CI matrix at the release commit, as a reusable workflow, and publishes only if every job passed; a missing, skipped or cancelled job fails the gate, except the PR-only codegen comparison (8444c63).
 - CI runs `cargo-semver-checks` for archmage and magetypes on every push and in the release gate; the separate PR-only workflow is removed (f209b894).
