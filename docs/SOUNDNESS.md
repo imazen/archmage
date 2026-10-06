@@ -149,17 +149,19 @@ backend needs no context, for the module-validation reason above.
 | `src/tokens/generated/{x86,arm,wasm}.rs` `from_context()` call sites | 90 (58 x86 + 29 arm + 3 wasm) | summon/detect just verified the features, the features are compile-time guaranteed, or the source token's feature set is a registry-verified superset (extraction methods) | per-block `// SAFETY:` comments, generator-emitted, checker-enforced |
 | `src/tokens/mod.rs` (`ScalarToken` constructors) | 0 | `ScalarToken` proves the empty feature set, so `from_context()` and its deprecated alias are ungated safe `const fn`s | doc sections |
 | `src/tokens/generated/{x86,arm,wasm}_stubs.rs` forge definitions | 17 total (9 x86 + 6 arm + 2 wasm); 8–15 visible per target | foreign-architecture constructors: `unsafe fn` with an *unsatisfiable* `# Safety` contract — they exist so cross-architecture code compiles, not to be called | doc sections; `tests/soundness/from_context_wrong_arch.rs` |
-| `magetypes/src/simd/impls/{x86_v3,x86_v4,arm_neon,wasm128}.rs` | **1 block** (was ~1,960) | per-method `#[arcane(_self = Token)]` turns each x86 and NEON body into a `#[target_feature]` region, and WASM SIMD intrinsics are safe to call from any context, so the 5,395 value intrinsics in these files need no `unsafe` at all; the one remaining block is `x86_v3.rs`'s `sse2_baseline!` macro, which calls a *narrower* SSE2-only inner fn from the AVX tier | file-header audit contract (generator-emitted, checker-enforced); every intrinsic re-verified against the registry per run |
-| `magetypes/src` outside `impls/` | **14 blocks, all in `simd_storage.rs`** (was 225) | size/align-guarded layout casts over `Pod` (all-bit-patterns-valid) storage; the four token-taking helpers additionally require a token value and const-assert the token is a 1-ZST; the six AVX-512 gather/scatter helpers (`simd_storage::gather`, `X64V4Token` only) bound every accessed lane's offset to `0..len` of the borrow: wrapping gathers mask with `N - 1` (`N` a power of two no larger than 2^31, const-asserted), and slice gathers and scatters enable only lanes whose unsigned index is below `min(len, 2^31)` | per-block `// SAFETY:` comments, checker-enforced; structural rules reject `unsafe` blocks elsewhere in magetypes (outside the generated impls), `unsafe impl Pod` outside this file, and gather/scatter intrinsics outside this file; every `Pod` registration declares a field-byte total, and every `TokenStorage` type must be `#[repr(C)]`; hostile-index gather/scatter tests in `magetypes/tests/gather_scatter_v4.rs` |
+| `magetypes/src/simd/impls/{x86_v3,x86_v4,arm_neon,wasm128}.rs` | **0** (was ~1,960) | per-method `#[arcane(_self = Token)]` turns each x86 and NEON body into a `#[target_feature]` region, and WASM SIMD intrinsics are safe to call from any context, so the 5,395 value intrinsics in these files need no `unsafe` at all; `x86_v3.rs`'s SSE2-only operations (`sse2_baseline!`) run in `#[arcane]` regions for `X64V1Token`, so they inline into callers without AVX | the crate-wide `deny(unsafe_code)`; every intrinsic re-verified against the registry per run |
+| `magetypes/src/simd_storage.rs`, the only magetypes module allowed `unsafe` | **14 blocks** (was 225 across magetypes), plus the `Pod` and `TokenStorage` traits and impls and the `Upcast` declaration | size/align-guarded layout casts over `Pod` (all-bit-patterns-valid) storage; the four token-taking helpers additionally require a token value and const-assert the token is a 1-ZST; `TokenStorage` is implemented only through `impl_token_storage!`, whose expansion checks that each wrapper is exactly `(T::Repr, T)` with `T::Repr` at offset 0 and no extra size; the six AVX-512 gather/scatter helpers (`simd_storage::gather`, `X64V4Token` only) bound every accessed lane's offset to `0..len` of the borrow: wrapping gathers mask with `N - 1` (`N` a power of two no larger than 2^31, const-asserted), and slice gathers and scatters enable only lanes whose unsigned index is below `min(len, 2^31)` | per-block `// SAFETY:` comments, checker-enforced; `#![deny(unsafe_code)]` at the crate root with `#[allow(unsafe_code)]` only on this module; structural rules reject the `unsafe` keyword and any other `allow(unsafe_code)` elsewhere in magetypes (including code cfg'd out for the host), and gather/scatter intrinsics outside this file; every `Pod` registration declares a field-byte total; hostile-index gather/scatter tests in `magetypes/tests/gather_scatter_v4.rs` |
 | `archmage-macros` emitted code (`#[arcane]` wrappers etc.) | 1 `unsafe` block per wrapper | the token parameter (tier-tag const-asserted) proves the sibling's `#[target_feature]` set | justified in macro source; expansion snapshots under `tests/expand/` are re-verified by the intrinsic scanner (comments cannot survive tokenization, so snapshots carry no SAFETY text) |
 
 Notable absences, enforced by structural rules: no `MaybeUninit`, no
 `mem::zeroed`, no forged tokens (`forge_token_dangerously`), no `from_context()`
 outside a safe function whose target features cover the token (checked by
-`raw_context.rs`), no bare `transmute` outside the backend impls,
-no `unsafe` blocks outside `simd_storage.rs` and the generated impls, no
+`raw_context.rs`), no `unsafe` of any kind outside `simd_storage.rs` (the
+compiler denies it, and the scanner also checks code cfg'd out for the host), no
 gather/scatter intrinsics outside `simd_storage.rs`, no `Default`/serde/bytemuck
-construction of SIMD wrappers anywhere in magetypes.
+construction of SIMD wrappers anywhere in magetypes. The `unsafe` blocks that
+`#[arcane]` emits are not magetypes code: the lint skips external proc-macro
+output, and their soundness argument is archmage's (the macro row above).
 
 ### Two things the storage helpers do **not** check, and what covers them
 
@@ -252,9 +254,11 @@ Run everything with `just ci`. Individually:
 3. **Backend impls or their generators changed?** `just generate` must
    leave a clean worktree; `just soundness` re-verifies every intrinsic.
    If a new impls file appears, add it to `REQUIRED_FILE_FLOORS`.
-4. **New `unsafe` anywhere else?** The checker will demand a `// SAFETY:`
-   comment; the comment must name the invariant, not restate the code. If
-   the obligation is layout/pointer validity, extend the Miri tests
+4. **New `unsafe` anywhere else?** In magetypes it can only go in
+   `simd_storage.rs`: the compiler and the checker reject it everywhere else.
+   Everywhere, the checker demands a `// SAFETY:` comment; the comment must
+   name the invariant, not restate the code. If the obligation is
+   layout/pointer validity, extend the Miri tests
    (`magetypes/tests/miri_boundary_tests.rs`).
 5. **Macros changed?** Regenerate expansion snapshots (`cargo xtask
    gen-expand`), then read the `.expanded.rs` diff — the sibling must stay

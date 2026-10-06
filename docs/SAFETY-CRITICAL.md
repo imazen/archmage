@@ -73,8 +73,8 @@ Each token's `summon()` must check every required CPU feature before calling
 ### 4. Unsafe Memory Operations (CRITICAL)
 
 **Files**:
-- `magetypes/src/simd_storage.rs` — every hand-written `unsafe` block in magetypes:
-  copies, views, slice casts, and gather/scatter
+- `magetypes/src/simd_storage.rs` — every `unsafe` in magetypes: copies, views,
+  slice casts, gather/scatter, and the `Pod` and `TokenStorage` impls
 - `xtask/src/simd_types/generic_gen/block_ops.rs` — generates `cast_slice_t`,
   `from_bytes_t`, `as_bytes` and the bitcast views, which call those helpers
 
@@ -84,12 +84,16 @@ Each token's `summon()` must check every required CPU feature before calling
 - Sizes are equal and the source alignment covers the destination's (const asserts)
 - Slice casts check length divisibility and pointer alignment at runtime
 - Anything that produces a token-bearing vector takes a token (`TokenStorage`)
+- `TokenStorage` impls come only from `impl_token_storage!`, whose expansion
+  checks that the wrapper is exactly `(T::Repr, T)` with `T::Repr` at offset 0
 
 **Verified by**: Miri over the magetypes tests (including
 `magetypes/tests/miri_boundary_tests.rs`); the unit tests in `simd_storage.rs`; the
 `storage_size`, `storage_alignment` and `storage_token` cases in
-`tests/soundness_exploits.rs`; `cargo xtask soundness` rejects `unsafe` blocks and
-`unsafe impl Pod` outside `simd_storage.rs`.
+`tests/soundness_exploits.rs`; the crate root's `#![deny(unsafe_code)]`, which
+allows it only for `simd_storage`; `cargo xtask soundness`, which rejects the
+`unsafe` keyword and any other `allow(unsafe_code)` elsewhere in magetypes,
+including code cfg'd out for the host.
 
 ---
 
@@ -118,10 +122,10 @@ Using an intrinsic that requires higher features than the token provides causes 
 
 **Invariant**: All intrinsics used in a method must be available with the method's token.
 
-**Verified by**: rustc. The generated backends hold one `unsafe` block, the
-SSE2-baseline helper in `x86_v3.rs`; every other intrinsic call is safe code. On
-x86 and NEON the methods are `#[arcane]` regions, so a call above its tier fails
-with E0133. WebAssembly intrinsics are safe to call anywhere, because a runtime
+**Verified by**: rustc. The generated backends hold no `unsafe`, so every
+intrinsic call is safe code. On x86 and NEON the methods are `#[arcane]` regions
+(SSE2-only operations use `X64V1Token`, so they inline into callers without AVX),
+and a call above the region's tier fails with E0133. WebAssembly intrinsics are safe to call anywhere, because a runtime
 refuses to load a module whose instructions it does not support. `cargo xtask
 soundness` checks every call against the stdarch database.
 

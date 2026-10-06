@@ -29,9 +29,9 @@ Cross-platform stubs where `summon()` always returns `None`.
 
 ## magetypes
 
-- **`magetypes/src/simd_storage.rs`** — every hand-written `unsafe` block in magetypes: the `Pod`/`TokenStorage` contracts, the byte copies and views, and the AVX-512 gather/scatter helpers with their lane bounds. `cargo xtask soundness` rejects `unsafe` blocks, gather/scatter intrinsics and `unsafe impl Pod` anywhere else in magetypes (the generated backend impls may hold `unsafe` blocks; today only `sse2_baseline!` in `impls/x86_v3.rs` does).
-- **`magetypes/src/simd/generic/generated/*_impl.rs`** — one `unsafe impl TokenStorage` per vector type, resting on the `#[repr(C)]` layout and its const assertions.
-- **`magetypes/src/simd/impls/*.rs`** — generated backends; every intrinsic call sits in an `#[arcane]` region whose token is the receiver.
+- **`magetypes/src/simd_storage.rs`** — every `unsafe` in magetypes: the `Pod` and `TokenStorage` contracts, the byte copies and views, the AVX-512 gather/scatter helpers with their lane bounds, and the public `Upcast` trait, which declares an `unsafe fn`. `TokenStorage` is implemented only through this file's `impl_token_storage!`, whose expansion checks each wrapper's layout at compile time. The crate root denies `unsafe_code` and allows it for this module alone; `cargo xtask soundness` also rejects the `unsafe` keyword, any other `allow(unsafe_code)`, and gather/scatter intrinsics anywhere else in magetypes, including code cfg'd out for the host.
+- **`magetypes/src/simd/generic/generated/*_impl.rs`** — one `impl_token_storage!` invocation per vector type, next to its `#[repr(C)]` struct.
+- **`magetypes/src/simd/impls/*.rs`** — generated backends with no `unsafe`; every intrinsic call sits in an `#[arcane]` region, for the receiver's token or, for SSE2-only operations, `X64V1Token`.
 
 The full `unsafe` inventory, with the verification behind each entry, is in [`docs/SOUNDNESS.md`](docs/SOUNDNESS.md).
 
