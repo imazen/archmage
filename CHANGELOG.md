@@ -115,6 +115,8 @@
 - The READMEs and the AVX-512 page say that `f32x4` and `f32x8` on the V4 tokens lack transcendentals, integer conversions and raw interop (463ad6a2).
 - The magetypes README demos AVX-512 with an `f32x16` kernel under Features, and its quick start lists `v3, neon, wasm128, scalar` (d71523ba).
 - The READMEs and the polyfills guide page say what polyfills cost, from assembly inspection recorded in `benchmarks/polyfill_asm_2026-10-06.md` (d71523ba).
+- The polyfills guide page and the magetypes README report timings of polyfilled kernels on a Neoverse-N1, an Apple M4 Pro and Zen 5, recorded in `benchmarks/polyfill_timing_2026-10-06.md` (584c9577).
+- `just diff-rs` shows `.rs` changes since the last release tag without generated code or expansion snapshots (584c9577).
 - The dispatch-testing page shows the `[dev-dependencies]` entry before its caveats, and the safety pages split their longest sentences (78e1ada3).
 - The AVX-512 page states which macros need the caller's `avx512` feature (cae48443).
 - The two guide landing pages say what each crate is before their example (dae6f383).
