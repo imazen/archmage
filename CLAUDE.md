@@ -1084,15 +1084,36 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
   AVX-512 failure was a tool artifact, verified by a passing configuration-only
   patch with inherited features intact. See [the consumer audit](docs/DOWNSTREAM-COMPATIBILITY.md).
 
-- Fixed #116: `mul_add`/`mul_sub` now fuse on scalar and strict WASM as well as
-  native SIMD. Relaxed WASM emits madd directly (user decision 2026-09-27),
-  with no probe/load/branch; engines may round twice. Exact tests cover strict,
-  fusing relaxed, forced-unfused relaxed, and NEON/QEMU configurations.
-  `tests/common/fma_expected.rs` corrects the Rust 1.98.1 WASM std oracle's
-  signed-zero discrepancy for `min_subnormal * -min_subnormal + 0`: the exact
-  negative product rounds to -0, while that std implementation returns +0.
-  Test expectations were explicitly approved on 2026-09-27.
-  Benchmark source and results: `benchmarks/fma_software_i265_2026-09-27.md`.
+- #116, final form (user decision 2026-10-05): `mul_add`/`mul_sub` keep the
+  0.9.29 contract: one rounding where the hardware fuses (x86 v3/v4, NEON), a
+  multiply then an add on the scalar backend and strict WASM. Relaxed WASM emits
+  madd directly (user decision 2026-09-27), with no probe/load/branch; engines may
+  round twice. `mul_add_portable`/`mul_sub_portable` round once on every backend:
+  hardware FMA on x86/NEON, software on the scalar backend and all WASM builds.
+  Exact tests cover strict, fusing relaxed, forced-unfused relaxed, and NEON/QEMU
+  configurations. The 2026-09-27 version made bare `mul_add` single-rounding everywhere; that
+  measured 8.7-25x slower on strict WASM, 2.6-29x on the scalar backend, and made
+  the generic transcendentals 1.5-23x slower, so the guarantee moved to the
+  `_portable` names (same split as `recip`/`recip_portable`). In
+  `tests/common/fma_expected.rs`, `mul_add_expected` models each token's
+  `mul_add` and `fused_expected` the `_portable` form; it also corrects the Rust
+  1.98.1 WASM std oracle's signed-zero discrepancy for
+  `min_subnormal * -min_subnormal + 0` (the exact negative product rounds to -0;
+  that std returns +0). Test expectations approved 2026-09-27, moved to the
+  `_portable` names 2026-10-05. Current costs:
+  `benchmarks/mul_add_portable_zen5-m4pro_2026-10-05.md` (scalar backend 2.7-29.5x)
+  and `benchmarks/mul_add_wasm_wasmtime_zen5-9950x3d_2026-10-05.md` (8.2-24x).
+  Interim-design records: `benchmarks/fma_software_i265_2026-09-27.md`,
+  `benchmarks/mul_add_cost_zen5-m4pro_2026-10-05.md`,
+  `benchmarks/transcendentals_fused_mul_add_2026-10-05.md`.
+- `cbrt_midp`/`cbrt_lowp` return NaN (a few ±inf) above `f32::MAX / 3` (Halley
+  step forms `y³ + 2x`); documented, not fixed, because every fix measured 8-47%
+  slower. `cbrt_midp_precise` covers the whole range (rescales from 1e36 up). Same for
+  `exp2_midp` in [127.5, 128): up to 134.1 ULP (197.1 for `exp_midp` above
+  88.5), documented; the fix measured 7-12% slower for exp2/exp/pow with AVX2,
+  4-8% on the scalar backend. `exp2_lowp` clamps at 127.99: 1.23% above, 0.56%
+  below. Exhaustive precision probes:
+  `benchmarks/transcendental_precision_2026-10-05.md`.
 
 - Fixed 2026-09-27: `#[arcane]` on `ScalarToken` emitted an invalid empty
   target-feature attribute. Scalar now keeps its signature without a feature boundary.
