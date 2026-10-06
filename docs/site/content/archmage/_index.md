@@ -40,6 +40,9 @@ apply_gain(&mut data, 0.5);
 assert_eq!(data, [1.0; 11]);
 ```
 
+The example compiles under `#![forbid(unsafe_code)]`; the
+[safety model](@/archmage/concepts/safety.md) explains why that holds.
+
 ## Continue with the production patterns
 
 1. [Type and const generics](@/magetypes/dispatch/types-and-dispatch.md): pixel types, mode specialization, and turbofish dispatch.

@@ -157,14 +157,13 @@ inspect optimized code under your supported baseline. See
 
 ## Safety
 
-Every vector carries the archmage token it was built with, so its operations
-run only where that token's CPU features are proven. magetypes denies
-`unsafe_code` except in one internal module, `simd_storage.rs`, whose `unsafe`
-blocks each state the invariant they rely on: copies between plain-data types,
-vector views with size and alignment checks, and the bounds-checked AVX-512
-gathers and scatters. See the
+magetypes vectors are safe to use, including from crates that
+`#![forbid(unsafe_code)]`. Every vector carries the archmage token it was built
+with, so its operations only run where the CPU's features are proven, and there
+is no way to build a vector without a token. All of magetypes' own `unsafe`
+lives in one internal module, where each block states what it relies on. The
 [magetypes safety model](https://imazen.github.io/archmage/magetypes/safety/)
-and the [archmage safety model](https://imazen.github.io/archmage/archmage/concepts/safety/).
+has the details.
 
 ## License
 

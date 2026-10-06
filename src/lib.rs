@@ -59,13 +59,13 @@
 //!
 //! ## Safety
 //!
-//! Each `#[arcane]` entry point contains one `unsafe` block, the call into its
-//! `#[target_feature]` function, and the token parameter justifies it: safe code
-//! gets a token only from `summon()`, from a stronger token, or from
-//! `from_context()` inside a function whose target features already cover it.
-//! Crates using archmage can `#![forbid(unsafe_code)]`. The
+//! You call intrinsics without writing `unsafe`, and crates using archmage can
+//! `#![forbid(unsafe_code)]`. A token is the proof that the CPU has its features;
+//! safe code gets one only once the features are confirmed, normally by
+//! `summon()`. The single `unsafe` block in each `#[arcane]` expansion is generated
+//! by the macro and justified by its token parameter. The
 //! [safety model](https://imazen.github.io/archmage/archmage/concepts/safety/)
-//! shows the expansion, its limits, and how it is checked.
+//! explains the expansion, what it relies on, and how it is checked.
 //!
 //! ## Features
 //!
@@ -123,9 +123,9 @@ pub mod testing;
 /// defense for concrete tokens is a shared associated constant named for the
 /// expected tier (shadow types and weaker aliases lack it), plus the sealed
 /// [`SimdToken`] bound for trait-generic parameters. Getting past it takes
-/// deliberately shadowing the type name and copying the hidden constant, and
-/// the result is a SIGILL crash on a CPU without the features, not a
-/// vulnerability.
+/// deliberately shadowing the type name and copying the hidden constant, which
+/// gives undefined behavior on CPUs without the features; the guide's safety
+/// model page covers the details.
 /// See `tests/soundness/token_shadowing_exploit.rs`
 /// and `token_aliasing_exploit.rs`.
 #[doc(hidden)]

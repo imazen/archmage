@@ -1,12 +1,21 @@
 +++
 title = "Safety Model"
-description = "Why safe code can call SIMD intrinsics through archmage, and where that guarantee stops"
+description = "Why safe code can call SIMD intrinsics through archmage, and what that relies on"
 weight = 6
 +++
 
-archmage lets safe Rust call SIMD intrinsics. This page shows the single
-`unsafe` block behind each entry point, what it relies on, and where the
-guarantee stops. For an audit, start from
+archmage lets safe Rust call SIMD intrinsics, and a crate that uses it can keep
+`#![forbid(unsafe_code)]`. What you need to know as a user:
+
+- A token such as `X64V3Token` proves the CPU has its features. Get one from
+  `summon()`, or let `incant!` and `#[magetypes]` get it for you.
+- Enter feature-enabled code through `#[arcane]`, `#[magetypes]` or `incant!`,
+  and call `#[rite]` helpers from there.
+- Don't use `unsafe` to make a token. An `unsafe` block is where you take over
+  the proof yourself.
+
+The rest of this page explains why that is enough, what the guarantee relies
+on, and how it is checked. For an audit, start from
 [SOUNDNESS.md](https://github.com/imazen/archmage/blob/main/docs/SOUNDNESS.md),
 which inventories every `unsafe` in archmage and magetypes, and
 [AUDITING.md](https://github.com/imazen/archmage/blob/main/AUDITING.md). The
@@ -136,18 +145,11 @@ the wrapper's `unsafe` block does not count against your crate. A crate that
 uses `#[arcane]`, `#[rite]`, `incant!`, magetypes and the reference-taking
 memory intrinsics can forbid `unsafe` entirely, as the examples on this page do.
 
-## Where the guarantee stops
+## What the guarantee relies on
 
-- **Evading it on purpose.** Accidental collisions fail to compile: a local
-  type named `X64V3Token`, or a weaker token imported under that name, lacks
-  the hidden tier constant the wrapper checks. Getting past the check without
-  `unsafe` means deliberately shadowing archmage's type names and copying its
-  hidden constants onto your own types. The prize for that effort is a
-  `SIGILL` crash on a CPU without the features, not a vulnerability.
-- **Your own `unsafe`.** `unsafe { X64V3Token::from_context() }` in an ordinary
-  function, or the deprecated `forge_token_dangerously()`, makes you the proof.
-- **`suppress_const_test`** removes the type check. It exists for code
-  generators that emit real type paths, such as `#[magetypes]`.
+- **No `unsafe` of your own around tokens.** `unsafe {
+  X64V3Token::from_context() }` in an ordinary function, or the deprecated
+  `forge_token_dangerously()`, makes you the proof.
 - **Detection is trusted.** x86 uses Rust's `std_detect` (CPUID, plus the check
   that the OS saves AVX and AVX-512 state); without the `std` feature, only
   compile-time features count. AArch64 uses `std_detect`, register decoding
@@ -159,6 +161,17 @@ memory intrinsics can forbid `unsafe` entirely, as the examples on this page do.
 - **`from_context()` skips detection**, so it also ignores tiers disabled for
   testing with `testable_dispatch`. Use `summon()` where dispatch has to follow
   runtime state.
+- **`suppress_const_test`** removes the type check. It exists for code
+  generators that emit real type paths, such as `#[magetypes]`.
+- **No deliberate evasion of the check.** Accidental collisions fail to
+  compile: a local type named `X64V3Token`, or a weaker token imported under
+  that name, lacks the hidden tier constant the wrapper checks. Getting past
+  the check without `unsafe` means deliberately shadowing archmage's type names
+  and copying its hidden constants onto your own types. What you get is
+  undefined behavior in your own functions on CPUs without the features.
+  Usually that's a `SIGILL` crash, but not always: on a CPU without LZCNT or
+  BMI1, `lzcnt` and `tzcnt` run as older instructions and return wrong values
+  instead of faulting.
 
 ## How it's checked
 

@@ -58,6 +58,7 @@
 //!
 //! ## Safety
 //!
+//! magetypes vectors are safe to use from crates that `#![forbid(unsafe_code)]`.
 //! Every vector carries the token it was built with, so its operations run only
 //! where the token's CPU features are proven. magetypes denies `unsafe_code`
 //! except in one internal module, where each `unsafe` block states the invariant
