@@ -58,6 +58,12 @@ safe_unaligned_simd = []
 # disabled at runtime. With this, compiled_with() returns None and summon()
 # uses runtime detection + cache, so dangerously_disable_token_process_wide()
 # and for_each_token_permutation() always work.
+#
+# Cost: every summon() becomes a cache read, even X64V1Token's on x86-64,
+# which is otherwise a constant. Cargo unifies features across the build, so
+# enable this only from [dev-dependencies] or a dev-only feature (for example
+# `_dev = ["archmage/testable_dispatch"]`), never from [dependencies] or
+# [workspace.dependencies], where it reaches every downstream build.
 testable_dispatch = []
 # Backwards-compat no-op. forge_token_dangerously() used to be gated behind
 # this feature; it is now always public, because it is a safe

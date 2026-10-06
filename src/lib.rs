@@ -72,7 +72,10 @@
 //!
 //! `std` is enabled by default. `avx512` enables native intrinsic-wrapper and macro
 //! support. Token names and macros are always available; unsupported tokens cannot
-//! be summoned. `testable_dispatch` enables the tier-testing facilities.
+//! be summoned. `testable_dispatch` enables the tier-testing facilities. It makes
+//! every `summon()` read a cache, even the x86-64 baseline token's, which is
+//! otherwise a constant, and Cargo turns it on for the whole build graph. Enable it
+//! from `[dev-dependencies]` or a dev-only feature, never from `[dependencies]`.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]

@@ -6,8 +6,22 @@ weight = 1
 Test the public call chain, not only a generic helper invoked with `ScalarToken`.
 Otherwise a missing feature-enabled entry or broken dispatcher can escape tests.
 
-Enable `archmage/testable_dispatch` in test dependencies. This example exercises
-the gain loop under the available tier permutations on the current machine:
+Enable `archmage/testable_dispatch` for tests only: in `[dev-dependencies]`, or
+behind a dev-only feature such as `_dev = ["archmage/testable_dispatch"]`. It
+lets tests disable tiers the build guarantees at compile time, such as SSE2 on
+x86-64 or NEON on AArch64. It also makes every `summon()` read a cache,
+including `X64V1Token`'s on x86-64, which is otherwise a constant, and stops
+`-Ctarget-cpu` from compiling detection away.
+
+Cargo unifies features across the build graph, so a crate that enables it under
+`[dependencies]` or `[workspace.dependencies]` turns it on for every build that
+includes that crate, published releases included. Dev-dependency features also
+apply to `cargo bench` and examples. Before profiling, check with
+`cargo tree -e features -i archmage` (add `@<version>` if two archmage versions
+are in the graph).
+
+This example exercises the gain loop under the available tier permutations on
+the current machine:
 
 ```rust
 use archmage::prelude::*;
