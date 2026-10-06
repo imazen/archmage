@@ -46,15 +46,16 @@
 //! - **STRUCTURAL RULE** — a magetypes source pattern that the soundness
 //!   model forbids (see [`structural_rules`]): token fabrication routes
 //!   (`MaybeUninit`, `mem::zeroed`, forging), `transmute` outside the
-//!   audited backend impls, token-less wrapper constructors
+//!   audited backend impls, `unsafe` blocks, gather/scatter intrinsics or
+//!   `unsafe impl Pod` outside `simd_storage.rs`, a `TokenStorage` type
+//!   without `#[repr(C)]` or `#[repr(transparent)]`, token-less wrapper constructors
 //!   (`Default`/serde/bytemuck), or backend-trait methods without a `self`
 //!   receiver (which would allow calling intrinsics via UFCS without
 //!   holding a token).
 //! - **SAFETY-COMMENT DISCIPLINE** — every `unsafe {` block outside the
 //!   generated backend impls must carry an adjacent `// SAFETY:` comment
-//!   (see [`safety_comment_rules`]); the generated impls files must carry
-//!   their file-header audit contract instead (one uniform invariant,
-//!   ~2000 identical blocks).
+//!   (see [`safety_comment_rules`]); a generated impls file that contains
+//!   `unsafe` must carry the file-header audit contract instead.
 //! - **VACUOUS PASS** — the total number of verified calls fell below
 //!   [`MIN_VERIFIED_CALLS`], or a file listed in [`REQUIRED_FILE_FLOORS`]
 //!   produced fewer verified calls than its floor. This guards against the
@@ -78,8 +79,8 @@
 //!   the scanner can never silently stop seeing the bulk of the code.
 //! - It verifies *feature availability*, not memory safety: `unsafe` blocks
 //!   whose obligation is pointer validity/layout (loads, stores,
-//!   transmutes) are counted and reported by `cargo xtask audit`
-//!   (`unsafe`-inventory) and exercised under Miri, not proven here.
+//!   transmutes) are confined to `simd_storage.rs` by the structural rules
+//!   and exercised under Miri, not proven here.
 
 use anyhow::{Context, Result, bail};
 use regex::Regex;
@@ -437,14 +438,14 @@ impl<'r> Scanner<'r> {
 ///
 /// - In handwritten/generated crate sources: every `unsafe {` block must
 ///   have a `SAFETY`-bearing comment within the four preceding lines (or
-///   on the same line). This holds today at 100% coverage — archmage
-///   `src/` (81/81 generated forge sites) and magetypes outside `impls/`
-///   (225/225).
-/// - The generated backend impls (`magetypes/src/simd/impls/*.rs`) carry
-///   ~2000 uniform one-line `unsafe { intrinsic }` bodies; a per-block
-///   comment would be pure noise, so the generator emits a single
-///   file-header audit contract instead, and this rule enforces the
-///   header's presence.
+///   on the same line). In archmage `src/` these are the token
+///   constructors' detection sites; in magetypes they are the storage
+///   helpers in `simd_storage.rs`.
+/// - The generated backend impls (`magetypes/src/simd/impls/*.rs`) are
+///   checked for a file-header audit contract (emitted by the generator)
+///   instead of per-block comments, wherever they contain `unsafe`. Their
+///   one block today, the SSE2-baseline helper in `x86_v3.rs`, also has
+///   its own comment.
 /// - Macro-expansion snapshots (`.expanded.rs`) are exempt: comments
 ///   cannot survive tokenization, so proc-macro output structurally cannot
 ///   carry them. Snapshots still get full intrinsic-gating verification;
