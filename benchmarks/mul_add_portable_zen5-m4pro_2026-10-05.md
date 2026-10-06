@@ -91,7 +91,7 @@ zenbench flagged several M4 Pro rows for a coefficient of variation of 20–29%.
 - The earlier record (`mul_add_cost_zen5-m4pro_2026-10-05.md`) found `f32x8`
   AVX2 streams 5–9% slower with `mul_add` in both layouts. This bench, with the
   same kernels plus the third form, measured −2.5% to +1.8%, so that result was
-  placement as well.
+  most likely placement as well.
 - On the scalar backend, `mul_add` is the same code as `a * b + c`; the measured
   −4.9% to +3.3% is placement again. `mul_add_portable` costs 2.7–29.5× the time
   of `a * b + c`: f32 lanes widen to f64 and run TwoSum with round-to-odd, f64
@@ -101,7 +101,7 @@ zenbench flagged several M4 Pro rows for a coefficient of variation of 20–29%.
   (f64x2) here, against 1.2–1.4 µs in the earlier record's bench with the same
   kernel bodies; the cause was not identified. The `mul_add_portable` ratios on
   that machine are therefore larger than the earlier record's `mul_add` ratios
-  for the same software path (15× against 10–11× for f32x4 streams).
+  for the same software path (15× against 10–12× for f32x4 streams).
 
 Limits: one machine per ISA, L1-resident microbenchmarks. A real kernel's change
 depends on how much of its time is in multiply-add.
