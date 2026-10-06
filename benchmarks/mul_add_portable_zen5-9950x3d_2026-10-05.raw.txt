@@ -1,0 +1,297 @@
+# zenbench output: magetypes/benches/mul_add_cost.rs on AMD Ryzen 9 9950X3D, 2026-10-05
+# a * b + c vs mul_add vs mul_add_portable. Sources: a8e27211 plus the bench rewrite;
+# a8e27211 was reworded before push as 2f856d2c, whose code is the same.
+# run 1: plain build. run 2: RUSTFLAGS="--cfg mul_add_cost_redraw" (layout redraw).
+
+## run 1
+run-heavy: mem-cap=16G (cgroup, hard) jobs=28/32 avail=49668MiB :: cargo bench -p magetypes --bench mul_add_cost --features avx512
+    Finished `bench` profile [optimized] target(s) in 0.02s
+     Running benches/mul_add_cost.rs (target/release/deps/mul_add_cost-88244bb7de3f9003)
+[zenbench] calibration: int=0.18ns/iter mem_bw=108.6GiB/s mem_lat=8.6ns
+[zenbench] timer resolution: 10ns, loop overhead: 0.18ns/iter, TSC: 4.300 ticks/ns (invariant)
+[zenbench] results → /tmp/zenbench/zenbench-1791244864-27a797.txt
+
+═══════════════════════════════════════════════════════════════
+  zenbench  1791244864-27a797
+  git: a8e2721176a02ec09370e1fdb337bdfe97a063db
+═══════════════════════════════════════════════════════════════
+
+  f32x8, AVX2 (V3) stream  200 rounds × 1K calls
+                       mean ±mad ns  95% CI vs base   ops/s
+  ├─ a * b + c          656 ±17ns  [646–667]ns      12.5G
+  ├─ mul_add            676 ±16ns  [+0.7%–+1.8%]    12.1G [1]
+  ╰─ mul_add_portable   662 ±12ns  [+0.5%–+1.5%]    12.4G [2]
+
+  a * b + c         ████████████████████████████████████████████████ 12.5 Gops/s
+  mul_add_portable  ████████████████████████████████████████████████ 12.4 Gops/s
+  mul_add           ███████████████████████████████████████████████ 12.1 Gops/s
+  [1] CI crosses zero
+  [2] CI crosses zero
+
+  f32x8, AVX2 (V3) chain  100 rounds × 1K calls
+                       mean ±mad µs  95% CI vs base     ops/s
+  ├─ a * b + c          1.1 ±0.0µs  [1.1–1.1]µs         927M
+  ├─ mul_add            0.7 ±0.0µs  [-35.7%–-35.6%]    1.42G
+  ╰─ mul_add_portable   0.7 ±0.0µs  [-35.7%–-35.5%]    1.47G
+
+  mul_add_portable  ████████████████████████████████████████████████ 1.47 Gops/s
+  mul_add           ██████████████████████████████████████████████ 1.42 Gops/s
+  a * b + c         ██████████████████████████████ 927 Mops/s
+
+  f64x4, AVX2 (V3) stream  200 rounds × 1K calls
+                       mean ±mad ns  95% CI vs base   ops/s
+  ├─ a * b + c          675 ±17ns  [662–689]ns      6.07G
+  ├─ mul_add             707 ±5ns  [+3.6%–+6.2%]    5.80G
+  ╰─ mul_add_portable   635 ±14ns  [-5.2%–-4.0%]    6.45G
+
+  mul_add_portable  ████████████████████████████████████████████████ 6.45 Gops/s
+  a * b + c         █████████████████████████████████████████████ 6.07 Gops/s
+  mul_add           ███████████████████████████████████████████ 5.80 Gops/s
+
+  f64x4, AVX2 (V3) chain  120 rounds × 1K calls
+                       mean ±mad µs  95% CI vs base     ops/s
+  ├─ a * b + c          1.1 ±0.0µs  [1.1–1.1]µs         920M
+  ├─ mul_add            0.7 ±0.0µs  [-36.8%–-30.6%]    1.38G
+  ╰─ mul_add_portable   0.7 ±0.0µs  [-38.1%–-35.3%]    1.45G
+
+  mul_add_portable  ████████████████████████████████████████████████ 1.45 Gops/s
+  mul_add           ██████████████████████████████████████████████ 1.38 Gops/s
+  a * b + c         ██████████████████████████████ 920 Mops/s
+
+  f32x16, AVX-512 (V4) stream  200 rounds × 970 calls
+                       mean ±mad µs  95% CI vs base   ops/s
+  ├─ a * b + c          1.2 ±0.0µs  [1.2–1.2]µs      13.7G
+  ├─ mul_add            1.2 ±0.0µs  [-1.3%–+1.5%]    13.9G [1]
+  ╰─ mul_add_portable   1.2 ±0.0µs  [-2.0%–+0.9%]    13.8G [2]
+
+  mul_add           ████████████████████████████████████████████████ 13.9 Gops/s
+  mul_add_portable  ████████████████████████████████████████████████ 13.8 Gops/s
+  a * b + c         ███████████████████████████████████████████████ 13.7 Gops/s
+  [1] CI crosses zero
+  [2] CI crosses zero
+
+  f32x16, AVX-512 (V4) chain  90 rounds × 1K calls
+                       mean ±mad µs  95% CI vs base     ops/s
+  ├─ a * b + c          1.1 ±0.0µs  [1.1–1.1]µs         934M
+  ├─ mul_add            0.7 ±0.0µs  [-34.5%–-29.1%]    1.39G
+  ╰─ mul_add_portable   0.7 ±0.0µs  [-37.9%–-35.4%]    1.44G
+
+  mul_add_portable  ████████████████████████████████████████████████ 1.44 Gops/s
+  mul_add           ██████████████████████████████████████████████ 1.39 Gops/s
+  a * b + c         ███████████████████████████████ 934 Mops/s
+
+  f64x8, AVX-512 (V4) stream  200 rounds × 944 calls
+                       mean ±mad µs  95% CI vs base   ops/s
+  ├─ a * b + c          1.2 ±0.0µs  [1.2–1.2]µs      6.71G
+  ├─ mul_add            1.2 ±0.0µs  [-3.6%–-1.3%]    6.82G
+  ╰─ mul_add_portable   1.2 ±0.0µs  [-3.4%–-2.5%]    7.01G
+
+  mul_add_portable  ████████████████████████████████████████████████ 7.01 Gops/s
+  mul_add           ███████████████████████████████████████████████ 6.82 Gops/s
+  a * b + c         ██████████████████████████████████████████████ 6.71 Gops/s
+
+  f64x8, AVX-512 (V4) chain  140 rounds × 1K calls
+                       mean ±mad µs  95% CI vs base     ops/s
+  ├─ a * b + c          1.1 ±0.0µs  [1.1–1.1]µs         924M
+  ├─ mul_add            0.8 ±0.0µs  [-34.4%–-30.0%]    1.36G
+  ╰─ mul_add_portable   0.7 ±0.0µs  [-35.5%–-34.1%]    1.39G
+
+  mul_add_portable  ████████████████████████████████████████████████ 1.39 Gops/s
+  mul_add           ███████████████████████████████████████████████ 1.36 Gops/s
+  a * b + c         ████████████████████████████████ 924 Mops/s
+
+  f32x8, scalar backend stream  200 rounds × 419 calls
+                       mean ±mad µs  95% CI vs base       ops/s
+  ├─ a * b + c          2.5 ±0.0µs  [2.4–2.5]µs          3.33G
+  ├─ mul_add            2.6 ±0.0µs  [+3.1%–+3.3%]        3.20G
+  ╰─ mul_add_portable   8.1 ±0.0µs  [+250.5%–+250.9%]    1.01G
+
+  a * b + c         ████████████████████████████████████████████████ 3.33 Gops/s
+  mul_add           ██████████████████████████████████████████████ 3.20 Gops/s
+  mul_add_portable  ███████████████ 1.01 Gops/s
+
+  f32x8, scalar backend chain  200 rounds × 934 calls
+                       mean ±mad µs  95% CI vs base       ops/s
+  ├─ a * b + c          1.1 ±0.0µs  [1.1–1.2]µs          895M
+  ├─ mul_add            1.1 ±0.0µs  [-0.1%–+0.1%]        903M [1]
+  ╰─ mul_add_portable   7.0 ±0.0µs  [+537.9%–+540.0%]    146M
+
+  mul_add           █████████████████████████████████████████████████ 903 Mops/s
+  a * b + c         █████████████████████████████████████████████████ 895 Mops/s
+  mul_add_portable  ████████ 146 Mops/s
+  [1] CI crosses zero
+
+  f64x4, scalar backend stream  200 rounds × 794 calls
+                        mean ±mad µs  95% CI vs base         ops/s
+  ├─ a * b + c           1.3 ±0.0µs  [1.3–1.4]µs            3.04G
+  ├─ mul_add             1.3 ±0.0µs  [-1.0%–-0.7%]          3.05G [1]
+  ╰─ mul_add_portable   15.9 ±0.1µs  [+1142.2%–+1145.5%]     257M
+
+  mul_add           ████████████████████████████████████████████████ 3.05 Gops/s
+  a * b + c         ████████████████████████████████████████████████ 3.04 Gops/s
+  mul_add_portable  ████ 257 Mops/s
+  [1] CI crosses zero
+
+  f64x4, scalar backend chain  200 rounds × 930 calls
+                        mean ±mad µs  95% CI vs base         ops/s
+  ├─ a * b + c           1.1 ±0.0µs  [1.1–1.2]µs             892M
+  ├─ mul_add             1.2 ±0.0µs  [-0.1%–+0.1%]           874M [1]
+  ╰─ mul_add_portable   13.6 ±0.1µs  [+1117.8%–+1122.0%]    75.1M
+
+  a * b + c         ████████████████████████████████████████████████ 892 Mops/s
+  mul_add           ███████████████████████████████████████████████ 874 Mops/s
+  mul_add_portable  ████ 75.1 Mops/s
+  [1] CI crosses zero
+
+  total: 228.2s  (230 noisy rounds)
+═══════════════════════════════════════════════════════════════
+  filter: cargo bench -- --group=NAME  format: --format=llm|csv|md|json
+run-heavy: done rc=0 228s | peak-RSS 0.09GiB | min-avail 49446MiB | peak-load 1.15
+rc=0
+
+## run 2 (layout redraw)
+run-heavy: mem-cap=20G (cgroup, hard) jobs=28/32 avail=49736MiB :: cargo bench -p magetypes --bench mul_add_cost --features avx512
+   Compiling archmage-macros v0.9.29 (/home/lilith/work/archmage/archmage-macros)
+   Compiling archmage v0.9.29 (/home/lilith/work/archmage)
+   Compiling magetypes v0.9.29 (/home/lilith/work/archmage/magetypes)
+    Finished `bench` profile [optimized] target(s) in 1.91s
+     Running benches/mul_add_cost.rs (/home/lilith/tmp/archmage-redraw-target/release/deps/mul_add_cost-7e0929801a831e99)
+[zenbench] calibration: int=0.18ns/iter mem_bw=102.8GiB/s mem_lat=8.9ns
+[zenbench] timer resolution: 10ns, loop overhead: 0.18ns/iter, TSC: 4.300 ticks/ns (invariant)
+[zenbench] results → /tmp/zenbench/zenbench-1791245094-27c832.txt
+
+═══════════════════════════════════════════════════════════════
+  zenbench  1791245094-27c832
+  git: a8e2721176a02ec09370e1fdb337bdfe97a063db
+═══════════════════════════════════════════════════════════════
+
+  f32x8, AVX2 (V3) stream  200 rounds × 1K calls
+                       mean ±mad ns  95% CI vs base   ops/s
+  ├─ a * b + c          665 ±35ns  [652–678]ns      12.3G
+  ├─ mul_add            640 ±27ns  [-2.5%–-0.4%]    12.8G [1]
+  ╰─ mul_add_portable   643 ±31ns  [-3.3%–-1.3%]    12.7G
+
+  mul_add           ████████████████████████████████████████████████ 12.8 Gops/s
+  mul_add_portable  ████████████████████████████████████████████████ 12.7 Gops/s
+  a * b + c         ██████████████████████████████████████████████ 12.3 Gops/s
+  [1] CI crosses zero
+
+  f32x8, AVX2 (V3) chain  30 rounds × 1K calls
+                       mean ±mad µs  95% CI vs base     ops/s
+  ├─ a * b + c          1.0 ±0.0µs  [1.0–1.1]µs         975M
+  ├─ mul_add            0.7 ±0.0µs  [-35.7%–-35.5%]    1.53G
+  ╰─ mul_add_portable   0.7 ±0.0µs  [-35.9%–-35.5%]    1.52G
+
+  mul_add           ████████████████████████████████████████████████ 1.53 Gops/s
+  mul_add_portable  ████████████████████████████████████████████████ 1.52 Gops/s
+  a * b + c         ███████████████████████████████ 975 Mops/s
+
+  f64x4, AVX2 (V3) stream  200 rounds × 1K calls
+                       mean ±mad ns  95% CI vs base    ops/s
+  ├─ a * b + c           646 ±6ns  [635–657]ns       6.34G
+  ├─ mul_add             606 ±5ns  [-8.2%–-7.5%]     6.76G
+  ╰─ mul_add_portable   579 ±14ns  [-10.1%–-9.1%]    7.08G
+
+  mul_add_portable  ████████████████████████████████████████████████ 7.08 Gops/s
+  mul_add           ██████████████████████████████████████████████ 6.76 Gops/s
+  a * b + c         ███████████████████████████████████████████ 6.34 Gops/s
+
+  f64x4, AVX2 (V3) chain  70 rounds × 1K calls
+                       mean ±mad µs  95% CI vs base     ops/s
+  ├─ a * b + c          1.1 ±0.0µs  [1.1–1.1]µs         945M
+  ├─ mul_add            0.7 ±0.0µs  [-35.2%–-32.6%]    1.42G
+  ╰─ mul_add_portable   0.7 ±0.0µs  [-35.9%–-35.2%]    1.47G
+
+  mul_add_portable  ████████████████████████████████████████████████ 1.47 Gops/s
+  mul_add           ██████████████████████████████████████████████ 1.42 Gops/s
+  a * b + c         ███████████████████████████████ 945 Mops/s
+
+  f32x16, AVX-512 (V4) stream  200 rounds × 956 calls
+                       mean ±mad µs  95% CI vs base   ops/s
+  ├─ a * b + c          1.1 ±0.0µs  [1.1–1.1]µs      14.7G
+  ├─ mul_add            1.1 ±0.0µs  [-1.7%–-0.1%]    14.8G [1]
+  ╰─ mul_add_portable   1.1 ±0.0µs  [+2.7%–+3.5%]    14.5G
+
+  mul_add           ████████████████████████████████████████████████ 14.8 Gops/s
+  a * b + c         ████████████████████████████████████████████████ 14.7 Gops/s
+  mul_add_portable  ███████████████████████████████████████████████ 14.5 Gops/s
+  [1] CI crosses zero
+
+  f32x16, AVX-512 (V4) chain  100 rounds × 1K calls
+                       mean ±mad µs  95% CI vs base     ops/s
+  ├─ a * b + c          1.1 ±0.0µs  [1.1–1.1]µs         949M
+  ├─ mul_add            0.7 ±0.0µs  [-34.9%–-31.8%]    1.40G
+  ╰─ mul_add_portable   0.7 ±0.0µs  [-35.7%–-35.6%]    1.47G
+
+  mul_add_portable  ████████████████████████████████████████████████ 1.47 Gops/s
+  mul_add           ██████████████████████████████████████████████ 1.40 Gops/s
+  a * b + c         ███████████████████████████████ 949 Mops/s
+
+  f64x8, AVX-512 (V4) stream  200 rounds × 952 calls
+                       mean ±mad µs  95% CI vs base   ops/s
+  ├─ a * b + c          1.2 ±0.0µs  [1.2–1.2]µs      6.79G
+  ├─ mul_add            1.2 ±0.1µs  [-4.3%–-2.8%]    6.95G
+  ╰─ mul_add_portable   1.2 ±0.0µs  [-4.2%–-3.1%]    6.90G
+
+  mul_add           ████████████████████████████████████████████████ 6.95 Gops/s
+  mul_add_portable  ████████████████████████████████████████████████ 6.90 Gops/s
+  a * b + c         ███████████████████████████████████████████████ 6.79 Gops/s
+
+  f64x8, AVX-512 (V4) chain  150 rounds × 1K calls
+                       mean ±mad µs  95% CI vs base     ops/s
+  ├─ a * b + c          1.1 ±0.0µs  [1.1–1.1]µs         933M
+  ├─ mul_add            0.8 ±0.0µs  [-35.2%–-33.3%]    1.36G [1]
+  ╰─ mul_add_portable   0.7 ±0.0µs  [-35.6%–-35.5%]    1.41G
+
+  mul_add_portable  ████████████████████████████████████████████████ 1.41 Gops/s
+  mul_add           ██████████████████████████████████████████████ 1.36 Gops/s
+  a * b + c         ████████████████████████████████ 933 Mops/s
+  [1] CV=20%
+
+  f32x8, scalar backend stream  200 rounds × 425 calls
+                       mean ±mad µs  95% CI vs base       ops/s
+  ├─ a * b + c          2.4 ±0.0µs  [2.4–2.5]µs          3.35G
+  ├─ mul_add            2.5 ±0.0µs  [+2.3%–+2.6%]        3.22G
+  ╰─ mul_add_portable   8.2 ±0.0µs  [+250.5%–+251.2%]    1.00G
+
+  a * b + c         ████████████████████████████████████████████████ 3.35 Gops/s
+  mul_add           ██████████████████████████████████████████████ 3.22 Gops/s
+  mul_add_portable  ██████████████ 1.00 Gops/s
+
+  f32x8, scalar backend chain  200 rounds × 929 calls
+                       mean ±mad µs  95% CI vs base       ops/s
+  ├─ a * b + c          1.2 ±0.0µs  [1.1–1.2]µs          883M
+  ├─ mul_add            1.2 ±0.0µs  [-0.1%–+1.8%]        876M [1]
+  ╰─ mul_add_portable   7.0 ±0.0µs  [+542.1%–+543.4%]    147M
+
+  a * b + c         █████████████████████████████████████████████████ 883 Mops/s
+  mul_add           █████████████████████████████████████████████████ 876 Mops/s
+  mul_add_portable  ████████ 147 Mops/s
+  [1] CI crosses zero
+
+  f64x4, scalar backend stream  200 rounds × 798 calls
+                        mean ±mad µs  95% CI vs base         ops/s
+  ├─ a * b + c           1.3 ±0.0µs  [1.3–1.4]µs            3.05G
+  ├─ mul_add             1.3 ±0.0µs  [-2.1%–-1.7%]          3.09G
+  ╰─ mul_add_portable   16.0 ±0.1µs  [+1139.2%–+1143.4%]     256M
+
+  mul_add           ████████████████████████████████████████████████ 3.09 Gops/s
+  a * b + c         ███████████████████████████████████████████████ 3.05 Gops/s
+  mul_add_portable  ████ 256 Mops/s
+
+  f64x4, scalar backend chain  200 rounds × 931 calls
+                        mean ±mad µs  95% CI vs base         ops/s
+  ├─ a * b + c           1.2 ±0.0µs  [1.1–1.2]µs             873M
+  ├─ mul_add             1.2 ±0.0µs  [+0.0%–+0.2%]           876M [1]
+  ╰─ mul_add_portable   13.6 ±0.1µs  [+1134.3%–+1138.4%]    75.2M
+
+  mul_add           ████████████████████████████████████████████████ 876 Mops/s
+  a * b + c         ████████████████████████████████████████████████ 873 Mops/s
+  mul_add_portable  ████ 75.2 Mops/s
+  [1] CI crosses zero
+
+  total: 216.1s  (166 noisy rounds)
+═══════════════════════════════════════════════════════════════
+  filter: cargo bench -- --group=NAME  format: --format=llm|csv|md|json
+run-heavy: done rc=0 218s | peak-RSS 0.37GiB | min-avail 49501MiB | peak-load 1.42
+rc=0

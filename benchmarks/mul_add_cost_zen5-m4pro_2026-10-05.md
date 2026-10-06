@@ -1,5 +1,13 @@
 # `mul_add` vs `a * b + c` per backend (Zen 5 and Apple M4 Pro, 2026-10-05)
 
+> **Interim design.** These runs measured main between 11a35a8b and 66986145,
+> when `mul_add` fused in software on the scalar backend and strict WASM (#116).
+> Before release, `mul_add` returned to the 0.9.29 behavior and the software
+> path moved to `mul_add_portable` (66986145). The scalar-backend rows below are
+> what `mul_add_portable` costs now. The current forms are measured in
+> `mul_add_portable_zen5-m4pro_2026-10-05.md`, which did not reproduce the
+> `f32x8` AVX2 stream slowdown reported here: it was code placement.
+
 Bench: `magetypes/benches/mul_add_cost.rs` (zenbench, interleaved). Since 0.9.30
 `mul_add` rounds once everywhere: hardware FMA on x86 v3/v4 and NEON, software
 fusion on the scalar backend and on strict WASM. zenbench does not build for
