@@ -109,7 +109,7 @@
 
 - The archmage and magetypes READMEs open with what each crate does, run their examples, add a direct-intrinsics example, Limits and (magetypes) What's included sections, and move release history to the migration guide (56d2dfb7).
 - The READMEs put the first example ahead of its explanation, show features in a table with the `avx512` forwarding lines, and link to the guide for detail (724e9e03).
-- The magetypes README quick start drops `v4` from its `f32x8` kernel, as the guide's AVX-512 page advises (724e9e03).
+- The READMEs write the AVX-512 tier as `v4(cfg(avx512))` and show the `avx512` feature your crate needs for it. The AVX-512 guide page recommends the explicit form (47068cd4).
 - The dispatch-testing page shows the `[dev-dependencies]` entry before its caveats, and the safety pages split their longest sentences (78e1ada3).
 - The AVX-512 page states which macros need the caller's `avx512` feature (cae48443).
 - The two guide landing pages say what each crate is before their example (dae6f383).
