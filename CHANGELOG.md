@@ -71,6 +71,7 @@
 - `exp2_lowp` clamped its input to 126, so every x in [126, 128) returned 2^126, up to 75% low; `exp_lowp` and `pow_lowp` inherited it. The clamp is now 127.99: at most 0.56% relative error below it and 1.23% above, at the same speed (64ae008f).
 - `cbrt_midp_precise` returned NaN, or +inf for a few inputs, for every input from 1.1342859e38 up (also in 0.9.29). It now covers the whole f32 range at 3.2 ULP and takes 15–17% longer with AVX2, 8–9% on the scalar backend. `cbrt_midp` and `cbrt_lowp` keep their speed and document that above `f32::MAX / 3` they return NaN, or ±inf near the limit; every fix measured 8–47% slower (2f856d2c, 96f85cd8).
 - The package includes the MIT and Apache-2.0 license texts (683bef73).
+- The docs of `log2_midp_precise`, `ln_midp_precise`, `log10_midp_precise` and `pow_midp_precise` promised subnormal handling that they do not have: each is its plain `_midp` form, so `log2_midp_precise(1e-42)` returns about -127 (true -139.5). The docs now say so; only `cbrt_midp_precise` handles subnormal inputs. Behavior is unchanged (780e205c).
 
 ## Workspace
 
@@ -86,6 +87,12 @@
 - `magetypes/benches/mul_add_cost.rs` times `a * b + c`, `mul_add` and `mul_add_portable` on each backend, in a streaming loop and in a dependency chain (97730e5c, ca30e564).
 - `xtask soundness` keeps magetypes' hand-written `unsafe` in `simd_storage.rs`: it rejects `unsafe` blocks elsewhere (outside the generated backend impls) and gather/scatter intrinsics anywhere else, so every gather/scatter lane offset is bounded against the borrowed slice in that one file (e3543634, 3fb0c910).
 - `cargo xtask validate` fails when archmage-macros or magetypes lacks a license text or its copy differs from the root file (683bef73).
+- Exercise tests for the NEON dotprod, fp16 and fhm intrinsics and the AVX-512 FP16 intrinsics, which became stable in Rust 1.94 and 1.98; CI runs the suite under Intel SDE's Sapphire Rapids model, the only lane where `Avx512Fp16Token` summons (916be548).
+- `cargo xtask <command>` works: the repository defines the alias its docs use (d98d2b43).
+
+#### Fixed
+
+- The intrinsic database and browser listed the FHM `vfmlal*`/`vfmlsl*` intrinsics under `Arm64V2Token`; they also need `fhm`, so `Arm64V3Token`. The extractor now reads `cfg_attr` target features (1ed03ff1).
 
 #### Changed
 
