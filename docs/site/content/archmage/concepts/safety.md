@@ -138,11 +138,12 @@ memory intrinsics can forbid `unsafe` entirely, as the examples on this page do.
 
 ## Where the guarantee stops
 
-- **Deliberate forgery.** The tier check stops accidental name collisions, not
-  intent. A crate that defines its own `X64V3Token` and copies archmage's
-  hidden tier constant onto it gets an `#[arcane]` function that skips
-  detection, without writing `unsafe`. Checking a sealed trait instead of a
-  constant would close this; that is not implemented.
+- **Evading it on purpose.** Accidental collisions fail to compile: a local
+  type named `X64V3Token`, or a weaker token imported under that name, lacks
+  the hidden tier constant the wrapper checks. Getting past the check without
+  `unsafe` means deliberately shadowing archmage's type names and copying its
+  hidden constants onto your own types. The prize for that effort is a
+  `SIGILL` crash on a CPU without the features, not a vulnerability.
 - **Your own `unsafe`.** `unsafe { X64V3Token::from_context() }` in an ordinary
   function, or the deprecated `forge_token_dangerously()`, makes you the proof.
 - **`suppress_const_test`** removes the type check. It exists for code

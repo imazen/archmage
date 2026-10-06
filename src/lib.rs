@@ -122,8 +122,10 @@ pub mod testing;
 /// wrappers for features the impostor never proves. `#[arcane]`'s current
 /// defense for concrete tokens is a shared associated constant named for the
 /// expected tier (shadow types and weaker aliases lack it), plus the sealed
-/// [`SimdToken`] bound for trait-generic parameters. Public constants do not
-/// prevent deliberate forgery.
+/// [`SimdToken`] bound for trait-generic parameters. Getting past it takes
+/// deliberately shadowing the type name and copying the hidden constant, and
+/// the result is a SIGILL crash on a CPU without the features, not a
+/// vulnerability.
 /// See `tests/soundness/token_shadowing_exploit.rs`
 /// and `token_aliasing_exploit.rs`.
 #[doc(hidden)]

@@ -139,9 +139,11 @@ Crates that use archmage and magetypes can `#![forbid(unsafe_code)]`, because
 the lint skips the macro-generated block. magetypes keeps all of its own
 `unsafe` in one module and denies it everywhere else.
 
-The [safety model](https://imazen.github.io/archmage/archmage/concepts/safety/)
-shows the expansion, its limits (a crate can still deliberately forge a token
-type), and how the invariant is checked.
+Getting around the token check without `unsafe` takes deliberately shadowing
+archmage's type names and hidden constants, and the prize is a `SIGILL` crash
+on a CPU without the features, not a vulnerability. The
+[safety model](https://imazen.github.io/archmage/archmage/concepts/safety/)
+shows the expansion, its limits, and how the invariant is checked.
 [SOUNDNESS.md](https://github.com/imazen/archmage/blob/main/docs/SOUNDNESS.md)
 inventories every `unsafe` in both crates.
 
