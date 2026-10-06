@@ -2855,7 +2855,7 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
 
             {arcane}
             fn reduce_add(self, a: __m512i) -> {elem} {{
-                // No native integer reduce_add in AVX-512; use transmute to array
+                // AVX-512 has no single-instruction integer reduction; fold the lanes
                 let arr: {array} = crate::simd_storage::cast(a);
                 arr.iter().copied().fold(0{elem}, {elem}::wrapping_add)
             }}
