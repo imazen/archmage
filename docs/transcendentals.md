@@ -44,8 +44,8 @@ that product grows with |x|, and above 88.5 it lands in `exp2_midp`'s weak band.
 `n * log2(x)` before `exp2`, so its error grows with that product.
 
 `cbrt_midp` and `cbrt_lowp` overflow an intermediate for magnitudes above
-`f32::MAX / 3` (1.13e38) and return ±inf; `cbrt_midp_precise` covers the whole
-range, subnormals included.
+`f32::MAX / 3` (1.13e38) and return NaN, or ±inf for some inputs near the limit;
+`cbrt_midp_precise` covers the whole range, subnormals included.
 
 ### lowp tier
 
@@ -348,14 +348,14 @@ For 1/sqrt(x), archmage provides `rsqrt_approx()` (raw ~12-bit precision) and `r
 
 Kahan bit-hack initial guess + 1 Halley iteration.
 
-**Precision**: at most 259 ULP, 3.0e-5 relative error, below `f32::MAX / 3`; larger magnitudes return ±inf
+**Precision**: at most 259 ULP, 3.0e-5 relative error, below `f32::MAX / 3`; larger magnitudes return NaN or ±inf
 **Performance**: ~2.3 ns / 8 values
 
 ### cbrt_midp — Cube Root (Accurate)
 
 Kahan bit-hack initial guess + 2 Halley iterations.
 
-**Precision**: at most 3.2 ULP, 2.5e-7 relative error, below `f32::MAX / 3`; larger magnitudes return ±inf (`cbrt_midp_precise` covers the whole range)
+**Precision**: at most 3.2 ULP, 2.5e-7 relative error, below `f32::MAX / 3`; larger magnitudes return NaN or ±inf (`cbrt_midp_precise` covers the whole range)
 **Performance**: ~3.5 ns / 8 values
 **Use case**: XYB color space (SSIMULACRA2, butteraugli), production color processing
 

@@ -1,7 +1,8 @@
 //! `cbrt_midp_precise` covers the whole f32 range. `cbrt_midp` and `cbrt_lowp`
 //! are fast and documented for magnitudes below `f32::MAX / 3`: their Halley step
-//! forms `y³ + 2x`, which overflows above that and returns ±inf. The precise variant
-//! used to inherit the overflow (every input from 1.1342859e38 up returned +inf).
+//! forms `y³ + 2x`, which overflows above that and returns NaN (±inf for a few
+//! inputs). The precise variant used to inherit the overflow: every input from
+//! 1.1342859e38 up returned NaN or +inf.
 #![forbid(unsafe_code)]
 use archmage::{ScalarToken, incant, magetypes};
 

@@ -409,8 +409,8 @@ impl<T: F32x16Convert> f32x16<T> {
     /// Uses Kahan's bit-hack initial approximation followed by 1 Halley
     /// iteration. Over every positive normal f32 below `f32::MAX / 3`: max
     /// 259 ULP vs `std::f32::cbrt` (relative error 3e-5), mean 56 ULP.
-    /// Larger magnitudes overflow an intermediate and return ±inf; use
-    /// `cbrt_midp_precise` for the whole range.
+    /// Larger magnitudes overflow an intermediate and return NaN (±inf for
+    /// some near the limit); use `cbrt_midp_precise` for the whole range.
     ///
     /// Fastest cbrt variant — 1.8x faster than `cbrt_midp` (1 division
     /// vs 2). Suitable for perceptual color (Oklab/XYB) targeting 8-bit
@@ -459,8 +459,9 @@ impl<T: F32x16Convert> f32x16<T> {
     /// making it ~35% faster at equal or better precision.
     ///
     /// Returns ±0 for ±0 input. Magnitudes above `f32::MAX / 3` (1.13e38)
-    /// overflow an intermediate and return ±inf, and denormals and infinity
-    /// are not handled: use `cbrt_midp_precise` for those.
+    /// overflow an intermediate and return NaN (±inf for a few just above
+    /// the limit), and denormals and infinity are not handled: use
+    /// `cbrt_midp_precise` for those.
     #[inline(always)]
     pub fn cbrt_midp(self) -> Self {
         const MAGIC: u32 = 0x2a50_8c2d;

@@ -117,10 +117,12 @@ the timing probe below built against the tree before and after each change.
   +8–11%; `pow_midp` +7–10%) and 4–8% longer on the scalar backend, on every
   call. The function docs state the band's error instead.
 - **`cbrt` above `f32::MAX / 3`.** The Halley step forms `y³ + 2x`, which
-  overflows from x = 1.1342859e38: `cbrt_midp`, `cbrt_lowp` and, through
-  `cbrt_midp`, `cbrt_midp_precise` returned ±inf for those 13,980,901 positive
-  normals on every backend, 0.9.29 included. Three fixes for the fast forms,
-  timed against the unchanged code (AVX2 / scalar backend):
+  overflows near x = 1.13e38. Above `f32::MAX / 3`, `cbrt_midp` (and through it
+  `cbrt_midp_precise`) returned NaN for 13,980,789 positive normals and +inf
+  for 112, all from 1.1342859e38 up; `cbrt_lowp` returned NaN for 13,502,481
+  and +inf for 225,417. Negative inputs mirror this, on the scalar backend and
+  AVX2 alike, 0.9.29 included. Three fixes for the fast forms, timed against
+  the unchanged code (AVX2 / scalar backend):
 
   | Fix | `cbrt_midp` | `cbrt_lowp` | `cbrt_midp_precise` |
   |---|---|---|---|
