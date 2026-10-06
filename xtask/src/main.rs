@@ -811,7 +811,7 @@ fn miri_toolchain() -> String {
 /// `unsafe` code or reaches only paths that a cheaper test, still run under
 /// Miri, already covers, so skipping it loses no undefined-behavior coverage.
 /// Each entry names a test binary and, with `Some`, one test in it; `None`
-/// skips the whole binary. Together they were about 95% of Miri's interpreted
+/// skips the whole binary. The first two were about 95% of Miri's interpreted
 /// work (measured 2026-10-03). Native, SDE and cross-architecture CI still run
 /// them in full.
 const MIRI_SKIPPED_TESTS: &[(&str, Option<&str>, &str)] = &[
@@ -825,6 +825,12 @@ const MIRI_SKIPPED_TESTS: &[(&str, Option<&str>, &str)] = &[
         "fused_arithmetic",
         None,
         "software-FMA comparisons against std; safe code only",
+    ),
+    (
+        "cbrt_range",
+        Some("cbrt_midp_precise_covers_the_whole_range"),
+        "range sweeps, about 33,000 cbrt calls per function (432 s under Miri); \
+         on the scalar backend Miri runs they are safe code only",
     ),
 ];
 
