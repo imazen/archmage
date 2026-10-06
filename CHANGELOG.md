@@ -27,7 +27,7 @@
 
 #### Fixed
 
-- Tokenless scalar/default `#[magetypes(rite, ...)]` fallbacks select covered scalar callees; tokenful fallbacks retain runtime dispatch (772ef504).
+- Tokenless scalar/default `#[magetypes(rite, ...)]` fallbacks select covered scalar callees; tokenful fallbacks retain runtime dispatch (3aef13f, 772ef504).
 - `#[arcane]` with `ScalarToken` no longer emits an empty target-feature attribute (c766c238).
 - `#[magetypes]` preserves explicit `Token` dispatch markers while substituting token types, including token parameters after other arguments (c766c238).
 - The package includes the MIT and Apache-2.0 license texts (683bef73).
@@ -45,7 +45,7 @@
 #### Added
 
 - Add magetypes inherent methods such as `splat_t(token, value)`, `zero_t(token)`, and `load_t(token, data)` across token-taking constructors, conversions, slice helpers, and single-lane scalar types. The `_t` methods hold the implementations; existing names retain their signatures as deprecated forwarders (772ef504, d53d425d).
-- Add native raw constructors: `from_raw_t(token, raw)` is callable without caller target-feature annotations; `from_raw(raw)` requires a matching or stronger target-feature context for safe calls (772ef504).
+- Add raw-register interop to the generic types: `raw()` returns the platform register, `from_raw_t(token, raw)` wraps one without caller target-feature annotations, and `from_raw(raw)` requires a matching or stronger target-feature context for safe calls. They exist on every native-backend vector type: all NEON and WASM types, all AVX-512 types (`X64V4Token` and `X64V4xToken`), and the x86 V3 128- and 256-bit types, which already had `raw()`. The WASM and AVX-512 types also regain `from_v128` and `from_m512`/`from_m512d`/`from_m512i`, and NEON `f32x4`, `f64x2` and `i32x4` regain `from_float32x4_t`, `from_float64x2_t` and `from_int32x4_t`, names that 0.9.27 removed with the concrete types. This does not fix [#117](https://github.com/imazen/archmage/issues/117): published `jxl-encoder-simd` 0.3.0 still fails on aarch64 and wasm32 at one one-argument `from_i32x4` call, where the published generic form takes a token (8ef7db6, 772ef504, e619c59).
 - [Complete constructor signatures](docs/constructors/README.md) are generated for all 40 vector types; native names already ending in `_t` use `from_raw_t` without redundant `_t_t` aliases (e619c59a).
 - Add `mul_add_portable` and `mul_sub_portable` to every float vector type and to `f32x1`/`f64x1`: one rounding on every backend, the same result as `f32::mul_add`/`f64::mul_add` apart from NaN payload and sign. x86 v3/v4 and NEON use FMA, the same instruction as `mul_add`; the scalar backend and WASM fuse in software, relaxed SIMD included because relaxed madd may round twice. That costs 2.7–29.5× the time of `a * b + c` on the scalar backend and 8.2–24× under wasmtime ([#116](https://github.com/imazen/archmage/issues/116); 66986145; [benchmark](benchmarks/mul_add_portable_zen5-m4pro_2026-10-05.md), [WASM](benchmarks/mul_add_wasm_wasmtime_zen5-9950x3d_2026-10-05.md)).
 - Add bounds-safe AVX-512 gather and scatter to `u32x16`, `i32x16` and `f32x16` with `X64V4Token`, indexed by a `u32x16`: `gather_wrapping` reads a power-of-two table with wrapping indices, `gather_or` reads a slice and leaves out-of-range lanes at a fallback, and `scatter_select` writes enabled, in-range lanes. None of them panics; there are no versions for other widths or backends ([guide](docs/site/content/magetypes/memory/gather-scatter.md); e3543634).
@@ -65,7 +65,6 @@
 
 #### Fixed
 
-- Restore NEON/WASM and native AVX-512 raw accessors and constructors ([#117](https://github.com/imazen/archmage/issues/117); 772ef504, c766c238).
 - AVX-512 f32 block operations forward to the existing native V3 implementations instead of scalar defaults ([#60](https://github.com/imazen/archmage/issues/60); 3999a29d).
 - x86 `to_u8` and `store_*_rgba_u8` returned 0 for `+inf` and values at or above 2^31; they now saturate to 255 like the other backends, and NaN still gives 0. AVX2 has had this since the native pack restoration; AVX-512 picked it up through the forwarding above (ff9e0a50).
 - Use native WASM SIMD rounding, saturating conversion, and packing for f32 byte output (050e25c1).
@@ -90,7 +89,8 @@
 
 #### Changed
 
-- Miri skips `int_widen_narrow::scalar_backend` and the `fused_arithmetic` binary, about 95% of its work. `scalar_backend`'s exhaustive loops reach the same `unsafe` bitcast path as `scalar_w512_bitcast_values`, which still runs under Miri; `fused_arithmetic` is safe code only. Native, SDE and cross-arch CI run everything. The local Miri run takes 255–394 s, depending on load (ec9c66b7, d570aa9b, 4d486072).
+- Miri skips `int_widen_narrow::scalar_backend` and the `fused_arithmetic` binary, about 95% of its work, and the new `cbrt_range` sweep, which took 432 s under Miri on its own and runs only safe code there. `scalar_backend`'s exhaustive loops reach the same `unsafe` bitcast path as `scalar_w512_bitcast_values`, which still runs under Miri; `fused_arithmetic` is safe code only. Native, SDE and cross-arch CI run everything. The local Miri run takes 255–394 s, depending on load (ec9c66b7, d570aa9b, 4d486072, 69061859).
+- The publish workflow runs the complete CI matrix at the release commit, as a reusable workflow, and publishes only if every job passed; a missing, skipped or cancelled job fails the gate, except the PR-only codegen comparison (8444c63).
 - CI runs `cargo-semver-checks` for archmage and magetypes on every push and in the release gate; the separate PR-only workflow is removed (f209b894).
 - `just ci` runs every check that `cargo xtask validate` runs; it had skipped the AVX-512 delegation, compile-budget, license and stderr-portability checks that CI's Validate Token Safety job enforces (f4cd76e6).
 
