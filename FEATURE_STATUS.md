@@ -33,10 +33,10 @@ more archmage tokens via `#[target_feature]`.
 | `f16c` | 1.68 | V3+ | FP16 conversion |
 | `lzcnt` | 1.27 | V3+ | Leading zero count |
 | `movbe` | 1.70 | V3+ | Byte-swap load/store |
-| `pclmulqdq` | 1.27 | X64CryptoToken, V3Crypto+ | 128-bit carry-less multiply |
-| `aes` | 1.27 | X64CryptoToken, V3Crypto+ | AES-NI |
-| `vpclmulqdq` | 1.89 | X64V3CryptoToken, V4x | 256/512-bit carry-less multiply |
-| `vaes` | 1.89 | X64V3CryptoToken, V4x | 256/512-bit AES |
+| `pclmulqdq` | 1.27 | X64CryptoToken, V3Crypto, V3GfniCrypto, V4, V4x, Fp16 | 128-bit carry-less multiply |
+| `aes` | 1.27 | X64CryptoToken, V3Crypto, V3GfniCrypto, V4, V4x, Fp16 | AES-NI |
+| `vpclmulqdq` | 1.89 | X64V3CryptoToken, X64V3GfniCryptoToken, V4x | 256/512-bit carry-less multiply |
+| `vaes` | 1.89 | X64V3CryptoToken, X64V3GfniCryptoToken, V4x | 256/512-bit AES |
 | `avx512f` | 1.89 | V4+ | AVX-512 Foundation |
 | `avx512bw` | 1.89 | V4+ | Byte/Word operations |
 | `avx512cd` | 1.89 | V4+ | Conflict Detection |

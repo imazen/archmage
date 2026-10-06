@@ -8,13 +8,13 @@ See [reusable generic kernels](https://imazen.github.io/archmage/magetypes/examp
 
 ```toml
 [dependencies]
-magetypes = "0.9.27"
-archmage  = "0.9.27"   # required: provides the macros + tokens magetypes uses
+magetypes = "0.9.30"
+archmage  = "0.9.30"   # required: provides the macros + tokens magetypes uses
 ```
 
-**Why both?** The vector *types* ([`f32x8`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html), [`u8x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.u8x16.html), …) come from `magetypes`, but the macros (`#[magetypes]`, `incant!`, `#[arcane]`, `#[autoversion]`, `#[rite]`) and the tokens (`Token`, `X64V3Token`, `NeonToken`, `ScalarToken`, …) come from `archmage` — every example here opens with `use archmage::prelude::*;`. So add `archmage` as a direct dependency. (`magetypes` does re-export it, so `magetypes::archmage::prelude::*` works with `magetypes` alone — but a direct `archmage` dep is the idiomatic path and what the examples assume.)
+**Why both?** The vector *types* ([`f32x8`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html), [`u8x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.u8x16.html), …) come from `magetypes`, but the macros (`#[magetypes]`, `incant!`, `#[arcane]`, `#[autoversion]`, `#[rite]`) and the tokens (`X64V3Token`, `NeonToken`, `ScalarToken`, …) come from `archmage`; `Token` is the placeholder `#[magetypes]` replaces with each tier's token. Every example here opens with `use archmage::prelude::*;`, so add `archmage` as a direct dependency. (`magetypes` re-exports it, which covers the types and tokens, but the macros' expansions name `archmage::` paths and need the direct dependency.)
 
-Default features (`std`, `w512`) are on. For `no_std + alloc`, use `default-features = false`. For native AVX-512 impls on x86-64, add `features = ["avx512"]` (implies `w512`). See [Cargo features](#cargo-features).
+Default features (`std`, `w512`) are on. For `no_std + alloc`, set `default-features = false` on both `magetypes` and `archmage`. For native AVX-512 on x86-64, give your crate an `avx512` feature that forwards to `magetypes/avx512` (which implies `w512` and `archmage/avx512`): the macros compile `v4` variants and dispatch arms only when your crate's `avx512` feature is on. See [Features and numerical contracts](#features-and-numerical-contracts).
 
 Then write **one** kernel that runs on AVX2, AVX-512, NEON, WASM SIMD128, or scalar — `#[magetypes]` generates the per-tier `#[target_feature]` contexts and `incant!` picks the best at runtime, all `#![forbid(unsafe_code)]`-compatible:
 
@@ -41,7 +41,7 @@ pub fn scale_plane(plane: &mut [f32], factor: f32) {
 }
 ```
 
-That's it. One algorithm, every platform. `#[magetypes]` generates five `#[arcane]`-wrapped variants (`_v4`, `_v3`, `_neon`, `_wasm128`, `_scalar`), each with its own `#[target_feature]`. `define(f32x8)` injects `type f32x8 = ::magetypes::simd::generic::f32x8<Token>;` at the top of each variant — no boilerplate alias line. Multiple types: `define(f32x8, u8x16, i16x8)`. `incant!` picks the highest available at runtime.
+That's it. One algorithm, every platform. `#[magetypes]` generates `#[arcane]`-wrapped `_v3`, `_neon` and `_wasm128` variants, each with its own `#[target_feature]`, a plain `_scalar` fallback, and `_v4` when your crate's `avx512` feature is on. `define(f32x8)` injects `type f32x8 = ::magetypes::simd::generic::f32x8<Token>;` at the top of each variant — no boilerplate alias line. Multiple types: `define(f32x8, u8x16, i16x8)`. `incant!` picks the highest available at runtime.
 
 **`#[magetypes]` IS the `#[arcane]` wrapper generator.** Do not write per-tier `#[arcane]` wrappers around a generic kernel by hand — the macro already does that. This is the single biggest source of confusion, so it bears repeating.
 
@@ -49,23 +49,24 @@ That's it. One algorithm, every platform. `#[magetypes]` generates five `#[arcan
 
 | You want… | Import |
 |---|---|
-| The macros + tokens (`#[magetypes]`, `incant!`, `Token`, `X64V3Token`, …) | `use archmage::prelude::*;` |
+| The macros + tokens (`#[magetypes]`, `incant!`, `X64V3Token`, …) | `use archmage::prelude::*;` |
 | A fixed-width type explicitly | `use magetypes::simd::f32x8;` (8 lanes everywhere, polyfilled off-x86) |
 | Inside a `#[magetypes]` body | nothing extra — `define(f32x8)` injects the alias per tier |
 | The generic SIMD types + `SimdToken` | `use magetypes::prelude::*;` — then name the token: [`f32x8::<X64V3Token>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html) |
 
-The vector types live under `magetypes::simd::*` — there are no root re-exports (the surface is kept stable during development), so reach for `magetypes::simd::f32x8`, not `magetypes::f32x8`.
+The vector types live under `magetypes::simd::*`; there are no vector types at the crate root, so reach for `magetypes::simd::f32x8`, not `magetypes::f32x8`.
 
 ### Load / store are **unaligned**
 
-`f32x8::load_t(token, &[f32; 8])` and `.store(&mut [f32; 8])` take **fixed-size array references** and perform an **unaligned** transfer — on x86-64 they lower to `_mm256_loadu_ps` / `_mm256_storeu_ps`. A `&[f32; 8]` only guarantees 4-byte (`f32`) alignment, and that's all that's required; there is **no 32-byte SIMD-alignment precondition**. Consequently `partition_slice_mut` (which reinterprets an arbitrary `&mut [f32]` as `&mut [[f32; 8]]` chunks) is sound on any slice — the bulk chunks feed straight into `load`/`store`. Don't reach for aligned allocators or hand-padded buffers; window your slice and go.
+`f32x8::load_t(token, &[f32; 8])` and `.store(&mut [f32; 8])` take **fixed-size array references** and perform an **unaligned** transfer — on x86-64 they lower to `_mm256_loadu_ps` / `_mm256_storeu_ps`. A `&[f32; 8]` only guarantees 4-byte (`f32`) alignment, and that's all that's required; there is **no 32-byte SIMD-alignment precondition**. Consequently `partition_slice_mut_t` (which reinterprets an arbitrary `&mut [f32]` as `&mut [[f32; 8]]` chunks) is sound on any slice — the bulk chunks feed straight into `load_t`/`store`. Don't reach for aligned allocators or hand-padded buffers; window your slice and go.
 
 
 ## Preparing for token constructor migration
 
-The next 0.9 patch adds explicit-token `_t` spellings, such as
+magetypes 0.9.30 adds explicit-token `_t` spellings, such as
 `f32x8::splat_t(token, value)` and `f32x8::load_t(token, data)`. Existing names
-remain callable but are deprecated, with warnings directing callers to `_t`.
+remain callable but are deprecated, with warnings directing callers to `_t`;
+builds with `deny(warnings)` or `deny(deprecated)` must migrate or allow them.
 These spellings prepare callers
 for the planned 0.10 constructor change while keeping argument order, vector
 widths, and function token parameters unchanged. Generic helpers can use `_t`
@@ -128,15 +129,25 @@ Rust 1.89 is the minimum supported version. Archmage macros are always included;
 its `macros` feature is a compatibility no-op. `std` is enabled by default.
 Magetypes also defaults to `w512`, which supplies logical 512-bit types and
 polyfills. Optional `avx512` adds native AVX-512 support; it does not detect the
-running CPU. Follow the [feature-forwarding example](https://imazen.github.io/archmage/archmage/getting-started/installation/)
-when exposing features from your own crate.
+running CPU. The macros compile `v4` and `v4x` variants and dispatch arms only
+when your own crate has a feature named `avx512`; follow the
+[feature-forwarding example](https://imazen.github.io/archmage/archmage/getting-started/installation/)
+to define one.
 
 Logical width does not change with the selected ISA: [`f32x8`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html) stays eight lanes.
 Use supported backend lists; do not assume every stronger token implements
-every narrower backend. The [ISA quirks and fixups](https://imazen.github.io/archmage/magetypes/isa-quirks/)
+every narrower backend. `mul_add` rounds once where the hardware fuses (x86
+v3/v4, NEON) and twice on the scalar backend and strict WASM;
+`mul_add_portable` rounds once everywhere, in software where needed. The [ISA quirks and fixups](https://imazen.github.io/archmage/magetypes/isa-quirks/)
 explain NaNs, rounding, saturation, lane ordering, and measured repair costs.
 [Transcendentals](https://imazen.github.io/archmage/magetypes/math/transcendentals/)
 have a separate domain and precision discussion.
+
+Every native-backend vector has `raw()`, `from_raw_t(token, raw)` and
+`from_raw(raw)` for handing registers to and from `core::arch` intrinsics;
+`from_raw` needs a matching target-feature context. With `X64V4Token` and the
+`avx512` feature, `u32x16`, `i32x16` and `f32x16` also have bounds-checked
+[gather and scatter](https://imazen.github.io/archmage/magetypes/memory/gather-scatter/).
 
 Compile the complete call chain, test supported tiers and scalar tails, and
 inspect optimized code under your supported baseline. See

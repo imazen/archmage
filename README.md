@@ -2,7 +2,7 @@
 
 [Guide](https://imazen.github.io/archmage/) · [Intrinsics browser](https://imazen.github.io/archmage/intrinsics/) · [Archmage API](https://docs.rs/archmage/latest/archmage/) · [Magetypes API](https://docs.rs/magetypes/latest/magetypes/)
 
-Archmage lets you write SIMD code in Rust **without `unsafe`** — your crate keeps `#![forbid(unsafe_code)]` while calling intrinsics directly. It works on x86-64, AArch64, and WASM, is `no_std + alloc` (with `std` on by default for runtime CPU detection), and depends only on [`archmage-macros`](https://crates.io/crates/archmage-macros) and [`safe_unaligned_simd`](https://crates.io/crates/safe_unaligned_simd). You pick a CPU tier, prove it's present once with `summon()`, and the type system keeps every intrinsic call sound.
+Archmage lets you write SIMD code in Rust **without `unsafe`** — your crate keeps `#![forbid(unsafe_code)]` while calling intrinsics directly. It works on x86-64, AArch64, and WASM, is `no_std + alloc` (with `std` on by default for runtime CPU detection), and depends on [`archmage-macros`](https://crates.io/crates/archmage-macros) and [`safe_unaligned_simd`](https://crates.io/crates/safe_unaligned_simd), plus [`winarm-cpufeatures`](https://crates.io/crates/winarm-cpufeatures) on Windows on ARM. You pick a CPU tier, prove it's present once with `summon()`, and the type system keeps every intrinsic call sound.
 
 ## Image planes and audio buffers
 
@@ -10,8 +10,8 @@ Use `archmage` with the [magetypes vector crate](https://docs.rs/magetypes/lates
 
 ```toml
 [dependencies]
-archmage = "0.9.29"
-magetypes = "0.9.29"
+archmage = "0.9.30"
+magetypes = "0.9.30"
 ```
 
 Process an image plane (exposure) or an audio buffer (gain), including a short
@@ -41,6 +41,10 @@ pub fn apply_gain(plane: &mut [f32], gain: f32) {
     incant!(gain_impl(plane, gain), [v3, neon, wasm128, scalar])
 }
 ```
+
+The `_t` constructors (`splat_t`, `load_t`, `partition_slice_mut_t`) are new in
+magetypes 0.9.30. The token-first names they replace still compile but are
+deprecated; see the [migration guide](https://github.com/imazen/archmage/blob/main/docs/TOKEN-CONSTRUCTOR-MIGRATION.md).
 
 For ISA-specific kernels, use `#[arcane(import_intrinsics)]` at the entry and
 `#[rite(import_intrinsics)]` for helpers. The [intrinsics browser](https://imazen.github.io/archmage/intrinsics/)
@@ -105,12 +109,16 @@ Rust 1.89 is the minimum supported version. Archmage macros are always included;
 its `macros` feature is a compatibility no-op. `std` is enabled by default.
 Magetypes also defaults to `w512`, which supplies logical 512-bit types and
 polyfills. Optional `avx512` adds native AVX-512 support; it does not detect the
-running CPU. Follow the [feature-forwarding example](https://imazen.github.io/archmage/archmage/getting-started/installation/)
-when exposing features from your own crate.
+running CPU. The macros compile `v4` and `v4x` variants and dispatch arms only
+when your own crate has a feature named `avx512`; follow the
+[feature-forwarding example](https://imazen.github.io/archmage/archmage/getting-started/installation/)
+to define one.
 
 Logical width does not change with the selected ISA: [`f32x8`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html) stays eight lanes.
 Use supported backend lists; do not assume every stronger token implements
-every narrower backend. The [ISA quirks and fixups](https://imazen.github.io/archmage/magetypes/isa-quirks/)
+every narrower backend. `mul_add` rounds once where the hardware fuses (x86
+v3/v4, NEON) and twice on the scalar backend and strict WASM;
+`mul_add_portable` rounds once everywhere, in software where needed. The [ISA quirks and fixups](https://imazen.github.io/archmage/magetypes/isa-quirks/)
 explain NaNs, rounding, saturation, lane ordering, and measured repair costs.
 [Transcendentals](https://imazen.github.io/archmage/magetypes/math/transcendentals/)
 have a separate domain and precision discussion.
