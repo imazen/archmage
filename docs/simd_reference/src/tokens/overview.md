@@ -45,7 +45,7 @@ pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
 | `X64V4xToken` | `Avx512ModernToken` | + VPOPCNTDQ, IFMA, VBMI, VNNI, VBMI2, BITALG, VPCLMULQDQ, GFNI, VAES | Ice Lake 2019+, Zen 4 2022+ |
 | `Avx512Fp16Token` | — | V4 + AVX-512 FP16 | Sapphire Rapids 2023+ |
 
-Each higher tier is a superset. If you have `X64V4Token`, you can pass it to any function expecting `X64V3Token` or `X64V2Token` (downcast is free).
+Each higher tier is a superset. An `X64V4Token` converts to the lower tokens with `.v3()` or `.v2()`, and satisfies bounds such as `impl HasX64V2` (both free).
 
 **The `avx512` cargo feature** is needed for `import_intrinsics` with the AVX-512 tokens (their safe memory operations) and for magetypes' native 512-bit backends. The tokens themselves, `summon()`, and `#[arcane]` without `import_intrinsics` work without it.
 

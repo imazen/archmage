@@ -17,7 +17,7 @@ if let Some(token) = Arm64::summon() {
 
 **Alias:** `Arm64` (preferred)
 
-NEON is always available on AArch64. Unlike x86 where you need to check for AVX2, `Arm64::summon()` always returns `Some` on 64-bit ARM. It still requires runtime detection because the same binary might run on x86 (where it returns `None`).
+NEON is always available on AArch64. Unlike x86 where you need to check for AVX2, `Arm64::summon()` always returns `Some` on 64-bit ARM: NEON is a compile-time feature of the standard AArch64 targets, so the call compiles to a constant. On other architectures it returns `None`.
 
 ### Key differences from x86 SSE
 
@@ -173,18 +173,24 @@ NeonToken / Arm64          — Baseline NEON (all AArch64)
 └── NeonCrcToken           — NEON + CRC (crypto leaf)
 ```
 
-V3 is a superset of V2, which is a superset of baseline NEON. Pass an `Arm64V3Token` to any function expecting `Arm64V2Token` or `NeonToken`.
+V3 is a superset of V2, which is a superset of baseline NEON. An `Arm64V3Token` converts with `.arm_v2()` or `.neon()` and satisfies `impl HasArm64V2` and `impl HasNeon` bounds.
+
+### Stable intrinsics for these features
+
+Holding the token enables the features; whether Rust has stable intrinsics for
+them is separate. DotProd (`vdotq_s32` and relatives) has been stable on
+AArch64 since Rust 1.98.0, and the FHM multiply-add-long intrinsics
+(`vfmlalq_low_f16` and relatives) since 1.94.0. I8MM and FCMA intrinsics are
+still nightly-only, and Rust has no BF16 intrinsics. See `FEATURE_STATUS.md`.
 
 ## SVE/SVE2: Not Supported
 
 Scalable Vector Extension (SVE/SVE2) is **not supported** in archmage:
 
-- Variable vector length (128-2048 bits) complicates the fixed-size type model
-- Rust stable doesn't support SVE intrinsics
-- Only available on a few server chips (Graviton 3+, Fujitsu A64FX, Neoverse)
-- No consumer hardware ships SVE
+- Rust stable has no SVE intrinsics, so there is nothing for a token to unlock
+- Variable vector length (128-2048 bits) does not fit the fixed-size type model
 
-When SVE ships widely and Rust adds stable support, archmage will add tokens. Until then, use NEON.
+When Rust stabilizes the intrinsics, archmage will add tokens. Until then, use NEON.
 
 ## NEON Intrinsic Naming
 
