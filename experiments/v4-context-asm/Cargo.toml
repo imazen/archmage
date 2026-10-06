@@ -13,3 +13,10 @@ avx512 = ["archmage/avx512", "magetypes/avx512"]
 [dependencies]
 archmage = { path = "../..", default-features = false, features = ["std"] }
 magetypes = { path = "../../magetypes" }
+
+[dev-dependencies]
+zenbench = "0.1.10"
+
+[[bench]]
+name = "polyfill"
+harness = false
