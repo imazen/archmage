@@ -95,6 +95,7 @@
 - `cargo xtask validate` fails when archmage-macros or magetypes lacks a license text or its copy differs from the root file (683bef73).
 - Exercise tests for the NEON dotprod, fp16 and fhm intrinsics and the AVX-512 FP16 intrinsics, which became stable in Rust 1.94 and 1.98; CI runs the suite under Intel SDE's Sapphire Rapids model, the only lane where `Avx512Fp16Token` summons (916be548).
 - `cargo xtask <command>` works: the repository defines the alias its docs use (d98d2b43).
+- The guide explains the safety model of [archmage](docs/site/content/archmage/concepts/safety.md) and [magetypes](docs/site/content/magetypes/safety.md): how safe code gets a token, the one `unsafe` block in each `#[arcane]` expansion, magetypes' single `unsafe` module, the known limits and the checks. Both crate docs and READMEs link it (8e2b8710).
 
 #### Fixed
 
