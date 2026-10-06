@@ -1,5 +1,5 @@
 //! Checked copies and views for backend storage, inspired by fearless_simd's transmute module:
-//! https://github.com/linebender/fearless_simd/blob/main/fearless_simd/src/transmute.rs
+//! <https://github.com/linebender/fearless_simd/blob/main/fearless_simd/src/transmute.rs>
 //!
 //! Only raw scalar/vector storage implements Pod. Never implement it for tokens
 //! or token-bearing SIMD wrappers: arbitrary bytes must not manufacture proofs.
