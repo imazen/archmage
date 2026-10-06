@@ -13,6 +13,10 @@
 
 - archmage depends on archmage-macros at an exact version, so the archmage-macros changes below arrive with this release.
 
+#### Changed
+
+- The `testable_dispatch` docs say what it costs and where it belongs: it makes every `summon()` read a cache, even `X64V1Token`'s on x86-64, which is otherwise a constant, and Cargo unifies it across the whole build, so enable it from `[dev-dependencies]` or a dev-only feature, never `[dependencies]` (aea4d41a).
+
 ## archmage-macros
 
 ### [Unreleased]
