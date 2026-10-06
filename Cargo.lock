@@ -73,6 +73,7 @@ version = "0.9.29"
 dependencies = [
  "archmage-macros",
  "macrotest",
+ "rustversion",
  "safe_unaligned_simd",
  "trybuild",
  "winarm-cpufeatures",

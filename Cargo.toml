@@ -85,6 +85,9 @@ winarm-cpufeatures = { version = "0.1.2", default-features = false, features = [
 # Dev dependencies that don't support WASM
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 
+# Gates exercise tests for intrinsics stabilized after the 1.89 MSRV
+# (NEON dotprod 1.98, NEON fp16/fhm 1.94, AVX-512 FP16 1.94).
+rustversion = "1.0.23"
 zenbench = { version = "0.1.7", features = ["criterion-compat"] }
 trybuild = "1.0.120"
 macrotest = "1.2.1"

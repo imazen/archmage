@@ -828,6 +828,9 @@ jobs:
           - { name: "Haswell (AVX2+FMA)", flag: "-hsw" }
           - { name: "Skylake-X (AVX-512)", flag: "-skx" }
           - { name: "Ice Lake (AVX-512 VBMI2)", flag: "-icl" }
+          # The only lane where Avx512Fp16Token summons, so the only one that
+          # executes tests/avx512fp16_intrinsics.rs.
+          - { name: "Sapphire Rapids (AVX-512 FP16)", flag: "-spr" }
 
     steps:
       - uses: actions/checkout@v6
