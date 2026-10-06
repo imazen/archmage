@@ -177,12 +177,18 @@ pub(crate) use impl_token_storage;
 
 /// Marker trait for types that can be upcast with proof of context.
 ///
-/// Upcasting requires being in the appropriate context (inside `#[arcane]`
-/// with the right token).
+/// Deprecated since 0.9.30 and queued for removal in magetypes 0.10: nothing
+/// has ever implemented it. A generic vector carries its token, so moving a
+/// vector to a wider context means rebuilding it with that context's token;
+/// see the `magetypes::cast` module docs.
 ///
 /// Public as `magetypes::cast::Upcast`. It is defined here only because it
 /// declares an `unsafe fn`, and this module is the one place in magetypes
-/// allowed to; nothing in magetypes implements it.
+/// allowed to.
+#[deprecated(
+    since = "0.9.30",
+    note = "never implemented; a vector carries its token, so rebuild it under the wider token (for example `f32x8::from_array_t(v4, v.to_array())`). Will be removed in magetypes 0.10."
+)]
 pub trait Upcast<T> {
     /// Upcast to a wider context type.
     ///
