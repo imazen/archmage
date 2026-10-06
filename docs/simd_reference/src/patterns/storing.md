@@ -19,7 +19,7 @@ use magetypes::simd::generic::f32x8;
 
 #[arcane(import_intrinsics)]
 fn double(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    let v = f32x8::load(token, data);
+    let v = f32x8::load_t(token, data);
     let doubled = v + v;
     doubled.to_array()
 }
@@ -30,7 +30,7 @@ fn double(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 ```rust
 #[arcane(import_intrinsics)]
 fn double_in_place(token: X64V3Token, data: &mut [f32; 8]) {
-    let v = f32x8::load(token, data);
+    let v = f32x8::load_t(token, data);
     let doubled = v + v;
     doubled.store(token, data);
 }
@@ -57,7 +57,7 @@ When you need to write into a slice (not an array), convert the subslice first:
 #[arcane(import_intrinsics)]
 fn process_slice(token: X64V3Token, data: &mut [f32]) {
     for chunk in data.chunks_exact_mut(8) {
-        let v = f32x8::from_slice(token, chunk);
+        let v = f32x8::from_slice_t(token, chunk);
         let result = v * v;
         let arr: &mut [f32; 8] = chunk.try_into().unwrap();
         result.store(token, arr);
@@ -72,7 +72,7 @@ When you need a single element (not the whole vector):
 ```rust
 #[arcane(import_intrinsics)]
 fn first_element(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    let v = f32x8::load(token, data);
+    let v = f32x8::load_t(token, data);
     v.to_array()[0]  // Extract first lane
 }
 ```

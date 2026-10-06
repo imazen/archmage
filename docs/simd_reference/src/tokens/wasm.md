@@ -44,7 +44,9 @@ Like NEON, WASM only has 128-bit registers. `f32x8` and wider types use polyfill
 
 ### Relaxed SIMD
 
-WASM Relaxed SIMD provides operations where the exact result may vary between engines (browsers/runtimes). Magetypes uses relaxed SIMD for FMA and some transcendentals where the performance gain justifies engine-dependent rounding.
+WASM Relaxed SIMD provides operations where the exact result may vary between engines (browsers/runtimes). `Wasm128RelaxedToken` proves `simd128` and `relaxed-simd`, and like `Wasm128Token` it is compile-time only (`-Ctarget-feature=+simd128,+relaxed-simd`).
+
+In a build with `relaxed-simd` enabled, magetypes' `mul_add` and `mul_sub` emit relaxed multiply-add, which an engine may fuse or not; the transcendentals, built on `mul_add`, inherit that. Without it, `mul_add` is a multiply then an add. `mul_add_portable` never uses relaxed SIMD: it fuses in software in every WASM build.
 
 ### ScalarToken
 

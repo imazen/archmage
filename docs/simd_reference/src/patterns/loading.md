@@ -6,11 +6,11 @@ Getting data from slices and arrays into SIMD registers.
 
 | Pattern | Input | Works in `#[arcane]`? | Notes |
 |---------|-------|----------------------|-------|
-| `f32x8::load(token, &array)` | `&[f32; 8]` | Yes | Preferred for magetypes |
-| `f32x8::from_array(token, array)` | `[f32; 8]` | Yes | Takes by value |
-| `f32x8::from_slice(token, slice)` | `&[f32]` | Yes | Panics if `slice.len() < 8` |
-| `f32x8::splat(token, 1.0)` | scalar | Yes | Broadcast one value to all lanes |
-| `f32x8::zero(token)` | — | Yes | All lanes zero |
+| `f32x8::load_t(token, &array)` | `&[f32; 8]` | Yes | Preferred for magetypes |
+| `f32x8::from_array_t(token, array)` | `[f32; 8]` | Yes | Takes by value |
+| `f32x8::from_slice_t(token, slice)` | `&[f32]` | Yes | Panics if `slice.len() < 8` |
+| `f32x8::splat_t(token, 1.0)` | scalar | Yes | Broadcast one value to all lanes |
+| `f32x8::zero_t(token)` | — | Yes | All lanes zero |
 | `_mm256_loadu_ps(data)` | `&[f32; 8]` | Yes | safe via `import_intrinsics` (reference-based) |
 | `_mm256_loadu_ps(ptr)` | `*const f32` | unsafe | Raw stdarch (pointer-based) |
 
@@ -24,7 +24,7 @@ use magetypes::simd::generic::f32x8;
 
 #[arcane(import_intrinsics)]
 fn process(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    let v = f32x8::load(token, data);
+    let v = f32x8::load_t(token, data);
     v.reduce_add()
 }
 ```
@@ -34,9 +34,9 @@ fn process(token: X64V3Token, data: &[f32; 8]) -> f32 {
 ```rust
 #[arcane(import_intrinsics)]
 fn sum_slice(token: X64V3Token, data: &[f32]) -> f32 {
-    let mut total = f32x8::zero(token);
+    let mut total = f32x8::zero_t(token);
     for chunk in data.chunks_exact(8) {
-        total = total + f32x8::from_slice(token, chunk);
+        total = total + f32x8::from_slice_t(token, chunk);
     }
     total.reduce_add()
 }
@@ -45,7 +45,7 @@ fn sum_slice(token: X64V3Token, data: &[f32]) -> f32 {
 ### From an array by value
 
 ```rust
-let v = f32x8::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+let v = f32x8::from_array_t(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
 ```
 
 ## Safe memory ops (via `import_intrinsics`)

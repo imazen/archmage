@@ -49,7 +49,7 @@ use magetypes::simd::generic::f32x8;
 
 #[arcane(import_intrinsics)]
 fn process(token: Arm64, data: &[f32; 8]) -> f32 {
-    let v = f32x8::load(token, data);  // 2× vld1q_f32 internally
+    let v = f32x8::load_t(token, data);  // 2× vld1q_f32 internally
     v.reduce_add()                      // 2× horizontal sum + scalar add
 }
 ```

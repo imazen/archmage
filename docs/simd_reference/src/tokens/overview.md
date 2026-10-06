@@ -35,16 +35,19 @@ pub trait SimdToken: Copy + Clone + Send + Sync + 'static {
 
 | Token | Aliases | Features | CPUs |
 |-------|---------|----------|------|
-| `X64V2Token` | — | SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT | Nehalem 2008+, Bulldozer 2011+ |
-| `X64V3Token` | — | + AVX, AVX2, FMA, BMI1, BMI2, F16C, MOVBE | Haswell 2013+, Zen 1 2017+ |
+| `X64V1Token` | `Sse2Token` | SSE, SSE2 (the x86-64 baseline) | All x86-64 CPUs |
+| `X64V2Token` | — | + SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT, CMPXCHG16B | Nehalem 2008+, Bulldozer 2011+ |
+| `X64CryptoToken` | — | V2 + PCLMULQDQ, AES | Westmere 2010+, Bulldozer 2011+ |
+| `X64V3Token` | `Desktop64` | + AVX, AVX2, FMA, BMI1, BMI2, F16C, LZCNT, MOVBE | Haswell 2013+, Zen 1 2017+ |
+| `X64V3CryptoToken` | — | V3 + PCLMULQDQ, AES, VPCLMULQDQ, VAES | Zen 3+ 2020, Alder Lake 2021+ |
 | `X64V3GfniCryptoToken` | — | V3 Crypto + GFNI | Alder/Raptor/Meteor/Arrow/Lunar Lake, Sierra Forest, Zen 4+ |
-| `X64V4Token` | `Server64`, `Avx512Token` | + AVX-512 F/BW/CD/DQ/VL | Skylake-X 2017+, Zen 4 2022+ |
-| `X64V4xToken` | — | + VPOPCNTDQ, IFMA, VBMI, VNNI, BF16, VBMI2, BITALG, VPCLMULQDQ, GFNI, VAES | Ice Lake 2019+, Zen 4 2022+ |
-| `Avx512Fp16Token` | — | AVX-512 FP16 | Sapphire Rapids 2023+ |
+| `X64V4Token` | `Server64`, `Avx512Token` | V3 + PCLMULQDQ, AES, AVX-512 F/BW/CD/DQ/VL | Skylake-X 2017+, Zen 4 2022+ |
+| `X64V4xToken` | `Avx512ModernToken` | + VPOPCNTDQ, IFMA, VBMI, VNNI, VBMI2, BITALG, VPCLMULQDQ, GFNI, VAES | Ice Lake 2019+, Zen 4 2022+ |
+| `Avx512Fp16Token` | — | V4 + AVX-512 FP16 | Sapphire Rapids 2023+ |
 
 Each higher tier is a superset. If you have `X64V4Token`, you can pass it to any function expecting `X64V3Token` or `X64V2Token` (downcast is free).
 
-**Requires `avx512` feature:** `X64V4Token`, `X64V4xToken`, `Avx512Fp16Token`.
+**The `avx512` cargo feature** is needed for `import_intrinsics` with the AVX-512 tokens (their safe memory operations) and for magetypes' native 512-bit backends. The tokens themselves, `summon()`, and `#[arcane]` without `import_intrinsics` work without it.
 
 ### AArch64
 
@@ -64,6 +67,7 @@ NEON is baseline on AArch64 — `NeonToken::summon()` always succeeds. Arm64V2/V
 | Token | Features | Notes |
 |-------|----------|-------|
 | `Wasm128Token` | SIMD128 | Compile with `-Ctarget-feature=+simd128` |
+| `Wasm128RelaxedToken` | SIMD128, relaxed SIMD | Compile with `-Ctarget-feature=+simd128,+relaxed-simd` |
 
 ### Universal
 
