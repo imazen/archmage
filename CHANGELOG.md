@@ -42,6 +42,7 @@
 - Planned magetypes 0.10: reserve short constructor names for matching feature contexts; `_t(token, ...)` provides the preparatory migration spelling in 0.9. No constructor signatures change in this patch (772ef504).
 - Remove the six no-op `*_midp_precise` aliases (`exp2`/`exp`/`ln`/`log2`/`log10`/`pow` — each is literally `self.*_midp()`); `cbrt_midp_precise` stays, it does real denormal/zero handling. With the reciprocal tiers settling on `_portable` as the precise tier, a `_precise` suffix that does nothing is a naming lie.
 - Planned: make `w512` non-default in magetypes; users who need 512-bit types would add `features = ["w512"]`. This patch keeps the existing default features.
+- Remove `cast::Upcast` and `cast::Downcast`, and with them the `cast` module, which holds nothing else. Both are deprecated in 0.9.30 and were never implemented (b1b2ff67).
 
 #### Added
 
@@ -54,6 +55,7 @@
 #### Deprecated
 
 - Deprecate legacy token-taking constructor and helper names in favor of `_t(token, ...)`, preserving argument order and signatures. Builds using `deny(deprecated)` or `deny(warnings)` must migrate those calls or allow the warnings. `_t` remains supported in the planned 0.10 transition; native NEON names already ending in `_t` and feature-context `from_raw(raw)` are not deprecated (d53d425d).
+- Deprecate `cast::Upcast` and `cast::Downcast`. Nothing has ever implemented either: a generic vector carries its token, so moving one to another context means rebuilding it with that context's token, `from_array_t(token, v.to_array())` for any vector or `from_raw_t(token, v.raw())` on native backends. Width changes use `low()`, `high()`, `split()` and `from_halves_t()` (b1b2ff67).
 
 #### Changed
 

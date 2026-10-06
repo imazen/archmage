@@ -91,14 +91,21 @@ prelude re-exports, `cast` cross-width utilities, and root module boilerplate.
 
 ## Module: `magetypes::cast` — vestigial placeholder traits
 
-`magetypes/src/cast.rs` defines two traits and exports them publicly:
+**Status (2026-10-05):** both traits are deprecated in 0.9.30 and their removal is queued
+for magetypes 0.10 (b1b2ff67). The snippet below was corrected the same day: an earlier
+version showed both traits as empty, but each declares one method.
+
+`magetypes/src/cast.rs` defines two traits and exports them publicly (`Upcast` is defined in
+`simd_storage.rs` since 7e49ccac, because it declares an `unsafe fn`, and re-exported here):
 
 ```rust
-/// Downcast a SIMD vector to a narrower type.
-pub trait Downcast<T> {}
+pub trait Downcast<T> {
+    fn downcast(self) -> T;
+}
 
-/// Upcast a SIMD vector to a wider type.
-pub trait Upcast<T> {}
+pub trait Upcast<T> {
+    unsafe fn upcast(self) -> T;
+}
 ```
 
 **Analysis:**
