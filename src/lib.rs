@@ -59,11 +59,12 @@
 //!
 //! ## Safety
 //!
-//! You call intrinsics without writing `unsafe`, and crates using archmage can
+//! Using archmage takes no `unsafe` in your code: you call intrinsics inside
+//! `#[arcane]` and `#[rite]` functions, and your crate can keep
 //! `#![forbid(unsafe_code)]`. A token is the proof that the CPU has its features;
 //! safe code gets one only once the features are confirmed, normally by
 //! `summon()`. The single `unsafe` block in each `#[arcane]` expansion is generated
-//! by the macro and justified by its token parameter. The
+//! by the macro, and the token parameter is what makes it sound. The
 //! [safety model](https://imazen.github.io/archmage/archmage/concepts/safety/)
 //! explains the expansion, what it relies on, and how it is checked.
 //!

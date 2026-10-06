@@ -122,10 +122,11 @@ fn process(token: X64V3Token, a: f32, b: f32) -> f32 {
 
 Calling a `#[target_feature]` function from a function without those features
 is `unsafe` because the CPU might lack them. The wrapper takes an
-`X64V3Token` by value, and that value exists only if the features do, so the
-`unsafe` block holds. The wrapper's first line checks that the parameter's
-type really is archmage's V3 token: a local struct named `X64V3Token`, or a
-weaker token imported under that name, fails to compile.
+`X64V3Token` by value, and safe code gets archmage's `X64V3Token` only where
+the features are present, so the `unsafe` block holds. The wrapper's first
+line checks the parameter's type for archmage's V3 tier constant, so a local
+struct named `X64V3Token`, or a weaker token imported under that name, fails to
+compile.
 
 The inner function is a safe `fn`. Inside it, value intrinsics such as
 `_mm256_add_ps` are safe to call (Rust 1.87 and later). Intrinsics that take

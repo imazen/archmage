@@ -17,8 +17,8 @@ cta_buttons = [
 ]
 
 [[extra.features]]
-title = "Zero Unsafe"
-desc = "Capability tokens prove CPU features at the type level. #[arcane] enables #[target_feature] so intrinsics are safe. Your crate uses #![forbid(unsafe_code)]."
+title = "No Unsafe in Your Code"
+desc = "Capability tokens prove CPU features at the type level. #[arcane] compiles your function with those features, so its intrinsic calls need no unsafe, and your crate can keep #![forbid(unsafe_code)]."
 icon = "fa-solid fa-shield-halved"
 
 [[extra.features]]

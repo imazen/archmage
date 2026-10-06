@@ -157,11 +157,17 @@ inspect optimized code under your supported baseline. See
 
 ## Safety
 
-magetypes vectors are safe to use, including from crates that
+Using magetypes takes no `unsafe` in your code, so your crate can keep
 `#![forbid(unsafe_code)]`. Every vector carries the archmage token it was built
-with, so its operations only run where the CPU's features are proven, and there
-is no way to build a vector without a token. All of magetypes' own `unsafe`
-lives in one internal module, where each block states what it relies on. The
+with, so its operations only run where the CPU's features are proven, and no
+constructor works without that proof.
+
+Inside, magetypes stacks its own proofs on archmage's. The compiler checks each
+x86 and NEON intrinsic in its backends against the features of the token it runs
+under, and compile-time assertions check the size and layout of every
+reinterpretation of memory. What the compiler can't check is memory access
+through a pointer: a few one-line `unsafe` blocks, all in one internal module, that load,
+store, gather and scatter vector storage, each stating what it relies on. The
 [magetypes safety model](https://imazen.github.io/archmage/magetypes/safety/)
 has the details.
 
