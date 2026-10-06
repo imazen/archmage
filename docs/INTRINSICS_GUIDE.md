@@ -136,7 +136,7 @@ vld4q_f32(ptr) -> float32x4x4_t  // Load 16 floats, deinterleave to 4 vectors
 
 **Mitigation**: For short bursts, AVX-512 wins. For sustained compute, 256-bit may be faster due to higher clocks. Profile your actual workload.
 
-**AMD Zen 4+**: No significant throttling. AVX-512 is implemented as 2×256-bit but clocks stay high.
+**AMD Zen 4 and Zen 5**: No significant throttling. Zen 4 runs 512-bit operations through 256-bit units; Zen 5 desktop and server parts have full 512-bit datapaths.
 
 ## x86: AVX/SSE Transition Penalty
 
@@ -185,17 +185,15 @@ let sum2 = _mm_add_ss(sum1, shuf);
 
 ### Gather/Scatter
 
-```rust
-// Gather: ~4-7 µops, variable latency based on cache behavior
-let gathered = _mm256_i32gather_ps(base, indices, 4);
+The gather intrinsics take a raw base pointer and per-lane offsets, so nothing
+about a borrowed slice bounds the addresses they read. In magetypes, the only
+gather and scatter are the AVX-512 methods on `u32x16`, `i32x16` and `f32x16`
+(`gather_wrapping`, `gather_or`, `scatter_select`), which mask or bounds-check
+every lane; their `unsafe` lives in `magetypes/src/simd_storage.rs`.
 
-// Often faster for small, known patterns: explicit loads + shuffle
-let v0 = _mm_load_ss(&data[i0]);
-let v1 = _mm_load_ss(&data[i1]);
-// ... combine with shuffles
-```
-
-**When gather IS worth it**: Random access patterns, large index ranges, or when the alternative is scalar loads.
+A hardware gather is not reliably faster than scalar loads, and the balance
+changes between CPU generations. Building the vector from scalar lookups
+(`from_array_t`) is often as fast for small tables. Measure both.
 
 ### Cross-Lane Shuffles (AVX2)
 
@@ -217,9 +215,9 @@ let shuf = _mm256_shuffle_ps(v, v, 0b10_11_00_01);  // 1 cycle
 Changing MXCSR changes the floating-point environment for surrounding code.
 There is no general safe environment-changing API here. Keep the default
 environment for the documented contracts; do not enable FTZ/DAZ globally as a
-routine SIMD optimization.
-
-**Trade-off**: Loses IEEE compliance for denormal handling. Usually fine for graphics/audio/ML.
+routine SIMD optimization. FTZ/DAZ also give up IEEE results for subnormals,
+which some graphics, audio and ML code can accept; that is a decision for the
+application, not for a SIMD library.
 
 ## NEON: Penalties
 
@@ -278,15 +276,14 @@ fn reduce_add_f32x4(v: float32x4_t) -> f32 {
 
 **SVE (Scalable Vector Extension)** is prohibited in archmage:
 
-- Not shipped in consumer hardware (as of 2025)
-- Variable vector length (128-2048 bits) complicates codegen
-- Only available on: AWS Graviton 3+, Fujitsu A64FX, some Arm Neoverse server chips
-- When it ships widely, we'll add tokens. Until then, use NEON.
+- Rust stable has no SVE intrinsics, so there is nothing for a token to unlock.
+- Variable vector length (128-2048 bits) does not fit fixed-width types.
+- When the intrinsics stabilize, tokens will follow. Until then, use NEON.
 
 ## WASM: Considerations
 
 - **Relaxed SIMD**: Behavior varies by runtime (browser/engine). Use for performance, not correctness.
-- **Runtime detection**: `Wasm128Token::summon()` works like other tokens. Also available via compile-time `#[cfg(target_feature = "simd128")]`.
+- **No runtime detection**: WebAssembly cannot query features. `Wasm128Token::summon()` returns `Some` only when the crate is built with `-Ctarget-feature=+simd128`; an engine without SIMD rejects that module at load time.
 - **Alignment**: Less penalty than native, but aligned access still preferred.
 
 ## General: Memory Performance
@@ -294,9 +291,9 @@ fn reduce_add_f32x4(v: float32x4_t) -> f32 {
 ### Cache Line Splits
 
 ```rust
-// BAD: Unaligned access crossing 64-byte cache line boundary
-let ptr = base.add(60) as *const __m256;  // 32-byte load at offset 60
-let v = _mm256_loadu_ps(ptr);  // Crosses into next cache line!
+// BAD: with `data` starting on a 64-byte boundary, floats 15..23 are bytes
+// 60..92, so this 32-byte load straddles two cache lines
+let v = _mm256_loadu_ps(data[15..23].try_into().unwrap());
 
 // BETTER: Align your data or process in aligned chunks
 #[repr(align(32))]
@@ -306,26 +303,25 @@ struct AlignedData([f32; 8]);
 ### Store Forwarding
 
 ```rust
-// BAD: Store then load with different size/alignment
-_mm_storeu_ps(ptr, narrow);           // Store 16 bytes
-let wide = _mm256_loadu_ps(ptr);      // Load 32 bytes overlapping - stall!
+// BAD: a load wider than the store it overlaps cannot be forwarded
+_mm_storeu_ps((&mut buf[..4]).try_into().unwrap(), narrow);  // store 16 bytes
+let wide = _mm256_loadu_ps(&buf);                             // load 32 bytes: stall
 
 // GOOD: Match store and load sizes, or add computation between
 ```
 
 ### Prefetching
 
-```rust
-// Usually unnecessary - hardware prefetchers are good
-// But for irregular access patterns:
-_mm_prefetch(ptr.add(512), _MM_HINT_T0);  // Prefetch 512 bytes ahead
-```
+Usually unnecessary: hardware prefetchers follow sequential and strided access.
+For irregular access, `_mm_prefetch::<_MM_HINT_T0>(p)` is a safe function, since
+a prefetch never faults; it takes a `*const i8`, which safe code gets from a
+reference with `.as_ptr().cast()`. magetypes has no portable prefetch.
 
 ## Summary: Default Recommendations
 
 1. **Use 256-bit (AVX2) as the sweet spot** for x86 - good perf, no throttling concerns
 2. **Avoid horizontal operations in hot loops** - restructure data if possible
-3. **Set DAZ+FTZ** for SIMD-heavy applications
+3. **Keep the default floating-point environment** - FTZ/DAZ is the application's call
 4. **Keep data in SIMD registers** - minimize GP↔SIMD transfers
 5. **Use aligned data** when possible (32-byte for AVX2, 64-byte for AVX-512)
 6. **Profile gather/scatter vs alternatives** - not always faster
