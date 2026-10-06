@@ -131,7 +131,7 @@ impl Parse for RiteArgs {
                                     "unknown rite argument: `{}`. Supported: tier names \
                                      (v1, v2, v3, v4, neon, arm_v2, wasm128, scalar, default, ...), \
                                      optional `+`/`-` tier modifiers, \
-                                     `stub`, `import_intrinsics`, `import_magetypes`, `cfg(feature)`.",
+                                     `import_intrinsics`, `import_magetypes`, `cfg(feature)`.",
                                     other
                                 ),
                             ));
