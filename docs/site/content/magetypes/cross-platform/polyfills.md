@@ -29,16 +29,29 @@ loop touches the stack or moves a vector between registers
 | NEON | gain | 5 / 4 | 6 / 8 | 11 / 16 |
 | NEON | sum | 4 / 4 | 5 / 8 | 9 / 16 |
 
-Each cell is instructions in the main loop / floats per iteration. On AVX2 an
-`f32x16` loop costs the same per float as an `f32x8` loop. On NEON the wider
-types do more per iteration, because LLVM does not unroll the `f32x4` loop.
+Each cell is instructions in the main loop / floats per iteration. Instruction
+counts are not times. [Timed](https://github.com/imazen/archmage/blob/main/benchmarks/polyfill_timing_2026-10-06.md) on a Neoverse-N1 and on Zen 5:
+
+- **A sum ran faster with the wider type**, because each part keeps its own
+  accumulator. Summing 8,192 floats on the Neoverse-N1 took 1.45 µs with
+  `f32x4`, 734 ns with `f32x8` and 488 ns with `f32x16`. On Zen 5 the `f32x16`
+  sum ran 1.4 to 1.9 times faster than `f32x8` from 1,024 floats up.
+- **An elementwise multiply did not.** On the Neoverse-N1 the three widths ran
+  within 1% of each other from 1,024 floats up. On Zen 5 `f32x16` took 2 to 9%
+  longer than `f32x8`.
+- **At 64 floats the widest type lost:** up to 20% longer than the native
+  width.
+
+So a wider polyfilled type pays off for reductions over long inputs. For
+elementwise work it made little difference on these two CPUs.
 
 Three costs remain:
 
 - **Registers.** Each `f32x16` value occupies two registers on AVX2 and four on
   NEON, so a kernel with many live vectors runs out sooner.
 - **Reductions.** `reduce_add` reduces each part and then adds the results: 13
-  instructions for `f32x16` on AVX2 against 6 for `f32x8`, once per call.
+  instructions for `f32x16` on AVX2 against 6 for `f32x8`, once per call. That
+  is what the short inputs above pay for.
 - **Tails.** A wider chunk leaves a longer scalar tail: up to 15 elements for
   `f32x16`.
 

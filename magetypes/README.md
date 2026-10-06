@@ -187,9 +187,13 @@ on AVX2, four 128-bit operations on NEON and WASM. An `f32x8` is two 128-bit
 operations on NEON and WASM.
 
 In the kernel above and a sum kernel, each polyfilled operation compiled to
-those native operations and nothing else. The AVX2 and NEON loops have no stack
-traffic and no extra moves. The AVX2 `f32x16` loop costs the same per float as
-the `f32x8` one ([assembly results](https://github.com/imazen/archmage/blob/main/benchmarks/polyfill_asm_2026-10-06.md); instruction counts, not timings).
+those native operations and nothing else: no stack traffic and no extra moves
+in the AVX2 and NEON loops ([assembly results](https://github.com/imazen/archmage/blob/main/benchmarks/polyfill_asm_2026-10-06.md)).
+
+[Timed](https://github.com/imazen/archmage/blob/main/benchmarks/polyfill_timing_2026-10-06.md) on Zen 5 and a Neoverse-N1 from 1,024 floats up, the multiply
+ran within 9% of the native width. The sum ran 1.4 to 3 times faster with the
+wider type, because each part keeps its own accumulator. At 64 floats the
+`f32x16` versions took up to 20% longer.
 
 Three costs remain. Each `f32x16` value takes two registers on AVX2 and four on
 NEON. Reductions such as `reduce_add` run once per part. A wider chunk leaves a

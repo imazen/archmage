@@ -19,7 +19,8 @@ and a sum kernel compile to at 4, 8 and 16 lanes.
   instructions.
 - **On NEON, the wider types do more per iteration.** LLVM does not unroll the
   `f32x4` loops there. The gain loop takes 1.25 instructions per float at
-  `f32x4`, 0.75 at `f32x8` and 0.69 at `f32x16`.
+  `f32x4`, 0.75 at `f32x8` and 0.69 at `f32x16`. Fewer instructions did not
+  mean less time for that loop: see the timings below.
 - **On WASM, the three widths compile to the same work per iteration:** 16
   floats in the gain loop and 32 in the sum loop.
 - **A polyfilled reduction costs more.** `reduce_add` reduces each part on its
@@ -70,9 +71,15 @@ M4 Pro at 16 bytes per vector (native) and 32 (polyfilled). On 65,536-byte rows
 the 32-byte form took 1.20 µs against 2.15 µs. On 16-byte rows it took 11.2 ns
 against 10.2 ns, because the whole row fell into its scalar tail.
 
+## Timing
+
+[polyfill_timing_2026-10-06.md](polyfill_timing_2026-10-06.md) times these
+kernels on a Neoverse-N1, an Apple M4 Pro and Zen 5. The sum ran 1.4 to 3
+times faster with the wider types. The gain kernel did not speed up on the
+Neoverse-N1.
+
 ## Not covered
 
-- Timing of these kernels.
 - Register pressure. Each `f32x16` value occupies two registers on AVX2 and
   four on NEON, so a kernel with many live vectors runs out sooner. Neither
   kernel here keeps more than a few.
