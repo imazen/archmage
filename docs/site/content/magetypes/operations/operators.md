@@ -11,7 +11,8 @@ in [gain](@/magetypes/examples/generic-kernels.md) and
 |---|---|---|
 | Arithmetic | `a + b`, `a - b`, `a * b`, `a / b`, `-a` | Availability depends on element type |
 | Assignment | `+=`, `-=`, `*=` | Same vector semantics |
-| Fused form | `a.mul_add(b, c)`, `a.mul_sub(b, c)` | One rounding, except relaxed WASM follows the engine; software fallback on strict WASM and scalar |
+| Multiply-add | `a.mul_add(b, c)`, `a.mul_sub(b, c)` | One rounding where the hardware fuses (x86 v3/v4, NEON), two on the scalar backend and strict WASM; relaxed WASM follows the engine |
+| Fused multiply-add | `a.mul_add_portable(b, c)`, `a.mul_sub_portable(b, c)` | One rounding on every backend; software on the scalar backend and WASM, several times slower than `a * b + c` there |
 | Comparisons | `simd_eq`, `simd_ne`, `simd_lt`, `simd_le`, `simd_gt`, `simd_ge` | Produce vector lane masks, not Rust scalar booleans |
 | Selection | `f32x8::blend(mask, yes, no)` | Use comparison-generated canonical masks |
 | Min/max | `min`, `max` | NaN and signed-zero behavior needs the ISA contract |

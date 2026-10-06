@@ -258,13 +258,14 @@ impl<T: F64x4Backend> f64x4<T> {
     /// For one rounding on every backend, use
     /// [`mul_add_portable`](Self::mul_add_portable).
     ///
-    /// x86 v3/v4 and NEON use FMA, one rounding: as fast as `self * a + b`
-    /// in streaming loops and 23–38% faster in dependency chains such as
-    /// Horner polynomials. The scalar backend and WASM built without
-    /// `relaxed-simd` multiply, round, add and round again, at the speed of
-    /// `self * a + b`. Builds with `relaxed-simd` use the engine's madd,
-    /// which may round either way. Results can therefore differ between
-    /// backends in the last bit. NaN payload/sign are unspecified.
+    /// x86 v3/v4 and NEON use FMA, one rounding: about as fast as
+    /// `self * a + b` in streaming loops, and 24–38% less time in
+    /// dependency chains such as Horner polynomials. The scalar backend
+    /// and WASM built without `relaxed-simd` multiply, round, add and
+    /// round again, at the speed of `self * a + b`. Builds with
+    /// `relaxed-simd` use the engine's madd, which may round either way.
+    /// Results can therefore differ between backends in the last bit.
+    /// NaN payload/sign are unspecified.
     #[inline(always)]
     pub fn mul_add(self, a: Self, b: Self) -> Self {
         Self(T::mul_add(self.1, self.0, a.0, b.0), self.1)
@@ -286,10 +287,10 @@ impl<T: F64x4Backend> f64x4<T> {
     /// `f32::mul_add` and `f64::mul_add` give in std. x86 v3/v4 and NEON
     /// use FMA, at the cost of [`mul_add`](Self::mul_add). The scalar
     /// backend and WASM fuse in software, relaxed SIMD included because
-    /// relaxed madd may round twice. That costs 2.6–29× the time of
-    /// `self * a + b` on the scalar backend and 8.7× (`f32x4`) to 25×
+    /// relaxed madd may round twice. That costs 2.7–29.5× the time of
+    /// `self * a + b` on the scalar backend and 8.2× (`f32x4`) to 24×
     /// (`f64x2`) under wasmtime.
-    /// [Measurements](https://github.com/imazen/archmage/blob/main/benchmarks/mul_add_cost_zen5-m4pro_2026-10-05.md).
+    /// [Measurements](https://github.com/imazen/archmage/blob/main/benchmarks/mul_add_portable_zen5-m4pro_2026-10-05.md).
     #[inline(always)]
     pub fn mul_add_portable(self, a: Self, b: Self) -> Self {
         Self(T::mul_add_portable(self.1, self.0, a.0, b.0), self.1)
