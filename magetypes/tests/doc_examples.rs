@@ -944,10 +944,11 @@ mod isa_quirks {
             let z = $ty::splat_t(token, -1.0);
             let expected = (1.0 + f32::EPSILON).mul_add_expected(1.0 - f32::EPSILON, -1.0, token);
             assert_eq!(x.mul_add(y, z).to_array(), [expected; $lanes]);
-            // One rounding keeps the exact -2^-46 on every backend.
+            // One rounding keeps the exact -2^-46 on every backend. Built from
+            // bits: Miri perturbs powi by design.
             assert_eq!(
                 x.mul_add_portable(y, z).to_array(),
-                [-(2.0f32).powi(-46); $lanes]
+                [-f32::from_bits((127 - 46) << 23); $lanes]
             );
         }};
     }
