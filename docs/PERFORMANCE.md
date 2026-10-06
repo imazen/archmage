@@ -27,7 +27,7 @@ LLVM won't inline across mismatched `#[target_feature]` attributes: no load hois
 
 The boundary has nothing to do with archmage. A bare `#[target_feature]` function has the same cost. `#[arcane]` just makes the wrapper safe; the boundary is LLVM's.
 
-**The fix:** enter `#[arcane]` once from non-SIMD code, put the loop inside. From within `#[arcane]`, call other `#[arcane]` functions freely — matching features means LLVM inlines the wrapper away. `#[rite]` is also available (adds `#[target_feature]` + `#[inline]` directly, no wrapper) but isn't necessary when features match.
+**The fix:** enter `#[arcane]` once from non-SIMD code, put the loop inside, and write the helpers as `#[rite]` (`#[target_feature]` + `#[inline]` directly, no wrapper). An `#[arcane]` helper with matching features also inlines, as the cross-token table below shows, but it generates a wrapper that LLVM then has to remove.
 
 ```rust
 // WRONG: boundary every iteration (4x slower)
@@ -48,12 +48,12 @@ fn process_all(points: &[[f32; 8]]) {
 #[arcane(import_intrinsics)]
 fn process_all_simd(token: X64V3Token, points: &[[f32; 8]]) {
     for p in points {
-        process_one(token, p);  // #[arcane] — features match, LLVM inlines
+        process_one(p);  // #[rite(v3)] — inlines, no boundary
     }
 }
 
-#[arcane(import_intrinsics)]
-fn process_one(_token: X64V3Token, p: &[f32; 8]) {
+#[rite(v3, import_intrinsics)]
+fn process_one(p: &[f32; 8]) {
     // ...
 }
 ```
@@ -113,18 +113,18 @@ A common concern: does using `f32x8::<T>` with a generic `T: F32x8Backend` produ
 
 The backend trait methods are all `#[inline(always)]`, but that's not enough on its own. **Your generic helper function must also inline** into the `#[arcane]` caller so LLVM compiles it within the `#[target_feature]` region. The generic function itself has no `#[target_feature]` — it gets the right features only by being inlined into a function that does.
 
-Source: [`benches/generic_vs_concrete.rs`](../benches/generic_vs_concrete.rs).
+Source: [`magetypes/benches/generic_vs_concrete.rs`](../magetypes/benches/generic_vs_concrete.rs). Measured 2026-10-05 on a Ryzen 9 9950X3D with Rust 1.99.0, median of three runs; record in [`benchmarks/generic_vs_concrete_zen5-9950x3d_2026-10-05.md`](../benchmarks/generic_vs_concrete_zen5-9950x3d_2026-10-05.md).
 
 | Pattern | Time | Assembly |
 |---------|------|----------|
-| `f32x8::<T>` generic `#[inline(always)]` inside `#[arcane]` | 1.35 ns | `vmovups` + `vaddps` + horizontal sum |
-| `f32x8::<T>` generic (no annotation) inside `#[arcane]` | 1.37 ns | identical — LLVM chose to inline (not guaranteed) |
-| `f32x8::<x64v3>` concrete inside `#[arcane]` | 1.16 ns | identical instructions |
-| Concrete via `#[rite]` in `#[arcane]` | 1.40 ns | identical |
-| `f32x8::<T>` generic `#[inline(never)]` inside `#[arcane]` | **23.7 ns (18x)** | `call _mm256_add_ps` — forced no-inline proves it |
-| `f32x8::<T>` generic **without** `#[target_feature]` | **24.7 ns (18x)** | `call _mm256_add_ps` (function calls!) |
+| `f32x8::<T>` generic `#[inline(always)]` inside `#[arcane]` | 1.08 ns | `vmovups` + `vaddps` + horizontal sum |
+| `f32x8::<T>` generic (no annotation) inside `#[arcane]` | 1.09 ns | identical — LLVM chose to inline (not guaranteed) |
+| `f32x8::<X64V3Token>` concrete inside `#[arcane]` | 1.09 ns | identical instructions |
+| Concrete via `#[rite]` in `#[arcane]` | 1.06 ns | identical |
+| `f32x8::<T>` generic `#[inline(never)]` inside `#[arcane]` | **8.13 ns (7.5x)** | SSE loads, stack spills, a call per backend method |
+| `f32x8::<T>` generic **without** `#[target_feature]` | **7.95 ns (7.4x)** | the same calls |
 
-The `#[inline(never)]` row is the smoking gun: even inside `#[arcane]`, a generic function that can't inline is just as slow as having no `#[target_feature]` at all. The generic function body is compiled without target features — it only gets them by being inlined into the `#[arcane]` caller's `#[target_feature]` region.
+The `#[inline(never)]` row is the smoking gun: even inside `#[arcane]`, a generic function that can't inline is just as slow as having no `#[target_feature]` at all. The generic function body is compiled without target features — it only gets them by being inlined into the `#[arcane]` caller's `#[target_feature]` region. The multiplier belongs to this 8-lane kernel, where the calls dominate; the bench's first version, in February 2026, measured 18x on an older build.
 
 **Mark generic SIMD helpers `#[inline(always)]`.** For small same-crate functions, LLVM usually inlines without annotation (the "no annotation" row above). But this is an LLVM heuristic, not a guarantee — LLVM can decline to inline any function without `#[inline(always)]`. Cross-crate, without at least `#[inline]`, the function body isn't even available to the caller's compilation unit. `#[inline(always)]` removes all ambiguity: the function will always inline, and the generic code will always get the caller's target features.
 
@@ -132,8 +132,8 @@ The `#[inline(never)]` row is the smoking gun: even inside `#[arcane]`, a generi
 // CORRECT: #[inline(always)] guarantees the generic body inlines into the caller
 #[inline(always)]
 fn generic_sum<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
-    let v = f32x8::<T>::from_array(token, *data);
-    (v + v).reduce_add()  // ~1.35 ns from #[arcane(import_intrinsics)]
+    let v = f32x8::<T>::from_array_t(token, *data);
+    (v + v).reduce_add()  // ~1.1 ns from #[arcane(import_intrinsics)]
 }
 
 // The #[arcane] caller provides #[target_feature] — generic_sum inlines into it
@@ -145,19 +145,21 @@ fn entry(token: X64V3Token, data: &[f32; 8]) -> f32 {
 
 ```asm
 ; #[inline(always)] generic inside #[arcane] — identical to concrete:
-vmovups ymm0, [rdi]          ; load 8 floats
-vaddps  ymm0, ymm0, ymm0    ; v + v
-vextractf128 xmm1, ymm0, 1  ; horizontal sum...
-vaddps  xmm0, xmm1, xmm0
-vhaddps xmm0, xmm0, xmm0
+vmovups ymm0, ymmword ptr [rdi]   ; load 8 floats
+vaddps ymm0, ymm0, ymm0           ; v + v
+vextractf128 xmm1, ymm0, 1        ; horizontal sum...
+vaddps xmm0, xmm0, xmm1
 vmovshdup xmm1, xmm0
-vaddss  xmm0, xmm0, xmm1
+vaddps xmm0, xmm0, xmm1
+vshufpd xmm1, xmm0, xmm0, 1
+vaddss xmm0, xmm0, xmm1
 
-; #[inline(never)] generic inside #[arcane] — still catastrophic:
-movups  xmm0, [rdi]          ; SSE2 load, not AVX!
-call    _mm256_add_ps         ; FUNCTION CALL
-call    _mm256_extractf128_ps ; FUNCTION CALL
-call    _mm_hadd_ps           ; FUNCTION CALL
+; #[inline(never)] generic inside #[arcane]:
+movups xmm0, xmmword ptr [rdi]    ; SSE loads, not AVX
+movups xmm1, xmmword ptr [rdi + 16]
+; ... both halves spilled to the stack ...
+call <X64V3Token as F32x8Backend>::add::__simd_inner_add
+call <X64V3Token as F32x8Backend>::reduce_add::__simd_inner_reduce_add
 ```
 
 **The rule:** generic magetypes code is zero-cost when it inlines into an `#[arcane]` or `#[rite]` caller. Mark generic SIMD helpers `#[inline(always)]` to guarantee this. The generic function has no `#[target_feature]` of its own — it inherits the caller's features through inlining.
@@ -168,7 +170,7 @@ These are distilled from the benchmark data above.
 
 1. **Enter `#[arcane]` once.** Put loops inside it. Each call from non-SIMD code crosses the boundary.
 
-2. **Use `#[arcane]` for helpers too.** When an `#[arcane]` function calls another with matching features, LLVM inlines the wrapper — no boundary. `#[rite]` (adds `#[target_feature]` + `#[inline]` directly) and plain `#[inline(always)]` functions also work.
+2. **Use `#[rite]` for helpers.** It adds `#[target_feature]` + `#[inline]` directly, with no wrapper. An `#[arcane]` helper with matching features also inlines (V3→V3 = 1.0x below), and so does a plain `#[inline(always)]` function.
 
 3. **Don't cross feature boundaries in hot loops.** Calling `#[arcane]` from `#[arcane]` with matching features is free — LLVM inlines the wrapper (benchmark: V3→V3 = 1.0x). The boundary only hurts when the caller has fewer features than the callee (V3→V4 = 4x).
 
@@ -176,7 +178,7 @@ These are distilled from the benchmark data above.
 
 5. **Upcasting hits the boundary.** A V3 function calling a V4 helper can't inline because the caller lacks AVX-512 features. Dispatch at the entry point, not deep in hot code.
 
-6. **Generic magetypes types are zero-cost inside `#[arcane]` — if they inline.** `f32x8::<T>` and `f32x8::<x64v3>` produce identical assembly when the generic function inlines into the `#[arcane]` caller. Mark generic SIMD helpers `#[inline(always)]` to ensure this. The generic function has no `#[target_feature]` of its own — if it doesn't inline, intrinsics become function calls (18x slower). The backend methods are `#[inline(always)]`, but that only helps once the generic body is inside the `#[target_feature]` region.
+6. **Generic magetypes types are zero-cost inside `#[arcane]` — if they inline.** `f32x8::<T>` and `f32x8::<X64V3Token>` produce identical assembly when the generic function inlines into the `#[arcane]` caller. Mark generic SIMD helpers `#[inline(always)]` to ensure this. The generic function has no `#[target_feature]` of its own — if it doesn't inline, every backend method becomes a call (7.4x slower for the 8-lane kernel above; the cost depends on the kernel). The backend methods are `#[inline(always)]`, but that only helps once the generic body is inside the `#[target_feature]` region.
 
 ## Reproducing
 
@@ -186,6 +188,9 @@ cargo bench --bench asm_inspection --features "std"
 
 # Cross-token nesting (needs avx512 feature + AVX-512 hardware)
 cargo bench --bench asm_inspection --features "std avx512"
+
+# Generic vs concrete magetypes
+cargo bench -p magetypes --bench generic_vs_concrete
 ```
 
 Results will vary by CPU. The *ratios* between patterns are stable: archmage always matches bare `#[target_feature]` on the same workload. The boundary multiplier itself (4x on simple adds, 6.2x on DCT-8) depends on how much optimization LLVM loses when it can't inline — denser workloads lose more.
@@ -195,7 +200,7 @@ Results will vary by CPU. The *ratios* between patterns are stable: archmage alw
 ## Proc-macro parsing and allocation pass (2026-09-07)
 
 Compared `0373579` with the parsing cleanup in `9382f9d` on the `wsl` Ryzen 9
-7950X, Rust 1.98.1. This changes macro execution, not the generated algorithms.
+9950X3D, Rust 1.98.1. This changes macro execution, not the generated algorithms.
 Bodies were already opaque token streams; `syn` remains responsible for
 signatures, generics, bounds, and dispatch arguments.
 
