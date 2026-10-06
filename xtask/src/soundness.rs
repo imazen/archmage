@@ -124,10 +124,10 @@ const REQUIRED_FILE_FLOORS: &[(&str, usize)] = &[
     ("magetypes/src/simd_storage.rs", 13),       // measured 18 (gather/scatter)
 ];
 
-/// The one magetypes file allowed hand-written `unsafe` blocks, `unsafe impl
-/// Pod`, and gather/scatter intrinsics. Each block there states its invariant
-/// next to the others, so auditing magetypes' hand-written unsafe means reading
-/// one file. The generated backend impls carry their own audit contract.
+/// The one magetypes file allowed `unsafe` of any kind, `unsafe impl Pod`, and
+/// gather/scatter intrinsics. Each `unsafe` there states its invariant next to
+/// the others, so auditing magetypes' unsafe means reading one file. The crate
+/// root denies `unsafe_code` everywhere else.
 const STORAGE_HOME: &str = "magetypes/src/simd_storage.rs";
 
 /// The magetypes crate root, which must deny `unsafe_code`.
