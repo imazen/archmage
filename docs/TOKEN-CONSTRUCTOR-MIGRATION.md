@@ -39,9 +39,9 @@ the token do not gain aliases. Existing target and Cargo feature gates still
 apply.
 
 Native raw values have a uniform `from_raw_t(token, raw)` entry point. Platform
-names that already end in `_t`, such as `from_float32x4_t(token, raw)`,
-remain available without deprecation or a redundant `_t_t` alias. Prefer `from_raw_t` for
-new raw interchange code.
+names that already end in `_t`, such as `from_float32x4_t(token, raw)`, are not
+deprecated and have no `_t_t` form. Prefer `from_raw_t` for new raw interchange
+code.
 The separate `from_raw(raw)` method requires a matching target-feature context
 and is not deprecated.
 
@@ -56,6 +56,10 @@ fn broadcast<T: F32x8Backend>(token: T, value: f32) -> f32x8<T> {
     f32x8::splat_t(token, value)
 }
 ```
+
+Code written for the concrete vector types of 0.9.26 and earlier may call
+one-argument conversions such as `f32x4::from_i32x4(v)`. The generic types take
+the token first, like the constructors: `f32x4::from_i32x4_t(token, v)`.
 
 Keep function token parameters, dispatch calls, and public vector signatures
 unchanged during this rename. Existing `#[magetypes(define(...), ...)]` aliases
@@ -73,8 +77,7 @@ separate step. A generic backend bound alone does not enable target features.
 The published archmage 0.9 macro contract uses
 `magetypes::simd::generic::TYPE<Token>` for `define(...)`, and tier/backends
 namespaces for `import_magetypes`. Preserving those paths avoids requiring a
-macro syntax migration for the constructor change. Compatibility with an actual
-0.10 package must be compiled before that release.
+macro syntax migration for the constructor change.
 
 The [complete signature inventory](constructors/README.md) lists every old and
 new constructor, bound, and platform gate for all 40 vector types.
@@ -87,53 +90,29 @@ attributes, and feature gates. It handles generated vectors and the handwritten
 cross-width and scalar modules. Regenerate with `cargo run -p xtask -- generate`;
 do not maintain separate constructor lists or hand-edit the generated aliases.
 
+`just check-packages` builds the crate archives together without publishing and
+asserts that the normalized manifests keep the exact archmage→archmage-macros pin
+and the ordinary magetypes→archmage version requirement. Pass `--target` to
+`python3 xtask/check_packages.py`, repeatedly, to check other targets.
+
 ## Compatibility checks
 
 Against the published 0.9.29 API snapshots, the x86-64, AArch64, and WASM
-surfaces retain every existing public line. The migration tests exercise both
-spellings, baseline-callable function pointers, generic token bounds, floating
-point bit preservation, mutable slice views and tails, and existing `define`
-macro syntax. Default, no-default-feature, and AVX-512 configurations pass the
-focused tests; AArch64 tests also pass under QEMU. WASM and i686 test targets
-compile. These checks cover the additive 0.9 change, not the future 0.10 API.
+surfaces retain every existing public line. `cargo-semver-checks` (0.50.0, patch
+comparison against the 0.9.29 packages) reports only
+`type_method_marked_deprecated`, the intended deprecations; no signature was
+removed. The tool cannot check proc-macro crates, so archmage-macros is covered
+by expansion snapshots and downstream compilation fixtures instead.
 
-## Release verification (2026-09-27)
-
-The baseline is the published 0.9.29 packages, not the preserved constructor-mode
-or `use(...)` draft. `cargo-semver-checks 0.50.0` found no breaking API changes in
-archmage or magetypes on x86-64, nor in magetypes on AArch64 or WASM, using
-a patch-release comparison. That result predates the deprecation step. With legacy-name deprecations enabled,
-the x86-64 patch comparison flags only `type_method_marked_deprecated` (222
-checks pass); no signatures were removed. This is the intentional warning
-change described above, not an unconditional clean semver-check result.
-The tool excludes proc-macro crates: selecting
-archmage-macros alone reports no checkable library target. Its compatibility
-is covered by expansion snapshots and downstream compilation fixtures, not
-by semver-checks. The API check addresses source compatibility;
-it does not establish numerical equivalence or future 0.10 compatibility.
-
-For WASM, the tool's automatic rustdoc generation hit
-[cargo-semver-checks #1068](https://github.com/obi1kenobi/cargo-semver-checks/issues/1068).
-Generating both rustdoc JSON inputs with `cargo rustdoc` (without
-`--cap-lints=allow`) and supplying `--current-rustdoc` / `--baseline-rustdoc`
-completed the comparison successfully. The ordinary per-target API snapshots
-remain the CI check.
-
-`just check-packages` builds actual crate archives together without publishing.
-It asserts the normalized manifests retain the exact archmage→archmage-macros
-pin and the ordinary compatible magetypes→archmage version requirement. The
-archives were also checked with `--target x86_64-unknown-linux-gnu`,
-`--target aarch64-unknown-linux-gnu`, and `--target wasm32-wasip1` passed to
-`python3 xtask/check_packages.py` (repeat `--target` to check several).
-
-Published jxl-encoder-simd 0.3.0 still calls `f32x4::from_i32x4(vector)` on ARM
-and WASM, so it does not compile there
-([#117](https://github.com/imazen/archmage/issues/117)). The fix belongs in that
-crate: pass the token, `f32x4::from_i32x4(token, vector)`. The calling-convention matrix runs on x86,
+The migration tests exercise both spellings, baseline-callable function
+pointers, generic token bounds, floating point bit preservation, mutable slice
+views and tails, and existing `define` macro syntax. Default, no-default-feature,
+and AVX-512 configurations pass them; AArch64 tests also pass under QEMU, and
+WASM and i686 test targets compile. The calling-convention matrix runs on x86,
 ARM/QEMU, and WASM/Wasmtime and covers scalar/default signatures, tokenful and
-tokenless composition, nested dispatch, and const generics.
-
-No package version was bumped and nothing was published by these checks.
+tokenless composition, nested dispatch, and const generics. These checks cover
+the additive 0.9 change, not the future 0.10 API, and source compatibility, not
+numerical equivalence.
 
 ## Downstream compilation after deprecation
 

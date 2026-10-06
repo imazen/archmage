@@ -40,8 +40,7 @@ assert_eq!(values, [9.0; 11]);
 | `f32x8::<T>::partition_slice_mut_t(token, slice)` | Array chunks and a scalar tail | Computes chunk/tail extents once; no vector-alignment requirement |
 
 The generic API does not provide `load_aligned`, `store_aligned`, or `stream`
-methods. Earlier versions of this page incorrectly advertised them. Do not
-substitute a raw pointer cast for these reference-based calls.
+methods. Do not substitute a raw pointer cast for these reference-based calls.
 
 For reusable `T: F32x8Backend` helpers, see
 [generic kernels](@/magetypes/examples/generic-kernels.md). Such helpers inline
