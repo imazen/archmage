@@ -335,12 +335,12 @@ mod generic_magetypes_dispatch {
     use magetypes::simd::backends::F32x8Backend;
     use magetypes::simd::generic::f32x8;
 
-    // NOTE: #[magetypes] + f32x8::<Token> does NOT work because #[magetypes]
-    // generates variants for ALL tokens (v3, v4, neon, wasm128, scalar) but
-    // F32x8Backend is only implemented for specific base tokens (v3, neon,
-    // wasm128, scalar). The v4 variant would fail to compile.
-    //
-    // Instead: write a generic function and wire up incant! manually.
+    // A backend-generic helper with incant! wired by hand. #[magetypes] with
+    // f32x8::<Token> also works for this body: with the avx512 feature the V4
+    // tokens implement F32x8Backend by delegating to V3
+    // (impls/x86_v4_f32_delegated.rs). They implement no other 128- or
+    // 256-bit backend, so a #[magetypes] body using, say, i32x8::<Token>
+    // needs a tier list without v4.
 
     fn sum_generic<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
         f32x8::<T>::from_array_t(token, *data).reduce_add()
