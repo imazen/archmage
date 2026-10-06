@@ -15,3 +15,8 @@ runner = "wasmtime -W simd=y"
 # that isn't installed and breaking the native jobs. To run aarch64 tests under
 # QEMU on an x86 dev box, set `CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER`
 # (and the matching `_LINKER`) in your own environment, or use `cross test`.
+
+# `cargo xtask <command>` runs the code generator and validators in `xtask/`;
+# the justfile recipes call the same commands.
+[alias]
+xtask = "run --package xtask --"
