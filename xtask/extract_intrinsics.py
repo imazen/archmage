@@ -94,6 +94,43 @@ def extract_signature(lines, fn_line_idx):
     return full
 
 
+# `#[cfg_attr(<cond>, target_feature(enable = "..."))]` on one line.
+CFG_ATTR_TF = re.compile(
+    r'#\[cfg_attr\(\s*(.+?)\s*,\s*target_feature\(enable\s*=\s*"([^"]+)"\)\s*\)\]'
+)
+TF_ENABLE = re.compile(r'target_feature\(enable\s*=\s*"([^"]+)"\)')
+
+
+def cfg_applies(cond, arch_name):
+    """Whether a `cfg_attr` condition holds on `arch_name`.
+
+    stdarch adds per-architecture features this way, e.g. the FMLAL/FMLSL
+    intrinsics carry `#[cfg_attr(not(target_arch = "arm"), target_feature(enable = "fhm"))]`
+    on top of `neon,fp16`. Only `target_arch` conditions are understood;
+    anything else is reported and ignored.
+    """
+    cond = cond.strip()
+    m = re.fullmatch(r'not\(\s*target_arch\s*=\s*"(\w+)"\s*\)', cond)
+    if m:
+        return m.group(1) != arch_name
+    m = re.fullmatch(r'target_arch\s*=\s*"(\w+)"', cond)
+    if m:
+        return m.group(1) == arch_name
+    print(f"warning: unrecognized cfg_attr condition on target_feature: {cond}", file=sys.stderr)
+    return False
+
+
+def merge_features(base, extra):
+    """Union of comma-separated feature lists, first occurrence order."""
+    out = []
+    for group in [base] + extra:
+        for f in group.split(','):
+            f = f.strip()
+            if f and f not in out:
+                out.append(f)
+    return ','.join(out)
+
+
 def extract_intrinsics(arch_dir, arch_name):
     """Extract intrinsics from a stdarch architecture directory."""
     results = []
@@ -139,6 +176,7 @@ def extract_intrinsics(arch_dir, arch_name):
                     fn_name = None
                     is_unsafe = False
                     stability = "unknown"
+                    extra_features = []
                     bracket_depth = 0
                     # Track multi-line cfg_attr context for ARM stability
                     in_arm_only_attr = False
@@ -155,6 +193,14 @@ def extract_intrinsics(arch_dir, arch_name):
                             elif 'target_arch = "arm"' in fline and 'not(' not in fline:
                                 in_arm_only_attr = True
                                 in_not_arm_attr = False
+
+                            # A multi-line cfg_attr may add a target feature.
+                            tf_inner = TF_ENABLE.search(fline)
+                            if tf_inner and (
+                                (in_not_arm_attr and arch_name != 'arm')
+                                or (in_arm_only_attr and arch_name == 'arm')
+                            ):
+                                extra_features.append(tf_inner.group(1))
 
                             # Ignore `rustc_const_{un}stable` — it gates *const*
                             # usage, not the fn's own (stable) availability.
@@ -186,6 +232,9 @@ def extract_intrinsics(arch_dir, arch_name):
                             break
 
                         if fline.startswith('#['):
+                            cfg_tf = CFG_ATTR_TF.search(fline)
+                            if cfg_tf and cfg_applies(cfg_tf.group(1), arch_name):
+                                extra_features.append(cfg_tf.group(2))
                             # Enter multi-line attribute tracking
                             if 'cfg_attr' in fline:
                                 if 'not(target_arch = "arm")' in fline:
@@ -224,7 +273,7 @@ def extract_intrinsics(arch_dir, arch_name):
                         entry = {
                             'arch': arch_name,
                             'name': fn_name,
-                            'features': features,
+                            'features': merge_features(features, extra_features),
                             'unsafe': is_unsafe,
                             'stability': stability,
                             'file': rel_path,

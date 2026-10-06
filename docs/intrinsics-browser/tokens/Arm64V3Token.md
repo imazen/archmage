@@ -3,7 +3,7 @@
 Proof that the full modern ARM SIMD feature set is available (Arm64-v3).
 
 **Architecture:** aarch64 | **Features:** neon, crc, rdm, dotprod, fp16, aes, sha2, fhm, fcma, sha3, i8mm, bf16
-**Total intrinsics:** 71 (71 safe, 0 unsafe, 0 stable, 71 unstable/unknown)
+**Total intrinsics:** 99 (99 safe, 0 unsafe, 24 stable, 75 unstable/unknown)
 
 ## Usage
 
@@ -34,14 +34,47 @@ fn process_chunk(_: Arm64V3Token, chunk: &mut [f32; 4]) {
 
 ## All Intrinsics
 
-### Unstable/Nightly (71 intrinsics)
+### Stable, Safe (24 intrinsics)
+
+| Name | Description | Instruction | Timing (H/Z4) |
+|------|-------------|-------------|---------------|
+| `vfmlal_high_f16` | Floating-point fused Multiply-Add Long to accumulator (vecto... | fmlal2 | — |
+| `vfmlal_lane_high_f16` | Floating-point fused Multiply-Add Long to accumulator (by el... |  | — |
+| `vfmlal_lane_low_f16` | Floating-point fused Multiply-Add Long to accumulator (by el... |  | — |
+| `vfmlal_laneq_high_f16` | Floating-point fused Multiply-Add Long to accumulator (by el... |  | — |
+| `vfmlal_laneq_low_f16` | Floating-point fused Multiply-Add Long to accumulator (by el... |  | — |
+| `vfmlal_low_f16` | Floating-point fused Multiply-Add Long to accumulator (vecto... | fmlal | — |
+| `vfmlalq_high_f16` | Floating-point fused Multiply-Add Long to accumulator (vecto... | fmlal2 | — |
+| `vfmlalq_lane_high_f16` | Floating-point fused Multiply-Add Long to accumulator (by el... |  | — |
+| `vfmlalq_lane_low_f16` | Floating-point fused Multiply-Add Long to accumulator (by el... |  | — |
+| `vfmlalq_laneq_high_f16` | Floating-point fused Multiply-Add Long to accumulator (by el... |  | — |
+| `vfmlalq_laneq_low_f16` | Floating-point fused Multiply-Add Long to accumulator (by el... |  | — |
+| `vfmlalq_low_f16` | Floating-point fused Multiply-Add Long to accumulator (vecto... | fmlal | — |
+| `vfmlsl_high_f16` | Floating-point fused Multiply-Subtract Long from accumulator... | fmlsl2 | — |
+| `vfmlsl_lane_high_f16` | Floating-point fused Multiply-Subtract Long from accumulator... |  | — |
+| `vfmlsl_lane_low_f16` | Floating-point fused Multiply-Subtract Long from accumulator... |  | — |
+| `vfmlsl_laneq_high_f16` | Floating-point fused Multiply-Subtract Long from accumulator... |  | — |
+| `vfmlsl_laneq_low_f16` | Floating-point fused Multiply-Subtract Long from accumulator... |  | — |
+| `vfmlsl_low_f16` | Floating-point fused Multiply-Subtract Long from accumulator... | fmlsl | — |
+| `vfmlslq_high_f16` | Floating-point fused Multiply-Subtract Long from accumulator... | fmlsl2 | — |
+| `vfmlslq_lane_high_f16` | Floating-point fused Multiply-Subtract Long from accumulator... |  | — |
+| `vfmlslq_lane_low_f16` | Floating-point fused Multiply-Subtract Long from accumulator... |  | — |
+| `vfmlslq_laneq_high_f16` | Floating-point fused Multiply-Subtract Long from accumulator... |  | — |
+| `vfmlslq_laneq_low_f16` | Floating-point fused Multiply-Subtract Long from accumulator... |  | — |
+| `vfmlslq_low_f16` | Floating-point fused Multiply-Subtract Long from accumulator... | fmlsl | — |
+
+### Unstable/Nightly (75 intrinsics)
 
 | Name | Description | Instruction |
 |------|-------------|-------------|
+| `vcadd_rot270_f16` | Floating-point complex add | fcadd |
 | `vcadd_rot270_f32` | Floating-point complex add | fcadd |
+| `vcadd_rot90_f16` | Floating-point complex add | fcadd |
 | `vcadd_rot90_f32` | Floating-point complex add | fcadd |
+| `vcaddq_rot270_f16` | Floating-point complex add | fcadd |
 | `vcaddq_rot270_f32` | Floating-point complex add | fcadd |
 | `vcaddq_rot270_f64` | Floating-point complex add | fcadd |
+| `vcaddq_rot90_f16` | Floating-point complex add | fcadd |
 | `vcaddq_rot90_f32` | Floating-point complex add | fcadd |
 | `vcaddq_rot90_f64` | Floating-point complex add | fcadd |
 | `vcmla_f16` | Floating-point complex multiply accumulate | fcmla |

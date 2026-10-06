@@ -694,7 +694,7 @@ Every token's feature claims MUST be verified by exercising real intrinsics on t
 | neon,fp16 | 162/301 | Partial | Rust 1.98.0 database: 162 stable (conversion, div, FMA), 139 unstable |
 | fcma | 0/58 | Nightly | All unstable (Rust 1.98.0 database) |
 | i8mm | 0/22 | Nightly | All unstable (Rust 1.98.0 database) |
-| fhm | 24/24 | Stable | FMLAL/FMLSL, stable since Rust 1.94.0 under `stdarch_neon_fp16`; each needs both `fp16` and `fhm` (the fhm gate is a `cfg_attr` the CSV extractor misses, so the database lists only `neon,fp16`) |
+| fhm | 24/24 | Stable | FMLAL/FMLSL, stable since Rust 1.94.0 under `stdarch_neon_fp16`; each needs both `fp16` and `fhm` (the `fhm` gate is a `cfg_attr`, which `xtask/extract_intrinsics.py` reads since 2026-10-05) |
 | bf16 | 0 | None | No Rust intrinsics in stdarch |
 | avx512fp16 | 438/441 (+266/272 with avx512vl) | Stable | Per `docs/intrinsics/x86_64_intrinsics.csv`; `_mm512_add_ph` on `__m512h` compiles on stable 1.99 (checked 2026-10-05). Intrinsics that take or return the scalar `f16` type still need nightly `f16`. Not yet exercised by a test. |
 | pclmulqdq + aes (128-bit) | ~10 | Full | Tested in x86_crypto_intrinsics.rs |
