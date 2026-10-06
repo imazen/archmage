@@ -49,14 +49,16 @@ scale_plane(&mut plane, 0.5);
 assert_eq!(plane, [1.0; 11]);
 ```
 
-- `#[magetypes]` compiles `scale_plane_impl` once per tier in its list: `v4`
-  (AVX-512), `v3` (AVX2 and FMA), `neon`, `wasm128` and `scalar`. List several
-  vector types as `define(f32x8, u8x16, i16x8)`.
+- `#[magetypes]` compiles `scale_plane_impl` once per tier in its list and
+  names each copy for its tier: `scale_plane_impl_v4` (AVX-512),
+  `scale_plane_impl_v3` (AVX2 and FMA), `_neon`, `_wasm128` and `_scalar`. List
+  several vector types as `define(f32x8, u8x16, i16x8)`.
 - `v4(cfg(avx512))` compiles the AVX-512 copy only when your crate's `avx512`
   feature is on: the opt-in from the `Cargo.toml` above. `f32x8` stays eight
   lanes in that copy. For 512-bit vectors, use `f32x16`.
-- `incant!` calls `summon()` for each tier, best first, and runs the first copy
-  the CPU supports. Call it around your loop, as here, not inside it.
+- `incant!` finds the copies by those names. It calls `summon()` for each tier,
+  best first, and runs the first copy the CPU supports. Call it around your
+  loop, as here, not inside it.
 - Constructors ending in `_t` take the token as their first argument.
 
 Don't write per-tier `#[arcane]` wrappers around a `#[magetypes]` kernel: the
@@ -103,16 +105,34 @@ chunks and a tail. You need no aligned allocator and no padding.
   [gather and scatter](https://imazen.github.io/archmage/magetypes/memory/gather-scatter/)
   on `u32x16`, `i32x16` and `f32x16`.
 
+## Naming: `<name>_<tier>`
+
+`incant!(scale_plane_impl(…), [v3, scalar])` calls `scale_plane_impl_v3(token, …)` or
+`scale_plane_impl_scalar(token, …)`. That is the whole contract: the tier as a suffix,
+and that tier's token as the first argument. `#[magetypes]` and `#[autoversion]`
+generate functions of that shape.
+
+Name your own tier functions the same way:
+
+- They join the same family. Leave `v3` out of a `#[magetypes]` list, write
+  `scale_plane_impl_v3` by hand, and `incant!` still finds it:
+  [hand-tuned variants](https://imazen.github.io/archmage/archmage/dispatch/incant/#hand-tuned-variants).
+- Inside a tier function, `incant!` needs no CPU check. In a `v3` function,
+  `incant!(helper(…), [v3, scalar])` compiles to a direct call to `helper_v3`:
+  [calls inside a tier](https://imazen.github.io/archmage/archmage/dispatch/incant/#calls-inside-a-tier).
+- The suffix shows, at every call site, which CPU features a function needs.
+
 ## Which macro
 
 The macros come from archmage:
 
-| You want to | Use |
-|---|---|
-| Write one kernel with vector types, for every CPU | [`#[magetypes]`](https://imazen.github.io/archmage/archmage/dispatch/magetypes-macro/) + [`incant!`](https://imazen.github.io/archmage/archmage/dispatch/incant/) |
-| Let the compiler vectorize a plain loop for each tier | [`#[autoversion]`](https://imazen.github.io/archmage/archmage/dispatch/autoversion/) |
-| Call the intrinsics of one instruction set | [`#[arcane]`](https://imazen.github.io/archmage/archmage/concepts/arcane/) at the entry, [`#[rite]`](https://imazen.github.io/archmage/archmage/concepts/rite/) for helpers |
-| Share an algorithm between kernels | [A generic helper](https://imazen.github.io/archmage/magetypes/examples/generic-kernels/), inlined into a `#[magetypes]` kernel |
+| You want | Write | Call it |
+|---|---|---|
+| One kernel with vector types, for every CPU | [`#[magetypes(v3, neon, scalar)]`](https://imazen.github.io/archmage/archmage/dispatch/magetypes-macro/) on `fn kernel(token: Token, …)` | [`incant!(kernel(…), [v3, neon, scalar])`](https://imazen.github.io/archmage/archmage/dispatch/incant/) |
+| A plain loop the compiler vectorizes for each tier | [`#[autoversion]`](https://imazen.github.io/archmage/archmage/dispatch/autoversion/) on `fn sum(data: &[f32]) -> f32` | `sum(data)`. The macro writes the dispatcher |
+| The intrinsics of one instruction set | [`#[arcane]`](https://imazen.github.io/archmage/archmage/concepts/arcane/) on `fn kernel_v3(token: X64V3Token, …)` | `incant!(kernel(…), [v3, scalar])` |
+| A helper inside SIMD code | [`#[rite(v3)]`](https://imazen.github.io/archmage/archmage/concepts/rite/) on `fn helper(…)` | `helper(…)`, from a function that has the `v3` features |
+| An algorithm shared between kernels | [A generic helper](https://imazen.github.io/archmage/magetypes/examples/generic-kernels/): `#[inline(always)] fn helper<T: F32x8Backend>(token: T, …)` | `helper(token, …)`, from a `#[magetypes]` kernel |
 
 [Types and dispatch](https://imazen.github.io/archmage/magetypes/dispatch/types-and-dispatch/)
 covers kernels that are also generic over a pixel type or a constant.

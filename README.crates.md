@@ -43,11 +43,13 @@ apply_gain(&mut plane, 0.5);
 assert_eq!(plane, [1.0; 11]);
 ```
 
-- `#[magetypes]` compiles `gain_impl` once per tier in its list: `v3` (AVX2 and
-  FMA), `neon`, `wasm128` and `scalar`. In each copy, `Token` is that tier's
-  token type and `f32x8` is that tier's vector.
-- `incant!` calls `summon()` for each tier, best first, and runs the first copy
-  the CPU supports. Call it around your loop, as here, not inside it.
+- `#[magetypes]` compiles `gain_impl` once per tier in its list and names each
+  copy for its tier: `gain_impl_v3` (AVX2 and FMA), `gain_impl_neon`,
+  `gain_impl_wasm128` and `gain_impl_scalar`. In each copy, `Token` is that
+  tier's token type and `f32x8` is that tier's vector.
+- `incant!` finds the copies by those names. It calls `summon()` for each tier,
+  best first, and runs the first copy the CPU supports. Call it around your
+  loop, as here, not inside it.
 - Constructors ending in `_t` take the token as their first argument.
 
 The kernel is adapted from `zenfilters`;
@@ -88,23 +90,42 @@ assert_eq!(multiply(&[3.0; 8]), [6.0; 8]);
   safe to call from ordinary code.
 - `import_intrinsics` brings the architecture's intrinsics into scope. Loads and
   stores take references instead of raw pointers.
-- `incant!` calls `multiply_v3` where the CPU has the `v3` features and
-  `multiply_scalar` everywhere else.
+- The names do the dispatch. `incant!(multiply(data), [v3, scalar])` calls
+  `multiply_v3` where the CPU has the `v3` features and `multiply_scalar`
+  everywhere else.
 
 Mark helper functions with `#[rite]` instead. They get the same features and
 inline into the kernel that calls them. The
 [intrinsics browser](https://imazen.github.io/archmage/intrinsics/) shows which
 intrinsics each token unlocks.
 
+## Naming: `<name>_<tier>`
+
+`incant!(gain_impl(…), [v3, scalar])` calls `gain_impl_v3(token, …)` or
+`gain_impl_scalar(token, …)`. That is the whole contract: the tier as a suffix,
+and that tier's token as the first argument. `#[magetypes]` and `#[autoversion]`
+generate functions of that shape.
+
+Name your own tier functions the same way:
+
+- They join the same family. Leave `v3` out of a `#[magetypes]` list, write
+  `gain_impl_v3` by hand, and `incant!` still finds it:
+  [hand-tuned variants](https://imazen.github.io/archmage/archmage/dispatch/incant/#hand-tuned-variants).
+- Inside a tier function, `incant!` needs no CPU check. In a `v3` function,
+  `incant!(helper(…), [v3, scalar])` compiles to a direct call to `helper_v3`:
+  [calls inside a tier](https://imazen.github.io/archmage/archmage/dispatch/incant/#calls-inside-a-tier).
+- The suffix shows, at every call site, which CPU features a function needs.
+
 ## Which macro
 
-| You want to | Use |
-|---|---|
-| Write one kernel with vector types, for every CPU | [`#[magetypes]`](https://imazen.github.io/archmage/archmage/dispatch/magetypes-macro/) + [`incant!`](https://imazen.github.io/archmage/archmage/dispatch/incant/) |
-| Let the compiler vectorize a plain loop for each tier | [`#[autoversion]`](https://imazen.github.io/archmage/archmage/dispatch/autoversion/) |
-| Call the intrinsics of one instruction set | [`#[arcane]`](https://imazen.github.io/archmage/archmage/concepts/arcane/) at the entry, [`#[rite]`](https://imazen.github.io/archmage/archmage/concepts/rite/) for helpers |
-| Share an algorithm between kernels | [A generic helper](https://imazen.github.io/archmage/magetypes/examples/generic-kernels/), inlined into a `#[magetypes]` kernel |
-| Choose the tier yourself | `X64V3Token::summon()` and an `if let`: [manual dispatch](https://imazen.github.io/archmage/archmage/dispatch/manual/) |
+| You want | Write | Call it |
+|---|---|---|
+| One kernel with vector types, for every CPU | [`#[magetypes(v3, neon, scalar)]`](https://imazen.github.io/archmage/archmage/dispatch/magetypes-macro/) on `fn kernel(token: Token, …)` | [`incant!(kernel(…), [v3, neon, scalar])`](https://imazen.github.io/archmage/archmage/dispatch/incant/) |
+| A plain loop the compiler vectorizes for each tier | [`#[autoversion]`](https://imazen.github.io/archmage/archmage/dispatch/autoversion/) on `fn sum(data: &[f32]) -> f32` | `sum(data)`. The macro writes the dispatcher |
+| The intrinsics of one instruction set | [`#[arcane]`](https://imazen.github.io/archmage/archmage/concepts/arcane/) on `fn kernel_v3(token: X64V3Token, …)` | `incant!(kernel(…), [v3, scalar])` |
+| A helper inside SIMD code | [`#[rite(v3)]`](https://imazen.github.io/archmage/archmage/concepts/rite/) on `fn helper(…)` | `helper(…)`, from a function that has the `v3` features |
+| An algorithm shared between kernels | [A generic helper](https://imazen.github.io/archmage/magetypes/examples/generic-kernels/): `#[inline(always)] fn helper<T: F32x8Backend>(token: T, …)` | `helper(token, …)`, from a `#[magetypes]` kernel |
+| The tier chosen by hand | `X64V3Token::summon()` and an `if let` | `kernel_v3(token, …)`, behind `#[cfg(target_arch = "x86_64")]`: [manual dispatch](https://imazen.github.io/archmage/archmage/dispatch/manual/) |
 
 The guide also covers
 [tokens and tiers](https://imazen.github.io/archmage/archmage/getting-started/tokens/),
