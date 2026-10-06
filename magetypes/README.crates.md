@@ -55,7 +55,8 @@ assert_eq!(plane, [1.0; 11]);
   several vector types as `define(f32x8, u8x16, i16x8)`.
 - `v4(cfg(avx512))` compiles the AVX-512 copy only when your crate's `avx512`
   feature is on: the opt-in from the `Cargo.toml` above. `f32x8` stays eight
-  lanes in that copy. For 512-bit vectors, use `f32x16`.
+  lanes in that copy and has fewer methods there (see [Limits](#limits)). For
+  512-bit vectors, use `f32x16`.
 - `incant!` finds the copies by those names. It calls `summon()` for each tier,
   best first, and runs the first copy the CPU supports. Call it around your
   loop, as here, not inside it.
@@ -178,9 +179,10 @@ has the details.
   operations: an `f32x8` on NEON is two `f32x4`s.
 - SIMD tiers cover x86-64, AArch64 and WASM. Other targets run the scalar
   backend.
-- With `v4` in a `#[magetypes]` tier list, the body can use the 512-bit types,
-  `f32x4` and `f32x8`. The AVX-512 tokens don't implement the other 128- and
-  256-bit types.
+- With `v4` in a `#[magetypes]` tier list, use the 512-bit types. The AVX-512
+  tokens implement only part of the narrower ones: `f32x4` and `f32x8` without
+  their transcendentals, integer conversions and raw interop, and no other
+  128- or 256-bit type.
 - Transcendentals are approximations with documented error:
   [Transcendentals](https://imazen.github.io/archmage/magetypes/math/transcendentals/)
   gives each function's domain and precision.

@@ -155,7 +155,8 @@ is on:
 incant!(gain_impl(plane, gain), [v4(cfg(avx512)), v3, neon, wasm128, scalar])
 ```
 
-`f32x8` stays eight lanes in the `v4` copy. For 512-bit vectors, use `f32x16`.
+`f32x8` stays eight lanes in the `v4` copy and has fewer methods there (see
+[Limits](#limits)). For 512-bit vectors, use `f32x16`.
 
 [Installation](https://imazen.github.io/archmage/archmage/getting-started/installation/)
 has the `no_std` setup and the remaining features.
@@ -190,9 +191,10 @@ lists every `unsafe` in both crates.
   Dispatch once, outside the loop.
 - A vector wider than the CPU's registers runs as two or four native
   operations: an `f32x8` on NEON is two `f32x4`s.
-- With `v4` in a `#[magetypes]` tier list, the body can use the 512-bit types,
-  `f32x4` and `f32x8`. The AVX-512 tokens don't implement the other 128- and
-  256-bit types.
+- With `v4` in a `#[magetypes]` tier list, use the 512-bit types. The AVX-512
+  tokens implement only part of the narrower ones: `f32x4` and `f32x8` without
+  their transcendentals, integer conversions and raw interop, and no other
+  128- or 256-bit type.
 - Some floating-point results differ between backends. `mul_add` rounds once
   where the hardware fuses (x86 v3/v4, NEON) and twice on the scalar backend and
   strict WASM; `mul_add_portable` rounds once everywhere, in software where
