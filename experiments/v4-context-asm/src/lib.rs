@@ -5,11 +5,21 @@
 #![allow(clippy::too_many_arguments)]
 
 
+#[cfg(target_arch = "x86_64")]
 mod entries_a;
+#[cfg(target_arch = "x86_64")]
 mod group_a;
+#[cfg(target_arch = "x86_64")]
 mod group_b;
+#[cfg(target_arch = "x86_64")]
 mod group_c;
+mod group_p;
+#[cfg(target_arch = "x86_64")]
 pub use entries_a::*;
+#[cfg(target_arch = "x86_64")]
 pub use group_a::*;
+#[cfg(target_arch = "x86_64")]
 pub use group_b::*;
+#[cfg(target_arch = "x86_64")]
 pub use group_c::*;
+pub use group_p::*;
