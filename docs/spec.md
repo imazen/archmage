@@ -23,13 +23,13 @@ Tokens are `Copy + Clone + Send + Sync + 'static`. They carry no data — the ty
 | Token | Aliases | Features | Hardware |
 |-------|---------|----------|----------|
 | `X64V1Token` | `Sse2Token` | sse, sse2 (x86_64 baseline) | All x86_64 CPUs |
-| `X64V2Token` | — | + sse3, ssse3, sse4.1, sse4.2, popcnt | Nehalem 2008+, Bulldozer 2011+ |
+| `X64V2Token` | — | + sse3, ssse3, sse4.1, sse4.2, popcnt, cmpxchg16b | Nehalem 2008+, Bulldozer 2011+ |
 | `X64CryptoToken` | — | v2 + pclmulqdq, aes | Westmere 2010+, Bulldozer 2011+ |
-| `X64V3Token` | — | + avx, avx2, fma, bmi1, bmi2, f16c, lzcnt | Haswell 2013+, Zen 1 2017+ |
+| `X64V3Token` | `Desktop64` (`Avx2FmaToken` deprecated) | + avx, avx2, fma, bmi1, bmi2, f16c, lzcnt, movbe | Haswell 2013+, Zen 1 2017+ |
 | `X64V3CryptoToken` | — | v3 + vpclmulqdq, vaes | Zen 3+ 2020, Alder Lake 2021+ |
 | `X64V3GfniCryptoToken` | — | v3 crypto + gfni | Alder/Raptor/Meteor/Arrow/Lunar Lake, Sierra Forest, Zen 4+ |
-| `X64V4Token` | `Avx512Token`, `Server64` | + avx512f, avx512bw, avx512cd, avx512dq, avx512vl | Skylake-X 2017+, Zen 4 2022+ |
-| `X64V4xToken` | — | + avx512vpopcntdq, avx512ifma, avx512vbmi, avx512vbmi2, avx512bitalg, avx512vnni, vpclmulqdq, gfni, vaes | Ice Lake 2019+, Zen 4 2022+ |
+| `X64V4Token` | `Avx512Token`, `Server64` | v3 + pclmulqdq, aes, avx512f, avx512bw, avx512cd, avx512dq, avx512vl | Skylake-X 2017+, Zen 4 2022+ |
+| `X64V4xToken` | `Avx512ModernToken` | + avx512vpopcntdq, avx512ifma, avx512vbmi, avx512vbmi2, avx512bitalg, avx512vnni, vpclmulqdq, gfni, vaes | Ice Lake 2019+, Zen 4 2022+ |
 | `Avx512Fp16Token` | — | v4 + avx512fp16 | Sapphire Rapids 2023+ |
 
 Features are cumulative — each token lists ALL features it enables, not just the delta from the previous tier. This eliminates the class of bugs where "minimal" lists diverge from "cumulative" lists. LLVM deduplicates redundant features in `#[target_feature]`.
@@ -56,15 +56,16 @@ Features are cumulative — each token lists ALL features it enables, not just t
 
 SVE/SVE2 tokens are prohibited — Rust stable doesn't support SVE intrinsics.
 
-#### WASM (1 token)
+#### WASM (2 tokens)
 
 | Token | Features | Notes |
 |-------|----------|-------|
 | `Wasm128Token` | simd128 | Compile-time only (`#[cfg(target_feature = "simd128")]`) |
+| `Wasm128RelaxedToken` | simd128, relaxed-simd | Compile-time only; relaxed operations may differ between engines |
 
 ### 1.3 Token Hierarchy
 
-Tokens form a subsumption hierarchy. Higher-tier tokens can produce lower-tier tokens via `From`/`Into` conversions and extraction methods:
+Tokens form a subsumption hierarchy. Higher-tier tokens produce lower-tier tokens through extraction methods (there are no `From`/`Into` conversions between tokens):
 
 ```
 x86_64:
@@ -80,7 +81,7 @@ AArch64:
   NeonCrcToken → NeonToken
 ```
 
-Extraction methods include `.v1()`, `.v2()`, `.v3()`, `.v3_crypto()`, `.v3_gfni_crypto()`, `.avx512()`, `.neon()`, and `.arm_v2()`. Downcasting is free (zero-cost, same optimization region). Upcasting via `IntoConcreteToken` is safe but creates an LLVM optimization boundary.
+Extraction methods are `.v1()`, `.v2()`, `.x64_crypto()`, `.v3()`, `.v3_crypto()`, `.v3_gfni_crypto()`, `.v4()` (alias `.avx512()`), `.neon()`, `.neon_aes()`, `.neon_sha3()`, `.neon_crc()`, `.arm_v2()` and `.wasm128()`, each on the tokens that cover it. Extraction is free. `IntoConcreteToken` recovers the concrete type of a generic token: `as_x64v3()` returns `Some` only for exactly `X64V3Token`, so it neither upgrades nor downcasts.
 
 ### 1.4 Trait Hierarchy
 
@@ -127,6 +128,7 @@ HasArm64V3 → HasNeonSha3
 | NeonSha3Token | | | x | | x | | |
 | NeonCrcToken | | | x | | | | |
 | Wasm128Token | | | | | | | |
+| Wasm128RelaxedToken | | | | | | | |
 
 ### 1.5 Cross-Platform Behavior
 
@@ -148,7 +150,7 @@ For every token `T`:
 target_features_in_macro(T) ⊆ features_checked_in_summon(T)
 ```
 
-The `#[arcane]` / `#[arcane]` macro reads the token type, looks up features via `token_to_features()`, and generates `#[target_feature(enable = "...")]`. If `summon()` checked fewer features than the macro enables, forging the token would allow calling intrinsics that the CPU doesn't actually support — **undefined behavior** (illegal instructions, crashes, silent data corruption).
+The `#[arcane]` / `#[rite]` macros read the token type, look up its features via `token_to_features()`, and generate `#[target_feature(enable = "...")]`. If `summon()` checked fewer features than the macro enables, it would hand out tokens on CPUs that lack an enabled feature, and the compiler could emit instructions the CPU does not support — **undefined behavior** (illegal instructions, crashes, silent data corruption).
 
 The reverse direction (summon checks more than the macro enables) is safe but wasteful.
 
@@ -171,11 +173,13 @@ fn example(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 This means archmage doesn't need to wrap most intrinsics. The `#[arcane]` macro generates `#[target_feature]` inner functions; value-based intrinsics are automatically safe inside them.
 
-Only pointer-based operations remain unsafe:
+Only pointer-based operations and processor-state access remain unsafe:
 - Loads from `*const T` (`_mm256_loadu_ps`, etc.)
 - Stores to `*mut T` (`_mm256_storeu_ps`, etc.)
 - Gather/scatter operations
-- Prefetch instructions
+- MXCSR, transactional-memory and state save/restore intrinsics
+
+`_mm_prefetch` takes a pointer but is safe: a prefetch never faults.
 
 For safe memory access, use `import_intrinsics` which provides reference-based alternatives (accepts `&[T; N]`/`&mut [T; N]` instead of raw pointers).
 
@@ -183,7 +187,7 @@ For safe memory access, use `import_intrinsics` which provides reference-based a
 
 Both macros parse the token type from your function signature to determine which `#[target_feature]` attributes to emit. The token type *is* the feature selector — `X64V3Token` maps to `avx2,fma,...`, `X64V4Token` maps to `avx512f,avx512bw,...`, and so on. This mapping is maintained in `token-registry.toml` and compiled into the proc macro via `token_to_features()`.
 
-Passing the same token type through a call hierarchy means every function gets the same `#[target_feature]` attributes. LLVM sees matching targets and inlines freely — no optimization boundary. When token types mismatch (or generic bounds prevent monomorphization to a concrete type), LLVM hits a target-feature boundary and can't optimize across it, costing 4-6x (see `docs/PERFORMANCE.md`).
+Passing the same token type through a call hierarchy means every function gets the same `#[target_feature]` attributes. LLVM sees matching targets and inlines freely — no optimization boundary. When a callee needs features its caller lacks — a stronger token, or a caller bounded by a tier trait and so compiled at that lower tier — LLVM hits a target-feature boundary and can't optimize across it, costing 4-6x (see `docs/PERFORMANCE.md`).
 
 #### Sibling Expansion (default)
 
@@ -232,55 +236,50 @@ call. That implementation belongs to archmage; callers use `#[arcane]` or
 
 Token-based and tier-based produce identical output. Multi-tier generates one function per tier. Since Rust 1.86+, all variants are safe to call from matching `#[arcane]` or `#[rite]` contexts.
 
-This also works with `impl Trait` bounds, generic parameters, and `_self` for trait methods.
+Token-based `#[rite]` also accepts `impl Trait` bounds and generic token parameters. It does not work on trait impl methods, because Rust rejects `#[target_feature]` on a safe trait method; use `#[arcane(_self = Type)]` there.
 
 ## 3. Intrinsic Safety Classification
 
-The stdarch CSV marks all SIMD intrinsics as `unsafe` without distinguishing WHY they're unsafe. Three categories exist:
+The Rust 1.98.0 intrinsic database (`docs/intrinsics/complete_intrinsics.csv`)
+marks 626 x86 intrinsics `unsafe`. Inside a `#[target_feature]` function that
+covers their features, all the others are safe to call. The `unsafe` ones fall
+into two groups, and the database does not record which.
 
-### 3.1 Category 1: Pointer Dereference (~525 of 582 unsafe x86 intrinsics)
+### 3.1 Memory access through a raw pointer (576 of the 626)
 
-Takes `*const T` or `*mut T`, dereferences it. Includes:
+Loads and stores (`_mm*_loadu_*`, `_mm*_storeu_*`, `_mm*_stream_*`), masked and
+expanding loads, compressing stores, `_mm_maskmoveu_si128`, gathers and
+scatters, mask-register loads (`_load_mask16`), the AVX-NE-CONVERT reads
+(`_mm*_bcstnebf16_ps`, `_mm*_cvtneebf16_ps` and relatives), AMX tile loads and
+stores (`_tile_loadd`, `_tile_stored`), and cache control (`_mm_clflush`).
 
-- **Loads:** `_mm*_loadu_*`, `_mm*_load_*`, `_mm*_lddqu_*`
-- **Stores:** `_mm*_storeu_*`, `_mm*_store_*`, `_mm*_stream_*`
-- **Gather:** `_mm*_i32gather_*`, `_mm*_i64gather_*`
-- **Scatter:** `_mm*_i32scatter_*`, `_mm*_i64scatter_*`
-- **Masked:** `_mm*_maskload_*`, `_mm*_maskstore_*`
-- **Prefetch:** `_mm_prefetch`
+Contiguous loads and stores become safe by taking `&[T; N]` / `&mut [T; N]`
+instead of a pointer; `import_intrinsics` provides these. A reference does not
+make gather or scatter safe, because each lane's offset is data: magetypes
+bounds every lane in `simd_storage.rs`. `_mm_prefetch` also takes a pointer but
+is already safe, because a prefetch never faults.
 
-**Wrappable safely** via reference-based wrappers: accept `&[T; N]` instead of `*const T`, validate bounds at the reference level, pass `.as_ptr()` to the intrinsic. These are provided by `import_intrinsics`.
+### 3.2 Processor state (the other 50)
 
-### 3.2 Category 2: Implicit Memory Access (~37 intrinsics)
+MXCSR access (`_mm_getcsr`, `_mm_setcsr`, `_MM_SET_FLUSH_ZERO_MODE` and
+relatives), transactional memory (`_xbegin`, `_xend`, `_xabort`, `_xtest`),
+extended control registers (`_xgetbv`, `_xsetbv`), the Key Locker key load
+(`_mm_loadiwkey`), and AMX tile operations (`_tile_dpbssd`, `_tile_zero`,
+`_tile_release` and relatives), which act on tile registers that
+`_tile_loadconfig` must have configured. State save and restore (`_xsave`,
+`_xrstor`, `_fxrstor`) belongs here too, though it is counted in 3.1 because it
+takes a pointer. Changing this state affects code the caller does not control,
+so no reference-based signature makes these safe.
 
-Reads/writes memory through implicit mechanisms — not through an explicit pointer parameter.
+### 3.3 Open Question: Safety Annotation
 
-- **AMX tile ops** (~15): `_tile_loadd`, `_tile_stored`, `_tile_dpbuud`, etc. — operate on tile registers that reference memory regions configured via `_tile_loadconfig`.
-- **AVX-NE-CONVERT pointer reads** (~12): `_mm*_cvtneps_avx_pbh` variants that read from memory addresses encoded in the instruction.
-- **SSE1 legacy pointer ops** (~10): `_mm_loadh_pi`, `_mm_storeh_pi` — legacy `__m64*` pointer operations.
+Should the CSV gain a `safety_reason` column (`pointer_deref` | `state`) to enable:
 
-Some of these can be wrapped safely (with careful API design), some cannot.
-
-### 3.3 Category 3: Side Effects / State Mutation (~20 intrinsics)
-
-Modifies CPU state beyond just computing a value.
-
-- **RTM transactional memory** (4): `_xbegin`, `_xend`, `_xabort`, `_xtest` — hardware transactional memory (deprecated on many CPUs).
-- **Key Locker crypto** (10): `_mm_aesenc256kl`, `_mm_aesdec256kl`, etc. — hardware-bound encryption with internal key state.
-- **XSAVE state save/restore** (4+): `_xsave`, `_xrstor`, `_xsaveopt`, etc. — saves/restores extended processor state.
-- **CMPXCHG16B atomic** (1): `_cmpxchg16b` — 128-bit compare-and-swap.
-
-**NOT wrappable** with reference patterns. These intrinsics have inherent side effects that cannot be made safe through API design alone.
-
-### 3.4 Open Question: Safety Annotation
-
-Should the registry or CSV gain a `safety_reason` column (`pointer_deref` | `implicit_memory` | `state_mutation`) to enable:
-
-1. Automatic generation of reference-based safe wrappers for Category 1
-2. Validation that magetypes never exposes Category 2/3 without explicit `unsafe`
+1. Automatic generation of reference-based safe wrappers for 3.1
+2. Validation that magetypes never exposes 3.2 without explicit `unsafe`
 3. Documentation of WHY each intrinsic is unsafe
 
-This would be valuable but requires auditing all ~582 unsafe intrinsics to categorize them.
+This would require auditing all 626 unsafe x86 intrinsics.
 
 ## 4. Feature Detection
 
@@ -288,10 +287,10 @@ This would be valuable but requires auditing all ~582 unsafe intrinsics to categ
 
 Token detection combines compile-time and runtime checks:
 
-1. `compiled_with()` — returns `Some(true)` if the feature is enabled at compile time (via `#[target_feature]`, `-Ctarget-cpu`, or being inside an `#[arcane]`/`#[rite]` function). Returns `None` if unknown at compile time.
+1. `compiled_with()` — returns `Some(true)` if the features are enabled for the whole crate (`-Ctarget-cpu`, `-Ctarget-feature`) and `testable_dispatch` is off, `Some(false)` on the wrong architecture, and `None` when only runtime detection can tell. A function's own `#[target_feature]` attribute does not change it: `cfg(target_feature)` is evaluated per crate.
 2. `summon()` — returns `Some(token)` if the CPU supports the required features. Uses atomic caching for fast repeated calls (~1.3 ns). When `compiled_with()` returns `Some(true)`, `summon()` compiles away entirely.
 
-This means inside an `#[arcane]` function compiled for AVX2, `X64V3Token::summon()` compiles to a constant `Some(token)`.
+Inside an `#[arcane]` function, `summon()` is still a cached runtime check. To get a token for the function's own tier, call `from_context()`, which rustc accepts there and which compiles to nothing.
 
 ### 4.2 WASM Special Case
 
@@ -299,7 +298,7 @@ WASM SIMD128 uses compile-time detection only (`#[cfg(target_feature = "simd128"
 
 ### 4.3 AArch64 NEON Detection
 
-NEON is virtually universal on AArch64, but `NeonToken::summon()` performs runtime detection (not a constant `Some`). This is because some AArch64 Linux kernels can disable NEON via `HWCAP` flags, and the detection mechanism is architecture-specific:
+NEON is part of the standard AArch64 targets, so `NeonToken::summon()` is a constant `Some` there (the `testable_dispatch` feature keeps it a runtime check so tests can disable it). The other AArch64 tokens use runtime detection:
 
 - **Linux/Android:** Uses `getauxval(AT_HWCAP)` via `std::arch::is_aarch64_feature_detected!`
 - **macOS / Mac Catalyst / aarch64 simulators:** Uses `sysctlbyname` — with an Apple Silicon fallback for the ten M1+ baseline features, applied **only** on these provably-M1+ hosts (works around the macOS 15.x std_detect bug). Device iOS/tvOS/watchOS/visionOS targets use genuine runtime detection and otherwise fail closed — their A7–A12-era hardware does not guarantee the list (see `docs/SOUNDNESS.md` incident log and `tests/apple_fallback_guard.rs`).
@@ -337,7 +336,7 @@ See `just test-cross` and `just test-parity` for full cross-platform suites.
 
 The registry uses TOML with these table types:
 
-- `[[token]]` — token definitions with name, arch, aliases, features, traits, cargo_feature, display_name, short_name, parent, extraction_aliases, doc
+- `[[token]]` — token definitions with name, arch, aliases, deprecated_aliases, features, traits, parents, display_name, short_name, magetypes_namespace, extraction_aliases, doc
 - `[[trait]]` — trait definitions with name, features, parents
 - `[[width_namespace]]` — width namespace config for simd type re-exports
 - `[[polyfill_w256]]` / `[[polyfill_w512]]` — polyfill platform configs
@@ -348,11 +347,14 @@ scanner — see `docs/SOUNDNESS.md`.)
 
 ### 6.2 Validation
 
-`cargo xtask validate` verifies:
-1. Generated macro code matches registry
-2. `summon()` source checks exactly the registry features
-3. Magetypes intrinsic usage is valid under gating tokens
-4. Trait hierarchy is consistent (token features ⊇ claimed trait features)
-5. Re-running `cargo xtask generate` produces identical output (idempotent)
+Loading the registry checks it: no duplicate names or aliases, every referenced trait exists, every parent exists on the same architecture, no parent cycles, and each token's features include those of its traits. `cargo xtask validate-registry` runs only that. `cargo xtask validate` loads the registry and then runs:
+1. The soundness scanner (`cargo xtask soundness`): every intrinsic call sits in a context whose features cover it, plus the structural and SAFETY-comment rules
+2. A portability check on the committed trybuild `.stderr` snapshots
+3. `summon()` source checks exactly the registry features
+4. The hand-written AVX-512 f32 delegation covers every method it must
+5. The generated backend surface stays within its compile budget
+6. The published sub-crates carry both license files
+
+`just check-generated` regenerates everything and fails if the tree changed, which catches drift between the registry and the generated code.
 
 `cargo xtask parity` checks API surface parity across x86/ARM/WASM (currently 0 issues).
