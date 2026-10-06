@@ -57,6 +57,16 @@
 //! Use `.v3()` to extract a V3 token from a stronger proof; `as_x64v3()` instead
 //! checks whether the held token is exactly a V3 token.
 //!
+//! ## Safety
+//!
+//! Each `#[arcane]` entry point contains one `unsafe` block, the call into its
+//! `#[target_feature]` function, and the token parameter justifies it: safe code
+//! gets a token only from `summon()`, from a stronger token, or from
+//! `from_context()` inside a function whose target features already cover it.
+//! Crates using archmage can `#![forbid(unsafe_code)]`. The
+//! [safety model](https://imazen.github.io/archmage/archmage/concepts/safety/)
+//! shows the expansion, its limits, and how it is checked.
+//!
 //! ## Features
 //!
 //! `std` is enabled by default. `avx512` enables native intrinsic-wrapper and macro

@@ -155,6 +155,17 @@ inspect optimized code under your supported baseline. See
 [testing](https://imazen.github.io/archmage/archmage/testing/dispatch-testing/) and
 [production coverage](https://imazen.github.io/archmage/magetypes/examples/coverage/).
 
+## Safety
+
+Every vector carries the archmage token it was built with, so its operations
+run only where that token's CPU features are proven. magetypes denies
+`unsafe_code` except in one internal module, `simd_storage.rs`, whose `unsafe`
+blocks each state the invariant they rely on: copies between plain-data types,
+vector views with size and alignment checks, and the bounds-checked AVX-512
+gathers and scatters. See the
+[magetypes safety model](https://imazen.github.io/archmage/magetypes/safety/)
+and the [archmage safety model](https://imazen.github.io/archmage/archmage/concepts/safety/).
+
 ## License
 
 MIT OR Apache-2.0

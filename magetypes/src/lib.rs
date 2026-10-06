@@ -55,6 +55,14 @@
 //! Logical [`f32x8<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html) stays eight lanes; `w512` enables wider shapes and `avx512`
 //! adds native AVX-512 implementations. See the [ISA contracts](https://imazen.github.io/archmage/magetypes/isa-quirks/)
 //! for numerical differences and fixups.
+//!
+//! ## Safety
+//!
+//! Every vector carries the token it was built with, so its operations run only
+//! where the token's CPU features are proven. magetypes denies `unsafe_code`
+//! except in one internal module, where each `unsafe` block states the invariant
+//! it relies on. See the
+//! [safety model](https://imazen.github.io/archmage/magetypes/safety/).
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]

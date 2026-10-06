@@ -129,6 +129,22 @@ inspect optimized code under your supported baseline. See
 [testing](https://imazen.github.io/archmage/archmage/testing/dispatch-testing/) and
 [production coverage](https://imazen.github.io/archmage/magetypes/examples/coverage/).
 
+## Safety
+
+Each `#[arcane]` entry point contains one `unsafe` block, the call into its
+`#[target_feature]` function, and the token parameter justifies it: safe code
+gets a token only from `summon()`, from a stronger token, or from
+`from_context()` inside a function whose target features already cover it.
+Crates that use archmage and magetypes can `#![forbid(unsafe_code)]`, because
+the lint skips the macro-generated block. magetypes keeps all of its own
+`unsafe` in one module and denies it everywhere else.
+
+The [safety model](https://imazen.github.io/archmage/archmage/concepts/safety/)
+shows the expansion, its limits (a crate can still deliberately forge a token
+type), and how the invariant is checked.
+[SOUNDNESS.md](https://github.com/imazen/archmage/blob/main/docs/SOUNDNESS.md)
+inventories every `unsafe` in both crates.
+
 ## License
 
 MIT OR Apache-2.0
