@@ -107,13 +107,14 @@ Testing all quantization levels for sRGB gamma round-trip:
 
 ### Implementation Tiers and Suffixes
 
-archmage provides two accuracy tiers with three suffix variants each:
+archmage provides two accuracy tiers. Every function has a plain form; the exp,
+log and pow functions also have `_unchecked`; the midp tier adds `_precise`.
 
 | Suffix | Edge Cases | Denormals | Use Case |
 |--------|------------|-----------|----------|
 | `_unchecked` | No | No | Hot loops with known-valid inputs |
 | (none) | Yes | No | General use |
-| `_precise` | Yes | Yes | Full IEEE compliance |
+| `_precise` | Yes | Yes | Inputs that may be subnormal |
 
 **Edge cases**: 0 → -inf, negative → NaN, +inf → +inf, NaN → NaN (for log functions)
 
@@ -121,7 +122,7 @@ archmage provides two accuracy tiers with three suffix variants each:
 
 #### Low-Precision Tier (`_lowp`)
 
-Functions: `log2_lowp`, `exp2_lowp`, `ln_lowp`, `exp_lowp`, `log10_lowp`, `pow_lowp`
+Functions: `log2_lowp`, `exp2_lowp`, `ln_lowp`, `exp_lowp`, `log10_lowp`, `pow_lowp`, `cbrt_lowp`
 
 Unchecked: `log2_lowp_unchecked`, `exp2_lowp_unchecked`, `ln_lowp_unchecked`, `exp_lowp_unchecked`, `log10_lowp_unchecked`, `pow_lowp_unchecked`
 
@@ -139,9 +140,11 @@ Unchecked: `log2_lowp_unchecked`, `exp2_lowp_unchecked`, `ln_lowp_unchecked`, `e
 
 Functions: `log2_midp`, `exp2_midp`, `ln_midp`, `exp_midp`, `log10_midp`, `pow_midp`, `cbrt_midp`
 
-Unchecked: `log2_midp_unchecked`, `exp2_midp_unchecked`, `ln_midp_unchecked`, `exp_midp_unchecked`, `log10_midp_unchecked`, `pow_midp_unchecked`, `cbrt_midp_unchecked`
+Unchecked: `log2_midp_unchecked`, `exp2_midp_unchecked`, `ln_midp_unchecked`, `exp_midp_unchecked`, `log10_midp_unchecked`, `pow_midp_unchecked`
 
-Precise (denormal-safe): `log2_midp_precise`, `ln_midp_precise`, `log10_midp_precise`, `pow_midp_precise`, `cbrt_midp_precise`
+Precise (denormal-safe): `log2_midp_precise`, `ln_midp_precise`, `log10_midp_precise`, `pow_midp_precise`, `cbrt_midp_precise`; `exp2_midp_precise` and `exp_midp_precise` are the plain forms under the same name, since a subnormal input to an exponential is just close to zero
+
+Activations: `sigmoid_midp` and `silu_midp`, built on `exp_midp` with an exact division, so saturated inputs give 0 or 1 rather than NaN
 
 **SUITABLE for production color processing:**
 - log2/ln/log10: at most 4.5 ULP; cbrt: 3.2 ULP
@@ -154,14 +157,10 @@ Precise (denormal-safe): `log2_midp_precise`, `ln_midp_precise`, `log10_midp_pre
 
 #### Platform Availability
 
-| Platform | lowp/midp | _unchecked | _precise |
-|----------|-----------|------------|----------|
-| x86-64 (AVX2+) | ✓ | ✓ | cbrt only |
-| AArch64 (NEON) | ✓ | ✓ | cbrt only |
-| WASM SIMD128 | ✓ | ✓ | ✓ (full) |
-
-WASM has complete `_precise` variants because polynomial approximations are used (no hardware transcendentals).
-x86/ARM use different algorithms where denormal handling is only implemented for cbrt.
+Every f32 width (`f32x4`, `f32x8`, `f32x16`) on every backend has the same
+functions: they are written once against the generic vector API in
+`xtask/src/simd_types/generic_gen/transcendentals.rs`. The f64 types have no
+transcendentals.
 
 ### Algorithm Implementation Status
 
@@ -173,7 +172,7 @@ x86/ARM use different algorithms where denormal handling is only implemented for
 | 10-bit HDR | midp | 100% exact round-trip | `pow_midp`, `exp2_midp`, `log2_midp` |
 | 12-bit | midp | 100% exact round-trip | `pow_midp`, `exp2_midp`, `log2_midp` |
 | 16-bit | midp | 97% exact, 3% off-by-1 | `pow_midp`, `exp2_midp`, `log2_midp` |
-| Denormal inputs | _precise | Full IEEE | `log2_midp_precise`, `ln_midp_precise`, `log10_midp_precise`, `pow_midp_precise` |
+| Subnormal inputs | _precise | midp accuracy, subnormals included | `log2_midp_precise`, `ln_midp_precise`, `log10_midp_precise`, `pow_midp_precise`, `cbrt_midp_precise` |
 
 **Recommendations:**
 - Use midp functions for all color processing work
@@ -342,7 +341,7 @@ Uses hardware `sqrtps`/`vsqrtps` instruction. Full precision, fast on modern CPU
 
 ### rsqrt — Fast Reciprocal Square Root
 
-For 1/sqrt(x), archmage provides `rsqrt_approx()` (raw ~12-bit precision) and `rsqrt()` (refined with Newton-Raphson).
+For 1/sqrt(x), archmage provides `rsqrt_approx()` (the cheapest path per platform, about 12 bits), `rsqrt()` (within 4 ULP, exact at ±0, +inf and NaN) and `rsqrt_portable()` (exact, the same bits on every backend).
 
 ### cbrt_lowp — Cube Root (Fast)
 
@@ -377,7 +376,7 @@ Kahan bit-hack initial guess + 2 Halley iterations.
 
 ## Comparison with sleef-rs
 
-Benchmarked using `examples/sleef_comparison.rs` (requires nightly for `portable_simd`).
+Benchmarked using `examples/sleef_comparison.rs` (required nightly for `portable_simd`), which was removed with the sleef feature in 337bbdd (2026-02-01). These figures predate the accuracy measurements at the top of this page, which supersede the archmage columns below.
 
 ### Performance (AVX2, 32K elements, 1000 iterations)
 
@@ -412,7 +411,7 @@ Benchmarked using `examples/sleef_comparison.rs` (requires nightly for `portable
 
 **CRITICAL: Use `#[arcane]` for proper inlining**
 
-archmage SIMD types **must** be used within functions annotated with `#[arcane]` (at the entry point) or `#[rite]` (for internal helpers). Without this, each call crosses a `#[target_feature]` boundary, costing 4-6× (see [PERFORMANCE.md](PERFORMANCE.md)).
+archmage SIMD types **must** be used within functions annotated with `#[arcane]` (at the entry point) or `#[rite]` (for internal helpers). Without this, every vector operation becomes a call across a `#[target_feature]` boundary (7.4× slower for the small kernel measured in [PERFORMANCE.md](PERFORMANCE.md)).
 
 ```rust
 use archmage::{arcane, X64V3Token, SimdToken};
@@ -420,14 +419,14 @@ use magetypes::simd::generic::f32x8;
 
 // WRONG - intrinsics won't inline
 fn slow_version(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    let v = f32x8::load(token, data);  // Function call overhead!
+    let v = f32x8::load_t(token, data);  // Function call overhead!
     v.exp2_lowp().to_array()
 }
 
 // CORRECT - use #[arcane] macro
 #[arcane(import_intrinsics)]
 fn fast_version(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-    let v = f32x8::load(token, data);  // Inline SIMD instructions!
+    let v = f32x8::load_t(token, data);  // Inline SIMD instructions!
     v.exp2_lowp().to_array()
 }
 
