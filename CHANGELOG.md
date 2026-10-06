@@ -31,6 +31,7 @@
 - `#[arcane]` with `ScalarToken` no longer emits an empty target-feature attribute (c766c238).
 - `#[magetypes]` preserves explicit `Token` dispatch markers while substituting token types, including token parameters after other arguments (c766c238).
 - The package includes the MIT and Apache-2.0 license texts (683bef73).
+- The `#[rite]` unknown-argument error no longer lists `stub`, which the parser rejects as removed (6f2bd1c3).
 
 ## magetypes
 
