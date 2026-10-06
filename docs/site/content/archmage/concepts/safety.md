@@ -178,13 +178,15 @@ memory intrinsics can forbid `unsafe` entirely, as the examples on this page do.
 
 - `cargo xtask soundness` checks every intrinsic call in archmage, magetypes and
   the macro expansion snapshots against the features of its enclosing function
-  or token, using 16,371 intrinsic signatures extracted from Rust's `stdarch`
-  sources. In 0.9.30 it verifies 5,479 calls across 216 files, and it fails if
-  the count drops below 4,000, so it cannot pass by seeing nothing.
+  or token. Its reference is 16,371 intrinsic signatures extracted from Rust's
+  `stdarch` sources. In 0.9.30 it verifies 5,479 calls across 216 files. It
+  fails if the count drops below 4,000, so it cannot pass by seeing nothing.
 - [`tests/soundness/`](https://github.com/imazen/archmage/tree/main/tests/soundness)
-  holds a compile-fail case for each bypass the macros block: shadowed and
-  aliased token and trait names, `from_context()` from a missing, weaker or
-  foreign-architecture context, and coercing it to a safe function pointer.
+  holds a compile-fail case for each bypass the macros block:
+  - shadowed and aliased token and trait names
+  - `from_context()` called from a missing, weaker or foreign-architecture
+    context
+  - `from_context` coerced to a safe function pointer
 - `cargo xtask validate` checks that each `summon()` tests exactly the features
   that `token-registry.toml` declares, the file every feature list is
   generated from.

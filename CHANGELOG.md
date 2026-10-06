@@ -107,6 +107,15 @@
 
 #### Changed
 
+- The archmage and magetypes READMEs open with what each crate does, run their examples, add a direct-intrinsics example, Limits and (magetypes) What's included sections, and move release history to the migration guide (56d2dfb7).
+- The READMEs put the first example ahead of its explanation, show features in a table with the `avx512` forwarding lines, and link to the guide for detail (724e9e03).
+- The READMEs write the AVX-512 tier as `v4(cfg(avx512))` and show the `avx512` feature your crate needs for it. The AVX-512 guide page recommends the explicit form (47068cd4).
+- The READMEs state the `<name>_<tier>` naming rule and show how each macro's functions are called. The `incant!` guide page gains a tested example of a hand-written `_v3` variant beside generated ones (e637cb03).
+- The AVX-512 guide page says what the `v4` context changes for `f32x8` code, from assembly inspection recorded in `benchmarks/v4_context_asm_2026-10-06.md` (463ad6a2).
+- The READMEs and the AVX-512 page say that `f32x4` and `f32x8` on the V4 tokens lack transcendentals, integer conversions and raw interop (463ad6a2).
+- The dispatch-testing page shows the `[dev-dependencies]` entry before its caveats, and the safety pages split their longest sentences (78e1ada3).
+- The AVX-512 page states which macros need the caller's `avx512` feature (cae48443).
+- The two guide landing pages say what each crate is before their example (dae6f383).
 - The integer codegen probe (`xtask/codegen.py --integer-ops`) treats swapped source operands of x86 instructions that commute bit-exactly as equal, like its NEON multiply rule (f287f3b3).
 - Miri skips `int_widen_narrow::scalar_backend` and the `fused_arithmetic` binary, about 95% of its work, and the new `cbrt_range` sweep, which took 432 s under Miri on its own and runs only safe code there. `scalar_backend`'s exhaustive loops reach the same `unsafe` bitcast path as `scalar_w512_bitcast_values`, which still runs under Miri; `fused_arithmetic` is safe code only. Native, SDE and cross-arch CI run everything. The local Miri run takes 255–394 s, depending on load (ec9c66b7, d570aa9b, 4d486072, 69061859).
 - The publish workflow runs the complete CI matrix at the release commit, as a reusable workflow, and publishes only if every job passed; a missing, skipped or cancelled job fails the gate, except the PR-only codegen comparison (8444c63).

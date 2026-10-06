@@ -26,12 +26,12 @@ Each layer relies on the one below it:
    soundness` re-checks all 5,395 backend intrinsic calls in 0.9.30 against
    the intrinsic table extracted from Rust's `stdarch`.
 3. **Compile-time layout proofs.** Every reinterpretation of memory checks at
-   compile time that the sizes match, and checks alignment wherever a
+   compile time that the sizes match. Alignment is checked wherever a
    reference is formed: at compile time for single values, at run time for
-   slices. Each vector type asserts that it is exactly its
-   register followed by its token, with the register at offset 0, and each
-   plain-data type asserts that it has no padding. Shift counts and gather
-   table sizes are checked at compile time too.
+   slices. Each vector type asserts that it is exactly its register followed
+   by its token, with the register at offset 0. Each plain-data type asserts
+   that it has no padding. Shift counts and gather table sizes are checked at
+   compile time too.
 4. **What remains.** The compiler cannot check memory access through a pointer.
    The 14 `unsafe` blocks do exactly that, and each states what it relies on in
    a `// SAFETY:` comment.
@@ -71,12 +71,15 @@ In 0.9.30 it contains 14 `unsafe` blocks, one line each, and each with a
 | 6: the AVX-512 gathers and scatters | Read and write table elements by per-lane index | Every lane that touches memory has its index bounded against the borrowed slice first. |
 
 The blocks rely on two `unsafe` marker traits defined in the same module:
-`Pod`, for plain data where every bit pattern is valid, and `TokenStorage`, for
-a vector that is exactly its register followed by its token. `Pod` is
-implemented by a macro that asserts each scalar and vector type has no padding,
-and for arrays of `Pod` types, which add none. `TokenStorage` is implemented
-only by a macro that checks each vector's layout at compile time. The module
-also declares `cast::Upcast`, a deprecated trait with an `unsafe fn`
+
+- `Pod` marks plain data where every bit pattern is valid. A macro implements
+  it for each scalar and vector type and asserts that the type has no padding.
+  Arrays of `Pod` types are `Pod` too, and add no padding.
+- `TokenStorage` marks a vector that is exactly its register followed by its
+  token. Only a macro implements it, and the macro checks each vector's layout
+  at compile time.
+
+The module also declares `cast::Upcast`, a deprecated trait with an `unsafe fn`
 that nothing implements. The backend implementations contain no `unsafe`.
 
 ## Gather and scatter
@@ -93,11 +96,11 @@ has the same quotes and the method-to-intrinsic table.
 ## How it's checked
 
 - The compiler: `#![deny(unsafe_code)]`, with one module allowed.
-- `cargo xtask soundness` rejects the `unsafe` keyword, any other
-  `allow(unsafe_code)`, bare `transmute`, gather and scatter intrinsics, and
-  `Default`, serde or bytemuck on vector types anywhere else in magetypes,
-  including code compiled out on the host. It also checks every backend
-  intrinsic against its token's features.
+- `cargo xtask soundness` reads the rest of magetypes, including code compiled
+  out on the host. It rejects the `unsafe` keyword, any other
+  `allow(unsafe_code)`, bare `transmute`, and gather and scatter intrinsics. It
+  rejects `Default`, serde and bytemuck on vector types. It also checks every
+  backend intrinsic against its token's features.
 - Miri runs the magetypes tests to catch layout and pointer mistakes in the
   `unsafe` blocks.
 - [`tests/gather_scatter_v4.rs`](https://github.com/imazen/archmage/blob/main/magetypes/tests/gather_scatter_v4.rs)
