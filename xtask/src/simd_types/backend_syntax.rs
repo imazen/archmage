@@ -28,7 +28,7 @@ macro_rules! sse2_baseline {
     (fn $name:ident(self, $($arg:ident: $ty:ty),* $(,)?) -> $ret:ty $body:block) => {
         #[inline(always)]
         fn $name(self, $($arg: $ty),*) -> $ret {
-            #[arcane(suppress_const_test)]
+            #[archmage::arcane(suppress_const_test)]
             fn inner(_token: archmage::X64V1Token, $($arg: $ty),*) -> $ret $body
             inner(self.v1(), $($arg),*)
         }
