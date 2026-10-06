@@ -61,6 +61,8 @@ more archmage tokens via `#[target_feature]`.
 | `sha3` | 1.61 | NeonSha3Token, Arm64V3 | 22 | SHA-512/SHA-3 |
 | `crc` | 1.61 | NeonCrcToken, Arm64V2+ | 8 | CRC32 |
 | `rdm` | 1.61 | Arm64V2+ | 36 | Rounding double multiply |
+| `dotprod` | 1.61 | Arm64V2+ | 12, all stable since Rust 1.98.0 | SDOT/UDOT. Critical for ML inference. |
+| `fhm` | 1.61 | Arm64V3 | 24, stable since Rust 1.94.0 (`stdarch_neon_fp16`) | FMLAL/FMLSL; each requires both `fp16` and `fhm`, so Arm64V2 does not cover them. |
 
 ### AArch64 — target feature only (intrinsics pending)
 
@@ -71,11 +73,9 @@ still useful — it just can't be used for direct intrinsic calls yet.
 
 | Feature | Stable since | Token(s) | Intrinsic status | Notes |
 |---------|-------------|----------|------------------|-------|
-| `dotprod` | 1.61 | Arm64V2+ | ALL nightly (`stdarch_neon_dotprod`) | SDOT/UDOT. Critical for ML inference. |
-| `fp16` | 1.61 | Arm64V2+ | 95/210 stable | Conversion + FMA stable, arithmetic mostly nightly. |
+| `fp16` | 1.61 | Arm64V2+ | 162 of 301 stable (Rust 1.98.0) | Conversion + FMA stable, arithmetic mostly nightly. |
 | `fcma` | 1.61 | Arm64V3 | ALL nightly (`stdarch_neon_fcma`) | Complex number FMA. |
 | `i8mm` | 1.61 | Arm64V3 | ALL nightly (`stdarch_neon_i8mm`) | Int8 matrix multiply. ML inference. |
-| `fhm` | 1.61 | Arm64V3 | None exist in stdarch | FMLAL/FMLSL. |
 | `bf16` | 1.61 | Arm64V3 | None exist in stdarch | BFloat16. |
 
 ### WebAssembly
@@ -181,12 +181,10 @@ Features we're watching that are unstable or have incomplete support.
 | Feature | Arch | Blocker | Notes |
 |---------|------|---------|-------|
 | `avx10.1` / `avx10.2` | x86 | Unstable target feature (`avx10_target_feature`). No shipping hardware yet (Panther Lake 2026?). | Intel's AVX-512 successor. Consolidates 13 AVX-512 subsets into one feature level. Mandatory 256-bit, optional 512-bit. Natural V4 successor token. |
-| AArch64 `dotprod` intrinsics | aarch64 | Nightly-only (`stdarch_neon_dotprod`). Target feature already stable and in Arm64V2. | SDOT/UDOT — critical for ML inference. We have the token, just waiting on intrinsic stabilization. |
 | AArch64 `fcma` intrinsics | aarch64 | Nightly-only (`stdarch_neon_fcma`). Target feature already stable and in Arm64V3. | Complex number FMA. Same — token exists, intrinsics don't. |
 | AArch64 `i8mm` intrinsics | aarch64 | Nightly-only (`stdarch_neon_i8mm`). Target feature already stable and in Arm64V3. | Int8 matrix multiply. ML inference. |
 | AArch64 `bf16` intrinsics | aarch64 | No intrinsics exist in stdarch. Target feature stable and in Arm64V3. | BFloat16. Waiting on stdarch. |
-| AArch64 `fhm` intrinsics | aarch64 | No intrinsics exist in stdarch. Target feature stable and in Arm64V3. | FMLAL/FMLSL. Waiting on stdarch. |
-| AArch64 remaining `fp16` | aarch64 | 115/210 intrinsics still nightly. | Half-precision arithmetic. Gradual progress. |
+| AArch64 remaining `fp16` | aarch64 | 139 of 301 intrinsics still nightly (Rust 1.98.0 database). | Half-precision arithmetic. Gradual progress. |
 
 ### Blocked on language/compiler changes
 

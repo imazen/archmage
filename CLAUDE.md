@@ -690,11 +690,11 @@ Every token's feature claims MUST be verified by exercising real intrinsics on t
 | neon,aes (rounds + p64) | ~37 | Full | Tested in arm_feature_intrinsics.rs |
 | sha2 | ~10 | Full | Tested in arm_feature_intrinsics.rs |
 | crc | 8 | Full | Tested in arm_feature_intrinsics.rs |
-| dotprod | ALL | Nightly | ALL dotprod intrinsics require `stdarch_neon_dotprod` (unstable) |
-| neon,fp16 | 95/210 | Partial | 95 stable (conversion, div, FMA), 115 unstable |
-| fcma | 34 | Nightly | All unstable |
-| i8mm | 4 | Nightly | All unstable |
-| fhm | 0 | None | No Rust intrinsics in stdarch |
+| dotprod | 12/12 | Stable | Stable on aarch64 since Rust 1.98.0 (`stdarch_neon_dotprod`); MSRV 1.89, so gate uses with `rustversion` |
+| neon,fp16 | 162/301 | Partial | Rust 1.98.0 database: 162 stable (conversion, div, FMA), 139 unstable |
+| fcma | 0/58 | Nightly | All unstable (Rust 1.98.0 database) |
+| i8mm | 0/22 | Nightly | All unstable (Rust 1.98.0 database) |
+| fhm | 24/24 | Stable | FMLAL/FMLSL, stable since Rust 1.94.0 under `stdarch_neon_fp16`; each needs both `fp16` and `fhm` (the fhm gate is a `cfg_attr` the CSV extractor misses, so the database lists only `neon,fp16`) |
 | bf16 | 0 | None | No Rust intrinsics in stdarch |
 | avx512fp16 | 438/441 (+266/272 with avx512vl) | Stable | Per `docs/intrinsics/x86_64_intrinsics.csv`; `_mm512_add_ph` on `__m512h` compiles on stable 1.99 (checked 2026-10-05). Intrinsics that take or return the scalar `f16` type still need nightly `f16`. Not yet exercised by a test. |
 | pclmulqdq + aes (128-bit) | ~10 | Full | Tested in x86_crypto_intrinsics.rs |
@@ -702,7 +702,7 @@ Every token's feature claims MUST be verified by exercising real intrinsics on t
 | gfni (128/256-bit unmasked) | 6 | Full | Tested in x86_crypto_intrinsics.rs |
 | simd128 (wasm) | ~100+ | Full | Tested in wasm_intrinsics_exercise.rs |
 
-**Features with zero stable intrinsics** (fhm, bf16) are documented but cannot have exercise tests on stable Rust. When these stabilize, add tests immediately. avx512fp16 has stable intrinsics now and still lacks an exercise test in `tests/avx512fp16_intrinsics.rs`.
+**Features with zero stable intrinsics** (bf16, and fcma/i8mm until they stabilize) are documented but cannot have exercise tests on stable Rust. When these stabilize, add tests immediately. dotprod, fhm and avx512fp16 have stable intrinsics now; check `tests/arm_feature_intrinsics.rs` and `tests/avx512fp16_intrinsics.rs` for their exercise tests.
 
 ## Source of Truth: token-registry.toml
 
