@@ -1,18 +1,19 @@
 //! AVX-512 FP16 intrinsic exercise tests for Avx512Fp16Token.
 //!
-//! STATUS: ALL 935 avx512fp16 intrinsics are UNSTABLE in Rust (require nightly
-//! `#![feature(avx512fp16)]`). There are ZERO stable avx512fp16 intrinsics as of
-//! Rust 1.93. This file tests what we CAN test on stable:
+//! STATUS: the avx512fp16 intrinsics on `__m128h`/`__m256h`/`__m512h` are stable
+//! (`_mm512_add_ph` compiles on stable Rust 1.99; checked 2026-10-05). Those that
+//! take or return the scalar `f16` type still need nightly, because `f16` itself
+//! is unstable. This file still tests only:
 //!   - Token summoning and hierarchy
 //!   - Avx512Fp16Token implies X64V4Token, X64V3Token, X64V2Token
 //!
-//! When avx512fp16 intrinsics stabilize, add comprehensive exercise tests here
-//! following the pattern in avx512_intrinsics_exercise.rs.
+//! TODO: add exercise tests here following the pattern in
+//! avx512_intrinsics_exercise.rs.
 //!
 //! Hardware: Intel Sapphire Rapids (2023+), Emerald Rapids. NOT available on
 //! AMD Zen 4 (has AVX-512 but not FP16) or earlier Intel (Skylake-X, Ice Lake).
 //!
-//! Intrinsic categories (935 total, all nightly-only):
+//! Intrinsic categories:
 //!   - Arithmetic: add, sub, mul, div, sqrt, rcp, rsqrt, min, max (512/256/128-bit)
 //!   - FMA: fmadd, fmsub, fnmadd, fnmsub, fmaddsub, fmsubadd (+ complex variants)
 //!   - Comparison: cmp_ph_mask, cmp_sh_mask, comi_sh, ucomi_sh

@@ -1,7 +1,17 @@
 # Software fused multiply-add cost
 
-Source snapshot: `33b122526c79b879ed9ec1b385b48459917aa766` (measurement-time draft).
-The measured helpers and benchmark are unchanged in implementation commit `11a35a8b`.
+Source snapshot: `33b122526c79b879ed9ec1b385b48459917aa766`, a measurement-time
+draft that was not kept: it is in neither this repository nor GitHub, so the
+exact measured source cannot be checked out. The session that measured it
+committed the helpers and the benchmark as `11a35a8b`; that they match the draft
+can no longer be verified. The `fma` group of `magetypes/benches/nostd_math_perf.rs`
+reruns the comparison.
+
+These helpers are the software fallback that `mul_add_portable` uses on the
+scalar backend (66986145). Between 11a35a8b and 66986145 plain `mul_add` used
+them too; see `mul_add_portable_zen5-m4pro_2026-10-05.md` for the current
+per-backend costs.
+
 Host: i265, Intel Core Ultra 7 265K, Linux x86_64, Rust 1.98.1.
 
 Command: `TMPDIR=/home/lilith/tmp ~/work/zen/scripts/run-heavy --mem 16G --jobs 8 -- cargo bench -p magetypes --bench nostd_math_perf -- --group=fma --format=json`.
