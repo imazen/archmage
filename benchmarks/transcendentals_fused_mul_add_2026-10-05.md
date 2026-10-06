@@ -1,5 +1,54 @@
 # Generic transcendentals on the scalar backend and strict WASM: 0.9.29 vs main (2026-10-05)
 
+Two rounds of measurement on the same day. The first (below, "Interim design")
+timed main while `mul_add` fused in software on the scalar backend and strict
+WASM (#116; 11a35a8b), and found the transcendentals 1.5–23× slower than in
+0.9.29. Before release, `mul_add` returned to the 0.9.29 behavior and the
+software path moved to `mul_add_portable` (66986145). The same probe, rebuilt
+against main at 2f856d2c, now matches 0.9.29.
+
+## After the split (main at 2f856d2c)
+
+Same probe, hosts, toolchain and method as below; the 0.9.29 binaries were
+reused. ns per pass over 1,024 vectors.
+
+x86 scalar backend (Ryzen 9 9950X3D), four rounds:
+
+| Function | 0.9.29 | main | main / 0.9.29, rounds 2 and 4 |
+|---|---:|---:|---:|
+| `exp2_midp` | 8,607 / 6,862 / 8,562 / 6,662 | 6,639 / 6,890 / 6,657 / 6,687 | 1.004 / 1.004 |
+| `log2_midp` | 3,372 / 2,689 / 3,359 / 2,612 | 2,600 / 2,699 / 2,609 / 2,619 | 1.004 / 1.003 |
+| `exp_midp` | 8,771 / 6,996 / 8,729 / 6,789 | 6,766 / 7,020 / 6,783 / 6,814 | 1.003 / 1.004 |
+| `pow_midp(2.4)` | 12,489 / 9,966 / 12,435 / 9,669 | 9,636 / 10,000 / 9,666 / 9,716 | 1.003 / 1.005 |
+
+Rounds 1 and 3 each began a new shell loop, and the first binary run in each
+(0.9.29 both times) ran about 29% slow; rounds 2 and 4 are the settled
+comparison.
+
+Strict WASM SIMD128 (wasmtime 40.0.1, same machine), two rounds:
+
+| Function | 0.9.29 | main | main / 0.9.29 |
+|---|---:|---:|---:|
+| `exp2_midp` | 5,284 / 5,380 | 5,306 / 5,383 | 1.00 |
+| `log2_midp` | 1,872 / 1,888 | 1,887 / 1,889 | 1.00–1.01 |
+| `exp_midp` | 5,430 / 5,472 | 5,467 / 5,471 | 1.00–1.01 |
+| `pow_midp(2.4)` | 11,277 / 11,365 | 11,359 / 11,363 | 1.00–1.01 |
+
+aarch64 scalar backend (Apple M4 Pro), three rounds:
+
+| Function | 0.9.29 | main | main / 0.9.29 |
+|---|---:|---:|---:|
+| `exp2_midp` | 20,875 / 21,450 / 22,211 | 21,435 / 21,443 / 21,464 | 0.97–1.03 |
+| `log2_midp` | 17,253 / 17,253 / 17,253 | 16,703 / 17,253 / 17,253 | 0.97–1.00 |
+| `exp_midp` | 21,089 / 21,904 / 22,300 | 20,688 / 22,292 / 22,940 | 0.98–1.03 |
+| `pow_midp(2.4)` | 38,943 / 38,945 / 38,948 | 38,815 / 38,932 / 38,948 | 1.00 |
+
+The scalar backend and strict WASM run the same code as 0.9.29 again, so the
+transcendentals' speed and results match it. Exhaustive precision for every
+backend class: `transcendental_precision_2026-10-05.md`.
+
+## Interim design (main at 93ca6a3)
+
 The generic transcendentals (`exp2_midp`, `log2_midp`, `pow_midp` and the rest)
 evaluate their polynomials with `mul_add`: 17 call sites in
 `xtask/src/simd_types/generic_gen/transcendentals.rs`, unchanged since 0.9.29.
@@ -8,7 +57,7 @@ add. On main they fuse in software (#116; 11a35a8b), so every polynomial step
 pays that cost. x86 v3/v4 and NEON used hardware FMA in 0.9.29 already, so their
 transcendentals did not change.
 
-## Method
+### Method
 
 The probe below was built twice, against `git archive v0.9.29` and against main
 at 93ca6a3, using only API both versions have. It times `f32x4<Wasm128Token>` on
@@ -21,7 +70,7 @@ function. Each build ran twice, alternating 0.9.29 and main.
 - x86 scalar backend: native x86_64 on the same machine, no `-Ctarget-cpu`.
 - aarch64 scalar backend: native on an Apple M4 Pro, rustc 1.99.0.
 
-## Results
+### Results
 
 ns per pass over 1,024 vectors, round 1 / round 2.
 
@@ -55,7 +104,7 @@ aarch64 scalar backend (Apple M4 Pro):
 | `exp_midp` | 21,328 / 20,763 | 33,096 / 33,406 | 1.6× |
 | `pow_midp(2.4)` | 38,948 / 35,742 | 109,219 / 108,432 | 2.8–3.0× |
 
-## Reading it
+### Reading it
 
 Code that calls transcendentals on the scalar backend or a strict-WASM build got
 1.5–23× slower between 0.9.29 and main, without calling `mul_add` itself.
@@ -63,7 +112,7 @@ Code that calls transcendentals on the scalar backend or a strict-WASM build got
 accuracy tests passed on every backend. Not measured: browser engines, other
 functions and widths, and real kernels.
 
-## Probe source
+### Probe source
 
 `Cargo.toml` (one copy per side; the path points at the archmage tree under test):
 
