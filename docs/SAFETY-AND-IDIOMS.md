@@ -24,13 +24,15 @@ These are orthogonal. Archmage's `#[arcane]` generates unsafe code that IS sound
 ### 1. Tokens Are Proofs
 
 ```rust
-#[derive(Clone, Copy)]  // Zero-sized!
-pub struct X64V3Token;  // Contains no data
+#[derive(Clone, Copy)]
+pub struct X64V3Token {
+    _private: (),  // zero-sized; the private field blocks `X64V3Token {}` outside archmage
+}
 
 impl SimdToken for X64V3Token {
     fn summon() -> Option<Self> {
         if /* runtime CPUID check */ {
-            Some(Self)  // Existence = proof features are available
+            Some(Self { _private: () })  // Existence = proof features are available
         } else {
             None
         }
@@ -38,7 +40,10 @@ impl SimdToken for X64V3Token {
 }
 ```
 
-You can't construct a token except through `summon()`. If you have one, the features are available.
+Safe code gets a token three ways: `summon()`, which checks the CPU; an
+extraction from a stronger token (`v4.v3()`); or `from_context()` inside a
+function whose `#[target_feature]` set covers the token's, where rustc checks
+the claim. If you have a token, the features are available.
 
 ### 2. `#[arcane]` Generates Safe-to-Call Code
 
@@ -125,19 +130,24 @@ The cost isn't `summon()` (~1.3 ns cached) — it's the `#[target_feature]` boun
 
 ### Concrete tokens for hot paths
 
-This is subtle: generic bounds create LLVM optimization barriers.
+`#[arcane]` enables the features its signature names. With a tier-trait bound,
+that is the bound's tier, whichever token the caller passes:
 
 ```rust
-// Generic bound prevents LLVM from inlining across the call
+// Compiled with V2 features (SSE4.2), even when called with an X64V4Token
 #[arcane(import_intrinsics)]
 fn process<T: HasX64V2>(token: T, data: &[f32]) -> f32 { ... }
 
-// Concrete token: full inlining, single target_feature region
+// Compiled with V3 features (AVX2, FMA)
 #[arcane(import_intrinsics)]
-fn process(token: X64V3Token, data: &[f32]) -> f32 { ... }
+fn process_v3(token: X64V3Token, data: &[f32]) -> f32 { ... }
 ```
 
-`#[target_feature]` changes LLVM's compilation target for that function. Generic callers and concrete callees have mismatched targets, preventing optimization across the boundary. Downcasting (V4 -> V3) is free. Dispatch once at the entry point.
+Generics are not the cost: they monomorphize, and a generic helper inlines into
+a caller whose features cover it. The cost is the feature set of the region the
+hot loop runs in, and any call from it into a stronger-feature function, which
+is a boundary. Passing a stronger token down is free (`v4.v3()`). Dispatch once
+at the entry point, with the concrete token for the tier you want.
 
 ### Memory operations via `import_intrinsics`
 
@@ -161,7 +171,9 @@ For high-level code, prefer magetypes (which uses safe memory ops internally).
 features_enabled_by_arcane(Token) ⊆ features_checked_by_summon(Token)
 ```
 
-Verified by `cargo xtask validate`.
+`cargo xtask validate` checks the right side: each `summon()` tests every
+feature `token-registry.toml` lists. The macros' feature lists are generated
+from the same registry, and `just check-generated` fails if they drift.
 
 ## Teaching Checklist
 
@@ -174,7 +186,7 @@ When explaining archmage:
 5. `#[arcane]` at the boundary, `#[rite]` for everything else
 6. `#[rite]` has three modes: token-based, tier-based (`#[rite(v3)]`), multi-tier (`#[rite(v3, v4, neon)]`)
 7. Enter `#[arcane]` once, `#[rite]` for everything inside
-8. Concrete tokens optimize better than trait bounds
+8. A trait bound compiles the body with the bound's tier; take a concrete token for the tier you want
 9. `import_intrinsics` provides safe memory operations (references, not pointers)
 10. magetypes provides high-level SIMD types
 
@@ -230,11 +242,10 @@ if let Some(token) = X64V3Token::summon() {
 
 ## Open Design Questions
 
-1. **Should magetypes root export SSE2 types on x86-64?** SSE2 is baseline. Currently the root exports all widths. No change yet.
+1. **Implicit token downcasting:** Should `impl From<X64V4Token> for X64V3Token` exist? Not implemented; use the explicit extraction methods (`v4.v3()`).
 
-2. **Implicit token downcasting:** Should `impl From<X64V4Token> for X64V3Token` exist? Not implemented — pass concrete tokens and downcast manually.
-
-3. **Implicit vector downcasting:** Should `f32x8` offer extract-low-half to `f32x4`? Not implemented.
+Vector halves are explicit too: `f32x8::low()`, `high()` and `split()` return
+`f32x4` values.
 
 ## Missing Methods
 
@@ -243,9 +254,15 @@ if let Some(token) = X64V3Token::summon() {
 | `signum` | Returns -1, 0, or 1 | Comparison + blend |
 | `tanh` / `tanh_lowp` | Hyperbolic tangent | `(exp(2x) - 1) / (exp(2x) + 1)` |
 | `sin` / `cos` | Trigonometric | Not implemented |
-| `and` / `or` / `xor` on floats | Bitwise ops on float vectors | Cast to integer, operate, cast back |
 
-Note: `rcp` is `rcp_approx`, `rsqrt` is `rsqrt_approx` for fast approximations. Use `recip()` and `rsqrt()` for full precision.
+Float vectors implement `&`, `|` and `^` directly.
+
+Reciprocals come in three tiers. `rcp_approx()` and `rsqrt_approx()` take the
+cheapest path on each platform, at least about 12 bits, with unspecified results
+at ±0, ±inf and NaN. `recip()` and `rsqrt()` are within 4 ULP and exact at ±0,
+±inf and NaN; V3 `recip` flushes results below the normal range to zero.
+`recip_portable()` and `rsqrt_portable()` are exact (0 ULP) and give the same
+bits on every backend. The method docs give each platform's lowering.
 
 ## License
 
@@ -266,7 +283,7 @@ not offer a callable example when no safe wrapper exists.
 
 | Gap | Current safe approach | Requirement before adding an abstraction |
 |---|---|---|
-| Portable gather/scatter | Checked slice indexing and ordinary loads/stores | Define bounds, masking, scale, and duplicate scatter ordering; prove generated checks disappear when bounds are established. |
+| Portable gather/scatter | Checked slice indexing and ordinary loads/stores. On AVX-512 only, `u32x16`, `i32x16` and `f32x16` on `X64V4Token` have bounds-safe `gather_wrapping`, `gather_or` and `scatter_select`. | Define bounds, masking, scale, and duplicate scatter ordering for other widths and backends, and measure against scalar lookups: a hardware gather is not reliably faster. |
 | Non-temporal stores | Ordinary reference-based stores | Encode alignment, writable extent, and completion/fence obligations. |
 | Generic prefetch | Leave prefetch out of portable examples | A reference-based interface and evidence of a useful consumer. |
 | Floating-point environment changes | Use operations with the required documented semantics | An ambient MXCSR/FTZ/DAZ change affects surrounding code; a local token alone is insufficient. |
