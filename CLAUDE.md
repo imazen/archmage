@@ -374,7 +374,7 @@ use magetypes::simd::f32x8;  // Always 8 lanes, polyfilled on ARM/WASM
 
 #[arcane(import_intrinsics)]
 fn process(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    let v = f32x8::load(token, data);
+    let v = f32x8::load_t(token, data);
     v.reduce_add()
 }
 ```
@@ -1046,8 +1046,8 @@ pub fn process(data: &[f32; 8]) -> f32 {
 
 #[arcane(import_intrinsics)]
 fn process_simd(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    let a = f32x8::load(token, data);
-    let b = f32x8::splat(token, 2.0);
+    let a = f32x8::load_t(token, data);
+    let b = f32x8::splat_t(token, 2.0);
     let c = a * b;
     c.reduce_add()
 }
@@ -1220,24 +1220,18 @@ The canonical tables are in `docs/site/content/magetypes/isa-quirks.md`; update 
   soundness hole (fixed 2026-07-14; guarded by `tests/apple_fallback_guard.rs`)
 - Upstream bugs: LLVM native CPU probe + Rust std_detect on macOS 15.x
 
-**Windows ARM64 — limited runtime detection** (not fixable in archmage):
-- Windows `IsProcessorFeaturePresent` API only exposes: neon, crc, dotprod, aes, sha2
-- Features NOT detectable at runtime on Windows: rdm, fp16, fhm, fcma, sha3, i8mm, bf16
-- This means Arm64V2Token::summon() returns None on Windows ARM64 (rdm and fp16 missing)
-- Snapdragon X definitely has these features but Windows doesn't expose them
-- Possible future fix: registry-based detection or undocumented Windows APIs
-- Tracked as a known Rust std_detect limitation
+**Windows ARM64 — registry-based detection** (since 0.9.24):
+- std's `is_aarch64_feature_detected!` on Windows asks `IsProcessorFeaturePresent`, which reports neon, crc, dotprod, aes and sha2 but not rdm, fp16, fhm, fcma, sha3, i8mm or bf16
+- archmage's aarch64 tokens use `winarm-cpufeatures` instead, which decodes the `ID_AA64*_EL1` registers from the Windows registry; Cobalt 100 on Windows summons `Arm64V3Token`, asserted on the `windows-11-arm` runner by `cobalt100_runner_must_summon_full_arm64_v3` (`tests/arm_feature_intrinsics.rs`)
+- `winarm_cpufeatures::set_registry_enabled(false)` falls back to the `IsProcessorFeaturePresent` view, for sandboxed processes
+- Details: `TOKEN_SUPPORT.md`, "Windows on ARM detection"
 
-### ~~avx512 Feature Gating in Dispatch Macros~~ — Fixed
+### avx512 Feature Gating in Dispatch Macros
 
-**All macros now handle avx512 correctly:**
-
-- **`#[autoversion]`**: Always generates v4/v4x variants (scalar code + `#[target_feature]`, no safe memory ops needed). Has its own default tier list that always includes v4.
-- **`incant!`/`#[magetypes]`**: Default tier list excludes v4 when archmage lacks avx512 feature. Explicit tier lists work unconditionally — no `#[cfg(feature)]` in output.
-- **`#[arcane(import_intrinsics)]`/`#[rite(import_intrinsics)]` with V4 token**: Clear `compile_error!` when avx512 feature not enabled, telling user exactly what to add to Cargo.toml.
+- **`incant!`/`#[magetypes]`**: wrap the `v4`/`v4x` variants and dispatch arms in `#[cfg(feature = "avx512")]` (with `#[allow(unexpected_cfgs)]`), evaluated in the **calling** crate, for default and explicit tier lists alike (`archmage-macros/src/incant.rs`, `resolve_tiers(.., true)`). A downstream crate gets v4 dispatch only if it defines and enables its own `avx512` feature, normally forwarding `archmage/avx512` and `magetypes/avx512`. `+v4` makes the arm unconditional; `v4(cfg(other))` gates on a different feature. In the expansion snapshots (`tests/expand/incant/default_tiers.expanded.rs`), which have no `avx512` feature, the v4 arm is compiled out.
+- **`#[autoversion]`**: never gates; always generates its `v4` variant (`default_tiers(false)`), which needs no cargo feature because it uses no AVX-512 memory ops.
+- **`#[arcane(import_intrinsics)]`/`#[rite(import_intrinsics)]` with V4 token**: Clear `compile_error!` when archmage-macros lacks its `avx512` feature, telling user exactly what to add to Cargo.toml.
 - **`#[arcane]`/`#[rite]` without `import_intrinsics`**: Always works with any token — value intrinsics need no cargo feature.
-
-**Implementation:** `avx512` feature propagated from archmage → archmage-macros. Macros check `cfg!(feature = "avx512")` at expansion time. No `#[cfg(feature)]` ever emitted in output (was checking calling crate's features — always wrong for downstream crates).
 
 **Test crates in `tests/avx512-cfg-tests/`** verify all scenarios including every token alias, trait bounds (`impl HasX64V4`), and generics (`T: HasX64V4`).
 
