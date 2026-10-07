@@ -1,0 +1,5 @@
+error: `in_impl` is an `#[arcane]` option. `#[rite]` has no wrapper, so an associated function in an inherent impl needs no flag.
+ --> tests/compile_fail/rite_in_impl.rs:8:12
+  |
+8 |     #[rite(in_impl)]
+  |            ^^^^^^^

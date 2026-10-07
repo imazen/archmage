@@ -101,6 +101,26 @@ impl Parse for RiteArgs {
                     continue;
                 }
                 match ident.to_string().as_str() {
+                    // `#[arcane]` placement flags. A trait method can never
+                    // carry `#[target_feature]` directly, and `#[rite]` has no
+                    // wrapper to call `Self::` from, so neither flag has a
+                    // meaning here; say what to use instead.
+                    "in_trait" | "nested" => {
+                        return Err(syn::Error::new(
+                            ident.span(),
+                            "`#[rite]` cannot be used on a trait method: rustc rejects \
+                             `#[target_feature]` on a safe trait method, and `#[rite]` \
+                             applies it directly. Use `#[arcane(in_trait, _self = Type)]` \
+                             on the trait method, or have it call a `#[rite]` free function.",
+                        ));
+                    }
+                    "in_impl" => {
+                        return Err(syn::Error::new(
+                            ident.span(),
+                            "`in_impl` is an `#[arcane]` option. `#[rite]` has no wrapper, \
+                             so an associated function in an inherent impl needs no flag.",
+                        ));
+                    }
                     "default" | "_default" => {
                         // Tokenless fallback tier. No ScalarToken parameter, no
                         // target_feature, no cfg-gating — just an `#[inline]`

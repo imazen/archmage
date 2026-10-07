@@ -57,6 +57,8 @@ fn ui_tests() {
     // One token parameter decides the features; two is an error, not "first wins"
     t.compile_fail("tests/compile_fail/two_token_params_arcane.rs");
     t.compile_fail("tests/compile_fail/two_token_params_rite.rs");
+    t.compile_fail("tests/compile_fail/rite_in_trait.rs");
+    t.compile_fail("tests/compile_fail/rite_in_impl.rs");
 
     // #[autoversion] cannot share an `impl Trait` return between variants
     t.compile_fail("tests/compile_fail/autoversion_opaque_return.rs");
