@@ -38,6 +38,13 @@ The other major zen use is `zenanalyze`'s palette/grayscale/statistics loops.
 Keep feature selection and input-shape decisions outside inner loops. Const
 specialization can remove mode checks, but multiplies compiled variants.
 
+Inherent methods with a receiver work as written. An associated function
+without a receiver needs `in_impl`, and a method in a trait implementation
+needs `in_trait` with `_self = Type`; the variants then nest inside the
+dispatcher, with `self` rewritten to a `_self` parameter. An `impl Trait`
+return type is rejected, because each variant would return a different opaque
+type. The `#[autoversion]` API reference has the examples.
+
 Explicit tier lists, feature gates, and modifiers follow the common tier
 syntax. Advanced token-parameter forms exist for composition; the ordinary
 application pattern shown here is tokenless. Do not copy tokenless variant

@@ -81,20 +81,41 @@ use token_discovery::*;
 /// }
 /// ```
 ///
-/// ## Nested (`nested` or `_self = Type`)
+/// ## Associated functions in an inherent impl (`in_impl`)
 ///
-/// Generates a nested inner function inside the original. Required for trait impls
-/// (where sibling functions would fail) and when `_self = Type` is used.
+/// An associated function without a receiver cannot call its sibling by bare
+/// name from inside an `impl` block, and the macro cannot see the block. Say
+/// `in_impl`, and the wrapper calls `Self::__arcane_fn(...)`:
+///
+/// ```ignore
+/// impl Table {
+///     #[arcane(in_impl)]
+///     fn build(token: X64V3Token, n: usize) -> Self { Self::with_capacity(n) }
+/// }
+/// ```
+///
+/// Methods with a receiver need no flag.
+///
+/// ## Trait impls (`in_trait`, `nested` or `_self = Type`)
+///
+/// A trait impl cannot hold the extra sibling, so the inner function nests
+/// inside the method. `in_trait` (alias `nested`) selects that expansion. A
+/// method with a receiver also needs `_self = Type`, because the nested
+/// function has no `self` and no `Self`: the receiver becomes `_self`, `Self`
+/// becomes the named type, and `self` in the body becomes `_self`, so the body
+/// reads as written:
 ///
 /// ```ignore
 /// impl SimdOps for MyType {
-///     #[arcane(_self = MyType)]
+///     #[arcane(in_trait, _self = MyType)]
 ///     fn compute(&self, token: X64V3Token) -> Self {
-///         // Use _self instead of self, Self replaced with MyType
-///         _self.data.iter().sum()
+///         Self::new(self.data.iter().sum())
 ///     }
 /// }
 /// ```
+///
+/// `_self = Type` implies `in_trait`. `in_impl` and `in_trait` describe
+/// different places and are rejected together.
 ///
 /// # Cross-Architecture Behavior
 ///
@@ -123,12 +144,18 @@ use token_discovery::*;
 /// fn process(_: X64V3Token, data: &[f32; 8]) -> [f32; 8] { ... }
 /// ```
 ///
+/// Exactly one parameter may be a token; two token parameters are a compile
+/// error, because the wrapper would not know which proof to assert. Wildcard
+/// and tuple patterns on other parameters are renamed to `__archmage_arg_N` in
+/// the wrapper's signature so they can be forwarded.
+///
 /// # Options
 ///
 /// | Option | Effect |
 /// |--------|--------|
-/// | `nested` | Use nested inner function instead of sibling |
-/// | `_self = Type` | Implies `nested`, transforms self receiver, replaces Self |
+/// | `in_impl` | Receiver-less associated function in an inherent impl: the wrapper calls `Self::__arcane_fn` |
+/// | `in_trait` (alias `nested`) | Trait impl: the inner function nests inside the method |
+/// | `_self = Type` | Implies `in_trait`; the receiver becomes `_self`, `Self` and `self` are rewritten |
 /// | `inline_always` | Use `#[inline(always)]` (requires nightly) |
 /// | `import_intrinsics` | Auto-import `archmage::intrinsics::{arch}::*` (includes safe memory ops) |
 /// | `import_magetypes` | Auto-import `magetypes::simd::{ns}::*` and `magetypes::simd::backends::*` |
@@ -309,6 +336,12 @@ pub fn token_target_features_boundary(attr: TokenStream, item: TokenStream) -> T
 ///
 /// See `#[arcane]` docs for the full namespace mapping table.
 ///
+/// `#[rite]` cannot go on a trait method: rustc rejects `#[target_feature]` on
+/// a safe trait method, and `#[rite]` applies it directly. `#[rite(in_trait)]`
+/// says so and points at `#[arcane(in_trait, _self = Type)]`; a plain `#[rite]`
+/// there leaves rustc's error on the generated method. Inside an inherent impl
+/// no flag is needed, so `in_impl` is rejected too.
+///
 /// # Comparison with #[arcane]
 ///
 /// | Aspect | `#[arcane]` | `#[rite]` |
@@ -389,6 +422,14 @@ pub fn token_target_features(attr: TokenStream, item: TokenStream) -> TokenStrea
 /// **Only `Token`** is replaced — with the concrete token type for each variant
 /// (e.g., `archmage::X64V3Token`, `archmage::ScalarToken`). SIMD types like
 /// `f32x8` and constants like `LANES` are **not** replaced by this macro.
+///
+/// # Options
+///
+/// | Option | Effect |
+/// |--------|--------|
+/// | `rite` | Variants use `#[rite(import_intrinsics)]` (no wrapper) instead of `#[arcane]` |
+/// | `define(f32x8, ...)` | Alias each named generic vector to its `Token` instantiation inside the body |
+/// | `in_impl` | Receiver-less associated function in an inherent impl: variants get `#[arcane(in_impl)]` |
 ///
 /// # Usage with incant!
 ///
@@ -732,16 +773,39 @@ pub fn dispatch_variant(input: TokenStream) -> TokenStream {
 /// buffer.normalize(2.2);
 /// ```
 ///
-/// For trait method delegation, use `_self = Type` (nested mode):
+/// An associated function without a receiver in an inherent impl needs
+/// `in_impl`, so the dispatcher calls the variants as `Self::process_v3(...)`:
 ///
 /// ```rust,ignore
-/// impl MyType {
-///     #[autoversion(_self = MyType)]
-///     fn compute_impl(&self, data: &[f32]) -> f32 {
-///         _self.weights.iter().zip(data).map(|(w, d)| w * d).sum()
+/// impl Table {
+///     #[autoversion(in_impl)]
+///     fn build(n: usize) -> Self { Self::with_capacity(n) }
+/// }
+/// ```
+///
+/// A trait impl cannot take the variants as extra items, so `in_trait` (alias
+/// `nested`) places them inside the dispatcher's body. A method with a receiver
+/// also needs `_self = Type`: each variant takes `_self: &Type` in place of
+/// the receiver, `Self` becomes the named type, and `self` in the body becomes
+/// `_self`:
+///
+/// ```rust,ignore
+/// impl Work for MyType {
+///     #[autoversion(v3, neon, scalar, in_trait, _self = MyType)]
+///     fn run(&self, data: &[f32]) -> f32 {
+///         self.weights.iter().zip(data).map(|(w, d)| w * d).sum()
 ///     }
 /// }
 /// ```
+///
+/// `_self = Type` without `in_trait` keeps the variants beside the dispatcher,
+/// which only an inherent impl accepts; plain `self` already works there. The
+/// variants of an `in_trait` function are local to its body and cannot be
+/// called directly.
+///
+/// `#[autoversion]` cannot dispatch an `impl Trait` return type: every variant
+/// would return a distinct opaque type and the dispatcher can return only one.
+/// Return a concrete type or `Box<dyn Trait>`.
 ///
 /// # Nesting with `incant!`
 ///

@@ -1091,13 +1091,19 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ### Open
 
-Macro limitations found by the expansion snapshot compilation tests (`tests/expand/*.expanded.rs`):
+Macro limitations the expansion snapshots document (`tests/expand/should-fail/`):
 
-0. **`#[arcane]`/`#[rite]` on a wildcard param with an `impl Trait` bound: E0562.** `#[arcane] fn f(_: impl HasX64V2, ..)` renames the wildcard to `__archmage_arg_0` and re-binds it as `let _: impl HasX64V2 = __archmage_arg_0;`, which is not legal — `impl Trait` cannot appear in the type of a variable binding. A wildcard with a *concrete* token (`_: X64V3Token`) is fine, and is the committed `wildcard_token` snapshot. Fix: skip the type annotation on the rebind when the type is `impl Trait`, or when the pattern is a wildcard.
-
-2. **`#[rite]` on trait impl method: `#[target_feature]` on safe trait method is invalid** — Rust rejects `#[target_feature(..)]` on safe trait methods. The macro applies it directly, which works as macro output but the expanded code is invalid standalone Rust. (`tests/expand/rite_trait_impl.expanded.rs`)
-
-3. **`#[autoversion]` on trait impl method: variants placed inside trait impl block** — Generated variant methods (`process_v3`, `process_v4`, `process_scalar`) are emitted inside `impl Trait for Type {}`, but they aren't members of the trait. Compile error E0407. (`tests/expand/autoversion_trait_impl.expanded.rs`)
+- An attribute macro cannot see its enclosing `impl`, so plain `#[arcane]`,
+  `#[autoversion]` or `#[magetypes]` on a receiver-less associated function
+  calls an unqualified sibling (E0425), and plain `#[arcane]` or
+  `#[autoversion]` in a trait impl adds items the trait lacks (E0407). The
+  flags `in_impl` and `in_trait` (alias `nested`) spell out the place; the
+  `tests/expand/shapes/*_in_impl` and `*_in_trait*` snapshots show them
+  expanding. `#[rite]` on a trait method can never work (rustc rejects
+  `#[target_feature]` on a safe trait method); `#[rite(in_trait)]` says so,
+  plain `#[rite]` there leaves rustc's error.
+- Tuple and wildcard parameters appear as `__archmage_arg_N` in the generated
+  wrapper's signature (cosmetic; rustdoc shows the rename).
 
 Documented accuracy limits, left unfixed because every fix measured slower on every call:
 
@@ -1112,6 +1118,20 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
 
 ### Resolved (each with its regression coverage)
 
+- Fixed 2026-10-07 (issue #122 and the expansion-snapshot list): `#[arcane]`
+  and `#[rite]` no longer rebind a wildcard parameter with an `impl Trait`
+  bound (E0562); `#[rite]` renames tuple and wildcard parameters like
+  `#[arcane]`; two token parameters are a compile error instead of "first
+  wins"; `#[autoversion]` rejects an `impl Trait` return type with a message
+  instead of rustc's E0308 on generated code; `#[arcane(in_trait, _self = T)]`
+  and `#[autoversion(in_trait, _self = T)]` work in trait impls with plain
+  `self` in the body; `#[arcane(in_impl)]`, `#[autoversion(in_impl)]` and
+  `#[magetypes(in_impl)]` handle receiver-less associated functions; generic
+  bounds are collected from every inline and `where` position; the `with
+  token` `incant!` fallback names the token and the tier list. Snapshots:
+  `tests/expand/shapes/`; compile-fail: `tests/compile_fail/two_token_params_*.rs`,
+  `autoversion_opaque_return.rs`, `autoversion_in_trait_needs_self_type.rs`,
+  `rite_in_trait.rs`, `rite_in_impl.rs`.
 - Fixed 2026-09-27: `#[arcane]` on `ScalarToken` emitted an invalid empty
   target-feature attribute. Scalar now keeps its signature without a feature boundary.
 - Fixed 2026-09-27: `#[magetypes]` replaced explicit `Token` argument markers
@@ -1269,7 +1289,7 @@ The canonical tables are in `docs/site/content/magetypes/isa-quirks.md`; update 
 
 - **v1.0: Remove `SimdToken` parameter support from `#[autoversion]`.** Deprecated since 0.9.11. Users should use tokenless (recommended) or `ScalarToken` for incant! nesting. `SimdToken` is a trait, not a type — it was always a macro-only placeholder.
 
-- **v1.0: Remove `_self = Type` from `#[autoversion]`.** Plain `self` works in sibling mode since the beginning. Only trait delegation needs nested mode, and autoversion can't do trait impls anyway. Saves ~40 lines.
+- **v1.0: Remove `_self = Type` without `in_trait` from `#[autoversion]`.** Plain `self` works in sibling mode since the beginning. With `in_trait` (since 2026-10-07) `_self = Type` names the receiver type for the nested variants and stays.
 
 - **v1.0: Deprecate incant! passthrough mode (`with token`).** Zero uses in zen or any downstream crate. The use case (re-dispatch an existing token) is better served by `#[rite]` multi-tier or `IntoConcreteToken` directly. `default` tier solves the nesting case without passthrough.
 
