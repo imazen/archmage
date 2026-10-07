@@ -275,6 +275,87 @@ impl core::ops::Deref for ResolvedTier {
     }
 }
 
+impl ResolvedTier {
+    /// The fallback tiers take no `summon()` check: `scalar` is always
+    /// available and `default` is tokenless.
+    pub(crate) fn is_fallback(&self) -> bool {
+        self.name == "scalar" || self.name == "default"
+    }
+
+    /// The `#[cfg]` attributes for a generated variant of this tier: its
+    /// architecture, then its feature gate (preceded by
+    /// `#[allow(unexpected_cfgs)]` when the gate is an implied default).
+    pub(crate) fn variant_cfg_guard(&self) -> proc_macro2::TokenStream {
+        let arch = self
+            .target_arch
+            .map(|arch| quote::quote! { #[cfg(target_arch = #arch)] });
+        let gate = self.feature_gate.as_ref().map(|feat| {
+            let allow_attr = if self.allow_unexpected_cfg {
+                quote::quote! { #[allow(unexpected_cfgs)] }
+            } else {
+                quote::quote! {}
+            };
+            quote::quote! {
+                #allow_attr
+                #[cfg(feature = #feat)]
+            }
+        });
+        quote::quote! { #arch #gate }
+    }
+}
+
+/// Build the dispatch arms for the non-fallback tiers. `check(tier)` produces
+/// one tier's test-and-call; each is wrapped in its `#[cfg(feature)]` gate,
+/// and the tiers of one architecture share a `#[cfg(target_arch)]` block, in
+/// list order. `incant!`'s two forms and `#[autoversion]` differ only in the
+/// check, so they share this.
+pub(crate) fn gen_dispatch_arms(
+    tiers: &[ResolvedTier],
+    mut check: impl FnMut(&ResolvedTier) -> proc_macro2::TokenStream,
+) -> Vec<proc_macro2::TokenStream> {
+    let mut arch_groups: Vec<(Option<&str>, Vec<&ResolvedTier>)> = Vec::new();
+    for rt in tiers.iter().filter(|rt| !rt.is_fallback()) {
+        if let Some(group) = arch_groups.iter_mut().find(|(a, _)| *a == rt.target_arch) {
+            group.1.push(rt);
+        } else {
+            arch_groups.push((rt.target_arch, vec![rt]));
+        }
+    }
+
+    let mut dispatch_arms = Vec::new();
+    for (target_arch, group_tiers) in &arch_groups {
+        let mut tier_checks = Vec::new();
+        for rt in group_tiers {
+            let check = check(rt);
+            if let Some(feat) = &rt.feature_gate {
+                let allow_attr = if rt.allow_unexpected_cfg {
+                    quote::quote! { #[allow(unexpected_cfgs)] }
+                } else {
+                    quote::quote! {}
+                };
+                tier_checks.push(quote::quote! {
+                    #allow_attr
+                    #[cfg(feature = #feat)]
+                    { #check }
+                });
+            } else {
+                tier_checks.push(check);
+            }
+        }
+
+        let inner = quote::quote! { #(#tier_checks)* };
+        if let Some(arch) = target_arch {
+            dispatch_arms.push(quote::quote! {
+                #[cfg(target_arch = #arch)]
+                { #inner }
+            });
+        } else {
+            dispatch_arms.push(inner);
+        }
+    }
+    dispatch_arms
+}
+
 /// The fixed defaults are already in stable descending priority order (tested
 /// below). No modifier processing, name copies, or sorting is needed here.
 pub(crate) fn default_tiers(default_feature_gates: bool) -> Vec<ResolvedTier> {

@@ -345,7 +345,7 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
         // scalar/default have no token to thread, so they only rewrite
         // `incant!(.. without token)` (the tokenless variant call); plain
         // `incant!` there is left for standalone expansion, as before.
-        let has_token = tier.name != "scalar" && tier.name != "default";
+        let has_token = !tier.is_fallback();
         let token_ident = if has_token {
             token_param.ident.clone()
         } else {
@@ -360,31 +360,13 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
         };
         variant_fn.body = crate::rewrite::rewrite_incant_in_body(variant_fn.body, &ctx);
 
-        // cfg guard: arch + optional feature gate from tier(feature) syntax
-        let allow_attr = if tier.allow_unexpected_cfg {
-            quote! { #[allow(unexpected_cfgs)] }
-        } else {
-            quote! {}
-        };
-        let cfg_guard = match (tier.target_arch, &tier.feature_gate) {
-            (Some(arch), Some(feat)) => quote! {
-                #[cfg(target_arch = #arch)]
-                #allow_attr
-                #[cfg(feature = #feat)]
-            },
-            (Some(arch), None) => quote! { #[cfg(target_arch = #arch)] },
-            (None, Some(feat)) => quote! {
-                #allow_attr
-                #[cfg(feature = #feat)]
-            },
-            (None, None) => quote! {},
-        };
+        let cfg_guard = tier.variant_cfg_guard();
 
         // All variants are private implementation details of the dispatcher.
         // Suppress dead_code: if the dispatcher is unused, rustc warns on IT
         // (via quote_spanned! with the user's span). Warning on individual
         // variants would be confusing — the user didn't write _scalar or _v3.
-        if tier.name != "scalar" && tier.name != "default" {
+        if !tier.is_fallback() {
             let arcane_attr = if args.in_trait {
                 // The receiver is already a plain `_self` parameter.
                 quote! { #[archmage::arcane] }
@@ -454,19 +436,6 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
     // Build turbofish for forwarding type/const generics to variant calls
     let turbofish = build_turbofish(&input_fn.sig.generics);
 
-    // Group non-fallback tiers by target_arch for cfg blocks
-    let mut arch_groups: Vec<(Option<&str>, Vec<&ResolvedTier>)> = Vec::new();
-    for tier in &tiers {
-        if tier.name == "scalar" || tier.name == "default" {
-            continue;
-        }
-        if let Some(group) = arch_groups.iter_mut().find(|(a, _)| *a == tier.target_arch) {
-            group.1.push(tier);
-        } else {
-            arch_groups.push((tier.target_arch, vec![tier]));
-        }
-    }
-
     // If the original function is `unsafe fn`, the dispatcher must also be `unsafe fn`
     // and variant calls must be wrapped in `unsafe {}`.
     // syn 3 replaced `Signature::unsafety: Option<Token![unsafe]>` with
@@ -475,92 +444,47 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
     // blocks), so this matches the old `unsafety.is_some()` exactly.
     let is_unsafe = matches!(input_fn.sig.safety, syn::Safety::Unsafe(_));
 
-    let mut dispatch_arms = Vec::new();
-    for (target_arch, group_tiers) in &arch_groups {
-        let mut tier_checks = Vec::new();
-        for rt in group_tiers {
-            let suffixed = format_ident!("{}_{}", fn_name, rt.suffix);
-            let token_path: syn::Path = syn::parse_str(rt.token_path).unwrap();
+    // How the dispatcher reaches a variant: a nested fn taking `self` first
+    // (`in_trait`), a method through `self`, a `Self::` path (`in_impl`), or a
+    // free function. `token_arg` is the leading token argument, if any.
+    let variant_call = |name: &Ident, token_arg: TokenStream| -> TokenStream {
+        let raw = if has_self && args.in_trait {
+            quote! { #name #turbofish(self, #token_arg #(#dispatch_args),*) }
+        } else if has_self {
+            quote! { self.#name #turbofish(#token_arg #(#dispatch_args),*) }
+        } else if args.in_impl {
+            quote! { Self::#name #turbofish(#token_arg #(#dispatch_args),*) }
+        } else {
+            quote! { #name #turbofish(#token_arg #(#dispatch_args),*) }
+        };
+        if is_unsafe {
+            quote! { unsafe { #raw } }
+        } else {
+            raw
+        }
+    };
 
-            let raw_call = if has_self && args.in_trait {
-                quote! { #suffixed #turbofish(self, __t, #(#dispatch_args),*) }
-            } else if has_self {
-                quote! { self.#suffixed #turbofish(__t, #(#dispatch_args),*) }
-            } else if args.in_impl {
-                quote! { Self::#suffixed #turbofish(__t, #(#dispatch_args),*) }
-            } else {
-                quote! { #suffixed #turbofish(__t, #(#dispatch_args),*) }
-            };
-
-            // Wrap call in unsafe if the original function (and thus variants) is unsafe
-            let call = if is_unsafe {
-                quote! { unsafe { #raw_call } }
-            } else {
-                raw_call
-            };
-
-            let check = quote! {
-                if let Some(__t) = #token_path::summon() {
-                    return #call;
-                }
-            };
-
-            if let Some(feat) = &rt.feature_gate {
-                let allow_attr = if rt.allow_unexpected_cfg {
-                    quote! { #[allow(unexpected_cfgs)] }
-                } else {
-                    quote! {}
-                };
-                tier_checks.push(quote! {
-                    #allow_attr
-                    #[cfg(feature = #feat)]
-                    { #check }
-                });
-            } else {
-                tier_checks.push(check);
+    let dispatch_arms = gen_dispatch_arms(&tiers, |rt| {
+        let suffixed = format_ident!("{}_{}", fn_name, rt.suffix);
+        let token_path: syn::Path = syn::parse_str(rt.token_path).unwrap();
+        let call = variant_call(&suffixed, quote! { __t, });
+        quote! {
+            if let Some(__t) = #token_path::summon() {
+                return #call;
             }
         }
+    });
 
-        let inner = quote! { #(#tier_checks)* };
-
-        if let Some(arch) = target_arch {
-            dispatch_arms.push(quote! {
-                #[cfg(target_arch = #arch)]
-                { #inner }
-            });
-        } else {
-            dispatch_arms.push(inner);
-        }
-    }
-
-    // Fallback call (always available, no summon needed)
+    // Fallback call (always available, no summon needed):
+    // default is tokenless, scalar takes ScalarToken.
     let has_default_tier = tiers.iter().any(|t| t.name == "default");
-    let fallback_suffix = if has_default_tier {
-        "default"
+    let (fallback_suffix, fallback_token) = if has_default_tier {
+        ("default", quote! {})
     } else {
-        "scalar"
+        ("scalar", quote! { archmage::ScalarToken, })
     };
     let fallback_name = format_ident!("{}_{}", fn_name, fallback_suffix);
-    // default: tokenless call; scalar: call with ScalarToken
-    let fallback_token = if has_default_tier {
-        quote! {}
-    } else {
-        quote! { archmage::ScalarToken, }
-    };
-    let raw_fallback = if has_self && args.in_trait {
-        quote! { #fallback_name #turbofish(self, #fallback_token #(#dispatch_args),*) }
-    } else if has_self {
-        quote! { self.#fallback_name #turbofish(#fallback_token #(#dispatch_args),*) }
-    } else if args.in_impl {
-        quote! { Self::#fallback_name #turbofish(#fallback_token #(#dispatch_args),*) }
-    } else {
-        quote! { #fallback_name #turbofish(#fallback_token #(#dispatch_args),*) }
-    };
-    let fallback_call = if is_unsafe {
-        quote! { unsafe { #raw_fallback } }
-    } else {
-        raw_fallback
-    };
+    let fallback_call = variant_call(&fallback_name, fallback_token);
 
     // Build dispatcher function
     let dispatcher_inputs_punct: syn::punctuated::Punctuated<FnArg, Token![,]> =
@@ -580,45 +504,37 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
     // autoversion uses `return` instead of `break '__dispatch` — no labeled block
     // needed. This avoids label hygiene issues when #[autoversion] is applied inside
     // macro_rules! (labels from proc macros can't be seen from macro_rules! contexts).
+    let full_body = quote! {
+        #simdtoken_deprecation_in_body
+        // Suppress unused_imports on archs where every dispatch arm is
+        // cfg'd out (e.g., 32-bit x86 with [v3, neon, wasm128] tiers).
+        // The `use` carries the user's span, so a downstream warning
+        // would point at the user's fn declaration. See issue #34.
+        #[allow(unused_imports)]
+        use archmage::SimdToken;
+        #(#dispatch_arms)*
+        #fallback_call
+    };
+    let dispatcher_fn = |cfg: TokenStream, body: &TokenStream| {
+        quote_spanned! { user_span =>
+            #cfg
+            #(#fn_attrs)*
+            #vis #unsafety fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
+                #body
+            }
+        }
+    };
     let dispatcher = if let Some(ref feat) = args.cfg_feature {
         // cfg(feature): full dispatch when on, scalar-only when off
-        quote_spanned! { user_span =>
-            #[cfg(feature = #feat)]
-            #(#fn_attrs)*
-            #vis #unsafety fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
-                #simdtoken_deprecation_in_body
-                // Suppress unused_imports on archs where every dispatch arm is
-                // cfg'd out (e.g., 32-bit x86 with [v3, neon, wasm128] tiers).
-                // The `use` carries the user's span, so a downstream warning
-                // would point at the user's fn declaration. See issue #34.
-                #[allow(unused_imports)]
-                use archmage::SimdToken;
-                #(#dispatch_arms)*
-                #fallback_call
-            }
-
-            #[cfg(not(feature = #feat))]
-            #(#fn_attrs)*
-            #vis #unsafety fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
-                #simdtoken_deprecation_in_body
-                #fallback_call
-            }
-        }
+        let on = dispatcher_fn(quote! { #[cfg(feature = #feat)] }, &full_body);
+        let off_body = quote! {
+            #simdtoken_deprecation_in_body
+            #fallback_call
+        };
+        let off = dispatcher_fn(quote! { #[cfg(not(feature = #feat))] }, &off_body);
+        quote! { #on #off }
     } else {
-        quote_spanned! { user_span =>
-            #(#fn_attrs)*
-            #vis #unsafety fn #fn_name #generics (#dispatcher_inputs_punct) #output #where_clause {
-                #simdtoken_deprecation_in_body
-                // Suppress unused_imports on archs where every dispatch arm is
-                // cfg'd out (e.g., 32-bit x86 with [v3, neon, wasm128] tiers).
-                // The `use` carries the user's span, so a downstream warning
-                // would point at the user's fn declaration. See issue #34.
-                #[allow(unused_imports)]
-                use archmage::SimdToken;
-                #(#dispatch_arms)*
-                #fallback_call
-            }
-        }
+        dispatcher_fn(quote! {}, &full_body)
     };
 
     if args.in_trait {

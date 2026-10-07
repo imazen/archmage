@@ -125,27 +125,9 @@ pub(crate) fn magetypes_impl(
             replace_ident_in_tokens(variant_fn.to_token_stream(), "Token", &concrete_tokens)
         };
 
-        // Add cfg guard: arch + optional feature gate
-        let allow_attr = if tier.allow_unexpected_cfg {
-            quote! { #[allow(unexpected_cfgs)] }
-        } else {
-            quote! {}
-        };
-        let cfg_guard = match (tier.target_arch, &tier.feature_gate) {
-            (Some(arch), Some(feat)) => quote! {
-                #[cfg(target_arch = #arch)]
-                #allow_attr
-                #[cfg(feature = #feat)]
-            },
-            (Some(arch), None) => quote! { #[cfg(target_arch = #arch)] },
-            (None, Some(feat)) => quote! {
-                #allow_attr
-                #[cfg(feature = #feat)]
-            },
-            (None, None) => quote! {},
-        };
+        let cfg_guard = tier.variant_cfg_guard();
 
-        variants.push(if tier.name != "scalar" && tier.name != "default" {
+        variants.push(if !tier.is_fallback() {
             // Non-fallback variants carry target_feature. The `rite` flag
             // chooses which macro applies it:
             //   - #[archmage::arcane]: safe wrapper + #[target_feature] inner

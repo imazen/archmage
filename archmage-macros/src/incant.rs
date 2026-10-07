@@ -282,62 +282,17 @@ pub(crate) fn gen_incant_passthrough(
     token_expr: &syn::Expr,
     tiers: &[ResolvedTier],
 ) -> TokenStream {
-    let mut dispatch_arms = Vec::new();
-
-    // Group non-fallback tiers by target_arch for cfg blocks
-    let mut arch_groups: Vec<(Option<&str>, Vec<&ResolvedTier>)> = Vec::new();
-    for rt in tiers {
-        if rt.name == "scalar" || rt.name == "default" {
-            continue; // Handle fallback separately at the end
-        }
-        if let Some(group) = arch_groups.iter_mut().find(|(a, _)| *a == rt.target_arch) {
-            group.1.push(rt);
-        } else {
-            arch_groups.push((rt.target_arch, vec![rt]));
-        }
-    }
-
     // Every non-fallback arm binds the same token name.
     let call_args = build_call_args(args, &quote! { __t });
-    for (target_arch, group_tiers) in &arch_groups {
-        let mut tier_checks = Vec::new();
-        for rt in group_tiers {
-            let fn_suffixed = suffix_path(func_path, rt.suffix);
-            let as_method = format_ident!("{}", rt.as_method);
-
-            let check = quote! {
-                if let Some(__t) = __incant_token.#as_method() {
-                    break '__incant #fn_suffixed(#call_args);
-                }
-            };
-
-            if let Some(feat) = &rt.feature_gate {
-                let allow_attr = if rt.allow_unexpected_cfg {
-                    quote! { #[allow(unexpected_cfgs)] }
-                } else {
-                    quote! {}
-                };
-                tier_checks.push(quote! {
-                    #allow_attr
-                    #[cfg(feature = #feat)]
-                    { #check }
-                });
-            } else {
-                tier_checks.push(check);
+    let dispatch_arms = gen_dispatch_arms(tiers, |rt| {
+        let fn_suffixed = suffix_path(func_path, rt.suffix);
+        let as_method = format_ident!("{}", rt.as_method);
+        quote! {
+            if let Some(__t) = __incant_token.#as_method() {
+                break '__incant #fn_suffixed(#call_args);
             }
         }
-
-        let inner = quote! { #(#tier_checks)* };
-
-        if let Some(arch) = target_arch {
-            dispatch_arms.push(quote! {
-                #[cfg(target_arch = #arch)]
-                { #inner }
-            });
-        } else {
-            dispatch_arms.push(inner);
-        }
-    }
+    });
 
     // Fallback (always last): scalar (with token) or default (tokenless).
     //
@@ -408,62 +363,17 @@ pub(crate) fn gen_incant_entry(
     args: &[syn::Expr],
     tiers: &[ResolvedTier],
 ) -> TokenStream {
-    let mut dispatch_arms = Vec::new();
-
-    // Group non-fallback tiers by target_arch for cfg blocks.
-    let mut arch_groups: Vec<(Option<&str>, Vec<&ResolvedTier>)> = Vec::new();
-    for rt in tiers {
-        if rt.name == "scalar" || rt.name == "default" {
-            continue;
-        }
-        if let Some(group) = arch_groups.iter_mut().find(|(a, _)| *a == rt.target_arch) {
-            group.1.push(rt);
-        } else {
-            arch_groups.push((rt.target_arch, vec![rt]));
-        }
-    }
-
     // Every non-fallback arm binds the same token name.
     let call_args = build_call_args(args, &quote! { __t });
-    for (target_arch, group_tiers) in &arch_groups {
-        let mut tier_checks = Vec::new();
-        for rt in group_tiers {
-            let fn_suffixed = suffix_path(func_path, rt.suffix);
-            let token_path: syn::Path = syn::parse_str(rt.token_path).unwrap();
-
-            let check = quote! {
-                if let Some(__t) = #token_path::summon() {
-                    break '__incant #fn_suffixed(#call_args);
-                }
-            };
-
-            if let Some(feat) = &rt.feature_gate {
-                let allow_attr = if rt.allow_unexpected_cfg {
-                    quote! { #[allow(unexpected_cfgs)] }
-                } else {
-                    quote! {}
-                };
-                tier_checks.push(quote! {
-                    #allow_attr
-                    #[cfg(feature = #feat)]
-                    { #check }
-                });
-            } else {
-                tier_checks.push(check);
+    let dispatch_arms = gen_dispatch_arms(tiers, |rt| {
+        let fn_suffixed = suffix_path(func_path, rt.suffix);
+        let token_path: syn::Path = syn::parse_str(rt.token_path).unwrap();
+        quote! {
+            if let Some(__t) = #token_path::summon() {
+                break '__incant #fn_suffixed(#call_args);
             }
         }
-
-        let inner = quote! { #(#tier_checks)* };
-
-        if let Some(arch) = target_arch {
-            dispatch_arms.push(quote! {
-                #[cfg(target_arch = #arch)]
-                { #inner }
-            });
-        } else {
-            dispatch_arms.push(inner);
-        }
-    }
+    });
 
     // Fallback: scalar (with ScalarToken) or default (tokenless)
     let has_default = tiers.iter().any(|rt| rt.name == "default");
