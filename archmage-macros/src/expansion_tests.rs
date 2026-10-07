@@ -810,8 +810,16 @@ fn lint_attributes_and_destructured_dispatch_inputs_are_preserved() {
         ),
     )
     .unwrap();
-    assert!(output.to_string().contains("__autoversion_wild_"));
-    assert!(output.to_string().contains("self . f_scalar"));
+    // The dispatcher names both non-identifier patterns and forwards them;
+    // before 2026-10-07 the tuple kept its pattern and was dropped from the
+    // call (E0061 in the user's crate).
+    let text = output.to_string();
+    assert!(
+        text.contains(
+            "self . f_scalar (archmage :: ScalarToken , __archmage_arg_0 , __archmage_arg_1)"
+        ),
+        "{text}"
+    );
     syn::parse2::<syn::File>(output).unwrap();
 }
 

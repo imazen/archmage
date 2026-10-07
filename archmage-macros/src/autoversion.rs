@@ -423,28 +423,14 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
         dispatcher_inputs.remove(token_param.index);
     }
 
-    // Rename wildcard params so we can pass them as arguments.
-    // Skip the kept ScalarToken param if it's a wildcard — the dispatcher
-    // ignores it (does its own summon()), no need to name it.
-    let mut wild_counter = 0u32;
-    for (i, arg) in dispatcher_inputs.iter_mut().enumerate() {
-        if keep_token_in_dispatcher && i == token_param.index {
-            continue; // Don't rename the kept token's pattern
-        }
-        if let FnArg::Typed(pat_type) = arg
-            && matches!(pat_type.pat.as_ref(), syn::Pat::Wild(_))
-        {
-            let ident = format_ident!("__autoversion_wild_{}", wild_counter);
-            wild_counter += 1;
-            *pat_type.pat = syn::Pat::Ident(syn::PatIdent {
-                attrs: vec![],
-                by_ref: None,
-                mutability: None,
-                ident,
-                subpat: None,
-            });
-        }
-    }
+    // Name wildcard and tuple patterns so the dispatcher can forward them.
+    // The dispatcher only forwards, so the rebinds are dropped; the variants
+    // keep the user's patterns and `#[arcane]` rebinds them there. A kept
+    // ScalarToken wildcard gets a name too, which the dispatcher ignores.
+    let mut dispatcher_sig = input_fn.sig.clone();
+    dispatcher_sig.inputs = dispatcher_inputs.into_iter().collect();
+    let _ = rename_non_ident_params(&mut dispatcher_sig);
+    let dispatcher_inputs: Vec<FnArg> = dispatcher_sig.inputs.into_iter().collect();
 
     // Collect argument idents for dispatch calls (exclude self receiver
     // AND the kept ScalarToken param — variants get their own token from

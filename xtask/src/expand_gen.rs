@@ -1115,6 +1115,27 @@ fn gen_shape_tests(files: &mut Vec<TestFile>) {
         "#}
         .to_string(),
     ));
+    // Non-identifier parameter patterns: the dispatcher must forward them.
+    for (name, params, body, call) in [
+        (
+            "tuple_pattern",
+            "(lo, hi): (f32, f32), x: f32",
+            "lo + hi + x",
+            "probe((1.0, 2.0), 3.0)",
+        ),
+        ("wildcard_param", "_: f32, x: f32", "x", "probe(1.0, 2.0)"),
+    ] {
+        files.push(shape(
+            "autoversion",
+            name,
+            formatdoc! {r#"
+                use archmage::autoversion;
+                #[autoversion(v3, scalar)]
+                fn probe({params}) -> f32 {{ {body} }}
+                fn main() {{ let _ = {call}; }}
+            "#},
+        ));
+    }
     files.push(shape(
         "autoversion",
         "generics_lifetime_const_type",
