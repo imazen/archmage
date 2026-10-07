@@ -265,8 +265,13 @@ fn report_display() {
 ///
 /// Two threads: the toggler cycles enable→disable and then asserts on
 /// its own summons, while the summoner spins `summon()` to keep a
-/// detect probe in flight across the disable boundary. Run under
-/// `testable_dispatch` or the disable calls are no-ops.
+/// detect probe in flight across the disable boundary. The toggler is
+/// the only oracle: `disable()` is two stores (the flag, then the
+/// cache), so a summoner that reads the flag between them sees a
+/// disable in progress, not a lost update, and a summoner-side check
+/// on `manually_disabled()` was a false positive about one run in 40
+/// (the 2026-10-07 release run). Run under `testable_dispatch` or the
+/// disable calls are no-ops.
 #[cfg(all(feature = "testable_dispatch", target_arch = "x86_64"))]
 #[test]
 fn detect_cannot_resurrect_a_disabled_token() {
@@ -293,33 +298,30 @@ fn detect_cannot_resurrect_a_disabled_token() {
     );
 
     let stop = Arc::new(AtomicBool::new(false));
-    let violations = Arc::new(AtomicUsize::new(0));
+    let probes = Arc::new(AtomicUsize::new(0));
 
     let summoner = {
         let stop = Arc::clone(&stop);
-        let violations = Arc::clone(&violations);
+        let probes = Arc::clone(&probes);
         std::thread::spawn(move || {
             while !stop.load(Ordering::Relaxed) {
                 // While the cache reads 0 this call runs the full CPUID
                 // probe — the in-flight window where a stale store used
-                // to land. If it returns Some while the disabled flag is
-                // already visible, the stale store won.
-                let got = X64V3Token::summon();
-                if got.is_some()
-                    && X64V3Token::manually_disabled().unwrap_or(false)
-                    && X64V3Token::summon().is_some()
-                {
-                    // A second summon returning Some means this isn't a
-                    // probe that merely raced the flag store — the cache
-                    // itself reads "available" under a committed disable.
-                    violations.fetch_add(1, Ordering::Relaxed);
+                // to land. Whether it returns Some or None says nothing
+                // by itself (a disable may be in progress); the toggler
+                // checks the cache after its disable() has returned.
+                if X64V3Token::summon().is_some() {
+                    probes.fetch_add(1, Ordering::Relaxed);
                 }
             }
         })
     };
 
+    // With the pre-fix unconditional store, this loop catches the lost
+    // update in 19 of 20 runs at 2000 iterations on a 32-thread Zen 5;
+    // 5000 leaves no room for a lucky run.
     let mut toggler_violations = 0usize;
-    for _ in 0..2000 {
+    for _ in 0..5000 {
         // Re-enable: cache drops to 0, so the summoner's next call enters
         // the slow detect path — the window the bug needs.
         let _ = X64V3Token::dangerously_disable_token_process_wide(false);
@@ -332,7 +334,7 @@ fn detect_cannot_resurrect_a_disabled_token() {
                 toggler_violations += 1;
             }
         }
-        if toggler_violations > 0 || violations.load(Ordering::Relaxed) > 0 {
+        if toggler_violations > 0 {
             break;
         }
     }
@@ -346,10 +348,10 @@ fn detect_cannot_resurrect_a_disabled_token() {
         "summon() returned Some while V3 was disabled process-wide \
          (detect() overwrote a concurrent disable — lost update)"
     );
-    assert_eq!(
-        violations.load(Ordering::Relaxed),
-        0,
-        "summon() returned Some while V3 was disabled process-wide \
-         (detect() overwrote a concurrent disable — lost update)"
+    // The summoner must have been exercising the probe, or the toggler's
+    // loop raced nothing.
+    assert!(
+        probes.load(Ordering::Relaxed) > 0,
+        "the summoner never saw an enabled window; the test did not exercise the race"
     );
 }
