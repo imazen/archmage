@@ -62,56 +62,40 @@ fn direct(
     inline: Option<Inline>,
 ) -> syn::Result<TokenStream> {
     let token = crate::generated::tier_to_canonical_token(tier.name).expect("registered tier");
-    let features = crate::generated::token_to_features(token).expect("registered token");
-    if let Some(error) =
-        avx512_import_error(&input.sig, args.imports.import_intrinsics, features, token)
-    {
-        return Ok(error);
-    }
-    if inline == Some(Inline::Always) && !features.is_empty() {
+    let context =
+        crate::engine::feature::FeatureContext::from_tier_token(token).expect("registered context");
+    if inline == Some(Inline::Always) && !context.features.is_empty() {
         return Err(syn::Error::new_spanned(
             &input.sig.ident,
             "inline(always) on target-feature bodies requires nightly; use inline(hint) or inline(never)",
         ));
     }
-    if let Some(policy) = inline {
-        input.attrs.retain(|attr| !attr.path().is_ident("inline"));
-        input.attrs.push(inline_attribute(policy));
-    } else if !input
-        .attrs
-        .iter()
-        .any(|attr| attr.path().is_ident("inline"))
-    {
-        input.attrs.push(inline_attribute(Inline::Hint));
-    }
-    if !features.is_empty() {
-        let csv = crate::token_discovery::features_csv(Some(token), features);
-        input
-            .attrs
-            .push(parse_quote!(#[target_feature(enable = #csv)]));
-    }
     let token_path: syn::Path = syn::parse_str(tier.token_path)?;
-    input.body = call::rewrite(input.body, tier);
-    let imports = generate_imports(
-        tier.target_arch,
-        crate::generated::token_to_magetypes_namespace(token),
-        args.imports.import_intrinsics,
-        args.imports.import_magetypes,
-    );
     let defines = args.defines.iter().map(|name| {
         quote! {
             #[allow(non_camel_case_types, dead_code)]
             type #name = ::magetypes::simd::generic::#name<#token_path>;
         }
     });
-    prepend_to_body(&mut input.body, quote!(#imports #(#defines)*));
-    let guard = gen_cfg_guard(
-        tier.target_arch,
-        gate.or(args.imports.cfg_feature.as_deref()),
-    );
-    // Token placeholders are discrete identifiers. No string substitutions.
-    let function = replace_ident_in_tokens(input.to_token_stream(), "Token", &quote!(#token_path));
-    Ok(quote!(#guard #function))
+    prepend_to_body(&mut input.body, quote!(#(#defines)*));
+    if inline.is_some() {
+        input.attrs.retain(|a| !a.path().is_ident("inline"));
+    }
+    let options = SharedOptions {
+        import_intrinsics: args.imports.import_intrinsics,
+        import_magetypes: args.imports.import_magetypes,
+        cfg_feature: gate
+            .map(str::to_string)
+            .or_else(|| args.imports.cfg_feature.clone()),
+    };
+    let function =
+        crate::engine::feature::emit(input, &options, inline.map(inline_attribute), true, context)
+            .unwrap_or_else(|diagnostic| diagnostic);
+    Ok(replace_ident_in_tokens(
+        function,
+        "Token",
+        &quote!(#token_path),
+    ))
 }
 
 fn output_name(
@@ -326,23 +310,12 @@ fn proof_entry(
 }
 
 fn wrap(input: LightFn, args: Args) -> syn::Result<TokenStream> {
-    // The compatibility boundary is moved to the shared emitter in the next
-    // lowering step; retain its sealed generic proof checks while doing so.
-    let in_impl = args.in_impl.then(|| quote!(in_impl,));
-    let nested = args.in_trait.then(|| quote!(in_trait,));
-    let self_type = args.self_type.as_ref().map(|ty| quote!(_self = #ty,));
-    let intrinsics = args
-        .imports
-        .import_intrinsics
-        .then(|| quote!(import_intrinsics,));
-    let magetypes = args
-        .imports
-        .import_magetypes
-        .then(|| quote!(import_magetypes,));
-    let gate = args.imports.cfg_feature.as_ref().map(|feature| {
-        let feature = format_ident!("{feature}");
-        quote!(cfg(#feature),)
-    });
-    let options = syn::parse2(quote!(#in_impl #nested #self_type #intrinsics #magetypes #gate))?;
-    Ok(crate::arcane::arcane_impl(input, "attune", options))
+    let options = crate::engine::boundary::BoundaryOptions {
+        nested: args.in_trait || args.self_type.is_some(),
+        in_impl: args.in_impl,
+        self_type: args.self_type,
+        shared: args.imports,
+        ..Default::default()
+    };
+    Ok(crate::engine::boundary::expand(input, "attune", options))
 }

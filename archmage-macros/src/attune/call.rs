@@ -212,7 +212,7 @@ impl Call {
 
 /// Inspect only macro invocations. Nested items have their own feature context.
 /// Qualified invocation paths are consumed along with the macro name.
-pub(super) fn rewrite(body: TokenStream, caller: &TierDescriptor) -> TokenStream {
+pub(crate) fn rewrite(body: TokenStream, caller: &TierDescriptor) -> TokenStream {
     if !crate::common::tokens_contain_ident(&body, &["attuned", "reattune"]) {
         return body;
     }

@@ -19,6 +19,7 @@ mod arcane;
 mod attune;
 mod autoversion;
 mod common;
+mod engine;
 mod generated;
 mod incant;
 mod magetypes;
