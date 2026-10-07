@@ -94,8 +94,8 @@ winarm-cpufeatures = { version = "0.1.2", default-features = false, features = [
 # Gates exercise tests for intrinsics stabilized after the 1.89 MSRV
 # (NEON dotprod 1.98, NEON fp16/fhm 1.94, AVX-512 FP16 1.94).
 rustversion = "1.0.23"
-zenbench = { version = "0.1.7", features = ["criterion-compat"] }
-trybuild = "1.0.120"
+zenbench = { version = "0.1.10", features = ["criterion-compat"] }
+trybuild = "1.0.121"
 macrotest = "1.2.1"
 safe_unaligned_simd = { version = "0.2.5", features = ["avx512"] }
 

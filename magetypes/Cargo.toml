@@ -45,8 +45,8 @@ rustversion = "1.0.23"
 # proptest and zenbench don't support WASM; trybuild/macrotest require host execution
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 proptest = "1.11.0"
-zenbench = { version = "0.1.7", features = ["criterion-compat"] }
-trybuild = "1.0.120"
+zenbench = { version = "0.1.10", features = ["criterion-compat"] }
+trybuild = "1.0.121"
 macrotest = "1.2.1"
 
 # Integration tests use rustversion to mirror the convert_f16 toolchain gate:
