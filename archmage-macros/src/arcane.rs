@@ -208,6 +208,18 @@ pub(crate) fn arcane_impl(
         ),
     );
 
+    // Rename non-ident patterns to named params so the wrapper → sibling call
+    // works. The original patterns are re-bound at the top of the inner body.
+    // This runs before the nested-dispatch rewrite below, which threads the
+    // token by name: a wildcard `_: X64V3Token` becomes `__archmage_arg_0:
+    // X64V3Token` (binding nothing, so no rebind), and the rewrite must see
+    // that name rather than the placeholder the wildcard was given.
+    let rebinds = rename_non_ident_params(&mut input_fn.sig);
+    prepend_to_body(&mut input_fn.body, quote! { #(#rebinds)* });
+    if let Some(info) = find_token_param(&input_fn.sig) {
+        _token_ident = info.ident;
+    }
+
     // Rewrite incant!() calls in the body to direct tier calls.
     // Only for concrete tokens where we can determine the tier suffix.
     if let Some(ref type_name) = token_type_name
@@ -248,17 +260,6 @@ pub(crate) fn arcane_impl(
     }
     let target_feature_attrs: Vec<Attribute> =
         vec![parse_quote!(#[target_feature(enable = #features_csv)])];
-
-    // Rename non-ident patterns to named params so the wrapper → sibling call works.
-    // The original patterns are re-bound at the top of the inner body.
-    let rebinds = rename_non_ident_params(&mut input_fn.sig);
-    prepend_to_body(&mut input_fn.body, quote! { #(#rebinds)* });
-    // Renaming may have changed the token parameter's ident (a wildcard
-    // `_: X64V3Token` becomes `__archmage_arg_0: X64V3Token` and binds
-    // nothing, so it leaves no rebind behind). Re-discover it.
-    if let Some(info) = find_token_param(&input_fn.sig) {
-        _token_ident = info.ident;
-    }
 
     // On wasm32, #[target_feature(enable = "simd128")] functions are safe (Rust 1.54+).
     // The wasm validation model guarantees unsupported instructions trap deterministically,

@@ -1190,6 +1190,71 @@ fn gen_shape_tests(files: &mut Vec<TestFile>) {
             "#},
         ));
     }
+    // Nested dispatch compositions that used to fail to compile (external
+    // review of PR #123, 2026-10-07): a wildcard token threaded into a nested
+    // incant!, a gated direct tier falling through when its feature is off, a
+    // named caller token replaced in the scalar fallback, and an autoversion
+    // token that is not the first parameter.
+    files.push(shape(
+        "arcane",
+        "wildcard_token_nested_incant",
+        indoc::indoc! {r#"
+            use archmage::prelude::*;
+            #[arcane]
+            fn inner_v3(_: X64V3Token, x: u32) -> u32 { x + 1 }
+            fn inner_scalar(_: ScalarToken, x: u32) -> u32 { x }
+            #[arcane]
+            fn outer(_: X64V3Token, x: u32) -> u32 {
+                incant!(inner(x), [v3, scalar])
+            }
+            fn main() {}
+        "#}
+        .to_string(),
+    ));
+    files.push(shape(
+        "arcane",
+        "gated_direct_tier_nested_incant",
+        indoc::indoc! {r#"
+            use archmage::prelude::*;
+            // `inner_v3` exists only with the feature; the caller holds V3, so
+            // the direct call must be gated and fall through to scalar.
+            #[cfg(feature = "gated")]
+            #[arcane]
+            fn inner_v3(_: X64V3Token, x: u32) -> u32 { x + 1 }
+            fn inner_scalar(_: ScalarToken, x: u32) -> u32 { x }
+            #[arcane]
+            fn outer(t: X64V3Token, x: u32) -> u32 {
+                incant!(inner(x), [v3(cfg(gated)), scalar])
+            }
+            fn main() {}
+        "#}
+        .to_string(),
+    ));
+    files.push(shape(
+        "arcane",
+        "named_token_scalar_nested_incant",
+        indoc::indoc! {r#"
+            use archmage::prelude::*;
+            fn inner_scalar(_: ScalarToken, x: u32) -> u32 { x }
+            #[arcane]
+            fn outer(t: X64V3Token, x: u32) -> u32 {
+                incant!(inner(t, x), [scalar])
+            }
+            fn main() {}
+        "#}
+        .to_string(),
+    ));
+    files.push(shape(
+        "autoversion",
+        "token_last_param",
+        indoc::indoc! {r#"
+            use archmage::{ScalarToken, autoversion};
+            #[autoversion(v3, scalar)]
+            fn sum(x: u32, _: ScalarToken) -> u32 { x }
+            fn main() { let _ = sum(1, ScalarToken); }
+        "#}
+        .to_string(),
+    ));
     // Non-identifier parameter patterns: the dispatcher must forward them.
     for (name, params, body, call) in [
         (

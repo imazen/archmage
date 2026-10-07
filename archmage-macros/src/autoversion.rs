@@ -441,15 +441,23 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
     // How the dispatcher reaches a variant: a nested fn taking `self` first
     // (`in_trait`), a method through `self`, a `Self::` path (`in_impl`), or a
     // free function. `token_arg` is the leading token argument, if any.
-    let variant_call = |name: &Ident, token_arg: TokenStream| -> TokenStream {
+    // The variants keep the user's parameter order, so the token goes where
+    // the user's token parameter is (or where the macro injected one: first,
+    // after any receiver). `None` is the tokenless `default` variant.
+    let token_position = token_param.index - usize::from(has_self);
+    let variant_call = |name: &Ident, token_arg: Option<TokenStream>| -> TokenStream {
+        let mut call_args: Vec<TokenStream> = dispatch_args.iter().map(|a| quote! { #a }).collect();
+        if let Some(token_arg) = token_arg {
+            call_args.insert(token_position, token_arg);
+        }
         let raw = if has_self && args.in_trait {
-            quote! { #name #turbofish(self, #token_arg #(#dispatch_args),*) }
+            quote! { #name #turbofish(self, #(#call_args),*) }
         } else if has_self {
-            quote! { self.#name #turbofish(#token_arg #(#dispatch_args),*) }
+            quote! { self.#name #turbofish(#(#call_args),*) }
         } else if args.in_impl {
-            quote! { Self::#name #turbofish(#token_arg #(#dispatch_args),*) }
+            quote! { Self::#name #turbofish(#(#call_args),*) }
         } else {
-            quote! { #name #turbofish(#token_arg #(#dispatch_args),*) }
+            quote! { #name #turbofish(#(#call_args),*) }
         };
         if is_unsafe {
             quote! { unsafe { #raw } }
@@ -461,7 +469,7 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
     let dispatch_arms = gen_dispatch_arms(&tiers, |rt| {
         let suffixed = format_ident!("{}_{}", fn_name, rt.suffix);
         let token_path: syn::Path = syn::parse_str(rt.token_path).unwrap();
-        let call = variant_call(&suffixed, quote! { __t, });
+        let call = variant_call(&suffixed, Some(quote! { __t }));
         quote! {
             if let Some(__t) = #token_path::summon() {
                 return #call;
@@ -473,9 +481,9 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
     // default is tokenless, scalar takes ScalarToken.
     let has_default_tier = tiers.iter().any(|t| t.name == "default");
     let (fallback_suffix, fallback_token) = if has_default_tier {
-        ("default", quote! {})
+        ("default", None)
     } else {
-        ("scalar", quote! { archmage::ScalarToken, })
+        ("scalar", Some(quote! { archmage::ScalarToken }))
     };
     let fallback_name = format_ident!("{}_{}", fn_name, fallback_suffix);
     let fallback_call = variant_call(&fallback_name, fallback_token);
