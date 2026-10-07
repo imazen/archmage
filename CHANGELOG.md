@@ -107,6 +107,7 @@
 
 #### Fixed
 
+- The Miri CI job runs on `nightly-2026-10-06`: zerocopy 0.8.61 calls `align_of_val_raw` under `cfg(miri)`, stable from Rust 1.99, which the old `nightly-2026-02-03` pin rejected (E0658).
 - The intrinsic database and browser listed the FHM `vfmlal*`/`vfmlsl*` intrinsics under `Arm64V2Token`; they also need `fhm`, so `Arm64V3Token`. The extractor now reads `cfg_attr` target features (1ed03ff1).
 
 #### Changed
