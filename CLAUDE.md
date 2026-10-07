@@ -1128,7 +1128,9 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
   `self` in the body; `#[arcane(in_impl)]`, `#[autoversion(in_impl)]` and
   `#[magetypes(in_impl)]` handle receiver-less associated functions; generic
   bounds are collected from every inline and `where` position; the `with
-  token` `incant!` fallback names the token and the tier list. Snapshots:
+  token` `incant!` fallback names the token and the tier list;
+  `#[autoversion]` forwards tuple-pattern parameters (it dropped them from
+  the dispatcher's call, E0061). Snapshots:
   `tests/expand/shapes/`; compile-fail: `tests/compile_fail/two_token_params_*.rs`,
   `autoversion_opaque_return.rs`, `autoversion_in_trait_needs_self_type.rs`,
   `rite_in_trait.rs`, `rite_in_impl.rs`.
