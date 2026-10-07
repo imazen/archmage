@@ -213,7 +213,8 @@ if let Some(token) = X64V4Token::summon() {
 
 Behavioral requirements:
 
-1. Without a shortlist, use the family's documented runtime tier order.
+1. Without a shortlist, use the documented default call contract and tier
+   order, not discovered callee metadata. Sparse families require a shortlist.
 2. With a shortlist, restrict eligibility to that list, respecting registry
    priority rather than inventing a different priority from token values.
 3. When selecting through per-tier entries, use known caller feature coverage
@@ -242,26 +243,32 @@ reattune expresses that intent explicitly and permits a shortlist. Inside one,
 reattune is the opt-in route for behavior currently provided by tokenful incant
 rewriting that probes stronger or unrelated feature branches.
 
-### Accessible entry selection
+### Explicit family contracts
 
-Recommendation for a covered call:
+Established decision: sparse families require explicit tier lists initially.
+A V4 caller targeting a family with only V3/scalar writes:
 
-1. Use an accessible direct entry if the family exposes one.
-2. Otherwise, if an accessible `_t` entry exists, derive the covered token with
-   `from_context()` and use that entry without detection.
-3. If only a dispatcher is accessible, report that static entry is unavailable;
-   explicitly calling the dispatcher or reattune retains runtime semantics.
+```rust,ignore
+attuned!(dependency::work(x), [_v3])
+```
 
-A public inline proof entry can optimize a private implementation body; this
-does not allow a source macro to name that private body. The existing assembly
-experiment supports this route for its measured cases, not all future kernels.
+This selects a covered V3 call without detection. Omitting the list does not
+promise discovery of V3 or a search for whichever suffix happens to exist.
+The no-list spelling uses a documented convention; its precise contract for
+same-tier calls versus default families still needs to be specified.
 
-**Spike required:** how a call discovers family outputs, gates and visibility
-across modules/crates, including renamed dependencies, re-exports, aliases and
-associated functions. Proc macros must not depend on expansion order, a mutable
-global registry, scanning source files, or probing whether arbitrary identifiers
-exist. A provider-generated family descriptor is a candidate; its exact export,
-namespace, generic and versioning contract must be demonstrated.
+Do not generate a family-discovery macro, descriptor type, global registry or
+source scan for the initial API. Callers must match the provider's names,
+visibility and cfg gates. Rust name resolution validates referenced entries;
+a missing or inaccessible entry is a compile error, not a request to try the
+next suffix. Any exported metadata protocol is a separate future proposal and
+must satisfy the same no-compilation-regression gate.
+
+A covered direct entry needs no runtime probe. A known public `_t` entry can
+use `from_context()` and optimize its private body, but the call macro cannot
+automatically test which entry form exists. Entry-form selection/conventions
+remain to be specified. A dispatcher-only API can be called explicitly; it
+retains its runtime semantics. Inlining does not grant access to private names.
 
 ## 5. self, Self and placement
 
@@ -448,7 +455,7 @@ Do not implement “best effort” emission that changes an API's meaning silent
 | Attribute routing | Mechanism clear, some policy choices open | Decide family-level routing; test expect/track_caller/unknown attrs |
 | Generic trait adapters/default bodies | Automatic enclosing-item processing excluded | Document free-kernel delegation; test rejection boundary |
 | Scope-correct receiver rewriting | Spike required for generality | Exercise nested items, macros, closures and hygiene |
-| Cross-crate family discovery | Spike required | Demonstrate descriptor/re-export/renamed-dependency behavior |
+| Sparse cross-crate families | Explicit tier lists chosen | Test naming/cfg/access contracts; no automatic discovery |
 | Cold compile cost and resulting codegen | Measurement required | Compare equivalent expanded output after the prototype exists |
 
 “Clear approach” does not mean implemented or already covered by attune tests.
@@ -459,8 +466,8 @@ passing tests of the new attribute.
 ## 11. Acceptance gates
 
 Before implementing the public interface, settle the listed grammar/policy
-decisions and demonstrate supported function-only shapes and family discovery
-off main.
+decisions and demonstrate supported function-only shapes and explicit
+cross-crate call contracts off main.
 New public API proceeds through signature review; preserving this draft is not
 authorization to merge experimental APIs into main.
 

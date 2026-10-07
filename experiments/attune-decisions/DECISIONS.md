@@ -1,7 +1,7 @@
 # Attune decision worksheet
 
-Q1, feature-gated V4 in Q2, and the function-only constraint in Q3 are accepted
-(2026-10-07). Idempotent `-_v4` exclusion and no end-user compile-time regression
+Q1, feature-gated V4 in Q2, the function-only constraint in Q3, and explicit
+sparse-family lists in Q4 are accepted (2026-10-07). Idempotent `-_v4` exclusion and no end-user compile-time regression
 are also accepted requirements. Other choices remain pending; recommendations
 are not recorded user decisions.
 No proposed attune syntax has been implemented. The
@@ -106,35 +106,28 @@ that this gate passes. No such comparison has yet been measured for attune.
 
 ### Q4. What automatic discovery do we promise for sparse families?
 
+**Accepted — Conventions plus explicit lists for sparse families initially.**
 Suppose an external family has only V3 and scalar implementations, while its
 caller is V4:
 
 ```rust,ignore
-attuned!(dependency::work(x))          // Must this automatically find V3?
-attuned!(dependency::work(x), [_v3])   // Or must sparse selection be explicit?
+attuned!(dependency::work(x), [_v3]) // Explicit covered V3; no detection.
 ```
 
-**A — Automatic discovery for declared families.** Simple call sites, with a
-provider-generated description of available entries and cfg. Independently
-handwritten variants may need an explicit family declaration. The descriptor
-becomes an exported protocol for public families and must survive versioning,
-renaming, re-exports and associated-function placement.
+The no-list call does not automatically discover V3. Its documented convention
+still needs a precise same-tier/default-family contract. Callers must know the
+available tiers, and names, visibility and cfg gates must agree. Missing symbols
+are compile errors; they cannot be used as reflection or implicit fallback.
 
-**B — Conventions plus explicit lists for sparse families.** Less generated
-discovery infrastructure. Callers must know/select available tiers, and names,
-visibility and gates must agree. No compiler reflection is implied by a missing
-function name. This resembles current incant's explicit-tier requirements.
+Do not require automatic discovery or emit its provider descriptor infrastructure
+in the initial API. The prior macro/enum probes remain evidence for possible
+future work, not a required component. They demonstrated namespace/cfg behavior
+and limitations, not a complete protocol or a compile-time advantage. Entry-form
+selection (direct versus _t versus dispatcher) likewise needs an explicit
+contract rather than probing which names exist.
 
-Recommendation: decide the behavioral promise first. Do not choose an internal
-macro or enum protocol yet. Both work for the tested free-function namespace
-cases, but both have demonstrated limitations: root macro-name collisions,
-type-name collisions, and no corresponding declaration position inside an impl.
-Neither prototype groups independently annotated variants or implements the
-complete versioned protocol. Cold compile cost is not measured.
-
-Trait-object calls are a separate contract: preserving an existing trait method
-does not create new statically callable tier members in that trait. Automatic
-discovery must not quietly change a trait's vtable or dyn compatibility.
+Trait-object calls keep their existing method contract and dyn compatibility;
+explicit tier lists do not add statically callable members to a trait.
 
 ### Q5. How should an existing token-taking public signature migrate?
 
