@@ -803,8 +803,17 @@ fn verify_intrinsic_soundness() -> Result<()> {
     soundness::verify(&reg)
 }
 
+/// The nightly Miri runs on: `ARCHMAGE_MIRI_TOOLCHAIN`, else the pin in
+/// `xtask/miri-nightly.txt` that CI installs, else the host's `nightly`.
 fn miri_toolchain() -> String {
-    std::env::var("ARCHMAGE_MIRI_TOOLCHAIN").unwrap_or_else(|_| "nightly".into())
+    if let Ok(toolchain) = std::env::var("ARCHMAGE_MIRI_TOOLCHAIN") {
+        return toolchain;
+    }
+    std::fs::read_to_string("xtask/miri-nightly.txt")
+        .map(|s| s.trim().to_string())
+        .ok()
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "nightly".into())
 }
 
 /// Expensive magetypes tests that Miri does not run. Each one either reaches no
@@ -2508,8 +2517,12 @@ fn run_ci() -> Result<()> {
         .unwrap_or(false);
 
     if !miri_available {
-        println!("  ⚠ Miri not available, skipping UB checks");
-        println!("  Install with: rustup +nightly component add miri");
+        let toolchain = miri_toolchain();
+        println!("  ⚠ Miri not available on {toolchain}, skipping UB checks");
+        println!(
+            "  Install with: rustup toolchain install {toolchain} --profile minimal \
+             --component miri,rust-src"
+        );
     } else {
         run_miri()?;
     }

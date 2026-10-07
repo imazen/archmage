@@ -600,7 +600,11 @@ CI checks (all must pass):
 11. `cargo fmt --check` — code is formatted
 12. **Public-API snapshot check** — `ZEN_API_DOC=check` on the apidoc runner; if a public-API change makes `docs/public-api/` stale, run `just api-doc` and commit the regenerated snapshots
 13. `cargo doc --features "std avx512" --no-deps` with `RUSTDOCFLAGS=-Dwarnings` — no broken doc links
-14. Miri UB detection (skipped if not installed). `MIRI_SKIPPED_TESTS` in
+14. Miri UB detection on the nightly named in `xtask/miri-nightly.txt`, the
+    same pin the CI job installs (`ARCHMAGE_MIRI_TOOLCHAIN` overrides; skipped
+    with a warning if that toolchain lacks Miri, so install it:
+    `rustup toolchain install $(cat xtask/miri-nightly.txt) --profile minimal
+    --component miri,rust-src`). `MIRI_SKIPPED_TESTS` in
     `xtask/src/main.rs` keeps expensive exhaustive tests out of Miri (about 95%
     of its work) when they reach no `unsafe`, or only paths a cheaper test still
     covers under Miri. Skip at the narrowest level, one test rather than its

@@ -517,28 +517,31 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # The pin lives in xtask/miri-nightly.txt, which `cargo xtask miri`
+      # also reads, so local runs use the toolchain CI uses. Pinned so a
+      # nightly regression cannot break the job on its own. Floor: zerocopy
+      # 0.8.61 uses align_of_val_raw under cfg(miri), stable from Rust 1.99.
+      - name: Read the Miri nightly pin
+        id: miri_pin
+        run: echo "toolchain=$(tr -d '[:space:]' < xtask/miri-nightly.txt)" >> "$GITHUB_OUTPUT"
+
       - name: Install Rust nightly
         uses: dtolnay/rust-toolchain@master
         with:
-          # Pinned so a nightly regression cannot break the job on its own.
-          # Floor: zerocopy 0.8.61 uses align_of_val_raw under cfg(miri),
-          # stable from Rust 1.99, so the pin must be a 1.99+ nightly.
-          toolchain: nightly-2026-10-06
+          toolchain: ${{ steps.miri_pin.outputs.toolchain }}
           components: miri
 
       - name: Setup Miri
         run: cargo miri setup
 
       - name: Run Miri on magetypes (native V3 raw tests + baseline suite)
-        env:
-          ARCHMAGE_MIRI_TOOLCHAIN: nightly-2026-10-06
         run: cargo run -p xtask -- miri
 
       - name: Run Miri on archmage
-        run: cargo miri test -p archmage --lib --features avx512
+        run: cargo +${{ steps.miri_pin.outputs.toolchain }} miri test -p archmage --lib --features avx512
 
       - name: Run Miri on miri_safe
-        run: cargo miri test --test miri_safe --features "${{ env.FEATURES }}"
+        run: cargo +${{ steps.miri_pin.outputs.toolchain }} miri test --test miri_safe --features "${{ env.FEATURES }}"
 
   # ==========================================================================
   # Fuzz testing - property-based divergence detection

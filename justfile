@@ -39,7 +39,7 @@ fmt-check:
 
 # Run Miri tests (token logic only, no SIMD) - legacy alias
 miri-tokens:
-    rustup run nightly cargo miri test --test miri_safe --all-features
+    rustup run "$(tr -d '[:space:]' < xtask/miri-nightly.txt)" cargo miri test --test miri_safe --all-features
 
 # Run Miri on magetypes with full SIMD support (detects UB)
 miri:
