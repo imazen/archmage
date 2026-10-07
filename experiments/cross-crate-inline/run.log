@@ -1,0 +1,17 @@
+run-heavy: mem-cap=16G (cgroup, hard) jobs=8/20 avail=22319MiB :: python3 experiments/cross-crate-inline/run.py --out /home/lilith/tmp/archmage-cross-crate-inline-2026-10-07-run4
+RUN cargo fmt --all
+OK  fmt.log
+RUN cargo test -p inline-probe-consumer --release --lib
+OK  test.log
+RUN cargo check -p inline-probe-consumer --features private-function
+OK  privacy-private-function.log
+RUN cargo check -p inline-probe-consumer --features crate-function
+OK  privacy-crate-function.log
+RUN cargo check -p inline-probe-consumer --features private-macro
+OK  privacy-private-macro.log
+RUN cargo asm -p inline-probe-consumer --lib --everything --keep-mangled --no-color
+OK  consumer.asm
+RUN cargo asm -p inline-probe-provider --lib --everything --keep-mangled --no-color
+OK  provider.asm
+COMPLETE: 252 caller cases; assembly, privacy diagnostics and correctness log in /home/lilith/tmp/archmage-cross-crate-inline-2026-10-07-run4
+run-heavy: done rc=0 16s | peak-RSS 0.30GiB | min-avail 21794MiB | peak-load 0.55
