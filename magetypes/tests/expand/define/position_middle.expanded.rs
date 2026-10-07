@@ -7,7 +7,7 @@ use archmage::magetypes;
 fn __arcane_kernel_v3(token: archmage::X64V3Token, data: &[f32; 8]) -> f32 {
     #[allow(non_camel_case_types, dead_code)]
     type f32x8 = ::magetypes::simd::generic::f32x8<archmage::X64V3Token>;
-    f32x8::load(token, data).reduce_add()
+    f32x8::load_t(token, data).reduce_add()
 }
 #[inline(always)]
 fn kernel_v3(token: archmage::X64V3Token, data: &[f32; 8]) -> f32 {
@@ -17,6 +17,6 @@ fn kernel_v3(token: archmage::X64V3Token, data: &[f32; 8]) -> f32 {
 fn kernel_scalar(token: archmage::ScalarToken, data: &[f32; 8]) -> f32 {
     #[allow(non_camel_case_types, dead_code)]
     type f32x8 = ::magetypes::simd::generic::f32x8<archmage::ScalarToken>;
-    f32x8::load(token, data).reduce_add()
+    f32x8::load_t(token, data).reduce_add()
 }
 fn main() {}
