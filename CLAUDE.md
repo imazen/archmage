@@ -610,7 +610,13 @@ CI checks (all must pass):
     covers under Miri. Skip at the narrowest level, one test rather than its
     binary, and name the retained test that covers its `unsafe` path
     (`scalar_w512_bitcast_values` covers `int_widen_narrow::scalar_backend`'s
-    bitcasts through `simd_storage::cast`).
+    bitcasts through `simd_storage::cast`). Miri is single-threaded and uses
+    its own build directory, so `just ci` starts it in the background right
+    after the clean-tree check and collects it at this step; its output is in
+    `target/miri-ci.log` (printed on failure). `just ci` ends with a table of
+    every step's wall time; use it before guessing where the time goes
+    (2026-10-07: Miri 233 s of 399 before these changes, then the no_std and
+    std test steps at 67 s and 58 s).
 15. **ARM64 cross-compilation + tests** (requires `cross` + Docker)
 16. **WASM cross-compilation + tests** (requires `wasmtime` + `wasm32-wasip1` target)
 17. **ARM64 clippy** (requires `cross` + Docker)

@@ -841,6 +841,26 @@ const MIRI_SKIPPED_TESTS: &[(&str, Option<&str>, &str)] = &[
         "range sweeps, about 33,000 cbrt calls per function (432 s under Miri); \
          on the scalar backend Miri runs they are safe code only",
     ),
+    (
+        "int_uniform_shift_saturating",
+        Some("scalar_backend"),
+        "every boundary shift count over every 8/16-bit type and width on the \
+         scalar backend (54 s under Miri, 2026-10-07): safe lane code, and its \
+         loads and stores are the paths x64v3_backend in the same binary runs \
+         under Miri in under a second",
+    ),
+    (
+        "precise_reciprocals",
+        None,
+        "ULP sweeps of recip/rsqrt over thousands of inputs (22 s under Miri): \
+         safe code apart from the loads and stores generic_all_types runs under \
+         Miri for every type",
+    ),
+    (
+        "exp2_lowp_range",
+        None,
+        "a range sweep over [126, 128) (12 s under Miri): safe code only",
+    ),
 ];
 
 /// magetypes integration-test targets, minus the binaries [`MIRI_SKIPPED_TESTS`]
@@ -984,13 +1004,19 @@ fn run_miri() -> Result<()> {
         // the baseline virtual CPU. Non-x86 hosts run their entire native suite.
         baseline.args(["--", "--skip", "native_raw_roundtrips"]);
     }
+    let started = std::time::Instant::now();
     let baseline = baseline
         .status()
         .context("Failed to run baseline Miri tests")?;
     if !baseline.success() {
         bail!("Baseline Miri tests failed; see diagnostics above");
     }
+    println!(
+        "  miri: baseline suite {:.0} s",
+        started.elapsed().as_secs_f64()
+    );
     for (bin, skips) in &partial {
+        let started = std::time::Instant::now();
         let mut run = Command::new("cargo");
         run.args([
             &toolchain,
@@ -1015,7 +1041,9 @@ fn run_miri() -> Result<()> {
         {
             bail!("Miri tests in {bin} failed; see diagnostics above");
         }
+        println!("  miri: {bin} {:.0} s", started.elapsed().as_secs_f64());
     }
+    let started = std::time::Instant::now();
     // Cargo cannot mix --doc with explicit targets, so the doctests that the
     // former all-targets invocation covered get their own run.
     let doc = Command::new("cargo")
@@ -1034,6 +1062,7 @@ fn run_miri() -> Result<()> {
     if !doc.success() {
         bail!("Miri doctests failed; see diagnostics above");
     }
+    println!("  miri: doctests {:.0} s", started.elapsed().as_secs_f64());
     println!("Miri tests passed for native raw interop, the baseline suite, and the doctests");
     Ok(())
 }
@@ -2275,6 +2304,11 @@ fn run_ci() -> Result<()> {
     println!("  ✓ Working tree is clean");
     println!("└─ Worktree check passed ────────────────────────────────────────────┘\n");
 
+    // Miri interprets single-threaded for minutes and shares no build
+    // directory with the steps below, so it runs alongside them; Step 15
+    // collects the result. Its output goes to a log that is printed on failure.
+    let miri = MiriJob::start();
+
     // Step 3: Intrinsic soundness verification (structure-aware scanner)
     timer.begin("Step 3/18: Verifying intrinsic soundness");
     let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
@@ -2516,26 +2550,8 @@ fn run_ci() -> Result<()> {
 
     // Step 13: Miri testing (UB detection)
     timer.begin("Step 15/18: Running Miri (UB detection)");
-    // Check if Miri is available
-    let miri_available = std::process::Command::new("cargo")
-        .args([
-            format!("+{}", miri_toolchain()),
-            "miri".into(),
-            "--version".into(),
-        ])
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
-
-    if !miri_available {
-        let toolchain = miri_toolchain();
-        println!("  ⚠ Miri not available on {toolchain}, skipping UB checks");
-        println!(
-            "  Install with: rustup toolchain install {toolchain} --profile minimal \
-             --component miri,rust-src"
-        );
-    } else {
-        run_miri()?;
+    if let Some(elapsed) = miri.finish()? {
+        timer.record("Miri (ran concurrently with Steps 3-14)", elapsed);
     }
     println!("└─ Miri check complete ──────────────────────────────────────────────┘\n");
 
@@ -2660,6 +2676,99 @@ fn run_ci() -> Result<()> {
     Ok(())
 }
 
+/// `cargo xtask miri` as a background child of `just ci`, started early and
+/// joined at Step 15. Its stdout and stderr go to `target/miri-ci.log`, which
+/// is printed when it fails, so the log of the other steps stays readable.
+enum MiriJob {
+    /// Miri is not installed on the pinned toolchain.
+    Unavailable(String),
+    Running {
+        child: std::process::Child,
+        log: PathBuf,
+        started: std::time::Instant,
+    },
+}
+
+impl MiriJob {
+    fn start() -> Self {
+        let toolchain = miri_toolchain();
+        let available = std::process::Command::new("cargo")
+            .args([format!("+{toolchain}"), "miri".into(), "--version".into()])
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false);
+        if !available {
+            return MiriJob::Unavailable(toolchain);
+        }
+        let log = PathBuf::from("target/miri-ci.log");
+        let _ = fs::create_dir_all("target");
+        let spawn = || -> Result<std::process::Child> {
+            let out = fs::File::create(&log).context("creating target/miri-ci.log")?;
+            let err = out.try_clone()?;
+            Ok(std::process::Command::new(std::env::current_exe()?)
+                .arg("miri")
+                .stdout(out)
+                .stderr(err)
+                .spawn()?)
+        };
+        match spawn() {
+            Ok(child) => {
+                println!(
+                    "  Miri started in the background (log: {})\n",
+                    log.display()
+                );
+                MiriJob::Running {
+                    child,
+                    log,
+                    started: std::time::Instant::now(),
+                }
+            }
+            Err(e) => MiriJob::Unavailable(format!("{toolchain} ({e})")),
+        }
+    }
+
+    /// Wait for the child; `Ok(Some(elapsed))` on success, `Ok(None)` when
+    /// Miri was unavailable, `Err` with the log when it failed.
+    fn finish(self) -> Result<Option<std::time::Duration>> {
+        match self {
+            MiriJob::Unavailable(toolchain) => {
+                println!("  ⚠ Miri not available on {toolchain}, skipping UB checks");
+                println!(
+                    "  Install with: rustup toolchain install {} --profile minimal \
+                     --component miri,rust-src",
+                    miri_toolchain()
+                );
+                Ok(None)
+            }
+            MiriJob::Running {
+                mut child,
+                log,
+                started,
+            } => {
+                let status = child.wait().context("waiting for the Miri job")?;
+                let elapsed = started.elapsed();
+                let text = fs::read_to_string(&log).unwrap_or_default();
+                if !status.success() {
+                    println!("{text}");
+                    bail!(
+                        "Miri failed ({status}); its full output is above and in {}",
+                        log.display()
+                    );
+                }
+                for line in text.lines().filter(|l| l.contains("  miri: ")) {
+                    println!("{line}");
+                }
+                println!(
+                    "  ✓ Miri passed in {:.0} s, concurrently with Steps 3-14 (log: {})",
+                    elapsed.as_secs_f64(),
+                    log.display()
+                );
+                Ok(Some(elapsed))
+            }
+        }
+    }
+}
+
 /// Wall-clock per `just ci` step, printed as a table at the end so the slow
 /// steps are visible without instrumenting a run by hand.
 #[derive(Default)]
@@ -2685,6 +2794,11 @@ impl StepTimer {
         if let Some((title, start)) = self.current.take() {
             self.done.push((title, start.elapsed()));
         }
+    }
+
+    /// Add a duration measured elsewhere (a concurrent job) to the table.
+    fn record(&mut self, title: &str, elapsed: std::time::Duration) {
+        self.done.push((title.to_string(), elapsed));
     }
 
     fn finish(&mut self) {
