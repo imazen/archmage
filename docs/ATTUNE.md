@@ -202,3 +202,91 @@ into covered tiers and runtime upgrades. Replacing that call with `attuned!`
 would remove the upgrade behavior; an exact migration may need `reattune!`.
 The legacy `without token` form instead selects the exact caller tier. Check
 the enclosing attribute and call modifiers together when generating an edit.
+
+
+## Method calls, migration suggestions and inline policy review (2026-10-07)
+
+These are recommendations and implementation requirements, not a claim that the
+current path-only parser already accepts method calls or that dispatcher defaults
+have changed.
+
+Support `attuned!(receiver.work(args), [_v3, _scalar])` and the corresponding
+`reattune!` form. Preserve an ordinary method-call expression in each selected
+branch, changing the method name and inserting proof only when required. Do not
+move the receiver into a local or eagerly take `&mut receiver`: either can change
+ownership or implicit borrowing. Rust resolves receiver types, autoderef/autoref,
+traits and generic arguments; no enclosing-impl scan is necessary. Method rename
+mappings should be method identifiers; qualified function paths belong to the
+function-call form. Existing restrictions on generating direct trait methods
+still apply independently of call syntax.
+
+A standalone lowering probe, [method_lowering.rs](../tests/expansion_audit/method_lowering.rs),
+compiled and ran on Rust 1.98.1. Both branch choices preserve `v.push(v.len())`,
+a boxed vector's implicit borrow, and one evaluation of a consuming receiver
+before its argument. This tests the proposed branch shape, not an implemented
+`attuned!` method frontend. Full integration still needs renamed methods,
+turbofish, proof position, receiver temporaries, borrowing returns and nested
+context calls.
+
+The migration helper should reuse the legacy resolved selection plan. Ordinary
+calls and covered-only composition can suggest `attuned!`; calls that actually
+perform runtime reselection need `reattune!`. Preserve gates, names, proof
+position and evaluation order. A standalone invocation macro does not know its
+enclosing attribute; the attribute's contextual rewrite or source converter
+must supply that information. Do not present a replacement as exact when the
+context or selection equivalence is unproved.
+
+There is a concrete ordering caveat in the current draft. The legacy rewriter
+emits all runtime-upgrade arms before covered arms. For a V4 caller with callee
+list `[v4, v3_crypto, scalar]`, it probes V3Crypto before calling covered V4.
+V4 does not cover V3Crypto. The new call emitter sorts all candidates by priority
+and stops at covered V4 (priority 40, versus V3Crypto's 35). Therefore simply
+renaming that invocation to `reattune!` would change selection. This conclusion
+comes from `rewrite.rs`, `attune/call.rs` and the generated registry; it is not a
+runtime measurement. The converter must preserve this plan explicitly or report
+that a one-invocation replacement is unavailable.
+
+Keep one Cargo gate per tier shared by its direct body and proof interface.
+Independent gates could package an optional public proof API around an always
+available direct kernel, but no consumer requirement for that flexibility has
+been established here. It adds conditional body/reference routing; it does not
+improve feature safety. The current parser's shared-gate restriction is suitable
+for the first implementation.
+
+Proposed default policy, reflecting the user's preference:
+
+| Generated function | Default | Override |
+|---|---|---|
+| Proof wrapper | `#[inline(always)]` | Per-output `inline(hint)` or `inline(never)` |
+| Dispatcher | `#[inline(always)]` | Per-output `inline(hint)` or `inline(never)` |
+| Operation body, including scalar | `#[inline]` | Per-output `inline(never)`; native feature bodies reject always |
+
+Keep the common spelling short, and attach exceptions to the selected output:
+
+```rust,ignore
+#[attune(make(all))]                                  // proposed defaults
+#[attune(make(_*, _*_t, inline(never) _))]             // shared dispatcher
+#[attune(make(inline(never) _*, _*_t, _))]             // out-of-line bodies
+```
+
+The override spellings parse today; default dispatchers currently have no
+implicit inline attribute. Forcing dispatcher inlining can duplicate selection
+logic across callers, so this preference still needs the agreed multi-repository
+codegen and compile-time checks. Keep scalar fallback as a separate operation
+body rather than source text embedded in the dispatcher. Covered `attuned!` calls
+should bypass dispatch and proof wrappers entirely.
+
+Rust 1.98.1 rejects `#[target_feature]` combined with `#[inline(always)]`.
+[inline_always_target_feature.rs](../tests/expansion_audit/inline_always_target_feature.rs)
+was compiled as a negative probe and exited 1 with that diagnostic. The current
+[Rust codegen reference](https://doc.rust-lang.org/reference/attributes/codegen.html)
+also documents this restriction and describes inline attributes as hints.
+[Method lookup](https://doc.rust-lang.org/reference/expressions/method-call-expr.html)
+performs the receiver's automatic dereference/borrow adjustments.
+
+Probe command: `rustc --edition=2024 <source> -o <output>` for each source;
+run only the successfully compiled method probe. Sources were identical to
+those preserved here. Full log: `/home/lilith/tmp/attune-method-inline/results.log`.
+The serialized run-heavy wrapper checked each expected exit status and reported
+`rc=0 0s | peak-RSS 0.11GiB | min-avail 21297MiB | peak-load 0.24`.
+No runtime-performance or end-to-end compile-time improvement is claimed.
