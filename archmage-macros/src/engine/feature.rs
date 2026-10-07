@@ -76,15 +76,12 @@ pub(crate) fn emit(
     preserve_inline: bool,
     tier: FeatureContext,
 ) -> Result<TokenStream, TokenStream> {
-    let token_desc = tier
-        .token
-        .clone()
-        .unwrap_or_else(|| "an AVX-512 token".to_string());
+    let token_desc = tier.token.as_deref().unwrap_or("an AVX-512 token");
     if let Some(err) = avx512_import_error(
         &variant_fn.sig,
         options.import_intrinsics,
         &tier.features,
-        &token_desc,
+        token_desc,
     ) {
         return Err(err);
     }
@@ -99,14 +96,14 @@ pub(crate) fn emit(
     {
         let ctx = match &tier.token_ident {
             Some(ident) => crate::rewrite::CallerContext {
-                tier_suffix: tier_suffix.to_string(),
+                tier_suffix,
                 target_arch: resolved.target_arch,
                 token_ident: ident.clone(),
                 has_token: true,
                 derive_token: false,
             },
             None => crate::rewrite::CallerContext {
-                tier_suffix: tier_suffix.to_string(),
+                tier_suffix,
                 target_arch: resolved.target_arch,
                 token_ident: quote::format_ident!("_"),
                 has_token: false,
@@ -114,7 +111,16 @@ pub(crate) fn emit(
             },
         };
         variant_fn.body = crate::rewrite::rewrite_incant_in_body(variant_fn.body, &ctx);
-        variant_fn.body = crate::attune::call::rewrite(variant_fn.body, resolved);
+    }
+
+    if tier.suffix.is_none() {
+        variant_fn.body = crate::attune::call::rewrite_context(
+            variant_fn.body,
+            crate::attune::call::Context {
+                features: &tier.features,
+                target_arch: tier.target_arch,
+            },
+        );
     }
 
     // Build the attribute list. Scalar and default tiers have no features —
@@ -133,10 +139,10 @@ pub(crate) fn emit(
     }
     for attr in variant_fn
         .attrs
-        .iter()
+        .into_iter()
         .filter(|attr| preserve_inline || !attr.path().is_ident("inline"))
     {
-        new_attrs.push(attr.clone());
+        new_attrs.push(attr);
     }
     variant_fn.attrs = new_attrs;
 

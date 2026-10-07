@@ -1,0 +1,120 @@
+{
+  "production_before": "e20ffeb41b49c67dc6fdbd5411e1f4b49addbb5f",
+  "production_after": "87e8cd7e435ab5f7f74fc1d648a3fd185499e408",
+  "command": "cargo test -p archmage-macros --lib profile_allocations -- --ignored --nocapture",
+  "backend": "proc_macro2 standalone; 1000 expansions per case, excludes input lexing; allocation and requested-byte averages are integer-truncated; not peak heap or compiler wall time",
+  "reports": {
+    "before": {
+      "log": "/home/lilith/tmp/attune-alloc-profile.log",
+      "measurements": {
+        "arcane": {
+          "allocations": 132,
+          "allocated_bytes": 10495,
+          "nanoseconds": 66447
+        },
+        "arcane-dispatch": {
+          "allocations": 177,
+          "allocated_bytes": 10863,
+          "nanoseconds": 72792
+        },
+        "rite": {
+          "allocations": 88,
+          "allocated_bytes": 8949,
+          "nanoseconds": 37207
+        },
+        "attune-raw": {
+          "allocations": 88,
+          "allocated_bytes": 9216,
+          "nanoseconds": 40663
+        },
+        "attune-wrap": {
+          "allocations": 132,
+          "allocated_bytes": 10527,
+          "nanoseconds": 55123
+        },
+        "attune-direct": {
+          "allocations": 195,
+          "allocated_bytes": 13228,
+          "nanoseconds": 89028
+        },
+        "attune-all": {
+          "allocations": 756,
+          "allocated_bytes": 51075,
+          "nanoseconds": 305753
+        },
+        "attune-compose": {
+          "allocations": 913,
+          "allocated_bytes": 61235,
+          "nanoseconds": 414609
+        },
+        "magetypes": {
+          "allocations": 681,
+          "allocated_bytes": 54708,
+          "nanoseconds": 398475
+        },
+        "autoversion": {
+          "allocations": 652,
+          "allocated_bytes": 37808,
+          "nanoseconds": 258614
+        }
+      },
+      "resources": "run-heavy: done rc=0 2s | peak-RSS 0.29GiB | min-avail 21537MiB | peak-load 0.50"
+    },
+    "after": {
+      "log": "/home/lilith/tmp/attune-opt6-profile.log",
+      "measurements": {
+        "arcane": {
+          "allocations": 125,
+          "allocated_bytes": 10163,
+          "nanoseconds": 76376
+        },
+        "arcane-dispatch": {
+          "allocations": 171,
+          "allocated_bytes": 10571,
+          "nanoseconds": 69608
+        },
+        "rite": {
+          "allocations": 88,
+          "allocated_bytes": 8949,
+          "nanoseconds": 38121
+        },
+        "attune-raw": {
+          "allocations": 81,
+          "allocated_bytes": 8726,
+          "nanoseconds": 37283
+        },
+        "attune-wrap": {
+          "allocations": 125,
+          "allocated_bytes": 10195,
+          "nanoseconds": 52838
+        },
+        "attune-direct": {
+          "allocations": 171,
+          "allocated_bytes": 11180,
+          "nanoseconds": 75417
+        },
+        "attune-all": {
+          "allocations": 585,
+          "allocated_bytes": 32539,
+          "nanoseconds": 250412
+        },
+        "attune-compose": {
+          "allocations": 742,
+          "allocated_bytes": 42699,
+          "nanoseconds": 355833
+        },
+        "magetypes": {
+          "allocations": 660,
+          "allocated_bytes": 47040,
+          "nanoseconds": 353748
+        },
+        "autoversion": {
+          "allocations": 631,
+          "allocated_bytes": 36796,
+          "nanoseconds": 251529
+        }
+      },
+      "resources": "run-heavy: done rc=0 2s | peak-RSS 0.23GiB | min-avail 21522MiB | peak-load 3.25"
+    }
+  }
+}

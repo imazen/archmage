@@ -43,9 +43,9 @@ use tiers::*;
 #[cfg(test)]
 use generated::{token_to_features, trait_to_features};
 #[cfg(test)]
-use quote::{ToTokens, format_ident};
+use quote::ToTokens;
 #[cfg(test)]
-use syn::{FnArg, PatType, Type};
+use syn::{FnArg, PatType};
 #[cfg(test)]
 use token_discovery::*;
 
@@ -696,3 +696,6 @@ pub fn reattune(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as attune::call::Call);
     input.expand(None, true).into()
 }
+
+#[cfg(test)]
+mod variant_tests;

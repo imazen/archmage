@@ -409,4 +409,36 @@ attune-compile out:
 
 # Unified macro definition/call contracts.
 attune-test:
-    cargo test --test attune
+    cargo test --test attune --test attune_selection --test attune_attributes
+
+# Compile the same unified contracts for every portable backend.
+attune-cross-check:
+    cargo check --target aarch64-unknown-linux-gnu --test attune --test attune_selection --test attune_attributes
+    cargo check --target wasm32-unknown-unknown --test attune --test attune_selection --test attune_attributes
+    cargo check --target i686-unknown-linux-gnu --test attune --test attune_selection --test attune_attributes
+
+# Compare pinned source archives, alternating cold and consumer-only checks.
+attune-compare baseline candidate out pairs="6":
+    python3 benchmarks/attune_compare.py --baseline {{baseline}} --candidate {{candidate}} --out {{out}} --pairs {{pairs}}
+
+# Include legacy expansion and proof-boundary regressions after engine changes.
+attune-compat:
+    cargo test -p archmage --test attune --test attune_selection --test attune_attributes --test arcane_sibling_resolution --test soundness_exploits --test macro_expand
+
+attune-unit:
+    cargo test -p archmage-macros
+
+# Package suites and doctests after shared macro-engine changes.
+attune-packages:
+    cargo test -p archmage -p magetypes --features "std avx512"
+
+attune-clippy:
+    cargo clippy -p archmage-macros --all-targets --all-features -- -D warnings
+
+# Standalone allocation instrumentation; confirm speed in real consumers.
+attune-profile:
+    cargo test -p archmage-macros --lib profile_allocations -- --ignored --nocapture
+
+# Isolated full dependency-stack comparison; prepare first, then run serially.
+consumer-compile out mode *args:
+    python3 benchmarks/consumer_compile.py --out {{out}} {{mode}} {{args}}

@@ -157,6 +157,22 @@ impl Parse for Args {
                 input.parse::<Token![,]>()?;
             }
         }
+        if args.wrap && args.tier.is_some() {
+            return Err(input.error(
+                "wrap derives its features from the proof parameter; omit the explicit tier",
+            ));
+        }
+        if !args.family && !args.names.is_empty() {
+            return Err(input.error("names(...) on a definition requires make(...)"));
+        }
+        if args.family && args.imports.cfg_feature.is_some() {
+            return Err(input.error("gate a whole family with an outer #[cfg(...)], or gate a selector with _v3(feature)"));
+        }
+        if args.wrap && !args.defines.is_empty() {
+            return Err(input.error(
+                "define(...) requires a concrete tier; use a direct tier body or a family",
+            ));
+        }
         if args.family && (args.wrap || args.tier.is_some()) {
             return Err(input.error("make(...) cannot be combined with wrap or a single tier"));
         }

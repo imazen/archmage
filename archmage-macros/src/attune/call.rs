@@ -1,7 +1,7 @@
 //! Calls use the same tier/form descriptors as definitions. Runtime probing is
 //! confined to ordinary callers and explicit reattune invocations.
 use proc_macro2::{Delimiter, Group, TokenStream, TokenTree};
-use quote::{format_ident, quote};
+use quote::{ToTokens, format_ident, quote};
 use syn::{
     Ident, Token,
     parse::{Parse, ParseStream},
@@ -103,20 +103,28 @@ impl Parse for Call {
     }
 }
 
-pub(super) fn covers(caller: &TierDescriptor, callee: &TierDescriptor) -> bool {
-    if callee.name == "scalar" {
-        return true;
-    }
-    if caller.target_arch != callee.target_arch {
-        return false;
-    }
-    let features = |tier: &TierDescriptor| {
-        crate::generated::tier_to_canonical_token(tier.name)
+#[derive(Clone, Copy)]
+pub(crate) struct Context<'a> {
+    pub features: &'a [&'static str],
+    pub target_arch: Option<&'static str>,
+}
+
+impl Context<'_> {
+    fn covers(self, callee: &TierDescriptor) -> bool {
+        if callee.name == "scalar" {
+            return true;
+        }
+        if self.target_arch != callee.target_arch {
+            return false;
+        }
+        crate::generated::tier_to_canonical_token(callee.name)
             .and_then(crate::generated::token_to_features)
-            .unwrap_or(&[])
-    };
-    let caller_features = features(caller);
-    features(callee).iter().all(|f| caller_features.contains(f))
+            .is_some_and(|features| {
+                features
+                    .iter()
+                    .all(|feature| self.features.contains(feature))
+            })
+    }
 }
 
 impl Call {
@@ -144,19 +152,48 @@ impl Call {
         }
     }
 
-    pub(crate) fn expand(&self, caller: Option<&TierDescriptor>, reselect: bool) -> TokenStream {
+    pub(crate) fn expand(&self, caller: Option<Context<'_>>, reselect: bool) -> TokenStream {
+        self.expand_scoped(caller, reselect, &mut 0)
+    }
+
+    fn expand_scoped(
+        &self,
+        caller: Option<Context<'_>>,
+        reselect: bool,
+        serial: &mut usize,
+    ) -> TokenStream {
+        let label = syn::Lifetime::new(
+            &format!("'__attune_call_{}", *serial),
+            proc_macro2::Span::mixed_site(),
+        );
+        *serial += 1;
+        let proof_ident = syn::Ident::new("__attune_proof", proc_macro2::Span::mixed_site());
+        let supplied_ident = syn::Ident::new("__attune_supplied", proc_macro2::Span::mixed_site());
+        let args: Vec<_> = self
+            .args
+            .iter()
+            .map(|arg| match caller {
+                Some(context) => rewrite_scoped(arg.to_token_stream(), context, serial),
+                None => arg.to_token_stream(),
+            })
+            .collect();
+        let has_marker = self
+            .args
+            .iter()
+            .any(|arg| crate::common::is_bare_ident(arg, "Token"));
         let mut candidates: Vec<_> = self.selections.iter().collect();
         candidates.sort_by_key(|s| std::cmp::Reverse(s.tier.priority));
-        let args = &self.args;
-        let mut result = quote! { compile_error!("attuned!/reattune!: no guaranteed fallback; include scalar or a tier covered by the caller's target features") };
-        for selection in candidates.into_iter().rev() {
+        let mut branches = Vec::new();
+        let mut guarantees = Vec::<TokenStream>::new();
+        let mut unconditional = false;
+        for selection in candidates {
             let tier = selection.tier;
-            let covered = tier.name == "scalar" || caller.is_some_and(|c| covers(c, tier));
+            let covered = tier.name == "scalar" || caller.is_some_and(|c| c.covers(tier));
             if caller.is_some() && !reselect && self.proof.is_none() && !covered {
                 continue;
             }
-            let token_path: syn::Path =
-                syn::parse_str(tier.token_path).expect("registered token path");
+            let token: syn::Path =
+                syn::parse_str(&format!("::{}", tier.token_path)).expect("registered token path");
             let runtime = !covered || self.proof.is_some();
             let form = if caller.is_none() || runtime {
                 Form::Proof
@@ -167,52 +204,99 @@ impl Call {
             let proof = if tier.name == "scalar" {
                 quote!(::archmage::ScalarToken)
             } else if runtime {
-                quote!(__attune_proof)
+                quote!(#proof_ident)
             } else {
-                quote!(#token_path::from_context())
+                quote!(#token::from_context())
             };
-            let invocation = if form == Form::Proof {
-                quote!(#path(#proof, #(#args),*))
+            let call_args = if has_marker {
+                let args = self.args.iter().zip(&args).map(|(original, tokens)| {
+                    if crate::common::is_bare_ident(original, "Token") {
+                        proof.clone()
+                    } else {
+                        tokens.clone()
+                    }
+                });
+                quote!(#(#args),*)
+            } else if form == Form::Proof {
+                quote!(#proof, #(#args),*)
             } else {
-                quote!(#path(#(#args),*))
+                quote!(#(#args),*)
             };
-            let branch = if tier.name == "scalar" || !runtime {
-                invocation
+            let invocation = quote!(#path(#call_args));
+            let guaranteed = tier.name == "scalar" || !runtime;
+            let branch = if guaranteed {
+                quote!(break #label #invocation;)
             } else if self.proof.is_some() {
                 let method = format_ident!("{}", tier.as_method);
-                quote! { if let Some(__attune_proof) = ::archmage::IntoConcreteToken::#method(__attune_supplied) { #invocation } else { #result } }
+                quote!(if let Some(#proof_ident) = ::archmage::IntoConcreteToken::#method(#supplied_ident) { break #label #invocation; })
             } else {
-                quote! { if let Some(__attune_proof) = <#token_path as ::archmage::SimdToken>::summon() { #invocation } else { #result } }
+                quote!(if let Some(#proof_ident) = <#token as ::archmage::SimdToken>::summon() { break #label #invocation; })
             };
             let arch = if caller.is_some_and(|c| c.target_arch == tier.target_arch) {
                 None
             } else {
                 tier.target_arch
             };
-            let feature = selection.gate.as_deref();
-            let condition = match (arch, feature) {
+            let condition = match (arch, selection.gate.as_deref()) {
                 (Some(a), Some(f)) => Some(quote!(all(target_arch = #a, feature = #f))),
                 (Some(a), None) => Some(quote!(target_arch = #a)),
                 (None, Some(f)) => Some(quote!(feature = #f)),
                 (None, None) => None,
             };
-            result = if let Some(condition) = condition {
-                quote! {{ #[cfg(#condition)] { #branch } #[cfg(not(#condition))] { #result } }}
-            } else {
-                branch
+            let guard = match (&condition, guarantees.is_empty()) {
+                (None, true) => quote!(),
+                (Some(condition), true) => quote!(#[cfg(#condition)]),
+                (None, false) => quote!(#[cfg(not(any(#(#guarantees),*)))]),
+                (Some(condition), false) => {
+                    quote!(#[cfg(all(#condition, not(any(#(#guarantees),*))))])
+                }
             };
+            branches.push(quote!(#guard { #branch }));
+            if guaranteed {
+                if let Some(condition) = condition {
+                    guarantees.push(condition);
+                } else {
+                    unconditional = true;
+                    break;
+                }
+            }
         }
-        if let Some(proof) = &self.proof {
-            quote! {{ let __attune_supplied = #proof; #result }}
+        let failure = if unconditional {
+            quote!()
         } else {
-            quote! {{ #result }}
-        }
+            quote!(#[cfg(not(any(#(#guarantees),*)))] compile_error!("attuned!/reattune!: no guaranteed fallback; include scalar or a tier covered by the caller's target features");)
+        };
+        let supplied = self.proof.as_ref().map(|proof| {
+            let proof = match caller {
+                Some(context) => rewrite_scoped(proof.to_token_stream(), context, serial),
+                None => proof.to_token_stream(),
+            };
+            quote!(let #supplied_ident = #proof;)
+        });
+        quote!({ #supplied #label: { #(#branches)* #failure } })
     }
 }
 
 /// Inspect only macro invocations. Nested items have their own feature context.
 /// Qualified invocation paths are consumed along with the macro name.
 pub(crate) fn rewrite(body: TokenStream, caller: &TierDescriptor) -> TokenStream {
+    let features = crate::generated::tier_to_canonical_token(caller.name)
+        .and_then(crate::generated::token_to_features)
+        .unwrap_or(&[]);
+    rewrite_context(
+        body,
+        Context {
+            features,
+            target_arch: caller.target_arch,
+        },
+    )
+}
+
+pub(crate) fn rewrite_context(body: TokenStream, caller: Context<'_>) -> TokenStream {
+    rewrite_scoped(body, caller, &mut 0)
+}
+
+fn rewrite_scoped(body: TokenStream, caller: Context<'_>, serial: &mut usize) -> TokenStream {
     if !crate::common::tokens_contain_ident(&body, &["attuned", "reattune"]) {
         return body;
     }
@@ -234,6 +318,11 @@ pub(crate) fn rewrite(body: TokenStream, caller: &TierDescriptor) -> TokenStream
             continue;
         }
         let mut end = i;
+        if matches!(tokens.get(end), Some(TokenTree::Punct(p)) if p.as_char() == ':')
+            && matches!(tokens.get(end + 1), Some(TokenTree::Punct(p)) if p.as_char() == ':')
+        {
+            end += 2;
+        }
         while end + 3 < tokens.len()
             && matches!(&tokens[end], TokenTree::Ident(_))
             && matches!(&tokens[end + 1], TokenTree::Punct(p) if p.as_char() == ':')
@@ -247,14 +336,17 @@ pub(crate) fn rewrite(body: TokenStream, caller: &TierDescriptor) -> TokenStream
             && let Some(TokenTree::Group(group)) = tokens.get(end + 2)
         {
             let expansion = syn::parse2::<Call>(group.stream())
-                .map(|call| call.expand(Some(caller), name == "reattune"))
+                .map(|call| call.expand_scoped(Some(caller), name == "reattune", serial))
                 .unwrap_or_else(|error| error.to_compile_error());
             out.extend(expansion);
             i = end + 3;
             continue;
         }
         if let TokenTree::Group(group) = &tokens[i] {
-            let mut next = Group::new(group.delimiter(), rewrite(group.stream(), caller));
+            let mut next = Group::new(
+                group.delimiter(),
+                rewrite_scoped(group.stream(), caller, serial),
+            );
             next.set_span(group.span());
             out.extend([TokenTree::Group(next)]);
         } else {

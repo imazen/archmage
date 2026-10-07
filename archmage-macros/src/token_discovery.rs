@@ -219,6 +219,8 @@ pub(crate) fn diagnose_featureless_token(sig: &Signature) -> Option<&'static str
 
 /// Result of finding a token parameter in a function signature.
 pub(crate) struct TokenParamInfo {
+    /// Position in `Signature::inputs`, retained when patterns are normalized.
+    pub index: usize,
     /// The parameter identifier (e.g., `token`)
     pub ident: Ident,
     /// Target features to enable (e.g., `["avx2", "fma"]`)
@@ -263,7 +265,7 @@ pub(crate) fn traits_to_arch(trait_names: &[String]) -> Option<&'static str> {
 
 /// Find the first token parameter in a function signature.
 pub(crate) fn find_token_param(sig: &Signature) -> Option<TokenParamInfo> {
-    for arg in &sig.inputs {
+    for (index, arg) in sig.inputs.iter().enumerate() {
         match arg {
             FnArg::Receiver(_) => {
                 // A receiver is never the token. Methods are supported: the
@@ -325,6 +327,7 @@ pub(crate) fn find_token_param(sig: &Signature) -> Option<TokenParamInfo> {
                         };
                         if let Some(ident) = ident {
                             return Some(TokenParamInfo {
+                                index,
                                 ident,
                                 features,
                                 target_arch: arch,

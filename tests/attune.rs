@@ -13,7 +13,7 @@ fn sum<const N: usize>((bias, values): (u32, [u32; N])) -> u32 {
 #[attune(make(_v3, _v3_t, _scalar, _scalar_t, _))]
 fn composition(value: u32) -> u32 {
     // A qualified invocation must be consumed as a whole by the body rewriter.
-    archmage::attuned!(sum((value, [1, 2, 3])), [_v3, _scalar])
+    ::archmage::attuned!(sum((value, [1, 2, 3])), [_v3, _scalar])
 }
 
 #[attune(make(_v3, _v3_t, _scalar, _scalar_t, _),

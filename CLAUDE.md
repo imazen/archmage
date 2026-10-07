@@ -1092,6 +1092,22 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ### Open
 
+- Expansion review on main `52bf060d` reproduced three legacy issues: an
+  originally unsafe `#[arcane]` function has a safe generated sibling;
+  `#[track_caller]` loses the external caller at that boundary; and
+  `#[expect(unused_variables)]` can become unfulfilled on the wrapper. The
+  unsafe-sibling case also compiles against published 0.9.29 and the draft
+  rewrite. Preserve the input function's safety contract when fixing it;
+  safe-input siblings must still work under `forbid(unsafe_code)`. The audit
+  probes use compilation only for the unsafe case, never execution.
+
+- The unpublished attune rewrite has not met its cold-compile acceptance gate.
+  The matched 2026-10-07 magetypes checks measured 2.676 s for the optimized
+  rewrite versus 2.583 s for PR #123. Allocation reductions did not remove
+  macro-crate compilation overhead. Keep this draft off main; measurements and
+  safety/maintenance constraints are in
+  [the optimization report](benchmarks/macro_optimization_2026-10-07.md).
+
 Macro limitations the expansion snapshots document (`tests/expand/should-fail/`):
 
 - An attribute macro cannot see its enclosing `impl`, so plain `#[arcane]`,

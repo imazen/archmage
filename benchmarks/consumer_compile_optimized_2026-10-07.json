@@ -1,0 +1,1358 @@
+{
+  "sources": {
+    "zenav1-svt": {
+      "repository": "https://github.com/imazen/zenav1-svt",
+      "revision": "224c6bbb9a3dc577c64f6e0531bda5c3f60c6b0b",
+      "archive_sha256": "c97bda0a517b17346b84094100e1be756aea7a2317b4073ac7a241c2c4f6193a"
+    },
+    "rav1d-safe": {
+      "repository": "https://github.com/imazen/rav1d-safe",
+      "revision": "5b51b144cf73216fffd1100bfc396bc7dc17b5bd",
+      "archive_sha256": "8a33631baf74031a2a7218f97f42ada73a3abb0ed1af140f45eb899054326485"
+    },
+    "archmage": {
+      "source": "https://crates.io/api/v1/crates/archmage/0.9.29/download",
+      "archive_sha256": "8e3a17fc8196cce2902db52de7a21d4407971d080c01a0256037fcd3fc6e536e"
+    },
+    "archmage-macros": {
+      "source": "https://crates.io/api/v1/crates/archmage-macros/0.9.29/download",
+      "archive_sha256": "1d0c10fb756a60ff9418d3e5dcd2b665c5914e32391d2523995d2c2c09237ac6"
+    },
+    "magetypes": {
+      "source": "https://crates.io/api/v1/crates/magetypes/0.9.29/download",
+      "archive_sha256": "eb20fe6c3852ae9d38e328f9da0a77bdb6d2837f7c8cad0bda1b9bcf77c4e251"
+    }
+  },
+  "stacks": {
+    "pr123": "d7f85a5bbdc11410524c557b46908fdfdccdd1bd",
+    "rewrite": "87e8cd7e435ab5f7f74fc1d648a3fd185499e408",
+    "previous": "e20ffeb41b49c67dc6fdbd5411e1f4b49addbb5f",
+    "published": {
+      "archmage": "0.9.29",
+      "archmage-macros": "0.9.29",
+      "magetypes": "0.9.29"
+    }
+  },
+  "environment": {
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: x86_64-unknown-linux-gnu\nrelease: 1.98.1\nLLVM version: 22.1.8\n",
+    "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+    "host": "i265",
+    "incremental": false,
+    "rustflags": "",
+    "compiler_cache": false,
+    "note": "Fresh Cargo outputs, warmed dependency downloads and OS caches; unchanged consumer Rust sources."
+  },
+  "commands": {
+    "check": "cargo --config CASE_CONFIG check --frozen --lib -p PACKAGE --timings",
+    "release": "cargo --config CASE_CONFIG build --frozen --lib -p PACKAGE --timings --release"
+  },
+  "logs": "/home/lilith/tmp/attune-consumer-optimized/comparison",
+  "summary": [
+    {
+      "workload": "magetypes",
+      "mode": "check",
+      "medians": {
+        "published": 2.508399957790971,
+        "pr123": 2.583498551044613,
+        "rewrite": 2.6757694559637457,
+        "previous": 2.6738062100484967
+      },
+      "range_seconds": {
+        "published": [
+          2.504512257874012,
+          2.5094066890887916
+        ],
+        "pr123": [
+          2.549120827112347,
+          2.5838656090199947
+        ],
+        "rewrite": [
+          2.656212623929605,
+          2.67682046093978
+        ],
+        "previous": [
+          2.661340116057545,
+          2.6919691159855574
+        ]
+      },
+      "rewrite_vs_pr123_percent": 3.571548545356218,
+      "rewrite_vs_published_percent": 6.672360906917296,
+      "rewrite_vs_previous_percent": 0.07342513858599187
+    },
+    {
+      "workload": "zenav1-svt",
+      "mode": "check",
+      "medians": {
+        "published": 8.204056116985157,
+        "pr123": 8.273842195048928,
+        "rewrite": 8.422043479047716,
+        "previous": 8.447048412868753
+      },
+      "range_seconds": {
+        "published": [
+          8.099055662984028,
+          8.248261196073145
+        ],
+        "pr123": [
+          8.082408139947802,
+          8.38630196894519
+        ],
+        "rewrite": [
+          8.142261401982978,
+          8.481485321186483
+        ],
+        "previous": [
+          8.187937123933807,
+          8.497620007023215
+        ]
+      },
+      "rewrite_vs_pr123_percent": 1.791202690419591,
+      "rewrite_vs_published_percent": 2.657068149634556,
+      "rewrite_vs_previous_percent": -0.2960197763628658
+    },
+    {
+      "workload": "rav1d-safe",
+      "mode": "check",
+      "medians": {
+        "published": 7.756809863029048,
+        "pr123": 7.772757653146982,
+        "rewrite": 7.769589957082644,
+        "previous": 7.7941132839769125
+      },
+      "range_seconds": {
+        "published": [
+          7.558902065036818,
+          7.8880026480183005
+        ],
+        "pr123": [
+          7.670164534123614,
+          7.810199795057997
+        ],
+        "rewrite": [
+          7.656697992933914,
+          7.822475642198697
+        ],
+        "previous": [
+          7.604102635988966,
+          7.799426449928433
+        ]
+      },
+      "rewrite_vs_pr123_percent": -0.04075382516339765,
+      "rewrite_vs_published_percent": 0.16475966639983852,
+      "rewrite_vs_previous_percent": -0.31463908722860756
+    },
+    {
+      "workload": "magetypes",
+      "mode": "release",
+      "medians": {
+        "published": 2.7799269971437752,
+        "pr123": 2.8891675090417266,
+        "rewrite": 3.006091940915212,
+        "previous": 2.9858028690796345
+      },
+      "range_seconds": {
+        "published": [
+          2.678835720056668,
+          2.9121731820050627
+        ],
+        "pr123": [
+          2.7870834211353213,
+          2.9948065048083663
+        ],
+        "rewrite": [
+          2.8882415818516165,
+          3.0864168680272996
+        ],
+        "previous": [
+          2.863370282109827,
+          3.0995401218533516
+        ]
+      },
+      "rewrite_vs_pr123_percent": 4.046993866141979,
+      "rewrite_vs_published_percent": 8.135643274223003,
+      "rewrite_vs_previous_percent": 0.6795181304729558
+    },
+    {
+      "workload": "zenav1-svt",
+      "mode": "release",
+      "medians": {
+        "published": 24.020483792060986,
+        "pr123": 24.222089950926602,
+        "rewrite": 24.36121049313806,
+        "previous": 24.609212055103853
+      },
+      "range_seconds": {
+        "published": [
+          23.420724839903414,
+          24.134354835143313
+        ],
+        "pr123": [
+          23.420926491962746,
+          24.226980245904997
+        ],
+        "rewrite": [
+          23.812420342117548,
+          25.838280650088564
+        ],
+        "previous": [
+          23.71096865995787,
+          25.9249642950017
+        ]
+      },
+      "rewrite_vs_pr123_percent": 0.5743539987396407,
+      "rewrite_vs_published_percent": 1.4184839240818592,
+      "rewrite_vs_previous_percent": -1.007759051409196
+    },
+    {
+      "workload": "rav1d-safe",
+      "mode": "release",
+      "medians": {
+        "published": 11.547944952035323,
+        "pr123": 11.580790070118383,
+        "rewrite": 11.718871918972582,
+        "previous": 11.90022856881842
+      },
+      "range_seconds": {
+        "published": [
+          11.425834933994338,
+          11.716358620906249
+        ],
+        "pr123": [
+          11.285290152067319,
+          11.812270804075524
+        ],
+        "rewrite": [
+          11.358770753024146,
+          11.81609001988545
+        ],
+        "previous": [
+          11.62025736598298,
+          11.980560129974037
+        ]
+      },
+      "rewrite_vs_pr123_percent": 1.1923353071608522,
+      "rewrite_vs_published_percent": 1.4801505172323592,
+      "rewrite_vs_previous_percent": -1.523976189172016
+    }
+  ],
+  "columns": [
+    "workload",
+    "variant",
+    "mode",
+    "repetition",
+    "seconds",
+    "max_rss_kib",
+    "exit_code",
+    "cargo_unit_seconds"
+  ],
+  "runs": [
+    [
+      "magetypes",
+      "published",
+      "check",
+      0,
+      2.504512257874012,
+      327540,
+      0,
+      {
+        "archmage-macros": 0.31,
+        "archmage": 0.08,
+        "magetypes": 0.89
+      }
+    ],
+    [
+      "magetypes",
+      "pr123",
+      "check",
+      0,
+      2.5838656090199947,
+      345344,
+      0,
+      {
+        "archmage-macros": 0.31,
+        "archmage": 0.07,
+        "magetypes": 0.98
+      }
+    ],
+    [
+      "magetypes",
+      "rewrite",
+      "check",
+      0,
+      2.656212623929605,
+      345500,
+      0,
+      {
+        "archmage-macros": 0.41,
+        "archmage": 0.07,
+        "magetypes": 0.96
+      }
+    ],
+    [
+      "magetypes",
+      "previous",
+      "check",
+      0,
+      2.661340116057545,
+      344980,
+      0,
+      {
+        "archmage-macros": 0.4,
+        "archmage": 0.07,
+        "magetypes": 0.96
+      }
+    ],
+    [
+      "zenav1-svt",
+      "published",
+      "check",
+      0,
+      8.248261196073145,
+      854144,
+      0,
+      {
+        "zenav1-svt-types": 0.1,
+        "archmage-macros": 0.31,
+        "archmage": 0.08,
+        "magetypes": 1.05,
+        "zenav1-svt-dsp": 1.91,
+        "zenav1-svt-encoder": 3.62,
+        "zenav1-svt": 0.05
+      }
+    ],
+    [
+      "zenav1-svt",
+      "pr123",
+      "check",
+      0,
+      8.38630196894519,
+      860368,
+      0,
+      {
+        "zenav1-svt-types": 0.1,
+        "archmage-macros": 0.32,
+        "archmage": 0.08,
+        "magetypes": 1.14,
+        "zenav1-svt-dsp": 1.93,
+        "zenav1-svt-encoder": 3.62,
+        "zenav1-svt": 0.05
+      }
+    ],
+    [
+      "zenav1-svt",
+      "rewrite",
+      "check",
+      0,
+      8.481485321186483,
+      860600,
+      0,
+      {
+        "zenav1-svt-types": 0.1,
+        "archmage-macros": 0.43,
+        "archmage": 0.07,
+        "magetypes": 1.16,
+        "zenav1-svt-dsp": 1.91,
+        "zenav1-svt-encoder": 3.62,
+        "zenav1-svt": 0.05
+      }
+    ],
+    [
+      "zenav1-svt",
+      "previous",
+      "check",
+      0,
+      8.497620007023215,
+      860628,
+      0,
+      {
+        "zenav1-svt-types": 0.1,
+        "archmage-macros": 0.41,
+        "archmage": 0.08,
+        "magetypes": 1.16,
+        "zenav1-svt-dsp": 1.93,
+        "zenav1-svt-encoder": 3.63,
+        "zenav1-svt": 0.05
+      }
+    ],
+    [
+      "rav1d-safe",
+      "published",
+      "check",
+      0,
+      7.8880026480183005,
+      920296,
+      0,
+      {
+        "archmage-macros": 0.36,
+        "archmage": 0.08,
+        "rav1d-safe": 4.77
+      }
+    ],
+    [
+      "rav1d-safe",
+      "pr123",
+      "check",
+      0,
+      7.810199795057997,
+      920184,
+      0,
+      {
+        "archmage-macros": 0.35,
+        "archmage": 0.08,
+        "rav1d-safe": 4.76
+      }
+    ],
+    [
+      "rav1d-safe",
+      "rewrite",
+      "check",
+      0,
+      7.822475642198697,
+      920504,
+      0,
+      {
+        "archmage-macros": 0.47,
+        "archmage": 0.08,
+        "rav1d-safe": 4.72
+      }
+    ],
+    [
+      "rav1d-safe",
+      "previous",
+      "check",
+      0,
+      7.7941132839769125,
+      919532,
+      0,
+      {
+        "archmage-macros": 0.46,
+        "archmage": 0.08,
+        "rav1d-safe": 4.71
+      }
+    ],
+    [
+      "magetypes",
+      "pr123",
+      "check",
+      1,
+      2.583498551044613,
+      345232,
+      0,
+      {
+        "archmage-macros": 0.31,
+        "archmage": 0.08,
+        "magetypes": 0.96
+      }
+    ],
+    [
+      "magetypes",
+      "rewrite",
+      "check",
+      1,
+      2.67682046093978,
+      345548,
+      0,
+      {
+        "archmage-macros": 0.41,
+        "archmage": 0.08,
+        "magetypes": 0.97
+      }
+    ],
+    [
+      "magetypes",
+      "previous",
+      "check",
+      1,
+      2.6738062100484967,
+      344980,
+      0,
+      {
+        "archmage-macros": 0.4,
+        "archmage": 0.08,
+        "magetypes": 0.96
+      }
+    ],
+    [
+      "magetypes",
+      "published",
+      "check",
+      1,
+      2.5094066890887916,
+      327832,
+      0,
+      {
+        "archmage-macros": 0.31,
+        "archmage": 0.07,
+        "magetypes": 0.88
+      }
+    ],
+    [
+      "zenav1-svt",
+      "pr123",
+      "check",
+      1,
+      8.273842195048928,
+      861092,
+      0,
+      {
+        "zenav1-svt-types": 0.1,
+        "archmage-macros": 0.31,
+        "archmage": 0.07,
+        "magetypes": 1.15,
+        "zenav1-svt-dsp": 1.89,
+        "zenav1-svt-encoder": 3.56,
+        "zenav1-svt": 0.05
+      }
+    ],
+    [
+      "zenav1-svt",
+      "rewrite",
+      "check",
+      1,
+      8.422043479047716,
+      860900,
+      0,
+      {
+        "zenav1-svt-types": 0.1,
+        "archmage-macros": 0.41,
+        "archmage": 0.08,
+        "magetypes": 1.16,
+        "zenav1-svt-dsp": 1.91,
+        "zenav1-svt-encoder": 3.56,
+        "zenav1-svt": 0.05
+      }
+    ],
+    [
+      "zenav1-svt",
+      "previous",
+      "check",
+      1,
+      8.447048412868753,
+      860732,
+      0,
+      {
+        "zenav1-svt-types": 0.1,
+        "archmage-macros": 0.41,
+        "archmage": 0.08,
+        "magetypes": 1.18,
+        "zenav1-svt-dsp": 1.92,
+        "zenav1-svt-encoder": 3.57,
+        "zenav1-svt": 0.05
+      }
+    ],
+    [
+      "zenav1-svt",
+      "published",
+      "check",
+      1,
+      8.204056116985157,
+      854424,
+      0,
+      {
+        "zenav1-svt-types": 0.09,
+        "archmage-macros": 0.31,
+        "archmage": 0.08,
+        "magetypes": 1.05,
+        "zenav1-svt-dsp": 1.9,
+        "zenav1-svt-encoder": 3.59,
+        "zenav1-svt": 0.05
+      }
+    ],
+    [
+      "rav1d-safe",
+      "pr123",
+      "check",
+      1,
+      7.772757653146982,
+      920016,
+      0,
+      {
+        "archmage-macros": 0.35,
+        "archmage": 0.08,
+        "rav1d-safe": 4.72
+      }
+    ],
+    [
+      "rav1d-safe",
+      "rewrite",
+      "check",
+      1,
+      7.769589957082644,
+      920080,
+      0,
+      {
+        "archmage-macros": 0.47,
+        "archmage": 0.08,
+        "rav1d-safe": 4.69
+      }
+    ],
+    [
+      "rav1d-safe",
+      "previous",
+      "check",
+      1,
+      7.799426449928433,
+      919612,
+      0,
+      {
+        "archmage-macros": 0.46,
+        "archmage": 0.08,
+        "rav1d-safe": 4.74
+      }
+    ],
+    [
+      "rav1d-safe",
+      "published",
+      "check",
+      1,
+      7.756809863029048,
+      920868,
+      0,
+      {
+        "archmage-macros": 0.35,
+        "archmage": 0.09,
+        "rav1d-safe": 4.7
+      }
+    ],
+    [
+      "magetypes",
+      "rewrite",
+      "check",
+      2,
+      2.6757694559637457,
+      345740,
+      0,
+      {
+        "archmage-macros": 0.41,
+        "archmage": 0.08,
+        "magetypes": 0.97
+      }
+    ],
+    [
+      "magetypes",
+      "previous",
+      "check",
+      2,
+      2.6919691159855574,
+      344776,
+      0,
+      {
+        "archmage-macros": 0.41,
+        "archmage": 0.07,
+        "magetypes": 0.99
+      }
+    ],
+    [
+      "magetypes",
+      "published",
+      "check",
+      2,
+      2.508399957790971,
+      327540,
+      0,
+      {
+        "archmage-macros": 0.32,
+        "archmage": 0.07,
+        "magetypes": 0.89
+      }
+    ],
+    [
+      "magetypes",
+      "pr123",
+      "check",
+      2,
+      2.549120827112347,
+      345348,
+      0,
+      {
+        "archmage-macros": 0.32,
+        "archmage": 0.07,
+        "magetypes": 0.94
+      }
+    ],
+    [
+      "zenav1-svt",
+      "rewrite",
+      "check",
+      2,
+      8.142261401982978,
+      861172,
+      0,
+      {
+        "zenav1-svt-types": 0.1,
+        "archmage-macros": 0.41,
+        "archmage": 0.08,
+        "magetypes": 1.1,
+        "zenav1-svt-dsp": 1.84,
+        "zenav1-svt-encoder": 3.45,
+        "zenav1-svt": 0.05
+      }
+    ],
+    [
+      "zenav1-svt",
+      "previous",
+      "check",
+      2,
+      8.187937123933807,
+      860988,
+      0,
+      {
+        "zenav1-svt-types": 0.1,
+        "archmage-macros": 0.4,
+        "archmage": 0.08,
+        "magetypes": 1.1,
+        "zenav1-svt-dsp": 1.86,
+        "zenav1-svt-encoder": 3.48,
+        "zenav1-svt": 0.05
+      }
+    ],
+    [
+      "zenav1-svt",
+      "published",
+      "check",
+      2,
+      8.099055662984028,
+      854984,
+      0,
+      {
+        "zenav1-svt-types": 0.1,
+        "archmage-macros": 0.32,
+        "archmage": 0.08,
+        "magetypes": 1.01,
+        "zenav1-svt-dsp": 1.88,
+        "zenav1-svt-encoder": 3.53,
+        "zenav1-svt": 0.05
+      }
+    ],
+    [
+      "zenav1-svt",
+      "pr123",
+      "check",
+      2,
+      8.082408139947802,
+      861080,
+      0,
+      {
+        "zenav1-svt-types": 0.1,
+        "archmage-macros": 0.31,
+        "archmage": 0.08,
+        "magetypes": 1.11,
+        "zenav1-svt-dsp": 1.85,
+        "zenav1-svt-encoder": 3.45,
+        "zenav1-svt": 0.05
+      }
+    ],
+    [
+      "rav1d-safe",
+      "rewrite",
+      "check",
+      2,
+      7.656697992933914,
+      919408,
+      0,
+      {
+        "archmage-macros": 0.49,
+        "archmage": 0.08,
+        "rav1d-safe": 4.59
+      }
+    ],
+    [
+      "rav1d-safe",
+      "previous",
+      "check",
+      2,
+      7.604102635988966,
+      918868,
+      0,
+      {
+        "archmage-macros": 0.47,
+        "archmage": 0.08,
+        "rav1d-safe": 4.57
+      }
+    ],
+    [
+      "rav1d-safe",
+      "published",
+      "check",
+      2,
+      7.558902065036818,
+      920448,
+      0,
+      {
+        "archmage-macros": 0.34,
+        "archmage": 0.09,
+        "rav1d-safe": 4.56
+      }
+    ],
+    [
+      "rav1d-safe",
+      "pr123",
+      "check",
+      2,
+      7.670164534123614,
+      920172,
+      0,
+      {
+        "archmage-macros": 0.35,
+        "archmage": 0.09,
+        "rav1d-safe": 4.68
+      }
+    ],
+    [
+      "magetypes",
+      "published",
+      "release",
+      0,
+      2.678835720056668,
+      344864,
+      0,
+      {
+        "archmage-macros": 0.31,
+        "archmage": 0.22,
+        "magetypes": 1.08
+      }
+    ],
+    [
+      "magetypes",
+      "pr123",
+      "release",
+      0,
+      2.7870834211353213,
+      360840,
+      0,
+      {
+        "archmage-macros": 0.31,
+        "archmage": 0.23,
+        "magetypes": 1.18
+      }
+    ],
+    [
+      "magetypes",
+      "rewrite",
+      "release",
+      0,
+      2.8882415818516165,
+      361352,
+      0,
+      {
+        "archmage-macros": 0.4,
+        "archmage": 0.22,
+        "magetypes": 1.17
+      }
+    ],
+    [
+      "magetypes",
+      "previous",
+      "release",
+      0,
+      2.863370282109827,
+      360548,
+      0,
+      {
+        "archmage-macros": 0.4,
+        "archmage": 0.23,
+        "magetypes": 1.16
+      }
+    ],
+    [
+      "zenav1-svt",
+      "published",
+      "release",
+      0,
+      23.420724839903414,
+      1050136,
+      0,
+      {
+        "zenav1-svt-types": 0.11,
+        "archmage-macros": 1.25,
+        "archmage": 0.16,
+        "magetypes": 1.21,
+        "zenav1-svt-dsp": 8.14,
+        "zenav1-svt-encoder": 15.68,
+        "zenav1-svt": 0.15
+      }
+    ],
+    [
+      "zenav1-svt",
+      "pr123",
+      "release",
+      0,
+      23.420926491962746,
+      1057704,
+      0,
+      {
+        "zenav1-svt-types": 0.12,
+        "archmage-macros": 1.31,
+        "archmage": 0.17,
+        "magetypes": 1.3,
+        "zenav1-svt-dsp": 8.21,
+        "zenav1-svt-encoder": 15.51,
+        "zenav1-svt": 0.15
+      }
+    ],
+    [
+      "zenav1-svt",
+      "rewrite",
+      "release",
+      0,
+      23.812420342117548,
+      1056360,
+      0,
+      {
+        "zenav1-svt-types": 0.12,
+        "archmage-macros": 1.57,
+        "archmage": 0.16,
+        "magetypes": 1.31,
+        "zenav1-svt-dsp": 8.24,
+        "zenav1-svt-encoder": 15.6,
+        "zenav1-svt": 0.15
+      }
+    ],
+    [
+      "zenav1-svt",
+      "previous",
+      "release",
+      0,
+      23.71096865995787,
+      1058720,
+      0,
+      {
+        "zenav1-svt-types": 0.12,
+        "archmage-macros": 1.54,
+        "archmage": 0.16,
+        "magetypes": 1.31,
+        "zenav1-svt-dsp": 8.18,
+        "zenav1-svt-encoder": 15.57,
+        "zenav1-svt": 0.15
+      }
+    ],
+    [
+      "rav1d-safe",
+      "published",
+      "release",
+      0,
+      11.425834933994338,
+      1250652,
+      0,
+      {
+        "archmage-macros": 0.35,
+        "archmage": 0.14,
+        "rav1d-safe": 8.19
+      }
+    ],
+    [
+      "rav1d-safe",
+      "pr123",
+      "release",
+      0,
+      11.285290152067319,
+      1249480,
+      0,
+      {
+        "archmage-macros": 0.35,
+        "archmage": 0.14,
+        "rav1d-safe": 8.08
+      }
+    ],
+    [
+      "rav1d-safe",
+      "rewrite",
+      "release",
+      0,
+      11.358770753024146,
+      1251336,
+      0,
+      {
+        "archmage-macros": 0.48,
+        "archmage": 0.14,
+        "rav1d-safe": 8.12
+      }
+    ],
+    [
+      "rav1d-safe",
+      "previous",
+      "release",
+      0,
+      11.980560129974037,
+      1244440,
+      0,
+      {
+        "archmage-macros": 0.49,
+        "archmage": 0.13,
+        "rav1d-safe": 8.68
+      }
+    ],
+    [
+      "magetypes",
+      "pr123",
+      "release",
+      1,
+      2.9948065048083663,
+      360652,
+      0,
+      {
+        "archmage-macros": 0.34,
+        "archmage": 0.23,
+        "magetypes": 1.26
+      }
+    ],
+    [
+      "magetypes",
+      "rewrite",
+      "release",
+      1,
+      3.0864168680272996,
+      361296,
+      0,
+      {
+        "archmage-macros": 0.44,
+        "archmage": 0.22,
+        "magetypes": 1.27
+      }
+    ],
+    [
+      "magetypes",
+      "previous",
+      "release",
+      1,
+      3.0995401218533516,
+      360644,
+      0,
+      {
+        "archmage-macros": 0.44,
+        "archmage": 0.23,
+        "magetypes": 1.27
+      }
+    ],
+    [
+      "magetypes",
+      "published",
+      "release",
+      1,
+      2.9121731820050627,
+      344872,
+      0,
+      {
+        "archmage-macros": 0.33,
+        "archmage": 0.23,
+        "magetypes": 1.19
+      }
+    ],
+    [
+      "zenav1-svt",
+      "pr123",
+      "release",
+      1,
+      24.226980245904997,
+      1056676,
+      0,
+      {
+        "zenav1-svt-types": 0.12,
+        "archmage-macros": 1.31,
+        "archmage": 0.17,
+        "magetypes": 1.38,
+        "zenav1-svt-dsp": 8.39,
+        "zenav1-svt-encoder": 16.04,
+        "zenav1-svt": 0.15
+      }
+    ],
+    [
+      "zenav1-svt",
+      "rewrite",
+      "release",
+      1,
+      25.838280650088564,
+      1057924,
+      0,
+      {
+        "zenav1-svt-types": 0.12,
+        "archmage-macros": 1.56,
+        "archmage": 0.16,
+        "magetypes": 1.41,
+        "zenav1-svt-dsp": 8.85,
+        "zenav1-svt-encoder": 17.19,
+        "zenav1-svt": 0.15
+      }
+    ],
+    [
+      "zenav1-svt",
+      "previous",
+      "release",
+      1,
+      25.9249642950017,
+      1058096,
+      0,
+      {
+        "zenav1-svt-types": 0.12,
+        "archmage-macros": 1.66,
+        "archmage": 0.17,
+        "magetypes": 1.44,
+        "zenav1-svt-dsp": 8.87,
+        "zenav1-svt-encoder": 16.78,
+        "zenav1-svt": 0.15
+      }
+    ],
+    [
+      "zenav1-svt",
+      "published",
+      "release",
+      1,
+      24.134354835143313,
+      1052964,
+      0,
+      {
+        "zenav1-svt-types": 0.12,
+        "archmage-macros": 1.24,
+        "archmage": 0.15,
+        "magetypes": 1.26,
+        "zenav1-svt-dsp": 8.61,
+        "zenav1-svt-encoder": 15.99,
+        "zenav1-svt": 0.15
+      }
+    ],
+    [
+      "rav1d-safe",
+      "pr123",
+      "release",
+      1,
+      11.812270804075524,
+      1249192,
+      0,
+      {
+        "archmage-macros": 0.41,
+        "archmage": 0.14,
+        "rav1d-safe": 8.31
+      }
+    ],
+    [
+      "rav1d-safe",
+      "rewrite",
+      "release",
+      1,
+      11.81609001988545,
+      1245336,
+      0,
+      {
+        "archmage-macros": 0.48,
+        "archmage": 0.14,
+        "rav1d-safe": 8.49
+      }
+    ],
+    [
+      "rav1d-safe",
+      "previous",
+      "release",
+      1,
+      11.90022856881842,
+      1247012,
+      0,
+      {
+        "archmage-macros": 0.47,
+        "archmage": 0.14,
+        "rav1d-safe": 8.48
+      }
+    ],
+    [
+      "rav1d-safe",
+      "published",
+      "release",
+      1,
+      11.716358620906249,
+      1247660,
+      0,
+      {
+        "archmage-macros": 0.36,
+        "archmage": 0.15,
+        "rav1d-safe": 8.38
+      }
+    ],
+    [
+      "magetypes",
+      "rewrite",
+      "release",
+      2,
+      3.006091940915212,
+      361224,
+      0,
+      {
+        "archmage-macros": 0.42,
+        "archmage": 0.22,
+        "magetypes": 1.22
+      }
+    ],
+    [
+      "magetypes",
+      "previous",
+      "release",
+      2,
+      2.9858028690796345,
+      360500,
+      0,
+      {
+        "archmage-macros": 0.42,
+        "archmage": 0.23,
+        "magetypes": 1.21
+      }
+    ],
+    [
+      "magetypes",
+      "published",
+      "release",
+      2,
+      2.7799269971437752,
+      344776,
+      0,
+      {
+        "archmage-macros": 0.32,
+        "archmage": 0.22,
+        "magetypes": 1.12
+      }
+    ],
+    [
+      "magetypes",
+      "pr123",
+      "release",
+      2,
+      2.8891675090417266,
+      360704,
+      0,
+      {
+        "archmage-macros": 0.31,
+        "archmage": 0.22,
+        "magetypes": 1.22
+      }
+    ],
+    [
+      "zenav1-svt",
+      "rewrite",
+      "release",
+      2,
+      24.36121049313806,
+      1058664,
+      0,
+      {
+        "zenav1-svt-types": 0.12,
+        "archmage-macros": 1.56,
+        "archmage": 0.16,
+        "magetypes": 1.37,
+        "zenav1-svt-dsp": 8.48,
+        "zenav1-svt-encoder": 15.96,
+        "zenav1-svt": 0.14
+      }
+    ],
+    [
+      "zenav1-svt",
+      "previous",
+      "release",
+      2,
+      24.609212055103853,
+      1058928,
+      0,
+      {
+        "zenav1-svt-types": 0.12,
+        "archmage-macros": 1.55,
+        "archmage": 0.16,
+        "magetypes": 1.38,
+        "zenav1-svt-dsp": 8.55,
+        "zenav1-svt-encoder": 16.17,
+        "zenav1-svt": 0.14
+      }
+    ],
+    [
+      "zenav1-svt",
+      "published",
+      "release",
+      2,
+      24.020483792060986,
+      1053312,
+      0,
+      {
+        "zenav1-svt-types": 0.12,
+        "archmage-macros": 1.24,
+        "archmage": 0.16,
+        "magetypes": 1.26,
+        "zenav1-svt-dsp": 8.47,
+        "zenav1-svt-encoder": 16.04,
+        "zenav1-svt": 0.14
+      }
+    ],
+    [
+      "zenav1-svt",
+      "pr123",
+      "release",
+      2,
+      24.222089950926602,
+      1057700,
+      0,
+      {
+        "zenav1-svt-types": 0.12,
+        "archmage-macros": 1.3,
+        "archmage": 0.16,
+        "magetypes": 1.36,
+        "zenav1-svt-dsp": 8.38,
+        "zenav1-svt-encoder": 16.11,
+        "zenav1-svt": 0.14
+      }
+    ],
+    [
+      "rav1d-safe",
+      "rewrite",
+      "release",
+      2,
+      11.718871918972582,
+      1247704,
+      0,
+      {
+        "archmage-macros": 0.48,
+        "archmage": 0.14,
+        "rav1d-safe": 8.43
+      }
+    ],
+    [
+      "rav1d-safe",
+      "previous",
+      "release",
+      2,
+      11.62025736598298,
+      1245384,
+      0,
+      {
+        "archmage-macros": 0.47,
+        "archmage": 0.14,
+        "rav1d-safe": 8.31
+      }
+    ],
+    [
+      "rav1d-safe",
+      "published",
+      "release",
+      2,
+      11.547944952035323,
+      1250304,
+      0,
+      {
+        "archmage-macros": 0.35,
+        "archmage": 0.14,
+        "rav1d-safe": 8.27
+      }
+    ],
+    [
+      "rav1d-safe",
+      "pr123",
+      "release",
+      2,
+      11.580790070118383,
+      1246436,
+      0,
+      {
+        "archmage-macros": 0.38,
+        "archmage": 0.14,
+        "rav1d-safe": 8.25
+      }
+    ]
+  ],
+  "run_heavy": {
+    "check": "run-heavy: done rc=0 224s | peak-RSS 0.88GiB | min-avail 20166MiB | peak-load 2.96",
+    "release": "run-heavy: done rc=0 467s | peak-RSS 1.19GiB | min-avail 19356MiB | peak-load 6.22"
+  }
+}

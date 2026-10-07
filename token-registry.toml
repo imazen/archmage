@@ -26,6 +26,8 @@
 
 [[token]]
 name = "X64V1Token"
+dispatch_priority = 10
+dispatch_as = "as_x64v1"
 arch = "x86"
 aliases = ["Sse2Token"]
 deprecated_aliases = { Sse2Token = "Use X64V1Token instead. Sse2Token is misleading — this is an x86_64-only token (SSE2 is the x86_64 baseline). On 32-bit x86, summon() returns None." }
@@ -38,6 +40,8 @@ doc = "Proof that SSE + SSE2 are available (x86-64-v1 baseline level).\n\nSSE2 i
 
 [[token]]
 name = "X64V2Token"
+dispatch_priority = 20
+dispatch_as = "as_x64v2"
 arch = "x86"
 features = [
     "sse", "sse2",
@@ -52,6 +56,8 @@ doc = "Proof that SSE4.2 + POPCNT are available (x86-64-v2 level).\n\nx86-64-v2 
 
 [[token]]
 name = "X64CryptoToken"
+dispatch_priority = 25
+dispatch_as = "as_x64_crypto"
 arch = "x86"
 features = [
     "sse", "sse2",
@@ -67,6 +73,8 @@ doc = "Proof that PCLMULQDQ + AES-NI are available (on top of x86-64-v2).\n\nPCL
 
 [[token]]
 name = "X64V3Token"
+dispatch_priority = 30
+dispatch_as = "as_x64v3"
 arch = "x86"
 aliases = ["Desktop64", "Avx2FmaToken"]
 deprecated_aliases = { Avx2FmaToken = "Use X64V3Token or Desktop64 instead. Avx2FmaToken is misleading — V3 includes BMI1/2, F16C, and more, not just AVX2+FMA." }
@@ -84,6 +92,8 @@ doc = "Proof that AVX2 + FMA + BMI1/2 + F16C + LZCNT are available (x86-64-v3 le
 
 [[token]]
 name = "X64V3CryptoToken"
+dispatch_priority = 35
+dispatch_as = "as_x64v3_crypto"
 arch = "x86"
 features = [
     "sse", "sse2",
@@ -101,6 +111,8 @@ doc = "Proof that AVX2 + VPCLMULQDQ + VAES are available.\n\nVPCLMULQDQ (256-bit
 
 [[token]]
 name = "X64V3GfniCryptoToken"
+dispatch_priority = 37
+dispatch_as = "as_x64v3_gfni_crypto"
 arch = "x86"
 features = [
     "sse", "sse2",
@@ -119,6 +131,9 @@ doc = "Proof that AVX2 + GFNI + VPCLMULQDQ + VAES are available.\n\nGFNI provide
 
 [[token]]
 name = "X64V4Token"
+dispatch_priority = 40
+dispatch_as = "as_x64v4"
+legacy_dispatch_gate = "avx512"
 arch = "x86"
 aliases = ["Avx512Token", "Server64"]
 features = [
@@ -138,6 +153,9 @@ doc = "Proof that AVX-512 (F + CD + VL + DQ + BW) is available.\n\nThis is the c
 
 [[token]]
 name = "X64V4xToken"
+dispatch_priority = 50
+dispatch_as = "as_x64v4x"
+legacy_dispatch_gate = "avx512"
 aliases = ["Avx512ModernToken"]
 arch = "x86"
 features = [
@@ -159,6 +177,9 @@ doc = "Proof that extended AVX-512 features are available (x86-64-v4x = Ice Lake
 
 [[token]]
 name = "Avx512Fp16Token"
+dispatch_priority = 45
+dispatch_as = "as_avx512_fp16"
+legacy_dispatch_gate = "avx512"
 arch = "x86"
 features = [
     "sse", "sse2",
@@ -179,6 +200,8 @@ doc = "Proof that AVX-512 FP16 (half-precision) is available.\n\nAVX-512 FP16 pr
 
 [[token]]
 name = "NeonToken"
+dispatch_priority = 20
+dispatch_as = "as_neon"
 arch = "aarch64"
 aliases = ["Arm64"]
 features = ["neon"]
@@ -190,6 +213,8 @@ doc = "Proof that NEON is available.\n\nNEON is available on virtually all AArch
 
 [[token]]
 name = "NeonAesToken"
+dispatch_priority = 30
+dispatch_as = "as_neon_aes"
 arch = "aarch64"
 features = ["neon", "aes"]
 traits = ["HasNeon", "HasNeonAes", "Has128BitSimd"]
@@ -201,6 +226,8 @@ doc = "Proof that NEON + AES is available.\n\nAES extension is common on modern 
 
 [[token]]
 name = "NeonSha3Token"
+dispatch_priority = 30
+dispatch_as = "as_neon_sha3"
 arch = "aarch64"
 features = ["neon", "sha3"]
 traits = ["HasNeon", "HasNeonSha3", "Has128BitSimd"]
@@ -212,6 +239,8 @@ doc = "Proof that NEON + SHA3 is available.\n\nSHA3 extension is available on AR
 
 [[token]]
 name = "NeonCrcToken"
+dispatch_priority = 30
+dispatch_as = "as_neon_crc"
 arch = "aarch64"
 features = ["neon", "crc"]
 traits = ["HasNeon", "Has128BitSimd"]
@@ -223,6 +252,8 @@ doc = "Proof that NEON + CRC is available.\n\nCRC32 extension is common on most 
 
 [[token]]
 name = "Arm64V2Token"
+dispatch_priority = 40
+dispatch_as = "as_arm_v2"
 arch = "aarch64"
 features = ["neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2"]
 traits = ["HasNeon", "HasNeonAes", "HasArm64V2", "Has128BitSimd"]
@@ -234,6 +265,8 @@ doc = "Proof that the Arm64-v2 feature set is available.\n\nArm64-v2 is archmage
 
 [[token]]
 name = "Arm64V3Token"
+dispatch_priority = 50
+dispatch_as = "as_arm_v3"
 arch = "aarch64"
 features = ["neon", "crc", "rdm", "dotprod", "fp16", "aes", "sha2", "fhm", "fcma", "sha3", "i8mm", "bf16"]
 traits = ["HasNeon", "HasNeonAes", "HasNeonSha3", "HasArm64V2", "HasArm64V3", "Has128BitSimd"]
@@ -247,6 +280,8 @@ doc = "Proof that the full modern ARM SIMD feature set is available (Arm64-v3).\
 
 [[token]]
 name = "Wasm128Token"
+dispatch_priority = 20
+dispatch_as = "as_wasm128"
 arch = "wasm"
 features = ["simd128"]
 traits = ["Has128BitSimd"]
@@ -257,6 +292,8 @@ doc = "Proof that WASM SIMD128 is available."
 
 [[token]]
 name = "Wasm128RelaxedToken"
+dispatch_priority = 21
+dispatch_as = "as_wasm128_relaxed"
 arch = "wasm"
 features = ["simd128", "relaxed-simd"]
 traits = ["Has128BitSimd"]

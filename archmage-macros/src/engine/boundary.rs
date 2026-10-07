@@ -55,16 +55,6 @@ pub(crate) struct BoundaryOptions {
     pub(crate) in_impl: bool,
 }
 
-/// Represents the kind of self receiver and the transformed parameter.
-pub(crate) enum SelfReceiver {
-    /// `self` (by value/move)
-    Owned,
-    /// `&self` (shared reference)
-    Ref,
-    /// `&mut self` (mutable reference)
-    RefMut,
-}
-
 /// Shared implementation for arcane/arcane macros.
 pub(crate) fn expand(
     mut input_fn: LightFn,
@@ -97,6 +87,7 @@ pub(crate) fn expand(
 
     // Find the token parameter, its features, target arch, and token type name
     let TokenParamInfo {
+        index: token_index,
         ident: mut _token_ident,
         features,
         target_arch,
@@ -161,6 +152,19 @@ pub(crate) fn expand(
         ),
     );
 
+    // Rename non-ident patterns to named params so the wrapper → sibling call works.
+    // The original patterns are re-bound at the top of the inner body.
+    let rebinds = rename_non_ident_params(&mut input_fn.sig);
+    prepend_to_body(&mut input_fn.body, quote! { #(#rebinds)* });
+    // Pattern normalization preserves positions. Reuse discovery instead of
+    // resolving the token's type and generic bounds a second time. A receiver
+    // proof keeps the synthetic `_self` name used by the nested function.
+    if let FnArg::Typed(param) = &input_fn.sig.inputs[token_index]
+        && let syn::Pat::Ident(pat) = param.pat.as_ref()
+    {
+        _token_ident = pat.ident.clone();
+    }
+
     // Rewrite incant!() calls in the body to direct tier calls.
     // Only for concrete tokens where we can determine the tier suffix.
     if let Some(ref type_name) = token_type_name
@@ -168,7 +172,7 @@ pub(crate) fn expand(
         && let Some(tier) = crate::tiers::find_tier(tier_suffix)
     {
         let ctx = crate::rewrite::CallerContext {
-            tier_suffix: tier_suffix.to_string(),
+            tier_suffix,
             target_arch: tier.target_arch,
             token_ident: _token_ident.clone(),
             has_token: true,
@@ -177,19 +181,14 @@ pub(crate) fn expand(
         input_fn.body = crate::rewrite::rewrite_incant_in_body(input_fn.body, &ctx);
     }
 
-    if let Some(tier) = crate::tiers::ALL_TIERS
-        .iter()
-        .filter(|tier| tier.name != "default")
-        .find(|tier| {
-            crate::generated::tier_to_canonical_token(tier.name)
-                .and_then(crate::generated::token_to_features)
-                .is_some_and(|candidate| {
-                    candidate.len() == features.len()
-                        && candidate.iter().all(|feature| features.contains(feature))
-                })
-        })
-    {
-        input_fn.body = crate::attune::call::rewrite(input_fn.body, tier);
+    if token_type_name.is_none() {
+        input_fn.body = crate::attune::call::rewrite_context(
+            input_fn.body,
+            crate::attune::call::Context {
+                features: &features,
+                target_arch,
+            },
+        );
     }
 
     // Build a single target_feature attribute with all features comma-joined
@@ -217,17 +216,6 @@ pub(crate) fn expand(
     let target_feature_attrs: Vec<Attribute> =
         vec![parse_quote!(#[target_feature(enable = #features_csv)])];
 
-    // Rename non-ident patterns to named params so the wrapper → sibling call works.
-    // The original patterns are re-bound at the top of the inner body.
-    let rebinds = rename_non_ident_params(&mut input_fn.sig);
-    prepend_to_body(&mut input_fn.body, quote! { #(#rebinds)* });
-    // Renaming may have changed the token parameter's ident (a wildcard
-    // `_: X64V3Token` becomes `__archmage_arg_0: X64V3Token` and binds
-    // nothing, so it leaves no rebind behind). Re-discover it.
-    if let Some(info) = find_token_param(&input_fn.sig) {
-        _token_ident = info.ident;
-    }
-
     // On wasm32, #[target_feature(enable = "simd128")] functions are safe (Rust 1.54+).
     // The wasm validation model guarantees unsupported instructions trap deterministically,
     // so there's no UB from feature mismatch. Skip the unsafe wrapper entirely.
@@ -246,11 +234,41 @@ pub(crate) fn expand(
         ),
         tier_trait_assertion: gen_tier_trait_assertion(&tier_traits, &_token_ident),
     };
-    if args.nested {
-        arcane_impl_nested(input_fn, &args, parts)
+    let callee = if args.nested {
+        format!("__simd_inner_{}", input_fn.sig.ident)
     } else {
-        arcane_impl_sibling(input_fn, &args, parts)
+        format!("__arcane_{}", input_fn.sig.ident)
+    };
+    if let Some(err) = reserved_param_error(&input_fn.sig, &callee, macro_name) {
+        return err;
     }
+    emit_boundary(input_fn, &args, parts)
+}
+
+/// Reject a parameter named like the generated callee, so nothing a caller
+/// writes can stand between the wrapper's `unsafe` call and that function.
+pub(crate) fn reserved_param_error(
+    sig: &syn::Signature,
+    callee: &str,
+    macro_name: &str,
+) -> Option<TokenStream> {
+    sig.inputs.iter().find_map(|arg| match arg {
+        FnArg::Typed(pat_type) => match pat_type.pat.as_ref() {
+            syn::Pat::Ident(pat) if pat.ident == callee => Some(
+                syn::Error::new_spanned(
+                    &pat.ident,
+                    format!(
+                        "parameter `{callee}` shadows the function #[{macro_name}] generates for \
+                         `{}` and would receive its `unsafe` call; rename the parameter",
+                        sig.ident
+                    ),
+                )
+                .to_compile_error(),
+            ),
+            _ => None,
+        },
+        FnArg::Receiver(_) => None,
+    })
 }
 
 /// The pieces every boundary expansion emits: the cfg guard on both halves,
@@ -312,32 +330,9 @@ pub(crate) fn arcane_impl_wasm_safe(
     }
 }
 
-/// Sibling expansion (default): generates two functions at the same scope level.
-///
-/// The sibling function is safe (Rust 2024 edition allows safe `#[target_feature]`
-/// functions). Only the call from the wrapper needs `unsafe` because the wrapper
-/// lacks matching target features. Compatible with `#![forbid(unsafe_code)]`.
-///
-/// Self/self work naturally since both functions live in the same impl scope.
-fn arcane_impl_sibling(
-    input_fn: LightFn,
-    args: &BoundaryOptions,
-    parts: BoundaryParts,
-) -> TokenStream {
-    let vis = &input_fn.vis;
-    let sig = &input_fn.sig;
-    let fn_name = &sig.ident;
-    let generics = &sig.generics;
-    let where_clause = &generics.where_clause;
-    let inputs = &sig.inputs;
-    let output = &sig.output;
-    let body = &input_fn.body;
-    // Filter out user #[inline] attrs to avoid duplicates (will become a hard error).
-    // The wrapper gets #[inline(always)] unconditionally — it's a trivial unsafe { sibling() }.
-    let attrs = filter_inline_attrs(&input_fn.attrs);
-    // Lint-control attrs (#[allow(...)], #[expect(...)], etc.) must also go on the sibling,
-    // because the sibling has the same parameters and clippy lints it independently.
-    let lint_attrs = filter_lint_attrs(&input_fn.attrs);
+/// One boundary emitter for sibling and nested placement. Placement changes
+/// name resolution and the receiver representation, never the proof obligation.
+fn emit_boundary(input: LightFn, options: &BoundaryOptions, parts: BoundaryParts) -> TokenStream {
     let BoundaryParts {
         cfg_guard,
         target_feature_attrs,
@@ -345,217 +340,114 @@ fn arcane_impl_sibling(
         token_assertion,
         tier_trait_assertion,
     } = parts;
-
-    let sibling_name = format_ident!("__arcane_{}", fn_name);
-
-    // Detect self receiver
-    let has_self_receiver = inputs
-        .first()
-        .map(|arg| matches!(arg, FnArg::Receiver(_)))
-        .unwrap_or(false);
-
-    // Build turbofish for forwarding type/const generic params to sibling
-    let turbofish = build_turbofish(generics);
-
-    // Every parameter is an identifier by now (see rename_non_ident_params).
-    let forwarded_args: Vec<proc_macro2::TokenStream> = inputs
-        .iter()
-        .filter_map(|arg| match arg {
-            FnArg::Typed(pat_type) => match pat_type.pat.as_ref() {
-                syn::Pat::Ident(pat_ident) => {
-                    let ident = &pat_ident.ident;
-                    Some(quote!(#ident))
-                }
-                _ => None,
-            },
-            FnArg::Receiver(_) => None,
-        })
-        .collect();
-
-    // Build the call from wrapper to sibling. A method calls through `self`;
-    // an associated function in an impl needs `Self::`, which the macro cannot
-    // infer, so `in_impl` says so; a free function calls the sibling by name.
-    let sibling_call = if has_self_receiver {
-        quote! { self.#sibling_name #turbofish(#(#forwarded_args),*) }
-    } else if args.in_impl {
-        quote! { Self::#sibling_name #turbofish(#(#forwarded_args),*) }
+    let sig = &input.sig;
+    let generics = &sig.generics;
+    let vis = &input.vis;
+    let name = if options.nested {
+        format_ident!("__simd_inner_{}", sig.ident)
     } else {
-        quote! { #sibling_name #turbofish(#(#forwarded_args),*) }
+        format_ident!("__arcane_{}", sig.ident)
     };
-
-    // Sibling function: #[doc(hidden)] #[target_feature] fn __arcane_fn(...)
-    // Always private — only the wrapper is user-visible.
-    // Safe declaration — Rust 2024 allows safe #[target_feature] functions.
-    quote! {
-        #cfg_guard
-        #[doc(hidden)]
-        #(#lint_attrs)*
-        #(#target_feature_attrs)*
-        #inline_attr
-        fn #sibling_name #generics (#inputs) #output #where_clause {
-            #body
+    let attrs = filter_inline_attrs(&input.attrs);
+    let lints = filter_lint_attrs(&input.attrs);
+    let turbofish = build_turbofish(generics);
+    let has_self = sig
+        .inputs
+        .iter()
+        .any(|arg| matches!(arg, FnArg::Receiver(_)));
+    let self_ident = format_ident!("self");
+    let mut forwarded = Vec::with_capacity(sig.inputs.len());
+    let params = if options.nested {
+        let params: Vec<_> = sig
+            .inputs
+            .iter()
+            .map(|arg| match arg {
+                FnArg::Receiver(receiver) => {
+                    forwarded.push(&self_ident);
+                    let ty = options
+                        .self_type
+                        .as_ref()
+                        .expect("nested receiver validated before emission");
+                    nested_self_param(receiver, ty).to_token_stream()
+                }
+                FnArg::Typed(param) => {
+                    if let syn::Pat::Ident(pat) = param.pat.as_ref() {
+                        let ident = &pat.ident;
+                        forwarded.push(ident);
+                    }
+                    options.self_type.as_ref().map_or_else(
+                        || quote!(#param),
+                        |ty| replace_self_in_tokens(quote!(#param), ty),
+                    )
+                }
+            })
+            .collect();
+        quote!(#(#params),*)
+    } else {
+        for arg in &sig.inputs {
+            if let FnArg::Typed(param) = arg
+                && let syn::Pat::Ident(pat) = param.pat.as_ref()
+            {
+                let ident = &pat.ident;
+                forwarded.push(ident);
+            }
         }
-
-        #cfg_guard
-        #(#attrs)*
-        #[inline(always)]
-        #vis #sig {
-            #token_assertion
-            #tier_trait_assertion
-            // SAFETY: The token parameter proves the required CPU features are available.
-            // Calling a #[target_feature] function from a non-matching context requires
-            // unsafe because the CPU may not support those instructions. The token's
-            // existence proves summon() succeeded, so the features are available.
-            unsafe { #sibling_call }
+        sig.inputs.to_token_stream()
+    };
+    let mut output = sig.output.to_token_stream();
+    let mut where_clause = generics.where_clause.to_token_stream();
+    let mut body = input.body;
+    if options.nested
+        && let Some(ty) = &options.self_type
+    {
+        output = replace_self_in_tokens(output, ty);
+        where_clause = replace_self_in_tokens(where_clause, ty);
+        body =
+            replace_self_value_in_tokens(replace_self_in_tokens(body, ty), &format_ident!("_self"));
+    }
+    let call = if options.nested {
+        quote!(#name #turbofish(#(#forwarded),*))
+    } else if has_self {
+        quote!(self.#name #turbofish(#(#forwarded),*))
+    } else if options.in_impl {
+        quote!(Self::#name #turbofish(#(#forwarded),*))
+    } else {
+        quote!(#name #turbofish(#(#forwarded),*))
+    };
+    // Keep legacy attribute order, including lint expectations. The body is
+    // emitted once; only its lexical placement differs between these policies.
+    let before = if options.nested {
+        quote!()
+    } else {
+        quote!(#[doc(hidden)] #(#lints)*)
+    };
+    let after = if options.nested {
+        quote!(#(#lints)*)
+    } else {
+        quote!()
+    };
+    let inner = quote! {
+        #before #(#target_feature_attrs)* #inline_attr #after
+        fn #name #generics (#params) #output #where_clause { #body }
+    };
+    let proof_call = proof_call(call);
+    let sibling = (!options.nested).then_some(&inner);
+    let sibling_cfg = (!options.nested).then_some(&cfg_guard);
+    let nested = options.nested.then_some(&inner);
+    quote! {
+        #sibling_cfg #sibling
+        #cfg_guard #(#attrs)* #[inline(always)] #vis #sig {
+            #nested #token_assertion #tier_trait_assertion #proof_call
         }
     }
 }
 
-/// Nested inner function expansion (opt-in via `nested`, `in_trait` or `_self = Type`).
-///
-/// Generates a nested inner function inside the original function. Required in
-/// trait impls, which cannot take a sibling item, and when `_self = Type` is
-/// used because `Self` must be replaced in the nested function (where it's not
-/// in scope).
-fn arcane_impl_nested(
-    input_fn: LightFn,
-    args: &BoundaryOptions,
-    parts: BoundaryParts,
-) -> TokenStream {
-    let vis = &input_fn.vis;
-    let sig = &input_fn.sig;
-    let fn_name = &sig.ident;
-    let generics = &sig.generics;
-    let where_clause = &generics.where_clause;
-    let inputs = &sig.inputs;
-    let output = &sig.output;
-    let body = &input_fn.body;
-    // Filter out user #[inline] attrs to avoid duplicates (will become a hard error).
-    let attrs = filter_inline_attrs(&input_fn.attrs);
-    // Propagate lint attrs to inner function (same issue as sibling mode — #17)
-    let lint_attrs = filter_lint_attrs(&input_fn.attrs);
-    let BoundaryParts {
-        cfg_guard,
-        target_feature_attrs,
-        inline_attr,
-        token_assertion,
-        tier_trait_assertion,
-    } = parts;
-
-    // Determine self receiver type if present
-    let self_receiver_kind: Option<SelfReceiver> = inputs.first().and_then(|arg| match arg {
-        FnArg::Receiver(receiver) => {
-            // syn 3 moved the by-reference shape into `Receiver::kind`. Owned
-            // (`self`/`mut self`) and typed (`self: Box<Self>`) receivers both
-            // map to `Owned`.
-            match &receiver.kind {
-                syn::ReceiverKind::Reference(_, _, mutability) => {
-                    if mutability.is_some() {
-                        Some(SelfReceiver::RefMut)
-                    } else {
-                        Some(SelfReceiver::Ref)
-                    }
-                }
-                _ => Some(SelfReceiver::Owned),
-            }
-        }
-        _ => None,
-    });
-
-    // Build inner function parameters, transforming self if needed.
-    // Also replace Self in non-self parameter types when _self = Type is set,
-    // since the inner function is a nested fn where Self from the impl is not in scope.
-    let inner_params: Vec<proc_macro2::TokenStream> = inputs
-        .iter()
-        .map(|arg| match arg {
-            FnArg::Receiver(_) => {
-                // Transform self receiver to _self parameter
-                let self_ty = args.self_type.as_ref().unwrap();
-                match self_receiver_kind.as_ref().unwrap() {
-                    SelfReceiver::Owned => quote!(_self: #self_ty),
-                    SelfReceiver::Ref => quote!(_self: &#self_ty),
-                    SelfReceiver::RefMut => quote!(_self: &mut #self_ty),
-                }
-            }
-            FnArg::Typed(pat_type) => {
-                if let Some(ref self_ty) = args.self_type {
-                    replace_self_in_tokens(quote!(#pat_type), self_ty)
-                } else {
-                    quote!(#pat_type)
-                }
-            }
-        })
-        .collect();
-
-    // Build inner function call arguments
-    let inner_args: Vec<proc_macro2::TokenStream> = inputs
-        .iter()
-        .filter_map(|arg| match arg {
-            FnArg::Typed(pat_type) => {
-                if let syn::Pat::Ident(pat_ident) = pat_type.pat.as_ref() {
-                    let ident = &pat_ident.ident;
-                    Some(quote!(#ident))
-                } else {
-                    None
-                }
-            }
-            FnArg::Receiver(_) => Some(quote!(self)), // Pass self to inner as _self
-        })
-        .collect();
-
-    let inner_fn_name = format_ident!("__simd_inner_{}", fn_name);
-
-    // Build turbofish for forwarding type/const generic params to inner function
-    let turbofish = build_turbofish(generics);
-
-    // The inner function cannot see the impl's `Self` or its `self` value.
-    // With `_self = Type`, replace the type `Self` by `Type` in the output,
-    // where clause and body, and rename the value `self` to `_self`, which
-    // the inner function takes as a parameter. `self::` paths are left alone.
-    let (inner_output, inner_body, inner_where_clause): (
-        proc_macro2::TokenStream,
-        proc_macro2::TokenStream,
-        proc_macro2::TokenStream,
-    ) = if let Some(ref self_ty) = args.self_type {
-        let self_ident = format_ident!("_self");
-        let transformed_output = replace_self_in_tokens(output.to_token_stream(), self_ty);
-        let transformed_body = replace_self_value_in_tokens(
-            replace_self_in_tokens(body.clone(), self_ty),
-            &self_ident,
-        );
-        let transformed_where = where_clause
-            .as_ref()
-            .map(|wc| replace_self_in_tokens(wc.to_token_stream(), self_ty))
-            .unwrap_or_default();
-        (transformed_output, transformed_body, transformed_where)
-    } else {
-        (
-            output.to_token_stream(),
-            body.clone(),
-            where_clause
-                .as_ref()
-                .map(|wc| wc.to_token_stream())
-                .unwrap_or_default(),
-        )
-    };
-
-    quote! {
-        #cfg_guard
-        #(#attrs)*
-        #[inline(always)]
-        #vis #sig {
-            #(#target_feature_attrs)*
-            #inline_attr
-            #(#lint_attrs)*
-            fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #inner_where_clause {
-                #inner_body
-            }
-            #token_assertion
-            #tier_trait_assertion
-            // SAFETY: The token parameter proves the required CPU features are available.
-            unsafe { #inner_fn_name #turbofish(#(#inner_args),*) }
-        }
-    }
+/// The only feature-boundary call emitted for native proof entries. Callers
+/// must authenticate the supplied proof and resolve a body generated in the
+/// same scope before reaching this function.
+pub(crate) fn proof_call(call: TokenStream) -> TokenStream {
+    // SAFETY: the enclosing proof entry establishes the callee's feature set.
+    quote!(unsafe { #call })
 }
 
 #[cfg(test)]

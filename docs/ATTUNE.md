@@ -1,6 +1,9 @@
 # Unified macros: implementation contract
 
-This is an unpublished rewrite based on `de7d28af833b`. Keep it on the
+This is an unpublished rewrite rebased onto main at `52bf060d` (0.9.30),
+including the merged PR #123 and harvested consumer signature tests. It
+originally started at `de7d28af833b`. The intended next version is 0.9.31;
+no release is authorized by this document. Keep it on the
 `draft/attune-rewrite` bookmark until the implementation, compatibility and
 compile-time gates pass. The existing attribute names and dispatch aliases
 remain compatibility frontends; their behavior is the contract, including
@@ -38,7 +41,7 @@ filtering must leave a guaranteed covered candidate, or compilation fails.
 An explicit `_v3_t` selector requests the proof interface even from a covered
 context, deriving proof with `from_context()` there.
 
-The current supplied-proof spelling is `using(token)`. Its expression is
+The supplied-proof spelling is `using(token)` only. Its expression is
 evaluated once, and selection does not probe the CPU. Naming dictionaries key
 on both tier and interface: `names(_v3 = work_avx2, _v3_t = work_avx2_t)`.
 Definition names are identifiers; call-site names may be paths.
@@ -51,7 +54,7 @@ legacy nested wrappers retain their supported receiver transformations.
 
 ## Verification and outstanding work
 
-The base passed `cargo xtask ci` on the available x86-64 host. That command
+The original `de7d28af833b` base passed `cargo xtask ci` on the available x86-64 host. That command
 reported skipped ARM cross checks because cross tooling was unavailable; it is
 not evidence of an ARM pass. Its resource report was:
 `done rc=0 230s | peak-RSS 1.19GiB | min-avail 20418MiB | peak-load 7.26`.
@@ -76,3 +79,118 @@ It uses the unchanged downstream compile-cost fixture, fresh Cargo target
 directories, and the same lockfile for subsequent comparisons. No compiler
 wrapper was configured in the measured environment. These are cold Cargo
 builds with warm OS caches, not cold-disk measurements.
+
+## PR #123 integration
+
+The shared boundary emitter preserves the upstream parameter-shadowing
+rejection before its unsafe forwarding call. Generated `attune` proof entries
+use the same check. A parameter cannot stand in for the generated callee.
+Pattern normalization happens before nested-call rewriting, so wildcard proof
+parameters have their final forwarding names before a call uses them.
+
+Nested receivers use the common receiver lowering, including explicit
+lifetimes and typed receivers such as `self: Box<Self>`. The upstream
+`Self` substitutions, nested-impl boundaries, token-position forwarding,
+and gated legacy dispatch logic remain in their shared helpers and legacy
+frontends. The upstream expansion snapshots remain the compatibility oracle.
+
+Cold-build results recorded against the original base are historical data;
+performance acceptance requires a matched comparison against the new base.
+
+The first matched PR #123 comparison is recorded in
+[pr123_comparison.json](../benchmarks/attune_compile_2026-10-07/pr123_comparison.json).
+Six alternating pairs used identical fixture sources and lockfiles, fresh Cargo
+outputs, and warm OS caches. Median cold checks were 1.754408 s baseline versus
+1.864871 s rewrite (macros only), and 3.229452 s versus 3.353086 s (magetypes plus
+AVX-512). Consumer-only rechecks were 0.039499 s versus 0.039606 s, and 0.042988 s
+versus 0.043321 s respectively. These measurements do **not** satisfy the
+no-regression requirement. They cover this fixture, not the entire consumer
+fleet or migrated applications.
+
+Resource report: `done rc=0 62s | peak-RSS 0.37GiB | min-avail 20683MiB |
+peak-load 6.03`. Run `just attune-compare BASE CANDIDATE OUTPUT` to repeat with
+pinned revisions. Full Cargo and `/usr/bin/time -v` logs remain in the named
+output directory.
+
+Rebase validation on the available host passed the unchanged legacy expansion
+snapshots, proof-boundary rejection fixtures, new runtime contracts, macro
+clippy with all features and warnings denied, registry regeneration, and
+`cargo test -p archmage -p magetypes --features 'std avx512'` including doctests.
+The latter reported `done rc=0 112s | peak-RSS 2.20GiB | min-avail 19487MiB |
+peak-load 6.00`. The new contracts also compiled for AArch64, WASM32 and i686;
+these checks did not run on those targets.
+
+The macro unit suite still has one intermediate-expansion assertion to adapt:
+`variant_replacement_keeps_the_token_position` expects an anonymous token
+parameter before boundary expansion, while direct lowering returns the final
+wrapper with a named forwarding parameter. The corresponding compiler-facing
+PR #123 token-position snapshot passes unchanged. This outstanding unit
+assertion and the measured cold-build regression keep the full acceptance
+gates open.
+
+The larger unchanged-consumer comparison against PR #123 and crates.io 0.9.29
+is recorded in [the cold-build report](../benchmarks/consumer_compile_2026-10-07.md).
+It covers magetypes, zenav1-svt and rav1d-safe with three cold checks and three
+release library builds per stack. It also separates standalone allocation
+counts from the cost of compiling the macro crate itself. The no-regression
+gate remains open; sub-percent codec deltas overlap observed run variation.
+
+The follow-up [optimization report](../benchmarks/macro_optimization_2026-10-07.md)
+records shared-emitter and substitution changes, allocation measurements, and
+matched builds including the prior rewrite. The changes keep proof checks and
+boundary placement explicit; reduced allocation counts alone do not satisfy
+the cold-compile gate.
+
+## Remaining decisions after the main rebase
+
+The current review separates the legacy 0.9.30 release from the unpublished
+0.9.31 rewrite. Do not describe a draft limitation as a regression in main.
+The independent expansion audit pins main at `52bf060d`; audit findings and
+coverage must name their source revision.
+
+The agreed core remains: explicit AVX-512 additions, exact call lists with a
+guaranteed fallback, `using(token)`, `wrap`, per-output visibility and inline
+controls, explicit lists for sparse families, and function-local expansion.
+These do not need another naming vote.
+
+After rebasing, the macro unit suite passes with 129 tests passed, no failures
+and one existing ignored allocation-profile test. The forwarding regression
+now checks the normalized wrapper argument, original inner pattern, forwarding
+call and dispatcher token position together. Main's and the draft's legacy
+expansion suites also pass; the independent expansion audit nevertheless found
+legacy safety and attribute-routing defects. Snapshot preservation is not a
+correctness proof, and those findings remain release work.
+
+The remaining policy questions are narrower:
+
+| Question | Current behavior / recommended first scope |
+|---|---|
+| Final inline defaults and family-level attributes | Direct bodies default to inline, thin proof wrappers to always-inline, dispatcher unforced. Keep per-output overrides; verify the complete cross-crate matrix and reject ambiguous family-wide overrides instead of guessing. |
+| Cold-build acceptance | The previous-base measurements still show a cold macro-crate cost. Rebase alone is not evidence it disappeared. Keep the no-regression gate unless the user explicitly revises it. |
+| Method-call expressions | The call parser currently accepts function paths, not `attuned!(self.work(x))`. Either support and test receiver evaluation/borrowing, or make path-only support an explicit first-release restriction. Do not inspect the enclosing impl. |
+| Different gates for direct/proof outputs of one tier | Currently rejected. Keeping a shared gate initially is simpler; independent gates require correctly guarding a shared body and every reference. |
+
+Other open items are implementation and verification work, not preference
+questions: duplicate/unused rename mappings, generated-name collisions,
+portable dispatcher fallback under gated scalar outputs, full attribute
+routing (`track_caller`, `expect`, `cfg_attr`, linkage and other proc macros),
+complete generic/trait coverage, and a validated migration converter with
+exact replacement text. Existing legacy names must remain supported while
+those replacements are incomplete.
+
+### Legacy contracts the migration must preserve
+
+| Existing spelling | Observable contract to preserve |
+|---|---|
+| `#[arcane]` | Existing proof-taking name is callable from ordinary code; wrapper establishes the feature boundary. |
+| `#[rite(v3)]` | Written name is retained and requires a covering feature context. Supplying a token alone does not change Rust's caller context. |
+| Multi-tier `#[rite(v3, scalar)]` | Generates suffixed direct names; a scalar/default body has no target-feature requirement. |
+| `#[magetypes(...)]` versus `#[magetypes(rite, ...)]` | Same family naming convention, but proof wrappers versus direct feature functions. This distinction affects callers, not just implementation style. |
+| `#[autoversion]` | Public dispatcher plus generated variants. No proof parameter, legacy `SimdToken`, and real `ScalarToken` have different dispatcher signatures. |
+| `incant!(...)` | Ordinary dispatch, context rewriting, supplied-proof and `without token` forms have distinct selection/signature rules. `without token` selects the caller's exact tier and accepts no tier list. |
+| `scalar` versus `default` | Both are featureless fallbacks, but token arguments and generated function names differ. |
+
+Tier defaults, provider feature gates, implicit inline attributes and helper
+visibility are also part of compatibility. A from/to converter must make them
+explicit where new defaults differ. These inconsistencies motivate the unified
+model; they are not by themselves evidence that an expansion is unsound.

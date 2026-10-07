@@ -12,6 +12,7 @@ pub(super) fn expand(name: &str, args: Tokens, item: Tokens) -> syn::Result<Toke
             arcane_impl(syn::parse2(item)?, name, syn::parse2(args)?)
         }
         "rite" | "token_target_features" => rite_impl(syn::parse2(item)?, syn::parse2(args)?),
+        "attune" => crate::attune::expand(args, item)?,
         "autoversion" => autoversion_impl(syn::parse2(item)?, syn::parse2(args)?),
         "magetypes" => {
             let (rite, in_impl, defines, names) = parse_magetypes_attr.parse2(args)?;
@@ -257,7 +258,7 @@ fn expansion_modes_preserve_body_and_generated_contracts() {
         ),
         (
             "magetypes",
-            quote!(v3(cfg(custom)), default),
+            quote!(rite, v3(cfg(custom)), default),
             quote!(
                 fn kernel() {
                     opaque!();
@@ -278,6 +279,16 @@ fn expansion_modes_preserve_body_and_generated_contracts() {
 #[test]
 fn rejected_inputs_keep_actionable_diagnostics() {
     for (name, args, input, expected) in [
+        (
+            "magetypes",
+            quote!(v3(cfg(custom)), default),
+            quote!(
+                fn kernel() {
+                    opaque!();
+                }
+            ),
+            "requires a token parameter",
+        ),
         (
             "arcane",
             quote!(stub),
@@ -484,7 +495,36 @@ fn profile_allocations() {
     for (name, args, input) in [
         ("arcane", quote!(), simple.clone()),
         ("arcane-dispatch", quote!(), dispatch),
-        ("rite", quote!(), simple),
+        ("rite", quote!(), simple.clone()),
+        ("attune-raw", quote!(v3), simple.clone()),
+        ("attune-wrap", quote!(wrap), simple),
+        (
+            "attune-direct",
+            quote!(make(_*)),
+            quote!(
+                fn kernel(x: u32) -> u32 {
+                    x + 1
+                }
+            ),
+        ),
+        (
+            "attune-all",
+            quote!(make(all)),
+            quote!(
+                fn kernel(x: u32) -> u32 {
+                    x + 1
+                }
+            ),
+        ),
+        (
+            "attune-compose",
+            quote!(make(all)),
+            quote!(
+                fn kernel(x: u32) -> u32 {
+                    archmage::attuned!(other(x), [_v3, _neon, _wasm128, _scalar])
+                }
+            ),
+        ),
         (
             "magetypes",
             quote!(define(f32x8)),
@@ -506,7 +546,9 @@ fn profile_allocations() {
             ),
         ),
     ] {
-        let macro_name = if name == "arcane-dispatch" {
+        let macro_name = if name.starts_with("attune-") {
+            "attune"
+        } else if name == "arcane-dispatch" {
             "arcane"
         } else {
             name
@@ -600,7 +642,7 @@ fn light_parser_preserves_opaque_body_and_rejects_broken_signatures() {
 #[test]
 fn nested_dispatch_rewrites_have_exact_outputs() {
     let ctx = rewrite::CallerContext {
-        tier_suffix: "v3".into(),
+        tier_suffix: "v3",
         target_arch: Some("x86_64"),
         token_ident: quote::format_ident!("token"),
         has_token: true,
