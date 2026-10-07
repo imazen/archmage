@@ -367,7 +367,7 @@ fn example_raw_access() {
         let raw: core::arch::x86_64::__m256 = v.raw();
 
         // Create from raw __m256
-        let back = f32x8::from_m256_t(t, raw);
+        let back = f32x8::from_raw_t(t, raw);
         assert_eq!(back.to_array(), [42.0; 8]);
     }
 }

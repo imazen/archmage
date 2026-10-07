@@ -327,7 +327,7 @@ fn raw_m256_roundtrip() {
     if let Some(token) = X64V3Token::summon() {
         let v = f32x8::<X64V3Token>::splat_t(token, 5.0);
         let raw = v.raw();
-        let v2 = f32x8::<X64V3Token>::from_m256_t(token, raw);
+        let v2 = f32x8::<X64V3Token>::from_raw_t(token, raw);
         assert_eq!(v2.to_array(), [5.0; 8]);
     }
 }

@@ -1156,16 +1156,20 @@ Design record for #116 (the `mul_add` contract):
 
 ### Downstream and tooling notes
 
-- #117 (closed, not planned): published `jxl-encoder-simd 0.3.0` still fails on
-  aarch64 and wasm32 with one error each, a one-argument `f32x4::from_i32x4` at
-  its `dequant.rs:421`; x86_64 builds (checked 2026-10-05 against main; 44 errors
-  against 0.9.29). Raw interop is back on the generic types: `raw`/`from_raw`/
-  `from_raw_t` on every native-backend type, WASM `from_v128` and AVX-512
-  `from_m512*` on all their types, and on NEON only the three legacy names that
-  crate calls (check coverage with the snapshots' `[also: ...]` alias lists).
-  The rest is the consumer's fix (pass its token to that conversion). Archmage
-  keeps the published two-argument form, and its CI does not track the
-  consumer's failure.
+- #117 (closed, not planned): published `jxl-encoder-simd 0.3.0` against main
+  (checked 2026-10-07 with a path patch, `cargo check` on three targets):
+  x86_64 builds (477 deprecation warnings, 22 of them `from_m256`); aarch64 and
+  wasm32 each fail with one error, the one-argument `f32x4::from_i32x4` at its
+  `dequant.rs:421` and `:563`. Passing its token at those two sites makes both
+  targets build. The raw constructors it calls are `from_m256` (23), `from_m256d`
+  (2), `from_float32x4_t` (20), `from_float64x2_t` (2) and `from_v128` on
+  `f32x4`/`f64x2` (6). Since it needs changes of its own anyway and imazen
+  owns it, magetypes keeps no NEON/WASM/AVX-512 platform names (user
+  decision 2026-10-07); only the 20 x86 names 0.9.29 shipped remain, as
+  deprecated forwarders to `from_raw_t`, removed in 0.10. Everything else is
+  `raw()` / `from_raw(raw)` (tokenless, feature context) / `from_raw_t(token,
+  raw)`. The consumer is migrated wholesale to the `_t` API when it is next
+  touched; archmage's CI does not track it.
 
 - Downstream audit tooling (2026-09-27): cargo-copter `2d50bf89` selects yanked
   releases as "latest" and drops workspace-inherited features when forcing a

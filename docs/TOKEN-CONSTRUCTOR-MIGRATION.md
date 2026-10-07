@@ -38,12 +38,13 @@ constructors, and the single-lane scalar types. Trait methods whose receiver is
 the token do not gain aliases. Existing target and Cargo feature gates still
 apply.
 
-Native raw values have a uniform `from_raw_t(token, raw)` entry point. Platform
-names that already end in `_t`, such as `from_float32x4_t(token, raw)`, are not
-deprecated and have no `_t_t` form. Prefer `from_raw_t` for new raw interchange
-code.
-The separate `from_raw(raw)` method requires a matching target-feature context
-and is not deprecated.
+Native raw values have two spellings on every native-backend type:
+`from_raw_t(token, raw)` for callers that hold a token, generic code included,
+and `from_raw(raw)`, which takes no token and requires a matching
+target-feature context that Rust checks. The x86 platform-named constructors
+0.9.29 shipped (`from_m128`, `from_m128d`, `from_m128i`, `from_m256`,
+`from_m256d`, `from_m256i`) are deprecated forwarders to `from_raw_t`, removed
+in 0.10; they have no `_t` form, and no other type gets a platform name.
 
 Ordinary functions and backend-generic helpers can call `_t` methods without
 target-feature annotations:

@@ -320,7 +320,7 @@ mod x86_impl {
         // Select based on threshold
         let mask = srgb.simd_le(threshold);
         let result_raw = _mm256_blendv_ps(gamma_result.raw(), linear_result.raw(), mask.raw());
-        f32x8::from_m256_t(token, result_raw)
+        f32x8::from_raw_t(token, result_raw)
     }
 
     /// Linear to sRGB conversion
@@ -350,7 +350,7 @@ mod x86_impl {
         // Select based on threshold
         let mask = linear.simd_le(threshold);
         let result_raw = _mm256_blendv_ps(gamma_result.raw(), linear_result.raw(), mask.raw());
-        f32x8::from_m256_t(token, result_raw)
+        f32x8::from_raw_t(token, result_raw)
     }
 
     // ============================================================================
@@ -365,7 +365,7 @@ mod x86_impl {
         // Preserve alpha (indices 3 and 7) from src
         let blend_mask = _mm256_set_ps(-0.0, 0.0, 0.0, 0.0, -0.0, 0.0, 0.0, 0.0);
         let result_raw = _mm256_blendv_ps(result.raw(), src.raw(), blend_mask);
-        f32x8::from_m256_t(token, result_raw)
+        f32x8::from_raw_t(token, result_raw)
     }
 
     /// Screen blend: out = 1 - (1-src) * (1-dst)
@@ -381,7 +381,7 @@ mod x86_impl {
         // Preserve alpha from src
         let blend_mask = _mm256_set_ps(-0.0, 0.0, 0.0, 0.0, -0.0, 0.0, 0.0, 0.0);
         let result_raw = _mm256_blendv_ps(result.raw(), src.raw(), blend_mask);
-        f32x8::from_m256_t(token, result_raw)
+        f32x8::from_raw_t(token, result_raw)
     }
 
     /// Overlay blend: if dst < 0.5: 2*src*dst, else: 1-2*(1-src)*(1-dst)
@@ -406,7 +406,7 @@ mod x86_impl {
         // Preserve alpha from src
         let blend_mask = _mm256_set_ps(-0.0, 0.0, 0.0, 0.0, -0.0, 0.0, 0.0, 0.0);
         let result_raw = _mm256_blendv_ps(result_raw, src.raw(), blend_mask);
-        f32x8::from_m256_t(token, result_raw)
+        f32x8::from_raw_t(token, result_raw)
     }
 
     // ============================================================================

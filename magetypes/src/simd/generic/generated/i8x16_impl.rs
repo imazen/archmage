@@ -602,9 +602,12 @@ impl i8x16<archmage::X64V3Token> {
         self.0
     }
 
-    /// Create from a raw `__m128i` (token-gated, zero-cost).
+    /// Deprecated spelling of [`Self::from_raw_t`].
+    #[deprecated(
+        note = "Use from_raw_t(token, v), or from_raw(v) in a matching feature context; from_m128i is removed in magetypes 0.10."
+    )]
     #[inline(always)]
-    pub fn from_m128i_t(token: archmage::X64V3Token, v: core::arch::x86_64::__m128i) -> Self {
+    pub fn from_m128i(token: archmage::X64V3Token, v: core::arch::x86_64::__m128i) -> Self {
         Self(v, token)
     }
 }
@@ -659,15 +662,6 @@ impl i8x16<archmage::NeonToken> {
         self.0
     }
 
-    /// Wrap a raw `int8x16_t` using an existing CPU capability token.
-    #[inline(always)]
-    pub fn from_int8x16_t(
-        token: archmage::NeonToken,
-        value: core::arch::aarch64::int8x16_t,
-    ) -> Self {
-        Self(value, token)
-    }
-
     /// Wrap a raw `int8x16_t` using an explicit CPU capability token.
     ///
     /// The caller does not need a target-feature annotation.
@@ -697,12 +691,6 @@ impl i8x16<archmage::Wasm128Token> {
     #[inline(always)]
     pub fn raw(self) -> core::arch::wasm32::v128 {
         self.0
-    }
-
-    /// Wrap a raw `v128` using an existing CPU capability token.
-    #[inline(always)]
-    pub fn from_v128_t(token: archmage::Wasm128Token, value: core::arch::wasm32::v128) -> Self {
-        Self(value, token)
     }
 
     /// Wrap a raw `v128` using an explicit CPU capability token.
@@ -795,29 +783,5 @@ impl<T: I8x16Backend> i8x16<T> {
     #[forbid(unsafe_code)]
     pub fn from_repr(token: T, repr: T::Repr) -> Self {
         Self::from_repr_t(token, repr)
-    }
-}
-#[cfg(target_arch = "x86_64")]
-impl i8x16<archmage::X64V3Token> {
-    #[inline(always)]
-    #[doc = "Deprecated token-taking spelling of [`Self::from_m128i_t`].\n\nUse `from_m128i_t` to keep explicit-token construction when `from_m128i` becomes tokenless in magetypes 0.10."]
-    #[deprecated(
-        note = "Use from_m128i_t(token, v); from_m128i becomes tokenless in magetypes 0.10."
-    )]
-    #[forbid(unsafe_code)]
-    pub fn from_m128i(token: archmage::X64V3Token, v: core::arch::x86_64::__m128i) -> Self {
-        Self::from_m128i_t(token, v)
-    }
-}
-#[cfg(target_arch = "wasm32")]
-impl i8x16<archmage::Wasm128Token> {
-    #[inline(always)]
-    #[doc = "Deprecated token-taking spelling of [`Self::from_v128_t`].\n\nUse `from_v128_t` to keep explicit-token construction when `from_v128` becomes tokenless in magetypes 0.10."]
-    #[deprecated(
-        note = "Use from_v128_t(token, value); from_v128 becomes tokenless in magetypes 0.10."
-    )]
-    #[forbid(unsafe_code)]
-    pub fn from_v128(token: archmage::Wasm128Token, value: core::arch::wasm32::v128) -> Self {
-        Self::from_v128_t(token, value)
     }
 }

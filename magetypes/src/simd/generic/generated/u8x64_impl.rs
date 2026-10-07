@@ -664,12 +664,6 @@ impl u8x64<archmage::X64V4Token> {
         self.0
     }
 
-    /// Wrap a raw `__m512i` using an existing CPU capability token.
-    #[inline(always)]
-    pub fn from_m512i_t(token: archmage::X64V4Token, value: core::arch::x86_64::__m512i) -> Self {
-        Self(value, token)
-    }
-
     /// Wrap a raw `__m512i` using an explicit CPU capability token.
     ///
     /// The caller does not need a target-feature annotation.
@@ -701,12 +695,6 @@ impl u8x64<archmage::X64V4xToken> {
     #[inline(always)]
     pub fn raw(self) -> core::arch::x86_64::__m512i {
         self.0
-    }
-
-    /// Wrap a raw `__m512i` using an existing CPU capability token.
-    #[inline(always)]
-    pub fn from_m512i_t(token: archmage::X64V4xToken, value: core::arch::x86_64::__m512i) -> Self {
-        Self(value, token)
     }
 
     /// Wrap a raw `__m512i` using an explicit CPU capability token.
@@ -801,29 +789,5 @@ impl<T: U8x64Backend> u8x64<T> {
     #[forbid(unsafe_code)]
     pub fn from_repr(token: T, repr: T::Repr) -> Self {
         Self::from_repr_t(token, repr)
-    }
-}
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl u8x64<archmage::X64V4Token> {
-    #[inline(always)]
-    #[doc = "Deprecated token-taking spelling of [`Self::from_m512i_t`].\n\nUse `from_m512i_t` to keep explicit-token construction when `from_m512i` becomes tokenless in magetypes 0.10."]
-    #[deprecated(
-        note = "Use from_m512i_t(token, value); from_m512i becomes tokenless in magetypes 0.10."
-    )]
-    #[forbid(unsafe_code)]
-    pub fn from_m512i(token: archmage::X64V4Token, value: core::arch::x86_64::__m512i) -> Self {
-        Self::from_m512i_t(token, value)
-    }
-}
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-impl u8x64<archmage::X64V4xToken> {
-    #[inline(always)]
-    #[doc = "Deprecated token-taking spelling of [`Self::from_m512i_t`].\n\nUse `from_m512i_t` to keep explicit-token construction when `from_m512i` becomes tokenless in magetypes 0.10."]
-    #[deprecated(
-        note = "Use from_m512i_t(token, value); from_m512i becomes tokenless in magetypes 0.10."
-    )]
-    #[forbid(unsafe_code)]
-    pub fn from_m512i(token: archmage::X64V4xToken, value: core::arch::x86_64::__m512i) -> Self {
-        Self::from_m512i_t(token, value)
     }
 }
