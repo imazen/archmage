@@ -55,10 +55,21 @@
 //! Logical [`f32x8<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html) stays eight lanes; `w512` enables wider shapes and `avx512`
 //! adds native AVX-512 implementations. See the [ISA contracts](https://imazen.github.io/archmage/magetypes/isa-quirks/)
 //! for numerical differences and fixups.
+//!
+//! ## Safety
+//!
+//! Using magetypes takes no `unsafe` in your code, so your crate can keep
+//! `#![forbid(unsafe_code)]`. Every vector carries the token it was built with, so
+//! its operations run only where the token's CPU features are proven. Inside,
+//! magetypes stacks compile-time proofs on archmage's tokens; its only `unsafe`
+//! is a few one-line blocks in one internal module that load, store, gather and
+//! scatter vector storage, each stating the invariant it relies on. See the
+//! [safety model](https://imazen.github.io/archmage/magetypes/safety/).
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(unsafe_op_in_unsafe_fn)]
+#![deny(unsafe_code)]
 #![warn(missing_docs)]
 // Every backend trait method that accepts `self` threads the CPU-feature
 // token through the call. The clippy `from_*` / `to_*` self-convention rule
@@ -79,8 +90,12 @@ pub use archmage;
 #[doc(hidden)]
 pub mod nostd_math;
 
-// SimdTypes trait - associates SIMD types with tokens
+// Every `unsafe` in magetypes lives in this module: the crate root denies
+// `unsafe_code`, and this is the only module that allows it.
+#[allow(unsafe_code)]
 mod simd_storage;
+
+// SimdTypes trait - associates SIMD types with tokens
 mod types;
 pub use types::SimdTypes;
 

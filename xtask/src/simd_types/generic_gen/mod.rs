@@ -375,7 +375,7 @@ pub fn generate_generic_files(registry: &crate::registry::Registry) -> BTreeMap<
     for ty in &all_types {
         let name = ty.name();
         let path = format!("generic/generated/{name}_impl.rs");
-        let content = type_impl::gen_type_impl(ty);
+        let content = type_impl::gen_type_impl(ty) + &type_impl::gen_raw_interop(ty, registry);
         files.insert(path, content);
     }
 

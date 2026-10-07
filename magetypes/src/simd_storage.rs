@@ -1,8 +1,13 @@
 //! Checked copies and views for backend storage, inspired by fearless_simd's transmute module:
-//! https://github.com/linebender/fearless_simd/blob/main/fearless_simd/src/transmute.rs
+//! <https://github.com/linebender/fearless_simd/blob/main/fearless_simd/src/transmute.rs>
 //!
 //! Only raw scalar/vector storage implements Pod. Never implement it for tokens
 //! or token-bearing SIMD wrappers: arbitrary bytes must not manufacture proofs.
+//!
+//! This is the only module in magetypes that may contain `unsafe`. The crate
+//! root denies `unsafe_code` and allows it for this module alone, and
+//! `cargo xtask soundness` rejects the `unsafe` keyword and any other
+//! `allow(unsafe_code)` elsewhere in `magetypes/src`.
 
 use core::mem::{align_of, size_of};
 
@@ -105,9 +110,13 @@ const _: () = {
 /// bit pattern must be valid as Self. Self must have no additional invariants,
 /// padding, pointers, interior mutability, or drop behavior. Mutable writes to
 /// Self must preserve arbitrary-bit validity of its storage. Implement only for
-/// the generated SIMD wrappers over sealed backend implementations.
+/// the generated SIMD wrappers over sealed backend implementations, and only
+/// through [`impl_token_storage!`], which checks the layout.
 pub(crate) unsafe trait TokenStorage: Copy {
     type Token: archmage::SimdToken;
+
+    /// Layout assertions for Self; every helper below evaluates them.
+    const LAYOUT: ();
 }
 
 #[inline(always)]
@@ -115,7 +124,79 @@ fn check_token_layout<Dst: TokenStorage>() {
     const {
         assert!(size_of::<Dst::Token>() == 0);
         assert!(align_of::<Dst::Token>() == 1);
+        Dst::LAYOUT
     }
+}
+
+/// Implement [`TokenStorage`] for a generated vector wrapper `$ty<T>`.
+///
+/// Every obligation of the impl that the compiler can check, it checks:
+///
+/// - `$ty(repr, token)` must build the wrapper from exactly a `T::Repr` and a
+///   `T`, in that order, so the wrapper has those two fields and no others.
+///   This fails at expansion.
+/// - `T::Repr` must sit at offset 0, and the wrapper must be exactly as large
+///   as `T::Repr` (`LAYOUT`). With the token zero-sized and alignment 1
+///   (`check_token_layout`), that leaves no padding. These fail when a helper
+///   instantiates the impl.
+///
+/// What remains is what the backend traits and `archmage` already guarantee:
+/// `T::Repr: Pod` is a bound on every backend's `Repr`, and the token types
+/// are sealed zero-sized proofs. The invocations sit next to each struct in
+/// `simd/generic/generated/`; the `allow(unsafe_code)` below is what lets the
+/// expansion compile there, so this macro is the only way to write the impl.
+macro_rules! impl_token_storage {
+    ($ty:ident, $backend:ident) => {
+        // SAFETY: the checks in this expansion pin the layout TokenStorage
+        // requires: exactly a Pod `T::Repr` at offset 0 followed by the sealed
+        // zero-sized token `T`. A supplied `T` proves CPU support, and the
+        // wrapper adds no invariants of its own to the representation's bits.
+        #[allow(unsafe_code)]
+        unsafe impl<T: crate::simd::backends::$backend> crate::simd_storage::TokenStorage
+            for $ty<T>
+        {
+            type Token = T;
+            const LAYOUT: () = {
+                assert!(core::mem::offset_of!($ty<T>, 0) == 0);
+                assert!(core::mem::size_of::<$ty<T>>() == core::mem::size_of::<T::Repr>());
+            };
+        }
+        const _: () = {
+            // Compiles only if the wrapper is exactly `(T::Repr, T)`.
+            #[allow(dead_code)]
+            fn fields_are_repr_then_token<T: crate::simd::backends::$backend>(
+                repr: T::Repr,
+                token: T,
+            ) -> $ty<T> {
+                $ty(repr, token)
+            }
+        };
+    };
+}
+pub(crate) use impl_token_storage;
+
+/// Marker trait for types that can be upcast with proof of context.
+///
+/// Deprecated since 0.9.30 and queued for removal in magetypes 0.10: nothing
+/// has ever implemented it. A generic vector carries its token, so moving a
+/// vector to a wider context means rebuilding it with that context's token;
+/// see the `magetypes::cast` module docs.
+///
+/// Public as `magetypes::cast::Upcast`. It is defined here only because it
+/// declares an `unsafe fn`, and this module is the one place in magetypes
+/// allowed to.
+#[deprecated(
+    since = "0.9.30",
+    note = "never implemented; a vector carries its token, so rebuild it under the wider token (for example `f32x8::from_array_t(v4, v.to_array())`). Will be removed in magetypes 0.10."
+)]
+pub trait Upcast<T> {
+    /// Upcast to a wider context type.
+    ///
+    /// # Safety
+    ///
+    /// Caller must ensure they are in an appropriate SIMD context
+    /// (inside `#[arcane]` function with matching token).
+    unsafe fn upcast(self) -> T;
 }
 
 /// Borrow raw storage as a vector, carrying an existing feature proof.
@@ -238,6 +319,421 @@ pub(crate) fn store<Src: Pod, Dst: Pod>(src: Src, dest: &mut Dst) {
     // bytes. Pod permits every source bit pattern as Dst; unaligned write
     // imposes no extra alignment and constructs no misaligned reference.
     unsafe { core::ptr::write_unaligned((dest as *mut Dst).cast::<Src>(), src) }
+}
+
+/// AVX-512 gather and scatter: the pointer-taking half of the `u32x16`,
+/// `i32x16` and `f32x16` methods in `simd/generic/gather.rs`.
+///
+/// The intrinsics access `base + 4 * offset` for per-lane signed 32-bit
+/// offsets, so the borrow alone proves nothing about the addresses. Every
+/// helper bounds the offsets against the borrow first, so each lane the
+/// instruction accesses has `0 <= offset < len`:
+///
+/// - Wrapping gathers mask with `N - 1`, where `N` is a power of two no larger
+///   than 2^31 (const-asserted). Every offset is in `0..N`.
+/// - Slice gathers and scatters enable only lanes whose unsigned index is below
+///   `min(len, 2^31)`. Masked-off lanes access no memory, so an empty slice is
+///   fine, and enabled offsets stay non-negative after sign extension.
+/// - Elements are 4-byte `Pod`: reads see only initialized bytes, and scatters
+///   (through `&mut`) may write any bit pattern.
+/// - Each helper is an `#[arcane]` region for the `X64V4Token` it takes.
+///
+/// `cargo xtask soundness` rejects gather and scatter intrinsics anywhere else
+/// in magetypes.
+///
+/// # The intrinsics, as Intel specifies them
+///
+/// Each entry quotes the Intel Intrinsics Guide (data version 3.6.9, 2024-07-12,
+/// the copy Rust's stdarch vendors as `library/stdarch/intrinsics_data/x86-intel.xml`)
+/// and links to the live guide. Reading the pseudocode:
+///
+/// - `MEM` is addressed in bits: `MEM[addr+31:addr]` is the 32 bits starting at
+///   `addr`, and an offset from an address is written in bits. That is what the
+///   `* 8` in the gather and scatter `addr` lines does (the guide's compress-store
+///   entries likewise advance their address by `size := 32` per 32-bit element).
+///   In bytes, lane `j` accesses the 4 bytes at
+///   `base_addr + SignExtend64(vindex[j]) * scale`.
+/// - In the masked forms `MEM` appears only inside `IF k[j]`, so a lane whose
+///   mask bit is clear reads or writes nothing.
+/// - The loops run `j` from 0 to 15. When scatter lanes share an index, the
+///   highest lane's value is the one left in memory, which `scatter_select`
+///   documents and `tests/gather_scatter_v4.rs` checks.
+/// - Every call here passes scale 4, the element size, so a lane with a
+///   non-negative index `v` accesses element `v` of the slice.
+/// - Rust takes `scale` as the const parameter `SCALE` and renames the arguments:
+///   `slice` is `base_addr`, `offsets` is `vindex`, `mask` is `k`, and a scatter's
+///   `src` is `a`. The Rust signatures are Rust 1.99's `core::arch::x86_64`.
+///
+/// ## `_mm512_set1_epi32`
+///
+/// [Intel's entry](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_set1_epi32)
+///
+/// - Synopsis: `__m512i _mm512_set1_epi32(int a)`
+/// - Instruction: `VPBROADCASTD zmm, r32`
+/// - CPUID flags: AVX512F
+/// - Rust: `pub const fn _mm512_set1_epi32(a: i32) -> __m512i`
+///
+/// Description:
+///
+/// > Broadcast 32-bit integer "a" to all elements of "dst".
+///
+/// Operation:
+///
+/// ```text
+/// FOR j := 0 to 15
+///     i := j*32
+///     dst[i+31:i] := a[31:0]
+/// ENDFOR
+/// dst[MAX:512] := 0
+/// ```
+///
+/// ## `_mm512_and_si512`
+///
+/// [Intel's entry](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_and_si512)
+///
+/// - Synopsis: `__m512i _mm512_and_si512(__m512i a, __m512i b)`
+/// - Instruction: `VPANDD zmm, zmm, zmm`
+/// - CPUID flags: AVX512F
+/// - Rust: `pub const fn _mm512_and_si512(a: __m512i, b: __m512i) -> __m512i`
+///
+/// Description:
+///
+/// > Compute the bitwise AND of 512 bits (representing integer data) in "a" and
+/// > "b", and store the result in "dst".
+///
+/// Operation:
+///
+/// ```text
+/// dst[511:0] := (a[511:0] AND b[511:0])
+/// dst[MAX:512] := 0
+/// ```
+///
+/// ## `_mm512_cmplt_epu32_mask`
+///
+/// [Intel's entry](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_cmplt_epu32_mask)
+///
+/// - Synopsis: `__mmask16 _mm512_cmplt_epu32_mask(__m512i a, __m512i b)`
+/// - Instruction: `VPCMPUD k, zmm, zmm, imm8`
+/// - CPUID flags: AVX512F
+/// - Rust: `pub const fn _mm512_cmplt_epu32_mask(a: __m512i, b: __m512i) -> __mmask16`
+///
+/// Description:
+///
+/// > Compare packed unsigned 32-bit integers in "a" and "b" for less-than, and
+/// > store the results in mask vector "k".
+///
+/// Operation:
+///
+/// ```text
+/// FOR j := 0 to 15
+///     i := j*32
+///     k[j] := ( a[i+31:i] < b[i+31:i] ) ? 1 : 0
+/// ENDFOR
+/// k[MAX:16] := 0
+/// ```
+///
+/// ## `_mm512_i32gather_epi32`
+///
+/// [Intel's entry](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_i32gather_epi32)
+///
+/// - Synopsis: `__m512i _mm512_i32gather_epi32(__m512i vindex, void const* base_addr, int scale)`
+/// - Instruction: `VPGATHERDD zmm, vm32z`
+/// - CPUID flags: AVX512F
+/// - Rust: `pub unsafe fn _mm512_i32gather_epi32<const SCALE: i32>(offsets: __m512i, slice: *const i32) -> __m512i`
+///
+/// Description:
+///
+/// > Gather 32-bit integers from memory using 32-bit indices. 32-bit elements are
+/// > loaded from addresses starting at "base_addr" and offset by each 32-bit
+/// > element in "vindex" (each index is scaled by the factor in "scale"). Gathered
+/// > elements are merged into "dst". "scale" should be 1, 2, 4 or 8.
+///
+/// Operation:
+///
+/// ```text
+/// FOR j := 0 to 15
+///     i := j*32
+///     m := j*32
+///     addr := base_addr + SignExtend64(vindex[m+31:m]) * ZeroExtend64(scale) * 8
+///     dst[i+31:i] := MEM[addr+31:addr]
+/// ENDFOR
+/// dst[MAX:512] := 0
+/// ```
+///
+/// ## `_mm512_i32gather_ps`
+///
+/// [Intel's entry](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_i32gather_ps)
+///
+/// - Synopsis: `__m512 _mm512_i32gather_ps(__m512i vindex, void const* base_addr, int scale)`
+/// - Instruction: `VGATHERDPS zmm, vm32z`
+/// - CPUID flags: AVX512F
+/// - Rust: `pub unsafe fn _mm512_i32gather_ps<const SCALE: i32>(offsets: __m512i, slice: *const f32) -> __m512`
+///
+/// Description:
+///
+/// > Gather single-precision (32-bit) floating-point elements from memory using
+/// > 32-bit indices. 32-bit elements are loaded from addresses starting at
+/// > "base_addr" and offset by each 32-bit element in "vindex" (each index is
+/// > scaled by the factor in "scale"). Gathered elements are merged into "dst".
+/// > "scale" should be 1, 2, 4 or 8.
+///
+/// Operation:
+///
+/// ```text
+/// FOR j := 0 to 15
+///     i := j*32
+///     m := j*32
+///     addr := base_addr + SignExtend64(vindex[m+31:m]) * ZeroExtend64(scale) * 8
+///     dst[i+31:i] := MEM[addr+31:addr]
+/// ENDFOR
+/// dst[MAX:512] := 0
+/// ```
+///
+/// ## `_mm512_mask_i32gather_epi32`
+///
+/// [Intel's entry](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_mask_i32gather_epi32)
+///
+/// - Synopsis: `__m512i _mm512_mask_i32gather_epi32(__m512i src, __mmask16 k, __m512i vindex, void const* base_addr, int scale)`
+/// - Instruction: `VPGATHERDD zmm {k}, vm32z`
+/// - CPUID flags: AVX512F
+/// - Rust: `pub unsafe fn _mm512_mask_i32gather_epi32<const SCALE: i32>(src: __m512i, mask: __mmask16, offsets: __m512i, slice: *const i32) -> __m512i`
+///
+/// Description:
+///
+/// > Gather 32-bit integers from memory using 32-bit indices. 32-bit elements are
+/// > loaded from addresses starting at "base_addr" and offset by each 32-bit
+/// > element in "vindex" (each index is scaled by the factor in "scale"). Gathered
+/// > elements are merged into "dst" using writemask "k" (elements are copied from
+/// > "src" when the corresponding mask bit is not set). "scale" should be 1, 2, 4
+/// > or 8.
+///
+/// Operation:
+///
+/// ```text
+/// FOR j := 0 to 15
+///     i := j*32
+///     m := j*32
+///     IF k[j]
+///         addr := base_addr + SignExtend64(vindex[m+31:m]) * ZeroExtend64(scale) * 8
+///         dst[i+31:i] := MEM[addr+31:addr]
+///     ELSE
+///         dst[i+31:i] := src[i+31:i]
+///     FI
+/// ENDFOR
+/// dst[MAX:512] := 0
+/// ```
+///
+/// ## `_mm512_mask_i32gather_ps`
+///
+/// [Intel's entry](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_mask_i32gather_ps)
+///
+/// - Synopsis: `__m512 _mm512_mask_i32gather_ps(__m512 src, __mmask16 k, __m512i vindex, void const* base_addr, int scale)`
+/// - Instruction: `VGATHERDPS zmm {k}, vm32z`
+/// - CPUID flags: AVX512F
+/// - Rust: `pub unsafe fn _mm512_mask_i32gather_ps<const SCALE: i32>(src: __m512, mask: __mmask16, offsets: __m512i, slice: *const f32) -> __m512`
+///
+/// Description:
+///
+/// > Gather single-precision (32-bit) floating-point elements from memory using
+/// > 32-bit indices. 32-bit elements are loaded from addresses starting at
+/// > "base_addr" and offset by each 32-bit element in "vindex" (each index is
+/// > scaled by the factor in "scale"). Gathered elements are merged into "dst"
+/// > using writemask "k" (elements are copied from "src" when the corresponding
+/// > mask bit is not set). "scale" should be 1, 2, 4 or 8.
+///
+/// Operation:
+///
+/// ```text
+/// FOR j := 0 to 15
+///     i := j*32
+///     m := j*32
+///     IF k[j]
+///         addr := base_addr + SignExtend64(vindex[m+31:m]) * ZeroExtend64(scale) * 8
+///         dst[i+31:i] := MEM[addr+31:addr]
+///     ELSE
+///         dst[i+31:i] := src[i+31:i]
+///     FI
+/// ENDFOR
+/// dst[MAX:512] := 0
+/// ```
+///
+/// ## `_mm512_mask_i32scatter_epi32`
+///
+/// [Intel's entry](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_mask_i32scatter_epi32)
+///
+/// - Synopsis: `void _mm512_mask_i32scatter_epi32(void* base_addr, __mmask16 k, __m512i vindex, __m512i a, int scale)`
+/// - Instruction: `VPSCATTERDD vm32z {k}, zmm`
+/// - CPUID flags: AVX512F
+/// - Rust: `pub unsafe fn _mm512_mask_i32scatter_epi32<const SCALE: i32>(slice: *mut i32, mask: __mmask16, offsets: __m512i, src: __m512i)`
+///
+/// Description:
+///
+/// > Scatter 32-bit integers from "a" into memory using 32-bit indices. 32-bit
+/// > elements are stored at addresses starting at "base_addr" and offset by each
+/// > 32-bit element in "vindex" (each index is scaled by the factor in "scale")
+/// > subject to mask "k" (elements are not stored when the corresponding mask bit
+/// > is not set). "scale" should be 1, 2, 4 or 8.
+///
+/// Operation:
+///
+/// ```text
+/// FOR j := 0 to 15
+///     i := j*32
+///     m := j*32
+///     IF k[j]
+///         addr := base_addr + SignExtend64(vindex[m+31:m]) * ZeroExtend64(scale) * 8
+///         MEM[addr+31:addr] := a[i+31:i]
+///     FI
+/// ENDFOR
+/// ```
+///
+/// ## `_mm512_mask_i32scatter_ps`
+///
+/// [Intel's entry](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm512_mask_i32scatter_ps)
+///
+/// - Synopsis: `void _mm512_mask_i32scatter_ps(void* base_addr, __mmask16 k, __m512i vindex, __m512 a, int scale)`
+/// - Instruction: `VSCATTERDPS vm32z {k}, zmm`
+/// - CPUID flags: AVX512F
+/// - Rust: `pub unsafe fn _mm512_mask_i32scatter_ps<const SCALE: i32>(slice: *mut f32, mask: __mmask16, offsets: __m512i, src: __m512)`
+///
+/// Description:
+///
+/// > Scatter single-precision (32-bit) floating-point elements from "a" into memory
+/// > using 32-bit indices. 32-bit elements are stored at addresses starting at
+/// > "base_addr" and offset by each 32-bit element in "vindex" (each index is
+/// > scaled by the factor in "scale") subject to mask "k" (elements are not stored
+/// > when the corresponding mask bit is not set). "scale" should be 1, 2, 4 or 8.
+///
+/// Operation:
+///
+/// ```text
+/// FOR j := 0 to 15
+///     i := j*32
+///     m := j*32
+///     IF k[j]
+///         addr := base_addr + SignExtend64(vindex[m+31:m]) * ZeroExtend64(scale) * 8
+///         MEM[addr+31:addr] := a[i+31:i]
+///     FI
+/// ENDFOR
+/// ```
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+pub(crate) mod gather {
+    use super::Pod;
+    use archmage::X64V4Token;
+    use core::arch::x86_64::{__m512, __m512i};
+
+    const fn assert_wrapping_table<const N: usize>() {
+        assert!(
+            N.is_power_of_two() && N <= 1 << 31,
+            "gather_wrapping: the table length must be a power of two no larger than 2^31"
+        );
+    }
+
+    const fn assert_lane<E>() {
+        assert!(size_of::<E>() == 4, "gather/scatter elements are 4 bytes");
+    }
+
+    /// Exclusive bound on enabled indices for a slice of `len` elements:
+    /// `min(len, 2^31)`, as the bit pattern of the unsigned compare operand.
+    #[inline(always)]
+    fn lane_bound(len: usize) -> i32 {
+        len.min(1 << 31) as u32 as i32
+    }
+
+    #[archmage::arcane(import_intrinsics)]
+    pub(crate) fn gather_wrapping_epi32<E: Pod, const N: usize>(
+        _token: X64V4Token,
+        table: &[E; N],
+        idx: __m512i,
+    ) -> __m512i {
+        const { assert_wrapping_table::<N>() };
+        const { assert_lane::<E>() };
+        let off = _mm512_and_si512(idx, _mm512_set1_epi32((N - 1) as i32));
+        // SAFETY: per the `_mm512_i32gather_epi32` Operation above, lane `j` reads
+        // 4 bytes at `table + SignExtend64(off[j]) * 4`. `off[j] = idx[j] & (N - 1)`
+        // is in `0..N` (`N` a power of two <= 2^31), so sign extension keeps it
+        // and the read is `table[off[j]]`.
+        unsafe { _mm512_i32gather_epi32::<4>(off, table.as_ptr().cast()) }
+    }
+
+    #[archmage::arcane(import_intrinsics)]
+    pub(crate) fn gather_wrapping_ps<const N: usize>(
+        _token: X64V4Token,
+        table: &[f32; N],
+        idx: __m512i,
+    ) -> __m512 {
+        const { assert_wrapping_table::<N>() };
+        let off = _mm512_and_si512(idx, _mm512_set1_epi32((N - 1) as i32));
+        // SAFETY: per the `_mm512_i32gather_ps` Operation above, lane `j` reads
+        // 4 bytes at `table + SignExtend64(off[j]) * 4`. `off[j] = idx[j] & (N - 1)`
+        // is in `0..N` (`N` a power of two <= 2^31), so sign extension keeps it
+        // and the read is `table[off[j]]`.
+        unsafe { _mm512_i32gather_ps::<4>(off, table.as_ptr()) }
+    }
+
+    #[archmage::arcane(import_intrinsics)]
+    pub(crate) fn gather_or_epi32<E: Pod>(
+        _token: X64V4Token,
+        table: &[E],
+        idx: __m512i,
+        or: __m512i,
+    ) -> __m512i {
+        const { assert_lane::<E>() };
+        let live = _mm512_cmplt_epu32_mask(idx, _mm512_set1_epi32(lane_bound(table.len())));
+        // SAFETY: per the `_mm512_mask_i32gather_epi32` Operation above, lanes with
+        // `live[j]` clear read nothing and copy `or[j]`; the rest read 4 bytes at
+        // `table + SignExtend64(idx[j]) * 4`. `live[j]` means `idx[j] < min(len, 2^31)`
+        // unsigned, so sign extension keeps `idx[j]` and the read is `table[idx[j]]`.
+        unsafe { _mm512_mask_i32gather_epi32::<4>(or, live, idx, table.as_ptr().cast()) }
+    }
+
+    #[archmage::arcane(import_intrinsics)]
+    pub(crate) fn gather_or_ps(
+        _token: X64V4Token,
+        table: &[f32],
+        idx: __m512i,
+        or: __m512,
+    ) -> __m512 {
+        let live = _mm512_cmplt_epu32_mask(idx, _mm512_set1_epi32(lane_bound(table.len())));
+        // SAFETY: per the `_mm512_mask_i32gather_ps` Operation above, lanes with
+        // `live[j]` clear read nothing and copy `or[j]`; the rest read 4 bytes at
+        // `table + SignExtend64(idx[j]) * 4`. `live[j]` means `idx[j] < min(len, 2^31)`
+        // unsigned, so sign extension keeps `idx[j]` and the read is `table[idx[j]]`.
+        unsafe { _mm512_mask_i32gather_ps::<4>(or, live, idx, table.as_ptr()) }
+    }
+
+    #[archmage::arcane(import_intrinsics)]
+    pub(crate) fn scatter_select_epi32<E: Pod>(
+        _token: X64V4Token,
+        dst: &mut [E],
+        enable: u16,
+        idx: __m512i,
+        v: __m512i,
+    ) {
+        const { assert_lane::<E>() };
+        let live = enable & _mm512_cmplt_epu32_mask(idx, _mm512_set1_epi32(lane_bound(dst.len())));
+        // SAFETY: per the `_mm512_mask_i32scatter_epi32` Operation above, only lanes
+        // with `live[j]` set write: 4 bytes at `dst + SignExtend64(idx[j]) * 4`.
+        // `live[j]` implies unsigned `idx[j] < min(len, 2^31)`, so that is `dst[idx[j]]`,
+        // exclusively borrowed here. `E` is Pod, so any written bit pattern is valid.
+        unsafe { _mm512_mask_i32scatter_epi32::<4>(dst.as_mut_ptr().cast(), live, idx, v) }
+    }
+
+    #[archmage::arcane(import_intrinsics)]
+    pub(crate) fn scatter_select_ps(
+        _token: X64V4Token,
+        dst: &mut [f32],
+        enable: u16,
+        idx: __m512i,
+        v: __m512,
+    ) {
+        let live = enable & _mm512_cmplt_epu32_mask(idx, _mm512_set1_epi32(lane_bound(dst.len())));
+        // SAFETY: per the `_mm512_mask_i32scatter_ps` Operation above, only lanes
+        // with `live[j]` set write: 4 bytes at `dst + SignExtend64(idx[j]) * 4`.
+        // `live[j]` implies unsigned `idx[j] < min(len, 2^31)`, so that is `dst[idx[j]]`,
+        // exclusively borrowed here. Any written bit pattern is a valid `f32`.
+        unsafe { _mm512_mask_i32scatter_ps::<4>(dst.as_mut_ptr(), live, idx, v) }
+    }
 }
 
 #[cfg(test)]

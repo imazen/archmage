@@ -230,12 +230,8 @@ fn gen_struct(ty: &SimdType) -> String {
         {note_section}#[derive(Clone, Copy)]
         #[repr(C)]
         pub struct {name}<T: {backend}>(pub(crate) T::Repr, pub(crate) T);
-        // SAFETY: repr(C) pair of Pod storage and a sealed 1-ZST token.
-        // A supplied T proves CPU support; the wrapper adds no bit invariants.
-        // Helpers additionally check token size/alignment at monomorphization.
-        unsafe impl<T: {backend}> crate::simd_storage::TokenStorage for {name}<T> {{
-            type Token = T;
-        }}
+        // The `unsafe impl` and the checks behind it live in `simd_storage`.
+        crate::simd_storage::impl_token_storage!({name}, {backend});
         {phantom_comment}{layout_asserts}
     "}
 }
@@ -1636,6 +1632,104 @@ fn gen_platform(ty: &SimdType) -> String {
             "}
         }
     }
+}
+
+/// Native raw construction without a token requires a compiler-checked context.
+/// Existing token-taking constructors retain their signatures and proof source.
+pub(super) fn gen_raw_interop(ty: &SimdType, registry: &crate::registry::Registry) -> String {
+    let name = ty.name();
+    let mut code = String::new();
+    let mut platforms = Vec::new();
+    match ty.width {
+        SimdWidth::W128 => {
+            platforms.push(("x86_64", "X64V3Token", "v3", x86_raw_type(ty), ""));
+            platforms.push(("aarch64", "NeonToken", "neon", arm_repr_hint(ty), ""));
+            platforms.push(("wasm32", "Wasm128Token", "wasm128", "v128", ""));
+        }
+        SimdWidth::W256 => {
+            platforms.push(("x86_64", "X64V3Token", "v3", x86_raw_type(ty), ""));
+        }
+        SimdWidth::W512 => {
+            platforms.push((
+                "x86_64",
+                "X64V4Token",
+                "v4",
+                x86_raw_type(ty),
+                ", feature = \"avx512\"",
+            ));
+            platforms.push((
+                "x86_64",
+                "X64V4xToken",
+                "v4x",
+                x86_raw_type(ty),
+                ", feature = \"avx512\"",
+            ));
+        }
+    }
+    for (arch, token, tier, raw, feature) in platforms {
+        let features = registry
+            .find_token(token)
+            .expect("registered raw backend")
+            .features
+            .join(",");
+        let cfg = if feature.is_empty() {
+            format!("target_arch = \"{arch}\"")
+        } else {
+            format!("all(target_arch = \"{arch}\"{feature})")
+        };
+        let legacy = if arch != "x86_64" || ty.width == SimdWidth::W512 {
+            let from_fn = format!("from_{}", raw.trim_start_matches('_'));
+            let from_fn = if from_fn.ends_with("_t") {
+                from_fn
+            } else {
+                format!("{from_fn}_t")
+            };
+            formatdoc! {r#"
+                /// Get the raw `{raw}` value.
+                #[inline(always)]
+                pub fn raw(self) -> core::arch::{arch}::{raw} {{
+                    self.0
+                }}
+
+                /// Wrap a raw `{raw}` using an existing CPU capability token.
+                #[inline(always)]
+                pub fn {from_fn}(token: archmage::{token}, value: core::arch::{arch}::{raw}) -> Self {{
+                    Self(value, token)
+                }}
+            "#}
+        } else {
+            String::new()
+        };
+        code.push_str(&formatdoc! {r#"
+            #[cfg({cfg})]
+            impl {name}<archmage::{token}> {{
+                {legacy}
+                /// Wrap a raw `{raw}` using an explicit CPU capability token.
+                ///
+                /// The caller does not need a target-feature annotation.
+                #[forbid(unsafe_code)]
+                #[inline(always)]
+                pub fn from_raw_t(token: archmage::{token}, value: core::arch::{arch}::{raw}) -> Self {{
+                    Self(value, token)
+                }}
+
+                /// Wrap a raw `{raw}` in a matching target-feature context.
+                ///
+                /// Rust requires the caller to enable the `{tier}` tier's features.
+                /// Use an archmage `#[rite({tier})]` helper or `#[arcane]` entry point.
+                #[forbid(unsafe_code)]
+                /// # Safety
+                /// The CPU must support the enabled target features. Safe calls require a
+                /// matching or stronger feature context, which Rust checks.
+                #[target_feature(enable = "{features}")]
+                #[inline]
+                pub fn from_raw(value: core::arch::{arch}::{raw}) -> Self {{
+                    Self(value, archmage::{token}::from_context())
+                }}
+            }}
+        "#});
+    }
+    code
 }
 
 fn gen_popcnt(ty: &SimdType) -> String {

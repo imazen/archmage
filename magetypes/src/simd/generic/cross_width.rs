@@ -31,8 +31,9 @@
 //!    function, so a safe call requires rustc to verify the caller's own
 //!    feature context covers the tier, and any other call is `unsafe`
 //!    with the obligation on the caller. magetypes never forges: the
-//!    soundness scanner's structural rules reject both
-//!    `from_context` and `forge_token_dangerously` in this crate.
+//!    soundness scanner permits explicit `archmage::Token::from_context()`
+//!    only in safe functions with matching target features, and rejects
+//!    `forge_token_dangerously` in this crate.
 //!
 //! 2. **The repr-construction operation is sound under those features.**
 //!    For native intrinsic paths, the chosen instruction is documented

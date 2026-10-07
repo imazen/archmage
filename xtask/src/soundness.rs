@@ -45,16 +45,19 @@
 //!   database is stale (`just intrinsics-refresh`) or the name is a typo.
 //! - **STRUCTURAL RULE** — a magetypes source pattern that the soundness
 //!   model forbids (see [`structural_rules`]): token fabrication routes
-//!   (`MaybeUninit`, `mem::zeroed`, forging), `transmute` outside the
-//!   audited backend impls, token-less wrapper constructors
-//!   (`Default`/serde/bytemuck), or backend-trait methods without a `self`
+//!   (`MaybeUninit`, `mem::zeroed`, forging); outside `simd_storage.rs`, the
+//!   `unsafe` keyword in any form, a bare `transmute`, gather/scatter
+//!   intrinsics or `unsafe impl Pod`; an `allow(unsafe_code)` other than the
+//!   one on `mod simd_storage;`, or a crate root without
+//!   `#![deny(unsafe_code)]`; an `impl_token_storage!` struct without
+//!   `#[repr(C)]`; token-less wrapper constructors
+//!   (`Default`/serde/bytemuck); or backend-trait methods without a `self`
 //!   receiver (which would allow calling intrinsics via UFCS without
 //!   holding a token).
 //! - **SAFETY-COMMENT DISCIPLINE** — every `unsafe {` block outside the
 //!   generated backend impls must carry an adjacent `// SAFETY:` comment
-//!   (see [`safety_comment_rules`]); the generated impls files must carry
-//!   their file-header audit contract instead (one uniform invariant,
-//!   ~2000 identical blocks).
+//!   (see [`safety_comment_rules`]); a generated impls file that contains
+//!   `unsafe` must carry the file-header audit contract instead.
 //! - **VACUOUS PASS** — the total number of verified calls fell below
 //!   [`MIN_VERIFIED_CALLS`], or a file listed in [`REQUIRED_FILE_FLOORS`]
 //!   produced fewer verified calls than its floor. This guards against the
@@ -78,8 +81,8 @@
 //!   the scanner can never silently stop seeing the bulk of the code.
 //! - It verifies *feature availability*, not memory safety: `unsafe` blocks
 //!   whose obligation is pointer validity/layout (loads, stores,
-//!   transmutes) are counted and reported by `cargo xtask audit`
-//!   (`unsafe`-inventory) and exercised under Miri, not proven here.
+//!   transmutes) are confined to `simd_storage.rs` by the structural rules
+//!   and exercised under Miri, not proven here.
 
 use anyhow::{Context, Result, bail};
 use regex::Regex;
@@ -89,6 +92,8 @@ use std::path::{Path, PathBuf};
 
 use crate::IntrinsicEntry;
 use crate::registry::Registry;
+
+mod raw_context;
 
 /// Directories scanned for intrinsic calls, relative to the repo root.
 ///
@@ -116,7 +121,17 @@ const REQUIRED_FILE_FLOORS: &[(&str, usize)] = &[
     ("magetypes/src/simd/impls/wasm128.rs", 700), // measured 942
     ("magetypes/src/simd/generic/cross_width.rs", 6), // measured 8
     ("magetypes/src/simd/generic/convert_f16.rs", 18), // measured 26
+    ("magetypes/src/simd_storage.rs", 13),       // measured 18 (gather/scatter)
 ];
+
+/// The one magetypes file allowed `unsafe` of any kind, `unsafe impl Pod`, and
+/// gather/scatter intrinsics. Each `unsafe` there states its invariant next to
+/// the others, so auditing magetypes' unsafe means reading one file. The crate
+/// root denies `unsafe_code` everywhere else.
+const STORAGE_HOME: &str = "magetypes/src/simd_storage.rs";
+
+/// The magetypes crate root, which must deny `unsafe_code`.
+const LIB_HOME: &str = "magetypes/src/lib.rs";
 
 /// Identifiers that look like intrinsics but are deliberately not verified.
 /// Every entry must carry a justification. Keep this list short — it is
@@ -325,6 +340,7 @@ impl<'r> Scanner<'r> {
         }
 
         structural_rules(rel, &text, &mut out.errors);
+        raw_context::verify(self.reg, rel, &text, &mut out.errors);
         safety_comment_rules(rel, raw, &mut out.errors);
         out
     }
@@ -427,14 +443,13 @@ impl<'r> Scanner<'r> {
 ///
 /// - In handwritten/generated crate sources: every `unsafe {` block must
 ///   have a `SAFETY`-bearing comment within the four preceding lines (or
-///   on the same line). This holds today at 100% coverage — archmage
-///   `src/` (81/81 generated forge sites) and magetypes outside `impls/`
-///   (225/225).
-/// - The generated backend impls (`magetypes/src/simd/impls/*.rs`) carry
-///   ~2000 uniform one-line `unsafe { intrinsic }` bodies; a per-block
-///   comment would be pure noise, so the generator emits a single
-///   file-header audit contract instead, and this rule enforces the
-///   header's presence.
+///   on the same line). In archmage `src/` these are the token
+///   constructors' detection sites; in magetypes they are the storage
+///   helpers in `simd_storage.rs`.
+/// - The generated backend impls (`magetypes/src/simd/impls/*.rs`) are
+///   checked for a file-header audit contract (emitted by the generator)
+///   instead of per-block comments, wherever they contain `unsafe`. They
+///   contain none today: the structural rules reject `unsafe` there.
 /// - Macro-expansion snapshots (`.expanded.rs`) are exempt: comments
 ///   cannot survive tokenization, so proc-macro output structurally cannot
 ///   carry them. Snapshots still get full intrinsic-gating verification;
@@ -495,18 +510,14 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
     if !in_magetypes {
         return;
     }
-    let is_backend_impl = rel.starts_with("magetypes/src/simd/impls/");
 
     // Token fabrication routes. Tokens must only come from summon() or an
-    // explicit archmage forge — magetypes has no business creating them.
+    // explicit archmage forge. Safe from_context calls are checked separately
+    // against the enclosing function, never against an impl or token parameter.
     for (pat, why) in [
         (
             r"\bforge_token_dangerously\b",
             "token forging inside magetypes",
-        ),
-        (
-            r"\bfrom_context\b",
-            "token construction from a feature context inside magetypes",
         ),
         (
             r"\bMaybeUninit\b",
@@ -534,12 +545,66 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
         }
     }
 
-    // `transmute` is allowed only inside the backend impls (array <-> Repr
-    // bitcasts inside impl-for-token blocks, verified by the intrinsic
-    // scanner's context machinery + Miri). Elsewhere in magetypes the
-    // audited idiom is `transmute_copy` on size-asserted types; a bare
-    // `transmute` outside impls/ is a red flag.
-    if !is_backend_impl {
+    // Every `unsafe` in magetypes lives in the storage file, where each one
+    // states its invariant next to the others: blocks, impls, traits and
+    // functions alike. Code that needs `unsafe` gets a helper there instead.
+    // The crate root's `#![deny(unsafe_code)]` enforces the same thing for what
+    // the host compiles; this textual check also covers code cfg'd out for the
+    // host's architecture.
+    if rel != STORAGE_HOME {
+        let re = Regex::new(r"\bunsafe\b").expect("unsafe keyword regex");
+        for m in re.find_iter(text) {
+            errors.push(format!(
+                "{}:{}: STRUCTURAL RULE: `unsafe` outside {} — magetypes keeps all \
+                 of its unsafe code in that file; add a helper there instead.",
+                rel,
+                line_of(text, m.start()),
+                STORAGE_HOME
+            ));
+        }
+    }
+
+    // Lint attributes that would let unsafe code back in. The one sanctioned
+    // `allow(unsafe_code)` outside the storage file is the attribute on
+    // `mod simd_storage;` in lib.rs; the storage file's own macros carry the
+    // rest. lib.rs must keep the crate-wide deny.
+    if rel != STORAGE_HOME {
+        let re = Regex::new(r"\b(?:allow|expect|warn)\s*\([^)]*\bunsafe_code\b[^)]*\)\s*\]")
+            .expect("unsafe_code lint attribute regex");
+        for m in re.find_iter(text) {
+            let sanctioned = rel == LIB_HOME
+                && text[m.end()..]
+                    .trim_start()
+                    .starts_with("mod simd_storage;");
+            if !sanctioned {
+                errors.push(format!(
+                    "{}:{}: STRUCTURAL RULE: `{}` outside {} — only `mod simd_storage;` \
+                     in {} may allow unsafe code.",
+                    rel,
+                    line_of(text, m.start()),
+                    m.as_str(),
+                    STORAGE_HOME,
+                    LIB_HOME
+                ));
+            }
+        }
+    }
+    if rel == LIB_HOME
+        && !text.contains("#![deny(unsafe_code)]")
+        && !text.contains("#![forbid(unsafe_code)]")
+    {
+        errors.push(format!(
+            "{}: STRUCTURAL RULE: missing `#![deny(unsafe_code)]` — magetypes denies \
+             unsafe code everywhere except {}.",
+            LIB_HOME, STORAGE_HOME
+        ));
+    }
+
+    // A bare `transmute` needs `unsafe`, so outside the storage file it is
+    // already rejected above; this names the specific problem. Inside the
+    // storage file the audited idiom is `transmute_copy` behind compile-time
+    // size checks.
+    if rel != STORAGE_HOME {
         let re = Regex::new(r"\btransmute\b").expect("transmute regex");
         for m in re.find_iter(text) {
             // `transmute_copy` is a different, length-checked-by-Dst idiom.
@@ -547,9 +612,8 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
                 continue;
             }
             errors.push(format!(
-                "{}:{}: STRUCTURAL RULE: bare `transmute` outside simd/impls/ — use \
-                 the audited size-asserted byte-cast helpers or move the bitcast \
-                 into a backend impl.",
+                "{}:{}: STRUCTURAL RULE: bare `transmute` outside simd_storage.rs — \
+                 use the size-asserted byte-cast helpers there.",
                 rel,
                 line_of(text, m.start())
             ));
@@ -581,11 +645,31 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
         }
     }
 
+    // Gather/scatter intrinsics address memory at `base + offset * scale`
+    // for per-lane offsets, so a borrowed slice proves nothing about the
+    // lanes. Their bounds proof is the offset masking or lane enabling in the
+    // storage helpers; anywhere else, including the generated impls, the
+    // offsets would be unchecked.
+    if rel != STORAGE_HOME {
+        let re =
+            Regex::new(r"\b_mm\w*_i(?:32|64)(?:lo)?(?:gather|scatter)_\w+").expect("gather regex");
+        for m in re.find_iter(text) {
+            errors.push(format!(
+                "{}:{}: STRUCTURAL RULE: `{}` outside {} — gather/scatter offsets \
+                 must be bounded against the borrowed slice, which only that file does.",
+                rel,
+                line_of(text, m.start()),
+                m.as_str(),
+                STORAGE_HOME
+            ));
+        }
+    }
+
     // `Pod` says "every bit pattern is valid" — implementing it for a
     // token-bearing wrapper would let `copy`/`cast`/`view` manufacture a
     // proof out of arbitrary bytes. The only legitimate impls are the
     // `impl_pod!` ones on raw scalars and stdarch vector types.
-    if rel != "magetypes/src/simd_storage.rs" {
+    if rel != STORAGE_HOME {
         let re =
             Regex::new(r"unsafe\s+impl(?:\s*<[^>{]*>)?\s+(?:\w+::)*Pod\b").expect("pod impl regex");
         for m in re.find_iter(text) {
@@ -600,13 +684,13 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
     }
 
     // `TokenStorage`'s contract is "repr(C) pair of a Pod representation and a
-    // 1-ZST token". `check_token_layout` verifies the token half at
-    // monomorphization; the layout half is only guaranteed by the attribute,
-    // so require it to be present on the implementing struct.
+    // 1-ZST token". `impl_token_storage!` checks the layout at compile time
+    // (field arity and types, Repr at offset 0, sizes); as a second line,
+    // require the attribute that guarantees that layout on each struct it is
+    // invoked for.
     {
-        let impl_re =
-            Regex::new(r"unsafe\s+impl(?:\s*<[^>{]*>)?\s+(?:\w+::)*TokenStorage\s+for\s+(\w+)")
-                .expect("token storage impl regex");
+        let impl_re = Regex::new(r"impl_token_storage!\s*\(\s*(\w+)")
+            .expect("token storage invocation regex");
         for m in impl_re.captures_iter(text) {
             let ty = m.get(1).unwrap().as_str();
             let struct_re = Regex::new(&format!(
@@ -620,7 +704,7 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
                 .unwrap_or_default();
             if !(attrs.contains("repr(C)") || attrs.contains("repr(transparent)")) {
                 errors.push(format!(
-                    "{}:{}: STRUCTURAL RULE: `unsafe impl TokenStorage for {}` but `{}` \
+                    "{}:{}: STRUCTURAL RULE: `impl_token_storage!({}, ..)` but `{}` \
                      is not declared `#[repr(C)]` in this file — TokenStorage's contract \
                      requires the Repr-then-token layout the attribute guarantees.",
                     rel,
@@ -978,7 +1062,7 @@ mod tests {
     fn catches_feature_mismatch_in_impl() {
         let scan = scan(
             "impl F32x4Backend for archmage::X64V3Token {\n\
-             fn f(self) { let _ = unsafe { _mm512_setzero_ps() }; }\n\
+             fn f(self) { let _ = _mm512_setzero_ps(); }\n\
              }\n",
         );
         assert_eq!(scan.errors.len(), 1, "{:?}", scan.errors);
@@ -992,7 +1076,7 @@ mod tests {
 
     #[test]
     fn catches_ungated_intrinsic() {
-        let scan = scan("fn helper() { let _ = unsafe { vaddq_f32(a, b) }; }\n");
+        let scan = scan("fn helper() { let _ = vaddq_f32(a, b); }\n");
         assert_eq!(scan.errors.len(), 1, "{:?}", scan.errors);
         assert!(scan.errors[0].contains("UNGATED"), "{:?}", scan.errors);
     }
@@ -1001,7 +1085,7 @@ mod tests {
     fn catches_ungated_in_trait_default_body() {
         let scan = scan(
             "pub trait F32x8Backend: SimdToken {\n\
-             fn rcp(self, a: Self::Repr) -> Self::Repr { unsafe { _mm256_rcp_ps(a) } }\n\
+             fn rcp(self, a: Self::Repr) -> Self::Repr { _mm256_rcp_ps(a) }\n\
              }\n",
         );
         // Trait blocks are not gating contexts — Self could be ScalarToken.
@@ -1012,7 +1096,7 @@ mod tests {
     #[test]
     fn ungated_x86_baseline_intrinsics_are_sound() {
         // sse/sse2 are the x86-64 ABI baseline — sound without any proof.
-        let scan = scan("fn helper(a: __m128) -> __m128 { unsafe { _mm_rcp_ps(a) } }\n");
+        let scan = scan("fn helper(a: __m128) -> __m128 { _mm_rcp_ps(a) }\n");
         assert!(scan.errors.is_empty(), "{:?}", scan.errors);
         assert_eq!(scan.verified, 1);
     }
@@ -1021,7 +1105,7 @@ mod tests {
     fn accepts_gated_by_impl_token() {
         let scan = scan(
             "impl F32x8Backend for archmage::X64V3Token {\n\
-             fn add(self, a: R, b: R) -> R { unsafe { _mm256_add_ps(a, b) } }\n\
+             fn add(self, a: R, b: R) -> R { _mm256_add_ps(a, b) }\n\
              }\n",
         );
         assert!(scan.errors.is_empty(), "{:?}", scan.errors);
@@ -1058,7 +1142,7 @@ mod tests {
         let scan = scan(
             "impl I64x2Backend for archmage::X64V3Token {\n\
              fn min_fast(self, a: R, b: R, _t: X64V4Token) -> R {\n\
-             unsafe { _mm_min_epi64(a, b) }\n\
+             _mm_min_epi64(a, b)\n\
              }\n\
              }\n",
         );
@@ -1083,7 +1167,7 @@ mod tests {
     fn unknown_intrinsic_shape_is_reported() {
         let scan = scan(
             "impl F32x4Backend for archmage::NeonToken {\n\
-             fn f(self) { let _ = unsafe { vfrobnicateq_f32(a) }; }\n\
+             fn f(self) { let _ = vfrobnicateq_f32(a); }\n\
              }\n",
         );
         assert_eq!(scan.errors.len(), 1, "{:?}", scan.errors);
@@ -1122,7 +1206,7 @@ mod tests {
     }
 
     #[test]
-    fn structural_rule_no_bare_transmute_outside_impls() {
+    fn structural_rule_no_bare_transmute_outside_storage_home() {
         let scan = scan_at(
             "magetypes/src/simd/generic/foo.rs",
             "fn f(x: [f32; 4]) -> Y { unsafe { core::mem::transmute(x) } }\n",
@@ -1132,9 +1216,10 @@ mod tests {
             "{:?}",
             scan.errors
         );
-        // transmute_copy is the audited idiom and stays allowed.
+        // transmute_copy is the audited idiom and stays allowed (in the one
+        // file where hand-written unsafe blocks may live).
         let ok = scan_at(
-            "magetypes/src/simd/generic/foo.rs",
+            STORAGE_HOME,
             "fn f(x: &[u8; 16]) -> Y { unsafe { core::mem::transmute_copy(x) } }\n",
         );
         assert!(
@@ -1145,7 +1230,9 @@ mod tests {
     }
 
     #[test]
-    fn structural_rule_transmute_allowed_in_backend_impls() {
+    fn structural_rule_transmute_rejected_in_backend_impls() {
+        // The generated backends hold no unsafe at all, so a bitcast there
+        // goes through the storage helpers like everywhere else.
         let scan = scan_at(
             "magetypes/src/simd/impls/x86_v3.rs",
             "//! # Safety (audit contract — test fixture)\n\
@@ -1153,7 +1240,154 @@ mod tests {
              fn from_array(self, arr: [f32; 4]) -> R { unsafe { core::mem::transmute(arr) } }\n\
              }\n",
         );
-        assert!(scan.errors.is_empty(), "{:?}", scan.errors);
+        assert!(
+            scan.errors.iter().any(|e| e.contains("bare `transmute`")),
+            "{:?}",
+            scan.errors
+        );
+        assert!(
+            scan.errors.iter().any(|e| e.contains("`unsafe` outside")),
+            "{:?}",
+            scan.errors
+        );
+    }
+
+    #[test]
+    fn structural_rule_gather_scatter_only_in_storage_home() {
+        let gather = "fn f(t: X64V4Token, i: __m512i, p: &[i32]) -> __m512i {\n\
+                      unsafe { _mm512_i32gather_epi32::<4>(i, p.as_ptr()) } }\n";
+        let bad = scan_at("magetypes/src/simd/generic/foo.rs", gather);
+        assert!(
+            bad.errors
+                .iter()
+                .any(|e| e.contains("STRUCTURAL RULE") && e.contains("_mm512_i32gather_epi32")),
+            "{:?}",
+            bad.errors
+        );
+        let scatter = scan_at(
+            "magetypes/src/simd/impls/x86_v4.rs",
+            "fn f(t: X64V4Token) { unsafe { _mm512_mask_i32scatter_ps::<4>(p, k, i, v) } }\n",
+        );
+        assert!(
+            scatter
+                .errors
+                .iter()
+                .any(|e| e.contains("STRUCTURAL RULE") && e.contains("_mm512_mask_i32scatter_ps")),
+            "{:?}",
+            scatter.errors
+        );
+        let ok = scan_at(STORAGE_HOME, gather);
+        assert!(
+            !ok.errors.iter().any(|e| e.contains("STRUCTURAL RULE")),
+            "{:?}",
+            ok.errors
+        );
+    }
+
+    #[test]
+    fn structural_rule_unsafe_only_in_storage_home() {
+        let src = "fn f(x: &[u8; 4]) -> u32 {\n\
+                   // SAFETY: test fixture.\n\
+                   unsafe { core::mem::transmute_copy(x) }\n\
+                   }\n";
+        let unsafe_outside = |scan: &FileScan| {
+            scan.errors
+                .iter()
+                .any(|e| e.contains("STRUCTURAL RULE") && e.contains("`unsafe` outside"))
+        };
+        let bad = scan_at("magetypes/src/simd/generic/foo.rs", src);
+        assert!(unsafe_outside(&bad), "{:?}", bad.errors);
+        let ok = scan_at(STORAGE_HOME, src);
+        assert!(ok.errors.is_empty(), "{:?}", ok.errors);
+        // The generated backend impls get no exemption.
+        let impls = scan_at("magetypes/src/simd/impls/x86_v3.rs", src);
+        assert!(unsafe_outside(&impls), "{:?}", impls.errors);
+        // Nor do the other forms of unsafe code.
+        for form in [
+            "unsafe impl Send for Foo {}\n",
+            "unsafe fn f() {}\n",
+            "pub unsafe trait Bar {}\n",
+            "pub trait Baz { unsafe fn up(self); }\n",
+        ] {
+            let scan = scan_at("magetypes/src/cast.rs", form);
+            assert!(unsafe_outside(&scan), "{form}: {:?}", scan.errors);
+        }
+        // Lint names and comments are not the keyword.
+        let names = scan_at(
+            "magetypes/src/simd/generic/foo.rs",
+            "#![deny(unsafe_op_in_unsafe_fn)]\n// unsafe in a comment\nfn f() {}\n",
+        );
+        assert!(!unsafe_outside(&names), "{:?}", names.errors);
+    }
+
+    #[test]
+    fn structural_rule_unsafe_code_lint_attributes() {
+        let allows = |scan: &FileScan| {
+            scan.errors
+                .iter()
+                .any(|e| e.contains("may allow unsafe code"))
+        };
+        let stray = scan_at(
+            "magetypes/src/simd/generic/foo.rs",
+            "#[allow(unsafe_code)]\nfn f() {}\n",
+        );
+        assert!(allows(&stray), "{:?}", stray.errors);
+        let expect = scan_at(
+            "magetypes/src/simd/generic/foo.rs",
+            "#[expect(dead_code, unsafe_code)]\nfn f() {}\n",
+        );
+        assert!(allows(&expect), "{:?}", expect.errors);
+        // The one sanctioned allow: on `mod simd_storage;`, under a crate-wide deny.
+        let lib = scan_at(
+            LIB_HOME,
+            "#![deny(unsafe_code)]\n#[allow(unsafe_code)]\nmod simd_storage;\nmod types;\n",
+        );
+        assert!(
+            !lib.errors.iter().any(|e| e.contains("STRUCTURAL RULE")),
+            "{:?}",
+            lib.errors
+        );
+        let other_module = scan_at(
+            LIB_HOME,
+            "#![deny(unsafe_code)]\n#[allow(unsafe_code)]\nmod types;\n",
+        );
+        assert!(allows(&other_module), "{:?}", other_module.errors);
+        let no_deny = scan_at(LIB_HOME, "#[allow(unsafe_code)]\nmod simd_storage;\n");
+        assert!(
+            no_deny
+                .errors
+                .iter()
+                .any(|e| e.contains("missing `#![deny(unsafe_code)]`")),
+            "{:?}",
+            no_deny.errors
+        );
+        // The storage file's own macros may carry the allow.
+        let storage = scan_at(
+            STORAGE_HOME,
+            "macro_rules! m { () => { #[allow(unsafe_code)] unsafe impl Foo for Bar {} }; }\n",
+        );
+        assert!(!allows(&storage), "{:?}", storage.errors);
+    }
+
+    #[test]
+    fn structural_rule_token_storage_needs_repr_c() {
+        let rule = |scan: &FileScan| {
+            scan.errors
+                .iter()
+                .any(|e| e.contains("is not declared `#[repr(C)]`"))
+        };
+        let missing = scan_at(
+            "magetypes/src/simd/generic/generated/foo_impl.rs",
+            "#[derive(Clone, Copy)]\npub struct foo<T: FooBackend>(pub(crate) T::Repr, pub(crate) T);\n\
+             crate::simd_storage::impl_token_storage!(foo, FooBackend);\n",
+        );
+        assert!(rule(&missing), "{:?}", missing.errors);
+        let present = scan_at(
+            "magetypes/src/simd/generic/generated/foo_impl.rs",
+            "#[derive(Clone, Copy)]\n#[repr(C)]\npub struct foo<T: FooBackend>(pub(crate) T::Repr, pub(crate) T);\n\
+             crate::simd_storage::impl_token_storage!(foo, FooBackend);\n",
+        );
+        assert!(!rule(&present), "{:?}", present.errors);
     }
 
     #[test]
@@ -1185,7 +1419,7 @@ mod tests {
             scan.errors
         );
         let ok = scan_at(
-            "magetypes/src/simd/generic/foo.rs",
+            STORAGE_HOME,
             "fn f(x: u32) -> f32 {\n\
              // SAFETY: u32 and f32 are the same size; all bit patterns valid.\n\
              unsafe { core::mem::transmute_copy(&x) }\n\
