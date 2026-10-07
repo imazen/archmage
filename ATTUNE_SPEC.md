@@ -33,6 +33,9 @@ Objectives:
    body will inline or every route has identical performance.
 7. Support migration alongside existing macros. Consolidation does not require
    deleting legacy compatibility or rejection tests.
+8. No end-user compile-time regression. Measure equivalent workloads before
+   accepting the implementation; function-only expansion is a design constraint,
+   not evidence that this performance requirement has already been met.
 
 ## 2. Function naming and requested outputs
 
@@ -85,6 +88,13 @@ invalid; see section 7.
 policy and optional AVX-512 gates still need agreement: current autoversion and
 incant/magetypes defaults differ in their gating. Explicit tier requests provide
 a migration path that does not depend on resolving that default immediately.
+
+Established decision: `-_v4` is an idempotent exclusion. Removing a registered
+tier that is absent from the selected set is valid and leaves the set unchanged.
+It must not create a missing-tier error when V4 is already cfg-disabled.
+For example, `make(_*, -_v4)` excludes V4 from the default direct family.
+Unknown tier names are still errors. Precedence for conflicting add/remove
+selectors and exclusions spanning direct/proof forms remains to be specified.
 
 ## 3. Visibility, cfg and output attributes
 
@@ -162,6 +172,16 @@ Coverage is based on the actual feature relation, including crypto branches,
 not the numeric value in a tier suffix. For eligible covered variants, the
 family's documented selection order determines the choice.
 
+Established decision: both `attuned!` and `reattune!` require a guaranteed
+eligible fallback after architecture/cfg filtering and explicit exclusions.
+An explicit shortlist is exact: never append another tier silently. A candidate
+is guaranteed when the caller's proved target features cover its requirements;
+scalar has no extra requirements. If no available candidate is covered, emit a
+compile error, even if a runtime probe might succeed on the developer's CPU.
+This also applies outside an attune function. A runtime-only stronger entry is
+not a guaranteed fallback. Availability and access must be established by the
+call contract; naming alone cannot discover arbitrary callee definitions.
+
 ### Recommendation: reattune!
 
 `reattune!` explicitly asks to reconsider the selected tier, including runtime
@@ -201,8 +221,9 @@ Behavioral requirements:
 4. Enter a stronger/uncovered implementation through an accessible safe proof
    entry or a suitable central dispatcher. Never create an unchecked raw call
    from the suffix alone. A dispatcher must honor an explicit shortlist if used.
-5. Infallible selection must have a guaranteed eligible candidate: a covered
-   implementation or a portable fallback. V4 alone from V3 supplies neither.
+5. Infallible selection without a guaranteed eligible candidate is a compile
+   error for both call macros. A covered implementation or portable fallback
+   satisfies the requirement. V4 alone from V3 supplies neither.
 6. An availability-returning exact-tier operation would be a separate API
    decision. Do not silently panic, invent a fallback outside an explicit list,
    or change the return type to Option.
@@ -249,29 +270,30 @@ substitutes capital `Self`; it does not rewrite lowercase self uses in the body.
 Existing callers therefore write `_self` explicitly. See
 [arcane.rs](https://github.com/imazen/archmage/blob/cf07592212e96294ef9ca5dca9a364fa8d15d8ad/archmage-macros/src/arcane.rs#L639).
 
-| Placement | Generation approach | Confidence |
-|---|---|---|
-| Free function | Sibling direct implementation / entries | Clear approach |
-| Inherent method with receiver | Sibling methods; retain self and Self | Clear approach |
-| Inherent associated function without receiver | Siblings with qualified `Self::...` calls | Clear once context is supplied |
-| Trait impl method | Preserve original trait member; place implementation in a legal helper scope | General case needs spike |
-| Trait default method | Preserve trait contract and dyn compatibility; helper needs trait-aware generic treatment | Separate spike |
-| Nested function | Own feature context; preserve scope and copied generics if helpers are introduced | Scope/hygiene tests required |
+Established decision: attune processes only the annotated function. No outer
+impl/trait attribute, source-file scanning, or enclosing-item transformation.
+Use a documented support table and reject unsupported generation shapes with
+"move this kernel outside of the impl" guidance. The following is the proposed
+initial support boundary, subject to compile-pass/fail tests before release:
 
-Recommendation: an `in_impl` option on a function means **inherent impl context**
-and is useful for associated functions without a receiver. Keep it part of
-attune rather than inventing another exported attribute macro.
+| Placement/request | Initial boundary |
+|---|---|
+| Free function with explicit generics/bounds | Support direct bodies, proof entries and valid dispatchers |
+| Inherent method with receiver | Support sibling outputs, keeping self, Self and enclosing generic scope |
+| Inherent associated function without receiver | Support with in_impl hint for qualified Self:: forwarding |
+| Trait impl/default method needing helpers or variant generation | Reject; keep an ordinary method delegating to a free kernel |
+| Nested free function | Support only its own generics/context; never capture enclosing function generics |
+| Expansion needing unavailable enclosing type/trait/bounds | Reject; move the kernel outside the impl and declare its bounds there |
 
-An `in_trait` hint could forbid illegal sibling trait members and select an
-ordinary adapter, but it does not supply the self type or enclosing generics.
-It must also distinguish a trait declaration/default from a trait implementation.
-Do not promise fully general trait support from that flag alone.
+An `in_impl` hint selects inherent sibling lowering; it does not inspect or
+validate the enclosing item. Rust still enforces that generated siblings are
+legal. `in_trait` alone cannot supply missing declarations and is not a route
+to automatic trait adaptation. Existing legacy macro behavior stays available.
 
-Recommendation: allow outer `#[attune]` on an impl to give method expansion its
-concrete self type, trait path, generics and where clauses. The outer annotation
-provides context to explicitly selected members; it does not automatically
-multiversion every method. How this composes with other impl-level macros must
-be tested. Trait declarations with default bodies need their own scope analysis.
+The [trait probes](experiments/attune-decisions/README.md#evidence-b-generic-and-trait-adapters)
+show legal handwritten adapters, including foreign-self trait impls and dyn
+calls. They support documenting how to extract a kernel; they do not authorize
+automatic processing of the enclosing impl or arbitrary receiver rewriting.
 
 Nested receiver rewriting must respect expression scopes, nested items, macro
 input hygiene, associated types, qualified paths and return-position Self.
@@ -398,7 +420,9 @@ Recommended initial diagnostics:
 | Identical repeated selectors, including wildcard overlap | Normalize to one output |
 | New undeclared sibling methods in a trait impl | Reject; use a legal adapter/helper placement |
 | Stronger/uncovered call through ordinary attuned | Diagnose; suggest reattune and a safe entry |
-| Infallible reattune without a guaranteed candidate | Require a fallback or an explicit availability-handling API |
+| Either call macro without a guaranteed eligible candidate | Compile error; add a covered/portable fallback |
+| Subtracting a known tier absent from the set | Accept as an idempotent no-op |
+| Function expansion needing enclosing impl/trait analysis | Reject; move this kernel outside of the impl |
 | Upgrade when only a raw inaccessible/unsupported entry exists | Require a suitable safe boundary; no unchecked suffix-based call |
 | Dispatcher with incompatible tier-specific signatures | Reject; retain direct-only family or require explicit conversion |
 | Loss of trait compatibility/dyn compatibility to make helpers compile | Reject the expansion design |
@@ -420,7 +444,7 @@ Do not implement “best effort” emission that changes an API's meaning silent
 | Intrinsic/type imports | Existing per-tier machinery | Specify flags and propagation, including scalar/default cases |
 | Exact-token passthrough | Known semantics, API choice open | Retain legacy operation until explicit-proof surface is chosen |
 | Attribute routing | Mechanism clear, some policy choices open | Decide family-level routing; test expect/track_caller/unknown attrs |
-| Full generic trait adapters/default bodies | Spike required | Compile nested/helper placements with associated types and dyn use |
+| Generic trait adapters/default bodies | Automatic enclosing-item processing excluded | Document free-kernel delegation; test rejection boundary |
 | Scope-correct receiver rewriting | Spike required for generality | Exercise nested items, macros, closures and hygiene |
 | Cross-crate family discovery | Spike required | Demonstrate descriptor/re-export/renamed-dependency behavior |
 | Cold compile cost and resulting codegen | Measurement required | Compare equivalent expanded output after the prototype exists |
@@ -433,7 +457,8 @@ passing tests of the new attribute.
 ## 11. Acceptance gates
 
 Before implementing the public interface, settle the listed grammar/policy
-decisions and demonstrate the trait and family-discovery spikes off main.
+decisions and demonstrate supported function-only shapes and family discovery
+off main.
 New public API proceeds through signature review; preserving this draft is not
 authorization to merge experimental APIs into main.
 
@@ -441,8 +466,10 @@ Required coverage for a later implementation:
 
 - Existing macro suites retained; analogous attune positive and negative cases
   added without weakening existing expectations.
-- Free/inherent/trait contexts; receivers and receiverless associated functions;
+- Free/inherent contexts; receivers and receiverless associated functions;
   generic impls, method generics, consts, lifetimes and associated types.
+  Trait callers delegate to free kernels; unsupported transformations fail
+  clearly without inspecting an enclosing item.
 - Private, restricted and public items; downstream crates, re-exports, dependency
   renaming, provider/consumer feature combinations and inaccessible entries.
 - Covered calls, explicit upgrades, cross-branch features, portable fallback,
@@ -458,6 +485,12 @@ Required coverage for a later implementation:
   no assumption that changing selected tiers is always numerically invisible.
 - Cross-crate assembly checks above/below observed inline heuristics, followed
   by cold compile comparisons on equivalent tier sets and output surfaces.
+- No end-user compile-time regression is a release gate, not a best-effort goal.
+  Compare unchanged legacy consumers and equivalent migrated consumers, including
+  cold builds, incremental rebuilds, and macro-heavy generic workloads. Keep
+  compiler, dependency versions, profile, tier set and output surface matched;
+  use repeated measurements to separate a reproducible regression from noise.
+  Do not claim this gate passed from namespace probes or small harness timings.
 
 ## 12. References
 

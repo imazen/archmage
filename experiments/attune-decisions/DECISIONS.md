@@ -1,6 +1,10 @@
 # Attune decision worksheet
 
-All choices below are pending. Recommendations are not recorded user decisions.
+Q1 and the function-only constraint in Q3 are accepted (2026-10-07).
+Idempotent `-_v4` exclusion and no end-user compile-time regression are also
+accepted requirements. The V4 default policy awaits clarification of the reply's
+question numbering. Other choices remain pending; recommendations are not
+recorded user decisions.
 No proposed attune syntax has been implemented. The
 [evidence report](README.md) distinguishes executed lowerings from untested
 macro integration. The [specification](../../ATTUNE_SPEC.md) remains a draft.
@@ -16,14 +20,16 @@ reattune!(work(x), [_v4, _v3]) // Try V4, otherwise use proved V3.
 reattune!(work(x), [_v4])      // What happens when V4 is unavailable?
 ```
 
-**A — Exact list, recommended.** The second infallible call is rejected unless
+**Accepted — Exact list, applying to both call macros.** The second infallible call is rejected unless
 V4 is already proved. Write the fallback explicitly. An availability-returning
 API, if desired, is a separate decision; the macro does not silently change
 the return type or panic.
 
-**B — Append a fallback automatically.** The second call may run V3 or scalar.
-Shorter common calls, but the displayed list no longer fully describes allowed
-implementations, and a caller may receive results from a tier it did not name.
+After cfg/architecture filtering and exclusions, at least one available eligible
+callee must have requirements covered by the caller's proved feature context.
+Otherwise either call macro emits a compile error. A portable scalar candidate
+qualifies; the chance that runtime detection will succeed does not. No implicit
+fallback, panic, or Option return. This holds for calls outside attune too.
 
 Evidence: both upgrade and fallback lowerings execute correctly with one move
 and drop, and a covered call does not need a probe. Which implementations are
@@ -51,36 +57,52 @@ safety, not missing compile-time backend support.
 from the wildcard; V4-capable users write an extra selector and gate. It changes
 the wildcard's relationship to both existing default sets.
 
+**Accepted independently of the default:** `-_v4` removes V4 if present and is
+valid if absent, including when cfg has already disabled it. Unknown tier names
+remain invalid. Conflicting-selector precedence still needs a rule.
+
 Evidence: current autoversion and magetypes generate different V4 surfaces with
 the feature disabled. Both references compile when enabled. No performance
 ranking or compile-time advantage between these policies was measured.
 
-### Q3. Can generic trait methods receive context from an outer impl attribute?
+### Q3. How much enclosing context may attune process?
+
+**Accepted — Function attributes only, with a clear supported subset.** Do not
+annotate or process an enclosing impl/trait to obtain context. Unsupported
+shapes should say "move this kernel outside of the impl" rather than trigger
+more source analysis. Inherent sibling generation can retain its original impl
+scope; missing generic context for nested trait helpers is not inferred.
 
 ```rust,ignore
-#[attune] // Supplies context; does not transform every method automatically.
 impl<T: Copy> Kernel for Processor<T> {
-    #[attune(/* chosen operation */)]
-    fn apply(&self, data: &[f32]) -> Self::Output { ... }
+    fn apply(&self, data: &[f32]) -> Self::Output {
+        // Ordinary adapter: the free kernel declares the bounds it needs.
+        attuned!(apply_kernel(self, data))
+    }
+}
+
+#[attune(make(all))]
+fn apply_kernel<T: Copy>(processor: &Processor<T>, data: &[f32]) -> Output<T> {
+    // Operation; concrete bounds/output must match the real API.
 }
 ```
 
-**A — Outer annotation when context is needed, recommended.** It supplies the
-self type, trait path, impl generics and bounds. Ordinary free functions still
-need only their function attribute. A receiverless inherent function can also
-use the lightweight in_impl hint.
+This is an illustrative API shape, not an executed fixture. The initial support
+boundary is in [spec section 5](../../ATTUNE_SPEC.md#5-self-self-and-placement).
+Trait-method transformation requiring additional helpers is excluded initially;
+ordinary trait methods may delegate to supported free kernels.
 
-**B — Function attributes only.** The method must explicitly supply missing
-context. An in_trait boolean alone is insufficient; generic declarations,
-bounds and self type may need repetition, or the supported shapes are narrower.
+Evidence: the executed handwritten adapters preserve generic and dyn contracts,
+but explicitly redeclare required generics. Implicit nested capture fails E0401;
+foreign inherent helpers fail E0116. Legal manual adapters do not imply cheap or
+complete automatic transformation.
 
-Evidence: candidate lowerings preserve mutable receivers, type/const/lifetime
-generics, associated output and dyn usage. Implicit nested capture fails E0401;
-receiverless bare sibling calls fail E0425. A free-helper strategy also handles
-legal foreign-self trait impls where an inherent helper impl fails E0116.
-
-This choice authorizes a context source, not a claim that arbitrary trait-body
-rewriting is already solved. The transformer still needs scope and hygiene tests.
+**Accepted performance gate:** no end-user compilation regression. Measure
+unchanged legacy and equivalent migrated consumers on matched compiler,
+dependencies, outputs and tiers, including cold/incremental builds and generic
+macro-heavy cases. Repeated measurements must distinguish noise from a
+reproducible regression. Function-only expansion limits scope but is not proof
+that this gate passes. No such comparison has yet been measured for attune.
 
 ## Next discussion: call surface and compatibility
 
@@ -258,8 +280,9 @@ implementation or compile-cost comparison was made here.
   API change explicitly says otherwise.
 - Do not forge feature proof, suppress feature errors, add implicit boxing,
   invent Clone/Copy/Sized bounds, or emit unchecked suffix-based upgrades.
-- Respect nested item scopes when rewriting receivers; copied generics require
-  explicit declarations. Use legal free helpers when inherent helpers are illegal.
+- Stay within the annotated function. Preserve inherent sibling scope; reject
+  shapes needing unavailable enclosing context. Document explicit free-kernel
+  extraction for trait callers, preserving their generic and dyn contracts.
 - Preserve argument ownership and single evaluation on a selected call path.
 - Propagate track_caller across forwarding layers; place expect where it is
   fulfilled rather than copying it to every generated function.
