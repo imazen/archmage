@@ -594,6 +594,17 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
         gate_w512_impls(generate_x86_v4_impls_file(&w512_types)),
     );
 
+    // 10c. The AVX-512 tokens' W128/W256 f32 backends, forwarded to V3's,
+    // derived from the trait definitions generated above so no method can be
+    // left to its scalar default body.
+    files.insert(
+        "impls/x86_v4_f32_delegated.rs".to_string(),
+        super::v4_delegation_gen::generate(
+            &files["backends/f32x4.rs"],
+            &files["backends/f32x8.rs"],
+        ),
+    );
+
     // 11. impls/mod.rs
     files.insert("impls/mod.rs".to_string(), generate_impls_mod());
 
@@ -1044,10 +1055,13 @@ fn generate_impls_mod() -> String {
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
         mod x86_v4;
 
-        // V4-family delegation of W128 / W256 f32 backends to V3 (hand-written —
-        // future generators may take it over). V4 ⊃ V3, so delegating is sound.
+        // The AVX-512 tokens' W128 / W256 f32 backends, forwarded to V3's
+        // (generated from the trait definitions; V4 ⊃ V3, so delegating is
+        // sound), plus the hand-written AVX-512VL pixel-packing overrides.
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
         mod x86_v4_f32_delegated;
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        mod x86_v4_f32_overrides;
 
         #[cfg(target_arch = "aarch64")]
         mod arm_neon;
