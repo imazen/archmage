@@ -535,8 +535,21 @@ fn x64_v2_detect() -> Option<X64V2Token> {
         && crate::is_x86_feature_available!("sse4.2")
         && crate::is_x86_feature_available!("popcnt")
         && crate::is_x86_feature_available!("cmpxchg16b");
-    X64_V2_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
-    if available {
+    // Publish only while the cache is still undetected (0): a
+    // concurrent disable/enable writes the cache itself, and an
+    // unconditional store here could overwrite it — resurrecting a
+    // token that was disabled mid-detect (lost update: summon()
+    // returning Some for a disabled token).
+    let _ = X64_V2_CACHE.compare_exchange(
+        0,
+        if available { 2 } else { 1 },
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+    );
+    // disable() stores the flag before the cache, so loading the
+    // flag after the CAS observes every disable that could have
+    // raced this probe.
+    if available && !X64_V2_DISABLED.load(Ordering::Relaxed) {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
         Some(unsafe { X64V2Token::from_context() })
@@ -860,8 +873,21 @@ fn x64_crypto_detect() -> Option<X64CryptoToken> {
         && crate::is_x86_feature_available!("cmpxchg16b")
         && crate::is_x86_feature_available!("pclmulqdq")
         && crate::is_x86_feature_available!("aes");
-    X64_CRYPTO_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
-    if available {
+    // Publish only while the cache is still undetected (0): a
+    // concurrent disable/enable writes the cache itself, and an
+    // unconditional store here could overwrite it — resurrecting a
+    // token that was disabled mid-detect (lost update: summon()
+    // returning Some for a disabled token).
+    let _ = X64_CRYPTO_CACHE.compare_exchange(
+        0,
+        if available { 2 } else { 1 },
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+    );
+    // disable() stores the flag before the cache, so loading the
+    // flag after the CAS observes every disable that could have
+    // raced this probe.
+    if available && !X64_CRYPTO_DISABLED.load(Ordering::Relaxed) {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
         Some(unsafe { X64CryptoToken::from_context() })
@@ -1246,8 +1272,21 @@ fn x64_v3_detect() -> Option<X64V3Token> {
         && crate::is_x86_feature_available!("f16c")
         && crate::is_x86_feature_available!("lzcnt")
         && crate::is_x86_feature_available!("movbe");
-    X64_V3_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
-    if available {
+    // Publish only while the cache is still undetected (0): a
+    // concurrent disable/enable writes the cache itself, and an
+    // unconditional store here could overwrite it — resurrecting a
+    // token that was disabled mid-detect (lost update: summon()
+    // returning Some for a disabled token).
+    let _ = X64_V3_CACHE.compare_exchange(
+        0,
+        if available { 2 } else { 1 },
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+    );
+    // disable() stores the flag before the cache, so loading the
+    // flag after the CAS observes every disable that could have
+    // raced this probe.
+    if available && !X64_V3_DISABLED.load(Ordering::Relaxed) {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
         Some(unsafe { X64V3Token::from_context() })
@@ -1685,8 +1724,21 @@ fn x64_v3_crypto_detect() -> Option<X64V3CryptoToken> {
         && crate::is_x86_feature_available!("aes")
         && crate::is_x86_feature_available!("vpclmulqdq")
         && crate::is_x86_feature_available!("vaes");
-    X64_V3_CRYPTO_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
-    if available {
+    // Publish only while the cache is still undetected (0): a
+    // concurrent disable/enable writes the cache itself, and an
+    // unconditional store here could overwrite it — resurrecting a
+    // token that was disabled mid-detect (lost update: summon()
+    // returning Some for a disabled token).
+    let _ = X64_V3_CRYPTO_CACHE.compare_exchange(
+        0,
+        if available { 2 } else { 1 },
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+    );
+    // disable() stores the flag before the cache, so loading the
+    // flag after the CAS observes every disable that could have
+    // raced this probe.
+    if available && !X64_V3_CRYPTO_DISABLED.load(Ordering::Relaxed) {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
         Some(unsafe { X64V3CryptoToken::from_context() })
@@ -2147,8 +2199,21 @@ fn x64_v3_gfni_crypto_detect() -> Option<X64V3GfniCryptoToken> {
         && crate::is_x86_feature_available!("vpclmulqdq")
         && crate::is_x86_feature_available!("vaes")
         && crate::is_x86_feature_available!("gfni");
-    X64_V3_GFNI_CRYPTO_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
-    if available {
+    // Publish only while the cache is still undetected (0): a
+    // concurrent disable/enable writes the cache itself, and an
+    // unconditional store here could overwrite it — resurrecting a
+    // token that was disabled mid-detect (lost update: summon()
+    // returning Some for a disabled token).
+    let _ = X64_V3_GFNI_CRYPTO_CACHE.compare_exchange(
+        0,
+        if available { 2 } else { 1 },
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+    );
+    // disable() stores the flag before the cache, so loading the
+    // flag after the CAS observes every disable that could have
+    // raced this probe.
+    if available && !X64_V3_GFNI_CRYPTO_DISABLED.load(Ordering::Relaxed) {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
         Some(unsafe { X64V3GfniCryptoToken::from_context() })
@@ -2615,8 +2680,21 @@ fn x64_v4_detect() -> Option<X64V4Token> {
         && crate::is_x86_feature_available!("avx512cd")
         && crate::is_x86_feature_available!("avx512dq")
         && crate::is_x86_feature_available!("avx512vl");
-    X64_V4_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
-    if available {
+    // Publish only while the cache is still undetected (0): a
+    // concurrent disable/enable writes the cache itself, and an
+    // unconditional store here could overwrite it — resurrecting a
+    // token that was disabled mid-detect (lost update: summon()
+    // returning Some for a disabled token).
+    let _ = X64_V4_CACHE.compare_exchange(
+        0,
+        if available { 2 } else { 1 },
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+    );
+    // disable() stores the flag before the cache, so loading the
+    // flag after the CAS observes every disable that could have
+    // raced this probe.
+    if available && !X64_V4_DISABLED.load(Ordering::Relaxed) {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
         Some(unsafe { X64V4Token::from_context() })
@@ -3204,8 +3282,21 @@ fn x64_v4x_detect() -> Option<X64V4xToken> {
         && crate::is_x86_feature_available!("vpclmulqdq")
         && crate::is_x86_feature_available!("gfni")
         && crate::is_x86_feature_available!("vaes");
-    X64_V4X_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
-    if available {
+    // Publish only while the cache is still undetected (0): a
+    // concurrent disable/enable writes the cache itself, and an
+    // unconditional store here could overwrite it — resurrecting a
+    // token that was disabled mid-detect (lost update: summon()
+    // returning Some for a disabled token).
+    let _ = X64_V4X_CACHE.compare_exchange(
+        0,
+        if available { 2 } else { 1 },
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+    );
+    // disable() stores the flag before the cache, so loading the
+    // flag after the CAS observes every disable that could have
+    // raced this probe.
+    if available && !X64_V4X_DISABLED.load(Ordering::Relaxed) {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
         Some(unsafe { X64V4xToken::from_context() })
@@ -3692,8 +3783,21 @@ fn avx512_fp16_detect() -> Option<Avx512Fp16Token> {
         && crate::is_x86_feature_available!("avx512dq")
         && crate::is_x86_feature_available!("avx512vl")
         && crate::is_x86_feature_available!("avx512fp16");
-    AVX512_FP16_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
-    if available {
+    // Publish only while the cache is still undetected (0): a
+    // concurrent disable/enable writes the cache itself, and an
+    // unconditional store here could overwrite it — resurrecting a
+    // token that was disabled mid-detect (lost update: summon()
+    // returning Some for a disabled token).
+    let _ = AVX512_FP16_CACHE.compare_exchange(
+        0,
+        if available { 2 } else { 1 },
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+    );
+    // disable() stores the flag before the cache, so loading the
+    // flag after the CAS observes every disable that could have
+    // raced this probe.
+    if available && !AVX512_FP16_DISABLED.load(Ordering::Relaxed) {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
         Some(unsafe { Avx512Fp16Token::from_context() })

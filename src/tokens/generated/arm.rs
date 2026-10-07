@@ -215,8 +215,21 @@ impl NeonToken {
 #[inline(never)]
 fn neon_detect() -> Option<NeonToken> {
     let available = crate::is_aarch64_feature_available!("neon");
-    NEON_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
-    if available {
+    // Publish only while the cache is still undetected (0): a
+    // concurrent disable/enable writes the cache itself, and an
+    // unconditional store here could overwrite it — resurrecting a
+    // token that was disabled mid-detect (lost update: summon()
+    // returning Some for a disabled token).
+    let _ = NEON_CACHE.compare_exchange(
+        0,
+        if available { 2 } else { 1 },
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+    );
+    // disable() stores the flag before the cache, so loading the
+    // flag after the CAS observes every disable that could have
+    // raced this probe.
+    if available && !NEON_DISABLED.load(Ordering::Relaxed) {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
         Some(unsafe { NeonToken::from_context() })
@@ -439,8 +452,21 @@ impl NeonAesToken {
 fn neon_aes_detect() -> Option<NeonAesToken> {
     let available =
         crate::is_aarch64_feature_available!("neon") && crate::is_aarch64_feature_available!("aes");
-    NEON_AES_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
-    if available {
+    // Publish only while the cache is still undetected (0): a
+    // concurrent disable/enable writes the cache itself, and an
+    // unconditional store here could overwrite it — resurrecting a
+    // token that was disabled mid-detect (lost update: summon()
+    // returning Some for a disabled token).
+    let _ = NEON_AES_CACHE.compare_exchange(
+        0,
+        if available { 2 } else { 1 },
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+    );
+    // disable() stores the flag before the cache, so loading the
+    // flag after the CAS observes every disable that could have
+    // raced this probe.
+    if available && !NEON_AES_DISABLED.load(Ordering::Relaxed) {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
         Some(unsafe { NeonAesToken::from_context() })
@@ -663,8 +689,21 @@ impl NeonSha3Token {
 fn neon_sha3_detect() -> Option<NeonSha3Token> {
     let available = crate::is_aarch64_feature_available!("neon")
         && crate::is_aarch64_feature_available!("sha3");
-    NEON_SHA3_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
-    if available {
+    // Publish only while the cache is still undetected (0): a
+    // concurrent disable/enable writes the cache itself, and an
+    // unconditional store here could overwrite it — resurrecting a
+    // token that was disabled mid-detect (lost update: summon()
+    // returning Some for a disabled token).
+    let _ = NEON_SHA3_CACHE.compare_exchange(
+        0,
+        if available { 2 } else { 1 },
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+    );
+    // disable() stores the flag before the cache, so loading the
+    // flag after the CAS observes every disable that could have
+    // raced this probe.
+    if available && !NEON_SHA3_DISABLED.load(Ordering::Relaxed) {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
         Some(unsafe { NeonSha3Token::from_context() })
@@ -888,8 +927,21 @@ impl NeonCrcToken {
 fn neon_crc_detect() -> Option<NeonCrcToken> {
     let available =
         crate::is_aarch64_feature_available!("neon") && crate::is_aarch64_feature_available!("crc");
-    NEON_CRC_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
-    if available {
+    // Publish only while the cache is still undetected (0): a
+    // concurrent disable/enable writes the cache itself, and an
+    // unconditional store here could overwrite it — resurrecting a
+    // token that was disabled mid-detect (lost update: summon()
+    // returning Some for a disabled token).
+    let _ = NEON_CRC_CACHE.compare_exchange(
+        0,
+        if available { 2 } else { 1 },
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+    );
+    // disable() stores the flag before the cache, so loading the
+    // flag after the CAS observes every disable that could have
+    // raced this probe.
+    if available && !NEON_CRC_DISABLED.load(Ordering::Relaxed) {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
         Some(unsafe { NeonCrcToken::from_context() })
@@ -1192,8 +1244,21 @@ fn arm64_v2_detect() -> Option<Arm64V2Token> {
         && crate::is_aarch64_feature_available!("fp16")
         && crate::is_aarch64_feature_available!("aes")
         && crate::is_aarch64_feature_available!("sha2");
-    ARM64_V2_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
-    if available {
+    // Publish only while the cache is still undetected (0): a
+    // concurrent disable/enable writes the cache itself, and an
+    // unconditional store here could overwrite it — resurrecting a
+    // token that was disabled mid-detect (lost update: summon()
+    // returning Some for a disabled token).
+    let _ = ARM64_V2_CACHE.compare_exchange(
+        0,
+        if available { 2 } else { 1 },
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+    );
+    // disable() stores the flag before the cache, so loading the
+    // flag after the CAS observes every disable that could have
+    // raced this probe.
+    if available && !ARM64_V2_DISABLED.load(Ordering::Relaxed) {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
         Some(unsafe { Arm64V2Token::from_context() })
@@ -1560,8 +1625,21 @@ fn arm64_v3_detect() -> Option<Arm64V3Token> {
         && crate::is_aarch64_feature_available!("sha3")
         && crate::is_aarch64_feature_available!("i8mm")
         && crate::is_aarch64_feature_available!("bf16");
-    ARM64_V3_CACHE.store(if available { 2 } else { 1 }, Ordering::Relaxed);
-    if available {
+    // Publish only while the cache is still undetected (0): a
+    // concurrent disable/enable writes the cache itself, and an
+    // unconditional store here could overwrite it — resurrecting a
+    // token that was disabled mid-detect (lost update: summon()
+    // returning Some for a disabled token).
+    let _ = ARM64_V3_CACHE.compare_exchange(
+        0,
+        if available { 2 } else { 1 },
+        Ordering::Relaxed,
+        Ordering::Relaxed,
+    );
+    // disable() stores the flag before the cache, so loading the
+    // flag after the CAS observes every disable that could have
+    // raced this probe.
+    if available && !ARM64_V3_DISABLED.load(Ordering::Relaxed) {
         // SAFETY: `available` — runtime detection just confirmed every
         // feature this token asserts is present on this CPU.
         Some(unsafe { Arm64V3Token::from_context() })

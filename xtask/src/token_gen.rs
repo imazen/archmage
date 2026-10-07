@@ -564,6 +564,7 @@ fn gen_summon_cold_x86(token: &TokenDef) -> String {
 
     let name = &token.name;
     let cache_name = cache_var_name(name);
+    let disabled_name = disabled_var_name(name);
     let detect_fn_name = lower_snake(name, "detect");
     let detect_expr = gen_x86_detect_expr(&check_features);
     let dct_guard = ", not(feature = \"testable_dispatch\")";
@@ -575,8 +576,21 @@ fn gen_summon_cold_x86(token: &TokenDef) -> String {
         #[inline(never)]
         fn {detect_fn_name}() -> Option<{name}> {{
             let available = {detect_expr};
-            {cache_name}.store(if available {{ 2 }} else {{ 1 }}, Ordering::Relaxed);
-            if available {{
+            // Publish only while the cache is still undetected (0): a
+            // concurrent disable/enable writes the cache itself, and an
+            // unconditional store here could overwrite it — resurrecting a
+            // token that was disabled mid-detect (lost update: summon()
+            // returning Some for a disabled token).
+            let _ = {cache_name}.compare_exchange(
+                0,
+                if available {{ 2 }} else {{ 1 }},
+                Ordering::Relaxed,
+                Ordering::Relaxed,
+            );
+            // disable() stores the flag before the cache, so loading the
+            // flag after the CAS observes every disable that could have
+            // raced this probe.
+            if available && !{disabled_name}.load(Ordering::Relaxed) {{
                 // SAFETY: `available` — runtime detection just confirmed every
                 // feature this token asserts is present on this CPU.
                 Some(unsafe {{ {name}::from_context() }})
@@ -631,6 +645,7 @@ fn gen_summon_cold_aarch64(token: &TokenDef) -> String {
 
     let name = &token.name;
     let cache_name = cache_var_name(name);
+    let disabled_name = disabled_var_name(name);
     let detect_fn_name = lower_snake(name, "detect");
     let detect_expr = gen_aarch64_detect_expr(&check_features);
     let dct_guard = ", not(feature = \"testable_dispatch\")";
@@ -642,8 +657,21 @@ fn gen_summon_cold_aarch64(token: &TokenDef) -> String {
         #[inline(never)]
         fn {detect_fn_name}() -> Option<{name}> {{
             let available = {detect_expr};
-            {cache_name}.store(if available {{ 2 }} else {{ 1 }}, Ordering::Relaxed);
-            if available {{
+            // Publish only while the cache is still undetected (0): a
+            // concurrent disable/enable writes the cache itself, and an
+            // unconditional store here could overwrite it — resurrecting a
+            // token that was disabled mid-detect (lost update: summon()
+            // returning Some for a disabled token).
+            let _ = {cache_name}.compare_exchange(
+                0,
+                if available {{ 2 }} else {{ 1 }},
+                Ordering::Relaxed,
+                Ordering::Relaxed,
+            );
+            // disable() stores the flag before the cache, so loading the
+            // flag after the CAS observes every disable that could have
+            // raced this probe.
+            if available && !{disabled_name}.load(Ordering::Relaxed) {{
                 // SAFETY: `available` — runtime detection just confirmed every
                 // feature this token asserts is present on this CPU.
                 Some(unsafe {{ {name}::from_context() }})

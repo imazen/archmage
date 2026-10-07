@@ -13,6 +13,7 @@
 
 #### Fixed
 
+- Token `detect()` no longer loses a race against `disable()`: the cold-path probe published its result with an unconditional cache store, so a `summon()` that entered `*_detect()` while the cache read "undetected" could overwrite a `dangerously_disable_token_process_wide(true)` landing mid-probe and leave `summon()` returning `Some` for a disabled token. The generated x86 and aarch64 detects now publish with `compare_exchange(0, ..)` and recheck the disabled flag. `tests/token_permutations.rs` gained `detect_cannot_resurrect_a_disabled_token`, a two-thread reproducer that trips the old code.
 - archmage depends on archmage-macros at an exact version, so the archmage-macros changes below arrive with this release.
 
 #### Changed

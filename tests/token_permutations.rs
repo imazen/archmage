@@ -245,3 +245,111 @@ fn report_display() {
         assert!(display.contains(w), "display should include warning: {w}");
     }
 }
+
+/// Regression test for the token-detect lost-update race.
+///
+/// `summon()` caches probe results in a per-token u8 (0 = undetected,
+/// 1 = unavailable/disabled, 2 = available). A `summon()` that enters the
+/// cold `*_detect()` path while the cache is 0 used to publish its result
+/// with an unconditional store — so a detect started in an enabled
+/// window could overwrite a `disable(true)` that landed mid-probe,
+/// leaving the cache at 2 and `summon()` returning `Some` for a token
+/// that was disabled process-wide (observed as `dispatch liveness`
+/// flakes in downstream test suites that permute tokens in parallel
+/// with unrelated `summon()` callers).
+///
+/// The fixed detect publishes with `compare_exchange(0, ..)` and
+/// rechecks the disabled flag, so after `disable(true)` returns the
+/// cache can never again hold a stale 2 until re-enabled: every summon
+/// must observe 1 and return `None`.
+///
+/// Two threads: the toggler cycles enable→disable and then asserts on
+/// its own summons, while the summoner spins `summon()` to keep a
+/// detect probe in flight across the disable boundary. Run under
+/// `testable_dispatch` or the disable calls are no-ops.
+#[cfg(all(feature = "testable_dispatch", target_arch = "x86_64"))]
+#[test]
+fn detect_cannot_resurrect_a_disabled_token() {
+    use archmage::X64V3Token;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+
+    // The toggler disables a real token process-wide, so it must hold the
+    // same lock `for_each_token_permutation` runs under — otherwise our
+    // disables race sibling permutation tests (and theirs race ours).
+    // The summoner thread deliberately stays unlocked: it models the
+    // unlocked `summon()` callers the ecosystem can't prevent, which is
+    // exactly the hazard the CAS'd detect store makes harmless.
+    let _lock = lock_token_testing();
+
+    if X64V3Token::summon().is_none() {
+        // No AVX2 on this CPU — the token is statically absent, so the
+        // lost-update path this test exercises cannot run.
+        return;
+    }
+    assert!(
+        X64V3Token::dangerously_disable_token_process_wide(false).is_ok(),
+        "V3 must be runtime-detectable under testable_dispatch"
+    );
+
+    let stop = Arc::new(AtomicBool::new(false));
+    let violations = Arc::new(AtomicUsize::new(0));
+
+    let summoner = {
+        let stop = Arc::clone(&stop);
+        let violations = Arc::clone(&violations);
+        std::thread::spawn(move || {
+            while !stop.load(Ordering::Relaxed) {
+                // While the cache reads 0 this call runs the full CPUID
+                // probe — the in-flight window where a stale store used
+                // to land. If it returns Some while the disabled flag is
+                // already visible, the stale store won.
+                let got = X64V3Token::summon();
+                if got.is_some()
+                    && X64V3Token::manually_disabled().unwrap_or(false)
+                    && X64V3Token::summon().is_some()
+                {
+                    // A second summon returning Some means this isn't a
+                    // probe that merely raced the flag store — the cache
+                    // itself reads "available" under a committed disable.
+                    violations.fetch_add(1, Ordering::Relaxed);
+                }
+            }
+        })
+    };
+
+    let mut toggler_violations = 0usize;
+    for _ in 0..2000 {
+        // Re-enable: cache drops to 0, so the summoner's next call enters
+        // the slow detect path — the window the bug needs.
+        let _ = X64V3Token::dangerously_disable_token_process_wide(false);
+        std::thread::yield_now();
+        X64V3Token::dangerously_disable_token_process_wide(true).expect("V3 is runtime-detectable");
+        // After disable() returns, the cache must read "disabled" for
+        // every summon; a resurrected 2 fails outright.
+        for _ in 0..32 {
+            if X64V3Token::summon().is_some() {
+                toggler_violations += 1;
+            }
+        }
+        if toggler_violations > 0 || violations.load(Ordering::Relaxed) > 0 {
+            break;
+        }
+    }
+
+    stop.store(true, Ordering::Relaxed);
+    let _ = X64V3Token::dangerously_disable_token_process_wide(false);
+    summoner.join().unwrap();
+
+    assert_eq!(
+        toggler_violations, 0,
+        "summon() returned Some while V3 was disabled process-wide \
+         (detect() overwrote a concurrent disable — lost update)"
+    );
+    assert_eq!(
+        violations.load(Ordering::Relaxed),
+        0,
+        "summon() returned Some while V3 was disabled process-wide \
+         (detect() overwrote a concurrent disable — lost update)"
+    );
+}
