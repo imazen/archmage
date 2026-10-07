@@ -1,0 +1,12 @@
+# Run under the host's serialized run-heavy wrapper.
+prepare out sources image:
+    python3 run.py prepare --out {{out}} --sources {{sources}} --image {{image}}
+
+build out:
+    python3 run.py build --out {{out}}
+
+measure out passes="5":
+    python3 run.py measure --out {{out}} --passes {{passes}}
+
+summarize out:
+    python3 run.py summarize --out {{out}}
