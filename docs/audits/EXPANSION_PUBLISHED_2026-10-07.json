@@ -1,0 +1,24 @@
+[
+  {
+    "name": "archmage",
+    "url": "https://static.crates.io/crates/archmage/archmage-0.9.29.crate",
+    "sha256": "8e3a17fc8196cce2902db52de7a21d4407971d080c01a0256037fcd3fc6e536e",
+    "vcs": {
+      "git": {
+        "sha1": "b04846c743b313a3539119a0a29f381fd39a482e"
+      },
+      "path_in_vcs": ""
+    }
+  },
+  {
+    "name": "archmage-macros",
+    "url": "https://static.crates.io/crates/archmage-macros/archmage-macros-0.9.29.crate",
+    "sha256": "1d0c10fb756a60ff9418d3e5dcd2b665c5914e32391d2523995d2c2c09237ac6",
+    "vcs": {
+      "git": {
+        "sha1": "b04846c743b313a3539119a0a29f381fd39a482e"
+      },
+      "path_in_vcs": "archmage-macros"
+    }
+  }
+]

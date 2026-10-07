@@ -155,11 +155,13 @@ These do not need another naming vote.
 
 After rebasing, the macro unit suite passes with 129 tests passed, no failures
 and one existing ignored allocation-profile test. The forwarding regression
-now checks the normalized wrapper argument, original inner pattern, forwarding
+now checks the normalized wrapper argument, inner signature, forwarding
 call and dispatcher token position together. Main's and the draft's legacy
 expansion suites also pass; the independent expansion audit nevertheless found
 legacy safety and attribute-routing defects. Snapshot preservation is not a
 correctness proof, and those findings remain release work.
+See the [independent expansion audit](audits/EXPANSION_AUDIT_2026-10-07.md)
+and its [per-file inventory](audits/EXPANSION_COVERAGE_2026-10-07.md).
 
 The remaining policy questions are narrower:
 
@@ -194,3 +196,9 @@ Tier defaults, provider feature gates, implicit inline attributes and helper
 visibility are also part of compatibility. A from/to converter must make them
 explicit where new defaults differ. These inconsistencies motivate the unified
 model; they are not by themselves evidence that an expansion is unsound.
+
+In particular, the legacy tokenful nested-call rewriter partitions candidates
+into covered tiers and runtime upgrades. Replacing that call with `attuned!`
+would remove the upgrade behavior; an exact migration may need `reattune!`.
+The legacy `without token` form instead selects the exact caller tier. Check
+the enclosing attribute and call modifiers together when generating an edit.
