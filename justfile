@@ -355,6 +355,13 @@ token-migration-check:
 token-migration-arm:
     CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER="qemu-aarch64 -L /usr/aarch64-linux-gnu" cargo test -p magetypes --test token_aliases --test raw_interop --target aarch64-unknown-linux-gnu
 
+# Regenerate magetypes/tests/harvest_shapes.rs from snapshots of consumer
+# crates: every macro signature shape they use, compiled as one test.
+# ROOT holds the snapshots (e.g. `git archive HEAD | tar -x -C ROOT/zen/<crate>`).
+harvest-shapes ROOT:
+    python3 -I xtask/harvest_shapes.py {{ROOT}}
+    cargo fmt --all
+
 # Build the actual crate archives together without publishing.
 check-packages *TARGETS:
     cargo run -p xtask -- check-packages {{TARGETS}}

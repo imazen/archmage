@@ -683,6 +683,7 @@ Every token's feature claims MUST be verified by exercising real intrinsics on t
 | `tests/arm_feature_intrinsics.rs` | aarch64 | Arm64V2Token (RDM, DotProd, SHA2), NeonAesToken, NeonCrcToken, NeonSha3Token |
 | `tests/wasm_intrinsics_exercise.rs` | wasm32 | Wasm128Token (SIMD128 — ~100 intrinsics) |
 | `tests/feature_consistency.rs` | all | Token hierarchy, cross-arch None checks, feature detection consistency |
+| `magetypes/tests/harvest_shapes.rs` | all | 233 macro signature shapes harvested from 50 consumer crates (`just harvest-shapes ROOT`); compile-only, placeholder types, stub bodies |
 
 **Before ANY publish:**
 1. `just ci` must pass (includes ARM64 + WASM when tooling available)
