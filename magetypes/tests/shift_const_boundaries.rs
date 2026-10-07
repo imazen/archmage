@@ -32,7 +32,7 @@ macro_rules! pattern {
 macro_rules! check_signed {
     ($Tok:ty, $t:expr, $ty:ident, $elem:ty, $uelem:ty, $max:literal) => {{
         let arr: [$elem; _] = pattern!($elem);
-        let v = $ty::<$Tok>::from_array($t, arr);
+        let v = $ty::<$Tok>::from_array_t($t, arr);
         // N == 0 is the identity shift for both flavors.
         assert_eq!(v.shr_arithmetic_const::<0>().to_array(), arr);
         assert_eq!(v.shr_logical_const::<0>().to_array(), arr);
@@ -51,7 +51,7 @@ macro_rules! check_signed {
 macro_rules! check_unsigned {
     ($Tok:ty, $t:expr, $ty:ident, $elem:ty, $max:literal) => {{
         let arr: [$elem; _] = pattern!($elem);
-        let v = $ty::<$Tok>::from_array($t, arr);
+        let v = $ty::<$Tok>::from_array_t($t, arr);
         assert_eq!(v.shr_logical_const::<0>().to_array(), arr);
         assert_eq!(
             v.shr_logical_const::<$max>().to_array(),

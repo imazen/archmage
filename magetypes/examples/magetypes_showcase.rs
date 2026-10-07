@@ -47,8 +47,8 @@ mod comparison {
     /// Magetypes: clean, readable, same codegen
     #[arcane]
     pub fn dot_product_clean(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-        let va = f32x8::from_array(token, *a);
-        let vb = f32x8::from_array(token, *b);
+        let va = f32x8::from_array_t(token, *a);
+        let vb = f32x8::from_array_t(token, *b);
         (va * vb).reduce_add()
     }
 
@@ -67,9 +67,9 @@ mod comparison {
     /// FMA with magetypes: a * b + c
     #[arcane]
     pub fn fma_clean(token: X64V3Token, a: &[f32; 8], b: &[f32; 8], c: &[f32; 8]) -> [f32; 8] {
-        let va = f32x8::from_array(token, *a);
-        let vb = f32x8::from_array(token, *b);
-        let vc = f32x8::from_array(token, *c);
+        let va = f32x8::from_array_t(token, *a);
+        let vb = f32x8::from_array_t(token, *b);
+        let vc = f32x8::from_array_t(token, *c);
         va.mul_add(vb, vc).to_array()
     }
 }
@@ -84,8 +84,8 @@ mod operators {
 
     #[arcane]
     pub fn vector_math(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> [f32; 8] {
-        let va = f32x8::from_array(token, *a);
-        let vb = f32x8::from_array(token, *b);
+        let va = f32x8::from_array_t(token, *a);
+        let vb = f32x8::from_array_t(token, *b);
 
         // Natural operators - no _mm256_add_ps, _mm256_mul_ps, etc.
         let sum = va + vb;
@@ -100,8 +100,8 @@ mod operators {
 
     #[arcane]
     pub fn integer_ops(token: X64V3Token, a: &[i32; 8], b: &[i32; 8]) -> [i32; 8] {
-        let va = i32x8::from_array(token, *a);
-        let vb = i32x8::from_array(token, *b);
+        let va = i32x8::from_array_t(token, *a);
+        let vb = i32x8::from_array_t(token, *b);
 
         // Integer operators
         let sum = va + vb;
@@ -122,7 +122,7 @@ mod methods {
 
     #[arcane]
     pub fn statistics(token: X64V3Token, data: &[f32; 8]) -> (f32, f32, f32) {
-        let v = f32x8::from_array(token, *data);
+        let v = f32x8::from_array_t(token, *data);
 
         let sum = v.reduce_add();
         let min = v.reduce_min();
@@ -133,21 +133,21 @@ mod methods {
 
     #[arcane]
     pub fn clamped_normalize(token: X64V3Token, data: &[f32; 8], lo: f32, hi: f32) -> [f32; 8] {
-        let v = f32x8::from_array(token, *data);
-        let lo_v = f32x8::splat(token, lo);
-        let hi_v = f32x8::splat(token, hi);
+        let v = f32x8::from_array_t(token, *data);
+        let lo_v = f32x8::splat_t(token, lo);
+        let hi_v = f32x8::splat_t(token, hi);
 
         // Clamp then normalize to [0, 1]
         let clamped = v.max(lo_v).min(hi_v);
         let range = hi - lo;
-        let normalized = (clamped - lo_v) / f32x8::splat(token, range);
+        let normalized = (clamped - lo_v) / f32x8::splat_t(token, range);
 
         normalized.to_array()
     }
 
     #[arcane]
     pub fn abs_values(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-        let v = f32x8::from_array(token, *data);
+        let v = f32x8::from_array_t(token, *data);
         v.abs().to_array()
     }
 
@@ -156,7 +156,7 @@ mod methods {
         token: X64V3Token,
         data: &[f32; 8],
     ) -> ([f32; 8], [f32; 8], [f32; 8]) {
-        let v = f32x8::from_array(token, *data);
+        let v = f32x8::from_array_t(token, *data);
 
         let sqrt = v.sqrt();
         let rsqrt = v.rsqrt_approx(); // 1/sqrt(x), fast approximation
@@ -167,7 +167,7 @@ mod methods {
 
     #[arcane]
     pub fn floor_ceil_round(token: X64V3Token, data: &[f32; 8]) -> ([f32; 8], [f32; 8], [f32; 8]) {
-        let v = f32x8::from_array(token, *data);
+        let v = f32x8::from_array_t(token, *data);
 
         (
             v.floor().to_array(),
@@ -188,8 +188,8 @@ mod transcendentals {
     /// Softmax activation function (one chunk)
     #[arcane]
     pub fn softmax_chunk(token: X64V3Token, logits: &[f32; 8], max_val: f32) -> ([f32; 8], f32) {
-        let v = f32x8::from_array(token, *logits);
-        let max_v = f32x8::splat(token, max_val);
+        let v = f32x8::from_array_t(token, *logits);
+        let max_v = f32x8::splat_t(token, max_val);
 
         // exp(x - max) for numerical stability
         let shifted = v - max_v;
@@ -202,17 +202,17 @@ mod transcendentals {
     /// Power function for gamma correction
     #[arcane]
     pub fn gamma_correction(token: X64V3Token, pixels: &[f32; 8], gamma: f32) -> [f32; 8] {
-        let v = f32x8::from_array(token, *pixels);
+        let v = f32x8::from_array_t(token, *pixels);
         v.pow_lowp(gamma).to_array()
     }
 
     /// Log-sum-exp (numerically stable)
     #[arcane]
     pub fn log_sum_exp(token: X64V3Token, data: &[f32; 8]) -> f32 {
-        let v = f32x8::from_array(token, *data);
+        let v = f32x8::from_array_t(token, *data);
 
         let max_val = v.reduce_max();
-        let max_v = f32x8::splat(token, max_val);
+        let max_v = f32x8::splat_t(token, max_val);
 
         let shifted = v - max_v;
         let exp_sum = shifted.exp_lowp().reduce_add();
@@ -223,14 +223,14 @@ mod transcendentals {
     /// Natural log
     #[arcane]
     pub fn log_values(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-        let v = f32x8::from_array(token, *data);
+        let v = f32x8::from_array_t(token, *data);
         v.ln_lowp().to_array()
     }
 
     /// Base-2 logarithm
     #[arcane]
     pub fn log2_values(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-        let v = f32x8::from_array(token, *data);
+        let v = f32x8::from_array_t(token, *data);
         v.log2_lowp().to_array()
     }
 }
@@ -246,17 +246,17 @@ mod conditionals {
     /// ReLU activation: max(0, x)
     #[arcane]
     pub fn relu(token: X64V3Token, x: &[f32; 8]) -> [f32; 8] {
-        let v = f32x8::from_array(token, *x);
-        let zero = f32x8::zero(token);
+        let v = f32x8::from_array_t(token, *x);
+        let zero = f32x8::zero_t(token);
         v.max(zero).to_array()
     }
 
     /// Leaky ReLU: x if x > 0 else alpha * x
     #[arcane]
     pub fn leaky_relu(token: X64V3Token, x: &[f32; 8], alpha: f32) -> [f32; 8] {
-        let v = f32x8::from_array(token, *x);
-        let zero = f32x8::zero(token);
-        let alpha_v = f32x8::splat(token, alpha);
+        let v = f32x8::from_array_t(token, *x);
+        let zero = f32x8::zero_t(token);
+        let alpha_v = f32x8::splat_t(token, alpha);
 
         // mask where x > 0
         let mask = v.simd_gt(zero);
@@ -269,10 +269,10 @@ mod conditionals {
     /// Threshold: 1.0 if x > threshold else 0.0
     #[arcane]
     pub fn threshold(token: X64V3Token, x: &[f32; 8], thresh: f32) -> [f32; 8] {
-        let v = f32x8::from_array(token, *x);
-        let thresh_v = f32x8::splat(token, thresh);
-        let one = f32x8::splat(token, 1.0);
-        let zero = f32x8::zero(token);
+        let v = f32x8::from_array_t(token, *x);
+        let thresh_v = f32x8::splat_t(token, thresh);
+        let one = f32x8::splat_t(token, 1.0);
+        let zero = f32x8::zero_t(token);
 
         let mask = v.simd_gt(thresh_v);
         f32x8::blend(mask, one, zero).to_array()
@@ -281,9 +281,9 @@ mod conditionals {
     /// Clamp to range using the dedicated method
     #[arcane]
     pub fn clamp(token: X64V3Token, x: &[f32; 8], lo: f32, hi: f32) -> [f32; 8] {
-        let v = f32x8::from_array(token, *x);
-        let lo_v = f32x8::splat(token, lo);
-        let hi_v = f32x8::splat(token, hi);
+        let v = f32x8::from_array_t(token, *x);
+        let lo_v = f32x8::splat_t(token, lo);
+        let hi_v = f32x8::splat_t(token, hi);
         v.clamp(lo_v, hi_v).to_array()
     }
 }
@@ -315,12 +315,12 @@ mod batch_norm {
         beta: f32,
         eps: f32,
     ) {
-        let mean_v = f32x8::splat(token, mean);
-        let inv_std = f32x8::splat(token, gamma / (var + eps).sqrt());
-        let beta_v = f32x8::splat(token, beta);
+        let mean_v = f32x8::splat_t(token, mean);
+        let inv_std = f32x8::splat_t(token, gamma / (var + eps).sqrt());
+        let beta_v = f32x8::splat_t(token, beta);
 
         for chunk in data.chunks_exact_mut(8) {
-            let x = f32x8::from_array(token, chunk.as_ref().try_into().unwrap());
+            let x = f32x8::from_array_t(token, chunk.as_ref().try_into().unwrap());
             // (x - mean) * inv_std + beta
             let normalized = (x - mean_v).mul_add(inv_std, beta_v);
             normalized.store(chunk.try_into().unwrap());
@@ -365,12 +365,12 @@ mod layer_norm {
         let var = compute_variance(token, data, mean);
 
         // Pass 3: Normalize
-        let mean_v = f32x8::splat(token, mean);
-        let inv_std = f32x8::splat(token, gamma / (var + eps).sqrt());
-        let beta_v = f32x8::splat(token, beta);
+        let mean_v = f32x8::splat_t(token, mean);
+        let inv_std = f32x8::splat_t(token, gamma / (var + eps).sqrt());
+        let beta_v = f32x8::splat_t(token, beta);
 
         for chunk in data.chunks_exact_mut(8) {
-            let x = f32x8::from_array(token, chunk.as_ref().try_into().unwrap());
+            let x = f32x8::from_array_t(token, chunk.as_ref().try_into().unwrap());
             let normalized = (x - mean_v).mul_add(inv_std, beta_v);
             normalized.store(chunk.try_into().unwrap());
         }
@@ -383,9 +383,9 @@ mod layer_norm {
 
     #[rite]
     fn compute_mean(token: X64V3Token, data: &[f32]) -> f32 {
-        let mut sum = f32x8::zero(token);
+        let mut sum = f32x8::zero_t(token);
         for chunk in data.chunks_exact(8) {
-            let v = f32x8::from_array(token, chunk.try_into().unwrap());
+            let v = f32x8::from_array_t(token, chunk.try_into().unwrap());
             sum += v;
         }
         let mut total = sum.reduce_add();
@@ -397,11 +397,11 @@ mod layer_norm {
 
     #[rite]
     fn compute_variance(token: X64V3Token, data: &[f32], mean: f32) -> f32 {
-        let mean_v = f32x8::splat(token, mean);
-        let mut sum_sq = f32x8::zero(token);
+        let mean_v = f32x8::splat_t(token, mean);
+        let mut sum_sq = f32x8::zero_t(token);
 
         for chunk in data.chunks_exact(8) {
-            let v = f32x8::from_array(token, chunk.try_into().unwrap());
+            let v = f32x8::from_array_t(token, chunk.try_into().unwrap());
             let diff = v - mean_v;
             sum_sq = diff.mul_add(diff, sum_sq);
         }
@@ -445,13 +445,13 @@ mod cosine_similarity {
 
     #[arcane]
     fn cosine_sim_avx2(token: X64V3Token, a: &[f32], b: &[f32]) -> f32 {
-        let mut dot = f32x8::zero(token);
-        let mut norm_a = f32x8::zero(token);
-        let mut norm_b = f32x8::zero(token);
+        let mut dot = f32x8::zero_t(token);
+        let mut norm_a = f32x8::zero_t(token);
+        let mut norm_b = f32x8::zero_t(token);
 
         for (a_chunk, b_chunk) in a.chunks_exact(8).zip(b.chunks_exact(8)) {
-            let va = f32x8::from_array(token, a_chunk.try_into().unwrap());
-            let vb = f32x8::from_array(token, b_chunk.try_into().unwrap());
+            let va = f32x8::from_array_t(token, a_chunk.try_into().unwrap());
+            let vb = f32x8::from_array_t(token, b_chunk.try_into().unwrap());
 
             dot = va.mul_add(vb, dot);
             norm_a = va.mul_add(va, norm_a);
@@ -510,11 +510,11 @@ mod softmax {
         let max_val = find_max(token, data);
 
         // exp(x - max) and accumulate sum
-        let max_v = f32x8::splat(token, max_val);
-        let mut sum_vec = f32x8::zero(token);
+        let max_v = f32x8::splat_t(token, max_val);
+        let mut sum_vec = f32x8::zero_t(token);
 
         for chunk in data.chunks_exact_mut(8) {
-            let v = f32x8::from_array(token, chunk.as_ref().try_into().unwrap());
+            let v = f32x8::from_array_t(token, chunk.as_ref().try_into().unwrap());
             let e = (v - max_v).exp_lowp();
             e.store(chunk.try_into().unwrap());
             sum_vec += e;
@@ -527,9 +527,9 @@ mod softmax {
         }
 
         // Normalize
-        let inv = f32x8::splat(token, 1.0 / sum);
+        let inv = f32x8::splat_t(token, 1.0 / sum);
         for chunk in data.chunks_exact_mut(8) {
-            let v = f32x8::from_array(token, chunk.as_ref().try_into().unwrap());
+            let v = f32x8::from_array_t(token, chunk.as_ref().try_into().unwrap());
             (v * inv).store(chunk.try_into().unwrap());
         }
         for x in data.chunks_exact_mut(8).into_remainder() {
@@ -539,9 +539,9 @@ mod softmax {
 
     #[rite]
     fn find_max(token: X64V3Token, data: &[f32]) -> f32 {
-        let mut max_vec = f32x8::splat(token, f32::NEG_INFINITY);
+        let mut max_vec = f32x8::splat_t(token, f32::NEG_INFINITY);
         for chunk in data.chunks_exact(8) {
-            let v = f32x8::from_array(token, chunk.try_into().unwrap());
+            let v = f32x8::from_array_t(token, chunk.try_into().unwrap());
             max_vec = max_vec.max(v);
         }
         let mut max_val = max_vec.reduce_max();

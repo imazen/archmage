@@ -276,13 +276,13 @@ mod tests {
         use crate::simd::generic::{f32x4, u32x4, u64x2};
         use archmage::ScalarToken;
         let token = ScalarToken;
-        let mut source = u32x4::from_array(token, [0x7fc0_1234, 0, u32::MAX, 1]);
+        let mut source = u32x4::from_array_t(token, [0x7fc0_1234, 0, u32::MAX, 1]);
         assert_eq!(source.bitcast_ref_f32x4()[0].to_bits(), 0x7fc0_1234);
         source.bitcast_mut_f32x4()[1] = -0.0;
         assert_eq!(source[1], 0x8000_0000);
         let bytes = source.as_bytes();
-        assert_eq!(f32x4::from_bytes(token, bytes).as_bytes(), bytes);
-        assert_eq!(f32x4::from_bytes_owned(token, *bytes).as_bytes(), bytes);
+        assert_eq!(f32x4::from_bytes_t(token, bytes).as_bytes(), bytes);
+        assert_eq!(f32x4::from_bytes_owned_t(token, *bytes).as_bytes(), bytes);
 
         #[repr(align(8))]
         struct Bytes([u8; 33]);
@@ -296,7 +296,7 @@ mod tests {
         let vectors =
             vector_slice_mut::<_, u64x2<ScalarToken>, 16>(token, &mut bytes.0[..32]).unwrap();
         vectors[0][1] = 0;
-        vectors[1] = u64x2::from_array(token, [u64::MAX; 2]);
+        vectors[1] = u64x2::from_array_t(token, [u64::MAX; 2]);
         assert_eq!(&bytes.0[8..16], &[0; 8]);
         assert_eq!(&bytes.0[16..32], &[255; 16]);
         assert_eq!(bytes.0[32], 0xa5);

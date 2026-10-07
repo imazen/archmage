@@ -14,8 +14,8 @@ mod pattern_magetypes {
     #[test]
     fn test_magetypes_basic() {
         if let Some(token) = X64V3Token::summon() {
-            let a = f32x8::splat(token, 2.0);
-            let b = f32x8::splat(token, 3.0);
+            let a = f32x8::splat_t(token, 2.0);
+            let b = f32x8::splat_t(token, 3.0);
             let c = a + b;
             assert_eq!(c.to_array(), [5.0f32; 8]);
         }
@@ -25,7 +25,7 @@ mod pattern_magetypes {
     fn test_magetypes_load_store() {
         if let Some(token) = X64V3Token::summon() {
             let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-            let v = f32x8::load(token, &data);
+            let v = f32x8::load_t(token, &data);
             let doubled = v + v;
             assert_eq!(
                 doubled.to_array(),
@@ -38,7 +38,7 @@ mod pattern_magetypes {
     fn test_magetypes_reduce() {
         if let Some(token) = X64V3Token::summon() {
             let data = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-            let v = f32x8::load(token, &data);
+            let v = f32x8::load_t(token, &data);
             let sum = v.reduce_add();
             assert_eq!(sum, 36.0);
         }

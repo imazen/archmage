@@ -13,8 +13,8 @@ use archmage::magetypes;
 
 #[magetypes(define(f32x8, u8x16), v3, scalar)]
 fn kernel(token: Token, data: &[f32; 8], bytes: &[u8; 16]) -> f32 {
-    let _ = u8x16::load(token, bytes);
-    f32x8::load(token, data).reduce_add()
+    let _ = u8x16::load_t(token, bytes);
+    f32x8::load_t(token, data).reduce_add()
 }
 
 fn main() {}

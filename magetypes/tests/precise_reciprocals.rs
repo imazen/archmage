@@ -78,7 +78,7 @@ fn check_x4<T: F32x4Convert>(token: T, max_ulp: i64, tier: &str) {
     for chunk in pos.chunks(4) {
         let mut arr = [1.0f32; 4];
         arr[..chunk.len()].copy_from_slice(chunk);
-        let got = f32x4::from_array(token, arr).rsqrt().to_array();
+        let got = f32x4::from_array_t(token, arr).rsqrt().to_array();
         for (i, (&x, &g)) in arr.iter().zip(got.iter()).enumerate() {
             let want = 1.0f32 / x.sqrt();
             let ulp = (g.to_bits() as i64 - want.to_bits() as i64).abs();
@@ -93,7 +93,7 @@ fn check_x4<T: F32x4Convert>(token: T, max_ulp: i64, tier: &str) {
     for chunk in inputs().chunks(4) {
         let mut arr = [1.0f32; 4];
         arr[..chunk.len()].copy_from_slice(chunk);
-        let got = f32x4::from_array(token, arr).recip().to_array();
+        let got = f32x4::from_array_t(token, arr).recip().to_array();
         for (i, (&x, &g)) in arr.iter().zip(got.iter()).enumerate() {
             let want = 1.0f32 / x;
             let ulp = (g.to_bits() as i64 - want.to_bits() as i64).abs();
@@ -111,7 +111,7 @@ fn check_x8<T: F32x8Convert>(token: T, max_ulp: i64, tier: &str) {
     for chunk in inputs().chunks(8) {
         let mut arr = [1.0f32; 8];
         arr[..chunk.len()].copy_from_slice(chunk);
-        let got = f32x8::from_array(token, arr).recip().to_array();
+        let got = f32x8::from_array_t(token, arr).recip().to_array();
         for (i, (&x, &g)) in arr.iter().zip(got.iter()).enumerate() {
             let want = 1.0f32 / x;
             let ulp = (g.to_bits() as i64 - want.to_bits() as i64).abs();
@@ -133,7 +133,7 @@ fn check_f64x2<T: F64x2Backend>(token: T, max_ulp: i64, tier: &str) {
     for chunk in pos.chunks(2) {
         let mut arr = [1.0f64; 2];
         arr[..chunk.len()].copy_from_slice(chunk);
-        let got = f64x2::from_array(token, arr).rsqrt().to_array();
+        let got = f64x2::from_array_t(token, arr).rsqrt().to_array();
         for (i, (&x, &g)) in arr.iter().zip(got.iter()).enumerate() {
             let want = 1.0f64 / x.sqrt();
             let ulp = (g.to_bits() as i64 - want.to_bits() as i64).abs();
@@ -148,7 +148,7 @@ fn check_f64x2<T: F64x2Backend>(token: T, max_ulp: i64, tier: &str) {
     for chunk in inputs_f64().chunks(2) {
         let mut arr = [1.0f64; 2];
         arr[..chunk.len()].copy_from_slice(chunk);
-        let got = f64x2::from_array(token, arr).recip().to_array();
+        let got = f64x2::from_array_t(token, arr).recip().to_array();
         for (i, (&x, &g)) in arr.iter().zip(got.iter()).enumerate() {
             let want = 1.0f64 / x;
             let ulp = (g.to_bits() as i64 - want.to_bits() as i64).abs();
@@ -166,7 +166,7 @@ fn check_f64x4<T: F64x4Backend>(token: T, max_ulp: i64, tier: &str) {
     for chunk in inputs_f64().chunks(4) {
         let mut arr = [1.0f64; 4];
         arr[..chunk.len()].copy_from_slice(chunk);
-        let got = f64x4::from_array(token, arr).recip().to_array();
+        let got = f64x4::from_array_t(token, arr).recip().to_array();
         for (i, (&x, &g)) in arr.iter().zip(got.iter()).enumerate() {
             let want = 1.0f64 / x;
             let ulp = (g.to_bits() as i64 - want.to_bits() as i64).abs();
@@ -186,7 +186,7 @@ fn check_f32x16<T: F32x16Backend>(token: T, max_ulp: i64, tier: &str) {
     for chunk in inputs().chunks(16) {
         let mut arr = [1.0f32; 16];
         arr[..chunk.len()].copy_from_slice(chunk);
-        let got = f32x16::from_array(token, arr).recip().to_array();
+        let got = f32x16::from_array_t(token, arr).recip().to_array();
         for (i, (&x, &g)) in arr.iter().zip(got.iter()).enumerate() {
             let want = 1.0f32 / x;
             let ulp = (g.to_bits() as i64 - want.to_bits() as i64).abs();
@@ -197,7 +197,7 @@ fn check_f32x16<T: F32x16Backend>(token: T, max_ulp: i64, tier: &str) {
             );
         }
         let pos = arr.map(|x| x.abs() + 1e-6);
-        let got = f32x16::from_array(token, pos).rsqrt().to_array();
+        let got = f32x16::from_array_t(token, pos).rsqrt().to_array();
         for (i, (&x, &g)) in pos.iter().zip(got.iter()).enumerate() {
             let want = 1.0f32 / x.sqrt();
             let ulp = (g.to_bits() as i64 - want.to_bits() as i64).abs();
@@ -215,7 +215,7 @@ fn check_f64x8<T: F64x8Backend>(token: T, max_ulp: i64, tier: &str) {
     for chunk in inputs_f64().chunks(8) {
         let mut arr = [1.0f64; 8];
         arr[..chunk.len()].copy_from_slice(chunk);
-        let got = f64x8::from_array(token, arr).recip().to_array();
+        let got = f64x8::from_array_t(token, arr).recip().to_array();
         for (i, (&x, &g)) in arr.iter().zip(got.iter()).enumerate() {
             let want = 1.0f64 / x;
             let ulp = (g.to_bits() as i64 - want.to_bits() as i64).abs();
@@ -226,7 +226,7 @@ fn check_f64x8<T: F64x8Backend>(token: T, max_ulp: i64, tier: &str) {
             );
         }
         let pos = arr.map(|x| x.abs() + 1e-6);
-        let got = f64x8::from_array(token, pos).rsqrt().to_array();
+        let got = f64x8::from_array_t(token, pos).rsqrt().to_array();
         for (i, (&x, &g)) in pos.iter().zip(got.iter()).enumerate() {
             let want = 1.0f64 / x.sqrt();
             let ulp = (g.to_bits() as i64 - want.to_bits() as i64).abs();
@@ -252,7 +252,7 @@ macro_rules! rails_checker {
             let recip_in: [$elem; $lanes] = core::array::from_fn(|i| {
                 [0.0, -0.0, <$elem>::INFINITY, <$elem>::NEG_INFINITY][i % 4]
             });
-            let got = $ty::from_array(token, recip_in).$recip().to_array();
+            let got = $ty::from_array_t(token, recip_in).$recip().to_array();
             for (i, (&x, &g)) in recip_in.iter().zip(got.iter()).enumerate() {
                 let want = (1.0 as $elem) / x;
                 assert!(
@@ -265,7 +265,7 @@ macro_rules! rails_checker {
             let rsqrt_in: [$elem; $lanes] = core::array::from_fn(|i| {
                 [0.0, -0.0, <$elem>::INFINITY, -1.0][i % 4]
             });
-            let got = $ty::from_array(token, rsqrt_in).$rsqrt().to_array();
+            let got = $ty::from_array_t(token, rsqrt_in).$rsqrt().to_array();
             for (i, (&x, &g)) in rsqrt_in.iter().zip(got.iter()).enumerate() {
                 let want = (1.0 as $elem) / x.sqrt();
                 if want.is_nan() {

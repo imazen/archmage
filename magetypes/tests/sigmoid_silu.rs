@@ -42,7 +42,7 @@ fn check_backend<T: F32x8Convert>(token: T, tier: &str) {
     for chunk in inputs.chunks(8) {
         let mut arr = [0.0f32; 8];
         arr[..chunk.len()].copy_from_slice(chunk);
-        let v = f32x8::<T>::from_array(token, arr);
+        let v = f32x8::<T>::from_array_t(token, arr);
 
         let sig = v.sigmoid_midp().to_array();
         let sil = v.silu_midp().to_array();
@@ -96,7 +96,7 @@ fn check_backend<T: F32x8Convert>(token: T, tier: &str) {
     }
 
     // The exact rails, spelled out.
-    let v = f32x8::<T>::from_array(token, [-100.0, 100.0, 0.0, -88.73, 88.73, -1.0, 1.0, 0.0]);
+    let v = f32x8::<T>::from_array_t(token, [-100.0, 100.0, 0.0, -88.73, 88.73, -1.0, 1.0, 0.0]);
     let sig = v.sigmoid_midp().to_array();
     assert_eq!(sig[0], 0.0, "{tier}: sigmoid_midp(-100) must be exactly 0");
     assert_eq!(sig[1], 1.0, "{tier}: sigmoid_midp(100) must be exactly 1");
@@ -111,7 +111,9 @@ fn check_backend<T: F32x8Convert>(token: T, tier: &str) {
     for chunk in sweep.chunks(8) {
         let mut arr = [256.0f32; 8];
         arr[..chunk.len()].copy_from_slice(chunk);
-        let got = f32x8::<T>::from_array(token, arr).sigmoid_midp().to_array();
+        let got = f32x8::<T>::from_array_t(token, arr)
+            .sigmoid_midp()
+            .to_array();
         for (i, g) in got.iter().enumerate().take(chunk.len()) {
             assert!(
                 *g >= last,

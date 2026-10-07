@@ -62,7 +62,7 @@ macro_rules! check_f64_full {
             }
             let mut arr = [0.0f64; $lanes];
             arr.copy_from_slice(chunk);
-            let v = $ty::<$toktype>::from_array(tok, arr);
+            let v = $ty::<$toktype>::from_array_t(tok, arr);
             let (mut r, mut rs) = ([0.0f64; $lanes], [0.0f64; $lanes]);
             v.recip().store(&mut r);
             v.rsqrt().store(&mut rs);
@@ -91,7 +91,7 @@ macro_rules! check_f32_approx {
             for (d, s) in arr.iter_mut().zip(chunk) {
                 *d = *s as f32;
             }
-            let v = $ty::<$toktype>::from_array(tok, arr);
+            let v = $ty::<$toktype>::from_array_t(tok, arr);
             let (mut ra, mut rsa) = ([0.0f32; $lanes], [0.0f32; $lanes]);
             v.rcp_approx().store(&mut ra);
             v.rsqrt_approx().store(&mut rsa);
@@ -253,7 +253,7 @@ fn wasm_scalar_rsqrt_approx_is_portable_bitexact() {
                 for (d, s) in arr.iter_mut().zip(chunk) {
                     *d = *s as f32;
                 }
-                let v = $ty::<$toktype>::from_array(tok, arr);
+                let v = $ty::<$toktype>::from_array_t(tok, arr);
                 // Backend rsqrt_approx is the bit-hack seed + 2 Newton steps; the
                 // `_portable` estimate is seed + 1 step, so the reference applies
                 // one extra `rsqrt_newton_portable`. Must match bit-for-bit.

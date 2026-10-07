@@ -35,9 +35,9 @@ fn scalar_unrolled(row: &mut [u8]) {
 fn green16(token: Token, row: &mut [u8]) {
     let (chunks, tail) = row.as_chunks_mut::<16>();
     for chunk in chunks {
-        let input = u8x16::load(token, chunk);
+        let input = u8x16::load_t(token, chunk);
         let a = input.to_array();
-        let mask = u8x16::from_array(
+        let mask = u8x16::from_array_t(
             token,
             [
                 a[1], 0, a[1], 0, a[5], 0, a[5], 0, a[9], 0, a[9], 0, a[13], 0, a[13], 0,
@@ -52,9 +52,9 @@ fn green16(token: Token, row: &mut [u8]) {
 fn green32(token: Token, row: &mut [u8]) {
     let (chunks, tail) = row.as_chunks_mut::<32>();
     for chunk in chunks {
-        let input = u8x32::load(token, chunk);
+        let input = u8x32::load_t(token, chunk);
         let a = input.to_array();
-        let mask = u8x32::from_array(
+        let mask = u8x32::from_array_t(
             token,
             core::array::from_fn(|i| if i % 2 == 0 { a[(i & !3) + 1] } else { 0 }),
         );

@@ -25,32 +25,32 @@ mod x86_impl {
 
     #[arcane]
     fn simd_cbrt_lowp(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-        f32x8::from_array(token, *data).cbrt_lowp().to_array()
+        f32x8::from_array_t(token, *data).cbrt_lowp().to_array()
     }
 
     #[arcane]
     fn simd_cbrt_midp(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-        f32x8::from_array(token, *data).cbrt_midp().to_array()
+        f32x8::from_array_t(token, *data).cbrt_midp().to_array()
     }
 
     #[arcane]
     fn simd_exp2_lowp(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-        f32x8::from_array(token, *data).exp2_lowp().to_array()
+        f32x8::from_array_t(token, *data).exp2_lowp().to_array()
     }
 
     #[arcane]
     fn simd_exp2_midp(token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
-        f32x8::from_array(token, *data).exp2_midp().to_array()
+        f32x8::from_array_t(token, *data).exp2_midp().to_array()
     }
 
     #[arcane]
     fn simd_pow_lowp(token: X64V3Token, data: &[f32; 8], n: f32) -> [f32; 8] {
-        f32x8::from_array(token, *data).pow_lowp(n).to_array()
+        f32x8::from_array_t(token, *data).pow_lowp(n).to_array()
     }
 
     #[arcane]
     fn simd_pow_midp(token: X64V3Token, data: &[f32; 8], n: f32) -> [f32; 8] {
-        f32x8::from_array(token, *data).pow_midp(n).to_array()
+        f32x8::from_array_t(token, *data).pow_midp(n).to_array()
     }
 
     // Scalar reference: std cbrt

@@ -20,71 +20,75 @@ use magetypes::simd::{f32x8, v3};
 
 #[arcane]
 fn direct_cbrt_lowp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-    v3::f32x8::load(token, input).cbrt_lowp().to_array()
+    v3::f32x8::load_t(token, input).cbrt_lowp().to_array()
 }
 
 #[arcane]
 fn direct_cbrt_midp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-    v3::f32x8::load(token, input).cbrt_midp().to_array()
+    v3::f32x8::load_t(token, input).cbrt_midp().to_array()
 }
 
 #[arcane]
 fn direct_cbrt_midp_precise(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-    v3::f32x8::load(token, input).cbrt_midp_precise().to_array()
+    v3::f32x8::load_t(token, input)
+        .cbrt_midp_precise()
+        .to_array()
 }
 
 #[arcane]
 fn direct_pow_lowp(token: X64V3Token, input: &[f32; 8], n: f32) -> [f32; 8] {
-    v3::f32x8::load(token, input).pow_lowp(n).to_array()
+    v3::f32x8::load_t(token, input).pow_lowp(n).to_array()
 }
 
 #[arcane]
 fn direct_pow_midp(token: X64V3Token, input: &[f32; 8], n: f32) -> [f32; 8] {
-    v3::f32x8::load(token, input).pow_midp(n).to_array()
+    v3::f32x8::load_t(token, input).pow_midp(n).to_array()
 }
 
 #[arcane]
 fn direct_pow_midp_precise(token: X64V3Token, input: &[f32; 8], n: f32) -> [f32; 8] {
-    v3::f32x8::load(token, input).pow_midp_precise(n).to_array()
+    v3::f32x8::load_t(token, input)
+        .pow_midp_precise(n)
+        .to_array()
 }
 
 #[arcane]
 fn direct_pow_midp_unchecked(token: X64V3Token, input: &[f32; 8], n: f32) -> [f32; 8] {
-    v3::f32x8::load(token, input)
+    v3::f32x8::load_t(token, input)
         .pow_midp_unchecked(n)
         .to_array()
 }
 
 #[arcane]
 fn direct_pow_lowp_unchecked(token: X64V3Token, input: &[f32; 8], n: f32) -> [f32; 8] {
-    v3::f32x8::load(token, input)
+    v3::f32x8::load_t(token, input)
         .pow_lowp_unchecked(n)
         .to_array()
 }
 
 #[arcane]
 fn direct_log2_lowp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-    v3::f32x8::load(token, input).log2_lowp().to_array()
+    v3::f32x8::load_t(token, input).log2_lowp().to_array()
 }
 
 #[arcane]
 fn direct_log2_midp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-    v3::f32x8::load(token, input).log2_midp().to_array()
+    v3::f32x8::load_t(token, input).log2_midp().to_array()
 }
 
 #[arcane]
 fn direct_exp2_midp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-    v3::f32x8::load(token, input).exp2_midp().to_array()
+    v3::f32x8::load_t(token, input).exp2_midp().to_array()
 }
 
 #[arcane]
 fn direct_ln_midp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-    v3::f32x8::load(token, input).ln_midp().to_array()
+    v3::f32x8::load_t(token, input).ln_midp().to_array()
 }
 
 #[arcane]
 fn direct_exp_midp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-    v3::f32x8::load(token, input).exp_midp().to_array()
+    v3::f32x8::load_t(token, input).exp_midp().to_array()
 }
 
 // ============================================================================
@@ -93,32 +97,32 @@ fn direct_exp_midp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
 
 #[arcane]
 fn generic_cbrt_lowp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-    f32x8::load(token, input).cbrt_lowp().to_array()
+    f32x8::load_t(token, input).cbrt_lowp().to_array()
 }
 
 #[arcane]
 fn generic_cbrt_midp(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-    f32x8::load(token, input).cbrt_midp().to_array()
+    f32x8::load_t(token, input).cbrt_midp().to_array()
 }
 
 #[arcane]
 fn generic_cbrt_midp_precise(token: X64V3Token, input: &[f32; 8]) -> [f32; 8] {
-    f32x8::load(token, input).cbrt_midp_precise().to_array()
+    f32x8::load_t(token, input).cbrt_midp_precise().to_array()
 }
 
 #[arcane]
 fn generic_pow_lowp(token: X64V3Token, input: &[f32; 8], n: f32) -> [f32; 8] {
-    f32x8::load(token, input).pow_lowp(n).to_array()
+    f32x8::load_t(token, input).pow_lowp(n).to_array()
 }
 
 #[arcane]
 fn generic_pow_midp(token: X64V3Token, input: &[f32; 8], n: f32) -> [f32; 8] {
-    f32x8::load(token, input).pow_midp(n).to_array()
+    f32x8::load_t(token, input).pow_midp(n).to_array()
 }
 
 #[arcane]
 fn generic_pow_midp_precise(token: X64V3Token, input: &[f32; 8], n: f32) -> [f32; 8] {
-    f32x8::load(token, input).pow_midp_precise(n).to_array()
+    f32x8::load_t(token, input).pow_midp_precise(n).to_array()
 }
 
 // ============================================================================
@@ -127,27 +131,31 @@ fn generic_pow_midp_precise(token: X64V3Token, input: &[f32; 8], n: f32) -> [f32
 
 #[arcane]
 fn direct_f32x4_cbrt_lowp(token: X64V3Token, input: &[f32; 4]) -> [f32; 4] {
-    v3::f32x4::load(token, input).cbrt_lowp().to_array()
+    v3::f32x4::load_t(token, input).cbrt_lowp().to_array()
 }
 
 #[arcane]
 fn direct_f32x4_cbrt_midp(token: X64V3Token, input: &[f32; 4]) -> [f32; 4] {
-    v3::f32x4::load(token, input).cbrt_midp().to_array()
+    v3::f32x4::load_t(token, input).cbrt_midp().to_array()
 }
 
 #[arcane]
 fn direct_f32x4_cbrt_midp_precise(token: X64V3Token, input: &[f32; 4]) -> [f32; 4] {
-    v3::f32x4::load(token, input).cbrt_midp_precise().to_array()
+    v3::f32x4::load_t(token, input)
+        .cbrt_midp_precise()
+        .to_array()
 }
 
 #[arcane]
 fn direct_f32x4_pow_midp(token: X64V3Token, input: &[f32; 4], n: f32) -> [f32; 4] {
-    v3::f32x4::load(token, input).pow_midp(n).to_array()
+    v3::f32x4::load_t(token, input).pow_midp(n).to_array()
 }
 
 #[arcane]
 fn direct_f32x4_pow_midp_precise(token: X64V3Token, input: &[f32; 4], n: f32) -> [f32; 4] {
-    v3::f32x4::load(token, input).pow_midp_precise(n).to_array()
+    v3::f32x4::load_t(token, input)
+        .pow_midp_precise(n)
+        .to_array()
 }
 
 // ============================================================================
@@ -733,24 +741,24 @@ mod avx512_cbrt_zero {
 
     #[arcane]
     fn v4_cbrt_lowp(token: X64V4Token, input: &[f32; 16]) -> [f32; 16] {
-        v4::f32x16::load(token, input).cbrt_lowp().to_array()
+        v4::f32x16::load_t(token, input).cbrt_lowp().to_array()
     }
 
     #[arcane]
     fn v4_cbrt_midp(token: X64V4Token, input: &[f32; 16]) -> [f32; 16] {
-        v4::f32x16::load(token, input).cbrt_midp().to_array()
+        v4::f32x16::load_t(token, input).cbrt_midp().to_array()
     }
 
     #[arcane]
     fn v4_cbrt_midp_precise(token: X64V4Token, input: &[f32; 16]) -> [f32; 16] {
-        v4::f32x16::load(token, input)
+        v4::f32x16::load_t(token, input)
             .cbrt_midp_precise()
             .to_array()
     }
 
     #[arcane]
     fn v4_pow_midp(token: X64V4Token, input: &[f32; 16], n: f32) -> [f32; 16] {
-        v4::f32x16::load(token, input).pow_midp(n).to_array()
+        v4::f32x16::load_t(token, input).pow_midp(n).to_array()
     }
 
     #[test]

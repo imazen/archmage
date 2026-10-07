@@ -26,32 +26,32 @@ fn test_cast_slice_length_boundaries_f32x4() {
         let mut data: Vec<f32> = vec![0.0; 128];
 
         // Length 0: should succeed (empty slice)
-        assert!(f32x4::cast_slice(token, &data[..0]).is_some());
-        assert_eq!(f32x4::cast_slice(token, &data[..0]).unwrap().len(), 0);
+        assert!(f32x4::cast_slice_t(token, &data[..0]).is_some());
+        assert_eq!(f32x4::cast_slice_t(token, &data[..0]).unwrap().len(), 0);
 
         // Length 1, 2, 3: not multiples of 4, should fail
-        assert!(f32x4::cast_slice(token, &data[..1]).is_none());
-        assert!(f32x4::cast_slice(token, &data[..2]).is_none());
-        assert!(f32x4::cast_slice(token, &data[..3]).is_none());
+        assert!(f32x4::cast_slice_t(token, &data[..1]).is_none());
+        assert!(f32x4::cast_slice_t(token, &data[..2]).is_none());
+        assert!(f32x4::cast_slice_t(token, &data[..3]).is_none());
 
         // Length 4: exactly 1 vector
-        assert!(f32x4::cast_slice(token, &data[..4]).is_some());
-        assert_eq!(f32x4::cast_slice(token, &data[..4]).unwrap().len(), 1);
+        assert!(f32x4::cast_slice_t(token, &data[..4]).is_some());
+        assert_eq!(f32x4::cast_slice_t(token, &data[..4]).unwrap().len(), 1);
 
         // Length 5, 6, 7: not multiples of 4
-        assert!(f32x4::cast_slice(token, &data[..5]).is_none());
-        assert!(f32x4::cast_slice(token, &data[..6]).is_none());
-        assert!(f32x4::cast_slice(token, &data[..7]).is_none());
+        assert!(f32x4::cast_slice_t(token, &data[..5]).is_none());
+        assert!(f32x4::cast_slice_t(token, &data[..6]).is_none());
+        assert!(f32x4::cast_slice_t(token, &data[..7]).is_none());
 
         // Length 8: exactly 2 vectors
-        assert!(f32x4::cast_slice(token, &data[..8]).is_some());
-        assert_eq!(f32x4::cast_slice(token, &data[..8]).unwrap().len(), 2);
+        assert!(f32x4::cast_slice_t(token, &data[..8]).is_some());
+        assert_eq!(f32x4::cast_slice_t(token, &data[..8]).unwrap().len(), 2);
 
         // Test cast_slice_mut with same boundaries
-        assert!(f32x4::cast_slice_mut(token, &mut data[..0]).is_some());
-        assert!(f32x4::cast_slice_mut(token, &mut data[..1]).is_none());
-        assert!(f32x4::cast_slice_mut(token, &mut data[..4]).is_some());
-        assert!(f32x4::cast_slice_mut(token, &mut data[..5]).is_none());
+        assert!(f32x4::cast_slice_mut_t(token, &mut data[..0]).is_some());
+        assert!(f32x4::cast_slice_mut_t(token, &mut data[..1]).is_none());
+        assert!(f32x4::cast_slice_mut_t(token, &mut data[..4]).is_some());
+        assert!(f32x4::cast_slice_mut_t(token, &mut data[..5]).is_none());
     }
 }
 
@@ -64,22 +64,22 @@ fn test_cast_slice_length_boundaries_f64x2() {
         let mut data: Vec<f64> = vec![0.0; 64];
 
         // Length 0: empty
-        assert!(f64x2::cast_slice(token, &data[..0]).is_some());
+        assert!(f64x2::cast_slice_t(token, &data[..0]).is_some());
 
         // Length 1: not a multiple of 2
-        assert!(f64x2::cast_slice(token, &data[..1]).is_none());
+        assert!(f64x2::cast_slice_t(token, &data[..1]).is_none());
 
         // Length 2: exactly 1 vector
-        assert!(f64x2::cast_slice(token, &data[..2]).is_some());
-        assert_eq!(f64x2::cast_slice(token, &data[..2]).unwrap().len(), 1);
+        assert!(f64x2::cast_slice_t(token, &data[..2]).is_some());
+        assert_eq!(f64x2::cast_slice_t(token, &data[..2]).unwrap().len(), 1);
 
         // Length 3: not a multiple of 2
-        assert!(f64x2::cast_slice(token, &data[..3]).is_none());
+        assert!(f64x2::cast_slice_t(token, &data[..3]).is_none());
 
         // Mutable version
-        assert!(f64x2::cast_slice_mut(token, &mut data[..0]).is_some());
-        assert!(f64x2::cast_slice_mut(token, &mut data[..1]).is_none());
-        assert!(f64x2::cast_slice_mut(token, &mut data[..2]).is_some());
+        assert!(f64x2::cast_slice_mut_t(token, &mut data[..0]).is_some());
+        assert!(f64x2::cast_slice_mut_t(token, &mut data[..1]).is_none());
+        assert!(f64x2::cast_slice_mut_t(token, &mut data[..2]).is_some());
     }
 }
 
@@ -92,22 +92,22 @@ fn test_cast_slice_length_boundaries_i8x16() {
         let mut data: Vec<i8> = vec![0; 256];
 
         // Check all lengths 0-17
-        assert!(i8x16::cast_slice(token, &data[..0]).is_some()); // 0 vectors
+        assert!(i8x16::cast_slice_t(token, &data[..0]).is_some()); // 0 vectors
         for len in 1..16 {
             assert!(
-                i8x16::cast_slice(token, &data[..len]).is_none(),
+                i8x16::cast_slice_t(token, &data[..len]).is_none(),
                 "len {} should fail",
                 len
             );
         }
-        assert!(i8x16::cast_slice(token, &data[..16]).is_some()); // 1 vector
-        assert!(i8x16::cast_slice(token, &data[..17]).is_none());
-        assert!(i8x16::cast_slice(token, &data[..32]).is_some()); // 2 vectors
+        assert!(i8x16::cast_slice_t(token, &data[..16]).is_some()); // 1 vector
+        assert!(i8x16::cast_slice_t(token, &data[..17]).is_none());
+        assert!(i8x16::cast_slice_t(token, &data[..32]).is_some()); // 2 vectors
 
         // Mutable version spot checks
-        assert!(i8x16::cast_slice_mut(token, &mut data[..0]).is_some());
-        assert!(i8x16::cast_slice_mut(token, &mut data[..15]).is_none());
-        assert!(i8x16::cast_slice_mut(token, &mut data[..16]).is_some());
+        assert!(i8x16::cast_slice_mut_t(token, &mut data[..0]).is_some());
+        assert!(i8x16::cast_slice_mut_t(token, &mut data[..15]).is_none());
+        assert!(i8x16::cast_slice_mut_t(token, &mut data[..16]).is_some());
     }
 }
 
@@ -125,12 +125,12 @@ fn test_cast_slice_alignment_rejection_f32x4() {
         let data: Vec<f32> = vec![1.0; 128];
 
         // The Vec itself is aligned, so cast_slice on the whole thing should work
-        assert!(f32x4::cast_slice(token, &data[..8]).is_some());
+        assert!(f32x4::cast_slice_t(token, &data[..8]).is_some());
 
         // Taking a slice starting at index 1 might be unaligned (depends on Vec allocation)
         // We can't guarantee unalignment, but we test that cast_slice handles it correctly
         let slice_at_1 = &data[1..9]; // 8 elements starting at index 1
-        let result = f32x4::cast_slice(token, slice_at_1);
+        let result = f32x4::cast_slice_t(token, slice_at_1);
         // Result depends on actual alignment - either Some (if aligned) or None (if not)
         // Miri will catch any UB if we access an unaligned pointer incorrectly
 
@@ -155,7 +155,7 @@ fn test_load_store_boundary_values_f32x4() {
     if let Some(token) = X64V3Token::summon() {
         // Test with special floating-point values
         let specials: [f32; 4] = [f32::MIN, f32::MAX, f32::INFINITY, f32::NEG_INFINITY];
-        let v = f32x4::load(token, &specials);
+        let v = f32x4::load_t(token, &specials);
         let mut out = [0.0f32; 4];
         v.store(&mut out);
         assert_eq!(out[0], f32::MIN);
@@ -165,7 +165,7 @@ fn test_load_store_boundary_values_f32x4() {
 
         // Test with NaN (NaN != NaN, so use is_nan)
         let nans: [f32; 4] = [f32::NAN, -f32::NAN, f32::NAN, f32::NAN];
-        let v = f32x4::load(token, &nans);
+        let v = f32x4::load_t(token, &nans);
         let mut out = [0.0f32; 4];
         v.store(&mut out);
         assert!(out[0].is_nan());
@@ -178,7 +178,7 @@ fn test_load_store_boundary_values_f32x4() {
             f32::from_bits(1),          // smallest positive subnormal
             f32::from_bits(0x007FFFFF), // largest subnormal
         ];
-        let v = f32x4::load(token, &subnormals);
+        let v = f32x4::load_t(token, &subnormals);
         let mut out = [0.0f32; 4];
         v.store(&mut out);
         // Verify bits are preserved exactly
@@ -196,7 +196,7 @@ fn test_load_store_boundary_values_i32x4() {
 
     if let Some(token) = X64V3Token::summon() {
         let boundaries: [i32; 4] = [i32::MIN, i32::MAX, 0, -1];
-        let v = i32x4::load(token, &boundaries);
+        let v = i32x4::load_t(token, &boundaries);
         let mut out = [0i32; 4];
         v.store(&mut out);
         assert_eq!(out, boundaries);
@@ -210,7 +210,7 @@ fn test_load_store_boundary_values_u64x2() {
 
     if let Some(token) = X64V3Token::summon() {
         let boundaries: [u64; 2] = [u64::MIN, u64::MAX];
-        let v = u64x2::load(token, &boundaries);
+        let v = u64x2::load_t(token, &boundaries);
         let mut out = [0u64; 2];
         v.store(&mut out);
         assert_eq!(out, boundaries);
@@ -228,13 +228,13 @@ fn test_bytes_roundtrip_f32x4() {
 
     if let Some(token) = X64V3Token::summon() {
         let original: [f32; 4] = [1.0, 2.0, 3.0, 4.0];
-        let v = f32x4::load(token, &original);
+        let v = f32x4::load_t(token, &original);
 
         // Get bytes
         let bytes: &[u8; 16] = v.as_bytes();
 
         // Reconstruct from bytes
-        let v2 = f32x4::from_bytes(token, bytes);
+        let v2 = f32x4::from_bytes_t(token, bytes);
         let mut out = [0.0f32; 4];
         v2.store(&mut out);
         assert_eq!(out, original);
@@ -248,7 +248,7 @@ fn test_bytes_mut_modification_i32x4() {
 
     if let Some(token) = X64V3Token::summon() {
         let original: [i32; 4] = [0x01020304, 0x05060708, 0x090A0B0C, 0x0D0E0F10];
-        let mut v = i32x4::load(token, &original);
+        let mut v = i32x4::load_t(token, &original);
 
         // Modify first byte
         let bytes = v.as_bytes_mut();
@@ -270,13 +270,13 @@ fn test_from_bytes_patterns() {
     if let Some(token) = X64V3Token::summon() {
         // All zeros
         let zeros: [u8; 16] = [0; 16];
-        let v = f32x4::from_bytes(token, &zeros);
+        let v = f32x4::from_bytes_t(token, &zeros);
         let arr = v.to_array();
         assert_eq!(arr, [0.0, 0.0, 0.0, 0.0]);
 
         // All ones (for i32: -1)
         let ones: [u8; 16] = [0xFF; 16];
-        let v = i32x4::from_bytes(token, &ones);
+        let v = i32x4::from_bytes_t(token, &ones);
         let arr = v.to_array();
         assert_eq!(arr, [-1, -1, -1, -1]);
     }
@@ -294,7 +294,7 @@ fn test_from_bytes_owned() {
             0x00, 0x00, 0x40, 0x40, // 3.0f32
             0x00, 0x00, 0x80, 0x40, // 4.0f32
         ];
-        let v = f32x4::from_bytes_owned(token, bytes);
+        let v = f32x4::from_bytes_owned_t(token, bytes);
         let arr = v.to_array();
         assert_eq!(arr, [1.0, 2.0, 3.0, 4.0]);
     }
@@ -312,7 +312,7 @@ fn test_bitcast_preserves_bits() {
     if let Some(token) = X64V3Token::summon() {
         // Create a pattern with specific bits (use u32 to avoid literal overflow)
         let uints: [u32; 4] = [0x12345678, 0x9ABCDEF0, 0xFFFFFFFF, 0x00000000];
-        let v_u32 = u32x4::load(token, &uints);
+        let v_u32 = u32x4::load_t(token, &uints);
 
         // Bitcast to i32
         let v_i32 = v_u32.bitcast_i32x4();
@@ -335,7 +335,7 @@ fn test_bitcast_ref_mut_aliasing() {
     use magetypes::simd::{f32x4, i32x4};
 
     if let Some(token) = X64V3Token::summon() {
-        let mut v = f32x4::splat(token, 1.0);
+        let mut v = f32x4::splat_t(token, 1.0);
 
         // Get immutable bitcast reference
         let as_i32: &i32x4 = v.bitcast_ref_i32x4();
@@ -378,28 +378,28 @@ fn test_all_signed_int_types() {
             0,
             0,
         ];
-        let v = i8x16::load(token, &data_i8);
+        let v = i8x16::load_t(token, &data_i8);
         let mut out = [0i8; 16];
         v.store(&mut out);
         assert_eq!(out, data_i8);
 
         // i16x8
         let data_i16: [i16; 8] = [i16::MIN, -1, 0, 1, i16::MAX, -32768, 32767, 1000];
-        let v = i16x8::load(token, &data_i16);
+        let v = i16x8::load_t(token, &data_i16);
         let mut out = [0i16; 8];
         v.store(&mut out);
         assert_eq!(out, data_i16);
 
         // i32x4
         let data_i32: [i32; 4] = [i32::MIN, 0, i32::MAX, -1];
-        let v = i32x4::load(token, &data_i32);
+        let v = i32x4::load_t(token, &data_i32);
         let mut out = [0i32; 4];
         v.store(&mut out);
         assert_eq!(out, data_i32);
 
         // i64x2
         let data_i64: [i64; 2] = [i64::MIN, i64::MAX];
-        let v = i64x2::load(token, &data_i64);
+        let v = i64x2::load_t(token, &data_i64);
         let mut out = [0i64; 2];
         v.store(&mut out);
         assert_eq!(out, data_i64);
@@ -431,28 +431,28 @@ fn test_all_unsigned_int_types() {
             0,
             0,
         ];
-        let v = u8x16::load(token, &data_u8);
+        let v = u8x16::load_t(token, &data_u8);
         let mut out = [0u8; 16];
         v.store(&mut out);
         assert_eq!(out, data_u8);
 
         // u16x8
         let data_u16: [u16; 8] = [u16::MIN, 1, 32767, 32768, 65535, u16::MAX, 0, 1000];
-        let v = u16x8::load(token, &data_u16);
+        let v = u16x8::load_t(token, &data_u16);
         let mut out = [0u16; 8];
         v.store(&mut out);
         assert_eq!(out, data_u16);
 
         // u32x4
         let data_u32: [u32; 4] = [u32::MIN, 0, u32::MAX, 0xDEADBEEF];
-        let v = u32x4::load(token, &data_u32);
+        let v = u32x4::load_t(token, &data_u32);
         let mut out = [0u32; 4];
         v.store(&mut out);
         assert_eq!(out, data_u32);
 
         // u64x2
         let data_u64: [u64; 2] = [u64::MIN, u64::MAX];
-        let v = u64x2::load(token, &data_u64);
+        let v = u64x2::load_t(token, &data_u64);
         let mut out = [0u64; 2];
         v.store(&mut out);
         assert_eq!(out, data_u64);
@@ -471,21 +471,21 @@ fn test_256bit_load_store() {
     if let Some(token) = X64V3Token::summon() {
         // f32x8
         let data_f32: [f32; 8] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let v = f32x8::load(token, &data_f32);
+        let v = f32x8::load_t(token, &data_f32);
         let mut out = [0.0f32; 8];
         v.store(&mut out);
         assert_eq!(out, data_f32);
 
         // f64x4
         let data_f64: [f64; 4] = [1.0, 2.0, 3.0, 4.0];
-        let v = f64x4::load(token, &data_f64);
+        let v = f64x4::load_t(token, &data_f64);
         let mut out = [0.0f64; 4];
         v.store(&mut out);
         assert_eq!(out, data_f64);
 
         // i32x8
         let data_i32: [i32; 8] = [i32::MIN, -1, 0, 1, i32::MAX, 100, -100, 0];
-        let v = i32x8::load(token, &data_i32);
+        let v = i32x8::load_t(token, &data_i32);
         let mut out = [0i32; 8];
         v.store(&mut out);
         assert_eq!(out, data_i32);
@@ -504,7 +504,7 @@ fn test_256bit_cast_slice_boundaries() {
         let arr1: [f32; 8] = [1.0; 8];
 
         // Test length boundary logic via to_array roundtrip (doesn't require cast_slice)
-        let v = f32x8::load(token, &arr1);
+        let v = f32x8::load_t(token, &arr1);
         let out = v.to_array();
         assert_eq!(out, arr1);
 
@@ -513,7 +513,7 @@ fn test_256bit_cast_slice_boundaries() {
         for len in 1..8 {
             // Lengths not multiple of 8 must fail regardless of alignment
             assert!(
-                f32x8::cast_slice(token, &data[..len]).is_none(),
+                f32x8::cast_slice_t(token, &data[..len]).is_none(),
                 "len {} should fail (not multiple of 8)",
                 len
             );
@@ -521,7 +521,7 @@ fn test_256bit_cast_slice_boundaries() {
 
         // 0, 8, 16 etc. may succeed or fail depending on alignment
         // We can't assert success without guaranteed alignment
-        let _ = f32x8::cast_slice(token, &data[..8]); // result depends on alignment
+        let _ = f32x8::cast_slice_t(token, &data[..8]); // result depends on alignment
     }
 }
 
@@ -544,7 +544,7 @@ mod w512_tests {
                 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0,
                 16.0,
             ];
-            let v = f32x16::load(token, &data_f32);
+            let v = f32x16::load_t(token, &data_f32);
             let mut out = [0.0f32; 16];
             v.store(&mut out);
             assert_eq!(out, data_f32);
@@ -568,7 +568,7 @@ mod w512_tests {
                 7,
                 8,
             ];
-            let v = i32x16::load(token, &data_i32);
+            let v = i32x16::load_t(token, &data_i32);
             let mut out = [0i32; 16];
             v.store(&mut out);
             assert_eq!(out, data_i32);
@@ -582,7 +582,7 @@ fn scalar_index_bounds_and_mutation() {
     use magetypes::simd::generic::{u32x4, u32x8};
     macro_rules! check {
         ($ty:ident, $n:expr) => {{
-            let mut v = $ty::from_array(ScalarToken, core::array::from_fn(|i| i as u32));
+            let mut v = $ty::from_array_t(ScalarToken, core::array::from_fn(|i| i as u32));
             for i in 0..$n {
                 assert_eq!(v[i], i as u32);
                 v[i] += 17;

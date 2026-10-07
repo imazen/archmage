@@ -52,14 +52,14 @@ mod f32x8_native_vs_polyfill {
     {
         if let Some(token) = X64V3Token::summon() {
             // Native path
-            let v = f32x8::from_array(token, input);
+            let v = f32x8::from_array_t(token, input);
             let native_result = native_op(v).to_array();
 
             // Polyfill path (split into two f32x4)
             let lo: [f32; 4] = input[0..4].try_into().unwrap();
             let hi: [f32; 4] = input[4..8].try_into().unwrap();
-            let v_lo = f32x4::from_array(token, lo);
-            let v_hi = f32x4::from_array(token, hi);
+            let v_lo = f32x4::from_array_t(token, lo);
+            let v_hi = f32x4::from_array_t(token, hi);
             let poly_lo = polyfill_op(v_lo).to_array();
             let poly_hi = polyfill_op(v_hi).to_array();
             let polyfill_result: [f32; 8] = [
@@ -79,8 +79,8 @@ mod f32x8_native_vs_polyfill {
         G: Fn(f32x4, f32x4) -> f32x4,
     {
         if let Some(token) = X64V3Token::summon() {
-            let va = f32x8::from_array(token, a);
-            let vb = f32x8::from_array(token, b);
+            let va = f32x8::from_array_t(token, a);
+            let vb = f32x8::from_array_t(token, b);
             let native_result = native_op(va, vb).to_array();
 
             let a_lo: [f32; 4] = a[0..4].try_into().unwrap();
@@ -88,10 +88,10 @@ mod f32x8_native_vs_polyfill {
             let b_lo: [f32; 4] = b[0..4].try_into().unwrap();
             let b_hi: [f32; 4] = b[4..8].try_into().unwrap();
 
-            let va_lo = f32x4::from_array(token, a_lo);
-            let va_hi = f32x4::from_array(token, a_hi);
-            let vb_lo = f32x4::from_array(token, b_lo);
-            let vb_hi = f32x4::from_array(token, b_hi);
+            let va_lo = f32x4::from_array_t(token, a_lo);
+            let va_hi = f32x4::from_array_t(token, a_hi);
+            let vb_lo = f32x4::from_array_t(token, b_lo);
+            let vb_hi = f32x4::from_array_t(token, b_hi);
 
             let poly_lo = polyfill_op(va_lo, vb_lo).to_array();
             let poly_hi = polyfill_op(va_hi, vb_hi).to_array();
@@ -210,7 +210,7 @@ mod f32x8_native_vs_polyfill {
             ];
 
             for case in &edge_cases {
-                let v = f32x8::from_array(token, *case);
+                let v = f32x8::from_array_t(token, *case);
                 let _ = v.abs().to_array();
                 let _ = (-v).to_array();
                 let _ = v.floor().to_array();
@@ -235,13 +235,13 @@ mod i32x8_native_vs_polyfill {
         G: Fn(i32x4) -> i32x4,
     {
         if let Some(token) = X64V3Token::summon() {
-            let v = i32x8::from_array(token, input);
+            let v = i32x8::from_array_t(token, input);
             let native_result = native_op(v).to_array();
 
             let lo: [i32; 4] = input[0..4].try_into().unwrap();
             let hi: [i32; 4] = input[4..8].try_into().unwrap();
-            let v_lo = i32x4::from_array(token, lo);
-            let v_hi = i32x4::from_array(token, hi);
+            let v_lo = i32x4::from_array_t(token, lo);
+            let v_hi = i32x4::from_array_t(token, hi);
             let poly_lo = polyfill_op(v_lo).to_array();
             let poly_hi = polyfill_op(v_hi).to_array();
             let polyfill_result: [i32; 8] = [
@@ -261,8 +261,8 @@ mod i32x8_native_vs_polyfill {
         G: Fn(i32x4, i32x4) -> i32x4,
     {
         if let Some(token) = X64V3Token::summon() {
-            let va = i32x8::from_array(token, a);
-            let vb = i32x8::from_array(token, b);
+            let va = i32x8::from_array_t(token, a);
+            let vb = i32x8::from_array_t(token, b);
             let native_result = native_op(va, vb).to_array();
 
             let a_lo: [i32; 4] = a[0..4].try_into().unwrap();
@@ -270,10 +270,10 @@ mod i32x8_native_vs_polyfill {
             let b_lo: [i32; 4] = b[0..4].try_into().unwrap();
             let b_hi: [i32; 4] = b[4..8].try_into().unwrap();
 
-            let va_lo = i32x4::from_array(token, a_lo);
-            let va_hi = i32x4::from_array(token, a_hi);
-            let vb_lo = i32x4::from_array(token, b_lo);
-            let vb_hi = i32x4::from_array(token, b_hi);
+            let va_lo = i32x4::from_array_t(token, a_lo);
+            let va_hi = i32x4::from_array_t(token, a_hi);
+            let vb_lo = i32x4::from_array_t(token, b_lo);
+            let vb_hi = i32x4::from_array_t(token, b_hi);
 
             let poly_lo = polyfill_op(va_lo, vb_lo).to_array();
             let poly_hi = polyfill_op(va_hi, vb_hi).to_array();
@@ -342,7 +342,7 @@ mod i32x8_native_vs_polyfill {
             ];
 
             for case in &edge_cases {
-                let v = i32x8::from_array(token, *case);
+                let v = i32x8::from_array_t(token, *case);
                 let _ = v.abs().to_array();
                 let _ = v.min(v).to_array();
                 let _ = v.max(v).to_array();
@@ -366,11 +366,11 @@ mod i32x8_shift_bitwise {
         polyfill_op: impl Fn(i32x4) -> i32x4,
     ) -> bool {
         if let Some(token) = X64V3Token::summon() {
-            let native_result = native_op(i32x8::from_array(token, a)).to_array();
+            let native_result = native_op(i32x8::from_array_t(token, a)).to_array();
             let lo: [i32; 4] = a[0..4].try_into().unwrap();
             let hi: [i32; 4] = a[4..8].try_into().unwrap();
-            let p_lo = polyfill_op(i32x4::from_array(token, lo)).to_array();
-            let p_hi = polyfill_op(i32x4::from_array(token, hi)).to_array();
+            let p_lo = polyfill_op(i32x4::from_array_t(token, lo)).to_array();
+            let p_hi = polyfill_op(i32x4::from_array_t(token, hi)).to_array();
             let polyfill: [i32; 8] = [
                 p_lo[0], p_lo[1], p_lo[2], p_lo[3], p_hi[0], p_hi[1], p_hi[2], p_hi[3],
             ];
@@ -452,7 +452,7 @@ mod bitcast_roundtrip {
         #[test]
         fn fuzz_f32_i32_roundtrip(a in prop::array::uniform4(-1e10f32..1e10f32)) {
             if let Some(token) = X64V3Token::summon() {
-                let v = f32x4::from_array(token, a);
+                let v = f32x4::from_array_t(token, a);
                 let back = v.bitcast_i32x4().bitcast_f32x4().to_array();
                 prop_assert!(f32_arrays_eq(&a, &back), "roundtrip failed: {:?} != {:?}", a, back);
             }
@@ -462,7 +462,7 @@ mod bitcast_roundtrip {
         #[test]
         fn fuzz_i32_f32_roundtrip(a in prop::array::uniform4(i32::MIN..i32::MAX)) {
             if let Some(token) = X64V3Token::summon() {
-                let v = i32x4::from_array(token, a);
+                let v = i32x4::from_array_t(token, a);
                 let back = v.bitcast_f32x4().bitcast_i32x4().to_array();
                 prop_assert_eq!(a, back);
             }
@@ -472,9 +472,9 @@ mod bitcast_roundtrip {
         #[test]
         fn fuzz_u32_i32_f32_chain(a in prop::array::uniform4(u32::MIN..u32::MAX)) {
             if let Some(token) = X64V3Token::summon() {
-                let v = u32x4::from_array(token, a);
+                let v = u32x4::from_array_t(token, a);
                 let via_i32 = v.bitcast_i32x4().to_array();
-                let via_f32 = i32x4::from_array(token, via_i32).bitcast_f32x4();
+                let via_f32 = i32x4::from_array_t(token, via_i32).bitcast_f32x4();
                 let back = via_f32.bitcast_i32x4().to_array();
                 // u32 → i32 bit reinterpretation, round-tripped through f32
                 let expected: [i32; 4] = a.map(|x| x as i32);
@@ -487,9 +487,9 @@ mod bitcast_roundtrip {
         fn fuzz_f32_bit_preservation(bits in prop::array::uniform4(u32::MIN..u32::MAX)) {
             if let Some(token) = X64V3Token::summon() {
                 let floats: [f32; 4] = bits.map(f32::from_bits);
-                let v = f32x4::from_array(token, floats);
+                let v = f32x4::from_array_t(token, floats);
                 let as_ints = v.bitcast_i32x4().to_array();
-                let back_floats = i32x4::from_array(token, as_ints).bitcast_f32x4().to_array();
+                let back_floats = i32x4::from_array_t(token, as_ints).bitcast_f32x4().to_array();
                 // Compare bit patterns, not float equality (NaN != NaN)
                 for i in 0..4 {
                     prop_assert_eq!(
@@ -504,7 +504,7 @@ mod bitcast_roundtrip {
         #[test]
         fn fuzz_u32_f32_i32_chain(a in prop::array::uniform4(u32::MIN..u32::MAX)) {
             if let Some(token) = X64V3Token::summon() {
-                let v = u32x4::from_array(token, a);
+                let v = u32x4::from_array_t(token, a);
                 let as_f32 = v.bitcast_f32x4();
                 let as_i32 = as_f32.bitcast_i32x4().to_array();
                 // u32 reinterpreted as i32 should be the same bits
@@ -530,7 +530,7 @@ mod memory_ops_fuzz {
         #[test]
         fn fuzz_load_store_roundtrip(a in prop::array::uniform8(-1e10f32..1e10f32)) {
             if let Some(token) = X64V3Token::summon() {
-                let v = f32x8::load(token, &a);
+                let v = f32x8::load_t(token, &a);
                 let mut out = [0.0f32; 8];
                 v.store(&mut out);
                 prop_assert!(f32_arrays_eq(&a, &out), "load/store roundtrip: {:?} != {:?}", a, out);
@@ -540,7 +540,7 @@ mod memory_ops_fuzz {
         #[test]
         fn fuzz_from_array_to_array_roundtrip(a in prop::array::uniform8(-1e10f32..1e10f32)) {
             if let Some(token) = X64V3Token::summon() {
-                let v = f32x8::from_array(token, a);
+                let v = f32x8::from_array_t(token, a);
                 let out = v.to_array();
                 prop_assert!(f32_arrays_eq(&a, &out), "from/to array roundtrip: {:?} != {:?}", a, out);
             }
@@ -549,7 +549,7 @@ mod memory_ops_fuzz {
         #[test]
         fn fuzz_splat_consistency(val in -1e10f32..1e10f32) {
             if let Some(token) = X64V3Token::summon() {
-                let v = f32x8::splat(token, val);
+                let v = f32x8::splat_t(token, val);
                 let arr = v.to_array();
                 for (i, &x) in arr.iter().enumerate() {
                     prop_assert!(f32_eq(x, val), "splat lane {} diverged: {} != {}", i, x, val);
@@ -574,7 +574,7 @@ mod reduce_operations {
         #[test]
         fn fuzz_reduce_add(a in prop::array::uniform8(-1e5f32..1e5f32)) {
             if let Some(token) = X64V3Token::summon() {
-                let v = f32x8::from_array(token, a);
+                let v = f32x8::from_array_t(token, a);
                 let native = v.reduce_add();
                 let scalar: f32 = a.iter().sum();
                 // SIMD uses tree reduction: ((a+e)+(b+f)) + ((c+g)+(d+h))
@@ -593,7 +593,7 @@ mod reduce_operations {
         #[test]
         fn fuzz_reduce_min(a in prop::array::uniform8(-1e10f32..1e10f32)) {
             if let Some(token) = X64V3Token::summon() {
-                let v = f32x8::from_array(token, a);
+                let v = f32x8::from_array_t(token, a);
                 let native = v.reduce_min();
                 let scalar = a.iter().copied().fold(f32::INFINITY, f32::min);
                 prop_assert!(f32_eq(native, scalar), "native={}, scalar={}", native, scalar);
@@ -603,7 +603,7 @@ mod reduce_operations {
         #[test]
         fn fuzz_reduce_max(a in prop::array::uniform8(-1e10f32..1e10f32)) {
             if let Some(token) = X64V3Token::summon() {
-                let v = f32x8::from_array(token, a);
+                let v = f32x8::from_array_t(token, a);
                 let native = v.reduce_max();
                 let scalar = a.iter().copied().fold(f32::NEG_INFINITY, f32::max);
                 prop_assert!(f32_eq(native, scalar), "native={}, scalar={}", native, scalar);

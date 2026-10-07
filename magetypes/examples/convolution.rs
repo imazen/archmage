@@ -51,13 +51,13 @@ mod x86_impl {
             }
 
             // Initialize accumulator to zero
-            let mut acc = f32x8::zero(token);
+            let mut acc = f32x8::zero_t(token);
 
             // Accumulate weighted contributions from all input rows
             for (row, &w) in inputs.iter().zip(weights.iter()) {
                 let input_arr: &[f32; 8] = (&row[chunk_start..chunk_start + 8]).try_into().unwrap();
-                let vals = f32x8::load(token, input_arr);
-                let weight = f32x8::splat(token, w);
+                let vals = f32x8::load_t(token, input_arr);
+                let weight = f32x8::splat_t(token, w);
                 // acc += vals * weight
                 acc = vals.mul_add(weight, acc);
             }
@@ -197,8 +197,8 @@ mod x86_impl {
 
         // Box filter weights: 1/9 for each of 9 pixels
         let weight = 1.0f32 / 9.0;
-        let weight_vec = f32x8::splat(token, weight);
-        let zero = f32x8::zero(token);
+        let weight_vec = f32x8::splat_t(token, weight);
+        let zero = f32x8::zero_t(token);
 
         // Process interior rows (skip borders for simplicity)
         for y in 1..height - 1 {
@@ -221,7 +221,7 @@ mod x86_impl {
                         let x_offset = (x_start as isize + dx - 1) as usize;
                         let idx = row_start + x_offset;
                         let arr: &[f32; 8] = (&input[idx..idx + 8]).try_into().unwrap();
-                        let vals = f32x8::load(token, arr);
+                        let vals = f32x8::load_t(token, arr);
                         acc += vals;
                     }
                 }

@@ -10,8 +10,8 @@
 //! use archmage::{SimdToken, X64V3Token};
 //!
 //! if let Some(token) = X64V3Token::summon() {
-//!     let a = f32x8::splat(token, 1.0);
-//!     let b = f32x8::splat(token, 2.0);
+//!     let a = f32x8::splat_t(token, 1.0);
+//!     let b = f32x8::splat_t(token, 2.0);
 //!     let c = a + b;
 //! }
 //! ```
@@ -27,7 +27,7 @@
 //! use magetypes::simd::generic::i32x4;
 //! let t = ScalarToken::summon().unwrap();
 //! // 32 is out of range for 32-bit lanes: valid shifts are 0..=31.
-//! let _ = i32x4::<ScalarToken>::splat(t, 1).shr_logical_const::<32>();
+//! let _ = i32x4::<ScalarToken>::splat_t(t, 1).shr_logical_const::<32>();
 //! ```
 //!
 //! ```compile_fail
@@ -35,7 +35,7 @@
 //! use magetypes::simd::generic::u8x16;
 //! let t = ScalarToken::summon().unwrap();
 //! // 8 is out of range for 8-bit lanes: valid shifts are 0..=7.
-//! let _ = u8x16::<ScalarToken>::splat(t, 1).shl_const::<8>();
+//! let _ = u8x16::<ScalarToken>::splat_t(t, 1).shl_const::<8>();
 //! ```
 
 // All generated code lives in the generated/ subfolder.
@@ -82,7 +82,7 @@ pub use generic::F16Convert;
 // On x86_64, `f32x8` = `generic::f32x8<X64V3Token>` (backed by __m256).
 // On x86_64, `f32x4` = `generic::f32x4<X64V3Token>` (backed by __m128).
 //
-// These aliases ensure existing code using `simd::f32x8::splat(token, 1.0)`
+// These aliases ensure existing code using `simd::f32x8::splat_t(token, 1.0)`
 // continues to work unchanged, while gaining the ability to write generic
 // functions over `T: F32x8Backend`.
 //

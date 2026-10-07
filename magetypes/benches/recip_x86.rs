@@ -31,7 +31,7 @@ mod kernels {
             #[arcane]
             pub fn $name($tok: X64V3Token, input: &[f32], out: &mut [f32]) {
                 for (ci, co) in input.chunks_exact(8).zip(out.chunks_exact_mut(8)) {
-                    let $v = f32x8::<X64V3Token>::from_array($tok, ci.try_into().unwrap());
+                    let $v = f32x8::<X64V3Token>::from_array_t($tok, ci.try_into().unwrap());
                     let r: f32x8<X64V3Token> = $body;
                     r.store(co.try_into().unwrap());
                 }
@@ -41,7 +41,7 @@ mod kernels {
 
     streaming_kernel!(recip_bare, token, v, v.recip());
     streaming_kernel!(recip_newton, token, v, {
-        let two = f32x8::splat(token, 2.0);
+        let two = f32x8::splat_t(token, 2.0);
         let r = v.rcp_approx();
         r * (two - v * r)
     });
@@ -49,8 +49,8 @@ mod kernels {
     streaming_kernel!(recip_portable_k, token, v, v.recip_portable());
     streaming_kernel!(rsqrt_bare, token, v, v.rsqrt());
     streaming_kernel!(rsqrt_newton, token, v, {
-        let half = f32x8::splat(token, 0.5);
-        let three = f32x8::splat(token, 3.0);
+        let half = f32x8::splat_t(token, 0.5);
+        let three = f32x8::splat_t(token, 3.0);
         let y = v.rsqrt_approx();
         half * y * (three - v * y * y)
     });

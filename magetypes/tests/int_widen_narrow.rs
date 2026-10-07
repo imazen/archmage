@@ -141,7 +141,7 @@ macro_rules! check_widen {
         let mut cases = 0usize;
         for seed in 0..8usize {
             let a: [$elem; $n] = widen_pattern!($elem, $n, seed);
-            let va = $ty::<$Tok>::from_array(t, a);
+            let va = $ty::<$Tok>::from_array_t(t, a);
             assert_eq!(
                 va.widen_low().to_array(),
                 want_widen!(a, $elem, $delem, $half, 0),
@@ -170,7 +170,7 @@ macro_rules! widen_lane_order {
         // 1, 2, 3, ... wrapped into the element range: distinct in every lane
         // for every width generated here (n <= 64 <= u8::MAX).
         let a: [$elem; $n] = core::array::from_fn(|i| (i as $elem).wrapping_add(1));
-        let va = $ty::<$Tok>::from_array(t, a);
+        let va = $ty::<$Tok>::from_array_t(t, a);
         let lo = va.widen_low().to_array();
         let hi = va.widen_high().to_array();
         for i in 0..$half {
@@ -201,8 +201,8 @@ macro_rules! check_narrow {
         for seed in 0..16usize {
             let a: [$elem; $n] = narrow_pattern!($elem, $sd, $ud, $n, seed);
             let b: [$elem; $n] = narrow_pattern!($elem, $sd, $ud, $n, seed + 5);
-            let va = $ty::<$Tok>::from_array(t, a);
-            let vb = $ty::<$Tok>::from_array(t, b);
+            let va = $ty::<$Tok>::from_array_t(t, a);
+            let vb = $ty::<$Tok>::from_array_t(t, b);
             assert_eq!(
                 va.$sm(vb).to_array(),
                 want_narrow!(
@@ -248,8 +248,8 @@ macro_rules! narrow_lane_order {
         // happens and the comparison is against the concatenation itself.
         let a: [$elem; $n] = core::array::from_fn(|i| (i as $elem) + 1);
         let b: [$elem; $n] = core::array::from_fn(|i| (i as $elem) + 1 + $n as $elem);
-        let va = $ty::<$Tok>::from_array(t, a);
-        let vb = $ty::<$Tok>::from_array(t, b);
+        let va = $ty::<$Tok>::from_array_t(t, a);
+        let vb = $ty::<$Tok>::from_array_t(t, b);
 
         let got_s = va.$sm(vb).to_array();
         let got_u = va.$um(vb).to_array();
@@ -290,7 +290,7 @@ macro_rules! exhaustive_widen_8 {
                 let a: [$elem; 16] = core::array::from_fn(|i| {
                     (base * 16 + ((i + rot) % 16) as i32 + <$elem>::MIN as i32) as $elem
                 });
-                let va = $ty::<$Tok>::from_array(t, a);
+                let va = $ty::<$Tok>::from_array_t(t, a);
                 assert_eq!(
                     va.widen_low().to_array(),
                     want_widen!(a, $elem, $delem, 8, 0),
@@ -320,7 +320,7 @@ macro_rules! exhaustive_widen_16 {
         for base in 0..8192i32 {
             let a: [$elem; 8] =
                 core::array::from_fn(|i| (base * 8 + i as i32 + <$elem>::MIN as i32) as $elem);
-            let va = $ty::<$Tok>::from_array(t, a);
+            let va = $ty::<$Tok>::from_array_t(t, a);
             assert_eq!(
                 va.widen_low().to_array(),
                 want_widen!(a, $elem, $delem, 4, 0),
@@ -352,8 +352,8 @@ macro_rules! exhaustive_narrow_i16 {
             let b: [i16; 8] = core::array::from_fn(|i| {
                 (32767 - (base * 8 + i as i32)).clamp(-32768, 32767) as i16
             });
-            let va = i16x8::<$Tok>::from_array(t, a);
-            let vb = i16x8::<$Tok>::from_array(t, b);
+            let va = i16x8::<$Tok>::from_array_t(t, a);
+            let vb = i16x8::<$Tok>::from_array_t(t, b);
             assert_eq!(
                 va.narrow_saturating_i8(vb).to_array(),
                 want_narrow!(a, b, i16, i8, 8, 16, i8::MIN as i16, i8::MAX as i16),
@@ -406,10 +406,10 @@ macro_rules! check_integer_ops {
                 1 => i32::MAX,
                 _ => (seed * 19873 + i) as i32,
             });
-            let va = $I::<$Tok>::from_array(t, a);
-            let vb = $I::<$Tok>::from_array(t, b);
+            let va = $I::<$Tok>::from_array_t(t, a);
+            let vb = $I::<$Tok>::from_array_t(t, b);
             let dot = va.madd_adjacent(vb).to_array();
-            let sub = ($Acc::<$Tok>::from_array(t, accum) - va.madd_adjacent(vb)).to_array();
+            let sub = ($Acc::<$Tok>::from_array_t(t, accum) - va.madd_adjacent(vb)).to_array();
             let diff = va.abs_diff(vb).to_array();
             for k in 0..$ni / 2 {
                 let exact =
@@ -436,7 +436,8 @@ macro_rules! check_integer_ops {
             for start in (0..256usize).step_by($nu) {
                 let lhs = [a as u8; $nu];
                 let rhs: [u8; $nu] = core::array::from_fn(|i| (start + i) as u8);
-                let value = $U::<$Tok>::from_array(t, lhs).abs_diff($U::<$Tok>::from_array(t, rhs));
+                let value =
+                    $U::<$Tok>::from_array_t(t, lhs).abs_diff($U::<$Tok>::from_array_t(t, rhs));
                 let result = value.to_array();
                 let mut sum = 0u32;
                 for k in 0..$nu {
@@ -451,15 +452,18 @@ macro_rules! check_integer_ops {
                 }
                 assert_eq!(value.reduce_add_u32(), sum);
                 assert_eq!(
-                    $U::<$Tok>::from_array(t, lhs).sum_abs_diff($U::<$Tok>::from_array(t, rhs)),
+                    $U::<$Tok>::from_array_t(t, lhs).sum_abs_diff($U::<$Tok>::from_array_t(t, rhs)),
                     sum
                 );
             }
         }
-        assert_eq!($U::<$Tok>::splat(t, 255).reduce_add_u32(), 255 * $nu as u32);
         assert_eq!(
-            $I::<$Tok>::splat(t, i16::MIN)
-                .abs_diff($I::<$Tok>::splat(t, i16::MAX))
+            $U::<$Tok>::splat_t(t, 255).reduce_add_u32(),
+            255 * $nu as u32
+        );
+        assert_eq!(
+            $I::<$Tok>::splat_t(t, i16::MIN)
+                .abs_diff($I::<$Tok>::splat_t(t, i16::MAX))
                 .to_array(),
             [u16::MAX; $ni]
         );
@@ -486,7 +490,7 @@ macro_rules! check_pairwise_widen {
                     (seed.wrapping_mul(19873).wrapping_add(i * 971)) as $elem
                 }
             });
-            let got = $Vec::<$Tok>::from_array($t, input)
+            let got = $Vec::<$Tok>::from_array_t($t, input)
                 .pairwise_widen_add()
                 .to_array();
             for k in 0..$n / 2 {
@@ -505,7 +509,7 @@ macro_rules! check_pairwise_widen {
                 let input: [$elem; $n] = core::array::from_fn(|i| {
                     (pair.rotate_left((i / 2 % 16) as u32) >> (8 * (i % 2))) as $elem
                 });
-                let got = $Vec::<$Tok>::from_array($t, input)
+                let got = $Vec::<$Tok>::from_array_t($t, input)
                     .pairwise_widen_add()
                     .to_array();
                 for k in 0..$n / 2 {
@@ -605,7 +609,7 @@ where
     T: magetypes::simd::backends::I16x32Backend + magetypes::simd::backends::U16x32Backend,
 {
     let bits = core::array::from_fn(|i| (i as u16).wrapping_mul(8191));
-    let unsigned = u16x32::from_array(token, bits);
+    let unsigned = u16x32::from_array_t(token, bits);
     let signed = unsigned.bitcast_i16x32();
     assert_eq!(signed.to_array(), bits.map(|x| x as i16));
     assert_eq!(signed.bitcast_u16x32().to_array(), bits);
@@ -626,18 +630,18 @@ macro_rules! check_w512_byte_dot {
         // Exhaust every u16 bit pattern, batching lane-distinct values.
         for start in (0..65536u32).step_by(32) {
             let bits = core::array::from_fn(|i| (start + i as u32) as u16);
-            let value = u16x32::<$Tok>::from_array(token, bits).bitcast_i16x32();
+            let value = u16x32::<$Tok>::from_array_t(token, bits).bitcast_i16x32();
             assert_eq!(value.to_array(), bits.map(|x| x as i16));
             assert_eq!(value.bitcast_u16x32().to_array(), bits);
         }
         for seed in 0..256usize {
             let bytes: [u8; 64] = core::array::from_fn(|i| (seed + i * 13) as u8);
             let rhs: [i16; 32] = core::array::from_fn(|i| (i as i16).wrapping_mul(8191));
-            let input = u8x64::<$Tok>::load(token, &bytes);
+            let input = u8x64::<$Tok>::load_t(token, &bytes);
             for (offset, widened) in [(0, input.widen_low()), (32, input.widen_high())] {
                 let actual = widened
                     .bitcast_i16x32()
-                    .madd_adjacent(i16x32::load(token, &rhs))
+                    .madd_adjacent(i16x32::load_t(token, &rhs))
                     .to_array();
                 let expected: [i32; 16] = core::array::from_fn(|k| {
                     (i64::from(bytes[offset + 2 * k]) * i64::from(rhs[2 * k])
@@ -823,10 +827,10 @@ fn wasm128_backend() {
 // adjacent products and widening SAD, without per-ISA user implementations.
 #[archmage::magetypes(define(i16x8, i32x4, u8x16), v3, neon, wasm128, scalar)]
 fn integer_kernel(token: Token, a: &[i16; 8], b: &[i16; 8], bytes: &[u8; 16]) -> ([i32; 4], u32) {
-    let a = i16x8::load(token, a);
-    let b = i16x8::load(token, b);
-    let result = i32x4::splat(token, 10) - a.madd_adjacent(b);
-    let sad = u8x16::load(token, bytes).sum_abs_diff(u8x16::splat(token, 255));
+    let a = i16x8::load_t(token, a);
+    let b = i16x8::load_t(token, b);
+    let result = i32x4::splat_t(token, 10) - a.madd_adjacent(b);
+    let sad = u8x16::load_t(token, bytes).sum_abs_diff(u8x16::splat_t(token, 255));
     (result.to_array(), sad)
 }
 
@@ -846,10 +850,10 @@ fn integer_primitives_in_one_magetypes_body() {
 #[cfg(feature = "w512")]
 #[archmage::magetypes(define(u8x64, i16x32), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
 fn w512_byte_dot(token: Token, bytes: &[u8; 64], rhs: &[i16; 32]) -> [i32; 16] {
-    u8x64::load(token, bytes)
+    u8x64::load_t(token, bytes)
         .widen_low()
         .bitcast_i16x32()
-        .madd_adjacent(i16x32::load(token, rhs))
+        .madd_adjacent(i16x32::load_t(token, rhs))
         .to_array()
 }
 
@@ -879,26 +883,26 @@ fn source_backend_bounds_are_sufficient() {
         I16x8Backend, I32x4Backend, U8x16Backend, U16x8Backend, U32x4Backend,
     };
     fn byte_sum<T: U8x16Backend>(t: T) -> u32 {
-        u8x16::splat(t, 255)
-            .abs_diff(u8x16::zero(t))
+        u8x16::splat_t(t, 255)
+            .abs_diff(u8x16::zero_t(t))
             .reduce_add_u32()
     }
     fn dot<T: I16x8Backend + I32x4Backend>(t: T) -> [i32; 4] {
-        i16x8::splat(t, 2)
-            .madd_adjacent(i16x8::splat(t, 3))
+        i16x8::splat_t(t, 2)
+            .madd_adjacent(i16x8::splat_t(t, 3))
             .to_array()
     }
     fn narrow<T: I16x8Backend + U8x16Backend>(t: T) -> [u8; 16] {
         // Signed-destination I8x16Backend is intentionally absent.
-        i16x8::splat(t, -1)
-            .narrow_saturating_u8(i16x8::splat(t, 300))
+        i16x8::splat_t(t, -1)
+            .narrow_saturating_u8(i16x8::splat_t(t, 300))
             .to_array()
     }
     fn pair_bytes<T: U8x16Backend + U16x8Backend>(t: T) -> [u16; 8] {
-        u8x16::splat(t, 255).pairwise_widen_add().to_array()
+        u8x16::splat_t(t, 255).pairwise_widen_add().to_array()
     }
     fn pair_halfwords<T: U16x8Backend + U32x4Backend>(t: T) -> [u32; 4] {
-        u16x8::splat(t, u16::MAX).pairwise_widen_add().to_array()
+        u16x8::splat_t(t, u16::MAX).pairwise_widen_add().to_array()
     }
     assert_eq!(pair_bytes(ScalarToken), [510; 8]);
     assert_eq!(pair_halfwords(ScalarToken), [131070; 4]);

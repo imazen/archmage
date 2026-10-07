@@ -68,7 +68,7 @@ fn measure(
     let mut err = 0.0f64;
     for chunk in data.chunks_exact(4) {
         let arr: [f32; 4] = chunk.try_into().unwrap();
-        let out = op(f32x4::<Tok>::from_array(token, arr)).to_array();
+        let out = op(f32x4::<Tok>::from_array_t(token, arr)).to_array();
         for (&x, &y) in arr.iter().zip(out.iter()) {
             fnv(&mut h, y.to_bits());
             let r = reference(x as f64);
@@ -143,7 +143,7 @@ macro_rules! collect_bits {
         let mut out: Vec<u32> = Vec::with_capacity($data.len());
         for chunk in $data.chunks_exact($lanes) {
             let arr: [f32; $lanes] = chunk.try_into().unwrap();
-            let r = <$ty>::from_array($token, arr).$method().to_array();
+            let r = <$ty>::from_array_t($token, arr).$method().to_array();
             out.extend(r.iter().map(|v| v.to_bits()));
         }
         out

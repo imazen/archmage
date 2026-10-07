@@ -178,7 +178,7 @@ fn exercise_f32x4<
     for chunk in F32_EDGE.chunks_exact(4) {
         let input: [f32; 4] = chunk.try_into().unwrap();
         let input_s = fmt_f32_array(&input);
-        let v = generic::f32x4::<T>::from_array(token, input);
+        let v = generic::f32x4::<T>::from_array_t(token, input);
 
         emit(
             "f32x4",
@@ -218,8 +218,8 @@ fn exercise_f32x4<
         let a: [f32; 4] = ca.try_into().unwrap();
         let b: [f32; 4] = cb.try_into().unwrap();
         let input_s = fmt_f32_array(&a);
-        let va = generic::f32x4::<T>::from_array(token, a);
-        let vb = generic::f32x4::<T>::from_array(token, b);
+        let va = generic::f32x4::<T>::from_array_t(token, a);
+        let vb = generic::f32x4::<T>::from_array_t(token, b);
 
         emit(
             "f32x4",
@@ -268,7 +268,7 @@ fn exercise_f32x4<
     for chunk in safe.chunks_exact(4) {
         let input: [f32; 4] = chunk.try_into().unwrap();
         let input_s = fmt_f32_array(&input);
-        let v = generic::f32x4::<T>::from_array(token, input);
+        let v = generic::f32x4::<T>::from_array_t(token, input);
         emit(
             "f32x4",
             "to_i32_round",
@@ -292,7 +292,7 @@ fn exercise_f32x8<
     for chunk in F32_EDGE.chunks_exact(8) {
         let input: [f32; 8] = chunk.try_into().unwrap();
         let input_s = fmt_f32_array(&input);
-        let v = generic::f32x8::<T>::from_array(token, input);
+        let v = generic::f32x8::<T>::from_array_t(token, input);
 
         emit(
             "f32x8",
@@ -325,8 +325,8 @@ fn exercise_f32x8<
         let a: [f32; 8] = ca.try_into().unwrap();
         let b: [f32; 8] = cb.try_into().unwrap();
         let input_s = fmt_f32_array(&a);
-        let va = generic::f32x8::<T>::from_array(token, a);
-        let vb = generic::f32x8::<T>::from_array(token, b);
+        let va = generic::f32x8::<T>::from_array_t(token, a);
+        let vb = generic::f32x8::<T>::from_array_t(token, b);
 
         emit(
             "f32x8",
@@ -374,7 +374,7 @@ fn exercise_f32x8<
     for chunk in safe.chunks_exact(8) {
         let input: [f32; 8] = chunk.try_into().unwrap();
         let input_s = fmt_f32_array(&input);
-        let v = generic::f32x8::<T>::from_array(token, input);
+        let v = generic::f32x8::<T>::from_array_t(token, input);
         emit(
             "f32x8",
             "to_i32_round",
@@ -388,7 +388,7 @@ fn exercise_i32x4<T: magetypes::simd::backends::I32x4Backend>(token: T) {
     for chunk in I32_EDGE.chunks_exact(4) {
         let input: [i32; 4] = chunk.try_into().unwrap();
         let input_s = fmt_i32_array(&input);
-        let v = generic::i32x4::<T>::from_array(token, input);
+        let v = generic::i32x4::<T>::from_array_t(token, input);
 
         emit(
             "i32x4",
@@ -412,8 +412,8 @@ fn exercise_i32x4<T: magetypes::simd::backends::I32x4Backend>(token: T) {
         let a: [i32; 4] = ca.try_into().unwrap();
         let b: [i32; 4] = cb.try_into().unwrap();
         let input_s = fmt_i32_array(&a);
-        let va = generic::i32x4::<T>::from_array(token, a);
-        let vb = generic::i32x4::<T>::from_array(token, b);
+        let va = generic::i32x4::<T>::from_array_t(token, a);
+        let vb = generic::i32x4::<T>::from_array_t(token, b);
 
         emit(
             "i32x4",

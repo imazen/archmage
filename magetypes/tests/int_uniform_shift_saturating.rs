@@ -92,8 +92,8 @@ macro_rules! check_byte_saturation {
     ($Tok:ty, $t:expr, $ty:ident, $elem:ty, $n:expr) => {{
         let a: [$elem; $n] = pattern_a!($elem);
         let b: [$elem; $n] = pattern_b!($elem);
-        let va = $ty::<$Tok>::from_array($t, a);
-        let vb = $ty::<$Tok>::from_array($t, b);
+        let va = $ty::<$Tok>::from_array_t($t, a);
+        let vb = $ty::<$Tok>::from_array_t($t, b);
         assert_eq!(
             va.saturating_add(vb).to_array(),
             core::array::from_fn(|i| a[i].saturating_add(b[i]))
@@ -114,8 +114,8 @@ macro_rules! check_signed {
 
         let a: [$elem; $n] = pattern_a!($elem);
         let b: [$elem; $n] = pattern_b!($elem);
-        let va = $ty::<$Tok>::from_array(t, a);
-        let vb = $ty::<$Tok>::from_array(t, b);
+        let va = $ty::<$Tok>::from_array_t(t, a);
+        let vb = $ty::<$Tok>::from_array_t(t, b);
 
         for count in counts($bits) {
             let want_shl: [$elem; $n] = a.map(|x| {
@@ -187,8 +187,8 @@ macro_rules! check_unsigned {
 
         let a: [$elem; $n] = pattern_a!($elem);
         let b: [$elem; $n] = pattern_b!($elem);
-        let va = $ty::<$Tok>::from_array(t, a);
-        let vb = $ty::<$Tok>::from_array(t, b);
+        let va = $ty::<$Tok>::from_array_t(t, a);
+        let vb = $ty::<$Tok>::from_array_t(t, b);
 
         for count in counts($bits) {
             let want_shl: [$elem; $n] = a.map(|x| if count >= $bits { 0 } else { x << count });
@@ -239,7 +239,7 @@ macro_rules! check_signed_shifts {
         let mut cases = 0usize;
 
         let a: [$elem; $n] = pattern_a!($elem);
-        let va = $ty::<$Tok>::from_array(t, a);
+        let va = $ty::<$Tok>::from_array_t(t, a);
 
         for count in counts($bits) {
             let want_shl: [$elem; $n] = a.map(|x| {
@@ -293,7 +293,7 @@ macro_rules! check_unsigned_shifts {
         let mut cases = 0usize;
 
         let a: [$elem; $n] = pattern_a!($elem);
-        let va = $ty::<$Tok>::from_array(t, a);
+        let va = $ty::<$Tok>::from_array_t(t, a);
 
         for count in counts($bits) {
             let want_shl: [$elem; $n] = a.map(|x| if count >= $bits { 0 } else { x << count });
@@ -324,7 +324,7 @@ macro_rules! lane_order_shifts {
     ($Tok:ty, $t:expr, $ty:ident, $elem:ty, $n:expr) => {{
         let t = $t;
         let a: [$elem; $n] = core::array::from_fn(|i| (i as $elem).wrapping_mul(3).wrapping_add(1));
-        let va = $ty::<$Tok>::from_array(t, a);
+        let va = $ty::<$Tok>::from_array_t(t, a);
 
         assert_eq!(
             va.shl_uniform(0).to_array(),
@@ -350,8 +350,8 @@ macro_rules! lane_order_cases {
         let t = $t;
         let a: [$elem; $n] = core::array::from_fn(|i| (i as $elem).wrapping_mul(3).wrapping_add(1));
         let b: [$elem; $n] = core::array::from_fn(|i| (i as $elem).wrapping_mul(7));
-        let va = $ty::<$Tok>::from_array(t, a);
-        let vb = $ty::<$Tok>::from_array(t, b);
+        let va = $ty::<$Tok>::from_array_t(t, a);
+        let vb = $ty::<$Tok>::from_array_t(t, b);
 
         // A shift by 0 is the identity: the result must be the input, lane for
         // lane, in the original order.
@@ -390,7 +390,7 @@ macro_rules! exhaustive_u8 {
         let mut cases = 0usize;
         for a_hi in 0..16u16 {
             let a: [u8; 16] = core::array::from_fn(|i| (a_hi * 16 + i as u16) as u8);
-            let va = u8x16::<$Tok>::from_array(t, a);
+            let va = u8x16::<$Tok>::from_array_t(t, a);
             for b_hi in 0..16u16 {
                 // Rotating b's low nibble against a's makes the sweep cover all
                 // 256 x 256 operand pairs, not just the ones that share a low
@@ -398,7 +398,7 @@ macro_rules! exhaustive_u8 {
                 for rot in 0..16usize {
                     let b: [u8; 16] =
                         core::array::from_fn(|i| (b_hi * 16 + ((i + rot) % 16) as u16) as u8);
-                    let vb = u8x16::<$Tok>::from_array(t, b);
+                    let vb = u8x16::<$Tok>::from_array_t(t, b);
                     let want_add: [u8; 16] = core::array::from_fn(|i| a[i].saturating_add(b[i]));
                     let want_sub: [u8; 16] = core::array::from_fn(|i| a[i].saturating_sub(b[i]));
                     assert_eq!(va.saturating_add(vb).to_array(), want_add);
@@ -418,12 +418,12 @@ macro_rules! exhaustive_i8 {
         let mut cases = 0usize;
         for a_hi in 0..16i32 {
             let a: [i8; 16] = core::array::from_fn(|i| (a_hi * 16 + i as i32 - 128) as i8);
-            let va = i8x16::<$Tok>::from_array(t, a);
+            let va = i8x16::<$Tok>::from_array_t(t, a);
             for b_hi in 0..16i32 {
                 for rot in 0..16usize {
                     let b: [i8; 16] =
                         core::array::from_fn(|i| (b_hi * 16 + ((i + rot) % 16) as i32 - 128) as i8);
-                    let vb = i8x16::<$Tok>::from_array(t, b);
+                    let vb = i8x16::<$Tok>::from_array_t(t, b);
                     let want_add: [i8; 16] = core::array::from_fn(|i| a[i].saturating_add(b[i]));
                     let want_sub: [i8; 16] = core::array::from_fn(|i| a[i].saturating_sub(b[i]));
                     assert_eq!(va.saturating_add(vb).to_array(), want_add);

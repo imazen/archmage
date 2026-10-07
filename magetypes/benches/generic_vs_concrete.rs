@@ -51,28 +51,28 @@ mod x86_impl {
     // ============================================================================
 
     fn generic_sum<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
-        let v = f32x8::<T>::from_array(token, *data);
+        let v = f32x8::<T>::from_array_t(token, *data);
         let doubled = v + v;
         doubled.reduce_add()
     }
 
     #[inline(never)]
     fn generic_sum_noinline<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
-        let v = f32x8::<T>::from_array(token, *data);
+        let v = f32x8::<T>::from_array_t(token, *data);
         let doubled = v + v;
         doubled.reduce_add()
     }
 
     #[inline(always)]
     fn generic_sum_inline_always<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
-        let v = f32x8::<T>::from_array(token, *data);
+        let v = f32x8::<T>::from_array_t(token, *data);
         let doubled = v + v;
         doubled.reduce_add()
     }
 
     fn generic_dot<T: F32x8Backend>(token: T, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-        let va = f32x8::<T>::from_array(token, *a);
-        let vb = f32x8::<T>::from_array(token, *b);
+        let va = f32x8::<T>::from_array_t(token, *a);
+        let vb = f32x8::<T>::from_array_t(token, *b);
         let product = va * vb;
         product.reduce_add()
     }
@@ -122,7 +122,7 @@ mod x86_impl {
 
     #[arcane]
     fn concrete_v3_entry(token: X64V3Token, data: &[f32; 8]) -> f32 {
-        let v = f32x8::<x64v3>::from_array(token, *data);
+        let v = f32x8::<x64v3>::from_array_t(token, *data);
         let doubled = v + v;
         doubled.reduce_add()
     }
@@ -144,7 +144,7 @@ mod x86_impl {
 
     #[rite]
     fn concrete_v3_rite_inner(token: X64V3Token, data: &[f32; 8]) -> f32 {
-        let v = f32x8::<x64v3>::from_array(token, *data);
+        let v = f32x8::<x64v3>::from_array_t(token, *data);
         let doubled = v + v;
         doubled.reduce_add()
     }
@@ -214,8 +214,8 @@ mod x86_impl {
 
     #[arcane]
     fn dot_concrete_arcane_entry(token: X64V3Token, data_a: &[f32; 8], data_b: &[f32; 8]) -> f32 {
-        let va = f32x8::<x64v3>::from_array(token, *data_a);
-        let vb = f32x8::<x64v3>::from_array(token, *data_b);
+        let va = f32x8::<x64v3>::from_array_t(token, *data_a);
+        let vb = f32x8::<x64v3>::from_array_t(token, *data_b);
         let product = va * vb;
         product.reduce_add()
     }

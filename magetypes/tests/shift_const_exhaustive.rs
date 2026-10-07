@@ -60,7 +60,7 @@ macro_rules! check_n_signed {
     ($n:literal, $Tok:ty, $t:expr, $ty:ident, $elem:ty, $uelem:ty) => {
         (|| {
             let arr: [$elem; _] = pattern!($elem);
-            let v = $ty::<$Tok>::from_array($t, arr);
+            let v = $ty::<$Tok>::from_array_t($t, arr);
             assert_eq!(
                 v.shl_const::<$n>().to_array(),
                 arr.map(|x| x << $n),
@@ -87,7 +87,7 @@ macro_rules! check_n_unsigned {
     ($n:literal, $Tok:ty, $t:expr, $ty:ident, $elem:ty, $uelem:ty) => {
         (|| {
             let arr: [$elem; _] = pattern!($elem);
-            let v = $ty::<$Tok>::from_array($t, arr);
+            let v = $ty::<$Tok>::from_array_t($t, arr);
             assert_eq!(
                 v.shl_const::<$n>().to_array(),
                 arr.map(|x| x << $n),

@@ -15,10 +15,10 @@ use archmage::{ScalarToken, incant, magetypes};
 #[magetypes(define(f32x8), v3, scalar)]
 fn scale_impl(token: Token, plane: &mut [f32], factor: f32) {
     // `f32x8` is in scope via the `define` preamble.
-    let factor_v = f32x8::splat(token, factor);
-    let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+    let factor_v = f32x8::splat_t(token, factor);
+    let (chunks, tail) = f32x8::partition_slice_mut_t(token, plane);
     for chunk in chunks {
-        (f32x8::load(token, chunk) * factor_v).store(chunk);
+        (f32x8::load_t(token, chunk) * factor_v).store(chunk);
     }
     for v in tail {
         *v *= factor;
@@ -42,8 +42,8 @@ fn define_injects_single_type() {
 
 #[magetypes(define(f32x4, f32x8), v3, scalar)]
 fn mixed_widths_impl(token: Token, data_4: &[f32; 4], data_8: &[f32; 8]) -> f32 {
-    let v4 = f32x4::load(token, data_4);
-    let v8 = f32x8::load(token, data_8);
+    let v4 = f32x4::load_t(token, data_4);
+    let v8 = f32x8::load_t(token, data_8);
     v4.reduce_add() + v8.reduce_add()
 }
 
@@ -65,10 +65,10 @@ fn define_injects_multiple_types() {
 
 #[magetypes(define(u8x16, i16x8), v3, scalar)]
 fn integer_ops_impl(token: Token, bytes: &[u8; 16]) -> i32 {
-    let v: u8x16 = u8x16::load(token, bytes);
+    let v: u8x16 = u8x16::load_t(token, bytes);
     // Existence-of-type test: both u8x16 and i16x8 are injected by define
     // and both compile. i16x8 is unused here; u8x16 we peek at via to_array.
-    let _ = i16x8::zero(token);
+    let _ = i16x8::zero_t(token);
     v.to_array().iter().filter(|&&b| b != 0).count() as i32
 }
 
@@ -88,7 +88,7 @@ fn define_injects_integer_types() {
 
 #[magetypes(rite, define(f32x8), v3, scalar)]
 fn rite_with_define_impl(token: Token, data: &[f32; 8]) -> f32 {
-    let v = f32x8::load(token, data);
+    let v = f32x8::load_t(token, data);
     v.reduce_add()
 }
 
@@ -108,7 +108,7 @@ type F32x8Outer = u32;
 
 #[magetypes(define(f32x8), v3, scalar)]
 fn scope_isolation_impl(token: Token, data: &[f32; 8]) -> f32 {
-    let v = f32x8::load(token, data);
+    let v = f32x8::load_t(token, data);
     v.reduce_add()
 }
 
@@ -142,12 +142,12 @@ fn empty_define_list() {
 
 #[magetypes(v3, define(f32x8), scalar)]
 fn order_define_middle_impl(token: Token, data: &[f32; 8]) -> f32 {
-    f32x8::load(token, data).reduce_add()
+    f32x8::load_t(token, data).reduce_add()
 }
 
 #[magetypes(v3, scalar, define(f32x8))]
 fn order_define_last_impl(token: Token, data: &[f32; 8]) -> f32 {
-    f32x8::load(token, data).reduce_add()
+    f32x8::load_t(token, data).reduce_add()
 }
 
 #[test]

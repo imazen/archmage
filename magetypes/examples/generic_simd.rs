@@ -37,11 +37,11 @@ fn main() {
 /// Dot product of two slices. Works with AVX2, NEON, WASM, or scalar.
 #[inline(always)]
 fn dot_product<T: F32x8Backend>(token: T, a: &[f32], b: &[f32]) -> f32 {
-    let mut acc = f32x8::<T>::zero(token);
+    let mut acc = f32x8::<T>::zero_t(token);
 
     for (ac, bc) in a.chunks_exact(8).zip(b.chunks_exact(8)) {
-        let va = f32x8::<T>::load(token, ac.try_into().unwrap());
-        let vb = f32x8::<T>::load(token, bc.try_into().unwrap());
+        let va = f32x8::<T>::load_t(token, ac.try_into().unwrap());
+        let vb = f32x8::<T>::load_t(token, bc.try_into().unwrap());
         acc = va.mul_add(vb, acc); // a*b + acc — single FMA on AVX2
     }
 
@@ -59,11 +59,11 @@ fn dot_product<T: F32x8Backend>(token: T, a: &[f32], b: &[f32]) -> f32 {
 
 /// Euclidean distance between two vectors.
 fn euclidean_distance<T: F32x8Backend>(token: T, a: &[f32], b: &[f32]) -> f32 {
-    let mut acc = f32x8::<T>::zero(token);
+    let mut acc = f32x8::<T>::zero_t(token);
 
     for (ac, bc) in a.chunks_exact(8).zip(b.chunks_exact(8)) {
-        let va = f32x8::<T>::load(token, ac.try_into().unwrap());
-        let vb = f32x8::<T>::load(token, bc.try_into().unwrap());
+        let va = f32x8::<T>::load_t(token, ac.try_into().unwrap());
+        let vb = f32x8::<T>::load_t(token, bc.try_into().unwrap());
         let diff = va - vb;
         acc = diff.mul_add(diff, acc);
     }
@@ -83,13 +83,13 @@ fn euclidean_distance<T: F32x8Backend>(token: T, a: &[f32], b: &[f32]) -> f32 {
 
 /// Cosine similarity: dot(a,b) / (|a| * |b|).
 fn cosine_similarity<T: F32x8Backend>(token: T, a: &[f32], b: &[f32]) -> f32 {
-    let mut dot = f32x8::<T>::zero(token);
-    let mut norm_a = f32x8::<T>::zero(token);
-    let mut norm_b = f32x8::<T>::zero(token);
+    let mut dot = f32x8::<T>::zero_t(token);
+    let mut norm_a = f32x8::<T>::zero_t(token);
+    let mut norm_b = f32x8::<T>::zero_t(token);
 
     for (ac, bc) in a.chunks_exact(8).zip(b.chunks_exact(8)) {
-        let va = f32x8::<T>::load(token, ac.try_into().unwrap());
-        let vb = f32x8::<T>::load(token, bc.try_into().unwrap());
+        let va = f32x8::<T>::load_t(token, ac.try_into().unwrap());
+        let vb = f32x8::<T>::load_t(token, bc.try_into().unwrap());
         dot = va.mul_add(vb, dot);
         norm_a = va.mul_add(va, norm_a);
         norm_b = vb.mul_add(vb, norm_b);
@@ -120,10 +120,10 @@ fn normalize_inplace<T: F32x8Backend>(token: T, data: &mut [f32]) {
         return;
     }
     let inv_norm = 1.0 / norm_sq.sqrt();
-    let inv_v = f32x8::<T>::splat(token, inv_norm);
+    let inv_v = f32x8::<T>::splat_t(token, inv_norm);
 
     for chunk in data.chunks_exact_mut(8) {
-        let v = f32x8::<T>::load(token, chunk.as_ref().try_into().unwrap());
+        let v = f32x8::<T>::load_t(token, chunk.as_ref().try_into().unwrap());
         (v * inv_v).store(chunk.try_into().unwrap());
     }
     for x in data.chunks_exact_mut(8).into_remainder() {
@@ -135,9 +135,9 @@ fn normalize_inplace<T: F32x8Backend>(token: T, data: &mut [f32]) {
 fn batch_normalize<T: F32x8Backend>(token: T, data: &mut [f32], eps: f32) {
     // Compute mean
     let n = data.len() as f32;
-    let mut sum_v = f32x8::<T>::zero(token);
+    let mut sum_v = f32x8::<T>::zero_t(token);
     for chunk in data.chunks_exact(8) {
-        sum_v += f32x8::<T>::load(token, chunk.try_into().unwrap());
+        sum_v += f32x8::<T>::load_t(token, chunk.try_into().unwrap());
     }
     let mut sum = sum_v.reduce_add();
     for &x in data.chunks_exact(8).remainder() {
@@ -146,10 +146,10 @@ fn batch_normalize<T: F32x8Backend>(token: T, data: &mut [f32], eps: f32) {
     let mean = sum / n;
 
     // Compute variance
-    let mean_v = f32x8::<T>::splat(token, mean);
-    let mut var_v = f32x8::<T>::zero(token);
+    let mean_v = f32x8::<T>::splat_t(token, mean);
+    let mut var_v = f32x8::<T>::zero_t(token);
     for chunk in data.chunks_exact(8) {
-        let v = f32x8::<T>::load(token, chunk.try_into().unwrap());
+        let v = f32x8::<T>::load_t(token, chunk.try_into().unwrap());
         let diff = v - mean_v;
         var_v = diff.mul_add(diff, var_v);
     }
@@ -161,9 +161,9 @@ fn batch_normalize<T: F32x8Backend>(token: T, data: &mut [f32], eps: f32) {
     let inv_std = 1.0 / (var / n + eps).sqrt();
 
     // Normalize
-    let inv_std_v = f32x8::<T>::splat(token, inv_std);
+    let inv_std_v = f32x8::<T>::splat_t(token, inv_std);
     for chunk in data.chunks_exact_mut(8) {
-        let v = f32x8::<T>::load(token, chunk.as_ref().try_into().unwrap());
+        let v = f32x8::<T>::load_t(token, chunk.as_ref().try_into().unwrap());
         ((v - mean_v) * inv_std_v).store(chunk.try_into().unwrap());
     }
     for x in data.chunks_exact_mut(8).into_remainder() {
@@ -173,9 +173,9 @@ fn batch_normalize<T: F32x8Backend>(token: T, data: &mut [f32], eps: f32) {
 
 /// ReLU activation: max(0, x).
 fn relu_inplace<T: F32x8Backend>(token: T, data: &mut [f32]) {
-    let zero = f32x8::<T>::zero(token);
+    let zero = f32x8::<T>::zero_t(token);
     for chunk in data.chunks_exact_mut(8) {
-        let v = f32x8::<T>::load(token, chunk.as_ref().try_into().unwrap());
+        let v = f32x8::<T>::load_t(token, chunk.as_ref().try_into().unwrap());
         v.max(zero).store(chunk.try_into().unwrap());
     }
     for x in data.chunks_exact_mut(8).into_remainder() {

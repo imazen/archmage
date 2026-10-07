@@ -16,7 +16,7 @@ use magetypes::simd::generic::{f32x4, f32x8};
 #[test]
 fn f32x8_as_array() {
     if let Some(t) = X64V3Token::summon() {
-        let v = f32x8::<X64V3Token>::from_array(t, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+        let v = f32x8::<X64V3Token>::from_array_t(t, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
         let arr = v.as_array();
         assert_eq!(*arr, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
     }
@@ -25,7 +25,7 @@ fn f32x8_as_array() {
 #[test]
 fn f32x8_as_array_mut() {
     if let Some(t) = X64V3Token::summon() {
-        let mut v = f32x8::<X64V3Token>::from_array(t, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+        let mut v = f32x8::<X64V3Token>::from_array_t(t, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
         v.as_array_mut()[3] = 42.0;
         assert_eq!(v.to_array()[3], 42.0);
     }
@@ -34,9 +34,9 @@ fn f32x8_as_array_mut() {
 #[test]
 fn f32x8_as_bytes_roundtrip() {
     if let Some(t) = X64V3Token::summon() {
-        let v = f32x8::<X64V3Token>::from_array(t, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+        let v = f32x8::<X64V3Token>::from_array_t(t, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
         let bytes = *v.as_bytes();
-        let v2 = f32x8::<X64V3Token>::from_bytes_owned(t, bytes);
+        let v2 = f32x8::<X64V3Token>::from_bytes_owned_t(t, bytes);
         assert_eq!(v.to_array(), v2.to_array());
     }
 }
@@ -46,7 +46,7 @@ fn f32x8_from_bytes_ref() {
     if let Some(t) = X64V3Token::summon() {
         let original = [1.0_f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let bytes: [u8; 32] = unsafe { core::mem::transmute(original) };
-        let v = f32x8::<X64V3Token>::from_bytes(t, &bytes);
+        let v = f32x8::<X64V3Token>::from_bytes_t(t, &bytes);
         assert_eq!(v.to_array(), original);
     }
 }
@@ -54,7 +54,7 @@ fn f32x8_from_bytes_ref() {
 #[test]
 fn f32x8_as_bytes_mut() {
     if let Some(t) = X64V3Token::summon() {
-        let mut v = f32x8::<X64V3Token>::splat(t, 0.0);
+        let mut v = f32x8::<X64V3Token>::splat_t(t, 0.0);
         let bytes = v.as_bytes_mut();
         // Write the bytes of 1.0_f32 into the first 4 bytes
         let one_bytes = 1.0_f32.to_ne_bytes();
@@ -71,10 +71,10 @@ fn f32x8_as_bytes_mut() {
 fn f32x8_cast_slice_aligned() {
     if let Some(t) = X64V3Token::summon() {
         // Use from_array to ensure alignment
-        let v = f32x8::<X64V3Token>::from_array(t, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+        let v = f32x8::<X64V3Token>::from_array_t(t, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
         let arr = v.as_array();
         // The array reference from as_array is properly aligned
-        let cast = f32x8::<X64V3Token>::cast_slice(t, arr);
+        let cast = f32x8::<X64V3Token>::cast_slice_t(t, arr);
         assert!(cast.is_some());
         assert_eq!(cast.unwrap().len(), 1);
         assert_eq!(
@@ -88,7 +88,7 @@ fn f32x8_cast_slice_aligned() {
 fn f32x8_cast_slice_wrong_length() {
     if let Some(t) = X64V3Token::summon() {
         let data = [1.0_f32, 2.0, 3.0]; // not multiple of 8
-        assert!(f32x8::<X64V3Token>::cast_slice(t, &data).is_none());
+        assert!(f32x8::<X64V3Token>::cast_slice_t(t, &data).is_none());
     }
 }
 
@@ -97,7 +97,7 @@ fn f32x8_cast_slice_scalar_always_aligned() {
     let t = ScalarToken;
     let data = [1.0_f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
     // ScalarToken uses [f32; 8] repr which has f32 alignment — any f32 slice qualifies
-    let cast = f32x8::<ScalarToken>::cast_slice(t, &data);
+    let cast = f32x8::<ScalarToken>::cast_slice_t(t, &data);
     assert!(cast.is_some());
     assert_eq!(cast.unwrap()[0].to_array(), data);
 }
@@ -110,7 +110,7 @@ fn f32x8_cast_slice_scalar_always_aligned() {
 fn f32x8_from_u8() {
     if let Some(t) = X64V3Token::summon() {
         let bytes = [0u8, 128, 255, 1, 50, 100, 200, 42];
-        let v = f32x8::<X64V3Token>::from_u8(t, &bytes);
+        let v = f32x8::<X64V3Token>::from_u8_t(t, &bytes);
         let arr = v.to_array();
         assert_eq!(arr, [0.0, 128.0, 255.0, 1.0, 50.0, 100.0, 200.0, 42.0]);
     }
@@ -120,7 +120,7 @@ fn f32x8_from_u8() {
 fn f32x8_to_u8() {
     if let Some(t) = X64V3Token::summon() {
         let v =
-            f32x8::<X64V3Token>::from_array(t, [0.0, 127.6, 255.0, -5.0, 300.0, 0.4, 128.5, 1.0]);
+            f32x8::<X64V3Token>::from_array_t(t, [0.0, 127.6, 255.0, -5.0, 300.0, 0.4, 128.5, 1.0]);
         let bytes = v.to_u8();
         assert_eq!(bytes, [0, 128, 255, 0, 255, 0, 128, 1]); // clamped + round-to-even
     }
@@ -130,7 +130,7 @@ fn f32x8_to_u8() {
 fn f32x8_u8_roundtrip() {
     if let Some(t) = X64V3Token::summon() {
         let input = [10u8, 20, 30, 40, 50, 60, 70, 80];
-        let v = f32x8::<X64V3Token>::from_u8(t, &input);
+        let v = f32x8::<X64V3Token>::from_u8_t(t, &input);
         let output = v.to_u8();
         assert_eq!(input, output);
     }
@@ -143,9 +143,9 @@ fn f32x8_u8_roundtrip() {
 #[test]
 fn f32x8_interleave_lo() {
     if let Some(t) = X64V3Token::summon() {
-        let a = f32x8::<X64V3Token>::from_array(t, [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]);
+        let a = f32x8::<X64V3Token>::from_array_t(t, [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]);
         let b =
-            f32x8::<X64V3Token>::from_array(t, [10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0]);
+            f32x8::<X64V3Token>::from_array_t(t, [10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0]);
         let lo = a.interleave_lo(b);
         // Within 128-bit lanes: low pairs
         assert_eq!(lo.to_array(), [0.0, 10.0, 1.0, 11.0, 4.0, 14.0, 5.0, 15.0]);
@@ -155,9 +155,9 @@ fn f32x8_interleave_lo() {
 #[test]
 fn f32x8_interleave_hi() {
     if let Some(t) = X64V3Token::summon() {
-        let a = f32x8::<X64V3Token>::from_array(t, [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]);
+        let a = f32x8::<X64V3Token>::from_array_t(t, [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]);
         let b =
-            f32x8::<X64V3Token>::from_array(t, [10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0]);
+            f32x8::<X64V3Token>::from_array_t(t, [10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0]);
         let hi = a.interleave_hi(b);
         // Within 128-bit lanes: high pairs
         assert_eq!(hi.to_array(), [2.0, 12.0, 3.0, 13.0, 6.0, 16.0, 7.0, 17.0]);
@@ -167,9 +167,9 @@ fn f32x8_interleave_hi() {
 #[test]
 fn f32x8_interleave_both() {
     if let Some(t) = X64V3Token::summon() {
-        let a = f32x8::<X64V3Token>::from_array(t, [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]);
+        let a = f32x8::<X64V3Token>::from_array_t(t, [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]);
         let b =
-            f32x8::<X64V3Token>::from_array(t, [10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0]);
+            f32x8::<X64V3Token>::from_array_t(t, [10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0]);
         let (lo, hi) = a.interleave(b);
         assert_eq!(lo.to_array(), a.interleave_lo(b).to_array());
         assert_eq!(hi.to_array(), a.interleave_hi(b).to_array());
@@ -185,10 +185,10 @@ fn f32x8_deinterleave_4ch() {
     if let Some(t) = X64V3Token::summon() {
         // 8 RGBA pixels in AoS format (4 vectors, 2 pixels each)
         let rgba = [
-            f32x8::<X64V3Token>::from_array(t, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]),
-            f32x8::<X64V3Token>::from_array(t, [9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0]),
-            f32x8::<X64V3Token>::from_array(t, [17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0]),
-            f32x8::<X64V3Token>::from_array(t, [25.0, 26.0, 27.0, 28.0, 29.0, 30.0, 31.0, 32.0]),
+            f32x8::<X64V3Token>::from_array_t(t, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]),
+            f32x8::<X64V3Token>::from_array_t(t, [9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0]),
+            f32x8::<X64V3Token>::from_array_t(t, [17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0]),
+            f32x8::<X64V3Token>::from_array_t(t, [25.0, 26.0, 27.0, 28.0, 29.0, 30.0, 31.0, 32.0]),
         ];
         let [r, g, b, a] = f32x8::<X64V3Token>::deinterleave_4ch(rgba);
         assert_eq!(r.to_array(), [1.0, 5.0, 9.0, 13.0, 17.0, 21.0, 25.0, 29.0]); // all R
@@ -202,10 +202,10 @@ fn f32x8_deinterleave_4ch() {
 fn f32x8_interleave_4ch() {
     if let Some(t) = X64V3Token::summon() {
         let channels = [
-            f32x8::<X64V3Token>::from_array(t, [1.0, 5.0, 9.0, 13.0, 17.0, 21.0, 25.0, 29.0]), // R
-            f32x8::<X64V3Token>::from_array(t, [2.0, 6.0, 10.0, 14.0, 18.0, 22.0, 26.0, 30.0]), // G
-            f32x8::<X64V3Token>::from_array(t, [3.0, 7.0, 11.0, 15.0, 19.0, 23.0, 27.0, 31.0]), // B
-            f32x8::<X64V3Token>::from_array(t, [4.0, 8.0, 12.0, 16.0, 20.0, 24.0, 28.0, 32.0]), // A
+            f32x8::<X64V3Token>::from_array_t(t, [1.0, 5.0, 9.0, 13.0, 17.0, 21.0, 25.0, 29.0]), // R
+            f32x8::<X64V3Token>::from_array_t(t, [2.0, 6.0, 10.0, 14.0, 18.0, 22.0, 26.0, 30.0]), // G
+            f32x8::<X64V3Token>::from_array_t(t, [3.0, 7.0, 11.0, 15.0, 19.0, 23.0, 27.0, 31.0]), // B
+            f32x8::<X64V3Token>::from_array_t(t, [4.0, 8.0, 12.0, 16.0, 20.0, 24.0, 28.0, 32.0]), // A
         ];
         let result = f32x8::<X64V3Token>::interleave_4ch(channels);
         assert_eq!(
@@ -231,10 +231,10 @@ fn f32x8_interleave_4ch() {
 fn f32x8_deinterleave_interleave_roundtrip() {
     if let Some(t) = X64V3Token::summon() {
         let original = [
-            f32x8::<X64V3Token>::from_array(t, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]),
-            f32x8::<X64V3Token>::from_array(t, [9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0]),
-            f32x8::<X64V3Token>::from_array(t, [17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0]),
-            f32x8::<X64V3Token>::from_array(t, [25.0, 26.0, 27.0, 28.0, 29.0, 30.0, 31.0, 32.0]),
+            f32x8::<X64V3Token>::from_array_t(t, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]),
+            f32x8::<X64V3Token>::from_array_t(t, [9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0]),
+            f32x8::<X64V3Token>::from_array_t(t, [17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0]),
+            f32x8::<X64V3Token>::from_array_t(t, [25.0, 26.0, 27.0, 28.0, 29.0, 30.0, 31.0, 32.0]),
         ];
         let channels = f32x8::<X64V3Token>::deinterleave_4ch(original);
         let restored = f32x8::<X64V3Token>::interleave_4ch(channels);
@@ -259,7 +259,7 @@ fn f32x8_load_8_rgba_u8() {
             rgba[i * 4 + 2] = (i * 10 + 2) as u8;
             rgba[i * 4 + 3] = (i * 10 + 3) as u8;
         }
-        let (r, g, b, a) = f32x8::<X64V3Token>::load_8_rgba_u8(t, &rgba);
+        let (r, g, b, a) = f32x8::<X64V3Token>::load_8_rgba_u8_t(t, &rgba);
         assert_eq!(
             r.to_array(),
             [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0]
@@ -282,10 +282,14 @@ fn f32x8_load_8_rgba_u8() {
 #[test]
 fn f32x8_store_8_rgba_u8() {
     if let Some(t) = X64V3Token::summon() {
-        let r = f32x8::<X64V3Token>::from_array(t, [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0]);
-        let g = f32x8::<X64V3Token>::from_array(t, [1.0, 11.0, 21.0, 31.0, 41.0, 51.0, 61.0, 71.0]);
-        let b = f32x8::<X64V3Token>::from_array(t, [2.0, 12.0, 22.0, 32.0, 42.0, 52.0, 62.0, 72.0]);
-        let a = f32x8::<X64V3Token>::from_array(t, [3.0, 13.0, 23.0, 33.0, 43.0, 53.0, 63.0, 73.0]);
+        let r =
+            f32x8::<X64V3Token>::from_array_t(t, [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0]);
+        let g =
+            f32x8::<X64V3Token>::from_array_t(t, [1.0, 11.0, 21.0, 31.0, 41.0, 51.0, 61.0, 71.0]);
+        let b =
+            f32x8::<X64V3Token>::from_array_t(t, [2.0, 12.0, 22.0, 32.0, 42.0, 52.0, 62.0, 72.0]);
+        let a =
+            f32x8::<X64V3Token>::from_array_t(t, [3.0, 13.0, 23.0, 33.0, 43.0, 53.0, 63.0, 73.0]);
         let out = f32x8::<X64V3Token>::store_8_rgba_u8(r, g, b, a);
         for i in 0..8 {
             assert_eq!(out[i * 4], (i * 10) as u8);
@@ -303,7 +307,7 @@ fn f32x8_rgba_load_store_roundtrip() {
         for i in 0..32 {
             rgba[i] = i as u8;
         }
-        let (r, g, b, a) = f32x8::<X64V3Token>::load_8_rgba_u8(t, &rgba);
+        let (r, g, b, a) = f32x8::<X64V3Token>::load_8_rgba_u8_t(t, &rgba);
         let out = f32x8::<X64V3Token>::store_8_rgba_u8(r, g, b, a);
         assert_eq!(rgba, out);
     }
@@ -317,7 +321,7 @@ fn f32x8_rgba_load_store_roundtrip() {
 fn f32x8_transpose_8x8() {
     if let Some(t) = X64V3Token::summon() {
         let mut rows: [f32x8<X64V3Token>; 8] = core::array::from_fn(|i| {
-            f32x8::<X64V3Token>::from_array(t, core::array::from_fn(|j| (i * 8 + j) as f32))
+            f32x8::<X64V3Token>::from_array_t(t, core::array::from_fn(|j| (i * 8 + j) as f32))
         });
         f32x8::<X64V3Token>::transpose_8x8(&mut rows);
         // After transpose: rows[i][j] should be (j*8 + i) as f32
@@ -334,7 +338,7 @@ fn f32x8_transpose_8x8() {
 fn f32x8_transpose_8x8_copy() {
     if let Some(t) = X64V3Token::summon() {
         let rows: [f32x8<X64V3Token>; 8] = core::array::from_fn(|i| {
-            f32x8::<X64V3Token>::from_array(t, core::array::from_fn(|j| (i * 8 + j) as f32))
+            f32x8::<X64V3Token>::from_array_t(t, core::array::from_fn(|j| (i * 8 + j) as f32))
         });
         let transposed = f32x8::<X64V3Token>::transpose_8x8_copy(rows);
         for i in 0..8 {
@@ -350,7 +354,7 @@ fn f32x8_transpose_8x8_copy() {
 fn f32x8_transpose_double_is_identity() {
     if let Some(t) = X64V3Token::summon() {
         let original: [f32x8<X64V3Token>; 8] = core::array::from_fn(|i| {
-            f32x8::<X64V3Token>::from_array(t, core::array::from_fn(|j| (i * 8 + j) as f32))
+            f32x8::<X64V3Token>::from_array_t(t, core::array::from_fn(|j| (i * 8 + j) as f32))
         });
         let transposed = f32x8::<X64V3Token>::transpose_8x8_copy(original);
         let restored = f32x8::<X64V3Token>::transpose_8x8_copy(transposed);
@@ -364,7 +368,7 @@ fn f32x8_transpose_double_is_identity() {
 fn f32x8_load_store_8x8() {
     if let Some(t) = X64V3Token::summon() {
         let block: [f32; 64] = core::array::from_fn(|i| i as f32);
-        let rows = f32x8::<X64V3Token>::load_8x8(t, &block);
+        let rows = f32x8::<X64V3Token>::load_8x8_t(t, &block);
         for i in 0..8 {
             let arr = rows[i].to_array();
             for j in 0..8 {
@@ -398,14 +402,14 @@ fn f32x8_bitcast_ref_i32() {
 #[test]
 fn f32x8_bitcast_mut_i32() {
     if let Some(t) = X64V3Token::summon() {
-        let mut v = f32x8::<X64V3Token>::splat(t, 0.0);
+        let mut v = f32x8::<X64V3Token>::splat_t(t, 0.0);
         {
             let i32_ref = v.bitcast_mut_i32();
             let one_bits = 1.0_f32.to_bits() as i32;
             // Set first lane to bits of 1.0
             let mut arr = i32_ref.to_array();
             arr[0] = one_bits;
-            *i32_ref = magetypes::simd::generic::i32x8::<X64V3Token>::from_array(t, arr);
+            *i32_ref = magetypes::simd::generic::i32x8::<X64V3Token>::from_array_t(t, arr);
         }
         assert_eq!(v.to_array()[0], 1.0);
     }
@@ -418,7 +422,7 @@ fn f32x8_bitcast_mut_i32() {
 #[test]
 fn f32x4_as_array() {
     if let Some(t) = X64V3Token::summon() {
-        let v = f32x4::<X64V3Token>::from_array(t, [1.0, 2.0, 3.0, 4.0]);
+        let v = f32x4::<X64V3Token>::from_array_t(t, [1.0, 2.0, 3.0, 4.0]);
         assert_eq!(*v.as_array(), [1.0, 2.0, 3.0, 4.0]);
     }
 }
@@ -426,7 +430,7 @@ fn f32x4_as_array() {
 #[test]
 fn f32x4_as_array_mut() {
     if let Some(t) = X64V3Token::summon() {
-        let mut v = f32x4::<X64V3Token>::from_array(t, [1.0, 2.0, 3.0, 4.0]);
+        let mut v = f32x4::<X64V3Token>::from_array_t(t, [1.0, 2.0, 3.0, 4.0]);
         v.as_array_mut()[2] = 99.0;
         assert_eq!(v.to_array()[2], 99.0);
     }
@@ -435,9 +439,9 @@ fn f32x4_as_array_mut() {
 #[test]
 fn f32x4_bytes_roundtrip() {
     if let Some(t) = X64V3Token::summon() {
-        let v = f32x4::<X64V3Token>::from_array(t, [1.0, 2.0, 3.0, 4.0]);
+        let v = f32x4::<X64V3Token>::from_array_t(t, [1.0, 2.0, 3.0, 4.0]);
         let bytes = *v.as_bytes();
-        let v2 = f32x4::<X64V3Token>::from_bytes_owned(t, bytes);
+        let v2 = f32x4::<X64V3Token>::from_bytes_owned_t(t, bytes);
         assert_eq!(v.to_array(), v2.to_array());
     }
 }
@@ -450,7 +454,7 @@ fn f32x4_bytes_roundtrip() {
 fn f32x4_from_u8() {
     if let Some(t) = X64V3Token::summon() {
         let bytes = [0u8, 128, 255, 42];
-        let v = f32x4::<X64V3Token>::from_u8(t, &bytes);
+        let v = f32x4::<X64V3Token>::from_u8_t(t, &bytes);
         assert_eq!(v.to_array(), [0.0, 128.0, 255.0, 42.0]);
     }
 }
@@ -458,7 +462,7 @@ fn f32x4_from_u8() {
 #[test]
 fn f32x4_to_u8() {
     if let Some(t) = X64V3Token::summon() {
-        let v = f32x4::<X64V3Token>::from_array(t, [0.0, 127.6, 255.0, -5.0]);
+        let v = f32x4::<X64V3Token>::from_array_t(t, [0.0, 127.6, 255.0, -5.0]);
         assert_eq!(v.to_u8(), [0, 128, 255, 0]); // clamped + rounded
     }
 }
@@ -467,7 +471,7 @@ fn f32x4_to_u8() {
 fn f32x4_u8_roundtrip() {
     if let Some(t) = X64V3Token::summon() {
         let input = [10u8, 20, 30, 40];
-        let v = f32x4::<X64V3Token>::from_u8(t, &input);
+        let v = f32x4::<X64V3Token>::from_u8_t(t, &input);
         assert_eq!(v.to_u8(), input);
     }
 }
@@ -479,8 +483,8 @@ fn f32x4_u8_roundtrip() {
 #[test]
 fn f32x4_interleave_lo() {
     if let Some(t) = X64V3Token::summon() {
-        let a = f32x4::<X64V3Token>::from_array(t, [0.0, 1.0, 2.0, 3.0]);
-        let b = f32x4::<X64V3Token>::from_array(t, [10.0, 11.0, 12.0, 13.0]);
+        let a = f32x4::<X64V3Token>::from_array_t(t, [0.0, 1.0, 2.0, 3.0]);
+        let b = f32x4::<X64V3Token>::from_array_t(t, [10.0, 11.0, 12.0, 13.0]);
         assert_eq!(a.interleave_lo(b).to_array(), [0.0, 10.0, 1.0, 11.0]);
     }
 }
@@ -488,8 +492,8 @@ fn f32x4_interleave_lo() {
 #[test]
 fn f32x4_interleave_hi() {
     if let Some(t) = X64V3Token::summon() {
-        let a = f32x4::<X64V3Token>::from_array(t, [0.0, 1.0, 2.0, 3.0]);
-        let b = f32x4::<X64V3Token>::from_array(t, [10.0, 11.0, 12.0, 13.0]);
+        let a = f32x4::<X64V3Token>::from_array_t(t, [0.0, 1.0, 2.0, 3.0]);
+        let b = f32x4::<X64V3Token>::from_array_t(t, [10.0, 11.0, 12.0, 13.0]);
         assert_eq!(a.interleave_hi(b).to_array(), [2.0, 12.0, 3.0, 13.0]);
     }
 }
@@ -502,10 +506,10 @@ fn f32x4_interleave_hi() {
 fn f32x4_deinterleave_4ch() {
     if let Some(t) = X64V3Token::summon() {
         let rgba = [
-            f32x4::<X64V3Token>::from_array(t, [1.0, 2.0, 3.0, 4.0]), // pixel 0: R,G,B,A
-            f32x4::<X64V3Token>::from_array(t, [5.0, 6.0, 7.0, 8.0]), // pixel 1
-            f32x4::<X64V3Token>::from_array(t, [9.0, 10.0, 11.0, 12.0]),
-            f32x4::<X64V3Token>::from_array(t, [13.0, 14.0, 15.0, 16.0]),
+            f32x4::<X64V3Token>::from_array_t(t, [1.0, 2.0, 3.0, 4.0]), // pixel 0: R,G,B,A
+            f32x4::<X64V3Token>::from_array_t(t, [5.0, 6.0, 7.0, 8.0]), // pixel 1
+            f32x4::<X64V3Token>::from_array_t(t, [9.0, 10.0, 11.0, 12.0]),
+            f32x4::<X64V3Token>::from_array_t(t, [13.0, 14.0, 15.0, 16.0]),
         ];
         let [r, g, b, a] = f32x4::<X64V3Token>::deinterleave_4ch(rgba);
         assert_eq!(r.to_array(), [1.0, 5.0, 9.0, 13.0]); // R channel
@@ -519,10 +523,10 @@ fn f32x4_deinterleave_4ch() {
 fn f32x4_interleave_4ch_roundtrip() {
     if let Some(t) = X64V3Token::summon() {
         let original = [
-            f32x4::<X64V3Token>::from_array(t, [1.0, 2.0, 3.0, 4.0]),
-            f32x4::<X64V3Token>::from_array(t, [5.0, 6.0, 7.0, 8.0]),
-            f32x4::<X64V3Token>::from_array(t, [9.0, 10.0, 11.0, 12.0]),
-            f32x4::<X64V3Token>::from_array(t, [13.0, 14.0, 15.0, 16.0]),
+            f32x4::<X64V3Token>::from_array_t(t, [1.0, 2.0, 3.0, 4.0]),
+            f32x4::<X64V3Token>::from_array_t(t, [5.0, 6.0, 7.0, 8.0]),
+            f32x4::<X64V3Token>::from_array_t(t, [9.0, 10.0, 11.0, 12.0]),
+            f32x4::<X64V3Token>::from_array_t(t, [13.0, 14.0, 15.0, 16.0]),
         ];
         let channels = f32x4::<X64V3Token>::deinterleave_4ch(original);
         let restored = f32x4::<X64V3Token>::interleave_4ch(channels);
@@ -545,7 +549,7 @@ fn f32x4_load_4_rgba_u8() {
             90, 100, 110, 120, // pixel 2
             130, 140, 150, 160, // pixel 3
         ];
-        let (r, g, b, a) = f32x4::<X64V3Token>::load_4_rgba_u8(t, &rgba);
+        let (r, g, b, a) = f32x4::<X64V3Token>::load_4_rgba_u8_t(t, &rgba);
         assert_eq!(r.to_array(), [10.0, 50.0, 90.0, 130.0]);
         assert_eq!(g.to_array(), [20.0, 60.0, 100.0, 140.0]);
         assert_eq!(b.to_array(), [30.0, 70.0, 110.0, 150.0]);
@@ -556,10 +560,10 @@ fn f32x4_load_4_rgba_u8() {
 #[test]
 fn f32x4_store_4_rgba_u8() {
     if let Some(t) = X64V3Token::summon() {
-        let r = f32x4::<X64V3Token>::from_array(t, [10.0, 50.0, 90.0, 130.0]);
-        let g = f32x4::<X64V3Token>::from_array(t, [20.0, 60.0, 100.0, 140.0]);
-        let b = f32x4::<X64V3Token>::from_array(t, [30.0, 70.0, 110.0, 150.0]);
-        let a = f32x4::<X64V3Token>::from_array(t, [40.0, 80.0, 120.0, 160.0]);
+        let r = f32x4::<X64V3Token>::from_array_t(t, [10.0, 50.0, 90.0, 130.0]);
+        let g = f32x4::<X64V3Token>::from_array_t(t, [20.0, 60.0, 100.0, 140.0]);
+        let b = f32x4::<X64V3Token>::from_array_t(t, [30.0, 70.0, 110.0, 150.0]);
+        let a = f32x4::<X64V3Token>::from_array_t(t, [40.0, 80.0, 120.0, 160.0]);
         let out = f32x4::<X64V3Token>::store_4_rgba_u8(r, g, b, a);
         assert_eq!(
             out,
@@ -574,7 +578,7 @@ fn f32x4_store_4_rgba_u8() {
 fn f32x4_rgba_roundtrip() {
     if let Some(t) = X64V3Token::summon() {
         let rgba: [u8; 16] = core::array::from_fn(|i| (i * 15) as u8);
-        let (r, g, b, a) = f32x4::<X64V3Token>::load_4_rgba_u8(t, &rgba);
+        let (r, g, b, a) = f32x4::<X64V3Token>::load_4_rgba_u8_t(t, &rgba);
         let out = f32x4::<X64V3Token>::store_4_rgba_u8(r, g, b, a);
         assert_eq!(rgba, out);
     }
@@ -588,10 +592,10 @@ fn f32x4_rgba_roundtrip() {
 fn f32x4_transpose_4x4() {
     if let Some(t) = X64V3Token::summon() {
         let mut rows = [
-            f32x4::<X64V3Token>::from_array(t, [0.0, 1.0, 2.0, 3.0]),
-            f32x4::<X64V3Token>::from_array(t, [4.0, 5.0, 6.0, 7.0]),
-            f32x4::<X64V3Token>::from_array(t, [8.0, 9.0, 10.0, 11.0]),
-            f32x4::<X64V3Token>::from_array(t, [12.0, 13.0, 14.0, 15.0]),
+            f32x4::<X64V3Token>::from_array_t(t, [0.0, 1.0, 2.0, 3.0]),
+            f32x4::<X64V3Token>::from_array_t(t, [4.0, 5.0, 6.0, 7.0]),
+            f32x4::<X64V3Token>::from_array_t(t, [8.0, 9.0, 10.0, 11.0]),
+            f32x4::<X64V3Token>::from_array_t(t, [12.0, 13.0, 14.0, 15.0]),
         ];
         f32x4::<X64V3Token>::transpose_4x4(&mut rows);
         assert_eq!(rows[0].to_array(), [0.0, 4.0, 8.0, 12.0]);
@@ -605,10 +609,10 @@ fn f32x4_transpose_4x4() {
 fn f32x4_transpose_double_is_identity() {
     if let Some(t) = X64V3Token::summon() {
         let original = [
-            f32x4::<X64V3Token>::from_array(t, [1.0, 2.0, 3.0, 4.0]),
-            f32x4::<X64V3Token>::from_array(t, [5.0, 6.0, 7.0, 8.0]),
-            f32x4::<X64V3Token>::from_array(t, [9.0, 10.0, 11.0, 12.0]),
-            f32x4::<X64V3Token>::from_array(t, [13.0, 14.0, 15.0, 16.0]),
+            f32x4::<X64V3Token>::from_array_t(t, [1.0, 2.0, 3.0, 4.0]),
+            f32x4::<X64V3Token>::from_array_t(t, [5.0, 6.0, 7.0, 8.0]),
+            f32x4::<X64V3Token>::from_array_t(t, [9.0, 10.0, 11.0, 12.0]),
+            f32x4::<X64V3Token>::from_array_t(t, [13.0, 14.0, 15.0, 16.0]),
         ];
         let transposed = f32x4::<X64V3Token>::transpose_4x4_copy(original);
         let restored = f32x4::<X64V3Token>::transpose_4x4_copy(transposed);
@@ -625,7 +629,7 @@ fn f32x4_transpose_double_is_identity() {
 #[test]
 fn f32x4_bitcast_ref_i32() {
     if let Some(t) = X64V3Token::summon() {
-        let v = f32x4::<X64V3Token>::from_array(t, [1.0, -1.0, 0.0, f32::INFINITY]);
+        let v = f32x4::<X64V3Token>::from_array_t(t, [1.0, -1.0, 0.0, f32::INFINITY]);
         let i32_ref = v.bitcast_ref_i32();
         let arr = i32_ref.to_array();
         assert_eq!(arr[0], 1.0_f32.to_bits() as i32);
@@ -640,14 +644,14 @@ fn f32x4_bitcast_ref_i32() {
 #[test]
 fn f32x8_scalar_as_array() {
     let t = ScalarToken;
-    let v = f32x8::<ScalarToken>::from_array(t, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+    let v = f32x8::<ScalarToken>::from_array_t(t, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
     assert_eq!(*v.as_array(), [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
 }
 
 #[test]
 fn f32x8_scalar_from_u8() {
     let bytes = [0u8, 128, 255, 1, 50, 100, 200, 42];
-    let v = f32x8::<ScalarToken>::from_u8(ScalarToken, &bytes);
+    let v = f32x8::<ScalarToken>::from_u8_t(ScalarToken, &bytes);
     assert_eq!(
         v.to_array(),
         [0.0, 128.0, 255.0, 1.0, 50.0, 100.0, 200.0, 42.0]
@@ -657,8 +661,8 @@ fn f32x8_scalar_from_u8() {
 #[test]
 fn f32x8_scalar_interleave_lo() {
     let t = ScalarToken;
-    let a = f32x8::<ScalarToken>::from_array(t, [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]);
-    let b = f32x8::<ScalarToken>::from_array(t, [10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0]);
+    let a = f32x8::<ScalarToken>::from_array_t(t, [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]);
+    let b = f32x8::<ScalarToken>::from_array_t(t, [10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0]);
     assert_eq!(
         a.interleave_lo(b).to_array(),
         [0.0, 10.0, 1.0, 11.0, 4.0, 14.0, 5.0, 15.0]
@@ -669,7 +673,7 @@ fn f32x8_scalar_interleave_lo() {
 fn f32x8_scalar_transpose_8x8() {
     let t = ScalarToken;
     let mut rows: [f32x8<ScalarToken>; 8] = core::array::from_fn(|i| {
-        f32x8::<ScalarToken>::from_array(t, core::array::from_fn(|j| (i * 8 + j) as f32))
+        f32x8::<ScalarToken>::from_array_t(t, core::array::from_fn(|j| (i * 8 + j) as f32))
     });
     f32x8::<ScalarToken>::transpose_8x8(&mut rows);
     for i in 0..8 {
@@ -686,7 +690,7 @@ fn f32x8_scalar_rgba_roundtrip() {
     for i in 0..32 {
         rgba[i] = i as u8;
     }
-    let (r, g, b, a) = f32x8::<ScalarToken>::load_8_rgba_u8(ScalarToken, &rgba);
+    let (r, g, b, a) = f32x8::<ScalarToken>::load_8_rgba_u8_t(ScalarToken, &rgba);
     let out = f32x8::<ScalarToken>::store_8_rgba_u8(r, g, b, a);
     assert_eq!(rgba, out);
 }
@@ -695,10 +699,10 @@ fn f32x8_scalar_rgba_roundtrip() {
 fn f32x4_scalar_transpose_4x4() {
     let t = ScalarToken;
     let mut rows = [
-        f32x4::<ScalarToken>::from_array(t, [0.0, 1.0, 2.0, 3.0]),
-        f32x4::<ScalarToken>::from_array(t, [4.0, 5.0, 6.0, 7.0]),
-        f32x4::<ScalarToken>::from_array(t, [8.0, 9.0, 10.0, 11.0]),
-        f32x4::<ScalarToken>::from_array(t, [12.0, 13.0, 14.0, 15.0]),
+        f32x4::<ScalarToken>::from_array_t(t, [0.0, 1.0, 2.0, 3.0]),
+        f32x4::<ScalarToken>::from_array_t(t, [4.0, 5.0, 6.0, 7.0]),
+        f32x4::<ScalarToken>::from_array_t(t, [8.0, 9.0, 10.0, 11.0]),
+        f32x4::<ScalarToken>::from_array_t(t, [12.0, 13.0, 14.0, 15.0]),
     ];
     f32x4::<ScalarToken>::transpose_4x4(&mut rows);
     assert_eq!(rows[0].to_array(), [0.0, 4.0, 8.0, 12.0]);
@@ -716,12 +720,10 @@ fn f32x8_v3_vs_scalar_interleave() {
         let a_vals = [1.0_f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let b_vals = [10.0_f32, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0];
 
-        let (lo_v3, hi_v3) =
-            f32x8::<X64V3Token>::from_array(t_v3, a_vals)
-                .interleave(f32x8::<X64V3Token>::from_array(t_v3, b_vals));
-        let (lo_sc, hi_sc) =
-            f32x8::<ScalarToken>::from_array(t_sc, a_vals)
-                .interleave(f32x8::<ScalarToken>::from_array(t_sc, b_vals));
+        let (lo_v3, hi_v3) = f32x8::<X64V3Token>::from_array_t(t_v3, a_vals)
+            .interleave(f32x8::<X64V3Token>::from_array_t(t_v3, b_vals));
+        let (lo_sc, hi_sc) = f32x8::<ScalarToken>::from_array_t(t_sc, a_vals)
+            .interleave(f32x8::<ScalarToken>::from_array_t(t_sc, b_vals));
 
         assert_eq!(lo_v3.to_array(), lo_sc.to_array());
         assert_eq!(hi_v3.to_array(), hi_sc.to_array());
@@ -736,10 +738,10 @@ fn f32x8_v3_vs_scalar_transpose() {
             core::array::from_fn(|i| core::array::from_fn(|j| (i * 8 + j) as f32));
 
         let rows_v3 = f32x8::<X64V3Token>::transpose_8x8_copy(core::array::from_fn(|i| {
-            f32x8::<X64V3Token>::from_array(t_v3, data[i])
+            f32x8::<X64V3Token>::from_array_t(t_v3, data[i])
         }));
         let rows_sc = f32x8::<ScalarToken>::transpose_8x8_copy(core::array::from_fn(|i| {
-            f32x8::<ScalarToken>::from_array(t_sc, data[i])
+            f32x8::<ScalarToken>::from_array_t(t_sc, data[i])
         }));
 
         for i in 0..8 {
@@ -753,8 +755,8 @@ fn f32x8_v3_vs_scalar_rgba() {
     if let Some(t) = X64V3Token::summon() {
         let rgba: [u8; 32] = core::array::from_fn(|i| (i * 7 + 13) as u8);
 
-        let (r1, g1, b1, a1) = f32x8::<X64V3Token>::load_8_rgba_u8(t, &rgba);
-        let (r2, g2, b2, a2) = f32x8::<ScalarToken>::load_8_rgba_u8(ScalarToken, &rgba);
+        let (r1, g1, b1, a1) = f32x8::<X64V3Token>::load_8_rgba_u8_t(t, &rgba);
+        let (r2, g2, b2, a2) = f32x8::<ScalarToken>::load_8_rgba_u8_t(ScalarToken, &rgba);
 
         assert_eq!(r1.to_array(), r2.to_array());
         assert_eq!(g1.to_array(), g2.to_array());
@@ -774,9 +776,10 @@ fn f32x8_parity_interleave_lo() {
         let a_vals = [1.0_f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let b_vals = [10.0_f32, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0];
 
-        let old = OldF32x8::from_array(t, a_vals).interleave_lo(OldF32x8::from_array(t, b_vals));
-        let new = f32x8::<X64V3Token>::from_array(t, a_vals)
-            .interleave_lo(f32x8::<X64V3Token>::from_array(t, b_vals));
+        let old =
+            OldF32x8::from_array_t(t, a_vals).interleave_lo(OldF32x8::from_array_t(t, b_vals));
+        let new = f32x8::<X64V3Token>::from_array_t(t, a_vals)
+            .interleave_lo(f32x8::<X64V3Token>::from_array_t(t, b_vals));
 
         assert_eq!(old.to_array(), new.to_array());
     }
@@ -789,9 +792,10 @@ fn f32x8_parity_interleave_hi() {
         let a_vals = [1.0_f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
         let b_vals = [10.0_f32, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0];
 
-        let old = OldF32x8::from_array(t, a_vals).interleave_hi(OldF32x8::from_array(t, b_vals));
-        let new = f32x8::<X64V3Token>::from_array(t, a_vals)
-            .interleave_hi(f32x8::<X64V3Token>::from_array(t, b_vals));
+        let old =
+            OldF32x8::from_array_t(t, a_vals).interleave_hi(OldF32x8::from_array_t(t, b_vals));
+        let new = f32x8::<X64V3Token>::from_array_t(t, a_vals)
+            .interleave_hi(f32x8::<X64V3Token>::from_array_t(t, b_vals));
 
         assert_eq!(old.to_array(), new.to_array());
     }
@@ -807,7 +811,7 @@ fn f32x8_parity_deinterleave_4ch() {
         let old =
             OldF32x8::deinterleave_4ch(core::array::from_fn(|i| OldF32x8::from_array(t, vals[i])));
         let new = f32x8::<X64V3Token>::deinterleave_4ch(core::array::from_fn(|i| {
-            f32x8::<X64V3Token>::from_array(t, vals[i])
+            f32x8::<X64V3Token>::from_array_t(t, vals[i])
         }));
 
         for i in 0..4 {
@@ -824,9 +828,9 @@ fn f32x8_parity_interleave_4ch() {
             core::array::from_fn(|i| core::array::from_fn(|j| (i * 8 + j + 1) as f32));
 
         let old =
-            OldF32x8::interleave_4ch(core::array::from_fn(|i| OldF32x8::from_array(t, vals[i])));
+            OldF32x8::interleave_4ch(core::array::from_fn(|i| OldF32x8::from_array_t(t, vals[i])));
         let new = f32x8::<X64V3Token>::interleave_4ch(core::array::from_fn(|i| {
-            f32x8::<X64V3Token>::from_array(t, vals[i])
+            f32x8::<X64V3Token>::from_array_t(t, vals[i])
         }));
 
         for i in 0..4 {
@@ -843,10 +847,10 @@ fn f32x8_parity_transpose_8x8() {
             core::array::from_fn(|i| core::array::from_fn(|j| (i * 8 + j) as f32));
 
         let old = OldF32x8::transpose_8x8_copy(core::array::from_fn(|i| {
-            OldF32x8::from_array(t, data[i])
+            OldF32x8::from_array_t(t, data[i])
         }));
         let new = f32x8::<X64V3Token>::transpose_8x8_copy(core::array::from_fn(|i| {
-            f32x8::<X64V3Token>::from_array(t, data[i])
+            f32x8::<X64V3Token>::from_array_t(t, data[i])
         }));
 
         for i in 0..8 {
@@ -860,8 +864,8 @@ fn f32x8_parity_from_u8() {
     if let Some(t) = X64V3Token::summon() {
         use magetypes::simd::f32x8 as OldF32x8;
         let bytes = [10u8, 20, 30, 40, 50, 60, 70, 80];
-        let old = OldF32x8::from_u8(t, &bytes).to_array();
-        let new = f32x8::<X64V3Token>::from_u8(t, &bytes).to_array();
+        let old = OldF32x8::from_u8_t(t, &bytes).to_array();
+        let new = f32x8::<X64V3Token>::from_u8_t(t, &bytes).to_array();
         assert_eq!(old, new);
     }
 }
@@ -874,8 +878,8 @@ fn f32x8_parity_to_u8() {
         // generic uses f32::round (ties-away-from-zero: 128.5→129).
         // Only exact .5 values differ; all other values are identical.
         let vals = [0.0_f32, 127.6, 255.0, -5.0, 300.0, 0.4, 128.7, 1.0];
-        let old = OldF32x8::from_array(t, vals).to_u8();
-        let new = f32x8::<X64V3Token>::from_array(t, vals).to_u8();
+        let old = OldF32x8::from_array_t(t, vals).to_u8();
+        let new = f32x8::<X64V3Token>::from_array_t(t, vals).to_u8();
         assert_eq!(old, new);
     }
 }
@@ -887,9 +891,10 @@ fn f32x4_parity_interleave_lo() {
         let a_vals = [1.0_f32, 2.0, 3.0, 4.0];
         let b_vals = [10.0_f32, 20.0, 30.0, 40.0];
 
-        let old = OldF32x4::from_array(t, a_vals).interleave_lo(OldF32x4::from_array(t, b_vals));
-        let new = f32x4::<X64V3Token>::from_array(t, a_vals)
-            .interleave_lo(f32x4::<X64V3Token>::from_array(t, b_vals));
+        let old =
+            OldF32x4::from_array_t(t, a_vals).interleave_lo(OldF32x4::from_array_t(t, b_vals));
+        let new = f32x4::<X64V3Token>::from_array_t(t, a_vals)
+            .interleave_lo(f32x4::<X64V3Token>::from_array_t(t, b_vals));
 
         assert_eq!(old.to_array(), new.to_array());
     }
@@ -903,10 +908,10 @@ fn f32x4_parity_transpose_4x4() {
             core::array::from_fn(|i| core::array::from_fn(|j| (i * 4 + j) as f32));
 
         let old = OldF32x4::transpose_4x4_copy(core::array::from_fn(|i| {
-            OldF32x4::from_array(t, data[i])
+            OldF32x4::from_array_t(t, data[i])
         }));
         let new = f32x4::<X64V3Token>::transpose_4x4_copy(core::array::from_fn(|i| {
-            f32x4::<X64V3Token>::from_array(t, data[i])
+            f32x4::<X64V3Token>::from_array_t(t, data[i])
         }));
 
         for i in 0..4 {
@@ -921,8 +926,8 @@ fn f32x8_parity_load_store_rgba() {
         use magetypes::simd::f32x8 as OldF32x8;
         let rgba: [u8; 32] = core::array::from_fn(|i| (i * 7 + 13) as u8);
 
-        let (or, og, ob, oa) = OldF32x8::load_8_rgba_u8(t, &rgba);
-        let (nr, ng, nb, na) = f32x8::<X64V3Token>::load_8_rgba_u8(t, &rgba);
+        let (or, og, ob, oa) = OldF32x8::load_8_rgba_u8_t(t, &rgba);
+        let (nr, ng, nb, na) = f32x8::<X64V3Token>::load_8_rgba_u8_t(t, &rgba);
 
         assert_eq!(or.to_array(), nr.to_array());
         assert_eq!(og.to_array(), ng.to_array());
@@ -937,7 +942,7 @@ fn f32x8_parity_load_store_rgba() {
 
 /// Demonstrates a generic image processing function using block ops.
 fn brighten_pixels<T: F32x8Backend>(token: T, pixels: &mut [u8; 32], amount: f32) {
-    let (r, g, b, a) = f32x8::<T>::load_8_rgba_u8(token, pixels);
+    let (r, g, b, a) = f32x8::<T>::load_8_rgba_u8_t(token, pixels);
     // Use operator overloads — the scalar broadcast Add<f32> impl
     let r = r + amount;
     let g = g + amount;

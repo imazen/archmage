@@ -21,7 +21,7 @@ fn main() {
         F: Fn(f32x8<ScalarToken>) -> f32x8<ScalarToken>,
     {
         for (ci, co) in inp.chunks_exact(8).zip(out.chunks_exact_mut(8)) {
-            op(f32x8::from_array(t, ci.try_into().unwrap())).store(co.try_into().unwrap());
+            op(f32x8::from_array_t(t, ci.try_into().unwrap())).store(co.try_into().unwrap());
         }
     }
 

@@ -149,7 +149,7 @@ fn cbrt_inputs(include_denormals: bool) -> Vec<f32> {
 
 #[arcane]
 fn eval_f32x8(token: X64V3Token, inputs: &[f32; 8], op: &str, param: f32) -> [f32; 8] {
-    let v = f32x8::from_array(token, *inputs);
+    let v = f32x8::from_array_t(token, *inputs);
     let r = match op {
         "log2_lowp" => v.log2_lowp(),
         "log2_midp" => v.log2_midp(),
@@ -181,7 +181,7 @@ fn eval_f32x8(token: X64V3Token, inputs: &[f32; 8], op: &str, param: f32) -> [f3
 
 #[arcane]
 fn eval_generic_f32x4(token: X64V3Token, inputs: &[f32; 4], op: &str, param: f32) -> [f32; 4] {
-    let v = f32x4::from_array(token, *inputs);
+    let v = f32x4::from_array_t(token, *inputs);
     let r = match op {
         "log2_lowp" => v.log2_lowp(),
         "log2_midp" => v.log2_midp(),

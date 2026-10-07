@@ -77,11 +77,11 @@ mod x86_impl {
     #[arcane]
     pub fn dct8_butterfly(token: X64V3Token, m: &mut [f32x8; 8]) {
         // WC8 coefficients
-        let wc0 = f32x8::splat(token, 0.5097955791041592);
-        let wc1 = f32x8::splat(token, 0.6013448869350453);
-        let wc2 = f32x8::splat(token, 0.8999762231364156);
-        let wc3 = f32x8::splat(token, 2.5629154477415055);
-        let sqrt2 = f32x8::splat(token, 1.41421356237);
+        let wc0 = f32x8::splat_t(token, 0.5097955791041592);
+        let wc1 = f32x8::splat_t(token, 0.6013448869350453);
+        let wc2 = f32x8::splat_t(token, 0.8999762231364156);
+        let wc3 = f32x8::splat_t(token, 2.5629154477415055);
+        let sqrt2 = f32x8::splat_t(token, 1.41421356237);
 
         // Stage 1: AddReverse<4>
         let t0 = m[0] + m[7];
@@ -102,12 +102,12 @@ mod x86_impl {
         let r0 = u0 + u1;
         let r2 = u0 - u1;
         let r1 = u2.mul_add(
-            f32x8::splat(token, 0.541196100146197),
-            u3 * f32x8::splat(token, 1.3065629648763764),
+            f32x8::splat_t(token, 0.541196100146197),
+            u3 * f32x8::splat_t(token, 1.3065629648763764),
         );
         let r3 = u2.mul_add(
-            f32x8::splat(token, 0.541196100146197),
-            u3 * f32x8::splat(token, -1.3065629648763764),
+            f32x8::splat_t(token, 0.541196100146197),
+            u3 * f32x8::splat_t(token, -1.3065629648763764),
         );
         let r1 = r1.mul_add(sqrt2, r3);
 
@@ -126,12 +126,12 @@ mod x86_impl {
         let p0 = v0 + v1;
         let p2 = v0 - v1;
         let p1 = v2.mul_add(
-            f32x8::splat(token, 0.541196100146197),
-            v3 * f32x8::splat(token, 1.3065629648763764),
+            f32x8::splat_t(token, 0.541196100146197),
+            v3 * f32x8::splat_t(token, 1.3065629648763764),
         );
         let p3 = v2.mul_add(
-            f32x8::splat(token, 0.541196100146197),
-            v3 * f32x8::splat(token, -1.3065629648763764),
+            f32x8::splat_t(token, 0.541196100146197),
+            v3 * f32x8::splat_t(token, -1.3065629648763764),
         );
 
         // B<4> cumulative
@@ -163,7 +163,7 @@ mod x86_impl {
         debug_assert!(row0.len() >= output.len() * 2);
         debug_assert!(row1.len() >= output.len() * 2);
 
-        let scale = f32x8::splat(token, 0.25);
+        let scale = f32x8::splat_t(token, 0.25);
 
         // Process 8 output pixels at a time (16 input pixels)
         for chunk in 0..(output.len() / 8) {
@@ -184,10 +184,10 @@ mod x86_impl {
                 p11[i] = row1[in_x + i * 2 + 1];
             }
 
-            let p00_v = f32x8::from_array(token, p00);
-            let p10_v = f32x8::from_array(token, p10);
-            let p01_v = f32x8::from_array(token, p01);
-            let p11_v = f32x8::from_array(token, p11);
+            let p00_v = f32x8::from_array_t(token, p00);
+            let p10_v = f32x8::from_array_t(token, p10);
+            let p01_v = f32x8::from_array_t(token, p01);
+            let p11_v = f32x8::from_array_t(token, p11);
 
             // Box filter average
             let sum = p00_v + p10_v + p01_v + p11_v;
@@ -214,22 +214,22 @@ mod x86_impl {
         g: f32x8,
         b: f32x8,
     ) -> (f32x8, f32x8, f32x8) {
-        let offset = f32x8::splat(token, 128.0);
+        let offset = f32x8::splat_t(token, 128.0);
 
         // Y coefficients
-        let ky_r = f32x8::splat(token, 0.299);
-        let ky_g = f32x8::splat(token, 0.587);
-        let ky_b = f32x8::splat(token, 0.114);
+        let ky_r = f32x8::splat_t(token, 0.299);
+        let ky_g = f32x8::splat_t(token, 0.587);
+        let ky_b = f32x8::splat_t(token, 0.114);
 
         // Cb coefficients
-        let kcb_r = f32x8::splat(token, -0.168736);
-        let kcb_g = f32x8::splat(token, -0.331264);
-        let kcb_b = f32x8::splat(token, 0.5);
+        let kcb_r = f32x8::splat_t(token, -0.168736);
+        let kcb_g = f32x8::splat_t(token, -0.331264);
+        let kcb_b = f32x8::splat_t(token, 0.5);
 
         // Cr coefficients
-        let kcr_r = f32x8::splat(token, 0.5);
-        let kcr_g = f32x8::splat(token, -0.418688);
-        let kcr_b = f32x8::splat(token, -0.081312);
+        let kcr_r = f32x8::splat_t(token, 0.5);
+        let kcr_g = f32x8::splat_t(token, -0.418688);
+        let kcr_b = f32x8::splat_t(token, -0.081312);
 
         // Y = 0.299*R + 0.587*G + 0.114*B
         let y = r.mul_add(ky_r, g.mul_add(ky_g, b * ky_b));
@@ -297,10 +297,10 @@ mod x86_impl {
     /// Uses sqrt chains to approximate x^2.4 ≈ x^2 * x^0.4
     #[arcane]
     pub fn srgb_to_linear_8px(token: X64V3Token, srgb: f32x8) -> f32x8 {
-        let threshold = f32x8::splat(token, 0.04045);
-        let linear_scale = f32x8::splat(token, 1.0 / 12.92);
-        let offset = f32x8::splat(token, 0.055);
-        let scale = f32x8::splat(token, 1.0 / 1.055);
+        let threshold = f32x8::splat_t(token, 0.04045);
+        let linear_scale = f32x8::splat_t(token, 1.0 / 12.92);
+        let offset = f32x8::splat_t(token, 0.055);
+        let scale = f32x8::splat_t(token, 1.0 / 1.055);
 
         // Linear part
         let linear_result = srgb * linear_scale;
@@ -320,17 +320,17 @@ mod x86_impl {
         // Select based on threshold
         let mask = srgb.simd_le(threshold);
         let result_raw = _mm256_blendv_ps(gamma_result.raw(), linear_result.raw(), mask.raw());
-        f32x8::from_m256(token, result_raw)
+        f32x8::from_m256_t(token, result_raw)
     }
 
     /// Linear to sRGB conversion
     #[arcane]
     pub fn linear_to_srgb_8px(token: X64V3Token, linear: f32x8) -> f32x8 {
-        let threshold = f32x8::splat(token, 0.0031308);
-        let linear_scale = f32x8::splat(token, 12.92);
-        let gamma_scale = f32x8::splat(token, 1.055);
-        let offset = f32x8::splat(token, -0.055);
-        let one = f32x8::splat(token, 1.0);
+        let threshold = f32x8::splat_t(token, 0.0031308);
+        let linear_scale = f32x8::splat_t(token, 12.92);
+        let gamma_scale = f32x8::splat_t(token, 1.055);
+        let offset = f32x8::splat_t(token, -0.055);
+        let one = f32x8::splat_t(token, 1.0);
 
         // Linear part
         let linear_result = linear * linear_scale;
@@ -344,13 +344,13 @@ mod x86_impl {
 
         let gamma_result = x_042_approx
             .mul_add(gamma_scale, offset)
-            .max(f32x8::zero(token))
+            .max(f32x8::zero_t(token))
             .min(one);
 
         // Select based on threshold
         let mask = linear.simd_le(threshold);
         let result_raw = _mm256_blendv_ps(gamma_result.raw(), linear_result.raw(), mask.raw());
-        f32x8::from_m256(token, result_raw)
+        f32x8::from_m256_t(token, result_raw)
     }
 
     // ============================================================================
@@ -365,13 +365,13 @@ mod x86_impl {
         // Preserve alpha (indices 3 and 7) from src
         let blend_mask = _mm256_set_ps(-0.0, 0.0, 0.0, 0.0, -0.0, 0.0, 0.0, 0.0);
         let result_raw = _mm256_blendv_ps(result.raw(), src.raw(), blend_mask);
-        f32x8::from_m256(token, result_raw)
+        f32x8::from_m256_t(token, result_raw)
     }
 
     /// Screen blend: out = 1 - (1-src) * (1-dst)
     #[arcane]
     pub fn blend_screen_2px(token: X64V3Token, src: f32x8, dst: f32x8) -> f32x8 {
-        let one = f32x8::splat(token, 1.0);
+        let one = f32x8::splat_t(token, 1.0);
 
         let inv_src = one - src;
         let inv_dst = one - dst;
@@ -381,15 +381,15 @@ mod x86_impl {
         // Preserve alpha from src
         let blend_mask = _mm256_set_ps(-0.0, 0.0, 0.0, 0.0, -0.0, 0.0, 0.0, 0.0);
         let result_raw = _mm256_blendv_ps(result.raw(), src.raw(), blend_mask);
-        f32x8::from_m256(token, result_raw)
+        f32x8::from_m256_t(token, result_raw)
     }
 
     /// Overlay blend: if dst < 0.5: 2*src*dst, else: 1-2*(1-src)*(1-dst)
     #[arcane]
     pub fn blend_overlay_2px(token: X64V3Token, src: f32x8, dst: f32x8) -> f32x8 {
-        let one = f32x8::splat(token, 1.0);
-        let two = f32x8::splat(token, 2.0);
-        let half = f32x8::splat(token, 0.5);
+        let one = f32x8::splat_t(token, 1.0);
+        let two = f32x8::splat_t(token, 2.0);
+        let half = f32x8::splat_t(token, 0.5);
 
         // Multiply path: 2 * src * dst
         let multiply_result = src * dst * two;
@@ -406,7 +406,7 @@ mod x86_impl {
         // Preserve alpha from src
         let blend_mask = _mm256_set_ps(-0.0, 0.0, 0.0, 0.0, -0.0, 0.0, 0.0, 0.0);
         let result_raw = _mm256_blendv_ps(result_raw, src.raw(), blend_mask);
-        f32x8::from_m256(token, result_raw)
+        f32x8::from_m256_t(token, result_raw)
     }
 
     // ============================================================================
@@ -492,7 +492,7 @@ mod x86_impl {
         // Test sRGB conversion
         if let Some(token) = X64V3Token::summon() {
             let srgb_vals = [0.0, 0.04, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0];
-            let srgb = f32x8::from_array(token, srgb_vals);
+            let srgb = f32x8::from_array_t(token, srgb_vals);
             let linear = srgb_to_linear_8px(token, srgb);
             let linear_arr = linear.to_array();
 
@@ -507,9 +507,9 @@ mod x86_impl {
             println!("    (Using sqrt approximation for x^2.4)\n");
 
             // Test RGB→YCbCr
-            let r = f32x8::from_array(token, [255.0, 0.0, 0.0, 128.0, 64.0, 192.0, 100.0, 200.0]);
-            let g = f32x8::from_array(token, [0.0, 255.0, 0.0, 128.0, 128.0, 64.0, 150.0, 100.0]);
-            let b = f32x8::from_array(token, [0.0, 0.0, 255.0, 128.0, 192.0, 128.0, 50.0, 150.0]);
+            let r = f32x8::from_array_t(token, [255.0, 0.0, 0.0, 128.0, 64.0, 192.0, 100.0, 200.0]);
+            let g = f32x8::from_array_t(token, [0.0, 255.0, 0.0, 128.0, 128.0, 64.0, 150.0, 100.0]);
+            let b = f32x8::from_array_t(token, [0.0, 0.0, 255.0, 128.0, 192.0, 128.0, 50.0, 150.0]);
 
             let (y, cb, cr) = rgb_to_ycbcr_8px(token, r, g, b);
             let y_arr = y.to_array();
@@ -535,8 +535,8 @@ mod x86_impl {
             );
 
             // Test blend modes
-            let src = f32x8::from_array(token, [0.5, 0.3, 0.8, 1.0, 0.2, 0.6, 0.4, 0.5]);
-            let dst = f32x8::from_array(token, [0.4, 0.6, 0.2, 1.0, 0.8, 0.4, 0.6, 0.5]);
+            let src = f32x8::from_array_t(token, [0.5, 0.3, 0.8, 1.0, 0.2, 0.6, 0.4, 0.5]);
+            let dst = f32x8::from_array_t(token, [0.4, 0.6, 0.2, 1.0, 0.8, 0.4, 0.6, 0.5]);
 
             let multiply = blend_multiply_2px(token, src, dst);
             let screen = blend_screen_2px(token, src, dst);
@@ -570,7 +570,7 @@ mod x86_impl {
                         let arr: &[f32; 8] = (&srgb_data[chunk_start..chunk_start + 8])
                             .try_into()
                             .unwrap();
-                        let srgb = f32x8::load(token, arr);
+                        let srgb = f32x8::load_t(token, arr);
                         let linear = srgb_to_linear_8px(token, srgb);
                         let out: &mut [f32; 8] = (&mut linear_data[chunk_start..chunk_start + 8])
                             .try_into()
@@ -600,15 +600,15 @@ mod x86_impl {
             for _ in 0..ITERATIONS {
                 for chunk_start in (0..PIXELS).step_by(8) {
                     if chunk_start + 8 <= PIXELS {
-                        let r = f32x8::load(
+                        let r = f32x8::load_t(
                             token,
                             (&r_data[chunk_start..chunk_start + 8]).try_into().unwrap(),
                         );
-                        let g = f32x8::load(
+                        let g = f32x8::load_t(
                             token,
                             (&g_data[chunk_start..chunk_start + 8]).try_into().unwrap(),
                         );
-                        let b = f32x8::load(
+                        let b = f32x8::load_t(
                             token,
                             (&b_data[chunk_start..chunk_start + 8]).try_into().unwrap(),
                         );
@@ -655,13 +655,13 @@ mod x86_impl {
             for _ in 0..ITERATIONS {
                 for chunk_start in (0..PIXELS).step_by(8) {
                     if chunk_start + 8 <= PIXELS {
-                        let src = f32x8::load(
+                        let src = f32x8::load_t(
                             token,
                             (&src_data[chunk_start..chunk_start + 8])
                                 .try_into()
                                 .unwrap(),
                         );
-                        let dst = f32x8::load(
+                        let dst = f32x8::load_t(
                             token,
                             (&dst_data[chunk_start..chunk_start + 8])
                                 .try_into()

@@ -22,8 +22,8 @@ mod index_page {
     use super::*;
 
     fn example<T: F32x8Backend>(token: T) {
-        let a = f32x8::<T>::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
-        let b = f32x8::<T>::splat(token, 2.0);
+        let a = f32x8::<T>::from_array_t(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+        let b = f32x8::<T>::splat_t(token, 2.0);
         let c = a * b;
         let sum = c.reduce_add();
         // (1+2+3+4+5+6+7+8) * 2 = 72
@@ -51,7 +51,7 @@ mod installation {
     use super::*;
 
     fn verify<T: F32x8Backend>(token: T) {
-        let v = f32x8::<T>::splat(token, 42.0);
+        let v = f32x8::<T>::splat_t(token, 42.0);
         assert_eq!(v.to_array(), [42.0; 8]);
     }
 
@@ -77,8 +77,8 @@ mod first_types {
 
     // The Pattern: summon → construct → operate → extract
     fn the_pattern<T: F32x8Backend>(token: T) {
-        let a = f32x8::<T>::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
-        let b = f32x8::<T>::splat(token, 2.0);
+        let a = f32x8::<T>::from_array_t(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+        let b = f32x8::<T>::splat_t(token, 2.0);
         let c = a * b;
         let result: [f32; 8] = c.to_array();
         assert_eq!(result, [2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0]);
@@ -86,15 +86,15 @@ mod first_types {
 
     // Summon once, pass to functions
     fn process_data<T: F32x8Backend>(token: T, input: &[f32; 8]) -> f32 {
-        let a = f32x8::<T>::from_array(token, *input);
-        let b = f32x8::<T>::splat(token, 0.5);
+        let a = f32x8::<T>::from_array_t(token, *input);
+        let b = f32x8::<T>::splat_t(token, 0.5);
         let scaled = a * b;
         scaled.reduce_add()
     }
 
     // Type properties: Copy
     fn copy_demo<T: F32x8Backend>(token: T) {
-        let a = f32x8::<T>::splat(token, 1.0);
+        let a = f32x8::<T>::splat_t(token, 1.0);
         let b = a; // Copy
         let c = a + b; // Both still valid
         assert_eq!(c.to_array(), [2.0; 8]);
@@ -133,8 +133,8 @@ mod overview {
     use super::*;
 
     fn basic_usage<T: F32x8Backend>(token: T) {
-        let a = f32x8::<T>::from_array(token, [1.0; 8]);
-        let b = f32x8::<T>::splat(token, 2.0);
+        let a = f32x8::<T>::from_array_t(token, [1.0; 8]);
+        let b = f32x8::<T>::splat_t(token, 2.0);
         let c = a + b;
         let d = c * c;
         let result: [f32; 8] = d.to_array();
@@ -160,24 +160,24 @@ mod construction {
     fn constructors<T: F32x8Backend>(token: T) {
         // from_array
         let data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let v = f32x8::<T>::from_array(token, data);
+        let v = f32x8::<T>::from_array_t(token, data);
         assert_eq!(v.to_array(), data);
 
         // splat
-        let v = f32x8::<T>::splat(token, 3.14159);
+        let v = f32x8::<T>::splat_t(token, 3.14159);
         assert!((v[0] - 3.14159).abs() < 1e-5);
 
         // zero
-        let v = f32x8::<T>::zero(token);
+        let v = f32x8::<T>::zero_t(token);
         assert_eq!(v.to_array(), [0.0; 8]);
 
         // load from array reference
-        let v = f32x8::<T>::load(token, &data);
+        let v = f32x8::<T>::load_t(token, &data);
         assert_eq!(v.to_array(), data);
     }
 
     fn extraction<T: F32x8Backend>(token: T) {
-        let v = f32x8::<T>::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+        let v = f32x8::<T>::from_array_t(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
 
         // to_array
         let arr: [f32; 8] = v.to_array();
@@ -219,8 +219,8 @@ mod operators {
     use super::*;
 
     fn arithmetic<T: F32x8Backend>(token: T) {
-        let a = f32x8::<T>::splat(token, 2.0);
-        let b = f32x8::<T>::splat(token, 3.0);
+        let a = f32x8::<T>::splat_t(token, 2.0);
+        let b = f32x8::<T>::splat_t(token, 3.0);
 
         let sum = a + b;
         assert_eq!(sum.to_array(), [5.0; 8]);
@@ -236,28 +236,28 @@ mod operators {
     }
 
     fn fma<T: F32x8Backend>(token: T) {
-        let a = f32x8::<T>::splat(token, 2.0);
-        let b = f32x8::<T>::splat(token, 3.0);
-        let c = f32x8::<T>::splat(token, 1.0);
+        let a = f32x8::<T>::splat_t(token, 2.0);
+        let b = f32x8::<T>::splat_t(token, 3.0);
+        let c = f32x8::<T>::splat_t(token, 1.0);
 
         let result = a.mul_add(b, c);
         assert_eq!(result.to_array(), [7.0; 8]);
     }
 
     fn comparisons<T: F32x8Backend>(token: T) {
-        let a = f32x8::<T>::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
-        let b = f32x8::<T>::splat(token, 4.0);
+        let a = f32x8::<T>::from_array_t(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+        let b = f32x8::<T>::splat_t(token, 4.0);
 
         let mask = a.simd_lt(b);
-        let result = f32x8::<T>::blend(mask, f32x8::<T>::splat(token, 0.0), a);
+        let result = f32x8::<T>::blend(mask, f32x8::<T>::splat_t(token, 0.0), a);
         // Where a < 4: 0.0; else: a
         assert_eq!(result[0], 0.0);
         assert_eq!(result[3], 4.0); // 4.0 is NOT < 4.0
     }
 
     fn min_max<T: F32x8Backend>(token: T) {
-        let a = f32x8::<T>::from_array(token, [1.0, 5.0, 3.0, 7.0, 2.0, 6.0, 4.0, 8.0]);
-        let b = f32x8::<T>::splat(token, 4.0);
+        let a = f32x8::<T>::from_array_t(token, [1.0, 5.0, 3.0, 7.0, 2.0, 6.0, 4.0, 8.0]);
+        let b = f32x8::<T>::splat_t(token, 4.0);
 
         let min = a.min(b);
         assert_eq!(min[0], 1.0);
@@ -269,8 +269,8 @@ mod operators {
     }
 
     fn dot_product<T: F32x8Backend>(token: T, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-        let va = f32x8::<T>::from_array(token, *a);
-        let vb = f32x8::<T>::from_array(token, *b);
+        let va = f32x8::<T>::from_array_t(token, *a);
+        let vb = f32x8::<T>::from_array_t(token, *b);
         (va * vb).reduce_add()
     }
 
@@ -310,7 +310,7 @@ mod reductions {
     use super::*;
 
     fn basic_reductions<T: F32x8Backend>(token: T) {
-        let v = f32x8::<T>::from_array(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+        let v = f32x8::<T>::from_array_t(token, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
 
         let sum = v.reduce_add();
         assert!((sum - 36.0).abs() < 0.01);
@@ -326,9 +326,9 @@ mod reductions {
         let chunks = data.chunks_exact(8);
         let remainder = chunks.remainder();
 
-        let mut max_v = f32x8::<T>::splat(token, f32::NEG_INFINITY);
+        let mut max_v = f32x8::<T>::splat_t(token, f32::NEG_INFINITY);
         for chunk in chunks {
-            let v = f32x8::<T>::load(token, chunk.try_into().unwrap());
+            let v = f32x8::<T>::load_t(token, chunk.try_into().unwrap());
             max_v = max_v.max(v);
         }
 
@@ -371,8 +371,8 @@ mod bitwise {
     use super::*;
 
     fn integer_arithmetic<T: I32x8Backend>(token: T) {
-        let a = i32x8::<T>::splat(token, 10);
-        let b = i32x8::<T>::splat(token, 3);
+        let a = i32x8::<T>::splat_t(token, 10);
+        let b = i32x8::<T>::splat_t(token, 3);
 
         let sum = a + b;
         assert_eq!(sum.to_array(), [13; 8]);
@@ -382,8 +382,8 @@ mod bitwise {
     }
 
     fn bitwise_ops<T: I32x8Backend>(token: T) {
-        let a = i32x8::<T>::splat(token, 0xFF);
-        let b = i32x8::<T>::splat(token, 0x0F);
+        let a = i32x8::<T>::splat_t(token, 0xFF);
+        let b = i32x8::<T>::splat_t(token, 0x0F);
 
         let result = a & b;
         assert_eq!(result[0], 0x0F);
@@ -416,14 +416,14 @@ mod float_int {
     use super::*;
 
     fn float_to_int<T: F32x8Convert>(token: T) {
-        let floats = f32x8::<T>::from_array(token, [1.5, 2.7, -3.2, 4.0, 5.9, 6.1, 7.0, 8.5]);
+        let floats = f32x8::<T>::from_array_t(token, [1.5, 2.7, -3.2, 4.0, 5.9, 6.1, 7.0, 8.5]);
         let ints = floats.to_i32();
         assert_eq!(ints.to_array(), [1, 2, -3, 4, 5, 6, 7, 8]);
     }
 
     fn int_to_float<T: F32x8Convert>(token: T) {
-        let ints = i32x8::<T>::from_array(token, [1, 2, 3, 4, 5, 6, 7, 8]);
-        let floats = f32x8::<T>::from_i32(token, ints);
+        let ints = i32x8::<T>::from_array_t(token, [1, 2, 3, 4, 5, 6, 7, 8]);
+        let floats = f32x8::<T>::from_i32_t(token, ints);
         assert_eq!(floats.to_array(), [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
     }
 
@@ -445,7 +445,7 @@ mod bitcast {
     use super::*;
 
     fn float_to_int_bitcast<T: F32x8Convert>(token: T) {
-        let floats = f32x8::<T>::splat(token, 1.0);
+        let floats = f32x8::<T>::splat_t(token, 1.0);
         let bits = floats.bitcast_to_i32();
         // IEEE 754: 1.0f32 = 0x3f800000
         assert_eq!(bits[0], 0x3f800000_i32);
@@ -466,7 +466,7 @@ mod slice_casting {
     #[test]
     fn cast_slice_scalar() {
         let data: Vec<f32> = (0..64).map(|i| i as f32).collect();
-        if let Some(vectors) = f32x8::<ScalarToken>::cast_slice(ScalarToken, &data) {
+        if let Some(vectors) = f32x8::<ScalarToken>::cast_slice_t(ScalarToken, &data) {
             assert_eq!(vectors.len(), 8);
             assert_eq!(
                 vectors[0].to_array(),
@@ -477,9 +477,9 @@ mod slice_casting {
 
     #[test]
     fn bytes_roundtrip_scalar() {
-        let v = f32x8::<ScalarToken>::splat(ScalarToken, 1.0);
+        let v = f32x8::<ScalarToken>::splat_t(ScalarToken, 1.0);
         let bytes: &[u8; 32] = v.as_bytes();
-        let restored = f32x8::<ScalarToken>::from_bytes(ScalarToken, bytes);
+        let restored = f32x8::<ScalarToken>::from_bytes_t(ScalarToken, bytes);
         assert_eq!(restored.to_array(), [1.0; 8]);
     }
 }
@@ -491,28 +491,28 @@ mod transcendentals {
     use super::*;
 
     fn exp_and_log<T: F32x8Convert>(token: T) {
-        let v = f32x8::<T>::splat(token, 3.0);
+        let v = f32x8::<T>::splat_t(token, 3.0);
         let exp2 = v.exp2_midp();
         assert!((exp2[0] - 8.0).abs() < 0.01);
 
-        let v = f32x8::<T>::splat(token, 8.0);
+        let v = f32x8::<T>::splat_t(token, 8.0);
         let log2 = v.log2_midp();
         assert!((log2[0] - 3.0).abs() < 0.01);
     }
 
     fn sqrt_test<T: F32x8Backend>(token: T) {
-        let v = f32x8::<T>::splat(token, 9.0);
+        let v = f32x8::<T>::splat_t(token, 9.0);
         let result = v.sqrt();
         assert!((result[0] - 3.0).abs() < 0.01);
     }
 
     fn softmax<T: F32x8Convert>(token: T, logits: &[f32; 8]) -> [f32; 8] {
-        let v = f32x8::<T>::load(token, logits);
-        let max_val = f32x8::<T>::splat(token, v.reduce_max());
+        let v = f32x8::<T>::load_t(token, logits);
+        let max_val = f32x8::<T>::splat_t(token, v.reduce_max());
         let shifted = v - max_val;
         let exp = shifted.exp_midp();
         let sum = exp.reduce_add();
-        let result = exp / f32x8::<T>::splat(token, sum);
+        let result = exp / f32x8::<T>::splat_t(token, sum);
         result.to_array()
     }
 
@@ -545,7 +545,7 @@ mod precision {
     use super::*;
 
     fn precision_tiers<T: F32x8Convert>(token: T) {
-        let v = f32x8::<T>::splat(token, 2.0);
+        let v = f32x8::<T>::splat_t(token, 2.0);
 
         let fast = v.exp2_lowp();
         let balanced = v.exp2_midp();
@@ -568,7 +568,7 @@ mod approximations {
     use super::*;
 
     fn rcp_and_rsqrt<T: F32x8Backend>(token: T) {
-        let v = f32x8::<T>::splat(token, 4.0);
+        let v = f32x8::<T>::splat_t(token, 4.0);
 
         let rcp = v.rcp_approx();
         assert!((rcp[0] - 0.25).abs() < 0.01);
@@ -581,10 +581,10 @@ mod approximations {
     }
 
     fn newton_raphson_rsqrt<T: F32x8Backend>(token: T) {
-        let v = f32x8::<T>::splat(token, 4.0);
+        let v = f32x8::<T>::splat_t(token, 4.0);
         let approx = v.rsqrt_approx();
-        let half = f32x8::<T>::splat(token, 0.5);
-        let three_halves = f32x8::<T>::splat(token, 1.5);
+        let half = f32x8::<T>::splat_t(token, 0.5);
+        let three_halves = f32x8::<T>::splat_t(token, 1.5);
         let refined = approx * (three_halves - half * v * approx * approx);
         assert!((refined[0] - 0.5).abs() < 0.001);
     }
@@ -610,11 +610,11 @@ mod load_store {
         let arr = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
 
         // from_array
-        let v = f32x8::<T>::from_array(token, arr);
+        let v = f32x8::<T>::from_array_t(token, arr);
         assert_eq!(v.to_array(), arr);
 
         // store
-        let v = f32x8::<T>::splat(token, 42.0);
+        let v = f32x8::<T>::splat_t(token, 42.0);
         let mut buf = [0.0f32; 8];
         v.store(&mut buf);
         assert_eq!(buf, [42.0; 8]);
@@ -637,7 +637,7 @@ mod chunked {
 
         for chunk in chunks.chunks_exact_mut(8) {
             let chunk_arr: &mut [f32; 8] = chunk.try_into().unwrap();
-            let v = f32x8::<T>::from_array(token, *chunk_arr);
+            let v = f32x8::<T>::from_array_t(token, *chunk_arr);
             let result = v * v;
             result.store(chunk_arr);
         }
@@ -651,10 +651,10 @@ mod chunked {
         let chunks = data.chunks_exact(8);
         let remainder = chunks.remainder();
 
-        let mut acc = f32x8::<T>::zero(token);
+        let mut acc = f32x8::<T>::zero_t(token);
         for chunk in chunks {
             let chunk_arr: &[f32; 8] = chunk.try_into().unwrap();
-            let v = f32x8::<T>::from_array(token, *chunk_arr);
+            let v = f32x8::<T>::from_array_t(token, *chunk_arr);
             acc = acc + v;
         }
 
@@ -698,8 +698,8 @@ mod polyfills {
 
     fn polyfill_demo<T: F32x8Backend>(token: T) {
         // f32x8 works with any backend — native or polyfilled
-        let a = f32x8::<T>::splat(token, 1.0);
-        let b = f32x8::<T>::splat(token, 2.0);
+        let a = f32x8::<T>::splat_t(token, 1.0);
+        let b = f32x8::<T>::splat_t(token, 2.0);
         let c = a + b;
         let sum = c.reduce_add();
         assert!((sum - 24.0).abs() < 0.01);
@@ -732,7 +732,7 @@ mod dispatch {
     // 1. Generic function — #[inline(always)], no #[arcane]
     #[inline(always)]
     fn sum_impl<T: F32x8Backend>(token: T, data: &[f32; 8]) -> f32 {
-        f32x8::<T>::from_array(token, *data).reduce_add()
+        f32x8::<T>::from_array_t(token, *data).reduce_add()
     }
 
     // Manual dispatch (equivalent to what incant! generates)
@@ -774,8 +774,8 @@ mod dispatch {
 
     #[cfg(target_arch = "x86_64")]
     fn dot_product_v3(token: X64V3Token, a: &[f32; 8], b: &[f32; 8]) -> f32 {
-        let va = f32x8::<X64V3Token>::from_array(token, *a);
-        let vb = f32x8::<X64V3Token>::from_array(token, *b);
+        let va = f32x8::<X64V3Token>::from_array_t(token, *a);
+        let vb = f32x8::<X64V3Token>::from_array_t(token, *b);
         (va * vb).reduce_add()
     }
 
@@ -829,12 +829,12 @@ mod normalization {
     use super::*;
 
     fn normalize<T: F32x8Backend>(token: T, v: &mut [f32; 8]) {
-        let vec = f32x8::<T>::from_array(token, *v);
+        let vec = f32x8::<T>::from_array_t(token, *v);
         let len_sq = (vec * vec).reduce_add();
         let len = len_sq.sqrt();
 
         if len > 0.0 {
-            let inv_len = f32x8::<T>::splat(token, 1.0 / len);
+            let inv_len = f32x8::<T>::splat_t(token, 1.0 / len);
             let normalized = vec * inv_len;
             *v = normalized.to_array();
         }
@@ -856,9 +856,9 @@ mod gaussian {
     use super::*;
 
     fn gaussian<T: F32x8Convert>(token: T, x: &[f32; 8], sigma: f32) -> [f32; 8] {
-        let v = f32x8::<T>::from_array(token, *x);
-        let sigma_v = f32x8::<T>::splat(token, sigma);
-        let two = f32x8::<T>::splat(token, 2.0);
+        let v = f32x8::<T>::from_array_t(token, *x);
+        let sigma_v = f32x8::<T>::splat_t(token, sigma);
+        let two = f32x8::<T>::splat_t(token, 2.0);
 
         let x_sq = v * v;
         let two_sigma_sq = two * sigma_v * sigma_v;
@@ -887,11 +887,11 @@ mod isa_quirks {
     macro_rules! check_float {
         ($token:expr, $ty:ident, $lanes:expr, $min_kind:expr, $ordered_ne:expr, $x86_neg:expr, $fused:expr) => {{
             let token = $token;
-            let a = $ty::from_array(
+            let a = $ty::from_array_t(
                 token,
                 core::array::from_fn(|i| [f32::NAN, 1.0, 0.0, -0.0][i % 4]),
             );
-            let b = $ty::from_array(
+            let b = $ty::from_array_t(
                 token,
                 core::array::from_fn(|i| [1.0, f32::NAN, -0.0, 0.0][i % 4]),
             );
@@ -928,7 +928,7 @@ mod isa_quirks {
                 if $x86_neg { 0 } else { (-0.0f32).to_bits() }
             );
             assert_eq!(neg[3].to_bits(), 0);
-            let rounding = $ty::from_array(
+            let rounding = $ty::from_array_t(
                 token,
                 core::array::from_fn(|i| [2.5, 3.5, -2.5, -3.5][i % 4]),
             )
@@ -1005,10 +1005,10 @@ mod complete_gain {
 
     #[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
     fn gain_impl(token: Token, plane: &mut [f32], gain: f32) {
-        let factor = f32x8::splat(token, gain);
-        let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+        let factor = f32x8::splat_t(token, gain);
+        let (chunks, tail) = f32x8::partition_slice_mut_t(token, plane);
         for chunk in chunks {
-            (f32x8::load(token, chunk) * factor).store(chunk);
+            (f32x8::load_t(token, chunk) * factor).store(chunk);
         }
         for value in tail {
             *value *= gain;
@@ -1036,10 +1036,10 @@ mod generic_gain {
 
     #[inline(always)]
     fn gain_kernel<T: F32x8Backend>(token: T, plane: &mut [f32], gain: f32) {
-        let factor = f32x8::<T>::splat(token, gain);
-        let (chunks, tail) = f32x8::<T>::partition_slice_mut(token, plane);
+        let factor = f32x8::<T>::splat_t(token, gain);
+        let (chunks, tail) = f32x8::<T>::partition_slice_mut_t(token, plane);
         for chunk in chunks {
-            (f32x8::<T>::load(token, chunk) * factor).store(chunk);
+            (f32x8::<T>::load_t(token, chunk) * factor).store(chunk);
         }
         for value in tail {
             *value *= gain;
@@ -1071,9 +1071,9 @@ mod complete_square {
 
     #[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
     fn square_impl(token: Token, plane: &mut [f32]) {
-        let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+        let (chunks, tail) = f32x8::partition_slice_mut_t(token, plane);
         for chunk in chunks {
-            let v = f32x8::load(token, chunk);
+            let v = f32x8::load_t(token, chunk);
             (v * v).store(chunk);
         }
         for value in tail {
@@ -1103,8 +1103,8 @@ mod complete_lookup {
     #[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
     fn lookup_impl(token: Token, table: &[f32], indices: &[usize; 8], gain: f32) -> [f32; 8] {
         let values = core::array::from_fn(|lane| table[indices[lane]]);
-        let v = f32x8::from_array(token, values);
-        (v * f32x8::splat(token, gain)).to_array()
+        let v = f32x8::from_array_t(token, values);
+        (v * f32x8::splat_t(token, gain)).to_array()
     }
 
     pub fn lookup(table: &[f32], indices: &[usize; 8], gain: f32) -> [f32; 8] {
@@ -1171,8 +1171,10 @@ mod linear_srgb_gamma_chain {
     fn gamma_to_linear_slice_tier(token: Token, values: &mut [f32], gamma: f32) {
         let (chunks, remainder) = values.as_chunks_mut::<16>();
         for chunk in chunks {
-            let v = f32x16::from_array(token, *chunk);
-            let clamped = v.max(f32x16::zero(token)).min(f32x16::splat(token, 1.0));
+            let v = f32x16::from_array_t(token, *chunk);
+            let clamped = v
+                .max(f32x16::zero_t(token))
+                .min(f32x16::splat_t(token, 1.0));
             *chunk = clamped.pow_midp(gamma).to_array();
         }
         for v in remainder {
@@ -1210,13 +1212,13 @@ mod zenblend_complete_chain {
 
     #[inline]
     fn blend_kernel<T: F32x4Backend>(token: T, fg: &mut [f32], bg: &[f32]) {
-        let (fg_chunks, _) = f32x4::<T>::partition_slice_mut(token, fg);
-        let (bg_chunks, _) = f32x4::<T>::partition_slice(token, bg);
+        let (fg_chunks, _) = f32x4::<T>::partition_slice_mut_t(token, fg);
+        let (bg_chunks, _) = f32x4::<T>::partition_slice_t(token, bg);
 
         for (fg_chunk, bg_chunk) in fg_chunks.iter_mut().zip(bg_chunks.iter()) {
-            let fg_pixel = f32x4::load(token, fg_chunk);
-            let bg_pixel = f32x4::load(token, bg_chunk);
-            let inv_alpha = f32x4::splat(token, 1.0 - fg_chunk[3]);
+            let fg_pixel = f32x4::load_t(token, fg_chunk);
+            let bg_pixel = f32x4::load_t(token, bg_chunk);
+            let inv_alpha = f32x4::splat_t(token, 1.0 - fg_chunk[3]);
             let result = fg_pixel + bg_pixel * inv_alpha;
             result.store(fg_chunk);
         }

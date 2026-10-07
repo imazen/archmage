@@ -28,7 +28,7 @@ fn main() {
         F: Fn(f32x4<Wasm128Token>) -> f32x4<Wasm128Token>,
     {
         for (ci, co) in inp.chunks_exact(4).zip(out.chunks_exact_mut(4)) {
-            op(f32x4::from_array(t, ci.try_into().unwrap())).store(co.try_into().unwrap());
+            op(f32x4::from_array_t(t, ci.try_into().unwrap())).store(co.try_into().unwrap());
         }
     }
 
