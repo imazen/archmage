@@ -84,10 +84,12 @@ an implementation requirement, not an implicit request for a public scalar name.
 Tier-dependent signatures may make a direct family valid but its dispatcher
 invalid; see section 7.
 
-`*` means one documented default tier policy, not every registry entry. The exact
-policy and optional AVX-512 gates still need agreement: current autoversion and
-incant/magetypes defaults differ in their gating. Explicit tier requests provide
-a migration path that does not depend on resolving that default immediately.
+`*` means one documented default tier policy, not every registry entry.
+Established decision: V4 is gated on the declaring crate's `avx512` feature,
+matching the current magetypes default. The provider owns and forwards that
+feature; consumer-side cfg must not reinterpret the provider's available set.
+This changes the unconditional V4 default of current autoversion. Explicit tier
+requests provide a migration path for callers needing a different policy.
 
 Established decision: `-_v4` is an idempotent exclusion. Removing a registered
 tier that is absent from the selected set is valid and leaves the set unchanged.

@@ -1,10 +1,9 @@
 # Attune decision worksheet
 
-Q1 and the function-only constraint in Q3 are accepted (2026-10-07).
-Idempotent `-_v4` exclusion and no end-user compile-time regression are also
-accepted requirements. The V4 default policy awaits clarification of the reply's
-question numbering. Other choices remain pending; recommendations are not
-recorded user decisions.
+Q1, feature-gated V4 in Q2, and the function-only constraint in Q3 are accepted
+(2026-10-07). Idempotent `-_v4` exclusion and no end-user compile-time regression
+are also accepted requirements. Other choices remain pending; recommendations
+are not recorded user decisions.
 No proposed attune syntax has been implemented. The
 [evidence report](README.md) distinguishes executed lowerings from untested
 macro integration. The [specification](../../ATTUNE_SPEC.md) remains a draft.
@@ -43,17 +42,16 @@ The no-list spelling can still use the family's documented defaults.
 fn work(...) { ... }
 ```
 
-**A — Gate V4 on the provider's avx512 feature, recommended for continuity
-with magetypes.** Retain the documented V3/NEON/WASM/scalar defaults and optional
+**Accepted — Gate V4 on the provider's avx512 feature, matching magetypes.** Retain the documented V3/NEON/WASM/scalar defaults and optional
 V4. Existing scalar autoversion users may need to enable a feature to retain
 their previous V4 generation. The declaring crate must own/forward this feature.
 
-**B — Always include V4.** Matches current scalar autoversion behavior. Every
+**Alternative not selected — Always include V4.** Matches current scalar autoversion behavior. Every
 body/backend requested by the wildcard must support V4; vector/backend feature
 requirements still have to be satisfied. Runtime CPU detection provides hardware
 safety, not missing compile-time backend support.
 
-**C — Require explicit V4 selection.** Removes an implicit Cargo-feature policy
+**Alternative not selected — Require explicit V4 selection.** Removes an implicit Cargo-feature policy
 from the wildcard; V4-capable users write an extra selector and gate. It changes
 the wildcard's relationship to both existing default sets.
 
