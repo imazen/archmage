@@ -388,8 +388,10 @@ fn f32x8_load_store_8x8() {
 #[test]
 fn f32x8_bitcast_ref_i32() {
     if let Some(t) = X64V3Token::summon() {
-        let v =
-            f32x8::<X64V3Token>::from_array(t, [1.0, -1.0, 0.0, f32::INFINITY, 2.0, 3.0, 4.0, 5.0]);
+        let v = f32x8::<X64V3Token>::from_array_t(
+            t,
+            [1.0, -1.0, 0.0, f32::INFINITY, 2.0, 3.0, 4.0, 5.0],
+        );
         let i32_ref = v.bitcast_ref_i32();
         let arr = i32_ref.to_array();
         assert_eq!(arr[0], 1.0_f32.to_bits() as i32);
@@ -808,8 +810,9 @@ fn f32x8_parity_deinterleave_4ch() {
         let vals: [[f32; 8]; 4] =
             core::array::from_fn(|i| core::array::from_fn(|j| (i * 8 + j + 1) as f32));
 
-        let old =
-            OldF32x8::deinterleave_4ch(core::array::from_fn(|i| OldF32x8::from_array(t, vals[i])));
+        let old = OldF32x8::deinterleave_4ch(core::array::from_fn(|i| {
+            OldF32x8::from_array_t(t, vals[i])
+        }));
         let new = f32x8::<X64V3Token>::deinterleave_4ch(core::array::from_fn(|i| {
             f32x8::<X64V3Token>::from_array_t(t, vals[i])
         }));

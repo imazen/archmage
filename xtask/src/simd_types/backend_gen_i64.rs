@@ -241,10 +241,21 @@ pub(super) fn generate_i64_backend_trait(ty: &I64VecType) -> String {
 
             // ====== Boolean ======
 
-            /// True if all lanes have their sign bit set (all-1s mask).
+            /// True if **every** lane has its sign bit set.
+            ///
+            /// This is a sign-bit test, not a "lane is nonzero" test, on
+            /// every backend and at every width. A lane holding `1` is
+            /// false; a lane holding `-1` (or `0x80` in its top bit) is
+            /// true. Comparison results are all-ones or all-zeros per lane,
+            /// so for masks — the intended input — the two readings agree
+            /// and this is the cheap native reduction. They diverge only on
+            /// hand-built vectors, which is where the backends used to
+            /// disagree with each other.
             fn all_true(self, a: Self::Repr) -> bool;
 
-            /// True if any lane has its sign bit set (any all-1s mask lane).
+            /// True if **any** lane has its sign bit set.
+            ///
+            /// Sign-bit test, not "lane is nonzero" — see `all_true`.
             fn any_true(self, a: Self::Repr) -> bool;
 
             /// Extract the high bit of each 64-bit lane as a bitmask.
@@ -643,13 +654,16 @@ fn generate_scalar_i64_impl(ty: &I64VecType) -> String {
         items.join(" | ")
     };
 
+    // Sign-bit contract: a lane is "true" when its top bit is set, not
+    // merely when it is nonzero. Shifting keeps this correct for both the
+    // signed lane types (arithmetic shift -> 0 or -1) and the unsigned ones.
     let all_true_expr = || -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}] != 0")).collect();
+        let items: Vec<String> = (0..lanes).map(|i| format!("(a[{i}] >> 63) != 0")).collect();
         items.join(" && ")
     };
 
     let any_true_expr = || -> String {
-        let items: Vec<String> = (0..lanes).map(|i| format!("a[{i}] != 0")).collect();
+        let items: Vec<String> = (0..lanes).map(|i| format!("(a[{i}] >> 63) != 0")).collect();
         items.join(" || ")
     };
 
@@ -1034,14 +1048,16 @@ fn generate_neon_native_i64_impl(ty: &I64VecType) -> String {
 
             {arcane}
             fn all_true(self, a: int64x2_t) -> bool {{
+                // Sign-bit contract. NEON has no 64-bit horizontal reduction,
+                // so combine the lanes and test one sign bit.
                 let as_u64 = vreinterpretq_u64_s64(a);
-                vgetq_lane_u64::<0>(as_u64) != 0 && vgetq_lane_u64::<1>(as_u64) != 0
+                ((vgetq_lane_u64::<0>(as_u64) & vgetq_lane_u64::<1>(as_u64)) >> 63) != 0
             }}
 
             {arcane}
             fn any_true(self, a: int64x2_t) -> bool {{
                 let as_u64 = vreinterpretq_u64_s64(a);
-                (vgetq_lane_u64::<0>(as_u64) | vgetq_lane_u64::<1>(as_u64)) != 0
+                ((vgetq_lane_u64::<0>(as_u64) | vgetq_lane_u64::<1>(as_u64)) >> 63) != 0
             }}
 
             {arcane}
@@ -1285,20 +1301,20 @@ fn generate_neon_polyfill_i64_impl(ty: &I64VecType) -> String {
             )
         },
         all_true = {
-            let items: Vec<String> = (0..sub_count)
-                .map(|i| {
-                    format!("(vgetq_lane_u64::<0>(vreinterpretq_u64_s64(a[{i}])) != 0 && vgetq_lane_u64::<1>(vreinterpretq_u64_s64(a[{i}])) != 0)")
-                })
-                .collect();
-            items.join(" && ")
+            let folded = (1..sub_count).fold("a[0]".to_string(), |acc, i| {
+                format!("vandq_s64({acc}, a[{i}])")
+            });
+            format!(
+                "{{ let f = vreinterpretq_u64_s64({folded}); ((vgetq_lane_u64::<0>(f) & vgetq_lane_u64::<1>(f)) >> 63) != 0 }}"
+            )
         },
         any_true = {
-            let items: Vec<String> = (0..sub_count)
-                .map(|i| {
-                    format!("((vgetq_lane_u64::<0>(vreinterpretq_u64_s64(a[{i}])) | vgetq_lane_u64::<1>(vreinterpretq_u64_s64(a[{i}]))) != 0)")
-                })
-                .collect();
-            items.join(" || ")
+            let folded = (1..sub_count).fold("a[0]".to_string(), |acc, i| {
+                format!("vorrq_s64({acc}, a[{i}])")
+            });
+            format!(
+                "{{ let f = vreinterpretq_u64_s64({folded}); ((vgetq_lane_u64::<0>(f) | vgetq_lane_u64::<1>(f)) >> 63) != 0 }}"
+            )
         },
         bitmask = {
             let mut body = "{\n".to_string();
@@ -1441,9 +1457,9 @@ fn generate_wasm_native_i64_impl(ty: &I64VecType) -> String {
             fn shr_logical_const<const N: i32>(self, a: v128) -> v128 {{ u64x2_shr(a, N as u32) }}
 
             #[inline(always)]
-            fn all_true(self, a: v128) -> bool {{ i64x2_all_true(a) }}
+            fn all_true(self, a: v128) -> bool {{ i64x2_bitmask(a) == 0x03 }}
             #[inline(always)]
-            fn any_true(self, a: v128) -> bool {{ v128_any_true(a) }}
+            fn any_true(self, a: v128) -> bool {{ i64x2_bitmask(a) != 0 }}
             #[inline(always)]
             fn bitmask(self, a: v128) -> u32 {{ i64x2_bitmask(a) as u32 }}
         }}
@@ -1648,12 +1664,18 @@ fn generate_wasm_polyfill_i64_impl(ty: &I64VecType) -> String {
         shr_logic_lanes = (0..sub_count)
             .map(|i| format!("u64x2_shr(a[{i}], N as u32)"))
             .collect::<Vec<_>>().join(", "),
-        all_true = (0..sub_count)
-            .map(|i| format!("i64x2_all_true(a[{i}])"))
-            .collect::<Vec<_>>().join(" && "),
-        any_true = (0..sub_count)
-            .map(|i| format!("v128_any_true(a[{i}])"))
-            .collect::<Vec<_>>().join(" || "),
+        all_true = {
+            let folded = (1..sub_count).fold("a[0]".to_string(), |acc, i| {
+                format!("v128_and({acc}, a[{i}])")
+            });
+            format!("i64x2_bitmask({folded}) == 0x03")
+        },
+        any_true = {
+            let folded = (1..sub_count).fold("a[0]".to_string(), |acc, i| {
+                format!("v128_or({acc}, a[{i}])")
+            });
+            format!("i64x2_bitmask({folded}) != 0")
+        },
         bitmask = {
             let items: Vec<String> = (0..sub_count)
                 .map(|i| format!("((i64x2_bitmask(a[{i}]) as u32) << {})", i * 2))

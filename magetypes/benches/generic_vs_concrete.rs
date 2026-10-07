@@ -12,14 +12,12 @@
 //!   6. Generic #[inline(always)] called from inside #[arcane] — guaranteed inline
 //!
 //! Run:
-//!   cargo bench --bench generic_vs_concrete --features "std"
+//!   cargo bench -p magetypes --bench generic_vs_concrete
 //!
-//! Inspect assembly:
-//!   cargo asm -p archmage --bench generic_vs_concrete --features "std" generic_no_target_feature
-//!   cargo asm -p archmage --bench generic_vs_concrete --features "std" generic_inside_arcane
-//!   cargo asm -p archmage --bench generic_vs_concrete --features "std" concrete_v3_in_arcane
-//!   cargo asm -p archmage --bench generic_vs_concrete --features "std" generic_noinline_inside_arcane
-//!   cargo asm -p archmage --bench generic_vs_concrete --features "std" generic_inline_always_inside_arcane
+//! Inspect assembly (`cargo asm` with no symbol lists them):
+//!   cargo asm -p magetypes --bench generic_vs_concrete generic_sum_noinline
+//!   cargo asm -p magetypes --bench generic_vs_concrete __arcane_generic_inline_always_arcane_entry
+//!   cargo asm -p magetypes --bench generic_vs_concrete __arcane_concrete_v3_entry
 
 // x86-only bench: stub main so the `harness = false` target still links on
 // other architectures (a crate-level `#![cfg]` would leave the bench with no

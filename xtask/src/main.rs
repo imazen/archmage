@@ -480,7 +480,7 @@ fn map_features_to_token(features: &str, arch: &str) -> String {
     match arch {
         "x86_64" | "x86" => match features {
             "sse" | "sse2" => "Baseline (always available)".to_string(),
-            "avx" => "Has256BitSimd / X64V3Token".to_string(),
+            "avx" => "X64V3Token".to_string(),
             "avx512f" => "X64V4Token".to_string(),
             "avx512f,avx512vl" => "X64V4Token".to_string(),
             "avx512bw" => "X64V4Token".to_string(),
