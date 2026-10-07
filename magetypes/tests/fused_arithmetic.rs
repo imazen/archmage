@@ -139,10 +139,15 @@ fn cases64() -> Vec<[f64; 3]> {
     cases
 }
 
+// `nostd_math::fmaf`/`fma` take the FMA instruction where the CPU has one
+// (NEON on aarch64; FMA through `X64V3Token` on x86-64), so on such hosts the
+// tests below exercise that path, and `fmaf_soft` is tested by name so the
+// software rounding stays covered everywhere.
 #[test]
 fn software_rounding_against_std() {
     for [a, b, c] in cases32() {
         same32(nostd_math::fmaf(a, b, c), a.fused_expected(b, c));
+        same32(nostd_math::fmaf_soft(a, b, c), a.fused_expected(b, c));
     }
     for [a, b, c] in cases64() {
         same64(nostd_math::fma(a, b, c), a.fused_expected(b, c));
@@ -155,6 +160,7 @@ fn random_software_rounding_against_std() {
     for _ in 0..1_000_000 {
         let [a, b, c] = core::array::from_fn(|_| f32::from_bits(random(&mut state) as u32));
         same32(nostd_math::fmaf(a, b, c), a.fused_expected(b, c));
+        same32(nostd_math::fmaf_soft(a, b, c), a.fused_expected(b, c));
         let [a, b, c] = core::array::from_fn(|_| f64::from_bits(random(&mut state)));
         same64(nostd_math::fma(a, b, c), a.fused_expected(b, c));
     }
@@ -168,7 +174,9 @@ fn exact_counterexamples() {
         0x3f80_0002
     );
     assert_eq!(nostd_math::fmaf(a, b, c).to_bits(), 0x3f80_0001);
+    assert_eq!(nostd_math::fmaf_soft(a, b, c).to_bits(), 0x3f80_0001);
     assert_eq!(nostd_math::fmaf(f32::MAX, 2.0, -f32::MAX), f32::MAX);
+    assert_eq!(nostd_math::fmaf_soft(f32::MAX, 2.0, -f32::MAX), f32::MAX);
     assert_eq!(nostd_math::fma(f64::MAX, 2.0, -f64::MAX), f64::MAX);
     assert_eq!(
         nostd_math::fmaf(-f32::from_bits(1), 0.5, 0.0).to_bits(),

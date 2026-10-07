@@ -39,7 +39,7 @@ CPU, width, compiler, baseline, and workload.
 | Same narrowing methods on [`i16x32`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i16x32.html) / [`i32x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i32x16.html) | Native AVX-512 | Narrow each input to a half and insert/concatenate. Unsigned destinations clamp signed inputs to zero before unsigned conversion. | Two zero clamps for unsigned output, plus the two conversions and concatenation needed for the operation. |
 | Same narrowing families at 128 bits; NEON / WASM widths | Native halves | Native signed-source saturating narrows already have the desired lane order. | No AVX2-style lane-order repair; polyfills still require composition. |
 | `v.shl_const::<N>()`, `v.shr_logical_const::<N>()`, `v.shr_arithmetic_const::<N>()` | Every backend | Const assertions reject invalid counts before execution. | **No runtime assertion.** Constant byte shifts can still require shift/mask emulation. |
-| `a.mul_add_portable(b, c)` / `a.mul_sub_portable(b, c)` on every float type | Scalar backend; WASM, relaxed SIMD included | Hardware backends use one FMA instruction. Software fusion instead: f32 lanes widen to f64 and run TwoSum with round-to-odd (on WASM per `f64x2` half), f64 lanes call `libm::fma` one at a time. | Every call. Measured at 2.7–29.5× (scalar backend) and 8.2–24× (WASM) the time of `a * b + c`; see [Fused arithmetic](#fused-arithmetic-and-reductions). |
+| `a.mul_add_portable(b, c)` / `a.mul_sub_portable(b, c)` on every float type | Scalar backend on a CPU without FMA; WASM, relaxed SIMD included | Hardware backends use one FMA instruction, and so does the scalar backend when the CPU has one (always on AArch64; on x86-64 through `X64V3Token::summon()`). Otherwise software fusion: f32 lanes widen to f64 and run TwoSum with round-to-odd (on WASM per `f64x2` half), f64 lanes call `libm::fma` one at a time. | Every call without hardware FMA. Measured at 2.7–29.5× (scalar backend, software) and 8.2–24× (WASM) the time of `a * b + c`; see [Fused arithmetic](#fused-arithmetic-and-reductions). |
 
 `abs_diff`, `madd_adjacent`, `pairwise_widen_add`, saturating arithmetic, and
 `reduce_add_u32` sometimes need several instructions because an ISA lacks that
@@ -201,8 +201,9 @@ and on 1,024 dependent steps (chain); records:
 |---|---|---|
 | AVX2 and AVX-512, Ryzen 9 9950X3D | Chains take 29–38% less time; streams −10% to +6%, within code-placement noise | The same instruction as `mul_add` |
 | NEON, Apple M4 Pro | Chains take 24–31% less time; streams −5% to +8% | The same instruction as `mul_add` |
-| Scalar backend, Ryzen 9 9950X3D | The same code as `a * b + c` | 3.5–6.4× (f32), 12.2–12.5× (f64) the time |
-| Scalar backend, Apple M4 Pro | The same code as `a * b + c` | 2.7–15.5× (f32), 9.1–29.5× (f64) the time |
+| Scalar backend with the CPU's FMA (AArch64 always; x86-64 built with `-Ctarget-cpu` from Haswell/Zen 1 on), Neoverse-N1 and 9950X3D | The same code as `a * b + c` | The same instruction as `mul_add`: 0.92–1.03× in streams, 0.65–0.78× in chains ([record](https://github.com/imazen/archmage/blob/main/benchmarks/fma_scalar_backend_2026-10-07.md)) |
+| Scalar backend, default x86-64 build on an FMA CPU, 9950X3D | The same code as `a * b + c` | A cached check and a call per lane: 2.7–3.0× (f64), 2.9–5.7× (f32) the time |
+| Scalar backend without hardware FMA (software; measured on the 9950X3D and M4 Pro before the hardware path) | The same code as `a * b + c` | 2.7–15.5× (f32), 9.1–29.5× (f64) the time |
 | WASM SIMD128, wasmtime on the 9950X3D | The same code as `a * b + c` | 8.2× (`f32x4`), 23× (`f64x2`) the time |
 | WASM relaxed SIMD, same | The engine's madd: 0.96–1.06× the time | 8.2× (`f32x4`), 24× (`f64x2`) the time |
 

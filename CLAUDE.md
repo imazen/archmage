@@ -1148,8 +1148,13 @@ Design record for #116 (the `mul_add` contract):
   `min_subnormal * -min_subnormal + 0` (the exact negative product rounds to -0;
   that std returns +0). Test expectations approved 2026-09-27, moved to the
   `_portable` names 2026-10-05. Current costs:
-  `benchmarks/mul_add_portable_zen5-m4pro_2026-10-05.md` (scalar backend 2.7-29.5x)
-  and `benchmarks/mul_add_wasm_wasmtime_zen5-9950x3d_2026-10-05.md` (8.2-24x).
+  `benchmarks/mul_add_portable_zen5-m4pro_2026-10-05.md` (scalar backend in
+  software, 2.7-29.5x) and `benchmarks/mul_add_wasm_wasmtime_zen5-9950x3d_2026-10-05.md`
+  (8.2-24x). Since 2026-10-07 `nostd_math::fmaf`/`fma` use the FMA instruction
+  when the CPU has one, so the scalar backend and `f32x1`/`f64x1` cost the same
+  as `mul_add` on AArch64 and on x86 `-Ctarget-cpu` builds
+  (`benchmarks/fma_scalar_backend_2026-10-07.md`); the software path remains
+  for CPUs without FMA and all WASM.
   Interim-design records: `benchmarks/fma_software_i265_2026-09-27.md`,
   `benchmarks/mul_add_cost_zen5-m4pro_2026-10-05.md`,
   `benchmarks/transcendentals_fused_mul_add_2026-10-05.md`.
