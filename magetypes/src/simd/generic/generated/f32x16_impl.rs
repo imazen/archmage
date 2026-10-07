@@ -53,12 +53,8 @@ use crate::simd::backends::F32x16Backend;
 #[derive(Clone, Copy)]
 #[repr(C)]
 pub struct f32x16<T: F32x16Backend>(pub(crate) T::Repr, pub(crate) T);
-// SAFETY: repr(C) pair of Pod storage and a sealed 1-ZST token.
-// A supplied T proves CPU support; the wrapper adds no bit invariants.
-// Helpers additionally check token size/alignment at monomorphization.
-unsafe impl<T: F32x16Backend> crate::simd_storage::TokenStorage for f32x16<T> {
-    type Token = T;
-}
+// The `unsafe impl` and the checks behind it live in `simd_storage`.
+crate::simd_storage::impl_token_storage!(f32x16, F32x16Backend);
 
 // PhantomData is ZST, so f32x16<T> has the same size as T::Repr.
 
@@ -844,6 +840,84 @@ impl f32x16<archmage::Wasm128Token> {
         "polyfill::wasm128_512::f32x16"
     }
 }
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl f32x16<archmage::X64V4Token> {
+    /// Get the raw `__m512` value.
+    #[inline(always)]
+    pub fn raw(self) -> core::arch::x86_64::__m512 {
+        self.0
+    }
+
+    /// Wrap a raw `__m512` using an existing CPU capability token.
+    #[inline(always)]
+    pub fn from_m512_t(token: archmage::X64V4Token, value: core::arch::x86_64::__m512) -> Self {
+        Self(value, token)
+    }
+
+    /// Wrap a raw `__m512` using an explicit CPU capability token.
+    ///
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    #[inline(always)]
+    pub fn from_raw_t(token: archmage::X64V4Token, value: core::arch::x86_64::__m512) -> Self {
+        Self(value, token)
+    }
+
+    /// Wrap a raw `__m512` in a matching target-feature context.
+    ///
+    /// Rust requires the caller to enable the `v4` tier's features.
+    /// Use an archmage `#[rite(v4)]` helper or `#[arcane]` entry point.
+    #[forbid(unsafe_code)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+    )]
+    #[inline]
+    pub fn from_raw(value: core::arch::x86_64::__m512) -> Self {
+        Self(value, archmage::X64V4Token::from_context())
+    }
+}
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl f32x16<archmage::X64V4xToken> {
+    /// Get the raw `__m512` value.
+    #[inline(always)]
+    pub fn raw(self) -> core::arch::x86_64::__m512 {
+        self.0
+    }
+
+    /// Wrap a raw `__m512` using an existing CPU capability token.
+    #[inline(always)]
+    pub fn from_m512_t(token: archmage::X64V4xToken, value: core::arch::x86_64::__m512) -> Self {
+        Self(value, token)
+    }
+
+    /// Wrap a raw `__m512` using an explicit CPU capability token.
+    ///
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    #[inline(always)]
+    pub fn from_raw_t(token: archmage::X64V4xToken, value: core::arch::x86_64::__m512) -> Self {
+        Self(value, token)
+    }
+
+    /// Wrap a raw `__m512` in a matching target-feature context.
+    ///
+    /// Rust requires the caller to enable the `v4x` tier's features.
+    /// Use an archmage `#[rite(v4x)]` helper or `#[arcane]` entry point.
+    #[forbid(unsafe_code)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl,avx512vpopcntdq,avx512ifma,avx512vbmi,avx512vbmi2,avx512bitalg,avx512vnni,vpclmulqdq,gfni,vaes"
+    )]
+    #[inline]
+    pub fn from_raw(value: core::arch::x86_64::__m512) -> Self {
+        Self(value, archmage::X64V4xToken::from_context())
+    }
+}
 // Generated deprecated token-constructor forwarders. Do not edit.
 impl<T: F32x16Backend> f32x16<T> {
     #[inline(always)]
@@ -938,5 +1012,29 @@ impl<T: crate::simd::backends::F32x16Convert> f32x16<T> {
     #[forbid(unsafe_code)]
     pub fn from_i32x16(token: T, v: super::i32x16<T>) -> Self {
         Self::from_i32x16_t(token, v)
+    }
+}
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl f32x16<archmage::X64V4Token> {
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_m512_t`].\n\nUse `from_m512_t` to keep explicit-token construction when `from_m512` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_m512_t(token, value); from_m512 becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn from_m512(token: archmage::X64V4Token, value: core::arch::x86_64::__m512) -> Self {
+        Self::from_m512_t(token, value)
+    }
+}
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+impl f32x16<archmage::X64V4xToken> {
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_m512_t`].\n\nUse `from_m512_t` to keep explicit-token construction when `from_m512` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_m512_t(token, value); from_m512 becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn from_m512(token: archmage::X64V4xToken, value: core::arch::x86_64::__m512) -> Self {
+        Self::from_m512_t(token, value)
     }
 }

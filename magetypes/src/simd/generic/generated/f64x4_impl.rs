@@ -38,12 +38,8 @@ use crate::simd::backends::F64x4Backend;
 #[derive(Clone, Copy)]
 #[repr(C)]
 pub struct f64x4<T: F64x4Backend>(pub(crate) T::Repr, pub(crate) T);
-// SAFETY: repr(C) pair of Pod storage and a sealed 1-ZST token.
-// A supplied T proves CPU support; the wrapper adds no bit invariants.
-// Helpers additionally check token size/alignment at monomorphization.
-unsafe impl<T: F64x4Backend> crate::simd_storage::TokenStorage for f64x4<T> {
-    type Token = T;
-}
+// The `unsafe impl` and the checks behind it live in `simd_storage`.
+crate::simd_storage::impl_token_storage!(f64x4, F64x4Backend);
 
 // Layout invariant: struct is `#[repr(C)]` with a trailing ZST `T`
 // field, so `sizeof/alignof(f64x4<T>) == sizeof/alignof(T::Repr)`
@@ -622,6 +618,33 @@ impl f64x4<archmage::Wasm128Token> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
         "polyfill::wasm128::f64x4"
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl f64x4<archmage::X64V3Token> {
+    /// Wrap a raw `__m256d` using an explicit CPU capability token.
+    ///
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    #[inline(always)]
+    pub fn from_raw_t(token: archmage::X64V3Token, value: core::arch::x86_64::__m256d) -> Self {
+        Self(value, token)
+    }
+
+    /// Wrap a raw `__m256d` in a matching target-feature context.
+    ///
+    /// Rust requires the caller to enable the `v3` tier's features.
+    /// Use an archmage `#[rite(v3)]` helper or `#[arcane]` entry point.
+    #[forbid(unsafe_code)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
+    pub fn from_raw(value: core::arch::x86_64::__m256d) -> Self {
+        Self(value, archmage::X64V3Token::from_context())
     }
 }
 // Generated deprecated token-constructor forwarders. Do not edit.

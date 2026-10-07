@@ -38,12 +38,8 @@ use crate::simd::backends::I16x8Backend;
 #[derive(Clone, Copy)]
 #[repr(C)]
 pub struct i16x8<T: I16x8Backend>(pub(crate) T::Repr, pub(crate) T);
-// SAFETY: repr(C) pair of Pod storage and a sealed 1-ZST token.
-// A supplied T proves CPU support; the wrapper adds no bit invariants.
-// Helpers additionally check token size/alignment at monomorphization.
-unsafe impl<T: I16x8Backend> crate::simd_storage::TokenStorage for i16x8<T> {
-    type Token = T;
-}
+// The `unsafe impl` and the checks behind it live in `simd_storage`.
+crate::simd_storage::impl_token_storage!(i16x8, I16x8Backend);
 
 // Layout invariant: struct is `#[repr(C)]` with a trailing ZST `T`
 // field, so `sizeof/alignof(i16x8<T>) == sizeof/alignof(T::Repr)`
@@ -755,6 +751,110 @@ impl i16x8<archmage::Wasm128Token> {
         "wasm::wasm128::i16x8"
     }
 }
+#[cfg(target_arch = "x86_64")]
+impl i16x8<archmage::X64V3Token> {
+    /// Wrap a raw `__m128i` using an explicit CPU capability token.
+    ///
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    #[inline(always)]
+    pub fn from_raw_t(token: archmage::X64V3Token, value: core::arch::x86_64::__m128i) -> Self {
+        Self(value, token)
+    }
+
+    /// Wrap a raw `__m128i` in a matching target-feature context.
+    ///
+    /// Rust requires the caller to enable the `v3` tier's features.
+    /// Use an archmage `#[rite(v3)]` helper or `#[arcane]` entry point.
+    #[forbid(unsafe_code)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
+    pub fn from_raw(value: core::arch::x86_64::__m128i) -> Self {
+        Self(value, archmage::X64V3Token::from_context())
+    }
+}
+#[cfg(target_arch = "aarch64")]
+impl i16x8<archmage::NeonToken> {
+    /// Get the raw `int16x8_t` value.
+    #[inline(always)]
+    pub fn raw(self) -> core::arch::aarch64::int16x8_t {
+        self.0
+    }
+
+    /// Wrap a raw `int16x8_t` using an existing CPU capability token.
+    #[inline(always)]
+    pub fn from_int16x8_t(
+        token: archmage::NeonToken,
+        value: core::arch::aarch64::int16x8_t,
+    ) -> Self {
+        Self(value, token)
+    }
+
+    /// Wrap a raw `int16x8_t` using an explicit CPU capability token.
+    ///
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    #[inline(always)]
+    pub fn from_raw_t(token: archmage::NeonToken, value: core::arch::aarch64::int16x8_t) -> Self {
+        Self(value, token)
+    }
+
+    /// Wrap a raw `int16x8_t` in a matching target-feature context.
+    ///
+    /// Rust requires the caller to enable the `neon` tier's features.
+    /// Use an archmage `#[rite(neon)]` helper or `#[arcane]` entry point.
+    #[forbid(unsafe_code)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger feature context, which Rust checks.
+    #[target_feature(enable = "neon")]
+    #[inline]
+    pub fn from_raw(value: core::arch::aarch64::int16x8_t) -> Self {
+        Self(value, archmage::NeonToken::from_context())
+    }
+}
+#[cfg(target_arch = "wasm32")]
+impl i16x8<archmage::Wasm128Token> {
+    /// Get the raw `v128` value.
+    #[inline(always)]
+    pub fn raw(self) -> core::arch::wasm32::v128 {
+        self.0
+    }
+
+    /// Wrap a raw `v128` using an existing CPU capability token.
+    #[inline(always)]
+    pub fn from_v128_t(token: archmage::Wasm128Token, value: core::arch::wasm32::v128) -> Self {
+        Self(value, token)
+    }
+
+    /// Wrap a raw `v128` using an explicit CPU capability token.
+    ///
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    #[inline(always)]
+    pub fn from_raw_t(token: archmage::Wasm128Token, value: core::arch::wasm32::v128) -> Self {
+        Self(value, token)
+    }
+
+    /// Wrap a raw `v128` in a matching target-feature context.
+    ///
+    /// Rust requires the caller to enable the `wasm128` tier's features.
+    /// Use an archmage `#[rite(wasm128)]` helper or `#[arcane]` entry point.
+    #[forbid(unsafe_code)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger feature context, which Rust checks.
+    #[target_feature(enable = "simd128")]
+    #[inline]
+    pub fn from_raw(value: core::arch::wasm32::v128) -> Self {
+        Self(value, archmage::Wasm128Token::from_context())
+    }
+}
 // Generated deprecated token-constructor forwarders. Do not edit.
 impl<T: I16x8Backend> i16x8<T> {
     #[inline(always)]
@@ -834,5 +934,17 @@ impl i16x8<archmage::X64V3Token> {
     #[forbid(unsafe_code)]
     pub fn from_m128i(token: archmage::X64V3Token, v: core::arch::x86_64::__m128i) -> Self {
         Self::from_m128i_t(token, v)
+    }
+}
+#[cfg(target_arch = "wasm32")]
+impl i16x8<archmage::Wasm128Token> {
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_v128_t`].\n\nUse `from_v128_t` to keep explicit-token construction when `from_v128` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_v128_t(token, value); from_v128 becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn from_v128(token: archmage::Wasm128Token, value: core::arch::wasm32::v128) -> Self {
+        Self::from_v128_t(token, value)
     }
 }

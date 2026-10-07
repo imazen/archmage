@@ -38,12 +38,8 @@ use crate::simd::backends::U16x16Backend;
 #[derive(Clone, Copy)]
 #[repr(C)]
 pub struct u16x16<T: U16x16Backend>(pub(crate) T::Repr, pub(crate) T);
-// SAFETY: repr(C) pair of Pod storage and a sealed 1-ZST token.
-// A supplied T proves CPU support; the wrapper adds no bit invariants.
-// Helpers additionally check token size/alignment at monomorphization.
-unsafe impl<T: U16x16Backend> crate::simd_storage::TokenStorage for u16x16<T> {
-    type Token = T;
-}
+// The `unsafe impl` and the checks behind it live in `simd_storage`.
+crate::simd_storage::impl_token_storage!(u16x16, U16x16Backend);
 
 // Layout invariant: struct is `#[repr(C)]` with a trailing ZST `T`
 // field, so `sizeof/alignof(u16x16<T>) == sizeof/alignof(T::Repr)`
@@ -663,6 +659,33 @@ impl u16x16<archmage::Wasm128Token> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
         "polyfill::wasm128::u16x16"
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl u16x16<archmage::X64V3Token> {
+    /// Wrap a raw `__m256i` using an explicit CPU capability token.
+    ///
+    /// The caller does not need a target-feature annotation.
+    #[forbid(unsafe_code)]
+    #[inline(always)]
+    pub fn from_raw_t(token: archmage::X64V3Token, value: core::arch::x86_64::__m256i) -> Self {
+        Self(value, token)
+    }
+
+    /// Wrap a raw `__m256i` in a matching target-feature context.
+    ///
+    /// Rust requires the caller to enable the `v3` tier's features.
+    /// Use an archmage `#[rite(v3)]` helper or `#[arcane]` entry point.
+    #[forbid(unsafe_code)]
+    /// # Safety
+    /// The CPU must support the enabled target features. Safe calls require a
+    /// matching or stronger feature context, which Rust checks.
+    #[target_feature(
+        enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+    )]
+    #[inline]
+    pub fn from_raw(value: core::arch::x86_64::__m256i) -> Self {
+        Self(value, archmage::X64V3Token::from_context())
     }
 }
 // Generated deprecated token-constructor forwarders. Do not edit.
