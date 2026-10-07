@@ -112,16 +112,6 @@ impl Parse for ArcaneArgs {
     }
 }
 
-/// Represents the kind of self receiver and the transformed parameter.
-pub(crate) enum SelfReceiver {
-    /// `self` (by value/move)
-    Owned,
-    /// `&self` (shared reference)
-    Ref,
-    /// `&mut self` (mutable reference)
-    RefMut,
-}
-
 /// Shared implementation for arcane/arcane macros.
 pub(crate) fn arcane_impl(
     mut input_fn: LightFn,
@@ -288,11 +278,46 @@ pub(crate) fn arcane_impl(
         ),
         tier_trait_assertion: gen_tier_trait_assertion(&tier_traits, &_token_ident),
     };
+    // The wrapper's one `unsafe` call names the generated function, and the
+    // only bindings in scope at that call are the parameters: a parameter
+    // with that name would shadow the item and receive the call (a `Deref`
+    // to an `unsafe fn` would then run arbitrary code under the token's
+    // proof). Module-level collisions are rustc errors; this one is ours.
+    let callee = if args.nested {
+        format!("__simd_inner_{}", input_fn.sig.ident)
+    } else {
+        format!("__arcane_{}", input_fn.sig.ident)
+    };
+    if let Some(err) = reserved_param_error(&input_fn.sig, &callee) {
+        return err;
+    }
     if args.nested {
         arcane_impl_nested(input_fn, &args, parts)
     } else {
         arcane_impl_sibling(input_fn, &args, parts)
     }
+}
+
+/// Reject a parameter named like the generated callee, so nothing a caller
+/// writes can stand between the wrapper's `unsafe` call and that function.
+fn reserved_param_error(sig: &syn::Signature, callee: &str) -> Option<TokenStream> {
+    sig.inputs.iter().find_map(|arg| match arg {
+        FnArg::Typed(pat_type) => match pat_type.pat.as_ref() {
+            syn::Pat::Ident(pat) if pat.ident == callee => Some(
+                syn::Error::new_spanned(
+                    &pat.ident,
+                    format!(
+                        "parameter `{callee}` shadows the function #[arcane] generates for \
+                         `{}` and would receive its `unsafe` call; rename the parameter",
+                        sig.ident
+                    ),
+                )
+                .to_compile_error(),
+            ),
+            _ => None,
+        },
+        FnArg::Receiver(_) => None,
+    })
 }
 
 /// The pieces every boundary expansion emits: the cfg guard on both halves,
@@ -476,40 +501,17 @@ fn arcane_impl_nested(input_fn: LightFn, args: &ArcaneArgs, parts: BoundaryParts
         tier_trait_assertion,
     } = parts;
 
-    // Determine self receiver type if present
-    let self_receiver_kind: Option<SelfReceiver> = inputs.first().and_then(|arg| match arg {
-        FnArg::Receiver(receiver) => {
-            // syn 3 moved the by-reference shape into `Receiver::kind`. Owned
-            // (`self`/`mut self`) and typed (`self: Box<Self>`) receivers both
-            // map to `Owned`.
-            match &receiver.kind {
-                syn::ReceiverKind::Reference(_, _, mutability) => {
-                    if mutability.is_some() {
-                        Some(SelfReceiver::RefMut)
-                    } else {
-                        Some(SelfReceiver::Ref)
-                    }
-                }
-                _ => Some(SelfReceiver::Owned),
-            }
-        }
-        _ => None,
-    });
-
     // Build inner function parameters, transforming self if needed.
     // Also replace Self in non-self parameter types when _self = Type is set,
     // since the inner function is a nested fn where Self from the impl is not in scope.
     let inner_params: Vec<proc_macro2::TokenStream> = inputs
         .iter()
         .map(|arg| match arg {
-            FnArg::Receiver(_) => {
-                // Transform self receiver to _self parameter
+            FnArg::Receiver(receiver) => {
+                // The receiver becomes `_self`, keeping its reference, lifetime
+                // and mutability, or its explicit type (`self: Box<Self>`).
                 let self_ty = args.self_type.as_ref().unwrap();
-                match self_receiver_kind.as_ref().unwrap() {
-                    SelfReceiver::Owned => quote!(_self: #self_ty),
-                    SelfReceiver::Ref => quote!(_self: &#self_ty),
-                    SelfReceiver::RefMut => quote!(_self: &mut #self_ty),
-                }
+                nested_self_param(receiver, self_ty).to_token_stream()
             }
             FnArg::Typed(pat_type) => {
                 if let Some(ref self_ty) = args.self_type {

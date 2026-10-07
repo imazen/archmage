@@ -301,34 +301,28 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
         }
 
         if args.in_trait {
-            // The variant nests inside the dispatcher, where it cannot be a
-            // method. Its receiver becomes a `_self` parameter of the named
-            // type, `Self` becomes that type, and `self` in the body becomes
-            // `_self`.
-            if let Some(self_ty) = &args.self_type
-                && has_self
-            {
-                let receiver_param: FnArg = match &variant_fn.sig.inputs[0] {
-                    FnArg::Receiver(receiver) => match &receiver.kind {
-                        syn::ReceiverKind::Reference(_, _, Some(_)) => {
-                            parse_quote!(_self: &mut #self_ty)
-                        }
-                        syn::ReceiverKind::Reference(_, _, None) => parse_quote!(_self: &#self_ty),
-                        _ => parse_quote!(_self: #self_ty),
-                    },
-                    FnArg::Typed(_) => unreachable!("has_self checked the first parameter"),
-                };
-                variant_fn.sig.inputs[0] = receiver_param;
+            // The variant nests inside the dispatcher's body, where neither the
+            // impl's `Self` nor its `self` exists. With `_self = Type`, the
+            // receiver becomes a `_self` parameter of its own shape, `Self`
+            // becomes the named type throughout the signature (parameters,
+            // return type, generics) and the body, and `self` in the body
+            // becomes `_self`. A receiver-less associated function still gets
+            // the `Self` substitution.
+            if let Some(self_ty) = &args.self_type {
+                if let Some(FnArg::Receiver(receiver)) = variant_fn.sig.inputs.first() {
+                    let receiver_param = nested_self_param(receiver, self_ty);
+                    variant_fn.sig.inputs[0] = receiver_param;
+                }
                 let self_ident = format_ident!("_self");
                 variant_fn.body = replace_self_value_in_tokens(
                     replace_self_in_tokens(variant_fn.body.clone(), self_ty),
                     &self_ident,
                 );
-                variant_fn.sig.output = syn::parse2(replace_self_in_tokens(
-                    variant_fn.sig.output.to_token_stream(),
+                variant_fn.sig = syn::parse2(replace_self_in_tokens(
+                    variant_fn.sig.to_token_stream(),
                     self_ty,
                 ))
-                .expect("replacing Self keeps the return type parseable");
+                .expect("replacing Self keeps the signature parseable");
             }
         } else if (tier.name == "scalar" || tier.name == "default")
             && has_self

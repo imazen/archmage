@@ -1115,6 +1115,81 @@ fn gen_shape_tests(files: &mut Vec<TestFile>) {
         "#}
         .to_string(),
     ));
+    // Trait receivers and `Self` in every signature position, nested in the
+    // dispatcher: `&'a self` keeps its lifetime, `self: Box<Self>` its type,
+    // `other: &Self` is substituted, and a nested impl's own `self` is left
+    // alone (external review of PR #123, 2026-10-07).
+    for (name, decl, body) in [
+        (
+            "trait_impl_in_trait_self_param",
+            "fn merge(&self, other: &Self) -> f32",
+            "self.k + other.k",
+        ),
+        (
+            "trait_impl_in_trait_lifetime",
+            "fn pick<'a>(&'a self, other: &'a f32) -> &'a f32",
+            "if self.k > *other { &self.k } else { other }",
+        ),
+        (
+            "trait_impl_in_trait_box",
+            "fn consume(self: Box<Self>) -> f32",
+            "self.k",
+        ),
+        (
+            "trait_impl_in_trait_nested_impl",
+            "fn run(&self, x: f32) -> f32",
+            "struct Inner(f32); impl Inner { fn value(&self) -> f32 { self.0 } } self.k + Inner(x).value()",
+        ),
+    ] {
+        let call = match name {
+            "trait_impl_in_trait_self_param" => "s.merge(&t)",
+            "trait_impl_in_trait_lifetime" => "*s.pick(&t.k)",
+            "trait_impl_in_trait_box" => "Box::new(s).consume()",
+            _ => "s.run(t.k)",
+        };
+        files.push(shape(
+            "autoversion",
+            name,
+            formatdoc! {r#"
+                use archmage::autoversion;
+                struct S {{ k: f32 }}
+                trait Work {{ {decl}; }}
+                impl Work for S {{
+                    #[autoversion(v3, scalar, in_trait, _self = S)]
+                    {decl} {{ {body} }}
+                }}
+                fn main() {{ let (s, t) = (S {{ k: 1.0 }}, S {{ k: 2.0 }}); let _: f32 = {call}; }}
+            "#},
+        ));
+        let arcane_decl = decl
+            .replace("(&self", "(&self, token: X64V3Token")
+            .replace("(&'a self", "(&'a self, token: X64V3Token")
+            .replace("(self: Box<Self>", "(self: Box<Self>, token: X64V3Token");
+        let arcane_call = call
+            .replace("(&t)", "(token, &t)")
+            .replace("(&t.k)", "(token, &t.k)")
+            .replace("consume()", "consume(token)")
+            .replace("run(t.k)", "run(token, t.k)");
+        files.push(shape(
+            "arcane",
+            name,
+            formatdoc! {r#"
+                use archmage::prelude::*;
+                struct S {{ k: f32 }}
+                trait Work {{ {arcane_decl}; }}
+                impl Work for S {{
+                    #[arcane(in_trait, _self = S)]
+                    {arcane_decl} {{ let _ = token; {body} }}
+                }}
+                fn main() {{
+                    if let Some(token) = X64V3Token::summon() {{
+                        let (s, t) = (S {{ k: 1.0 }}, S {{ k: 2.0 }});
+                        let _: f32 = {arcane_call};
+                    }}
+                }}
+            "#},
+        ));
+    }
     // Non-identifier parameter patterns: the dispatcher must forward them.
     for (name, params, body, call) in [
         (

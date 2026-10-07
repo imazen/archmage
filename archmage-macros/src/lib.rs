@@ -49,7 +49,7 @@ use token_discovery::*;
 
 // LightFn, filter_inline_attrs, is_lint_attr, filter_lint_attrs, gen_cfg_guard,
 // build_turbofish, replace_self_in_tokens, suffix_path → moved to common.rs
-// ArcaneArgs, SelfReceiver, arcane_impl, arcane_impl_* → moved to arcane.rs
+// ArcaneArgs, arcane_impl, arcane_impl_* → moved to arcane.rs
 // generate_imports → moved to common.rs
 
 /// Mark a function as an arcane SIMD function.

@@ -610,6 +610,23 @@ pub(crate) fn prepend_to_body(
     *body = quote! { #prefix #original };
 }
 
+/// The `_self` parameter a nested function takes in place of a receiver,
+/// with the receiver's own shape kept: `&'a self` becomes `_self: &'a Type`,
+/// `&mut self` becomes `_self: &mut Type`, `self: Box<Self>` becomes
+/// `_self: Box<Type>`, and `self` / `mut self` become `_self: Type`.
+pub(crate) fn nested_self_param(receiver: &syn::Receiver, self_ty: &syn::Type) -> syn::FnArg {
+    let ty: proc_macro2::TokenStream = match &receiver.kind {
+        syn::ReceiverKind::Value => quote!(#self_ty),
+        syn::ReceiverKind::Reference(_, lifetime, mutability) => {
+            quote!(& #lifetime #mutability #self_ty)
+        }
+        syn::ReceiverKind::Typed(_, ty) => replace_self_in_tokens(ty.to_token_stream(), self_ty),
+        // `#[non_exhaustive]`: a receiver shape syn adds later is passed by value.
+        _ => quote!(#self_ty),
+    };
+    syn::parse_quote!(_self: #ty)
+}
+
 /// Replace the value `self` with another identifier, leaving `self::` paths
 /// alone. Used when a method body moves into a nested function that receives
 /// the receiver as `_self`.
@@ -619,8 +636,17 @@ pub(crate) fn replace_self_value_in_tokens(
 ) -> proc_macro2::TokenStream {
     let mut result = proc_macro2::TokenStream::new();
     let mut tokens = tokens.into_iter().peekable();
+    // A nested `impl` or `trait` item has receivers of its own: once one of
+    // those keywords is seen, the next brace group is that item's body and is
+    // copied untouched. Closures and blocks still refer to the outer `self`
+    // and are rewritten.
+    let mut in_item_header = false;
     while let Some(tt) = tokens.next() {
         match tt {
+            proc_macro2::TokenTree::Ident(ref ident) if *ident == "impl" || *ident == "trait" => {
+                in_item_header = true;
+                result.extend([tt]);
+            }
             proc_macro2::TokenTree::Ident(ref ident) if *ident == "self" => {
                 let is_path = matches!(tokens.peek(), Some(proc_macro2::TokenTree::Punct(p)) if p.as_char() == ':');
                 if is_path {
@@ -630,6 +656,12 @@ pub(crate) fn replace_self_value_in_tokens(
                     replaced.set_span(ident.span());
                     result.extend([proc_macro2::TokenTree::Ident(replaced)]);
                 }
+            }
+            proc_macro2::TokenTree::Group(group)
+                if in_item_header && group.delimiter() == proc_macro2::Delimiter::Brace =>
+            {
+                in_item_header = false;
+                result.extend([proc_macro2::TokenTree::Group(group)]);
             }
             proc_macro2::TokenTree::Group(group) => {
                 let inner = replace_self_value_in_tokens(group.stream(), replacement);
