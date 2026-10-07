@@ -1,0 +1,96 @@
+{
+  "unaccounted_rg_candidates": [],
+  "files": 435,
+  "rust_files": 379,
+  "records": 5448,
+  "rg_line_candidates": 5448,
+  "counts": {
+    "diagnostic / diagnostic / migration": 15,
+    "diagnostic / diagnostic / support": 5,
+    "expansion-input / code / migration": 165,
+    "expansion-input / code / support": 7,
+    "expansion-input / comment / migration": 26,
+    "expansion-input / comment / support": 6,
+    "expected-failure / code / migration": 28,
+    "expected-failure / code / support": 26,
+    "expected-failure / comment / migration": 11,
+    "expected-failure / comment / support": 10,
+    "snapshot / code / support": 662,
+    "snapshot / literal / migration": 2,
+    "soundness-control / code / migration": 2,
+    "soundness-control / code / support": 1,
+    "source / code / migration": 967,
+    "source / code / support": 3009,
+    "source / comment / migration": 398,
+    "source / comment / support": 97,
+    "source / literal / migration": 8,
+    "source / literal / support": 3
+  },
+  "macros": {
+    "arcane": 623,
+    "magetypes": 87,
+    "incant": 146,
+    "autoversion": 119,
+    "rite": 174,
+    "token_target_features_boundary": 2,
+    "token_target_features": 3,
+    "dispatch_variant": 4,
+    "simd_fn": 1,
+    "simd_route": 3
+  },
+  "index_parts": 57,
+  "file_categories": {
+    "source": 177,
+    "snapshot": 105,
+    "expansion-input": 102,
+    "expected-failure": 36,
+    "diagnostic": 14,
+    "soundness-control": 1
+  },
+  "rust_file_categories": {
+    "source": 137,
+    "snapshot": 105,
+    "expansion-input": 102,
+    "expected-failure": 34,
+    "soundness-control": 1
+  },
+  "macro_by_category": {
+    "diagnostic": {},
+    "expansion-input": {
+      "magetypes": 10,
+      "rite": 22,
+      "incant": 23,
+      "arcane": 88,
+      "autoversion": 17,
+      "dispatch_variant": 1,
+      "simd_fn": 1,
+      "simd_route": 1,
+      "token_target_features": 1,
+      "token_target_features_boundary": 1
+    },
+    "expected-failure": {
+      "arcane": 14,
+      "autoversion": 2,
+      "incant": 6,
+      "rite": 6
+    },
+    "snapshot": {},
+    "soundness-control": {
+      "rite": 1,
+      "token_target_features": 1
+    },
+    "source": {
+      "arcane": 521,
+      "magetypes": 77,
+      "incant": 117,
+      "autoversion": 100,
+      "rite": 145,
+      "token_target_features_boundary": 1,
+      "token_target_features": 1,
+      "dispatch_variant": 3,
+      "simd_route": 2
+    }
+  },
+  "compact_records": 1162,
+  "compact_parts": 13
+}
