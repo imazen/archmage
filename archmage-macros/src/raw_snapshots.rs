@@ -199,10 +199,15 @@ fn raw_snapshots_match() {
     for input in inputs() {
         let rel = input.strip_prefix(root.join(INPUT_ROOT)).unwrap();
         let output = root.join(OUTPUT_ROOT).join(rel);
-        let source = std::fs::read_to_string(&input).unwrap();
+        // Windows checkouts may carry CRLF (git autocrlf); compare as LF.
+        let source = std::fs::read_to_string(&input)
+            .unwrap()
+            .replace("\r\n", "\n");
         let expanded = raw_expand(&source);
         count += 1;
-        let current = std::fs::read_to_string(&output).ok();
+        let current = std::fs::read_to_string(&output)
+            .ok()
+            .map(|c| c.replace("\r\n", "\n"));
         if current.as_deref() == Some(expanded.as_str()) {
             continue;
         }
