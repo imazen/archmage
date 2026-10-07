@@ -271,8 +271,8 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<Tok
                 let default_args: Vec<&syn::Expr> = args
                     .iter()
                     .filter(|a| {
-                        !crate::common::is_bare_ident_pub(a, "Token")
-                            && !crate::common::is_bare_ident_pub(a, &caller_ident)
+                        !crate::common::is_bare_ident(a, "Token")
+                            && !crate::common::is_bare_ident(a, &caller_ident)
                     })
                     .collect();
                 quote! { #fn_default(#(#default_args),*) }
@@ -336,7 +336,7 @@ fn rewrite_tokenless_incant(input: &IncantInput, ctx: &CallerContext) -> Option<
             let args: Vec<_> = input
                 .args
                 .iter()
-                .filter(|arg| !crate::common::is_bare_ident_pub(arg, "Token"))
+                .filter(|arg| !crate::common::is_bare_ident(arg, "Token"))
                 .collect();
             quote! { #function(#(#args),*) }
         } else {

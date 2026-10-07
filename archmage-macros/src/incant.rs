@@ -322,7 +322,7 @@ pub(crate) fn gen_incant_passthrough(
         let fn_default = suffix_path(func_path, "default");
         let default_args = args
             .iter()
-            .filter(|a| !crate::common::is_bare_ident_pub(a, "Token"));
+            .filter(|a| !crate::common::is_bare_ident(a, "Token"));
         quote! {
             break '__incant #fn_default(#(#default_args),*);
         }
@@ -382,7 +382,7 @@ pub(crate) fn gen_incant_entry(
         // Default tier: strip Token marker from args if present (tokenless call)
         let default_args = args
             .iter()
-            .filter(|a| !crate::common::is_bare_ident_pub(a, "Token"));
+            .filter(|a| !crate::common::is_bare_ident(a, "Token"));
         quote! { #fn_default(#(#default_args),*) }
     } else {
         let fn_scalar = suffix_path(func_path, "scalar");

@@ -1133,7 +1133,15 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
   the dispatcher's call, E0061). Snapshots:
   `tests/expand/shapes/`; compile-fail: `tests/compile_fail/two_token_params_*.rs`,
   `autoversion_opaque_return.rs`, `autoversion_in_trait_needs_self_type.rs`,
-  `rite_in_trait.rs`, `rite_in_impl.rs`.
+  `rite_in_trait.rs`, `rite_in_impl.rs`. The external review of #123
+  (gpt-6-astra, report in the PR) added: a parameter named like the sibling
+  is a macro error (`tests/soundness/sibling_param_shadow_exploit.rs`);
+  nested receivers keep lifetimes and explicit types; `Self` is substituted
+  across the whole `in_trait` signature; nested `impl` bodies keep their
+  `self`; nested `incant!` keeps feature gates, named tokens and wildcard
+  tokens; `#[autoversion]` keeps the token's parameter position (shapes
+  `*_in_trait_{self_param,lifetime,box,nested_impl}`,
+  `arcane_*_nested_incant`, `autoversion_token_last_param`).
 - Fixed 2026-09-27: `#[arcane]` on `ScalarToken` emitted an invalid empty
   target-feature attribute. Scalar now keeps its signature without a feature boundary.
 - Fixed 2026-09-27: `#[magetypes]` replaced explicit `Token` argument markers

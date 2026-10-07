@@ -236,13 +236,7 @@ pub(crate) fn generate_imports(
     imports
 }
 
-/// Check if any argument expression contains the `Token` identifier.
-/// Check if an expression is a bare ident matching a given name.
-pub(crate) fn is_bare_ident_pub(expr: &syn::Expr, name: &str) -> bool {
-    is_bare_ident(expr, name)
-}
-
-fn is_bare_ident(expr: &syn::Expr, name: &str) -> bool {
+pub(crate) fn is_bare_ident(expr: &syn::Expr, name: &str) -> bool {
     match expr {
         syn::Expr::Path(p) => {
             p.qself.is_none() && p.path.segments.len() == 1 && p.path.segments[0].ident == name
