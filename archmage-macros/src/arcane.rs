@@ -263,6 +263,28 @@ pub(crate) fn arcane_impl(
 
     // Build a single target_feature attribute with all features comma-joined
     let features_csv = crate::token_discovery::features_csv(token_type_name.as_deref(), &features);
+    // Scalar has no instruction-set boundary. Preserve its signature and body
+    // without emitting the invalid #[target_feature(enable = "")].
+    if features_csv.is_empty() {
+        let vis = &input_fn.vis;
+        let sig = &input_fn.sig;
+        let attrs = filter_inline_attrs(&input_fn.attrs);
+        let body = &input_fn.body;
+        let self_binding = args
+            .self_type
+            .as_ref()
+            .map(|_| quote! { let _self = self; });
+        let cfg = args
+            .cfg_feature
+            .as_ref()
+            .map(|feature| quote! { #[cfg(feature = #feature)] });
+        let inline = if args.inline_always {
+            quote! { #[inline(always)] }
+        } else {
+            quote! { #[inline] }
+        };
+        return quote! { #cfg #(#attrs)* #inline #vis #sig { #self_binding #body } };
+    }
     let target_feature_attrs: Vec<Attribute> =
         vec![parse_quote!(#[target_feature(enable = #features_csv)])];
 

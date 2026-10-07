@@ -197,7 +197,9 @@ use token_discovery::*;
 /// Concrete tokens are checked through a shared, tier-specific associated constant.
 /// This rejects accidental token-name aliases without reevaluating a tag comparison
 /// in every expansion. The matching archmage release pins this macro crate exactly.
-/// Public constants do not prevent deliberate forgery.
+/// Getting past the check takes deliberately shadowing archmage's type names and
+/// copying their hidden constants, which gives undefined behavior on CPUs without
+/// the features; see the [safety model](https://imazen.github.io/archmage/archmage/concepts/safety/).
 ///
 /// `#[arcane(suppress_const_test)]` omits this accidental-misuse check for trusted
 /// generators. The caller must ensure the actual token proves the tier selected

@@ -52,16 +52,30 @@
 //! if let Some(token) = X64V3Token::summon() { assert!(entry(token)); }
 //! ```
 //!
-//! This is a repository addition after 0.9.28. See
+//! Added in 0.9.29. See
 //! [from_context and token extraction](https://imazen.github.io/archmage/archmage/getting-started/tokens/).
 //! Use `.v3()` to extract a V3 token from a stronger proof; `as_x64v3()` instead
 //! checks whether the held token is exactly a V3 token.
+//!
+//! ## Safety
+//!
+//! Using archmage takes no `unsafe` in your code: you call intrinsics inside
+//! `#[arcane]` and `#[rite]` functions, and your crate can keep
+//! `#![forbid(unsafe_code)]`. A token is the proof that the CPU has its features;
+//! safe code gets one only once the features are confirmed, normally by
+//! `summon()`. The single `unsafe` block in each `#[arcane]` expansion is generated
+//! by the macro, and the token parameter is what makes it sound. The
+//! [safety model](https://imazen.github.io/archmage/archmage/concepts/safety/)
+//! explains the expansion, what it relies on, and how it is checked.
 //!
 //! ## Features
 //!
 //! `std` is enabled by default. `avx512` enables native intrinsic-wrapper and macro
 //! support. Token names and macros are always available; unsupported tokens cannot
-//! be summoned. `testable_dispatch` enables the tier-testing facilities.
+//! be summoned. `testable_dispatch` enables the tier-testing facilities. It makes
+//! every `summon()` read a cache, even the x86-64 baseline token's, which is
+//! otherwise a constant, and Cargo turns it on for the whole build graph. Enable it
+//! from `[dev-dependencies]` or a dev-only feature, never from `[dependencies]`.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -112,8 +126,10 @@ pub mod testing;
 /// wrappers for features the impostor never proves. `#[arcane]`'s current
 /// defense for concrete tokens is a shared associated constant named for the
 /// expected tier (shadow types and weaker aliases lack it), plus the sealed
-/// [`SimdToken`] bound for trait-generic parameters. Public constants do not
-/// prevent deliberate forgery.
+/// [`SimdToken`] bound for trait-generic parameters. Getting past it takes
+/// deliberately shadowing the type name and copying the hidden constant, which
+/// gives undefined behavior on CPUs without the features; the guide's safety
+/// model page covers the details.
 /// See `tests/soundness/token_shadowing_exploit.rs`
 /// and `token_aliasing_exploit.rs`.
 #[doc(hidden)]

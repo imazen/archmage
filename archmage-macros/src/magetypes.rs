@@ -62,6 +62,21 @@ pub(crate) fn magetypes_impl(
     // Dispatch presence is independent of the tier. Scan the original body
     // once, before making variants (the define preamble contains no dispatch).
     let has_dispatch = tokens_contain_ident(&input_fn.body, &["incant", "dispatch_variant"]);
+    // Token is still a placeholder here. Use the same type inspection as the
+    // other tier macros, also recognizing that placeholder before substitution.
+    // Do not mistake a vector parameter such as V<Token> for a token parameter.
+    let tokenless_rite = rite_flag
+        && has_dispatch
+        && crate::token_discovery::find_token_param(&input_fn.sig).is_none()
+        && !input_fn.sig.inputs.iter().any(|arg| {
+            let syn::FnArg::Typed(param) = arg else {
+                return false;
+            };
+            matches!(
+                crate::token_discovery::extract_token_type_info(&param.ty),
+                Some(crate::token_discovery::TokenTypeInfo::Generic(name)) if name == "Token"
+            )
+        });
     let mut variants = Vec::with_capacity(tiers.len());
 
     for tier in tiers {
@@ -80,19 +95,17 @@ pub(crate) fn magetypes_impl(
             };
         }
 
-        // Resolve `incant!(.. without token)` to this tier's tokenless variant
-        // call (`f_<suffix>(args)`). `has_token: false` ⇒ only `without token` is
-        // rewritten here; plain `incant!`/`with token` are left untouched. Tiered
-        // variants are also `#[arcane]`-wrapped (which handles the token-first
-        // forms); this pass is what gives the scalar/default variants — emitted
-        // plain, with no arcane wrapper — a working `without token` too.
+        // SIMD variants receive the remaining call rewrite from arcane/rite.
+        // Scalar/default variants have no wrapper: tokenless rite fallbacks
+        // must also select covered callees here. Tokenful and ordinary boundary
+        // fallbacks retain runtime dispatch.
         if has_dispatch {
             let ctx = crate::rewrite::CallerContext {
                 tier_suffix: tier.suffix.to_string(),
                 target_arch: tier.target_arch,
                 token_ident: quote::format_ident!("_"),
                 has_token: false,
-                derive_token: false,
+                derive_token: tokenless_rite && tier.target_arch.is_none(),
             };
             variant_fn.body = crate::rewrite::rewrite_incant_in_body(variant_fn.body, &ctx);
         }
@@ -140,7 +153,8 @@ pub(crate) fn magetypes_impl(
             //     + #[inline], no wrapper (only callable from matching-feature
             //     contexts, e.g. via `incant!` rewriting from another tier body)
             let wrapper = if rite_flag {
-                quote! { #[archmage::rite(import_intrinsics)] }
+                let tier_name = quote::format_ident!("{}", tier.name);
+                quote! { #[archmage::rite(#tier_name, import_intrinsics)] }
             } else {
                 quote! { #[archmage::arcane] }
             };
