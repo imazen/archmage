@@ -85,6 +85,31 @@ fallback such as V3. Generating both preserves their V4 path but adds a tier
 body. Neither runtime benefit nor compilation-cost difference was measured.
 Keep this hardware-policy question separate from the accepted avx512 gate.
 
+#### Proposed revision: explicit AVX-512 opt-in
+
+Pending decision: replace implicit feature-gated V4 in the wildcard defaults
+with explicit additions. Separate output forms from tier-set modifiers:
+
+```rust,ignore
+#[attune(make(_*_t, +v4x))]          // Add V4x token entries unconditionally.
+#[attune(make(_*_t, +v4x(avx512)))] // Add them under the provider's feature.
+```
+
+Under this proposal, +tier modifies the tier set of selected wildcard output
+forms; it does not silently request a direct entry when only token entries were
+selected. An explicit literal output selector retains its existing meaning.
+The shorthand gate syntax and behavior without wildcard selectors still need
+a grammar decision. Wildcards would exclude both V4 and V4x until requested.
+
+Unconditional here means no Cargo-feature gate on generating that tier, not
+unconditional execution: architecture guards and proof/detection requirements
+remain. Required dependency/backend features must still be enabled explicitly.
+A conditional addition tests the crate containing the declaration, not an
+unrelated downstream crate. Sparse callers must follow the provider's exported
+contract; their own similarly named feature is not provider introspection.
+
+This is a proposed revision of Q2, not yet a replacement for the accepted gate.
+
 ### Q3. How much enclosing context may attune process?
 
 **Accepted — Function attributes only, with a clear supported subset.** Do not
