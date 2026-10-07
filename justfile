@@ -283,7 +283,7 @@ bench-edge-cases:
 # Time cold builds of the magetypes crate. ROOT holds before/ and after/ source
 # trees, e.g. `git archive v0.9.29 | tar -x -C ROOT/before`.
 magetypes-compile-perf ROOT PAIRS="6":
-    python3 xtask/magetypes_compile_perf.py {{ROOT}} {{PAIRS}}
+    python3 benchmarks/magetypes_compile_perf.py {{ROOT}} {{PAIRS}}
 
 # ============================================================================
 # ASM Verification (requires cargo-show-asm)
@@ -356,8 +356,8 @@ token-migration-arm:
     CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER="qemu-aarch64 -L /usr/aarch64-linux-gnu" cargo test -p magetypes --test token_aliases --test raw_interop --target aarch64-unknown-linux-gnu
 
 # Build the actual crate archives together without publishing.
-check-packages:
-    python3 xtask/check_packages.py
+check-packages *TARGETS:
+    cargo run -p xtask -- check-packages {{TARGETS}}
 
 # Fused arithmetic regression and interleaved software-path comparison
 test-fused:

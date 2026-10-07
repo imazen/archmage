@@ -97,7 +97,7 @@
 - Add tokenful/tokenless calling-convention fixtures on x86, ARM/QEMU, and WASM/Wasmtime (c766c238, 595d13e0).
 - Record [native compilation checks for 23 published consumer libraries](docs/DOWNSTREAM-COMPATIBILITY.md), including optional SIMD feature checks; this audit does not establish ARM/WASM consumer compatibility or runtime equivalence (5bfae758, aac61604).
 - Record [generic-vs-intrinsic codegen and compile-cost measurements](benchmarks/magetypes_vs_intrinsics_r5900xt_2026-09-08.md) (1a0ea59a).
-- Record [magetypes cold-build time against 0.9.29](benchmarks/magetypes_compile_zen5-9950x3d_2026-10-03.md): 3.6–6.7% longer, about 40–60 ms on a Ryzen 9 9950X3D, measured with the new `xtask/magetypes_compile_perf.py` harness (ee27ecc7).
+- Record [magetypes cold-build time against 0.9.29](benchmarks/magetypes_compile_zen5-9950x3d_2026-10-03.md): 3.6–6.7% longer, about 40–60 ms on a Ryzen 9 9950X3D, measured with the new `benchmarks/magetypes_compile_perf.py` harness (ee27ecc7; moved beside its results in #125).
 - `magetypes/benches/mul_add_cost.rs` times `a * b + c`, `mul_add` and `mul_add_portable` on each backend, in a streaming loop and in a dependency chain (97730e5c, ca30e564).
 - `xtask soundness` keeps magetypes' hand-written `unsafe` in `simd_storage.rs`: it rejects `unsafe` blocks elsewhere (outside the generated backend impls) and gather/scatter intrinsics anywhere else, so every gather/scatter lane offset is bounded against the borrowed slice in that one file (e3543634, 3fb0c910).
 - `cargo xtask validate` fails when archmage-macros or magetypes lacks a license text or its copy differs from the root file (683bef73).

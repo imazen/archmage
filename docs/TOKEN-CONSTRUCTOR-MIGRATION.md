@@ -94,7 +94,7 @@ do not maintain separate constructor lists or hand-edit the generated aliases.
 `just check-packages` builds the crate archives together without publishing and
 asserts that the normalized manifests keep the exact archmage→archmage-macros pin
 and the ordinary magetypes→archmage version requirement. Pass `--target` to
-`python3 xtask/check_packages.py`, repeatedly, to check other targets.
+`cargo xtask check-packages --target <triple>`, repeatedly, to check other targets.
 
 ## Compatibility checks
 

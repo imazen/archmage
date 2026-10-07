@@ -1057,6 +1057,9 @@ fn main() -> Result<()> {
             "       cargo xtask soundness           - Compile-time intrinsic safety verification"
         );
         eprintln!("       cargo xtask miri                - Run magetypes under Miri (detects UB)");
+        eprintln!(
+            "       cargo xtask check-packages [--target T]... - Package the crates and check the packaged sources"
+        );
         std::process::exit(1);
     }
 
@@ -1071,6 +1074,16 @@ fn main() -> Result<()> {
         "parity" => check_api_parity(false)?,
         "soundness" => verify_intrinsic_soundness()?,
         "gen-expand" => expand_gen::generate_expand_tests(&PathBuf::from("tests/expand"))?,
+        "check-packages" => {
+            // `--target T` may repeat; everything else is an error.
+            let mut targets = Vec::new();
+            let mut rest = args[2..].iter();
+            while let Some(arg) = rest.next() {
+                anyhow::ensure!(arg == "--target", "unknown check-packages argument: {arg}");
+                targets.push(rest.next().context("--target needs a value")?.clone());
+            }
+            check_packages(&targets)?
+        }
         "miri" => run_miri()?,
         "audit" => run_safety_audit()?,
         "intrinsics-refresh" => refresh_intrinsics_database()?,
@@ -1271,6 +1284,122 @@ fn check_package_licenses() -> Result<()> {
         }
     }
     println!("  OK: archmage-macros and magetypes carry LICENSE-MIT and LICENSE-APACHE");
+    Ok(())
+}
+
+/// Build the three packaged libraries together, without publishing anything.
+///
+/// `cargo package` each crate, extract the archives into
+/// `target/package-verification/`, check that the published dependency
+/// protocol is what the release needs (archmage pins archmage-macros exactly,
+/// magetypes requires the archmage version), and `cargo check` the packaged
+/// sources as one workspace, once per `--target` (host when none is given).
+fn check_packages(targets: &[String]) -> Result<()> {
+    use std::process::Command;
+    const CRATES: [&str; 3] = ["archmage", "archmage-macros", "magetypes"];
+
+    let metadata: serde_json::Value = serde_json::from_slice(
+        &Command::new("cargo")
+            .args(["metadata", "--no-deps", "--format-version", "1"])
+            .output()
+            .context("cargo metadata")?
+            .stdout,
+    )?;
+    let packages = metadata["packages"].as_array().context("packages")?;
+    let version = |name: &str| -> Result<String> {
+        packages
+            .iter()
+            .find(|p| p["name"] == name)
+            .and_then(|p| p["version"].as_str())
+            .map(String::from)
+            .with_context(|| format!("{name} is not a workspace member"))
+    };
+    let target_dir = PathBuf::from(
+        metadata["target_directory"]
+            .as_str()
+            .context("target dir")?,
+    );
+
+    let mut package = Command::new("cargo");
+    package.args(["package", "--no-verify", "--allow-dirty"]);
+    for crate_name in CRATES {
+        package.args(["-p", crate_name]);
+    }
+    println!("+ {package:?}");
+    anyhow::ensure!(package.status()?.success(), "cargo package failed");
+
+    let staging = target_dir.join("package-verification").join(format!(
+        "sources-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_secs()
+    ));
+    fs::create_dir_all(&staging)?;
+    let mut members = Vec::new();
+    for crate_name in CRATES {
+        let member = format!("{crate_name}-{}", version(crate_name)?);
+        let archive = target_dir.join("package").join(format!("{member}.crate"));
+        let status = Command::new("tar")
+            .arg("-xzf")
+            .arg(&archive)
+            .arg("-C")
+            .arg(&staging)
+            .status()
+            .context("tar")?;
+        anyhow::ensure!(status.success(), "extracting {}", archive.display());
+        members.push(member);
+    }
+
+    // The published dependency protocol, not just local path resolution.
+    let manifest = |member: &str| -> Result<toml::Value> {
+        Ok(toml::from_str(&fs::read_to_string(
+            staging.join(member).join("Cargo.toml"),
+        )?)?)
+    };
+    let archmage = manifest(&members[0])?;
+    let magetypes = manifest(&members[2])?;
+    anyhow::ensure!(
+        archmage["dependencies"]["archmage-macros"]["version"].as_str()
+            == Some(&format!("={}", version("archmage-macros")?)),
+        "packaged archmage must pin archmage-macros exactly"
+    );
+    anyhow::ensure!(
+        magetypes["dependencies"]["archmage"]["version"].as_str() == Some(&version("archmage")?),
+        "packaged magetypes must require the workspace archmage version"
+    );
+
+    let mut workspace = format!(
+        "[workspace]\nresolver = \"3\"\nmembers = {}\n\n[patch.crates-io]\n",
+        serde_json::to_string(&members)?
+    );
+    for (crate_name, member) in CRATES.iter().zip(&members) {
+        workspace.push_str(&format!("{crate_name} = {{ path = {member:?} }}\n"));
+    }
+    fs::write(staging.join("Cargo.toml"), workspace)?;
+
+    let host = [String::new()];
+    for target in if targets.is_empty() {
+        &host[..]
+    } else {
+        targets
+    } {
+        let mut check = Command::new("cargo");
+        check
+            .args([
+                "check",
+                "--workspace",
+                "--all-features",
+                "--lib",
+                "--manifest-path",
+            ])
+            .arg(staging.join("Cargo.toml"));
+        if !target.is_empty() {
+            check.args(["--target", target]);
+        }
+        println!("+ {check:?}");
+        anyhow::ensure!(check.status()?.success(), "packaged sources fail to check");
+    }
+    println!("Verified packaged sources: {}", staging.display());
     Ok(())
 }
 
