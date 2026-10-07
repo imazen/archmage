@@ -325,10 +325,10 @@ signature: retain a safe adapter with exactly that name, visibility, generics,
 arguments and return type, and forward into a feature-enabled implementation.
 Existing arcane supplies the underlying boundary mechanism.
 
-**Grammar decision:** how the unified attribute requests that adapter while
-preserving its name. A proposed `entry(token)` option is not settled. `_t`
-generation alone does not preserve an old unsuffixed token entry's name.
-Existing arcane can remain the migration bridge while this is decided.
+Established spelling: `#[attune(wrap)]` requests that adapter, inferring features
+from the existing proof parameter and preserving its name and signature.
+`#[attune(v3)]` instead enables features directly on an arbitrary existing name.
+No existing proof parameter is removed or duplicated in wrap mode.
 
 For generic proof parameters such as `T: HasX64V2 + Other`, retain T and its
 associated-type/bound contracts when the operation uses them. The feature
@@ -345,10 +345,9 @@ Receivers remain receivers; proof never precedes `self` in a method signature.
 
 Existing `incant!(... with token)` performs exact-token passthrough. Neither
 attuned's feature-context selection nor reattune's runtime reselection is a
-drop-in substitute. Its implementation strategy is understood, but whether the
-unified API needs a new explicit-proof family operation is a product decision.
-Retain the old operation until that choice is made; concrete cases can call
-the relevant `_t` entry directly.
+drop-in substitute. Complete migration requires an equivalent explicit-proof
+operation or validated source adapter. The spelling and unmatched-token policy
+remain open; concrete cases can call the relevant `_t` entry directly.
 
 ## 7. Generics, vectors and dispatcher signatures
 
@@ -447,7 +446,7 @@ Do not implement “best effort” emission that changes an API's meaning silent
 | Suffixes and default visibility | Clear rules | Implement output model and expansion snapshots |
 | Cfg-disabled SIMD with scalar fallback | Clear approach | Settle selector cfg grammar; test gates/references together |
 | Explicit upgrade/reselection | Clear approach | Use reattune recommendation; reuse feature-proof dispatch machinery |
-| Old names and proof parameter placement | Clear adapter approach | Choose compatibility entry spelling |
+| Old names and proof parameter placement | wrap spelling chosen | Preserve the existing proof parameter and generic contracts |
 | Ordinary generics and fixed-width aliases | Existing machinery | Preserve contracts; finalize placeholder/alias spelling |
 | Inherent associated functions without self | Clear with context hint | Implement qualified forwarding; test impl generics |
 | Intrinsic/type imports | Existing per-tier machinery | Specify flags and propagation, including scalar/default cases |

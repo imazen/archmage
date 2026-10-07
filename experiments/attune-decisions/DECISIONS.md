@@ -8,6 +8,36 @@ No proposed attune syntax has been implemented. The
 [evidence report](README.md) distinguishes executed lowerings from untested
 macro integration. The [specification](../../ATTUNE_SPEC.md) remains a draft.
 
+## Remaining decision checklist after choosing wrap
+
+All recommendations here remain proposals:
+
+1. **Wildcard AVX-512:** explicit opt-in (`+v4x` or `+v4x(avx512)`) was proposed
+   after gated V4 was accepted. Confirm whether this replaces the earlier default.
+2. **Call conventions:** no-list attuned in a known tier calls its direct variant;
+   outside it uses default token entries. Sparse lists are explicit. Propose
+   allowing `_v3_t` in a call shortlist to require a proof entry even inside V3,
+   using from_context rather than probing. Ordinary `_v3` selects entry form by
+   context. Missing names fail; no automatic direct-to-token entry discovery.
+3. **Existing supplied-token dispatch:** complete conversion needs its spelling
+   and exact-type/unmatched-token contract. Context selection and runtime
+   reselection do not automatically preserve it.
+4. **Inline policy:** recommend inline on direct bodies, always-inline on thin
+   proof wrappers, no forced dispatcher inline. Require per-output placement
+   for overrides on multi-output requests; single-output attrs remain ordinary.
+5. **Visibility/selector attributes:** inherit source visibility, with optional
+   Rust-shaped per-output visibility and attributes. Cfg shorthand versus full
+   predicates and wildcard/explicit override precedence need consistent grammar.
+6. **Set modifiers:** propose normalize additions first, then removals, independent
+   of written order; absent known tiers remain valid removals. Identical outputs
+   coalesce, incompatible duplicate policies fail. Define how modifiers affect
+   dispatcher-only requests as well as wildcard output forms.
+
+Retaining define(...) for existing fixed-width aliases is the migration-friendly
+recommendation. Adaptive widths/tails remain a separate design. Rename-map
+collision rules and diagnostics can follow the chosen selector model without
+new family discovery or source scanning.
+
 ## First discussion: behavior and necessary context
 
 ### Q1. Is an explicit reattune tier list exact?
@@ -226,37 +256,28 @@ exact-token dispatch syntax remain decisions to settle.
 
 ### Q5. How should an existing token-taking public signature migrate?
 
-Old API:
+**Accepted spelling — `#[attune(wrap)]`.** It preserves the existing function
+name, visibility, signature, generic contracts and proof position, and infers
+body features from the recognized proof parameter. `#[attune(v3)]` instead
+adds features directly to an arbitrary existing function name.
 
 ```rust,ignore
-#[arcane]
-pub fn work(token: X64V3Token, data: &[f32]) -> f32 { ... }
+#[attune(wrap)]
+pub fn work<T: HasX64V2 + OtherTrait>(token: T, data: &[f32]) -> T::Output {
+    token.finish(data.iter().sum())
+}
 ```
 
-**A — Keep legacy attributes as the compatibility bridge, recommended initially.**
-New names follow the direct/_t conventions. Existing work(token, data) remains
-available and can share the same implementation machinery without inventing
-another new syntax immediately.
+The [cargo expand probe](../generic-token-trampoline/README.md) establishes the
+underlying existing arcane lowering, preserving T and associated behavior on
+both sides of the trampoline. The proposed syntax itself is not implemented.
+Legacy attributes remain usable during development; complete migration must
+provide equivalent supported replacements before deprecation rollout.
 
-**B — Add a same-name proof-entry mode to attune.** One attribute can express
-the existing signature directly, including generic proof parameters and their
-additional contracts. A spelling such as entry(token) must be chosen and its
-relationship to make outputs specified.
-
-Both can use a safe ordinary wrapper around a feature-enabled body. Merely
-generating work_v3_t changes the old name. Existing first/middle/last proof
-positions and generic associated types must not disappear during conversion.
-This is an interface choice, not an unsolved safety boundary.
-
-Follow-up [cargo expand probe](../generic-token-trampoline/README.md): arcane
-preserves T, extra trait bounds and T::Output in both the wrapper and its private
-feature-enabled sibling. V2/u32 and V3/u64 executions passed. The bound establishes
-features, while the original concrete token retains its associated behavior.
-This means attune could preserve an existing generic proof-entry signature with
-the same lowering; keeping legacy arcane is an API-scope recommendation, not a
-technical requirement caused by genericity. Removing/concretizing T is the
-separate compatibility issue.
-
+Bare suffix inference for `_v3_t` was proposed alongside wrap but its exact
+interaction with explicit tiers and proof parameters still needs specification.
+Do not infer an arbitrary-name wrapper merely from a proof-looking parameter
+unless that inference rule is separately accepted.
 
 ### Q6. What happens to exact-token passthrough?
 

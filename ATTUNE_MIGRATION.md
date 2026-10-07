@@ -112,7 +112,8 @@ fallback can change observable numerical behavior too.
 - Same-signature generic proof entries must be expressible. The
   [cargo expand probe](experiments/generic-token-trampoline/README.md) establishes
   the existing lowering: preserve T and its bounds in wrapper and body. Keeping
-  arcane forever is not the completed migration plan. Entry syntax remains open.
+  arcane forever is not the completed migration plan. `#[attune(wrap)]` is the
+  chosen spelling for retaining an existing proof-taking signature.
 - The new surface must express explicit-proof dispatch semantics where legacy
   incant uses them. Replacing every such call with reattune would introduce a
   different selection policy. Syntax remains open.
