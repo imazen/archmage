@@ -402,3 +402,11 @@ diff-rs scope="handwritten" *args:
     [ -n "$files" ] || { echo "no .rs changes since $base"; exit 0; }
     echo "base $base, $(echo "$files" | wc -l) files" >&2
     git -c delta.navigate=true diff {{args}} "$base"..HEAD -- $files
+
+# Compare cold downstream compilation; output directories must be new.
+attune-compile out:
+    python3 benchmarks/attune_compile.py --out {{out}}
+
+# Unified macro definition/call contracts.
+attune-test:
+    cargo test --test attune
