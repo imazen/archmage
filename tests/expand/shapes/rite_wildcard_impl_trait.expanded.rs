@@ -1,15 +1,9 @@
 use archmage::prelude::*;
-#[doc(hidden)]
 #[target_feature(
     enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
 )]
 #[inline]
-fn __arcane_probe<T: HasX64V2 + HasX64V4>(__archmage_arg_0: T, x: f32) -> f32 {
-    let _ = X64V3Token::from_context();
-    x
-}
-#[inline(always)]
-fn probe<T: HasX64V2 + HasX64V4>(__archmage_arg_0: T, x: f32) -> f32 {
+fn probe(__archmage_arg_0: impl HasX64V2 + HasX64V4, x: f32) -> f32 {
     {
         #[inline(always)]
         const fn __archmage_assert_tier_trait<
@@ -17,6 +11,7 @@ fn probe<T: HasX64V2 + HasX64V4>(__archmage_arg_0: T, x: f32) -> f32 {
         >(_: &__T) {}
         __archmage_assert_tier_trait(&__archmage_arg_0);
     }
-    unsafe { __arcane_probe::<T>(__archmage_arg_0, x) }
+    let _ = X64V3Token::from_context();
+    x
 }
 fn main() {}

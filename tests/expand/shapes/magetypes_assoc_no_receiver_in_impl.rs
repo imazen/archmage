@@ -2,8 +2,8 @@
 use archmage::prelude::*;
 struct S { k: f32 }
 impl S {
-    #[arcane(nested)]
-    fn probe(token: X64V3Token, x: f32) -> f32 { let _ = token; x }
+    #[magetypes(v3, scalar, in_impl)]
+    fn probe(token: Token, x: f32) -> f32 { let _ = token; Self::offset() + x }
     fn offset() -> f32 { 1.0 }
 }
 fn main() {}

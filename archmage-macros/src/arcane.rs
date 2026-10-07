@@ -39,6 +39,8 @@ fn gen_token_assertion(
 
 #[derive(Default)]
 pub(crate) struct ArcaneArgs {
+    /// Options spelled the same way in `#[rite]`: imports and `cfg(feature)`.
+    pub(crate) shared: SharedOptions,
     /// Trusted generators may omit the accidental token-name mismatch check.
     /// Intrinsic feature checking remains enabled.
     suppress_const_test: bool,
@@ -49,19 +51,14 @@ pub(crate) struct ArcaneArgs {
     /// When specified, `self`/`&self`/`&mut self` is transformed to `_self: Type`/`&Type`/`&mut Type`.
     /// Implies `nested = true`.
     pub(crate) self_type: Option<Type>,
-    /// Use nested inner function instead of sibling function.
-    /// Implied by `_self = Type`. Required for associated functions in impl blocks
-    /// that have no `self` receiver (the macro can't distinguish them from free functions).
+    /// Use a nested inner function instead of a sibling function. Spelled
+    /// `nested` or `in_trait`; implied by `_self = Type`. Required in trait
+    /// impls, which cannot take the extra sibling item.
     pub(crate) nested: bool,
-    /// Inject `use archmage::intrinsics::{arch}::*;` (includes safe memory ops).
-    pub(crate) import_intrinsics: bool,
-    /// Inject `use magetypes::simd::{ns}::*;`, `use magetypes::simd::generic::*;`,
-    /// and `use magetypes::simd::backends::*;`.
-    pub(crate) import_magetypes: bool,
-    /// Additional cargo feature gate. When set, the generated `#[cfg(target_arch)]`
-    /// becomes `#[cfg(all(target_arch = "...", feature = "..."))]`.
-    /// Example: `#[arcane(cfg(avx512))]` → `#[cfg(all(target_arch = "x86_64", feature = "avx512"))]`
-    pub(crate) cfg_feature: Option<String>,
+    /// The function is a receiver-less associated function in an inherent
+    /// impl, so the wrapper calls its sibling as `Self::__arcane_fn`. An
+    /// attribute macro cannot see the enclosing impl, so this is spelled out.
+    pub(crate) in_impl: bool,
 }
 
 impl Parse for ArcaneArgs {
@@ -70,38 +67,26 @@ impl Parse for ArcaneArgs {
 
         while !input.is_empty() {
             let ident: Ident = input.parse()?;
-            match ident.to_string().as_str() {
-                "suppress_const_test" => args.suppress_const_test = true,
-                "inline_always" => args.inline_always = true,
-                "stub" => {
-                    return Err(syn::Error::new(
-                        ident.span(),
-                        "`stub` has been removed. Use `incant!` for cross-arch dispatch \
-                         instead — it cfg-gates each architecture automatically.\n\
-                         \n\
-                         Before: #[arcane(stub)] fn process(token: X64V3Token, ...) { ... }\n\
-                         After:  #[arcane] fn process_v3(token: X64V3Token, ...) { ... }\n\
-                         \x20       fn dispatch(...) { incant!(process(...)) }",
-                    ));
-                }
-                "nested" => args.nested = true,
-                "import_intrinsics" => args.import_intrinsics = true,
-                "import_magetypes" => args.import_magetypes = true,
-                "cfg" => {
-                    let content;
-                    syn::parenthesized!(content in input);
-                    let feat: Ident = content.parse()?;
-                    args.cfg_feature = Some(feat.to_string());
-                }
-                "_self" => {
-                    let _: Token![=] = input.parse()?;
-                    args.self_type = Some(input.parse()?);
-                }
-                other => {
-                    return Err(syn::Error::new(
-                        ident.span(),
-                        format!("unknown arcane argument: `{}`", other),
-                    ));
+            if !parse_shared_option(&ident, input, &mut args.shared)? {
+                match ident.to_string().as_str() {
+                    "suppress_const_test" => args.suppress_const_test = true,
+                    "inline_always" => args.inline_always = true,
+                    "nested" | "in_trait" => args.nested = true,
+                    "in_impl" => args.in_impl = true,
+                    "_self" => {
+                        let _: Token![=] = input.parse()?;
+                        args.self_type = Some(input.parse()?);
+                    }
+                    other => {
+                        return Err(syn::Error::new(
+                            ident.span(),
+                            format!(
+                                "unknown arcane argument: `{other}`. Supported: `in_impl`, \
+                                 `in_trait` (or `nested`), `_self = Type`, `import_intrinsics`, \
+                                 `import_magetypes`, `cfg(feature)`, `suppress_const_test`."
+                            ),
+                        ));
+                    }
                 }
             }
             // Consume optional comma
@@ -113,6 +98,14 @@ impl Parse for ArcaneArgs {
         // _self = Type implies nested (inner fn needed for Self replacement)
         if args.self_type.is_some() {
             args.nested = true;
+        }
+        if args.in_impl && args.nested {
+            return Err(syn::Error::new(
+                input.span(),
+                "`in_impl` is for a receiver-less function in an inherent impl, where the \
+                 sibling expansion applies; `in_trait`/`nested`/`_self` already avoid the \
+                 sibling. Use one of them.",
+            ));
         }
 
         Ok(args)
@@ -149,11 +142,11 @@ pub(crate) fn arcane_impl(
     if has_self_receiver && args.nested && args.self_type.is_none() {
         let msg = format!(
             "{} with self receiver in nested mode requires `_self = Type` argument.\n\
-             Example: #[{}(nested, _self = MyType)]\n\
-             Use `_self` (not `self`) in the function body to refer to self.\n\
+             Example: #[{}(in_trait, _self = MyType)]\n\
+             The body may keep using `self`; it is renamed to `_self` for the inner function.\n\
              \n\
-             Alternatively, remove `nested` to use sibling expansion (default), \
-             which handles self/Self naturally.",
+             Alternatively, remove `nested`/`in_trait` to use sibling expansion (default), \
+             which handles self/Self naturally in inherent impls.",
             macro_name, macro_name
         );
         return syn::Error::new_spanned(&input_fn.sig, msg).to_compile_error();
@@ -182,68 +175,48 @@ pub(crate) fn arcane_impl(
     }) {
         Some(result) => result,
         None => {
-            // Check for specific misuse: featureless traits like SimdToken
-            if let Some(trait_name) = diagnose_featureless_token(&input_fn.sig) {
-                let msg = format!(
-                    "`{trait_name}` cannot be used as a token bound in #[{macro_name}] \
-                     because it doesn't specify any CPU features.\n\
-                     \n\
-                     #[{macro_name}] needs concrete features to generate #[target_feature]. \
-                     Use a concrete token or a feature trait:\n\
-                     \n\
-                     Concrete tokens: X64V3Token, Desktop64, NeonToken, Arm64V2Token, ...\n\
-                     Feature traits:  impl HasX64V2, impl HasNeon, impl HasArm64V3, ..."
-                );
-                return syn::Error::new_spanned(&input_fn.sig, msg).to_compile_error();
-            }
-            let msg = format!(
-                "{} requires a token parameter. Supported forms:\n\
-                 - Concrete: `token: X64V3Token`\n\
-                 - impl Trait: `token: impl HasX64V2`\n\
-                 - Generic: `fn foo<T: HasX64V2>(token: T, ...)`\n\
-                 - With self: `#[{}(_self = Type)] fn method(&self, token: impl HasNeon, ...)`",
-                macro_name, macro_name
+            return missing_token_error(
+                &input_fn.sig,
+                macro_name,
+                &format!(
+                    ". Supported forms:\n\
+                     - Concrete: `token: X64V3Token`\n\
+                     - impl Trait: `token: impl HasX64V2`\n\
+                     - Generic: `fn foo<T: HasX64V2>(token: T, ...)`\n\
+                     - With self: `#[{macro_name}(_self = Type)] fn method(&self, token: impl HasNeon, ...)`"
+                ),
             );
-            return syn::Error::new_spanned(&input_fn.sig, msg).to_compile_error();
         }
     };
 
-    // Check: import_intrinsics with AVX-512 features requires the avx512 cargo feature
-    // on archmage (propagated to archmage-macros). Without it, 512-bit safe memory ops
-    // from safe_unaligned_simd are not available, and _mm512_loadu_ps etc. would resolve
-    // to the unsafe core::arch versions (taking raw pointers instead of references).
-    //
-    // We check the resolved features (not the token name) so this works uniformly for
-    // concrete tokens (X64V4Token), trait bounds (impl HasX64V4), and generics (T: HasX64V4).
-    #[cfg(not(feature = "avx512"))]
-    if args.import_intrinsics && features.iter().any(|f| f.starts_with("avx512")) {
-        let token_desc = token_type_name.as_deref().unwrap_or("an AVX-512 token");
-        let msg = format!(
-            "Using {token_desc} with `import_intrinsics` requires the `avx512` feature.\n\
-             \n\
-             Add to your Cargo.toml:\n\
-             \x20 archmage = {{ version = \"...\", features = [\"avx512\"] }}\n\
-             \n\
-             Without it, 512-bit safe memory ops (_mm512_loadu_ps etc.) are not available.\n\
-             If you only need value intrinsics (no memory ops), remove `import_intrinsics`."
-        );
-        return syn::Error::new_spanned(&input_fn.sig, msg).to_compile_error();
+    // One token decides the features. Two would have been resolved by position,
+    // which is the surprising rule issue #122 reports.
+    let token_params = token_param_idents(&input_fn.sig);
+    if token_params.len() > 1 {
+        return multiple_tokens_error(&input_fn.sig, macro_name, &token_params);
+    }
+
+    // import_intrinsics with AVX-512 features needs archmage's avx512 feature
+    // (propagated to archmage-macros) for the 512-bit safe memory wrappers.
+    if let Some(err) = avx512_import_error(
+        &input_fn.sig,
+        args.shared.import_intrinsics,
+        &features,
+        token_type_name.as_deref().unwrap_or("an AVX-512 token"),
+    ) {
+        return err;
     }
 
     // Prepend import statements to body if requested
-    let body_imports = generate_imports(
-        target_arch,
-        magetypes_namespace,
-        args.import_intrinsics,
-        args.import_magetypes,
+    prepend_to_body(
+        &mut input_fn.body,
+        generate_imports(
+            target_arch,
+            magetypes_namespace,
+            args.shared.import_intrinsics,
+            args.shared.import_magetypes,
+        ),
     );
-    if !body_imports.is_empty() {
-        let original_body = &input_fn.body;
-        input_fn.body = quote! {
-            #body_imports
-            #original_body
-        };
-    }
 
     // Rewrite incant!() calls in the body to direct tier calls.
     // Only for concrete tokens where we can determine the tier suffix.
@@ -263,6 +236,12 @@ pub(crate) fn arcane_impl(
 
     // Build a single target_feature attribute with all features comma-joined
     let features_csv = crate::token_discovery::features_csv(token_type_name.as_deref(), &features);
+    let inline_attr: Attribute = if args.inline_always {
+        parse_quote!(#[inline(always)])
+    } else {
+        parse_quote!(#[inline])
+    };
+
     // Scalar has no instruction-set boundary. Preserve its signature and body
     // without emitting the invalid #[target_feature(enable = "")].
     if features_csv.is_empty() {
@@ -274,67 +253,22 @@ pub(crate) fn arcane_impl(
             .self_type
             .as_ref()
             .map(|_| quote! { let _self = self; });
-        let cfg = args
-            .cfg_feature
-            .as_ref()
-            .map(|feature| quote! { #[cfg(feature = #feature)] });
-        let inline = if args.inline_always {
-            quote! { #[inline(always)] }
-        } else {
-            quote! { #[inline] }
-        };
-        return quote! { #cfg #(#attrs)* #inline #vis #sig { #self_binding #body } };
+        let cfg = gen_cfg_guard(None, args.shared.cfg_feature.as_deref());
+        return quote! { #cfg #(#attrs)* #inline_attr #vis #sig { #self_binding #body } };
     }
     let target_feature_attrs: Vec<Attribute> =
         vec![parse_quote!(#[target_feature(enable = #features_csv)])];
 
     // Rename non-ident patterns to named params so the wrapper → sibling call works.
-    // Wildcards (`_: T`), tuple patterns (`(a, b): (T, U)`), struct patterns, etc.
-    // are replaced with generated idents. The original pattern is re-bound in the
-    // sibling body via `let original_pattern = generated_ident;`.
-    let mut pattern_rename_counter = 0u32;
-    let mut pattern_rebinds = Vec::new();
-    for arg in &mut input_fn.sig.inputs {
-        if let FnArg::Typed(pat_type) = arg {
-            let needs_rename = !matches!(pat_type.pat.as_ref(), syn::Pat::Ident(_));
-            if needs_rename {
-                let generated = format_ident!("__archmage_arg_{}", pattern_rename_counter);
-                pattern_rename_counter += 1;
-                let original_pat = pat_type.pat.clone();
-                let ty = &pat_type.ty;
-                // Emit `let original_pattern: Type = generated_ident;` in the body
-                pattern_rebinds.push(quote! { let #original_pat: #ty = #generated; });
-                *pat_type.pat = syn::Pat::Ident(syn::PatIdent {
-                    attrs: vec![],
-                    by_ref: None,
-                    mutability: None,
-                    ident: generated,
-                    subpat: None,
-                });
-            }
-        }
+    // The original patterns are re-bound at the top of the inner body.
+    let rebinds = rename_non_ident_params(&mut input_fn.sig);
+    prepend_to_body(&mut input_fn.body, quote! { #(#rebinds)* });
+    // Renaming may have changed the token parameter's ident (a wildcard
+    // `_: X64V3Token` becomes `__archmage_arg_0: X64V3Token` and binds
+    // nothing, so it leaves no rebind behind). Re-discover it.
+    if let Some(info) = find_token_param(&input_fn.sig) {
+        _token_ident = info.ident;
     }
-    // Prepend pattern rebindings to the body
-    if !pattern_rebinds.is_empty() {
-        let original_body = &input_fn.body;
-        input_fn.body = quote! {
-            #(#pattern_rebinds)*
-            #original_body
-        };
-        // Pattern renaming may have changed the token parameter's ident
-        // (e.g., wildcard `_: X64V3Token` → `__archmage_arg_0: X64V3Token`).
-        // Re-discover the correct ident from the modified signature.
-        if let Some(info) = find_token_param(&input_fn.sig) {
-            _token_ident = info.ident;
-        }
-    }
-
-    // Choose inline attribute based on args
-    let inline_attr: Attribute = if args.inline_always {
-        parse_quote!(#[inline(always)])
-    } else {
-        parse_quote!(#[inline])
-    };
 
     // On wasm32, #[target_feature(enable = "simd128")] functions are safe (Rust 1.54+).
     // The wasm validation model guarantees unsupported instructions trap deterministically,
@@ -343,31 +277,33 @@ pub(crate) fn arcane_impl(
         return arcane_impl_wasm_safe(input_fn, &args, target_feature_attrs, inline_attr);
     }
 
+    let parts = BoundaryParts {
+        cfg_guard: gen_cfg_guard(target_arch, args.shared.cfg_feature.as_deref()),
+        target_feature_attrs,
+        inline_attr,
+        token_assertion: gen_token_assertion(
+            &token_type_name,
+            &token_type,
+            args.suppress_const_test,
+        ),
+        tier_trait_assertion: gen_tier_trait_assertion(&tier_traits, &_token_ident),
+    };
     if args.nested {
-        arcane_impl_nested(
-            input_fn,
-            &args,
-            target_arch,
-            token_type_name,
-            token_type,
-            target_feature_attrs,
-            inline_attr,
-            _token_ident,
-            tier_traits,
-        )
+        arcane_impl_nested(input_fn, &args, parts)
     } else {
-        arcane_impl_sibling(
-            input_fn,
-            &args,
-            target_arch,
-            token_type_name,
-            token_type,
-            target_feature_attrs,
-            inline_attr,
-            _token_ident,
-            tier_traits,
-        )
+        arcane_impl_sibling(input_fn, &args, parts)
     }
+}
+
+/// The pieces every boundary expansion emits: the cfg guard on both halves,
+/// the attributes of the feature-enabled half, and the two assertions that
+/// authenticate the token before the one `unsafe` call.
+struct BoundaryParts {
+    cfg_guard: TokenStream,
+    target_feature_attrs: Vec<Attribute>,
+    inline_attr: Attribute,
+    token_assertion: TokenStream,
+    tier_trait_assertion: TokenStream,
 }
 
 /// WASM-safe expansion: emits rite-style output (no unsafe wrapper).
@@ -408,16 +344,14 @@ pub(crate) fn arcane_impl_wasm_safe(
         new_attrs.push(attr.clone());
     }
 
-    let expanded = quote! {
-        #[cfg(target_arch = "wasm32")]
+    let cfg_guard = gen_cfg_guard(Some("wasm32"), args.shared.cfg_feature.as_deref());
+    quote! {
+        #cfg_guard
         #(#new_attrs)*
         #vis #sig {
             #body
         }
-
-    };
-
-    expanded
+    }
 }
 
 /// Sibling expansion (default): generates two functions at the same scope level.
@@ -427,18 +361,7 @@ pub(crate) fn arcane_impl_wasm_safe(
 /// lacks matching target features. Compatible with `#![forbid(unsafe_code)]`.
 ///
 /// Self/self work naturally since both functions live in the same impl scope.
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn arcane_impl_sibling(
-    input_fn: LightFn,
-    args: &ArcaneArgs,
-    target_arch: Option<&str>,
-    token_type_name: Option<String>,
-    token_type: Option<Type>,
-    target_feature_attrs: Vec<Attribute>,
-    inline_attr: Attribute,
-    _token_ident: Ident,
-    tier_traits: Vec<String>,
-) -> TokenStream {
+fn arcane_impl_sibling(input_fn: LightFn, args: &ArcaneArgs, parts: BoundaryParts) -> TokenStream {
     let vis = &input_fn.vis;
     let sig = &input_fn.sig;
     let fn_name = &sig.ident;
@@ -453,6 +376,13 @@ pub(crate) fn arcane_impl_sibling(
     // Lint-control attrs (#[allow(...)], #[expect(...)], etc.) must also go on the sibling,
     // because the sibling has the same parameters and clippy lints it independently.
     let lint_attrs = filter_lint_attrs(&input_fn.attrs);
+    let BoundaryParts {
+        cfg_guard,
+        target_feature_attrs,
+        inline_attr,
+        token_assertion,
+        tier_trait_assertion,
+    } = parts;
 
     let sibling_name = format_ident!("__arcane_{}", fn_name);
 
@@ -462,142 +392,70 @@ pub(crate) fn arcane_impl_sibling(
         .map(|arg| matches!(arg, FnArg::Receiver(_)))
         .unwrap_or(false);
 
-    // Build sibling signature: same as original but with sibling name, #[doc(hidden)]
-    // NOT unsafe — Rust 2024 edition allows safe #[target_feature] functions.
-    // Only the call from non-matching context (the wrapper) needs unsafe.
-    let sibling_sig_inputs = inputs;
-
     // Build turbofish for forwarding type/const generic params to sibling
     let turbofish = build_turbofish(generics);
 
-    // Build the call from wrapper to sibling
+    // Every parameter is an identifier by now (see rename_non_ident_params).
+    let forwarded_args: Vec<proc_macro2::TokenStream> = inputs
+        .iter()
+        .filter_map(|arg| match arg {
+            FnArg::Typed(pat_type) => match pat_type.pat.as_ref() {
+                syn::Pat::Ident(pat_ident) => {
+                    let ident = &pat_ident.ident;
+                    Some(quote!(#ident))
+                }
+                _ => None,
+            },
+            FnArg::Receiver(_) => None,
+        })
+        .collect();
+
+    // Build the call from wrapper to sibling. A method calls through `self`;
+    // an associated function in an impl needs `Self::`, which the macro cannot
+    // infer, so `in_impl` says so; a free function calls the sibling by name.
     let sibling_call = if has_self_receiver {
-        // Method: self.__arcane_fn::<T, N>(other_args...)
-        let other_args: Vec<proc_macro2::TokenStream> = inputs
-            .iter()
-            .skip(1) // skip self receiver
-            .filter_map(|arg| {
-                if let FnArg::Typed(pat_type) = arg
-                    && let syn::Pat::Ident(pat_ident) = pat_type.pat.as_ref()
-                {
-                    let ident = &pat_ident.ident;
-                    Some(quote!(#ident))
-                } else {
-                    None
-                }
-            })
-            .collect();
-        quote! { self.#sibling_name #turbofish(#(#other_args),*) }
+        quote! { self.#sibling_name #turbofish(#(#forwarded_args),*) }
+    } else if args.in_impl {
+        quote! { Self::#sibling_name #turbofish(#(#forwarded_args),*) }
     } else {
-        // Free function: __arcane_fn::<T, N>(all_args...)
-        let all_args: Vec<proc_macro2::TokenStream> = inputs
-            .iter()
-            .filter_map(|arg| {
-                if let FnArg::Typed(pat_type) = arg
-                    && let syn::Pat::Ident(pat_ident) = pat_type.pat.as_ref()
-                {
-                    let ident = &pat_ident.ident;
-                    Some(quote!(#ident))
-                } else {
-                    None
-                }
-            })
-            .collect();
-        quote! { #sibling_name #turbofish(#(#all_args),*) }
+        quote! { #sibling_name #turbofish(#(#forwarded_args),*) }
     };
 
-    let cfg_guard = gen_cfg_guard(target_arch, args.cfg_feature.as_deref());
-
-    if target_arch.is_some() {
-        // Sibling function: #[doc(hidden)] #[target_feature] fn __arcane_fn(...)
-        // Always private — only the wrapper is user-visible.
-        // Safe declaration — Rust 2024 allows safe #[target_feature] functions.
-        let sibling_fn = quote! {
-            #cfg_guard
-            #[doc(hidden)]
-            #(#lint_attrs)*
-            #(#target_feature_attrs)*
-            #inline_attr
-            fn #sibling_name #generics (#sibling_sig_inputs) #output #where_clause {
-                #body
-            }
-        };
-
-        // Wrapper function: fn original_name(...) { unsafe { sibling_call } }
-        // The unsafe block is needed because the sibling has #[target_feature] and
-        // the wrapper doesn't — calling across this boundary requires unsafe.
-        let token_assertion =
-            gen_token_assertion(&token_type_name, &token_type, args.suppress_const_test);
-        let tier_trait_assertion =
-            crate::common::gen_tier_trait_assertion(&tier_traits, &_token_ident);
-        let wrapper_fn = quote! {
-            #cfg_guard
-            #(#attrs)*
-            #[inline(always)]
-            #vis #sig {
-                #token_assertion
-                #tier_trait_assertion
-                // SAFETY: The token parameter proves the required CPU features are available.
-                // Calling a #[target_feature] function from a non-matching context requires
-                // unsafe because the CPU may not support those instructions. The token's
-                // existence proves summon() succeeded, so the features are available.
-                unsafe { #sibling_call }
-            }
-        };
-
-        quote! {
-            #sibling_fn
-            #wrapper_fn
+    // Sibling function: #[doc(hidden)] #[target_feature] fn __arcane_fn(...)
+    // Always private — only the wrapper is user-visible.
+    // Safe declaration — Rust 2024 allows safe #[target_feature] functions.
+    quote! {
+        #cfg_guard
+        #[doc(hidden)]
+        #(#lint_attrs)*
+        #(#target_feature_attrs)*
+        #inline_attr
+        fn #sibling_name #generics (#inputs) #output #where_clause {
+            #body
         }
-    } else {
-        // No specific arch (trait bounds or generic) - no cfg guards.
-        // Still use sibling pattern for consistency. Sibling is always private.
-        let sibling_fn = quote! {
-            #[doc(hidden)]
-            #(#lint_attrs)*
-            #(#target_feature_attrs)*
-            #inline_attr
-            fn #sibling_name #generics (#sibling_sig_inputs) #output #where_clause {
-                #body
-            }
-        };
 
-        let tier_trait_assertion =
-            crate::common::gen_tier_trait_assertion(&tier_traits, &_token_ident);
-        let wrapper_fn = quote! {
-            #(#attrs)*
-            #[inline(always)]
-            #vis #sig {
-                #tier_trait_assertion
-                // SAFETY: The token proves the required CPU features are available.
-                unsafe { #sibling_call }
-            }
-        };
-
-        quote! {
-            #sibling_fn
-            #wrapper_fn
+        #cfg_guard
+        #(#attrs)*
+        #[inline(always)]
+        #vis #sig {
+            #token_assertion
+            #tier_trait_assertion
+            // SAFETY: The token parameter proves the required CPU features are available.
+            // Calling a #[target_feature] function from a non-matching context requires
+            // unsafe because the CPU may not support those instructions. The token's
+            // existence proves summon() succeeded, so the features are available.
+            unsafe { #sibling_call }
         }
     }
 }
 
-/// Nested inner function expansion (opt-in via `nested` or `_self = Type`).
+/// Nested inner function expansion (opt-in via `nested`, `in_trait` or `_self = Type`).
 ///
-/// This is the original approach: generates a nested inner function inside the
-/// original function. Required when `_self = Type` is used because Self must be
-/// replaced in the nested function (where it's not in scope).
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn arcane_impl_nested(
-    input_fn: LightFn,
-    args: &ArcaneArgs,
-    target_arch: Option<&str>,
-    token_type_name: Option<String>,
-    token_type: Option<Type>,
-    target_feature_attrs: Vec<Attribute>,
-    inline_attr: Attribute,
-    _token_ident: Ident,
-    tier_traits: Vec<String>,
-) -> TokenStream {
+/// Generates a nested inner function inside the original function. Required in
+/// trait impls, which cannot take a sibling item, and when `_self = Type` is
+/// used because `Self` must be replaced in the nested function (where it's not
+/// in scope).
+fn arcane_impl_nested(input_fn: LightFn, args: &ArcaneArgs, parts: BoundaryParts) -> TokenStream {
     let vis = &input_fn.vis;
     let sig = &input_fn.sig;
     let fn_name = &sig.ident;
@@ -610,17 +468,20 @@ pub(crate) fn arcane_impl_nested(
     let attrs = filter_inline_attrs(&input_fn.attrs);
     // Propagate lint attrs to inner function (same issue as sibling mode — #17)
     let lint_attrs = filter_lint_attrs(&input_fn.attrs);
+    let BoundaryParts {
+        cfg_guard,
+        target_feature_attrs,
+        inline_attr,
+        token_assertion,
+        tier_trait_assertion,
+    } = parts;
 
     // Determine self receiver type if present
     let self_receiver_kind: Option<SelfReceiver> = inputs.first().and_then(|arg| match arg {
         FnArg::Receiver(receiver) => {
-            // syn 3 moved the by-reference shape into `Receiver::kind`. In syn 2
-            // this read `reference.is_none()` for owned, then `mutability` for
-            // `&mut`; syn 2 stored the `&mut` mutability in `Receiver::mutability`,
-            // syn 3 stores it in the `Reference` variant's third field. Owned
+            // syn 3 moved the by-reference shape into `Receiver::kind`. Owned
             // (`self`/`mut self`) and typed (`self: Box<Self>`) receivers both
-            // took the `reference.is_none()` branch before and still map to
-            // `Owned` here, so the classification is unchanged.
+            // map to `Owned`.
             match &receiver.kind {
                 syn::ReceiverKind::Reference(_, _, mutability) => {
                     if mutability.is_some() {
@@ -681,14 +542,21 @@ pub(crate) fn arcane_impl_nested(
     // Build turbofish for forwarding type/const generic params to inner function
     let turbofish = build_turbofish(generics);
 
-    // Transform output, body, and where clause to replace Self with concrete type if needed.
+    // The inner function cannot see the impl's `Self` or its `self` value.
+    // With `_self = Type`, replace the type `Self` by `Type` in the output,
+    // where clause and body, and rename the value `self` to `_self`, which
+    // the inner function takes as a parameter. `self::` paths are left alone.
     let (inner_output, inner_body, inner_where_clause): (
         proc_macro2::TokenStream,
         proc_macro2::TokenStream,
         proc_macro2::TokenStream,
     ) = if let Some(ref self_ty) = args.self_type {
+        let self_ident = format_ident!("_self");
         let transformed_output = replace_self_in_tokens(output.to_token_stream(), self_ty);
-        let transformed_body = replace_self_in_tokens(body.clone(), self_ty);
+        let transformed_body = replace_self_value_in_tokens(
+            replace_self_in_tokens(body.clone(), self_ty),
+            &self_ident,
+        );
         let transformed_where = where_clause
             .as_ref()
             .map(|wc| replace_self_in_tokens(wc.to_token_stream(), self_ty))
@@ -705,54 +573,21 @@ pub(crate) fn arcane_impl_nested(
         )
     };
 
-    let cfg_guard = gen_cfg_guard(target_arch, args.cfg_feature.as_deref());
-
-    if target_arch.is_some() {
-        let token_assertion =
-            gen_token_assertion(&token_type_name, &token_type, args.suppress_const_test);
-        let tier_trait_assertion =
-            crate::common::gen_tier_trait_assertion(&tier_traits, &_token_ident);
-        quote! {
-            // Real implementation for the correct architecture
-            #cfg_guard
-            #(#attrs)*
-            #[inline(always)]
-            #vis #sig {
-                #(#target_feature_attrs)*
-                #inline_attr
-                #(#lint_attrs)*
-                fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #inner_where_clause {
-                    #inner_body
-                }
-
-                #token_assertion
-                #tier_trait_assertion
-                // SAFETY: The token parameter proves the required CPU features are available.
-                unsafe { #inner_fn_name #turbofish(#(#inner_args),*) }
+    quote! {
+        #cfg_guard
+        #(#attrs)*
+        #[inline(always)]
+        #vis #sig {
+            #(#target_feature_attrs)*
+            #inline_attr
+            #(#lint_attrs)*
+            fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #inner_where_clause {
+                #inner_body
             }
-        }
-    } else {
-        // No specific arch (trait bounds or generic) - generate without cfg guards
-        let token_assertion =
-            gen_token_assertion(&token_type_name, &token_type, args.suppress_const_test);
-        let tier_trait_assertion =
-            crate::common::gen_tier_trait_assertion(&tier_traits, &_token_ident);
-        quote! {
-            #(#attrs)*
-            #[inline(always)]
-            #vis #sig {
-                #(#target_feature_attrs)*
-                #inline_attr
-                #(#lint_attrs)*
-                fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #inner_where_clause {
-                    #inner_body
-                }
-
-                #token_assertion
-                #tier_trait_assertion
-                // SAFETY: The token proves the required CPU features are available.
-                unsafe { #inner_fn_name #turbofish(#(#inner_args),*) }
-            }
+            #token_assertion
+            #tier_trait_assertion
+            // SAFETY: The token parameter proves the required CPU features are available.
+            unsafe { #inner_fn_name #turbofish(#(#inner_args),*) }
         }
     }
 }
@@ -777,5 +612,12 @@ mod assertion_tests {
     #[test]
     fn no_shared_opt_in() {
         assert!(syn::parse_str::<ArcaneArgs>("shared").is_err());
+    }
+
+    #[test]
+    fn in_impl_and_nested_are_exclusive() {
+        assert!(syn::parse_str::<ArcaneArgs>("in_impl, nested").is_err());
+        assert!(syn::parse_str::<ArcaneArgs>("in_impl").unwrap().in_impl);
+        assert!(syn::parse_str::<ArcaneArgs>("in_trait").unwrap().nested);
     }
 }

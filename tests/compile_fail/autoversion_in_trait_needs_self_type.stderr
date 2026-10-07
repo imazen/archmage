@@ -1,0 +1,14 @@
+error: #[autoversion(in_trait)] on a method needs `_self = Type`: the variants nest inside the dispatcher and take the receiver as a `_self` parameter, so the macro must know its type. Example: #[autoversion(v3, scalar, in_trait, _self = MyType)]
+  --> tests/compile_fail/autoversion_in_trait_needs_self_type.rs:16:5
+   |
+16 |     fn run(&self, x: f32) -> f32 {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0046]: not all trait items implemented, missing: `run`
+  --> tests/compile_fail/autoversion_in_trait_needs_self_type.rs:14:1
+   |
+11 |     fn run(&self, x: f32) -> f32;
+   |     ----------------------------- `run` from trait
+...
+14 | impl Work for S {
+   | ^^^^^^^^^^^^^^^ missing `run` in implementation

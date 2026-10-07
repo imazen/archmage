@@ -9,9 +9,6 @@ fn __arcane_process(
     __archmage_arg_1: f32,
     __archmage_arg_2: f32,
 ) -> f32 {
-    let _: X64V3Token = __archmage_arg_0;
-    let _: f32 = __archmage_arg_1;
-    let _: f32 = __archmage_arg_2;
     0.0
 }
 #[inline(always)]

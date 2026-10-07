@@ -5,7 +5,6 @@ use archmage::prelude::*;
 )]
 #[inline]
 fn __arcane_probe(__archmage_arg_0: impl HasX64V2 + HasX64V4, x: f32) -> f32 {
-    let _: impl HasX64V2 + HasX64V4 = __archmage_arg_0;
     let _ = X64V3Token::from_context();
     x
 }

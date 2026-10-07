@@ -852,28 +852,14 @@ fn gen_combination_tests(files: &mut Vec<TestFile>) {
 // entries). Move a name out of KNOWN_FAILURES when its fix lands.
 
 const KNOWN_FAILURES: &[&str] = &[
-    // #122 item 1: bound discovery stops at the first inline bound or where predicate
-    "arcane_bounds_split",
-    "arcane_bounds_where_two",
-    "arcane_bounds_copy_then_where",
-    "rite_bounds_split",
-    "rite_bounds_where_two",
-    "rite_bounds_copy_then_where",
-    // #122 item 2: #[rite] does not rename wildcard token patterns
-    "rite_wildcard_generic",
-    "rite_wildcard_impl_trait",
-    // CLAUDE.md known bug 0: `let _: impl Trait = ...` rebind
-    "arcane_wildcard_impl_trait",
-    // #122 item 3 and CLAUDE.md known bugs 2 and 3: the macro cannot see its impl
+    // An attribute macro cannot see its enclosing impl. Without `in_impl` the
+    // wrapper calls its sibling unqualified, and without `in_trait` the
+    // sibling lands in a trait impl that cannot take it. The `_in_impl` and
+    // `_in_trait` shapes show the spelled-out forms expanding correctly.
     "arcane_assoc_no_receiver",
     "arcane_trait_impl_sibling",
     "autoversion_assoc_no_receiver",
     "magetypes_assoc_no_receiver",
-    // #122 policy item: the first token parameter wins
-    "arcane_two_tokens_scalar_first",
-    "rite_two_tokens_scalar_first",
-    // #122 diagnostic item: variants with opaque return types cannot share a dispatcher
-    "autoversion_return_impl_trait",
 ];
 
 fn gen_shape_tests(files: &mut Vec<TestFile>) {
@@ -937,23 +923,6 @@ fn gen_shape_tests(files: &mut Vec<TestFile>) {
                     use archmage::prelude::*;
                     {attr}
                     fn probe{generics}({params}) -> f32 {{ {body} }}
-                    fn main() {{}}
-                "#},
-            ));
-        }
-
-        // Two token parameters: the first one decides the features today.
-        for (name, params) in [
-            ("two_tokens_scalar_first", "_s: ScalarToken, _v: X64V3Token"),
-            ("two_tokens_v3_first", "_v: X64V3Token, _s: ScalarToken"),
-        ] {
-            files.push(shape(
-                prefix,
-                name,
-                formatdoc! {r#"
-                    use archmage::prelude::*;
-                    {attr}
-                    fn probe({params}) -> X64V3Token {{ X64V3Token::from_context() }}
                     fn main() {{}}
                 "#},
             ));
@@ -1024,15 +993,41 @@ fn gen_shape_tests(files: &mut Vec<TestFile>) {
             ));
         }
     }
+    // `in_impl` keeps the sibling in the impl, so the body may use `Self`;
+    // a nested inner function cannot see `Self`, so that body does not.
+    for (name, attr, body) in [
+        (
+            "assoc_no_receiver_in_impl",
+            "#[arcane(in_impl)]",
+            "Self::offset() + x",
+        ),
+        ("assoc_no_receiver_nested", "#[arcane(nested)]", "x"),
+    ] {
+        files.push(shape(
+            "arcane",
+            name,
+            formatdoc! {r#"
+                use archmage::prelude::*;
+                struct S {{ k: f32 }}
+                impl S {{
+                    {attr}
+                    fn probe(token: X64V3Token, x: f32) -> f32 {{ let _ = token; {body} }}
+                    fn offset() -> f32 {{ 1.0 }}
+                }}
+                fn main() {{}}
+            "#},
+        ));
+    }
     files.push(shape(
-        "arcane",
-        "assoc_no_receiver_nested",
+        "magetypes",
+        "assoc_no_receiver_in_impl",
         indoc::indoc! {r#"
             use archmage::prelude::*;
             struct S { k: f32 }
             impl S {
-                #[arcane(nested)]
-                fn probe(token: X64V3Token, x: f32) -> f32 { let _ = token; x }
+                #[magetypes(v3, scalar, in_impl)]
+                fn probe(token: Token, x: f32) -> f32 { let _ = token; Self::offset() + x }
+                fn offset() -> f32 { 1.0 }
             }
             fn main() {}
         "#}
@@ -1045,6 +1040,12 @@ fn gen_shape_tests(files: &mut Vec<TestFile>) {
             "#[arcane(_self = S)]",
             "_self.k + x",
         ),
+        // `self` may stay `self`: the nested inner function renames it.
+        (
+            "trait_impl_in_trait_self",
+            "#[arcane(in_trait, _self = S)]",
+            "self.k + Self::offset() + x",
+        ),
     ] {
         files.push(shape(
             "arcane",
@@ -1052,6 +1053,7 @@ fn gen_shape_tests(files: &mut Vec<TestFile>) {
             formatdoc! {r#"
                 use archmage::prelude::*;
                 struct S {{ k: f32 }}
+                impl S {{ fn offset() -> f32 {{ 1.0 }} }}
                 trait Work {{ fn run(&self, token: X64V3Token, x: f32) -> f32; }}
                 impl Work for S {{
                     {attr}
@@ -1063,9 +1065,25 @@ fn gen_shape_tests(files: &mut Vec<TestFile>) {
     }
 
     // #[autoversion]: receivers, generics and an opaque return
-    for (name, params, body, ret) in [
-        ("method_ref_self", "&self, x: f32", "self.k + x", "f32"),
-        ("assoc_no_receiver", "x: f32", "x", "f32"),
+    for (name, attr, params, body) in [
+        (
+            "method_ref_self",
+            "#[autoversion(v3, scalar)]",
+            "&self, x: f32",
+            "self.k + x",
+        ),
+        (
+            "assoc_no_receiver",
+            "#[autoversion(v3, scalar)]",
+            "x: f32",
+            "Self::offset() + x",
+        ),
+        (
+            "assoc_no_receiver_in_impl",
+            "#[autoversion(v3, scalar, in_impl)]",
+            "x: f32",
+            "Self::offset() + x",
+        ),
     ] {
         files.push(shape(
             "autoversion",
@@ -1074,8 +1092,9 @@ fn gen_shape_tests(files: &mut Vec<TestFile>) {
                 use archmage::autoversion;
                 struct S {{ k: f32 }}
                 impl S {{
-                    #[autoversion(v3, scalar)]
-                    fn probe({params}) -> {ret} {{ {body} }}
+                    {attr}
+                    fn probe({params}) -> f32 {{ {body} }}
+                    fn offset() -> f32 {{ 1.0 }}
                 }}
                 fn main() {{}}
             "#},
@@ -1083,22 +1102,26 @@ fn gen_shape_tests(files: &mut Vec<TestFile>) {
     }
     files.push(shape(
         "autoversion",
-        "generics_lifetime_const_type",
+        "trait_impl_in_trait",
         indoc::indoc! {r#"
             use archmage::autoversion;
-            #[autoversion(v3, scalar)]
-            fn probe<'a, U: Copy, const N: usize>(xs: &'a [U; N]) -> &'a [U; N] { xs }
-            fn main() {}
+            struct S { k: f32 }
+            trait Work { fn run(&self, x: f32) -> f32; }
+            impl Work for S {
+                #[autoversion(v3, scalar, in_trait, _self = S)]
+                fn run(&self, x: f32) -> f32 { self.k + x }
+            }
+            fn main() { let _ = S { k: 1.0 }.run(2.0); }
         "#}
         .to_string(),
     ));
     files.push(shape(
         "autoversion",
-        "return_impl_trait",
+        "generics_lifetime_const_type",
         indoc::indoc! {r#"
             use archmage::autoversion;
             #[autoversion(v3, scalar)]
-            fn probe(n: u32) -> impl Iterator<Item = u32> { 0..n }
+            fn probe<'a, U: Copy, const N: usize>(xs: &'a [U; N]) -> &'a [U; N] { xs }
             fn main() {}
         "#}
         .to_string(),

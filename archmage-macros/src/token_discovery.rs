@@ -74,37 +74,40 @@ pub(crate) fn extract_trait_names_from_bounds(
         .collect()
 }
 
-/// Look up a generic type parameter in the function's generics.
+/// Every trait bound on a generic type parameter, from its inline bounds and
+/// from every `where` predicate that names it, in source order.
+///
+/// `fn f<T: HasX64V2>(t: T) where T: HasX64V4` yields both traits, so the
+/// features are the union the signature declares. Returning only the first
+/// bound list, as this once did, gave such a function V2 features and a
+/// `where`-only tier bound behind an inline `T: Copy` no features at all
+/// (issue #122).
 pub(crate) fn find_generic_bounds(sig: &Signature, type_name: &str) -> Option<Vec<String>> {
-    // Check inline bounds first (e.g., `fn foo<T: HasX64V2>(token: T)`)
+    let mut traits = Vec::new();
     for param in &sig.generics.params {
         if let GenericParam::Type(type_param) = param
             && type_param.ident == type_name
         {
-            let traits = extract_trait_names_from_bounds(&type_param.bounds);
-            if !traits.is_empty() {
-                return Some(traits);
-            }
+            traits.extend(extract_trait_names_from_bounds(&type_param.bounds));
         }
     }
-
-    // Check where clause (e.g., `fn foo<T>(token: T) where T: HasX64V2`)
     if let Some(where_clause) = &sig.generics.where_clause {
         for predicate in &where_clause.predicates {
             if let syn::WherePredicate::Type(pred_type) = predicate
                 && let Type::Path(type_path) = &pred_type.bounded_ty
+                && type_path.path.segments.len() == 1
                 && let Some(seg) = type_path.path.segments.last()
                 && seg.ident == type_name
             {
-                let traits = extract_trait_names_from_bounds(&pred_type.bounds);
-                if !traits.is_empty() {
-                    return Some(traits);
-                }
+                traits.extend(extract_trait_names_from_bounds(&pred_type.bounds));
             }
         }
     }
-
-    None
+    if traits.is_empty() {
+        None
+    } else {
+        Some(traits)
+    }
 }
 
 /// Convert trait names to features, collecting all features from all traits.

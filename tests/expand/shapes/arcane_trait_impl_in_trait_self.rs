@@ -4,7 +4,7 @@ struct S { k: f32 }
 impl S { fn offset() -> f32 { 1.0 } }
 trait Work { fn run(&self, token: X64V3Token, x: f32) -> f32; }
 impl Work for S {
-    #[arcane(_self = S)]
-    fn run(&self, token: X64V3Token, x: f32) -> f32 { let _ = token; _self.k + x }
+    #[arcane(in_trait, _self = S)]
+    fn run(&self, token: X64V3Token, x: f32) -> f32 { let _ = token; self.k + Self::offset() + x }
 }
 fn main() {}

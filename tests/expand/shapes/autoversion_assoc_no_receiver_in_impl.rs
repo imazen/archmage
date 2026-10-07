@@ -2,7 +2,7 @@
 use archmage::autoversion;
 struct S { k: f32 }
 impl S {
-    #[autoversion(v3, scalar)]
+    #[autoversion(v3, scalar, in_impl)]
     fn probe(x: f32) -> f32 { Self::offset() + x }
     fn offset() -> f32 { 1.0 }
 }

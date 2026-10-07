@@ -1,0 +1,5 @@
+error: #[rite] found 2 token parameters (`_s`, `_v`) and takes its CPU features from only one. name the tier instead: `#[rite(v3)]`, or keep one token parameter.
+ --> tests/compile_fail/two_token_params_rite.rs:7:1
+  |
+7 | fn probe(_s: ScalarToken, _v: X64V3Token) -> X64V3Token {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

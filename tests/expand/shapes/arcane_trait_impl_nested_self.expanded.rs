@@ -2,6 +2,11 @@ use archmage::prelude::*;
 struct S {
     k: f32,
 }
+impl S {
+    fn offset() -> f32 {
+        1.0
+    }
+}
 trait Work {
     fn run(&self, token: X64V3Token, x: f32) -> f32;
 }

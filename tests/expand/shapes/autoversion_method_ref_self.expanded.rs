@@ -32,5 +32,8 @@ impl S {
     fn probe_scalar(&self, _token: archmage::ScalarToken, x: f32) -> f32 {
         self.k + x
     }
+    fn offset() -> f32 {
+        1.0
+    }
 }
 fn main() {}

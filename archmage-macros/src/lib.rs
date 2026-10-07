@@ -424,7 +424,7 @@ pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Assumption: neither `rite` nor `define` is or will become a tier name.
     // `token-registry.toml` must not declare `short_name = "rite"` or
     // `short_name = "define"`.
-    let (rite_flag, defines, tier_names) =
+    let (rite_flag, in_impl, defines, tier_names) =
         match syn::parse::Parser::parse(parse_magetypes_attr, attr) {
             Ok(parsed) => parsed,
             Err(e) => return e.to_compile_error().into(),
@@ -439,18 +439,20 @@ pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     };
 
-    magetypes_impl(input_fn, &tiers, rite_flag, &defines).into()
+    magetypes_impl(input_fn, &tiers, rite_flag, in_impl, &defines).into()
 }
 
-/// Parse `#[magetypes]` attributes: `rite` flag, `define(list)`, and tier names.
+/// Parse `#[magetypes]` attributes: `rite` and `in_impl` flags, `define(list)`,
+/// and tier names.
 ///
-/// Returns `(rite_flag, defines, tier_names)`. Tier names preserve the
+/// Returns `(rite_flag, in_impl, defines, tier_names)`. Tier names preserve the
 /// `+`/`-` modifier prefixes and `(cfg(feat))` gates for the tier resolver.
 fn parse_magetypes_attr(
     input: syn::parse::ParseStream,
-) -> syn::Result<(bool, Vec<String>, Vec<String>)> {
+) -> syn::Result<(bool, bool, Vec<String>, Vec<String>)> {
     use syn::Token;
     let mut rite_flag = false;
+    let mut in_impl = false;
     let mut defines = Vec::new();
     let mut tier_names = Vec::new();
 
@@ -467,10 +469,19 @@ fn parse_magetypes_attr(
             fork.parse::<syn::Ident>()
                 .is_ok_and(|i| i == "define" && fork.peek(syn::token::Paren))
         };
+        let peek_in_impl = input.peek(syn::Ident) && {
+            let fork = input.fork();
+            fork.parse::<syn::Ident>().is_ok_and(|i| i == "in_impl")
+        };
 
         if peek_rite {
             let _: syn::Ident = input.parse()?;
             rite_flag = true;
+        } else if peek_in_impl {
+            // A receiver-less associated function in an inherent impl: the
+            // generated #[arcane] variants must call their siblings as `Self::`.
+            let _: syn::Ident = input.parse()?;
+            in_impl = true;
         } else if peek_define {
             let _: syn::Ident = input.parse()?;
             let content;
@@ -492,7 +503,7 @@ fn parse_magetypes_attr(
         }
     }
 
-    Ok((rite_flag, defines, tier_names))
+    Ok((rite_flag, in_impl, defines, tier_names))
 }
 
 // =============================================================================

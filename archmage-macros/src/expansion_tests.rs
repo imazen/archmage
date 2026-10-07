@@ -14,13 +14,13 @@ fn expand(name: &str, args: Tokens, item: Tokens) -> syn::Result<Tokens> {
         "rite" | "token_target_features" => rite_impl(syn::parse2(item)?, syn::parse2(args)?),
         "autoversion" => autoversion_impl(syn::parse2(item)?, syn::parse2(args)?),
         "magetypes" => {
-            let (rite, defines, names) = parse_magetypes_attr.parse2(args)?;
+            let (rite, in_impl, defines, names) = parse_magetypes_attr.parse2(args)?;
             let tiers = if names.is_empty() {
                 default_tiers(true)
             } else {
                 resolve_tiers(&names, proc_macro2::Span::call_site(), true)?
             };
-            magetypes::magetypes_impl(syn::parse2(item)?, &tiers, rite, &defines)
+            magetypes::magetypes_impl(syn::parse2(item)?, &tiers, rite, in_impl, &defines)
         }
         _ => panic!("unrecognized macro {name}"),
     })

@@ -1,10 +1,11 @@
 use archmage::prelude::*;
 #[doc(hidden)]
-#[target_feature(enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b")]
+#[target_feature(
+    enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+)]
 #[inline]
-fn __arcane_probe<T>(token: T, x: f32) -> f32
+fn __arcane_probe<T: Copy>(token: T, x: f32) -> f32
 where
-    T: HasX64V2,
     T: HasX64V4,
 {
     let _ = token;
@@ -12,14 +13,13 @@ where
     x
 }
 #[inline(always)]
-fn probe<T>(token: T, x: f32) -> f32
+fn probe<T: Copy>(token: T, x: f32) -> f32
 where
-    T: HasX64V2,
     T: HasX64V4,
 {
     {
         #[inline(always)]
-        const fn __archmage_assert_tier_trait<__T: ?Sized + ::archmage::HasX64V2>(
+        const fn __archmage_assert_tier_trait<__T: ?Sized + ::archmage::HasX64V4>(
             _: &__T,
         ) {}
         __archmage_assert_tier_trait(&token);

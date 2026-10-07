@@ -34,6 +34,7 @@ pub(crate) fn magetypes_impl(
     mut input_fn: LightFn,
     tiers: &[ResolvedTier],
     rite_flag: bool,
+    in_impl: bool,
     defines: &[String],
 ) -> TokenStream {
     // Propagate ordinary attributes once; these macro attributes are consumed
@@ -155,6 +156,8 @@ pub(crate) fn magetypes_impl(
             let wrapper = if rite_flag {
                 let tier_name = quote::format_ident!("{}", tier.name);
                 quote! { #[archmage::rite(#tier_name, import_intrinsics)] }
+            } else if in_impl {
+                quote! { #[archmage::arcane(in_impl)] }
             } else {
                 quote! { #[archmage::arcane] }
             };

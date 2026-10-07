@@ -4,7 +4,7 @@
 //! dispatcher from a single annotated function.
 
 use proc_macro2::TokenStream;
-use quote::{format_ident, quote, quote_spanned};
+use quote::{ToTokens, format_ident, quote, quote_spanned};
 use syn::{
     Attribute, FnArg, Ident, PatType, Signature, Token, Type,
     parse::{Parse, ParseStream},
@@ -25,6 +25,13 @@ pub(crate) struct AutoversionArgs {
     /// plain scalar fallback under `#[cfg(not(feature = "..."))]`. Solves the
     /// hygiene issue with `macro_rules!` wrappers.
     pub(crate) cfg_feature: Option<String>,
+    /// The function is a receiver-less associated function in an inherent
+    /// impl: variants are called as `Self::name_v3`.
+    pub(crate) in_impl: bool,
+    /// The function is a trait impl method: variants nest inside the
+    /// dispatcher, since a trait impl cannot take extra items. A receiver
+    /// needs `_self = Type` so the variants can take it as a parameter.
+    pub(crate) in_trait: bool,
 }
 
 impl Parse for AutoversionArgs {
@@ -32,6 +39,8 @@ impl Parse for AutoversionArgs {
         let mut self_type = None;
         let mut tier_names = Vec::new();
         let mut cfg_feature = None;
+        let mut in_impl = false;
+        let mut in_trait = false;
 
         while !input.is_empty() {
             // Check for +tier/-tier (modify defaults) before consuming ident
@@ -42,6 +51,10 @@ impl Parse for AutoversionArgs {
                 if ident == "_self" {
                     let _: Token![=] = input.parse()?;
                     self_type = Some(input.parse()?);
+                } else if ident == "in_impl" {
+                    in_impl = true;
+                } else if ident == "in_trait" || ident == "nested" {
+                    in_trait = true;
                 } else if ident == "cfg" {
                     let content;
                     syn::parenthesized!(content in input);
@@ -65,6 +78,8 @@ impl Parse for AutoversionArgs {
                 Some(tier_names)
             },
             cfg_feature,
+            in_impl,
+            in_trait,
         })
     }
 }
@@ -157,6 +172,36 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
 
     // _self = Type is only needed for trait impls (nested mode in #[arcane]).
     // For inherent methods, self/Self work naturally in sibling mode.
+
+    if args.in_impl && args.in_trait {
+        return syn::Error::new_spanned(
+            &input_fn.sig,
+            "#[autoversion]: `in_impl` and `in_trait` describe different places; use one.",
+        )
+        .to_compile_error();
+    }
+    if args.in_trait && has_self && args.self_type.is_none() {
+        return syn::Error::new_spanned(
+            &input_fn.sig,
+            "#[autoversion(in_trait)] on a method needs `_self = Type`: the variants nest \
+             inside the dispatcher and take the receiver as a `_self` parameter, so the \
+             macro must know its type. Example: #[autoversion(v3, scalar, in_trait, _self = MyType)]",
+        )
+        .to_compile_error();
+    }
+    // Each variant would return its own opaque type, and one dispatcher cannot
+    // return both. Say so instead of leaving rustc's E0308 on generated code.
+    if let syn::ReturnType::Type(_, ty) = &input_fn.sig.output
+        && matches!(**ty, Type::ImplTrait(_))
+    {
+        return syn::Error::new_spanned(
+            &input_fn.sig.output,
+            "#[autoversion] cannot dispatch an `impl Trait` return type: every tier variant \
+             returns a distinct opaque type and the dispatcher can return only one. Return a \
+             named type, or `Box<dyn Trait>`.",
+        )
+        .to_compile_error();
+    }
 
     // Find token parameter (SimdToken or ScalarToken), or auto-inject one.
     //
@@ -255,11 +300,43 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
             }
         }
 
-        // Fallback (scalar/default) with _self = Type: inject `let _self = self;` preamble
-        // so body's _self references resolve (non-fallback variants get this from
-        // #[arcane(_self = Type)])
-        if (tier.name == "scalar" || tier.name == "default") && has_self && args.self_type.is_some()
+        if args.in_trait {
+            // The variant nests inside the dispatcher, where it cannot be a
+            // method. Its receiver becomes a `_self` parameter of the named
+            // type, `Self` becomes that type, and `self` in the body becomes
+            // `_self`.
+            if let Some(self_ty) = &args.self_type
+                && has_self
+            {
+                let receiver_param: FnArg = match &variant_fn.sig.inputs[0] {
+                    FnArg::Receiver(receiver) => match &receiver.kind {
+                        syn::ReceiverKind::Reference(_, _, Some(_)) => {
+                            parse_quote!(_self: &mut #self_ty)
+                        }
+                        syn::ReceiverKind::Reference(_, _, None) => parse_quote!(_self: &#self_ty),
+                        _ => parse_quote!(_self: #self_ty),
+                    },
+                    FnArg::Typed(_) => unreachable!("has_self checked the first parameter"),
+                };
+                variant_fn.sig.inputs[0] = receiver_param;
+                let self_ident = format_ident!("_self");
+                variant_fn.body = replace_self_value_in_tokens(
+                    replace_self_in_tokens(variant_fn.body.clone(), self_ty),
+                    &self_ident,
+                );
+                variant_fn.sig.output = syn::parse2(replace_self_in_tokens(
+                    variant_fn.sig.output.to_token_stream(),
+                    self_ty,
+                ))
+                .expect("replacing Self keeps the return type parseable");
+            }
+        } else if (tier.name == "scalar" || tier.name == "default")
+            && has_self
+            && args.self_type.is_some()
         {
+            // Fallback (scalar/default) with _self = Type: inject `let _self = self;`
+            // preamble so body's _self references resolve (non-fallback variants
+            // get this from #[arcane(_self = Type)])
             let original_body = variant_fn.body.clone();
             variant_fn.body = quote!(let _self = self; #original_body);
         }
@@ -308,8 +385,13 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
         // (via quote_spanned! with the user's span). Warning on individual
         // variants would be confusing — the user didn't write _scalar or _v3.
         if tier.name != "scalar" && tier.name != "default" {
-            let arcane_attr = if let Some(ref self_type) = args.self_type {
+            let arcane_attr = if args.in_trait {
+                // The receiver is already a plain `_self` parameter.
+                quote! { #[archmage::arcane] }
+            } else if let Some(ref self_type) = args.self_type {
                 quote! { #[archmage::arcane(_self = #self_type)] }
+            } else if args.in_impl {
+                quote! { #[archmage::arcane(in_impl)] }
             } else {
                 quote! { #[archmage::arcane] }
             };
@@ -414,8 +496,12 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
             let suffixed = format_ident!("{}_{}", fn_name, rt.suffix);
             let token_path: syn::Path = syn::parse_str(rt.token_path).unwrap();
 
-            let raw_call = if has_self {
+            let raw_call = if has_self && args.in_trait {
+                quote! { #suffixed #turbofish(self, __t, #(#dispatch_args),*) }
+            } else if has_self {
                 quote! { self.#suffixed #turbofish(__t, #(#dispatch_args),*) }
+            } else if args.in_impl {
+                quote! { Self::#suffixed #turbofish(__t, #(#dispatch_args),*) }
             } else {
                 quote! { #suffixed #turbofish(__t, #(#dispatch_args),*) }
             };
@@ -469,20 +555,20 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
         "scalar"
     };
     let fallback_name = format_ident!("{}_{}", fn_name, fallback_suffix);
-    let raw_fallback = if has_default_tier {
-        // default: tokenless call
-        if has_self {
-            quote! { self.#fallback_name #turbofish(#(#dispatch_args),*) }
-        } else {
-            quote! { #fallback_name #turbofish(#(#dispatch_args),*) }
-        }
+    // default: tokenless call; scalar: call with ScalarToken
+    let fallback_token = if has_default_tier {
+        quote! {}
     } else {
-        // scalar: call with ScalarToken
-        if has_self {
-            quote! { self.#fallback_name #turbofish(archmage::ScalarToken, #(#dispatch_args),*) }
-        } else {
-            quote! { #fallback_name #turbofish(archmage::ScalarToken, #(#dispatch_args),*) }
-        }
+        quote! { archmage::ScalarToken, }
+    };
+    let raw_fallback = if has_self && args.in_trait {
+        quote! { #fallback_name #turbofish(self, #fallback_token #(#dispatch_args),*) }
+    } else if has_self {
+        quote! { self.#fallback_name #turbofish(#fallback_token #(#dispatch_args),*) }
+    } else if args.in_impl {
+        quote! { Self::#fallback_name #turbofish(#fallback_token #(#dispatch_args),*) }
+    } else {
+        quote! { #fallback_name #turbofish(#fallback_token #(#dispatch_args),*) }
     };
     let fallback_call = if is_unsafe {
         quote! { unsafe { #raw_fallback } }
@@ -549,10 +635,35 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
         }
     };
 
-    let expanded = quote! {
+    if args.in_trait {
+        // A trait impl cannot take extra items: the variants live inside the
+        // dispatcher's body, where block items are visible throughout.
+        return place_variants_inside(dispatcher, quote! { #(#variants)* });
+    }
+    quote! {
         #dispatcher
         #(#variants)*
-    };
+    }
+}
 
-    expanded
+/// Insert `items` at the start of every function body in `dispatcher` (one
+/// body normally, two under `cfg(feature)`). The bodies are the top-level
+/// brace groups; attribute arguments never use braces here.
+fn place_variants_inside(dispatcher: TokenStream, items: TokenStream) -> TokenStream {
+    let mut out = TokenStream::new();
+    for tt in dispatcher {
+        match tt {
+            proc_macro2::TokenTree::Group(group)
+                if group.delimiter() == proc_macro2::Delimiter::Brace =>
+            {
+                let body = group.stream();
+                let mut new_group =
+                    proc_macro2::Group::new(group.delimiter(), quote! { #items #body });
+                new_group.set_span(group.span());
+                out.extend([proc_macro2::TokenTree::Group(new_group)]);
+            }
+            other => out.extend([other]),
+        }
+    }
+    out
 }
