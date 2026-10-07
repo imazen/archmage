@@ -11,8 +11,8 @@ Migration methods append `_t` and
 Native names already ending in `_t` use the uniform `from_raw_t(token, raw)`;
 there are no `_t_t` methods. `from_raw(raw)` alone requires the displayed CPU
 features in its caller. Explicit-token constructors require no caller attributes.
-The new spellings are unreleased additions to the published 0.9.29 surface;
-restored NEON/WASM/AVX-512 native names were missing in that published version.
+The `_t` spellings and `from_raw` are new in 0.9.30;
+no NEON, WASM or AVX-512 platform-named constructor exists on the generic types.
 
 Generic vector paths are `magetypes::simd::generic::TYPE<T>`; single-lane paths
 are `magetypes::simd::scalar::TYPE`. The 512-bit types require `w512` even when a

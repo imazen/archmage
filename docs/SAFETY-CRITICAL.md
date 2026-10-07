@@ -108,7 +108,7 @@ incorrect `#[target_feature]` attributes.
 
 **Verified by**:
 - `just check-generated` (regenerates and fails if the tree moved)
-- `cargo xtask soundness` (5,479 intrinsic calls checked against the stdarch
+- `cargo xtask soundness` (5,493 intrinsic calls checked against the stdarch
   database on 2026-10-05; it fails below 4,000)
 
 ---

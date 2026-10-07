@@ -1,4 +1,101 @@
-# Downstream constructor migration compatibility
+# Downstream compatibility
+
+## 0.9.30 release check against local checkouts (2026-10-07)
+
+Every local repository under `~/work/zen/` and `~/work/` whose manifests depend
+on archmage, archmage-macros or magetypes (50 repositories; jj lane workspaces,
+`_*`, `retired/` and the archmage workspaces excluded) was snapshotted with
+`git archive HEAD` into an isolated mirror and built with the three crates
+patched to the release tree (`--config patch.crates-io.<crate>.path=...`,
+shared build directory, Rust 1.99.0, `x86_64-unknown-linux-gnu`, dev). The
+live checkouts were not touched: cargo-copter builds local dependents in place
+and rewrites their manifests, so it was not pointed at them. Working-copy
+changes of other lanes (13 repositories were dirty) are not covered.
+
+**Check:** 37 of 50 snapshots check clean (`cargo check --workspace
+--all-targets`, or `--workspace` where noted). None of the 13 failures is an
+archmage change: they are build scripts that need git or a C toolchain,
+workspace members or test vectors not tracked by git, `[patch]` siblings outside
+the mirror, nightly-only code, and one crate (zensr) using
+`f32x8::concat_shift`, which exists only on the unmerged `feat/concat-shift`
+branch.
+
+| Snapshot (HEAD) | `cargo check --workspace --all-targets` | Note |
+|---|---|---|
+| `butteraugli` aac925f | pass |  |
+| `coefficient` fa1ef73 | fail | its `[patch]` needs sibling repos (ravif, zenjpeg at a version the mirror lacks) |
+| `dssim` 711efc8 | pass |  |
+| `dvifmish` 8784d3f | pass |  |
+| `garb` 0e475de | pass |  |
+| `hdr-research` 8985b51 | fail | workspace member `hdr-editor` is not tracked by git |
+| `highway-rs-port` 371553e | pass |  |
+| `hoisted-bounds` 79d0ac4 | pass |  |
+| `imageflow` f49ec638 | fail | `imageflow_types/build.rs` needs a git checkout and `GIT_COMMIT` |
+| `imageflow-zencodecs-v2` 9e0ee767 | fail | same build script as imageflow |
+| `libimagequant` 39a5edc | fail | `#![feature]` (nightly-only) |
+| `moxcms-archmage` f1ec4c4 | pass |  |
+| `moxcms-safe` eee52bf | pass |  |
+| `quantizr-fast` 7480262 | pass |  |
+| `simd-compare` 31756e6 | fail | `[patch]` sibling `third-party/pulp` missing; then its own `extern` blocks (edition) |
+| `zen/aom-decoder-rs` b087b30 | pass |  |
+| `zen/aom-rs` 1434bc3 | fail | `aom-sys-ref/build.rs` needs a C toolchain and libaom sources |
+| `zen/BRAG` d3d66a5 | pass |  |
+| `zen/butteraugli` 31e79df | pass |  |
+| `zen/fast-ssim2` d4ad4fa | pass |  |
+| `zen/heic` bdee718 | fail | needs a backend feature; with `backend-rust` its own `enable_deblock_trace` is missing |
+| `zen/jxl-encoder` f738479d | pass |  |
+| `zen/linear-srgb` c56e794 | pass | library checks clean (its `benches/kernel_tiers.rs` names functions its own cfg turns off; the library and tests check clean) |
+| `zen/mozjpeg-rs` beab085 | fail | `sys-local/build.rs` needs a C toolchain |
+| `zen/rav1d-safe` e771c7b | pass | library checks clean (its test target requires `--release`; the library checks clean) |
+| `zen/ultrahdr` d77976b | pass |  |
+| `zen/zenanalyze` e6c72f9 | pass |  |
+| `zen/zenav1-aom` 25ce06c3 | fail | same as aom-rs |
+| `zen/zenavif` a7c56be9 | pass | library checks clean (an untracked test vector (`tests/vectors/libavif/...`) ; the library checks clean) |
+| `zen/zenbitmaps` 32376ef | pass |  |
+| `zen/zenblend` 866a067 | pass |  |
+| `zen/zenflate` 3d597d4 | pass |  |
+| `zen/zengif` 8cd4c9e | pass |  |
+| `zen/zenjpeg` 8f703a6e | pass |  |
+| `zen/zenjpegai` c7e1ae4 | pass |  |
+| `zen/zenjxl` 4a2c021 | pass |  |
+| `zen/zenjxl-decoder` 940d2c51 | pass |  |
+| `zen/zenmetrics` 594b014bf | fail | workspace member `crates/zenfleet-vastai` is not tracked by git |
+| `zen/zenpipe` aa21cba | pass |  |
+| `zen/zenpixels` 82cb6e2 | pass |  |
+| `zen/zenpng` cfccd88 | pass |  |
+| `zen/zenquant` 7dbde81 | pass |  |
+| `zen/zenraw` 50f9c69 | pass |  |
+| `zen/zenresize` e3975fb | pass |  |
+| `zen/zensim` 298ef4e5 | pass |  |
+| `zen/zensr` 12e1054 | fail | uses `f32x8::concat_shift`, which exists only on the unmerged `feat/concat-shift` branch |
+| `zen/zensysbench` 67c097c | fail | `[patch]` siblings missing (zencodec, zenav1-svt) |
+| `zen/zentone` 9f0dab4 | pass |  |
+| `zen/zenwebp` 8aa8a78 | pass |  |
+| `zen/zenzstd` 21ba0c2 | pass |  |
+
+**Test:** `cargo test --workspace --no-fail-fast` on the 37 clean snapshots
+(1,884 s, peak RSS 22.3 GiB): 26 pass in full; 11 have failing test binaries,
+none attributable to archmage:
+
+| Snapshot | Failing | Cause |
+|---|---|---|
+| `butteraugli`, `zen/butteraugli` | `butteraugli-cli` `tests/cli.rs` (11 tests) | runs the binary from `target/debug/`, which the shared build directory does not provide; 15 other binaries pass |
+| `quantizr-fast` | two doctests | its own `load_image` helper is not in the doctest scope |
+| `zen/jxl-encoder` | `w44_222_decoder_roundtrip` | the external `djxl` cannot load `libIlmImf-2_5.so.25`; 29 other binaries pass |
+| `zen/zenanalyze` | `zenpicker` `metapicker_v1_contract` | needs `ZENPICKER_METAPICKER_V1_BAKE`; 32 other binaries pass |
+| `zen/zenjpeg` | `encoder_regression::test_quality_floor`, `recompress_api::preserve_identity_emit_handles_16bit_dqt` | pre-existing at that HEAD: the same score (44.6 below the 47.0 floor) and assertion with the archmage 0.9.28 its lockfile pins; 43 other binaries pass |
+| `zen/zenjxl-decoder` | corpus-backed feature tests | `codec-corpus` not found; 15 other binaries pass |
+| `zen/zensim` | `zensim-validate` `bake_surface` | pre-existing at that HEAD: identical assertion failures without the patch; 135 other binaries pass |
+| `zen/zenzstd` | conformance golden tests | golden files not in the snapshot; 4 other binaries pass |
+| `zen/rav1d-safe` | (compile) | its test target requires `cargo test --release` |
+| `zen/zenavif` | (compile) | an untracked test vector |
+
+The snapshot list, logs and results are under `~/tmp/downstream-0.9.30/`
+(`snapshots.tsv`, `results-check.tsv`, `results-test.tsv`, `logs/`); the driver
+is `run-phase.sh` there. The signature shapes harvested from the same snapshots
+are compiled by `magetypes/tests/harvest_shapes.rs` (`just harvest-shapes ROOT`).
+
+## Constructor migration compatibility (2026-09-27)
 
 Verified 2026-09-27 on `i265`, `x86_64-unknown-linux-gnu`, Rust 1.98.1,
 against archmage workspace commit `4401f724b6c8` (implementation `d53d425d`).
@@ -16,7 +113,7 @@ The deprecations still require migration for callers using `deny(deprecated)` or
 jxl-encoder-simd conversion incompatibility documented in
 [TOKEN-CONSTRUCTOR-MIGRATION.md](TOKEN-CONSTRUCTOR-MIGRATION.md).
 
-## Published consumers
+### Published consumers
 
 [cargo-copter](https://github.com/imazen/cargo-copter) at commit
 [`2d50bf89`](https://github.com/imazen/cargo-copter/commit/2d50bf89) was built and
@@ -66,7 +163,7 @@ local crates: `zenbitmaps --features all`,
 the local archmage dependencies were active; zenbitmaps' default empty feature
 set alone would not exercise archmage.
 
-## Local committed sources
+### Local committed sources
 
 Clean local checkouts were archived before testing. Original consumer checkouts
 were not edited. Direct baseline and patched checks retained every original
@@ -111,7 +208,7 @@ WIP is not covered by the published-package results.
 | `zentone` | `df84ca43dcc4` |
 | `zenjxl` | `9226d3a32cfd` |
 
-## Cargo-copter limitations found in this run
+### Cargo-copter limitations found in this run
 
 1. **“Latest” included yanked releases.** Registry version records confirmed
    `linear-srgb 0.7.0`, `zenavif 0.1.7`, `zenfilters 0.1.1`,
@@ -135,7 +232,7 @@ WIP is not covered by the published-package results.
 
 No cargo-copter fixes were included in the archmage change.
 
-## Reproduce and inspect
+### Reproduce and inspect
 
 For a published consumer, use a verified non-yanked version explicitly:
 

@@ -23,7 +23,7 @@ Each layer relies on the one below it:
    an `#[arcane]` region for its token, so rustc rejects any intrinsic that the
    token's features don't cover. WASM SIMD intrinsics are safe to call
    anywhere, because a module that loads has its features. `cargo xtask
-   soundness` re-checks all 5,395 backend intrinsic calls in 0.9.30 against
+   soundness` re-checks all 5,485 magetypes intrinsic calls in 0.9.30 against
    the intrinsic table extracted from Rust's `stdarch`.
 3. **Compile-time layout proofs.** Every reinterpretation of memory checks at
    compile time that the sizes match. Alignment is checked wherever a

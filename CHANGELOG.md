@@ -9,6 +9,8 @@
 - Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)
 - Remove width traits `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` — use concrete tokens or tier traits (`HasX64V2`, `HasX64V4`) instead (deprecated since 0.9.9; `Has256BitSimd` only enables AVX, not AVX2/FMA)
 
+### [0.9.30] - 2026-10-07
+
 #### Fixed
 
 - archmage depends on archmage-macros at an exact version, so the archmage-macros changes below arrive with this release.
@@ -28,6 +30,8 @@
 - Deprecate `incant!` passthrough mode (`with token`) — zero downstream uses; `#[rite]` multi-tier or direct `IntoConcreteToken` dispatch are better alternatives
 - Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with deprecation warning)
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
+
+### [0.9.30] - 2026-10-07
 
 #### Changed
 
@@ -64,6 +68,8 @@
 - Planned: make `w512` non-default in magetypes; users who need 512-bit types would add `features = ["w512"]`. This patch keeps the existing default features.
 - Remove `cast::Upcast` and `cast::Downcast`, and with them the `cast` module, which holds nothing else. Both are deprecated in 0.9.30 and were never implemented (b1b2ff67).
 
+### [0.9.30] - 2026-10-07
+
 #### Added
 
 - Add magetypes inherent methods such as `splat_t(token, value)`, `zero_t(token)`, and `load_t(token, data)` across token-taking constructors, conversions, slice helpers, and single-lane scalar types. The `_t` methods hold the implementations; existing names retain their signatures as deprecated forwarders (772ef504, d53d425d).
@@ -99,6 +105,12 @@
 ## Workspace
 
 ### [Unreleased]
+
+#### QUEUED BREAKING CHANGES
+
+(none)
+
+### [0.9.30] - 2026-10-07
 
 #### Added
 
