@@ -37,13 +37,13 @@ impl<T: F64x2Backend> f64x2<T> {
 
     /// Create from byte array reference (token-gated).
     #[inline(always)]
-    pub fn from_bytes(token: T, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes_t(token: T, bytes: &[u8; 16]) -> Self {
         Self(crate::simd_storage::copy(bytes), token)
     }
 
     /// Create from owned byte array (token-gated).
     #[inline(always)]
-    pub fn from_bytes_owned(token: T, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned_t(token: T, bytes: [u8; 16]) -> Self {
         Self(crate::simd_storage::cast(bytes), token)
     }
 
@@ -53,7 +53,7 @@ impl<T: F64x2Backend> f64x2<T> {
     ///
     /// Returns `None` if length is not a multiple of 2 or alignment is wrong.
     #[inline(always)]
-    pub fn cast_slice(token: T, slice: &[f64]) -> Option<&[Self]> {
+    pub fn cast_slice_t(token: T, slice: &[f64]) -> Option<&[Self]> {
         crate::simd_storage::vector_slice::<_, Self, 2>(token, slice)
     }
 
@@ -61,7 +61,46 @@ impl<T: F64x2Backend> f64x2<T> {
     ///
     /// Returns `None` if length is not a multiple of 2 or alignment is wrong.
     #[inline(always)]
-    pub fn cast_slice_mut(token: T, slice: &mut [f64]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut_t(token: T, slice: &mut [f64]) -> Option<&mut [Self]> {
         crate::simd_storage::vector_slice_mut::<_, Self, 2>(token, slice)
+    }
+}
+// Generated deprecated token-constructor forwarders. Do not edit.
+impl<T: F64x2Backend> f64x2<T> {
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_bytes_t`].\n\nUse `from_bytes_t` to keep explicit-token construction when `from_bytes` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_bytes_t(token, bytes); from_bytes becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn from_bytes(token: T, bytes: &[u8; 16]) -> Self {
+        Self::from_bytes_t(token, bytes)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_bytes_owned_t`].\n\nUse `from_bytes_owned_t` to keep explicit-token construction when `from_bytes_owned` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_bytes_owned_t(token, bytes); from_bytes_owned becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn from_bytes_owned(token: T, bytes: [u8; 16]) -> Self {
+        Self::from_bytes_owned_t(token, bytes)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::cast_slice_t`].\n\nUse `cast_slice_t` to keep explicit-token construction when `cast_slice` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use cast_slice_t(token, slice); cast_slice becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn cast_slice(token: T, slice: &[f64]) -> Option<&[Self]> {
+        Self::cast_slice_t(token, slice)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::cast_slice_mut_t`].\n\nUse `cast_slice_mut_t` to keep explicit-token construction when `cast_slice_mut` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use cast_slice_mut_t(token, slice); cast_slice_mut becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn cast_slice_mut(token: T, slice: &mut [f64]) -> Option<&mut [Self]> {
+        Self::cast_slice_mut_t(token, slice)
     }
 }

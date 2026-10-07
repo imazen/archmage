@@ -38,13 +38,13 @@ impl<T: F32x4Backend> f32x4<T> {
 
     /// Create from byte array reference (token-gated).
     #[inline(always)]
-    pub fn from_bytes(token: T, bytes: &[u8; 16]) -> Self {
+    pub fn from_bytes_t(token: T, bytes: &[u8; 16]) -> Self {
         Self(crate::simd_storage::copy(bytes), token)
     }
 
     /// Create from owned byte array (token-gated).
     #[inline(always)]
-    pub fn from_bytes_owned(token: T, bytes: [u8; 16]) -> Self {
+    pub fn from_bytes_owned_t(token: T, bytes: [u8; 16]) -> Self {
         Self(crate::simd_storage::cast(bytes), token)
     }
 
@@ -54,7 +54,7 @@ impl<T: F32x4Backend> f32x4<T> {
     ///
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[inline(always)]
-    pub fn cast_slice(token: T, slice: &[f32]) -> Option<&[Self]> {
+    pub fn cast_slice_t(token: T, slice: &[f32]) -> Option<&[Self]> {
         crate::simd_storage::vector_slice::<_, Self, 4>(token, slice)
     }
 
@@ -62,7 +62,7 @@ impl<T: F32x4Backend> f32x4<T> {
     ///
     /// Returns `None` if length is not a multiple of 4 or alignment is wrong.
     #[inline(always)]
-    pub fn cast_slice_mut(token: T, slice: &mut [f32]) -> Option<&mut [Self]> {
+    pub fn cast_slice_mut_t(token: T, slice: &mut [f32]) -> Option<&mut [Self]> {
         crate::simd_storage::vector_slice_mut::<_, Self, 4>(token, slice)
     }
 
@@ -72,7 +72,7 @@ impl<T: F32x4Backend> f32x4<T> {
     ///
     /// Values are in `[0.0, 255.0]`. Useful for image processing.
     #[inline(always)]
-    pub fn from_u8(token: T, bytes: &[u8; 4]) -> Self {
+    pub fn from_u8_t(token: T, bytes: &[u8; 4]) -> Self {
         Self::from_repr_unchecked(
             token,
             T::from_array(token, core::array::from_fn(|i| bytes[i] as f32)),
@@ -158,7 +158,7 @@ impl<T: F32x4Backend> f32x4<T> {
     /// Input: 16 bytes = 4 RGBA pixels in interleaved format.
     /// Output: `(R, G, B, A)` where each is f32x4 with values in `[0.0, 255.0]`.
     #[inline(always)]
-    pub fn load_4_rgba_u8(token: T, rgba: &[u8; 16]) -> (Self, Self, Self, Self) {
+    pub fn load_4_rgba_u8_t(token: T, rgba: &[u8; 16]) -> (Self, Self, Self, Self) {
         let r: [f32; 4] = core::array::from_fn(|i| rgba[i * 4] as f32);
         let g: [f32; 4] = core::array::from_fn(|i| rgba[i * 4 + 1] as f32);
         let b: [f32; 4] = core::array::from_fn(|i| rgba[i * 4 + 2] as f32);
@@ -222,5 +222,62 @@ impl<T: crate::simd::backends::F32x4Convert> f32x4<T> {
     #[inline(always)]
     pub fn bitcast_mut_i32(&mut self) -> &mut super::i32x4<T> {
         crate::simd_storage::vector_view_mut(self.1, &mut self.0)
+    }
+}
+// Generated deprecated token-constructor forwarders. Do not edit.
+impl<T: F32x4Backend> f32x4<T> {
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_bytes_t`].\n\nUse `from_bytes_t` to keep explicit-token construction when `from_bytes` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_bytes_t(token, bytes); from_bytes becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn from_bytes(token: T, bytes: &[u8; 16]) -> Self {
+        Self::from_bytes_t(token, bytes)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_bytes_owned_t`].\n\nUse `from_bytes_owned_t` to keep explicit-token construction when `from_bytes_owned` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_bytes_owned_t(token, bytes); from_bytes_owned becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn from_bytes_owned(token: T, bytes: [u8; 16]) -> Self {
+        Self::from_bytes_owned_t(token, bytes)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::cast_slice_t`].\n\nUse `cast_slice_t` to keep explicit-token construction when `cast_slice` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use cast_slice_t(token, slice); cast_slice becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn cast_slice(token: T, slice: &[f32]) -> Option<&[Self]> {
+        Self::cast_slice_t(token, slice)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::cast_slice_mut_t`].\n\nUse `cast_slice_mut_t` to keep explicit-token construction when `cast_slice_mut` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use cast_slice_mut_t(token, slice); cast_slice_mut becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn cast_slice_mut(token: T, slice: &mut [f32]) -> Option<&mut [Self]> {
+        Self::cast_slice_mut_t(token, slice)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_u8_t`].\n\nUse `from_u8_t` to keep explicit-token construction when `from_u8` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_u8_t(token, bytes); from_u8 becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn from_u8(token: T, bytes: &[u8; 4]) -> Self {
+        Self::from_u8_t(token, bytes)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::load_4_rgba_u8_t`].\n\nUse `load_4_rgba_u8_t` to keep explicit-token construction when `load_4_rgba_u8` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use load_4_rgba_u8_t(token, rgba); load_4_rgba_u8 becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn load_4_rgba_u8(token: T, rgba: &[u8; 16]) -> (Self, Self, Self, Self) {
+        Self::load_4_rgba_u8_t(token, rgba)
     }
 }

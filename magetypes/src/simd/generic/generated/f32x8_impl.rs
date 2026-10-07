@@ -11,9 +11,9 @@
 //! use magetypes::simd::generic::f32x8;
 //!
 //! fn sum<T: F32x8Backend>(token: T, data: &[f32]) -> f32 {
-//!     let mut acc = f32x8::<T>::zero(token);
+//!     let mut acc = f32x8::<T>::zero_t(token);
 //!     for chunk in data.chunks_exact(8) {
-//!         acc = acc + f32x8::<T>::load(token, chunk.try_into().unwrap());
+//!         acc = acc + f32x8::<T>::load_t(token, chunk.try_into().unwrap());
 //!     }
 //!     acc.reduce_add()
 //! }
@@ -138,31 +138,31 @@ impl<T: F32x8Backend> f32x8<T> {
 
     /// Broadcast scalar to all 8 lanes.
     #[inline(always)]
-    pub fn splat(token: T, v: f32) -> Self {
+    pub fn splat_t(token: T, v: f32) -> Self {
         Self(T::splat(token, v), token)
     }
 
     /// All lanes zero.
     #[inline(always)]
-    pub fn zero(token: T) -> Self {
+    pub fn zero_t(token: T) -> Self {
         Self(T::zero(token), token)
     }
 
     /// Load from a `[f32; 8]` array.
     #[inline(always)]
-    pub fn load(token: T, data: &[f32; 8]) -> Self {
+    pub fn load_t(token: T, data: &[f32; 8]) -> Self {
         Self(T::load(token, data), token)
     }
 
     /// Create from array (zero-cost where possible).
     #[inline(always)]
-    pub fn from_array(token: T, arr: [f32; 8]) -> Self {
+    pub fn from_array_t(token: T, arr: [f32; 8]) -> Self {
         Self(T::from_array(token, arr), token)
     }
 
     /// Create from slice. Panics if `slice.len() < 8`.
     #[inline(always)]
-    pub fn from_slice(token: T, slice: &[f32]) -> Self {
+    pub fn from_slice_t(token: T, slice: &[f32]) -> Self {
         let arr: [f32; 8] = slice[..8].try_into().unwrap();
         Self(T::from_array(token, arr), token)
     }
@@ -170,18 +170,18 @@ impl<T: F32x8Backend> f32x8<T> {
     /// Split a slice into SIMD-width chunks and a scalar remainder.
     ///
     /// Returns `(&[[f32; 8]], &[f32])` — fixed-size arrays suitable
-    /// for [`load`](Self::load), plus any leftover elements.
+    /// for [`load_t`](Self::load_t), plus any leftover elements.
     #[inline(always)]
-    pub fn partition_slice(_: T, data: &[f32]) -> (&[[f32; 8]], &[f32]) {
+    pub fn partition_slice_t(_: T, data: &[f32]) -> (&[[f32; 8]], &[f32]) {
         data.as_chunks::<8>()
     }
 
     /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
     ///
     /// Returns `(&mut [[f32; 8]], &mut [f32])` — the bulk portion reinterpreted
-    /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
+    /// as fixed-size arrays suitable for [`load_t`](Self::load_t), plus any leftover elements.
     #[inline(always)]
-    pub fn partition_slice_mut(_: T, data: &mut [f32]) -> (&mut [[f32; 8]], &mut [f32]) {
+    pub fn partition_slice_mut_t(_: T, data: &mut [f32]) -> (&mut [[f32; 8]], &mut [f32]) {
         data.as_chunks_mut::<8>()
     }
 
@@ -207,7 +207,7 @@ impl<T: F32x8Backend> f32x8<T> {
 
     /// Wrap a platform representation (token-gated).
     #[inline(always)]
-    pub fn from_repr(token: T, repr: T::Repr) -> Self {
+    pub fn from_repr_t(token: T, repr: T::Repr) -> Self {
         Self(repr, token)
     }
 
@@ -456,9 +456,9 @@ impl<T: F32x8Backend> f32x8<T> {
     {
         let t = self.1;
         let bits = self.bitcast_to_i32();
-        let seed = Self::from_i32_bitcast(
+        let seed = Self::from_i32_bitcast_t(
             t,
-            super::i32x8::splat(t, 0x5f3759df_i32) - bits.shr_logical_const::<1>(),
+            super::i32x8::splat_t(t, 0x5f3759df_i32) - bits.shr_logical_const::<1>(),
         );
         seed.rsqrt_newton_portable(self)
     }
@@ -469,8 +469,8 @@ impl<T: F32x8Backend> f32x8<T> {
     #[inline(always)]
     pub fn rsqrt_newton_portable(self, x: Self) -> Self {
         let t = self.1;
-        let half = Self::splat(t, 0.5);
-        let three_halves = Self::splat(t, 1.5);
+        let half = Self::splat_t(t, 0.5);
+        let three_halves = Self::splat_t(t, 1.5);
         self * (three_halves - half * x * self * self)
     }
 
@@ -481,7 +481,7 @@ impl<T: F32x8Backend> f32x8<T> {
     /// on Zen-class x86 (and is the faster form on Apple Silicon).
     #[inline(always)]
     pub fn rsqrt_portable(self) -> Self {
-        Self::splat(self.1, 1.0) / self.sqrt()
+        Self::splat_t(self.1, 1.0) / self.sqrt()
     }
 
     /// Deterministic reciprocal estimate (~8-bit), bit-identical on every
@@ -497,7 +497,7 @@ impl<T: F32x8Backend> f32x8<T> {
     {
         let t = self.1;
         let bits = self.bitcast_to_i32();
-        let seed = Self::from_i32_bitcast(t, super::i32x8::splat(t, 0x7ef127ea_i32) - bits);
+        let seed = Self::from_i32_bitcast_t(t, super::i32x8::splat_t(t, 0x7ef127ea_i32) - bits);
         seed.recip_newton_portable(self)
     }
 
@@ -506,7 +506,7 @@ impl<T: F32x8Backend> f32x8<T> {
     #[inline(always)]
     pub fn recip_newton_portable(self, x: Self) -> Self {
         let t = self.1;
-        let two = Self::splat(t, 2.0);
+        let two = Self::splat_t(t, 2.0);
         self * (two - x * self)
     }
 
@@ -521,7 +521,7 @@ impl<T: F32x8Backend> f32x8<T> {
     /// on Apple Silicon).
     #[inline(always)]
     pub fn recip_portable(self) -> Self {
-        Self::splat(self.1, 1.0) / self
+        Self::splat_t(self.1, 1.0) / self
     }
 
     // ====== Bitwise ======
@@ -744,7 +744,7 @@ impl<T: crate::simd::backends::F32x8Convert> f32x8<T> {
 
     /// Create from i32x8 via bitcast (reinterpret bits, no conversion).
     #[inline(always)]
-    pub fn from_i32_bitcast(token: T, v: super::i32x8<T>) -> Self {
+    pub fn from_i32_bitcast_t(token: T, v: super::i32x8<T>) -> Self {
         Self(T::bitcast_i32_to_f32(token, v.into_repr()), token)
     }
 
@@ -781,7 +781,7 @@ impl<T: crate::simd::backends::F32x8Convert> f32x8<T> {
 
     /// Create from i32x8 via numeric conversion.
     #[inline(always)]
-    pub fn from_i32(token: T, v: super::i32x8<T>) -> Self {
+    pub fn from_i32_t(token: T, v: super::i32x8<T>) -> Self {
         Self(T::convert_i32_to_f32(token, v.into_repr()), token)
     }
 
@@ -805,10 +805,10 @@ impl<T: crate::simd::backends::F32x8Convert> f32x8<T> {
         self.to_i32_round()
     }
 
-    /// Alias for [`from_i32`](Self::from_i32).
+    /// Alias for [`from_i32_t`](Self::from_i32_t).
     #[inline(always)]
-    pub fn from_i32x8(token: T, v: super::i32x8<T>) -> Self {
-        Self::from_i32(token, v)
+    pub fn from_i32x8_t(token: T, v: super::i32x8<T>) -> Self {
+        Self::from_i32_t(token, v)
     }
 
     /// Alias for [`bitcast_ref_i32`](Self::bitcast_ref_i32) (from block_ops).
@@ -850,7 +850,7 @@ impl f32x8<archmage::X64V3Token> {
 
     /// Create from a raw `__m256` (token-gated, zero-cost).
     #[inline(always)]
-    pub fn from_m256(token: archmage::X64V3Token, v: core::arch::x86_64::__m256) -> Self {
+    pub fn from_m256_t(token: archmage::X64V3Token, v: core::arch::x86_64::__m256) -> Self {
         Self(v, token)
     }
 }
@@ -868,5 +868,113 @@ impl f32x8<archmage::Wasm128Token> {
     /// Implementation identifier for this backend.
     pub const fn implementation_name() -> &'static str {
         "polyfill::wasm128::f32x8"
+    }
+}
+// Generated deprecated token-constructor forwarders. Do not edit.
+impl<T: F32x8Backend> f32x8<T> {
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::splat_t`].\n\nUse `splat_t` to keep explicit-token construction when `splat` becomes tokenless in magetypes 0.10."]
+    #[deprecated(note = "Use splat_t(token, v); splat becomes tokenless in magetypes 0.10.")]
+    #[forbid(unsafe_code)]
+    pub fn splat(token: T, v: f32) -> Self {
+        Self::splat_t(token, v)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::zero_t`].\n\nUse `zero_t` to keep explicit-token construction when `zero` becomes tokenless in magetypes 0.10."]
+    #[deprecated(note = "Use zero_t(token); zero becomes tokenless in magetypes 0.10.")]
+    #[forbid(unsafe_code)]
+    pub fn zero(token: T) -> Self {
+        Self::zero_t(token)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::load_t`].\n\nUse `load_t` to keep explicit-token construction when `load` becomes tokenless in magetypes 0.10."]
+    #[deprecated(note = "Use load_t(token, data); load becomes tokenless in magetypes 0.10.")]
+    #[forbid(unsafe_code)]
+    pub fn load(token: T, data: &[f32; 8]) -> Self {
+        Self::load_t(token, data)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_array_t`].\n\nUse `from_array_t` to keep explicit-token construction when `from_array` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_array_t(token, arr); from_array becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn from_array(token: T, arr: [f32; 8]) -> Self {
+        Self::from_array_t(token, arr)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_slice_t`].\n\nUse `from_slice_t` to keep explicit-token construction when `from_slice` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_slice_t(token, slice); from_slice becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn from_slice(token: T, slice: &[f32]) -> Self {
+        Self::from_slice_t(token, slice)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::partition_slice_t`].\n\nUse `partition_slice_t` to keep explicit-token construction when `partition_slice` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use partition_slice_t(token, data); partition_slice becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn partition_slice(token: T, data: &[f32]) -> (&[[f32; 8]], &[f32]) {
+        Self::partition_slice_t(token, data)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::partition_slice_mut_t`].\n\nUse `partition_slice_mut_t` to keep explicit-token construction when `partition_slice_mut` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use partition_slice_mut_t(token, data); partition_slice_mut becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn partition_slice_mut(token: T, data: &mut [f32]) -> (&mut [[f32; 8]], &mut [f32]) {
+        Self::partition_slice_mut_t(token, data)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_repr_t`].\n\nUse `from_repr_t` to keep explicit-token construction when `from_repr` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_repr_t(token, repr); from_repr becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn from_repr(token: T, repr: T::Repr) -> Self {
+        Self::from_repr_t(token, repr)
+    }
+}
+impl<T: crate::simd::backends::F32x8Convert> f32x8<T> {
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_i32_bitcast_t`].\n\nUse `from_i32_bitcast_t` to keep explicit-token construction when `from_i32_bitcast` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_i32_bitcast_t(token, v); from_i32_bitcast becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn from_i32_bitcast(token: T, v: super::i32x8<T>) -> Self {
+        Self::from_i32_bitcast_t(token, v)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_i32_t`].\n\nUse `from_i32_t` to keep explicit-token construction when `from_i32` becomes tokenless in magetypes 0.10."]
+    #[deprecated(note = "Use from_i32_t(token, v); from_i32 becomes tokenless in magetypes 0.10.")]
+    #[forbid(unsafe_code)]
+    pub fn from_i32(token: T, v: super::i32x8<T>) -> Self {
+        Self::from_i32_t(token, v)
+    }
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_i32x8_t`].\n\nUse `from_i32x8_t` to keep explicit-token construction when `from_i32x8` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_i32x8_t(token, v); from_i32x8 becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn from_i32x8(token: T, v: super::i32x8<T>) -> Self {
+        Self::from_i32x8_t(token, v)
+    }
+}
+#[cfg(target_arch = "x86_64")]
+impl f32x8<archmage::X64V3Token> {
+    #[inline(always)]
+    #[doc = "Deprecated token-taking spelling of [`Self::from_m256_t`].\n\nUse `from_m256_t` to keep explicit-token construction when `from_m256` becomes tokenless in magetypes 0.10."]
+    #[deprecated(
+        note = "Use from_m256_t(token, v); from_m256 becomes tokenless in magetypes 0.10."
+    )]
+    #[forbid(unsafe_code)]
+    pub fn from_m256(token: archmage::X64V3Token, v: core::arch::x86_64::__m256) -> Self {
+        Self::from_m256_t(token, v)
     }
 }

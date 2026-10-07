@@ -3,7 +3,7 @@
 Proof that the Arm64-v2 feature set is available.
 
 **Architecture:** aarch64 | **Features:** neon, crc, rdm, dotprod, fp16, aes, sha2
-**Total intrinsics:** 375 (365 safe, 10 unsafe, 244 stable, 131 unstable/unknown)
+**Total intrinsics:** 347 (337 safe, 10 unsafe, 220 stable, 127 unstable/unknown)
 
 ## Usage
 
@@ -34,7 +34,7 @@ fn process_chunk(_: Arm64V2Token, chunk: &mut [f32; 4]) {
 
 ## All Intrinsics
 
-### Stable, Safe (244 intrinsics)
+### Stable, Safe (220 intrinsics)
 
 | Name | Description | Instruction | Timing (H/Z4) |
 |------|-------------|-------------|---------------|
@@ -128,30 +128,6 @@ fn process_chunk(_: Arm64V2Token, chunk: &mut [f32; 4]) {
 | `vfmaq_f16` |  |  | — |
 | `vfmaq_lane_f16` | Floating-point fused multiply-add to accumulator |  | — |
 | `vfmaq_laneq_f16` | Floating-point fused multiply-add to accumulator |  | — |
-| `vfmlal_high_f16` | Floating-point fused Multiply-Add Long to accumulator (vecto... | fmlal2 | — |
-| `vfmlal_lane_high_f16` | Floating-point fused Multiply-Add Long to accumulator (by el... |  | — |
-| `vfmlal_lane_low_f16` | Floating-point fused Multiply-Add Long to accumulator (by el... |  | — |
-| `vfmlal_laneq_high_f16` | Floating-point fused Multiply-Add Long to accumulator (by el... |  | — |
-| `vfmlal_laneq_low_f16` | Floating-point fused Multiply-Add Long to accumulator (by el... |  | — |
-| `vfmlal_low_f16` | Floating-point fused Multiply-Add Long to accumulator (vecto... | fmlal | — |
-| `vfmlalq_high_f16` | Floating-point fused Multiply-Add Long to accumulator (vecto... | fmlal2 | — |
-| `vfmlalq_lane_high_f16` | Floating-point fused Multiply-Add Long to accumulator (by el... |  | — |
-| `vfmlalq_lane_low_f16` | Floating-point fused Multiply-Add Long to accumulator (by el... |  | — |
-| `vfmlalq_laneq_high_f16` | Floating-point fused Multiply-Add Long to accumulator (by el... |  | — |
-| `vfmlalq_laneq_low_f16` | Floating-point fused Multiply-Add Long to accumulator (by el... |  | — |
-| `vfmlalq_low_f16` | Floating-point fused Multiply-Add Long to accumulator (vecto... | fmlal | — |
-| `vfmlsl_high_f16` | Floating-point fused Multiply-Subtract Long from accumulator... | fmlsl2 | — |
-| `vfmlsl_lane_high_f16` | Floating-point fused Multiply-Subtract Long from accumulator... |  | — |
-| `vfmlsl_lane_low_f16` | Floating-point fused Multiply-Subtract Long from accumulator... |  | — |
-| `vfmlsl_laneq_high_f16` | Floating-point fused Multiply-Subtract Long from accumulator... |  | — |
-| `vfmlsl_laneq_low_f16` | Floating-point fused Multiply-Subtract Long from accumulator... |  | — |
-| `vfmlsl_low_f16` | Floating-point fused Multiply-Subtract Long from accumulator... | fmlsl | — |
-| `vfmlslq_high_f16` | Floating-point fused Multiply-Subtract Long from accumulator... | fmlsl2 | — |
-| `vfmlslq_lane_high_f16` | Floating-point fused Multiply-Subtract Long from accumulator... |  | — |
-| `vfmlslq_lane_low_f16` | Floating-point fused Multiply-Subtract Long from accumulator... |  | — |
-| `vfmlslq_laneq_high_f16` | Floating-point fused Multiply-Subtract Long from accumulator... |  | — |
-| `vfmlslq_laneq_low_f16` | Floating-point fused Multiply-Subtract Long from accumulator... |  | — |
-| `vfmlslq_low_f16` | Floating-point fused Multiply-Subtract Long from accumulator... | fmlsl | — |
 | `vfms_f16` |  |  | — |
 | `vfms_lane_f16` | Floating-point fused multiply-subtract from accumulator |  | — |
 | `vfms_laneq_f16` | Floating-point fused multiply-subtract from accumulator |  | — |
@@ -283,17 +259,13 @@ fn process_chunk(_: Arm64V2Token, chunk: &mut [f32; 4]) {
 | `vzip_f16` |  |  | — |
 | `vzipq_f16` |  |  | — |
 
-### Unstable/Nightly (131 intrinsics)
+### Unstable/Nightly (127 intrinsics)
 
 | Name | Description | Instruction |
 |------|-------------|-------------|
 | `vabdh_f16` | Floating-point absolute difference | fabd |
 | `vabsh_f16` |  |  |
 | `vaddh_f16` |  |  |
-| `vcadd_rot270_f16` | Floating-point complex add | fcadd |
-| `vcadd_rot90_f16` | Floating-point complex add | fcadd |
-| `vcaddq_rot270_f16` | Floating-point complex add | fcadd |
-| `vcaddq_rot90_f16` | Floating-point complex add | fcadd |
 | `vcageh_f16` | Floating-point absolute compare greater than or equal |  |
 | `vcagth_f16` | Floating-point absolute compare greater than |  |
 | `vcaleh_f16` | Floating-point absolute compare less than or equal |  |
