@@ -50,6 +50,19 @@ signature and a name is not a proof:
   built from. Pinned by `trait_shadowing_exploit.rs` (plus its generic and
   `#[rite]` variants) and `trait_aliasing_exploit.rs`.
 
+The wrapper's one `unsafe` block names the sibling by name as well
+(`unsafe { __arcane_<fn>(..) }`), and Rust's name resolution is what keeps
+that call pointed at the function the macro just generated: a second item of
+that name in the module is a duplicate definition (E0428), an explicit import
+of one conflicts (E0255), a glob import loses to the local item, and an
+inherent method or associated function wins over a trait item of the same
+name. The sibling is private and `#[doc(hidden)]`, so no other crate can name
+it, and it shares one `cfg` guard with the wrapper, so the two never appear
+separately. In nested mode the inner function is block-local to the wrapper.
+Pinned by `tests/soundness/sibling_duplicate_exploit.rs`,
+`sibling_import_exploit.rs` and the runtime cases in
+`tests/arcane_sibling_resolution.rs`.
+
 Proofs union: a method taking `X64V4Token` inside an
 `impl … for X64V3Token` block may use V3 ∪ V4 features.
 
