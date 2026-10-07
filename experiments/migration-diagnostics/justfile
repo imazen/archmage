@@ -1,0 +1,2 @@
+run out:
+    TMPDIR="$HOME/tmp" "$HOME/work/claudehints/scripts/run-heavy" --mem 16G --jobs 8 -- python3 run.py --out {{quote(out)}}

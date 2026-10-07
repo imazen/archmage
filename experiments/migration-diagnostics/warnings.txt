@@ -1,0 +1,34 @@
+warning: use of deprecated macro `diagnostic_probe::statically_deprecated`: Static macro-level note: this cannot describe each invocation's arguments
+  --> /home/lilith/work/archmage/experiments/migration-diagnostics/consumer.rs:20:3
+   |
+20 | #[diagnostic_probe::statically_deprecated]
+   |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+
+
+warning: use of deprecated constant `visible::__ARCHMAGE_MIGRATION`: ARCHMAGE-MIGRATE probe: replace this legacy_attr attribute with:
+         #[inline(always)]
+ --> /home/lilith/work/archmage/experiments/migration-diagnostics/consumer.rs:3:1
+  |
+3 | #[diagnostic_probe::legacy_attr(always)]
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: this warning originates in the attribute macro `diagnostic_probe::legacy_attr` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+
+warning: use of deprecated constant `main::__ARCHMAGE_MIGRATION`: ARCHMAGE-MIGRATE probe: replace this legacy_expr invocation with:
+         ({ evaluations += 1; 11 })
+  --> /home/lilith/work/archmage/experiments/migration-diagnostics/consumer.rs:27:13
+   |
+27 |       let x = diagnostic_probe::legacy_expr!({
+   |  _____________^
+28 | |         evaluations += 1;
+29 | |         11
+30 | |     });
+   | |______^
+   |
+   = note: this warning originates in the macro `diagnostic_probe::legacy_expr` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+
+warning: 3 warnings emitted
