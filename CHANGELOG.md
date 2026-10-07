@@ -93,6 +93,7 @@
 
 #### Added
 
+- `just ci` ends with a table of every step's wall time, and runs Miri and the no_std gate as background jobs in their own build directories (`target/miri-ci.log`, `target/nostd`): 399 s → 162 s on the same box and load. Three sweeps that are safe lane code join `MIRI_SKIPPED_TESTS` with their retained coverage named (`int_uniform_shift_saturating::scalar_backend`, `precise_reciprocals`, `exp2_lowp_range`); native, SDE and cross-architecture CI still run them.
 - Enforce generated-backend size budgets to detect unintended growth (3999a29d, a97decd1). The AVX-512 tokens' W128/W256 f32 backends are now generated from the `F32x4Backend`/`F32x8Backend` definitions (`xtask/src/simd_types/v4_delegation_gen.rs`), so a trait method cannot be left to its scalar default body for those tokens; that replaces the hand-written `x86_v4_f32_delegated.rs`, its `validate` check and its private `V4Proof` trait. The three AVX-512VL pixel-packing helpers stay hand-written in `x86_v4_f32_overrides.rs` (#125).
 - Add tokenful/tokenless calling-convention fixtures on x86, ARM/QEMU, and WASM/Wasmtime (c766c238, 595d13e0).
 - Record [native compilation checks for 23 published consumer libraries](docs/DOWNSTREAM-COMPATIBILITY.md), including optional SIMD feature checks; this audit does not establish ARM/WASM consumer compatibility or runtime equivalence (5bfae758, aac61604).

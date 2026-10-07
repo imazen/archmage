@@ -1114,6 +1114,7 @@ fn main() -> Result<()> {
             check_packages(&targets)?
         }
         "miri" => run_miri()?,
+        "nostd" => run_nostd_checks()?,
         "audit" => run_safety_audit()?,
         "intrinsics-refresh" => refresh_intrinsics_database()?,
         "compare-arch-results" => {
@@ -1429,6 +1430,110 @@ fn check_packages(targets: &[String]) -> Result<()> {
         anyhow::ensure!(check.status()?.success(), "packaged sources fail to check");
     }
     println!("Verified packaged sources: {}", staging.display());
+    Ok(())
+}
+
+/// The no_std gate: archmage and magetypes compile and test without `std` on
+/// the host, and magetypes compiles for two bare-metal targets, which catch
+/// std leaks the host cannot (libstd is always linkable there). `just ci`
+/// runs this as a background child in its own build directory
+/// (`target/nostd`), so it does not wait on the std build's cargo lock.
+fn run_nostd_checks() -> Result<()> {
+    // Check archmage compiles under no_std (with macros)
+    let nostd_check = std::process::Command::new("cargo")
+        .args([
+            "check",
+            "-p",
+            "archmage",
+            "--no-default-features",
+            "--features",
+            "macros avx512",
+        ])
+        .status()
+        .context("Failed to check archmage under no_std")?;
+    if !nostd_check.success() {
+        bail!("archmage fails to compile under no_std");
+    }
+    println!("  ✓ archmage compiles under no_std");
+
+    // Check magetypes compiles under no_std
+    let nostd_magetypes = std::process::Command::new("cargo")
+        .args(["check", "-p", "magetypes", "--no-default-features"])
+        .status()
+        .context("Failed to check magetypes under no_std")?;
+    if !nostd_magetypes.success() {
+        bail!("magetypes fails to compile under no_std");
+    }
+    println!("  ✓ magetypes compiles under no_std");
+
+    // Run magetypes tests under no_std (scalar tests + skip-when-unavailable)
+    let nostd_tests = std::process::Command::new("cargo")
+        .args(["test", "-p", "magetypes", "--no-default-features"])
+        .status()
+        .context("Failed to test magetypes under no_std")?;
+    if !nostd_tests.success() {
+        bail!("magetypes tests fail under no_std");
+    }
+    println!("  ✓ magetypes tests pass under no_std");
+
+    // Run archmage tests under no_std (with macros)
+    let nostd_archmage_tests = std::process::Command::new("cargo")
+        .args([
+            "test",
+            "-p",
+            "archmage",
+            "--no-default-features",
+            "--features",
+            "macros avx512",
+        ])
+        .status()
+        .context("Failed to test archmage under no_std")?;
+    if !nostd_archmage_tests.success() {
+        bail!("archmage tests fail under no_std");
+    }
+    println!("  ✓ archmage tests pass under no_std");
+
+    // Cross-target no_std compilation (true no_std — catches std leaks the host can't)
+    // These are MANDATORY: host-target no_std checks don't catch f64::log2() etc.
+    // because libstd is always linkable on the host even without the "std" feature.
+    let nostd_targets = [
+        ("aarch64-unknown-none", "aarch64 bare metal"),
+        ("thumbv7m-none-eabi", "ARM Cortex-M (no SIMD)"),
+    ];
+    for (target, desc) in &nostd_targets {
+        // Auto-install if missing
+        let installed = std::process::Command::new("rustup")
+            .args(["target", "list", "--installed"])
+            .output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).contains(target))
+            .unwrap_or(false);
+        if !installed {
+            println!("  Installing target {target}...");
+            let install = std::process::Command::new("rustup")
+                .args(["target", "add", target])
+                .status()
+                .context(format!("Failed to install target {target}"))?;
+            if !install.success() {
+                bail!("Failed to install target {target} — required for no_std CI");
+            }
+        }
+        let check = std::process::Command::new("cargo")
+            .args([
+                "check",
+                "-p",
+                "magetypes",
+                "--no-default-features",
+                "--target",
+                target,
+            ])
+            .status()
+            .context(format!("Failed to check magetypes for {target}"))?;
+        if !check.success() {
+            bail!("magetypes fails to compile for {target} ({desc})");
+        }
+        println!("  ✓ magetypes compiles for {target} ({desc})");
+    }
+    println!("no_std checks passed");
     Ok(())
 }
 
@@ -2304,10 +2409,9 @@ fn run_ci() -> Result<()> {
     println!("  ✓ Working tree is clean");
     println!("└─ Worktree check passed ────────────────────────────────────────────┘\n");
 
-    // Miri interprets single-threaded for minutes and shares no build
-    // directory with the steps below, so it runs alongside them; Step 15
-    // collects the result. Its output goes to a log that is printed on failure.
-    let miri = MiriJob::start();
+    // Miri interprets single-threaded for minutes in its own build directory,
+    // so it runs alongside the steps below; Step 15 collects the result.
+    let miri = BackgroundStep::miri();
 
     // Step 3: Intrinsic soundness verification (structure-aware scanner)
     timer.begin("Step 3/18: Verifying intrinsic soundness");
@@ -2336,6 +2440,15 @@ fn run_ci() -> Result<()> {
         bail!("xtask self-tests failed — the verification tooling itself is broken");
     }
     println!("└─ Verifier self-tests passed ───────────────────────────────────────┘\n");
+
+    // The no_std build uses its own build directory, so it runs alongside
+    // the std clippy and test steps; Step 10 collects it.
+    let nostd = BackgroundStep::start(
+        "no_std",
+        "nostd",
+        "target/nostd-ci.log",
+        Some("target/nostd"),
+    );
 
     // Step 7: Clippy
     timer.begin("Step 7/18: Running clippy");
@@ -2392,99 +2505,8 @@ fn run_ci() -> Result<()> {
 
     // Step 10: no_std compilation and tests
     timer.begin("Step 10/18: no_std compilation + tests");
-    // Check archmage compiles under no_std (with macros)
-    let nostd_check = std::process::Command::new("cargo")
-        .args([
-            "check",
-            "-p",
-            "archmage",
-            "--no-default-features",
-            "--features",
-            "macros avx512",
-        ])
-        .status()
-        .context("Failed to check archmage under no_std")?;
-    if !nostd_check.success() {
-        bail!("archmage fails to compile under no_std");
-    }
-    println!("  ✓ archmage compiles under no_std");
-
-    // Check magetypes compiles under no_std
-    let nostd_magetypes = std::process::Command::new("cargo")
-        .args(["check", "-p", "magetypes", "--no-default-features"])
-        .status()
-        .context("Failed to check magetypes under no_std")?;
-    if !nostd_magetypes.success() {
-        bail!("magetypes fails to compile under no_std");
-    }
-    println!("  ✓ magetypes compiles under no_std");
-
-    // Run magetypes tests under no_std (scalar tests + skip-when-unavailable)
-    let nostd_tests = std::process::Command::new("cargo")
-        .args(["test", "-p", "magetypes", "--no-default-features"])
-        .status()
-        .context("Failed to test magetypes under no_std")?;
-    if !nostd_tests.success() {
-        bail!("magetypes tests fail under no_std");
-    }
-    println!("  ✓ magetypes tests pass under no_std");
-
-    // Run archmage tests under no_std (with macros)
-    let nostd_archmage_tests = std::process::Command::new("cargo")
-        .args([
-            "test",
-            "-p",
-            "archmage",
-            "--no-default-features",
-            "--features",
-            "macros avx512",
-        ])
-        .status()
-        .context("Failed to test archmage under no_std")?;
-    if !nostd_archmage_tests.success() {
-        bail!("archmage tests fail under no_std");
-    }
-    println!("  ✓ archmage tests pass under no_std");
-
-    // Cross-target no_std compilation (true no_std — catches std leaks the host can't)
-    // These are MANDATORY: host-target no_std checks don't catch f64::log2() etc.
-    // because libstd is always linkable on the host even without the "std" feature.
-    let nostd_targets = [
-        ("aarch64-unknown-none", "aarch64 bare metal"),
-        ("thumbv7m-none-eabi", "ARM Cortex-M (no SIMD)"),
-    ];
-    for (target, desc) in &nostd_targets {
-        // Auto-install if missing
-        let installed = std::process::Command::new("rustup")
-            .args(["target", "list", "--installed"])
-            .output()
-            .map(|o| String::from_utf8_lossy(&o.stdout).contains(target))
-            .unwrap_or(false);
-        if !installed {
-            println!("  Installing target {target}...");
-            let install = std::process::Command::new("rustup")
-                .args(["target", "add", target])
-                .status()
-                .context(format!("Failed to install target {target}"))?;
-            if !install.success() {
-                bail!("Failed to install target {target} — required for no_std CI");
-            }
-        }
-        let check = std::process::Command::new("cargo")
-            .args([
-                "check",
-                "-p",
-                "magetypes",
-                "--no-default-features",
-                "--target",
-                target,
-            ])
-            .status()
-            .context(format!("Failed to check magetypes for {target}"))?;
-        if !check.success() {
-            bail!("magetypes fails to compile for {target} ({desc})");
-        }
-        println!("  ✓ magetypes compiles for {target} ({desc})");
+    if let Some(elapsed) = nostd.finish()? {
+        timer.record("no_std (ran concurrently with Steps 7-9)", elapsed);
     }
     println!("└─ no_std checks passed ───────────────────────────────────────────────┘\n");
 
@@ -2676,21 +2698,59 @@ fn run_ci() -> Result<()> {
     Ok(())
 }
 
-/// `cargo xtask miri` as a background child of `just ci`, started early and
-/// joined at Step 15. Its stdout and stderr go to `target/miri-ci.log`, which
-/// is printed when it fails, so the log of the other steps stays readable.
-enum MiriJob {
-    /// Miri is not installed on the pinned toolchain.
-    Unavailable(String),
+/// An xtask subcommand run as a background child of `just ci` and joined at
+/// a later step. Its stdout and stderr go to a log that is printed when it
+/// fails and summarized when it passes, so the log of the other steps stays
+/// readable. `target_dir` gives the child its own `CARGO_TARGET_DIR`, so it
+/// never waits on the main build directory's cargo lock.
+enum BackgroundStep {
+    /// The step cannot run here (the reason is printed at join time).
+    Unavailable { name: String, reason: String },
     Running {
+        name: String,
         child: std::process::Child,
         log: PathBuf,
         started: std::time::Instant,
     },
 }
 
-impl MiriJob {
-    fn start() -> Self {
+impl BackgroundStep {
+    fn start(name: &str, subcommand: &str, log: &str, target_dir: Option<&str>) -> Self {
+        let log = PathBuf::from(log);
+        let _ = fs::create_dir_all("target");
+        let spawn = || -> Result<std::process::Child> {
+            let out =
+                fs::File::create(&log).with_context(|| format!("creating {}", log.display()))?;
+            let err = out.try_clone()?;
+            let mut command = std::process::Command::new(std::env::current_exe()?);
+            command.arg(subcommand).stdout(out).stderr(err);
+            if let Some(dir) = target_dir {
+                command.env("CARGO_TARGET_DIR", dir);
+            }
+            Ok(command.spawn()?)
+        };
+        match spawn() {
+            Ok(child) => {
+                println!(
+                    "  {name} started in the background (log: {})\n",
+                    log.display()
+                );
+                BackgroundStep::Running {
+                    name: name.to_string(),
+                    child,
+                    log,
+                    started: std::time::Instant::now(),
+                }
+            }
+            Err(e) => BackgroundStep::Unavailable {
+                name: name.to_string(),
+                reason: e.to_string(),
+            },
+        }
+    }
+
+    /// Miri, when the pinned toolchain has it.
+    fn miri() -> Self {
         let toolchain = miri_toolchain();
         let available = std::process::Command::new("cargo")
             .args([format!("+{toolchain}"), "miri".into(), "--version".into()])
@@ -2698,68 +2758,51 @@ impl MiriJob {
             .map(|o| o.status.success())
             .unwrap_or(false);
         if !available {
-            return MiriJob::Unavailable(toolchain);
+            return BackgroundStep::Unavailable {
+                name: "Miri".to_string(),
+                reason: format!(
+                    "not available on {toolchain}; install with: rustup toolchain install \
+                     {toolchain} --profile minimal --component miri,rust-src"
+                ),
+            };
         }
-        let log = PathBuf::from("target/miri-ci.log");
-        let _ = fs::create_dir_all("target");
-        let spawn = || -> Result<std::process::Child> {
-            let out = fs::File::create(&log).context("creating target/miri-ci.log")?;
-            let err = out.try_clone()?;
-            Ok(std::process::Command::new(std::env::current_exe()?)
-                .arg("miri")
-                .stdout(out)
-                .stderr(err)
-                .spawn()?)
-        };
-        match spawn() {
-            Ok(child) => {
-                println!(
-                    "  Miri started in the background (log: {})\n",
-                    log.display()
-                );
-                MiriJob::Running {
-                    child,
-                    log,
-                    started: std::time::Instant::now(),
-                }
-            }
-            Err(e) => MiriJob::Unavailable(format!("{toolchain} ({e})")),
-        }
+        BackgroundStep::start("Miri", "miri", "target/miri-ci.log", None)
     }
 
-    /// Wait for the child; `Ok(Some(elapsed))` on success, `Ok(None)` when
-    /// Miri was unavailable, `Err` with the log when it failed.
+    /// Wait for the child; `Ok(Some(elapsed))` on success, `Ok(None)` when the
+    /// step could not run, `Err` with the log when it failed.
     fn finish(self) -> Result<Option<std::time::Duration>> {
         match self {
-            MiriJob::Unavailable(toolchain) => {
-                println!("  ⚠ Miri not available on {toolchain}, skipping UB checks");
-                println!(
-                    "  Install with: rustup toolchain install {} --profile minimal \
-                     --component miri,rust-src",
-                    miri_toolchain()
-                );
+            BackgroundStep::Unavailable { name, reason } => {
+                println!("  ⚠ {name} skipped: {reason}");
                 Ok(None)
             }
-            MiriJob::Running {
+            BackgroundStep::Running {
+                name,
                 mut child,
                 log,
                 started,
             } => {
-                let status = child.wait().context("waiting for the Miri job")?;
+                let status = child
+                    .wait()
+                    .with_context(|| format!("waiting for the {name} job"))?;
                 let elapsed = started.elapsed();
                 let text = fs::read_to_string(&log).unwrap_or_default();
                 if !status.success() {
                     println!("{text}");
                     bail!(
-                        "Miri failed ({status}); its full output is above and in {}",
+                        "{name} failed ({status}); its full output is above and in {}",
                         log.display()
                     );
                 }
-                for line in text.lines().filter(|l| l.contains("  miri: ")) {
+                for line in text
+                    .lines()
+                    .filter(|l| l.contains("  miri: ") || l.starts_with("  ✓"))
+                {
                     println!("{line}");
                 }
                 println!(
-                    "  ✓ Miri passed in {:.0} s, concurrently with Steps 3-14 (log: {})",
+                    "  ✓ {name} passed in {:.0} s, concurrently with the steps above (log: {})",
                     elapsed.as_secs_f64(),
                     log.display()
                 );
