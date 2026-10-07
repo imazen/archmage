@@ -1245,7 +1245,7 @@ fn test_i16x16_bitcast_u16x16() {
 /// not undefined behavior. But it means CI was not checking those call sites at
 /// all. One touch per (type, token) moves them into the checked set.
 fn gen_load_coverage_tests(code: &mut String) {
-    use crate::simd_types::types::{ElementType, SimdWidth, all_simd_types};
+    use crate::simd_types::types::{SimdWidth, all_simd_types};
 
     code.push_str(
         "\n// ---------------------------------------------------------------------\n\
