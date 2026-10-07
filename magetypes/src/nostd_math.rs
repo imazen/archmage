@@ -398,20 +398,43 @@ pub fn roundeven(x: f64) -> f64 {
     }
 }
 
-/// f32 fused multiply-add (non-fused fallback: `a * b + c`).
+/// Correctly rounded f32 fused multiply-add, including subnormals and signed zero.
 ///
-/// In a scalar no_std context there's no hardware FMA instruction to use,
-/// so this is just the unfused version. The precision difference vs true FMA
-/// is acceptable for a fallback path.
+/// The product is exact in f64 (48 significant bits, exponent range fits).
+/// TwoSum recovers the exact addition error. If the rounded sum is even and
+/// inexact, move one f64 ULP toward the exact result to round to odd. Narrowing
+/// that odd result to f32 avoids double rounding, including at underflow.
+/// All finite f32 products and residuals are normal in f64, so TwoSum cannot
+/// overflow or underflow. NaN payload and sign follow ordinary Rust semantics.
 #[inline(always)]
+#[forbid(unsafe_code)]
 pub fn fmaf(a: f32, b: f32, c: f32) -> f32 {
-    a * b + c
+    let product = f64::from(a) * f64::from(b);
+    let addend = f64::from(c);
+    let sum = product + addend;
+    if !sum.is_finite() {
+        return sum as f32;
+    }
+    let virtual_addend = sum - product;
+    let error = (product - (sum - virtual_addend)) + (addend - virtual_addend);
+    let bits = sum.to_bits();
+    if error != 0.0 && bits & 1 == 0 {
+        let odd = if (error > 0.0) == (sum > 0.0) {
+            bits + 1
+        } else {
+            bits - 1
+        };
+        f64::from_bits(odd) as f32
+    } else {
+        sum as f32
+    }
 }
 
-/// f64 fused multiply-add (non-fused fallback: `a * b + c`).
+/// Correctly rounded f64 fused multiply-add using libm's no_std implementation.
 #[inline(always)]
+#[forbid(unsafe_code)]
 pub fn fma(a: f64, b: f64, c: f64) -> f64 {
-    a * b + c
+    libm::fma(a, b, c)
 }
 
 // ============================================================================
@@ -770,18 +793,18 @@ mod tests {
 
     /// Test f64 across critical ranges: denorms, small, medium, large, special
     fn f64_test_values() -> impl Iterator<Item = f64> {
-        let mut values = alloc::vec::Vec::new();
-
         // Special values
-        values.push(0.0);
-        values.push(-0.0);
-        values.push(f64::NAN);
-        values.push(f64::INFINITY);
-        values.push(f64::NEG_INFINITY);
-        values.push(f64::MIN);
-        values.push(f64::MAX);
-        values.push(f64::MIN_POSITIVE);
-        values.push(f64::EPSILON);
+        let mut values = alloc::vec![
+            0.0,
+            -0.0,
+            f64::NAN,
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+            f64::MIN,
+            f64::MAX,
+            f64::MIN_POSITIVE,
+            f64::EPSILON,
+        ];
 
         // Small integers and near-integers
         for i in -1000..=1000 {
@@ -791,7 +814,7 @@ mod tests {
             values.push(f + 0.25);
             values.push(f + 0.49999999999999994);
             values.push(f + 0.5);
-            values.push(f + 0.50000000000000006);
+            values.push(f + 0.500_000_000_000_000_1);
             values.push(f + 0.75);
             values.push(f + 0.9);
             values.push(f - 0.1);

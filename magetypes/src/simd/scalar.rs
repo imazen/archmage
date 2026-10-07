@@ -119,20 +119,33 @@ impl f32x1 {
         Self(crate::nostd_math::roundevenf(self.0))
     }
 
-    /// Multiply-add: `self * b + c`, computed unfused (two roundings).
+    /// Multiply-add: `self * b + c`, computed as a multiply then an add (two
+    /// roundings), like the scalar backend's vector `mul_add`.
     ///
-    /// The scalar fallback has no hardware FMA; results can differ from
-    /// fused backends (x86 v3/v4, NEON) by 1 ULP.
+    /// For one rounding, use [`mul_add_portable`](Self::mul_add_portable).
     #[inline(always)]
     pub fn mul_add(self, b: Self, c: Self) -> Self {
+        Self(self.0 * b.0 + c.0)
+    }
+
+    /// Multiply-subtract: `self * b - c`. Same contract as
+    /// [`mul_add`](Self::mul_add).
+    #[inline(always)]
+    pub fn mul_sub(self, b: Self, c: Self) -> Self {
+        Self(self.0 * b.0 - c.0)
+    }
+
+    /// Multiply-add with one rounding: `self * b + c`, correctly rounded in
+    /// software. NaN payload/sign are unspecified.
+    #[inline(always)]
+    pub fn mul_add_portable(self, b: Self, c: Self) -> Self {
         Self(crate::nostd_math::fmaf(self.0, b.0, c.0))
     }
 
-    /// Multiply-subtract: `self * b - c`, computed unfused (two roundings).
-    ///
-    /// Same contract as [`mul_add`](Self::mul_add).
+    /// Multiply-subtract with one rounding: `self * b - c`. Same contract as
+    /// [`mul_add_portable`](Self::mul_add_portable).
     #[inline(always)]
-    pub fn mul_sub(self, b: Self, c: Self) -> Self {
+    pub fn mul_sub_portable(self, b: Self, c: Self) -> Self {
         Self(crate::nostd_math::fmaf(self.0, b.0, -c.0))
     }
 }
@@ -240,12 +253,19 @@ impl f64x1 {
         Self(f64::from_bits(self.0.to_bits() & 0x7FFF_FFFF_FFFF_FFFF))
     }
 
-    /// Multiply-add: `self * b + c`, computed unfused (two roundings).
+    /// Multiply-add: `self * b + c`, computed as a multiply then an add (two
+    /// roundings), like the scalar backend's vector `mul_add`.
     ///
-    /// The scalar fallback has no hardware FMA; results can differ from
-    /// fused backends (x86 v3/v4, NEON) by 1 ULP.
+    /// For one rounding, use [`mul_add_portable`](Self::mul_add_portable).
     #[inline(always)]
     pub fn mul_add(self, b: Self, c: Self) -> Self {
+        Self(self.0 * b.0 + c.0)
+    }
+
+    /// Multiply-add with one rounding: `self * b + c`, correctly rounded in
+    /// software. NaN payload/sign are unspecified.
+    #[inline(always)]
+    pub fn mul_add_portable(self, b: Self, c: Self) -> Self {
         Self(crate::nostd_math::fma(self.0, b.0, c.0))
     }
 }

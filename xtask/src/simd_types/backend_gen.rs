@@ -796,16 +796,26 @@ fn generate_float_backend_trait(ty: &FloatVecType) -> String {
             /// Round to nearest integer.
             fn round(self, a: Self::Repr) -> Self::Repr;
 
-            /// Multiply-add: `a * b + c`.
+            /// Multiply-add: `a * b + c`, fused where the hardware fuses.
             ///
-            /// Fused with a single rounding on backends with hardware FMA
-            /// (x86 v3/v4, NEON); unfused `mul` + `add` (two roundings) on
-            /// the scalar and WASM backends — lanes can differ by 1 ULP.
+            /// One rounding on x86 v3/v4 and NEON. Two roundings (multiply,
+            /// then add) on the scalar backend and on WASM without
+            /// `relaxed-simd`; relaxed WASM uses the engine's madd, which may
+            /// round either way. NaN payload/sign are unspecified.
             fn mul_add(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
 
-            /// Multiply-sub: `a * b - c`. Same fusion contract as
+            /// Multiply-sub: `a * b - c`. Same rounding contract as
             /// [`mul_add`](Self::mul_add).
             fn mul_sub(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
+
+            /// Multiply-add with one rounding on every backend: `a * b + c`.
+            ///
+            /// The same result everywhere, NaN payload/sign aside. Software
+            /// FMA where the hardware cannot fuse.
+            fn mul_add_portable(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
+
+            /// Multiply-sub with one rounding on every backend: `a * b - c`.
+            fn mul_sub_portable(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
 
             // ====== Comparisons ======
             // Return masks where each lane is all-1s (true) or all-0s (false).
@@ -1414,7 +1424,11 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
 
             {arcane}
             fn to_u8_bytes(self, a: {inner}) -> [u8; 4] {{
-                let i32s = _mm_cvtps_epi32(a);
+                // Clamp above at 255 first: cvtps turns +inf and anything past
+                // i32::MAX into i32::MIN, which the packs would saturate to 0.
+                // `min(255, a)` keeps NaN (minps returns its second operand),
+                // and NaN still converts to 0, as in the scalar reference.
+                let i32s = _mm_cvtps_epi32(_mm_min_ps(_mm_set1_ps(255.0), a));
                 let i16s = _mm_packs_epi32(i32s, i32s);
                 let u8s = _mm_packus_epi16(i16s, i16s);
                 (_mm_cvtsi128_si32(u8s) as u32).to_ne_bytes()
@@ -1425,7 +1439,8 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
 
             {arcane}
             fn to_u8_bytes(self, a: {inner}) -> [u8; 8] {{
-                let i32s = _mm256_cvtps_epi32(a);
+                // Clamp above at 255 before cvtps; see the 128-bit form.
+                let i32s = _mm256_cvtps_epi32(_mm256_min_ps(_mm256_set1_ps(255.0), a));
                 let lo = _mm256_castsi256_si128(i32s);
                 let hi = _mm256_extracti128_si256::<1>(i32s);
                 let i16s = _mm_packs_epi32(lo, hi);
@@ -1440,14 +1455,23 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
     // Native pixel interleave (overrides the to_u8_bytes-based default, whose
     // generic byte interleave LLVM expands to ~8 pshufb). All 4 planes packed
     // together in-register, one pshufb to RGBA order. Round-to-even via cvtps
-    // (MXCSR default); packs/packus saturate to [0,255] (= clamp).
+    // (MXCSR default); packs/packus saturate to [0,255] (= clamp). Each plane is
+    // first clamped above at 255: cvtps maps +inf and values past i32::MAX to
+    // i32::MIN, which would otherwise saturate to 0.
     let store_rgba_x86 = if elem == "f32" && bits == 128 {
         formatdoc! {r#"
 
             {arcane}
             fn store_rgba_bytes(self, r: {inner}, g: {inner}, b: {inner}, a: {inner}) -> [u8; 16] {{
-                let rg = _mm_packs_epi32(_mm_cvtps_epi32(r), _mm_cvtps_epi32(g));
-                let ba = _mm_packs_epi32(_mm_cvtps_epi32(b), _mm_cvtps_epi32(a));
+                let max = _mm_set1_ps(255.0);
+                let rg = _mm_packs_epi32(
+                    _mm_cvtps_epi32(_mm_min_ps(max, r)),
+                    _mm_cvtps_epi32(_mm_min_ps(max, g)),
+                );
+                let ba = _mm_packs_epi32(
+                    _mm_cvtps_epi32(_mm_min_ps(max, b)),
+                    _mm_cvtps_epi32(_mm_min_ps(max, a)),
+                );
                 // [R0-3,G0-3,B0-3,A0-3] -> interleaved RGBA pixels 0-3.
                 let packed = _mm_packus_epi16(rg, ba);
                 let shuf = _mm_setr_epi8(0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15);
@@ -1460,8 +1484,15 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
             {arcane}
             fn store_rgba_bytes(self, r: {inner}, g: {inner}, b: {inner}, a: {inner}) -> [u8; 32] {{
                 // AVX2 packs are lane-wise: lane0 holds pixels 0-3, lane1 4-7.
-                let rg = _mm256_packs_epi32(_mm256_cvtps_epi32(r), _mm256_cvtps_epi32(g));
-                let ba = _mm256_packs_epi32(_mm256_cvtps_epi32(b), _mm256_cvtps_epi32(a));
+                let max = _mm256_set1_ps(255.0);
+                let rg = _mm256_packs_epi32(
+                    _mm256_cvtps_epi32(_mm256_min_ps(max, r)),
+                    _mm256_cvtps_epi32(_mm256_min_ps(max, g)),
+                );
+                let ba = _mm256_packs_epi32(
+                    _mm256_cvtps_epi32(_mm256_min_ps(max, b)),
+                    _mm256_cvtps_epi32(_mm256_min_ps(max, a)),
+                );
                 let packed = _mm256_packus_epi16(rg, ba);
                 let shuf = _mm256_setr_epi8(
                     0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15,
@@ -1625,6 +1656,16 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
 
             {arcane}
             fn mul_sub(self, a: {inner}, b: {inner}, c: {inner}) -> {inner} {{
+                {p}_fmsub_{s}(a, b, c)
+            }}
+
+            {arcane}
+            fn mul_add_portable(self, a: {inner}, b: {inner}, c: {inner}) -> {inner} {{
+                {p}_fmadd_{s}(a, b, c)
+            }}
+
+            {arcane}
+            fn mul_sub_portable(self, a: {inner}, b: {inner}, c: {inner}) -> {inner} {{
                 {p}_fmsub_{s}(a, b, c)
             }}
 
@@ -1987,6 +2028,8 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
         format!("[{}]", items.join(", "))
     };
 
+    // mul_add/mul_sub round twice here (multiply, then add); the _portable
+    // forms round once through the correctly rounded software FMA.
     let mul_add_lanes = || -> String {
         let items: Vec<String> = (0..lanes)
             .map(|i| format!("a[{i}] * b[{i}] + c[{i}]"))
@@ -1997,6 +2040,18 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
     let mul_sub_lanes = || -> String {
         let items: Vec<String> = (0..lanes)
             .map(|i| format!("a[{i}] * b[{i}] - c[{i}]"))
+            .collect();
+        format!("[{}]", items.join(", "))
+    };
+
+    let fused_lanes = |negate: &str| -> String {
+        let items: Vec<String> = (0..lanes)
+            .map(|i| {
+                format!(
+                    "crate::nostd_math::{}(a[{i}], b[{i}], {negate}c[{i}])",
+                    if elem == "f32" { "fmaf" } else { "fma" }
+                )
+            })
             .collect();
         format!("[{}]", items.join(", "))
     };
@@ -2220,6 +2275,16 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
                 {mul_sub}
             }}
 
+            #[inline(always)]
+            fn mul_add_portable(self, a: {array}, b: {array}, c: {array}) -> {array} {{
+                {mul_add_portable}
+            }}
+
+            #[inline(always)]
+            fn mul_sub_portable(self, a: {array}, b: {array}, c: {array}) -> {array} {{
+                {mul_sub_portable}
+            }}
+
             // ====== Comparisons ======
 
             #[inline(always)]
@@ -2351,6 +2416,8 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
         abs = abs_lanes(),
         mul_add = mul_add_lanes(),
         mul_sub = mul_sub_lanes(),
+        mul_add_portable = fused_lanes(""),
+        mul_sub_portable = fused_lanes("-"),
         reduce_add = reduce_add(),
         not_lanes = bitwise_unary_lanes("!"),
         and_lanes = bitwise_binary_lanes("&"),
@@ -2680,6 +2747,16 @@ fn generate_neon_float_impl(ty: &FloatVecType) -> String {
             {arcane}
             fn mul_sub(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
                 // a*b - c => vfmaq(-c, a, b) = -c + a*b
+                {mul_sub_body}
+            }}
+
+            {arcane}
+            fn mul_add_portable(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
+                {mul_add_body}
+            }}
+
+            {arcane}
+            fn mul_sub_portable(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
                 {mul_sub_body}
             }}
 
@@ -3032,6 +3109,16 @@ fn generate_neon_native_impl(ty: &FloatVecType) -> String {
             }}
 
             {arcane}
+            fn mul_add_portable(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
+                vfmaq_{ns}(c, a, b)
+            }}
+
+            {arcane}
+            fn mul_sub_portable(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
+                vfmaq_{ns}(vnegq_{ns}(c), a, b)
+            }}
+
+            {arcane}
             fn simd_eq(self, a: {repr}, b: {repr}) -> {repr} {{
                 vreinterpretq_{ns}_u{eb}(vceqq_{ns}(a, b))
             }}
@@ -3251,6 +3338,41 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
     // inherits its per-platform `_approx` (the f32 bit-hack) and exact full
     // methods — no second copy of the estimate to keep in sync.
     let sub_trait = format!("F{}x{}Backend", &elem[1..], native_lanes);
+
+    // Native pixel pack for the wasm f32x8 polyfill ([v128; 2]). Same sequence
+    // as the native f32x4 path, applied per half; the i16 narrow combines both
+    // halves so the 8-lane pack is one `u8x16_narrow_i16x8`.
+    let pixel_pack_wasm_poly = if elem == "f32" && lanes == 8 {
+        formatdoc! {r#"
+
+            #[inline(always)]
+            fn to_u8_bytes(self, a: [v128; 2]) -> [u8; 8] {{
+                let i0 = i32x4_trunc_sat_f32x4(f32x4_nearest(a[0]));
+                let i1 = i32x4_trunc_sat_f32x4(f32x4_nearest(a[1]));
+                let i16s = i16x8_narrow_i32x4(i0, i1);
+                let u8s = u8x16_narrow_i16x8(i16s, i16s);
+                let lo = u32x4_extract_lane::<0>(u8s);
+                let hi = u32x4_extract_lane::<1>(u8s);
+                ((u64::from(hi) << 32) | u64::from(lo)).to_ne_bytes()
+            }}
+
+            #[inline(always)]
+            fn store_rgba_bytes(self, r: [v128; 2], g: [v128; 2], b: [v128; 2], a: [v128; 2]) -> [u8; 32] {{
+                let lo = i32x4_splat(0);
+                let hi = i32x4_splat(255);
+                let clamp = |v: v128| i32x4_min(i32x4_max(i32x4_trunc_sat_f32x4(f32x4_nearest(v)), lo), hi);
+                let pack = |r: v128, g: v128, b: v128, a: v128| {{
+                    v128_or(
+                        v128_or(clamp(r), i32x4_shl(clamp(g), 8)),
+                        v128_or(i32x4_shl(clamp(b), 16), i32x4_shl(clamp(a), 24)),
+                    )
+                }};
+                crate::simd_storage::cast([pack(r[0], g[0], b[0], a[0]), pack(r[1], g[1], b[1], a[1])])
+            }}
+        "#}
+    } else {
+        String::new()
+    };
     formatdoc! {r#"
         impl {trait_name} for archmage::Wasm128Token {{
             type Repr = {repr};
@@ -3316,13 +3438,23 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
 
             #[inline(always)]
             fn mul_add(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
-                // WASM has no native FMA
+                // Share the native-width implementations.
                 [{mul_add_lanes}]
             }}
 
             #[inline(always)]
             fn mul_sub(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
                 [{mul_sub_lanes}]
+            }}
+
+            #[inline(always)]
+            fn mul_add_portable(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
+                [{mul_add_portable_lanes}]
+            }}
+
+            #[inline(always)]
+            fn mul_sub_portable(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
+                [{mul_sub_portable_lanes}]
             }}
 
             #[inline(always)]
@@ -3386,6 +3518,7 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
             fn bitor(self, a: {repr}, b: {repr}) -> {repr} {{ {or} }}
             #[inline(always)]
             fn bitxor(self, a: {repr}, b: {repr}) -> {repr} {{ {xor} }}
+        {pixel_pack}
         }}
     "#,
         v4_copies = (0..sub_count).map(|_| "v4").collect::<Vec<_>>().join(", "),
@@ -3409,10 +3542,16 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
         ceil = unary_op(&format!("{wp}_ceil")),
         round = unary_op(&format!("{wp}_nearest")),
         mul_add_lanes = (0..sub_count)
-            .map(|i| format!("{wp}_add({wp}_mul(a[{i}], b[{i}]), c[{i}])"))
+            .map(|i| format!("crate::wasm_fma::madd_{wp}(self, a[{i}], b[{i}], c[{i}])"))
             .collect::<Vec<_>>().join(", "),
         mul_sub_lanes = (0..sub_count)
-            .map(|i| format!("{wp}_sub({wp}_mul(a[{i}], b[{i}]), c[{i}])"))
+            .map(|i| format!("crate::wasm_fma::msub_{wp}(self, a[{i}], b[{i}], c[{i}])"))
+            .collect::<Vec<_>>().join(", "),
+        mul_add_portable_lanes = (0..sub_count)
+            .map(|i| format!("crate::wasm_fma::fused_{wp}(self, a[{i}], b[{i}], c[{i}])"))
+            .collect::<Vec<_>>().join(", "),
+        mul_sub_portable_lanes = (0..sub_count)
+            .map(|i| format!("crate::wasm_fma::fused_{wp}(self, a[{i}], b[{i}], {wp}_neg(c[{i}]))"))
             .collect::<Vec<_>>().join(", "),
         eq = binary_op(&format!("{wp}_eq")),
         ne = binary_op(&format!("{wp}_ne")),
@@ -3430,6 +3569,7 @@ fn generate_wasm_float_impl(ty: &FloatVecType) -> String {
         and = binary_op("v128_and"),
         or = binary_op("v128_or"),
         xor = binary_op("v128_xor"),
+        pixel_pack = pixel_pack_wasm_poly,
     }
 }
 
@@ -3442,6 +3582,40 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
     let array = ty.array_type();
     let wp = ty.wasm_prefix();
     let zero_lit = if elem == "f32" { "0.0f32" } else { "0.0f64" };
+
+    // Native pixel pack for wasm f32x4. `f32x4_nearest` is round-half-to-even,
+    // matching the scalar default's `roundevenf`; `i32x4_trunc_sat_f32x4` then
+    // truncates an already-integral value exactly, and the two saturating
+    // narrows clamp into 0..=255. Without this override the trait default runs
+    // the software `roundevenf` per lane and LLVM does not recover it — the
+    // emitted module carries no `f32x4.nearest`/`narrow` at all, just an
+    // out-of-line call.
+    let pixel_pack_wasm_native = if elem == "f32" && lanes == 4 {
+        formatdoc! {r#"
+
+            #[inline(always)]
+            fn to_u8_bytes(self, a: v128) -> [u8; 4] {{
+                let i32s = i32x4_trunc_sat_f32x4(f32x4_nearest(a));
+                let i16s = i16x8_narrow_i32x4(i32s, i32s);
+                let u8s = u8x16_narrow_i16x8(i16s, i16s);
+                (u32x4_extract_lane::<0>(u8s)).to_ne_bytes()
+            }}
+
+            #[inline(always)]
+            fn store_rgba_bytes(self, r: v128, g: v128, b: v128, a: v128) -> [u8; 16] {{
+                let lo = i32x4_splat(0);
+                let hi = i32x4_splat(255);
+                let clamp = |v: v128| i32x4_min(i32x4_max(i32x4_trunc_sat_f32x4(f32x4_nearest(v)), lo), hi);
+                let pixels = v128_or(
+                    v128_or(clamp(r), i32x4_shl(clamp(g), 8)),
+                    v128_or(i32x4_shl(clamp(b), 16), i32x4_shl(clamp(a), 24)),
+                );
+                crate::simd_storage::cast(pixels)
+            }}
+        "#}
+    } else {
+        String::new()
+    };
 
     // Adjacent-pair tree for f32x4 to match x86/NEON shape (#50).
     let reduce_add_body = || -> String {
@@ -3559,9 +3733,13 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
             #[inline(always)]
             fn round(self, a: v128) -> v128 {{ {wp}_nearest(a) }}
             #[inline(always)]
-            fn mul_add(self, a: v128, b: v128, c: v128) -> v128 {{ {wp}_add({wp}_mul(a, b), c) }}
+            fn mul_add(self, a: v128, b: v128, c: v128) -> v128 {{ crate::wasm_fma::madd_{wp}(self, a, b, c) }}
             #[inline(always)]
-            fn mul_sub(self, a: v128, b: v128, c: v128) -> v128 {{ {wp}_sub({wp}_mul(a, b), c) }}
+            fn mul_sub(self, a: v128, b: v128, c: v128) -> v128 {{ crate::wasm_fma::msub_{wp}(self, a, b, c) }}
+            #[inline(always)]
+            fn mul_add_portable(self, a: v128, b: v128, c: v128) -> v128 {{ crate::wasm_fma::fused_{wp}(self, a, b, c) }}
+            #[inline(always)]
+            fn mul_sub_portable(self, a: v128, b: v128, c: v128) -> v128 {{ crate::wasm_fma::fused_{wp}(self, a, b, {wp}_neg(c)) }}
             #[inline(always)]
             fn simd_eq(self, a: v128, b: v128) -> v128 {{ {wp}_eq(a, b) }}
             #[inline(always)]
@@ -3599,11 +3777,13 @@ fn generate_wasm_native_impl(ty: &FloatVecType) -> String {
             fn bitor(self, a: v128, b: v128) -> v128 {{ v128_or(a, b) }}
             #[inline(always)]
             fn bitxor(self, a: v128, b: v128) -> v128 {{ v128_xor(a, b) }}
+        {pixel_pack}
         }}
     "#,
         reduce_add = reduce_add_body(),
         reduce_min = reduce_minmax("min"),
         reduce_max = reduce_minmax("max"),
+        pixel_pack = pixel_pack_wasm_native,
     }
 }
 

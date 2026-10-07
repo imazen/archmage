@@ -466,16 +466,26 @@ fn generate_float_backend_trait(ty: &W512Type) -> String {
             /// Round to nearest integer.
             fn round(self, a: Self::Repr) -> Self::Repr;
 
-            /// Multiply-add: `a * b + c`.
+            /// Multiply-add: `a * b + c`, fused where the hardware fuses.
             ///
-            /// Fused with a single rounding on backends with hardware FMA
-            /// (x86 v3/v4, NEON); unfused `mul` + `add` (two roundings) on
-            /// the scalar and WASM backends — lanes can differ by 1 ULP.
+            /// One rounding on x86 v3/v4 and NEON. Two roundings (multiply,
+            /// then add) on the scalar backend and on WASM without
+            /// `relaxed-simd`; relaxed WASM uses the engine's madd, which may
+            /// round either way. NaN payload/sign are unspecified.
             fn mul_add(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
 
-            /// Multiply-sub: `a * b - c`. Same fusion contract as
+            /// Multiply-sub: `a * b - c`. Same rounding contract as
             /// [`mul_add`](Self::mul_add).
             fn mul_sub(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
+
+            /// Multiply-add with one rounding on every backend: `a * b + c`.
+            ///
+            /// The same result everywhere, NaN payload/sign aside. Software
+            /// FMA where the hardware cannot fuse.
+            fn mul_add_portable(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
+
+            /// Multiply-sub with one rounding on every backend: `a * b - c`.
+            fn mul_sub_portable(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
 
             // ====== Comparisons ======
             // Return masks where each lane is all-1s (true) or all-0s (false).
@@ -963,6 +973,7 @@ pub(super) fn generate_w512_backend_trait(ty: &W512Type) -> String {
 
 /// Generate scalar backend implementation for a W512 float type.
 fn generate_scalar_float_impl(ty: &W512Type) -> String {
+    let fma_fn = if ty.elem == "f32" { "fmaf" } else { "fma" };
     let trait_name = ty.trait_name();
     let elem = ty.elem;
     let lanes = ty.lanes;
@@ -1083,6 +1094,12 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
 
             #[inline(always)]
             fn mul_sub(self, a: {array}, b: {array}, c: {array}) -> {array} {{ core::array::from_fn(|i| a[i] * b[i] - c[i]) }}
+
+            #[inline(always)]
+            fn mul_add_portable(self, a: {array}, b: {array}, c: {array}) -> {array} {{ core::array::from_fn(|i| crate::nostd_math::{fma_fn}(a[i], b[i], c[i])) }}
+
+            #[inline(always)]
+            fn mul_sub_portable(self, a: {array}, b: {array}, c: {array}) -> {array} {{ core::array::from_fn(|i| crate::nostd_math::{fma_fn}(a[i], b[i], -c[i])) }}
 
             #[inline(always)]
             fn simd_eq(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] == b[i] {{ {elem}::from_bits(!0{uint}) }} else {{ {zero_lit} }}) }}
@@ -1605,6 +1622,22 @@ fn generate_v3_polyfill_impl(ty: &W512Type) -> String {
             }}
 
             #[inline(always)]
+            fn mul_add_portable(self, a: {v3_repr}, b: {v3_repr}, c: {v3_repr}) -> {v3_repr} {{
+                [
+                    <archmage::X64V3Token as {half_trait}>::mul_add_portable(self, a[0], b[0], c[0]),
+                    <archmage::X64V3Token as {half_trait}>::mul_add_portable(self, a[1], b[1], c[1]),
+                ]
+            }}
+
+            #[inline(always)]
+            fn mul_sub_portable(self, a: {v3_repr}, b: {v3_repr}, c: {v3_repr}) -> {v3_repr} {{
+                [
+                    <archmage::X64V3Token as {half_trait}>::mul_sub_portable(self, a[0], b[0], c[0]),
+                    <archmage::X64V3Token as {half_trait}>::mul_sub_portable(self, a[1], b[1], c[1]),
+                ]
+            }}
+
+            #[inline(always)]
             fn reduce_add(self, a: {v3_repr}) -> {elem} {{
                 <archmage::X64V3Token as {half_trait}>::reduce_add(self, a[0])
                     + <archmage::X64V3Token as {half_trait}>::reduce_add(self, a[1])
@@ -2097,6 +2130,16 @@ fn generate_4way_polyfill_impl(
             }}
 
             #[inline(always)]
+            fn mul_add_portable(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul_add_portable(self, a[i], b[i], c[i]))
+            }}
+
+            #[inline(always)]
+            fn mul_sub_portable(self, a: {repr}, b: {repr}, c: {repr}) -> {repr} {{
+                core::array::from_fn(|i| <archmage::{token} as {quarter_trait}>::mul_sub_portable(self, a[i], b[i], c[i]))
+            }}
+
+            #[inline(always)]
             fn reduce_add(self, a: {repr}) -> {elem} {{
                 <archmage::{token} as {quarter_trait}>::reduce_add(self, a[0])
                     + <archmage::{token} as {quarter_trait}>::reduce_add(self, a[1])
@@ -2478,6 +2521,16 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
 
             {arcane}
             fn mul_sub(self, a: {inner}, b: {inner}, c: {inner}) -> {inner} {{
+                _mm512_fmsub_{s}(a, b, c)
+            }}
+
+            {arcane}
+            fn mul_add_portable(self, a: {inner}, b: {inner}, c: {inner}) -> {inner} {{
+                _mm512_fmadd_{s}(a, b, c)
+            }}
+
+            {arcane}
+            fn mul_sub_portable(self, a: {inner}, b: {inner}, c: {inner}) -> {inner} {{
                 _mm512_fmsub_{s}(a, b, c)
             }}
 
