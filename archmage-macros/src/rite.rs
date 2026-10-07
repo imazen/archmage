@@ -108,10 +108,11 @@ impl Parse for RiteArgs {
                     "in_trait" | "nested" => {
                         return Err(syn::Error::new(
                             ident.span(),
-                            "`#[rite]` cannot be used on a trait method: rustc rejects \
-                             `#[target_feature]` on a safe trait method, and `#[rite]` \
-                             applies it directly. Use `#[arcane(in_trait, _self = Type)]` \
-                             on the trait method, or have it call a `#[rite]` free function.",
+                            "`#[rite]` has no trait-method mode: it applies `#[target_feature]` \
+                             directly, which rustc rejects on a safe trait method on x86-64 \
+                             and AArch64 (wasm32's simd128 is the exception). Use \
+                             `#[arcane(in_trait, _self = Type)]` on the trait method, or have \
+                             it call a `#[rite]` free function.",
                         ));
                     }
                     "in_impl" => {

@@ -680,310 +680,129 @@ fn autoversion_default_tier_list_is_sensible() {
 /// Mirrors what `autoversion_impl` does for a single variant: parse an
 /// ItemFn (for test convenience), rename it, swap the SimdToken param
 /// type, optionally inject the `_self` preamble for scalar+self.
-fn do_variant_replacement(func: &str, tier_name: &str, has_self: bool) -> ItemFn {
-    let mut f: ItemFn = syn::parse_str(func).unwrap();
-    let fn_name = f.sig.ident.to_string();
+/// Run the real `#[autoversion]` expansion and return it as a string, so the
+/// assertions below test production output rather than a copy of its logic.
+fn autoversion_expansion(attr: &str, item: &str) -> String {
+    let attr: proc_macro2::TokenStream = attr.parse().unwrap();
+    let item: proc_macro2::TokenStream = item.parse().unwrap();
+    let out = super::expansion_tests::expand("autoversion", attr, item).unwrap();
+    syn::parse2::<syn::File>(out.clone()).expect("expansion parses as items");
+    out.to_string()
+}
 
-    let tier = find_tier(tier_name).unwrap();
+/// One assertion per tier: the variant is named `<fn>_<suffix>` and takes
+/// the tier's token type at the token parameter's position.
+fn assert_variant(expansion: &str, variant_signature: &str) {
+    let normalized = expansion.replace(' ', "");
+    let wanted = variant_signature.replace(' ', "");
+    assert!(
+        normalized.contains(&wanted),
+        "expected `{variant_signature}` in:\n{expansion}"
+    );
+}
 
-    // Rename
-    f.sig.ident = format_ident!("{}_{}", fn_name, tier.suffix);
+#[test]
+fn variant_replacement_renames_and_retypes_per_tier() {
+    let out = autoversion_expansion(
+        "v3, neon, wasm128, scalar",
+        "fn process(token: SimdToken, data: &[f32]) -> f32 { 0.0 }",
+    );
+    assert_variant(
+        &out,
+        "fn process_v3(token: archmage::X64V3Token, data: &[f32]) -> f32",
+    );
+    assert_variant(
+        &out,
+        "fn process_neon(token: archmage::NeonToken, data: &[f32]) -> f32",
+    );
+    assert_variant(
+        &out,
+        "fn process_wasm128(token: archmage::Wasm128Token, data: &[f32]) -> f32",
+    );
+    assert_variant(
+        &out,
+        "fn process_scalar(token: archmage::ScalarToken, data: &[f32]) -> f32",
+    );
+}
 
-    // Find and replace SimdToken param type (skip for "default" — tokenless)
-    let token_idx = find_autoversion_token_param(&f.sig)
-        .expect("should not error on SimdToken")
-        .unwrap_or_else(|| panic!("No SimdToken param in: {}", func))
-        .index;
-    if tier_name == "default" {
-        // Remove the token param for default tier
-        let stmts = f.block.stmts.clone();
-        let mut inputs: Vec<FnArg> = f.sig.inputs.iter().cloned().collect();
-        inputs.remove(token_idx);
-        f.sig.inputs = inputs.into_iter().collect();
-        f.block.stmts = stmts;
-    } else {
-        let concrete_type: Type = syn::parse_str(tier.token_path).unwrap();
-        if let FnArg::Typed(pt) = &mut f.sig.inputs[token_idx] {
-            *pt.ty = concrete_type;
+#[test]
+fn variant_replacement_default_tier_drops_the_token() {
+    let out = autoversion_expansion(
+        "v3, default",
+        "fn compute(token: SimdToken, data: &[f32]) -> f32 { 0.0 }",
+    );
+    assert_variant(&out, "fn compute_default(data: &[f32]) -> f32");
+    assert_variant(&out, "compute_default(data)");
+}
+
+#[test]
+fn variant_replacement_keeps_the_token_position() {
+    // The token is not the first parameter: variants and dispatch calls both
+    // keep it where the user put it.
+    let out = autoversion_expansion("v3, scalar", "fn sum(x: u32, _: ScalarToken) -> u32 { x }");
+    assert_variant(&out, "fn sum_v3(x: u32, _: archmage::X64V3Token) -> u32");
+    assert_variant(&out, "sum_v3(x, __t)");
+    assert_variant(&out, "sum_scalar(x, archmage::ScalarToken)");
+}
+
+#[test]
+fn variant_replacement_covers_every_known_tier() {
+    // Every tier the registry knows produces a `<fn>_<suffix>` variant with
+    // the tier's token type, and the placeholder never survives.
+    for tier in ALL_TIERS {
+        let out = autoversion_expansion(
+            tier.name,
+            "fn compute(token: SimdToken, data: &mut [f32]) { }",
+        );
+        if tier.name == "default" {
+            assert_variant(&out, "fn compute_default(data: &mut [f32])");
+        } else {
+            let token = tier.token_path;
+            assert_variant(
+                &out,
+                &format!(
+                    "fn compute_{}(token: {token}, data: &mut [f32])",
+                    tier.suffix
+                ),
+            );
         }
+        assert!(
+            // The dispatcher's deprecation note names the placeholder; no
+            // signature may still carry it as a type.
+            !out.replace(' ', "").contains("token:SimdToken"),
+            "tier {} left the SimdToken placeholder in:\n{out}",
+            tier.name
+        );
     }
-
-    // Fallback (scalar/default) + self: inject preamble
-    if (tier_name == "scalar" || tier_name == "default") && has_self {
-        let preamble: syn::Stmt = syn::parse_quote!(let _self = self;);
-        f.block.stmts.insert(0, preamble);
-    }
-
-    f
 }
 
 #[test]
-fn variant_replacement_v3_renames_function() {
-    let f = do_variant_replacement(
-        "fn process(token: SimdToken, data: &[f32]) -> f32 { 0.0 }",
-        "v3",
-        false,
+fn variant_replacement_preserves_the_rest_of_the_signature() {
+    let out = autoversion_expansion(
+        "v3, scalar",
+        "fn process<'a, T: Copy + Default>(token: SimdToken, data: &'a [T], scale: f32) -> Vec<T> \
+         where T: core::fmt::Debug { vec![] }",
     );
-    assert_eq!(f.sig.ident, "process_v3");
-}
-
-#[test]
-fn variant_replacement_v3_replaces_token_type() {
-    let f = do_variant_replacement(
-        "fn process(token: SimdToken, data: &[f32]) -> f32 { 0.0 }",
-        "v3",
-        false,
+    assert_variant(
+        &out,
+        "fn process_v3<'a, T: Copy + Default>(token: archmage::X64V3Token, data: &'a [T], scale: f32) \
+         -> Vec<T> where T: core::fmt::Debug",
     );
-    let first_param_ty = match &f.sig.inputs[0] {
-        FnArg::Typed(pt) => pt.ty.to_token_stream().to_string(),
-        _ => panic!("Expected typed param"),
-    };
-    assert!(
-        first_param_ty.contains("X64V3Token"),
-        "Expected X64V3Token, got: {}",
-        first_param_ty
-    );
-}
-
-#[test]
-fn variant_replacement_neon_produces_valid_fn() {
-    let f = do_variant_replacement(
-        "fn compute(token: SimdToken, data: &[f32]) -> f32 { 0.0 }",
-        "neon",
-        false,
-    );
-    assert_eq!(f.sig.ident, "compute_neon");
-    let first_param_ty = match &f.sig.inputs[0] {
-        FnArg::Typed(pt) => pt.ty.to_token_stream().to_string(),
-        _ => panic!("Expected typed param"),
-    };
-    assert!(
-        first_param_ty.contains("NeonToken"),
-        "Expected NeonToken, got: {}",
-        first_param_ty
-    );
-}
-
-#[test]
-fn variant_replacement_wasm128_produces_valid_fn() {
-    let f = do_variant_replacement(
-        "fn compute(_t: SimdToken, data: &[f32]) -> f32 { 0.0 }",
-        "wasm128",
-        false,
-    );
-    assert_eq!(f.sig.ident, "compute_wasm128");
-}
-
-#[test]
-fn variant_replacement_scalar_produces_valid_fn() {
-    let f = do_variant_replacement(
-        "fn compute(token: SimdToken, data: &[f32]) -> f32 { 0.0 }",
-        "scalar",
-        false,
-    );
-    assert_eq!(f.sig.ident, "compute_scalar");
-    let first_param_ty = match &f.sig.inputs[0] {
-        FnArg::Typed(pt) => pt.ty.to_token_stream().to_string(),
-        _ => panic!("Expected typed param"),
-    };
-    assert!(
-        first_param_ty.contains("ScalarToken"),
-        "Expected ScalarToken, got: {}",
-        first_param_ty
-    );
-}
-
-#[test]
-fn variant_replacement_v4_produces_valid_fn() {
-    let f = do_variant_replacement(
-        "fn transform(token: SimdToken, data: &mut [f32]) { }",
-        "v4",
-        false,
-    );
-    assert_eq!(f.sig.ident, "transform_v4");
-    let first_param_ty = match &f.sig.inputs[0] {
-        FnArg::Typed(pt) => pt.ty.to_token_stream().to_string(),
-        _ => panic!("Expected typed param"),
-    };
-    assert!(
-        first_param_ty.contains("X64V4Token"),
-        "Expected X64V4Token, got: {}",
-        first_param_ty
-    );
-}
-
-#[test]
-fn variant_replacement_v4x_produces_valid_fn() {
-    let f = do_variant_replacement(
-        "fn transform(token: SimdToken, data: &mut [f32]) { }",
-        "v4x",
-        false,
-    );
-    assert_eq!(f.sig.ident, "transform_v4x");
-}
-
-#[test]
-fn variant_replacement_arm_v2_produces_valid_fn() {
-    let f = do_variant_replacement(
-        "fn transform(token: SimdToken, data: &mut [f32]) { }",
-        "arm_v2",
-        false,
-    );
-    assert_eq!(f.sig.ident, "transform_arm_v2");
-}
-
-#[test]
-fn variant_replacement_preserves_generics() {
-    let f = do_variant_replacement(
-        "fn process<T: Copy + Default>(token: SimdToken, data: &[T]) -> T { T::default() }",
-        "v3",
-        false,
-    );
-    assert_eq!(f.sig.ident, "process_v3");
-    // Generic params should still be present
-    assert!(
-        !f.sig.generics.params.is_empty(),
-        "Generics should be preserved"
-    );
-}
-
-#[test]
-fn variant_replacement_preserves_where_clause() {
-    let f = do_variant_replacement(
-        "fn process<T>(token: SimdToken, data: &[T]) -> T where T: Copy + Default { T::default() }",
-        "v3",
-        false,
-    );
-    assert!(
-        f.sig.generics.where_clause.is_some(),
-        "Where clause should be preserved"
-    );
-}
-
-#[test]
-fn variant_replacement_preserves_return_type() {
-    let f = do_variant_replacement(
-        "fn process(token: SimdToken, data: &[f32]) -> Vec<f32> { vec![] }",
-        "neon",
-        false,
-    );
-    let ret = f.sig.output.to_token_stream().to_string();
-    assert!(
-        ret.contains("Vec"),
-        "Return type should be preserved, got: {}",
-        ret
-    );
-}
-
-#[test]
-fn variant_replacement_preserves_multiple_params() {
-    let f = do_variant_replacement(
-        "fn process(token: SimdToken, a: &[f32], b: &[f32], scale: f32) -> f32 { 0.0 }",
-        "v3",
-        false,
-    );
-    // SimdToken → X64V3Token, plus the 3 other params
-    assert_eq!(f.sig.inputs.len(), 4);
-}
-
-#[test]
-fn variant_replacement_preserves_no_return_type() {
-    let f = do_variant_replacement(
-        "fn transform(token: SimdToken, data: &mut [f32]) { }",
-        "v3",
-        false,
-    );
-    assert!(
-        matches!(f.sig.output, ReturnType::Default),
-        "No return type should remain as Default"
-    );
-}
-
-#[test]
-fn variant_replacement_preserves_lifetime_params() {
-    let f = do_variant_replacement(
-        "fn process<'a>(token: SimdToken, data: &'a [f32]) -> &'a [f32] { data }",
-        "v3",
-        false,
-    );
-    assert!(!f.sig.generics.params.is_empty());
+    assert_variant(&out, "process_v3::<T>(__t, data, scale)");
 }
 
 #[test]
 fn variant_replacement_scalar_self_injects_preamble() {
-    let f = do_variant_replacement(
-        "fn method(token: SimdToken, data: &[f32]) -> f32 { 0.0 }",
-        "scalar",
-        true, // has_self
+    // With `_self = Type` outside a trait, the scalar variant stays a method
+    // and binds `_self` itself, since it has no #[arcane] inner function.
+    let out = autoversion_expansion(
+        "v3, scalar, _self = S",
+        "fn method(&self, token: SimdToken, data: &[f32]) -> f32 { _self.k }",
     );
-    assert_eq!(f.sig.ident, "method_scalar");
-
-    // First statement should be `let _self = self;`
-    let body_str = f.block.to_token_stream().to_string();
-    assert!(
-        body_str.contains("let _self = self"),
-        "Scalar+self variant should have _self preamble, got: {}",
-        body_str
+    assert_variant(
+        &out,
+        "fn method_scalar(&self, token: archmage::ScalarToken, data: &[f32]) -> f32 { let _self = self;",
     );
-}
-
-#[test]
-fn variant_replacement_all_default_tiers_produce_valid_fns() {
-    let names: Vec<String> = DEFAULT_TIER_NAMES.iter().map(|s| s.to_string()).collect();
-    let tiers = resolve_tiers(&names, proc_macro2::Span::call_site(), false).unwrap();
-
-    for tier in &tiers {
-        let f = do_variant_replacement(
-            "fn process(token: SimdToken, data: &[f32]) -> f32 { 0.0 }",
-            tier.name,
-            false,
-        );
-        let expected_name = format!("process_{}", tier.suffix);
-        assert_eq!(
-            f.sig.ident.to_string(),
-            expected_name,
-            "Tier '{}' should produce function '{}'",
-            tier.name,
-            expected_name
-        );
-    }
-}
-
-#[test]
-fn variant_replacement_all_known_tiers_produce_valid_fns() {
-    for tier in ALL_TIERS {
-        let f = do_variant_replacement(
-            "fn compute(token: SimdToken, data: &[f32]) -> f32 { 0.0 }",
-            tier.name,
-            false,
-        );
-        let expected_name = format!("compute_{}", tier.suffix);
-        assert_eq!(
-            f.sig.ident.to_string(),
-            expected_name,
-            "Tier '{}' should produce function '{}'",
-            tier.name,
-            expected_name
-        );
-    }
-}
-
-#[test]
-fn variant_replacement_no_simdtoken_remains() {
-    for tier in ALL_TIERS {
-        let f = do_variant_replacement(
-            "fn compute(token: SimdToken, data: &[f32]) -> f32 { 0.0 }",
-            tier.name,
-            false,
-        );
-        let full_str = f.to_token_stream().to_string();
-        assert!(
-            !full_str.contains("SimdToken"),
-            "Tier '{}' variant still contains 'SimdToken': {}",
-            tier.name,
-            full_str
-        );
-    }
 }
 
 // =========================================================================
@@ -1123,43 +942,18 @@ fn dispatcher_dispatch_args_extraction() {
 
 #[test]
 fn dispatcher_wildcard_params_get_renamed() {
-    let f: ItemFn = syn::parse_str("fn process(_: &[f32], _: f32) -> f32 { 0.0 }").unwrap();
-
-    let mut dispatcher_inputs: Vec<FnArg> = f.sig.inputs.iter().cloned().collect();
-
-    let mut wild_counter = 0u32;
-    for arg in &mut dispatcher_inputs {
-        if let FnArg::Typed(pat_type) = arg
-            && matches!(pat_type.pat.as_ref(), syn::Pat::Wild(_))
-        {
-            let ident = format_ident!("__autoversion_wild_{}", wild_counter);
-            wild_counter += 1;
-            *pat_type.pat = syn::Pat::Ident(syn::PatIdent {
-                attrs: vec![],
-                by_ref: None,
-                mutability: None,
-                ident,
-                subpat: None,
-            });
-        }
-    }
-
-    // Both wildcards should be renamed
-    assert_eq!(wild_counter, 2);
-
-    let names: Vec<String> = dispatcher_inputs
-        .iter()
-        .filter_map(|arg| {
-            if let FnArg::Typed(PatType { pat, .. }) = arg
-                && let syn::Pat::Ident(pi) = pat.as_ref()
-            {
-                return Some(pi.ident.to_string());
-            }
-            None
-        })
-        .collect();
-
-    assert_eq!(names, vec!["__autoversion_wild_0", "__autoversion_wild_1"]);
+    // The dispatcher names wildcard parameters so it can forward them; the
+    // variants keep the user's patterns.
+    let out = autoversion_expansion("v3, scalar", "fn process(_: &[f32], _: f32) -> f32 { 0.0 }");
+    assert_variant(
+        &out,
+        "fn process(__archmage_arg_0: &[f32], __archmage_arg_1: f32) -> f32",
+    );
+    assert_variant(&out, "process_v3(__t, __archmage_arg_0, __archmage_arg_1)");
+    assert_variant(
+        &out,
+        "fn process_scalar(_token: archmage::ScalarToken, _: &[f32], _: f32) -> f32",
+    );
 }
 
 // =========================================================================

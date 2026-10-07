@@ -383,7 +383,9 @@ pub(crate) fn default_tiers(default_feature_gates: bool) -> Vec<ResolvedTier> {
 /// descriptor automatically get that as their feature gate.
 ///
 /// Tier names prefixed with `+` trigger **additive mode**: defaults are included
-/// first, then the `+` entries are appended. All entries must be `+` or none.
+/// first, then the `+` entries are appended. Plain names may be mixed in: with
+/// any `+` present they are treated as `+name`; `-` alone with plain names
+/// keeps override mode and removes from that set (issue #48).
 pub(crate) fn resolve_tiers(
     tier_names: &[String],
     error_span: proc_macro2::Span,

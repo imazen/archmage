@@ -723,8 +723,9 @@ pub(crate) fn multiple_tokens_error(
     let hint = if macro_name == "rite" {
         "name the tier instead: `#[rite(v3)]`, or keep one token parameter"
     } else {
-        "keep one token parameter; pass the others as ordinary values, or take a \
-         stronger token and derive the weaker one with `.v3()`"
+        "keep the strongest token as the parameter and derive the weaker ones inside \
+         the body with its extractors (`token.v3()`, `token.v2()`), or split the \
+         function so each part takes one token"
     };
     let msg = format!(
         "#[{macro_name}] found {} token parameters ({list}) and takes its CPU features \

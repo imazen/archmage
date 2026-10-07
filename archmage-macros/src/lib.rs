@@ -316,8 +316,10 @@ pub fn token_target_features_boundary(attr: TokenStream, item: TokenStream) -> T
 /// required CPU features are enabled:
 /// - From within `#[arcane]` functions with matching/superset tokens
 /// - From within other `#[rite]` functions with matching/superset tokens
-/// - From code compiled with `-Ctarget-cpu` that enables the features
 ///
+/// A globally enabled feature (`-Ctarget-cpu`, `-Ctarget-feature`) does not
+/// make the call safe: rustc requires the caller's own `#[target_feature]`
+/// to cover the callee's, whatever the build enables (E0133 otherwise).
 /// Calling from other contexts requires `unsafe` and the caller must ensure
 /// the CPU supports the required features.
 ///
@@ -336,11 +338,12 @@ pub fn token_target_features_boundary(attr: TokenStream, item: TokenStream) -> T
 ///
 /// See `#[arcane]` docs for the full namespace mapping table.
 ///
-/// `#[rite]` cannot go on a trait method: rustc rejects `#[target_feature]` on
-/// a safe trait method, and `#[rite]` applies it directly. `#[rite(in_trait)]`
-/// says so and points at `#[arcane(in_trait, _self = Type)]`; a plain `#[rite]`
-/// there leaves rustc's error on the generated method. Inside an inherent impl
-/// no flag is needed, so `in_impl` is rejected too.
+/// `#[rite]` has no trait-method mode: it applies `#[target_feature]` directly,
+/// which rustc rejects on a safe trait method on x86-64 and AArch64 (wasm32's
+/// `simd128` functions are safe to call anywhere, so there it compiles).
+/// `#[rite(in_trait)]` says so and points at `#[arcane(in_trait, _self = Type)]`;
+/// a plain `#[rite]` on such a method leaves rustc's error on it. Inside an
+/// inherent impl no flag is needed, so `in_impl` is rejected too.
 ///
 /// # Comparison with #[arcane]
 ///

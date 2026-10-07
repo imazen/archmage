@@ -3,8 +3,9 @@
 //! import of another `__arcane_<fn>` loses to the local item, an inherent
 //! `__arcane_<fn>` method wins over a trait method of that name, and an
 //! inherent associated function wins over a trait's. The duplicate-definition
-//! and explicit-import cases are compile errors, pinned in
-//! `tests/soundness/sibling_*_exploit.rs`.
+//! and explicit-import cases are rustc errors, and a parameter named like the
+//! sibling (the one local that could shadow it) is a macro error; all three
+//! are pinned in `tests/soundness/sibling_*_exploit.rs`.
 //!
 //! The macro reads the token type by name, so the cases are stamped out per
 //! architecture with the baseline token that `summon()` always returns.

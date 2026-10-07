@@ -6,7 +6,7 @@ use proc_macro2::{Delimiter, Group, Spacing, TokenStream as Tokens, TokenTree};
 use quote::{ToTokens, quote};
 use syn::parse::Parser;
 
-fn expand(name: &str, args: Tokens, item: Tokens) -> syn::Result<Tokens> {
+pub(super) fn expand(name: &str, args: Tokens, item: Tokens) -> syn::Result<Tokens> {
     Ok(match name {
         "arcane" | "simd_fn" | "token_target_features_boundary" => {
             arcane_impl(syn::parse2(item)?, name, syn::parse2(args)?)
