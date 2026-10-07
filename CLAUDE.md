@@ -2,6 +2,21 @@
 
 > Safely invoke your intrinsic power, using the tokens granted to you by the CPU. Cast primitive magics faster than any mage alive.
 
+## Release discipline
+
+Experiments and draft APIs must stay off main. Only reviewed, validated
+implementation changes land on main; release-to-release diffs must contain no
+experimental APIs or measurement scaffolding. Preserve design work separately
+and review the diff against the last published release before pushing.
+
+The unpublished constructor modes and `use(...)` / adaptive-alias experiments
+are preserved at bookmark `draft/context-constructors-2026-09-27` (commit
+`3ae7b632`). They are not the compatibility baseline. The migration API is the
+single-token vector family plus `_t(token, ...)` methods. Legacy token-taking
+names are deprecated in the next 0.9 patch; `_t` remains supported in 0.10,
+where the short names become non-deprecated feature-context constructors. See
+[the migration guide](docs/TOKEN-CONSTRUCTOR-MIGRATION.md).
+
 ## CRITICAL: Every Conversation Health Check
 
 **Run these checks at the start of every conversation, even if the user doesn't ask:**
@@ -359,7 +374,7 @@ use magetypes::simd::f32x8;  // Always 8 lanes, polyfilled on ARM/WASM
 
 #[arcane(import_intrinsics)]
 fn process(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    let v = f32x8::load(token, data);
+    let v = f32x8::load_t(token, data);
     v.reduce_add()
 }
 ```
@@ -585,7 +600,13 @@ CI checks (all must pass):
 11. `cargo fmt --check` — code is formatted
 12. **Public-API snapshot check** — `ZEN_API_DOC=check` on the apidoc runner; if a public-API change makes `docs/public-api/` stale, run `just api-doc` and commit the regenerated snapshots
 13. `cargo doc --features "std avx512" --no-deps` with `RUSTDOCFLAGS=-Dwarnings` — no broken doc links
-14. Miri UB detection (skipped if not installed)
+14. Miri UB detection (skipped if not installed). `MIRI_SKIPPED_TESTS` in
+    `xtask/src/main.rs` keeps expensive exhaustive tests out of Miri (about 95%
+    of its work) when they reach no `unsafe`, or only paths a cheaper test still
+    covers under Miri. Skip at the narrowest level, one test rather than its
+    binary, and name the retained test that covers its `unsafe` path
+    (`scalar_w512_bitcast_values` covers `int_widen_narrow::scalar_backend`'s
+    bitcasts through `simd_storage::cast`).
 15. **ARM64 cross-compilation + tests** (requires `cross` + Docker)
 16. **WASM cross-compilation + tests** (requires `wasmtime` + `wasm32-wasip1` target)
 17. **ARM64 clippy** (requires `cross` + Docker)
@@ -624,7 +645,7 @@ If ANY check fails:
 
    The single `v{version}` GitHub release fires one publish workflow run that publishes all three crates in dep order (archmage-macros → archmage → magetypes).
 
-   **Don't wait for main CI to go green first.** The publish workflow has its own `pre-publish-check` job that blocks on tests; if it fails, fix and re-tag.
+   **Don't wait for main CI to go green first.** The publish workflow calls the complete reusable `ci.yml` matrix at the release commit and separately verifies the packaged crates. Publishing requires both to succeed. The final CI gate rejects failed, cancelled, missing, or unexpectedly skipped jobs; only the PR-base codegen comparison is omitted outside PRs.
 
    `gh release create <tag>` infers the target from the pushed tag — do NOT pass `--target <sha>` (GitHub rejects it as `target_commitish is invalid` once the tag exists).
 
@@ -648,7 +669,7 @@ Every token's feature claims MUST be verified by exercising real intrinsics on t
 |-----------|-------------|---------------|
 | `tests/x86_crypto_intrinsics.rs` | x86_64 | X64CryptoToken (PCLMULQDQ, AES-NI), X64V3CryptoToken (VPCLMULQDQ, VAES), X64V3GfniCryptoToken (GFNI) |
 | `tests/avx512_intrinsics_exercise.rs` | x86_64 | X64V4Token, X64V4xToken (AVX-512 F/BW/CD/DQ/VL + extensions) |
-| `tests/avx512fp16_intrinsics.rs` | x86_64 | Avx512Fp16Token (hierarchy only — all 935 intrinsics are nightly) |
+| `tests/avx512fp16_intrinsics.rs` | x86_64 | Avx512Fp16Token (hierarchy only; no intrinsic exercise yet, see the FP16 row below) |
 | `tests/arm_feature_intrinsics.rs` | aarch64 | Arm64V2Token (RDM, DotProd, SHA2), NeonAesToken, NeonCrcToken, NeonSha3Token |
 | `tests/wasm_intrinsics_exercise.rs` | wasm32 | Wasm128Token (SIMD128 — ~100 intrinsics) |
 | `tests/feature_consistency.rs` | all | Token hierarchy, cross-arch None checks, feature detection consistency |
@@ -669,19 +690,19 @@ Every token's feature claims MUST be verified by exercising real intrinsics on t
 | neon,aes (rounds + p64) | ~37 | Full | Tested in arm_feature_intrinsics.rs |
 | sha2 | ~10 | Full | Tested in arm_feature_intrinsics.rs |
 | crc | 8 | Full | Tested in arm_feature_intrinsics.rs |
-| dotprod | ALL | Nightly | ALL dotprod intrinsics require `stdarch_neon_dotprod` (unstable) |
-| neon,fp16 | 95/210 | Partial | 95 stable (conversion, div, FMA), 115 unstable |
-| fcma | 34 | Nightly | All unstable |
-| i8mm | 4 | Nightly | All unstable |
-| fhm | 0 | None | No Rust intrinsics in stdarch |
+| dotprod | 12/12 | Stable | Stable on aarch64 since Rust 1.98.0 (`stdarch_neon_dotprod`); MSRV 1.89, so gate uses with `rustversion` |
+| neon,fp16 | 162/301 | Partial | Rust 1.98.0 database: 162 stable (conversion, div, FMA), 139 unstable |
+| fcma | 0/58 | Nightly | All unstable (Rust 1.98.0 database) |
+| i8mm | 0/22 | Nightly | All unstable (Rust 1.98.0 database) |
+| fhm | 24/24 | Stable | FMLAL/FMLSL, stable since Rust 1.94.0 under `stdarch_neon_fp16`; each needs both `fp16` and `fhm` (the `fhm` gate is a `cfg_attr`, which `xtask/extract_intrinsics.py` reads since 2026-10-05) |
 | bf16 | 0 | None | No Rust intrinsics in stdarch |
-| avx512fp16 | 438/440 | Stable | 438 stable, 2 unstable (per intrinsics CSV) |
+| avx512fp16 | 438/441 (+266/272 with avx512vl) | Stable | Per `docs/intrinsics/x86_64_intrinsics.csv`; `_mm512_add_ph` on `__m512h` compiles on stable 1.99 (checked 2026-10-05). Intrinsics that take or return the scalar `f16` type still need nightly `f16`. Not yet exercised by a test. |
 | pclmulqdq + aes (128-bit) | ~10 | Full | Tested in x86_crypto_intrinsics.rs |
 | vpclmulqdq + vaes (256-bit) | ~8 | Full | Tested in x86_crypto_intrinsics.rs |
 | gfni (128/256-bit unmasked) | 6 | Full | Tested in x86_crypto_intrinsics.rs |
 | simd128 (wasm) | ~100+ | Full | Tested in wasm_intrinsics_exercise.rs |
 
-**Features with zero stable intrinsics** (fhm, bf16, avx512fp16) are documented but cannot have exercise tests on stable Rust. When these stabilize, add tests immediately.
+**Features with zero stable intrinsics** (bf16, and fcma/i8mm until they stabilize) are documented but cannot have exercise tests on stable Rust. When these stabilize, add tests immediately. dotprod, fhm and avx512fp16 have stable intrinsics now; check `tests/arm_feature_intrinsics.rs` and `tests/avx512fp16_intrinsics.rs` for their exercise tests.
 
 ## Source of Truth: token-registry.toml
 
@@ -1025,8 +1046,8 @@ pub fn process(data: &[f32; 8]) -> f32 {
 
 #[arcane(import_intrinsics)]
 fn process_simd(token: X64V3Token, data: &[f32; 8]) -> f32 {
-    let a = f32x8::load(token, data);
-    let b = f32x8::splat(token, 2.0);
+    let a = f32x8::load_t(token, data);
+    let b = f32x8::splat_t(token, 2.0);
     let c = a * b;
     c.reduce_add()
 }
@@ -1055,21 +1076,100 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ## Known Bugs
 
-Found by macro expansion snapshot compilation tests (`tests/expand/*.expanded.rs`):
+### Open
+
+Macro limitations found by the expansion snapshot compilation tests (`tests/expand/*.expanded.rs`):
 
 0. **`#[arcane]`/`#[rite]` on a wildcard param with an `impl Trait` bound: E0562.** `#[arcane] fn f(_: impl HasX64V2, ..)` renames the wildcard to `__archmage_arg_0` and re-binds it as `let _: impl HasX64V2 = __archmage_arg_0;`, which is not legal — `impl Trait` cannot appear in the type of a variable binding. A wildcard with a *concrete* token (`_: X64V3Token`) is fine, and is the committed `wildcard_token` snapshot. Fix: skip the type annotation on the rebind when the type is `impl Trait`, or when the pattern is a wildcard.
-
-1. ~~**`#[autoversion]` on `unsafe fn`: dispatcher drops `unsafe`**~~ — Fixed. Dispatcher now preserves `unsafe fn` and wraps variant calls in `unsafe {}`.
 
 2. **`#[rite]` on trait impl method: `#[target_feature]` on safe trait method is invalid** — Rust rejects `#[target_feature(..)]` on safe trait methods. The macro applies it directly, which works as macro output but the expanded code is invalid standalone Rust. (`tests/expand/rite_trait_impl.expanded.rs`)
 
 3. **`#[autoversion]` on trait impl method: variants placed inside trait impl block** — Generated variant methods (`process_v3`, `process_v4`, `process_scalar`) are emitted inside `impl Trait for Type {}`, but they aren't members of the trait. Compile error E0407. (`tests/expand/autoversion_trait_impl.expanded.rs`)
+
+Documented accuracy limits, left unfixed because every fix measured slower on every call:
+
+- `cbrt_midp`/`cbrt_lowp` return NaN (a few ±inf) above `f32::MAX / 3` (Halley
+  step forms `y³ + 2x`); documented, not fixed, because every fix measured 8-47%
+  slower. `cbrt_midp_precise` covers the whole range (rescales from 1e36 up). Same for
+  `exp2_midp` in [127.5, 128): up to 134.1 ULP (197.1 for `exp_midp` above
+  88.5), documented; the fix measured 7-12% slower for exp2/exp/pow with AVX2,
+  4-8% on the scalar backend. `exp2_lowp` clamps at 127.99: 1.23% above, 0.56%
+  below. Exhaustive precision probes:
+  `benchmarks/transcendental_precision_2026-10-05.md`.
+
+### Resolved (each with its regression coverage)
+
+- Fixed 2026-09-27: `#[arcane]` on `ScalarToken` emitted an invalid empty
+  target-feature attribute. Scalar now keeps its signature without a feature boundary.
+- Fixed 2026-09-27: `#[magetypes]` replaced explicit `Token` argument markers
+  inside nested `incant!` before dispatch could consume them. Type substitution
+  now preserves bare dispatch markers, including non-first token placement.
+  Regression coverage: `tests/calling_convention_matrix.rs`.
+- Fixed: tokenless scalar/default `#[magetypes(rite, ...)]` fallbacks previously
+  retained runtime dispatch to SIMD-only rite helpers. They now rewrite covered
+  scalar calls; tokenful fallbacks retain runtime boundary dispatch. Regression:
+  `tests/magetypes_scalar_dispatch.rs`.
+- Raw interchange restoration retains native token-taking constructors and adds
+  `from_raw` with compiler-checked features plus baseline-callable `from_raw_t`.
+  `xtask/src/soundness/raw_context.rs` validates explicit token construction in
+  safe matching-feature functions. Regressions: `magetypes/tests/raw_interop.rs`
+  and `tests/soundness/raw_*.rs`.
+
+Earlier entries from the expansion-test list:
+
+1. ~~**`#[autoversion]` on `unsafe fn`: dispatcher drops `unsafe`**~~ — Fixed. Dispatcher now preserves `unsafe fn` and wraps variant calls in `unsafe {}`.
 
 4. ~~**magetypes NEON `shr_arithmetic_const`/`shr_logical_const` reject `N == 0`**~~ — Fixed (0dc8fbe) via the `vshlq_*(a, vdupq_n_*(-N))` lowering plus a `const { assert!(N >= 0 && N <= lane_bits-1) }` contract (a const-branch guard does NOT work — the mono collector instantiates the dead branch). The fix's boundary tests exposed and fixed three sibling bugs in the same commit: x86 v3 `i8` arith `::<0>` corrupted negative lanes (`wrapping_shl` fill-mask wrap), AVX-512 `i8x64` arith was byte-identical to logical (no sign extension at any `N`), and WASM signed `i8`/`i16` logical used the arithmetic intrinsic. Guarded by `magetypes/tests/shift_const_boundaries.rs` on every backend. Contract unified in 54b34bc (maintainer-approved): out-of-range `N` — including on `shl_const` — is a uniform compile-time failure on all backends via front-end const asserts (`N ∈ 0..=lane_bits-1`), pinned by `compile_fail` doctests in `simd/mod.rs`. [#63](https://github.com/imazen/archmage/issues/63) closed. #62 (downstream duplicate) closed by exhaustive all-`N` coverage in `magetypes/tests/shift_const_exhaustive.rs`.
 
 5. ~~**magetypes `f32→i32` conversion diverges across backends on out-of-range/NaN lanes**~~ — Resolved ([#80](https://github.com/imazen/archmage/issues/80)): bare `to_i32` stays natural-per-backend with the divergence documented on the method and pinned by test; new `to_i32_saturating` is contracted as Rust-`as` semantics (saturate, NaN→0) on every backend — native on NEON/WASM/scalar, 4-op compare/blend fixup over cvttps on x86, mask-register form at 512-bit. Guarded by `convert_saturating.rs`. Original report: x86 `_mm*_cvttps_epi32` yields the `i32::MIN` integer-indefinite sentinel for OOR and NaN; scalar (`as`), NEON (FCVTZS), and wasm (`trunc_sat`) saturate with NaN→0 — so `3e9_f32` converts to −2147483648 on x86 and +2147483647 everywhere else, silently. Suggested shape: document the native op's per-backend rails + add a saturating variant contracted uniformly (compare/blend fixup on x86). Audit `_round`, f64, and u32 variants at the same time. Found via the fearless_simd review (their #134/#167/#348 fixed the same class).
 
 6. ~~**magetypes `recip()`/`rsqrt()` returned NaN at `±0`/`±inf` on estimate-refining backends**~~ — Resolved by a TIER SPLIT, not by making the bare names exact (an interim exact-everywhere flip measured ~1.9x/~3.6x slower on Zen-class x86 — `benchmarks/recip_x86_zen5-9950x3d_2026-09-03.md` — and would have silently regressed zen callers using `.recip()` as a speed idiom, e.g. iwssim). Final contract, zero new names: bare `recip()`/`rsqrt()` = WORKING tier, ≤4 ULP AND exact IEEE rails at ±0/±inf/NaN, branchlessly — x86 128/256: FMA-Newton + cmp_unord/blendv rescue to the rail-exact raw estimate (+2.6%/+20% vs plain Newton); AVX-512 512-bit native: Newton + VFIXUPIMM (tables 0x00870622/0x03830622, silicon-verified, +11.7%); NEON: FRECPS/FRSQRTS hardware inf·0 special case — recip was never rail-broken, rsqrt fixed free via `y·FRSQRTS(a, y·y)` (never form `a·y` with a plain mul); WASM/scalar/f64 divide. Subnormal inputs unspecified at this tier. `recip_portable()`/`rsqrt_portable()` = PRECISE tier: exact IEEE division, 0 ULP, IEEE rails (`recip(±inf)=±0` — the [#64](https://github.com/imazen/archmage/issues/64) escape hatch), bit-identical for free. `sigmoid_midp`/`silu_midp` (817cdd6) use division internally so the footgun stays dead regardless. Pinned by `precise_reciprocals.rs` (bare ≤4 ULP on x86/NEON f32, 0 elsewhere; rails on the precise tier) and `sigmoid_silu.rs`. The NEON f64 1-ULP fix and generator-idempotence fixes from the earlier rounds are retained (f64 divides everywhere).
+
+Design record for #116 (the `mul_add` contract):
+
+- #116, final form (user decision 2026-10-05): `mul_add`/`mul_sub` keep the
+  0.9.29 contract: one rounding where the hardware fuses (x86 v3/v4, NEON), a
+  multiply then an add on the scalar backend and strict WASM. Relaxed WASM emits
+  madd directly (user decision 2026-09-27), with no probe/load/branch; engines may
+  round twice. `mul_add_portable`/`mul_sub_portable` round once on every backend:
+  hardware FMA on x86/NEON, software on the scalar backend and all WASM builds.
+  Exact tests cover strict, fusing relaxed, forced-unfused relaxed, and NEON/QEMU
+  configurations. The 2026-09-27 version made bare `mul_add` single-rounding everywhere; that
+  measured 8.7-25x slower on strict WASM, 2.6-29x on the scalar backend, and made
+  the generic transcendentals 1.5-23x slower, so the guarantee moved to the
+  `_portable` names (same split as `recip`/`recip_portable`). In
+  `tests/common/fma_expected.rs`, `mul_add_expected` models each token's
+  `mul_add` and `fused_expected` the `_portable` form; it also corrects the Rust
+  1.98.1 WASM std oracle's signed-zero discrepancy for
+  `min_subnormal * -min_subnormal + 0` (the exact negative product rounds to -0;
+  that std returns +0). Test expectations approved 2026-09-27, moved to the
+  `_portable` names 2026-10-05. Current costs:
+  `benchmarks/mul_add_portable_zen5-m4pro_2026-10-05.md` (scalar backend 2.7-29.5x)
+  and `benchmarks/mul_add_wasm_wasmtime_zen5-9950x3d_2026-10-05.md` (8.2-24x).
+  Interim-design records: `benchmarks/fma_software_i265_2026-09-27.md`,
+  `benchmarks/mul_add_cost_zen5-m4pro_2026-10-05.md`,
+  `benchmarks/transcendentals_fused_mul_add_2026-10-05.md`.
+
+### Downstream and tooling notes
+
+- #117 (closed, not planned): published `jxl-encoder-simd 0.3.0` still fails on
+  aarch64 and wasm32 with one error each, a one-argument `f32x4::from_i32x4` at
+  its `dequant.rs:421`; x86_64 builds (checked 2026-10-05 against main; 44 errors
+  against 0.9.29). Raw interop is back on the generic types: `raw`/`from_raw`/
+  `from_raw_t` on every native-backend type, WASM `from_v128` and AVX-512
+  `from_m512*` on all their types, and on NEON only the three legacy names that
+  crate calls (check coverage with the snapshots' `[also: ...]` alias lists).
+  The rest is the consumer's fix (pass its token to that conversion). Archmage
+  keeps the published two-argument form, and its CI does not track the
+  consumer's failure.
+
+- Downstream audit tooling (2026-09-27): cargo-copter `2d50bf89` selects yanked
+  releases as "latest" and drops workspace-inherited features when forcing a
+  dependency to a path. It also leaves local manifests rewritten. Use explicit
+  non-yanked versions and isolated snapshots; for local workspaces preserve
+  manifests and apply root Cargo configuration patches. The zensim-train-core
+  AVX-512 failure was a tool artifact, verified by a passing configuration-only
+  patch with inherited features intact. See [the consumer audit](docs/DOWNSTREAM-COMPATIBILITY.md).
 
 ## Open Questions
 
@@ -1120,24 +1220,18 @@ The canonical tables are in `docs/site/content/magetypes/isa-quirks.md`; update 
   soundness hole (fixed 2026-07-14; guarded by `tests/apple_fallback_guard.rs`)
 - Upstream bugs: LLVM native CPU probe + Rust std_detect on macOS 15.x
 
-**Windows ARM64 — limited runtime detection** (not fixable in archmage):
-- Windows `IsProcessorFeaturePresent` API only exposes: neon, crc, dotprod, aes, sha2
-- Features NOT detectable at runtime on Windows: rdm, fp16, fhm, fcma, sha3, i8mm, bf16
-- This means Arm64V2Token::summon() returns None on Windows ARM64 (rdm and fp16 missing)
-- Snapdragon X definitely has these features but Windows doesn't expose them
-- Possible future fix: registry-based detection or undocumented Windows APIs
-- Tracked as a known Rust std_detect limitation
+**Windows ARM64 — registry-based detection** (since 0.9.24):
+- std's `is_aarch64_feature_detected!` on Windows asks `IsProcessorFeaturePresent`, which reports neon, crc, dotprod, aes and sha2 but not rdm, fp16, fhm, fcma, sha3, i8mm or bf16
+- archmage's aarch64 tokens use `winarm-cpufeatures` instead, which decodes the `ID_AA64*_EL1` registers from the Windows registry; Cobalt 100 on Windows summons `Arm64V3Token`, asserted on the `windows-11-arm` runner by `cobalt100_runner_must_summon_full_arm64_v3` (`tests/arm_feature_intrinsics.rs`)
+- `winarm_cpufeatures::set_registry_enabled(false)` falls back to the `IsProcessorFeaturePresent` view, for sandboxed processes
+- Details: `TOKEN_SUPPORT.md`, "Windows on ARM detection"
 
-### ~~avx512 Feature Gating in Dispatch Macros~~ — Fixed
+### avx512 Feature Gating in Dispatch Macros
 
-**All macros now handle avx512 correctly:**
-
-- **`#[autoversion]`**: Always generates v4/v4x variants (scalar code + `#[target_feature]`, no safe memory ops needed). Has its own default tier list that always includes v4.
-- **`incant!`/`#[magetypes]`**: Default tier list excludes v4 when archmage lacks avx512 feature. Explicit tier lists work unconditionally — no `#[cfg(feature)]` in output.
-- **`#[arcane(import_intrinsics)]`/`#[rite(import_intrinsics)]` with V4 token**: Clear `compile_error!` when avx512 feature not enabled, telling user exactly what to add to Cargo.toml.
+- **`incant!`/`#[magetypes]`**: wrap the `v4`/`v4x` variants and dispatch arms in `#[cfg(feature = "avx512")]` (with `#[allow(unexpected_cfgs)]`), evaluated in the **calling** crate, for default and explicit tier lists alike (`archmage-macros/src/incant.rs`, `resolve_tiers(.., true)`). A downstream crate gets v4 dispatch only if it defines and enables its own `avx512` feature, normally forwarding `archmage/avx512` and `magetypes/avx512`. `+v4` makes the arm unconditional; `v4(cfg(other))` gates on a different feature. In the expansion snapshots (`tests/expand/incant/default_tiers.expanded.rs`), which have no `avx512` feature, the v4 arm is compiled out.
+- **`#[autoversion]`**: never gates; always generates its `v4` variant (`default_tiers(false)`), which needs no cargo feature because it uses no AVX-512 memory ops.
+- **`#[arcane(import_intrinsics)]`/`#[rite(import_intrinsics)]` with V4 token**: Clear `compile_error!` when archmage-macros lacks its `avx512` feature, telling user exactly what to add to Cargo.toml.
 - **`#[arcane]`/`#[rite]` without `import_intrinsics`**: Always works with any token — value intrinsics need no cargo feature.
-
-**Implementation:** `avx512` feature propagated from archmage → archmage-macros. Macros check `cfg!(feature = "avx512")` at expansion time. No `#[cfg(feature)]` ever emitted in output (was checking calling crate's features — always wrong for downstream crates).
 
 **Test crates in `tests/avx512-cfg-tests/`** verify all scenarios including every token alias, trait bounds (`impl HasX64V4`), and generics (`T: HasX64V4`).
 
@@ -1214,7 +1308,7 @@ Found during pal.rs refactoring to use `#[arcane]` + `safe_unaligned_simd`:
 - ~~**WASM token-gated casting methods**~~: Done. Added cast_slice, cast_slice_mut, as_bytes, as_bytes_mut, from_bytes, from_bytes_owned (token-gated replacements for bytemuck, NOT actual Pod/Zeroable implementations).
 - ~~**ARM reduce_add for unsigned**~~: Done. Extended reduce_add to all integer types including unsigned.
 - ~~**Approximations (rcp, rsqrt) for ARM/WASM**~~: Done. ARM uses native vrecpe/vrsqrte, WASM uses division.
-- ~~**mul_sub for ARM/WASM**~~: Done. ARM uses vfma with negation, WASM uses mul+sub.
+- ~~**mul_sub for ARM/WASM**~~: Done. ARM uses vfma with negation; WASM uses its multiply-add helper with a negated addend (relaxed SIMD follows engine rounding).
 - ~~**Type conversions for ARM/WASM**~~: Done. Added to_i32x4, to_i32x4_round, from_i32x4, to_f32x4, to_i32x4_low.
 - ~~**shr_arithmetic for ARM/WASM**~~: Done. Added for i8x16, i16x8, i32x4.
 

@@ -1,5 +1,11 @@
 # Cross-ISA audit: variable shift, saturating add/sub, widening/narrowing
 
+> **Status (2026-10-05):** the findings and the shipped surface in §4 stand.
+> The backend-impl counts in §0 predate the merge of the separate operation
+> traits into the per-type backend traits: each backend now has 30 impls
+> (`x86_v4.rs` 28, for the 512-bit types and their popcount traits). Line
+> numbers cited from `token-registry.toml` are as of 2026-09-03.
+
 **Question asked:** do these integer primitives exist on NEON *and* on the x86 tiers
 (`v3`/`v4`/`v4x`) *and* on `wasm128`, do they behave identically, and can they be
 exposed with a semantics that is provable on every tier?

@@ -25,7 +25,7 @@ Data collected via `cargo run --example cpu_survey --features "avx512"`.
 | AWS Graviton 3+ (Neoverse V1, 2022) | V3 | + | + | + | + | + | + |
 | Azure Cobalt 100 (Neoverse N2, 2024) | V3 | + | + | + | + | + | + |
 | Qualcomm Snapdragon X (Oryon, 2024) | V3 | + | + | + | + | + | + |
-| Azure Cobalt 100 on **Windows** | **Neon** | + | + | | + | | |
+| Azure Cobalt 100 on Windows | V3 | + | + | + | + | + | + |
 
 ## Detailed Feature Tables
 
@@ -102,7 +102,7 @@ Features grouped by archmage token tier. A `+` means detected at runtime.
 
 ### AArch64 Features
 
-| Feature | Description | Apple M1 (macOS) | Cobalt 100 (Linux) | Cobalt 100 (Windows) |
+| Feature | Description | Apple M1 (macOS) | Cobalt 100 (Linux) | Cobalt 100 (Windows, std_detect) |
 |---------|-------------|:----------------:|:-------------------:|:--------------------:|
 | **Neon (baseline)** | | | | |
 | neon | 128-bit SIMD | + | + | + |
@@ -158,16 +158,11 @@ Features grouped by archmage token tier. A `+` means detected at runtime.
 
 The M1 has most V3 features (sha3, fhm, fcma) but **lacks bf16 and i8mm**. Archmage's Arm64V3Token requires all of: fhm, fcma, sha3, i8mm, bf16. The M2 and later add bf16 + i8mm, so they qualify for V3.
 
-## Windows ARM64 Detection Limitations
+## Windows on ARM detection
 
-Windows `IsProcessorFeaturePresent` only exposes: neon, crc, dotprod, aes, sha2.
+std's `is_aarch64_feature_detected!` on Windows asks `IsProcessorFeaturePresent`, which reports neon, crc, dotprod, aes and sha2 (and some SVE2 features) but not rdm, fp16, fhm, fcma, bf16, i8mm, sha3, frintts, rcpc2, dit, sb, ssbs, paca, pacg, dpb, dpb2 or flagm. The "Cobalt 100 (Windows, std_detect)" column above shows that view.
 
-Features **not detectable** on Windows ARM64 despite hardware support:
-rdm, fp16, fhm, fcma, bf16, i8mm, sha3, frintts, rcpc2, dit, sb, ssbs, paca, pacg, dpb, dpb2, flagm.
-
-This means Azure Cobalt 100 (Neoverse N2) — which has **every** archmage ARM feature — only gets `NeonToken` on Windows. The same chip on Linux gets `Arm64V3Token`.
-
-Paradoxically, Windows *does* detect SVE/SVE2 features (sve2-bitperm, sve2-sha3, sve2-sm4) while missing basic NEON extensions like rdm. This is a Rust `std_detect` limitation tied to the Windows API surface.
+archmage's aarch64 tokens do not use it on Windows. Since 0.9.24 their `summon()` goes through [winarm-cpufeatures](https://crates.io/crates/winarm-cpufeatures), which decodes the `ID_AA64*_EL1` feature registers from the Windows registry. Azure Cobalt 100 on Windows therefore summons `Arm64V3Token`, as on Linux; CI asserts this on the `windows-11-arm` runner (`cobalt100_runner_must_summon_full_arm64_v3` in `tests/arm_feature_intrinsics.rs`). A sandboxed process can turn the registry layer off with `winarm_cpufeatures::set_registry_enabled(false)`, which falls back to the `IsProcessorFeaturePresent` view.
 
 ## GitHub Actions Runner Summary
 
@@ -179,7 +174,7 @@ Paradoxically, Windows *does* detect SVE/SVE2 features (sve2-bitperm, sve2-sha3,
 | `macos-14` | Apple M1 (Virtual) | macOS | Arm64V2Token |
 | `macos-latest` | Apple M1 (Virtual) | macOS | Arm64V2Token |
 | `ubuntu-24.04-arm` | Neoverse N2 (Cobalt 100) | Linux | **Arm64V3Token** |
-| `windows-11-arm` | Neoverse N2 (Cobalt 100) | Windows | NeonToken |
+| `windows-11-arm` | Neoverse N2 (Cobalt 100) | Windows | **Arm64V3Token** |
 
 **Note**: `ubuntu-latest` x64 draws from a mixed pool. Some jobs get Intel Xeon 8370C (AVX-512), others get AMD EPYC 7763 (no AVX-512). Token-level tests that require AVX-512 may pass or fail non-deterministically on this runner. The SDE jobs provide deterministic emulation for specific CPU levels.
 
@@ -209,9 +204,7 @@ Non-compute features on all surveyed x86_64 CPUs but outside archmage scope: adx
 |-----|--------------|----------------------|-------------------|
 | Apple M1 | Arm64V2Token | sha3 → *NeonSha3Token* | fhm, fcma |
 | Cobalt 100 (Linux) | Arm64V3Token | — | sm4 |
-| Cobalt 100 (Windows) | NeonToken | aes → *NeonAesToken*, crc → *NeonCrcToken* | dotprod* |
-
-\* Windows ARM64 cannot detect rdm or fp16, so Arm64V2Token won't summon. The CPU has all V3 features but only NeonToken + leaf tokens (NeonAesToken, NeonCrcToken) are available.
+| Cobalt 100 (Windows) | Arm64V3Token | — | sm4 |
 
 Non-compute features outside archmage scope: jsconv, frintts, lse, rcpc, rcpc2, security (dit, sb, ssbs, paca, pacg), cache maintenance (dpb, dpb2), flagm, SVE/SVE2.
 

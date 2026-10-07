@@ -11,7 +11,9 @@ shows turbofish forwarding. Dispatch belongs outside the hot loop.
 
 ## Variants and fallback
 
-For `incant!(gain_impl(plane, gain), [v3, neon, wasm128, scalar])`, provide:
+`incant!` appends each tier to the function name and passes that tier's token
+as the first argument. For
+`incant!(gain_impl(plane, gain), [v3, neon, wasm128, scalar])`, provide:
 
 | Variant | First argument |
 |---|---|
@@ -27,8 +29,11 @@ use `scalar`; ordinary scalar fallback functions can use `default`.
 
 List tiers deliberately, keeping generation and dispatch in sync. Include a
 fallback explicitly rather than relying on the current auto-append behavior.
-`v4(cfg(avx512))` gates a variant on the caller's feature; forward that feature
-to the dependencies. See [features](@/archmage/getting-started/installation.md).
+`v4` and `v4x` arms compile only when the calling crate has a feature named
+`avx512`, whether or not the list says so: `v4(cfg(avx512))` spells the default
+out, `v4(cfg(other))` gates on another feature, and `+v4` makes the arm
+unconditional. Forward that feature to the dependencies. See
+[features](@/archmage/getting-started/installation.md).
 
 ## Calls inside a tier
 
@@ -48,7 +53,48 @@ distinguishes observed production patterns from reference-only ones.
 ## Hand-tuned variants
 
 A generated family can omit one tier, which you implement with `#[arcane]`
-using the expected suffix. Keep its input/output and numerical contract aligned
+using the expected suffix. Here `#[magetypes]` generates the NEON, WASM and
+scalar variants of the gain kernel, and the V3 variant is written by hand:
+
+```rust
+use archmage::prelude::*;
+
+#[magetypes(define(f32x8), neon, wasm128, scalar)]
+fn gain_impl(token: Token, plane: &mut [f32], gain: f32) {
+    let factor = f32x8::splat_t(token, gain);
+    let (chunks, tail) = f32x8::partition_slice_mut_t(token, plane);
+    for chunk in chunks {
+        (f32x8::load_t(token, chunk) * factor).store(chunk);
+    }
+    for value in tail { *value *= gain; }
+}
+
+// The name and the token-first signature make this the family's V3 variant.
+#[arcane(import_intrinsics)]
+fn gain_impl_v3(_token: X64V3Token, plane: &mut [f32], gain: f32) {
+    let factor = _mm256_set1_ps(gain);
+    let (chunks, tail) = plane.as_chunks_mut::<8>();
+    for chunk in chunks {
+        _mm256_storeu_ps(chunk, _mm256_mul_ps(_mm256_loadu_ps(chunk), factor));
+    }
+    for value in tail { *value *= gain; }
+}
+
+pub fn apply_gain(plane: &mut [f32], gain: f32) {
+    incant!(gain_impl(plane, gain), [v3, neon, wasm128, scalar])
+}
+
+let mut plane = [2.0; 11];
+apply_gain(&mut plane, 0.5);
+assert_eq!(plane, [1.0; 11]);
+```
+
+This adapts the gain kernel from
+[Reusable generic kernels](@/magetypes/examples/generic-kernels.md). The pinned
+sources there show `zenfilters` splitting its tiers the same way: generated
+NEON and WASM variants beside hand-written V3 and scalar entries.
+
+Keep a hand-written variant's input/output and numerical contract aligned
 with the other variants. `zenfilters`, `zenresize`, and `zenblend` use portable
 helpers alongside specialized x86 implementations. See
 [direct intrinsic helpers](@/archmage/concepts/rite.md).
@@ -73,12 +119,12 @@ use archmage::prelude::*;
 #[magetypes(define(i32x8), v3, neon, wasm128, -scalar)]
 fn levels_impl(token: Token, input: &[i32], output: &mut [u8]) {
     assert_eq!(input.len(), output.len());
-    let zero = i32x8::zero(token);
-    let cap = i32x8::splat(token, 127);
+    let zero = i32x8::zero_t(token);
+    let cap = i32x8::splat_t(token, 127);
     let (chunks, tail) = input.as_chunks::<8>();
     let (dst, dst_tail) = output.as_chunks_mut::<8>();
     for (chunk, out) in chunks.iter().zip(dst) {
-        let x = i32x8::load(token, chunk);
+        let x = i32x8::load_t(token, chunk);
         let sign = x.shr_arithmetic_const::<31>();
         let abs = (x ^ sign) - sign;
         // Only MIN remains negative after wrapping absolute value.

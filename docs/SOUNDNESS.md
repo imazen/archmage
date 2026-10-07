@@ -5,7 +5,7 @@ archmage and magetypes are sound. It states the one invariant everything
 rests on, inventories every place `unsafe` lives, lists what each tool
 proves, and gives the audit procedure for reviewing changes.
 
-Last full audit: 2026-07-14. The inventory below was re-measured 2026-09-05.
+Last full audit: 2026-07-14. The inventory below was re-measured 2026-10-05.
 
 ## The invariant
 
@@ -111,8 +111,11 @@ instead — and the fragments are our own identifiers, not rustc prose, so a
 reworded diagnostic cannot break them either. `cargo xtask validate` enforces
 the boundary: it rejects any committed trybuild `.stderr` that names target
 features, quotes the build configuration, embeds an absolute or toolchain path,
-carries a rustc version, or depends on pointer width. The soundness scanner's structural rules ban both `from_context` and
-`forge_token_dangerously` from magetypes.
+carries a rustc version, or depends on pointer width. The soundness scanner's structural rules ban
+`forge_token_dangerously` from magetypes. `from_context()` is allowed there only
+inside a safe function whose own `#[target_feature]` set covers the token's
+features (the generated `from_raw` constructors); `xtask/src/soundness/raw_context.rs`
+checks every such call against its enclosing function.
 
 **The feature gate is free.** `#[inline(always)]` is not permitted on a
 `#[target_feature]` function, so `from_context()` is plain `#[inline]`, and
@@ -134,9 +137,10 @@ with `-C target-cpu=x86-64-v3`:
 
 Since Rust 1.87, value-based `core::arch` intrinsics are *safe* inside a
 matching `#[target_feature]` region; everywhere else they require `unsafe`
-with exactly this feature-availability obligation. magetypes' backend impls
-use token-matched `#[arcane]` contexts, so the compiler checks value-intrinsic
-feature requirements inside each generated body.
+with exactly this feature-availability obligation. magetypes' x86 and NEON
+backend impls use token-matched `#[arcane]` contexts, so the compiler checks
+value-intrinsic feature requirements inside each generated body. The WASM
+backend needs no context, for the module-validation reason above.
 
 ## Where `unsafe` lives (the complete inventory)
 
@@ -145,15 +149,19 @@ feature requirements inside each generated body.
 | `src/tokens/generated/{x86,arm,wasm}.rs` `from_context()` call sites | 90 (58 x86 + 29 arm + 3 wasm) | summon/detect just verified the features, the features are compile-time guaranteed, or the source token's feature set is a registry-verified superset (extraction methods) | per-block `// SAFETY:` comments, generator-emitted, checker-enforced |
 | `src/tokens/mod.rs` (`ScalarToken` constructors) | 0 | `ScalarToken` proves the empty feature set, so `from_context()` and its deprecated alias are ungated safe `const fn`s | doc sections |
 | `src/tokens/generated/{x86,arm,wasm}_stubs.rs` forge definitions | 17 total (9 x86 + 6 arm + 2 wasm); 8–15 visible per target | foreign-architecture constructors: `unsafe fn` with an *unsatisfiable* `# Safety` contract — they exist so cross-architecture code compiles, not to be called | doc sections; `tests/soundness/from_context_wrong_arch.rs` |
-| `magetypes/src/simd/impls/{x86_v3,x86_v4,arm_neon,wasm128}.rs` | **1 block** (was ~1,960) | per-method `#[arcane(_self = Token)]` turns each body into a `#[target_feature]` region, so the 5,142 value intrinsics in these files need no `unsafe` at all; the one remaining block is `x86_v3.rs`'s `sse2_baseline!` macro, which calls a *narrower* SSE2-only inner fn from the AVX tier | file-header audit contract (generator-emitted, checker-enforced); every intrinsic re-verified against the registry per run |
-| `magetypes/src` outside `impls/` | **8 blocks, all in `simd_storage.rs`** (was 225) | size/align-guarded layout casts over `Pod` (all-bit-patterns-valid) storage; the four token-taking helpers additionally require a token value and const-assert the token is a 1-ZST | per-block `// SAFETY:` comments, checker-enforced; `unsafe impl Pod` is banned outside this file, every `Pod` registration declares a field-byte total, and every `TokenStorage` type must be `#[repr(C)]` |
+| `magetypes/src/simd/impls/{x86_v3,x86_v4,arm_neon,wasm128}.rs` | **0** (was ~1,960) | per-method `#[arcane(_self = Token)]` turns each x86 and NEON body into a `#[target_feature]` region, and WASM SIMD intrinsics are safe to call from any context, so the 5,395 value intrinsics in these files need no `unsafe` at all; `x86_v3.rs`'s SSE2-only operations (`sse2_baseline!`) run in `#[arcane]` regions for `X64V1Token`, so they inline into callers without AVX | the crate-wide `deny(unsafe_code)`; every intrinsic re-verified against the registry per run |
+| `magetypes/src/simd_storage.rs`, the only magetypes module allowed `unsafe` | **14 blocks** (was 225 across magetypes), plus the `Pod` and `TokenStorage` traits and impls and the `Upcast` declaration (deprecated in 0.9.30, never implemented) | size/align-guarded layout casts over `Pod` (all-bit-patterns-valid) storage; the four token-taking helpers additionally require a token value and const-assert the token is a 1-ZST; `TokenStorage` is implemented only through `impl_token_storage!`, whose expansion checks that each wrapper is exactly `(T::Repr, T)` with `T::Repr` at offset 0 and no extra size; the six AVX-512 gather/scatter helpers (`simd_storage::gather`, `X64V4Token` only) bound every accessed lane's offset to `0..len` of the borrow: wrapping gathers mask with `N - 1` (`N` a power of two no larger than 2^31, const-asserted), and slice gathers and scatters enable only lanes whose unsigned index is below `min(len, 2^31)` | per-block `// SAFETY:` comments, checker-enforced; `#![deny(unsafe_code)]` at the crate root with `#[allow(unsafe_code)]` only on this module; structural rules reject the `unsafe` keyword and any other `allow(unsafe_code)` elsewhere in magetypes (including code cfg'd out for the host), and gather/scatter intrinsics outside this file; every `Pod` registration declares a field-byte total; hostile-index gather/scatter tests in `magetypes/tests/gather_scatter_v4.rs`; the `gather` module quotes the Intel Intrinsics Guide entry (description and Operation pseudocode) for each intrinsic it uses, and each gather/scatter `SAFETY` comment cites the Operation it relies on |
 | `archmage-macros` emitted code (`#[arcane]` wrappers etc.) | 1 `unsafe` block per wrapper | the token parameter (tier-tag const-asserted) proves the sibling's `#[target_feature]` set | justified in macro source; expansion snapshots under `tests/expand/` are re-verified by the intrinsic scanner (comments cannot survive tokenization, so snapshots carry no SAFETY text) |
 
 Notable absences, enforced by structural rules: no `MaybeUninit`, no
-`mem::zeroed`, no token construction (neither `from_context` nor
-`forge_token_dangerously`), no bare `transmute` outside the backend impls,
-no `Default`/serde/bytemuck construction of SIMD wrappers anywhere in
-magetypes.
+`mem::zeroed`, no forged tokens (`forge_token_dangerously`), no `from_context()`
+outside a safe function whose target features cover the token (checked by
+`raw_context.rs`), no `unsafe` of any kind outside `simd_storage.rs` (the
+compiler denies it, and the scanner also checks code cfg'd out for the host), no
+gather/scatter intrinsics outside `simd_storage.rs`, no `Default`/serde/bytemuck
+construction of SIMD wrappers anywhere in magetypes. The `unsafe` blocks that
+`#[arcane]` emits are not magetypes code: the lint skips external proc-macro
+output, and their soundness argument is archmage's (the macro row above).
 
 ### Two things the storage helpers do **not** check, and what covers them
 
@@ -197,14 +205,14 @@ Run everything with `just ci`. Individually:
 
 | Command | What it proves |
 |---|---|
-| `just soundness` (= `cargo xtask soundness`, also inside `generate`/`validate`/`ci`) | The structure-aware scanner (`xtask/src/soundness.rs`): every intrinsic call in `src/`, `magetypes/src/`, and `tests/expand/*.expanded.rs` sits inside a gating context whose feature set (from `token-registry.toml`) covers the intrinsic's requirements (from the stdarch-extracted `docs/intrinsics/complete_intrinsics.csv`, 10,884 entries). Also enforces the structural rules and SAFETY-comment discipline above. **Vacuous-pass guards:** global floor (4,000 verified calls; 4,478 measured at introduction) plus per-file floors — if the scanner stops seeing the backends, it fails rather than passing empty. |
+| `just soundness` (= `cargo xtask soundness`, also inside `generate`/`validate`/`ci`) | The structure-aware scanner (`xtask/src/soundness.rs`): every intrinsic call in `src/`, `magetypes/src/`, and `tests/expand/*.expanded.rs` sits inside a gating context whose feature set (from `token-registry.toml`) covers the intrinsic's requirements (from `docs/intrinsics/complete_intrinsics.csv`: 16,371 intrinsics extracted from the Rust 1.98.0 stdarch sources). Also enforces the structural rules and SAFETY-comment discipline above. **Vacuous-pass guards:** global floor (4,000 verified calls; 4,478 measured at introduction) plus per-file floors — if the scanner stops seeing the backends, it fails rather than passing empty. |
 | `cargo test -p xtask` (CI step 6) | The verifiers themselves: unit tests plant every violation class (feature mismatch, ungated intrinsic, trait-default-body intrinsic, unknown intrinsic, structural-rule breaches, missing SAFETY comments) and assert the scanner fires; plus a full-repo scan meeting the floors. |
 | `just validate-tokens` | Every token's `summon()` checks exactly the features the registry declares (parses the generated detection code). |
 | `just parity` | API parity across x86/ARM/WASM backends (0 issues). |
-| `just miri` | UB detection over magetypes under Miri (layout casts, transmutes, pointer ops — the obligations the intrinsic scanner does *not* prove). |
-| `just audit` | Scans the safety-critical non-generated areas listed in `docs/SAFETY-CRITICAL.md`. |
+| `just miri` | UB detection over magetypes under Miri (layout casts, transmutes, pointer ops — the obligations the intrinsic scanner does *not* prove). It skips three expensive tests whose `unsafe` coverage it keeps elsewhere: `int_widen_narrow::scalar_backend`, whose exhaustive loops reach the bitcast path that the retained `scalar_w512_bitcast_values` test covers; the `fused_arithmetic` binary, which is safe code only; and `cbrt_range::cbrt_midp_precise_covers_the_whole_range`, about 33,000 cbrt calls per function that run only safe code on the scalar backend Miri uses. `MIRI_SKIPPED_TESTS` in `xtask/src/main.rs` lists the reasons; native, SDE and cross-arch runs still execute all three. |
+| `just audit` | A report, not a check: counts `CRITICAL`/`FRAGILE`/`SAFETY` markers, `unsafe` blocks without a nearby `// SAFETY:` comment, and every `forge_token_dangerously`/`from_context` call. It never fails; `just soundness` enforces. See `docs/SAFETY-CRITICAL.md`. |
 | `cargo test` (all platforms in CI) | Exercise tests: every token's claimed features drive real intrinsics on x86-64, ARM64 (cross/QEMU), WASM (wasmtime), Windows ARM64, macOS — see `tests/*_intrinsics*.rs`, `tests/feature_consistency.rs`. |
-| Compile-fail suites (`tests/compile_fail.rs`, `magetypes/tests/bypass_adversarial.rs`, `tests/soundness/*`) | Negative space: tokenless UFCS calls, token shadowing/aliasing around `#[arcane]`, raw-pointer intrinsics without `unsafe` — all fail to compile. |
+| Compile-fail suites (`tests/compile_fail.rs`, `magetypes/src/bypass_adversarial.rs` doctests, `tests/soundness/*`) | Negative space: tokenless UFCS calls, token shadowing/aliasing around `#[arcane]`, raw-pointer intrinsics without `unsafe` — all fail to compile. |
 | Source-guard tests (`tests/apple_fallback_guard.rs`, `tests/winarm_registry_path_guard.rs`) | Platform detection paths that CI hardware cannot execute are pinned at the source level so known-bad patterns can't silently return. |
 
 ### Trust boundaries (what is asserted, not proven, and by whom)
@@ -216,7 +224,9 @@ Run everything with `just ci`. Individually:
 - **`complete_intrinsics.csv`** is extracted from rust stdarch sources
   (`just intrinsics-refresh`); intrinsic-shaped names missing from it are
   hard errors, so staleness surfaces instead of hiding.
-- **Platform detection truths**: x86-64 CPUID; aarch64 via std_detect
+- **Platform detection truths**: x86-64 via std_detect (CPUID, plus the
+  XCR0 check that the OS saves AVX and AVX-512 state); without the `std`
+  feature, x86 counts only compile-time features. aarch64 via std_detect
   (Linux), `winarm-cpufeatures` registry decoding (Windows), and the Apple
   Silicon fallback **only** on provably-M1+ hosts (macOS, Catalyst,
   simulators — device iOS/tvOS/watchOS/visionOS use genuine runtime
@@ -244,9 +254,11 @@ Run everything with `just ci`. Individually:
 3. **Backend impls or their generators changed?** `just generate` must
    leave a clean worktree; `just soundness` re-verifies every intrinsic.
    If a new impls file appears, add it to `REQUIRED_FILE_FLOORS`.
-4. **New `unsafe` anywhere else?** The checker will demand a `// SAFETY:`
-   comment; the comment must name the invariant, not restate the code. If
-   the obligation is layout/pointer validity, extend the Miri tests
+4. **New `unsafe` anywhere else?** In magetypes it can only go in
+   `simd_storage.rs`: the compiler and the checker reject it everywhere else.
+   Everywhere, the checker demands a `// SAFETY:` comment; the comment must
+   name the invariant, not restate the code. If the obligation is
+   layout/pointer validity, extend the Miri tests
    (`magetypes/tests/miri_boundary_tests.rs`).
 5. **Macros changed?** Regenerate expansion snapshots (`cargo xtask
    gen-expand`), then read the `.expanded.rs` diff — the sibling must stay

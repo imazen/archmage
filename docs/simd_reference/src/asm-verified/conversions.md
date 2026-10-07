@@ -61,7 +61,7 @@ This is the minimum necessary — you're asserting a runtime-sized slice has at 
 | Already have `&[f32; 8]` | Direct | No conversion needed |
 | Have a slice, processing in chunks | `.first_chunk()` | Clearest intent, one bounds check |
 | Have a slice, already sliced | `.try_into()` | Works when you've already indexed |
-| Using magetypes | `f32x8::from_slice(token, slice)` | Handles conversion internally |
+| Using magetypes | `f32x8::from_slice_t(token, slice)` | Handles conversion internally |
 
 ## Integer conversions
 

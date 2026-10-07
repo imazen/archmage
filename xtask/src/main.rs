@@ -1576,6 +1576,18 @@ fn generate_intrinsics_reexport_modules() -> Result<()> {
 
 /// Generate all artifacts: SIMD types, macro registry, and documentation
 fn generate_all() -> Result<()> {
+    // crates.io uses the same README body with the existing badge-free title.
+    for (name, directory) in [("archmage", "."), ("magetypes", "magetypes")] {
+        let source = fs::read_to_string(format!("{directory}/README.md"))?;
+        let (_, body) = source
+            .split_once('\n')
+            .context("README needs a title line")?;
+        fs::write(
+            format!("{directory}/README.crates.md"),
+            format!("# {name}\n{body}"),
+        )?;
+    }
+
     // Resolve the ONE external precondition before destroying anything.
     //
     // The purge below deletes six directories, and the safe_unaligned_simd

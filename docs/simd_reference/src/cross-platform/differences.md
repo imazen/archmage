@@ -17,7 +17,7 @@ vfmaq_f32(b.0, self.0, a.0)  // Rearranged to get self*a + b
 f32x4_relaxed_madd(self.0, a.0, b.0)
 ```
 
-**Magetypes `mul_add`:** Handles this automatically. `v.mul_add(a, b)` always means `v*a + b` regardless of platform.
+**Magetypes `mul_add`:** Handles the argument order automatically. `v.mul_add(a, b)` always means `v*a + b`. It rounds once where the hardware fuses (x86 v3/v4, NEON) and twice on the scalar backend and strict WASM; `mul_add_portable` rounds once everywhere.
 
 ## Blend/Select Argument Order
 
@@ -99,7 +99,7 @@ let est = vmulq_f32(est, vrecpsq_f32(v, est));  // Step 1
 let est = vmulq_f32(est, vrecpsq_f32(v, est));  // Step 2
 ```
 
-**Magetypes:** `rcp_approx()` uses the native estimate (different precision per platform). `recip()` provides full precision.
+**Magetypes:** `rcp_approx()` uses the native estimate (different precision per platform). `recip()` is within 4 ULP with exact results at ±0, ±inf and NaN; `recip_portable()` is exact and gives the same bits on every backend.
 
 ## 64-bit Integer Min/Max
 

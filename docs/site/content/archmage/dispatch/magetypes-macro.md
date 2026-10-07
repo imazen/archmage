@@ -14,8 +14,8 @@ The generic vector implementation is the same with either spelling:
 
 | Inside a `#[magetypes]` body | Meaning |
 |---|---|
-| `f32x8::<Token>::load(token, chunk)` | Explicit generic type; import `magetypes::simd::generic::f32x8` |
-| `f32x8::load(token, chunk)` with `define(f32x8)` | Macro injects a local alias to that same concrete vector |
+| `f32x8::<Token>::load_t(token, chunk)` | Explicit generic type; import `magetypes::simd::generic::f32x8` |
+| `f32x8::load_t(token, chunk)` with `define(f32x8)` | Macro injects a local alias to that same concrete vector |
 | `type V = magetypes::simd::generic::f32x8<Token>;` | Explicit local alias, as used in older zen kernels |
 
 Only the identifier `Token` is replaced. The macro does not change [`f32x8`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html)

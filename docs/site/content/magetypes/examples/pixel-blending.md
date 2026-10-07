@@ -22,13 +22,13 @@ use magetypes::simd::{backends::F32x4Backend, generic::f32x4};
 
 #[inline]
 fn blend_kernel<T: F32x4Backend>(token: T, fg: &mut [f32], bg: &[f32]) {
-    let (fg_chunks, _) = f32x4::<T>::partition_slice_mut(token, fg);
-    let (bg_chunks, _) = f32x4::<T>::partition_slice(token, bg);
+    let (fg_chunks, _) = f32x4::<T>::partition_slice_mut_t(token, fg);
+    let (bg_chunks, _) = f32x4::<T>::partition_slice_t(token, bg);
 
     for (fg_chunk, bg_chunk) in fg_chunks.iter_mut().zip(bg_chunks.iter()) {
-        let fg_pixel = f32x4::load(token, fg_chunk);
-        let bg_pixel = f32x4::load(token, bg_chunk);
-        let inv_alpha = f32x4::splat(token, 1.0 - fg_chunk[3]);
+        let fg_pixel = f32x4::load_t(token, fg_chunk);
+        let bg_pixel = f32x4::load_t(token, bg_chunk);
+        let inv_alpha = f32x4::splat_t(token, 1.0 - fg_chunk[3]);
         let result = fg_pixel + bg_pixel * inv_alpha;
         result.store(fg_chunk);
     }

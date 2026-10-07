@@ -39,6 +39,7 @@ CPU, width, compiler, baseline, and workload.
 | Same narrowing methods on [`i16x32`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i16x32.html) / [`i32x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i32x16.html) | Native AVX-512 | Narrow each input to a half and insert/concatenate. Unsigned destinations clamp signed inputs to zero before unsigned conversion. | Two zero clamps for unsigned output, plus the two conversions and concatenation needed for the operation. |
 | Same narrowing families at 128 bits; NEON / WASM widths | Native halves | Native signed-source saturating narrows already have the desired lane order. | No AVX2-style lane-order repair; polyfills still require composition. |
 | `v.shl_const::<N>()`, `v.shr_logical_const::<N>()`, `v.shr_arithmetic_const::<N>()` | Every backend | Const assertions reject invalid counts before execution. | **No runtime assertion.** Constant byte shifts can still require shift/mask emulation. |
+| `a.mul_add_portable(b, c)` / `a.mul_sub_portable(b, c)` on every float type | Scalar backend; WASM, relaxed SIMD included | Hardware backends use one FMA instruction. Software fusion instead: f32 lanes widen to f64 and run TwoSum with round-to-odd (on WASM per `f64x2` half), f64 lanes call `libm::fma` one at a time. | Every call. Measured at 2.7–29.5× (scalar backend) and 8.2–24× (WASM) the time of `a * b + c`; see [Fused arithmetic](#fused-arithmetic-and-reductions). |
 
 `abs_diff`, `madd_adjacent`, `pairwise_widen_add`, saturating arithmetic, and
 `reduce_add_u32` sometimes need several instructions because an ISA lacks that
@@ -164,12 +165,60 @@ codegen review rather than silently changing a published operation here.
 
 | Example | x86 / NEON | WASM / scalar | What we fix up |
 |---|---|---|---|
-| `a.mul_add(b, -1)` where `a = 1 + 2^-23`, `b = 1 - 2^-23` | `-2^-46` (fused) | `0` (separate multiply/add) | Nothing: the existing method uses native FMA where available. |
+| `a.mul_add(b, -1)` where `a = 1 + 2^-23`, `b = 1 - 2^-23` | `-2^-46` (fused) | `0` (multiply, then add); relaxed WASM: either | Nothing: `mul_add` fuses only where the hardware does. |
+| `a.mul_add_portable(b, -1)`, same inputs | `-2^-46` (fused) | `-2^-46` (fused in software) | Software single rounding where the hardware cannot fuse. |
 | Floating-point `reduce_add` | Association depends on backend and vector shape | Association depends on backend and vector shape | Nothing: no universal cross-backend ULP or relative-error bound. |
 
-Fused versus unfused arithmetic can disagree substantially near cancellation or
-intermediate overflow. “Within 1 ULP” is not a general cross-backend guarantee.
-Choose the arithmetic formulation according to the application's error budget.
+`mul_add` and `mul_sub` round once on x86 v3/v4 and NEON, and twice (multiply,
+then add) on the scalar backend and strict WASM; relaxed WASM follows the
+engine's rounding choice. `mul_add_portable` and `mul_sub_portable` round once on
+every backend, so their results match bit for bit. NaN payloads and signs remain
+unspecified. One and two roundings can differ near cancellation or intermediate
+overflow.
+
+On relaxed WASM, `mul_add` emits relaxed multiply-add directly, without a
+probe, cached load, or runtime branch. A non-fusing engine may round twice, so
+`mul_add_portable` never uses it: it fuses in software in every WASM build. A relaxed-SIMD
+token proves instruction availability, not fusion; the
+[relaxed-SIMD specification](https://github.com/WebAssembly/relaxed-simd/blob/main/proposals/relaxed-simd/Overview.md)
+permits either rounding behavior. Modules built with relaxed SIMD still require
+an engine that supports those instructions; the arithmetic fallback does not
+make such modules loadable on older engines.
+
+V8's [x86 QFMA lowering](https://github.com/v8/v8/blob/main/src/codegen/shared-ia32-x64/macro-assembler-shared-ia32-x64.h)
+selects hardware FMA when the CPU exposes FMA3, otherwise separate multiply and
+add (source checked 2026-09-27). This choice occurs during code generation, not
+as a per-operation branch in the generated kernel. Thus relaxed-SIMD support
+alone does not imply fusion on older CPUs or VMs that hide FMA.
+
+Single rounding has a price where the hardware cannot fuse, and `mul_add` does
+not pay it. Measured against `a * b + c` on 1,024 L1-resident vectors (stream)
+and on 1,024 dependent steps (chain); records:
+[per backend](https://github.com/imazen/archmage/blob/main/benchmarks/mul_add_portable_zen5-m4pro_2026-10-05.md),
+[WASM](https://github.com/imazen/archmage/blob/main/benchmarks/mul_add_wasm_wasmtime_zen5-9950x3d_2026-10-05.md).
+
+| Backend, machine | `mul_add` | `mul_add_portable` |
+|---|---|---|
+| AVX2 and AVX-512, Ryzen 9 9950X3D | Chains take 29–38% less time; streams −10% to +6%, within code-placement noise | The same instruction as `mul_add` |
+| NEON, Apple M4 Pro | Chains take 24–31% less time; streams −5% to +8% | The same instruction as `mul_add` |
+| Scalar backend, Ryzen 9 9950X3D | The same code as `a * b + c` | 3.5–6.4× (f32), 12.2–12.5× (f64) the time |
+| Scalar backend, Apple M4 Pro | The same code as `a * b + c` | 2.7–15.5× (f32), 9.1–29.5× (f64) the time |
+| WASM SIMD128, wasmtime on the 9950X3D | The same code as `a * b + c` | 8.2× (`f32x4`), 23× (`f64x2`) the time |
+| WASM relaxed SIMD, same | The engine's madd: 0.96–1.06× the time | 8.2× (`f32x4`), 24× (`f64x2`) the time |
+
+With hardware FMA, `mul_add` is the faster choice for dependency chains such as
+Horner polynomials, and elsewhere it costs nothing. Use `mul_add_portable` where
+identical results on every backend matter more than speed.
+
+The generic transcendentals (`exp2_midp`, `log2_midp`, `pow_midp` and the rest)
+evaluate their polynomials with `mul_add`, so their last bits depend on the
+backend. Over every f32 input, 0.3–0.8% of exp/log results differ by 1–3 ULP
+between the scalar backend and AVX2, and about 11% of `pow_midp(2.4)` results
+by up to 178 ULP; the maxima against the true value move by at most 0.43 ULP
+([record](https://github.com/imazen/archmage/blob/main/benchmarks/transcendental_precision_2026-10-05.md)).
+
+Floating-point reductions retain backend-dependent association. Single-rounding
+multiply-add does not make an entire algorithm independent of reduction order.
 
 ## Reciprocal and reciprocal square root
 

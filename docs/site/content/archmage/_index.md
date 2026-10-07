@@ -8,12 +8,11 @@ weight = 1
 sidebar = true
 +++
 
-Process an image plane (exposure) or an audio buffer (gain), including a short
-scalar tail. The vector type is generic over the token selected by `#[magetypes]`;
-`incant!` chooses the CPU tier once outside the loop. No manual per-tier wrappers
-or raw pointers are needed.
+Archmage lets you write SIMD code in Rust without `unsafe`. You prove a CPU
+tier is present once, and the type system keeps every intrinsic call sound.
 
-Adapted from the `zenfilters` plane-scaling kernel; the [complete production call chain and adaptation notes](https://imazen.github.io/archmage/magetypes/examples/generic-kernels/) include pinned source links.
+This kernel multiplies a buffer by a gain, using AVX2, NEON or WASM SIMD where
+available:
 
 ```rust
 #![forbid(unsafe_code)]
@@ -21,10 +20,10 @@ use archmage::prelude::*;
 
 #[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
 fn gain_impl(token: Token, plane: &mut [f32], gain: f32) {
-    let factor = f32x8::splat(token, gain);
-    let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+    let factor = f32x8::splat_t(token, gain);
+    let (chunks, tail) = f32x8::partition_slice_mut_t(token, plane);
     for chunk in chunks {
-        (f32x8::load(token, chunk) * factor).store(chunk);
+        (f32x8::load_t(token, chunk) * factor).store(chunk);
     }
     for value in tail {
         *value *= gain;
@@ -39,6 +38,16 @@ let mut data = [2.0; 11];
 apply_gain(&mut data, 0.5);
 assert_eq!(data, [1.0; 11]);
 ```
+
+`#[magetypes]` compiles `gain_impl` once per tier in its list, and `incant!`
+runs the best one the CPU supports. Call it around your loop, as here, not
+inside it.
+
+The example compiles under `#![forbid(unsafe_code)]`; the
+[safety model](@/archmage/concepts/safety.md) explains why that holds. It is
+adapted from `zenfilters`:
+[Reusable generic kernels](@/magetypes/examples/generic-kernels.md) links the
+production source.
 
 ## Continue with the production patterns
 

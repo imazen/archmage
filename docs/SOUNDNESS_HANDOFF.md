@@ -1,5 +1,11 @@
 # Token-by-Self Refactor — Design Notes
 
+> **Historical record.** PR #40 shipped in 0.9.24 (2026-05-26). Later releases
+> changed the storage and constructor details described here (backend `Repr`
+> types are now `Pod`, construction goes through `simd_storage.rs`, and tokens
+> come from `from_context()`). For the current model and `unsafe` inventory see
+> [SOUNDNESS.md](SOUNDNESS.md).
+
 Record of the `fix/token-by-self-soundness` branch (PR #40). Every backend trait method now takes `self`; the generic wrapper stores the token inline so the typestate matches the runtime contract.
 
 ---

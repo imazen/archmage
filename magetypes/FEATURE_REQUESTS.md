@@ -78,9 +78,10 @@ on every architecture:
 - ARM: `vcvtns` + `vqmovn` + `vst1`
 - WASM: `f32x4_nearest` + `i32x4_trunc_sat` + narrowing + store
 
-The magetypes `to_u8()` method returns `[u8; N]` via scalar extraction — it
-doesn't use the SIMD pack instructions. A proper `round_store_u8(&self, dest)`
-or `round_to_u8(self) -> u8xN` would be significantly faster.
+Since this was written, `to_u8()` packs with SIMD instructions on every
+backend (AVX-512 uses `vpmovusdb` as of 0.9.30) and saturates to 0..=255. It
+still returns `[u8; N]`; a store into a caller slice (`round_store_u8(&self,
+dest)`) or a `u8xN` result (`round_to_u8(self)`) is still missing.
 
 ### 5. `MaybeUninit` output variants for interleave stores
 
@@ -118,7 +119,11 @@ Used in the modular transform pipeline for fixed-point arithmetic. Maps to
 12 call sites in the modular squeeze transform. Maps to `vpackusdw` + store
 on x86, `vqmovun` + `vst1` on ARM.
 
-### 8. `load_f16_bits` / `store_f16_bits` (f16 ↔ f32 conversion)
+### 8. `load_f16_bits` / `store_f16_bits` (f16 ↔ f32 conversion) — shipped in 0.9.25
+
+Provided as `F16Convert::{f16_to_f32_slice, f32_to_f16_slice}` and their
+`_into` forms, plus `i32x4::f16_to_f32` and `f32x4::to_f16`. The original
+request follows.
 
 **Loads u16 f16 bit patterns and converts to f32xN, and the reverse.**
 
@@ -216,7 +221,7 @@ fn foo<D: SimdDescriptor>(d: D, ...) { D::F32Vec::load(d, ...); }
 magetypes uses separate backend traits per type:
 ```rust
 fn foo<T: F32x8Backend + I32x8Backend + F32x8Convert>(t: T, ...) {
-    f32x8::load(t, ...);
+    f32x8::load_t(t, ...);
 }
 ```
 

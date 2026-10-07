@@ -42,12 +42,12 @@ fn luma_impl<const BT601: bool, P: Pixel>(
     let (chunks, tail) = pixels.as_chunks::<8>();
     for chunk in chunks {
         let rgb = chunk.map(Pixel::rgb);
-        let r = f32x8::from_array(token, core::array::from_fn(|i| rgb[i][0]));
-        let g = f32x8::from_array(token, core::array::from_fn(|i| rgb[i][1]));
-        let b = f32x8::from_array(token, core::array::from_fn(|i| rgb[i][2]));
-        let y = r * f32x8::splat(token, kr)
-              + g * f32x8::splat(token, kg)
-              + b * f32x8::splat(token, kb);
+        let r = f32x8::from_array_t(token, core::array::from_fn(|i| rgb[i][0]));
+        let g = f32x8::from_array_t(token, core::array::from_fn(|i| rgb[i][1]));
+        let b = f32x8::from_array_t(token, core::array::from_fn(|i| rgb[i][2]));
+        let y = r * f32x8::splat_t(token, kr)
+              + g * f32x8::splat_t(token, kg)
+              + b * f32x8::splat_t(token, kb);
         sum += f64::from(y.reduce_add());
     }
     for &pixel in tail {

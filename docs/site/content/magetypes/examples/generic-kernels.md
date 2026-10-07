@@ -31,10 +31,10 @@ use archmage::prelude::*;
 
 #[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
 fn gain_impl(token: Token, plane: &mut [f32], gain: f32) {
-    let factor = f32x8::splat(token, gain);
-    let (chunks, tail) = f32x8::partition_slice_mut(token, plane);
+    let factor = f32x8::splat_t(token, gain);
+    let (chunks, tail) = f32x8::partition_slice_mut_t(token, plane);
     for chunk in chunks {
-        (f32x8::load(token, chunk) * factor).store(chunk);
+        (f32x8::load_t(token, chunk) * factor).store(chunk);
     }
     for value in tail {
         *value *= gain;
@@ -71,10 +71,10 @@ use magetypes::simd::{backends::F32x8Backend, generic::f32x8};
 
 #[inline(always)]
 fn gain_kernel<T: F32x8Backend>(token: T, plane: &mut [f32], gain: f32) {
-    let factor = f32x8::<T>::splat(token, gain);
-    let (chunks, tail) = f32x8::<T>::partition_slice_mut(token, plane);
+    let factor = f32x8::<T>::splat_t(token, gain);
+    let (chunks, tail) = f32x8::<T>::partition_slice_mut_t(token, plane);
     for chunk in chunks {
-        (f32x8::<T>::load(token, chunk) * factor).store(chunk);
+        (f32x8::<T>::load_t(token, chunk) * factor).store(chunk);
     }
     for value in tail { *value *= gain; }
 }
