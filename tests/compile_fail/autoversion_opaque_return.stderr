@@ -1,0 +1,5 @@
+error: #[autoversion] cannot dispatch an `impl Trait` return type: every tier variant returns a distinct opaque type and the dispatcher can return only one. Return a named type, or `Box<dyn Trait>`.
+ --> tests/compile_fail/autoversion_opaque_return.rs:7:20
+  |
+7 | fn numbers(n: u32) -> impl Iterator<Item = u32> {
+  |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

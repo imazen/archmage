@@ -5,7 +5,6 @@ use archmage::{arcane, X64V3Token};
 )]
 #[inline]
 fn __arcane_process(__archmage_arg_0: X64V3Token, a: f32) -> f32 {
-    let _: X64V3Token = __archmage_arg_0;
     a * 2.0
 }
 #[inline(always)]

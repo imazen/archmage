@@ -24,7 +24,7 @@
 #### QUEUED BREAKING CHANGES
 
 - Remove `SimdToken` parameter support from `#[autoversion]` — use tokenless (recommended) or `ScalarToken` for `incant!` nesting (deprecated since 0.9.11)
-- Remove `_self = Type` from `#[autoversion]` — plain `self` works in sibling mode; `#[autoversion]` can't do trait impls anyway
+- Remove `_self = Type` without `in_trait` from `#[autoversion]` — plain `self` works in sibling mode; with `in_trait` it names the receiver type and stays
 - Deprecate `incant!` passthrough mode (`with token`) — zero downstream uses; `#[rite]` multi-tier or direct `IntoConcreteToken` dispatch are better alternatives
 - Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with deprecation warning)
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
@@ -36,6 +36,11 @@
 #### Added
 
 - `#[magetypes(rite, ...)]` accepts functions without a token parameter, which 0.9.29 rejected ("rite requires a token parameter or a tier name"). Each SIMD variant becomes a tier-based `#[rite(<tier>)]` function, and the scalar and default variants call the covered scalar callees directly. Token-taking fallbacks keep runtime dispatch (0833022, 3aef13f).
+- `#[arcane(in_impl)]`, `#[autoversion(in_impl)]` and `#[magetypes(in_impl)]` handle an associated function without a receiver in an inherent impl: the wrapper or dispatcher calls `Self::`, which the macro cannot infer from the function alone (#123).
+- `#[arcane(in_trait, _self = Type)]` (`in_trait` is an alias of `nested`) and the new `#[autoversion(in_trait, _self = Type)]` work in trait impls with plain `self` in the body: the receiver becomes `_self`, and `self` and `Self` in the body are rewritten for the nested function. `#[autoversion]` previously had no trait path at all; its variants now nest inside the dispatcher instead of landing in the trait impl (#123).
+- Two token parameters on `#[arcane]` or `#[rite]` are a compile error that names both; 0.9.29 silently used the first. `#[autoversion]` rejects an `impl Trait` return type with a message instead of rustc's type error on generated code. `#[rite(in_trait)]` and `#[rite(in_impl)]` say what to use instead; rustc rejects `#[target_feature]` on a safe trait method, which `#[rite]` applies directly (#123).
+- The `incant!(... with token)` fallback panic names the token and the tier list when no tier matches (#123).
+- Fixes from an external review of #123 (gpt-6-astra): `#[arcane]` rejects a parameter named like the function it generates (`__arcane_<fn>`, `__simd_inner_<fn>`), the one binding that could shadow it inside the wrapper's `unsafe` call; nested receivers keep their lifetime, mutability or explicit type (`&'a self`, `self: Box<Self>`) in both `#[arcane(in_trait)]` and `#[autoversion(in_trait)]`, through one shared lowering; `#[autoversion(in_trait, _self = T)]` substitutes `Self` across the whole signature; the `self` rewrite leaves nested `impl`/`trait` bodies alone; a nested `incant!` keeps a covered tier's `cfg(feature)` gate as an arm (it was an unconditional call, E0425 with the feature off), replaces the caller's named token in the scalar fallback (E0061), and threads a wildcard token under its generated name (E0425); `#[autoversion]` passes the token at the user's parameter position (E0308 when it was not first). Diagnostics: the two-token message names a working alternative, the `#[rite]` trait-method text is qualified by architecture, and the rite rustdoc no longer lists `-Ctarget-cpu` as a safe-call context (#123).
 
 #### Fixed
 
@@ -43,6 +48,10 @@
 - `#[magetypes]` no longer replaces the `Token` marker in a nested `incant!` or `dispatch_variant!` argument list with the tier's token type, which broke those calls in 0.9.29 (c766c238).
 - The package includes the MIT and Apache-2.0 license texts (683bef73).
 - The `#[rite]` unknown-argument error no longer lists `stub`, which the parser rejects as removed (6f2bd1c3).
+- `#[arcane]` and `#[rite]` no longer rebind a wildcard parameter with an `impl Trait` bound as `let _: impl Trait = ...`, which rustc rejects (E0562); wildcards are not rebound at all, and `#[rite]` renames tuple and wildcard parameters the way `#[arcane]` does (#123).
+- `#[autoversion]` forwards a parameter written as a pattern, such as `(lo, hi): (f32, f32)`; 0.9.29 kept the pattern in the dispatcher's signature and left the parameter out of the call (E0061). Wildcards and patterns appear as `__archmage_arg_N` in the dispatcher's signature (#123).
+- `#[arcane]` and `#[rite]` collect generic bounds from every inline and `where` position, so a token bound split across both, or declared after another parameter's bound, is found (#123).
+- `#[arcane]` and `#[rite]` share one argument parser, diagnostic set, parameter renamer and variant emitter, so the fixes above apply to the sibling, nested and WASM expansions and to single- and multi-tier `#[rite]` alike (#123).
 
 ## magetypes
 
@@ -94,6 +103,8 @@
 #### Added
 
 - `just ci` ends with a table of every step's wall time, and runs Miri and the no_std gate as background jobs in their own build directories (`target/miri-ci.log`, `target/nostd`): 399 s → 162 s on the same box and load. Three sweeps that are safe lane code join `MIRI_SKIPPED_TESTS` with their retained coverage named (`int_uniform_shift_saturating::scalar_backend`, `precise_reciprocals`, `exp2_lowp_range`); native, SDE and cross-architecture CI still run them.
+- `cargo xtask generate` writes expansion snapshots for 40 signature shapes (receivers, wildcards, tuples, generics, bounds, `impl Trait`, placement flags) across `#[arcane]`, `#[rite]`, `#[autoversion]` and `#[magetypes]` under `tests/expand/shapes/`, and the shapes the macros cannot handle under `tests/expand/should-fail/` (#123).
+- `archmage-macros/src/lib.rs` holds the macro entry points and their docs; its unit tests moved to `archmage-macros/src/tests.rs` (#123).
 - Enforce generated-backend size budgets to detect unintended growth (3999a29d, a97decd1). The AVX-512 tokens' W128/W256 f32 backends are now generated from the `F32x4Backend`/`F32x8Backend` definitions (`xtask/src/simd_types/v4_delegation_gen.rs`), so a trait method cannot be left to its scalar default body for those tokens; that replaces the hand-written `x86_v4_f32_delegated.rs`, its `validate` check and its private `V4Proof` trait. The three AVX-512VL pixel-packing helpers stay hand-written in `x86_v4_f32_overrides.rs` (#125).
 - Add tokenful/tokenless calling-convention fixtures on x86, ARM/QEMU, and WASM/Wasmtime (c766c238, 595d13e0).
 - Record [native compilation checks for 23 published consumer libraries](docs/DOWNSTREAM-COMPATIBILITY.md), including optional SIMD feature checks; this audit does not establish ARM/WASM consumer compatibility or runtime equivalence (5bfae758, aac61604).

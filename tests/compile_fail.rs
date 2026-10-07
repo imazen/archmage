@@ -54,6 +54,18 @@ fn ui_tests() {
     // #[autoversion] rejects concrete tokens
     t.compile_fail("tests/compile_fail/autoversion_concrete_token.rs");
 
+    // One token parameter decides the features; two is an error, not "first wins"
+    t.compile_fail("tests/compile_fail/two_token_params_arcane.rs");
+    t.compile_fail("tests/compile_fail/two_token_params_rite.rs");
+    t.compile_fail("tests/compile_fail/rite_in_trait.rs");
+    t.compile_fail("tests/compile_fail/rite_in_impl.rs");
+
+    // #[autoversion] cannot share an `impl Trait` return between variants
+    t.compile_fail("tests/compile_fail/autoversion_opaque_return.rs");
+
+    // #[autoversion(in_trait)] on a method needs `_self = Type`
+    t.compile_fail("tests/compile_fail/autoversion_in_trait_needs_self_type.rs");
+
     // Token shadowing: local struct with same name as archmage token must fail
     t.compile_fail("tests/compile_fail/token_shadowing.rs");
 

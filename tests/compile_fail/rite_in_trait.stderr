@@ -1,0 +1,14 @@
+error: `#[rite]` has no trait-method mode: it applies `#[target_feature]` directly, which rustc rejects on a safe trait method on x86-64 and AArch64 (wasm32's simd128 is the exception). Use `#[arcane(in_trait, _self = Type)]` on the trait method, or have it call a `#[rite]` free function.
+  --> tests/compile_fail/rite_in_trait.rs:15:12
+   |
+15 |     #[rite(in_trait)]
+   |            ^^^^^^^^
+
+error[E0046]: not all trait items implemented, missing: `compute`
+  --> tests/compile_fail/rite_in_trait.rs:14:1
+   |
+11 |     fn compute(&self, token: X64V3Token, x: f32) -> f32;
+   |     ---------------------------------------------------- `compute` from trait
+...
+14 | impl Compute for Engine {
+   | ^^^^^^^^^^^^^^^^^^^^^^^ missing `compute` in implementation

@@ -19,11 +19,8 @@ use crate::token_discovery::*;
 
 #[derive(Default)]
 pub(crate) struct RiteArgs {
-    /// Inject `use archmage::intrinsics::{arch}::*;` (includes safe memory ops).
-    pub(crate) import_intrinsics: bool,
-    /// Inject `use magetypes::simd::{ns}::*;`, `use magetypes::simd::generic::*;`,
-    /// and `use magetypes::simd::backends::*;`.
-    import_magetypes: bool,
+    /// Options spelled the same way in `#[arcane]`: imports and `cfg(feature)`.
+    pub(crate) shared: SharedOptions,
     /// Tiers specified directly (e.g., `#[rite(v3)]` or `#[rite(v3, v4, neon)]`).
     /// Stored as canonical token names (e.g., "X64V3Token"), or the sentinel
     /// "" for the `default` tier (tokenless fallback — no `#[target_feature]`,
@@ -31,8 +28,6 @@ pub(crate) struct RiteArgs {
     /// Single tier: generates one function (no suffix, no token parameter needed).
     /// Multiple tiers: generates suffixed variants (e.g., `fn_v3`, `fn_v4`, `fn_neon`).
     tier_tokens: Vec<String>,
-    /// Additional cargo feature gate (same as arcane's cfg_feature).
-    pub(crate) cfg_feature: Option<String>,
 }
 
 /// The sentinel used in `tier_tokens` for the `default` tier.
@@ -99,20 +94,33 @@ impl Parse for RiteArgs {
                 }
             } else {
                 let ident: Ident = input.parse()?;
+                if parse_shared_option(&ident, input, &mut args.shared)? {
+                    if input.peek(Token![,]) {
+                        let _: Token![,] = input.parse()?;
+                    }
+                    continue;
+                }
                 match ident.to_string().as_str() {
-                    "stub" => {
+                    // `#[arcane]` placement flags. A trait method can never
+                    // carry `#[target_feature]` directly, and `#[rite]` has no
+                    // wrapper to call `Self::` from, so neither flag has a
+                    // meaning here; say what to use instead.
+                    "in_trait" | "nested" => {
                         return Err(syn::Error::new(
                             ident.span(),
-                            "`stub` has been removed. Use `incant!` for cross-arch dispatch instead.",
+                            "`#[rite]` has no trait-method mode: it applies `#[target_feature]` \
+                             directly, which rustc rejects on a safe trait method on x86-64 \
+                             and AArch64 (wasm32's simd128 is the exception). Use \
+                             `#[arcane(in_trait, _self = Type)]` on the trait method, or have \
+                             it call a `#[rite]` free function.",
                         ));
                     }
-                    "import_intrinsics" => args.import_intrinsics = true,
-                    "import_magetypes" => args.import_magetypes = true,
-                    "cfg" => {
-                        let content;
-                        syn::parenthesized!(content in input);
-                        let feat: Ident = content.parse()?;
-                        args.cfg_feature = Some(feat.to_string());
+                    "in_impl" => {
+                        return Err(syn::Error::new(
+                            ident.span(),
+                            "`in_impl` is an `#[arcane]` option. `#[rite]` has no wrapper, \
+                             so an associated function in an inherent impl needs no flag.",
+                        ));
                     }
                     "default" | "_default" => {
                         // Tokenless fallback tier. No ScalarToken parameter, no
@@ -166,196 +174,105 @@ pub(crate) fn rite_impl(input_fn: LightFn, args: RiteArgs) -> TokenStream {
     if args.tier_tokens.len() > 1 {
         return rite_multi_tier_impl(input_fn, &args);
     }
-
     // Single-tier or token-param mode
     rite_single_impl(input_fn, args)
+}
+
+/// Where a `#[rite]` variant gets its features from.
+struct RiteTier {
+    /// Canonical token name (`X64V3Token`), or `None` for the tokenless `default` tier.
+    token: Option<String>,
+    /// The tier suffix (`v3`, `scalar`, `default`), when the tier is one the
+    /// registry knows; it selects the nested `incant!` rewrite.
+    suffix: Option<&'static str>,
+    features: std::borrow::Cow<'static, [&'static str]>,
+    target_arch: Option<&'static str>,
+    magetypes_namespace: Option<&'static str>,
+    /// The token parameter when the features came from the signature.
+    token_ident: Option<Ident>,
+    /// Tier traits to re-state through `::archmage::` (trait or generic bound).
+    tier_traits: Vec<String>,
+}
+
+impl RiteTier {
+    /// A tier named in the attribute: `#[rite(v3)]`, or `default`.
+    fn from_tier_token(tier_token: &str) -> Option<Self> {
+        if tier_token == DEFAULT_TIER_SENTINEL {
+            return Some(RiteTier {
+                token: None,
+                suffix: Some("default"),
+                features: std::borrow::Cow::Borrowed(&[]),
+                target_arch: None,
+                magetypes_namespace: None,
+                token_ident: None,
+                tier_traits: Vec::new(),
+            });
+        }
+        Some(RiteTier {
+            token: Some(tier_token.to_string()),
+            suffix: canonical_token_to_tier_suffix(tier_token),
+            features: std::borrow::Cow::Borrowed(token_to_features(tier_token)?),
+            target_arch: token_to_arch(tier_token),
+            magetypes_namespace: token_to_magetypes_namespace(tier_token),
+            token_ident: None,
+            tier_traits: Vec::new(),
+        })
+    }
+
+    fn from_token_param(info: TokenParamInfo) -> Self {
+        RiteTier {
+            suffix: info
+                .token_type_name
+                .as_deref()
+                .and_then(canonical_token_to_tier_suffix),
+            token: info.token_type_name,
+            features: info.features,
+            target_arch: info.target_arch,
+            magetypes_namespace: info.magetypes_namespace,
+            token_ident: Some(info.ident),
+            tier_traits: info.tier_traits,
+        }
+    }
 }
 
 /// Generate a single `#[rite]` function (single tier or token-param mode).
 pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenStream {
     // Resolve features: either from tier name or from token parameter
-    let TokenParamInfo {
-        ident: token_ident,
-        features,
-        target_arch,
-        token_type_name: _token_type_name,
-        magetypes_namespace,
-        token_type: _,
-        tier_traits,
-    } = if let Some(tier_token) = args.tier_tokens.first() {
+    let tier = if let Some(tier_token) = args.tier_tokens.first() {
         // Tier specified directly (e.g., #[rite(v3)]) — no token param needed.
-        // `default` tier (DEFAULT_TIER_SENTINEL) is tokenless: no features,
-        // no arch, no target_feature attribute.
-        let is_default = tier_token == DEFAULT_TIER_SENTINEL;
-        let features = std::borrow::Cow::Borrowed(if is_default {
-            &[][..]
-        } else {
-            token_to_features(tier_token)
-                .expect("tier_to_canonical_token returned invalid token name")
-        });
-        let target_arch = if is_default {
-            None
-        } else {
-            token_to_arch(tier_token)
-        };
-        let magetypes_namespace = if is_default {
-            None
-        } else {
-            token_to_magetypes_namespace(tier_token)
-        };
-        TokenParamInfo {
-            ident: Ident::new("_", proc_macro2::Span::call_site()),
-            features,
-            target_arch,
-            token_type_name: if is_default {
-                None
-            } else {
-                Some(tier_token.clone())
-            },
-            magetypes_namespace,
-            token_type: None,
-            // Tokenless tier form (`#[rite(v3)]`): the tier comes from the
-            // attribute, not from a bound, so there is no trait to authenticate.
-            tier_traits: Vec::new(),
-        }
+        RiteTier::from_tier_token(tier_token)
+            .expect("tier_to_canonical_token returned invalid token name")
     } else {
+        // Non-identifier patterns get names so the tier assertion can refer
+        // to the token; the patterns are re-bound at the top of the body.
+        let rebinds = rename_non_ident_params(&mut input_fn.sig);
+        prepend_to_body(&mut input_fn.body, quote! { #(#rebinds)* });
         match find_token_param(&input_fn.sig) {
-            Some(result) => result,
+            Some(info) => RiteTier::from_token_param(info),
             None => {
-                // Check for specific misuse: featureless traits like SimdToken
-                if let Some(trait_name) = diagnose_featureless_token(&input_fn.sig) {
-                    let msg = format!(
-                        "`{trait_name}` cannot be used as a token bound in #[rite] \
-                         because it doesn't specify any CPU features.\n\
-                         \n\
-                         #[rite] needs concrete features to generate #[target_feature]. \
-                         Use a concrete token, a feature trait, or a tier name:\n\
-                         \n\
-                         Concrete tokens: X64V3Token, Desktop64, NeonToken, Arm64V2Token, ...\n\
-                         Feature traits:  impl HasX64V2, impl HasNeon, impl HasArm64V3, ...\n\
-                         Tier names:      #[rite(v3)], #[rite(neon)], #[rite(v4)], ..."
-                    );
-                    return syn::Error::new_spanned(&input_fn.sig, msg).to_compile_error();
-                }
-                let msg = "rite requires a token parameter or a tier name. Supported forms:\n\
+                return missing_token_error(
+                    &input_fn.sig,
+                    "rite",
+                    " or a tier name. Supported forms:\n\
                      - Tier name: `#[rite(v3)]`, `#[rite(neon)]`\n\
                      - Multi-tier: `#[rite(v3, v4, neon)]` (generates suffixed variants)\n\
                      - Concrete: `token: X64V3Token`\n\
                      - impl Trait: `token: impl HasX64V2`\n\
-                     - Generic: `fn foo<T: HasX64V2>(token: T, ...)`";
-                return syn::Error::new_spanned(&input_fn.sig, msg).to_compile_error();
+                     - Generic: `fn foo<T: HasX64V2>(token: T, ...)`",
+                );
             }
         }
     };
-
-    // Check: import_intrinsics with AVX-512 features requires the avx512 cargo feature.
-    // Check resolved features (not token name) for uniform handling of concrete/trait/generic.
-    #[cfg(not(feature = "avx512"))]
-    if args.import_intrinsics && features.iter().any(|f| f.starts_with("avx512")) {
-        let token_desc = _token_type_name.as_deref().unwrap_or("an AVX-512 token");
-        let msg = format!(
-            "Using {token_desc} with `import_intrinsics` requires the `avx512` feature.\n\
-             \n\
-             Add to your Cargo.toml:\n\
-             \x20 archmage = {{ version = \"...\", features = [\"avx512\"] }}\n\
-             \n\
-             Without it, 512-bit safe memory ops (_mm512_loadu_ps etc.) are not available.\n\
-             If you only need value intrinsics (no memory ops), remove `import_intrinsics`."
-        );
-        return syn::Error::new_spanned(&input_fn.sig, msg).to_compile_error();
-    }
-
-    // Rewrite incant!() calls in the body to direct tier calls.
-    // - With a real token param: full rewrite (token-first direct calls +
-    //   `without token`). Tokenless rite (`#[rite(v3)]`) has no token to thread,
-    //   so plain incant! constructs proof with from_context() for covered tiers.
-    //   `without token` calls tokenless helpers; `with token` stays explicit.
-    let rewrite_ctx = if token_ident != "_"
-        && let Some(ref type_name) = _token_type_name
-        && let Some(tier_suffix) = crate::generated::canonical_token_to_tier_suffix(type_name)
-        && let Some(tier) = crate::tiers::find_tier(tier_suffix)
-    {
-        Some(crate::rewrite::CallerContext {
-            tier_suffix: tier_suffix.to_string(),
-            target_arch: tier.target_arch,
-            token_ident: token_ident.clone(),
-            has_token: true,
-            derive_token: false,
-        })
-    } else if let Some(tier_token) = args.tier_tokens.first()
-        && let Some(tier_suffix) = crate::generated::canonical_token_to_tier_suffix(tier_token)
-        && let Some(tier) = crate::tiers::find_tier(tier_suffix)
-    {
-        // Tokenless tier-based rite can construct proof for covered callees.
-        Some(crate::rewrite::CallerContext {
-            tier_suffix: tier_suffix.to_string(),
-            target_arch: tier.target_arch,
-            token_ident: quote::format_ident!("_"),
-            has_token: false,
-            derive_token: true,
-        })
-    } else {
-        None
-    };
-    if let Some(ctx) = rewrite_ctx {
-        input_fn.body = crate::rewrite::rewrite_incant_in_body(input_fn.body, &ctx);
-    }
-
-    // Build the attribute list. Scalar tier has no features — emit only
-    // `#[inline]` without `#[target_feature]` (enable="" is a compile error).
-    let mut new_attrs: Vec<Attribute> = Vec::new();
-    if !features.is_empty() {
-        let features_csv =
-            crate::token_discovery::features_csv(_token_type_name.as_deref(), &features);
-        new_attrs.push(parse_quote!(#[target_feature(enable = #features_csv)]));
-    }
-    // Always use #[inline] - #[inline(always)] + #[target_feature] requires nightly
-    new_attrs.push(parse_quote!(#[inline]));
-    for attr in filter_inline_attrs(&input_fn.attrs) {
-        new_attrs.push(attr.clone());
-    }
-    input_fn.attrs = new_attrs;
-
-    // Prepend import statements to body if requested
-    let body_imports = generate_imports(
-        target_arch,
-        magetypes_namespace,
-        args.import_intrinsics,
-        args.import_magetypes,
-    );
-    // `#[rite]` has no wrapper — it puts `#[target_feature]` on the function
-    // itself — so a trait/generic bound is authenticated at the top of the body.
-    // Concrete tokens keep their tier-tag const in `#[arcane]`'s wrapper; a
-    // tokenless tier form (`#[rite(v3)]`) has no bound to authenticate.
-    let tier_trait_assertion = crate::common::gen_tier_trait_assertion(&tier_traits, &token_ident);
-    if !body_imports.is_empty() || !tier_trait_assertion.is_empty() {
-        let original_body = &input_fn.body;
-        input_fn.body = quote! {
-            #body_imports
-            #tier_trait_assertion
-            #original_body
-        };
-    }
-
-    // If we know the target arch, generate cfg-gated impl
-    let cfg_guard = gen_cfg_guard(target_arch, args.cfg_feature.as_deref());
-    if target_arch.is_some() {
-        let vis = &input_fn.vis;
-        let sig = &input_fn.sig;
-        let attrs = &input_fn.attrs;
-        let body = &input_fn.body;
-
-        quote! {
-            #cfg_guard
-            #(#attrs)*
-            #vis #sig {
-                #body
-            }
-
+    // In token-param mode one token decides the features (see #122).
+    if tier.token_ident.is_some() {
+        let token_params = token_param_idents(&input_fn.sig);
+        if token_params.len() > 1 {
+            return multiple_tokens_error(&input_fn.sig, "rite", &token_params);
         }
-    } else {
-        // No specific arch (trait bounds) - just emit the annotated function
-        quote!(#input_fn)
+    }
+    match emit_rite_variant(input_fn, &args, tier) {
+        Ok(tokens) => tokens,
+        Err(err) => err,
     }
 }
 
@@ -372,136 +289,133 @@ pub(crate) fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenS
     let mut variants = proc_macro2::TokenStream::new();
 
     for tier_token in &args.tier_tokens {
-        // `default` tier uses DEFAULT_TIER_SENTINEL (empty string) — tokenless,
-        // no features, no arch, suffix "_default", no imports.
-        let is_default = tier_token == DEFAULT_TIER_SENTINEL;
-        let features: &[&'static str] = if is_default {
-            &[]
-        } else {
-            match token_to_features(tier_token) {
-                Some(f) => f,
-                None => {
-                    return syn::Error::new_spanned(
-                        &input_fn.sig,
-                        format!("unknown token `{tier_token}` in multi-tier #[rite]"),
-                    )
-                    .to_compile_error();
-                }
-            }
+        let Some(tier) = RiteTier::from_tier_token(tier_token) else {
+            return syn::Error::new_spanned(
+                &input_fn.sig,
+                format!("unknown token `{tier_token}` in multi-tier #[rite]"),
+            )
+            .to_compile_error();
         };
-        let target_arch = if is_default {
-            None
-        } else {
-            token_to_arch(tier_token)
-        };
-        let magetypes_namespace = if is_default {
-            None
-        } else {
-            token_to_magetypes_namespace(tier_token)
-        };
+        let suffix = tier.suffix.expect("every attribute tier has a suffix");
 
-        // Check: import_intrinsics with AVX-512 features requires the avx512 cargo feature.
-        #[cfg(not(feature = "avx512"))]
-        if args.import_intrinsics && features.iter().any(|f| f.starts_with("avx512")) {
-            let msg = format!(
-                "Using {tier_token} with `import_intrinsics` requires the `avx512` feature.\n\
-                 \n\
-                 Add to your Cargo.toml:\n\
-                 \x20 archmage = {{ version = \"...\", features = [\"avx512\"] }}\n\
-                 \n\
-                 Without it, 512-bit safe memory ops (_mm512_loadu_ps etc.) are not available.\n\
-                 If you only need value intrinsics (no memory ops), remove `import_intrinsics`."
-            );
-            return syn::Error::new_spanned(&input_fn.sig, msg).to_compile_error();
-        }
-
-        let suffix = if is_default {
-            "default"
-        } else {
-            canonical_token_to_tier_suffix(tier_token)
-                .expect("canonical token must have a tier suffix")
-        };
-
-        // Build suffixed function name
-        let suffixed_ident = format_ident!("{}_{}", fn_name, suffix);
-
-        // Clone and rename the function
+        // Clone and rename the function: process → process_v3
         let mut variant_fn = input_fn.clone();
-        variant_fn.sig.ident = suffixed_ident;
+        variant_fn.sig.ident = format_ident!("{}_{}", fn_name, suffix);
 
-        // Rewrite incant!() calls in the variant body. With a token param: full
-        // rewrite. Tokenless variant: only `incant!(.. without token)` (the
-        // tokenless variant call) — it needs no token, just the caller's tier.
-        if let Some(tier) = crate::tiers::find_tier(suffix) {
-            let ctx = match crate::token_discovery::find_token_param(&variant_fn.sig) {
-                Some(token_info) => crate::rewrite::CallerContext {
-                    tier_suffix: suffix.to_string(),
-                    target_arch: tier.target_arch,
-                    token_ident: token_info.ident,
-                    has_token: true,
-                    derive_token: false,
-                },
-                None => crate::rewrite::CallerContext {
-                    tier_suffix: suffix.to_string(),
-                    target_arch: tier.target_arch,
-                    token_ident: quote::format_ident!("_"),
-                    has_token: false,
-                    derive_token: true,
-                },
-            };
-            variant_fn.body = crate::rewrite::rewrite_incant_in_body(variant_fn.body, &ctx);
-        }
-
-        // Build the attribute list. Scalar tier has no features — emit only
-        // `#[inline]` without `#[target_feature]` (enable="" is a compile error).
-        let mut new_attrs: Vec<Attribute> = Vec::new();
-        if !features.is_empty() {
-            let features_csv = crate::token_discovery::features_csv(Some(tier_token), features);
-            new_attrs.push(parse_quote!(#[target_feature(enable = #features_csv)]));
-        }
-        new_attrs.push(parse_quote!(#[inline]));
-        for attr in filter_inline_attrs(&variant_fn.attrs) {
-            new_attrs.push(attr.clone());
-        }
-        variant_fn.attrs = new_attrs;
-
-        // Prepend import statements if requested
-        let body_imports = generate_imports(
-            target_arch,
-            magetypes_namespace,
-            args.import_intrinsics,
-            args.import_magetypes,
-        );
-        if !body_imports.is_empty() {
-            let original_body = &variant_fn.body;
-            variant_fn.body = quote! {
-                #body_imports
-                #original_body
-            };
-        }
-
-        // Emit cfg-gated variant
-        let variant_cfg = gen_cfg_guard(target_arch, args.cfg_feature.as_deref());
-        if target_arch.is_some() {
-            let vis = &variant_fn.vis;
-            let sig = &variant_fn.sig;
-            let attrs = &variant_fn.attrs;
-            let body = &variant_fn.body;
-
-            variants.extend(quote! {
-                #variant_cfg
-                #(#attrs)*
-                #vis #sig {
-                    #body
-                }
-            });
-        } else {
-            // No specific arch — just emit the annotated function
-            variants.extend(quote!(#variant_fn));
+        // A multi-tier variant may still carry a token parameter; the rewrite
+        // threads it through nested incant! calls when it does.
+        let tier = match crate::token_discovery::find_token_param(&variant_fn.sig) {
+            Some(info) => RiteTier {
+                token_ident: Some(info.ident),
+                ..tier
+            },
+            None => tier,
+        };
+        match emit_rite_variant(variant_fn, args, tier) {
+            Ok(tokens) => variants.extend(tokens),
+            Err(err) => return err,
         }
     }
 
     variants
+}
+
+/// Emit one `#[target_feature]` + `#[inline]` function for `tier`, with
+/// imports, nested `incant!` rewriting, the bound assertion and the cfg guard.
+/// Both the single- and multi-tier forms go through here.
+fn emit_rite_variant(
+    mut variant_fn: LightFn,
+    args: &RiteArgs,
+    tier: RiteTier,
+) -> Result<TokenStream, TokenStream> {
+    let token_desc = tier
+        .token
+        .clone()
+        .unwrap_or_else(|| "an AVX-512 token".to_string());
+    if let Some(err) = avx512_import_error(
+        &variant_fn.sig,
+        args.shared.import_intrinsics,
+        &tier.features,
+        &token_desc,
+    ) {
+        return Err(err);
+    }
+
+    // Rewrite incant!() calls in the body to direct tier calls.
+    // - With a token param: full rewrite (token-first direct calls + `without token`).
+    // - Tokenless tier form (`#[rite(v3)]`): no token to thread, so plain incant!
+    //   constructs proof with from_context() for covered tiers; `without token`
+    //   calls tokenless helpers; `with token` stays explicit.
+    if let Some(tier_suffix) = tier.suffix
+        && let Some(resolved) = crate::tiers::find_tier(tier_suffix)
+    {
+        let ctx = match &tier.token_ident {
+            Some(ident) => crate::rewrite::CallerContext {
+                tier_suffix: tier_suffix.to_string(),
+                target_arch: resolved.target_arch,
+                token_ident: ident.clone(),
+                has_token: true,
+                derive_token: false,
+            },
+            None => crate::rewrite::CallerContext {
+                tier_suffix: tier_suffix.to_string(),
+                target_arch: resolved.target_arch,
+                token_ident: quote::format_ident!("_"),
+                has_token: false,
+                derive_token: true,
+            },
+        };
+        variant_fn.body = crate::rewrite::rewrite_incant_in_body(variant_fn.body, &ctx);
+    }
+
+    // Build the attribute list. Scalar and default tiers have no features —
+    // emit only `#[inline]` without `#[target_feature]` (enable="" is an error).
+    let mut new_attrs: Vec<Attribute> = Vec::new();
+    if !tier.features.is_empty() {
+        let features_csv =
+            crate::token_discovery::features_csv(tier.token.as_deref(), &tier.features);
+        new_attrs.push(parse_quote!(#[target_feature(enable = #features_csv)]));
+    }
+    // Always use #[inline] - #[inline(always)] + #[target_feature] requires nightly
+    new_attrs.push(parse_quote!(#[inline]));
+    for attr in filter_inline_attrs(&variant_fn.attrs) {
+        new_attrs.push(attr.clone());
+    }
+    variant_fn.attrs = new_attrs;
+
+    // `#[rite]` has no wrapper — it puts `#[target_feature]` on the function
+    // itself — so a trait/generic bound is authenticated at the top of the body.
+    // Concrete tokens keep their tier-tag const in `#[arcane]`'s wrapper; a
+    // tokenless tier form (`#[rite(v3)]`) has no bound to authenticate.
+    let body_imports = generate_imports(
+        tier.target_arch,
+        tier.magetypes_namespace,
+        args.shared.import_intrinsics,
+        args.shared.import_magetypes,
+    );
+    let tier_trait_assertion = match &tier.token_ident {
+        Some(ident) => gen_tier_trait_assertion(&tier.tier_traits, ident),
+        None => quote! {},
+    };
+    prepend_to_body(
+        &mut variant_fn.body,
+        quote! { #body_imports #tier_trait_assertion },
+    );
+
+    // Emit the function behind its cfg guard (empty for trait bounds and the
+    // default tier, which have no architecture).
+    let cfg_guard = gen_cfg_guard(tier.target_arch, args.shared.cfg_feature.as_deref());
+    let vis = &variant_fn.vis;
+    let sig = &variant_fn.sig;
+    let attrs = &variant_fn.attrs;
+    let body = &variant_fn.body;
+    Ok(quote! {
+        #cfg_guard
+        #(#attrs)*
+        #vis #sig {
+            #body
+        }
+    })
 }
 
 #[cfg(test)]
@@ -574,7 +488,7 @@ mod tests {
     fn tiers_coexist_with_keywords() {
         let a = parse("v3, import_intrinsics");
         assert_eq!(a.tier_tokens, vec!["X64V3Token"]);
-        assert!(a.import_intrinsics);
+        assert!(a.shared.import_intrinsics);
     }
 
     #[test]

@@ -6,7 +6,7 @@ use proc_macro2::{Delimiter, Group, Spacing, TokenStream as Tokens, TokenTree};
 use quote::{ToTokens, quote};
 use syn::parse::Parser;
 
-fn expand(name: &str, args: Tokens, item: Tokens) -> syn::Result<Tokens> {
+pub(super) fn expand(name: &str, args: Tokens, item: Tokens) -> syn::Result<Tokens> {
     Ok(match name {
         "arcane" | "simd_fn" | "token_target_features_boundary" => {
             arcane_impl(syn::parse2(item)?, name, syn::parse2(args)?)
@@ -14,13 +14,13 @@ fn expand(name: &str, args: Tokens, item: Tokens) -> syn::Result<Tokens> {
         "rite" | "token_target_features" => rite_impl(syn::parse2(item)?, syn::parse2(args)?),
         "autoversion" => autoversion_impl(syn::parse2(item)?, syn::parse2(args)?),
         "magetypes" => {
-            let (rite, defines, names) = parse_magetypes_attr.parse2(args)?;
+            let (rite, in_impl, defines, names) = parse_magetypes_attr.parse2(args)?;
             let tiers = if names.is_empty() {
                 default_tiers(true)
             } else {
                 resolve_tiers(&names, proc_macro2::Span::call_site(), true)?
             };
-            magetypes::magetypes_impl(syn::parse2(item)?, &tiers, rite, &defines)
+            magetypes::magetypes_impl(syn::parse2(item)?, &tiers, rite, in_impl, &defines)
         }
         _ => panic!("unrecognized macro {name}"),
     })
@@ -810,8 +810,16 @@ fn lint_attributes_and_destructured_dispatch_inputs_are_preserved() {
         ),
     )
     .unwrap();
-    assert!(output.to_string().contains("__autoversion_wild_"));
-    assert!(output.to_string().contains("self . f_scalar"));
+    // The dispatcher names both non-identifier patterns and forwards them;
+    // before 2026-10-07 the tuple kept its pattern and was dropped from the
+    // call (E0061 in the user's crate).
+    let text = output.to_string();
+    assert!(
+        text.contains(
+            "self . f_scalar (archmage :: ScalarToken , __archmage_arg_0 , __archmage_arg_1)"
+        ),
+        "{text}"
+    );
     syn::parse2::<syn::File>(output).unwrap();
 }
 

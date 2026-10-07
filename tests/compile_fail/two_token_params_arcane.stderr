@@ -1,0 +1,5 @@
+error: #[arcane] found 2 token parameters (`_s`, `_v`) and takes its CPU features from only one. keep the strongest token as the parameter and derive the weaker ones inside the body with its extractors (`token.v3()`, `token.v2()`), or split the function so each part takes one token.
+ --> tests/compile_fail/two_token_params_arcane.rs:7:1
+  |
+7 | fn probe(_s: ScalarToken, _v: X64V3Token) -> X64V3Token {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -24,14 +24,17 @@ loads, unchecked indices, or aliasing mutable references.
 | Concrete token such as `X64V3Token` | Uses that token's feature set |
 | Recognized tier bound such as `T: HasX64V2` | Uses the declared bound's feature set, not a stronger caller's extra features |
 | `import_intrinsics` | Imports the matching combined intrinsic namespace |
-| `nested` | Places the feature-enabled function inside the wrapper, useful for trait implementations |
-| `_self = Type` | Nested receiver handling; use `_self` inside the extracted body |
+| `in_impl` | Associated function without a receiver in an inherent impl: the wrapper calls `Self::` |
+| `in_trait` (alias `nested`) | Trait implementation: the feature-enabled function nests inside the method |
+| `_self = Type` | Receiver type for `in_trait`; the body's `self` and `Self` are rewritten for the nested function |
 | `suppress_const_test` | Opts out of the extra compile-time token-trait check; not a routine application option |
 
 The ordinary expansion uses a sibling feature function and an outer wrapper.
-Rust generics and where clauses are forwarded. Methods need the receiver rules
-in [methods](@/archmage/advanced/methods.md); a sibling cannot be added to a trait
-implementation unless it is a declared trait member, so use nested mode there.
+Rust generics and where clauses are forwarded. Exactly one parameter is the
+token; two are a compile error. Methods need the receiver rules in
+[methods](@/archmage/advanced/methods.md): a sibling cannot be added to a trait
+implementation unless it is a declared trait member, so use `in_trait` there,
+and a receiver-less associated function needs `in_impl`.
 
 Wrong-architecture definitions are omitted; `stub` has been removed. `incant!` handles
 call-site cfg guards; [manual callers](@/archmage/dispatch/manual.md) must supply

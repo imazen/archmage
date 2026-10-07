@@ -236,13 +236,7 @@ pub(crate) fn generate_imports(
     imports
 }
 
-/// Check if any argument expression contains the `Token` identifier.
-/// Check if an expression is a bare ident matching a given name.
-pub(crate) fn is_bare_ident_pub(expr: &syn::Expr, name: &str) -> bool {
-    is_bare_ident(expr, name)
-}
-
-fn is_bare_ident(expr: &syn::Expr, name: &str) -> bool {
+pub(crate) fn is_bare_ident(expr: &syn::Expr, name: &str) -> bool {
     match expr {
         syn::Expr::Path(p) => {
             p.qself.is_none() && p.path.segments.len() == 1 && p.path.segments[0].ident == name
@@ -439,4 +433,298 @@ mod dispatch_marker_tests {
             expected.to_string()
         );
     }
+}
+
+// ============================================================================
+// Helpers shared by #[arcane] and #[rite]
+// ============================================================================
+
+/// Options that `#[arcane]` and `#[rite]` spell the same way.
+///
+/// Each macro's parser calls [`parse_shared_option`] first and handles only
+/// its own options itself, so the two accept identical spellings for the
+/// shared ones and give the same diagnostics.
+#[derive(Default)]
+pub(crate) struct SharedOptions {
+    /// Inject `use archmage::intrinsics::{arch}::*;` (includes safe memory ops).
+    pub(crate) import_intrinsics: bool,
+    /// Inject `use magetypes::simd::{ns}::*;`, `use magetypes::simd::generic::*;`,
+    /// and `use magetypes::simd::backends::*;`.
+    pub(crate) import_magetypes: bool,
+    /// Additional cargo feature gate: `cfg(avx512)` adds `feature = "avx512"`
+    /// to the generated `#[cfg(...)]`.
+    pub(crate) cfg_feature: Option<String>,
+}
+
+/// Parse one of the shared options. Returns `Ok(true)` when `ident` named one.
+pub(crate) fn parse_shared_option(
+    ident: &Ident,
+    input: syn::parse::ParseStream,
+    opts: &mut SharedOptions,
+) -> syn::Result<bool> {
+    match ident.to_string().as_str() {
+        "import_intrinsics" => opts.import_intrinsics = true,
+        "import_magetypes" => opts.import_magetypes = true,
+        "cfg" => {
+            let content;
+            syn::parenthesized!(content in input);
+            let feat: Ident = content.parse()?;
+            opts.cfg_feature = Some(feat.to_string());
+        }
+        "stub" => {
+            return Err(syn::Error::new(
+                ident.span(),
+                "`stub` has been removed. Use `incant!` for cross-arch dispatch \
+                 instead — it cfg-gates each architecture automatically.\n\
+                 \n\
+                 Before: #[arcane(stub)] fn process(token: X64V3Token, ...) { ... }\n\
+                 After:  #[arcane] fn process_v3(token: X64V3Token, ...) { ... }\n\
+                 \x20       fn dispatch(...) { incant!(process(...)) }",
+            ));
+        }
+        _ => return Ok(false),
+    }
+    Ok(true)
+}
+
+/// The error for `import_intrinsics` with AVX-512 features when archmage was
+/// built without its `avx512` feature: the 512-bit safe memory wrappers are
+/// missing, so `_mm512_loadu_ps` would resolve to the pointer-taking intrinsic.
+#[cfg(not(feature = "avx512"))]
+pub(crate) fn avx512_import_error(
+    sig: &syn::Signature,
+    import_intrinsics: bool,
+    features: &[&str],
+    token_desc: &str,
+) -> Option<proc_macro2::TokenStream> {
+    if !import_intrinsics || !features.iter().any(|f| f.starts_with("avx512")) {
+        return None;
+    }
+    let msg = format!(
+        "Using {token_desc} with `import_intrinsics` requires the `avx512` feature.\n\
+         \n\
+         Add to your Cargo.toml:\n\
+         \x20 archmage = {{ version = \"...\", features = [\"avx512\"] }}\n\
+         \n\
+         Without it, 512-bit safe memory ops (_mm512_loadu_ps etc.) are not available.\n\
+         If you only need value intrinsics (no memory ops), remove `import_intrinsics`."
+    );
+    Some(syn::Error::new_spanned(sig, msg).to_compile_error())
+}
+
+#[cfg(feature = "avx512")]
+pub(crate) fn avx512_import_error(
+    _sig: &syn::Signature,
+    _import_intrinsics: bool,
+    _features: &[&str],
+    _token_desc: &str,
+) -> Option<proc_macro2::TokenStream> {
+    None
+}
+
+/// The error when a signature has no usable token parameter. A featureless
+/// bound such as `SimdToken` gets its own explanation; `forms` lists the
+/// macro's accepted spellings.
+pub(crate) fn missing_token_error(
+    sig: &syn::Signature,
+    macro_name: &str,
+    forms: &str,
+) -> proc_macro2::TokenStream {
+    if let Some(trait_name) = crate::token_discovery::diagnose_featureless_token(sig) {
+        let msg = format!(
+            "`{trait_name}` cannot be used as a token bound in #[{macro_name}] \
+             because it doesn't specify any CPU features.\n\
+             \n\
+             #[{macro_name}] needs concrete features to generate #[target_feature]. \
+             Use a concrete token or a feature trait:\n\
+             \n\
+             Concrete tokens: X64V3Token, Desktop64, NeonToken, Arm64V2Token, ...\n\
+             Feature traits:  impl HasX64V2, impl HasNeon, impl HasArm64V3, ...{}",
+            if macro_name == "rite" {
+                "\nTier names:      #[rite(v3)], #[rite(neon)], #[rite(v4)], ..."
+            } else {
+                ""
+            }
+        );
+        return syn::Error::new_spanned(sig, msg).to_compile_error();
+    }
+    let msg = format!("{macro_name} requires a token parameter{forms}");
+    syn::Error::new_spanned(sig, msg).to_compile_error()
+}
+
+/// Rename every non-identifier parameter pattern to a generated identifier,
+/// so the parameter can be forwarded by name, and return the statements that
+/// re-bind the original pattern inside the body.
+///
+/// `_: T` becomes `__archmage_arg_0: T` with no re-binding (a wildcard binds
+/// nothing). `(a, b): (T, U)` becomes `__archmage_arg_1: (T, U)` plus
+/// `let (a, b): (T, U) = __archmage_arg_1;`. The type annotation is left off
+/// when the type is `impl Trait`, which a `let` cannot name.
+pub(crate) fn rename_non_ident_params(sig: &mut syn::Signature) -> Vec<proc_macro2::TokenStream> {
+    let mut rebinds = Vec::new();
+    let mut counter = 0u32;
+    for arg in &mut sig.inputs {
+        let syn::FnArg::Typed(pat_type) = arg else {
+            continue;
+        };
+        if matches!(pat_type.pat.as_ref(), syn::Pat::Ident(_)) {
+            continue;
+        }
+        let generated = format_ident!("__archmage_arg_{}", counter);
+        counter += 1;
+        let original_pat = pat_type.pat.clone();
+        let ty = &pat_type.ty;
+        if !matches!(original_pat.as_ref(), syn::Pat::Wild(_)) {
+            rebinds.push(if matches!(ty.as_ref(), syn::Type::ImplTrait(_)) {
+                quote! { let #original_pat = #generated; }
+            } else {
+                quote! { let #original_pat: #ty = #generated; }
+            });
+        }
+        *pat_type.pat = syn::Pat::Ident(syn::PatIdent {
+            attrs: vec![],
+            by_ref: None,
+            mutability: None,
+            ident: generated,
+            subpat: None,
+        });
+    }
+    rebinds
+}
+
+/// Prepend statements to a function body.
+pub(crate) fn prepend_to_body(
+    body: &mut proc_macro2::TokenStream,
+    prefix: proc_macro2::TokenStream,
+) {
+    if prefix.is_empty() {
+        return;
+    }
+    let original = std::mem::take(body);
+    *body = quote! { #prefix #original };
+}
+
+/// The `_self` parameter a nested function takes in place of a receiver,
+/// with the receiver's own shape kept: `&'a self` becomes `_self: &'a Type`,
+/// `&mut self` becomes `_self: &mut Type`, `self: Box<Self>` becomes
+/// `_self: Box<Type>`, and `self` / `mut self` become `_self: Type`.
+pub(crate) fn nested_self_param(receiver: &syn::Receiver, self_ty: &syn::Type) -> syn::FnArg {
+    let ty: proc_macro2::TokenStream = match &receiver.kind {
+        syn::ReceiverKind::Value => quote!(#self_ty),
+        syn::ReceiverKind::Reference(_, lifetime, mutability) => {
+            quote!(& #lifetime #mutability #self_ty)
+        }
+        syn::ReceiverKind::Typed(_, ty) => replace_self_in_tokens(ty.to_token_stream(), self_ty),
+        // `#[non_exhaustive]`: a receiver shape syn adds later is passed by value.
+        _ => quote!(#self_ty),
+    };
+    syn::parse_quote!(_self: #ty)
+}
+
+/// Replace the value `self` with another identifier, leaving `self::` paths
+/// alone. Used when a method body moves into a nested function that receives
+/// the receiver as `_self`.
+pub(crate) fn replace_self_value_in_tokens(
+    tokens: proc_macro2::TokenStream,
+    replacement: &Ident,
+) -> proc_macro2::TokenStream {
+    let mut result = proc_macro2::TokenStream::new();
+    let mut tokens = tokens.into_iter().peekable();
+    // A nested `impl` or `trait` item has receivers of its own: once one of
+    // those keywords is seen, the next brace group is that item's body and is
+    // copied untouched. Closures and blocks still refer to the outer `self`
+    // and are rewritten.
+    let mut in_item_header = false;
+    while let Some(tt) = tokens.next() {
+        match tt {
+            proc_macro2::TokenTree::Ident(ref ident) if *ident == "impl" || *ident == "trait" => {
+                in_item_header = true;
+                result.extend([tt]);
+            }
+            proc_macro2::TokenTree::Ident(ref ident) if *ident == "self" => {
+                let is_path = matches!(tokens.peek(), Some(proc_macro2::TokenTree::Punct(p)) if p.as_char() == ':');
+                if is_path {
+                    result.extend([tt]);
+                } else {
+                    let mut replaced = replacement.clone();
+                    replaced.set_span(ident.span());
+                    result.extend([proc_macro2::TokenTree::Ident(replaced)]);
+                }
+            }
+            proc_macro2::TokenTree::Group(group)
+                if in_item_header && group.delimiter() == proc_macro2::Delimiter::Brace =>
+            {
+                in_item_header = false;
+                result.extend([proc_macro2::TokenTree::Group(group)]);
+            }
+            proc_macro2::TokenTree::Group(group) => {
+                let inner = replace_self_value_in_tokens(group.stream(), replacement);
+                let mut new_group = proc_macro2::Group::new(group.delimiter(), inner);
+                new_group.set_span(group.span());
+                result.extend([proc_macro2::TokenTree::Group(new_group)]);
+            }
+            other => result.extend([other]),
+        }
+    }
+    result
+}
+
+/// The identifiers of every parameter whose type is a token (concrete, trait
+/// bound or bounded generic), in signature order.
+pub(crate) fn token_param_idents(sig: &syn::Signature) -> Vec<String> {
+    let mut out = Vec::new();
+    for arg in &sig.inputs {
+        let syn::FnArg::Typed(syn::PatType { pat, ty, .. }) = arg else {
+            continue;
+        };
+        let Some(info) = crate::token_discovery::extract_token_type_info(ty) else {
+            continue;
+        };
+        let is_token = match &info {
+            crate::token_discovery::TokenTypeInfo::Concrete(_) => true,
+            crate::token_discovery::TokenTypeInfo::ImplTrait(names) => {
+                crate::token_discovery::traits_to_features(names).is_some()
+            }
+            crate::token_discovery::TokenTypeInfo::Generic(name) => {
+                crate::token_discovery::find_generic_bounds(sig, name)
+                    .and_then(|b| crate::token_discovery::traits_to_features(&b))
+                    .is_some()
+            }
+        };
+        if is_token {
+            out.push(match pat.as_ref() {
+                syn::Pat::Ident(p) => p.ident.to_string(),
+                _ => "_".to_string(),
+            });
+        }
+    }
+    out
+}
+
+/// The error for a signature with more than one token parameter: the macros
+/// take their features from one token, and picking the first silently was
+/// the surprising rule that issue #122 reports.
+pub(crate) fn multiple_tokens_error(
+    sig: &syn::Signature,
+    macro_name: &str,
+    idents: &[String],
+) -> proc_macro2::TokenStream {
+    let list = idents
+        .iter()
+        .map(|i| format!("`{i}`"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let hint = if macro_name == "rite" {
+        "name the tier instead: `#[rite(v3)]`, or keep one token parameter"
+    } else {
+        "keep the strongest token as the parameter and derive the weaker ones inside \
+         the body with its extractors (`token.v3()`, `token.v2()`), or split the \
+         function so each part takes one token"
+    };
+    let msg = format!(
+        "#[{macro_name}] found {} token parameters ({list}) and takes its CPU features \
+         from only one. {hint}.",
+        idents.len()
+    );
+    syn::Error::new_spanned(sig, msg).to_compile_error()
 }

@@ -162,26 +162,24 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<Tok
     // numeric priority. This correctly handles cross-branch cases (e.g., V4
     // cannot downgrade to V3_crypto even though V4 has higher priority).
     let mut upgrade_tiers: Vec<&ResolvedTier> = Vec::new();
-    let mut direct_tier: Option<&ResolvedTier> = None;
+    // Every tier the caller already covers (exact match or downgrade), in
+    // priority order. The first one without a feature gate ends the chain;
+    // gated ones before it become `#[cfg(feature)]` arms, so a gate that is
+    // off falls through to the next covered tier or the scalar fallback.
+    let mut direct_tiers: Vec<&ResolvedTier> = Vec::new();
 
     for rt in &tiers {
-        if rt.name == "scalar" || rt.name == "default" {
+        if rt.is_fallback() {
             continue; // handled as fallback
         }
         // Only consider tiers on the same architecture
         if rt.target_arch != ctx.target_arch {
             continue;
         }
-        if rt.suffix == ctx.tier_suffix {
-            // Exact match — direct call, no downgrade method
-            if direct_tier.is_none() {
-                direct_tier = Some(rt);
-            }
-        } else if crate::generated::can_downgrade_tier(&ctx.tier_suffix, rt.suffix) {
-            // Caller can downgrade to this tier — direct call with method
-            if direct_tier.is_none() {
-                direct_tier = Some(rt);
-            }
+        if rt.suffix == ctx.tier_suffix
+            || crate::generated::can_downgrade_tier(&ctx.tier_suffix, rt.suffix)
+        {
+            direct_tiers.push(rt);
         } else {
             // Can't downgrade — needs upgrade summon
             upgrade_tiers.push(rt);
@@ -224,8 +222,12 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<Tok
         }
     }
 
-    // Build the direct call (guaranteed hit — no summon)
-    let fallback_call = if let Some(rt) = direct_tier {
+    // The direct calls (guaranteed hits, no summon). A gated tier becomes a
+    // `#[cfg(feature)]` arm; the first ungated one is the terminal call.
+    let caller_ident = token_ident.to_string();
+    let mut direct_arms = Vec::new();
+    let mut terminal = None;
+    for rt in &direct_tiers {
         let fn_suffixed = suffix_path(func_path, rt.suffix);
         let token_expr = if rt.suffix == ctx.tier_suffix {
             // Exact match — pass token directly
@@ -235,41 +237,69 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<Tok
             let downgrade_method = format_ident!("{}", rt.suffix);
             quote! { #token_ident.#downgrade_method() }
         };
-        let caller_ident = token_ident.to_string();
         let call_args =
             crate::common::build_call_args_with_ident(args, &token_expr, Some(&caller_ident));
-        quote! { #fn_suffixed(#call_args) }
-    } else {
-        // No same-arch tier at or below caller — fall through to scalar
-        let has_default = tiers.iter().any(|t| t.name == "default");
-        if has_default {
-            let fn_default = suffix_path(func_path, "default");
-            // Strip token markers from args for tokenless default call
-            let caller_ident = token_ident.to_string();
-            let default_args: Vec<&syn::Expr> = args
-                .iter()
-                .filter(|a| {
-                    !crate::common::is_bare_ident_pub(a, "Token")
-                        && !crate::common::is_bare_ident_pub(a, &caller_ident)
-                })
-                .collect();
-            quote! { #fn_default(#(#default_args),*) }
-        } else {
-            let fn_scalar = suffix_path(func_path, "scalar");
-            let scalar_args = crate::common::build_scalar_call_args(args);
-            quote! { #fn_scalar(#scalar_args) }
+        let call = quote! { #fn_suffixed(#call_args) };
+        match &rt.feature_gate {
+            Some(feat) => {
+                let allow_attr = if rt.allow_unexpected_cfg {
+                    quote! { #[allow(unexpected_cfgs)] }
+                } else {
+                    quote! {}
+                };
+                direct_arms.push(quote! {
+                    #allow_attr
+                    #[cfg(feature = #feat)]
+                    { break '__incant_rewrite #call; }
+                });
+            }
+            None => {
+                terminal = Some(call);
+                break;
+            }
+        }
+    }
+
+    let fallback_call = match terminal {
+        Some(call) => call,
+        None => {
+            // No ungated same-arch tier at or below the caller: scalar or default.
+            let has_default = tiers.iter().any(|t| t.name == "default");
+            if has_default {
+                let fn_default = suffix_path(func_path, "default");
+                // Strip token markers from args for tokenless default call
+                let default_args: Vec<&syn::Expr> = args
+                    .iter()
+                    .filter(|a| {
+                        !crate::common::is_bare_ident(a, "Token")
+                            && !crate::common::is_bare_ident(a, &caller_ident)
+                    })
+                    .collect();
+                quote! { #fn_default(#(#default_args),*) }
+            } else {
+                // The caller's named token is replaced like in the arms above,
+                // so `incant!(inner(t, x), [scalar])` passes ScalarToken for `t`.
+                let fn_scalar = suffix_path(func_path, "scalar");
+                let scalar_args = crate::common::build_call_args_with_ident(
+                    args,
+                    &quote! { archmage::ScalarToken },
+                    Some(&caller_ident),
+                );
+                quote! { #fn_scalar(#scalar_args) }
+            }
         }
     };
 
-    Some(if upgrade_arms.is_empty() {
-        // No upgrades to try — just the direct call, no labeled block needed
+    Some(if upgrade_arms.is_empty() && direct_arms.is_empty() {
+        // Nothing to try first — just the direct call, no labeled block needed
         fallback_call
     } else {
-        // Upgrade attempts + guaranteed fallback
+        // Upgrade attempts, gated direct calls, then the guaranteed fallback
         quote! {
             '__incant_rewrite: {
                 use archmage::SimdToken;
                 #(#upgrade_arms)*
+                #(#direct_arms)*
                 #fallback_call
             }
         }
@@ -306,7 +336,7 @@ fn rewrite_tokenless_incant(input: &IncantInput, ctx: &CallerContext) -> Option<
             let args: Vec<_> = input
                 .args
                 .iter()
-                .filter(|arg| !crate::common::is_bare_ident_pub(arg, "Token"))
+                .filter(|arg| !crate::common::is_bare_ident(arg, "Token"))
                 .collect();
             quote! { #function(#(#args),*) }
         } else {
