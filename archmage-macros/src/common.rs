@@ -67,9 +67,41 @@ pub(crate) fn is_lint_attr(attr: &Attribute) -> bool {
         || path.is_ident("forbid")
 }
 
-/// Extract lint-control attributes from a list of attributes.
-pub(crate) fn filter_lint_attrs(attrs: &[Attribute]) -> Vec<&Attribute> {
-    attrs.iter().filter(|attr| is_lint_attr(attr)).collect()
+/// The attributes for the half of a boundary expansion that holds the user's
+/// body (the `__arcane_` sibling, or the nested inner fn): the lint levels,
+/// which must govern the body's code (#17), and `#[track_caller]`, which must
+/// sit on every function between a panic in the body and the caller it names.
+/// In nested mode the inner fn sits inside the wrapper, so the wrapper's lint
+/// levels already cover it and `lint_levels` is false.
+pub(crate) fn body_attrs(attrs: &[Attribute], lint_levels: bool) -> Vec<Attribute> {
+    attrs
+        .iter()
+        .filter(|attr| (lint_levels && is_lint_attr(attr)) || attr.path().is_ident("track_caller"))
+        .cloned()
+        .collect()
+}
+
+/// The attributes for the wrapper or dispatcher that only forwards its
+/// arguments, with each `#[expect(..)]` turned into `#[allow(..)]`. The
+/// forwarding function uses every parameter and has no body of its own, so a
+/// copy of the expectation there would be unfulfilled; the body half keeps
+/// the `#[expect]`, which is fulfilled or reported there.
+pub(crate) fn expect_as_allow<'a>(
+    attrs: impl IntoIterator<Item = &'a Attribute>,
+) -> Vec<Attribute> {
+    attrs
+        .into_iter()
+        .map(|attr| {
+            let mut attr = attr.clone();
+            if attr.path().is_ident("expect")
+                && let syn::Meta::List(list) = &mut attr.meta
+                && let Some(last) = list.path.segments.last_mut()
+            {
+                last.ident = syn::Ident::new("allow", last.ident.span());
+            }
+            attr
+        })
+        .collect()
 }
 
 /// Generate a cfg guard combining target_arch and an optional feature gate.

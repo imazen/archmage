@@ -398,9 +398,12 @@ pub(crate) fn arcane_impl_wasm_safe(
 
 /// Sibling expansion (default): generates two functions at the same scope level.
 ///
-/// The sibling function is safe (Rust 2024 edition allows safe `#[target_feature]`
-/// functions). Only the call from the wrapper needs `unsafe` because the wrapper
-/// lacks matching target features. Compatible with `#![forbid(unsafe_code)]`.
+/// The sibling function is safe when the input is (Rust 2024 edition allows
+/// safe `#[target_feature]` functions). Only the call from the wrapper needs
+/// `unsafe` because the wrapper lacks matching target features. Compatible
+/// with `#![forbid(unsafe_code)]`. An `unsafe fn` input keeps `unsafe` on
+/// both halves: the sibling is callable without `unsafe` from a matching
+/// feature context, so a safe sibling would discard its preconditions.
 ///
 /// Self/self work naturally since both functions live in the same impl scope.
 fn arcane_impl_sibling(input_fn: LightFn, args: &ArcaneArgs, parts: BoundaryParts) -> TokenStream {
@@ -412,12 +415,15 @@ fn arcane_impl_sibling(input_fn: LightFn, args: &ArcaneArgs, parts: BoundaryPart
     let inputs = &sig.inputs;
     let output = &sig.output;
     let body = &input_fn.body;
-    // Filter out user #[inline] attrs to avoid duplicates (will become a hard error).
-    // The wrapper gets #[inline(always)] unconditionally — it's a trivial unsafe { sibling() }.
-    let attrs = filter_inline_attrs(&input_fn.attrs);
-    // Lint-control attrs (#[allow(...)], #[expect(...)], etc.) must also go on the sibling,
-    // because the sibling has the same parameters and clippy lints it independently.
-    let lint_attrs = filter_lint_attrs(&input_fn.attrs);
+    // The sibling keeps the input's `unsafe`: it is callable without `unsafe`
+    // from any matching feature context, so a safe sibling would discard the
+    // preconditions the user declared.
+    let unsafety = &sig.safety;
+    // The wrapper gets #[inline(always)] unconditionally — it's a trivial
+    // unsafe { sibling() } — and every other attribute; the sibling gets the
+    // ones that belong with the body (`#[expect]` only there).
+    let attrs = expect_as_allow(filter_inline_attrs(&input_fn.attrs));
+    let sibling_attrs = body_attrs(&input_fn.attrs, true);
     let BoundaryParts {
         cfg_guard,
         target_feature_attrs,
@@ -467,14 +473,15 @@ fn arcane_impl_sibling(input_fn: LightFn, args: &ArcaneArgs, parts: BoundaryPart
 
     // Sibling function: #[doc(hidden)] #[target_feature] fn __arcane_fn(...)
     // Always private — only the wrapper is user-visible.
-    // Safe declaration — Rust 2024 allows safe #[target_feature] functions.
+    // Declared safe when the input is — Rust 2024 allows safe #[target_feature]
+    // functions — and `unsafe` when the input is.
     quote! {
         #cfg_guard
         #[doc(hidden)]
-        #(#lint_attrs)*
+        #(#sibling_attrs)*
         #(#target_feature_attrs)*
         #inline_attr
-        fn #sibling_name #generics (#inputs) #output #where_clause {
+        #unsafety fn #sibling_name #generics (#inputs) #output #where_clause {
             #body
         }
 
@@ -508,10 +515,14 @@ fn arcane_impl_nested(input_fn: LightFn, args: &ArcaneArgs, parts: BoundaryParts
     let inputs = &sig.inputs;
     let output = &sig.output;
     let body = &input_fn.body;
-    // Filter out user #[inline] attrs to avoid duplicates (will become a hard error).
+    // The inner fn keeps the input's `unsafe` (see the sibling expansion).
+    let unsafety = &sig.safety;
+    // The wrapper's lint levels cover the inner fn nested in its body, so the
+    // wrapper keeps `#[expect]` (fulfilled by the body inside it) and the
+    // inner fn gets no lint levels of its own (a second `#[expect]` would
+    // leave the wrapper's unfulfilled); `#[track_caller]` goes on both.
     let attrs = filter_inline_attrs(&input_fn.attrs);
-    // Propagate lint attrs to inner function (same issue as sibling mode — #17)
-    let lint_attrs = filter_lint_attrs(&input_fn.attrs);
+    let inner_attrs = body_attrs(&input_fn.attrs, false);
     let BoundaryParts {
         cfg_guard,
         target_feature_attrs,
@@ -604,8 +615,8 @@ fn arcane_impl_nested(input_fn: LightFn, args: &ArcaneArgs, parts: BoundaryParts
         #vis #wrapper_sig {
             #(#target_feature_attrs)*
             #inline_attr
-            #(#lint_attrs)*
-            fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #inner_where_clause {
+            #(#inner_attrs)*
+            #unsafety fn #inner_fn_name #generics (#(#inner_params),*) #inner_output #inner_where_clause {
                 #inner_body
             }
             #token_assertion

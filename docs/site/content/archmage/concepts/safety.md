@@ -128,7 +128,11 @@ line checks the parameter's type for archmage's V3 tier constant, so a local
 struct named `X64V3Token`, or a weaker token imported under that name, fails to
 compile.
 
-The inner function is a safe `fn`. Inside it, value intrinsics such as
+The inner function is a safe `fn` when yours is. An `unsafe fn` keeps
+`unsafe` on both the wrapper and the inner function: the inner function can be
+called without `unsafe` from any function with the same target features, so a
+safe one would drop your preconditions (`tests/soundness/sibling_unsafe_bypass.rs`
+pins this). Inside it, value intrinsics such as
 `_mm256_add_ps` are safe to call (Rust 1.87 and later). Intrinsics that take
 raw pointers still need `unsafe`, so `import_intrinsics` brings in versions
 that take references: `_mm256_loadu_ps(&[f32; 8])` instead of a

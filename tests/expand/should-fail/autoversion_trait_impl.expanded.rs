@@ -26,7 +26,6 @@ impl Process for Filter {
             enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
         )]
         #[inline]
-        #[allow(dead_code)]
         fn __simd_inner_process_v4(
             _self: &Filter,
             _token: archmage::X64V4Token,
@@ -50,7 +49,6 @@ impl Process for Filter {
             enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
         )]
         #[inline]
-        #[allow(dead_code)]
         fn __simd_inner_process_v3(
             _self: &Filter,
             _token: archmage::X64V3Token,

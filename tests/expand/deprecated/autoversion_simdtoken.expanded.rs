@@ -24,6 +24,7 @@ fn process(data: &[f32; 4]) -> f32 {
 }
 #[doc(hidden)]
 #[allow(dead_code)]
+#[allow(deprecated)]
 #[target_feature(
     enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
 )]
@@ -32,6 +33,7 @@ fn __arcane_process_v4(_token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
     data.iter().sum()
 }
 #[allow(dead_code)]
+#[allow(deprecated)]
 #[inline(always)]
 fn process_v4(_token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
     let _: () = <archmage::X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
@@ -39,6 +41,7 @@ fn process_v4(_token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
 }
 #[doc(hidden)]
 #[allow(dead_code)]
+#[allow(deprecated)]
 #[target_feature(
     enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
 )]
@@ -47,12 +50,14 @@ fn __arcane_process_v3(_token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
     data.iter().sum()
 }
 #[allow(dead_code)]
+#[allow(deprecated)]
 #[inline(always)]
 fn process_v3(_token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
     let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
     unsafe { __arcane_process_v3(_token, data) }
 }
 #[allow(dead_code)]
+#[allow(deprecated)]
 fn process_scalar(_token: archmage::ScalarToken, data: &[f32; 4]) -> f32 {
     data.iter().sum()
 }

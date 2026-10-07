@@ -152,6 +152,37 @@ fn gen_arcane_tests(files: &mut Vec<TestFile>) {
             .to_string(),
     });
 
+    // Nested unsafe fn: the inner fn keeps `unsafe` like the sibling does.
+    files.push(TestFile {
+        path: "arcane/unsafe_fn_nested.rs".to_string(),
+        content: "use archmage::{arcane, X64V3Token};\n\
+                  #[arcane(nested)]\n\
+                  unsafe fn process(token: X64V3Token, ptr: *const f32) -> f32 {\n\
+                      unsafe { *ptr }\n\
+                  }\n\
+                  fn main() {}\n"
+            .to_string(),
+    });
+
+    // Attributes that follow the body: #[track_caller] on both halves,
+    // #[expect] on the body half with #[allow] on the wrapper, other lint
+    // levels on both (sibling) or on the wrapper alone (nested).
+    for (mode, attr) in [("sibling", "#[arcane]"), ("nested", "#[arcane(nested)]")] {
+        files.push(TestFile {
+            path: format!("arcane/body_attrs_{mode}.rs"),
+            content: format!(
+                "use archmage::{{arcane, X64V3Token}};\n\
+                 {attr}\n\
+                 #[track_caller]\n\
+                 #[expect(unused_variables)]\n\
+                 #[allow(clippy::too_many_arguments)]\n\
+                 #[must_use]\n\
+                 fn process(token: X64V3Token, unused: f32) -> f32 {{ 1.0 }}\n\
+                 fn main() {{}}\n"
+            ),
+        });
+    }
+
     // Import intrinsics
     files.push(TestFile {
         path: "arcane/import_intrinsics.rs".to_string(),
@@ -394,6 +425,20 @@ fn gen_autoversion_tests(files: &mut Vec<TestFile>) {
                       for i in 0..len { s += unsafe { *ptr.add(i) }; }\n\
                       s\n\
                   }\n\
+                  fn main() {}\n"
+            .to_string(),
+    });
+
+    // Attributes that follow the body: #[track_caller] on the dispatcher and
+    // every variant, #[expect] on the variants with #[allow] on the dispatcher.
+    files.push(TestFile {
+        path: "autoversion/body_attrs.rs".to_string(),
+        content: "use archmage::autoversion;\n\
+                  #[autoversion(v3, scalar)]\n\
+                  #[track_caller]\n\
+                  #[expect(unused_variables)]\n\
+                  #[must_use]\n\
+                  fn process(unused: f32) -> f32 { 1.0 }\n\
                   fn main() {}\n"
             .to_string(),
     });

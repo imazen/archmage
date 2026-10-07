@@ -797,9 +797,21 @@ fn lint_attributes_and_destructured_dispatch_inputs_are_preserved() {
     )
     .unwrap()
     .to_string();
-    for lint in ["expect", "deny", "warn", "forbid"] {
+    for lint in ["deny", "warn", "forbid"] {
         assert_eq!(output.matches(&format!("# [{lint}")).count(), 2, "{output}");
     }
+    // `#[expect]` is fulfilled by the body, so only the sibling keeps it; the
+    // wrapper, which uses every parameter, gets `#[allow]` of the same lints.
+    assert_eq!(
+        output.matches("# [expect (unused_variables)]").count(),
+        1,
+        "{output}"
+    );
+    assert_eq!(
+        output.matches("# [allow (unused_variables)]").count(),
+        1,
+        "{output}"
+    );
     let output = expand(
         "autoversion",
         quote!(scalar),
@@ -895,4 +907,114 @@ fn combined_trait_features_preserve_first_seen_order() {
     let csv = crate::token_discovery::features_csv(None, &unusual);
     assert!(matches!(csv, Cow::Owned(_)));
     assert_eq!(csv, unusual.join(","));
+}
+
+/// An `unsafe fn` keeps `unsafe` on the half that holds the body: the sibling
+/// (or nested inner fn) is callable without `unsafe` from a matching feature
+/// context, so a safe one would discard the user's preconditions.
+#[test]
+fn unsafe_fn_keeps_unsafe_on_both_halves() {
+    for (args, inner) in [
+        (quote!(), "unsafe fn __arcane_f"),
+        (quote!(nested), "unsafe fn __simd_inner_f"),
+    ] {
+        let output = expand(
+            "arcane",
+            args,
+            quote!(
+                unsafe fn f(token: X64V3Token, ptr: *const f32) -> f32 {
+                    unsafe { *ptr }
+                }
+            ),
+        )
+        .unwrap()
+        .to_string()
+        .replace("# [", "#[");
+        assert!(output.contains(inner), "{output}");
+        assert!(output.contains("unsafe fn f"), "{output}");
+    }
+    // A safe input stays safe on both halves (`#![forbid(unsafe_code)]`).
+    let output = expand(
+        "arcane",
+        quote!(),
+        quote!(
+            fn f(token: X64V3Token) {}
+        ),
+    )
+    .unwrap()
+    .to_string();
+    assert!(!output.contains("unsafe fn"), "{output}");
+}
+
+/// `#[track_caller]` goes on every function between a panic in the body and
+/// the caller it names: the wrapper and the sibling, the dispatcher and each
+/// variant.
+#[test]
+fn track_caller_follows_the_body() {
+    let sibling = expand(
+        "arcane",
+        quote!(),
+        quote!(
+            #[track_caller]
+            fn f(token: X64V3Token) {}
+        ),
+    )
+    .unwrap()
+    .to_string();
+    assert_eq!(sibling.matches("track_caller").count(), 2, "{sibling}");
+    let nested = expand(
+        "arcane",
+        quote!(nested),
+        quote!(
+            #[track_caller]
+            fn f(token: X64V3Token) {}
+        ),
+    )
+    .unwrap()
+    .to_string();
+    assert_eq!(nested.matches("track_caller").count(), 2, "{nested}");
+    let autoversion = expand(
+        "autoversion",
+        quote!(v3, scalar),
+        quote!(
+            #[track_caller]
+            fn f(x: f32) -> f32 {
+                x
+            }
+        ),
+    )
+    .unwrap()
+    .to_string();
+    // dispatcher + v3 variant (whose own `#[archmage::arcane]` expansion is
+    // the sibling case above) + scalar variant
+    assert_eq!(
+        autoversion.matches("track_caller").count(),
+        3,
+        "{autoversion}"
+    );
+}
+
+/// A nested inner fn inherits the wrapper's lint levels, so the wrapper keeps
+/// `#[expect]` and the inner fn carries no lint levels of its own; a second
+/// `#[expect]` there would leave the wrapper's unfulfilled.
+#[test]
+fn nested_inner_fn_has_no_lint_levels_of_its_own() {
+    let output = expand(
+        "arcane",
+        quote!(nested),
+        quote!(
+            #[expect(unused_variables)]
+            #[allow(clippy::too_many_arguments)]
+            fn f(token: X64V3Token, unused: f32) {}
+        ),
+    )
+    .unwrap()
+    .to_string();
+    assert_eq!(
+        output.matches("# [expect (unused_variables)]").count(),
+        1,
+        "{output}"
+    );
+    assert_eq!(output.matches("# [allow").count(), 1, "{output}");
+    assert_eq!(output.matches("too_many_arguments").count(), 1, "{output}");
 }

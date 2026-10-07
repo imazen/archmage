@@ -264,8 +264,11 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
     let fn_name = &input_fn.sig.ident;
     let vis = input_fn.vis.clone();
 
-    // Move attrs to dispatcher only; variants get no user attrs
-    let fn_attrs: Vec<Attribute> = core::mem::take(&mut input_fn.attrs);
+    // The dispatcher gets the user's attributes (`#[expect]` as `#[allow]`:
+    // it forwards every argument and has no body of its own); each variant
+    // gets the ones that belong with the body it holds.
+    let fn_attrs: Vec<Attribute> = expect_as_allow(&input_fn.attrs);
+    input_fn.attrs = body_attrs(&input_fn.attrs, true);
 
     // =========================================================================
     // Generate suffixed variants

@@ -64,9 +64,14 @@ otherwise receive the call under the token's proof (found by review,
 2026-10-07). The sibling is private and `#[doc(hidden)]`, so no other crate
 can name it, and it shares one `cfg` guard with the wrapper, so the two never
 appear separately. In nested mode the inner function is block-local to the
-wrapper. Pinned by `tests/soundness/sibling_duplicate_exploit.rs`,
-`sibling_import_exploit.rs`, `sibling_param_shadow_exploit.rs` and the
-runtime cases in `tests/arcane_sibling_resolution.rs`.
+wrapper. Within the module, a function with matching target features can call
+the sibling directly and safely, so the sibling is `unsafe fn` exactly when the
+user's function is: a safe sibling of an `unsafe fn` would discard the
+preconditions the wrapper declares (found by review, 2026-10-07). Pinned by
+`tests/soundness/sibling_duplicate_exploit.rs`, `sibling_import_exploit.rs`,
+`sibling_param_shadow_exploit.rs`, `sibling_unsafe_bypass.rs`,
+`autoversion_unsafe_bypass.rs` and the runtime cases in
+`tests/arcane_sibling_resolution.rs`.
 
 Proofs union: a method taking `X64V4Token` inside an
 `impl … for X64V3Token` block may use V3 ∪ V4 features.

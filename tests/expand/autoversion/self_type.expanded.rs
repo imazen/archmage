@@ -23,7 +23,6 @@ impl P {
             enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
         )]
         #[inline]
-        #[allow(dead_code)]
         fn __simd_inner_apply_v4(
             _self: &P,
             _token: archmage::X64V4Token,
@@ -41,7 +40,6 @@ impl P {
             enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
         )]
         #[inline]
-        #[allow(dead_code)]
         fn __simd_inner_apply_v3(
             _self: &P,
             _token: archmage::X64V3Token,

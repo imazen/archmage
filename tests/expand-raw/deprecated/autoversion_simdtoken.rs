@@ -39,6 +39,7 @@ fn process(data: &[f32; 4]) -> f32 {
 #[cfg(target_arch = "x86_64")]
 #[doc(hidden)]
 #[allow(dead_code)]
+#[allow(deprecated)]
 #[target_feature(
     enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
 )]
@@ -48,6 +49,7 @@ fn __arcane_process_v4(_token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
 }
 #[cfg(target_arch = "x86_64")]
 #[allow(dead_code)]
+#[allow(deprecated)]
 #[inline(always)]
 fn process_v4(_token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
     let _: () = <archmage::X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
@@ -56,6 +58,7 @@ fn process_v4(_token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
 #[cfg(target_arch = "x86_64")]
 #[doc(hidden)]
 #[allow(dead_code)]
+#[allow(deprecated)]
 #[target_feature(
     enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
 )]
@@ -65,6 +68,7 @@ fn __arcane_process_v3(_token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
 }
 #[cfg(target_arch = "x86_64")]
 #[allow(dead_code)]
+#[allow(deprecated)]
 #[inline(always)]
 fn process_v3(_token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
     let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
@@ -73,6 +77,7 @@ fn process_v3(_token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
 #[cfg(target_arch = "aarch64")]
 #[doc(hidden)]
 #[allow(dead_code)]
+#[allow(deprecated)]
 #[target_feature(enable = "neon")]
 #[inline]
 fn __arcane_process_neon(_token: archmage::NeonToken, data: &[f32; 4]) -> f32 {
@@ -80,6 +85,7 @@ fn __arcane_process_neon(_token: archmage::NeonToken, data: &[f32; 4]) -> f32 {
 }
 #[cfg(target_arch = "aarch64")]
 #[allow(dead_code)]
+#[allow(deprecated)]
 #[inline(always)]
 fn process_neon(_token: archmage::NeonToken, data: &[f32; 4]) -> f32 {
     let _: () = <archmage::NeonToken>::__ARCHMAGE_ASSERT_TIER_72CB52B2;
@@ -89,10 +95,12 @@ fn process_neon(_token: archmage::NeonToken, data: &[f32; 4]) -> f32 {
 #[target_feature(enable = "simd128")]
 #[inline]
 #[allow(dead_code)]
+#[allow(deprecated)]
 fn process_wasm128(_token: archmage::Wasm128Token, data: &[f32; 4]) -> f32 {
     data.iter().sum()
 }
 #[allow(dead_code)]
+#[allow(deprecated)]
 fn process_scalar(_token: archmage::ScalarToken, data: &[f32; 4]) -> f32 {
     data.iter().sum()
 }
