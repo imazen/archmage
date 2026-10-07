@@ -10,6 +10,15 @@ env:
   FEATURES: "std avx512"
 
 jobs:
+  # A local reusable workflow runs the same matrix at this release's commit.
+  # Do not replace this with a status check for a branch tip or another run.
+  full-ci:
+    name: Full release CI
+    needs: check-tags
+    uses: ./.github/workflows/ci.yml
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
   # ==========================================================================
   # Verify tags and versions
   # ==========================================================================
@@ -22,6 +31,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          ref: ${{ github.sha }}
 
       - name: Extract version from tag
         id: version
@@ -39,14 +49,12 @@ jobs:
       - name: Verify all required tags exist and match
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          FIRST_COMMIT=""
+          FIRST_COMMIT=$(git rev-parse HEAD)
           for TAG in "v${VERSION}" "archmage-macros-v${VERSION}" "magetypes-v${VERSION}"; do
             if git rev-parse "$TAG" >/dev/null 2>&1; then
-              COMMIT=$(git rev-parse "$TAG")
+              COMMIT=$(git rev-parse "${TAG}^{commit}")
               echo "✓ $TAG -> $COMMIT"
-              if [ -z "$FIRST_COMMIT" ]; then
-                FIRST_COMMIT="$COMMIT"
-              elif [ "$COMMIT" != "$FIRST_COMMIT" ]; then
+              if [ "$COMMIT" != "$FIRST_COMMIT" ]; then
                 echo "::error::Tag $TAG points to $COMMIT, expected $FIRST_COMMIT"
                 exit 1
               fi
@@ -72,48 +80,22 @@ jobs:
           done
 
   # ==========================================================================
-  # Run generation check + clippy + tests before publishing
+  # Validate packaged sources as well as the full source-tree CI matrix.
   # ==========================================================================
   pre-publish-check:
-    name: Pre-publish Verification
+    name: Verify Release Packages
+    needs: check-tags
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy, rustfmt
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
-
-      - name: Generate and verify clean
-        run: |
-          cargo fetch
-          cargo run -p xtask -- generate
-          if ! git diff --exit-code; then
-            echo "::error::Generated code differs from committed code!"
-            exit 1
-          fi
-
-      - name: Clippy
-        run: cargo clippy --features "${{ env.FEATURES }}" -- -D warnings
-
-      - name: Format check
-        run: cargo fmt --all -- --check
-
-      - name: Install cargo-expand
-        run: cargo install cargo-expand --locked
-
-      - name: Tests
-        run: cargo test --features "${{ env.FEATURES }}"
-
-      - name: Validate safety
-        run: cargo run -p xtask -- validate
-
-      - name: Soundness verification
-        run: cargo run -p xtask -- soundness
 
       - name: Verify all crates package and build
         run: cargo publish --workspace --dry-run
@@ -125,10 +107,12 @@ jobs:
   publish:
     name: Publish Crates
     runs-on: ubuntu-latest
-    needs: [check-tags, pre-publish-check]
+    needs: [check-tags, pre-publish-check, full-ci]
     environment: crates-io
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable

@@ -803,56 +803,230 @@ fn verify_intrinsic_soundness() -> Result<()> {
     soundness::verify(&reg)
 }
 
-/// Run tests under Miri to detect undefined behavior.
-///
-/// Runs magetypes tests under Miri with full SIMD support enabled.
-/// This catches UB in SIMD operations, memory handling, and type conversions.
+fn miri_toolchain() -> String {
+    std::env::var("ARCHMAGE_MIRI_TOOLCHAIN").unwrap_or_else(|_| "nightly".into())
+}
+
+/// Expensive magetypes tests that Miri does not run. Each one either reaches no
+/// `unsafe` code or reaches only paths that a cheaper test, still run under
+/// Miri, already covers, so skipping it loses no undefined-behavior coverage.
+/// Each entry names a test binary and, with `Some`, one test in it; `None`
+/// skips the whole binary. The first two were about 95% of Miri's interpreted
+/// work (measured 2026-10-03). Native, SDE and cross-architecture CI still run
+/// them in full.
+const MIRI_SKIPPED_TESTS: &[(&str, Option<&str>, &str)] = &[
+    (
+        "int_widen_narrow",
+        Some("scalar_backend"),
+        "exhaustive i16/u16 loops; the unsafe bitcast path they reach is covered \
+         by scalar_w512_bitcast_values, which still runs under Miri",
+    ),
+    (
+        "fused_arithmetic",
+        None,
+        "software-FMA comparisons against std; safe code only",
+    ),
+    (
+        "cbrt_range",
+        Some("cbrt_midp_precise_covers_the_whole_range"),
+        "range sweeps, about 33,000 cbrt calls per function (432 s under Miri); \
+         on the scalar backend Miri runs they are safe code only",
+    ),
+];
+
+/// magetypes integration-test targets, minus the binaries [`MIRI_SKIPPED_TESTS`]
+/// skips whole. Fails if an entry no longer names a real target or a test that
+/// target defines, so a rename cannot leave it stale.
+fn miri_test_targets() -> Result<Vec<String>> {
+    let out = std::process::Command::new("cargo")
+        .args(["metadata", "--no-deps", "--format-version", "1"])
+        .output()
+        .context("Failed to run cargo metadata")?;
+    if !out.status.success() {
+        bail!("cargo metadata failed");
+    }
+    let meta: serde_json::Value = serde_json::from_slice(&out.stdout)?;
+    let package = meta["packages"]
+        .as_array()
+        .and_then(|packages| packages.iter().find(|p| p["name"] == "magetypes"))
+        .context("magetypes is missing from cargo metadata")?;
+    let tests: Vec<(String, String)> = package["targets"]
+        .as_array()
+        .context("magetypes has no targets in cargo metadata")?
+        .iter()
+        .filter(|t| {
+            t["kind"]
+                .as_array()
+                .is_some_and(|k| k.iter().any(|k| k == "test"))
+        })
+        .filter_map(|t| {
+            Some((
+                t["name"].as_str()?.to_owned(),
+                t["src_path"].as_str()?.to_owned(),
+            ))
+        })
+        .collect();
+    for (name, test, _) in MIRI_SKIPPED_TESTS {
+        let Some((_, src_path)) = tests.iter().find(|(t, _)| t == name) else {
+            bail!("MIRI_SKIPPED_TESTS names `{name}`, which is not a magetypes test target");
+        };
+        if let Some(test) = test {
+            let src = std::fs::read_to_string(src_path)
+                .with_context(|| format!("Failed to read {src_path}"))?;
+            if !src.contains(&format!("fn {test}(")) {
+                bail!("MIRI_SKIPPED_TESTS names test `{test}`, which {src_path} does not define");
+            }
+        }
+    }
+    Ok(tests
+        .into_iter()
+        .map(|(name, _)| name)
+        .filter(|t| {
+            !MIRI_SKIPPED_TESTS
+                .iter()
+                .any(|(skip, test, _)| skip == t && test.is_none())
+        })
+        .collect())
+}
+
+/// Run native raw tests with their required virtual CPU, then the baseline
+/// suite (unit tests and the integration tests [`MIRI_SKIPPED_TESTS`] does not
+/// skip), then the doctests.
 fn run_miri() -> Result<()> {
     use std::process::Command;
-
-    println!("=== Running Miri on magetypes ===\n");
-
-    // Check if miri is installed
-    let miri_check = Command::new("cargo")
-        .args(["+nightly", "miri", "--version"])
-        .output();
-
-    match miri_check {
-        Err(_) => {
-            eprintln!("Miri not installed. Install with:");
-            eprintln!("  rustup +nightly component add miri");
-            eprintln!("  cargo +nightly miri setup");
-            bail!("Miri not available");
-        }
-        Ok(ref out) if !out.status.success() => {
-            eprintln!("Miri not installed. Install with:");
-            eprintln!("  rustup +nightly component add miri");
-            eprintln!("  cargo +nightly miri setup");
-            bail!("Miri not available");
-        }
-        _ => {}
+    let toolchain = format!("+{}", miri_toolchain());
+    println!("=== Running Miri on magetypes ({toolchain}) ===");
+    let check = Command::new("cargo")
+        .args([&toolchain, "miri", "--version"])
+        .status()?;
+    if !check.success() {
+        bail!("Miri is unavailable for {toolchain}; install its miri component");
     }
 
-    // Run miri on magetypes with full SIMD support
-    let status = Command::new("cargo")
-        .args([
-            "+nightly",
+    let targets = miri_test_targets()?;
+    println!("Not run under Miri (unsafe paths covered by retained tests; native CI runs them):");
+    for (bin, test, why) in MIRI_SKIPPED_TESTS {
+        match test {
+            Some(test) => println!("  {bin}::{test}: {why}"),
+            None => println!("  {bin} (whole binary): {why}"),
+        }
+    }
+    // A binary with per-test skips runs on its own: libtest's --skip applies to
+    // every binary in one cargo invocation.
+    let mut partial: Vec<(&str, Vec<&str>)> = Vec::new();
+    for (bin, test, _) in MIRI_SKIPPED_TESTS {
+        if let Some(test) = test {
+            match partial.iter_mut().find(|(b, _)| b == bin) {
+                Some((_, skips)) => skips.push(test),
+                None => partial.push((bin, vec![test])),
+            }
+        }
+    }
+    let mut baseline = Command::new("cargo");
+    baseline.args([
+        &toolchain,
+        "miri",
+        "test",
+        "-p",
+        "magetypes",
+        "--features",
+        "avx512",
+        "--lib",
+    ]);
+    for target in targets
+        .iter()
+        .filter(|t| !partial.iter().any(|(b, _)| b == t))
+    {
+        baseline.args(["--test", target]);
+    }
+    if cfg!(target_arch = "x86_64") {
+        // This test deliberately requires a native V3 token. Give the interpreter
+        // that virtual CPU; retain every roundtrip assertion. Run it first so a
+        // failure cannot hide behind the much longer baseline suite.
+        let mut raw = Command::new("cargo");
+        raw.args([
+            &toolchain,
             "miri",
             "test",
             "-p",
             "magetypes",
             "--features",
-            "magetypes/avx512",
+            "avx512",
+            "--test",
+            "raw_interop",
+        ]);
+        if let Ok(flags) = std::env::var("CARGO_ENCODED_RUSTFLAGS") {
+            raw.env(
+                "CARGO_ENCODED_RUSTFLAGS",
+                format!("{flags}\x1f-Ctarget-cpu=x86-64-v3"),
+            );
+        } else {
+            let flags = std::env::var("RUSTFLAGS").unwrap_or_default();
+            raw.env("RUSTFLAGS", format!("{flags} -Ctarget-cpu=x86-64-v3"));
+        }
+        if !raw
+            .status()
+            .context("Failed to run native raw Miri tests")?
+            .success()
+        {
+            bail!("Native raw Miri tests failed; see diagnostics above");
+        }
+        // The named raw test has already executed above. All other tests retain
+        // the baseline virtual CPU. Non-x86 hosts run their entire native suite.
+        baseline.args(["--", "--skip", "native_raw_roundtrips"]);
+    }
+    let baseline = baseline
+        .status()
+        .context("Failed to run baseline Miri tests")?;
+    if !baseline.success() {
+        bail!("Baseline Miri tests failed; see diagnostics above");
+    }
+    for (bin, skips) in &partial {
+        let mut run = Command::new("cargo");
+        run.args([
+            &toolchain,
+            "miri",
+            "test",
+            "-p",
+            "magetypes",
+            "--features",
+            "avx512",
+            "--test",
+            bin,
+            "--",
+            "--exact",
+        ]);
+        for test in skips {
+            run.args(["--skip", test]);
+        }
+        if !run
+            .status()
+            .with_context(|| format!("Failed to run Miri on {bin}"))?
+            .success()
+        {
+            bail!("Miri tests in {bin} failed; see diagnostics above");
+        }
+    }
+    // Cargo cannot mix --doc with explicit targets, so the doctests that the
+    // former all-targets invocation covered get their own run.
+    let doc = Command::new("cargo")
+        .args([
+            &toolchain,
+            "miri",
+            "test",
+            "-p",
+            "magetypes",
+            "--features",
+            "avx512",
+            "--doc",
         ])
         .status()
-        .context("Failed to run miri")?;
-
-    if status.success() {
-        println!("\n✓ Miri found no undefined behavior in magetypes!");
-        Ok(())
-    } else {
-        bail!("Miri detected undefined behavior")
+        .context("Failed to run Miri doctests")?;
+    if !doc.success() {
+        bail!("Miri doctests failed; see diagnostics above");
     }
+    println!("Miri tests passed for native raw interop, the baseline suite, and the doctests");
+    Ok(())
 }
 
 fn main() -> Result<()> {
@@ -882,8 +1056,7 @@ fn main() -> Result<()> {
         "validate" => {
             let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
             soundness::verify(&reg)?;
-            soundness::check_stderr_snapshot_portability()?;
-            validate_summon(&reg)?;
+            validate_after_soundness(&reg)?;
         }
         "validate-registry" => validate_registry()?,
         "parity" => check_api_parity(false)?,
@@ -926,6 +1099,269 @@ fn main() -> Result<()> {
         }
     }
 
+    Ok(())
+}
+
+/// Verify the hand-written AVX-512 f32 delegation forwards *every* backend
+/// trait method to `X64V3Token`.
+///
+/// `magetypes/src/simd/impls/x86_v4_f32_delegated.rs` is the one backend impl
+/// the generator does not emit. Because `F32x4Backend` / `F32x8Backend` give
+/// several methods a scalar **default** body, a method the delegation forgets
+/// still compiles — it just silently drops the V3 hardware path for every
+/// AVX-512 token. That is how `to_u8_bytes`, `store_rgba_bytes` and
+/// `transpose_8x8_repr` regressed to a per-lane `roundevenf` / gather after
+/// the concrete-type retirement restored them on V3 and NEON only
+/// (issue #60): `f32x8<X64V4Token>::transpose_8x8` compiled to ~198
+/// instructions against V3's ~32.
+///
+/// So: no silent defaults. Every trait method must appear in both macros.
+fn validate_v4_f32_delegation() -> Result<()> {
+    println!("\n=== Validating AVX-512 f32 delegation completeness ===");
+
+    /// Names of `fn`s declared directly inside the first `{}` block that
+    /// follows `header` in `src`.
+    fn methods_in_block(src: &str, header: &str, indent: &str) -> Result<Vec<String>> {
+        let start = src
+            .find(header)
+            .ok_or_else(|| anyhow::anyhow!("could not find `{header}`"))?;
+        let open = src[start..]
+            .find('{')
+            .ok_or_else(|| anyhow::anyhow!("no `{{` after `{header}`"))?
+            + start;
+        let mut depth = 0usize;
+        let mut end = open;
+        for (i, c) in src[open..].char_indices() {
+            match c {
+                '{' => depth += 1,
+                '}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        end = open + i;
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        let needle = format!("\n{indent}fn ");
+        Ok(src[open..end]
+            .match_indices(&needle)
+            .map(|(i, _)| {
+                let rest = &src[open + i + needle.len()..];
+                rest.chars()
+                    .take_while(|c| c.is_alphanumeric() || *c == '_')
+                    .collect::<String>()
+            })
+            .collect())
+    }
+
+    let deleg_path = "magetypes/src/simd/impls/x86_v4_f32_delegated.rs";
+    let deleg = std::fs::read_to_string(deleg_path)?;
+
+    let mut missing_total = 0usize;
+    for (trait_name, trait_path) in [
+        ("F32x4Backend", "magetypes/src/simd/backends/f32x4.rs"),
+        ("F32x8Backend", "magetypes/src/simd/backends/f32x8.rs"),
+    ] {
+        let trait_src = std::fs::read_to_string(trait_path)?;
+        let declared = methods_in_block(&trait_src, &format!("pub trait {trait_name}"), "    ")?;
+        let forwarded = methods_in_block(
+            &deleg,
+            &format!("impl {trait_name} for $token"),
+            "            ",
+        )?;
+
+        let missing: Vec<_> = declared
+            .iter()
+            .filter(|m| !forwarded.contains(m))
+            .cloned()
+            .collect();
+
+        println!(
+            "  {trait_name}: {} declared, {} forwarded, {} missing",
+            declared.len(),
+            forwarded.len(),
+            missing.len()
+        );
+        for m in &missing {
+            println!("    MISSING: {trait_name}::{m}");
+        }
+        missing_total += missing.len();
+    }
+
+    if missing_total > 0 {
+        anyhow::bail!(
+            "{missing_total} backend method(s) not forwarded in {deleg_path}.\n\
+             Every AVX-512 token would silently fall back to the trait's scalar default \
+             body for these, losing V3's hardware path. Add a forwarding method for each."
+        );
+    }
+
+    println!("  OK: every f32 backend method is forwarded to X64V3Token");
+    Ok(())
+}
+
+/// Per-target budgets for the generated backend surface that a given
+/// `target_arch` actually compiles.
+///
+/// **Why this check exists.** `magetypes` is a serialization point: dozens of
+/// crates sit above it in the build graph and none of them can start until its
+/// unit finishes. Its own compile time is therefore fully on their critical
+/// path — it does not overlap with anything and does not amortise across
+/// cores. A percentage that looks small against a whole parallel build is paid
+/// in full, serially, by every downstream crate.
+///
+/// **The numbers are calibrated, not invented.** Measured on `r5900xt`
+/// (32 cores, 60 GB, rustc 1.98.1, idle), `magetypes` unit only with
+/// dependencies pre-built, mean of three cold runs, spread +/- 0.02 s:
+///
+/// | x86-compiled lines | magetypes unit |
+/// |---|---|
+/// | 17 928 | 2.52 s |
+/// | 21 174 | 2.70 s |
+///
+/// So +18.1% of compiled source cost +5.8% of serial compile time on that
+/// host. Source lines are used rather than wall-clock because CI wall-clock is
+/// far too noisy to gate on, and because this metric is deterministic — the
+/// same tree always produces the same number.
+///
+/// **These are budgets, not floors.** Exceeding one is not automatically
+/// wrong; it means the growth has to be a deliberate, reviewed edit to the
+/// number below rather than something that lands unnoticed. Note the
+/// asymmetry with `REQUIRED_FILE_FLOORS` in `soundness.rs`, which guards
+/// against generated code *disappearing*; this guards against it *accreting*.
+///
+/// Only files the target actually compiles are counted: `impls/mod.rs`
+/// cfg-gates `arm_neon` and `wasm128` away on x86, so a NEON-only change
+/// costs an x86 build nothing.
+const COMPILE_BUDGETS: &[(&str, &[&str], usize)] = &[
+    (
+        "x86_64",
+        &[
+            "magetypes/src/simd/impls/x86_v3.rs",
+            "magetypes/src/simd/impls/x86_v4.rs",
+            "magetypes/src/simd/impls/x86_v4_f32_delegated.rs",
+            "magetypes/src/simd/impls/scalar.rs",
+            "magetypes/src/simd/backends/",
+        ],
+        31_700, // measured 30 197
+    ),
+    (
+        "aarch64",
+        &[
+            "magetypes/src/simd/impls/arm_neon.rs",
+            "magetypes/src/simd/impls/scalar.rs",
+            "magetypes/src/simd/backends/",
+        ],
+        26_100, // measured 24 890
+    ),
+    (
+        "wasm32",
+        &[
+            "magetypes/src/simd/impls/wasm128.rs",
+            "magetypes/src/simd/impls/scalar.rs",
+            "magetypes/src/simd/backends/",
+        ],
+        25_700, // measured 24 442
+    ),
+];
+
+/// Check the generated backend surface against [`COMPILE_BUDGETS`].
+fn check_compile_budgets() -> Result<()> {
+    println!("\n=== Generated backend surface (compile budget) ===");
+    let count = |spec: &str| -> Result<usize> {
+        let mut files: Vec<PathBuf> = Vec::new();
+        if let Some(dir) = spec.strip_suffix('/') {
+            for entry in std::fs::read_dir(dir)
+                .with_context(|| format!("reading {dir}"))?
+                .flatten()
+            {
+                let p = entry.path();
+                if p.extension().is_some_and(|e| e == "rs") {
+                    files.push(p);
+                }
+            }
+        } else {
+            files.push(PathBuf::from(spec));
+        }
+        files.sort();
+        let mut total = 0usize;
+        for f in files {
+            let text =
+                std::fs::read_to_string(&f).with_context(|| format!("reading {}", f.display()))?;
+            total += text.lines().count();
+        }
+        Ok(total)
+    };
+
+    let mut over: Vec<String> = Vec::new();
+    for (arch, specs, budget) in COMPILE_BUDGETS {
+        let mut lines = 0usize;
+        for spec in *specs {
+            lines += count(spec)?;
+        }
+        let pct = (lines as f64 / *budget as f64) * 100.0;
+        println!("  {arch:<8} {lines:>6} lines / {budget:>6} budget  ({pct:.1}%)");
+        if lines > *budget {
+            over.push(format!(
+                "  {arch}: {lines} lines exceeds the {budget} budget by {}",
+                lines - budget
+            ));
+        }
+    }
+
+    if !over.is_empty() {
+        println!();
+        anyhow::bail!(
+            "generated backend surface over budget:\n{}\n\n\
+             magetypes is a serialization point — dozens of crates wait on its unit, so\n\
+             its compile time lands in full on every downstream build's critical path.\n\
+             If the growth is intended, raise the budget in COMPILE_BUDGETS and say why\n\
+             in the commit message. If it is not, the generator emitted more than you\n\
+             expected — check what changed before raising the number.",
+            over.join("\n")
+        );
+    }
+    println!("  OK: every target's generated surface is within budget");
+    Ok(())
+}
+
+/// Every check `cargo xtask validate` runs after the soundness scan. `just ci`
+/// calls this too, so the local gate matches CI's Validate Token Safety job.
+fn validate_after_soundness(reg: &registry::Registry) -> Result<()> {
+    soundness::check_stderr_snapshot_portability()?;
+    validate_summon(reg)?;
+    validate_v4_f32_delegation()?;
+    check_compile_budgets()?;
+    check_package_licenses()?;
+    Ok(())
+}
+
+/// Check that the sub-crates ship both license texts, identical to the root copies.
+///
+/// A package's `include` list only reaches files inside its own directory, so
+/// archmage-macros and magetypes keep copies; the root crate includes `/LICENSE*`.
+fn check_package_licenses() -> Result<()> {
+    println!("\n=== License texts in the published sub-crates ===");
+    for crate_dir in ["archmage-macros", "magetypes"] {
+        for name in ["LICENSE-MIT", "LICENSE-APACHE"] {
+            let root = std::fs::read(name).with_context(|| format!("reading {name}"))?;
+            let copy = PathBuf::from(crate_dir).join(name);
+            let packaged = std::fs::read(&copy).with_context(|| {
+                format!(
+                    "{} is missing; copy {name} from the repository root",
+                    copy.display()
+                )
+            })?;
+            anyhow::ensure!(
+                packaged == root,
+                "{} differs from the root {name}; copy the root file over it",
+                copy.display()
+            );
+        }
+    }
+    println!("  OK: archmage-macros and magetypes carry LICENSE-MIT and LICENSE-APACHE");
     Ok(())
 }
 
@@ -1809,9 +2245,9 @@ fn run_ci() -> Result<()> {
     soundness::verify(&reg)?;
     println!("└─ Soundness verification passed ────────────────────────────────────┘\n");
 
-    println!("┌─ Step 4/18: Validating summon() features ──────────────────────────┐");
-    validate_summon(&reg)?;
-    println!("└─ summon() validation passed ──────────────────────────────────────┘\n");
+    println!("┌─ Step 4/18: Validating tokens, delegation, budgets, licenses ──────┐");
+    validate_after_soundness(&reg)?;
+    println!("└─ Validation passed ───────────────────────────────────────────────┘\n");
 
     // Step 5: Parity check (strict mode - fails on any issues)
     println!("┌─ Step 5/18: Checking API parity (strict) ──────────────────────────┐");
@@ -2046,7 +2482,11 @@ fn run_ci() -> Result<()> {
     println!("┌─ Step 15/18: Running Miri (UB detection) ──────────────────────────┐");
     // Check if Miri is available
     let miri_available = std::process::Command::new("cargo")
-        .args(["+nightly", "miri", "--version"])
+        .args([
+            format!("+{}", miri_toolchain()),
+            "miri".into(),
+            "--version".into(),
+        ])
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false);
@@ -2055,22 +2495,7 @@ fn run_ci() -> Result<()> {
         println!("  ⚠ Miri not available, skipping UB checks");
         println!("  Install with: rustup +nightly component add miri");
     } else {
-        let miri = std::process::Command::new("cargo")
-            .args([
-                "+nightly",
-                "miri",
-                "test",
-                "-p",
-                "magetypes",
-                "--features",
-                "magetypes/avx512",
-            ])
-            .status()
-            .context("Failed to run Miri")?;
-        if !miri.success() {
-            bail!("Miri detected undefined behavior!");
-        }
-        println!("  ✓ Miri found no undefined behavior");
+        run_miri()?;
     }
     println!("└─ Miri check complete ──────────────────────────────────────────────┘\n");
 

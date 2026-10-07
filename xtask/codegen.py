@@ -555,6 +555,39 @@ def neon_widen_mul_operands(body):
     return result
 
 
+# x86 instructions whose two sources commute bit-exactly: integer add,
+# saturating add, multiply, multiply-add of pairs, average, min, max, equality
+# compare, and the bitwise and/or/xor (integer and float forms). Float add,
+# multiply, min and max are left out: which NaN payload, or which operand on a
+# tie, comes back depends on the order. `andn` and subtraction don't commute.
+X86_COMMUTATIVE = {
+    *(f"vpadd{s}" for s in ("b", "w", "d", "q", "sb", "sw", "usb", "usw")),
+    *(f"vpmul{s}" for s in ("lw", "ld", "lq", "hw", "huw", "udq", "dq")),
+    "vpmaddwd", "vpavgb", "vpavgw",
+    *(f"vp{m}{s}" for m in ("max", "min") for s in ("sb", "sw", "sd", "sq", "ub", "uw", "ud", "uq")),
+    *(f"vpcmpeq{s}" for s in ("b", "w", "d", "q")),
+    "vpand", "vpandd", "vpandq", "vpor", "vpord", "vporq", "vpxor", "vpxord", "vpxorq",
+    "vandps", "vandpd", "vorps", "vorpd", "vxorps", "vxorpd",
+}
+
+
+def x86_commuted_sources(body):
+    """Order the two AT&T source operands of bit-exactly commutative instructions.
+
+    Register allocation can swap them without changing results or instruction
+    counts; the destination, the last operand, keeps its position.
+    """
+    result = []
+    for line in body:
+        mnemonic, _, rest = line.partition("\t")
+        operands = rest.split(", ")
+        if mnemonic in X86_COMMUTATIVE and len(operands) == 3:
+            first, second = sorted(operands[:2])
+            line = f"{mnemonic}\t{first}, {second}, {operands[2]}"
+        result.append(line)
+    return result
+
+
 def retained_reference_casts(ty, before, after):
     """Keep baseline probes; permit only the four deliberately retired casts."""
     pattern = r"pub fn (bitcast_(?:ref|mut)_\w+)\(&(mut )?self\) -> &(mut )?super::(\w+)<T>"
@@ -1542,6 +1575,8 @@ def integer_probes():
                 "neon_512_byte_dot_high",
             ):
                 equal = neon_widen_mul_operands(api) == neon_widen_mul_operands(hand)
+            if arch == "x86" and not equal:
+                equal = x86_commuted_sources(api) == x86_commuted_sources(hand)
             equal = equal or pair_equivalent
             exploratory = name.endswith("sad_composed") or (
                 target.startswith("wasm")
@@ -1579,7 +1614,7 @@ def integer_probes():
             sum(r["matches_reference"] for r in rows),
             "/",
             len(rows),
-            "match intrinsic references (allowing commuted NEON multiply operands)",
+            "match intrinsic references (allowing commuted operands of commutative instructions)",
             flush=True,
         )
     (root / "results.json").write_text(json.dumps(result, indent=2))

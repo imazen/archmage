@@ -22,7 +22,7 @@ repository.workspace = true
 description = "Safely invoke your intrinsic power, using the tokens granted to you by the CPU. Cast primitive magics faster than any mage alive."
 documentation = "https://docs.rs/archmage"
 # crates.io renders this trimmed, badge-free README (generated from README.md by
-# scripts/gen-readme-crates.sh); GitHub keeps README.md with the full badge row.
+# cargo run -p xtask -- generate); GitHub keeps README.md with the full badge row.
 readme = "README.crates.md"
 keywords = ["simd", "avx", "neon", "wasm", "safe"]
 categories = ["development-tools", "hardware-support", "no-std"]
@@ -58,6 +58,12 @@ safe_unaligned_simd = []
 # disabled at runtime. With this, compiled_with() returns None and summon()
 # uses runtime detection + cache, so dangerously_disable_token_process_wide()
 # and for_each_token_permutation() always work.
+#
+# Cost: every summon() becomes a cache read, even X64V1Token's on x86-64,
+# which is otherwise a constant. Cargo unifies features across the build, so
+# enable this only from [dev-dependencies] or a dev-only feature (for example
+# `_dev = ["archmage/testable_dispatch"]`), never from [dependencies] or
+# [workspace.dependencies], where it reaches every downstream build.
 testable_dispatch = []
 # Backwards-compat no-op. forge_token_dangerously() used to be gated behind
 # this feature; it is now always public, because it is a safe
@@ -85,6 +91,9 @@ winarm-cpufeatures = { version = "0.1.2", default-features = false, features = [
 # Dev dependencies that don't support WASM
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 
+# Gates exercise tests for intrinsics stabilized after the 1.89 MSRV
+# (NEON dotprod 1.98, NEON fp16/fhm 1.94, AVX-512 FP16 1.94).
+rustversion = "1.0.23"
 zenbench = { version = "0.1.7", features = ["criterion-compat"] }
 trybuild = "1.0.120"
 macrotest = "1.2.1"

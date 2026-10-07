@@ -126,14 +126,14 @@ Archmage maps capability tokens to `#[target_feature]` attributes. Every AVX-512
 | Token | Features |
 |-------|----------|
 | `X64V4Token` | `avx512f`, `avx512bw`, `avx512cd`, `avx512dq`, `avx512vl` |
-| `X64V4xToken` | Above + `avx512vbmi`, `avx512vbmi2`, `avx512bitalg`, `avx512vnni`, `avx512vpopcntdq`, `avx512ifma`, `avx512bf16`, `gfni`, `vaes`, `vpclmulqdq` |
-| `Avx512Fp16Token` | Above + `avx512fp16` |
+| `X64V4xToken` | Above + `avx512vbmi`, `avx512vbmi2`, `avx512bitalg`, `avx512vnni`, `avx512vpopcntdq`, `avx512ifma`, `gfni`, `vaes`, `vpclmulqdq` |
+| `Avx512Fp16Token` | `X64V4Token`'s features + `avx512fp16` |
 
 Runtime detection (`is_x86_feature_detected!("avx512f")`) also works on stable now, so `summon()` compiles without feature gates.
 
 ## The result
 
-On Rust 1.89, you can write AVX-512 code with zero `unsafe`:
+On Rust 1.89, you can write AVX-512 code with zero `unsafe` (with archmage's `avx512` feature enabled; `import_intrinsics` needs it for AVX-512 tokens):
 
 ```rust
 use archmage::prelude::*;

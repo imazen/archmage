@@ -8,23 +8,20 @@ repository.workspace = true
 description = "Token-gated SIMD types with natural operators. Depends on archmage for tokens."
 documentation = "https://docs.rs/magetypes"
 # crates.io renders this trimmed, badge-free README (generated from README.md by
-# scripts/gen-readme-crates.sh); GitHub keeps README.md with the full badge row.
+# cargo run -p xtask -- generate); GitHub keeps README.md with the full badge row.
 readme = "README.crates.md"
 keywords = ["simd", "avx", "neon", "wasm", "safe"]
 categories = ["development-tools", "hardware-support", "no-std"]
+# Tests, benches and examples stay in the repository; shipping them pushed the
+# crate past the 300 KiB package budget (443 KiB at 0.9.30-pre).
 include = [
     "src/**",
-    "benches/**",
-    "tests/**",
-    "examples/**",
     "Cargo.toml",
     "README.crates.md",
     "LICENSE*",
 ]
 
 [features]
-# bytemuck is NOT default - it bypasses token-gated construction safety
-# Users who enable it are explicitly opting out of token safety guarantees
 default = ["std", "w512"]
 std = ["archmage/std"]
 # 512-bit SIMD type support (polyfill via 2×W256 on all platforms).
@@ -41,6 +38,8 @@ archmage = { version = "0.9.29", path = "..", default-features = false }
 # `core::arch` intrinsics above the crate MSRV — gates the aarch64 NEON-f16
 # hardware path (`vcvt_*`, stable since 1.94) without raising the 1.89 floor.
 # See `simd::generic::convert_f16` and `MSRV.md`.
+# Correctly rounded f64 software FMA for scalar and strict WASM, including no_std.
+libm = { version = "0.2.16", default-features = false }
 rustversion = "1.0.23"
 
 # proptest and zenbench don't support WASM; trybuild/macrotest require host execution

@@ -6,8 +6,8 @@
 //! If feature detection lies about capabilities, these tests will crash (SIGILL).
 //!
 //! **Tokens tested:**
-//! - `Arm64V2Token` — RDM, DotProd, CRC, SHA2, AES round ops, p64 multiply
-//! - `Arm64V3Token` — SHA3 (vbcax, veor3, vrax1, vxar, vsha512)
+//! - `Arm64V2Token` — RDM, DotProd, FP16 vectors, CRC, SHA2, AES round ops, p64 multiply
+//! - `Arm64V3Token` — SHA3 (vbcax, veor3, vrax1, vxar, vsha512), FHM (vfmlal, vfmlsl)
 //! - `NeonAesToken` — AES round ops + p64 multiply
 //! - `NeonSha3Token` — SHA3 intrinsics
 //! - `NeonCrcToken` — CRC32 intrinsics
@@ -109,10 +109,222 @@ fn exercise_rdm(token: Arm64V2Token) {
 
 // =============================================================================
 // DotProd — Dot Product (Arm64V2Token)
-// ALL dotprod intrinsics are nightly-only (stdarch_neon_dotprod).
-// Verified: vdot_s32, vdotq_s32, vdot_u32, vdotq_u32 + lane variants
-// all require #![feature(stdarch_neon_dotprod)] on stable Rust 1.93.
+// All 12 dotprod intrinsics are stable on aarch64 since Rust 1.98.0
+// (`stdarch_neon_dotprod`). The MSRV is 1.89, hence the rustversion gate.
 // =============================================================================
+
+#[rustversion::since(1.98)]
+#[test]
+fn test_dotprod_intrinsics() {
+    if let Some(token) = Arm64V2Token::summon() {
+        exercise_dotprod(token);
+        println!("All 12 DotProd intrinsic tests passed!");
+    } else {
+        println!("Arm64V2Token not available - skipping DotProd tests");
+    }
+}
+
+#[rustversion::since(1.98)]
+#[arcane]
+fn exercise_dotprod(token: Arm64V2Token) {
+    let s8x8 = vdup_n_s8(2);
+    let s8x16 = vdupq_n_s8(2);
+    let t8x8 = vdup_n_s8(-3);
+    let t8x16 = vdupq_n_s8(-3);
+    let u8x8 = vdup_n_u8(200);
+    let u8x16 = vdupq_n_u8(200);
+    let v8x8 = vdup_n_u8(2);
+    let v8x16 = vdupq_n_u8(2);
+    let s32x2 = vdup_n_s32(1);
+    let s32x4 = vdupq_n_s32(1);
+    let u32x2 = vdup_n_u32(1);
+    let u32x4 = vdupq_n_u32(1);
+
+    // Each 32-bit lane adds four byte products: 1 + 4 * (2 * -3) = -23.
+    assert_eq!(vget_lane_s32::<0>(vdot_s32(s32x2, s8x8, t8x8)), -23);
+    assert_eq!(vgetq_lane_s32::<3>(vdotq_s32(s32x4, s8x16, t8x16)), -23);
+    // Unsigned bytes keep their full range: 1 + 4 * (200 * 2) = 1601.
+    assert_eq!(vget_lane_u32::<1>(vdot_u32(u32x2, u8x8, v8x8)), 1601);
+    assert_eq!(vgetq_lane_u32::<0>(vdotq_u32(u32x4, u8x16, v8x16)), 1601);
+
+    // Lane forms broadcast one 4-byte group of the last operand; with uniform
+    // inputs the sums are unchanged.
+    assert_eq!(
+        vget_lane_s32::<0>(vdot_lane_s32::<1>(s32x2, s8x8, t8x8)),
+        -23
+    );
+    assert_eq!(
+        vgetq_lane_s32::<0>(vdotq_lane_s32::<1>(s32x4, s8x16, t8x8)),
+        -23
+    );
+    assert_eq!(
+        vget_lane_s32::<0>(vdot_laneq_s32::<3>(s32x2, s8x8, t8x16)),
+        -23
+    );
+    assert_eq!(
+        vgetq_lane_s32::<0>(vdotq_laneq_s32::<3>(s32x4, s8x16, t8x16)),
+        -23
+    );
+    assert_eq!(
+        vget_lane_u32::<0>(vdot_lane_u32::<1>(u32x2, u8x8, v8x8)),
+        1601
+    );
+    assert_eq!(
+        vgetq_lane_u32::<0>(vdotq_lane_u32::<1>(u32x4, u8x16, v8x8)),
+        1601
+    );
+    assert_eq!(
+        vget_lane_u32::<0>(vdot_laneq_u32::<3>(u32x2, u8x8, v8x16)),
+        1601
+    );
+    assert_eq!(
+        vgetq_lane_u32::<0>(vdotq_laneq_u32::<3>(u32x4, u8x16, v8x16)),
+        1601
+    );
+}
+
+// =============================================================================
+// FP16 — half-precision vector arithmetic (Arm64V2Token)
+// The vector forms are stable since Rust 1.94.0 (`stdarch_neon_fp16`). Those
+// that take or return the scalar `f16` type are not, because `f16` is not.
+// =============================================================================
+
+#[rustversion::since(1.94)]
+#[test]
+fn test_fp16_intrinsics() {
+    if let Some(token) = Arm64V2Token::summon() {
+        exercise_fp16(token);
+        println!("FP16 vector intrinsic tests passed!");
+    } else {
+        println!("Arm64V2Token not available - skipping FP16 tests");
+    }
+}
+
+#[rustversion::since(1.94)]
+#[arcane]
+fn exercise_fp16(token: Arm64V2Token) {
+    // Bit patterns: 0x3C00 is 1.0, 0x3E00 is 1.5, 0x4000 is 2.0.
+    let one = vreinterpretq_f16_u16(vdupq_n_u16(0x3C00));
+    let a = vreinterpretq_f16_u16(vdupq_n_u16(0x3E00));
+    let b = vreinterpretq_f16_u16(vdupq_n_u16(0x4000));
+    // Widen to f32 to read a lane; every result here is exact in f16.
+    let low = |v: float16x8_t| vgetq_lane_f32::<0>(vcvt_f32_f16(vget_low_f16(v)));
+    let high = |v: float16x8_t| vgetq_lane_f32::<3>(vcvt_high_f32_f16(v));
+
+    assert_eq!(low(vaddq_f16(a, b)), 3.5);
+    assert_eq!(high(vsubq_f16(b, a)), 0.5);
+    assert_eq!(low(vmulq_f16(a, b)), 3.0);
+    assert_eq!(high(vdivq_f16(a, b)), 0.75);
+    // vfmaq_f16(acc, x, y) = acc + x * y
+    assert_eq!(low(vfmaq_f16(one, a, b)), 4.0);
+}
+
+// =============================================================================
+// FHM — FP16 multiply-add long (Arm64V3Token)
+// The 24 FMLAL/FMLSL intrinsics are stable since Rust 1.94.0
+// (`stdarch_neon_fp16`). Each needs both fp16 and fhm, so Arm64V2Token
+// (fp16 without fhm) does not cover them.
+// =============================================================================
+
+#[rustversion::since(1.94)]
+#[test]
+fn test_fhm_intrinsics() {
+    if let Some(token) = Arm64V3Token::summon() {
+        exercise_fhm(token);
+        println!("All 24 FHM intrinsic tests passed!");
+    } else {
+        println!("Arm64V3Token not available - skipping FHM tests");
+    }
+}
+
+#[rustversion::since(1.94)]
+#[arcane]
+fn exercise_fhm(token: Arm64V3Token) {
+    // The f16 scalar type is unstable, so build the vectors from bit patterns:
+    // 0x3E00 is 1.5 and 0x4000 is 2.0.
+    let a4 = vreinterpret_f16_u16(vdup_n_u16(0x3E00));
+    let a8 = vreinterpretq_f16_u16(vdupq_n_u16(0x3E00));
+    let b4 = vreinterpret_f16_u16(vdup_n_u16(0x4000));
+    let b8 = vreinterpretq_f16_u16(vdupq_n_u16(0x4000));
+    let r2 = vdup_n_f32(1.0);
+    let r4 = vdupq_n_f32(1.0);
+
+    // FMLAL: 1.0 + 1.5 * 2.0 = 4.0, exact in f32.
+    assert_eq!(vget_lane_f32::<0>(vfmlal_low_f16(r2, a4, b4)), 4.0);
+    assert_eq!(vget_lane_f32::<1>(vfmlal_high_f16(r2, a4, b4)), 4.0);
+    assert_eq!(vgetq_lane_f32::<0>(vfmlalq_low_f16(r4, a8, b8)), 4.0);
+    assert_eq!(vgetq_lane_f32::<3>(vfmlalq_high_f16(r4, a8, b8)), 4.0);
+    assert_eq!(
+        vget_lane_f32::<0>(vfmlal_lane_low_f16::<3>(r2, a4, b4)),
+        4.0
+    );
+    assert_eq!(
+        vget_lane_f32::<0>(vfmlal_lane_high_f16::<3>(r2, a4, b4)),
+        4.0
+    );
+    assert_eq!(
+        vget_lane_f32::<0>(vfmlal_laneq_low_f16::<7>(r2, a4, b8)),
+        4.0
+    );
+    assert_eq!(
+        vget_lane_f32::<0>(vfmlal_laneq_high_f16::<7>(r2, a4, b8)),
+        4.0
+    );
+    assert_eq!(
+        vgetq_lane_f32::<0>(vfmlalq_lane_low_f16::<3>(r4, a8, b4)),
+        4.0
+    );
+    assert_eq!(
+        vgetq_lane_f32::<0>(vfmlalq_lane_high_f16::<3>(r4, a8, b4)),
+        4.0
+    );
+    assert_eq!(
+        vgetq_lane_f32::<0>(vfmlalq_laneq_low_f16::<7>(r4, a8, b8)),
+        4.0
+    );
+    assert_eq!(
+        vgetq_lane_f32::<0>(vfmlalq_laneq_high_f16::<7>(r4, a8, b8)),
+        4.0
+    );
+
+    // FMLSL: 1.0 - 1.5 * 2.0 = -2.0.
+    assert_eq!(vget_lane_f32::<0>(vfmlsl_low_f16(r2, a4, b4)), -2.0);
+    assert_eq!(vget_lane_f32::<1>(vfmlsl_high_f16(r2, a4, b4)), -2.0);
+    assert_eq!(vgetq_lane_f32::<0>(vfmlslq_low_f16(r4, a8, b8)), -2.0);
+    assert_eq!(vgetq_lane_f32::<3>(vfmlslq_high_f16(r4, a8, b8)), -2.0);
+    assert_eq!(
+        vget_lane_f32::<0>(vfmlsl_lane_low_f16::<3>(r2, a4, b4)),
+        -2.0
+    );
+    assert_eq!(
+        vget_lane_f32::<0>(vfmlsl_lane_high_f16::<3>(r2, a4, b4)),
+        -2.0
+    );
+    assert_eq!(
+        vget_lane_f32::<0>(vfmlsl_laneq_low_f16::<7>(r2, a4, b8)),
+        -2.0
+    );
+    assert_eq!(
+        vget_lane_f32::<0>(vfmlsl_laneq_high_f16::<7>(r2, a4, b8)),
+        -2.0
+    );
+    assert_eq!(
+        vgetq_lane_f32::<0>(vfmlslq_lane_low_f16::<3>(r4, a8, b4)),
+        -2.0
+    );
+    assert_eq!(
+        vgetq_lane_f32::<0>(vfmlslq_lane_high_f16::<3>(r4, a8, b4)),
+        -2.0
+    );
+    assert_eq!(
+        vgetq_lane_f32::<0>(vfmlslq_laneq_low_f16::<7>(r4, a8, b8)),
+        -2.0
+    );
+    assert_eq!(
+        vgetq_lane_f32::<0>(vfmlslq_laneq_high_f16::<7>(r4, a8, b8)),
+        -2.0
+    );
+}
 
 // =============================================================================
 // AES Round Operations (NeonAesToken / Arm64V2Token)
@@ -452,23 +664,16 @@ fn cobalt100_runner_must_summon_full_arm64_v3() {
 // Nightly-Only / Missing Features (documented)
 // =============================================================================
 
-// FP16 (neon,fp16): ALL 214+ intrinsics are UNSTABLE in Rust stdarch.
-// Examples: vdivq_f16, vsqrtq_f16, vmaxnmq_f16, etc.
-// Cannot be tested on stable Rust. Document and skip.
+// FP16 (neon,fp16): 139 of 301 intrinsics are unstable in the Rust 1.98.0
+// database, nearly all because they take or return the scalar `f16` type
+// (vaddh_f16, vcvth_*, vfmaq_n_f16, ...). The vector forms are tested above.
 //
-// FCMA (fcma): 34 intrinsics, ALL UNSTABLE (nightly_arm_intrinsics).
+// FCMA (fcma): 58 intrinsics, all unstable (stdarch_neon_fcma).
 // Complex number multiply-accumulate operations.
 // Examples: vcadd_rot90_f32, vcmla_f32, vcmla_rot90_f32, etc.
 //
-// I8MM (i8mm): 4 intrinsics, ALL UNSTABLE.
-// Int8 matrix multiply: vsmmla_s32, vummla_u32, vusmmlaq_s32, etc.
-//
-// FHM (fhm): ZERO intrinsics in Rust stdarch.
-// FP16 fused multiply-add half-precision to single-precision.
-// The hardware feature exists but Rust has no intrinsic bindings yet.
+// I8MM (i8mm): 22 intrinsics, all unstable (stdarch_neon_i8mm).
+// Int8 matrix multiply: vmmlaq_s32, vmmlaq_u32, vusmmlaq_s32, vusdotq_s32, etc.
 //
 // BF16 (bf16): ZERO intrinsics in Rust stdarch.
 // BFloat16 support. The hardware feature exists but Rust has no bindings yet.
-//
-// DotProd laneq variants: vdot_laneq_s32, vdotq_laneq_s32, etc.
-// These are UNSTABLE (require nightly).
