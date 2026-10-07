@@ -1,0 +1,5 @@
+    Checking safe_unaligned_simd v0.2.5
+    Checking decision-provider v0.0.0 (/home/lilith/tmp/attune-decisions-2026-10-07-run5/workspace/provider)
+    Checking archmage v0.9.29 (/home/lilith/work/archmage)
+    Checking decision-traits v0.0.0 (/home/lilith/tmp/attune-decisions-2026-10-07-run5/workspace/traits)
+    Finished `release` profile [optimized] target(s) in 0.22s

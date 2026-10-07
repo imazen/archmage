@@ -1,0 +1,44 @@
+run-heavy: mem-cap=16G (cgroup, hard) jobs=8/20 avail=22408MiB :: python3 experiments/attune-decisions/run.py --out /home/lilith/tmp/attune-decisions-2026-10-07-run5
+RUN provider_0
+RUN namespace_p0_c0
+RUN namespace_p0_c0_run
+RUN namespace_p0_c1
+RUN namespace_p0_c1_run
+RUN provider_1
+RUN namespace_p1_c0
+RUN namespace_p1_c0_run
+RUN namespace_p1_c1
+RUN namespace_p1_c1_run
+RUN cfg_leak_missing
+RUN cfg_leak_wrong_selection
+RUN cfg_leak_wrong_selection_run
+RUN macro_export_collision
+RUN macro_public_reexport_without_export
+RUN descriptor_existing_type_collision
+RUN descriptor_in_impl
+RUN macro_in_impl
+RUN associated_forwarding_bare
+RUN associated_forwarding_qualified
+RUN associated_forwarding_qualified_run
+RUN nested_outer_generic_capture
+RUN ambiguous_associated_output
+RUN foreign_inherent_helper
+RUN track_caller_chain
+RUN track_caller_chain_run
+RUN expect_duplicated
+RUN expect_body_only
+RUN expect_body_only_run
+RUN receiver_original_scopes
+RUN receiver_original_scopes_run
+RUN receiver_blind_rewrite
+RUN traits_fmt
+RUN traits_test
+RUN traits_clippy
+RUN defaults_auto_without_avx512
+RUN defaults_family_without_avx512
+RUN defaults_both_with_avx512
+RUN defaults_cfg_disabled
+RUN defaults_cfg_enabled
+RUN defaults_outer_cfg_omits
+PASS: 41 command outcomes, including eight SIMD trait/call-policy tests and two cfg fallback runs
+run-heavy: done rc=0 6s | peak-RSS 0.30GiB | min-avail 22225MiB | peak-load 0.21

@@ -1,0 +1,27 @@
+    Updating crates.io index
+     Locking 8 packages to latest compatible versions
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.26
+   Compiling safe_unaligned_simd v0.2.5
+   Compiling decision-provider v0.0.0 (/home/lilith/tmp/attune-decisions-2026-10-07-run5/workspace/provider)
+   Compiling syn v3.0.6
+   Compiling archmage-macros v0.9.29 (/home/lilith/work/archmage/archmage-macros)
+   Compiling archmage v0.9.29 (/home/lilith/work/archmage)
+   Compiling decision-traits v0.0.0 (/home/lilith/tmp/attune-decisions-2026-10-07-run5/workspace/traits)
+    Finished `release` profile [optimized] target(s) in 1.94s
+     Running unittests src/lib.rs (target/release/deps/decision_traits-064a3aee3557d69d)
+
+running 8 tests
+v4 available on this host: false
+test call_policy::upgrade_success_moves_argument_once ... ok
+test call_policy::covered_selection_does_not_probe ... ok
+test call_policy::v3_to_v4_checks_real_availability ... ok
+test tests::existing_sized_self_return_contract_is_preserved ... ok
+test tests::associated_output_const_generic_mut_receiver_and_dyn ... ok
+test tests::default_trait_body_accepts_unsized_dyn_receiver ... ok
+test call_policy::unavailable_upgrade_uses_covered_fallback_once ... ok
+test tests::foreign_self_type_uses_free_helper ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -1,0 +1,42 @@
+case,exit,required
+provider_0,0,success
+namespace_p0_c0,0,success
+namespace_p0_c0_run,0,success
+namespace_p0_c1,0,success
+namespace_p0_c1_run,0,success
+provider_1,0,success
+namespace_p1_c0,0,success
+namespace_p1_c0_run,0,success
+namespace_p1_c1,0,success
+namespace_p1_c1_run,0,success
+cfg_leak_missing,1,E0425
+cfg_leak_wrong_selection,0,success
+cfg_leak_wrong_selection_run,0,success
+macro_export_collision,1,E0428
+macro_public_reexport_without_export,1,E0364
+descriptor_existing_type_collision,1,E0428
+descriptor_in_impl,1,enum is not supported in
+macro_in_impl,1,macro definition is not supported in
+associated_forwarding_bare,1,E0425
+associated_forwarding_qualified,0,success
+associated_forwarding_qualified_run,0,success
+nested_outer_generic_capture,1,E0401
+ambiguous_associated_output,1,E0223
+foreign_inherent_helper,1,E0116
+track_caller_chain,0,success
+track_caller_chain_run,0,success
+expect_duplicated,1,this lint expectation is unfulfilled
+expect_body_only,0,success
+expect_body_only_run,0,success
+receiver_original_scopes,0,success
+receiver_original_scopes_run,0,success
+receiver_blind_rewrite,1,expected one of
+traits_fmt,0,success
+traits_test,0,success
+traits_clippy,0,success
+defaults_auto_without_avx512,0,success
+defaults_family_without_avx512,101,E0425
+defaults_both_with_avx512,0,success
+defaults_cfg_disabled,0,success
+defaults_cfg_enabled,0,success
+defaults_outer_cfg_omits,101,E0425
