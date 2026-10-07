@@ -29,6 +29,10 @@
 - Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with deprecation warning)
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 
+#### Changed
+
+- `syn` floor raised to 3.0.6, the tested version (27f814c).
+
 #### Added
 
 - `#[magetypes(rite, ...)]` accepts functions without a token parameter, which 0.9.29 rejected ("rite requires a token parameter or a tier name"). Each SIMD variant becomes a tier-based `#[rite(<tier>)]` function, and the scalar and default variants call the covered scalar callees directly. Token-taking fallbacks keep runtime dispatch (0833022, 3aef13f).
