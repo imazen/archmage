@@ -63,6 +63,28 @@ Evidence: current autoversion and magetypes generate different V4 surfaces with
 the feature disabled. Both references compile when enabled. No performance
 ranking or compile-time advantage between these policies was measured.
 
+#### Follow-up: V4 versus V4x hardware coverage
+
+Checked 2026-10-07 against the registry and primary sources. V4x is a strict
+superset of our V4 tier. The useful population comparison is V4x-capable versus
+V4-capable but not V4x-capable, not V4x versus all V4-capable CPUs.
+
+[LLVM's CPU feature definitions](https://github.com/llvm/llvm-project/blob/main/llvm/lib/TargetParser/X86TargetParser.cpp)
+include our V4x requirements for AMD Zen 4 and Zen 5. Intel's
+[feature introduction table](https://cdrdv2-public.intel.com/855340/361050-004-intel-avx10.2-spec.pdf)
+places the remaining V4x additions at Ice Lake; Sapphire Rapids retains them.
+Intel's [older Xeon AVX-512 table](https://www.intel.com/content/www/us/en/support/articles/000058341/processors/intel-xeon-processors.html)
+documents the narrower Skylake/Cascade Lake/Cooper Lake sets.
+These establish hardware capability, not installed-base prevalence. No customer
+CPU distribution was measured, so do not claim V4x machines outnumber V4-only
+machines in the user population.
+
+A gated V4x default is a candidate worth comparing with the accepted gated V4
+policy, not an accepted change. V4x-only would send V4-only CPUs to a lower
+fallback such as V3. Generating both preserves their V4 path but adds a tier
+body. Neither runtime benefit nor compilation-cost difference was measured.
+Keep this hardware-policy question separate from the accepted avx512 gate.
+
 ### Q3. How much enclosing context may attune process?
 
 **Accepted — Function attributes only, with a clear supported subset.** Do not
@@ -280,4 +302,4 @@ implementation or compile-cost comparison was made here.
 - Report unavailable/inaccessible required entries clearly. Keep existing
   compatibility tests and negative tests intact.
 - Keep experiments off main and measure compilation after the actual generator
-  and discovery protocol exist; namespace probes cannot establish those costs.
+  and call lowering exist; namespace probes cannot establish those costs.
