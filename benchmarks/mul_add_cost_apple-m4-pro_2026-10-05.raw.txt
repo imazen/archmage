@@ -1,0 +1,182 @@
+# zenbench output: magetypes/benches/mul_add_cost.rs on Apple M4 Pro, 2026-10-05
+
+## run 1
+    Finished `bench` profile [optimized] target(s) in 0.03s
+     Running benches/mul_add_cost.rs (target/release/deps/mul_add_cost-b5477b07db0da4e7)
+[zenbench] calibration: int=0.28ns/iter mem_bw=114.9GiB/s mem_lat=7.7ns
+[zenbench] timer resolution: 41ns, loop overhead: 0.22ns/iter, TSC: 1.000 ticks/ns (invariant)
+[zenbench] results → /var/folders/sc/m9jbk0qj0jz4w09h7gg8v3p80000gn/T/zenbench/zenbench-1791240805-ada6.txt
+
+═══════════════════════════════════════════════════════════════
+  zenbench  1791240805-ada6
+═══════════════════════════════════════════════════════════════
+
+  f32x4, NEON stream  200 rounds × 3K calls
+                mean ±mad µs  95% CI vs base   ops/s
+  ├─ a * b + c   1.2 ±0.2µs  [1.1–1.2]µs      3.55G [1]
+  ╰─ mul_add     1.1 ±0.1µs  [-1.7%–+1.1%]    3.62G [2]
+
+  mul_add    ███████████████████████████████████████████████████████ 3.62 Gops/s
+  a * b + c  ██████████████████████████████████████████████████████ 3.55 Gops/s
+  [1] CV=23%
+  [2] CI crosses zero
+
+  f32x4, NEON chain  40 rounds × 891 calls
+                mean ±mad µs  95% CI vs base     ops/s
+  ├─ a * b + c   3.5 ±0.6µs  [3.3–3.7]µs        289M
+  ╰─ mul_add     2.6 ±0.4µs  [-29.6%–-25.8%]    399M
+
+  mul_add    ████████████████████████████████████████████████████████ 399 Mops/s
+  a * b + c  █████████████████████████████████████████ 289 Mops/s
+
+  f64x2, NEON stream  200 rounds × 3K calls
+                mean ±mad µs  95% CI vs base   ops/s
+  ├─ a * b + c   1.1 ±0.1µs  [1.1–1.1]µs      1.84G
+  ╰─ mul_add     1.1 ±0.2µs  [-2.5%–+0.3%]    1.85G [1]
+
+  mul_add    ███████████████████████████████████████████████████████ 1.85 Gops/s
+  a * b + c  ███████████████████████████████████████████████████████ 1.84 Gops/s
+  [1] CI crosses zero
+
+  f64x2, NEON chain  40 rounds × 884 calls
+                mean ±mad µs  95% CI vs base     ops/s
+  ├─ a * b + c   3.7 ±0.1µs  [3.5–3.9]µs        275M
+  ╰─ mul_add     2.7 ±0.1µs  [-28.2%–-25.8%]    376M
+
+  mul_add    ████████████████████████████████████████████████████████ 376 Mops/s
+  a * b + c  █████████████████████████████████████████ 275 Mops/s
+
+  f32x4, scalar backend stream  30 rounds × 266 calls
+                 mean ±mad µs  95% CI vs base        ops/s
+  ├─ a * b + c    1.2 ±0.3µs  [1.1–1.3]µs           3.45G [1]
+  ╰─ mul_add     12.9 ±1.0µs  [+929.6%–+1004.6%]     318M
+
+  a * b + c  ███████████████████████████████████████████████████████ 3.45 Gops/s
+  mul_add    █████ 318 Mops/s
+  [1] CV=27%
+
+  f32x4, scalar backend chain  120 rounds × 323 calls
+                 mean ±mad µs  95% CI vs base       ops/s
+  ├─ a * b + c    4.4 ±0.9µs  [3.9–4.9]µs           234M [1]
+  ╰─ mul_add     11.3 ±2.5µs  [+156.9%–+184.0%]    90.5M [2]
+
+  a * b + c  ███████████████████████████████████████████████████████ 234 Mops/s
+  mul_add    █████████████████████ 90.5 Mops/s
+  [1] CV=64%
+  [2] CV=39%
+
+  f64x2, scalar backend stream  40 rounds × 120 calls
+                 mean ±mad µs  95% CI vs base         ops/s
+  ├─ a * b + c    1.3 ±0.4µs  [1.1–1.4]µs            1.59G [1]
+  ╰─ mul_add     35.3 ±7.7µs  [+2457.6%–+2723.8%]    58.0M [2]
+
+  a * b + c  ███████████████████████████████████████████████████████ 1.59 Gops/s
+  mul_add    ██ 58.0 Mops/s
+  [1] CV=34%
+  [2] CV=32%
+
+  f64x2, scalar backend chain  50 rounds × 94 calls
+                 mean ±mad µs  95% CI vs base       ops/s
+  ├─ a * b + c    5.1 ±0.8µs  [3.7–7.7]µs           202M [1]
+  ╰─ mul_add     32.0 ±6.0µs  [+689.4%–+736.5%]    32.0M
+
+  a * b + c  ███████████████████████████████████████████████████████ 202 Mops/s
+  mul_add    █████████ 32.0 Mops/s
+  [1] CV=172%
+
+  total: 95.6s  (720 noisy rounds)
+═══════════════════════════════════════════════════════════════
+  filter: cargo bench -- --group=NAME  format: --format=llm|csv|md|json
+rc=0
+
+## run 2
+    Finished `bench` profile [optimized] target(s) in 0.06s
+     Running benches/mul_add_cost.rs (target/release/deps/mul_add_cost-b5477b07db0da4e7)
+[zenbench] calibration: int=0.27ns/iter mem_bw=117.8GiB/s mem_lat=7.4ns
+[zenbench] timer resolution: 41ns, loop overhead: 0.22ns/iter, TSC: 1.000 ticks/ns (invariant)
+[zenbench] results → /var/folders/sc/m9jbk0qj0jz4w09h7gg8v3p80000gn/T/zenbench/zenbench-1791240996-b259.txt
+
+═══════════════════════════════════════════════════════════════
+  zenbench  1791240996-b259
+═══════════════════════════════════════════════════════════════
+
+  f32x4, NEON stream  200 rounds × 3K calls
+                mean ±mad µs  95% CI vs base   ops/s
+  ├─ a * b + c   1.1 ±0.2µs  [1.1–1.2]µs      3.62G [1]
+  ╰─ mul_add     1.1 ±0.2µs  [-0.3%–+3.1%]    3.56G [2] [3]
+
+  a * b + c  ███████████████████████████████████████████████████████ 3.62 Gops/s
+  mul_add    ██████████████████████████████████████████████████████ 3.56 Gops/s
+  [1] CV=20%
+  [2] CI crosses zero
+  [3] CV=23%
+
+  f32x4, NEON chain  40 rounds × 890 calls
+                mean ±mad µs  95% CI vs base     ops/s
+  ├─ a * b + c   3.5 ±0.5µs  [3.3–3.7]µs        291M
+  ╰─ mul_add     2.6 ±0.3µs  [-28.4%–-23.4%]    393M
+
+  mul_add    ████████████████████████████████████████████████████████ 393 Mops/s
+  a * b + c  █████████████████████████████████████████ 291 Mops/s
+
+  f64x2, NEON stream  200 rounds × 3K calls
+                mean ±mad µs  95% CI vs base   ops/s
+  ├─ a * b + c   1.1 ±0.1µs  [1.1–1.1]µs      1.89G
+  ╰─ mul_add     1.1 ±0.1µs  [-2.9%–+0.5%]    1.91G [1]
+
+  mul_add    ███████████████████████████████████████████████████████ 1.91 Gops/s
+  a * b + c  ███████████████████████████████████████████████████████ 1.89 Gops/s
+  [1] CI crosses zero
+
+  f64x2, NEON chain  110 rounds × 890 calls
+                mean ±mad µs  95% CI vs base     ops/s
+  ├─ a * b + c   3.8 ±0.3µs  [3.7–3.9]µs        268M
+  ╰─ mul_add     2.8 ±0.1µs  [-27.6%–-25.8%]    361M [1]
+
+  mul_add    ████████████████████████████████████████████████████████ 361 Mops/s
+  a * b + c  ██████████████████████████████████████████ 268 Mops/s
+  [1] CV=20%
+
+  f32x4, scalar backend stream  40 rounds × 266 calls
+                 mean ±mad µs  95% CI vs base        ops/s
+  ├─ a * b + c    1.4 ±0.3µs  [1.2–1.5]µs           3.03G [1]
+  ╰─ mul_add     14.7 ±4.1µs  [+900.4%–+1081.2%]     278M [2]
+
+  a * b + c  ███████████████████████████████████████████████████████ 3.03 Gops/s
+  mul_add    █████ 278 Mops/s
+  [1] CV=35%
+  [2] CV=31%
+
+  f32x4, scalar backend chain  60 rounds × 331 calls
+                 mean ±mad µs  95% CI vs base       ops/s
+  ├─ a * b + c    4.7 ±1.2µs  [4.3–5.1]µs           219M [1]
+  ╰─ mul_add     13.4 ±3.8µs  [+166.7%–+198.6%]    76.4M [2]
+
+  a * b + c  ███████████████████████████████████████████████████████ 219 Mops/s
+  mul_add    ███████████████████ 76.4 Mops/s
+  [1] CV=32%
+  [2] CV=34%
+
+  f64x2, scalar backend stream  50 rounds × 124 calls
+                 mean ±mad µs  95% CI vs base         ops/s
+  ├─ a * b + c    1.4 ±0.4µs  [1.3–1.6]µs            1.42G [1]
+  ╰─ mul_add     40.2 ±8.1µs  [+2560.0%–+2803.8%]    50.9M [2]
+
+  a * b + c  ███████████████████████████████████████████████████████ 1.42 Gops/s
+  mul_add    ██ 50.9 Mops/s
+  [1] CV=35%
+  [2] CV=34%
+
+  f64x2, scalar backend chain  30 rounds × 94 calls
+                 mean ±mad µs  95% CI vs base       ops/s
+  ├─ a * b + c    3.9 ±0.4µs  [3.6–4.1]µs           265M [1]
+  ╰─ mul_add     32.4 ±0.6µs  [+706.2%–+763.1%]    31.6M
+
+  a * b + c  ███████████████████████████████████████████████████████ 265 Mops/s
+  mul_add    ███████ 31.6 Mops/s
+  [1] CV=21%
+
+  total: 96.6s  (730 noisy rounds)
+═══════════════════════════════════════════════════════════════
+  filter: cargo bench -- --group=NAME  format: --format=llm|csv|md|json
+rc=0
