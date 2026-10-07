@@ -31,6 +31,25 @@
 //! assert_eq!(plane, [1.0; 11]);
 //! ```
 //!
+//! Explicit-token constructors use `_t` spellings. The old token-taking names
+//! are deprecated in 0.9 so callers can migrate before the 0.10 signature change:
+//!
+//! ```compile_fail
+//! #![deny(deprecated)]
+//! use archmage::ScalarToken;
+//! use magetypes::simd::generic::f32x8;
+//! let _ = f32x8::splat(ScalarToken, 1.0);
+//! ```
+//!
+//! ```
+//! #![deny(deprecated)]
+//! #![forbid(unsafe_code)]
+//! use archmage::ScalarToken;
+//! use magetypes::simd::generic::f32x8;
+//! let value = f32x8::splat_t(ScalarToken, 1.0);
+//! assert_eq!(value.to_array(), [1.0; 8]);
+//! ```
+//!
 //! Use [generic functions and const modes](https://imazen.github.io/archmage/magetypes/dispatch/types-and-dispatch/)
 //! for reusable data/algorithm specialization. `define(...)` is optional shorthand.
 //! Logical [`f32x8<T>`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.f32x8.html) stays eight lanes; `w512` enables wider shapes and `avx512`

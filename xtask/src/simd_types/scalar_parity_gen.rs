@@ -494,8 +494,8 @@ fn gen_float_type_tests(code: &mut String, elem: &str, lanes: usize) {
                 if let Some(token_n) = <$native_token>::summon() {{
                     for chunk in super::{edge_a}.chunks_exact({lanes}) {{
                         let input: [{elem}; {lanes}] = chunk.try_into().unwrap();
-                        let vs = generic::{type_name}::<ScalarToken>::from_array(token_s, input);
-                        let vn = generic::{type_name}::<$native_token>::from_array(token_n, input);
+                        let vs = generic::{type_name}::<ScalarToken>::from_array_t(token_s, input);
+                        let vn = generic::{type_name}::<$native_token>::from_array_t(token_n, input);
                         let (s, n) = f(vs, vn);
                         cmp(&s, &n, op, &input);
                     }}
@@ -515,8 +515,8 @@ fn gen_float_type_tests(code: &mut String, elem: &str, lanes: usize) {
                     for chunk in super::{edge_a}.chunks_exact({lanes}) {{
                         let input: [{elem}; {lanes}] = chunk.try_into().unwrap();
                         if super::has_nan_or_inf_{elem}(&input) {{ continue; }}
-                        let vs = generic::{type_name}::<ScalarToken>::from_array(token_s, input);
-                        let vn = generic::{type_name}::<$native_token>::from_array(token_n, input);
+                        let vs = generic::{type_name}::<ScalarToken>::from_array_t(token_s, input);
+                        let vn = generic::{type_name}::<$native_token>::from_array_t(token_n, input);
                         let (s, n) = f(vs, vn);
                         cmp(&s, &n, op, &input);
                     }}
@@ -536,10 +536,10 @@ fn gen_float_type_tests(code: &mut String, elem: &str, lanes: usize) {
                     for (ca, cb) in super::{edge_a}.chunks_exact({lanes}).zip(super::{edge_b}.chunks_exact({lanes})) {{
                         let a: [{elem}; {lanes}] = ca.try_into().unwrap();
                         let b: [{elem}; {lanes}] = cb.try_into().unwrap();
-                        let as_ = generic::{type_name}::<ScalarToken>::from_array(token_s, a);
-                        let bs = generic::{type_name}::<ScalarToken>::from_array(token_s, b);
-                        let an = generic::{type_name}::<$native_token>::from_array(token_n, a);
-                        let bn = generic::{type_name}::<$native_token>::from_array(token_n, b);
+                        let as_ = generic::{type_name}::<ScalarToken>::from_array_t(token_s, a);
+                        let bs = generic::{type_name}::<ScalarToken>::from_array_t(token_s, b);
+                        let an = generic::{type_name}::<$native_token>::from_array_t(token_n, a);
+                        let bn = generic::{type_name}::<$native_token>::from_array_t(token_n, b);
                         let (s, n) = f(as_, bs, an, bn);
                         cmp(&s, &n, op, &a);
                     }}
@@ -561,10 +561,10 @@ fn gen_float_type_tests(code: &mut String, elem: &str, lanes: usize) {
                         let a: [{elem}; {lanes}] = ca.try_into().unwrap();
                         let b: [{elem}; {lanes}] = cb.try_into().unwrap();
                         if super::has_nan_or_inf_{elem}(&a) || super::has_nan_or_inf_{elem}(&b) {{ continue; }}
-                        let as_ = generic::{type_name}::<ScalarToken>::from_array(token_s, a);
-                        let bs = generic::{type_name}::<ScalarToken>::from_array(token_s, b);
-                        let an = generic::{type_name}::<$native_token>::from_array(token_n, a);
-                        let bn = generic::{type_name}::<$native_token>::from_array(token_n, b);
+                        let as_ = generic::{type_name}::<ScalarToken>::from_array_t(token_s, a);
+                        let bs = generic::{type_name}::<ScalarToken>::from_array_t(token_s, b);
+                        let an = generic::{type_name}::<$native_token>::from_array_t(token_n, a);
+                        let bn = generic::{type_name}::<$native_token>::from_array_t(token_n, b);
                         let (s, n) = f(as_, bs, an, bn);
                         cmp(&s, &n, op, &a);
                     }}
@@ -701,8 +701,8 @@ fn gen_float_type_tests(code: &mut String, elem: &str, lanes: usize) {
                         // Skip chunks with NaN/Inf or extreme magnitudes (catastrophic cancellation
                         // from different FP associativity between tree and left-fold reduction)
                         if input.iter().any(|x| x.is_nan() || x.is_infinite() || x.abs() > 1e9) {{ continue; }}
-                        let s = generic::{type_name}::<ScalarToken>::from_array(token_s, input).reduce_add();
-                        let n = generic::{type_name}::<$native_token>::from_array(token_n, input).reduce_add();
+                        let s = generic::{type_name}::<ScalarToken>::from_array_t(token_s, input).reduce_add();
+                        let n = generic::{type_name}::<$native_token>::from_array_t(token_n, input).reduce_add();
                         if s.is_nan() && n.is_nan() {{ continue; }}
                         if s.to_bits() != n.to_bits() {{
                             // Allow relative tolerance for FP associativity
@@ -722,8 +722,8 @@ fn gen_float_type_tests(code: &mut String, elem: &str, lanes: usize) {
                     for chunk in super::{edge_a}.chunks_exact({lanes}) {{
                         let input: [{elem}; {lanes}] = chunk.try_into().unwrap();
                         if super::has_nan_or_inf_{elem}(&input) {{ continue; }}
-                        let s = generic::{type_name}::<ScalarToken>::from_array(token_s, input).reduce_min();
-                        let n = generic::{type_name}::<$native_token>::from_array(token_n, input).reduce_min();
+                        let s = generic::{type_name}::<ScalarToken>::from_array_t(token_s, input).reduce_min();
+                        let n = generic::{type_name}::<$native_token>::from_array_t(token_n, input).reduce_min();
                         // Allow ±0 difference (hardware min may return different zero sign)
                         if s == 0.0 && n == 0.0 {{ continue; }}
                         assert_eq!(s.to_bits(), n.to_bits(),
@@ -739,8 +739,8 @@ fn gen_float_type_tests(code: &mut String, elem: &str, lanes: usize) {
                     for chunk in super::{edge_a}.chunks_exact({lanes}) {{
                         let input: [{elem}; {lanes}] = chunk.try_into().unwrap();
                         if super::has_nan_or_inf_{elem}(&input) {{ continue; }}
-                        let s = generic::{type_name}::<ScalarToken>::from_array(token_s, input).reduce_max();
-                        let n = generic::{type_name}::<$native_token>::from_array(token_n, input).reduce_max();
+                        let s = generic::{type_name}::<ScalarToken>::from_array_t(token_s, input).reduce_max();
+                        let n = generic::{type_name}::<$native_token>::from_array_t(token_n, input).reduce_max();
                         if s == 0.0 && n == 0.0 {{ continue; }}
                         assert_eq!(s.to_bits(), n.to_bits(),
                             "{type_name}::reduce_max divergence: scalar={{s}} native={{n}} input={{input:?}}");
@@ -808,8 +808,8 @@ fn gen_float_type_tests(code: &mut String, elem: &str, lanes: usize) {
                         .collect();
                     for chunk in safe_inputs.chunks_exact({lanes}) {{
                         let input: [{elem}; {lanes}] = chunk.try_into().unwrap();
-                        let s = generic::{type_name}::<ScalarToken>::from_array(token_s, input).{op}().to_array();
-                        let n = generic::{type_name}::<$native_token>::from_array(token_n, input).{op}().to_array();
+                        let s = generic::{type_name}::<ScalarToken>::from_array_t(token_s, input).{op}().to_array();
+                        let n = generic::{type_name}::<$native_token>::from_array_t(token_n, input).{op}().to_array();
                         super::assert_f32_approx(&s, &n, "{type_name}::{op}", &input, {tol});
                     }}
                 }}
@@ -875,10 +875,10 @@ fn gen_int_type_tests(code: &mut String, elem: &str, lanes: usize, signed: bool)
                     for (ca, cb) in edge_a.chunks_exact({lanes}).zip(edge_b.chunks_exact({lanes})) {{
                         let a: [{elem}; {lanes}] = ca.try_into().unwrap();
                         let b: [{elem}; {lanes}] = cb.try_into().unwrap();
-                        let as_ = generic::{type_name}::<ScalarToken>::from_array(token_s, a);
-                        let bs = generic::{type_name}::<ScalarToken>::from_array(token_s, b);
-                        let an = generic::{type_name}::<$native_token>::from_array(token_n, a);
-                        let bn = generic::{type_name}::<$native_token>::from_array(token_n, b);
+                        let as_ = generic::{type_name}::<ScalarToken>::from_array_t(token_s, a);
+                        let bs = generic::{type_name}::<ScalarToken>::from_array_t(token_s, b);
+                        let an = generic::{type_name}::<$native_token>::from_array_t(token_n, a);
+                        let bn = generic::{type_name}::<$native_token>::from_array_t(token_n, b);
                         let s = {expr_s};
                         let n = {expr_n};
                         super::{assert_fn}(&s, &n, "{type_name}::{op}", &a);
@@ -903,11 +903,11 @@ fn gen_int_type_tests(code: &mut String, elem: &str, lanes: usize, signed: bool)
                     for (ca, cb) in edge_a.chunks_exact({lanes}).zip(edge_b.chunks_exact({lanes})) {{
                         let a: [{elem}; {lanes}] = ca.try_into().unwrap();
                         let b: [{elem}; {lanes}] = cb.try_into().unwrap();
-                        let s = generic::{type_name}::<ScalarToken>::from_array(token_s, a).{op}(
-                            generic::{type_name}::<ScalarToken>::from_array(token_s, b)
+                        let s = generic::{type_name}::<ScalarToken>::from_array_t(token_s, a).{op}(
+                            generic::{type_name}::<ScalarToken>::from_array_t(token_s, b)
                         ).to_array();
-                        let n = generic::{type_name}::<$native_token>::from_array(token_n, a).{op}(
-                            generic::{type_name}::<$native_token>::from_array(token_n, b)
+                        let n = generic::{type_name}::<$native_token>::from_array_t(token_n, a).{op}(
+                            generic::{type_name}::<$native_token>::from_array_t(token_n, b)
                         ).to_array();
                         super::{assert_fn}(&s, &n, "{type_name}::{op}", &a);
                     }}
@@ -940,8 +940,8 @@ fn gen_int_type_tests(code: &mut String, elem: &str, lanes: usize, signed: bool)
             }}
 
             "#,
-                call_s = call.replace("v.", &format!("generic::{type_name}::<ScalarToken>::from_array(token_s, input).")).replace("(-v)", &format!("(-generic::{type_name}::<ScalarToken>::from_array(token_s, input))")),
-                call_n = call.replace("v.", &format!("generic::{type_name}::<$native_token>::from_array(token_n, input).")).replace("(-v)", &format!("(-generic::{type_name}::<$native_token>::from_array(token_n, input))"))
+                call_s = call.replace("v.", &format!("generic::{type_name}::<ScalarToken>::from_array_t(token_s, input).")).replace("(-v)", &format!("(-generic::{type_name}::<ScalarToken>::from_array_t(token_s, input))")),
+                call_n = call.replace("v.", &format!("generic::{type_name}::<$native_token>::from_array_t(token_n, input).")).replace("(-v)", &format!("(-generic::{type_name}::<$native_token>::from_array_t(token_n, input))"))
             });
         }
     }
@@ -955,8 +955,8 @@ fn gen_int_type_tests(code: &mut String, elem: &str, lanes: usize, signed: bool)
                 if let Some(token_n) = <$native_token>::summon() {{
                     for chunk in edge_a.chunks_exact({lanes}) {{
                         let input: [{elem}; {lanes}] = chunk.try_into().unwrap();
-                        let s = generic::{type_name}::<ScalarToken>::from_array(token_s, input).not().to_array();
-                        let n = generic::{type_name}::<$native_token>::from_array(token_n, input).not().to_array();
+                        let s = generic::{type_name}::<ScalarToken>::from_array_t(token_s, input).not().to_array();
+                        let n = generic::{type_name}::<$native_token>::from_array_t(token_n, input).not().to_array();
                         super::{assert_fn}(&s, &n, "{type_name}::not", &input);
                     }}
                 }}
@@ -987,9 +987,9 @@ fn gen_conversion_tests(code: &mut String, lanes: usize) {
                         .collect();
                     for chunk in safe_f32.chunks_exact({lanes}) {{
                         let input: [f32; {lanes}] = chunk.try_into().unwrap();
-                        let s = generic::{f_type}::<ScalarToken>::from_array(token_s, input)
+                        let s = generic::{f_type}::<ScalarToken>::from_array_t(token_s, input)
                             .to_i32_round().to_array();
-                        let n = generic::{f_type}::<$native_token>::from_array(token_n, input)
+                        let n = generic::{f_type}::<$native_token>::from_array_t(token_n, input)
                             .to_i32_round().to_array();
                         super::assert_i32_exact(&s, &n, "{f_type}::to_i32_round", &input.map(|x| x as i32));
                     }}
@@ -1006,9 +1006,9 @@ fn gen_conversion_tests(code: &mut String, lanes: usize) {
                         .collect();
                     for chunk in safe_f32.chunks_exact({lanes}) {{
                         let input: [f32; {lanes}] = chunk.try_into().unwrap();
-                        let s = generic::{f_type}::<ScalarToken>::from_array(token_s, input)
+                        let s = generic::{f_type}::<ScalarToken>::from_array_t(token_s, input)
                             .to_i32().to_array();
-                        let n = generic::{f_type}::<$native_token>::from_array(token_n, input)
+                        let n = generic::{f_type}::<$native_token>::from_array_t(token_n, input)
                             .to_i32().to_array();
                         super::assert_i32_exact(&s, &n, "{f_type}::to_i32", &input.map(|x| x as i32));
                     }}
@@ -1021,15 +1021,15 @@ fn gen_conversion_tests(code: &mut String, lanes: usize) {
                 if let Some(token_n) = <$native_token>::summon() {{
                     for chunk in super::I32_EDGE_A.chunks_exact({lanes}) {{
                         let input: [i32; {lanes}] = chunk.try_into().unwrap();
-                        let s = generic::{f_type}::<ScalarToken>::from_i32(
+                        let s = generic::{f_type}::<ScalarToken>::from_i32_t(
                             token_s,
-                            generic::{i_type}::<ScalarToken>::from_array(token_s, input)
+                            generic::{i_type}::<ScalarToken>::from_array_t(token_s, input)
                         ).to_array();
-                        let n = generic::{f_type}::<$native_token>::from_i32(
+                        let n = generic::{f_type}::<$native_token>::from_i32_t(
                             token_n,
-                            generic::{i_type}::<$native_token>::from_array(token_n, input)
+                            generic::{i_type}::<$native_token>::from_array_t(token_n, input)
                         ).to_array();
-                        super::assert_f32_exact(&s, &n, "{f_type}::from_i32", &s);
+                        super::assert_f32_exact(&s, &n, "{f_type}::from_i32_t", &s);
                     }}
                 }}
             }}
@@ -1041,13 +1041,13 @@ fn gen_conversion_tests(code: &mut String, lanes: usize) {
                     for chunk in super::F32_EDGE_A.chunks_exact({lanes}) {{
                         let input: [f32; {lanes}] = chunk.try_into().unwrap();
                         // f32 → i32 bitcast → f32 bitcast should be identity
-                        let s = generic::{f_type}::<ScalarToken>::from_i32_bitcast(
+                        let s = generic::{f_type}::<ScalarToken>::from_i32_bitcast_t(
                             token_s,
-                            generic::{f_type}::<ScalarToken>::from_array(token_s, input).bitcast_to_i32()
+                            generic::{f_type}::<ScalarToken>::from_array_t(token_s, input).bitcast_to_i32()
                         ).to_array();
-                        let n = generic::{f_type}::<$native_token>::from_i32_bitcast(
+                        let n = generic::{f_type}::<$native_token>::from_i32_bitcast_t(
                             token_n,
-                            generic::{f_type}::<$native_token>::from_array(token_n, input).bitcast_to_i32()
+                            generic::{f_type}::<$native_token>::from_array_t(token_n, input).bitcast_to_i32()
                         ).to_array();
                         // Compare bit patterns (NaN payload must survive roundtrip)
                         for i in 0..{lanes} {{

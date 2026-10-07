@@ -5,6 +5,7 @@
 
 mod block_ops;
 mod conversions;
+mod token_aliases;
 mod transcendentals;
 mod type_impl;
 
@@ -366,7 +367,7 @@ pub(crate) fn all_conversions() -> Vec<Conversion> {
 /// Generate all files for `magetypes/src/simd/generic/generated/`.
 ///
 /// Returns a map from relative path (e.g., `"generic/generated/f32x4_impl.rs"`) to file content.
-pub fn generate_generic_files() -> BTreeMap<String, String> {
+pub fn generate_generic_files(registry: &crate::registry::Registry) -> BTreeMap<String, String> {
     let mut files = BTreeMap::new();
     let all_types = all_simd_types();
 
@@ -427,6 +428,24 @@ pub fn generate_generic_files() -> BTreeMap<String, String> {
         transcendentals::gen_mod_rs(&all_types),
     );
 
+    for (path, source) in &mut files {
+        if !path.ends_with("/mod.rs") {
+            source.push_str(&token_aliases::generate(source));
+        }
+    }
+    // These modules contain handwritten implementations. Only their deprecated forwarders
+    // are generated, using the same signature-driven pass as the vector files.
+    files.insert(
+        "generic/generated/scalar_token_aliases.rs".into(),
+        token_aliases::generate(include_str!("../../../../magetypes/src/simd/scalar.rs")),
+    );
+    files.insert(
+        "generic/generated/cross_width_token_aliases.rs".into(),
+        token_aliases::generate(include_str!(
+            "../../../../magetypes/src/simd/generic/cross_width.rs"
+        )),
+    );
+
     files
 }
 
@@ -442,4 +461,12 @@ fn block_ops_types() -> Vec<(&'static str, ElementType, SimdWidth)> {
         ("i8x16", ElementType::I8, SimdWidth::W128),
         ("u32x4", ElementType::U32, SimdWidth::W128),
     ]
+}
+
+/// Documentation derives from the complete generated source and handwritten originals.
+pub fn constructor_inventory(files: &BTreeMap<String, String>) -> BTreeMap<String, String> {
+    token_aliases::inventory(files.values().cloned().chain([
+        include_str!("../../../../magetypes/src/simd/scalar.rs").to_owned(),
+        include_str!("../../../../magetypes/src/simd/generic/cross_width.rs").to_owned(),
+    ]))
 }

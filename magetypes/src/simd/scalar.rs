@@ -19,25 +19,25 @@ impl f32x1 {
 
     /// Broadcast a scalar value.
     #[inline(always)]
-    pub fn splat(_: ScalarToken, v: f32) -> Self {
+    pub fn splat_t(_: ScalarToken, v: f32) -> Self {
         Self(v)
     }
 
     /// Zero vector.
     #[inline(always)]
-    pub fn zero(_: ScalarToken) -> Self {
+    pub fn zero_t(_: ScalarToken) -> Self {
         Self(0.0)
     }
 
     /// Load from array.
     #[inline(always)]
-    pub fn load(_: ScalarToken, data: &[f32; 1]) -> Self {
+    pub fn load_t(_: ScalarToken, data: &[f32; 1]) -> Self {
         Self(data[0])
     }
 
     /// Create from array.
     #[inline(always)]
-    pub fn from_array(_: ScalarToken, arr: [f32; 1]) -> Self {
+    pub fn from_array_t(_: ScalarToken, arr: [f32; 1]) -> Self {
         Self(arr[0])
     }
 
@@ -188,25 +188,25 @@ impl f64x1 {
 
     /// Broadcast a scalar value.
     #[inline(always)]
-    pub fn splat(_: ScalarToken, v: f64) -> Self {
+    pub fn splat_t(_: ScalarToken, v: f64) -> Self {
         Self(v)
     }
 
     /// Zero vector.
     #[inline(always)]
-    pub fn zero(_: ScalarToken) -> Self {
+    pub fn zero_t(_: ScalarToken) -> Self {
         Self(0.0)
     }
 
     /// Load from array.
     #[inline(always)]
-    pub fn load(_: ScalarToken, data: &[f64; 1]) -> Self {
+    pub fn load_t(_: ScalarToken, data: &[f64; 1]) -> Self {
         Self(data[0])
     }
 
     /// Create from array.
     #[inline(always)]
-    pub fn from_array(_: ScalarToken, arr: [f64; 1]) -> Self {
+    pub fn from_array_t(_: ScalarToken, arr: [f64; 1]) -> Self {
         Self(arr[0])
     }
 
@@ -301,19 +301,19 @@ impl i32x1 {
 
     /// Broadcast a scalar value.
     #[inline(always)]
-    pub fn splat(_: ScalarToken, v: i32) -> Self {
+    pub fn splat_t(_: ScalarToken, v: i32) -> Self {
         Self(v)
     }
 
     /// Zero vector.
     #[inline(always)]
-    pub fn zero(_: ScalarToken) -> Self {
+    pub fn zero_t(_: ScalarToken) -> Self {
         Self(0)
     }
 
     /// Create from array.
     #[inline(always)]
-    pub fn from_array(_: ScalarToken, arr: [i32; 1]) -> Self {
+    pub fn from_array_t(_: ScalarToken, arr: [i32; 1]) -> Self {
         Self(arr[0])
     }
 
@@ -365,19 +365,19 @@ impl u32x1 {
 
     /// Broadcast a scalar value.
     #[inline(always)]
-    pub fn splat(_: ScalarToken, v: u32) -> Self {
+    pub fn splat_t(_: ScalarToken, v: u32) -> Self {
         Self(v)
     }
 
     /// Zero vector.
     #[inline(always)]
-    pub fn zero(_: ScalarToken) -> Self {
+    pub fn zero_t(_: ScalarToken) -> Self {
         Self(0)
     }
 
     /// Create from array.
     #[inline(always)]
-    pub fn from_array(_: ScalarToken, arr: [u32; 1]) -> Self {
+    pub fn from_array_t(_: ScalarToken, arr: [u32; 1]) -> Self {
         Self(arr[0])
     }
 
@@ -429,19 +429,19 @@ impl i8x1 {
 
     /// Broadcast a scalar value.
     #[inline(always)]
-    pub fn splat(_: ScalarToken, v: i8) -> Self {
+    pub fn splat_t(_: ScalarToken, v: i8) -> Self {
         Self(v)
     }
 
     /// Zero vector.
     #[inline(always)]
-    pub fn zero(_: ScalarToken) -> Self {
+    pub fn zero_t(_: ScalarToken) -> Self {
         Self(0)
     }
 
     /// Create from array.
     #[inline(always)]
-    pub fn from_array(_: ScalarToken, arr: [i8; 1]) -> Self {
+    pub fn from_array_t(_: ScalarToken, arr: [i8; 1]) -> Self {
         Self(arr[0])
     }
 
@@ -479,19 +479,19 @@ impl u8x1 {
 
     /// Broadcast a scalar value.
     #[inline(always)]
-    pub fn splat(_: ScalarToken, v: u8) -> Self {
+    pub fn splat_t(_: ScalarToken, v: u8) -> Self {
         Self(v)
     }
 
     /// Zero vector.
     #[inline(always)]
-    pub fn zero(_: ScalarToken) -> Self {
+    pub fn zero_t(_: ScalarToken) -> Self {
         Self(0)
     }
 
     /// Create from array.
     #[inline(always)]
-    pub fn from_array(_: ScalarToken, arr: [u8; 1]) -> Self {
+    pub fn from_array_t(_: ScalarToken, arr: [u8; 1]) -> Self {
         Self(arr[0])
     }
 
@@ -529,19 +529,19 @@ impl i16x1 {
 
     /// Broadcast a scalar value.
     #[inline(always)]
-    pub fn splat(_: ScalarToken, v: i16) -> Self {
+    pub fn splat_t(_: ScalarToken, v: i16) -> Self {
         Self(v)
     }
 
     /// Zero vector.
     #[inline(always)]
-    pub fn zero(_: ScalarToken) -> Self {
+    pub fn zero_t(_: ScalarToken) -> Self {
         Self(0)
     }
 
     /// Create from array.
     #[inline(always)]
-    pub fn from_array(_: ScalarToken, arr: [i16; 1]) -> Self {
+    pub fn from_array_t(_: ScalarToken, arr: [i16; 1]) -> Self {
         Self(arr[0])
     }
 
@@ -579,19 +579,19 @@ impl u16x1 {
 
     /// Broadcast a scalar value.
     #[inline(always)]
-    pub fn splat(_: ScalarToken, v: u16) -> Self {
+    pub fn splat_t(_: ScalarToken, v: u16) -> Self {
         Self(v)
     }
 
     /// Zero vector.
     #[inline(always)]
-    pub fn zero(_: ScalarToken) -> Self {
+    pub fn zero_t(_: ScalarToken) -> Self {
         Self(0)
     }
 
     /// Create from array.
     #[inline(always)]
-    pub fn from_array(_: ScalarToken, arr: [u16; 1]) -> Self {
+    pub fn from_array_t(_: ScalarToken, arr: [u16; 1]) -> Self {
         Self(arr[0])
     }
 
@@ -629,19 +629,19 @@ impl i64x1 {
 
     /// Broadcast a scalar value.
     #[inline(always)]
-    pub fn splat(_: ScalarToken, v: i64) -> Self {
+    pub fn splat_t(_: ScalarToken, v: i64) -> Self {
         Self(v)
     }
 
     /// Zero vector.
     #[inline(always)]
-    pub fn zero(_: ScalarToken) -> Self {
+    pub fn zero_t(_: ScalarToken) -> Self {
         Self(0)
     }
 
     /// Create from array.
     #[inline(always)]
-    pub fn from_array(_: ScalarToken, arr: [i64; 1]) -> Self {
+    pub fn from_array_t(_: ScalarToken, arr: [i64; 1]) -> Self {
         Self(arr[0])
     }
 
@@ -679,19 +679,19 @@ impl u64x1 {
 
     /// Broadcast a scalar value.
     #[inline(always)]
-    pub fn splat(_: ScalarToken, v: u64) -> Self {
+    pub fn splat_t(_: ScalarToken, v: u64) -> Self {
         Self(v)
     }
 
     /// Zero vector.
     #[inline(always)]
-    pub fn zero(_: ScalarToken) -> Self {
+    pub fn zero_t(_: ScalarToken) -> Self {
         Self(0)
     }
 
     /// Create from array.
     #[inline(always)]
-    pub fn from_array(_: ScalarToken, arr: [u64; 1]) -> Self {
+    pub fn from_array_t(_: ScalarToken, arr: [u64; 1]) -> Self {
         Self(arr[0])
     }
 
@@ -717,3 +717,5 @@ impl Sub for u64x1 {
         Self(self.0.wrapping_sub(rhs.0))
     }
 }
+
+include!("generic/generated/scalar_token_aliases.rs");

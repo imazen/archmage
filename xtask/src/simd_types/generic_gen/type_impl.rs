@@ -56,9 +56,9 @@ fn gen_header(ty: &SimdType) -> String {
             //! use magetypes::simd::generic::{name};
             //!
             //! fn sum<T: {backend}>(token: T, data: &[{elem}]) -> {elem} {{
-            //!     let mut acc = {name}::<T>::zero(token);
+            //!     let mut acc = {name}::<T>::zero_t(token);
             //!     for chunk in data.chunks_exact({lanes}) {{
-            //!         acc = acc + {name}::<T>::load(token, chunk.try_into().unwrap());
+            //!         acc = acc + {name}::<T>::load_t(token, chunk.try_into().unwrap());
             //!     }}
             //!     acc.reduce_add()
             //! }}
@@ -520,31 +520,31 @@ fn gen_construction(elem: &str, lanes: usize) -> String {
     formatdoc! {"
         \x20   /// Broadcast scalar to all {lanes} lanes.
             #[inline(always)]
-            pub fn splat(token: T, v: {elem}) -> Self {{
+            pub fn splat_t(token: T, v: {elem}) -> Self {{
                 Self(T::splat(token, v), token)
             }}
 
             /// All lanes zero.
             #[inline(always)]
-            pub fn zero(token: T) -> Self {{
+            pub fn zero_t(token: T) -> Self {{
                 Self(T::zero(token), token)
             }}
 
             /// Load from a `[{elem}; {lanes}]` array.
             #[inline(always)]
-            pub fn load(token: T, data: &[{elem}; {lanes}]) -> Self {{
+            pub fn load_t(token: T, data: &[{elem}; {lanes}]) -> Self {{
                 Self(T::load(token, data), token)
             }}
 
             /// Create from array (zero-cost where possible).
             #[inline(always)]
-            pub fn from_array(token: T, arr: [{elem}; {lanes}]) -> Self {{
+            pub fn from_array_t(token: T, arr: [{elem}; {lanes}]) -> Self {{
                 Self(T::from_array(token, arr), token)
             }}
 
             /// Create from slice. Panics if `slice.len() < {lanes}`.
             #[inline(always)]
-            pub fn from_slice(token: T, slice: &[{elem}]) -> Self {{
+            pub fn from_slice_t(token: T, slice: &[{elem}]) -> Self {{
                 let arr: [{elem}; {lanes}] = slice[..{lanes}].try_into().unwrap();
                 Self(T::from_array(token, arr), token)
             }}
@@ -574,7 +574,7 @@ fn gen_accessors(elem: &str, lanes: usize) -> String {
 
             /// Wrap a platform representation (token-gated).
             #[inline(always)]
-            pub fn from_repr(token: T, repr: T::Repr) -> Self {{
+            pub fn from_repr_t(token: T, repr: T::Repr) -> Self {{
                 Self(repr, token)
             }}
 
@@ -953,9 +953,9 @@ fn gen_deterministic_reciprocals(ty: &SimdType) -> String {
             {{
                 let t = self.1;
                 let bits = self.bitcast_to_i32();
-                let seed = Self::from_i32_bitcast(
+                let seed = Self::from_i32_bitcast_t(
                     t,
-                    super::i32x{lanes}::splat(t, 0x5f3759df_i32) - bits.shr_logical_const::<1>(),
+                    super::i32x{lanes}::splat_t(t, 0x5f3759df_i32) - bits.shr_logical_const::<1>(),
                 );
                 seed.rsqrt_newton_portable(self)
             }}
@@ -966,8 +966,8 @@ fn gen_deterministic_reciprocals(ty: &SimdType) -> String {
             #[inline(always)]
             pub fn rsqrt_newton_portable(self, x: Self) -> Self {{
                 let t = self.1;
-                let half = Self::splat(t, 0.5);
-                let three_halves = Self::splat(t, 1.5);
+                let half = Self::splat_t(t, 0.5);
+                let three_halves = Self::splat_t(t, 1.5);
                 self * (three_halves - half * x * self * self)
             }}
 
@@ -978,7 +978,7 @@ fn gen_deterministic_reciprocals(ty: &SimdType) -> String {
             /// on Zen-class x86 (and is the faster form on Apple Silicon).
             #[inline(always)]
             pub fn rsqrt_portable(self) -> Self {{
-                Self::splat(self.1, 1.0) / self.sqrt()
+                Self::splat_t(self.1, 1.0) / self.sqrt()
             }}
 
             /// Deterministic reciprocal estimate (~8-bit), bit-identical on every
@@ -994,9 +994,9 @@ fn gen_deterministic_reciprocals(ty: &SimdType) -> String {
             {{
                 let t = self.1;
                 let bits = self.bitcast_to_i32();
-                let seed = Self::from_i32_bitcast(
+                let seed = Self::from_i32_bitcast_t(
                     t,
-                    super::i32x{lanes}::splat(t, 0x7ef127ea_i32) - bits,
+                    super::i32x{lanes}::splat_t(t, 0x7ef127ea_i32) - bits,
                 );
                 seed.recip_newton_portable(self)
             }}
@@ -1006,7 +1006,7 @@ fn gen_deterministic_reciprocals(ty: &SimdType) -> String {
             #[inline(always)]
             pub fn recip_newton_portable(self, x: Self) -> Self {{
                 let t = self.1;
-                let two = Self::splat(t, 2.0);
+                let two = Self::splat_t(t, 2.0);
                 self * (two - x * self)
             }}
 
@@ -1021,7 +1021,7 @@ fn gen_deterministic_reciprocals(ty: &SimdType) -> String {
             /// on Apple Silicon).
             #[inline(always)]
             pub fn recip_portable(self) -> Self {{
-                Self::splat(self.1, 1.0) / self
+                Self::splat_t(self.1, 1.0) / self
             }}
 
     "#, lanes = lanes}
@@ -1179,9 +1179,9 @@ fn gen_partition_slice(ty: &SimdType) -> String {
         \x20   /// Split a slice into SIMD-width chunks and a scalar remainder.
             ///
             /// Returns `(&[[{elem}; {lanes}]], &[{elem}])` — fixed-size arrays suitable
-            /// for [`load`](Self::load), plus any leftover elements.
+            /// for [`load_t`](Self::load_t), plus any leftover elements.
             #[inline(always)]
-            pub fn partition_slice(_: T, data: &[{elem}]) -> (&[[{elem}; {lanes}]], &[{elem}]) {{
+            pub fn partition_slice_t(_: T, data: &[{elem}]) -> (&[[{elem}; {lanes}]], &[{elem}]) {{
                 data.as_chunks::<{lanes}>()
             }}
 
@@ -1196,9 +1196,9 @@ fn gen_partition_slice_mut(ty: &SimdType) -> String {
         \x20   /// Split a mutable slice into SIMD-width chunks and a scalar remainder.
             ///
             /// Returns `(&mut [[{elem}; {lanes}]], &mut [{elem}])` — the bulk portion reinterpreted
-            /// as fixed-size arrays suitable for [`load`](Self::load), plus any leftover elements.
+            /// as fixed-size arrays suitable for [`load_t`](Self::load_t), plus any leftover elements.
             #[inline(always)]
-            pub fn partition_slice_mut(_: T, data: &mut [{elem}]) -> (&mut [[{elem}; {lanes}]], &mut [{elem}]) {{
+            pub fn partition_slice_mut_t(_: T, data: &mut [{elem}]) -> (&mut [[{elem}; {lanes}]], &mut [{elem}]) {{
                 data.as_chunks_mut::<{lanes}>()
             }}
 
@@ -1512,7 +1512,7 @@ fn gen_platform(ty: &SimdType) -> String {
 
                     /// Create from a raw `{raw_type}` (token-gated, zero-cost).
                     #[inline(always)]
-                    pub fn {from_fn}(token: archmage::X64V3Token, v: core::arch::x86_64::{raw_type}) -> Self {{
+                    pub fn {from_fn}_t(token: archmage::X64V3Token, v: core::arch::x86_64::{raw_type}) -> Self {{
                         Self(v, token)
                     }}
                 }}
@@ -1556,7 +1556,7 @@ fn gen_platform(ty: &SimdType) -> String {
 
                     /// Create from a raw `{raw_type}` (token-gated, zero-cost).
                     #[inline(always)]
-                    pub fn {from_fn}(token: archmage::X64V3Token, v: core::arch::x86_64::{raw_type}) -> Self {{
+                    pub fn {from_fn}_t(token: archmage::X64V3Token, v: core::arch::x86_64::{raw_type}) -> Self {{
                         Self(v, token)
                     }}
                 }}

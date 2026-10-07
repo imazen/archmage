@@ -106,10 +106,10 @@ fn assoc_type_name(elem: &ElemType, width: u32) -> String {
 
 /// What kind of constructor strategy to use.
 enum Strategy {
-    /// Native width or narrower: pass self directly. `type_name::splat(self, v)`
+    /// Native width or narrower: pass self directly. `type_name::splat_t(self, v)`
     /// Works because wider tokens downcast to narrower tokens' required type.
     Native,
-    /// Polyfill exists: `poly_mod::type_name::splat(self, v)`
+    /// Polyfill exists: `poly_mod::type_name::splat_t(self, v)`
     Polyfill { poly_mod: &'static str },
     /// No polyfill: array of w128. `[part, part, part, part]`
     Array { w128_type: String, chunks: u32 },
@@ -239,13 +239,13 @@ fn generate_trait_def() -> String {
 /// Generate a constructor body based on strategy.
 fn gen_splat(strat: &Strategy, _tc: &TokenConfig, tn: &str, scalar: &str) -> String {
     match strat {
-        Strategy::Native => format!("{tn}::splat(self, v)"),
-        Strategy::Polyfill { poly_mod } => format!("{poly_mod}::{tn}::splat(self, v)"),
+        Strategy::Native => format!("{tn}::splat_t(self, v)"),
+        Strategy::Polyfill { poly_mod } => format!("{poly_mod}::{tn}::splat_t(self, v)"),
         Strategy::Array { w128_type, .. } => {
             let _ = scalar;
             formatdoc! {r#"
                 {{
-                            let part = {w128_type}::splat(self, v);
+                            let part = {w128_type}::splat_t(self, v);
                             [part, part, part, part]
                         }}"#
             }
@@ -255,12 +255,12 @@ fn gen_splat(strat: &Strategy, _tc: &TokenConfig, tn: &str, scalar: &str) -> Str
 
 fn gen_zero(strat: &Strategy, _tc: &TokenConfig, tn: &str) -> String {
     match strat {
-        Strategy::Native => format!("{tn}::zero(self)"),
-        Strategy::Polyfill { poly_mod } => format!("{poly_mod}::{tn}::zero(self)"),
+        Strategy::Native => format!("{tn}::zero_t(self)"),
+        Strategy::Polyfill { poly_mod } => format!("{poly_mod}::{tn}::zero_t(self)"),
         Strategy::Array { w128_type, .. } => {
             formatdoc! {r#"
                 {{
-                            let part = {w128_type}::zero(self);
+                            let part = {w128_type}::zero_t(self);
                             [part, part, part, part]
                         }}"#
             }
@@ -270,8 +270,8 @@ fn gen_zero(strat: &Strategy, _tc: &TokenConfig, tn: &str) -> String {
 
 fn gen_load(strat: &Strategy, _tc: &TokenConfig, tn: &str, elem: &ElemType, width: u32) -> String {
     match strat {
-        Strategy::Native => format!("{tn}::load(self, data)"),
-        Strategy::Polyfill { poly_mod } => format!("{poly_mod}::{tn}::load(self, data)"),
+        Strategy::Native => format!("{tn}::load_t(self, data)"),
+        Strategy::Polyfill { poly_mod } => format!("{poly_mod}::{tn}::load_t(self, data)"),
         Strategy::Array { w128_type, chunks } => {
             let w128_lanes = lanes(elem, 128);
             let mut parts = String::new();
@@ -282,7 +282,7 @@ fn gen_load(strat: &Strategy, _tc: &TokenConfig, tn: &str, elem: &ElemType, widt
                     parts.push_str(",\n                    ");
                 }
                 parts.push_str(&format!(
-                    "{w128_type}::load(self, data[{start}..{end}].try_into().unwrap())"
+                    "{w128_type}::load_t(self, data[{start}..{end}].try_into().unwrap())"
                 ));
             }
             let _ = width;

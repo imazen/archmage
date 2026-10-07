@@ -281,7 +281,7 @@ impl<T: F32x8FromHalves> f32x8<T> {
     /// The token is load-bearing on x86 (proves AVX); a no-op on other
     /// tiers but kept in the signature for uniform use.
     #[inline(always)]
-    pub fn from_halves(token: T, lo: f32x4<T>, hi: f32x4<T>) -> Self {
+    pub fn from_halves_t(token: T, lo: f32x4<T>, hi: f32x4<T>) -> Self {
         Self::from_repr_unchecked(
             token,
             <T as F32x8FromHalves>::from_halves(token, lo.into_repr(), hi.into_repr()),
@@ -514,7 +514,7 @@ impl F32x16FromHalves for archmage::ScalarToken {
 impl<T: F32x16FromHalves> f32x16<T> {
     /// Combine two `f32x8<T>` halves into one `f32x16<T>`.
     #[inline(always)]
-    pub fn from_halves(token: T, lo: f32x8<T>, hi: f32x8<T>) -> Self {
+    pub fn from_halves_t(token: T, lo: f32x8<T>, hi: f32x8<T>) -> Self {
         Self::from_repr_unchecked(
             token,
             <T as F32x16FromHalves>::from_halves(token, lo.into_repr(), hi.into_repr()),
@@ -542,3 +542,5 @@ impl<T: F32x16FromHalves> f32x16<T> {
         (self.low(), self.high())
     }
 }
+
+include!("generated/cross_width_token_aliases.rs");
