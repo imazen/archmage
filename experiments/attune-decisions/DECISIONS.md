@@ -238,6 +238,16 @@ generating work_v3_t changes the old name. Existing first/middle/last proof
 positions and generic associated types must not disappear during conversion.
 This is an interface choice, not an unsolved safety boundary.
 
+Follow-up [cargo expand probe](../generic-token-trampoline/README.md): arcane
+preserves T, extra trait bounds and T::Output in both the wrapper and its private
+feature-enabled sibling. V2/u32 and V3/u64 executions passed. The bound establishes
+features, while the original concrete token retains its associated behavior.
+This means attune could preserve an existing generic proof-entry signature with
+the same lowering; keeping legacy arcane is an API-scope recommendation, not a
+technical requirement caused by genericity. Removing/concretizing T is the
+separate compatibility issue.
+
+
 ### Q6. What happens to exact-token passthrough?
 
 ```rust,ignore

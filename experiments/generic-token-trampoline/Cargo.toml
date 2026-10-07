@@ -1,0 +1,9 @@
+[package]
+name = "arcane-generic-token-probe"
+version = "0.0.0"
+edition = "2024"
+
+[workspace]
+
+[dependencies]
+archmage = { path = "../.." }

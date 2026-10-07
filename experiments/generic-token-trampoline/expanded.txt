@@ -1,0 +1,81 @@
+#![feature(prelude_import)]
+#![forbid(unsafe_code)]
+extern crate std;
+#[prelude_import]
+use std::prelude::rust_2024::*;
+use archmage::{arcane, HasX64V2, SimdToken, X64V2Token, X64V3Token};
+pub trait OtherTrait {
+    type Output;
+    fn finish(self, sum: f32) -> Self::Output;
+}
+impl OtherTrait for X64V2Token {
+    type Output = u32;
+    fn finish(self, sum: f32) -> u32 {
+        sum as u32 + 2
+    }
+}
+impl OtherTrait for X64V3Token {
+    type Output = u64;
+    fn finish(self, sum: f32) -> u64 {
+        sum as u64 + 3
+    }
+}
+#[doc(hidden)]
+#[target_feature(enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b")]
+#[inline]
+fn __arcane_work<T: HasX64V2 + OtherTrait>(token: T, data: &[f32]) -> T::Output {
+    let _context_proof = X64V2Token::from_context();
+    token.finish(data.iter().sum())
+}
+#[inline(always)]
+pub fn work<T: HasX64V2 + OtherTrait>(token: T, data: &[f32]) -> T::Output {
+    {
+        #[inline(always)]
+        const fn __archmage_assert_tier_trait<__T: ?Sized + ::archmage::HasX64V2>(
+            _: &__T,
+        ) {}
+        __archmage_assert_tier_trait(&token);
+    }
+    unsafe { __arcane_work::<T>(token, data) }
+}
+fn main() {
+    let v2 = X64V2Token::summon().expect("probe requires V2");
+    let v3 = X64V3Token::summon().expect("probe requires V3");
+    let result_v2: u32 = work(v2, &[1.0, 2.0]);
+    let result_v3: u64 = work(v3, &[1.0, 2.0]);
+    {
+        match (&result_v2, &5) {
+            (left_val, right_val) => {
+                if !(*left_val == *right_val) {
+                    let kind = ::core::panicking::AssertKind::Eq;
+                    ::core::panicking::assert_failed(
+                        kind,
+                        &*left_val,
+                        &*right_val,
+                        ::core::option::Option::None,
+                    );
+                }
+            }
+        }
+    };
+    {
+        match (&result_v3, &6) {
+            (left_val, right_val) => {
+                if !(*left_val == *right_val) {
+                    let kind = ::core::panicking::AssertKind::Eq;
+                    ::core::panicking::assert_failed(
+                        kind,
+                        &*left_val,
+                        &*right_val,
+                        ::core::option::Option::None,
+                    );
+                }
+            }
+        }
+    };
+    {
+        ::std::io::_print(
+            format_args!("V2 -> u32 {0}; V3 -> u64 {1}\n", result_v2, result_v3),
+        );
+    };
+}

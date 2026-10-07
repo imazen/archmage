@@ -1,0 +1,13 @@
+run-heavy: mem-cap=16G (cgroup, hard) jobs=8/20 avail=22324MiB :: cargo run --release --manifest-path /home/lilith/tmp/archmage-generic-token-expand-2026-10-07/Cargo.toml
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.26
+   Compiling quote v1.0.47
+   Compiling safe_unaligned_simd v0.2.5
+   Compiling syn v3.0.6
+   Compiling archmage-macros v0.9.29 (/home/lilith/work/archmage/archmage-macros)
+   Compiling archmage v0.9.29 (/home/lilith/work/archmage)
+   Compiling arcane-generic-token-probe v0.0.0 (/home/lilith/tmp/archmage-generic-token-expand-2026-10-07)
+    Finished `release` profile [optimized] target(s) in 1.74s
+     Running `/home/lilith/tmp/archmage-generic-token-expand-2026-10-07/target/release/arcane-generic-token-probe`
+V2 -> u32 5; V3 -> u64 6
+run-heavy: done rc=0 1s | peak-RSS 0.30GiB | min-avail 22324MiB | peak-load 0.34

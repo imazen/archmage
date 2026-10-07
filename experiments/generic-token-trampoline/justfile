@@ -1,0 +1,5 @@
+expand out:
+    TMPDIR="$HOME/tmp" "$HOME/work/claudehints/scripts/run-heavy" --mem 16G --jobs 8 -- cargo expand --locked --bin arcane-generic-token-probe > {{quote(out)}} 2> {{quote(out + ".log")}}
+
+run out:
+    TMPDIR="$HOME/tmp" "$HOME/work/claudehints/scripts/run-heavy" --mem 16G --jobs 8 -- cargo run --locked --release > {{quote(out)}} 2>&1
