@@ -339,8 +339,30 @@ pub(crate) fn gen_incant_passthrough(
         }
     }
 
-    // Fallback (always last): scalar (with token) or default (tokenless)
+    // Fallback (always last): scalar (with token) or default (tokenless).
+    //
+    // `with token` dispatches on the held token's exact type, so a token that
+    // is not in the list reaches the end: a `X64V4Token` matches no `v3` arm
+    // and only a real `ScalarToken` matches `scalar`. Only a `default` arm
+    // takes every token. The panic names the token (through `SimdToken::NAME`)
+    // and the tiers, so the reader can add `default` or dispatch with the
+    // tier the token proves.
     let has_default = tiers.iter().any(|t| t.name == "default");
+    let tier_names = tiers.iter().map(|t| t.name).collect::<Vec<_>>().join(", ");
+    let no_match = quote! {
+        {
+            fn __incant_token_name<__T: archmage::SimdToken>(_: &__T) -> &'static str {
+                __T::NAME
+            }
+            ::core::panic!(
+                "incant!(.. with token): the held token `{}` matches none of [{}]. \
+                 `with token` dispatches on the token's exact type; add a `default` \
+                 arm, or dispatch with the token of a listed tier",
+                __incant_token_name(&__incant_token),
+                #tier_names,
+            )
+        }
+    };
     let fallback_arm = if has_default {
         let fn_default = suffix_path(func_path, "default");
         let default_args = args
@@ -357,10 +379,10 @@ pub(crate) fn gen_incant_passthrough(
             if let Some(__t) = __incant_token.as_scalar() {
                 break '__incant #fn_scalar(#call_args);
             }
-            unreachable!("Token did not match any known variant")
+            #no_match
         }
     } else {
-        quote! { unreachable!("Token did not match any known variant") }
+        no_match
     };
 
     let expanded = quote! {

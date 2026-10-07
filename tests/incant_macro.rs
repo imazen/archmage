@@ -643,6 +643,46 @@ mod default_tier_tests {
         }
     }
 
+    // -- Passthrough with no matching arm --
+
+    #[arcane]
+    fn exact_v3(_: X64V3Token, x: f32) -> f32 {
+        x * 3.0
+    }
+
+    fn exact_scalar(_: ScalarToken, x: f32) -> f32 {
+        x
+    }
+
+    fn exact_dispatch<T: IntoConcreteToken>(token: T, x: f32) -> f32 {
+        incant!(exact(x) with token, [v3, scalar])
+    }
+
+    /// `with token` matches the token's exact type: a V2 token is neither a
+    /// `X64V3Token` nor a `ScalarToken`, so the dispatch reaches its end and
+    /// panics with a message naming the token and the tiers.
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn passthrough_without_match_names_token_and_tiers() {
+        use archmage::X64V2Token;
+        let Some(v2) = X64V2Token::summon() else {
+            return;
+        };
+        let result = std::panic::catch_unwind(|| exact_dispatch(v2, 1.0));
+        let message = result
+            .expect_err("a V2 token matches neither the v3 arm nor the scalar arm")
+            .downcast::<String>()
+            .expect("panic message is a formatted string");
+        assert!(message.contains(X64V2Token::NAME), "{message}");
+        assert!(message.contains("[v3, scalar]"), "{message}");
+        assert!(message.contains("add a `default` arm"), "{message}");
+    }
+
+    #[test]
+    fn passthrough_scalar_still_matches_scalar() {
+        assert_eq!(exact_dispatch(ScalarToken, 2.0), 2.0);
+    }
+
     // -- Verify default is called without token (tokenless) --
 
     // This function takes NO token. If incant! tried to pass one, it wouldn't compile.

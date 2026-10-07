@@ -158,6 +158,8 @@ normal positive coefficients.
 `with token` uses the **exact type** of a held token. It does not detect an
 upgrade or extract a lower proof. Use `default` when unmatched token types must
 still execute a fallback; a `scalar` arm only matches an actual `ScalarToken`.
+A token that matches no arm panics at run time with a message naming the token
+and the listed tiers.
 
 ```rust
 use archmage::prelude::*;

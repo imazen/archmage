@@ -28,12 +28,18 @@ fn pass_through<T: IntoConcreteToken>(token: T, x: f32) -> f32 {
             break '__incant inner_scalar(__t, x);
         }
         {
-            ::core::panicking::panic_fmt(
-                format_args!(
-                    "internal error: entered unreachable code: {0}",
-                    format_args!("Token did not match any known variant"),
-                ),
-            );
+            fn __incant_token_name<__T: archmage::SimdToken>(_: &__T) -> &'static str {
+                __T::NAME
+            }
+            {
+                ::core::panicking::panic_fmt(
+                    format_args!(
+                        "incant!(.. with token): the held token `{0}` matches none of [{1}]. `with token` dispatches on the token\'s exact type; add a `default` arm, or dispatch with the token of a listed tier",
+                        __incant_token_name(& __incant_token),
+                        "v4, v3, neon, wasm128, scalar",
+                    ),
+                );
+            }
         }
     }
 }
