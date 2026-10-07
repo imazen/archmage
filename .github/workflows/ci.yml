@@ -40,7 +40,7 @@ jobs:
     name: Release gate contracts
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: python3 -m pip install PyYAML==6.0.3
       - run: python3 xtask/check_ci_gate.py --test
 
@@ -52,7 +52,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-14]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Run actual Markdown examples with default features
@@ -65,7 +65,7 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
@@ -95,7 +95,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-26-intel]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -154,7 +154,7 @@ jobs:
 
       - name: Upload CPU survey
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cpu-survey-test-x64-${{ matrix.os }}
           path: cpu-survey.txt
@@ -166,7 +166,7 @@ jobs:
 
       - name: Upload arch results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: arch-results-x64-${{ matrix.os }}
           path: arch-results.jsonl
@@ -187,7 +187,7 @@ jobs:
           - { os: windows-11-arm, name: Windows }
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -230,7 +230,7 @@ jobs:
 
       - name: Upload CPU survey
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cpu-survey-test-aarch64-${{ matrix.os }}
           path: cpu-survey.txt
@@ -242,7 +242,7 @@ jobs:
 
       - name: Upload arch results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: arch-results-aarch64-${{ matrix.name }}
           path: arch-results.jsonl
@@ -262,7 +262,7 @@ jobs:
           - armv7-unknown-linux-gnueabihf
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -306,7 +306,7 @@ jobs:
     name: Test WASM SIMD128
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -391,7 +391,7 @@ jobs:
 
       - name: Upload arch results (WASM)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: arch-results-wasm
           path: arch-results.jsonl
@@ -403,7 +403,7 @@ jobs:
     name: Generation Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -439,7 +439,7 @@ jobs:
     name: Public API Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -461,7 +461,7 @@ jobs:
     name: Validate Token Safety
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -479,7 +479,7 @@ jobs:
     name: Soundness Verification
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -497,7 +497,7 @@ jobs:
     name: API Parity Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -515,7 +515,7 @@ jobs:
     name: Miri (UB Detection)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust nightly
         uses: dtolnay/rust-toolchain@master
@@ -545,7 +545,7 @@ jobs:
     name: Fuzz (Divergence Detection)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -564,7 +564,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -607,7 +607,7 @@ jobs:
           - { os: macos-latest, name: macOS }
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -630,7 +630,7 @@ jobs:
     name: Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -647,7 +647,7 @@ jobs:
     name: Docs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -677,7 +677,7 @@ jobs:
           - { os: macos-14, name: aarch64 macOS }
           - { os: windows-11-arm, name: aarch64 Windows }
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust 1.89
         uses: dtolnay/rust-toolchain@master
@@ -697,7 +697,7 @@ jobs:
 
       - name: Upload CPU survey
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cpu-survey-msrv-${{ matrix.os }}
           path: cpu-survey.txt
@@ -722,7 +722,7 @@ jobs:
           - { name: "all-features", build: "--all-features", test: "--all-features" }
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -757,7 +757,7 @@ jobs:
           - { os: windows-11-arm, name: aarch64 Windows }
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -795,14 +795,14 @@ jobs:
 
       - name: Upload detect features
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: detect-features-${{ matrix.os }}
           path: detect-features.txt
 
       - name: Upload CPU survey
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cpu-survey-testable-dispatch-${{ matrix.os }}
           path: cpu-survey.txt
@@ -833,7 +833,7 @@ jobs:
           - { name: "Sapphire Rapids (AVX-512 FP16)", flag: "-spr" }
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -910,7 +910,7 @@ jobs:
 
       - name: Upload CPU survey
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cpu-survey-sde-${{ matrix.cpu.name }}
           path: cpu-survey.txt
@@ -922,7 +922,7 @@ jobs:
     name: Coverage (x86_64)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -944,7 +944,7 @@ jobs:
         run: cargo llvm-cov --features "${{ env.FEATURES }} forge-token-api" --lcov --output-path lcov.info
 
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: lcov.info
           flags: x86_64
@@ -958,7 +958,7 @@ jobs:
     name: Coverage (aarch64)
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -978,7 +978,7 @@ jobs:
         run: cargo llvm-cov --features "${{ env.FEATURES }} forge-token-api" --lcov --output-path lcov.info
 
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: lcov.info
           flags: aarch64
@@ -995,7 +995,7 @@ jobs:
     # Superseded runs can be cancelled before producing any artifacts.
     if: ${{ !cancelled() }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -1004,7 +1004,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Download all arch results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: arch-results-*
           path: arch-results/
@@ -1040,7 +1040,7 @@ jobs:
       matrix:
         crate: [archmage, magetypes]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -1085,7 +1085,7 @@ jobs:
       - semver
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: python3 -m pip install PyYAML==6.0.3
       - name: Require every applicable job to succeed
         env:

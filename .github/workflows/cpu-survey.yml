@@ -32,7 +32,7 @@ jobs:
           - { os: macos-15-intel, name: "macOS 15 Intel (Xeon W)" }
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -43,7 +43,7 @@ jobs:
 
       - name: Upload CPU survey
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cpu-survey-catalog-${{ matrix.os }}
           path: cpu-survey.txt
