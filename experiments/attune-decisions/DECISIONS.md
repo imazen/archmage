@@ -176,6 +176,44 @@ contract rather than probing which names exist.
 Trait-object calls keep their existing method contract and dyn compatibility;
 explicit tier lists do not add statically callable members to a trait.
 
+#### Rename dictionaries for irregular names
+
+User requested a rename dictionary usable by attune, attuned and reattune.
+Proposed spelling (not an implemented parser):
+
+```rust,ignore
+#[attune(make(_v3, _v3_t),
+         names(_v3 = work_avx2, _v3_t = work_avx2_t))]
+fn work(x: f32) -> f32 { /* operation */ }
+
+attuned!(vendor::work(x), [_v3],
+         names(_v3 = vendor::work_avx2))
+
+reattune!(vendor::work(x), [_v4x, _v3],
+         names(_v4x_t = vendor::work_modern_entry,
+               _v3 = vendor::work_avx2))
+```
+
+Key by logical tier and entry form: `_v3` is direct, `_v3_t` is a proof entry,
+and `_` is a dispatcher. The key retains its feature and calling convention
+meaning regardless of the renamed identifier. Definitions map to identifiers
+in the generated scope; calls may map to paths. A map changes spelling, not
+the selected tiers, argument order, visibility or cfg. The existing exact-list
+and guaranteed-fallback rules still apply. Rust checks the actual callee's
+signature and target-feature requirements; a name map grants no feature proof.
+
+This can use per-invocation parsing and direct substitution without a family
+registry, exported descriptor or scanning another item. Compilation cost must
+still be measured; simpler structure is not a no-regression result. An ordinary
+Rust re-export under conventional names is also an option for repeated external
+mappings. A reusable dictionary declaration is not yet proposed.
+
+Before implementation, settle duplicate/colliding names, unused keys,
+associated/receiver call paths, generic arguments, and the interaction with
+entry-form selection. A mapping alone does not adapt an old token position or
+turn an arbitrary function into a compatible family entry. Keep such signature
+adaptation explicit.
+
 ### Q5. How should an existing token-taking public signature migrate?
 
 Old API:
