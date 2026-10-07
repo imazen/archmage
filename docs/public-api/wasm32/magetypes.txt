@@ -6,14 +6,14 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2643 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 34 lines (41 hidden + 0 excluded-feature)
+# files: magetypes.txt 2641 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 35 lines (42 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                12
 #   pub types (struct/enum/trait/alias)       287
 #   pub consts/statics                        228
-#   free functions                           3766
+#   free functions                           3726
 #   inherent methods                         1251
 #   enum variants                               1
 #   re-exports                                  2
@@ -25,10 +25,10 @@
 # per-module pub lines:
 #   (root)                          321
 #   cast                              3
-#   prelude                        3614
+#   prelude                        3574
 #   simd                           1609
 
-## items (2419 lines)
+## items (2417 lines)
 
 pub mod magetypes
 pub use archmage
@@ -80,9 +80,7 @@ pub fn [f32; 16]::from(prelude::f32x16<T>) -> [f32; 16] [also: (root)]
 pub const fn prelude::f32x4<archmage::tokens::ScalarToken>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::f32x4<archmage::tokens::generated::wasm::Wasm128Token>::from_raw(core::core_arch::wasm32::simd128::v128) -> Self [also: prelude::f32x4<archmage::tokens::generated::wasm::Wasm128Token>, prelude::f64x2<archmage::tokens::generated::wasm::Wasm128Token>, prelude::i16x8<archmage::tokens::generated::wasm::Wasm128Token>, prelude::i32x4<archmage::tokens::generated::wasm::Wasm128Token>, prelude::i64x2<archmage::tokens::generated::wasm::Wasm128Token>, prelude::i8x16<archmage::tokens::generated::wasm::Wasm128Token>, prelude::u16x8<archmage::tokens::generated::wasm::Wasm128Token>, prelude::u32x4<archmage::tokens::generated::wasm::Wasm128Token>, prelude::u64x2<archmage::tokens::generated::wasm::Wasm128Token>, prelude::u8x16<archmage::tokens::generated::wasm::Wasm128Token>]
 pub fn prelude::f32x4<archmage::tokens::generated::wasm::Wasm128Token>::from_raw_t(archmage::tokens::generated::wasm::Wasm128Token, core::core_arch::wasm32::simd128::v128) -> Self [also: prelude::f32x4<archmage::tokens::generated::wasm::Wasm128Token>, prelude::f64x2<archmage::tokens::generated::wasm::Wasm128Token>, prelude::i16x8<archmage::tokens::generated::wasm::Wasm128Token>, prelude::i32x4<archmage::tokens::generated::wasm::Wasm128Token>, prelude::i64x2<archmage::tokens::generated::wasm::Wasm128Token>, prelude::i8x16<archmage::tokens::generated::wasm::Wasm128Token>, prelude::u16x8<archmage::tokens::generated::wasm::Wasm128Token>, prelude::u32x4<archmage::tokens::generated::wasm::Wasm128Token>, prelude::u64x2<archmage::tokens::generated::wasm::Wasm128Token>, prelude::u8x16<archmage::tokens::generated::wasm::Wasm128Token>]
-pub fn prelude::f32x4<archmage::tokens::generated::wasm::Wasm128Token>::from_v128_t(archmage::tokens::generated::wasm::Wasm128Token, core::core_arch::wasm32::simd128::v128) -> Self [also: prelude::f32x4<archmage::tokens::generated::wasm::Wasm128Token>, prelude::f64x2<archmage::tokens::generated::wasm::Wasm128Token>, prelude::i16x8<archmage::tokens::generated::wasm::Wasm128Token>, prelude::i32x4<archmage::tokens::generated::wasm::Wasm128Token>, prelude::i64x2<archmage::tokens::generated::wasm::Wasm128Token>, prelude::i8x16<archmage::tokens::generated::wasm::Wasm128Token>, prelude::u16x8<archmage::tokens::generated::wasm::Wasm128Token>, prelude::u32x4<archmage::tokens::generated::wasm::Wasm128Token>, prelude::u64x2<archmage::tokens::generated::wasm::Wasm128Token>, prelude::u8x16<archmage::tokens::generated::wasm::Wasm128Token>]
 pub fn prelude::f32x4<archmage::tokens::generated::wasm::Wasm128Token>::raw(self) -> core::core_arch::wasm32::simd128::v128 [also: prelude::f32x4<archmage::tokens::generated::wasm::Wasm128Token>, prelude::f64x2<archmage::tokens::generated::wasm::Wasm128Token>, prelude::i16x8<archmage::tokens::generated::wasm::Wasm128Token>, prelude::i32x4<archmage::tokens::generated::wasm::Wasm128Token>, prelude::i64x2<archmage::tokens::generated::wasm::Wasm128Token>, prelude::i8x16<archmage::tokens::generated::wasm::Wasm128Token>, prelude::u16x8<archmage::tokens::generated::wasm::Wasm128Token>, prelude::u32x4<archmage::tokens::generated::wasm::Wasm128Token>, prelude::u64x2<archmage::tokens::generated::wasm::Wasm128Token>, prelude::u8x16<archmage::tokens::generated::wasm::Wasm128Token>]
-pub fn prelude::f32x4<archmage::tokens::generated::wasm::Wasm128Token>::from_v128(archmage::tokens::generated::wasm::Wasm128Token, core::core_arch::wasm32::simd128::v128) -> Self [also: prelude::f32x4<archmage::tokens::generated::wasm::Wasm128Token>, prelude::f64x2<archmage::tokens::generated::wasm::Wasm128Token>, prelude::i16x8<archmage::tokens::generated::wasm::Wasm128Token>, prelude::i32x4<archmage::tokens::generated::wasm::Wasm128Token>, prelude::i64x2<archmage::tokens::generated::wasm::Wasm128Token>, prelude::i8x16<archmage::tokens::generated::wasm::Wasm128Token>, prelude::u16x8<archmage::tokens::generated::wasm::Wasm128Token>, prelude::u32x4<archmage::tokens::generated::wasm::Wasm128Token>, prelude::u64x2<archmage::tokens::generated::wasm::Wasm128Token>, prelude::u8x16<archmage::tokens::generated::wasm::Wasm128Token>]
 pub const fn prelude::f32x4<archmage::tokens::generated::wasm::Wasm128Token>::implementation_name() -> &'static str [also: (root)]
 pub fn prelude::f32x4<T>::blend(Self, Self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>]
 pub fn prelude::f32x4<T>::from_array_t(T, [f32; 4]) -> Self [also: prelude::f32x4<T>]

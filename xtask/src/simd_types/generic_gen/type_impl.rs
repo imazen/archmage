@@ -1521,7 +1521,11 @@ fn gen_platform(ty: &SimdType) -> String {
         SimdWidth::W128 => {
             // W128 is native on every platform.
             let raw_type = x86_raw_type(ty);
-            let from_fn = from_raw_fn_name(ty);
+            let legacy_raw = deprecated_platform_ctor(
+                &from_raw_fn_name(ty),
+                "X64V3Token",
+                &format!("core::arch::x86_64::{raw_type}"),
+            );
 
             formatdoc! {"
                 {scalar_block}
@@ -1538,11 +1542,7 @@ fn gen_platform(ty: &SimdType) -> String {
                         self.0
                     }}
 
-                    /// Create from a raw `{raw_type}` (token-gated, zero-cost).
-                    #[inline(always)]
-                    pub fn {from_fn}_t(token: archmage::X64V3Token, v: core::arch::x86_64::{raw_type}) -> Self {{
-                        Self(v, token)
-                    }}
+                    {legacy_raw}
                 }}
 
                 #[cfg(target_arch = \"aarch64\")]
@@ -1565,7 +1565,11 @@ fn gen_platform(ty: &SimdType) -> String {
         SimdWidth::W256 => {
             // W256 is native on x86 (AVX2); polyfilled on NEON and WASM via pairs of W128.
             let raw_type = x86_raw_type(ty);
-            let from_fn = from_raw_fn_name(ty);
+            let legacy_raw = deprecated_platform_ctor(
+                &from_raw_fn_name(ty),
+                "X64V3Token",
+                &format!("core::arch::x86_64::{raw_type}"),
+            );
 
             formatdoc! {"
                 {scalar_block}
@@ -1582,11 +1586,7 @@ fn gen_platform(ty: &SimdType) -> String {
                         self.0
                     }}
 
-                    /// Create from a raw `{raw_type}` (token-gated, zero-cost).
-                    #[inline(always)]
-                    pub fn {from_fn}_t(token: archmage::X64V3Token, v: core::arch::x86_64::{raw_type}) -> Self {{
-                        Self(v, token)
-                    }}
+                    {legacy_raw}
                 }}
 
                 #[cfg(target_arch = \"aarch64\")]
@@ -1666,8 +1666,24 @@ fn gen_platform(ty: &SimdType) -> String {
     }
 }
 
+/// A platform-named raw constructor kept for callers that already use it,
+/// deprecated in favor of `from_raw_t` / `from_raw` and removed in 0.10.
+fn deprecated_platform_ctor(name: &str, token: &str, raw_path: &str) -> String {
+    formatdoc! {r#"
+        /// Deprecated spelling of [`Self::from_raw_t`].
+        #[deprecated(
+            note = "Use from_raw_t(token, v), or from_raw(v) in a matching feature context; {name} is removed in magetypes 0.10."
+        )]
+        #[inline(always)]
+        pub fn {name}(token: archmage::{token}, v: {raw_path}) -> Self {{
+            Self(v, token)
+        }}
+    "#}
+}
+
 /// Native raw construction without a token requires a compiler-checked context.
-/// Existing token-taking constructors retain their signatures and proof source.
+/// `from_raw_t(token, raw)` is the explicit-token form, for callers (generic
+/// code included) that hold a token but no feature context.
 pub(super) fn gen_raw_interop(ty: &SimdType, registry: &crate::registry::Registry) -> String {
     let name = ty.name();
     let mut code = String::new();
@@ -1709,29 +1725,23 @@ pub(super) fn gen_raw_interop(ty: &SimdType, registry: &crate::registry::Registr
         } else {
             format!("all(target_arch = \"{arch}\"{feature})")
         };
-        let legacy = if arch != "x86_64" || ty.width == SimdWidth::W512 {
-            let from_fn = format!("from_{}", raw.trim_start_matches('_'));
-            let from_fn = if from_fn.ends_with("_t") {
-                from_fn
-            } else {
-                format!("{from_fn}_t")
-            };
+        // x86 128/256-bit types get `raw()` in `gen_type_impl`; the rest here.
+        let raw_getter = if arch != "x86_64" || ty.width == SimdWidth::W512 {
             formatdoc! {r#"
                 /// Get the raw `{raw}` value.
                 #[inline(always)]
                 pub fn raw(self) -> core::arch::{arch}::{raw} {{
                     self.0
                 }}
-
-                /// Wrap a raw `{raw}` using an existing CPU capability token.
-                #[inline(always)]
-                pub fn {from_fn}(token: archmage::{token}, value: core::arch::{arch}::{raw}) -> Self {{
-                    Self(value, token)
-                }}
             "#}
         } else {
             String::new()
         };
+        // Platform-named constructors exist only where 0.9.29 shipped them:
+        // the x86 128/256-bit names, emitted in `gen_type_impl` as deprecated
+        // forwarders to `from_raw_t`. NEON, WASM and AVX-512 types never had
+        // one on the generic types and do not get one.
+        let legacy = raw_getter;
         code.push_str(&formatdoc! {r#"
             #[cfg({cfg})]
             impl {name}<archmage::{token}> {{

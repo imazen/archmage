@@ -58,6 +58,21 @@ fn x86_roundtrips() {
             .map(f32::to_bits),
         bits
     );
+    // The platform names 0.9.29 shipped stay callable (deprecated) until 0.10.
+    let token = X64V3Token::from_context();
+    assert_eq!(
+        f32x4::from_m128(token, v.raw())
+            .to_array()
+            .map(f32::to_bits),
+        bits
+    );
+    let wide = f32x8::<X64V3Token>::splat_t(token, -0.0);
+    assert_eq!(f32x8::from_m256(token, wide.raw()).to_array(), [-0.0; 8]);
+    let ints = i32x4::<X64V3Token>::splat_t(token, i32::MIN);
+    assert_eq!(
+        i32x4::from_m128i(token, ints.raw()).to_array(),
+        [i32::MIN; 4]
+    );
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -72,12 +87,12 @@ fn native_raw_roundtrips() {
 
 #[cfg(target_arch = "aarch64")]
 #[test]
-fn neon_legacy_roundtrips() {
+fn neon_roundtrips() {
     #[arcane]
     fn entry(token: archmage::NeonToken) {
         let bits = [0x8000_0000, 0x7fc0_1234, 1, 0xff80_0000];
         let a = f32x4::from_array(token, bits.map(f32::from_bits));
-        let b = f32x4::from_float32x4_t(token, a.raw());
+        let b = f32x4::from_raw_t(token, a.raw());
         assert_eq!(b.to_array().map(f32::to_bits), bits);
         assert_eq!(
             f32x4::<archmage::NeonToken>::from_raw(b.raw())
@@ -88,7 +103,7 @@ fn neon_legacy_roundtrips() {
         let bits64 = [0x8000_0000_0000_0000, 0x7ff8_0000_0000_1234];
         let a = f64x2::from_array(token, bits64.map(f64::from_bits));
         assert_eq!(
-            f64x2::from_float64x2_t(token, a.raw())
+            f64x2::from_raw_t(token, a.raw())
                 .to_array()
                 .map(f64::to_bits),
             bits64

@@ -876,9 +876,12 @@ impl f32x8<archmage::X64V3Token> {
         self.0
     }
 
-    /// Create from a raw `__m256` (token-gated, zero-cost).
+    /// Deprecated spelling of [`Self::from_raw_t`].
+    #[deprecated(
+        note = "Use from_raw_t(token, v), or from_raw(v) in a matching feature context; from_m256 is removed in magetypes 0.10."
+    )]
     #[inline(always)]
-    pub fn from_m256_t(token: archmage::X64V3Token, v: core::arch::x86_64::__m256) -> Self {
+    pub fn from_m256(token: archmage::X64V3Token, v: core::arch::x86_64::__m256) -> Self {
         Self(v, token)
     }
 }
@@ -1019,17 +1022,5 @@ impl<T: crate::simd::backends::F32x8Convert> f32x8<T> {
     #[forbid(unsafe_code)]
     pub fn from_i32x8(token: T, v: super::i32x8<T>) -> Self {
         Self::from_i32x8_t(token, v)
-    }
-}
-#[cfg(target_arch = "x86_64")]
-impl f32x8<archmage::X64V3Token> {
-    #[inline(always)]
-    #[doc = "Deprecated token-taking spelling of [`Self::from_m256_t`].\n\nUse `from_m256_t` to keep explicit-token construction when `from_m256` becomes tokenless in magetypes 0.10."]
-    #[deprecated(
-        note = "Use from_m256_t(token, v); from_m256 becomes tokenless in magetypes 0.10."
-    )]
-    #[forbid(unsafe_code)]
-    pub fn from_m256(token: archmage::X64V3Token, v: core::arch::x86_64::__m256) -> Self {
-        Self::from_m256_t(token, v)
     }
 }

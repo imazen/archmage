@@ -630,9 +630,12 @@ impl f64x4<archmage::X64V3Token> {
         self.0
     }
 
-    /// Create from a raw `__m256d` (token-gated, zero-cost).
+    /// Deprecated spelling of [`Self::from_raw_t`].
+    #[deprecated(
+        note = "Use from_raw_t(token, v), or from_raw(v) in a matching feature context; from_m256d is removed in magetypes 0.10."
+    )]
     #[inline(always)]
-    pub fn from_m256d_t(token: archmage::X64V3Token, v: core::arch::x86_64::__m256d) -> Self {
+    pub fn from_m256d(token: archmage::X64V3Token, v: core::arch::x86_64::__m256d) -> Self {
         Self(v, token)
     }
 }
@@ -746,17 +749,5 @@ impl<T: F64x4Backend> f64x4<T> {
     #[forbid(unsafe_code)]
     pub fn from_repr(token: T, repr: T::Repr) -> Self {
         Self::from_repr_t(token, repr)
-    }
-}
-#[cfg(target_arch = "x86_64")]
-impl f64x4<archmage::X64V3Token> {
-    #[inline(always)]
-    #[doc = "Deprecated token-taking spelling of [`Self::from_m256d_t`].\n\nUse `from_m256d_t` to keep explicit-token construction when `from_m256d` becomes tokenless in magetypes 0.10."]
-    #[deprecated(
-        note = "Use from_m256d_t(token, v); from_m256d becomes tokenless in magetypes 0.10."
-    )]
-    #[forbid(unsafe_code)]
-    pub fn from_m256d(token: archmage::X64V3Token, v: core::arch::x86_64::__m256d) -> Self {
-        Self::from_m256d_t(token, v)
     }
 }

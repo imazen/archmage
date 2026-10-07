@@ -189,7 +189,7 @@ fn i32x4_raw_m128i_roundtrip() {
     if let Some(t) = X64V3Token::summon() {
         let v = i32x4::<X64V3Token>::from_array_t(t, [11, 22, 33, 44]);
         let raw = v.raw();
-        let v2 = i32x4::from_m128i_t(t, raw);
+        let v2 = i32x4::from_raw_t(t, raw);
         assert_eq!(v2.to_array(), [11, 22, 33, 44]);
     }
 }
@@ -242,7 +242,7 @@ fn i32x8_raw_m256i_roundtrip() {
     if let Some(t) = X64V3Token::summon() {
         let v = i32x8::<X64V3Token>::from_array_t(t, [1, 2, 3, 4, 5, 6, 7, 8]);
         let raw = v.raw();
-        let v2 = i32x8::from_m256i_t(t, raw);
+        let v2 = i32x8::from_raw_t(t, raw);
         assert_eq!(v2.to_array(), [1, 2, 3, 4, 5, 6, 7, 8]);
     }
 }

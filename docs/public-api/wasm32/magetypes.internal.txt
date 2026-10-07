@@ -11,16 +11,16 @@
 #
 #   pub modules                                 2
 #   pub types (struct/enum/trait/alias)         1
-#   free functions                             28
+#   free functions                             29
 #   trait roster entries (type × trait)        10
 #
 # per-module pub lines:
 #   (root)                            2
 #   bypass_adversarial                1
-#   nostd_math                       20
+#   nostd_math                       21
 #   simd                              8
 
-## items (24 lines)
+## items (25 lines)
 
 pub fn nostd_math::cbrt_lowp_f32(f32) -> f32
 pub fn nostd_math::cbrt_midp_f32(f32) -> f32
@@ -32,6 +32,7 @@ pub fn nostd_math::floor(f64) -> f64
 pub fn nostd_math::floorf(f32) -> f32
 pub fn nostd_math::fma(f64, f64, f64) -> f64
 pub fn nostd_math::fmaf(f32, f32, f32) -> f32
+pub fn nostd_math::fmaf_soft(f32, f32, f32) -> f32
 pub fn nostd_math::ln_f64(f64) -> f64
 pub fn nostd_math::log10_f64(f64) -> f64
 pub fn nostd_math::log2_f64(f64) -> f64

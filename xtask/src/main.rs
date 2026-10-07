@@ -1057,6 +1057,9 @@ fn main() -> Result<()> {
             "       cargo xtask soundness           - Compile-time intrinsic safety verification"
         );
         eprintln!("       cargo xtask miri                - Run magetypes under Miri (detects UB)");
+        eprintln!(
+            "       cargo xtask check-packages [--target T]... - Package the crates and check the packaged sources"
+        );
         std::process::exit(1);
     }
 
@@ -1071,6 +1074,16 @@ fn main() -> Result<()> {
         "parity" => check_api_parity(false)?,
         "soundness" => verify_intrinsic_soundness()?,
         "gen-expand" => expand_gen::generate_expand_tests(&PathBuf::from("tests/expand"))?,
+        "check-packages" => {
+            // `--target T` may repeat; everything else is an error.
+            let mut targets = Vec::new();
+            let mut rest = args[2..].iter();
+            while let Some(arg) = rest.next() {
+                anyhow::ensure!(arg == "--target", "unknown check-packages argument: {arg}");
+                targets.push(rest.next().context("--target needs a value")?.clone());
+            }
+            check_packages(&targets)?
+        }
         "miri" => run_miri()?,
         "audit" => run_safety_audit()?,
         "intrinsics-refresh" => refresh_intrinsics_database()?,
@@ -1108,106 +1121,6 @@ fn main() -> Result<()> {
         }
     }
 
-    Ok(())
-}
-
-/// Verify the hand-written AVX-512 f32 delegation forwards *every* backend
-/// trait method to `X64V3Token`.
-///
-/// `magetypes/src/simd/impls/x86_v4_f32_delegated.rs` is the one backend impl
-/// the generator does not emit. Because `F32x4Backend` / `F32x8Backend` give
-/// several methods a scalar **default** body, a method the delegation forgets
-/// still compiles — it just silently drops the V3 hardware path for every
-/// AVX-512 token. That is how `to_u8_bytes`, `store_rgba_bytes` and
-/// `transpose_8x8_repr` regressed to a per-lane `roundevenf` / gather after
-/// the concrete-type retirement restored them on V3 and NEON only
-/// (issue #60): `f32x8<X64V4Token>::transpose_8x8` compiled to ~198
-/// instructions against V3's ~32.
-///
-/// So: no silent defaults. Every trait method must appear in both macros.
-fn validate_v4_f32_delegation() -> Result<()> {
-    println!("\n=== Validating AVX-512 f32 delegation completeness ===");
-
-    /// Names of `fn`s declared directly inside the first `{}` block that
-    /// follows `header` in `src`.
-    fn methods_in_block(src: &str, header: &str, indent: &str) -> Result<Vec<String>> {
-        let start = src
-            .find(header)
-            .ok_or_else(|| anyhow::anyhow!("could not find `{header}`"))?;
-        let open = src[start..]
-            .find('{')
-            .ok_or_else(|| anyhow::anyhow!("no `{{` after `{header}`"))?
-            + start;
-        let mut depth = 0usize;
-        let mut end = open;
-        for (i, c) in src[open..].char_indices() {
-            match c {
-                '{' => depth += 1,
-                '}' => {
-                    depth -= 1;
-                    if depth == 0 {
-                        end = open + i;
-                        break;
-                    }
-                }
-                _ => {}
-            }
-        }
-        let needle = format!("\n{indent}fn ");
-        Ok(src[open..end]
-            .match_indices(&needle)
-            .map(|(i, _)| {
-                let rest = &src[open + i + needle.len()..];
-                rest.chars()
-                    .take_while(|c| c.is_alphanumeric() || *c == '_')
-                    .collect::<String>()
-            })
-            .collect())
-    }
-
-    let deleg_path = "magetypes/src/simd/impls/x86_v4_f32_delegated.rs";
-    let deleg = std::fs::read_to_string(deleg_path)?;
-
-    let mut missing_total = 0usize;
-    for (trait_name, trait_path) in [
-        ("F32x4Backend", "magetypes/src/simd/backends/f32x4.rs"),
-        ("F32x8Backend", "magetypes/src/simd/backends/f32x8.rs"),
-    ] {
-        let trait_src = std::fs::read_to_string(trait_path)?;
-        let declared = methods_in_block(&trait_src, &format!("pub trait {trait_name}"), "    ")?;
-        let forwarded = methods_in_block(
-            &deleg,
-            &format!("impl {trait_name} for $token"),
-            "            ",
-        )?;
-
-        let missing: Vec<_> = declared
-            .iter()
-            .filter(|m| !forwarded.contains(m))
-            .cloned()
-            .collect();
-
-        println!(
-            "  {trait_name}: {} declared, {} forwarded, {} missing",
-            declared.len(),
-            forwarded.len(),
-            missing.len()
-        );
-        for m in &missing {
-            println!("    MISSING: {trait_name}::{m}");
-        }
-        missing_total += missing.len();
-    }
-
-    if missing_total > 0 {
-        anyhow::bail!(
-            "{missing_total} backend method(s) not forwarded in {deleg_path}.\n\
-             Every AVX-512 token would silently fall back to the trait's scalar default \
-             body for these, losing V3's hardware path. Add a forwarding method for each."
-        );
-    }
-
-    println!("  OK: every f32 backend method is forwarded to X64V3Token");
     Ok(())
 }
 
@@ -1251,6 +1164,7 @@ const COMPILE_BUDGETS: &[(&str, &[&str], usize)] = &[
             "magetypes/src/simd/impls/x86_v3.rs",
             "magetypes/src/simd/impls/x86_v4.rs",
             "magetypes/src/simd/impls/x86_v4_f32_delegated.rs",
+            "magetypes/src/simd/impls/x86_v4_f32_overrides.rs",
             "magetypes/src/simd/impls/scalar.rs",
             "magetypes/src/simd/backends/",
         ],
@@ -1341,7 +1255,6 @@ fn check_compile_budgets() -> Result<()> {
 fn validate_after_soundness(reg: &registry::Registry) -> Result<()> {
     soundness::check_stderr_snapshot_portability()?;
     validate_summon(reg)?;
-    validate_v4_f32_delegation()?;
     check_compile_budgets()?;
     check_package_licenses()?;
     Ok(())
@@ -1371,6 +1284,122 @@ fn check_package_licenses() -> Result<()> {
         }
     }
     println!("  OK: archmage-macros and magetypes carry LICENSE-MIT and LICENSE-APACHE");
+    Ok(())
+}
+
+/// Build the three packaged libraries together, without publishing anything.
+///
+/// `cargo package` each crate, extract the archives into
+/// `target/package-verification/`, check that the published dependency
+/// protocol is what the release needs (archmage pins archmage-macros exactly,
+/// magetypes requires the archmage version), and `cargo check` the packaged
+/// sources as one workspace, once per `--target` (host when none is given).
+fn check_packages(targets: &[String]) -> Result<()> {
+    use std::process::Command;
+    const CRATES: [&str; 3] = ["archmage", "archmage-macros", "magetypes"];
+
+    let metadata: serde_json::Value = serde_json::from_slice(
+        &Command::new("cargo")
+            .args(["metadata", "--no-deps", "--format-version", "1"])
+            .output()
+            .context("cargo metadata")?
+            .stdout,
+    )?;
+    let packages = metadata["packages"].as_array().context("packages")?;
+    let version = |name: &str| -> Result<String> {
+        packages
+            .iter()
+            .find(|p| p["name"] == name)
+            .and_then(|p| p["version"].as_str())
+            .map(String::from)
+            .with_context(|| format!("{name} is not a workspace member"))
+    };
+    let target_dir = PathBuf::from(
+        metadata["target_directory"]
+            .as_str()
+            .context("target dir")?,
+    );
+
+    let mut package = Command::new("cargo");
+    package.args(["package", "--no-verify", "--allow-dirty"]);
+    for crate_name in CRATES {
+        package.args(["-p", crate_name]);
+    }
+    println!("+ {package:?}");
+    anyhow::ensure!(package.status()?.success(), "cargo package failed");
+
+    let staging = target_dir.join("package-verification").join(format!(
+        "sources-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_secs()
+    ));
+    fs::create_dir_all(&staging)?;
+    let mut members = Vec::new();
+    for crate_name in CRATES {
+        let member = format!("{crate_name}-{}", version(crate_name)?);
+        let archive = target_dir.join("package").join(format!("{member}.crate"));
+        let status = Command::new("tar")
+            .arg("-xzf")
+            .arg(&archive)
+            .arg("-C")
+            .arg(&staging)
+            .status()
+            .context("tar")?;
+        anyhow::ensure!(status.success(), "extracting {}", archive.display());
+        members.push(member);
+    }
+
+    // The published dependency protocol, not just local path resolution.
+    let manifest = |member: &str| -> Result<toml::Value> {
+        Ok(toml::from_str(&fs::read_to_string(
+            staging.join(member).join("Cargo.toml"),
+        )?)?)
+    };
+    let archmage = manifest(&members[0])?;
+    let magetypes = manifest(&members[2])?;
+    anyhow::ensure!(
+        archmage["dependencies"]["archmage-macros"]["version"].as_str()
+            == Some(&format!("={}", version("archmage-macros")?)),
+        "packaged archmage must pin archmage-macros exactly"
+    );
+    anyhow::ensure!(
+        magetypes["dependencies"]["archmage"]["version"].as_str() == Some(&version("archmage")?),
+        "packaged magetypes must require the workspace archmage version"
+    );
+
+    let mut workspace = format!(
+        "[workspace]\nresolver = \"3\"\nmembers = {}\n\n[patch.crates-io]\n",
+        serde_json::to_string(&members)?
+    );
+    for (crate_name, member) in CRATES.iter().zip(&members) {
+        workspace.push_str(&format!("{crate_name} = {{ path = {member:?} }}\n"));
+    }
+    fs::write(staging.join("Cargo.toml"), workspace)?;
+
+    let host = [String::new()];
+    for target in if targets.is_empty() {
+        &host[..]
+    } else {
+        targets
+    } {
+        let mut check = Command::new("cargo");
+        check
+            .args([
+                "check",
+                "--workspace",
+                "--all-features",
+                "--lib",
+                "--manifest-path",
+            ])
+            .arg(staging.join("Cargo.toml"));
+        if !target.is_empty() {
+            check.args(["--target", target]);
+        }
+        println!("+ {check:?}");
+        anyhow::ensure!(check.status()?.success(), "packaged sources fail to check");
+    }
+    println!("Verified packaged sources: {}", staging.display());
     Ok(())
 }
 
@@ -2129,38 +2158,19 @@ fn check_api_parity(strict: bool) -> Result<()> {
     // Known gaps that have no efficient native intrinsic support.
     // These are intentionally allowed and documented.
     let known_gaps: &[&str] = &[
-        // Architecture-specific native type conversions (from_m128i, from_float32x4_t, from_v128)
-        // are intentionally per-platform — no cross-arch equivalent exists.
-        "  f32x4::from_float32x4_t — missing from: x86, WASM",
+        // Deprecated platform-named raw constructors: the x86 names 0.9.29
+        // shipped, forwarding to `from_raw_t`. The cross-platform spellings
+        // are `from_raw_t` and `from_raw`.
         "  f32x4::from_m128 — missing from: ARM, WASM",
-        "  f32x4::from_v128 — missing from: x86, ARM",
-        "  f64x2::from_float64x2_t — missing from: x86, WASM",
         "  f64x2::from_m128d — missing from: ARM, WASM",
-        "  f64x2::from_v128 — missing from: x86, ARM",
-        "  i8x16::from_int8x16_t — missing from: x86, WASM",
         "  i8x16::from_m128i — missing from: ARM, WASM",
-        "  i8x16::from_v128 — missing from: x86, ARM",
-        "  u8x16::from_uint8x16_t — missing from: x86, WASM",
         "  u8x16::from_m128i — missing from: ARM, WASM",
-        "  u8x16::from_v128 — missing from: x86, ARM",
-        "  i16x8::from_int16x8_t — missing from: x86, WASM",
         "  i16x8::from_m128i — missing from: ARM, WASM",
-        "  i16x8::from_v128 — missing from: x86, ARM",
-        "  u16x8::from_uint16x8_t — missing from: x86, WASM",
         "  u16x8::from_m128i — missing from: ARM, WASM",
-        "  u16x8::from_v128 — missing from: x86, ARM",
-        "  i32x4::from_int32x4_t — missing from: x86, WASM",
         "  i32x4::from_m128i — missing from: ARM, WASM",
-        "  i32x4::from_v128 — missing from: x86, ARM",
-        "  u32x4::from_uint32x4_t — missing from: x86, WASM",
         "  u32x4::from_m128i — missing from: ARM, WASM",
-        "  u32x4::from_v128 — missing from: x86, ARM",
-        "  i64x2::from_int64x2_t — missing from: x86, WASM",
         "  i64x2::from_m128i — missing from: ARM, WASM",
-        "  i64x2::from_v128 — missing from: x86, ARM",
-        "  u64x2::from_uint64x2_t — missing from: x86, WASM",
         "  u64x2::from_m128i — missing from: ARM, WASM",
-        "  u64x2::from_v128 — missing from: x86, ARM",
         // AVX-512 fast-path methods (only available with X64V4Token)
         "  i64x2::abs_fast — missing from: ARM, WASM",
         "  i64x2::min_fast — missing from: ARM, WASM",

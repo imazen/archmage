@@ -135,8 +135,9 @@ impl f32x1 {
         Self(self.0 * b.0 - c.0)
     }
 
-    /// Multiply-add with one rounding: `self * b + c`, correctly rounded in
-    /// software. NaN payload/sign are unspecified.
+    /// Multiply-add with one rounding: `self * b + c`, the FMA instruction
+    /// where the CPU has one and correctly rounded software otherwise. NaN
+    /// payload/sign are unspecified.
     #[inline(always)]
     pub fn mul_add_portable(self, b: Self, c: Self) -> Self {
         Self(crate::nostd_math::fmaf(self.0, b.0, c.0))
@@ -262,8 +263,9 @@ impl f64x1 {
         Self(self.0 * b.0 + c.0)
     }
 
-    /// Multiply-add with one rounding: `self * b + c`, correctly rounded in
-    /// software. NaN payload/sign are unspecified.
+    /// Multiply-add with one rounding: `self * b + c`, the FMA instruction
+    /// where the CPU has one and correctly rounded software otherwise. NaN
+    /// payload/sign are unspecified.
     #[inline(always)]
     pub fn mul_add_portable(self, b: Self, c: Self) -> Self {
         Self(crate::nostd_math::fma(self.0, b.0, c.0))

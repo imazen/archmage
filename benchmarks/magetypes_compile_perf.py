@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Time cold builds of the magetypes crate itself, before vs after a change.
 
-Usage: python3 xtask/magetypes_compile_perf.py ROOT [PAIRS]
+Usage: python3 benchmarks/magetypes_compile_perf.py ROOT [PAIRS]
 ROOT contains before/ and after/ archmage source trees (for example from
 `git archive <rev> | tar -x -C ROOT/before`). Each tree keeps its own Cargo.lock
 and target directory. Dependencies are built once per tree and configuration;

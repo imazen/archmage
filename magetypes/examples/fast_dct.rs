@@ -216,14 +216,14 @@ mod x86_impl {
         let c7 = _mm256_permute2f128_ps::<0x31>(s3, s7);
 
         [
-            f32x8::from_m256_t(token, c0),
-            f32x8::from_m256_t(token, c1),
-            f32x8::from_m256_t(token, c2),
-            f32x8::from_m256_t(token, c3),
-            f32x8::from_m256_t(token, c4),
-            f32x8::from_m256_t(token, c5),
-            f32x8::from_m256_t(token, c6),
-            f32x8::from_m256_t(token, c7),
+            f32x8::from_raw_t(token, c0),
+            f32x8::from_raw_t(token, c1),
+            f32x8::from_raw_t(token, c2),
+            f32x8::from_raw_t(token, c3),
+            f32x8::from_raw_t(token, c4),
+            f32x8::from_raw_t(token, c5),
+            f32x8::from_raw_t(token, c6),
+            f32x8::from_raw_t(token, c7),
         ]
     }
 
