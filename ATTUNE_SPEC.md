@@ -503,6 +503,8 @@ Required coverage for a later implementation:
 
 ## 12. References
 
+- [Exact legacy migration and deprecation contract](ATTUNE_MIGRATION.md)
+
 - [Pinned migration inventory](experiments/attune-migration/report.md)
 - [Annotated migration patterns](experiments/attune-migration/migration.md)
 - [Trait, generic, visibility and inline contracts](experiments/attune-migration/migration-contracts.md)

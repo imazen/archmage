@@ -214,6 +214,16 @@ entry-form selection. A mapping alone does not adapt an old token position or
 turn an arbitrary function into a compatible family entry. Keep such signature
 adaptation explicit.
 
+### Migration requirement added after the initial options
+
+A [full migration converter](../../ATTUNE_MIGRATION.md) is now required, including
+invocation-specific deprecation replacements and explicit preservation of inline
+and dispatch behavior. The legacy-bridge options in Q5/Q6 below may describe a
+transition, but cannot be the final answer for supported old syntax. Attune and
+its call surface, or validated source adapters, must express those contracts
+before claiming complete migration. Same-signature generic proof entries and
+exact-token dispatch syntax remain decisions to settle.
+
 ### Q5. How should an existing token-taking public signature migrate?
 
 Old API:
