@@ -574,7 +574,7 @@ impl I8x64Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn reduce_add(self, a: __m512i) -> i8 {
-        // No native integer reduce_add in AVX-512; use transmute to array
+        // AVX-512 has no single-instruction integer reduction; fold the lanes
         let arr: [i8; 64] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0i8, i8::wrapping_add)
     }
@@ -641,14 +641,16 @@ impl I8x64Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi8_mask(a) as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi8_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -774,7 +776,7 @@ impl U8x64Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn reduce_add(self, a: __m512i) -> u8 {
-        // No native integer reduce_add in AVX-512; use transmute to array
+        // AVX-512 has no single-instruction integer reduction; fold the lanes
         let arr: [u8; 64] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0u8, u8::wrapping_add)
     }
@@ -840,14 +842,16 @@ impl U8x64Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi8_mask(a) as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi8_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1012,7 +1016,7 @@ impl I16x32Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn reduce_add(self, a: __m512i) -> i16 {
-        // No native integer reduce_add in AVX-512; use transmute to array
+        // AVX-512 has no single-instruction integer reduction; fold the lanes
         let arr: [i16; 32] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0i16, i16::wrapping_add)
     }
@@ -1079,14 +1083,16 @@ impl I16x32Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFF_FFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi16_mask(a) as u64 == 0xFFFF_FFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi16_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1250,7 +1256,7 @@ impl U16x32Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn reduce_add(self, a: __m512i) -> u16 {
-        // No native integer reduce_add in AVX-512; use transmute to array
+        // AVX-512 has no single-instruction integer reduction; fold the lanes
         let arr: [u16; 32] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0u16, u16::wrapping_add)
     }
@@ -1317,14 +1323,16 @@ impl U16x32Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFF_FFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi16_mask(a) as u64 == 0xFFFF_FFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi16_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1471,7 +1479,7 @@ impl I32x16Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn reduce_add(self, a: __m512i) -> i32 {
-        // No native integer reduce_add in AVX-512; use transmute to array
+        // AVX-512 has no single-instruction integer reduction; fold the lanes
         let arr: [i32; 16] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0i32, i32::wrapping_add)
     }
@@ -1528,14 +1536,16 @@ impl I32x16Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi32_mask(a) as u64 == 0xFFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi32_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1679,7 +1689,7 @@ impl U32x16Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn reduce_add(self, a: __m512i) -> u32 {
-        // No native integer reduce_add in AVX-512; use transmute to array
+        // AVX-512 has no single-instruction integer reduction; fold the lanes
         let arr: [u32; 16] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0u32, u32::wrapping_add)
     }
@@ -1736,14 +1746,16 @@ impl U32x16Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi32_mask(a) as u64 == 0xFFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi32_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1868,7 +1880,7 @@ impl I64x8Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn reduce_add(self, a: __m512i) -> i64 {
-        // No native integer reduce_add in AVX-512; use transmute to array
+        // AVX-512 has no single-instruction integer reduction; fold the lanes
         let arr: [i64; 8] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0i64, i64::wrapping_add)
     }
@@ -1910,14 +1922,16 @@ impl I64x8Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi64_mask(a) as u64 == 0xFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi64_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -2037,7 +2051,7 @@ impl U64x8Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn reduce_add(self, a: __m512i) -> u64 {
-        // No native integer reduce_add in AVX-512; use transmute to array
+        // AVX-512 has no single-instruction integer reduction; fold the lanes
         let arr: [u64; 8] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0u64, u64::wrapping_add)
     }
@@ -2079,14 +2093,16 @@ impl U64x8Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi64_mask(a) as u64 == 0xFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi64_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -2646,7 +2662,7 @@ impl I8x64Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn reduce_add(self, a: __m512i) -> i8 {
-        // No native integer reduce_add in AVX-512; use transmute to array
+        // AVX-512 has no single-instruction integer reduction; fold the lanes
         let arr: [i8; 64] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0i8, i8::wrapping_add)
     }
@@ -2713,14 +2729,16 @@ impl I8x64Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi8_mask(a) as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi8_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -2846,7 +2864,7 @@ impl U8x64Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn reduce_add(self, a: __m512i) -> u8 {
-        // No native integer reduce_add in AVX-512; use transmute to array
+        // AVX-512 has no single-instruction integer reduction; fold the lanes
         let arr: [u8; 64] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0u8, u8::wrapping_add)
     }
@@ -2912,14 +2930,16 @@ impl U8x64Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi8_mask(a) as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi8_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi8_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3084,7 +3104,7 @@ impl I16x32Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn reduce_add(self, a: __m512i) -> i16 {
-        // No native integer reduce_add in AVX-512; use transmute to array
+        // AVX-512 has no single-instruction integer reduction; fold the lanes
         let arr: [i16; 32] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0i16, i16::wrapping_add)
     }
@@ -3151,14 +3171,16 @@ impl I16x32Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFF_FFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi16_mask(a) as u64 == 0xFFFF_FFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi16_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3322,7 +3344,7 @@ impl U16x32Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn reduce_add(self, a: __m512i) -> u16 {
-        // No native integer reduce_add in AVX-512; use transmute to array
+        // AVX-512 has no single-instruction integer reduction; fold the lanes
         let arr: [u16; 32] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0u16, u16::wrapping_add)
     }
@@ -3389,14 +3411,16 @@ impl U16x32Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFF_FFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi16_mask(a) as u64 == 0xFFFF_FFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi16_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi16_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3543,7 +3567,7 @@ impl I32x16Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn reduce_add(self, a: __m512i) -> i32 {
-        // No native integer reduce_add in AVX-512; use transmute to array
+        // AVX-512 has no single-instruction integer reduction; fold the lanes
         let arr: [i32; 16] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0i32, i32::wrapping_add)
     }
@@ -3600,14 +3624,16 @@ impl I32x16Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi32_mask(a) as u64 == 0xFFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi32_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3751,7 +3777,7 @@ impl U32x16Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn reduce_add(self, a: __m512i) -> u32 {
-        // No native integer reduce_add in AVX-512; use transmute to array
+        // AVX-512 has no single-instruction integer reduction; fold the lanes
         let arr: [u32; 16] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0u32, u32::wrapping_add)
     }
@@ -3808,14 +3834,16 @@ impl U32x16Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi32_mask(a) as u64 == 0xFFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi32_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi32_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3940,7 +3968,7 @@ impl I64x8Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn reduce_add(self, a: __m512i) -> i64 {
-        // No native integer reduce_add in AVX-512; use transmute to array
+        // AVX-512 has no single-instruction integer reduction; fold the lanes
         let arr: [i64; 8] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0i64, i64::wrapping_add)
     }
@@ -3982,14 +4010,16 @@ impl I64x8Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi64_mask(a) as u64 == 0xFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi64_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -4109,7 +4139,7 @@ impl U64x8Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn reduce_add(self, a: __m512i) -> u64 {
-        // No native integer reduce_add in AVX-512; use transmute to array
+        // AVX-512 has no single-instruction integer reduction; fold the lanes
         let arr: [u64; 8] = crate::simd_storage::cast(a);
         arr.iter().copied().fold(0u64, u64::wrapping_add)
     }
@@ -4151,14 +4181,16 @@ impl U64x8Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn all_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-        mask as u64 == 0xFFu64
+        // Sign-bit contract: `movepi*_mask` reads the sign bits
+        // directly. The `cmpneq` form this replaces answered a
+        // different question (lane nonzero) and disagreed with the
+        // V3 movemask backends.
+        _mm512_movepi64_mask(a) as u64 == 0xFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn any_true(self, a: __m512i) -> bool {
-        let mask = _mm512_cmpneq_epi64_mask(a, _mm512_setzero_si512());
-        mask as u64 != 0
+        _mm512_movepi64_mask(a) as u64 != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]

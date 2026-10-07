@@ -149,10 +149,21 @@ pub trait I32x4Backend: SimdToken + Sealed + Copy + 'static {
 
     // ====== Boolean ======
 
-    /// True if all lanes have their sign bit set (all-1s mask).
+    /// True if **every** lane has its sign bit set.
+    ///
+    /// This is a sign-bit test, not a "lane is nonzero" test, on
+    /// every backend and at every width. A lane holding `1` is
+    /// false; a lane holding `-1` (or `0x80` in its top bit) is
+    /// true. Comparison results are all-ones or all-zeros per lane,
+    /// so for masks — the intended input — the two readings agree
+    /// and this is the cheap native reduction. They diverge only on
+    /// hand-built vectors, which is where the backends used to
+    /// disagree with each other.
     fn all_true(self, a: Self::Repr) -> bool;
 
-    /// True if any lane has its sign bit set (any all-1s mask lane).
+    /// True if **any** lane has its sign bit set.
+    ///
+    /// Sign-bit test, not "lane is nonzero" — see `all_true`.
     fn any_true(self, a: Self::Repr) -> bool;
 
     /// Extract the high bit of each 32-bit lane as a bitmask.

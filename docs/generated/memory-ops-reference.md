@@ -215,144 +215,6 @@ fn _mm_storeu_si64<T: Is64BitsUnaligned>(mem_addr: &mut T, a: __m128i) -> ()
 
 Features: `sse2`
 
-## Has256BitSimd / X64V3Token (17 functions)
-
-### `_mm256_broadcast_pd`
-
-```rust
-fn _mm256_broadcast_pd(mem_addr: &__m128d) -> __m256d
-```
-
-Features: `avx`
-
-### `_mm256_broadcast_ps`
-
-```rust
-fn _mm256_broadcast_ps(mem_addr: &__m128) -> __m256
-```
-
-Features: `avx`
-
-### `_mm256_broadcast_sd`
-
-```rust
-fn _mm256_broadcast_sd(mem_addr: &f64) -> __m256d
-```
-
-Features: `avx`
-
-### `_mm256_broadcast_ss`
-
-```rust
-fn _mm256_broadcast_ss(mem_addr: &f32) -> __m256
-```
-
-Features: `avx`
-
-### `_mm256_loadu2_m128`
-
-```rust
-fn _mm256_loadu2_m128(hiaddr: &[f32; 4], loaddr: &[f32; 4]) -> __m256
-```
-
-Features: `avx`
-
-### `_mm256_loadu2_m128d`
-
-```rust
-fn _mm256_loadu2_m128d(hiaddr: &[f64; 2], loaddr: &[f64; 2]) -> __m256d
-```
-
-Features: `avx`
-
-### `_mm256_loadu2_m128i`
-
-```rust
-fn _mm256_loadu2_m128i<T: Is128BitsUnaligned>(hiaddr: &T, loaddr: &T) -> __m256i
-```
-
-Features: `avx`
-
-### `_mm256_loadu_pd`
-
-```rust
-fn _mm256_loadu_pd(mem_addr: &[f64; 4]) -> __m256d
-```
-
-Features: `avx`
-
-### `_mm256_loadu_ps`
-
-```rust
-fn _mm256_loadu_ps(mem_addr: &[f32; 8]) -> __m256
-```
-
-Features: `avx`
-
-### `_mm256_loadu_si256`
-
-```rust
-fn _mm256_loadu_si256<T: Is256BitsUnaligned>(mem_addr: &T) -> __m256i
-```
-
-Features: `avx`
-
-### `_mm256_storeu2_m128`
-
-```rust
-fn _mm256_storeu2_m128(hiaddr: &mut [f32; 4], loaddr: &mut [f32; 4], a: __m256) -> ()
-```
-
-Features: `avx`
-
-### `_mm256_storeu2_m128d`
-
-```rust
-fn _mm256_storeu2_m128d(hiaddr: &mut [f64; 2], loaddr: &mut [f64; 2], a: __m256d) -> ()
-```
-
-Features: `avx`
-
-### `_mm256_storeu2_m128i`
-
-```rust
-fn _mm256_storeu2_m128i<T: Is128BitsUnaligned>(hiaddr: &mut T, loaddr: &mut T, a: __m256i) -> ()
-```
-
-Features: `avx`
-
-### `_mm256_storeu_pd`
-
-```rust
-fn _mm256_storeu_pd(mem_addr: &mut [f64; 4], a: __m256d) -> ()
-```
-
-Features: `avx`
-
-### `_mm256_storeu_ps`
-
-```rust
-fn _mm256_storeu_ps(mem_addr: &mut [f32; 8], a: __m256) -> ()
-```
-
-Features: `avx`
-
-### `_mm256_storeu_si256`
-
-```rust
-fn _mm256_storeu_si256<T: Is256BitsUnaligned>(mem_addr: &mut T, a: __m256i) -> ()
-```
-
-Features: `avx`
-
-### `_mm_broadcast_ss`
-
-```rust
-fn _mm_broadcast_ss(mem_addr: &f32) -> __m128
-```
-
-Features: `avx`
-
 ## Wasm128Token (17 functions)
 
 ### `i16x8_load_extend_i8x8`
@@ -490,6 +352,144 @@ fn v128_store<T: Is16BytesUnaligned>(t: &mut T, v: v128) -> ()
 ```
 
 Features: `simd128`
+
+## X64V3Token (17 functions)
+
+### `_mm256_broadcast_pd`
+
+```rust
+fn _mm256_broadcast_pd(mem_addr: &__m128d) -> __m256d
+```
+
+Features: `avx`
+
+### `_mm256_broadcast_ps`
+
+```rust
+fn _mm256_broadcast_ps(mem_addr: &__m128) -> __m256
+```
+
+Features: `avx`
+
+### `_mm256_broadcast_sd`
+
+```rust
+fn _mm256_broadcast_sd(mem_addr: &f64) -> __m256d
+```
+
+Features: `avx`
+
+### `_mm256_broadcast_ss`
+
+```rust
+fn _mm256_broadcast_ss(mem_addr: &f32) -> __m256
+```
+
+Features: `avx`
+
+### `_mm256_loadu2_m128`
+
+```rust
+fn _mm256_loadu2_m128(hiaddr: &[f32; 4], loaddr: &[f32; 4]) -> __m256
+```
+
+Features: `avx`
+
+### `_mm256_loadu2_m128d`
+
+```rust
+fn _mm256_loadu2_m128d(hiaddr: &[f64; 2], loaddr: &[f64; 2]) -> __m256d
+```
+
+Features: `avx`
+
+### `_mm256_loadu2_m128i`
+
+```rust
+fn _mm256_loadu2_m128i<T: Is128BitsUnaligned>(hiaddr: &T, loaddr: &T) -> __m256i
+```
+
+Features: `avx`
+
+### `_mm256_loadu_pd`
+
+```rust
+fn _mm256_loadu_pd(mem_addr: &[f64; 4]) -> __m256d
+```
+
+Features: `avx`
+
+### `_mm256_loadu_ps`
+
+```rust
+fn _mm256_loadu_ps(mem_addr: &[f32; 8]) -> __m256
+```
+
+Features: `avx`
+
+### `_mm256_loadu_si256`
+
+```rust
+fn _mm256_loadu_si256<T: Is256BitsUnaligned>(mem_addr: &T) -> __m256i
+```
+
+Features: `avx`
+
+### `_mm256_storeu2_m128`
+
+```rust
+fn _mm256_storeu2_m128(hiaddr: &mut [f32; 4], loaddr: &mut [f32; 4], a: __m256) -> ()
+```
+
+Features: `avx`
+
+### `_mm256_storeu2_m128d`
+
+```rust
+fn _mm256_storeu2_m128d(hiaddr: &mut [f64; 2], loaddr: &mut [f64; 2], a: __m256d) -> ()
+```
+
+Features: `avx`
+
+### `_mm256_storeu2_m128i`
+
+```rust
+fn _mm256_storeu2_m128i<T: Is128BitsUnaligned>(hiaddr: &mut T, loaddr: &mut T, a: __m256i) -> ()
+```
+
+Features: `avx`
+
+### `_mm256_storeu_pd`
+
+```rust
+fn _mm256_storeu_pd(mem_addr: &mut [f64; 4], a: __m256d) -> ()
+```
+
+Features: `avx`
+
+### `_mm256_storeu_ps`
+
+```rust
+fn _mm256_storeu_ps(mem_addr: &mut [f32; 8], a: __m256) -> ()
+```
+
+Features: `avx`
+
+### `_mm256_storeu_si256`
+
+```rust
+fn _mm256_storeu_si256<T: Is256BitsUnaligned>(mem_addr: &mut T, a: __m256i) -> ()
+```
+
+Features: `avx`
+
+### `_mm_broadcast_ss`
+
+```rust
+fn _mm_broadcast_ss(mem_addr: &f32) -> __m128
+```
+
+Features: `avx`
 
 ## X64V4Token (95 functions)
 
