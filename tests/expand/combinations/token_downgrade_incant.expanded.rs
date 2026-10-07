@@ -1,0 +1,31 @@
+use archmage::prelude::*;
+#[doc(hidden)]
+#[target_feature(
+    enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+)]
+#[inline]
+fn __arcane_helper_v3(_t: X64V3Token, x: f32) -> f32 {
+    x
+}
+#[inline(always)]
+fn helper_v3(_t: X64V3Token, x: f32) -> f32 {
+    let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
+    unsafe { __arcane_helper_v3(_t, x) }
+}
+fn helper_scalar(_t: ScalarToken, x: f32) -> f32 {
+    x
+}
+#[doc(hidden)]
+#[target_feature(
+    enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+)]
+#[inline]
+fn __arcane_v4_caller(token: X64V4Token, x: f32) -> f32 {
+    helper_v3(token.v3(), x) + 1.0
+}
+#[inline(always)]
+fn v4_caller(token: X64V4Token, x: f32) -> f32 {
+    let _: () = <X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
+    unsafe { __arcane_v4_caller(token, x) }
+}
+fn main() {}

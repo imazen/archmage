@@ -208,16 +208,22 @@ pub(crate) fn arcane_impl(
         ),
     );
 
-    // Rename non-ident patterns to named params so the wrapper → sibling call
-    // works. The original patterns are re-bound at the top of the inner body.
-    // This runs before the nested-dispatch rewrite below, which threads the
-    // token by name: a wildcard `_: X64V3Token` becomes `__archmage_arg_0:
-    // X64V3Token` (binding nothing, so no rebind), and the rewrite must see
-    // that name rather than the placeholder the wildcard was given.
-    let rebinds = rename_non_ident_params(&mut input_fn.sig);
-    prepend_to_body(&mut input_fn.body, quote! { #(#rebinds)* });
-    if let Some(info) = find_token_param(&input_fn.sig) {
-        _token_ident = info.ident;
+    // The wrapper forwards every argument by name, so its signature names
+    // every non-identifier pattern (`_`, `(a, b)`) as `__archmage_arg_N`. The
+    // feature-enabled function keeps the user's patterns; only a wildcard
+    // token gets a name there, because the nested-dispatch rewrite below
+    // threads the token by name. The wrapper's token name is what the tier
+    // assertions use.
+    let wrapper_sig = {
+        let mut sig = input_fn.sig.clone();
+        let _ = rename_non_ident_params(&mut sig);
+        sig
+    };
+    let wrapper_token_ident = find_token_param(&wrapper_sig)
+        .map(|info| info.ident)
+        .unwrap_or_else(|| _token_ident.clone());
+    if let Some(ident) = rename_wildcard_token(&mut input_fn.sig) {
+        _token_ident = ident;
     }
 
     // Rewrite incant!() calls in the body to direct tier calls.
@@ -268,8 +274,10 @@ pub(crate) fn arcane_impl(
         return arcane_impl_wasm_safe(input_fn, &args, target_feature_attrs, inline_attr);
     }
 
+    let cfg_guard = gen_cfg_guard(target_arch, args.shared.cfg_feature.as_deref());
+    drop_attrs_equal_to(&mut input_fn.attrs, &cfg_guard);
     let parts = BoundaryParts {
-        cfg_guard: gen_cfg_guard(target_arch, args.shared.cfg_feature.as_deref()),
+        cfg_guard,
         target_feature_attrs,
         inline_attr,
         token_assertion: gen_token_assertion(
@@ -277,7 +285,8 @@ pub(crate) fn arcane_impl(
             &token_type,
             args.suppress_const_test,
         ),
-        tier_trait_assertion: gen_tier_trait_assertion(&tier_traits, &_token_ident),
+        tier_trait_assertion: gen_tier_trait_assertion(&tier_traits, &wrapper_token_ident),
+        wrapper_sig,
     };
     // The wrapper's one `unsafe` call names the generated function, and the
     // only bindings in scope at that call are the parameters: a parameter
@@ -330,6 +339,9 @@ struct BoundaryParts {
     inline_attr: Attribute,
     token_assertion: TokenStream,
     tier_trait_assertion: TokenStream,
+    /// The user's signature with every non-identifier pattern named, for the
+    /// wrapper, which forwards its arguments by name.
+    wrapper_sig: syn::Signature,
 }
 
 /// WASM-safe expansion: emits rite-style output (no unsafe wrapper).
@@ -341,11 +353,15 @@ struct BoundaryParts {
 /// If `_self = Type` is set, we inject `let _self = self;` at the top of the body
 /// (the function stays in impl scope, so `Self` resolves naturally — no replacement needed).
 pub(crate) fn arcane_impl_wasm_safe(
-    input_fn: LightFn,
+    mut input_fn: LightFn,
     args: &ArcaneArgs,
     target_feature_attrs: Vec<Attribute>,
     inline_attr: Attribute,
 ) -> TokenStream {
+    drop_attrs_equal_to(
+        &mut input_fn.attrs,
+        &gen_cfg_guard(Some("wasm32"), args.shared.cfg_feature.as_deref()),
+    );
     let vis = &input_fn.vis;
     let sig = &input_fn.sig;
     let attrs = &input_fn.attrs;
@@ -408,6 +424,7 @@ fn arcane_impl_sibling(input_fn: LightFn, args: &ArcaneArgs, parts: BoundaryPart
         inline_attr,
         token_assertion,
         tier_trait_assertion,
+        wrapper_sig,
     } = parts;
 
     let sibling_name = format_ident!("__arcane_{}", fn_name);
@@ -421,8 +438,9 @@ fn arcane_impl_sibling(input_fn: LightFn, args: &ArcaneArgs, parts: BoundaryPart
     // Build turbofish for forwarding type/const generic params to sibling
     let turbofish = build_turbofish(generics);
 
-    // Every parameter is an identifier by now (see rename_non_ident_params).
-    let forwarded_args: Vec<proc_macro2::TokenStream> = inputs
+    // The wrapper's parameters are all identifiers (see rename_non_ident_params).
+    let forwarded_args: Vec<proc_macro2::TokenStream> = wrapper_sig
+        .inputs
         .iter()
         .filter_map(|arg| match arg {
             FnArg::Typed(pat_type) => match pat_type.pat.as_ref() {
@@ -463,7 +481,7 @@ fn arcane_impl_sibling(input_fn: LightFn, args: &ArcaneArgs, parts: BoundaryPart
         #cfg_guard
         #(#attrs)*
         #[inline(always)]
-        #vis #sig {
+        #vis #wrapper_sig {
             #token_assertion
             #tier_trait_assertion
             // SAFETY: The token parameter proves the required CPU features are available.
@@ -500,6 +518,7 @@ fn arcane_impl_nested(input_fn: LightFn, args: &ArcaneArgs, parts: BoundaryParts
         inline_attr,
         token_assertion,
         tier_trait_assertion,
+        wrapper_sig,
     } = parts;
 
     // Build inner function parameters, transforming self if needed.
@@ -524,8 +543,10 @@ fn arcane_impl_nested(input_fn: LightFn, args: &ArcaneArgs, parts: BoundaryParts
         })
         .collect();
 
-    // Build inner function call arguments
-    let inner_args: Vec<proc_macro2::TokenStream> = inputs
+    // Build inner function call arguments from the outer (wrapper) signature,
+    // whose parameters are all identifiers.
+    let inner_args: Vec<proc_macro2::TokenStream> = wrapper_sig
+        .inputs
         .iter()
         .filter_map(|arg| match arg {
             FnArg::Typed(pat_type) => {
@@ -580,7 +601,7 @@ fn arcane_impl_nested(input_fn: LightFn, args: &ArcaneArgs, parts: BoundaryParts
         #cfg_guard
         #(#attrs)*
         #[inline(always)]
-        #vis #sig {
+        #vis #wrapper_sig {
             #(#target_feature_attrs)*
             #inline_attr
             #(#lint_attrs)*

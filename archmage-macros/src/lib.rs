@@ -14,6 +14,8 @@
 
 #[cfg(test)]
 mod expansion_tests;
+#[cfg(test)]
+mod raw_snapshots;
 
 mod arcane;
 mod autoversion;

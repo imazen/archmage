@@ -243,10 +243,10 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
         RiteTier::from_tier_token(tier_token)
             .expect("tier_to_canonical_token returned invalid token name")
     } else {
-        // Non-identifier patterns get names so the tier assertion can refer
-        // to the token; the patterns are re-bound at the top of the body.
-        let rebinds = rename_non_ident_params(&mut input_fn.sig);
-        prepend_to_body(&mut input_fn.body, quote! { #(#rebinds)* });
+        // A wildcard token gets a name so the tier assertion and the nested
+        // dispatch rewrite can refer to it; every other pattern stays as
+        // written (there is no wrapper that would need to forward it).
+        rename_wildcard_token(&mut input_fn.sig);
         match find_token_param(&input_fn.sig) {
             Some(info) => RiteTier::from_token_param(info),
             None => {
@@ -405,6 +405,7 @@ fn emit_rite_variant(
     // Emit the function behind its cfg guard (empty for trait bounds and the
     // default tier, which have no architecture).
     let cfg_guard = gen_cfg_guard(tier.target_arch, args.shared.cfg_feature.as_deref());
+    drop_attrs_equal_to(&mut variant_fn.attrs, &cfg_guard);
     let vis = &variant_fn.vis;
     let sig = &variant_fn.sig;
     let attrs = &variant_fn.attrs;

@@ -355,6 +355,13 @@ token-migration-check:
 token-migration-arm:
     CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER="qemu-aarch64 -L /usr/aarch64-linux-gnu" cargo test -p magetypes --test token_aliases --test raw_interop --target aarch64-unknown-linux-gnu
 
+# Refresh both expansion snapshot sets after a macro change: the cargo-expand
+# ones (post-cfg, host arch) and the raw ones (macro output, every arch).
+expand-snapshots:
+    cargo run -p xtask -- gen-expand
+    MACROTEST=overwrite cargo test -p archmage --test macro_expand -- --test-threads=1
+    ARCHMAGE_RAW_SNAPSHOTS=overwrite cargo test -p archmage-macros raw_snapshots
+
 # Regenerate magetypes/tests/harvest_shapes.rs from snapshots of consumer
 # crates: every macro signature shape they use, compiled as one test.
 # ROOT holds the snapshots (e.g. `git archive HEAD | tar -x -C ROOT/zen/<crate>`).

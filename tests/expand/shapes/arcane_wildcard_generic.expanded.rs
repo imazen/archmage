@@ -4,7 +4,7 @@ use archmage::prelude::*;
     enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
 )]
 #[inline]
-fn __arcane_probe<T: HasX64V2 + HasX64V4>(__archmage_arg_0: T, x: f32) -> f32 {
+fn __arcane_probe<T: HasX64V2 + HasX64V4>(__archmage_token: T, x: f32) -> f32 {
     let _ = X64V3Token::from_context();
     x
 }

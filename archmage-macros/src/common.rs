@@ -87,6 +87,18 @@ pub(crate) fn gen_cfg_guard(
     }
 }
 
+/// Drop from `attrs` any `#[cfg]` equal to the guard the macro emits on both
+/// halves of its output (a `#[magetypes]` variant arrives with its
+/// `#[cfg(target_arch = ...)]` already on it), so the wrapper, which copies
+/// the input's attributes, is not gated twice.
+pub(crate) fn drop_attrs_equal_to(attrs: &mut Vec<Attribute>, guard: &proc_macro2::TokenStream) {
+    let wanted = guard.to_string();
+    if wanted.is_empty() {
+        return;
+    }
+    attrs.retain(|a| a.to_token_stream().to_string() != wanted);
+}
+
 /// Build a turbofish token stream from a function's generics.
 pub(crate) fn build_turbofish(generics: &syn::Generics) -> proc_macro2::TokenStream {
     let params: Vec<proc_macro2::TokenStream> = generics
@@ -590,6 +602,40 @@ pub(crate) fn rename_non_ident_params(sig: &mut syn::Signature) -> Vec<proc_macr
         });
     }
     rebinds
+}
+
+/// Give a wildcard token parameter (`_: X64V3Token`) the name
+/// `find_token_param` synthesizes for it, so the nested dispatch rewrite and
+/// the tier assertions can refer to it; every other pattern is left as
+/// written. Returns the name when something was renamed.
+pub(crate) fn rename_wildcard_token(sig: &mut syn::Signature) -> Option<Ident> {
+    let template = sig.clone();
+    for arg in &mut sig.inputs {
+        let syn::FnArg::Typed(pat_type) = arg else {
+            continue;
+        };
+        if !matches!(pat_type.pat.as_ref(), syn::Pat::Wild(_)) {
+            continue;
+        }
+        // Probe this parameter alone, with the function's generics so a
+        // `T: HasX64V2` bound still resolves.
+        let probe = syn::Signature {
+            inputs: std::iter::once(syn::FnArg::Typed(pat_type.clone())).collect(),
+            ..template.clone()
+        };
+        let Some(info) = crate::token_discovery::find_token_param(&probe) else {
+            continue;
+        };
+        *pat_type.pat = syn::Pat::Ident(syn::PatIdent {
+            attrs: vec![],
+            by_ref: None,
+            mutability: None,
+            ident: info.ident.clone(),
+            subpat: None,
+        });
+        return Some(info.ident);
+    }
+    None
 }
 
 /// Prepend statements to a function body.

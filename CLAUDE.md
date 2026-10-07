@@ -1092,6 +1092,16 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ### Open
 
+Expansion snapshots come in two sets, refreshed together by `just
+expand-snapshots`: `tests/expand/**/*.expanded.rs` is what `cargo expand`
+prints, after rustc evaluates every `cfg` (a false gate removes the item, a
+true one loses its attribute, foreign-arch variants are absent on the host);
+`tests/expand-raw/` is the macros' own output before cfg evaluation (every
+arch's variant with its `#[cfg]`, every feature gate, every diagnostic),
+written and checked by `archmage-macros/src/raw_snapshots.rs`. Read the raw
+set to review what a macro emits; the cargo-expand set doubles as the
+compile check of the expansion (`expanded_output_compiles`).
+
 Macro limitations the expansion snapshots document (`tests/expand/should-fail/`):
 
 - An attribute macro cannot see its enclosing `impl`, so plain `#[arcane]`,

@@ -4,7 +4,7 @@ use archmage::prelude::*;
     enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
 )]
 #[inline]
-fn __arcane_inner_v3(__archmage_arg_0: X64V3Token, x: u32) -> u32 {
+fn __arcane_inner_v3(__archmage_token: X64V3Token, x: u32) -> u32 {
     x + 1
 }
 #[inline(always)]
@@ -20,8 +20,8 @@ fn inner_scalar(_: ScalarToken, x: u32) -> u32 {
     enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
 )]
 #[inline]
-fn __arcane_outer(__archmage_arg_0: X64V3Token, x: u32) -> u32 {
-    inner_v3(__archmage_arg_0, x)
+fn __arcane_outer(__archmage_token: X64V3Token, x: u32) -> u32 {
+    inner_v3(__archmage_token, x)
 }
 #[inline(always)]
 fn outer(__archmage_arg_0: X64V3Token, x: u32) -> u32 {

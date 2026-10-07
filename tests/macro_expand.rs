@@ -10,6 +10,15 @@
 //! To update snapshots: `MACROTEST=overwrite cargo test -p archmage --test macro_expand`
 //!
 //! Requires `cargo-expand` (`cargo install cargo-expand`).
+//!
+//! These `.expanded.rs` files are what `cargo expand` prints: the crate after
+//! rustc has evaluated every `cfg`, so a false gate removes the item and a true
+//! gate loses its attribute, and the foreign-architecture variants are absent
+//! on an x86-64 host. The same inputs expanded by the macro implementations
+//! themselves, before cfg evaluation (all architectures, gates and diagnostics
+//! visible), are the raw snapshots under `tests/expand-raw/`, written and
+//! checked by `archmage-macros/src/raw_snapshots.rs`:
+//! `ARCHMAGE_RAW_SNAPSHOTS=overwrite cargo test -p archmage-macros raw_snapshots`.
 
 /// Expand all passing inputs and diff against `.expanded.rs` snapshots.
 /// x86_64 only — expansion output is arch-dependent.

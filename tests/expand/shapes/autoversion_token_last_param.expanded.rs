@@ -15,7 +15,7 @@ fn sum(x: u32, __archmage_arg_0: ScalarToken) -> u32 {
     enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
 )]
 #[inline]
-fn __arcane_sum_v3(x: u32, __archmage_arg_0: archmage::X64V3Token) -> u32 {
+fn __arcane_sum_v3(x: u32, __archmage_token: archmage::X64V3Token) -> u32 {
     x
 }
 #[allow(dead_code)]

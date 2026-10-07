@@ -825,6 +825,81 @@ fn gen_combination_tests(files: &mut Vec<TestFile>) {
             .to_string(),
     });
 
+    // The same compositions through incant! inside a tier body: the nested
+    // dispatch rewrite calls the covered tier directly (no summon), downgrades
+    // through the token's extractor, and summons only for an upgrade. The raw
+    // snapshots under tests/expand-raw/ show every arch's variant.
+    files.push(TestFile {
+        path: "combinations/token_downgrade_incant.rs".to_string(),
+        content: "use archmage::prelude::*;\n\
+                  #[arcane]\n\
+                  fn helper_v3(_t: X64V3Token, x: f32) -> f32 { x }\n\
+                  fn helper_scalar(_t: ScalarToken, x: f32) -> f32 { x }\n\
+                  // Caller holds V4; the rewrite calls helper_v3(token.v3(), x) directly.\n\
+                  #[arcane]\n\
+                  fn v4_caller(token: X64V4Token, x: f32) -> f32 {\n\
+                      incant!(helper(x), [v3, scalar]) + 1.0\n\
+                  }\n\
+                  fn main() {}\n"
+            .to_string(),
+    });
+    files.push(TestFile {
+        path: "combinations/token_upgrade_incant.rs".to_string(),
+        content: "use archmage::prelude::*;\n\
+                  #[arcane]\n\
+                  fn fast_v4(_t: X64V4Token, x: f32) -> f32 { x * 4.0 }\n\
+                  #[arcane]\n\
+                  fn fast_v3(_t: X64V3Token, x: f32) -> f32 { x * 2.0 }\n\
+                  fn fast_scalar(_t: ScalarToken, x: f32) -> f32 { x }\n\
+                  // Caller holds V3: one summon arm for V4, then fast_v3(t, x) directly.\n\
+                  #[arcane]\n\
+                  fn v3_with_upgrade(t: X64V3Token, x: f32) -> f32 {\n\
+                      incant!(fast(x), [+v4])\n\
+                  }\n\
+                  fn main() {}\n"
+            .to_string(),
+    });
+    files.push(TestFile {
+        path: "combinations/magetypes_calls_incant.rs".to_string(),
+        content: "use archmage::prelude::*;\n\
+                  #[magetypes(v3, neon, wasm128, scalar)]\n\
+                  fn inner(token: Token, x: f32) -> f32 { let _ = token; x }\n\
+                  // Each outer variant calls its own tier's inner variant directly.\n\
+                  #[magetypes(v3, neon, wasm128, scalar)]\n\
+                  fn outer(token: Token, x: f32) -> f32 {\n\
+                      incant!(inner(x), [v3, neon, wasm128, scalar])\n\
+                  }\n\
+                  pub fn api(x: f32) -> f32 { incant!(outer(x), [v3, neon, wasm128, scalar]) }\n\
+                  fn main() {}\n"
+            .to_string(),
+    });
+    files.push(TestFile {
+        path: "combinations/rite_tokenless_incant.rs".to_string(),
+        content: "use archmage::prelude::*;\n\
+                  #[magetypes(v3, neon, scalar)]\n\
+                  fn inner(token: Token, x: f32) -> f32 { let _ = token; x }\n\
+                  // Tokenless tiers derive the callee's token with from_context().\n\
+                  #[rite(v3, neon)]\n\
+                  fn outer(x: f32) -> f32 {\n\
+                      incant!(inner(x), [v3, neon, scalar])\n\
+                  }\n\
+                  fn main() {}\n"
+            .to_string(),
+    });
+    files.push(TestFile {
+        path: "combinations/autoversion_calls_incant.rs".to_string(),
+        content: "use archmage::prelude::*;\n\
+                  #[magetypes(v3, neon, scalar)]\n\
+                  fn inner(token: Token, x: f32) -> f32 { let _ = token; x }\n\
+                  // autoversion variants hold their tier's token; the nested call is direct.\n\
+                  #[autoversion(v3, neon, scalar)]\n\
+                  fn outer(x: f32) -> f32 {\n\
+                      incant!(inner(x), [v3, neon, scalar])\n\
+                  }\n\
+                  fn main() { let _ = outer(1.0); }\n"
+            .to_string(),
+    });
+
     // plain token fn (no macro)
     files.push(TestFile {
         path: "combinations/plain_token_fn.rs".to_string(),

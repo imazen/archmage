@@ -28,6 +28,10 @@ proc-macro = true
 avx512 = []
 
 [dependencies]
-syn = { version = "3.0.6", features = ["full", "parsing", "printing"] }
+syn = { version = "3.0.6", features = ["full", "parsing", "printing", "visit-mut"] }
 quote = "1.0.47"
 proc-macro2 = "1.0.107"
+
+[dev-dependencies]
+# Pretty-prints raw macro output for the cfg-complete expansion snapshots.
+prettyplease = "0.3.0"
