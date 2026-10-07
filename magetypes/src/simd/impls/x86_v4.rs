@@ -139,6 +139,16 @@ impl F32x16Backend for archmage::X64V4Token {
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn mul_add_portable(self, a: __m512, b: __m512, c: __m512) -> __m512 {
+        _mm512_fmadd_ps(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn mul_sub_portable(self, a: __m512, b: __m512, c: __m512) -> __m512 {
+        _mm512_fmsub_ps(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
     fn simd_eq(self, a: __m512, b: __m512) -> __m512 {
         let mask = _mm512_cmp_ps_mask::<_CMP_EQ_OQ>(a, b);
         _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
@@ -359,6 +369,16 @@ impl F64x8Backend for archmage::X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn mul_sub(self, a: __m512d, b: __m512d, c: __m512d) -> __m512d {
+        _mm512_fmsub_pd(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn mul_add_portable(self, a: __m512d, b: __m512d, c: __m512d) -> __m512d {
+        _mm512_fmadd_pd(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4Token)]
+    fn mul_sub_portable(self, a: __m512d, b: __m512d, c: __m512d) -> __m512d {
         _mm512_fmsub_pd(a, b, c)
     }
 
@@ -2227,6 +2247,16 @@ impl F32x16Backend for archmage::X64V4xToken {
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn mul_add_portable(self, a: __m512, b: __m512, c: __m512) -> __m512 {
+        _mm512_fmadd_ps(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn mul_sub_portable(self, a: __m512, b: __m512, c: __m512) -> __m512 {
+        _mm512_fmsub_ps(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn simd_eq(self, a: __m512, b: __m512) -> __m512 {
         let mask = _mm512_cmp_ps_mask::<_CMP_EQ_OQ>(a, b);
         _mm512_castsi512_ps(_mm512_maskz_set1_epi32(mask, -1))
@@ -2447,6 +2477,16 @@ impl F64x8Backend for archmage::X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn mul_sub(self, a: __m512d, b: __m512d, c: __m512d) -> __m512d {
+        _mm512_fmsub_pd(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn mul_add_portable(self, a: __m512d, b: __m512d, c: __m512d) -> __m512d {
+        _mm512_fmadd_pd(a, b, c)
+    }
+
+    #[arcane(suppress_const_test, _self = X64V4xToken)]
+    fn mul_sub_portable(self, a: __m512d, b: __m512d, c: __m512d) -> __m512d {
         _mm512_fmsub_pd(a, b, c)
     }
 

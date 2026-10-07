@@ -113,6 +113,16 @@ impl F32x4Backend for archmage::NeonToken {
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
+    fn mul_add_portable(self, a: float32x4_t, b: float32x4_t, c: float32x4_t) -> float32x4_t {
+        vfmaq_f32(c, a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn mul_sub_portable(self, a: float32x4_t, b: float32x4_t, c: float32x4_t) -> float32x4_t {
+        vfmaq_f32(vnegq_f32(c), a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: float32x4_t, b: float32x4_t) -> float32x4_t {
         vreinterpretq_f32_u32(vceqq_f32(a, b))
     }
@@ -402,6 +412,29 @@ impl F32x8Backend for archmage::NeonToken {
         c: [float32x4_t; 2],
     ) -> [float32x4_t; 2] {
         // a*b - c => vfmaq(-c, a, b) = -c + a*b
+        [
+            vfmaq_f32(vnegq_f32(c[0]), a[0], b[0]),
+            vfmaq_f32(vnegq_f32(c[1]), a[1], b[1]),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn mul_add_portable(
+        self,
+        a: [float32x4_t; 2],
+        b: [float32x4_t; 2],
+        c: [float32x4_t; 2],
+    ) -> [float32x4_t; 2] {
+        [vfmaq_f32(c[0], a[0], b[0]), vfmaq_f32(c[1], a[1], b[1])]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn mul_sub_portable(
+        self,
+        a: [float32x4_t; 2],
+        b: [float32x4_t; 2],
+        c: [float32x4_t; 2],
+    ) -> [float32x4_t; 2] {
         [
             vfmaq_f32(vnegq_f32(c[0]), a[0], b[0]),
             vfmaq_f32(vnegq_f32(c[1]), a[1], b[1]),
@@ -712,6 +745,16 @@ impl F64x2Backend for archmage::NeonToken {
     }
 
     #[arcane(suppress_const_test, _self = NeonToken)]
+    fn mul_add_portable(self, a: float64x2_t, b: float64x2_t, c: float64x2_t) -> float64x2_t {
+        vfmaq_f64(c, a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn mul_sub_portable(self, a: float64x2_t, b: float64x2_t, c: float64x2_t) -> float64x2_t {
+        vfmaq_f64(vnegq_f64(c), a, b)
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
     fn simd_eq(self, a: float64x2_t, b: float64x2_t) -> float64x2_t {
         vreinterpretq_f64_u64(vceqq_f64(a, b))
     }
@@ -968,6 +1011,29 @@ impl F64x4Backend for archmage::NeonToken {
         c: [float64x2_t; 2],
     ) -> [float64x2_t; 2] {
         // a*b - c => vfmaq(-c, a, b) = -c + a*b
+        [
+            vfmaq_f64(vnegq_f64(c[0]), a[0], b[0]),
+            vfmaq_f64(vnegq_f64(c[1]), a[1], b[1]),
+        ]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn mul_add_portable(
+        self,
+        a: [float64x2_t; 2],
+        b: [float64x2_t; 2],
+        c: [float64x2_t; 2],
+    ) -> [float64x2_t; 2] {
+        [vfmaq_f64(c[0], a[0], b[0]), vfmaq_f64(c[1], a[1], b[1])]
+    }
+
+    #[arcane(suppress_const_test, _self = NeonToken)]
+    fn mul_sub_portable(
+        self,
+        a: [float64x2_t; 2],
+        b: [float64x2_t; 2],
+        c: [float64x2_t; 2],
+    ) -> [float64x2_t; 2] {
         [
             vfmaq_f64(vnegq_f64(c[0]), a[0], b[0]),
             vfmaq_f64(vnegq_f64(c[1]), a[1], b[1]),
@@ -4649,6 +4715,30 @@ impl F32x16Backend for archmage::NeonToken {
     }
 
     #[inline(always)]
+    fn mul_add_portable(
+        self,
+        a: [float32x4_t; 4],
+        b: [float32x4_t; 4],
+        c: [float32x4_t; 4],
+    ) -> [float32x4_t; 4] {
+        core::array::from_fn(|i| {
+            <archmage::NeonToken as F32x4Backend>::mul_add_portable(self, a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn mul_sub_portable(
+        self,
+        a: [float32x4_t; 4],
+        b: [float32x4_t; 4],
+        c: [float32x4_t; 4],
+    ) -> [float32x4_t; 4] {
+        core::array::from_fn(|i| {
+            <archmage::NeonToken as F32x4Backend>::mul_sub_portable(self, a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
     fn reduce_add(self, a: [float32x4_t; 4]) -> f32 {
         <archmage::NeonToken as F32x4Backend>::reduce_add(self, a[0])
             + <archmage::NeonToken as F32x4Backend>::reduce_add(self, a[1])
@@ -4923,6 +5013,30 @@ impl F64x8Backend for archmage::NeonToken {
     ) -> [float64x2_t; 4] {
         core::array::from_fn(|i| {
             <archmage::NeonToken as F64x2Backend>::mul_sub(self, a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn mul_add_portable(
+        self,
+        a: [float64x2_t; 4],
+        b: [float64x2_t; 4],
+        c: [float64x2_t; 4],
+    ) -> [float64x2_t; 4] {
+        core::array::from_fn(|i| {
+            <archmage::NeonToken as F64x2Backend>::mul_add_portable(self, a[i], b[i], c[i])
+        })
+    }
+
+    #[inline(always)]
+    fn mul_sub_portable(
+        self,
+        a: [float64x2_t; 4],
+        b: [float64x2_t; 4],
+        c: [float64x2_t; 4],
+    ) -> [float64x2_t; 4] {
+        core::array::from_fn(|i| {
+            <archmage::NeonToken as F64x2Backend>::mul_sub_portable(self, a[i], b[i], c[i])
         })
     }
 

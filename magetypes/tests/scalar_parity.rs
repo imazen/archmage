@@ -12,6 +12,10 @@
 #![allow(clippy::excessive_precision)]
 #![allow(clippy::float_cmp)]
 
+#[path = "common/fma_expected.rs"]
+mod fma_expected;
+use fma_expected::FmaExpected;
+
 // ============================================================================
 // Comparison helpers
 // ============================================================================
@@ -185,80 +189,6 @@ fn assert_f64_signed_zero_tolerant(scalar: &[f64], native: &[f64], op: &str, inp
             s.to_bits(),
             n.to_bits()
         );
-    }
-}
-
-/// f32 FMA comparison: allows both relative and absolute tolerance.
-/// FMA (one rounding) vs separate mul+add (two roundings) can produce large relative
-/// errors near zero due to catastrophic cancellation, but the absolute error is small.
-fn assert_f32_fma(scalar: &[f32], native: &[f32], op: &str, input: &[f32]) {
-    assert_eq!(scalar.len(), native.len(), "{op}: length mismatch");
-    for i in 0..scalar.len() {
-        let s = scalar[i];
-        let n = native[i];
-        if s.is_nan() && n.is_nan() {
-            continue;
-        }
-        if s.to_bits() == n.to_bits() {
-            continue;
-        }
-        if s == 0.0 && n == 0.0 {
-            continue;
-        } // ±0
-        if s.is_nan() || n.is_nan() {
-            panic!("{op} NaN mismatch at lane {i}: scalar={s} native={n} input={input:?}");
-        }
-        if s.is_infinite() && n.is_infinite() && s.signum() == n.signum() {
-            continue;
-        }
-        let abs_err = (s - n).abs();
-        // Allow absolute error up to 1e-6 (handles near-zero cancellation)
-        if abs_err < 1e-6 {
-            continue;
-        }
-        // Allow relative error up to 1e-4 for larger values
-        let denom = s.abs().max(n.abs());
-        let rel_err = abs_err / denom;
-        if rel_err > 1e-4 {
-            panic!(
-                "{op} divergence at lane {i}: scalar={s} native={n} (abs_err={abs_err}, rel_err={rel_err}) input={input:?}"
-            );
-        }
-    }
-}
-
-/// f64 FMA comparison.
-fn assert_f64_fma(scalar: &[f64], native: &[f64], op: &str, input: &[f64]) {
-    assert_eq!(scalar.len(), native.len(), "{op}: length mismatch");
-    for i in 0..scalar.len() {
-        let s = scalar[i];
-        let n = native[i];
-        if s.is_nan() && n.is_nan() {
-            continue;
-        }
-        if s.to_bits() == n.to_bits() {
-            continue;
-        }
-        if s == 0.0 && n == 0.0 {
-            continue;
-        }
-        if s.is_nan() || n.is_nan() {
-            panic!("{op} NaN mismatch at lane {i}: scalar={s} native={n} input={input:?}");
-        }
-        if s.is_infinite() && n.is_infinite() && s.signum() == n.signum() {
-            continue;
-        }
-        let abs_err = (s - n).abs();
-        if abs_err < 1e-12 {
-            continue;
-        }
-        let denom = s.abs().max(n.abs());
-        let rel_err = abs_err / denom;
-        if rel_err > 1e-10 {
-            panic!(
-                "{op} divergence at lane {i}: scalar={s} native={n} (abs_err={abs_err}, rel_err={rel_err}) input={input:?}"
-            );
-        }
     }
 }
 
@@ -805,24 +735,20 @@ fn mul_add() {
             let a: [f32; 4] = ca.try_into().unwrap();
             let b: [f32; 4] = cb.try_into().unwrap();
             let c: [f32; 4] = cc.try_into().unwrap();
-            // Skip chunks with NaN/Inf/extreme values
-            if [a.as_slice(), b.as_slice(), c.as_slice()].iter()
-                .any(|arr| arr.iter().any(|x| x.is_nan() || x.is_infinite() || x.abs() > 1e30))
-            { continue; }
-            let as_ = generic::f32x4::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::f32x4::<ScalarToken>::from_array(token_s, b);
-            let cs = generic::f32x4::<ScalarToken>::from_array(token_s, c);
-            let an = generic::f32x4::<$native_token>::from_array(token_n, a);
-            let bn = generic::f32x4::<$native_token>::from_array(token_n, b);
-            let cn = generic::f32x4::<$native_token>::from_array(token_n, c);
+            let as_ = generic::f32x4::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f32x4::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f32x4::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f32x4::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f32x4::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f32x4::<$native_token>::from_array_t(token_n, c);
             let s = as_.mul_add(bs, cs).to_array();
             let n = an.mul_add(bn, cn).to_array();
-            // FMA vs mul+add can differ by many ULPs with catastrophic cancellation.
-            // Just check that NaN/Inf agreement is maintained and finite values
-            // are in the same ballpark (1e-4 relative tolerance).
-            // FMA vs mul+add can differ significantly with catastrophic cancellation.
-            // Use signed-zero-tolerant comparison (allows ±0 and NaN agreement).
-            super::assert_f32_fma(&s, &n, "f32x4::mul_add", &a);
+            let expected_s: [f32; 4] = core::array::from_fn(|i|
+                a[i].mul_add_expected(b[i], c[i], token_s));
+            let expected_n: [f32; 4] = core::array::from_fn(|i|
+                a[i].mul_add_expected(b[i], c[i], token_n));
+            super::assert_f32_exact(&s, &expected_s, "scalar f32x4::mul_add", &a);
+            super::assert_f32_exact(&n, &expected_n, "native f32x4::mul_add", &a);
         }
     }
 }
@@ -838,24 +764,78 @@ fn mul_sub() {
             let a: [f32; 4] = ca.try_into().unwrap();
             let b: [f32; 4] = cb.try_into().unwrap();
             let c: [f32; 4] = cc.try_into().unwrap();
-            // Skip chunks with NaN/Inf/extreme values
-            if [a.as_slice(), b.as_slice(), c.as_slice()].iter()
-                .any(|arr| arr.iter().any(|x| x.is_nan() || x.is_infinite() || x.abs() > 1e30))
-            { continue; }
-            let as_ = generic::f32x4::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::f32x4::<ScalarToken>::from_array(token_s, b);
-            let cs = generic::f32x4::<ScalarToken>::from_array(token_s, c);
-            let an = generic::f32x4::<$native_token>::from_array(token_n, a);
-            let bn = generic::f32x4::<$native_token>::from_array(token_n, b);
-            let cn = generic::f32x4::<$native_token>::from_array(token_n, c);
+            let as_ = generic::f32x4::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f32x4::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f32x4::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f32x4::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f32x4::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f32x4::<$native_token>::from_array_t(token_n, c);
             let s = as_.mul_sub(bs, cs).to_array();
             let n = an.mul_sub(bn, cn).to_array();
-            // FMA vs mul+add can differ by many ULPs with catastrophic cancellation.
-            // Just check that NaN/Inf agreement is maintained and finite values
-            // are in the same ballpark (1e-4 relative tolerance).
-            // FMA vs mul+add can differ significantly with catastrophic cancellation.
-            // Use signed-zero-tolerant comparison (allows ±0 and NaN agreement).
-            super::assert_f32_fma(&s, &n, "f32x4::mul_sub", &a);
+            let expected_s: [f32; 4] = core::array::from_fn(|i|
+                a[i].mul_add_expected(b[i], -c[i], token_s));
+            let expected_n: [f32; 4] = core::array::from_fn(|i|
+                a[i].mul_add_expected(b[i], -c[i], token_n));
+            super::assert_f32_exact(&s, &expected_s, "scalar f32x4::mul_sub", &a);
+            super::assert_f32_exact(&n, &expected_n, "native f32x4::mul_sub", &a);
+        }
+    }
+}
+
+#[test]
+fn mul_add_portable() {
+    let token_s = ScalarToken;
+    if let Some(token_n) = <$native_token>::summon() {
+        for ((ca, cb), cc) in super::F32_EDGE_A.chunks_exact(4)
+            .zip(super::F32_EDGE_B.chunks_exact(4))
+            .zip(super::F32_EDGE_C.chunks_exact(4))
+        {
+            let a: [f32; 4] = ca.try_into().unwrap();
+            let b: [f32; 4] = cb.try_into().unwrap();
+            let c: [f32; 4] = cc.try_into().unwrap();
+            let as_ = generic::f32x4::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f32x4::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f32x4::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f32x4::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f32x4::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f32x4::<$native_token>::from_array_t(token_n, c);
+            let s = as_.mul_add_portable(bs, cs).to_array();
+            let n = an.mul_add_portable(bn, cn).to_array();
+            let expected_s: [f32; 4] = core::array::from_fn(|i|
+                a[i].fused_expected(b[i], c[i]));
+            let expected_n: [f32; 4] = core::array::from_fn(|i|
+                a[i].fused_expected(b[i], c[i]));
+            super::assert_f32_exact(&s, &expected_s, "scalar f32x4::mul_add_portable", &a);
+            super::assert_f32_exact(&n, &expected_n, "native f32x4::mul_add_portable", &a);
+        }
+    }
+}
+
+#[test]
+fn mul_sub_portable() {
+    let token_s = ScalarToken;
+    if let Some(token_n) = <$native_token>::summon() {
+        for ((ca, cb), cc) in super::F32_EDGE_A.chunks_exact(4)
+            .zip(super::F32_EDGE_B.chunks_exact(4))
+            .zip(super::F32_EDGE_C.chunks_exact(4))
+        {
+            let a: [f32; 4] = ca.try_into().unwrap();
+            let b: [f32; 4] = cb.try_into().unwrap();
+            let c: [f32; 4] = cc.try_into().unwrap();
+            let as_ = generic::f32x4::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f32x4::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f32x4::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f32x4::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f32x4::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f32x4::<$native_token>::from_array_t(token_n, c);
+            let s = as_.mul_sub_portable(bs, cs).to_array();
+            let n = an.mul_sub_portable(bn, cn).to_array();
+            let expected_s: [f32; 4] = core::array::from_fn(|i|
+                a[i].fused_expected(b[i], -c[i]));
+            let expected_n: [f32; 4] = core::array::from_fn(|i|
+                a[i].fused_expected(b[i], -c[i]));
+            super::assert_f32_exact(&s, &expected_s, "scalar f32x4::mul_sub_portable", &a);
+            super::assert_f32_exact(&n, &expected_n, "native f32x4::mul_sub_portable", &a);
         }
     }
 }
@@ -1246,24 +1226,20 @@ fn mul_add() {
             let a: [f32; 8] = ca.try_into().unwrap();
             let b: [f32; 8] = cb.try_into().unwrap();
             let c: [f32; 8] = cc.try_into().unwrap();
-            // Skip chunks with NaN/Inf/extreme values
-            if [a.as_slice(), b.as_slice(), c.as_slice()].iter()
-                .any(|arr| arr.iter().any(|x| x.is_nan() || x.is_infinite() || x.abs() > 1e30))
-            { continue; }
-            let as_ = generic::f32x8::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::f32x8::<ScalarToken>::from_array(token_s, b);
-            let cs = generic::f32x8::<ScalarToken>::from_array(token_s, c);
-            let an = generic::f32x8::<$native_token>::from_array(token_n, a);
-            let bn = generic::f32x8::<$native_token>::from_array(token_n, b);
-            let cn = generic::f32x8::<$native_token>::from_array(token_n, c);
+            let as_ = generic::f32x8::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f32x8::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f32x8::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f32x8::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f32x8::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f32x8::<$native_token>::from_array_t(token_n, c);
             let s = as_.mul_add(bs, cs).to_array();
             let n = an.mul_add(bn, cn).to_array();
-            // FMA vs mul+add can differ by many ULPs with catastrophic cancellation.
-            // Just check that NaN/Inf agreement is maintained and finite values
-            // are in the same ballpark (1e-4 relative tolerance).
-            // FMA vs mul+add can differ significantly with catastrophic cancellation.
-            // Use signed-zero-tolerant comparison (allows ±0 and NaN agreement).
-            super::assert_f32_fma(&s, &n, "f32x8::mul_add", &a);
+            let expected_s: [f32; 8] = core::array::from_fn(|i|
+                a[i].mul_add_expected(b[i], c[i], token_s));
+            let expected_n: [f32; 8] = core::array::from_fn(|i|
+                a[i].mul_add_expected(b[i], c[i], token_n));
+            super::assert_f32_exact(&s, &expected_s, "scalar f32x8::mul_add", &a);
+            super::assert_f32_exact(&n, &expected_n, "native f32x8::mul_add", &a);
         }
     }
 }
@@ -1279,24 +1255,78 @@ fn mul_sub() {
             let a: [f32; 8] = ca.try_into().unwrap();
             let b: [f32; 8] = cb.try_into().unwrap();
             let c: [f32; 8] = cc.try_into().unwrap();
-            // Skip chunks with NaN/Inf/extreme values
-            if [a.as_slice(), b.as_slice(), c.as_slice()].iter()
-                .any(|arr| arr.iter().any(|x| x.is_nan() || x.is_infinite() || x.abs() > 1e30))
-            { continue; }
-            let as_ = generic::f32x8::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::f32x8::<ScalarToken>::from_array(token_s, b);
-            let cs = generic::f32x8::<ScalarToken>::from_array(token_s, c);
-            let an = generic::f32x8::<$native_token>::from_array(token_n, a);
-            let bn = generic::f32x8::<$native_token>::from_array(token_n, b);
-            let cn = generic::f32x8::<$native_token>::from_array(token_n, c);
+            let as_ = generic::f32x8::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f32x8::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f32x8::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f32x8::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f32x8::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f32x8::<$native_token>::from_array_t(token_n, c);
             let s = as_.mul_sub(bs, cs).to_array();
             let n = an.mul_sub(bn, cn).to_array();
-            // FMA vs mul+add can differ by many ULPs with catastrophic cancellation.
-            // Just check that NaN/Inf agreement is maintained and finite values
-            // are in the same ballpark (1e-4 relative tolerance).
-            // FMA vs mul+add can differ significantly with catastrophic cancellation.
-            // Use signed-zero-tolerant comparison (allows ±0 and NaN agreement).
-            super::assert_f32_fma(&s, &n, "f32x8::mul_sub", &a);
+            let expected_s: [f32; 8] = core::array::from_fn(|i|
+                a[i].mul_add_expected(b[i], -c[i], token_s));
+            let expected_n: [f32; 8] = core::array::from_fn(|i|
+                a[i].mul_add_expected(b[i], -c[i], token_n));
+            super::assert_f32_exact(&s, &expected_s, "scalar f32x8::mul_sub", &a);
+            super::assert_f32_exact(&n, &expected_n, "native f32x8::mul_sub", &a);
+        }
+    }
+}
+
+#[test]
+fn mul_add_portable() {
+    let token_s = ScalarToken;
+    if let Some(token_n) = <$native_token>::summon() {
+        for ((ca, cb), cc) in super::F32_EDGE_A.chunks_exact(8)
+            .zip(super::F32_EDGE_B.chunks_exact(8))
+            .zip(super::F32_EDGE_C.chunks_exact(8))
+        {
+            let a: [f32; 8] = ca.try_into().unwrap();
+            let b: [f32; 8] = cb.try_into().unwrap();
+            let c: [f32; 8] = cc.try_into().unwrap();
+            let as_ = generic::f32x8::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f32x8::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f32x8::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f32x8::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f32x8::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f32x8::<$native_token>::from_array_t(token_n, c);
+            let s = as_.mul_add_portable(bs, cs).to_array();
+            let n = an.mul_add_portable(bn, cn).to_array();
+            let expected_s: [f32; 8] = core::array::from_fn(|i|
+                a[i].fused_expected(b[i], c[i]));
+            let expected_n: [f32; 8] = core::array::from_fn(|i|
+                a[i].fused_expected(b[i], c[i]));
+            super::assert_f32_exact(&s, &expected_s, "scalar f32x8::mul_add_portable", &a);
+            super::assert_f32_exact(&n, &expected_n, "native f32x8::mul_add_portable", &a);
+        }
+    }
+}
+
+#[test]
+fn mul_sub_portable() {
+    let token_s = ScalarToken;
+    if let Some(token_n) = <$native_token>::summon() {
+        for ((ca, cb), cc) in super::F32_EDGE_A.chunks_exact(8)
+            .zip(super::F32_EDGE_B.chunks_exact(8))
+            .zip(super::F32_EDGE_C.chunks_exact(8))
+        {
+            let a: [f32; 8] = ca.try_into().unwrap();
+            let b: [f32; 8] = cb.try_into().unwrap();
+            let c: [f32; 8] = cc.try_into().unwrap();
+            let as_ = generic::f32x8::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f32x8::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f32x8::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f32x8::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f32x8::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f32x8::<$native_token>::from_array_t(token_n, c);
+            let s = as_.mul_sub_portable(bs, cs).to_array();
+            let n = an.mul_sub_portable(bn, cn).to_array();
+            let expected_s: [f32; 8] = core::array::from_fn(|i|
+                a[i].fused_expected(b[i], -c[i]));
+            let expected_n: [f32; 8] = core::array::from_fn(|i|
+                a[i].fused_expected(b[i], -c[i]));
+            super::assert_f32_exact(&s, &expected_s, "scalar f32x8::mul_sub_portable", &a);
+            super::assert_f32_exact(&n, &expected_n, "native f32x8::mul_sub_portable", &a);
         }
     }
 }
@@ -1687,24 +1717,20 @@ fn mul_add() {
             let a: [f64; 2] = ca.try_into().unwrap();
             let b: [f64; 2] = cb.try_into().unwrap();
             let c: [f64; 2] = cc.try_into().unwrap();
-            // Skip chunks with NaN/Inf/extreme values
-            if [a.as_slice(), b.as_slice(), c.as_slice()].iter()
-                .any(|arr| arr.iter().any(|x| x.is_nan() || x.is_infinite() || x.abs() > 1e30))
-            { continue; }
-            let as_ = generic::f64x2::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::f64x2::<ScalarToken>::from_array(token_s, b);
-            let cs = generic::f64x2::<ScalarToken>::from_array(token_s, c);
-            let an = generic::f64x2::<$native_token>::from_array(token_n, a);
-            let bn = generic::f64x2::<$native_token>::from_array(token_n, b);
-            let cn = generic::f64x2::<$native_token>::from_array(token_n, c);
+            let as_ = generic::f64x2::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f64x2::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f64x2::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f64x2::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f64x2::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f64x2::<$native_token>::from_array_t(token_n, c);
             let s = as_.mul_add(bs, cs).to_array();
             let n = an.mul_add(bn, cn).to_array();
-            // FMA vs mul+add can differ by many ULPs with catastrophic cancellation.
-            // Just check that NaN/Inf agreement is maintained and finite values
-            // are in the same ballpark (1e-4 relative tolerance).
-            // FMA vs mul+add can differ significantly with catastrophic cancellation.
-            // Use signed-zero-tolerant comparison (allows ±0 and NaN agreement).
-            super::assert_f64_fma(&s, &n, "f64x2::mul_add", &a);
+            let expected_s: [f64; 2] = core::array::from_fn(|i|
+                a[i].mul_add_expected(b[i], c[i], token_s));
+            let expected_n: [f64; 2] = core::array::from_fn(|i|
+                a[i].mul_add_expected(b[i], c[i], token_n));
+            super::assert_f64_exact(&s, &expected_s, "scalar f64x2::mul_add", &a);
+            super::assert_f64_exact(&n, &expected_n, "native f64x2::mul_add", &a);
         }
     }
 }
@@ -1720,24 +1746,78 @@ fn mul_sub() {
             let a: [f64; 2] = ca.try_into().unwrap();
             let b: [f64; 2] = cb.try_into().unwrap();
             let c: [f64; 2] = cc.try_into().unwrap();
-            // Skip chunks with NaN/Inf/extreme values
-            if [a.as_slice(), b.as_slice(), c.as_slice()].iter()
-                .any(|arr| arr.iter().any(|x| x.is_nan() || x.is_infinite() || x.abs() > 1e30))
-            { continue; }
-            let as_ = generic::f64x2::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::f64x2::<ScalarToken>::from_array(token_s, b);
-            let cs = generic::f64x2::<ScalarToken>::from_array(token_s, c);
-            let an = generic::f64x2::<$native_token>::from_array(token_n, a);
-            let bn = generic::f64x2::<$native_token>::from_array(token_n, b);
-            let cn = generic::f64x2::<$native_token>::from_array(token_n, c);
+            let as_ = generic::f64x2::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f64x2::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f64x2::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f64x2::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f64x2::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f64x2::<$native_token>::from_array_t(token_n, c);
             let s = as_.mul_sub(bs, cs).to_array();
             let n = an.mul_sub(bn, cn).to_array();
-            // FMA vs mul+add can differ by many ULPs with catastrophic cancellation.
-            // Just check that NaN/Inf agreement is maintained and finite values
-            // are in the same ballpark (1e-4 relative tolerance).
-            // FMA vs mul+add can differ significantly with catastrophic cancellation.
-            // Use signed-zero-tolerant comparison (allows ±0 and NaN agreement).
-            super::assert_f64_fma(&s, &n, "f64x2::mul_sub", &a);
+            let expected_s: [f64; 2] = core::array::from_fn(|i|
+                a[i].mul_add_expected(b[i], -c[i], token_s));
+            let expected_n: [f64; 2] = core::array::from_fn(|i|
+                a[i].mul_add_expected(b[i], -c[i], token_n));
+            super::assert_f64_exact(&s, &expected_s, "scalar f64x2::mul_sub", &a);
+            super::assert_f64_exact(&n, &expected_n, "native f64x2::mul_sub", &a);
+        }
+    }
+}
+
+#[test]
+fn mul_add_portable() {
+    let token_s = ScalarToken;
+    if let Some(token_n) = <$native_token>::summon() {
+        for ((ca, cb), cc) in super::F64_EDGE_A.chunks_exact(2)
+            .zip(super::F64_EDGE_B.chunks_exact(2))
+            .zip(super::F64_EDGE_C.chunks_exact(2))
+        {
+            let a: [f64; 2] = ca.try_into().unwrap();
+            let b: [f64; 2] = cb.try_into().unwrap();
+            let c: [f64; 2] = cc.try_into().unwrap();
+            let as_ = generic::f64x2::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f64x2::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f64x2::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f64x2::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f64x2::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f64x2::<$native_token>::from_array_t(token_n, c);
+            let s = as_.mul_add_portable(bs, cs).to_array();
+            let n = an.mul_add_portable(bn, cn).to_array();
+            let expected_s: [f64; 2] = core::array::from_fn(|i|
+                a[i].fused_expected(b[i], c[i]));
+            let expected_n: [f64; 2] = core::array::from_fn(|i|
+                a[i].fused_expected(b[i], c[i]));
+            super::assert_f64_exact(&s, &expected_s, "scalar f64x2::mul_add_portable", &a);
+            super::assert_f64_exact(&n, &expected_n, "native f64x2::mul_add_portable", &a);
+        }
+    }
+}
+
+#[test]
+fn mul_sub_portable() {
+    let token_s = ScalarToken;
+    if let Some(token_n) = <$native_token>::summon() {
+        for ((ca, cb), cc) in super::F64_EDGE_A.chunks_exact(2)
+            .zip(super::F64_EDGE_B.chunks_exact(2))
+            .zip(super::F64_EDGE_C.chunks_exact(2))
+        {
+            let a: [f64; 2] = ca.try_into().unwrap();
+            let b: [f64; 2] = cb.try_into().unwrap();
+            let c: [f64; 2] = cc.try_into().unwrap();
+            let as_ = generic::f64x2::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f64x2::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f64x2::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f64x2::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f64x2::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f64x2::<$native_token>::from_array_t(token_n, c);
+            let s = as_.mul_sub_portable(bs, cs).to_array();
+            let n = an.mul_sub_portable(bn, cn).to_array();
+            let expected_s: [f64; 2] = core::array::from_fn(|i|
+                a[i].fused_expected(b[i], -c[i]));
+            let expected_n: [f64; 2] = core::array::from_fn(|i|
+                a[i].fused_expected(b[i], -c[i]));
+            super::assert_f64_exact(&s, &expected_s, "scalar f64x2::mul_sub_portable", &a);
+            super::assert_f64_exact(&n, &expected_n, "native f64x2::mul_sub_portable", &a);
         }
     }
 }
@@ -2056,24 +2136,20 @@ fn mul_add() {
             let a: [f64; 4] = ca.try_into().unwrap();
             let b: [f64; 4] = cb.try_into().unwrap();
             let c: [f64; 4] = cc.try_into().unwrap();
-            // Skip chunks with NaN/Inf/extreme values
-            if [a.as_slice(), b.as_slice(), c.as_slice()].iter()
-                .any(|arr| arr.iter().any(|x| x.is_nan() || x.is_infinite() || x.abs() > 1e30))
-            { continue; }
-            let as_ = generic::f64x4::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::f64x4::<ScalarToken>::from_array(token_s, b);
-            let cs = generic::f64x4::<ScalarToken>::from_array(token_s, c);
-            let an = generic::f64x4::<$native_token>::from_array(token_n, a);
-            let bn = generic::f64x4::<$native_token>::from_array(token_n, b);
-            let cn = generic::f64x4::<$native_token>::from_array(token_n, c);
+            let as_ = generic::f64x4::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f64x4::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f64x4::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f64x4::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f64x4::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f64x4::<$native_token>::from_array_t(token_n, c);
             let s = as_.mul_add(bs, cs).to_array();
             let n = an.mul_add(bn, cn).to_array();
-            // FMA vs mul+add can differ by many ULPs with catastrophic cancellation.
-            // Just check that NaN/Inf agreement is maintained and finite values
-            // are in the same ballpark (1e-4 relative tolerance).
-            // FMA vs mul+add can differ significantly with catastrophic cancellation.
-            // Use signed-zero-tolerant comparison (allows ±0 and NaN agreement).
-            super::assert_f64_fma(&s, &n, "f64x4::mul_add", &a);
+            let expected_s: [f64; 4] = core::array::from_fn(|i|
+                a[i].mul_add_expected(b[i], c[i], token_s));
+            let expected_n: [f64; 4] = core::array::from_fn(|i|
+                a[i].mul_add_expected(b[i], c[i], token_n));
+            super::assert_f64_exact(&s, &expected_s, "scalar f64x4::mul_add", &a);
+            super::assert_f64_exact(&n, &expected_n, "native f64x4::mul_add", &a);
         }
     }
 }
@@ -2089,24 +2165,78 @@ fn mul_sub() {
             let a: [f64; 4] = ca.try_into().unwrap();
             let b: [f64; 4] = cb.try_into().unwrap();
             let c: [f64; 4] = cc.try_into().unwrap();
-            // Skip chunks with NaN/Inf/extreme values
-            if [a.as_slice(), b.as_slice(), c.as_slice()].iter()
-                .any(|arr| arr.iter().any(|x| x.is_nan() || x.is_infinite() || x.abs() > 1e30))
-            { continue; }
-            let as_ = generic::f64x4::<ScalarToken>::from_array(token_s, a);
-            let bs = generic::f64x4::<ScalarToken>::from_array(token_s, b);
-            let cs = generic::f64x4::<ScalarToken>::from_array(token_s, c);
-            let an = generic::f64x4::<$native_token>::from_array(token_n, a);
-            let bn = generic::f64x4::<$native_token>::from_array(token_n, b);
-            let cn = generic::f64x4::<$native_token>::from_array(token_n, c);
+            let as_ = generic::f64x4::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f64x4::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f64x4::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f64x4::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f64x4::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f64x4::<$native_token>::from_array_t(token_n, c);
             let s = as_.mul_sub(bs, cs).to_array();
             let n = an.mul_sub(bn, cn).to_array();
-            // FMA vs mul+add can differ by many ULPs with catastrophic cancellation.
-            // Just check that NaN/Inf agreement is maintained and finite values
-            // are in the same ballpark (1e-4 relative tolerance).
-            // FMA vs mul+add can differ significantly with catastrophic cancellation.
-            // Use signed-zero-tolerant comparison (allows ±0 and NaN agreement).
-            super::assert_f64_fma(&s, &n, "f64x4::mul_sub", &a);
+            let expected_s: [f64; 4] = core::array::from_fn(|i|
+                a[i].mul_add_expected(b[i], -c[i], token_s));
+            let expected_n: [f64; 4] = core::array::from_fn(|i|
+                a[i].mul_add_expected(b[i], -c[i], token_n));
+            super::assert_f64_exact(&s, &expected_s, "scalar f64x4::mul_sub", &a);
+            super::assert_f64_exact(&n, &expected_n, "native f64x4::mul_sub", &a);
+        }
+    }
+}
+
+#[test]
+fn mul_add_portable() {
+    let token_s = ScalarToken;
+    if let Some(token_n) = <$native_token>::summon() {
+        for ((ca, cb), cc) in super::F64_EDGE_A.chunks_exact(4)
+            .zip(super::F64_EDGE_B.chunks_exact(4))
+            .zip(super::F64_EDGE_C.chunks_exact(4))
+        {
+            let a: [f64; 4] = ca.try_into().unwrap();
+            let b: [f64; 4] = cb.try_into().unwrap();
+            let c: [f64; 4] = cc.try_into().unwrap();
+            let as_ = generic::f64x4::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f64x4::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f64x4::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f64x4::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f64x4::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f64x4::<$native_token>::from_array_t(token_n, c);
+            let s = as_.mul_add_portable(bs, cs).to_array();
+            let n = an.mul_add_portable(bn, cn).to_array();
+            let expected_s: [f64; 4] = core::array::from_fn(|i|
+                a[i].fused_expected(b[i], c[i]));
+            let expected_n: [f64; 4] = core::array::from_fn(|i|
+                a[i].fused_expected(b[i], c[i]));
+            super::assert_f64_exact(&s, &expected_s, "scalar f64x4::mul_add_portable", &a);
+            super::assert_f64_exact(&n, &expected_n, "native f64x4::mul_add_portable", &a);
+        }
+    }
+}
+
+#[test]
+fn mul_sub_portable() {
+    let token_s = ScalarToken;
+    if let Some(token_n) = <$native_token>::summon() {
+        for ((ca, cb), cc) in super::F64_EDGE_A.chunks_exact(4)
+            .zip(super::F64_EDGE_B.chunks_exact(4))
+            .zip(super::F64_EDGE_C.chunks_exact(4))
+        {
+            let a: [f64; 4] = ca.try_into().unwrap();
+            let b: [f64; 4] = cb.try_into().unwrap();
+            let c: [f64; 4] = cc.try_into().unwrap();
+            let as_ = generic::f64x4::<ScalarToken>::from_array_t(token_s, a);
+            let bs = generic::f64x4::<ScalarToken>::from_array_t(token_s, b);
+            let cs = generic::f64x4::<ScalarToken>::from_array_t(token_s, c);
+            let an = generic::f64x4::<$native_token>::from_array_t(token_n, a);
+            let bn = generic::f64x4::<$native_token>::from_array_t(token_n, b);
+            let cn = generic::f64x4::<$native_token>::from_array_t(token_n, c);
+            let s = as_.mul_sub_portable(bs, cs).to_array();
+            let n = an.mul_sub_portable(bn, cn).to_array();
+            let expected_s: [f64; 4] = core::array::from_fn(|i|
+                a[i].fused_expected(b[i], -c[i]));
+            let expected_n: [f64; 4] = core::array::from_fn(|i|
+                a[i].fused_expected(b[i], -c[i]));
+            super::assert_f64_exact(&s, &expected_s, "scalar f64x4::mul_sub_portable", &a);
+            super::assert_f64_exact(&n, &expected_n, "native f64x4::mul_sub_portable", &a);
         }
     }
 }
