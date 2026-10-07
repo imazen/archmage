@@ -1,0 +1,18 @@
+use archmage::prelude::*;
+#[target_feature(
+    enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+)]
+#[inline]
+fn probe<T: HasX64V2 + HasX64V4>(token: T, x: f32) -> f32 {
+    {
+        #[inline(always)]
+        const fn __archmage_assert_tier_trait<
+            __T: ?Sized + ::archmage::HasX64V2 + ::archmage::HasX64V4,
+        >(_: &__T) {}
+        __archmage_assert_tier_trait(&token);
+    }
+    let _ = token;
+    let _ = X64V3Token::from_context();
+    x
+}
+fn main() {}

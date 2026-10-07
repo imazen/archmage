@@ -1,7 +1,10 @@
 //! Macro expansion snapshot tests.
 //!
 //! Generated test files live in `tests/expand/{category}/`.
-//! Known bugs live in `tests/expand/should-fail/`.
+//! Known bugs live in `tests/expand/should-fail/`. Signature shapes (bound
+//! placement, parameter patterns, receivers, generics, return types) live in
+//! `tests/expand/shapes/`; a shape whose expansion is wrong today is listed in
+//! `KNOWN_FAILURES` in `xtask/src/expand_gen.rs` and lands in `should-fail/`.
 //!
 //! To regenerate test inputs: `cargo run -p xtask -- gen-expand`
 //! To update snapshots: `MACROTEST=overwrite cargo test -p archmage --test macro_expand`
@@ -35,6 +38,7 @@ fn unexpanded_input_compiles() {
     t.pass("tests/expand/rewrite/*.rs");
     t.pass("tests/expand/deprecated/*.rs");
     t.pass("tests/expand/combinations/*.rs");
+    t.pass("tests/expand/shapes/*.rs");
 }
 
 /// Every expanded output must compile as standalone Rust.
@@ -49,6 +53,7 @@ fn expanded_output_compiles() {
     t.pass("tests/expand/rewrite/*.expanded.rs");
     t.pass("tests/expand/deprecated/*.expanded.rs");
     t.pass("tests/expand/combinations/*.expanded.rs");
+    t.pass("tests/expand/shapes/*.expanded.rs");
 }
 
 // Known-bug rejection reasons are checked by soundness_exploits.rs using
