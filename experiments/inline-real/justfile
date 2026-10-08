@@ -10,3 +10,11 @@ measure out passes="5":
 
 summarize out:
     python3 run.py summarize --out {{out}}
+
+export out report:
+    python3 run.py export --out {{out}} --report {{report}}
+
+check:
+    uvx ruff format --check run.py
+    uvx ruff check run.py
+    rustfmt --edition 2024 --check driver.rs
