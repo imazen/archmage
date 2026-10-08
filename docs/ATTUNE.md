@@ -290,3 +290,31 @@ those preserved here. Full log: `/home/lilith/tmp/attune-method-inline/results.l
 The serialized run-heavy wrapper checked each expected exit status and reported
 `rc=0 0s | peak-RSS 0.11GiB | min-avail 21297MiB | peak-load 0.24`.
 No runtime-performance or end-to-end compile-time improvement is claimed.
+
+## Explicit body policy investigation (2026-10-08)
+
+The user clarified that `no_inline` is a proposed escape hatch for legacy
+attributes, and asked whether attune should require an explicit choice. No
+parser or default changes were made in this investigation. The earlier default
+table remains a proposal, not a settled or implemented policy.
+
+The recommendation under investigation is one explicit body policy per attune
+definition, inherited by its generated direct bodies. Proof wrappers and
+central dispatchers are separate outputs with their own defaults/overrides;
+users should not have to repeat the body choice for every tier. For example,
+`#[attune(inline(hint), make(all))]` is proposed syntax, not syntax accepted by
+the current parser. An explicit policy emitting no attribute must remain
+separate from `inline(never)`. The former leaves the optimizer free to inline;
+the latter requests out-of-line code.
+
+For migration, legacy body hints must become an explicit hint, and legacy proof
+wrappers must retain their effective policy. Whether legacy
+`#[arcane(no_inline)]` suppresses only the body hint or also the proof wrapper's
+always-inline attribute is still a separate naming/behavior decision.
+
+The [real-consumer experiment](../experiments/inline-real/README.md) changes one
+emitted layer at a time in fixed-main source copies. Its
+[results](../benchmarks/inline_real_2026-10-08/README.md) cover zenav1-svt encoding
+and rav1d-safe decoding, with output parity checks. This measures legacy emitter
+policies; it does not establish the performance of the complete attune rewrite
+or close that rewrite's compile-time acceptance gate.
