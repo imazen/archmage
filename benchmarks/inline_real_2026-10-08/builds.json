@@ -1,0 +1,218 @@
+[
+  {
+    "command": [
+      "cargo",
+      "build",
+      "--profile",
+      "release",
+      "--locked"
+    ],
+    "wall_seconds": 16.389735268996446,
+    "binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/baseline/driver/target/release/inline-consumer-probe",
+    "sha256": "1ad7d9ffd9130e906f0df6e4886e31953b6e6e5b88d8cfdfb7e21e7f563d0708",
+    "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n9878974\t 376864\t  64456\t10320294\t 9d79a6\t/home/lilith/tmp/attune-inline-real-2026-10-08/baseline/driver/target/release/inline-consumer-probe\n",
+    "status": 0,
+    "profile": "release",
+    "policy": "baseline",
+    "preserved_binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/builds/release-baseline.bin",
+    "max_rss_kbytes": 1231388
+  },
+  {
+    "command": [
+      "cargo",
+      "build",
+      "--profile",
+      "release",
+      "--locked"
+    ],
+    "wall_seconds": 15.44562671201129,
+    "binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/body_none/driver/target/release/inline-consumer-probe",
+    "sha256": "8b6f7eb743e831514927a474f5231dc66bd33d54ec3f6666fe092d0b183bc78a",
+    "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n9914182\t 374904\t  64000\t10353086\t 9df9be\t/home/lilith/tmp/attune-inline-real-2026-10-08/body_none/driver/target/release/inline-consumer-probe\n",
+    "status": 0,
+    "profile": "release",
+    "policy": "body_none",
+    "preserved_binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/builds/release-body_none.bin",
+    "max_rss_kbytes": 1233144
+  },
+  {
+    "command": [
+      "cargo",
+      "build",
+      "--profile",
+      "release",
+      "--locked"
+    ],
+    "wall_seconds": 15.837928653985728,
+    "binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/body_never/driver/target/release/inline-consumer-probe",
+    "sha256": "a4075f3c023bc7e61589cb74c2d83eeba6ab559a5ab3b69773a6ea60f8f561a3",
+    "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n10007538\t 376368\t  63368\t10447274\t 9f69aa\t/home/lilith/tmp/attune-inline-real-2026-10-08/body_never/driver/target/release/inline-consumer-probe\n",
+    "status": 0,
+    "profile": "release",
+    "policy": "body_never",
+    "preserved_binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/builds/release-body_never.bin",
+    "max_rss_kbytes": 1207248
+  },
+  {
+    "command": [
+      "cargo",
+      "build",
+      "--profile",
+      "release",
+      "--locked"
+    ],
+    "wall_seconds": 15.671017159998883,
+    "binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/proof_none/driver/target/release/inline-consumer-probe",
+    "sha256": "7dba69e297254dc4b9cf2619437e96928ca9707865d5264258a5cbe855f9eba1",
+    "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n9904494\t 376192\t  64168\t10344854\t 9dd996\t/home/lilith/tmp/attune-inline-real-2026-10-08/proof_none/driver/target/release/inline-consumer-probe\n",
+    "status": 0,
+    "profile": "release",
+    "policy": "proof_none",
+    "preserved_binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/builds/release-proof_none.bin",
+    "max_rss_kbytes": 1222676
+  },
+  {
+    "command": [
+      "cargo",
+      "build",
+      "--profile",
+      "release",
+      "--locked"
+    ],
+    "wall_seconds": 15.853573398999288,
+    "binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/proof_hint/driver/target/release/inline-consumer-probe",
+    "sha256": "6135eb75d75cefaaad024b1ca4f43e73490f1a3430def729567a25d5df32fd8f",
+    "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n9879134\t 376856\t  64336\t10320326\t 9d79c6\t/home/lilith/tmp/attune-inline-real-2026-10-08/proof_hint/driver/target/release/inline-consumer-probe\n",
+    "status": 0,
+    "profile": "release",
+    "policy": "proof_hint",
+    "preserved_binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/builds/release-proof_hint.bin",
+    "max_rss_kbytes": 1230548
+  },
+  {
+    "command": [
+      "cargo",
+      "build",
+      "--profile",
+      "release",
+      "--locked"
+    ],
+    "wall_seconds": 15.645928826997988,
+    "binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/dispatcher_always/driver/target/release/inline-consumer-probe",
+    "sha256": "48067fd7b43949a2bc0d7f5f41a357c24462bd0cdd316a1e75dcde9944f9cc08",
+    "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n9883882\t 376864\t  63672\t10324418\t 9d89c2\t/home/lilith/tmp/attune-inline-real-2026-10-08/dispatcher_always/driver/target/release/inline-consumer-probe\n",
+    "status": 0,
+    "profile": "release",
+    "policy": "dispatcher_always",
+    "preserved_binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/builds/release-dispatcher_always.bin",
+    "max_rss_kbytes": 1229440
+  },
+  {
+    "command": [
+      "cargo",
+      "build",
+      "--profile",
+      "ship",
+      "--locked"
+    ],
+    "wall_seconds": 54.813453228998696,
+    "binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/baseline/driver/target/ship/inline-consumer-probe",
+    "sha256": "d626b7a0d228fd067532499aa9747189ad06cdeff3310a891087f74ef1a7e2e2",
+    "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n9085764\t 308648\t  61600\t9456012\t 90498c\t/home/lilith/tmp/attune-inline-real-2026-10-08/baseline/driver/target/ship/inline-consumer-probe\n",
+    "status": 0,
+    "profile": "ship",
+    "policy": "baseline",
+    "preserved_binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/builds/ship-baseline.bin",
+    "max_rss_kbytes": 1091224
+  },
+  {
+    "command": [
+      "cargo",
+      "build",
+      "--profile",
+      "ship",
+      "--locked"
+    ],
+    "wall_seconds": 54.95161502099654,
+    "binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/body_none/driver/target/ship/inline-consumer-probe",
+    "sha256": "2766e2a443e0c8793c7e6608318743191810444c152a3333650df397857476cc",
+    "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n9052340\t 308696\t  62192\t9423228\t 8fc97c\t/home/lilith/tmp/attune-inline-real-2026-10-08/body_none/driver/target/ship/inline-consumer-probe\n",
+    "status": 0,
+    "profile": "ship",
+    "policy": "body_none",
+    "preserved_binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/builds/ship-body_none.bin",
+    "max_rss_kbytes": 1088152
+  },
+  {
+    "command": [
+      "cargo",
+      "build",
+      "--profile",
+      "ship",
+      "--locked"
+    ],
+    "wall_seconds": 53.34435458599182,
+    "binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/body_never/driver/target/ship/inline-consumer-probe",
+    "sha256": "26f61c0a7a5eff6432643def4321eeec99fc071e9707bc1ff766588e3aa15be1",
+    "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n9124936\t 309848\t  62176\t9496960\t 90e980\t/home/lilith/tmp/attune-inline-real-2026-10-08/body_never/driver/target/ship/inline-consumer-probe\n",
+    "status": 0,
+    "profile": "ship",
+    "policy": "body_never",
+    "preserved_binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/builds/ship-body_never.bin",
+    "max_rss_kbytes": 1089896
+  },
+  {
+    "command": [
+      "cargo",
+      "build",
+      "--profile",
+      "ship",
+      "--locked"
+    ],
+    "wall_seconds": 55.38333871499344,
+    "binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/proof_none/driver/target/ship/inline-consumer-probe",
+    "sha256": "27cfad124fe37e165219703862ced6ca5010781c6dc572253398325c9ecde34d",
+    "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n9069608\t 308744\t  61248\t9439600\t 900970\t/home/lilith/tmp/attune-inline-real-2026-10-08/proof_none/driver/target/ship/inline-consumer-probe\n",
+    "status": 0,
+    "profile": "ship",
+    "policy": "proof_none",
+    "preserved_binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/builds/ship-proof_none.bin",
+    "max_rss_kbytes": 1093212
+  },
+  {
+    "command": [
+      "cargo",
+      "build",
+      "--profile",
+      "ship",
+      "--locked"
+    ],
+    "wall_seconds": 55.332356151004205,
+    "binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/proof_hint/driver/target/ship/inline-consumer-probe",
+    "sha256": "e96f6e35424a6435b13bc8960a338dc35e4b3902b8c4c596a1e557fae370d1ee",
+    "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n9086048\t 308696\t  61248\t9455992\t 904978\t/home/lilith/tmp/attune-inline-real-2026-10-08/proof_hint/driver/target/ship/inline-consumer-probe\n",
+    "status": 0,
+    "profile": "ship",
+    "policy": "proof_hint",
+    "preserved_binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/builds/ship-proof_hint.bin",
+    "max_rss_kbytes": 1092416
+  },
+  {
+    "command": [
+      "cargo",
+      "build",
+      "--profile",
+      "ship",
+      "--locked"
+    ],
+    "wall_seconds": 55.15162177399907,
+    "binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/dispatcher_always/driver/target/ship/inline-consumer-probe",
+    "sha256": "34ed297852dfb97494a9a9d6e91affed9ebd7b294a495d7046cea2c783183b00",
+    "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n9090984\t 308648\t  64576\t9464208\t 906990\t/home/lilith/tmp/attune-inline-real-2026-10-08/dispatcher_always/driver/target/ship/inline-consumer-probe\n",
+    "status": 0,
+    "profile": "ship",
+    "policy": "dispatcher_always",
+    "preserved_binary": "/home/lilith/tmp/attune-inline-real-2026-10-08/builds/ship-dispatcher_always.bin",
+    "max_rss_kbytes": 1092932
+  }
+]

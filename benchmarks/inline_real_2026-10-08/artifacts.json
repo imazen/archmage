@@ -1,0 +1,18 @@
+{
+  "root": "/home/lilith/tmp/attune-inline-real-2026-10-08",
+  "checks": {
+    "256": {
+      "encoded.obu": "8a705dc53f6846846dd0a8aa3aaba14054a80da9ec9cbc19803fd76076dbf341",
+      "decoded.yuv": "f1cb13289de1b7111df39924ac100df93fc0d62a534f92613e2d9ea0bb13554d"
+    },
+    "512": {
+      "encoded.obu": "c0eaba23f06e16d8302c534f64c496aab9cf97734e5cebbf055a1b0efb685cc1",
+      "decoded.yuv": "dcdee4c0cfddf0e36819cbf72691768e35f7cab3872db622687cacf91bfdf64f"
+    }
+  },
+  "rows": 240,
+  "processes": 120,
+  "samples_per_row": 20,
+  "driver_sha256": "79c1ff6e98325742363193a0bc253d247dfded408ad96f6cd38b0e11aa62f34c",
+  "runner_sha256": "a9596fbd7984ab2d0b00f4f5635898483d2c18850d9c3a9912670a3587035922"
+}
