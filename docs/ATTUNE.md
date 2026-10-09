@@ -393,3 +393,10 @@ and decoder differences were small. This supports offering `inline(default)`
 as an explicit policy, not changing omission behavior or recommending it over
 `inline(hint)` for hot kernels. The experiment measures equivalent legacy
 emitter policies rather than the complete attune rewrite.
+
+The [emission inventory](../benchmarks/inline_default_inventory_2026-10-09/README.md)
+records where the visibility rule resolves in those pinned consumers. All 2,402
+matching body events resolve to no inline attribute; 1,359 are magetypes backend
+kernels. Proof-wrapper decisions are counted separately. The full inventory
+preserves source/body locations and guards, including distinct macro-template
+instances. These are emission decisions, not executed or LLVM-inlined functions.
