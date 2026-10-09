@@ -405,3 +405,15 @@ matching body events resolve to no inline attribute; 1,359 are magetypes backend
 kernels. Proof-wrapper decisions are counted separately. The full inventory
 preserves source/body locations and guards, including distinct macro-template
 instances. These are emission decisions, not executed or LLVM-inlined functions.
+
+The visibility-selection bug is fixed in `0176d430`: source operation visibility
+is resolved before a synthetic body becomes private. The
+[corrected inventory](../benchmarks/inline_operation_inventory_2026-10-09/README.md)
+restores 42 public-operation body hints while retaining separate wrapper policy.
+The [paired retest](../benchmarks/inline_operation_2026-10-09/README.md) keeps the
+old rule as a control. Corrected-policy non-LTO encoding still takes 22.34% and
+18.90% longer than the existing-hints baseline on the tested crops; shipping
+encoder changes are −0.49% and +0.19%, with overlapping ranges. This legacy-emitter
+ablation still removes internal magetypes hints and is not a full attune migration;
+trait placements require explicit policy, and preserving existing hints remains
+the faithful migration. The policy remains opt-in.

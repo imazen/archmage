@@ -1,0 +1,18 @@
+{
+  "root": "/home/lilith/tmp/attune-inline-operation-2026-10-09",
+  "checks": {
+    "256": {
+      "encoded.obu": "8a705dc53f6846846dd0a8aa3aaba14054a80da9ec9cbc19803fd76076dbf341",
+      "decoded.yuv": "f1cb13289de1b7111df39924ac100df93fc0d62a534f92613e2d9ea0bb13554d"
+    },
+    "512": {
+      "encoded.obu": "c0eaba23f06e16d8302c534f64c496aab9cf97734e5cebbf055a1b0efb685cc1",
+      "decoded.yuv": "dcdee4c0cfddf0e36819cbf72691768e35f7cab3872db622687cacf91bfdf64f"
+    }
+  },
+  "rows": 120,
+  "processes": 60,
+  "samples_per_row": 20,
+  "driver_sha256": "79c1ff6e98325742363193a0bc253d247dfded408ad96f6cd38b0e11aa62f34c",
+  "export_runner_sha256": "f25a0969b319becd8a4b15daee76067397a4b791081373601a19007108a43731"
+}

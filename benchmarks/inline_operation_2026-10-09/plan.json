@@ -1,0 +1,118 @@
+{
+  "archmage": "e2dbab66ef5aa08f8e23ed05248e7d1217f58475",
+  "consumer_sources": {
+    "zenav1-svt": {
+      "repository": "https://github.com/imazen/zenav1-svt",
+      "revision": "224c6bbb9a3dc577c64f6e0531bda5c3f60c6b0b",
+      "archive_sha256": "c97bda0a517b17346b84094100e1be756aea7a2317b4073ac7a241c2c4f6193a"
+    },
+    "rav1d-safe": {
+      "repository": "https://github.com/imazen/rav1d-safe",
+      "revision": "5b51b144cf73216fffd1100bfc396bc7dc17b5bd",
+      "archive_sha256": "8a33631baf74031a2a7218f97f42ada73a3abb0ed1af140f45eb899054326485"
+    },
+    "archmage": {
+      "source": "https://crates.io/api/v1/crates/archmage/0.9.29/download",
+      "archive_sha256": "8e3a17fc8196cce2902db52de7a21d4407971d080c01a0256037fcd3fc6e536e"
+    },
+    "archmage-macros": {
+      "source": "https://crates.io/api/v1/crates/archmage-macros/0.9.29/download",
+      "archive_sha256": "1d0c10fb756a60ff9418d3e5dcd2b665c5914e32391d2523995d2c2c09237ac6"
+    },
+    "magetypes": {
+      "source": "https://crates.io/api/v1/crates/magetypes/0.9.29/download",
+      "archive_sha256": "eb20fe6c3852ae9d38e328f9da0a77bdb6d2837f7c8cad0bda1b9bcf77c4e251"
+    }
+  },
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: x86_64-unknown-linux-gnu\nrelease: 1.98.1\nLLVM version: 22.1.8\n",
+  "image": {
+    "path": "/home/lilith/tmp/png-corpus-sample/2400-unsplash-textures/2404_textures_tree-bark-texture_by-hwang-sanguk-k0tljwrabxg-unsplash_3024x3024.sdr.png",
+    "sha256": "d15d17d088206a6e4b5cc88b6ce6040a232b14274368f0939db429b4df618df3"
+  },
+  "policies": {
+    "baseline": {
+      "driver": "/home/lilith/tmp/attune-inline-operation-2026-10-09/baseline/driver",
+      "selected": {
+        "archmage": {
+          "version": "0.9.30",
+          "manifest": "/home/lilith/tmp/attune-inline-operation-2026-10-09/baseline/archmage/Cargo.toml"
+        },
+        "archmage-macros": {
+          "version": "0.9.30",
+          "manifest": "/home/lilith/tmp/attune-inline-operation-2026-10-09/baseline/archmage/archmage-macros/Cargo.toml"
+        },
+        "magetypes": {
+          "version": "0.9.30",
+          "manifest": "/home/lilith/tmp/attune-inline-operation-2026-10-09/baseline/archmage/magetypes/Cargo.toml"
+        },
+        "zenbench": {
+          "version": "0.1.10",
+          "manifest": "/home/lilith/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zenbench-0.1.10/Cargo.toml"
+        }
+      },
+      "lock_sha256": "788cd21bacd78f7407abf4ea4f4bf6088c98daf1d11fd63e25083896da1a0d74"
+    },
+    "body_default": {
+      "driver": "/home/lilith/tmp/attune-inline-operation-2026-10-09/body_default/driver",
+      "selected": {
+        "archmage": {
+          "version": "0.9.30",
+          "manifest": "/home/lilith/tmp/attune-inline-operation-2026-10-09/body_default/archmage/Cargo.toml"
+        },
+        "archmage-macros": {
+          "version": "0.9.30",
+          "manifest": "/home/lilith/tmp/attune-inline-operation-2026-10-09/body_default/archmage/archmage-macros/Cargo.toml"
+        },
+        "magetypes": {
+          "version": "0.9.30",
+          "manifest": "/home/lilith/tmp/attune-inline-operation-2026-10-09/body_default/archmage/magetypes/Cargo.toml"
+        },
+        "zenbench": {
+          "version": "0.1.10",
+          "manifest": "/home/lilith/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zenbench-0.1.10/Cargo.toml"
+        }
+      },
+      "lock_sha256": "788cd21bacd78f7407abf4ea4f4bf6088c98daf1d11fd63e25083896da1a0d74"
+    },
+    "body_operation": {
+      "driver": "/home/lilith/tmp/attune-inline-operation-2026-10-09/body_operation/driver",
+      "selected": {
+        "archmage": {
+          "version": "0.9.30",
+          "manifest": "/home/lilith/tmp/attune-inline-operation-2026-10-09/body_operation/archmage/Cargo.toml"
+        },
+        "archmage-macros": {
+          "version": "0.9.30",
+          "manifest": "/home/lilith/tmp/attune-inline-operation-2026-10-09/body_operation/archmage/archmage-macros/Cargo.toml"
+        },
+        "magetypes": {
+          "version": "0.9.30",
+          "manifest": "/home/lilith/tmp/attune-inline-operation-2026-10-09/body_operation/archmage/magetypes/Cargo.toml"
+        },
+        "zenbench": {
+          "version": "0.1.10",
+          "manifest": "/home/lilith/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zenbench-0.1.10/Cargo.toml"
+        }
+      },
+      "lock_sha256": "788cd21bacd78f7407abf4ea4f4bf6088c98daf1d11fd63e25083896da1a0d74"
+    }
+  },
+  "profiles": {
+    "release": {
+      "lto": "off",
+      "codegen_units": 16
+    },
+    "ship": {
+      "lto": "fat",
+      "codegen_units": 1
+    }
+  },
+  "driver_sha256": "79c1ff6e98325742363193a0bc253d247dfded408ad96f6cd38b0e11aa62f34c",
+  "runner_sha256": "f25a0969b319becd8a4b15daee76067397a4b791081373601a19007108a43731",
+  "cpu": 2,
+  "note": "Real consumer implementations unchanged. Macro emission ablations only. In-memory API timing; setup/drop/I/O outside clock. No target-cpu=native.",
+  "inputs": {
+    "256": "5b9ee30c238195457c4cd85d81a11db65b56e7b82b2b9b4a833e8cad7d8f48fc",
+    "512": "0ad4e2563cbb49aae00c627e3d01e2e3436fa1533755e5ec8a861c6f48df835d"
+  }
+}
