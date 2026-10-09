@@ -1,6 +1,8 @@
 //! Unified definition and call model. Legacy frontends retain their own syntax
 //! contracts; target-feature bodies and proof boundaries share the emitter.
 pub(crate) mod call;
+#[cfg(test)]
+mod inline_tests;
 mod syntax;
 
 use proc_macro2::TokenStream;
@@ -42,15 +44,7 @@ pub(crate) fn expand(attr: TokenStream, item: TokenStream) -> syn::Result<TokenS
                 "direct target features cannot be placed on a safe trait method; move this kernel outside of the impl, or use attune(wrap) with a proof parameter",
             ));
         }
-        direct(input, tier, &args, None, None)
-    }
-}
-
-fn inline_attribute(policy: Inline) -> syn::Attribute {
-    match policy {
-        Inline::Hint => parse_quote!(#[inline]),
-        Inline::Always => parse_quote!(#[inline(always)]),
-        Inline::Never => parse_quote!(#[inline(never)]),
+        direct(input, tier, &args, None, args.body_inline)
     }
 }
 
@@ -83,9 +77,6 @@ fn direct(
         }
     });
     prepend_to_body(&mut input.body, quote!(#(#defines)*));
-    if inline.is_some() {
-        input.attrs.retain(|a| !a.path().is_ident("inline"));
-    }
     let options = SharedOptions {
         import_intrinsics: args.imports.import_intrinsics,
         import_magetypes: args.imports.import_magetypes,
@@ -93,9 +84,8 @@ fn direct(
             .map(str::to_string)
             .or_else(|| args.imports.cfg_feature.clone()),
     };
-    let function =
-        crate::engine::feature::emit(input, &options, inline.map(inline_attribute), true, context)
-            .unwrap_or_else(|diagnostic| diagnostic);
+    let function = crate::engine::feature::emit(input, &options, inline, true, context)
+        .unwrap_or_else(|diagnostic| diagnostic);
     // A single raw context preserves the written signature and identifiers.
     // Token is a substitution placeholder only for generated families.
     Ok(
@@ -244,7 +234,7 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
             tier,
             &args,
             gate,
-            direct_selection.and_then(|s| s.inline),
+            direct_selection.and_then(|s| s.inline).or(args.body_inline),
         )?);
         if proof_selection.is_some() || args.dispatcher.is_some() {
             let proof_name = if proof_selection.is_some() {
@@ -289,7 +279,7 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
             dispatcher
                 .attrs
                 .retain(|attr| !attr.path().is_ident("inline"));
-            dispatcher.attrs.push(inline_attribute(*policy));
+            dispatcher.attrs.extend(policy.attribute(&dispatcher.vis));
         }
         let proofs: Vec<_> = dispatcher
             .sig
@@ -349,9 +339,12 @@ fn proof_entry(
     wrapper
         .attrs
         .retain(|attr| !attr.path().is_ident("inline") && !attr.path().is_ident("expect"));
-    wrapper.attrs.push(inline_attribute(
-        selection.and_then(|s| s.inline).unwrap_or(Inline::Always),
-    ));
+    wrapper.attrs.extend(
+        selection
+            .and_then(|s| s.inline)
+            .unwrap_or(Inline::Always)
+            .attribute(&wrapper.vis),
+    );
     wrapper.body = if tier.name == "scalar" || tier.target_arch == Some("wasm32") {
         invocation
     } else {
@@ -368,6 +361,7 @@ fn proof_entry(
 
 fn wrap(input: LightFn, args: Args) -> syn::Result<TokenStream> {
     let options = crate::engine::boundary::BoundaryOptions {
+        body_inline: args.body_inline,
         nested: args.in_trait || args.self_type.is_some(),
         in_impl: args.in_impl,
         self_type: args.self_type,

@@ -6,19 +6,13 @@ use syn::{
     parse::{Parse, ParseStream},
 };
 
+pub(super) use crate::engine::inline::InlinePolicy as Inline;
 use crate::tiers::{TierDescriptor, find_tier};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Form {
     Direct,
     Proof,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum Inline {
-    Hint,
-    Always,
-    Never,
 }
 
 #[derive(Clone)]
@@ -38,6 +32,7 @@ pub(super) struct Rename {
 
 #[derive(Default)]
 pub(super) struct Args {
+    pub body_inline: Option<Inline>,
     pub tier: Option<&'static TierDescriptor>,
     pub wrap: bool,
     pub family: bool,
@@ -117,6 +112,11 @@ impl Parse for Args {
         while !input.is_empty() {
             let name: Ident = input.parse()?;
             match name.to_string().as_str() {
+                "inline" => {
+                    if args.body_inline.replace(parse_inline(input)?).is_some() {
+                        return Err(syn::Error::new(name.span(), "duplicate body inline policy"));
+                    }
+                }
                 "make" => {
                     if args.family {
                         return Err(syn::Error::new(name.span(), "duplicate make(...)"));
@@ -179,8 +179,35 @@ impl Parse for Args {
         if args.in_impl && (args.in_trait || args.self_type.is_some()) {
             return Err(input.error("in_impl and in_trait/_self describe different placements"));
         }
+        if (args.in_trait || args.self_type.is_some()) && args.body_inline == Some(Inline::Default)
+        {
+            return Err(input.error("inline(default) cannot infer trait visibility; choose inline(hint), inline(none), or inline(never)"));
+        }
         Ok(args)
     }
+}
+
+fn parse_inline(input: ParseStream) -> syn::Result<Inline> {
+    let inner;
+    syn::parenthesized!(inner in input);
+    let value: Ident = inner.parse()?;
+    let policy = match value.to_string().as_str() {
+        "default" => Inline::Default,
+        "none" => Inline::None,
+        "hint" => Inline::Hint,
+        "always" => Inline::Always,
+        "never" => Inline::Never,
+        _ => {
+            return Err(syn::Error::new(
+                value.span(),
+                "expected default, none, hint, always, or never",
+            ));
+        }
+    };
+    if !inner.is_empty() {
+        return Err(inner.error("expected one inline policy"));
+    }
+    Ok(policy)
 }
 
 impl Args {
@@ -196,23 +223,7 @@ impl Args {
             let mut inline = None;
             if input.peek(Ident) && input.fork().parse::<Ident>()? == "inline" {
                 input.parse::<Ident>()?;
-                let inner;
-                syn::parenthesized!(inner in input);
-                let value: Ident = inner.parse()?;
-                inline = Some(match value.to_string().as_str() {
-                    "hint" => Inline::Hint,
-                    "always" => Inline::Always,
-                    "never" => Inline::Never,
-                    _ => {
-                        return Err(syn::Error::new(
-                            value.span(),
-                            "expected hint, always, or never",
-                        ));
-                    }
-                });
-                if !inner.is_empty() {
-                    return Err(inner.error("expected one inline policy"));
-                }
+                inline = Some(parse_inline(input)?);
             }
             let remove = input.peek(Token![-]);
             let add = input.peek(Token![+]);

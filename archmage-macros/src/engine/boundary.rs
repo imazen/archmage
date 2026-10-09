@@ -1,6 +1,7 @@
 //! Feature-proof boundaries shared by all attribute frontends.
 //! Parsing syntax is kept out of this module; the proof is authenticated before
 //! emitting the single unsafe call. Body tokens are never parsed as expressions.
+use super::inline::InlinePolicy;
 use crate::common::*;
 use crate::token_discovery::*;
 use proc_macro2::TokenStream;
@@ -33,6 +34,8 @@ fn gen_token_assertion(
 
 #[derive(Default)]
 pub(crate) struct BoundaryOptions {
+    /// Attune body policy; legacy frontends leave this unset.
+    pub(crate) body_inline: Option<InlinePolicy>,
     /// Options spelled the same way in `#[rite]`: imports and `cfg(feature)`.
     pub(crate) shared: SharedOptions,
     /// Trusted generators may omit the accidental token-name mismatch check.
@@ -193,11 +196,27 @@ pub(crate) fn expand(
 
     // Build a single target_feature attribute with all features comma-joined
     let features_csv = crate::token_discovery::features_csv(token_type_name.as_deref(), &features);
-    let inline_attr: Attribute = if args.inline_always {
-        parse_quote!(#[inline(always)])
+    if args.body_inline == Some(InlinePolicy::Always) && !features.is_empty() {
+        return syn::Error::new_spanned(
+            &input_fn.sig.ident,
+            "inline(always) on target-feature bodies requires nightly; use inline(hint) or inline(never)",
+        ).to_compile_error();
+    }
+    // Native boundary bodies are private even when their proof wrapper is pub.
+    // Scalar and wasm lower directly, so their body retains the input visibility.
+    let body_vis = if features.is_empty() || target_arch == Some("wasm32") {
+        &input_fn.vis
     } else {
-        parse_quote!(#[inline])
+        &syn::Visibility::Inherited
     };
+    let inline_attr = args
+        .body_inline
+        .unwrap_or(if args.inline_always {
+            InlinePolicy::Always
+        } else {
+            InlinePolicy::Hint
+        })
+        .attribute(body_vis);
 
     // Scalar has no instruction-set boundary. Preserve its signature and body
     // without emitting the invalid #[target_feature(enable = "")].
@@ -277,7 +296,7 @@ pub(crate) fn reserved_param_error(
 struct BoundaryParts {
     cfg_guard: TokenStream,
     target_feature_attrs: Vec<Attribute>,
-    inline_attr: Attribute,
+    inline_attr: Option<Attribute>,
     token_assertion: TokenStream,
     tier_trait_assertion: TokenStream,
 }
@@ -294,7 +313,7 @@ pub(crate) fn arcane_impl_wasm_safe(
     input_fn: LightFn,
     args: &BoundaryOptions,
     target_feature_attrs: Vec<Attribute>,
-    inline_attr: Attribute,
+    inline_attr: Option<Attribute>,
 ) -> TokenStream {
     let vis = &input_fn.vis;
     let sig = &input_fn.sig;
@@ -315,7 +334,7 @@ pub(crate) fn arcane_impl_wasm_safe(
 
     // Prepend target_feature + inline attrs, filtering user #[inline] to avoid duplicates
     let mut new_attrs = target_feature_attrs;
-    new_attrs.push(inline_attr);
+    new_attrs.extend(inline_attr);
     for attr in filter_inline_attrs(attrs) {
         new_attrs.push(attr.clone());
     }

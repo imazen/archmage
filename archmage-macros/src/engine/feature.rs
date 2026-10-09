@@ -1,4 +1,5 @@
 //! A feature-enabled function, independent of attribute spelling.
+use super::inline::InlinePolicy;
 use crate::common::*;
 use crate::generated::{
     canonical_token_to_tier_suffix, token_to_arch, token_to_features, token_to_magetypes_namespace,
@@ -72,7 +73,7 @@ impl FeatureContext {
 pub(crate) fn emit(
     mut variant_fn: LightFn,
     options: &SharedOptions,
-    inline: Option<Attribute>,
+    inline: Option<InlinePolicy>,
     preserve_inline: bool,
     tier: FeatureContext,
 ) -> Result<TokenStream, TokenStream> {
@@ -131,16 +132,17 @@ pub(crate) fn emit(
             crate::token_discovery::features_csv(tier.token.as_deref(), &tier.features);
         new_attrs.push(parse_quote!(#[target_feature(enable = #features_csv)]));
     }
-    // Always use #[inline] - #[inline(always)] + #[target_feature] requires nightly
-    if let Some(inline) = inline {
-        new_attrs.push(inline);
+    // Explicit policy replaces source inline attributes, including when it
+    // deliberately emits no attribute. Legacy callers keep their old defaults.
+    if let Some(policy) = inline {
+        new_attrs.extend(policy.attribute(&variant_fn.vis));
     } else if !preserve_inline || !variant_fn.attrs.iter().any(|a| a.path().is_ident("inline")) {
         new_attrs.push(parse_quote!(#[inline]));
     }
     for attr in variant_fn
         .attrs
         .into_iter()
-        .filter(|attr| preserve_inline || !attr.path().is_ident("inline"))
+        .filter(|attr| (preserve_inline && inline.is_none()) || !attr.path().is_ident("inline"))
     {
         new_attrs.push(attr);
     }

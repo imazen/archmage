@@ -674,6 +674,12 @@ mod tests;
 /// `#[attune(v3)]` keeps the function name. `#[attune]` infers a registered
 /// terminal tier suffix. `make(_v3, _v3_t, _)` requests a direct function,
 /// a proof-taking wrapper, and a central dispatcher with a private scalar fallback.
+///
+/// `inline(default)` selects body hints from each generated body's visibility:
+/// unrestricted `pub` gets `#[inline]`; restricted/private bodies get no attribute.
+/// `inline(none)`, `inline(hint)`, and `inline(never)` select explicit body policies.
+/// Per-output `make(inline(...) _v3)` overrides the definition-level policy.
+/// Definition-level policy does not alter proof-wrapper or dispatcher defaults.
 #[proc_macro_attribute]
 pub fn attune(attr: TokenStream, item: TokenStream) -> TokenStream {
     attune::expand(attr.into(), item.into())
