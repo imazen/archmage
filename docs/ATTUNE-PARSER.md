@@ -111,3 +111,6 @@ expansion allocation and consumer compile cost. Keep unknown syntax an error so
 future additions cannot silently reinterpret previously accepted typos. Reuse
 the parser for future migration tooling rather than maintaining a second grammar.
 No migration converter is implemented by this refactor.
+
+The [allocation and cold-build comparison](../benchmarks/attune_parser_2026-10-09/README.md)
+records the refactor's measured costs, source revisions, and coverage limits.

@@ -1,0 +1,267 @@
+[
+  {
+    "path": "/home/lilith/tmp/attune-parser-before.log",
+    "bytes": 1256,
+    "sha256": "3e63fcad9c55f65f8c1b6952dcc26a4d2601ef89645e706d78d5bf626f1111c7"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-verified.log",
+    "bytes": 447901,
+    "sha256": "8c5ecb60bd1db306921cf83acf1dc4a33455b8aa140113b57863070a8e637fdf"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cold.log",
+    "bytes": 762,
+    "sha256": "62b04c1c28cd8a516966c7fa02ff32c0bd21e02ae7d2cb4b5cdd2c30c44519e1"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cold-refreshed.log",
+    "bytes": 8666,
+    "sha256": "20c19f1aebe5bc43b07f2b4e27420b8da3a7707b22a5ba367226161ed715d4e2"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-0-baseline-cold.log",
+    "bytes": 1560,
+    "sha256": "4132806e06e8f3653741d9e0f983701aec877f5db8b567fadf2ecc7c64cae9a5"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-0-baseline-consumer.log",
+    "bytes": 1013,
+    "sha256": "06fee971682784c158312100e2675a063377dcc9ce72f104074d03fa86210103"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-0-candidate-cold.log",
+    "bytes": 1564,
+    "sha256": "efa45675abae13181edb7495c807a9e3046def2be0248eb8d219f8c875f45410"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-0-candidate-consumer.log",
+    "bytes": 1014,
+    "sha256": "94dbdc60ba7f5684ec1372c85410803208dca2c27a333eadc484e1896e213893"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-1-baseline-cold.log",
+    "bytes": 1560,
+    "sha256": "3cc639551c49674e7f8a9ed979ee59d2af96ce0215d61e042d76d2d8f3a2b8af"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-1-baseline-consumer.log",
+    "bytes": 1013,
+    "sha256": "06fee971682784c158312100e2675a063377dcc9ce72f104074d03fa86210103"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-1-candidate-cold.log",
+    "bytes": 1564,
+    "sha256": "064810c6a077232e9023f0dc58f9c1e2ee6b2b0fb654a7d971a654d48661d08e"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-1-candidate-consumer.log",
+    "bytes": 1014,
+    "sha256": "94dbdc60ba7f5684ec1372c85410803208dca2c27a333eadc484e1896e213893"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-2-baseline-cold.log",
+    "bytes": 1560,
+    "sha256": "87474fd5a61f9d13a97b95c005d390b0f0e539f2e6dee5e351ba1d0ff2ef608d"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-2-baseline-consumer.log",
+    "bytes": 1013,
+    "sha256": "06fee971682784c158312100e2675a063377dcc9ce72f104074d03fa86210103"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-2-candidate-cold.log",
+    "bytes": 1564,
+    "sha256": "69fa5d3a78470a96d8849b8a8612a8d13d27a0df1131479d8be558eff8076520"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-2-candidate-consumer.log",
+    "bytes": 1014,
+    "sha256": "94dbdc60ba7f5684ec1372c85410803208dca2c27a333eadc484e1896e213893"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/lock-preparation.log",
+    "bytes": 53900,
+    "sha256": "f471208a1ab44705ce34d8975e932812b4e9e9d7baea9b35580935fc115fa5d2"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-0-baseline-cold.log",
+    "bytes": 1040,
+    "sha256": "4d5bb374535946bed775015198c4d94f8cf2d5a1378b1f8c3e898db27fb6726e"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-0-baseline-consumer.log",
+    "bytes": 661,
+    "sha256": "b611b089b269f743532a3818cc648c0ea6f05bd9d6730afa2bd2b71563f950ea"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-0-candidate-cold.log",
+    "bytes": 1043,
+    "sha256": "161c2acbc0df99db0f577371751e4a0e1137d92ea8284348f511b704c257e659"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-0-candidate-consumer.log",
+    "bytes": 662,
+    "sha256": "a63cec89fe1915c1930322d7741d8952a5f7e1bb5f97fc58a70f91dcf919d141"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-1-baseline-cold.log",
+    "bytes": 1040,
+    "sha256": "4d5bb374535946bed775015198c4d94f8cf2d5a1378b1f8c3e898db27fb6726e"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-1-baseline-consumer.log",
+    "bytes": 661,
+    "sha256": "b611b089b269f743532a3818cc648c0ea6f05bd9d6730afa2bd2b71563f950ea"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-1-candidate-cold.log",
+    "bytes": 1043,
+    "sha256": "323826123c8760a62ea74ca5763792b5c19357c2e999c98097573c47f14c293f"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-1-candidate-consumer.log",
+    "bytes": 662,
+    "sha256": "a63cec89fe1915c1930322d7741d8952a5f7e1bb5f97fc58a70f91dcf919d141"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-2-baseline-cold.log",
+    "bytes": 1040,
+    "sha256": "3956d9eb05a0961bd9b92cc909326d6a92eff2dc90269fd76c75636e793aacff"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-2-baseline-consumer.log",
+    "bytes": 661,
+    "sha256": "b611b089b269f743532a3818cc648c0ea6f05bd9d6730afa2bd2b71563f950ea"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-2-candidate-cold.log",
+    "bytes": 1043,
+    "sha256": "bf775f065eaf1d780d7ad02e2cb8d95d47b9a9375d38defc4a90bf3df40c0517"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-2-candidate-consumer.log",
+    "bytes": 662,
+    "sha256": "a63cec89fe1915c1930322d7741d8952a5f7e1bb5f97fc58a70f91dcf919d141"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-0-baseline-cold.time",
+    "bytes": 914,
+    "sha256": "1afe0b2b991c06d57fde97d455546b3c5a637146273c468722eef4bc13a8268d"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-0-baseline-consumer.time",
+    "bytes": 903,
+    "sha256": "c324c193dd626445d7e9acb5d2291bb6b364c72e91e5b1abdf3c6e5768e845c8"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-0-candidate-cold.time",
+    "bytes": 915,
+    "sha256": "5df61bb6183a798695a67e39c6d07a1c3c401a056cd06afabba773a92111f5d0"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-0-candidate-consumer.time",
+    "bytes": 903,
+    "sha256": "6d8ea366f5e4cd17c6ff006f57a7670271e2ac40b6bf07ff7cc4ebb0371e0dbb"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-1-baseline-cold.time",
+    "bytes": 915,
+    "sha256": "f53bd53e34c650b6bd103582718ceb00dba282c461cddd9a043458dd850f8bba"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-1-baseline-consumer.time",
+    "bytes": 903,
+    "sha256": "d3d924c5181dcb6ea2a647c1f53320ccff3d9652226f580f84b629406ca0b86b"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-1-candidate-cold.time",
+    "bytes": 915,
+    "sha256": "0b42701aef1226f401ee66b006ef2d81dca56dec234860d0321ad0180a3fe6e9"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-1-candidate-consumer.time",
+    "bytes": 903,
+    "sha256": "63d57b6f6cfca5578664482dfb7826024f2ea89b0fecffd86ede7951e950d9e0"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-2-baseline-cold.time",
+    "bytes": 913,
+    "sha256": "ad4b5ee06b167ca204f5982d43022e2fd10cbf70fabba3e3961ade08e99be88b"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-2-baseline-consumer.time",
+    "bytes": 902,
+    "sha256": "c806b531eda18b8b4ec26d6370a134801f8dbbd5b9c5c6f2de973e8f3a7c35d3"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-2-candidate-cold.time",
+    "bytes": 916,
+    "sha256": "8da2be2c0f717d7140e44cf9fae2ce7c043ce4d718ee101a6291b2effbba0cf1"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/all-2-candidate-consumer.time",
+    "bytes": 904,
+    "sha256": "d9dacfcc9a3702b9b1f775b7140d808279296fde0712356339d579e41ab09c34"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-0-baseline-cold.time",
+    "bytes": 882,
+    "sha256": "e6fd7074e5f1ad27901eedab1698f52ae857c8a23527e6ac84353ef2349ba2ad"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-0-baseline-consumer.time",
+    "bytes": 869,
+    "sha256": "5803887454026eb87bd4135f64c5aa93604b8a8b9eb3d69f3ac5bf7b424391e5"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-0-candidate-cold.time",
+    "bytes": 883,
+    "sha256": "f27f12e42a64f9992bb7b931ed2d8106094717d67f0a33101e7bc738d631c976"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-0-candidate-consumer.time",
+    "bytes": 870,
+    "sha256": "347c458bb4224ff9dfb41ee91c07879ac396be18e5f98ba387a21c1a902eab26"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-1-baseline-cold.time",
+    "bytes": 880,
+    "sha256": "4d6b8ec8cfed8952115e8085f61888a812124b306aa11bc8d18d9a610711332f"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-1-baseline-consumer.time",
+    "bytes": 869,
+    "sha256": "0069fd783b41cc6d4042045199bb2dff673127b6ac1a2cf08ae9f0d1caec76f1"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-1-candidate-cold.time",
+    "bytes": 882,
+    "sha256": "660859645fa70a870f0bb7ec175d5fa47e70922b76521ddc39134b571e88b5bd"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-1-candidate-consumer.time",
+    "bytes": 870,
+    "sha256": "14a4097e9aba30b0e16f6bec1b6bc8df18146ed7a1f9dd80f0ac10864cb465f5"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-2-baseline-cold.time",
+    "bytes": 881,
+    "sha256": "f47a44f71221c2b2134cf177397af706963b69319b842a0e46c03f4089ceaf8e"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-2-baseline-consumer.time",
+    "bytes": 869,
+    "sha256": "468522638dc5c0bb44e8be22250c71027666f54d6984023b5068e4cfae242b82"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-2-candidate-cold.time",
+    "bytes": 881,
+    "sha256": "048dc1a7a5f14c42191ba1de85ce18688b0f61eb83f8c3dbeb25d95fa8b51f18"
+  },
+  {
+    "path": "/home/lilith/tmp/attune-parser-cost-refreshed-2026-10-09/macros-2-candidate-consumer.time",
+    "bytes": 870,
+    "sha256": "34b55951cc437248ea901d01d6411bdf5503430032ebb51baded8b6432ecfa8f"
+  }
+]
