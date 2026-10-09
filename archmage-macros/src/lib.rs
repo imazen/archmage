@@ -672,8 +672,12 @@ mod tests;
 /// Establish a feature context or generate explicit direct/proof/dispatch outputs.
 ///
 /// `#[attune(v3)]` keeps the function name. `#[attune]` infers a registered
-/// terminal tier suffix. `make(_v3, _v3_t, _)` requests a direct function,
+/// terminal tier suffix: `_v3` selects a direct context; `_v3_t` selects a proof
+/// boundary, adding a concrete proof parameter when omitted. A written proof
+/// must match the suffix. `make(_v3, _v3_t, _)` requests a direct function,
 /// a proof-taking wrapper, and a central dispatcher with a private scalar fallback.
+/// `dispatch` is an alias for `_`; `make(dispatch, +v4(avx512))` adds a private
+/// V4 implementation without exposing additional entry points.
 ///
 /// `inline(default)` selects body hints from the operation's visibility before
 /// lowering to private helpers: unrestricted `pub` gets `#[inline]`; restricted
@@ -691,6 +695,9 @@ pub fn attune(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 /// Invoke a family using the enclosing attune feature context, or runtime proof
 /// entries outside one. Explicit tier lists never acquire an implicit fallback.
+/// Annotated callers can reuse a named concrete token or an `IntoConcreteToken`
+/// parameter without CPU detection. Covered calls remain direct. `using(token)`
+/// overrides inference and is required to supply proof in unannotated callers.
 #[proc_macro]
 pub fn attuned(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as attune::call::Call);

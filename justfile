@@ -423,7 +423,7 @@ attune-compare baseline candidate out pairs="6":
 
 # Include legacy expansion and proof-boundary regressions after engine changes.
 attune-compat:
-    cargo test -p archmage --test attune --test attune_selection --test attune_attributes --test arcane_sibling_resolution --test soundness_exploits --test macro_expand
+    cargo test -p archmage --test attune --test attune_selection --test attune_attributes --test attune_inline --test attune_conventions --test arcane_sibling_resolution --test soundness_exploits --test macro_expand
 
 attune-unit:
     cargo test -p archmage-macros
@@ -442,3 +442,8 @@ attune-profile:
 # Isolated full dependency-stack comparison; prepare first, then run serially.
 consumer-compile out mode *args:
     python3 benchmarks/consumer_compile.py --out {{out}} {{mode}} {{args}}
+
+# Convention inference and dispatcher additions with the optional tier gate off/on.
+attune-conventions:
+    cargo test --test attune_conventions --no-default-features
+    cargo test --test attune_conventions --features avx512

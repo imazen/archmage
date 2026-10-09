@@ -145,7 +145,13 @@ fn direct(
     };
     // Signature proof discovery must see each family's concrete parameter;
     // body Token markers remain intact until contextual calls are rewritten.
-    if args.family && input.sig.inputs.iter().any(placeholder_parameter) {
+    if args.family
+        && input
+            .sig
+            .inputs
+            .pairs()
+            .any(|arg| placeholder_parameter(arg.value()))
+    {
         specialize_syntax(&mut input.sig, &quote!(::#token_path))?;
     }
     let function = crate::engine::feature::emit(input, &options, inline, true, context)

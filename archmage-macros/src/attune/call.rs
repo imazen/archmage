@@ -329,8 +329,11 @@ pub(crate) fn rewrite_context(
     }
     let parent = Parent::new(signature);
     let body = rewrite_scoped(body, caller, Some(&parent), &mut 0);
-    let capture = parent.capture();
-    quote!(#capture #body)
+    if let Some(capture) = parent.capture() {
+        quote!(#capture #body)
+    } else {
+        body
+    }
 }
 
 fn rewrite_scoped(
