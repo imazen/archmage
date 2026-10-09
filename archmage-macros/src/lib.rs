@@ -675,8 +675,10 @@ mod tests;
 /// terminal tier suffix. `make(_v3, _v3_t, _)` requests a direct function,
 /// a proof-taking wrapper, and a central dispatcher with a private scalar fallback.
 ///
-/// `inline(default)` selects body hints from each generated body's visibility:
-/// unrestricted `pub` gets `#[inline]`; restricted/private bodies get no attribute.
+/// `inline(default)` selects body hints from the operation's visibility before
+/// lowering to private helpers: unrestricted `pub` gets `#[inline]`; restricted
+/// or private operations get no attribute. Direct output visibility overrides
+/// participate; wrapper visibility overrides apply independently.
 /// `inline(none)`, `inline(hint)`, and `inline(never)` select explicit body policies.
 /// Per-output `make(inline(...) _v3)` overrides the definition-level policy.
 /// Definition-level policy does not alter proof-wrapper or dispatcher defaults.

@@ -115,14 +115,18 @@ fn explicit_output_overrides_body_policy_and_source_attribute() {
 
 #[test]
 fn hidden_bodies_and_wrappers_have_separate_policies() {
-    for args in [quote!(wrap, inline(default)), quote!(wrap, inline(none))] {
+    for (args, expected) in [
+        (quote!(wrap, inline(default)), Some("inline")),
+        (quote!(wrap, inline(none)), None),
+    ] {
         let output = functions(
             args,
             quote!(
                 pub fn kernel(token: X64V3Token) {}
             ),
         );
-        assert_eq!(policy(&output[0]), None);
+        assert_eq!(policy(&output[0]).as_deref(), expected);
+        assert!(matches!(output[0].vis, syn::Visibility::Inherited));
         assert_eq!(policy(&output[1]).as_deref(), Some("inline (always)"));
     }
     let output = functions(
@@ -131,7 +135,8 @@ fn hidden_bodies_and_wrappers_have_separate_policies() {
             pub fn kernel() {}
         ),
     );
-    assert_eq!(policy(&output[0]), None);
+    assert_eq!(policy(&output[0]).as_deref(), Some("inline"));
+    assert!(matches!(output[0].vis, syn::Visibility::Inherited));
     assert_eq!(policy(&output[1]).as_deref(), Some("inline (always)"));
     for token in [quote!(ScalarToken), quote!(Wasm128Token)] {
         let output = functions(
@@ -213,4 +218,40 @@ fn invalid_or_ambiguous_policies_are_rejected() {
     .to_string();
     assert!(output.contains("compile_error"));
     assert!(output.contains("inline(always) on target-feature bodies"));
+}
+
+#[test]
+fn hidden_family_body_policy_uses_source_operation_visibility() {
+    for (visibility, expected) in [
+        (quote!(pub), Some("inline")),
+        (quote!(pub(crate)), None),
+        (quote!(), None),
+    ] {
+        for outputs in [quote!(_v3_t), quote!(_), quote!(pub(crate) _v3_t, pub _)] {
+            let output = functions(
+                quote!(inline(default), make(#outputs)),
+                quote!(#visibility fn kernel<T: Copy>(x: T) -> T { x }),
+            );
+            let bodies: Vec<_> = output
+                .iter()
+                .filter(|f| {
+                    let name = f.sig.ident.to_string();
+                    name.starts_with("__attune_") && !name.ends_with("_t")
+                })
+                .collect();
+            assert!(!bodies.is_empty());
+            for body in bodies {
+                assert!(matches!(body.vis, syn::Visibility::Inherited));
+                assert_eq!(policy(body).as_deref(), expected, "{}", body.sig.ident);
+                assert_eq!(body.sig.generics.params.len(), 1);
+            }
+        }
+        let output = functions(
+            quote!(wrap, inline(default)),
+            quote!(#visibility fn kernel(token: X64V3Token) {}),
+        );
+        assert_eq!(policy(&output[0]).as_deref(), expected);
+        assert!(matches!(output[0].vis, syn::Visibility::Inherited));
+        assert_eq!(policy(&output[1]).as_deref(), Some("inline (always)"));
+    }
 }

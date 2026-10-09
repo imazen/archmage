@@ -202,13 +202,8 @@ pub(crate) fn expand(
             "inline(always) on target-feature bodies requires nightly; use inline(hint) or inline(never)",
         ).to_compile_error();
     }
-    // Native boundary bodies are private even when their proof wrapper is pub.
-    // Scalar and wasm lower directly, so their body retains the input visibility.
-    let body_vis = if features.is_empty() || target_arch == Some("wasm32") {
-        &input_fn.vis
-    } else {
-        &syn::Visibility::Inherited
-    };
+    // The operation's visibility determines the body policy. Native lowering
+    // makes the implementation private without changing its inlining needs.
     let inline_attr = args
         .body_inline
         .unwrap_or(if args.inline_always {
@@ -216,7 +211,7 @@ pub(crate) fn expand(
         } else {
             InlinePolicy::Hint
         })
-        .attribute(body_vis);
+        .attribute(&input_fn.vis);
 
     // Scalar has no instruction-set boundary. Preserve its signature and body
     // without emitting the invalid #[target_feature(enable = "")].

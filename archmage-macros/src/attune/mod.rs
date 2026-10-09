@@ -226,16 +226,22 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
         };
         let mut body = input.clone();
         body.sig.ident = direct_name.clone();
-        body.vis = direct_selection
-            .map(|s| s.visibility.clone().unwrap_or_else(|| input.vis.clone()))
-            .unwrap_or(syn::Visibility::Inherited);
-        output.extend(direct(
-            body,
-            tier,
-            &args,
-            gate,
-            direct_selection.and_then(|s| s.inline).or(args.body_inline),
-        )?);
+        // Direct outputs use their visibility override; hidden implementations
+        // retain the source operation's policy before becoming private. Wrapper
+        // visibility and inline overrides apply independently to wrappers.
+        let operation_vis = direct_selection
+            .and_then(|s| s.visibility.as_ref())
+            .unwrap_or(&input.vis);
+        let body_inline = direct_selection
+            .and_then(|s| s.inline)
+            .or(args.body_inline)
+            .map(|policy| policy.resolve(operation_vis));
+        body.vis = if direct_selection.is_some() {
+            operation_vis.clone()
+        } else {
+            syn::Visibility::Inherited
+        };
+        output.extend(direct(body, tier, &args, gate, body_inline)?);
         if proof_selection.is_some() || args.dispatcher.is_some() {
             let proof_name = if proof_selection.is_some() {
                 output_name(&base, tier, Form::Proof, &args)?

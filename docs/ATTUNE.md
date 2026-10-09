@@ -327,7 +327,9 @@ or close that rewrite's compile-time acceptance gate.
 Implemented on the draft: `inline(default)` explicitly requests an archmage
 policy that emits `#[inline]` for unrestricted `pub`, and no inline attribute
 for restricted visibility or an ordinary private function. Resolution happens
-after each generated output's visibility override. Omitting the policy keeps
+after a direct output's visibility override, before lowering to a private helper.
+Hidden implementations use the source operation's visibility; wrapper visibility
+overrides affect wrappers independently. Omitting the policy keeps
 the previous defaults; this is not a change to legacy attribute behavior.
 
 ```rust,ignore
@@ -335,7 +337,7 @@ the previous defaults; this is not a change to legacy attribute behavior.
 #[attune(inline(default), make(all))]             // policy for every operation body
 #[attune(inline(default), make(pub _v3, pub(crate) _scalar, _v3_t, _))]
 #[attune(inline(default), make(inline(hint) _*, inline(never) _))]
-#[attune(wrap, inline(default))]                  // hidden native body is private
+#[attune(wrap, inline(default))]                  // body policy uses source visibility
 ```
 
 Definition-level policy applies to bodies only, including private bodies emitted
@@ -347,9 +349,11 @@ emits `#[inline(never)]`. `always` is rejected for target-feature bodies by this
 stable frontend, but is available for scalar bodies and forwarding outputs.
 Duplicate definition-level policies are errors.
 
-A native `wrap` body is private, so `inline(default)` omits its hint even if the
-proof wrapper is public; that wrapper keeps `#[inline(always)]`. Scalar and wasm
-`wrap` lower directly, so their body policy uses the original visibility. Trait
+A native `wrap` body remains private, but a public source operation gives that
+body `#[inline]`; its proof wrapper independently keeps `#[inline(always)]`.
+The same source-visibility rule applies to hidden proof-only and dispatcher-only
+family bodies, including scalar fallbacks. Scalar and wasm `wrap` lower directly
+and also use the source visibility. Trait
 placement markers (`in_trait`, `nested`, or `_self`) reject definition-level
 `inline(default)` with an explicit-choice diagnostic rather than guessing.
 No enclosing source scan or body AST pass was added.
@@ -387,7 +391,8 @@ and feature preservation across scalar, x86, NEON and WASM expansions.
 method, dispatch and covered calls with `forbid(unsafe_code)` and `deny(warnings)`.
 
 The [visibility-policy runtime comparison](../benchmarks/inline_default_2026-10-09/README.md)
-uses fresh baseline/policy builds and the same real-consumer workloads. It found
+used the earlier, incorrect policy that resolved native kernels from their
+synthetic private visibility. It used fresh baseline/policy builds and found
 higher non-LTO encoder times with visibility-based hints, while shipping-profile
 and decoder differences were small. This supports offering `inline(default)`
 as an explicit policy, not changing omission behavior or recommending it over
@@ -395,7 +400,7 @@ as an explicit policy, not changing omission behavior or recommending it over
 emitter policies rather than the complete attune rewrite.
 
 The [emission inventory](../benchmarks/inline_default_inventory_2026-10-09/README.md)
-records where the visibility rule resolves in those pinned consumers. All 2,402
+records that earlier policy in those pinned consumers. All 2,402
 matching body events resolve to no inline attribute; 1,359 are magetypes backend
 kernels. Proof-wrapper decisions are counted separately. The full inventory
 preserves source/body locations and guards, including distinct macro-template
