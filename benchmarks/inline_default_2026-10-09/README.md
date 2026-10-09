@@ -107,3 +107,21 @@ Full wrapper logs are `/home/lilith/tmp/attune-inline-default-build.log` and
 indexes full sample/build logs by hash. Reference binaries are preserved outside
 Cargo target directories. The provenance capture also lists older crates.io
 archives that were **not** the selected macro stack in this experiment.
+
+## Implementation checks
+
+Macro-crate unit tests, all attune integration suites (including the new inline
+suite), and macro-crate Clippy passed. The generator, registry validation, token
+validation and soundness checks passed. Legacy macro expansion snapshots and
+both the original-input and expanded-output compile suites passed unchanged;
+no expected output was updated. Their complete logs are
+`/home/lilith/tmp/attune-inline-default-tests-recheck.log` and
+`/home/lilith/tmp/attune-inline-default-compat.log`.
+
+```text
+focused tests + Clippy: rc=0 1s  | peak-RSS 0.22GiB | min-avail 29021MiB | peak-load 1.20
+health + legacy suites: rc=0 94s | peak-RSS 0.24GiB | min-avail 28559MiB | peak-load 0.99
+```
+
+These are local x86-64 checks. No new cross-platform CI result or closed
+end-user compile-time gate is claimed.
