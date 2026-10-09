@@ -15,11 +15,15 @@ export out report:
     python3 run.py export --out {{out}} --report {{report}}
 
 check:
-    uvx ruff format --check run.py
-    uvx ruff check run.py
-    rustfmt --edition 2024 --check driver.rs
+    uvx ruff format --check run.py inventory.py
+    uvx ruff check run.py inventory.py
+    rustfmt --edition 2024 --check driver.rs inventory_emit.rs inventory_controls.rs
 
 # Focused gates for the visibility-policy implementation.
 check-attune:
     cd ../.. && cargo test -p archmage-macros
     cd ../.. && cargo test --test attune_inline --test attune --test attune_selection --test attune_attributes
+
+# Inventory emitter decisions in a fresh copy of a measured body_default case.
+inventory measurement out:
+    python3 inventory.py --measurement {{measurement}} --out {{out}}
