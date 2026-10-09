@@ -204,7 +204,16 @@ impl Call {
                 match parent.map(|parent| parent.access(tier)).transpose() {
                     Ok(Some(Some(access))) => Some(access),
                     Ok(_) => continue,
-                    Err(diagnostic) => return diagnostic,
+                    Err(diagnostic) => {
+                        // A foreign or disabled candidate must not diagnose
+                        // proof ambiguity in a call that uses another fallback.
+                        // Like a call arm, the diagnostic also yields to an
+                        // earlier guaranteed candidate whose cfg is enabled.
+                        let condition = selection_condition(caller, selection);
+                        let guard = branch_guard(&condition, &guarantees);
+                        branches.push(quote!(#guard { #diagnostic }));
+                        continue;
+                    }
                 }
             } else {
                 None
@@ -256,25 +265,8 @@ impl Call {
             } else {
                 quote!(if let Some(#proof_ident) = <#token as ::archmage::SimdToken>::summon() { break #label #invocation; })
             };
-            let arch = if caller.is_some_and(|c| c.target_arch == tier.target_arch) {
-                None
-            } else {
-                tier.target_arch
-            };
-            let condition = match (arch, selection.gate.as_deref()) {
-                (Some(a), Some(f)) => Some(quote!(all(target_arch = #a, feature = #f))),
-                (Some(a), None) => Some(quote!(target_arch = #a)),
-                (None, Some(f)) => Some(quote!(feature = #f)),
-                (None, None) => None,
-            };
-            let guard = match (&condition, guarantees.is_empty()) {
-                (None, true) => quote!(),
-                (Some(condition), true) => quote!(#[cfg(#condition)]),
-                (None, false) => quote!(#[cfg(not(any(#(#guarantees),*)))]),
-                (Some(condition), false) => {
-                    quote!(#[cfg(all(#condition, not(any(#(#guarantees),*))))])
-                }
-            };
+            let condition = selection_condition(caller, selection);
+            let guard = branch_guard(&condition, &guarantees);
             branches.push(quote!(#guard { #branch }));
             if guaranteed {
                 if let Some(condition) = condition {
@@ -298,6 +290,29 @@ impl Call {
             quote!(let #supplied_ident = #proof;)
         });
         quote!({ #supplied #label: { #(#branches)* #failure } })
+    }
+}
+
+fn selection_condition(caller: Option<Context<'_>>, selection: &Selection) -> Option<TokenStream> {
+    let arch = if caller.is_some_and(|c| c.target_arch == selection.tier.target_arch) {
+        None
+    } else {
+        selection.tier.target_arch
+    };
+    match (arch, selection.gate.as_deref()) {
+        (Some(a), Some(f)) => Some(quote!(all(target_arch = #a, feature = #f))),
+        (Some(a), None) => Some(quote!(target_arch = #a)),
+        (None, Some(f)) => Some(quote!(feature = #f)),
+        (None, None) => None,
+    }
+}
+
+fn branch_guard(condition: &Option<TokenStream>, guarantees: &[TokenStream]) -> TokenStream {
+    match (condition, guarantees.is_empty()) {
+        (None, true) => quote!(),
+        (Some(condition), true) => quote!(#[cfg(#condition)]),
+        (None, false) => quote!(#[cfg(not(any(#(#guarantees),*)))]),
+        (Some(condition), false) => quote!(#[cfg(all(#condition, not(any(#(#guarantees),*))))]),
     }
 }
 

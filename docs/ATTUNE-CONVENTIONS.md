@@ -87,6 +87,10 @@ parameters require `using(token)` when a call needs inherited proof; already
 covered calls do not need that choice. Explicit `using(...)` wins and is evaluated
 once. `reattune!` retains runtime reselection unless given explicit `using(...)`.
 
+Ambiguity diagnostics follow the candidate's architecture and feature gates,
+including guards for earlier guaranteed choices. A foreign or disabled candidate
+cannot require a parent-proof choice before an available scalar fallback.
+
 The same contextual rewrite is shared by compatible legacy feature attributes.
 Ordinary unannotated functions cannot provide their signature to a function-like
 macro: keep `using(token)` there. Inference does not inspect enclosing source,
