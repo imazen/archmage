@@ -1,0 +1,16 @@
+{
+  "old": {
+    "path": "/home/lilith/tmp/attune-inline-inventory-calibrated-2026-10-09/decisions.csv",
+    "sha256": "24502320f33d555e1143eaee511c2e75e32bb3eb2811a5d065098f8e58b118b4"
+  },
+  "corrected": {
+    "path": "/home/lilith/tmp/attune-inline-operation-inventory-2026-10-09/decisions.csv",
+    "sha256": "a7dfe3a02890b7142b534b5fbe86aff980d6a86b0652cb4c32583c2da5b93c22"
+  },
+  "identity_fields": "All old CSV columns except selected; new policy_visibility is additional derived metadata.",
+  "unique_events_per_inventory": 4364,
+  "same_identities_and_other_metadata": true,
+  "changed_matching_consumer_bodies": 42,
+  "changed_calibration_bodies": 1,
+  "unchanged_matching_proof_wrappers": 1951
+}
