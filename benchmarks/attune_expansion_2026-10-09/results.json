@@ -1,0 +1,305 @@
+{
+  "command": [
+    "tests/attune_expansion/run.py",
+    "--out",
+    "/home/lilith/output/archmage/attune-expanded-2026-10-09",
+    "--keep-going"
+  ],
+  "revision": "dfa5458e4ab8bf99bfaece7a1bd440dc8a412257",
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: x86_64-unknown-linux-gnu\nrelease: 1.98.1\nLLVM version: 22.1.8\n",
+  "results": [
+    {
+      "arch": "x86_64",
+      "features": false,
+      "expected_pass": 1539,
+      "expected_reject": 466,
+      "ok": true,
+      "failures": [],
+      "groups": {
+        "definition-policy": 432,
+        "selector-policy": 120,
+        "definition-modifier": 96,
+        "definition-placement": 30,
+        "invocation": 1188,
+        "options": 10,
+        "call-shape": 32,
+        "unsupported-invocation": 7,
+        "rejection": 17,
+        "token-marker": 9,
+        "rust-attribute": 28,
+        "proof-expression": 2,
+        "signature": 5,
+        "registered-tier": 17,
+        "nesting": 10,
+        "inference": 2
+      }
+    },
+    {
+      "arch": "x86_64",
+      "features": true,
+      "expected_pass": 1572,
+      "expected_reject": 477,
+      "ok": true,
+      "failures": [],
+      "groups": {
+        "definition-policy": 432,
+        "selector-policy": 120,
+        "definition-modifier": 96,
+        "definition-placement": 30,
+        "invocation": 1232,
+        "options": 10,
+        "call-shape": 32,
+        "unsupported-invocation": 7,
+        "rejection": 17,
+        "token-marker": 9,
+        "rust-attribute": 28,
+        "proof-expression": 2,
+        "signature": 5,
+        "registered-tier": 17,
+        "nesting": 10,
+        "inference": 2
+      }
+    },
+    {
+      "arch": "aarch64",
+      "features": false,
+      "expected_pass": 1510,
+      "expected_reject": 451,
+      "ok": true,
+      "failures": [],
+      "groups": {
+        "definition-policy": 432,
+        "selector-policy": 120,
+        "definition-modifier": 96,
+        "definition-placement": 30,
+        "invocation": 1144,
+        "options": 10,
+        "call-shape": 32,
+        "unsupported-invocation": 7,
+        "rejection": 17,
+        "token-marker": 9,
+        "rust-attribute": 28,
+        "proof-expression": 2,
+        "signature": 5,
+        "registered-tier": 17,
+        "nesting": 10,
+        "inference": 2
+      }
+    },
+    {
+      "arch": "aarch64",
+      "features": true,
+      "expected_pass": 1510,
+      "expected_reject": 451,
+      "ok": true,
+      "failures": [],
+      "groups": {
+        "definition-policy": 432,
+        "selector-policy": 120,
+        "definition-modifier": 96,
+        "definition-placement": 30,
+        "invocation": 1144,
+        "options": 10,
+        "call-shape": 32,
+        "unsupported-invocation": 7,
+        "rejection": 17,
+        "token-marker": 9,
+        "rust-attribute": 28,
+        "proof-expression": 2,
+        "signature": 5,
+        "registered-tier": 17,
+        "nesting": 10,
+        "inference": 2
+      }
+    },
+    {
+      "arch": "wasm32",
+      "features": false,
+      "expected_pass": 1453,
+      "expected_reject": 464,
+      "ok": true,
+      "failures": [],
+      "groups": {
+        "definition-policy": 432,
+        "selector-policy": 120,
+        "definition-modifier": 96,
+        "definition-placement": 30,
+        "invocation": 1100,
+        "options": 10,
+        "call-shape": 32,
+        "unsupported-invocation": 7,
+        "rejection": 17,
+        "token-marker": 9,
+        "rust-attribute": 28,
+        "proof-expression": 2,
+        "signature": 5,
+        "registered-tier": 17,
+        "nesting": 10,
+        "inference": 2
+      }
+    },
+    {
+      "arch": "wasm32",
+      "features": true,
+      "expected_pass": 1453,
+      "expected_reject": 464,
+      "ok": true,
+      "failures": [],
+      "groups": {
+        "definition-policy": 432,
+        "selector-policy": 120,
+        "definition-modifier": 96,
+        "definition-placement": 30,
+        "invocation": 1100,
+        "options": 10,
+        "call-shape": 32,
+        "unsupported-invocation": 7,
+        "rejection": 17,
+        "token-marker": 9,
+        "rust-attribute": 28,
+        "proof-expression": 2,
+        "signature": 5,
+        "registered-tier": 17,
+        "nesting": 10,
+        "inference": 2
+      }
+    },
+    {
+      "arch": "x86",
+      "features": false,
+      "expected_pass": 1072,
+      "expected_reject": 273,
+      "ok": true,
+      "failures": [],
+      "groups": {
+        "definition-policy": 432,
+        "selector-policy": 120,
+        "definition-modifier": 96,
+        "definition-placement": 30,
+        "invocation": 528,
+        "options": 10,
+        "call-shape": 32,
+        "unsupported-invocation": 7,
+        "rejection": 17,
+        "token-marker": 9,
+        "rust-attribute": 28,
+        "proof-expression": 2,
+        "signature": 5,
+        "registered-tier": 17,
+        "nesting": 10,
+        "inference": 2
+      }
+    },
+    {
+      "arch": "x86",
+      "features": true,
+      "expected_pass": 1072,
+      "expected_reject": 273,
+      "ok": true,
+      "failures": [],
+      "groups": {
+        "definition-policy": 432,
+        "selector-policy": 120,
+        "definition-modifier": 96,
+        "definition-placement": 30,
+        "invocation": 528,
+        "options": 10,
+        "call-shape": 32,
+        "unsupported-invocation": 7,
+        "rejection": 17,
+        "token-marker": 9,
+        "rust-attribute": 28,
+        "proof-expression": 2,
+        "signature": 5,
+        "registered-tier": 17,
+        "nesting": 10,
+        "inference": 2
+      }
+    }
+  ],
+  "resource_summary": "run-heavy: done rc=0 154s | peak-RSS 0.37GiB | min-avail 27826MiB | peak-load 1.29",
+  "harness_commit": "a100424120af7d94ea0dec247f3ed941cbe450fc",
+  "artifacts": "/home/lilith/output/archmage/attune-expanded-2026-10-09",
+  "raw_artifacts": [
+    {
+      "path": "x86_64-off/expanded-raw.rs",
+      "bytes": 2961287,
+      "sha256": "c1bf100452e1ed134981f84bf64e4a402768460b0bde3a5cc56d7e588d039ae9"
+    },
+    {
+      "path": "x86_64-off/rejected-expanded-raw.rs",
+      "bytes": 860621,
+      "sha256": "4edea2014698d6726585d4124cdf103dc19262d4223f0905a6c6f88774669286"
+    },
+    {
+      "path": "x86_64-on/expanded-raw.rs",
+      "bytes": 3903386,
+      "sha256": "45057d10c73a5d440064288caf16f92109d536963b00be51a8573c2e6a22d400"
+    },
+    {
+      "path": "x86_64-on/rejected-expanded-raw.rs",
+      "bytes": 1186579,
+      "sha256": "70d8e2f9d078a620805880f42907692d66d06cc6ba38d033d25b119c18a5eccb"
+    },
+    {
+      "path": "aarch64-off/expanded-raw.rs",
+      "bytes": 2070571,
+      "sha256": "17fa8a00eeaebe8ad076f0daa1531692558cd13bf076c9c98c4e92b6188fa51a"
+    },
+    {
+      "path": "aarch64-off/rejected-expanded-raw.rs",
+      "bytes": 559782,
+      "sha256": "ada2aa4579c937a4dcce90b054ed6dc57cd9c0c8529a1ee4bf241a1e474cbb25"
+    },
+    {
+      "path": "aarch64-on/expanded-raw.rs",
+      "bytes": 2070761,
+      "sha256": "a8e036520612c27ac3fc3313d9ceab50857bcca5f08efd9b736217e04f2728a2"
+    },
+    {
+      "path": "aarch64-on/rejected-expanded-raw.rs",
+      "bytes": 559782,
+      "sha256": "ada2aa4579c937a4dcce90b054ed6dc57cd9c0c8529a1ee4bf241a1e474cbb25"
+    },
+    {
+      "path": "wasm32-off/expanded-raw.rs",
+      "bytes": 1936498,
+      "sha256": "ab73d55dc830e95d888f405fe915a6a27f4aa4cecee81838a406bd1b240b584a"
+    },
+    {
+      "path": "wasm32-off/rejected-expanded-raw.rs",
+      "bytes": 545020,
+      "sha256": "fac9c355cc14f4180744592354edab97e2708986821755d24bff886748084389"
+    },
+    {
+      "path": "wasm32-on/expanded-raw.rs",
+      "bytes": 1936691,
+      "sha256": "f6468d0f6c2d48d8baa1195c1225a8886543c51bea1d60e90574b7d46ddc099c"
+    },
+    {
+      "path": "wasm32-on/rejected-expanded-raw.rs",
+      "bytes": 545020,
+      "sha256": "fac9c355cc14f4180744592354edab97e2708986821755d24bff886748084389"
+    },
+    {
+      "path": "x86-off/expanded-raw.rs",
+      "bytes": 672880,
+      "sha256": "82a5397633ffff768e4200714fc63724dea2df56d0170c241b3faad87899c0f3"
+    },
+    {
+      "path": "x86-off/rejected-expanded-raw.rs",
+      "bytes": 142726,
+      "sha256": "2d95e51d4b6cfa4ffd91b3be833630b45af570d84630349a18892e404d2b9302"
+    },
+    {
+      "path": "x86-on/expanded-raw.rs",
+      "bytes": 673003,
+      "sha256": "83e277ddf65b3f8e4894a4eb204fc55ae1b4e61250d4e723b0c9a86b085506bb"
+    },
+    {
+      "path": "x86-on/rejected-expanded-raw.rs",
+      "bytes": 142726,
+      "sha256": "2d95e51d4b6cfa4ffd91b3be833630b45af570d84630349a18892e404d2b9302"
+    }
+  ]
+}
