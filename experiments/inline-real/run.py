@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 POLICIES = (
     "baseline",
+    "body_default",
     "body_none",
     "body_never",
     "proof_none",
@@ -51,6 +52,13 @@ def policy_patch(stack, policy):
         body = (
             "None" if policy == "body_none" else "Some(parse_quote!(#[inline(never)]))"
         )
+        if policy == "body_default":
+            # Native arcane kernels are private siblings/nested functions.
+            # Scalar and wasm bodies keep the original function's visibility.
+            body = """if (features_csv.is_empty() || target_arch == Some("wasm32"))
+                && matches!(input_fn.vis, syn::Visibility::Public(_)) {
+            Some(parse_quote!(#[inline]))
+        } else { None }"""
         replace(
             arc,
             """let inline_attr: Attribute = if args.inline_always {
@@ -71,6 +79,10 @@ def policy_patch(stack, policy):
             if policy == "body_none"
             else "new_attrs.push(parse_quote!(#[inline(never)]));"
         )
+        if policy == "body_default":
+            new = """if matches!(variant_fn.vis, syn::Visibility::Public(_)) {
+        new_attrs.push(parse_quote!(#[inline]));
+    }"""
         replace(rite, "new_attrs.push(parse_quote!(#[inline]));", new)
     elif policy.startswith("proof_"):
         new = "" if policy == "proof_none" else "#[inline]"
@@ -108,7 +120,7 @@ def clean_env():
     return env
 
 
-def prepare(out, sources, revision, image):
+def prepare(out, sources, revision, image, policies):
     out.mkdir(parents=True, exist_ok=False)
     rev = subprocess.check_output(
         ["git", "rev-parse", revision], cwd=ROOT, text=True
@@ -153,7 +165,7 @@ def prepare(out, sources, revision, image):
         ]
         subprocess.run(cmd, check=True)
     plan["inputs"] = {str(s): sha(out / f"photo-{s}.yuv") for s in (256, 512)}
-    for policy in POLICIES:
+    for policy in policies:
         case = out / policy
         stack = case / "archmage"
         with tarfile.open(archive) as f:
@@ -383,13 +395,13 @@ def summarize(out):
         print(r)
 
 
-def export(out, report):
+def export(out, report, profiles, policies):
     """Validate the complete matrix and preserve compact reviewable evidence."""
     rows = json.loads((out / "measurements.json").read_text())
     expected = {
         (profile, policy, size, repetition, workload)
-        for profile in PROFILES
-        for policy in POLICIES
+        for profile in profiles
+        for policy in policies
         for size in (256, 512)
         for repetition in range(5)
         for workload in ("encode", "decode")
@@ -419,14 +431,14 @@ def export(out, report):
         "mad_ns",
         "reliable",
     ]
-    for profile in PROFILES:
+    for profile in profiles:
         with (report / f"{profile}.csv").open("w", newline="") as f:
             writer = csv.DictWriter(f, fields, extrasaction="ignore")
             writer.writeheader()
             writer.writerows(r for r in rows if r["profile"] == profile)
     builds = []
-    for profile in PROFILES:
-        for policy in POLICIES:
+    for profile in profiles:
+        for policy in policies:
             key = f"{profile}-{policy}"
             record = json.loads((out / "builds" / f"{key}.json").read_text())
             preserved = out / "builds" / f"{key}.bin"
@@ -486,13 +498,13 @@ def main():
     p.add_argument("--passes", type=int, default=5)
     a = p.parse_args()
     if a.action == "prepare":
-        prepare(a.out, a.sources, a.revision, a.image)
+        prepare(a.out, a.sources, a.revision, a.image, a.policies)
     elif a.action == "build":
         build(a.out, a.profiles, a.policies)
     elif a.action == "measure":
         measure(a.out, a.profiles, a.policies, a.passes)
     elif a.action == "export":
-        export(a.out, a.report)
+        export(a.out, a.report, a.profiles, a.policies)
     else:
         summarize(a.out)
 

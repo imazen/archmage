@@ -15,6 +15,7 @@ Policies, each changing one layer from the baseline:
 | Policy | Changed emission |
 |---|---|
 | baseline | Fixed main's existing attributes: body hints, always-inline proof wrappers, existing dispatcher attributes |
+| body_default | Body hints only on unrestricted pub; native arcane kernels are private |
 | body_none | Omit implicit body inline attributes in arcane and rite |
 | body_never | Replace those body hints with inline(never) |
 | proof_none | Omit implicit inline(always) on arcane proof wrappers |
@@ -83,6 +84,14 @@ resource wrapper's peak-RSS lines. Do not infer generic defaults from a single
 CPU and these two workloads, or interpret inline(never) as equivalent to
 omitting an attribute.
 
-The export command requires the complete five-pass matrix, 20 samples per group,
+The export command requires the complete five-pass matrix for the explicitly
+selected `--profiles` and `--policies`, 20 samples per group,
 reliable runs and output parity before writing compact CSV/JSON evidence. Full
 samples stay in the raw logs, indexed by hash in `raw-artifacts.csv`.
+
+To compare only the visibility-based policy, pass `--policies baseline
+body_default` to prepare, build, measure and export. Rebuild and remeasure the
+baseline alongside it; do not compare runs made in different sessions as if
+paired. The native arcane operation is private even when its proof wrapper is
+public. Scalar/wasm arcane bodies and rite functions use their emitted visibility.
+Proof-wrapper attributes and all explicit `inline_always` requests stay intact.

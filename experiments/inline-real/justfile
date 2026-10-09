@@ -18,3 +18,8 @@ check:
     uvx ruff format --check run.py
     uvx ruff check run.py
     rustfmt --edition 2024 --check driver.rs
+
+# Focused gates for the visibility-policy implementation.
+check-attune:
+    cd ../.. && cargo test -p archmage-macros
+    cd ../.. && cargo test --test attune_inline --test attune --test attune_selection --test attune_attributes
