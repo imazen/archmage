@@ -385,3 +385,11 @@ Verification: `archmage-macros/src/attune/inline_tests.rs` checks resolved attri
 and feature preservation across scalar, x86, NEON and WASM expansions.
 `tests/attune_inline.rs` compiles and exercises generics, a re-exported inherent
 method, dispatch and covered calls with `forbid(unsafe_code)` and `deny(warnings)`.
+
+The [visibility-policy runtime comparison](../benchmarks/inline_default_2026-10-09/README.md)
+uses fresh baseline/policy builds and the same real-consumer workloads. It found
+higher non-LTO encoder times with visibility-based hints, while shipping-profile
+and decoder differences were small. This supports offering `inline(default)`
+as an explicit policy, not changing omission behavior or recommending it over
+`inline(hint)` for hot kernels. The experiment measures equivalent legacy
+emitter policies rather than the complete attune rewrite.
