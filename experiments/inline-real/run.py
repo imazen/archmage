@@ -22,6 +22,7 @@ HERE = Path(__file__).resolve().parent
 POLICIES = (
     "baseline",
     "body_default",
+    "body_operation",
     "body_none",
     "body_never",
     "proof_none",
@@ -60,6 +61,11 @@ def policy_patch(stack, policy):
                 && matches!(input_fn.vis, syn::Visibility::Public(_)) {
             Some(parse_quote!(#[inline]))
         } else { None }"""
+        if policy == "body_operation":
+            # Resolve before the implementation becomes a private helper.
+            body = """if matches!(input_fn.vis, syn::Visibility::Public(_)) {
+            Some(parse_quote!(#[inline]))
+        } else { None }"""
         replace(
             arc,
             """let inline_attr: Attribute = if args.inline_always {
@@ -80,7 +86,7 @@ def policy_patch(stack, policy):
             if policy == "body_none"
             else "new_attrs.push(parse_quote!(#[inline(never)]));"
         )
-        if policy == "body_default":
+        if policy in ("body_default", "body_operation"):
             new = """if matches!(variant_fn.vis, syn::Visibility::Public(_)) {
         new_attrs.push(parse_quote!(#[inline]));
     }"""

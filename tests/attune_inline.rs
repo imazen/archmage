@@ -48,3 +48,22 @@ fn visibility_policy_preserves_generics_dispatch_and_context_calls() {
     assert_eq!(scalar_proof(ScalarToken, 9), 10);
     assert_eq!(identity(7), 7);
 }
+
+// Both exposed entry points have private implementation bodies. Their source
+// visibility must be resolved before lowering, including generic signatures.
+#[attune(inline(default), make(_v3_t, _))]
+pub fn public_family<T: Copy>(value: T) -> T {
+    value
+}
+
+#[cfg(target_arch = "x86_64")]
+#[attune(wrap, inline(default))]
+pub fn public_proof<T: Copy>(token: archmage::X64V3Token, value: T) -> T {
+    let _ = token;
+    value
+}
+
+#[test]
+fn public_hidden_family_preserves_generic_dispatch() {
+    assert_eq!(public_family(23u64), 23);
+}

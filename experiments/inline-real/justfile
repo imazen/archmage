@@ -25,5 +25,18 @@ check-attune:
     cd ../.. && cargo test --test attune_inline --test attune --test attune_selection --test attune_attributes
 
 # Inventory emitter decisions in a fresh copy of a measured body_default case.
-inventory measurement out:
-    python3 inventory.py --measurement {{measurement}} --out {{out}}
+inventory measurement out policy="body_default":
+    python3 inventory.py --measurement {{measurement}} --out {{out}} --policy {{policy}}
+
+# Paired baseline / original private-helper rule / corrected operation rule.
+prepare-operation out sources image revision:
+    python3 run.py prepare --out {{out}} --sources {{sources}} --image {{image}} --revision {{revision}} --policies baseline body_default body_operation
+
+build-operation out:
+    python3 run.py build --out {{out}} --policies baseline body_default body_operation
+
+measure-operation out:
+    python3 run.py measure --out {{out}} --passes 5 --policies baseline body_default body_operation
+
+export-operation out report:
+    python3 run.py export --out {{out}} --report {{report}} --policies baseline body_default body_operation

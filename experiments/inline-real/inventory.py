@@ -89,9 +89,9 @@ def write_csv(path, fields, rows):
         writer.writerows(rows)
 
 
-def collect(measurement, out):
+def collect(measurement, out, policy):
     out.mkdir(parents=True, exist_ok=False)
-    source = measurement / "body_default"
+    source = measurement / policy
     case = out / "case"
     for name in ("archmage", "zenav1-svt", "rav1d-safe", "driver"):
         shutil.copytree(
@@ -178,9 +178,12 @@ def collect(measurement, out):
         )
         row["generated_guards_match"] = row["arch_matches"] and row["feature_matches"]
         # Compare reported decisions with the documented rule, not source text heuristics.
+        row["policy_visibility"] = row[
+            "source_visibility" if policy == "body_operation" else "body_visibility"
+        ]
         if row["policy"] == "default":
             assert row["selected"] == (
-                "inline" if row["body_visibility"] == "pub" else "none"
+                "inline" if row["policy_visibility"] == "pub" else "none"
             ), row
         rows.append(row)
     assert rows, "instrumentation produced no events"
@@ -189,7 +192,11 @@ def collect(measurement, out):
         ("public_direct", "direct", "inline"),
         ("crate_direct", "direct", "none"),
         ("private_direct", "direct", "none"),
-        ("public_wrapped", "hidden_sibling", "none"),
+        (
+            "public_wrapped",
+            "hidden_sibling",
+            "inline" if policy == "body_operation" else "none",
+        ),
         ("public_wrapped", "proof_wrapper", "always"),
         ("public_scalar", "direct", "inline"),
         ("explicit_always", "direct", "always"),
@@ -200,6 +207,7 @@ def collect(measurement, out):
         out / "decisions.csv",
         [
             *FIELDS,
+            "policy_visibility",
             "enabled_features",
             "arch_matches",
             "feature_matches",
@@ -213,6 +221,7 @@ def collect(measurement, out):
         "macro",
         "source_visibility",
         "body_visibility",
+        "policy_visibility",
         "kind",
         "selected",
         "policy",
@@ -240,6 +249,7 @@ def collect(measurement, out):
         out / "provenance.json",
         {
             "measurement_root": str(measurement),
+            "measured_policy": policy,
             "measurement_plan_sha256": sha(measurement / "plan.json"),
             "measurement_plan": json.loads((measurement / "plan.json").read_text()),
             "command": command,
@@ -277,5 +287,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--measurement", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument(
+        "--policy", choices=("body_default", "body_operation"), default="body_default"
+    )
     args = parser.parse_args()
-    collect(args.measurement, args.out)
+    collect(args.measurement, args.out, args.policy)
