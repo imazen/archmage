@@ -1,0 +1,193 @@
+{
+  "observed_at": "2026-10-09T00:53:55.562975+00:00",
+  "hostname": "i265",
+  "lscpu": {
+    "lscpu": [
+      {
+        "field": "Architecture:",
+        "data": "x86_64"
+      },
+      {
+        "field": "CPU op-mode(s):",
+        "data": "32-bit, 64-bit"
+      },
+      {
+        "field": "Address sizes:",
+        "data": "46 bits physical, 48 bits virtual"
+      },
+      {
+        "field": "Byte Order:",
+        "data": "Little Endian"
+      },
+      {
+        "field": "CPU(s):",
+        "data": "20"
+      },
+      {
+        "field": "On-line CPU(s) list:",
+        "data": "0-19"
+      },
+      {
+        "field": "Vendor ID:",
+        "data": "GenuineIntel"
+      },
+      {
+        "field": "Model name:",
+        "data": "Intel(R) Core(TM) Ultra 7 265K"
+      },
+      {
+        "field": "CPU family:",
+        "data": "6"
+      },
+      {
+        "field": "Model:",
+        "data": "198"
+      },
+      {
+        "field": "Thread(s) per core:",
+        "data": "1"
+      },
+      {
+        "field": "Core(s) per socket:",
+        "data": "20"
+      },
+      {
+        "field": "Socket(s):",
+        "data": "1"
+      },
+      {
+        "field": "Stepping:",
+        "data": "2"
+      },
+      {
+        "field": "CPU(s) scaling MHz:",
+        "data": "46%"
+      },
+      {
+        "field": "CPU max MHz:",
+        "data": "5600.0000"
+      },
+      {
+        "field": "CPU min MHz:",
+        "data": "800.0000"
+      },
+      {
+        "field": "BogoMIPS:",
+        "data": "7756.80"
+      },
+      {
+        "field": "Flags:",
+        "data": "fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf tsc_known_freq pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault ssbd ibrs ibpb stibp ibrs_enhanced tpr_shadow flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid rdt_a rdseed adx smap clflushopt clwb intel_pt sha_ni xsaveopt xsavec xgetbv1 xsaves split_lock_detect user_shstk avx_vnni lam wbnoinvd dtherm ida arat pln pts hwp hwp_notify hwp_act_window hwp_epp hwp_pkg_req hfi vnmi umip pku ospke waitpkg gfni vaes vpclmulqdq rdpid bus_lock_detect movdiri movdir64b fsrm md_clear serialize arch_lbr ibt flush_l1d arch_capabilities"
+      },
+      {
+        "field": "Virtualization:",
+        "data": "VT-x"
+      },
+      {
+        "field": "L1d cache:",
+        "data": "704 KiB (18 instances)"
+      },
+      {
+        "field": "L1i cache:",
+        "data": "1.1 MiB (18 instances)"
+      },
+      {
+        "field": "L2 cache:",
+        "data": "36 MiB (11 instances)"
+      },
+      {
+        "field": "L3 cache:",
+        "data": "30 MiB (1 instance)"
+      },
+      {
+        "field": "NUMA node(s):",
+        "data": "1"
+      },
+      {
+        "field": "NUMA node0 CPU(s):",
+        "data": "0-19"
+      },
+      {
+        "field": "Vulnerability Gather data sampling:",
+        "data": "Not affected"
+      },
+      {
+        "field": "Vulnerability Ghostwrite:",
+        "data": "Not affected"
+      },
+      {
+        "field": "Vulnerability Indirect target selection:",
+        "data": "Not affected"
+      },
+      {
+        "field": "Vulnerability Itlb multihit:",
+        "data": "Not affected"
+      },
+      {
+        "field": "Vulnerability L1tf:",
+        "data": "Not affected"
+      },
+      {
+        "field": "Vulnerability Mds:",
+        "data": "Not affected"
+      },
+      {
+        "field": "Vulnerability Meltdown:",
+        "data": "Not affected"
+      },
+      {
+        "field": "Vulnerability Mmio stale data:",
+        "data": "Not affected"
+      },
+      {
+        "field": "Vulnerability Old microcode:",
+        "data": "Not affected"
+      },
+      {
+        "field": "Vulnerability Reg file data sampling:",
+        "data": "Not affected"
+      },
+      {
+        "field": "Vulnerability Retbleed:",
+        "data": "Not affected"
+      },
+      {
+        "field": "Vulnerability Spec rstack overflow:",
+        "data": "Not affected"
+      },
+      {
+        "field": "Vulnerability Spec store bypass:",
+        "data": "Mitigation; Speculative Store Bypass disabled via prctl"
+      },
+      {
+        "field": "Vulnerability Spectre v1:",
+        "data": "Mitigation; usercopy/swapgs barriers and __user pointer sanitization"
+      },
+      {
+        "field": "Vulnerability Spectre v2:",
+        "data": "Mitigation; Enhanced / Automatic IBRS; IBPB conditional; PBRSB-eIBRS Not affected; BHI BHI_DIS_S"
+      },
+      {
+        "field": "Vulnerability Srbds:",
+        "data": "Not affected"
+      },
+      {
+        "field": "Vulnerability Tsa:",
+        "data": "Not affected"
+      },
+      {
+        "field": "Vulnerability Tsx async abort:",
+        "data": "Not affected"
+      },
+      {
+        "field": "Vulnerability Vmscape:",
+        "data": "Mitigation; IBPB before exit to userspace"
+      }
+    ]
+  },
+  "resolve_commands": [
+    "hostname",
+    "lscpu -J",
+    "rustc -Vv"
+  ]
+}

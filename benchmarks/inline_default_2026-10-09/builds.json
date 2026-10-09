@@ -1,0 +1,74 @@
+[
+  {
+    "command": [
+      "cargo",
+      "build",
+      "--profile",
+      "release",
+      "--locked"
+    ],
+    "wall_seconds": 15.629184128003544,
+    "binary": "/home/lilith/tmp/attune-inline-default-2026-10-09/builds/release-baseline.bin",
+    "sha256": "7ce32f43fa3257874208426d1bc67ceaf68bdcbf0ba1554317d29784237d3073",
+    "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n9880386\t 376856\t  63088\t10320330\t 9d79ca\t/home/lilith/tmp/attune-inline-default-2026-10-09/builds/release-baseline.bin\n",
+    "status": 0,
+    "profile": "release",
+    "policy": "baseline",
+    "preserved_binary": "/home/lilith/tmp/attune-inline-default-2026-10-09/builds/release-baseline.bin",
+    "max_rss_kbytes": 1223404
+  },
+  {
+    "command": [
+      "cargo",
+      "build",
+      "--profile",
+      "release",
+      "--locked"
+    ],
+    "wall_seconds": 15.769700346005266,
+    "binary": "/home/lilith/tmp/attune-inline-default-2026-10-09/builds/release-body_default.bin",
+    "sha256": "25c9870fa0f11f02f3c888b0e3f10d456a1375d3ed290fbc0a4efced6dd4b8c6",
+    "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n9922822\t 375176\t  63280\t10361278\t 9e19be\t/home/lilith/tmp/attune-inline-default-2026-10-09/builds/release-body_default.bin\n",
+    "status": 0,
+    "profile": "release",
+    "policy": "body_default",
+    "preserved_binary": "/home/lilith/tmp/attune-inline-default-2026-10-09/builds/release-body_default.bin",
+    "max_rss_kbytes": 1232772
+  },
+  {
+    "command": [
+      "cargo",
+      "build",
+      "--profile",
+      "ship",
+      "--locked"
+    ],
+    "wall_seconds": 55.43509200999688,
+    "binary": "/home/lilith/tmp/attune-inline-default-2026-10-09/builds/ship-baseline.bin",
+    "sha256": "79163ee6aafa6afe3ba17720603ad96440fc6b5b5e5e78c9e3422f681977b73c",
+    "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n9086724\t 308648\t  64736\t9460108\t 90598c\t/home/lilith/tmp/attune-inline-default-2026-10-09/builds/ship-baseline.bin\n",
+    "status": 0,
+    "profile": "ship",
+    "policy": "baseline",
+    "preserved_binary": "/home/lilith/tmp/attune-inline-default-2026-10-09/builds/ship-baseline.bin",
+    "max_rss_kbytes": 1092140
+  },
+  {
+    "command": [
+      "cargo",
+      "build",
+      "--profile",
+      "ship",
+      "--locked"
+    ],
+    "wall_seconds": 55.0886778490094,
+    "binary": "/home/lilith/tmp/attune-inline-default-2026-10-09/builds/ship-body_default.bin",
+    "sha256": "ec8ff4414281ebdac261d7e38bb9f23435c03af9b653bf9be3c6d9f04424f26b",
+    "size": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n9054180\t 308696\t  64448\t9427324\t 8fd97c\t/home/lilith/tmp/attune-inline-default-2026-10-09/builds/ship-body_default.bin\n",
+    "status": 0,
+    "profile": "ship",
+    "policy": "body_default",
+    "preserved_binary": "/home/lilith/tmp/attune-inline-default-2026-10-09/builds/ship-body_default.bin",
+    "max_rss_kbytes": 1088412
+  }
+]
