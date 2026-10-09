@@ -53,6 +53,7 @@ impl Parse for Call {
                         gate,
                         visibility: None,
                         inline: None,
+                        span: name.span(),
                     });
                     if !inner.is_empty() {
                         inner.parse::<Token![,]>()?;
@@ -97,6 +98,7 @@ impl Parse for Call {
                         gate: None,
                         visibility: None,
                         inline: None,
+                        span: input.span(),
                     })
                     .collect()
             }),

@@ -23,16 +23,16 @@ pub(crate) fn expand(attr: TokenStream, item: TokenStream) -> syn::Result<TokenS
     let mut input: LightFn = syn::parse2(item)?;
     if args.family {
         family(input, args)
-    } else if args.wrap {
+    } else if args.options.wrap {
         wrap(input, args)
     } else {
-        let inferred = if args.tier.is_none() {
+        let inferred = if args.options.tier.is_none() {
             infer_suffix(&input.sig.ident)
         } else {
             None
         };
         if let Some((tier, Form::Proof)) = inferred {
-            if !args.defines.is_empty() {
+            if !args.options.defines.is_empty() {
                 return Err(syn::Error::new_spanned(
                     &input.sig,
                     "define(...) on a proof wrapper requires a generated family",
@@ -76,17 +76,17 @@ pub(crate) fn expand(attr: TokenStream, item: TokenStream) -> syn::Result<TokenS
                 output
             });
         }
-        let tier = args.tier.or_else(|| inferred.map(|(tier, _)| tier)).ok_or_else(|| {
+        let tier = args.options.tier.or_else(|| inferred.map(|(tier, _)| tier)).ok_or_else(|| {
             syn::Error::new_spanned(&input.sig.ident,
                 "attune needs a tier, a registered tier suffix (optionally _t), wrap, or make(...)")
         })?;
-        if args.in_trait || args.self_type.is_some() {
+        if args.options.in_trait || args.options.self_type.is_some() {
             return Err(syn::Error::new_spanned(
                 &input.sig,
                 "direct target features cannot be placed on a safe trait method; move this kernel outside of the impl, or use attune(wrap) with a proof parameter",
             ));
         }
-        direct(input, tier, &args, None, args.body_inline)
+        direct(input, tier, &args, None, args.options.body_inline)
     }
 }
 
@@ -124,12 +124,12 @@ fn direct(
         ));
     }
     // Raw functions without aliases need no token path or substitution pass.
-    let token_path = if args.family || !args.defines.is_empty() {
+    let token_path = if args.family || !args.options.defines.is_empty() {
         Some(tier.token_path.parse::<TokenStream>()?)
     } else {
         None
     };
-    let defines = args.defines.iter().map(|name| {
+    let defines = args.options.defines.iter().map(|name| {
         quote! {
             #[allow(non_camel_case_types, dead_code)]
             type #name = ::magetypes::simd::generic::#name<::#token_path>;
@@ -137,11 +137,11 @@ fn direct(
     });
     prepend_to_body(&mut input.body, quote!(#(#defines)*));
     let options = SharedOptions {
-        import_intrinsics: args.imports.import_intrinsics,
-        import_magetypes: args.imports.import_magetypes,
+        import_intrinsics: args.options.imports.import_intrinsics,
+        import_magetypes: args.options.imports.import_magetypes,
         cfg_feature: gate
             .map(str::to_string)
-            .or_else(|| args.imports.cfg_feature.clone()),
+            .or_else(|| args.options.imports.cfg_feature.clone()),
     };
     // Signature proof discovery must see each family's concrete parameter;
     // body Token markers remain intact until contextual calls are rewritten.
@@ -174,6 +174,7 @@ fn output_name(
     args: &Args,
 ) -> syn::Result<syn::Ident> {
     if let Some(rename) = args
+        .options
         .names
         .iter()
         .find(|r| r.tier.name == tier.name && r.form == form)
@@ -240,7 +241,7 @@ fn forward(
 }
 
 fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
-    if args.in_trait || args.self_type.is_some() {
+    if args.options.in_trait || args.options.self_type.is_some() {
         return Err(syn::Error::new_spanned(
             &input.sig,
             "family generation adds sibling functions; move this kernel outside of the impl for a trait method",
@@ -281,16 +282,6 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
                 .find(|s| s.tier.name == tier.name && s.form == Form::Hidden)
         });
         let gate = implementation.and_then(|s| s.gate.as_deref());
-        if args
-            .selections
-            .iter()
-            .any(|s| s.tier.name == tier.name && s.gate.as_deref() != gate)
-        {
-            return Err(syn::Error::new_spanned(
-                &base,
-                "a tier's direct, proof and dispatcher implementations must have the same feature gate",
-            ));
-        }
         let direct_name = if direct_selection.is_some() {
             output_name(&base, tier, Form::Direct, &args)?
         } else {
@@ -306,7 +297,7 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
             .unwrap_or(&input.vis);
         let body_inline = direct_selection
             .and_then(|s| s.inline)
-            .or(args.body_inline)
+            .or(args.options.body_inline)
             .map(|policy| policy.resolve(operation_vis));
         body.vis = if direct_selection.is_some() {
             operation_vis.clone()
@@ -333,12 +324,12 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
             let invocation = forward(
                 &input.sig,
                 &proof_name,
-                args.in_impl,
+                args.options.in_impl,
                 Some(quote!(__attune_proof)),
             );
             let guard = gen_cfg_guard(tier.target_arch, gate);
             dispatch_arms.push(if tier.name == "scalar" {
-                let invocation = forward(&input.sig, &proof_name, args.in_impl, Some(quote!(::archmage::ScalarToken)));
+                let invocation = forward(&input.sig, &proof_name, args.options.in_impl, Some(quote!(::archmage::ScalarToken)));
                 quote!(#guard { break '__attune_dispatch #invocation; })
             } else { quote!(#guard { if let Some(__attune_proof) = <#token as ::archmage::SimdToken>::summon() { break '__attune_dispatch #invocation; } }) });
         }
@@ -397,7 +388,7 @@ fn proof_entry(
     ) {
         return Ok(error);
     }
-    let invocation = forward(&wrapper.sig, direct_name, args.in_impl, None);
+    let invocation = forward(&wrapper.sig, direct_name, args.options.in_impl, None);
     let token: syn::Path = syn::parse_str(&format!("::{}", tier.token_path))?;
     let position = usize::from(matches!(
         wrapper.sig.inputs.first(),
@@ -432,18 +423,18 @@ fn proof_entry(
     };
     let guard = gen_cfg_guard(
         tier.target_arch,
-        gate.or(args.imports.cfg_feature.as_deref()),
+        gate.or(args.options.imports.cfg_feature.as_deref()),
     );
     Ok(quote!(#guard #wrapper))
 }
 
 fn wrap(input: LightFn, args: Args) -> syn::Result<TokenStream> {
     let options = crate::engine::boundary::BoundaryOptions {
-        body_inline: args.body_inline,
-        nested: args.in_trait || args.self_type.is_some(),
-        in_impl: args.in_impl,
-        self_type: args.self_type,
-        shared: args.imports,
+        body_inline: args.options.body_inline,
+        nested: args.options.in_trait || args.options.self_type.is_some(),
+        in_impl: args.options.in_impl,
+        self_type: args.options.self_type,
+        shared: args.options.imports,
         ..Default::default()
     };
     Ok(crate::engine::boundary::expand(input, "attune", options))

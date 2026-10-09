@@ -447,3 +447,9 @@ consumer-compile out mode *args:
 attune-conventions:
     cargo test --test attune_conventions --no-default-features
     cargo test --test attune_conventions --features avx512
+
+# Structured definition grammar and selector-local policies, gate off/on.
+attune-parser:
+    cargo test -p archmage-macros
+    cargo test --test attune_structured_syntax --no-default-features
+    cargo test --test attune_structured_syntax --features avx512

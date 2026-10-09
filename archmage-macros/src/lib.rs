@@ -679,6 +679,12 @@ mod tests;
 /// `dispatch` is an alias for `_`; `make(dispatch, +v4(avx512))` adds a private
 /// V4 implementation without exposing additional entry points.
 ///
+/// Selectors can also be written directly: `#[attune(_v3, _v3_t, dispatch)]`.
+/// Selector-local options are visibility, `cfg(feature)`, and `inline(policy)`:
+/// `_v4x_t(cfg(avx512), pub)`. A top-level `v3` preserves the written function
+/// name; `_v3` generates a suffixed output. Top-level inline policy applies to
+/// bodies; a proof/dispatcher selector's inline policy applies to its wrapper.
+///
 /// `inline(default)` selects body hints from the operation's visibility before
 /// lowering to private helpers: unrestricted `pub` gets `#[inline]`; restricted
 /// or private operations get no attribute. Direct output visibility overrides

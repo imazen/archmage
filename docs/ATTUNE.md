@@ -16,6 +16,12 @@ adds a concrete proof parameter if omitted; a written matching proof keeps its
 position. `#[attune(wrap)]` retains an existing proof-taking
 signature, including generic bounds and the proof argument's position.
 
+Output selectors can now appear directly in `attune(...)`, with local options:
+`#[attune(_*(pub(crate)), _*_t(pub), dispatch(pub), inline(hint))]`.
+`make(...)` remains a compatibility grouping. A top-level `v3` keeps the written
+name; `_v3` generates a suffixed output. See [the parser contract](ATTUNE-PARSER.md)
+for grammar, validation, option scope, and extension tests.
+
 For a source named `work`, explicit outputs are:
 
 | Selector | Interface |
