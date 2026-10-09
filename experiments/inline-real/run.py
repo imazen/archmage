@@ -5,6 +5,7 @@ Run prepare/build/measure through run-heavy, serially. All outputs are retained.
 
 import argparse
 import csv
+import datetime
 import hashlib
 import json
 import os
@@ -122,6 +123,15 @@ def clean_env():
 
 def prepare(out, sources, revision, image, policies):
     out.mkdir(parents=True, exist_ok=False)
+    save(
+        out / "machine.json",
+        {
+            "observed_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "hostname": subprocess.check_output(["hostname"], text=True).strip(),
+            "lscpu": json.loads(subprocess.check_output(["lscpu", "-J"], text=True)),
+            "resolve_commands": ["hostname", "lscpu -J", "rustc -Vv"],
+        },
+    )
     rev = subprocess.check_output(
         ["git", "rev-parse", revision], cwd=ROOT, text=True
     ).strip()
@@ -139,6 +149,7 @@ def prepare(out, sources, revision, image, policies):
             "ship": {"lto": "fat", "codegen_units": 1},
         },
         "driver_sha256": sha(HERE / "driver.rs"),
+        "runner_sha256": sha(HERE / "run.py"),
         "cpu": 2,
         "note": "Real consumer implementations unchanged. Macro emission ablations only. In-memory API timing; setup/drop/I/O outside clock. No target-cpu=native.",
     }
@@ -478,9 +489,42 @@ def export(out, report, profiles, policies):
             "processes": len(rows) // 2,
             "samples_per_row": 20,
             "driver_sha256": sha(HERE / "driver.rs"),
-            "runner_sha256": sha(HERE / "run.py"),
+            "export_runner_sha256": sha(HERE / "run.py"),
         },
     )
+
+    summary = json.loads((out / "summary.json").read_text())
+    table = [
+        "# Runtime results",
+        "",
+        "Median of five process medians; bracketed values are their minimum and maximum.",
+        "Positive changes mean more elapsed time. Ranges are not confidence intervals.",
+        "",
+    ]
+    for profile in profiles:
+        for size in (256, 512):
+            table += [
+                f"## {profile}, {size}×{size}",
+                "",
+                "| Policy | Encode ms [range] | Change | Decode ms [range] | Change |",
+                "|---|---:|---:|---:|---:|",
+            ]
+            for policy in policies:
+                cells = [policy]
+                for workload in ("encode", "decode"):
+                    r = next(
+                        r
+                        for r in summary
+                        if (r["profile"], r["size"], r["policy"], r["workload"])
+                        == (profile, size, policy, workload)
+                    )
+                    cells += [
+                        f"{r['median_ns'] / 1e6:.3f} [{r['min_ns'] / 1e6:.3f}, {r['max_ns'] / 1e6:.3f}]",
+                        f"{r['vs_baseline_pct']:+.2f}%",
+                    ]
+                table.append("| " + " | ".join(cells) + " |")
+            table.append("")
+    (report / "results.md").write_text("\n".join(table))
 
 
 def main():
