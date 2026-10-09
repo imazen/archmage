@@ -23,6 +23,10 @@
 
 ### [Unreleased]
 
+#### Added (draft branch only)
+
+- The unpublished `#[attune]` frontend accepts definition-level `inline(default|none|hint|always|never)` and per-output overrides. `default` emits hints only for unrestricted public bodies after visibility overrides; proof-wrapper and dispatcher defaults remain separate. Trait placements require an explicit policy when visibility is ambiguous. Existing omitted-policy and legacy behavior is retained (b7aceb85).
+
 #### QUEUED BREAKING CHANGES
 
 - Remove `SimdToken` parameter support from `#[autoversion]` — use tokenless (recommended) or `ScalarToken` for `incant!` nesting (deprecated since 0.9.11)

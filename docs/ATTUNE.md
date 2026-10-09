@@ -296,16 +296,17 @@ No runtime-performance or end-to-end compile-time improvement is claimed.
 ## Explicit body policy investigation (2026-10-08)
 
 The user clarified that `no_inline` is a proposed escape hatch for legacy
-attributes, and asked whether attune should require an explicit choice. No
-parser or default changes were made in this investigation. The earlier default
-table remains a proposal, not a settled or implemented policy.
+attributes, and asked whether attune should require an explicit choice. The initial
+measurement phase made no parser or default changes. The implementation below
+subsequently added explicit choices; the earlier default table remains a
+proposal rather than the settled omission behavior.
 
 The recommendation under investigation is one explicit body policy per attune
 definition, inherited by its generated direct bodies. Proof wrappers and
 central dispatchers are separate outputs with their own defaults/overrides;
 users should not have to repeat the body choice for every tier. For example,
-`#[attune(inline(hint), make(all))]` is proposed syntax, not syntax accepted by
-the current parser. An explicit policy emitting no attribute must remain
+`#[attune(inline(hint), make(all))]` is now accepted by the draft parser.
+Requiring an explicit choice is still a proposal; omission remains supported. An explicit policy emitting no attribute must remain
 separate from `inline(never)`. The former leaves the optimizer free to inline;
 the latter requests out-of-line code.
 
