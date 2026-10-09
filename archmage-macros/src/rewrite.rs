@@ -64,6 +64,14 @@ fn dispatch_presence(body: &TokenStream) -> u8 {
 ///
 /// Returns a new TokenStream with incant! calls replaced by direct tier calls.
 pub(crate) fn rewrite_incant_in_body(body: TokenStream, ctx: &CallerContext) -> TokenStream {
+    rewrite_incant_in_function(body, ctx, None)
+}
+
+pub(crate) fn rewrite_incant_in_function(
+    body: TokenStream,
+    ctx: &CallerContext,
+    signature: Option<&syn::Signature>,
+) -> TokenStream {
     // Most kernels have no dispatch inside them. Keep their original groups,
     // spans, and token storage instead of allocating two vectors at every depth.
     let calls = dispatch_presence(&body);
@@ -72,7 +80,7 @@ pub(crate) fn rewrite_incant_in_body(body: TokenStream, ctx: &CallerContext) -> 
     }
     let body = if calls & 2 != 0 {
         if let Some(tier) = tiers::find_tier(ctx.tier_suffix) {
-            crate::attune::call::rewrite(body, tier)
+            crate::attune::call::rewrite(body, tier, signature)
         } else {
             body
         }

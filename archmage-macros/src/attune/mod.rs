@@ -2,7 +2,10 @@
 //! contracts; target-feature bodies and proof boundaries share the emitter.
 pub(crate) mod call;
 #[cfg(test)]
+mod convention_tests;
+#[cfg(test)]
 mod inline_tests;
+mod parent;
 mod syntax;
 
 use proc_macro2::TokenStream;
@@ -17,27 +20,66 @@ use syntax::{Args, Form, Inline, Selection};
 
 pub(crate) fn expand(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream> {
     let args: Args = syn::parse2(attr)?;
-    let input: LightFn = syn::parse2(item)?;
+    let mut input: LightFn = syn::parse2(item)?;
     if args.family {
         family(input, args)
     } else if args.wrap {
         wrap(input, args)
     } else {
-        let tier = args
-            .tier
-            .or_else(|| {
-                let name = input.sig.ident.to_string();
-                crate::tiers::ALL_TIERS
-                    .iter()
-                    .filter(|t| t.name != "default" && name.ends_with(&format!("_{}", t.suffix)))
-                    .max_by_key(|t| t.suffix.len())
-            })
-            .ok_or_else(|| {
-                syn::Error::new_spanned(
-                    &input.sig.ident,
-                    "attune needs a tier, a registered tier suffix, wrap, or make(...)",
-                )
-            })?;
+        let inferred = if args.tier.is_none() {
+            infer_suffix(&input.sig.ident)
+        } else {
+            None
+        };
+        if let Some((tier, Form::Proof)) = inferred {
+            if !args.defines.is_empty() {
+                return Err(syn::Error::new_spanned(
+                    &input.sig,
+                    "define(...) on a proof wrapper requires a generated family",
+                ));
+            }
+            // A suffix is an exact context declaration, not permission to mint
+            // proof. Add the concrete proof parameter when none was written;
+            // otherwise ensure the existing proof declares the named context.
+            let placeholder = input.sig.inputs.iter().any(placeholder_parameter);
+            if let Some(proof) = crate::token_discovery::find_token_param(&input.sig) {
+                let expected = crate::generated::tier_to_canonical_token(tier.name)
+                    .and_then(crate::generated::token_to_features)
+                    .expect("registered tier");
+                if proof.target_arch != tier.target_arch
+                    || proof.features.len() != expected.len()
+                    || !expected.iter().all(|f| proof.features.contains(f))
+                {
+                    return Err(syn::Error::new_spanned(
+                        &input.sig,
+                        "proof parameter does not match the inferred tier suffix; use the matching token or explicit wrap",
+                    ));
+                }
+            } else {
+                let token: syn::Path = syn::parse_str(&format!("::{}", tier.token_path))?;
+                if placeholder {
+                    specialize_syntax(&mut input.sig, &quote!(#token))?;
+                } else {
+                    let position =
+                        usize::from(matches!(input.sig.inputs.first(), Some(FnArg::Receiver(_))));
+                    input
+                        .sig
+                        .inputs
+                        .insert(position, parse_quote!(__attune_token: #token));
+                }
+            }
+            let output = wrap(input, args)?;
+            return Ok(if placeholder {
+                let token: syn::Path = syn::parse_str(&format!("::{}", tier.token_path))?;
+                replace_ident_in_tokens(output, "Token", &quote!(#token))
+            } else {
+                output
+            });
+        }
+        let tier = args.tier.or_else(|| inferred.map(|(tier, _)| tier)).ok_or_else(|| {
+            syn::Error::new_spanned(&input.sig.ident,
+                "attune needs a tier, a registered tier suffix (optionally _t), wrap, or make(...)")
+        })?;
         if args.in_trait || args.self_type.is_some() {
             return Err(syn::Error::new_spanned(
                 &input.sig,
@@ -46,6 +88,23 @@ pub(crate) fn expand(attr: TokenStream, item: TokenStream) -> syn::Result<TokenS
         }
         direct(input, tier, &args, None, args.body_inline)
     }
+}
+
+fn infer_suffix(name: &syn::Ident) -> Option<(&'static TierDescriptor, Form)> {
+    let name = name.to_string();
+    let (stem, form) = name
+        .strip_suffix("_t")
+        .map_or((name.as_str(), Form::Direct), |stem| (stem, Form::Proof));
+    crate::tiers::ALL_TIERS
+        .iter()
+        .filter(|tier| {
+            tier.name != "default"
+                && stem
+                    .strip_suffix(tier.suffix)
+                    .is_some_and(|prefix| prefix.is_empty() || prefix.ends_with('_'))
+        })
+        .max_by_key(|tier| tier.suffix.len())
+        .map(|tier| (tier, form))
 }
 
 fn direct(
@@ -84,6 +143,11 @@ fn direct(
             .map(str::to_string)
             .or_else(|| args.imports.cfg_feature.clone()),
     };
+    // Signature proof discovery must see each family's concrete parameter;
+    // body Token markers remain intact until contextual calls are rewritten.
+    if args.family && input.sig.inputs.iter().any(placeholder_parameter) {
+        specialize_syntax(&mut input.sig, &quote!(::#token_path))?;
+    }
     let function = crate::engine::feature::emit(input, &options, inline, true, context)
         .unwrap_or_else(|diagnostic| diagnostic);
     // A single raw context preserves the written signature and identifiers.
@@ -189,9 +253,6 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
     prepend_to_body(&mut input.body, quote!(#(#rebinds)*));
     let base = input.sig.ident.clone();
     let mut tiers: Vec<_> = args.selections.iter().map(|s| s.tier).collect();
-    if args.dispatcher.is_some() && tiers.is_empty() {
-        tiers.extend(syntax::DEFAULTS.iter().map(|name| find_tier(name).unwrap()));
-    }
     if args.dispatcher.is_some() && !tiers.iter().any(|t| t.name == "scalar") {
         tiers.push(find_tier("scalar").unwrap());
     }
@@ -208,17 +269,22 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
             .selections
             .iter()
             .find(|s| s.tier.name == tier.name && s.form == Form::Proof);
-        if let (Some(a), Some(b)) = (direct_selection, proof_selection)
-            && a.gate != b.gate
+        let implementation = direct_selection.or(proof_selection).or_else(|| {
+            args.selections
+                .iter()
+                .find(|s| s.tier.name == tier.name && s.form == Form::Hidden)
+        });
+        let gate = implementation.and_then(|s| s.gate.as_deref());
+        if args
+            .selections
+            .iter()
+            .any(|s| s.tier.name == tier.name && s.gate.as_deref() != gate)
         {
             return Err(syn::Error::new_spanned(
                 &base,
-                "a tier's direct and proof outputs must have the same feature gate",
+                "a tier's direct, proof and dispatcher implementations must have the same feature gate",
             ));
         }
-        let gate = direct_selection
-            .or(proof_selection)
-            .and_then(|s| s.gate.as_deref());
         let direct_name = if direct_selection.is_some() {
             output_name(&base, tier, Form::Direct, &args)?
         } else {

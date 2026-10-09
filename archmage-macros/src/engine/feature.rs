@@ -111,7 +111,11 @@ pub(crate) fn emit(
                 derive_token: true,
             },
         };
-        variant_fn.body = crate::rewrite::rewrite_incant_in_body(variant_fn.body, &ctx);
+        variant_fn.body = crate::rewrite::rewrite_incant_in_function(
+            variant_fn.body,
+            &ctx,
+            Some(&variant_fn.sig),
+        );
     }
 
     if tier.suffix.is_none() {
@@ -121,6 +125,7 @@ pub(crate) fn emit(
                 features: &tier.features,
                 target_arch: tier.target_arch,
             },
+            Some(&variant_fn.sig),
         );
     }
 

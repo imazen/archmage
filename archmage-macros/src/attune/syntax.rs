@@ -11,6 +11,8 @@ use crate::tiers::{TierDescriptor, find_tier};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Form {
+    /// Implementation selected only for a central dispatcher, never an exposed API.
+    Hidden,
     Direct,
     Proof,
 }
@@ -243,6 +245,9 @@ impl Args {
                     ));
                 }
                 let forms = if text == "all" {
+                    if self.dispatcher.is_some() {
+                        return Err(input.error("duplicate dispatcher selector"));
+                    }
                     self.dispatcher = Some((visibility.clone(), inline));
                     vec![Form::Direct, Form::Proof]
                 } else {
@@ -269,7 +274,7 @@ impl Args {
                         });
                     }
                 }
-            } else if text == "_" {
+            } else if text == "_" || text == "dispatch" {
                 if remove || add || self.dispatcher.is_some() {
                     return Err(syn::Error::new(
                         name.span(),
@@ -296,17 +301,52 @@ impl Args {
                 input.parse::<Token![,]>()?;
             }
         }
+        // Dispatcher-only families have the default tier set even when they
+        // carry modifiers. Normalize it before applying additions/removals so
+        // private implementation choices never become exposed direct outputs.
+        if self.dispatcher.is_some() && self.selections.is_empty() {
+            self.selections
+                .extend(DEFAULTS.iter().map(|name| Selection {
+                    tier: find_tier(name).unwrap(),
+                    form: Form::Hidden,
+                    gate: None,
+                    visibility: None,
+                    inline: None,
+                }));
+        }
         for (remove, tier, form, gate, span) in modifiers {
             if remove {
+                if self.dispatcher.is_some() && tier.name == "scalar" && form == Form::Direct {
+                    return Err(syn::Error::new(
+                        span,
+                        "a dispatcher requires its scalar fallback",
+                    ));
+                }
                 self.selections.retain(|s| {
                     s.tier.name != tier.name || (form == Form::Proof && s.form != form)
                 });
             } else {
                 if wildcard_forms.is_empty() {
-                    return Err(syn::Error::new(
-                        span,
-                        "+tier requires a wildcard output form",
-                    ));
+                    if self.dispatcher.is_none() {
+                        return Err(syn::Error::new(
+                            span,
+                            "+tier requires a wildcard output form or a dispatcher",
+                        ));
+                    }
+                    if form == Form::Proof {
+                        return Err(syn::Error::new(
+                            span,
+                            "use +tier for a hidden dispatcher tier, or tier_t to expose a proof wrapper",
+                        ));
+                    }
+                    self.selections.push(Selection {
+                        tier,
+                        form: Form::Hidden,
+                        gate,
+                        visibility: None,
+                        inline: None,
+                    });
+                    continue;
                 }
                 for (form, visibility, inline) in &wildcard_forms {
                     self.selections.push(Selection {
@@ -339,6 +379,13 @@ impl Args {
             } else {
                 unique.push(selection);
             }
+        }
+        if self.dispatcher.is_some()
+            && unique
+                .iter()
+                .any(|s| s.tier.name == "scalar" && s.gate.is_some())
+        {
+            return Err(input.error("a dispatcher requires an ungated scalar fallback"));
         }
         self.selections = unique;
         Ok(())

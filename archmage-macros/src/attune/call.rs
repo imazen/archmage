@@ -7,6 +7,7 @@ use syn::{
     parse::{Parse, ParseStream},
 };
 
+use super::parent::{Access, Parent};
 use super::syntax::{self, Form, Rename, Selection};
 use crate::tiers::{TierDescriptor, find_tier};
 
@@ -153,13 +154,14 @@ impl Call {
     }
 
     pub(crate) fn expand(&self, caller: Option<Context<'_>>, reselect: bool) -> TokenStream {
-        self.expand_scoped(caller, reselect, &mut 0)
+        self.expand_scoped(caller, reselect, None, &mut 0)
     }
 
     fn expand_scoped(
         &self,
         caller: Option<Context<'_>>,
         reselect: bool,
+        parent: Option<&Parent<'_>>,
         serial: &mut usize,
     ) -> TokenStream {
         let label = syn::Lifetime::new(
@@ -173,7 +175,7 @@ impl Call {
             .args
             .iter()
             .map(|arg| match caller {
-                Some(context) => rewrite_scoped(arg.to_token_stream(), context, serial),
+                Some(context) => rewrite_scoped(arg.to_token_stream(), context, parent, serial),
                 None => arg.to_token_stream(),
             })
             .collect();
@@ -188,10 +190,23 @@ impl Call {
         let mut unconditional = false;
         for selection in candidates {
             let tier = selection.tier;
-            let covered = tier.name == "scalar" || caller.is_some_and(|c| c.covers(tier));
-            if caller.is_some() && !reselect && self.proof.is_none() && !covered {
+            if caller.is_some_and(|context| {
+                context.target_arch.is_some()
+                    && tier.target_arch.is_some()
+                    && context.target_arch != tier.target_arch
+            }) {
                 continue;
             }
+            let covered = tier.name == "scalar" || caller.is_some_and(|c| c.covers(tier));
+            let inherited = if caller.is_some() && !reselect && self.proof.is_none() && !covered {
+                match parent.map(|parent| parent.access(tier)).transpose() {
+                    Ok(Some(Some(access))) => Some(access),
+                    Ok(_) => continue,
+                    Err(diagnostic) => return diagnostic,
+                }
+            } else {
+                None
+            };
             let token: syn::Path =
                 syn::parse_str(&format!("::{}", tier.token_path)).expect("registered token path");
             let runtime = !covered || self.proof.is_some();
@@ -203,6 +218,8 @@ impl Call {
             let path = self.path(tier, form);
             let proof = if tier.name == "scalar" {
                 quote!(::archmage::ScalarToken)
+            } else if let Some(Access::Guaranteed(value)) = &inherited {
+                value.clone()
             } else if runtime {
                 quote!(#proof_ident)
             } else {
@@ -223,9 +240,14 @@ impl Call {
                 quote!(#(#args),*)
             };
             let invocation = quote!(#path(#call_args));
-            let guaranteed = tier.name == "scalar" || !runtime;
+            let guaranteed = tier.name == "scalar"
+                || !runtime
+                || matches!(inherited, Some(Access::Guaranteed(_)));
             let branch = if guaranteed {
                 quote!(break #label #invocation;)
+            } else if let Some(Access::Conditional(value)) = &inherited {
+                let method = format_ident!("{}", tier.as_method);
+                quote!(if let Some(#proof_ident) = ::archmage::IntoConcreteToken::#method(#value) { break #label #invocation; })
             } else if self.proof.is_some() {
                 let method = format_ident!("{}", tier.as_method);
                 quote!(if let Some(#proof_ident) = ::archmage::IntoConcreteToken::#method(#supplied_ident) { break #label #invocation; })
@@ -268,7 +290,7 @@ impl Call {
         };
         let supplied = self.proof.as_ref().map(|proof| {
             let proof = match caller {
-                Some(context) => rewrite_scoped(proof.to_token_stream(), context, serial),
+                Some(context) => rewrite_scoped(proof.to_token_stream(), context, parent, serial),
                 None => proof.to_token_stream(),
             };
             quote!(let #supplied_ident = #proof;)
@@ -279,7 +301,11 @@ impl Call {
 
 /// Inspect only macro invocations. Nested items have their own feature context.
 /// Qualified invocation paths are consumed along with the macro name.
-pub(crate) fn rewrite(body: TokenStream, caller: &TierDescriptor) -> TokenStream {
+pub(crate) fn rewrite(
+    body: TokenStream,
+    caller: &TierDescriptor,
+    signature: Option<&syn::Signature>,
+) -> TokenStream {
     let features = crate::generated::tier_to_canonical_token(caller.name)
         .and_then(crate::generated::token_to_features)
         .unwrap_or(&[]);
@@ -289,14 +315,30 @@ pub(crate) fn rewrite(body: TokenStream, caller: &TierDescriptor) -> TokenStream
             features,
             target_arch: caller.target_arch,
         },
+        signature,
     )
 }
 
-pub(crate) fn rewrite_context(body: TokenStream, caller: Context<'_>) -> TokenStream {
-    rewrite_scoped(body, caller, &mut 0)
+pub(crate) fn rewrite_context(
+    body: TokenStream,
+    caller: Context<'_>,
+    signature: Option<&syn::Signature>,
+) -> TokenStream {
+    if !crate::common::tokens_contain_ident(&body, &["attuned", "reattune"]) {
+        return body;
+    }
+    let parent = Parent::new(signature);
+    let body = rewrite_scoped(body, caller, Some(&parent), &mut 0);
+    let capture = parent.capture();
+    quote!(#capture #body)
 }
 
-fn rewrite_scoped(body: TokenStream, caller: Context<'_>, serial: &mut usize) -> TokenStream {
+fn rewrite_scoped(
+    body: TokenStream,
+    caller: Context<'_>,
+    parent: Option<&Parent<'_>>,
+    serial: &mut usize,
+) -> TokenStream {
     if !crate::common::tokens_contain_ident(&body, &["attuned", "reattune"]) {
         return body;
     }
@@ -336,7 +378,7 @@ fn rewrite_scoped(body: TokenStream, caller: Context<'_>, serial: &mut usize) ->
             && let Some(TokenTree::Group(group)) = tokens.get(end + 2)
         {
             let expansion = syn::parse2::<Call>(group.stream())
-                .map(|call| call.expand_scoped(Some(caller), name == "reattune", serial))
+                .map(|call| call.expand_scoped(Some(caller), name == "reattune", parent, serial))
                 .unwrap_or_else(|error| error.to_compile_error());
             out.extend(expansion);
             i = end + 3;
@@ -345,7 +387,7 @@ fn rewrite_scoped(body: TokenStream, caller: Context<'_>, serial: &mut usize) ->
         if let TokenTree::Group(group) = &tokens[i] {
             let mut next = Group::new(
                 group.delimiter(),
-                rewrite_scoped(group.stream(), caller, serial),
+                rewrite_scoped(group.stream(), caller, parent, serial),
             );
             next.set_span(group.span());
             out.extend([TokenTree::Group(next)]);

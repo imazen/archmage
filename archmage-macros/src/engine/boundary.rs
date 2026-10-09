@@ -181,7 +181,8 @@ pub(crate) fn expand(
             has_token: true,
             derive_token: false,
         };
-        input_fn.body = crate::rewrite::rewrite_incant_in_body(input_fn.body, &ctx);
+        input_fn.body =
+            crate::rewrite::rewrite_incant_in_function(input_fn.body, &ctx, Some(&input_fn.sig));
     }
 
     if token_type_name.is_none() {
@@ -191,6 +192,7 @@ pub(crate) fn expand(
                 features: &features,
                 target_arch,
             },
+            Some(&input_fn.sig),
         );
     }
 
