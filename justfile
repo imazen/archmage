@@ -418,8 +418,8 @@ attune-cross-check:
     cargo check --target i686-unknown-linux-gnu --test attune --test attune_selection --test attune_attributes
 
 # Compare pinned source archives, alternating cold and consumer-only checks.
-attune-compare baseline candidate out pairs="6":
-    python3 benchmarks/attune_compare.py --baseline {{baseline}} --candidate {{candidate}} --out {{out}} --pairs {{pairs}}
+attune-compare baseline candidate out pairs="6" *args:
+    python3 benchmarks/attune_compare.py --baseline {{baseline}} --candidate {{candidate}} --out {{out}} --pairs {{pairs}} {{args}}
 
 # Include legacy expansion and proof-boundary regressions after engine changes.
 attune-compat:

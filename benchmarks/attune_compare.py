@@ -20,6 +20,8 @@ def main():
     parser.add_argument('--candidate', required=True)
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--pairs', type=int, default=6)
+    parser.add_argument('--refresh-lock', action='store_true',
+                        help='resolve the candidate fixture lock offline before timing; share it with baseline')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     out = args.out.resolve()
@@ -42,7 +44,16 @@ def main():
         source.mkdir()
         with tarfile.open(archive) as capture:
             capture.extractall(source, filter='data')
+    if args.refresh_lock:
+        # Workspace version bumps can stale the fixture lock. Resolve once,
+        # outside the timed region, then use the same lock for both revisions.
+        # The source archives preserve the original lock for comparison.
+        with (out / 'lock-preparation.log').open('w') as log:
+            subprocess.run(['cargo', 'metadata', '--offline', '--format-version', '1',
+                            '--manifest-path', str(out / 'candidate' / fixture / 'Cargo.toml')],
+                           cwd=out / 'candidate', stdout=log, stderr=subprocess.STDOUT, check=True)
     lock = (out / 'candidate' / fixture / 'Cargo.lock').read_bytes()
+    (out / 'fixture.Cargo.lock').write_bytes(lock)
     (out / 'baseline' / fixture / 'Cargo.lock').write_bytes(lock)
     metadata['fixture_lock_sha256'] = hashlib.sha256(lock).hexdigest()
     baseline_input = (out / 'baseline' / fixture / 'src/lib.rs').read_bytes()
