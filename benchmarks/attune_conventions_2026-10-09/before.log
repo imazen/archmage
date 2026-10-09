@@ -1,0 +1,23 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.26
+   Compiling syn v3.0.6
+   Compiling archmage-macros v0.9.30 (/home/lilith/tmp/attune-conventions-cost-2026-10-09/before/archmage-macros)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.97s
+     Running unittests src/lib.rs (target/debug/deps/archmage_macros-d7807217fb1844d6)
+
+running 1 test
+arcane: allocations=125 bytes=10163 ns=63297
+arcane-dispatch: allocations=171 bytes=10571 ns=68829
+rite: allocations=88 bytes=8949 ns=36836
+attune-raw: allocations=81 bytes=8726 ns=36419
+attune-wrap: allocations=125 bytes=10195 ns=51357
+attune-direct: allocations=171 bytes=11180 ns=73170
+attune-all: allocations=585 bytes=32539 ns=241235
+attune-compose: allocations=742 bytes=42699 ns=347525
+magetypes: allocations=660 bytes=47040 ns=350871
+autoversion: allocations=631 bytes=36796 ns=252015
+test expansion_tests::profile_allocations ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 136 filtered out; finished in 1.52s
+

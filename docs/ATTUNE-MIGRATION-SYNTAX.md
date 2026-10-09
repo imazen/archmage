@@ -1,10 +1,12 @@
 # Attune migration syntax and spelling cost — 2026-10-09
 
-Checked against draft `5a745872` (parser, emitters and legacy frontends).
+Updated against implementation `bb79a827` (parser, emitters and legacy frontends).
 This is a spelling comparison and design recommendation, not a completed
-migration converter. No macro implementation or defaults change in this document.
+migration converter. Inline omission defaults are unchanged. The new conventions
+are described in [ATTUNE-CONVENTIONS.md](ATTUNE-CONVENTIONS.md).
 
-The autoversion-shaped form is `#[attune(make(_))]`: a dispatcher with private
+The autoversion-shaped forms are `#[attune(make(_))]` and
+`#[attune(make(dispatch))]`: a dispatcher with private
 implementation bodies. `make(_*, _)` additionally exposes direct variants;
 `make(all)` additionally exposes both direct and proof-taking variants.
 
@@ -49,6 +51,10 @@ must not be inferred to be free. Notes identify semantic/API differences.
 | Covered-context direct call | `incant!(work(x) without token)` | `attuned!(work(x))` | 30 → 17 | -13 | Legacy is exact-tier; new form selects a covered available tier. Add an explicit list if exact selection matters. |
 | Runtime reselection within a context | `incant!(work(x))` | `reattune!(work(x))` | 16 → 18 | +2 | Use only where the legacy call actually permitted an upgrade; not all incant calls need reselection. |
 | Use an existing proof | `incant!(work(x) with token)` | `attuned!(work(x), using(token))` | 27 → 31 | +4 | Proof evaluated once; no CPU detection. Preserve explicit tier lists and renamed proof entries. |
+| Proof boundary already named work_v3_t | `#[arcane]` | `#[attune]` | 9 → 9 | +0 | Written proof position is preserved. Omitting it from the source injects a concrete proof parameter in the exposed signature. |
+| Dispatcher, readable spelling | `#[autoversion]` | `#[attune(make(dispatch))]` | 14 → 25 | +11 | Same output shape as make(_); V4 remains explicit. |
+| Dispatcher with legacy default tiers | `#[autoversion]` | `#[attune(make(_, +v4(avx512)))]` | 14 → 31 | +17 | Private implementations and V4 gate retained; internal names and scalar inline policy need review. |
+| Inherited parent proof | `incant!(work(x) with token)` | `attuned!(work(x))` | 27 → 17 | -10 | Annotated caller with one usable parent proof. Covered calls stay direct; explicit lists/names must still match the migrated family. |
 
 The measurements cover individual spellings, not the aggregate cost across the
 consumer repositories. A fleet-wide net character count has not been measured.
@@ -60,23 +66,18 @@ V3, NEON, WASM128 and scalar. The new wildcard set is V3, NEON, WASM128 and scal
 AVX-512 must be requested. `make(_)` uses that smaller default set. It is the
 same dispatcher-only API shape, not an exact default-tier migration.
 
-The current grammar can preserve the legacy tiers and keep named helpers private:
+The grammar now preserves the legacy default tier set with private implementations:
 
 ```rust,ignore
-#[attune(make(pub(self) _*_t, +v4(avx512), _))]
+#[attune(make(dispatch, +v4(avx512)))]
+// Equivalent shorter spelling:
+#[attune(make(_, +v4(avx512)))]
 ```
 
-`pub(self)` restricts the wildcard outputs, while `_` inherits the source
-visibility. This still changes internal helper names to `_t` names, and body
-inline differences (especially the scalar fallback) need review. Private helpers
-can be referenced elsewhere in their module, so private naming changes are not
-necessarily harmless. A name dictionary can preserve required helper names.
-
-There is a grammar gap: `make(_, +v4(avx512))` currently fails because `+tier`
-requires a wildcard output form. A dispatcher-only tier-list spelling could
-remove this verbosity, but is not implemented or settled here. Do not present
-`make(auto)` as existing syntax either; the parser accepts `_`, wildcards and
-`all`, not `auto`.
+These alternatives close the previous dispatcher-only modifier gap. Added tiers
+stay private; they do not request public direct/proof outputs. Private helper
+names and scalar inline differences still need review when migrating internal
+call sites. `make(auto)` remains unsupported; `dispatch` is the readable synonym.
 
 Signature distinctions also matter:
 

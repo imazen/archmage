@@ -11,7 +11,9 @@ effective inline policies and tier defaults.
 
 The new definition spelling is `#[attune]`. `#[attune(v3)]` keeps an arbitrary
 function name and adds that tier's features. A bare attribute infers a registered
-terminal suffix, longest first. `#[attune(wrap)]` retains an existing proof-taking
+terminal suffix, longest first. A `_v3_t` suffix infers a proof boundary and
+adds a concrete proof parameter if omitted; a written matching proof keeps its
+position. `#[attune(wrap)]` retains an existing proof-taking
 signature, including generic bounds and the proof argument's position.
 
 For a source named `work`, explicit outputs are:
@@ -20,14 +22,16 @@ For a source named `work`, explicit outputs are:
 | --- | --- |
 | `_v3` | `work_v3(args)` in a covering feature context |
 | `_v3_t` | `work_v3_t(token, args)` from ordinary code |
-| `_` | `work(args)` with central detection and a private scalar fallback |
+| `_` or `dispatch` | `work(args)` with central detection and a private scalar fallback |
 | `_*` | Direct outputs for V3, NEON, WASM128 and scalar |
 | `_*_t` | Proof outputs for that same set |
 | `all` | Both wildcard forms and the dispatcher |
 
 AVX-512 is explicit: `make(_*_t, +v4x)` or
 `make(_*_t, +v4x(avx512))`. The latter condition names the declaring crate's
-Cargo feature. Removing a registered tier with `-_v4` is valid even if absent.
+Cargo feature. Dispatcher-only families also accept `make(dispatch, +v4(avx512))`;
+added implementations stay private. Removing a registered tier with `-_v4` is
+valid even if absent. The dispatcher must retain its ungated scalar fallback.
 Per-output visibility inherits the source unless overridden, for example
 `make(pub(crate) _*, pub _)`. A definition-level `inline(...)` selects the operation-body policy; selectors
 inside `make` can override it with `inline(...)`, without attribute brackets.
@@ -37,14 +41,21 @@ visibility-policy section below for precedence and restrictions.
 
 `attuned!(work(args), [_v3, _scalar])` selects a covered direct function inside
 a feature context, and uses proof entries in ordinary code. It does not attempt
-an implicit upgrade from a known context. `reattune!` explicitly permits runtime
-reselection. Explicit lists never acquire an implicit fallback: cfg/architecture
-filtering must leave a guaranteed covered candidate, or compilation fails.
+CPU detection from a known context. A named parent proof can select an otherwise
+uncovered tier through its proof interface, without detection. `reattune!`
+explicitly permits runtime reselection. Explicit lists never acquire an implicit
+fallback: cfg/architecture filtering must leave a guaranteed candidate from the
+context, a concrete proof, or scalar, or compilation fails.
 An explicit `_v3_t` selector requests the proof interface even from a covered
 context, deriving proof with `from_context()` there.
 
 The supplied-proof spelling is `using(token)` only. Its expression is
-evaluated once, and selection does not probe the CPU. Naming dictionaries key
+evaluated once, and selection does not probe the CPU. It overrides automatic
+parent-parameter inference; use it for ambiguity and ordinary unannotated callers.
+Concrete parents permit registry downgrades; generic `IntoConcreteToken` parents
+retain exact-type selection and need a guaranteed fallback. Covered direct calls
+stay direct. See [the convention contract](ATTUNE-CONVENTIONS.md) for scope and
+signature restrictions. Naming dictionaries key
 on both tier and interface: `names(_v3 = work_avx2, _v3_t = work_avx2_t)`.
 Definition names are identifiers; call-site names may be paths.
 

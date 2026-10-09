@@ -1,0 +1,21 @@
+run-heavy: mem-cap=16G (cgroup, hard) jobs=8/20 avail=28895MiB :: cargo test -p archmage-macros --lib profile_allocations -- --ignored --nocapture
+   Compiling archmage-macros v0.9.30 (/home/lilith/work/archmage/archmage-macros)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.35s
+     Running unittests src/lib.rs (target/debug/deps/archmage_macros-9551f36a05738511)
+
+running 1 test
+arcane: allocations=125 bytes=10163 ns=64792
+arcane-dispatch: allocations=171 bytes=10571 ns=69186
+rite: allocations=88 bytes=8949 ns=37132
+attune-raw: allocations=81 bytes=8726 ns=36896
+attune-wrap: allocations=125 bytes=10195 ns=51789
+attune-direct: allocations=171 bytes=11180 ns=74495
+attune-all: allocations=585 bytes=32539 ns=246565
+attune-compose: allocations=743 bytes=42723 ns=355937
+magetypes: allocations=660 bytes=47040 ns=350558
+autoversion: allocations=631 bytes=36796 ns=251353
+test expansion_tests::profile_allocations ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 144 filtered out; finished in 1.54s
+
+run-heavy: done rc=0 2s | peak-RSS 0.24GiB | min-avail 28895MiB | peak-load 0.27
