@@ -28,10 +28,21 @@ continues to infer from the parameter for arbitrary names. Longest registered
 suffixes win, including `_v3_gfni_crypto_t`. Explicit tier and `wrap` arguments
 override name inference.
 
+A token parameter alone does not select a wrapper. Bare `#[attune]` on
+`fn work(token: X64V3Token)` requires an explicit tier, a conventional suffix, or
+`wrap`. A `_v3` function remains direct even with a token parameter; `_v3_t`
+selects the proof boundary. Legacy `#[arcane]` still selects a boundary itself.
+
 Methods receive an injected proof immediately after `self`. Receiverless
 associated functions still need `in_impl`; trait wrappers retain the existing
 `in_trait`/`_self` placement restrictions. Inferred proof wrappers do not accept
 `define(...)`; use a generated family when aliases are needed there.
+
+`nested` and `in_trait` select the same nested placement; `_self = Type` implies
+it. A nested receiver requires that explicit type in both legacy `arcane` and
+`attune(wrap)`. Receiverless trait defaults work without `_self`; generic trait
+defaults with receivers are not automatically rewritten to generic helpers.
+The [raw expansion corpus](../tests/attune_expansion/README.md) checks these forms.
 
 ## Dispatchers
 

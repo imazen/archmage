@@ -423,7 +423,7 @@ attune-compare baseline candidate out pairs="6" *args:
 
 # Include legacy expansion and proof-boundary regressions after engine changes.
 attune-compat:
-    cargo test -p archmage --test attune --test attune_selection --test attune_attributes --test attune_inline --test attune_conventions --test arcane_sibling_resolution --test soundness_exploits --test macro_expand
+    cargo test -p archmage --test attune --test attune_selection --test attune_attributes --test attune_inline --test attune_conventions --test attune_gated_proof --test arcane_sibling_resolution --test soundness_exploits --test macro_expand
 
 attune-unit:
     cargo test -p archmage-macros
@@ -453,3 +453,14 @@ attune-parser:
     cargo test -p archmage-macros
     cargo test --test attune_structured_syntax --no-default-features
     cargo test --test attune_structured_syntax --features avx512
+
+# Full raw expansion matrix; output directories must be new.
+attune-expanded-raw out *args:
+    python3 -B tests/attune_expansion/run.py --out {{out}} {{args}}
+
+attune-expanded-generator-test:
+    python3 -B -m unittest discover -s tests/attune_expansion -v
+
+attune-gated-proof:
+    cargo test --test attune_gated_proof --no-default-features
+    cargo test --test attune_gated_proof --features avx512
