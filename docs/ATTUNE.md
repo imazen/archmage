@@ -318,3 +318,38 @@ emitted layer at a time in fixed-main source copies. Its
 and rav1d-safe decoding, with output parity checks. This measures legacy emitter
 policies; it does not establish the performance of the complete attune rewrite
 or close that rewrite's compile-time acceptance gate.
+
+## Visibility-based inline policy candidate (2026-10-09)
+
+`inline(default)` could explicitly request an archmage policy that emits a body
+hint for unrestricted `pub`, and no body attribute for restricted visibility or
+an ordinary private function. This is a candidate, not an implemented default.
+Resolve it after each generated output's visibility override, not solely from
+the input function's visibility. Keep proof-wrapper policy separate.
+
+Syntactic visibility is only a heuristic. Re-exporting a public type does not
+remove `pub` from its public inherent methods, and a public re-export cannot
+promote a crate-private item. Trait methods are the important ambiguity: they
+have no explicit `pub`, yet can form an externally callable API. A function-only
+attribute must not interpret every inherited-visibility method as private or
+scan the enclosing impl to resolve this. An explicit hint remains the clear
+choice when the enclosing trait context is unavailable. These visibility rules
+are described in the [Rust Reference](https://doc.rust-lang.org/reference/visibility-and-privacy.html).
+
+Cross-crate inlining does not absolutely require an inline attribute. Type/const
+generic instantiations already make bodies available; Rust also has automatic
+cross-crate eligibility for some small functions, and LTO is another route.
+For ordinary non-generic library functions, an explicit hint is the predictable
+way to make bodies available without relying on those mechanisms. See the
+[inline documentation](https://dev-doc.rust-lang.org/stable/core/attribute.inline.html),
+[current compiler eligibility implementation](https://doc.rust-lang.org/stable/nightly-rustc/src/rustc_mir_transform/cross_crate_inline.rs.html),
+and [LTO options](https://doc.rust-lang.org/rustc/codegen-options/index.html#lto).
+Availability still does not guarantee actual inlining.
+
+A visibility change would also change codegen policy under this rule. Internal
+hot helpers may benefit from hints regardless of visibility, and helpers called
+by exported inline bodies need consideration too. The recorded real-consumer
+experiment removed body hints across visibilities; it did not test this mixed
+policy. Do not claim those results establish the performance of
+`inline(default)`. Measure the visibility-based variant before adopting it as
+the recommended default; preserve explicit legacy hints during migration.
