@@ -29,9 +29,11 @@ AVX-512 is explicit: `make(_*_t, +v4x)` or
 `make(_*_t, +v4x(avx512))`. The latter condition names the declaring crate's
 Cargo feature. Removing a registered tier with `-_v4` is valid even if absent.
 Per-output visibility inherits the source unless overridden, for example
-`make(pub(crate) _*, pub _)`. Inline controls use `inline(never)` inside `make`,
-without attribute brackets. Attachment grammar and defaults remain subject to
-consumer validation before release.
+`make(pub(crate) _*, pub _)`. A definition-level `inline(...)` selects the operation-body policy; selectors
+inside `make` can override it with `inline(...)`, without attribute brackets.
+The policies are `default`, `none`, `hint`, `always`, and `never`. Omission keeps
+the existing defaults; specifying a policy is not yet mandatory. See the
+visibility-policy section below for precedence and restrictions.
 
 `attuned!(work(args), [_v3, _scalar])` selects a covered direct function inside
 a feature context, and uses proof entries in ordinary code. It does not attempt
@@ -319,13 +321,37 @@ and rav1d-safe decoding, with output parity checks. This measures legacy emitter
 policies; it does not establish the performance of the complete attune rewrite
 or close that rewrite's compile-time acceptance gate.
 
-## Visibility-based inline policy candidate (2026-10-09)
+## Visibility-based inline policy (2026-10-09)
 
-`inline(default)` could explicitly request an archmage policy that emits a body
-hint for unrestricted `pub`, and no body attribute for restricted visibility or
-an ordinary private function. This is a candidate, not an implemented default.
-Resolve it after each generated output's visibility override, not solely from
-the input function's visibility. Keep proof-wrapper policy separate.
+Implemented on the draft: `inline(default)` explicitly requests an archmage
+policy that emits `#[inline]` for unrestricted `pub`, and no inline attribute
+for restricted visibility or an ordinary private function. Resolution happens
+after each generated output's visibility override. Omitting the policy keeps
+the previous defaults; this is not a change to legacy attribute behavior.
+
+```rust,ignore
+#[attune(v3, inline(default))]                    // one direct body
+#[attune(inline(default), make(all))]             // policy for every operation body
+#[attune(inline(default), make(pub _v3, pub(crate) _scalar, _v3_t, _))]
+#[attune(inline(default), make(inline(hint) _*, inline(never) _))]
+#[attune(wrap, inline(default))]                  // hidden native body is private
+```
+
+Definition-level policy applies to bodies only, including private bodies emitted
+for proof-only or dispatcher-only families. It does not change proof-wrapper or
+dispatcher defaults. Per-output policy wins over definition-level policy;
+explicit policy replaces any source `#[inline...]` on that output. `none` emits
+no attribute regardless of visibility, `hint` emits `#[inline]`, and `never`
+emits `#[inline(never)]`. `always` is rejected for target-feature bodies by this
+stable frontend, but is available for scalar bodies and forwarding outputs.
+Duplicate definition-level policies are errors.
+
+A native `wrap` body is private, so `inline(default)` omits its hint even if the
+proof wrapper is public; that wrapper keeps `#[inline(always)]`. Scalar and wasm
+`wrap` lower directly, so their body policy uses the original visibility. Trait
+placement markers (`in_trait`, `nested`, or `_self`) reject definition-level
+`inline(default)` with an explicit-choice diagnostic rather than guessing.
+No enclosing source scan or body AST pass was added.
 
 Syntactic visibility is only a heuristic. Re-exporting a public type does not
 remove `pub` from its public inherent methods, and a public re-export cannot
@@ -353,3 +379,8 @@ experiment removed body hints across visibilities; it did not test this mixed
 policy. Do not claim those results establish the performance of
 `inline(default)`. Measure the visibility-based variant before adopting it as
 the recommended default; preserve explicit legacy hints during migration.
+
+Verification: `archmage-macros/src/attune/inline_tests.rs` checks resolved attributes
+and feature preservation across scalar, x86, NEON and WASM expansions.
+`tests/attune_inline.rs` compiles and exercises generics, a re-exported inherent
+method, dispatch and covered calls with `forbid(unsafe_code)` and `deny(warnings)`.
