@@ -34,7 +34,8 @@ assert_eq!(values, [1.0, 2.0]);
 wrapper using its token parameter. Bare `#[attune]` infers a direct `_v3` or
 proof-wrapper `_v3_t` suffix. A token parameter alone does not imply `wrap`.
 The [beta guide](https://github.com/imazen/archmage/blob/release/0.9.31-beta/docs/ATTUNE.md)
-covers selectors, calls, inlining, and current restrictions.
+covers the selector grammar, call and proof rules, inline policies, a legacy-attribute
+mapping, and current restrictions.
 
 ## Quick start
 

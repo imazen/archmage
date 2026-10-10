@@ -17,6 +17,11 @@ names are deprecated in the next 0.9 patch; `_t` remains supported in 0.10,
 where the short names become non-deprecated feature-context constructors. See
 [the migration guide](docs/TOKEN-CONSTRUCTOR-MIGRATION.md).
 
+The 0.9.31-beta unified macros (`#[attune]`, `attuned!`, `reattune!`) are
+documented in [docs/ATTUNE.md](docs/ATTUNE.md), the owning guide for the beta
+syntax, call and proof rules, inline policies, and the legacy-attribute
+mapping. It ships on `release/0.9.31-beta`, not on main.
+
 ## CRITICAL: Every Conversation Health Check
 
 **Run these checks at the start of every conversation, even if the user doesn't ask:**
