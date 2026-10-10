@@ -409,3 +409,50 @@ diff-rs scope="handwritten" *args:
     [ -n "$files" ] || { echo "no .rs changes since $base"; exit 0; }
     echo "base $base, $(echo "$files" | wc -l) files" >&2
     git -c delta.navigate=true diff {{args}} "$base"..HEAD -- $files
+
+# Beta integration and unchanged legacy output contracts.
+attune-beta-unit:
+    cargo test -p archmage-macros
+
+attune-expanded-raw out *args:
+    python3 -B tests/attune_expansion/run.py --out {{out}} {{args}}
+
+attune-expanded-generator-test:
+    python3 -B -m unittest discover -s tests/attune_expansion -v
+
+# Release validation runs serially, including generated sources and all targets.
+attune-beta-check:
+    just generate
+    just validate-registry
+    just validate-tokens
+    just soundness
+    cargo test --all-targets
+    cargo test --doc
+
+attune-beta-clippy:
+    cargo clippy -p archmage-macros --all-targets --all-features -- -D warnings
+
+attune-beta-packages:
+    cargo test -p magetypes --all-targets --features "std avx512"
+    cargo test -p magetypes --doc --features "std avx512"
+    cargo test -p archmage-macros
+    cargo publish --workspace --dry-run --allow-dirty
+
+attune-beta-semver:
+    cargo semver-checks check-release -p archmage --baseline-version 0.9.30
+    cargo semver-checks check-release -p magetypes --baseline-version 0.9.30
+
+# Alternate pinned source archives; no CPU-native flags or reused cold targets.
+attune-beta-compare baseline candidate out pairs="6":
+    python3 -B benchmarks/attune_compare.py --baseline {{baseline}} --candidate {{candidate}} --out {{out}} --pairs {{pairs}} --refresh-lock
+
+# Diagnose semver-checker self-comparisons without suppressing any lint.
+semver-self rustdoc:
+    cargo semver-checks check-release --current-rustdoc {{rustdoc}} --baseline-rustdoc {{rustdoc}} --release-type patch
+
+# Compare CPU feature requirements without conflating token specializations.
+check-target-features baseline current:
+    python3 xtask/check_target_features.py {{baseline}} {{current}}
+
+check-target-features-test:
+    python3 -B -m unittest discover -s xtask -p test_target_features.py -v
