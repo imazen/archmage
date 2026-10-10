@@ -1690,11 +1690,9 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
                 {cmp}::<_CMP_EQ_OQ>(a, b)
             }}
 
-            // Unordered: a NaN lane is not equal to anything, as Rust's `!=`, NEON,
-            // WASM, the scalar backend and the AVX-512 types have it.
             {arcane}
             fn simd_ne(self, a: {inner}, b: {inner}) -> {inner} {{
-                {cmp}::<_CMP_NEQ_UQ>(a, b)
+                {cmp}::<_CMP_NEQ_OQ>(a, b)
             }}
 
             {arcane}
