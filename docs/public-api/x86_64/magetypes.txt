@@ -6,14 +6,14 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2672 lines (supported surface) | magetypes.features.txt 96 added (features: avx512,std,w512) | magetypes.internal.txt 35 lines (42 hidden + 0 excluded-feature)
+# files: magetypes.txt 2678 lines (supported surface) | magetypes.features.txt 96 added (features: avx512,std,w512) | magetypes.internal.txt 35 lines (42 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                12
 #   pub types (struct/enum/trait/alias)       377
 #   pub consts/statics                        228
-#   free functions                           3826
+#   free functions                           3862
 #   inherent methods                         1251
 #   enum variants                               1
 #   re-exports                                  2
@@ -25,10 +25,10 @@
 # per-module pub lines:
 #   (root)                          321
 #   cast                              3
-#   prelude                        3674
+#   prelude                        3710
 #   simd                           1699
 
-## items (2448 lines)
+## items (2454 lines)
 
 pub mod magetypes
 pub use archmage
@@ -165,31 +165,37 @@ pub fn prelude::f32x4<T>::cbrt_midp_precise(self) -> Self [also: prelude::f32x16
 pub fn prelude::f32x4<T>::exp2_lowp(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::exp2_lowp_unchecked(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::exp2_midp(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
+pub fn prelude::f32x4<T>::exp2_midp_portable(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::exp2_midp_precise(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::exp2_midp_unchecked(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::exp_lowp(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::exp_lowp_unchecked(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::exp_midp(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
+pub fn prelude::f32x4<T>::exp_midp_portable(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::exp_midp_precise(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::exp_midp_unchecked(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::ln_lowp(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::ln_lowp_unchecked(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::ln_midp(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
+pub fn prelude::f32x4<T>::ln_midp_portable(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::ln_midp_precise(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::ln_midp_unchecked(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::log10_lowp(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::log10_lowp_unchecked(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::log10_midp(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
+pub fn prelude::f32x4<T>::log10_midp_portable(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::log10_midp_precise(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::log10_midp_unchecked(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::log2_lowp(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::log2_lowp_unchecked(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::log2_midp(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
+pub fn prelude::f32x4<T>::log2_midp_portable(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::log2_midp_precise(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::log2_midp_unchecked(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::pow_lowp(self, f32) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::pow_lowp_unchecked(self, f32) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::pow_midp(self, f32) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
+pub fn prelude::f32x4<T>::pow_midp_portable(self, f32) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::pow_midp_precise(self, f32) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::pow_midp_unchecked(self, f32) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]
 pub fn prelude::f32x4<T>::sigmoid_midp(self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>]

@@ -73,6 +73,10 @@
 - Planned: make `w512` non-default in magetypes; users who need 512-bit types would add `features = ["w512"]`. This patch keeps the existing default features.
 - Remove `cast::Upcast` and `cast::Downcast`, and with them the `cast` module, which holds nothing else. Both are deprecated in 0.9.30 and were never implemented (b1b2ff67).
 
+#### Added
+
+- `log2_midp_portable`, `exp2_midp_portable`, `ln_midp_portable`, `exp_midp_portable`, `log10_midp_portable` and `pow_midp_portable` on `f32x4`, `f32x8` and `f32x16`: the midp algorithms with every multiply-add rounded once (`mul_add_portable`) and NaN passed through, so an input gives the same bits on every backend and token tier. Where the CPU has FMA they return exactly what the plain midp forms return there wherever the result is a number, at the same cost; the scalar backend without FMA and WASM fuse in software. `tests/transcendentals_portable.rs` compares the native tier with the scalar backend under every token permutation and pins FNV-1a checksums of the outputs, which matched on x86-64 (AVX2 and AVX-512), aarch64 (macOS) and wasm32 (with and without SIMD128). They cost 5–16% more than the plain forms on AVX2, AVX-512 and NEON (the NaN pass-through), 4–15× on the scalar backend of a baseline x86-64 build, and about 11× on WASM ([measurements](benchmarks/transcendental_portable_zen4-7950x-m4pro_2026-10-09.md)).
+
 #### Fixed
 
 - `simd_ne` on the x86-64-v3 float types (`f32x4`, `f32x8`, `f64x2`, `f64x4`, and the AVX-512 tier's `f32x4`/`f32x8`, which delegate to them) is true for NaN lanes, as Rust's `!=`, NEON, WASM, the scalar backend and the 512-bit types have it; it used the ordered `_CMP_NEQ_OQ`, so `x.simd_ne(x)` missed NaN only on that tier. `tests/float_compare_nan.rs` checks every comparison against NaN on each backend.
