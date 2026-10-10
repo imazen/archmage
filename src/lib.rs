@@ -89,8 +89,8 @@ extern crate alloc;
 
 // Re-export macros from archmage-macros
 pub use archmage_macros::{
-    arcane, autoversion, dispatch_variant, incant, magetypes, rite, simd_fn, simd_route,
-    token_target_features, token_target_features_boundary,
+    arcane, attune, attuned, autoversion, dispatch_variant, incant, magetypes, reattune, rite,
+    simd_fn, simd_route, token_target_features, token_target_features_boundary,
 };
 
 // Optimized feature detection

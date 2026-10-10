@@ -6,7 +6,7 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: archmage.txt 386 lines (supported surface) | archmage.features.txt 0 added (features: avx512,forge-token-api,macros,safe_unaligned_simd,std,testable_dispatch) | archmage.internal.txt 81 lines (81 hidden + 0 excluded-feature)
+# files: archmage.txt 392 lines (supported surface) | archmage.features.txt 0 added (features: avx512,forge-token-api,macros,safe_unaligned_simd,std,testable_dispatch) | archmage.internal.txt 81 lines (81 hidden + 0 excluded-feature)
 
 ## summary
 #
@@ -17,26 +17,29 @@
 #   inherent methods                          180
 #   struct fields                              12
 #   enum variants                              48
-#   re-exports                                 54
+#   re-exports                                 60
 #   trait roster entries (type × trait)       164
 #   auto-trait-complete types                  23
 #   auto-trait exceptions                       1
 #
 # per-module pub lines:
-#   (root)                          135
+#   (root)                          138
 #   intrinsics                       19
-#   prelude                          87
+#   prelude                          90
 #   testing                          13
 #   tokens                          182
 
-## items (360 lines)
+## items (366 lines)
 
 pub mod archmage
 pub use arcane
+pub use attune
+pub use attuned
 pub use autoversion
 pub use dispatch_variant
 pub use incant
 pub use magetypes
+pub use reattune
 pub use rite
 pub use simd_route
 pub use token_target_features
@@ -64,6 +67,8 @@ pub use intrinsics::wasm32::v128_store
 pub mod prelude
 pub use prelude::<<core::arch::wasm32::*>>
 pub use prelude::arcane
+pub use prelude::attune
+pub use prelude::attuned
 pub use prelude::autoversion
 pub use prelude::dispatch_variant
 pub use prelude::i16x8_load_extend_i8x8
@@ -74,6 +79,7 @@ pub use prelude::i64x2_load_extend_i32x2
 pub use prelude::i64x2_load_extend_u32x2
 pub use prelude::incant
 pub use prelude::magetypes
+pub use prelude::reattune
 pub use prelude::rite
 pub use prelude::simd_route
 pub use prelude::token_target_features

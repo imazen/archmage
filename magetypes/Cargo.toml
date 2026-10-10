@@ -21,6 +21,12 @@ include = [
     "LICENSE*",
 ]
 
+# Replaced by the concrete-impl comparison in xtask/check_semver.py, which CI
+# requires alongside every other cargo-semver-checks lint. The 0.51.0 query
+# conflates V4 and V4x methods even when comparing identical rustdoc JSON.
+[package.metadata.cargo-semver-checks.lints]
+safe_inherent_method_requires_more_target_features = "allow"
+
 [features]
 default = ["std", "w512"]
 std = ["archmage/std"]
@@ -33,7 +39,7 @@ avx512 = ["w512", "archmage/avx512"]
 
 [dependencies]
 # Core tokens and macros
-archmage = { version = "0.9.30", path = "..", default-features = false }
+archmage = { version = "0.9.31-beta", path = "..", default-features = false }
 # Toolchain-version gate (proc-macro, dep-light, dtolnay) for newer-stable
 # `core::arch` intrinsics above the crate MSRV — gates the aarch64 NEON-f16
 # hardware path (`vcvt_*`, stable since 1.94) without raising the 1.89 floor.

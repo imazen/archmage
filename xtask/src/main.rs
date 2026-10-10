@@ -1817,13 +1817,18 @@ fn generate_all() -> Result<()> {
     fs::write(&gen_path, &generated)?;
     println!("  Wrote {} ({} bytes)", gen_path.display(), generated.len());
 
+    let dispatch_path = gen_dir.join("dispatch.rs");
+    fs::write(&dispatch_path, reg.generate_dispatch_registry())?;
+
     // Write generated/mod.rs for the macro crate
     let gen_mod = r#"//! Generated code from token-registry.toml.
 //!
 //! **Auto-generated** by `cargo xtask generate` - do not edit manually.
 
 mod registry;
+mod dispatch;
 pub(crate) use registry::*;
+pub(crate) use dispatch::*;
 "#;
     let gen_mod_path = gen_dir.join("mod.rs");
     fs::write(&gen_mod_path, gen_mod)?;
@@ -1835,7 +1840,7 @@ pub(crate) use registry::*;
 
     // Run rustfmt on the generated files so they stay fmt-clean
     // archmage-macros uses edition 2021
-    for path in [&gen_path, &gen_mod_path] {
+    for path in [&gen_path, &gen_mod_path, &dispatch_path] {
         let fmt_status = std::process::Command::new("rustfmt")
             .arg("--edition")
             .arg("2021")

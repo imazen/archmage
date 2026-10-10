@@ -20,7 +20,7 @@ use crate::tiers::{self, ResolvedTier};
 #[derive(Clone)]
 pub(crate) struct CallerContext {
     /// The caller's tier suffix (e.g., "v3", "v4", "neon")
-    pub tier_suffix: String,
+    pub tier_suffix: &'static str,
     /// The caller's target arch (e.g., Some("x86_64"))
     pub target_arch: Option<&'static str>,
     /// The token ident available in the caller's scope (e.g., `token`, `__token`, `_token`)
@@ -33,6 +33,29 @@ pub(crate) struct CallerContext {
     pub derive_token: bool,
 }
 
+/// Find both dispatch dialects in one body scan. Ordinary legacy kernels pay
+/// for one presence pass, as before, regardless of how many frontends exist.
+fn dispatch_presence(body: &TokenStream) -> u8 {
+    let mut found = 0;
+    for token in body.clone() {
+        match token {
+            TokenTree::Ident(id) => {
+                if id == "incant" || id == "dispatch_variant" {
+                    found |= 1;
+                } else if id == "attuned" || id == "reattune" {
+                    found |= 2;
+                }
+            }
+            TokenTree::Group(group) => found |= dispatch_presence(&group.stream()),
+            _ => {}
+        }
+        if found == 3 {
+            break;
+        }
+    }
+    found
+}
+
 /// Rewrite `incant!()` calls in a function body for a specific tier context.
 ///
 /// Walks the token stream looking for `incant ! ( ... )` patterns.
@@ -41,9 +64,30 @@ pub(crate) struct CallerContext {
 ///
 /// Returns a new TokenStream with incant! calls replaced by direct tier calls.
 pub(crate) fn rewrite_incant_in_body(body: TokenStream, ctx: &CallerContext) -> TokenStream {
+    rewrite_incant_in_function(body, ctx, None)
+}
+
+pub(crate) fn rewrite_incant_in_function(
+    body: TokenStream,
+    ctx: &CallerContext,
+    signature: Option<&syn::Signature>,
+) -> TokenStream {
     // Most kernels have no dispatch inside them. Keep their original groups,
     // spans, and token storage instead of allocating two vectors at every depth.
-    if !crate::common::tokens_contain_ident(&body, &["incant", "dispatch_variant"]) {
+    let calls = dispatch_presence(&body);
+    if calls == 0 {
+        return body;
+    }
+    let body = if calls & 2 != 0 {
+        if let Some(tier) = tiers::find_tier(ctx.tier_suffix) {
+            crate::attune::call::rewrite(body, tier, signature)
+        } else {
+            body
+        }
+    } else {
+        body
+    };
+    if calls & 1 == 0 {
         return body;
     }
     let tokens: Vec<TokenTree> = body.into_iter().collect();
@@ -123,7 +167,7 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<Tok
     // matching-feature call; a missing `f_<tier>` or a feature mismatch is a
     // compile error. Works whether or not the caller itself holds a token.
     if input.without_token {
-        let fn_suffixed = suffix_path(&input.func_path, &ctx.tier_suffix);
+        let fn_suffixed = suffix_path(&input.func_path, ctx.tier_suffix);
         let args = &input.args;
         return Some(quote! { #fn_suffixed(#(#args),*) });
     }
@@ -177,7 +221,7 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<Tok
             continue;
         }
         if rt.suffix == ctx.tier_suffix
-            || crate::generated::can_downgrade_tier(&ctx.tier_suffix, rt.suffix)
+            || crate::generated::can_downgrade_tier(ctx.tier_suffix, rt.suffix)
         {
             direct_tiers.push(rt);
         } else {
@@ -322,7 +366,7 @@ fn rewrite_tokenless_incant(input: &IncantInput, ctx: &CallerContext) -> Option<
             || tier.name == "default"
             || (tier.target_arch == ctx.target_arch
                 && (tier.suffix == ctx.tier_suffix
-                    || crate::generated::can_downgrade_tier(&ctx.tier_suffix, tier.suffix)))
+                    || crate::generated::can_downgrade_tier(ctx.tier_suffix, tier.suffix)))
     });
 
     // Build from the fallback up: cfg-gating a preferred tier must expose the
@@ -377,9 +421,9 @@ mod tests {
     use super::*;
     use quote::quote;
 
-    fn make_ctx(tier: &str, _priority: u32, arch: Option<&'static str>) -> CallerContext {
+    fn make_ctx(tier: &'static str, _priority: u32, arch: Option<&'static str>) -> CallerContext {
         CallerContext {
-            tier_suffix: tier.to_string(),
+            tier_suffix: tier,
             target_arch: arch,
             token_ident: format_ident!("__token"),
             has_token: true,

@@ -17,6 +17,11 @@ names are deprecated in the next 0.9 patch; `_t` remains supported in 0.10,
 where the short names become non-deprecated feature-context constructors. See
 [the migration guide](docs/TOKEN-CONSTRUCTOR-MIGRATION.md).
 
+The 0.9.31-beta unified macros (`#[attune]`, `attuned!`, `reattune!`) are
+documented in [docs/ATTUNE.md](docs/ATTUNE.md), the owning guide for the beta
+syntax, call and proof rules, inline policies, and the legacy-attribute
+mapping. It ships on `release/0.9.31-beta`, not on main.
+
 ## CRITICAL: Every Conversation Health Check
 
 **Run these checks at the start of every conversation, even if the user doesn't ask:**
@@ -1212,6 +1217,28 @@ Design record for #116 (the `mul_add` contract):
   `benchmarks/transcendentals_fused_mul_add_2026-10-05.md`.
 
 ### Downstream and tooling notes
+
+- Beta release tooling (2026-10-10): cargo-semver-checks 0.51.0's
+  `safe_inherent_method_requires_more_target_features` lint conflates V4 and
+  V4x inherent impls, including when comparing the same rustdoc JSON to itself.
+  `xtask/check_semver.py` now requires a concrete-impl comparison alongside
+  ordinary semver checking. Only this Magetypes lint is replaced, with explicit
+  approval; every other lint remains enabled. Use `just semver magetypes`, not
+  the standalone Cargo command, for the complete guard. Evidence:
+  [beta validation](benchmarks/attune_beta_validation_2026-10-10.md).
+  The checker validates rustdoc JSON format 60 (local Rust 1.98.1). Remote CI
+  on 2026-10-10 runs stable Rust 1.99.0, whose newer rustdoc format makes the
+  precise step fail closed (`ValueError: Review the precise checker for this new
+  rustdoc format`) after the ordinary Magetypes checks pass (201 checks, 201
+  pass, 59 skip). The Semver (magetypes) job is red on every beta commit from
+  3067ce51 until the checker covers the new format or the job pins the
+  validated toolchain; it is tooling scope, unrelated to documentation.
+- Expansion snapshots (2026-10-10): cargo-expand 1.0.127 propagates the compiler's
+  nonzero exit status for intentionally invalid inputs; macrotest 1.2.1 treats
+  this as an expansion failure. CI pins cargo-expand 1.0.126 for the existing
+  snapshot contract. Compilation rejection is checked independently in
+  `tests/soundness_exploits.rs`; no snapshot expectations or classifications
+  change. The version is centralized in `.github/workflows/ci.yml`.
 
 - #117 (closed, not planned): published `jxl-encoder-simd 0.3.0` against main
   (checked 2026-10-07 with a path patch, `cargo check` on three targets):
