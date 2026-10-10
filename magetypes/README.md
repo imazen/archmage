@@ -14,8 +14,8 @@ token proving its CPU features, so using it takes no `unsafe` in your code.
 
 ```toml
 [dependencies]
-magetypes = "0.9.30"
-archmage  = "0.9.30"   # the macros and tokens
+magetypes = "=0.9.31-beta"
+archmage  = "=0.9.31-beta"   # the macros and tokens
 ```
 
 Multiply a buffer by a factor, using AVX2, NEON or WASM SIMD where available:
