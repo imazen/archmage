@@ -113,7 +113,8 @@ feature bodies; selecting it for proof wrappers or dispatchers is permitted.
 ## Beta scope and validation
 
 The beta keeps migration manual: there is no complete source converter or exact
-replacement deprecation machinery. Matched cold-compile measurements remain a release gate.
+replacement deprecation machinery. The measured cold-compile overhead was accepted for this beta on 2026-10-10;
+see the [consumer measurements](../benchmarks/consumer_compile_beta_2026-10-10.md).
 The pre-beta measurements and design history remain on the archived
 `draft/attune-rewrite` branch; they are not part of the release patch.
 

@@ -1,6 +1,8 @@
 # Beta validation, 2026-10-10
 
-The cold-compile gate remains open. This small existing legacy-consumer fixture
+The measured cold-compile overhead was accepted for this beta on 2026-10-10.
+The [full-consumer follow-up](consumer_compile_beta_2026-10-10.md) records the
+Magetypes, encoder, and decoder measurements behind that decision. This small existing legacy-consumer fixture
 has higher cold check times in the beta; it is not a measurement of large codec
 consumers or of runtime performance.
 

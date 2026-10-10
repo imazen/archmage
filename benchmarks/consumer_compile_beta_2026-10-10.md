@@ -3,7 +3,9 @@
 These are fresh measurements of the beta implementation against published
 0.9.30 source, using the same pinned consumer sources as the earlier survey.
 They do not establish a no-regression result: Magetypes and the encoder have
-higher cold medians. Decoder ranges overlap in both modes.
+higher cold medians. Decoder ranges overlap in both modes. The measured
+overhead was accepted for this beta on 2026-10-10; the compile-time release
+gate is satisfied by that explicit acceptance, not by a no-regression claim.
 
 | Workload | Mode | 0.9.30 (s) | Beta (s) | Added time | Change |
 | --- | --- | ---: | ---: | ---: | ---: |
