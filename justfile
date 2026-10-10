@@ -456,3 +456,7 @@ check-target-features baseline current:
 
 check-target-features-test:
     python3 -B -m unittest discover -s xtask -p test_target_features.py -v
+
+# Cold checks/release builds of retained, fixed codec source captures.
+consumer-compile out mode *args:
+    python3 -B benchmarks/consumer_compile.py --out {{out}} {{mode}} {{args}}
