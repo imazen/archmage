@@ -22,6 +22,13 @@
 //! - `_precise`: `cbrt_midp_precise` also handles subnormal inputs and the
 //!   whole range; the other `_midp_precise` names are aliases of the plain
 //!   forms, queued for removal
+//! - `_portable`: `log2`, `exp2`, `ln`, `exp`, `log10` and `pow` at midp with
+//!   the same bits on every backend and token tier. Each multiply-add rounds
+//!   once ([`mul_add_portable`](f32x4::mul_add_portable)), so on a CPU
+//!   with FMA (x86-64-v3 and up, AArch64) they return exactly what the plain
+//!   midp forms return there wherever the result is a number, and the scalar
+//!   backend and WASM, which round twice in `mul_add`, return the same; NaN
+//!   in gives NaN out
 
 use crate::simd::backends::{F32x4Backend, F32x4Convert, I32x4Backend};
 use crate::simd::generic::{f32x4, i32x4};
@@ -414,6 +421,152 @@ impl<T: F32x4Convert> f32x4<T> {
     #[inline(always)]
     pub fn pow_midp_precise(self, n: f32) -> Self {
         self.pow_midp(n)
+    }
+
+    // ====== Portable Mid-Precision Transcendentals ======
+    //
+    // The midp algorithms with every multiply-add fused once on every backend
+    // (`mul_add_portable`) and NaN passed through, so one input gives one
+    // result everywhere. Everything else they use (bit and integer operations,
+    // IEEE division and products, `round` to nearest even, comparisons and
+    // blends) already gives the same bits on every backend; `min` and `max`
+    // differ only for NaN, which the public forms return unchanged.
+
+    /// [`log2_midp_unchecked`](Self::log2_midp_unchecked) with one rounding
+    /// per multiply-add on every backend.
+    #[inline(always)]
+    fn log2_midp_portable_core(self) -> Self {
+        const SQRT2_OVER_2: u32 = 0x3f35_04f3;
+        const ONE_BITS: u32 = 0x3f80_0000;
+        const MANTISSA_MASK: i32 = 0x007f_ffff_u32 as i32;
+
+        const C0: f32 = 2.885_39;
+        const C1: f32 = 0.961_800_76;
+        const C2: f32 = 0.576_974_45;
+        const C3: f32 = 0.434_411_97;
+
+        let x_bits = self.bitcast_to_i32();
+
+        let offset = splat_i32::<T>(self.1, (ONE_BITS - SQRT2_OVER_2) as i32);
+        let adjusted = x_bits + offset;
+
+        let exp_raw = adjusted.shr_arithmetic_const::<23>();
+        let n = (exp_raw - splat_i32::<T>(self.1, 127)).to_f32();
+
+        let mantissa_bits = adjusted & splat_i32::<T>(self.1, MANTISSA_MASK);
+        let a = (mantissa_bits + splat_i32::<T>(self.1, SQRT2_OVER_2 as i32)).bitcast_to_f32();
+
+        let one = splat_f32::<T>(self.1, 1.0);
+        let y = (a - one) / (a + one);
+        let y2 = y * y;
+
+        let poly = splat_f32::<T>(self.1, C3).mul_add_portable(y2, splat_f32::<T>(self.1, C2));
+        let poly = poly.mul_add_portable(y2, splat_f32::<T>(self.1, C1));
+        let poly = poly.mul_add_portable(y2, splat_f32::<T>(self.1, C0));
+
+        poly.mul_add_portable(y, n)
+    }
+
+    /// [`exp2_midp_unchecked`](Self::exp2_midp_unchecked) with one rounding
+    /// per multiply-add on every backend.
+    #[inline(always)]
+    fn exp2_midp_portable_core(self) -> Self {
+        const C0: f32 = 1.0;
+        const C1: f32 = core::f32::consts::LN_2;
+        const C2: f32 = 0.240_226_46;
+        const C3: f32 = 0.055_504_545;
+        const C4: f32 = 0.009_618_055;
+        const C5: f32 = 0.001_333_37;
+        const C6: f32 = 0.000_154_47;
+
+        let xi = self.round().min(splat_f32::<T>(self.1, 127.0));
+        let xf = self - xi;
+
+        let poly = splat_f32::<T>(self.1, C6).mul_add_portable(xf, splat_f32::<T>(self.1, C5));
+        let poly = poly.mul_add_portable(xf, splat_f32::<T>(self.1, C4));
+        let poly = poly.mul_add_portable(xf, splat_f32::<T>(self.1, C3));
+        let poly = poly.mul_add_portable(xf, splat_f32::<T>(self.1, C2));
+        let poly = poly.mul_add_portable(xf, splat_f32::<T>(self.1, C1));
+        let poly = poly.mul_add_portable(xf, splat_f32::<T>(self.1, C0));
+
+        let xi_i32 = xi.to_i32_round();
+        let scale_bits = (xi_i32 + splat_i32::<T>(self.1, 127)).shl_const::<23>();
+        poly * scale_bits.bitcast_to_f32()
+    }
+
+    /// Base-2 logarithm with the same bits on every backend and token tier:
+    /// [`log2_midp`](Self::log2_midp)'s algorithm, accuracy and edge cases
+    /// (-inf for 0, NaN for negative values, +inf for +inf), with each
+    /// multiply-add rounded once ([`mul_add_portable`](Self::mul_add_portable))
+    /// and NaN returned unchanged. Where the CPU has FMA it returns exactly
+    /// what `log2_midp` returns there wherever the result is a number, at the same
+    /// cost; the scalar backend without FMA and WASM fuse in software, which
+    /// costs more.
+    #[inline(always)]
+    pub fn log2_midp_portable(self) -> Self {
+        let result = self.log2_midp_portable_core();
+        let zero = splat_f32::<T>(self.1, 0.0);
+        let result = Self::blend(
+            self.simd_eq(zero),
+            splat_f32::<T>(self.1, f32::NEG_INFINITY),
+            result,
+        );
+        let result = Self::blend(self.simd_lt(zero), splat_f32::<T>(self.1, f32::NAN), result);
+        let inf = splat_f32::<T>(self.1, f32::INFINITY);
+        let result = Self::blend(self.simd_eq(inf), inf, result);
+        Self::blend(self.simd_eq(self), result, self)
+    }
+
+    /// Base-2 exponential with the same bits on every backend and token tier:
+    /// [`exp2_midp`](Self::exp2_midp)'s algorithm, accuracy and clamping (0
+    /// below -126, inf from 128), with each multiply-add rounded once and NaN
+    /// returned unchanged. Where the CPU has FMA it returns exactly what
+    /// `exp2_midp` returns there wherever the result is a number; see
+    /// [`log2_midp_portable`](Self::log2_midp_portable) for the cost.
+    #[inline(always)]
+    pub fn exp2_midp_portable(self) -> Self {
+        let underflow_limit = splat_f32::<T>(self.1, -126.0);
+        let overflow_limit = splat_f32::<T>(self.1, 128.0);
+        let clamped = self.max(underflow_limit).min(overflow_limit);
+        let result = clamped.exp2_midp_portable_core();
+        let zero = splat_f32::<T>(self.1, 0.0);
+        let inf = splat_f32::<T>(self.1, f32::INFINITY);
+        let result = Self::blend(self.simd_lt(underflow_limit), zero, result);
+        let result = Self::blend(self.simd_ge(overflow_limit), inf, result);
+        Self::blend(self.simd_eq(self), result, self)
+    }
+
+    /// Natural logarithm with the same bits on every backend and token tier:
+    /// [`ln_midp`](Self::ln_midp) from
+    /// [`log2_midp_portable`](Self::log2_midp_portable).
+    #[inline(always)]
+    pub fn ln_midp_portable(self) -> Self {
+        self.log2_midp_portable() * splat_f32::<T>(self.1, core::f32::consts::LN_2)
+    }
+
+    /// Natural exponential with the same bits on every backend and token tier:
+    /// [`exp_midp`](Self::exp_midp) from
+    /// [`exp2_midp_portable`](Self::exp2_midp_portable), with its accuracy.
+    #[inline(always)]
+    pub fn exp_midp_portable(self) -> Self {
+        (self * splat_f32::<T>(self.1, core::f32::consts::LOG2_E)).exp2_midp_portable()
+    }
+
+    /// Base-10 logarithm with the same bits on every backend and token tier:
+    /// [`log10_midp`](Self::log10_midp) from
+    /// [`log2_midp_portable`](Self::log2_midp_portable).
+    #[inline(always)]
+    pub fn log10_midp_portable(self) -> Self {
+        self.log2_midp_portable()
+            * splat_f32::<T>(self.1, core::f32::consts::LN_2 / core::f32::consts::LN_10)
+    }
+
+    /// Power function `self^n` with the same bits on every backend and token
+    /// tier: [`pow_midp`](Self::pow_midp) from the portable `log2` and `exp2`,
+    /// with its accuracy.
+    #[inline(always)]
+    pub fn pow_midp_portable(self, n: f32) -> Self {
+        (self.log2_midp_portable() * splat_f32::<T>(self.1, n)).exp2_midp_portable()
     }
 
     /// Low-precision cube root (~15 bits, ~4.5 decimal digits).
