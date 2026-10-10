@@ -73,6 +73,10 @@
 - Planned: make `w512` non-default in magetypes; users who need 512-bit types would add `features = ["w512"]`. This patch keeps the existing default features.
 - Remove `cast::Upcast` and `cast::Downcast`, and with them the `cast` module, which holds nothing else. Both are deprecated in 0.9.30 and were never implemented (b1b2ff67).
 
+#### Fixed
+
+- `simd_ne` on the x86-64-v3 float types (`f32x4`, `f32x8`, `f64x2`, `f64x4`, and the AVX-512 tier's `f32x4`/`f32x8`, which delegate to them) is true for NaN lanes, as Rust's `!=`, NEON, WASM, the scalar backend and the 512-bit types have it; it used the ordered `_CMP_NEQ_OQ`, so `x.simd_ne(x)` missed NaN only on that tier. `tests/float_compare_nan.rs` checks every comparison against NaN on each backend.
+
 ### [0.9.30] - 2026-10-07
 
 #### Added
