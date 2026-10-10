@@ -9,6 +9,12 @@
 - Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)
 - Remove width traits `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` — use concrete tokens or tier traits (`HasX64V2`, `HasX64V4`) instead (deprecated since 0.9.9; `Has256BitSimd` only enables AVX, not AVX2/FMA)
 
+### [0.9.31-beta] - 2026-10-10
+
+#### Added
+
+- Export `attune`, `attuned!`, and `reattune!` for direct feature bodies, proof wrappers, and runtime dispatch; legacy macro names remain supported (b22d0336).
+
 ### [0.9.30] - 2026-10-07
 
 #### Fixed
@@ -31,6 +37,21 @@
 - Deprecate `incant!` passthrough mode (`with token`) — zero downstream uses; `#[rite]` multi-tier or direct `IntoConcreteToken` dispatch are better alternatives
 - Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with deprecation warning)
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
+
+### [0.9.31-beta] - 2026-10-10
+
+#### Added
+
+- `#[attune]` supports explicit tiers, conventional suffix inference, structured output selectors, per-output visibility and inline policies, and explicitly gated extra tiers (b22d0336).
+- `attuned!` uses covered feature contexts or an eligible enclosing proof; `using(...)` overrides proof inference and `reattune!` permits runtime reselection. Explicit tier lists require a guaranteed fallback (b22d0336).
+
+#### Changed
+
+- Legacy frontends and the new attributes share feature-body and proof-boundary emission; existing calling conventions and default inline behavior remain supported (b22d0336).
+
+#### Fixed
+
+- Unavailable invocation candidates cannot demand an ambiguous parent-proof choice before an available fallback (b22d0336).
 
 ### [0.9.30] - 2026-10-07
 
@@ -72,6 +93,12 @@
 - Remove the six no-op `*_midp_precise` aliases (`exp2`/`exp`/`ln`/`log2`/`log10`/`pow` — each is literally `self.*_midp()`); `cbrt_midp_precise` stays, it does real denormal/zero handling. With the reciprocal tiers settling on `_portable` as the precise tier, a `_precise` suffix that does nothing is a naming lie.
 - Planned: make `w512` non-default in magetypes; users who need 512-bit types would add `features = ["w512"]`. This patch keeps the existing default features.
 - Remove `cast::Upcast` and `cast::Downcast`, and with them the `cast` module, which holds nothing else. Both are deprecated in 0.9.30 and were never implemented (b1b2ff67).
+
+### [0.9.31-beta] - 2026-10-10
+
+#### Changed
+
+- Use the matching archmage beta so vector token types interoperate with its unified macros. Constructor signatures remain unchanged (567507af).
 
 ### [0.9.30] - 2026-10-07
 
