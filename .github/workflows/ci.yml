@@ -60,6 +60,32 @@ jobs:
       - name: Run actual Markdown examples with AVX-512 support
         run: python3 xtask/check_docs.py --features avx512
 
+  attune-expansion:
+    name: Unified macro raw expansions
+    runs-on: ubuntu-latest
+    env:
+      CARGO_BUILD_JOBS: 2
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu,wasm32-unknown-unknown,i686-unknown-linux-gnu
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cargo-expand
+        run: cargo install cargo-expand --locked
+      - name: Check generator contracts
+        run: python3 -B -m unittest discover -s tests/attune_expansion -v
+      - name: Compile all target and gate combinations
+        run: python3 -B tests/attune_expansion/run.py --out expansion-artifacts --keep-going
+      - name: Retain source, raw output, and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: attune-expanded-raw
+          path: |
+            expansion-artifacts/**
+            !expansion-artifacts/target/**
+
   storage-codegen:
     name: SIMD codegen against PR base
     if: github.event_name == 'pull_request'
@@ -1065,6 +1091,7 @@ jobs:
       - workflow-contracts
       - website-examples
       - storage-codegen
+      - attune-expansion
       - test-x64
       - test-aarch64
       - test-cross
