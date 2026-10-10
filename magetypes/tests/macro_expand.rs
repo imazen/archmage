@@ -10,7 +10,8 @@
 //!
 //! To update snapshots: `MACROTEST=overwrite cargo test -p magetypes --test macro_expand`
 //!
-//! Requires `cargo-expand` (`cargo install cargo-expand`).
+//! Requires `cargo-expand`; CI pins the version (`CARGO_EXPAND_VERSION` in
+//! `.github/workflows/ci.yml`).
 
 // Miri isolates the filesystem by default; trybuild/macrotest both do
 // disk I/O (glob, compile, write snapshots) which Miri rejects. These

@@ -16,6 +16,12 @@ env:
   CI: true
   # All stable features
   FEATURES: "std avx512"
+  # cargo-expand 1.0.127 exits non-zero when rustc rejects the expansion. The
+  # inputs in tests/expand/should-fail/ are known-buggy expansions that rustc
+  # rejects by design, and macrotest 1.2.1 treats any non-zero exit as an
+  # expansion error, so their snapshot tests fail although the printed
+  # expansions still match. 1.0.126 exits 0 there.
+  CARGO_EXPAND_VERSION: "1.0.126"
 
 # PR runs supersede each other — only the newest push to a PR branch matters,
 # so cancel the stale one and spare the runner queue (particularly the macOS
@@ -104,7 +110,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-expand
-        run: cargo install cargo-expand --locked
+        run: cargo install cargo-expand@${{ env.CARGO_EXPAND_VERSION }} --locked
 
       - name: Build
         run: cargo build --features "${{ env.FEATURES }}"
@@ -196,7 +202,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-expand
-        run: cargo install cargo-expand --locked
+        run: cargo install cargo-expand@${{ env.CARGO_EXPAND_VERSION }} --locked
 
       - name: Build
         run: cargo build --features "${{ env.FEATURES }}"
@@ -276,7 +282,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-expand
-        run: cargo install cargo-expand --locked
+        run: cargo install cargo-expand@${{ env.CARGO_EXPAND_VERSION }} --locked
 
       - name: Build (cross)
         run: cross build --features "${{ env.FEATURES }}" --target ${{ matrix.target }}
@@ -736,7 +742,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-expand
-        run: cargo install cargo-expand --locked
+        run: cargo install cargo-expand@${{ env.CARGO_EXPAND_VERSION }} --locked
 
       - name: Build
         run: cargo build ${{ matrix.build }}
@@ -941,7 +947,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-expand
-        run: cargo install cargo-expand --locked
+        run: cargo install cargo-expand@${{ env.CARGO_EXPAND_VERSION }} --locked
 
       # forge-token-api compiles the forged-token tests, the only coverage
       # for tokens this runner's CPU cannot summon (V3 crypto, GFNI, FP16).
@@ -977,7 +983,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-expand
-        run: cargo install cargo-expand --locked
+        run: cargo install cargo-expand@${{ env.CARGO_EXPAND_VERSION }} --locked
 
       - name: Generate coverage
         run: cargo llvm-cov --features "${{ env.FEATURES }} forge-token-api" --lcov --output-path lcov.info
