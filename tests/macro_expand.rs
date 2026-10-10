@@ -9,7 +9,11 @@
 //! To regenerate test inputs: `cargo run -p xtask -- gen-expand`
 //! To update snapshots: `MACROTEST=overwrite cargo test -p archmage --test macro_expand`
 //!
-//! Requires `cargo-expand` (`cargo install cargo-expand`).
+//! Requires `cargo-expand` (`cargo install cargo-expand --locked --version 1.0.126`).
+//! CI pins this version for macrotest 1.2.1: cargo-expand 1.0.127 returns a
+//! nonzero status for our deliberately invalid snapshot inputs. Their rejection
+//! is checked separately by soundness_exploits.rs; snapshot expectations stay
+//! unchanged.
 //!
 //! These `.expanded.rs` files are what `cargo expand` prints: the crate after
 //! rustc has evaluated every `cfg`, so a false gate removes the item and a true

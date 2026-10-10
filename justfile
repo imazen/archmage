@@ -460,3 +460,7 @@ check-target-features-test:
 # Cold checks/release builds of retained, fixed codec source captures.
 consumer-compile out mode *args:
     python3 -B benchmarks/consumer_compile.py --out {{out}} {{mode}} {{args}}
+
+# Check snapshots and positive compilation without refreshing expectations.
+expand-check:
+    cargo test -p archmage --test macro_expand -- --test-threads=1
