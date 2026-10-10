@@ -21,6 +21,12 @@ include = [
     "LICENSE*",
 ]
 
+# Replaced by the concrete-impl comparison in xtask/check_semver.py, which CI
+# requires alongside every other cargo-semver-checks lint. The 0.51.0 query
+# conflates V4 and V4x methods even when comparing identical rustdoc JSON.
+[package.metadata.cargo-semver-checks.lints]
+safe_inherent_method_requires_more_target_features = "allow"
+
 [features]
 default = ["std", "w512"]
 std = ["archmage/std"]

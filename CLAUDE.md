@@ -1213,6 +1213,21 @@ Design record for #116 (the `mul_add` contract):
 
 ### Downstream and tooling notes
 
+- Beta release tooling (2026-10-10): cargo-semver-checks 0.51.0's
+  `safe_inherent_method_requires_more_target_features` lint conflates V4 and
+  V4x inherent impls, including when comparing the same rustdoc JSON to itself.
+  `xtask/check_semver.py` now requires a concrete-impl comparison alongside
+  ordinary semver checking. Only this Magetypes lint is replaced, with explicit
+  approval; every other lint remains enabled. Use `just semver magetypes`, not
+  the standalone Cargo command, for the complete guard. Evidence:
+  [beta validation](benchmarks/attune_beta_validation_2026-10-10.md).
+- Expansion snapshots (2026-10-10): cargo-expand 1.0.127 propagates the compiler's
+  nonzero exit status for intentionally invalid inputs; macrotest 1.2.1 treats
+  this as an expansion failure. CI pins cargo-expand 1.0.126 for the existing
+  snapshot contract. Compilation rejection is checked independently in
+  `tests/soundness_exploits.rs`; no snapshot expectations or classifications
+  change. The version is centralized in `.github/workflows/ci.yml`.
+
 - #117 (closed, not planned): published `jxl-encoder-simd 0.3.0` against main
   (checked 2026-10-07 with a path patch, `cargo check` on three targets):
   x86_64 builds (477 deprecation warnings, 22 of them `from_m256`); aarch64 and

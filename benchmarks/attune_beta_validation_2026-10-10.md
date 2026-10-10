@@ -61,9 +61,27 @@ with `--release-type patch`. Its [lint query](https://github.com/obi1kenobi/carg
 matches owner paths and method names without distinguishing impl type arguments.
 V4 and V4x `from_raw` methods therefore cross-match.
 
-The diagnostic `xtask/check_target_features.py` retains concrete impl arguments
-and compares 2,040 safe inherent methods, including 40 with target features:
-zero differences that add requirements against published 0.9.30. Its tests
-reject strengthened requirements independently on either specialization,
-including a previously unannotated method. This companion does not disable
-the existing semver lint; release CI remains blocked on it pending review.
+The approved replacement, `xtask/check_target_features.py`, retains concrete
+impl arguments. `xtask/check_semver.py` requires it alongside ordinary semver
+checking in CI and release CI; only the faulty Magetypes lint is overridden.
+`just semver magetypes` selects the published baseline, while
+`just attune-beta-semver` fixes the baseline at 0.9.30 for this release review.
+Direct `cargo semver-checks` alone does not run the companion guard.
+
+The integrated check passed against 0.9.30: Archmage passed 202 ordinary checks;
+Magetypes passed 201 ordinary checks plus the comparison of 2,040 public safe
+inherent methods, including 40 with target features. No method gained a feature
+requirement. Tests reject strengthened requirements on either specialization,
+including a previously unannotated method, and reject missing/ambiguous artifacts,
+mismatched targets, versions or features, and empty feature comparisons.
+
+Each run retains a fresh artifact directory under `target/semver-guard/`. The
+checker verifies both crates' resolved Cargo features and the rustdoc target.
+Cargo-semver-checks 0.51.0 and rustdoc JSON format 60 are the validated interface;
+a new JSON format fails closed until reviewed. Because `CARGO_TARGET_DIR` makes
+baseline generation overwrite the current JSON, a second Magetypes pass reads
+the frozen baseline JSON and rebuilds only the current crate before comparison.
+
+Validation command: `just attune-beta-semver`, under run-heavy with
+`--mem 16G --jobs 8`. Log: `~/tmp/attune-beta-precise-semver-isolated.log`.
+Resource-limiter summary: `rc=0 9s | peak-RSS 0.36GiB | min-avail 27680MiB | peak-load 0.31`.

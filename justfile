@@ -439,8 +439,12 @@ attune-beta-packages:
     cargo publish --workspace --dry-run --allow-dirty
 
 attune-beta-semver:
-    cargo semver-checks check-release -p archmage --baseline-version 0.9.30
-    cargo semver-checks check-release -p magetypes --baseline-version 0.9.30
+    python3 -B xtask/check_semver.py archmage --baseline-version 0.9.30
+    python3 -B xtask/check_semver.py magetypes --baseline-version 0.9.30
+
+# Published baseline selected by cargo-semver-checks; includes the precise guard.
+semver package:
+    python3 -B xtask/check_semver.py {{package}}
 
 # Alternate pinned source archives; no CPU-native flags or reused cold targets.
 attune-beta-compare baseline candidate out pairs="6":

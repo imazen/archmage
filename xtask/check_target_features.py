@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Compare safe inherent methods by concrete impl, including generic arguments.
 
-Diagnostic companion to cargo-semver-checks. Its target-feature lint in 0.51.0
+Required companion to cargo-semver-checks. Its target-feature lint in 0.51.0
 matches methods without their impl's type arguments, confusing V4 and V4x.
-This script does not disable that lint or replace the rest of semver checking.
+For Magetypes only, this replaces that lint; all other lints remain enabled.
+Run check_semver.py to perform both checks on the same fresh rustdoc artifacts.
 Inputs must be rustdoc JSON built for the same target and Cargo feature set.
 """
 import argparse
