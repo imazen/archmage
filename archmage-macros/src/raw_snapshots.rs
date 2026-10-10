@@ -76,6 +76,23 @@ fn expand_item(name: &str, args: TokenStream, item: TokenStream) -> TokenStream 
 struct Expander;
 
 impl Expander {
+    fn expand_impl_items(&mut self, items: Vec<ImplItem>) -> Vec<ImplItem> {
+        let mut out = Vec::new();
+        for mut member in items {
+            if let ImplItem::Fn(f) = &mut member
+                && let Some((name, args)) = take_macro_attr(&mut f.attrs)
+            {
+                let tokens = expand_item(&name, args, f.to_token_stream());
+                let wrapped: syn::ItemImpl = syn::parse2(quote::quote! { impl __Raw { #tokens } })
+                    .expect("macro output parses as impl items");
+                out.extend(self.expand_impl_items(wrapped.items));
+            } else {
+                out.push(member);
+            }
+        }
+        out
+    }
+
     fn expand_items(&mut self, items: Vec<Item>) -> Vec<Item> {
         let mut out = Vec::new();
         for mut item in items {
@@ -90,23 +107,7 @@ impl Expander {
                     }
                 }
                 Item::Impl(imp) => {
-                    let mut new_items = Vec::new();
-                    for mut member in std::mem::take(&mut imp.items) {
-                        if let ImplItem::Fn(f) = &mut member
-                            && let Some((name, args)) = take_macro_attr(&mut f.attrs)
-                        {
-                            let tokens = expand_item(&name, args, f.to_token_stream());
-                            // The output of a method expansion is one or more
-                            // impl items; parse them inside a dummy impl.
-                            let wrapped: syn::ItemImpl =
-                                syn::parse2(quote::quote! { impl __Raw { #tokens } })
-                                    .expect("macro output parses as impl items");
-                            new_items.extend(wrapped.items);
-                            continue;
-                        }
-                        new_items.push(member);
-                    }
-                    imp.items = new_items;
+                    imp.items = self.expand_impl_items(std::mem::take(&mut imp.items));
                 }
                 Item::Mod(m) => {
                     if let Some((brace, items)) = m.content.take() {
@@ -138,6 +139,23 @@ fn expand_function_macro(mac: &syn::Macro) -> Option<TokenStream> {
 }
 
 impl VisitMut for Expander {
+    fn visit_block_mut(&mut self, block: &mut syn::Block) {
+        let mut statements = Vec::new();
+        for mut statement in std::mem::take(&mut block.stmts) {
+            if let syn::Stmt::Item(item) = statement {
+                statements.extend(
+                    self.expand_items(vec![item])
+                        .into_iter()
+                        .map(syn::Stmt::Item),
+                );
+            } else {
+                self.visit_stmt_mut(&mut statement);
+                statements.push(statement);
+            }
+        }
+        block.stmts = statements;
+    }
+
     fn visit_expr_mut(&mut self, expr: &mut syn::Expr) {
         if let syn::Expr::Macro(m) = expr
             && let Some(tokens) = expand_function_macro(&m.mac)
@@ -193,6 +211,7 @@ fn inputs() -> Vec<PathBuf> {
 #[test]
 fn raw_snapshots_match() {
     let overwrite = std::env::var("ARCHMAGE_RAW_SNAPSHOTS").is_ok_and(|v| v == "overwrite");
+    let actual_dir = std::env::var_os("ARCHMAGE_RAW_ACTUAL_DIR").map(PathBuf::from);
     let root = repo_root();
     let mut stale = Vec::new();
     let mut count = 0usize;
@@ -219,6 +238,11 @@ fn raw_snapshots_match() {
                 output.strip_prefix(&root).unwrap().display()
             );
         } else {
+            if let Some(directory) = &actual_dir {
+                let actual = directory.join(rel);
+                std::fs::create_dir_all(actual.parent().unwrap()).unwrap();
+                std::fs::write(actual, &expanded).unwrap();
+            }
             stale.push(output.strip_prefix(&root).unwrap().display().to_string());
         }
     }
@@ -230,4 +254,24 @@ fn raw_snapshots_match() {
         stale.len(),
         stale.join("\n")
     );
+}
+
+#[test]
+fn raw_expansion_reaches_methods_and_block_items() {
+    let expanded = raw_expand(
+        r#"
+        struct Kernel;
+        impl Kernel {
+            #[archmage::autoversion(v3, scalar)]
+            fn work(&self, x: u32) -> u32 { x }
+        }
+        fn outer() {
+            #[archmage::arcane]
+            fn nested(t: archmage::X64V3Token) {}
+        }
+    "#,
+    );
+    assert!(!expanded.contains("#[archmage::"), "{expanded}");
+    assert!(expanded.contains("fn __arcane_work_v3"), "{expanded}");
+    assert!(expanded.contains("fn __arcane_nested"), "{expanded}");
 }
