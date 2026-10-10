@@ -142,6 +142,13 @@
 
 (none)
 
+### [0.9.31-beta] - 2026-10-10
+
+#### Fixed
+
+- Require a concrete-impl target-feature comparison in semver and release CI; replace only the Magetypes lint that conflates V4 and V4x, retaining all other checks (94d828e2).
+- Pin cargo-expand 1.0.126 for macrotest's intentionally invalid expansion inputs; retain existing snapshots and independent rejection checks (cd5a37de).
+
 ### [0.9.30] - 2026-10-07
 
 #### Added

@@ -122,3 +122,24 @@ The [expansion corpus](../tests/attune_expansion/README.md) documents finite syn
 products, calling contexts, raw replay, and expected rejections. These checks
 complement runtime tests and cross-platform CI; passing the matrix does not make
 every Rust signature or attribute combination supported.
+
+### Documentation review before publication
+
+The beta documentation still needs a complete consistency review against the
+parser, emitters, and expansion fixtures. Cover the root and per-crate READMEs,
+the website, and the constructor migration guide. Keep legacy examples valid;
+show a verified old-to-new table that distinguishes direct bodies, proof
+wrappers, and dispatchers, including visibility and inline-policy changes.
+Document unsupported receiver/generic cases with a working alternative, and
+keep unpublished constructor experiments separate from this beta's API.
+
+Compile documentation examples with `just docs-test`. Regenerate the trimmed
+crates.io READMEs from their source READMEs with `just generate`; do not edit
+generated copies independently. The syntax and rejection evidence lives in
+`archmage-macros/src/attune/` and `tests/attune_expansion/`.
+
+The [precise semver guard](../xtask/check_semver.py) is integrated in local and
+release CI (`94d828e2`); run `just attune-beta-semver` to compare against 0.9.30.
+Its [validation record](../benchmarks/attune_beta_validation_2026-10-10.md)
+explains the single replaced lint. Full remote CI, the documentation review,
+and the owner's README review and publication approval remain release gates.
