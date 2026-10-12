@@ -281,12 +281,11 @@ impl<T: F64x4Backend> f64x4<T> {
     ///
     /// The same result on every backend, NaN payload/sign aside, as
     /// `f32::mul_add` and `f64::mul_add` give in std. x86 v3/v4 and NEON
-    /// use FMA, at the cost of [`mul_add`](Self::mul_add). The scalar
-    /// backend and WASM fuse in software, relaxed SIMD included because
-    /// relaxed madd may round twice. That costs 2.7–29.5× the time of
-    /// `self * a + b` on the scalar backend and 8.2× (`f32x4`) to 24×
-    /// (`f64x2`) under wasmtime.
-    /// [Measurements](https://github.com/imazen/archmage/blob/main/benchmarks/mul_add_portable_zen5-m4pro_2026-10-05.md).
+    /// use FMA, at the cost of [`mul_add`](Self::mul_add). Scalar lanes
+    /// delegate to libm's hardware/software selection without an extra
+    /// Magetypes CPU probe. WASM fuses in software, relaxed SIMD included
+    /// because relaxed madd may round twice.
+    /// [Historical software-fusion measurements](https://github.com/imazen/archmage/blob/main/benchmarks/mul_add_portable_zen5-m4pro_2026-10-05.md).
     #[inline(always)]
     pub fn mul_add_portable(self, a: Self, b: Self) -> Self {
         Self(T::mul_add_portable(self.1, self.0, a.0, b.0), self.1)
