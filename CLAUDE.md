@@ -138,6 +138,15 @@ fn dist_simd(a: &[f32; 8], b: &[f32; 8]) -> f32 {
 
 **The rule:** `#[arcane(import_intrinsics)]` at the entry point, `#[rite(v3, import_intrinsics)]` for everything called from SIMD code (or `#[rite(import_intrinsics)]` with a token when using magetypes).
 
+### Explicit dispatch only
+
+Magetypes arithmetic must not detect or upgrade CPU features internally.
+Runtime CPU selection belongs at user-requested dispatch boundaries
+(`attuned!`, `reattune!`, `incant!`, or an explicit user `summon()` call).
+A scalar backend stays scalar even on a machine with native SIMD. Portable
+f32 FMA uses f64 TwoSum with round-to-odd; portable f64 FMA uses libm with
+`force-soft-floats` so dependency feature unification cannot add detection.
+
 ### Generic kernels and feature contexts
 
 Rust generics monomorphize; trait bounds are not inherently indirect calls or
@@ -1101,6 +1110,12 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ### Open
 
+- Half-float slice conversion still probes for a stronger tier inside V3 and
+  NEON implementations (`simd/generic/convert_f16.rs`). Removing those probes
+  requires replacing the ARM test's CPU-dependent NaN expectations and deciding
+  how callers explicitly select the existing stronger-tier kernels.
+
+
 Expansion snapshots come in two sets, refreshed together by `just
 expand-snapshots`: `tests/expand/**/*.expanded.rs` is what `cargo expand`
 prints, after rustc evaluates every `cfg` (a false gate removes the item, a
@@ -1137,6 +1152,13 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
   `benchmarks/transcendental_precision_2026-10-05.md`.
 
 ### Resolved (each with its regression coverage)
+
+- Scalar portable FMA probed for native hardware once per lane. The scalar
+  helpers now use software fusion directly, with libm `force-soft-floats`
+  preventing hidden dispatch through Cargo feature unification. Existing
+  `magetypes/tests/fused_arithmetic.rs` cases pass with `libm/arch` explicitly
+  enabled as well as without default features; no rounding expectations changed.
+
 
 - **Expansion capture on fresh CI runners (2026-10-12):** The display generator
   selected a scratch directory without creating it, so cargo-expand failed on

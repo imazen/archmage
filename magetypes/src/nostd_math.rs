@@ -398,76 +398,28 @@ pub fn roundeven(x: f64) -> f64 {
     }
 }
 
-/// Correctly rounded f32 fused multiply-add, including subnormals and signed zero.
+/// Correctly rounded software f32 fused multiply-add, including subnormals
+/// and signed zero.
 ///
-/// Uses the FMA instruction when the CPU has one: NEON on AArch64, where
-/// `NeonToken::summon()` folds to a constant and the helper inlines, and FMA
-/// on x86-64 through `X64V3Token::summon()`, which is a constant with
-/// `-Ctarget-cpu` from Haswell or Zen 1 on and a cached check otherwise.
-/// Everywhere else, [`fmaf_soft`]. No `unsafe`: the helpers are `#[arcane]`
-/// entries whose token is the proof.
+/// Uses [`fmaf_soft`] without probing CPU features. Hardware backends select
+/// their own FMA intrinsics using the caller's token.
 #[inline(always)]
 #[forbid(unsafe_code)]
 pub fn fmaf(a: f32, b: f32, c: f32) -> f32 {
-    #[cfg(target_arch = "aarch64")]
-    if let Some(token) = <archmage::NeonToken as archmage::SimdToken>::summon() {
-        return hw::fmaf_neon(token, a, b, c);
-    }
-    #[cfg(target_arch = "x86_64")]
-    if let Some(token) = <archmage::X64V3Token as archmage::SimdToken>::summon() {
-        return hw::fmaf_v3(token, a, b, c);
-    }
     fmaf_soft(a, b, c)
 }
 
-/// Correctly rounded f64 fused multiply-add: the FMA instruction where the CPU
-/// has one (see [`fmaf`]), else libm's no_std implementation.
+/// Correctly rounded software f64 fused multiply-add.
+///
+/// Uses libm's no_std implementation with `force-soft-floats`, so enabling
+/// libm's architecture feature elsewhere cannot introduce runtime dispatch.
 #[inline(always)]
 #[forbid(unsafe_code)]
 pub fn fma(a: f64, b: f64, c: f64) -> f64 {
-    #[cfg(target_arch = "aarch64")]
-    if let Some(token) = <archmage::NeonToken as archmage::SimdToken>::summon() {
-        return hw::fma_neon(token, a, b, c);
-    }
-    #[cfg(target_arch = "x86_64")]
-    if let Some(token) = <archmage::X64V3Token as archmage::SimdToken>::summon() {
-        return hw::fma_v3(token, a, b, c);
-    }
     libm::fma(a, b, c)
 }
 
-/// The FMA instructions behind [`fmaf`] and [`fma`]: `#[arcane]` entries, so
-/// the token is the proof and the soundness scanner checks each intrinsic
-/// against it.
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-mod hw {
-    /// `fmadd`: `vfmas_lane_f32` computes `a + b * c[LANE]`.
-    #[archmage::arcane(import_intrinsics)]
-    pub(super) fn fmaf_neon(_token: archmage::NeonToken, a: f32, b: f32, c: f32) -> f32 {
-        vfmas_lane_f32::<0>(c, a, vdup_n_f32(b))
-    }
-
-    /// `fmadd` (double): `vfmad_lane_f64` computes `a + b * c[LANE]`.
-    #[archmage::arcane(import_intrinsics)]
-    pub(super) fn fma_neon(_token: archmage::NeonToken, a: f64, b: f64, c: f64) -> f64 {
-        vfmad_lane_f64::<0>(c, a, vdup_n_f64(b))
-    }
-
-    /// `vfmadd213ss` on the low lane.
-    #[archmage::arcane(import_intrinsics)]
-    pub(super) fn fmaf_v3(_token: archmage::X64V3Token, a: f32, b: f32, c: f32) -> f32 {
-        _mm_cvtss_f32(_mm_fmadd_ss(_mm_set_ss(a), _mm_set_ss(b), _mm_set_ss(c)))
-    }
-
-    /// `vfmadd213sd` on the low lane.
-    #[archmage::arcane(import_intrinsics)]
-    pub(super) fn fma_v3(_token: archmage::X64V3Token, a: f64, b: f64, c: f64) -> f64 {
-        _mm_cvtsd_f64(_mm_fmadd_sd(_mm_set_sd(a), _mm_set_sd(b), _mm_set_sd(c)))
-    }
-}
-
-/// Software f32 fused multiply-add, correctly rounded, for builds without an
-/// FMA instruction.
+/// Software f32 fused multiply-add, correctly rounded, without CPU detection.
 ///
 /// The product is exact in f64 (48 significant bits, exponent range fits).
 /// TwoSum recovers the exact addition error. If the rounded sum is even and

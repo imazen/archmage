@@ -87,6 +87,10 @@
 
 ### [Unreleased]
 
+#### Fixed
+
+- Scalar `mul_add_portable` / `mul_sub_portable` (including `f32x1` / `f64x1`) use software fusion without hidden CPU detection: f32 uses f64 TwoSum with round-to-odd; f64 uses libm with `force-soft-floats`. Native SIMD backends retain their direct FMA instructions. The libm feature also disables its architecture implementations for other users of the same dependency version.
+
 #### QUEUED BREAKING CHANGES
 
 - Planned magetypes 0.10: reserve short constructor names for matching feature contexts; `_t(token, ...)` provides the preparatory migration spelling in 0.9. No constructor signatures change in this patch (772ef504).

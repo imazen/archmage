@@ -45,7 +45,8 @@ archmage = { version = "0.9.31-beta", path = "..", default-features = false }
 # hardware path (`vcvt_*`, stable since 1.94) without raising the 1.89 floor.
 # See `simd::generic::convert_f16` and `MSRV.md`.
 # Correctly rounded f64 software FMA for scalar and strict WASM, including no_std.
-libm = { version = "0.2.16", default-features = false }
+# Keep this software-only even when another dependency enables libm/arch.
+libm = { version = "0.2.16", default-features = false, features = ["force-soft-floats"] }
 rustversion = "1.0.23"
 
 # proptest and zenbench don't support WASM; trybuild/macrotest require host execution

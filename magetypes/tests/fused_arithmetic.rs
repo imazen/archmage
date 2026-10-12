@@ -139,10 +139,8 @@ fn cases64() -> Vec<[f64; 3]> {
     cases
 }
 
-// `nostd_math::fmaf`/`fma` take the FMA instruction where the CPU has one
-// (NEON on aarch64; FMA through `X64V3Token` on x86-64), so on such hosts the
-// tests below exercise that path, and `fmaf_soft` is tested by name so the
-// software rounding stays covered everywhere.
+// The scalar entry points must preserve software single rounding on every
+// host. Exercise both the public fmaf entry and its reusable software helper.
 #[test]
 fn software_rounding_against_std() {
     for [a, b, c] in cases32() {
