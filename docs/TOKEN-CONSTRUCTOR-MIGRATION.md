@@ -68,7 +68,7 @@ refer to the same types and support both method spellings.
 
 ## The unified-macro beta does not change constructors
 
-The 0.9.31-beta archmage macros (`#[attune]`, `attuned!`, `reattune!`) add
+The 0.9.31-beta.2 archmage macros (`#[attune]`, `attuned!`, `reattune!`) add
 definition and dispatch syntax but change no constructor signature: `_t(token,
 ...)` remains the token-first spelling, and the short names have not become
 tokenless. See [the unified macro guide](ATTUNE.md) for that beta's API and its

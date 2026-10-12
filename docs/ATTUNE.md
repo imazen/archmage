@@ -1,4 +1,4 @@
-# Unified macros in 0.9.31-beta
+# Unified macros in 0.9.31-beta.2
 
 `#[attune]` defines feature bodies, proof wrappers, and dispatchers. `attuned!`
 calls a family using the enclosing feature context or proof; `reattune!` permits

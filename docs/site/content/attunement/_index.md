@@ -9,7 +9,7 @@ sidebar = true
 +++
 
 Write a function, let Archmage select its CPU context, and keep the work inside
-that context. This path teaches the **0.9.31-beta** unified macros. You can start
+that context. This path teaches the **0.9.31-beta.2** unified macros. You can start
 here without learning `#[arcane]`, `#[rite]`, or `incant!` first.
 
 1. [Attune a kernel](@/attunement/first-kernel.md): an ordinary public function

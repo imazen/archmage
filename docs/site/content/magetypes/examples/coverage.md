@@ -65,7 +65,7 @@ compatibility and performance need their own tests before changing those crates.
 
 ## Version and evidence scope
 
-This site tracks the repository, whose current work is the 0.9.31-beta
+This site tracks the repository, whose current work is the 0.9.31-beta.2
 prerelease; the latest **published** release is 0.9.30, and API links point to
 the latest **published** docs.rs version, which may lag the repository. The
 APIs this guide teaches (`from_context()`, the integer abstractions, tokenless

@@ -24,6 +24,21 @@ mapping. The website reference is generated from that guide by `just generate`.
 The reviewed beta is being integrated through PR #129; earlier constructor
 experiments remain archived.
 
+## 0.9.31-beta.2 release gate
+
+Prepared against published 0.9.30 on 2026-10-12; 0.9.31-beta was never
+published. Local Archmage all-target tests/doctests, Magetypes all-target
+tests/doctests with std and AVX-512, macro tests, workspace packaging dry-run,
+generation/registry/soundness checks, Markdown examples, Clippy, and the
+precise semver guard pass. No existing signatures changed; the public API
+additions are the unified macro exports and narrow AVX-512 trait impls.
+
+Do not tag or publish until the open native software FMA rounding, native
+scalar performance, and Miri issues below are resolved, the release commit
+passes the full CI matrix, and the user reviews the READMEs and authorizes
+publication. The runtime policy choice and corrections to stale AVX-512
+README limitations/beta-branch links remain pending user review.
+
 ## CRITICAL: Every Conversation Health Check
 
 **Run these checks at the start of every conversation, even if the user doesn't ask:**
