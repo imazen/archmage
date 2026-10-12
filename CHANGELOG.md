@@ -87,6 +87,10 @@
 
 ### [Unreleased]
 
+#### Added
+
+- Add explicit-proof half-float slice conversions `f16_to_f32_slice_v4_t` / `f32_to_f16_slice_v4_t` (`X64V4Token`, `avx512`) and `f16_to_f32_slice_arm_v2_t` / `f32_to_f16_slice_arm_v2_t` (`Arm64V2Token`, AArch64, Rust 1.94+). These functions skip CPU detection; existing `F16Convert` slice methods retain once-per-buffer auto-upgrade.
+
 #### Fixed
 
 - Scalar `mul_add_portable` / `mul_sub_portable` (including `f32x1` / `f64x1`) use software fusion without hidden CPU detection: f32 uses f64 TwoSum with round-to-odd; f64 uses libm with `force-soft-floats`. Native SIMD backends retain their direct FMA instructions. The libm feature also disables its architecture implementations for other users of the same dependency version.

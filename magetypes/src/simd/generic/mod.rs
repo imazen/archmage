@@ -14,6 +14,11 @@ mod cross_width;
 mod gather;
 mod generated;
 pub use convert_f16::F16Convert;
+#[cfg(target_arch = "aarch64")]
+#[rustversion::since(1.94)]
+pub use convert_f16::{f16_to_f32_slice_arm_v2_t, f32_to_f16_slice_arm_v2_t};
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+pub use convert_f16::{f16_to_f32_slice_v4_t, f32_to_f16_slice_v4_t};
 pub use cross_width::F32x8FromHalves;
 #[cfg(feature = "w512")]
 pub use cross_width::F32x16FromHalves;

@@ -1115,6 +1115,12 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ### Open
 
+- Strict `RUSTDOCFLAGS="-D warnings" cargo doc -p magetypes --features avx512`
+  fails on existing generated backend links (`rsqrt`, `rcp_approx`, `recip`,
+  `convert_f32_to_i32`, and unquoted array-index notation) and a redundant
+  explicit prelude link. The half-float proof API adds no diagnostic sites;
+  repair these in the generator rather than generated backend files.
+
 
 Expansion snapshots come in two sets, refreshed together by `just
 expand-snapshots`: `tests/expand/**/*.expanded.rs` is what `cargo expand`

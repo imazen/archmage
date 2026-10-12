@@ -6,14 +6,14 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2667 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 35 lines (42 hidden + 0 excluded-feature)
+# files: magetypes.txt 2669 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 35 lines (42 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                12
 #   pub types (struct/enum/trait/alias)       287
 #   pub consts/statics                        228
-#   free functions                           3726
+#   free functions                           3730
 #   inherent methods                         1251
 #   enum variants                               1
 #   re-exports                                  2
@@ -25,10 +25,10 @@
 # per-module pub lines:
 #   (root)                          321
 #   cast                              3
-#   prelude                        3574
-#   simd                           1609
+#   prelude                        3576
+#   simd                           1611
 
-## items (2444 lines)
+## items (2446 lines)
 
 pub mod magetypes
 pub use archmage
@@ -951,6 +951,8 @@ pub trait prelude::F32x8FromHalves: simd::backends::F32x8Backend + simd::backend
 pub fn prelude::F32x8FromHalves::from_halves(self, <Self as simd::backends::F32x4Backend>::Repr, <Self as simd::backends::F32x4Backend>::Repr) -> <Self as simd::backends::F32x8Backend>::Repr
 pub fn prelude::F32x8FromHalves::high(self, <Self as simd::backends::F32x8Backend>::Repr) -> <Self as simd::backends::F32x4Backend>::Repr
 pub fn prelude::F32x8FromHalves::low(self, <Self as simd::backends::F32x8Backend>::Repr) -> <Self as simd::backends::F32x4Backend>::Repr
+pub fn prelude::f16_to_f32_slice_arm_v2_t(archmage::tokens::generated::arm::Arm64V2Token, &[u16], &mut [f32]) [also: simd::generic]
+pub fn prelude::f32_to_f16_slice_arm_v2_t(archmage::tokens::generated::arm::Arm64V2Token, &[f32], &mut [u16]) [also: simd::generic]
 pub mod simd
 pub mod simd::backends
 pub trait simd::backends::F32x16Backend: archmage::tokens::SimdToken + simd::backends::sealed::Sealed + core::marker::Copy + 'static

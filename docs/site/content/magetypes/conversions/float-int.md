@@ -69,3 +69,18 @@ A V4 holder can extract `.v3()` to reach the supported slice converter surface.
 NaN bit handling and hardware availability vary with target and Rust version;
 consult the [F16Convert API](https://docs.rs/magetypes/latest/magetypes/simd/trait.F16Convert.html)
 and exhaustive conversion tests for that contract.
+
+To choose the hardware tier yourself and avoid the once-per-slice probe, use
+these proof-taking functions from `magetypes::simd::generic` (also re-exported
+by the prelude):
+
+| Conversion | Explicit hardware function | Required proof |
+|---|---|---|
+| f16 → f32 | `f16_to_f32_slice_v4_t(token, input, output)` | `X64V4Token`; `avx512` feature |
+| f32 → f16 | `f32_to_f16_slice_v4_t(token, input, output)` | `X64V4Token`; `avx512` feature |
+| f16 → f32 | `f16_to_f32_slice_arm_v2_t(token, input, output)` | `Arm64V2Token`; AArch64, Rust 1.94+ |
+| f32 → f16 | `f32_to_f16_slice_arm_v2_t(token, input, output)` | `Arm64V2Token`; AArch64, Rust 1.94+ |
+
+All four require equal slice lengths and handle partial-vector tails. A stronger
+proof can be downgraded before calling: for example, ARM-V3 uses `.arm_v2()`.
+The existing trait methods keep their automatic upgrade behavior.

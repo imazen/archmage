@@ -11,15 +11,15 @@
 #
 #   pub types (struct/enum/trait/alias)        50
 #   pub consts/statics                         40
-#   free functions                            162
+#   free functions                            166
 #   trait roster entries (type × trait)       133
 #
 # per-module pub lines:
 #   (root)                           40
-#   prelude                         154
-#   simd                             58
+#   prelude                         156
+#   simd                             60
 
-## items (93 lines)
+## items (95 lines)
 
 pub fn prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>::from_raw(core::core_arch::x86::__m512) -> Self [also: prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>, prelude::f32x16<archmage::tokens::generated::x86::X64V4xToken>]
 pub fn prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>::from_raw_t(archmage::tokens::generated::x86::X64V4Token, core::core_arch::x86::__m512) -> Self [also: prelude::f32x16<archmage::tokens::generated::x86::X64V4Token>]
@@ -63,6 +63,8 @@ pub const fn prelude::u64x8<archmage::tokens::generated::x86::X64V4Token>::imple
 pub const fn prelude::u64x8<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str [also: (root)]
 pub const fn prelude::u8x64<archmage::tokens::generated::x86::X64V4Token>::implementation_name() -> &'static str [also: (root)]
 pub const fn prelude::u8x64<archmage::tokens::generated::x86::X64V4xToken>::implementation_name() -> &'static str [also: (root)]
+pub fn prelude::f16_to_f32_slice_v4_t(archmage::tokens::generated::x86::X64V4Token, &[u16], &mut [f32]) [also: simd::generic]
+pub fn prelude::f32_to_f16_slice_v4_t(archmage::tokens::generated::x86::X64V4Token, &[f32], &mut [u16]) [also: simd::generic]
 pub trait simd::backends::i16x32PopcntBackend: simd::backends::I16x32Backend
 pub trait simd::backends::i32x16PopcntBackend: simd::backends::I32x16Backend
 pub trait simd::backends::i64x8PopcntBackend: simd::backends::I64x8Backend

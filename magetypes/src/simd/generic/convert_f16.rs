@@ -67,6 +67,12 @@
 //!   (summons `Arm64V2Token`), else the software kernel.
 //! - Every other token → the branchless software kernel.
 //!
+//! For explicit tier selection without a runtime probe, use the named slice
+//! functions `f16_to_f32_slice_v4_t` / `f32_to_f16_slice_v4_t` with an
+//! `X64V4Token` (`avx512` feature), or `f16_to_f32_slice_arm_v2_t` /
+//! `f32_to_f16_slice_arm_v2_t` with an `Arm64V2Token` (AArch64, Rust 1.94+).
+//! The existing trait slice methods retain their once-per-buffer auto-upgrade.
+//!
 //! On Zen 4 (which double-pumps AVX-512 on 256-bit units) the measured 16-wide
 //! win over 8-wide F16C is *modest* — decode ≈1.2–1.5×, encode ≈1.5–1.8× when
 //! L1-resident, ≈parity once memory-bandwidth-bound; **not 2×** (see
@@ -564,7 +570,7 @@ fn neon_f16_encode(token: archmage::NeonToken, input: &[f32], output: &mut [u16]
 fn neon_f16_decode_select(token: archmage::NeonToken, input: &[u16], output: &mut [f32]) {
     use archmage::SimdToken;
     if let Some(v2) = archmage::Arm64V2Token::summon() {
-        neon_f16_decode_hw(v2, input, output);
+        f16_to_f32_slice_arm_v2_t(v2, input, output);
         return;
     }
     // `fp16` absent at runtime: software fallback.
@@ -588,7 +594,7 @@ fn neon_f16_decode_select(token: archmage::NeonToken, input: &[u16], output: &mu
 fn neon_f16_encode_select(token: archmage::NeonToken, input: &[f32], output: &mut [u16]) {
     use archmage::SimdToken;
     if let Some(v2) = archmage::Arm64V2Token::summon() {
-        neon_f16_encode_hw(v2, input, output);
+        f32_to_f16_slice_arm_v2_t(v2, input, output);
         return;
     }
     f32_to_f16_slice_soft(token, input, output);
@@ -619,6 +625,13 @@ fn neon_f16_encode_select(token: archmage::NeonToken, input: &[f32], output: &mu
 /// (mantissa MSB set), whereas the software kernel widens the f16 payload
 /// directly — the same benign, NaN-only divergence the F16C path documents (the
 /// divergence set is exactly the 1022 f16 signaling-NaN patterns).
+///
+/// Uses the supplied proof without CPU detection. NaN payloads can differ
+/// from software conversion; a partial-vector tail uses the software kernel.
+///
+/// # Panics
+///
+/// Panics if `input.len() != output.len()`.
 #[cfg(target_arch = "aarch64")]
 #[rustversion::since(1.94)]
 // `#[rustversion::since(1.94)]` is the MSRV gate: this item only compiles on a
@@ -627,7 +640,12 @@ fn neon_f16_encode_select(token: archmage::NeonToken, input: &[f32], output: &mu
 // 1.89 MSRV) is a false positive here — the gate guarantees ≥ 1.94. Allow it.
 #[allow(clippy::incompatible_msrv)]
 #[archmage::arcane(import_intrinsics)]
-fn neon_f16_decode_hw(token: archmage::Arm64V2Token, input: &[u16], output: &mut [f32]) {
+pub fn f16_to_f32_slice_arm_v2_t(token: archmage::Arm64V2Token, input: &[u16], output: &mut [f32]) {
+    assert_eq!(
+        input.len(),
+        output.len(),
+        "f16_to_f32_slice_arm_v2_t: input and output must have equal length"
+    );
     let (in4, in_tail) = input.as_chunks::<4>();
     let (out4, out_tail) = output.as_chunks_mut::<4>();
     for (inp, out) in in4.iter().zip(out4.iter_mut()) {
@@ -647,19 +665,31 @@ fn neon_f16_decode_hw(token: archmage::Arm64V2Token, input: &[u16], output: &mut
 
 /// Hardware NEON-f16 encode kernel: `&[f32]` → `&mut [u16]` via `vcvt_f16_f32`
 /// (round-to-nearest-even — the only rounding mode the narrowing convert
-/// offers). See [`neon_f16_decode_hw`] for the `#[arcane]` / gating rationale.
+/// offers). See [`f16_to_f32_slice_arm_v2_t`] for the `#[arcane]` / gating rationale.
 ///
 /// Bit-identical to the software kernel for every **finite and Inf** f32
 /// (verified over the f16-roundtrip grid + dense f32 sweep under QEMU); for a
 /// NaN input both produce a valid quiet f16 NaN whose payload bits may differ —
 /// the same tolerance the software encode and the F16C path already document.
+///
+/// Uses the supplied proof without CPU detection. NaN payloads can differ
+/// from software conversion; a partial-vector tail uses the software kernel.
+///
+/// # Panics
+///
+/// Panics if `input.len() != output.len()`.
 #[cfg(target_arch = "aarch64")]
 #[rustversion::since(1.94)]
-// See `neon_f16_decode_hw`: `#[rustversion::since(1.94)]` is the MSRV gate;
+// See `f16_to_f32_slice_arm_v2_t`: `#[rustversion::since(1.94)]` is the MSRV gate;
 // `incompatible_msrv` cannot see it, so we allow the (here false-positive) lint.
 #[allow(clippy::incompatible_msrv)]
 #[archmage::arcane(import_intrinsics)]
-fn neon_f16_encode_hw(token: archmage::Arm64V2Token, input: &[f32], output: &mut [u16]) {
+pub fn f32_to_f16_slice_arm_v2_t(token: archmage::Arm64V2Token, input: &[f32], output: &mut [u16]) {
+    assert_eq!(
+        input.len(),
+        output.len(),
+        "f32_to_f16_slice_arm_v2_t: input and output must have equal length"
+    );
     let (in4, in_tail) = input.as_chunks::<4>();
     let (out4, out_tail) = output.as_chunks_mut::<4>();
     for (inp, out) in in4.iter().zip(out4.iter_mut()) {
@@ -702,7 +732,7 @@ fn neon_f16_encode_hw(token: archmage::Arm64V2Token, input: &[f32], output: &mut
 fn f16c_decode_select(token: archmage::X64V3Token, input: &[u16], output: &mut [f32]) {
     use archmage::SimdToken;
     if let Some(v4) = archmage::X64V4Token::summon() {
-        f16c_decode_v4(v4, input, output);
+        f16_to_f32_slice_v4_t(v4, input, output);
         return;
     }
     f16c_decode_v3(token, input, output);
@@ -722,7 +752,7 @@ fn f16c_decode_select(token: archmage::X64V3Token, input: &[u16], output: &mut [
 fn f16c_encode_select(token: archmage::X64V3Token, input: &[f32], output: &mut [u16]) {
     use archmage::SimdToken;
     if let Some(v4) = archmage::X64V4Token::summon() {
-        f16c_encode_v4(v4, input, output);
+        f32_to_f16_slice_v4_t(v4, input, output);
         return;
     }
     f16c_encode_v3(token, input, output);
@@ -746,9 +776,21 @@ fn f16c_encode_select(token: archmage::X64V3Token, input: &[f32], output: &mut [
 /// branchless software kernel — for every finite, subnormal, and infinite
 /// f16; NaN inputs take the same hardware quieting `vcvtph2ps` already
 /// documents. Compiled only with the `avx512` cargo feature.
+///
+/// Uses the supplied proof without CPU detection. NaN payloads can differ
+/// from software conversion; a partial-vector tail uses the software kernel.
+///
+/// # Panics
+///
+/// Panics if `input.len() != output.len()`.
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[archmage::arcane(import_intrinsics)]
-fn f16c_decode_v4(token: archmage::X64V4Token, input: &[u16], output: &mut [f32]) {
+pub fn f16_to_f32_slice_v4_t(token: archmage::X64V4Token, input: &[u16], output: &mut [f32]) {
+    assert_eq!(
+        input.len(),
+        output.len(),
+        "f16_to_f32_slice_v4_t: input and output must have equal length"
+    );
     let (in16, in_rest) = input.as_chunks::<16>();
     let (out16, out_rest) = output.as_chunks_mut::<16>();
     for (inp, out) in in16.iter().zip(out16.iter_mut()) {
@@ -764,11 +806,23 @@ fn f16c_decode_v4(token: archmage::X64V4Token, input: &[u16], output: &mut [f32]
 
 /// AVX-512F encode kernel: `&[f32]` → `&mut [u16]` using `vcvtps2ph` widened to
 /// 512 bits (`_mm512_cvtps_ph`, round-to-nearest-even, 16 f32 → 16 f16 per
-/// instruction). See [`f16c_decode_v4`] for the `#[arcane]` / gating rationale.
+/// instruction). See [`f16_to_f32_slice_v4_t`] for the `#[arcane]` / gating rationale.
 /// The remainder drops to the V3 F16C path for bit-identity.
+///
+/// Uses the supplied proof without CPU detection. NaN payloads can differ
+/// from software conversion; a partial-vector tail uses the software kernel.
+///
+/// # Panics
+///
+/// Panics if `input.len() != output.len()`.
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[archmage::arcane(import_intrinsics)]
-fn f16c_encode_v4(token: archmage::X64V4Token, input: &[f32], output: &mut [u16]) {
+pub fn f32_to_f16_slice_v4_t(token: archmage::X64V4Token, input: &[f32], output: &mut [u16]) {
+    assert_eq!(
+        input.len(),
+        output.len(),
+        "f32_to_f16_slice_v4_t: input and output must have equal length"
+    );
     let (in16, in_rest) = input.as_chunks::<16>();
     let (out16, out_rest) = output.as_chunks_mut::<16>();
     for (inp, out) in in16.iter().zip(out16.iter_mut()) {
