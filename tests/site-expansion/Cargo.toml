@@ -12,4 +12,3 @@ avx512 = ["archmage/avx512", "magetypes/avx512"]
 [dependencies]
 archmage = { path = "../.." }
 magetypes = { path = "../../magetypes" }
-

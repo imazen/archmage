@@ -87,6 +87,8 @@ const pages = ['', 'attunement/', 'attunement/first-kernel/',
             await page.goto(`${base}attunement/expansions/`, { waitUntil: 'networkidle' });
             const comparison = page.locator('.expansion-browser');
             assert.equal(await comparison.locator('.expansion-example').count(), 15);
+            assert.match(await page.locator('#direct .source-pane pre').innerText(), /^pub mod direct \{/);
+            assert(!((await comparison.innerText()).includes('\\n```')), 'literal Markdown fence in rendered code');
             for (const target of ['aarch64', 'wasm32', 'x86_64-avx512', 'x86_64']) {
                 await comparison.locator('.expansion-target').selectOption(target);
                 assert.equal(await comparison.locator('.expansion-preset:not([hidden])').count(), 15);
@@ -104,6 +106,8 @@ const pages = ['', 'attunement/', 'attunement/first-kernel/',
                 await comparison.getByRole('button', { name: 'Source', exact: true }).click();
                 assert(await page.locator('#vectors .source-pane').isVisible());
                 assert(!(await page.locator('#vectors .expanded-pane').isVisible()));
+                const afterSwitch = await toolbar.boundingBox();
+                assert(afterSwitch.y >= 60 && afterSwitch.y <= 70, 'tabs lost their sticky position');
             } else {
                 assert(await page.locator('#direct .source-pane').isVisible());
                 assert(await page.locator('#direct .expanded-pane').isVisible());

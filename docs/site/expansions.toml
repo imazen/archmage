@@ -88,4 +88,3 @@ note = "The dispatcher and each tier implementation retain the generic bound."
 id = "method"
 title = "Generate inherent methods"
 note = "Receiver methods can generate sibling variants. Trait implementations have additional restrictions described in the reference."
-
