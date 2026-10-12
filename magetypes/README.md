@@ -14,8 +14,8 @@ token proving its CPU features, so using it takes no `unsafe` in your code.
 
 ```toml
 [dependencies]
-magetypes = "=0.9.31-beta"
-archmage  = "=0.9.31-beta"   # the macros and tokens
+magetypes = "=0.9.31-beta.2"
+archmage  = "=0.9.31-beta.2"   # the macros and tokens
 ```
 
 Multiply a buffer by a factor, using AVX2, NEON or WASM SIMD where available:
@@ -54,7 +54,7 @@ assert_eq!(plane, [1.0; 11]);
   loop, as here, not inside it.
 - Constructors ending in `_t` take the token as their first argument.
 
-`0.9.31-beta` is the matching release for the archmage unified-macro beta:
+`0.9.31-beta.2` is the matching release for the archmage unified-macro beta:
 vector APIs and constructor signatures are unchanged, and `_t(token, ...)`
 remains token-first. The
 [beta guide](https://github.com/imazen/archmage/blob/release/0.9.31-beta/docs/ATTUNE.md)

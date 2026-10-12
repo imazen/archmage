@@ -41,8 +41,8 @@ mapping, and current restrictions.
 
 ```toml
 [dependencies]
-archmage = "=0.9.31-beta"
-magetypes = "=0.9.31-beta"   # vector types such as f32x8
+archmage = "=0.9.31-beta.2"
+magetypes = "=0.9.31-beta.2"   # vector types such as f32x8
 ```
 
 Multiply a buffer by a gain, using AVX2, NEON or WASM SIMD where available:
