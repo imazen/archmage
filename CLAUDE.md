@@ -151,6 +151,18 @@ Whole-slice f16 conversion may auto-upgrade once per buffer. Explicit-proof
 hardware alternatives may avoid that selection. Keep the slice exception out
 of register-level conversion and vector arithmetic.
 
+Consumer check (2026-10-12): the dispatched `F16Convert` slice methods have six
+handwritten production call sites in two downstream crates: four in zenresize
+([V3 rows](https://github.com/imazen/zenresize/blob/e3975fb9d6d6b7baa96038a0eb8e27febb37c012/src/simd/x86.rs#L2387)
+and [NEON/WASM rows](https://github.com/imazen/zenresize/blob/e3975fb9d6d6b7baa96038a0eb8e27febb37c012/src/simd/wide_kernels.rs#L1261)),
+and two in [zenpixels-convert](https://github.com/imazen/zenpixels/blob/197a38ba7e42989a69d8f32938fb02293d056aeb/zenpixels-convert/src/f16_scalar.rs#L199).
+Those callers supply V3/NEON/WASM/scalar proofs; zenpixels-convert explicitly
+excludes V4 from its outer dispatch and relies on the slice method's upgrade.
+No uses were found in garb or linear-srgb. This was a committed-source search
+of available local checkouts, cross-checked against GitHub code search; it is
+not an exhaustive inventory of external users. These uses establish demand
+for the existing dispatched API, not for separate hardware-only methods.
+
 ### Generic kernels and feature contexts
 
 Rust generics monomorphize; trait bounds are not inherently indirect calls or
