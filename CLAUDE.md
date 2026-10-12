@@ -21,8 +21,8 @@ The 0.9.31-beta unified macros (`#[attune]`, `attuned!`, `reattune!`) are
 documented in [docs/ATTUNE.md](docs/ATTUNE.md), the owning guide for the beta
 syntax, call and proof rules, inline policies, and the legacy-attribute
 mapping. The website reference is generated from that guide by `just generate`.
-The reviewed beta is being integrated through PR #129; earlier constructor
-experiments remain archived.
+The reviewed unified-macro beta was merged in 72910a29 through PR #129;
+PR #127 was superseded. Earlier constructor experiments remain archived.
 
 ## 0.9.31-beta.2 release gate
 
@@ -33,11 +33,14 @@ generation/registry/soundness checks, Markdown examples, Clippy, and the
 precise semver guard pass. No existing signatures changed; the public API
 additions are the unified macro exports and narrow AVX-512 trait impls.
 
-Do not tag or publish until the open native software FMA rounding, native
-scalar performance, and Miri issues below are resolved, the release commit
-passes the full CI matrix, and the user reviews the READMEs and authorizes
-publication. Corrections to stale AVX-512 README limitations/beta-branch links remain
-pending user review.
+Portable FMA rounding and Miri pass local regression checks; full CI still
+must confirm them on the release commit. The final scalar FMA implementation
+has not yet been rebenchmarked against the published release, so the native
+performance gate below remains open. README AVX-512 coverage and beta-guide
+links are corrected, and fresh three-target API snapshots plus semver checks
+against published 0.9.30 pass. Do not tag or publish until the full matrix is
+green, the performance gate is resolved, and the user reviews the final
+READMEs and authorizes publication.
 
 ## CRITICAL: Every Conversation Health Check
 

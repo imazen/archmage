@@ -55,9 +55,10 @@ assert_eq!(plane, [1.0; 11]);
 - Constructors ending in `_t` take the token as their first argument.
 
 `0.9.31-beta.2` is the matching release for the archmage unified-macro beta:
-vector APIs and constructor signatures are unchanged, and `_t(token, ...)`
-remains token-first. The
-[beta guide](https://github.com/imazen/archmage/blob/release/0.9.31-beta/docs/ATTUNE.md)
+existing vector and constructor signatures are preserved, and `_t(token, ...)`
+remains token-first. The beta adds narrow-vector trait implementations for
+AVX-512 tokens and corrects portable FMA software rounding. The
+[beta guide](https://github.com/imazen/archmage/blob/main/docs/ATTUNE.md)
 documents `#[attune]`, `attuned!`, and `reattune!`.
 
 Don't write per-tier `#[arcane]` wrappers around a `#[magetypes]` kernel: the
@@ -232,10 +233,9 @@ has the details.
   [Polyfills](#polyfills).
 - SIMD tiers cover x86-64, AArch64 and WASM. Other targets run the scalar
   backend.
-- With `v4` in a `#[magetypes]` tier list, use the 512-bit types. The AVX-512
-  tokens implement only part of the narrower ones: `f32x4` and `f32x8` without
-  their transcendentals, integer conversions and raw interop, and no other
-  128- or 256-bit type.
+- With the `avx512` feature, AVX-512 tokens also support the 128- and
+  256-bit float and integer types. These narrower backend, conversion and
+  bitcast implementations delegate to V3; 512-bit types use AVX-512.
 - Transcendentals are approximations with documented error:
   [Transcendentals](https://imazen.github.io/archmage/magetypes/math/transcendentals/)
   gives each function's domain and precision.

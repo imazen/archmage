@@ -72,7 +72,7 @@ APIs this guide teaches (`from_context()`, the integer abstractions, tokenless
 rite construction) are available in the published 0.9.30 release; do not assume
 them in 0.9.28 or earlier. The beta's unified `#[attune]`, `attuned!`, and
 `reattune!` macros are documented in the repository's
-[beta guide](https://github.com/imazen/archmage/blob/release/0.9.31-beta/docs/ATTUNE.md).
+[beta guide](https://github.com/imazen/archmage/blob/main/docs/ATTUNE.md).
 No crate publication is implied by this guide.
 
 The search used local checkouts; pinned walkthroughs name their source revisions.

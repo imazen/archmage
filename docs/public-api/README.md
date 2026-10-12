@@ -29,3 +29,36 @@ excluded-feature surface).
 
 `ABLATION-*.md` are one-time hand-written audit reports (2026-06-11), not
 generated files.
+
+## 0.9.31-beta.2 compared with published 0.9.30
+
+The compatibility baseline is the published `v0.9.30` tag, not an unpublished
+constructor experiment or earlier beta draft. The snapshot diff contains:
+
+- Archmage: `attune`, `attuned!`, and `reattune!` exports, at both the crate
+  root and in the prelude, on all three targets.
+- Magetypes: 90 additional x86 AVX-512 trait implementations for narrow
+  vectors, conversions and bitcasts. They are feature-gated and delegate
+  to V3. No existing function or constructor signature changes.
+- No supported API removals. `_t(token, ...)` and the older deprecated
+  constructor signatures were already published in 0.9.30.
+
+Verified on 2026-10-12 against implementation commit `b9179436`: the committed
+snapshots match fresh x86-64, AArch64 and WASM output. Both ordinary semver
+checks pass; the precise Magetypes check compares 2,040 safe methods, including
+40 carrying target features, with no failures. Reproduce with:
+
+```sh
+just api-doc-check
+python3 -B xtask/check_semver.py archmage --baseline-version 0.9.30
+python3 -B xtask/check_semver.py magetypes --baseline-version 0.9.30
+git diff v0.9.30 -- docs/public-api/
+```
+
+Signature snapshots do not describe macro expansion semantics or numerical
+behavior. See the [unified macro guide](../ATTUNE.md),
+[release changelog](../../CHANGELOG.md), and
+[FMA contract](../site/content/magetypes/isa-quirks.md#fused-arithmetic-and-reductions)
+for those changes. In particular, portable software FMA now fixes subnormal
+rounding without CPU probes; bare multiply-add keeps its backend-specific
+rounding behavior. These are behavior changes, not signature changes.

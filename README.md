@@ -33,7 +33,7 @@ assert_eq!(values, [1.0, 2.0]);
 `#[attune(v3)]` adds features to one function; `#[attune(wrap)]` creates a proof
 wrapper using its token parameter. Bare `#[attune]` infers a direct `_v3` or
 proof-wrapper `_v3_t` suffix. A token parameter alone does not imply `wrap`.
-The [beta guide](https://github.com/imazen/archmage/blob/release/0.9.31-beta/docs/ATTUNE.md)
+The [beta guide](https://github.com/imazen/archmage/blob/main/docs/ATTUNE.md)
 covers the selector grammar, call and proof rules, inline policies, a legacy-attribute
 mapping, and current restrictions.
 
@@ -229,10 +229,9 @@ lists every `unsafe` in both crates.
   four native operations, and each value takes that many registers: an `f32x8`
   on NEON is two `f32x4`s.
   [Polyfills](https://imazen.github.io/archmage/magetypes/cross-platform/polyfills/) has the measured costs.
-- With `v4` in a `#[magetypes]` tier list, use the 512-bit types. The AVX-512
-  tokens implement only part of the narrower ones: `f32x4` and `f32x8` without
-  their transcendentals, integer conversions and raw interop, and no other
-  128- or 256-bit type.
+- With the `avx512` feature, AVX-512 tokens also support the 128- and
+  256-bit float and integer types. These narrower backend, conversion and
+  bitcast implementations delegate to V3; 512-bit types use AVX-512.
 - Some floating-point results differ between backends. `mul_add` rounds once
   where the hardware fuses (x86 v3/v4, NEON) and twice on the scalar backend and
   strict WASM; `mul_add_portable` rounds once everywhere, in software where
