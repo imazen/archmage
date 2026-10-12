@@ -410,6 +410,12 @@ jobs:
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
         run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --test fused_arithmetic --test doc_examples --test scalar_parity
 
+      - name: Test no_std WASM arithmetic
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128"
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
+        run: cargo test -p magetypes --no-default-features --features w512 --target wasm32-wasip1 --test fused_arithmetic --test doc_examples --test scalar_parity
+
       - name: Test relaxed WASM arithmetic without host FMA
         env:
           RUSTFLAGS: "-C target-feature=+simd128,+relaxed-simd"

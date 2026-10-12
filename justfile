@@ -395,6 +395,10 @@ bench-fused:
 test-fused-wasm runner="wasmtime" flags="+simd128":
     RUSTFLAGS="-Ctarget-feature={{flags}}" CARGO_TARGET_WASM32_WASIP1_RUNNER="{{runner}}" cargo test -p magetypes --target wasm32-wasip1 --test fused_arithmetic --test doc_examples --test scalar_parity
 
+# Exercise the same arithmetic with magetypes' std feature disabled.
+test-fused-wasm-no-std runner="wasmtime" flags="+simd128":
+    RUSTFLAGS="-Ctarget-feature={{flags}}" CARGO_TARGET_WASM32_WASIP1_RUNNER="{{runner}}" cargo test -p magetypes --no-default-features --features w512 --target wasm32-wasip1 --test fused_arithmetic --test doc_examples --test scalar_parity
+
 # Review .rs changes since the last release tag, without generated code:
 # generated/ directories, files with a generated-file header, and
 # macro-expansion snapshots (*.expanded.rs). Scope: handwritten (default),

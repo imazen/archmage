@@ -400,13 +400,20 @@ pub fn roundeven(x: f64) -> f64 {
 
 /// Correctly rounded f32 fused multiply-add, including subnormals and signed zero.
 ///
-/// Delegates directly to libm, including its architecture-specific selection.
-/// Magetypes adds no CPU detection or dispatch layer. Native vector backends
-/// use their own FMA intrinsics; [`fmaf_soft`] remains explicitly software-only.
+/// WASM uses [`fmaf_soft`] to avoid libm 0.2.16's subnormal double-rounding
+/// bug. Other targets retain libm's architecture-specific selection.
+/// Magetypes adds no CPU detection or dispatch layer.
 #[inline(always)]
 #[forbid(unsafe_code)]
 pub fn fmaf(a: f32, b: f32, c: f32) -> f32 {
-    libm::fmaf(a, b, c)
+    #[cfg(target_arch = "wasm32")]
+    {
+        fmaf_soft(a, b, c)
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        libm::fmaf(a, b, c)
+    }
 }
 
 /// Correctly rounded f64 fused multiply-add through libm.

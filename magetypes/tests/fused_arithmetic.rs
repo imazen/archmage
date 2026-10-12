@@ -165,6 +165,50 @@ fn random_software_rounding_against_std() {
 }
 
 #[test]
+fn software_subnormal_rounding() {
+    // Independent counterexample and expected bits, not std/libm as an oracle:
+    // https://shnatsel.github.io/implementing-fma-finding-bugs-in-std/
+    // In units of the minimum f32 subnormal, the exact result is
+    // 9007405413171199 / 137438953472, just below the midpoint 65537.5.
+    let [a, b, c] = [0x9700_0800, 0x1cff_f001, 0x0001_0002].map(f32::from_bits);
+    for (a, c, expected) in [(a, c, 0x0001_0001), (-a, -c, 0x8001_0001)] {
+        assert_eq!(nostd_math::fmaf_soft(a, b, c).to_bits(), expected);
+        assert_eq!(nostd_math::fmaf(a, b, c).to_bits(), expected);
+        let x = magetypes::simd::f32x1(a);
+        let y = magetypes::simd::f32x1(b);
+        let z = magetypes::simd::f32x1(c);
+        assert_eq!(x.mul_add_portable(y, z).0.to_bits(), expected);
+        assert_eq!(
+            x.mul_sub_portable(y, magetypes::simd::f32x1(-c))
+                .0
+                .to_bits(),
+            expected
+        );
+        macro_rules! scalar_vector {
+            ($ty:ident, $lanes:expr) => {{
+                use magetypes::simd::generic::$ty;
+                let x = $ty::splat_t(ScalarToken, a);
+                let y = $ty::splat_t(ScalarToken, b);
+                let z = $ty::splat_t(ScalarToken, c);
+                let minus_z = $ty::splat_t(ScalarToken, -c);
+                assert_eq!(
+                    x.mul_add_portable(y, z).to_array().map(f32::to_bits),
+                    [expected; $lanes]
+                );
+                assert_eq!(
+                    x.mul_sub_portable(y, minus_z).to_array().map(f32::to_bits),
+                    [expected; $lanes]
+                );
+            }};
+        }
+        scalar_vector!(f32x4, 4);
+        scalar_vector!(f32x8, 8);
+        #[cfg(feature = "w512")]
+        scalar_vector!(f32x16, 16);
+    }
+}
+
+#[test]
 fn exact_counterexamples() {
     let [a, b, c] = [0x3380_0001, 0x3f7f_fffe, 0x3f80_0001].map(f32::from_bits);
     assert_eq!(

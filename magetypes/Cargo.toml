@@ -44,7 +44,8 @@ archmage = { version = "0.9.31-beta", path = "..", default-features = false }
 # `core::arch` intrinsics above the crate MSRV — gates the aarch64 NEON-f16
 # hardware path (`vcvt_*`, stable since 1.94) without raising the 1.89 floor.
 # See `simd::generic::convert_f16` and `MSRV.md`.
-# Correctly rounded scalar FMA, with libm's normal architecture selection.
+# Native scalar FMA and WASM f64, with libm's normal architecture selection.
+# WASM f32 uses our corrected round-to-odd software helper.
 # `arch` supports no_std and does not force other libm users onto software.
 libm = { version = "0.2.16", default-features = false, features = ["arch"] }
 rustversion = "1.0.23"
