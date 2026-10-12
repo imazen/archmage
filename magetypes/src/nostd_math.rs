@@ -398,33 +398,58 @@ pub fn roundeven(x: f64) -> f64 {
     }
 }
 
-/// Correctly rounded f32 fused multiply-add, including subnormals and signed zero.
-///
-/// WASM uses [`fmaf_soft`] to avoid libm 0.2.16's subnormal double-rounding
-/// bug. Other targets retain libm's architecture-specific selection.
-/// Magetypes adds no CPU detection or dispatch layer.
-#[inline(always)]
-#[forbid(unsafe_code)]
-pub fn fmaf(a: f32, b: f32, c: f32) -> f32 {
-    #[cfg(target_arch = "wasm32")]
-    {
-        fmaf_soft(a, b, c)
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        libm::fmaf(a, b, c)
-    }
+// Only compile-time feature guarantees select hardware here. Per-vector operations
+// must not probe the CPU; native vector backends have their own proof-bound FMA.
+macro_rules! portable_fma {
+    ($name:ident, $float:ty, $software:expr) => {
+        /// Correctly rounded fused multiply-add, without runtime CPU detection.
+        /// NaN payloads and signs are unspecified; assumes round-to-nearest and
+        /// gradual underflow, as do the native vector implementations.
+        #[inline(always)]
+        #[forbid(unsafe_code)]
+        pub fn $name(a: $float, b: $float, c: $float) -> $float {
+            #[cfg(all(
+                not(miri),
+                feature = "std",
+                any(
+                    all(target_arch = "aarch64", target_feature = "neon"),
+                    all(
+                        any(target_arch = "x86", target_arch = "x86_64"),
+                        target_feature = "fma"
+                    )
+                )
+            ))]
+            {
+                a.mul_add(b, c)
+            }
+            #[cfg(not(all(
+                not(miri),
+                feature = "std",
+                any(
+                    all(target_arch = "aarch64", target_feature = "neon"),
+                    all(
+                        any(target_arch = "x86", target_arch = "x86_64"),
+                        target_feature = "fma"
+                    )
+                )
+            )))]
+            {
+                ($software)(a, b, c)
+            }
+        }
+    };
 }
 
-/// Correctly rounded f64 fused multiply-add through libm.
-///
-/// Uses libm's normal architecture selection without an additional Magetypes
-/// feature probe. Other dependencies remain free to configure libm's features.
-#[inline(always)]
-#[forbid(unsafe_code)]
-pub fn fma(a: f64, b: f64, c: f64) -> f64 {
-    libm::fma(a, b, c)
-}
+portable_fma!(fmaf, f32, fmaf_soft);
+// Bypass libm's architecture dispatcher, and reuse its integer-significand
+// implementation. The dependency is pinned because this is an unstable API.
+portable_fma!(fma, f64, |a, b, c| libm::generic::fma_round(
+    a,
+    b,
+    c,
+    libm::support::Round::Nearest
+)
+.val);
 
 /// Software f32 fused multiply-add, correctly rounded, without CPU detection.
 ///

@@ -36,8 +36,8 @@ additions are the unified macro exports and narrow AVX-512 trait impls.
 Do not tag or publish until the open native software FMA rounding, native
 scalar performance, and Miri issues below are resolved, the release commit
 passes the full CI matrix, and the user reviews the READMEs and authorizes
-publication. The runtime policy choice and corrections to stale AVX-512
-README limitations/beta-branch links remain pending user review.
+publication. Corrections to stale AVX-512 README limitations/beta-branch links remain
+pending user review.
 
 ## CRITICAL: Every Conversation Health Check
 
@@ -155,13 +155,15 @@ fn dist_simd(a: &[f32; 8], b: &[f32; 8]) -> f32 {
 
 ### Dispatch granularity
 
-Magetypes must not add CPU probes inside single-vector arithmetic. Native scalar
-portable FMA delegates directly to libm's normal architecture implementation,
-including libm's own cached dispatch where applicable. Do not add an Archmage
-probe around that call or force libm's other dependents onto software.
-Native SIMD backends use direct FMA intrinsics. `fmaf_soft` remains the explicit
-software f32 helper and implements scalar f32 portable FMA on WASM, in both
-std and no_std builds, to avoid libm 0.2.16's subnormal rounding bug.
+Magetypes must not add CPU probes inside single-vector arithmetic. Portable
+software FMA uses f64/TwoSum/round-to-odd for f32 and pinned libm's generic
+integer implementation for f64; neither dispatches. Compile-time-guaranteed
+std AArch64 NEON and x86 FMA builds use Rust's hardware lowering. Other scalar
+contexts, including no_std, use software regardless of other dependents' libm
+features. Native SIMD backends retain direct FMA intrinsics. Bare scalar and
+strict-WASM `mul_add` remain multiply then add; relaxed WASM uses native madd.
+The independent corpus in `tests/fma_contract.rs` enforces portable expected
+bits and backend-specific bare behavior; never substitute std as its oracle.
 
 Whole-slice f16 conversion may auto-upgrade once per buffer. Explicit-proof
 hardware alternatives may avoid that selection. Keep the slice exception out
@@ -1142,22 +1144,14 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ### Open
 
-- **Native software f32 FMA subnormal rounding (2026-10-12, open):** CI on
-  `d08b649e` confirms the new independent `software_subnormal_rounding`
-  regression fails under SDE Nehalem and ARMv7/QEMU: direct libm 0.2.16
-  returns `0x00010002` instead of `0x00010001`. The WASM-only correction
-  does not cover these native software paths. Preserve the assertion and
-  correct the fallback before release. Evidence: [Nehalem job](https://github.com/imazen/archmage/actions/runs/38272203477/job/114888939641),
-  [ARMv7 job](https://github.com/imazen/archmage/actions/runs/38272203477/job/114888939658).
-
-- **Direct-libm scalar FMA breaks Miri (2026-10-12, open):** on main
-  `a3372cea`, `doc_examples::isa_quirks::scalar_tables` reaches libm's x86
-  feature initializer through `nostd_math::fmaf`. Its CPUID inline assembly
-  is unsupported by Miri. This is an interpreter limitation, not a reported
-  undefined-behavior finding. The [failed CI run](https://github.com/imazen/archmage/actions/runs/38247453244)
-  records the complete stack. Keep this release blocker visible when replacing
-  the scalar lowering; do not hide it by dropping the arithmetic test.
-
+- **Portable FMA rounding and Miri (2026-10-12, fixed locally; CI pending):**
+  The all-target f32 round-to-odd fallback fixes the independent subnormal
+  counterexample that failed under Nehalem and ARMv7. Direct generic f64
+  fusion avoids libm's CPUID path. Native no-FMA QEMU, Miri (including the
+  previously failing documentation tests), WASM strict/relaxed, ARMv7 and
+  AArch64 QEMU pass the new exact-rational corpus. CI must confirm the full matrix
+  before release. Prior failures: [Nehalem/ARMv7](https://github.com/imazen/archmage/actions/runs/38272203477),
+  [Miri](https://github.com/imazen/archmage/actions/runs/38247453244).
 
 - **Scalar portable FMA runtime regression (2026-10-12, open):** main
   `a3372cea` matches direct libm but regresses against published 0.9.30 in

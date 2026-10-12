@@ -40,14 +40,13 @@ avx512 = ["w512", "archmage/avx512"]
 [dependencies]
 # Core tokens and macros
 archmage = { version = "0.9.31-beta.2", path = "..", default-features = false }
+# Direct generic f64 FMA avoids architecture dispatch in portable fallbacks.
+# Pin the internal API. Other dependents may configure libm independently.
+libm = { version = "=0.2.16", default-features = false, features = ["arch", "unstable-public-internals"] }
 # Toolchain-version gate (proc-macro, dep-light, dtolnay) for newer-stable
 # `core::arch` intrinsics above the crate MSRV — gates the aarch64 NEON-f16
 # hardware path (`vcvt_*`, stable since 1.94) without raising the 1.89 floor.
 # See `simd::generic::convert_f16` and `MSRV.md`.
-# Native scalar FMA and WASM f64, with libm's normal architecture selection.
-# WASM f32 uses our corrected round-to-odd software helper.
-# `arch` supports no_std and does not force other libm users onto software.
-libm = { version = "0.2.16", default-features = false, features = ["arch"] }
 rustversion = "1.0.23"
 
 # proptest and zenbench don't support WASM; trybuild/macrotest require host execution
@@ -62,6 +61,10 @@ macrotest = "1.2.1"
 # test must expect software-vs-software (no HW divergence) on the pre-1.94
 # fallback even when the CPU/QEMU presents `fp16` at runtime.
 [dev-dependencies]
+# Toolchain-version gate (proc-macro, dep-light, dtolnay) for newer-stable
+# `core::arch` intrinsics above the crate MSRV — gates the aarch64 NEON-f16
+# hardware path (`vcvt_*`, stable since 1.94) without raising the 1.89 floor.
+# See `simd::generic::convert_f16` and `MSRV.md`.
 rustversion = "1.0.23"
 
 [[bench]]

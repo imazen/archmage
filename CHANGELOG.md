@@ -111,8 +111,9 @@ The `0.9.31-beta.2` entries cover changes since `0.9.30`. The earlier
 
 #### Fixed
 
-- WASM scalar f32 portable multiply-add/subtract use the corrected f64/TwoSum/round-to-odd helper in std and no_std builds. This fixes a one-bit subnormal rounding error in the libm 0.2.16 path; bare relaxed-SIMD `mul_add` keeps the engine's madd instruction (`cd7e87f0`).
-- Native scalar `mul_add_portable` / `mul_sub_portable` (including `f32x1` / `f64x1`) delegate directly to libm's normal FMA implementation instead of adding an Archmage feature probe. Libm's architecture selection is enabled without forcing its other dependents onto software. Native SIMD backends retain direct FMA instructions; the explicit `fmaf_soft` helper remains available. W512 scalar generation now uses the same explicit lane expressions as W128/W256 to avoid extra array copies around libm calls (75eb736f, 9e462e61).
+- Correct portable f32 multiply-add/subtract subnormal rounding on all software backends using f64/TwoSum/round-to-odd, including WASM, no-FMA x86 and ARMv7. Portable f64 calls libm's integer implementation directly, avoiding its runtime CPU dispatcher and unsupported CPUID under Miri. Libm is pinned for this internal API; its other dependents are not forced onto software. Scalar hardware lowering is selected only by compile-time guarantees (std AArch64 NEON/x86 FMA). Native vector FMA and bare scalar/strict-WASM multiply-add remain unchanged; relaxed WASM keeps the engine's madd instruction.
+- Enforce portable expected bits with an independent exact-rational corpus across widths, add/subtract, signed zeros, subnormals, cancellation and overflow. CI covers std/no_std native and cross targets, strict/relaxed WASM and Miri; NaN payload/sign remain unspecified.
+- W512 scalar generation uses the same explicit lane expressions as W128/W256 to avoid extra array copies around portable FMA calls (9e462e61).
 
 ### [0.9.30] - 2026-10-07
 

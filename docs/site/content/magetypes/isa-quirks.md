@@ -207,18 +207,28 @@ and on 1,024 dependent steps (chain); records:
 | WASM SIMD128, wasmtime on the 9950X3D | The same code as `a * b + c` | 8.2× (`f32x4`), 23× (`f64x2`) the time |
 | WASM relaxed SIMD, same | The engine's madd: 0.96–1.06× the time | 8.2× (`f32x4`), 24× (`f64x2`) the time |
 
-Native scalar portable FMA delegates directly to libm, including `f32x1` and
-`f64x1`. On WASM, scalar f32 uses the corrected f64/TwoSum/round-to-odd helper
-in both std and no_std builds; this avoids libm 0.2.16's subnormal
-double-rounding bug. WASM f64 continues to use libm. Magetypes adds no feature
-check around libm's dispatch and does not
-force software selection onto other libm dependents. On x86, libm selects an
-implementation through a cached function pointer; its normal architecture
-feature remains enabled for no_std builds too. On targets without a hardware
-implementation it uses software fusion.
+Portable software fallbacks use f64/TwoSum/round-to-odd for f32 and libm's
+integer-significand implementation for f64. They do not probe the CPU. The f32
+algorithm avoids libm 0.2.16's subnormal double-rounding bug. We pin libm because
+calling its generic f64 implementation directly requires its internal API;
+other dependents retain their own libm feature selection.
 
-The scalar rows above measure earlier implementations. Before the WASM f32
-rounding fix, an assembly comparison with Rust 1.99 checked the f32/f64 helpers and
+Scalar helpers use hardware only when the build guarantees it: with `std`,
+AArch64 NEON or x86 FMA-enabled builds use Rust's `mul_add`. Other scalar
+contexts (including all `no_std` builds) use software,
+including baseline x86 even on a CPU with FMA. Native vector backends retain
+their token-proven FMA intrinsics. Strict and relaxed WASM portable operations
+both use software. The bit-exact contract assumes round-to-nearest and gradual
+underflow; NaN payloads and signs are unspecified.
+
+CI checks committed expected bits generated with Python exact rational
+arithmetic, independently of std/libm, alongside the broader randomized suite.
+The contract runs on native x86/ARM, cross targets, WASM and Miri, in `std` and
+`no_std` configurations. Bare arithmetic is checked separately against its
+backend's fused, unfused, or relaxed behavior.
+
+The scalar rows above measure earlier implementations. Before the portable software
+rounding fixes, an assembly comparison with Rust 1.99 checked the f32/f64 helpers and
 portable add/sub at all six scalar vector widths: each matched the corresponding
 direct libm expression on baseline x86-64, x86-64-v3, AArch64, and WASM after
 normalizing local label numbers. That establishes code-generation equivalence
