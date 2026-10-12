@@ -65,10 +65,15 @@ compatibility and performance need their own tests before changing those crates.
 
 ## Version and evidence scope
 
-This site tracks the repository, whose current work is 0.9.29. API links point
-to the latest **published** docs.rs version, which may lag it. `from_context()`,
-the newer integer abstractions, and tokenless-rite token construction should not
-be assumed available in 0.9.28. No crate publication is implied by this guide.
+This site tracks the repository, whose current work is the 0.9.31-beta
+prerelease; the latest **published** release is 0.9.30, and API links point to
+the latest **published** docs.rs version, which may lag the repository. The
+APIs this guide teaches (`from_context()`, the integer abstractions, tokenless
+rite construction) are available in the published 0.9.30 release; do not assume
+them in 0.9.28 or earlier. The beta's unified `#[attune]`, `attuned!`, and
+`reattune!` macros are documented in the repository's
+[beta guide](https://github.com/imazen/archmage/blob/release/0.9.31-beta/docs/ATTUNE.md).
+No crate publication is implied by this guide.
 
 The search used local checkouts; pinned walkthroughs name their source revisions.
 The additional inspected heads were zenanalyze `b102fa5`, zenavif `2ebca1b`,

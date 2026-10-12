@@ -1,0 +1,746 @@
+{
+  "sources": {
+    "zenav1-svt": {
+      "repository": "https://github.com/imazen/zenav1-svt",
+      "revision": "224c6bbb9a3dc577c64f6e0531bda5c3f60c6b0b",
+      "archive_sha256": "c97bda0a517b17346b84094100e1be756aea7a2317b4073ac7a241c2c4f6193a"
+    },
+    "rav1d-safe": {
+      "repository": "https://github.com/imazen/rav1d-safe",
+      "revision": "5b51b144cf73216fffd1100bfc396bc7dc17b5bd",
+      "archive_sha256": "8a33631baf74031a2a7218f97f42ada73a3abb0ed1af140f45eb899054326485"
+    }
+  },
+  "stacks": {
+    "baseline": "e2dbab66ef5aa08f8e23ed05248e7d1217f58475",
+    "candidate": "afa92acb57d5e5eed347c297ba9ed61a2b4d263b"
+  },
+  "environment": {
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: x86_64-unknown-linux-gnu\nrelease: 1.98.1\nLLVM version: 22.1.8\n",
+    "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+    "host": "i265",
+    "incremental": false,
+    "rustflags": "",
+    "compiler_cache": false,
+    "note": "Fresh Cargo outputs, warmed dependency downloads and OS caches; unchanged consumer Rust sources."
+  },
+  "normalization": {
+    "baseline": {
+      "original": "0.9.30",
+      "normalized": "0.9.29",
+      "manifests": {
+        "Cargo.toml": {
+          "original_sha256": "8b7c3b3ff5e4a8de119eaf509589a0f39b81caa3e16d821886bb070b3c186e57",
+          "normalized_sha256": "5023e5161f8e9e1db11eb990111dc1dc867a08b34a154d452bf2e1c579fc8776"
+        },
+        "magetypes/Cargo.toml": {
+          "original_sha256": "54d20fdbe9872928ab35e669415d039d489e3056a3dfec6dc6eb57e188905d43",
+          "normalized_sha256": "62527728a55d278746ac6a3a5f7dbc122b9fb66483e60abc06266faefa605bf5"
+        }
+      }
+    },
+    "candidate": {
+      "original": "0.9.31-beta",
+      "normalized": "0.9.29",
+      "manifests": {
+        "Cargo.toml": {
+          "original_sha256": "eb09014d7f0b287a66d5b7448a3e765c9ca6442b3dfdbcc647bac4df9a945893",
+          "normalized_sha256": "5023e5161f8e9e1db11eb990111dc1dc867a08b34a154d452bf2e1c579fc8776"
+        },
+        "magetypes/Cargo.toml": {
+          "original_sha256": "2995f430c76ed2180682aada7b40d644b2f1cb62e62ba98603c63ee4df1bf559",
+          "normalized_sha256": "11664ed495dacc1066ee5307673a49c5a7f4e789514b0c60f241a157c48fb855"
+        }
+      }
+    }
+  },
+  "commands": {
+    "check": "cargo --config CASE_CONFIG check --frozen --lib -p PACKAGE --timings",
+    "release": "cargo --config CASE_CONFIG build --frozen --lib -p PACKAGE --timings --release"
+  },
+  "logs": "/home/lilith/output/archmage/attune-beta-consumers-2026-10-10/comparison",
+  "summary": [
+    {
+      "workload": "magetypes",
+      "mode": "check",
+      "medians": {
+        "baseline": 2.559942318010144,
+        "candidate": 2.6768957689928357
+      },
+      "range_seconds": {
+        "baseline": [
+          2.550262353004655,
+          2.5686491600063164
+        ],
+        "candidate": [
+          2.659013011987554,
+          2.6917522180010565
+        ]
+      },
+      "candidate_vs_baseline_percent": 4.568597118766338
+    },
+    {
+      "workload": "zenav1-svt",
+      "mode": "check",
+      "medians": {
+        "baseline": 8.051578904007329,
+        "candidate": 8.201924590015551
+      },
+      "range_seconds": {
+        "baseline": [
+          8.045943407021696,
+          8.12605372001417
+        ],
+        "candidate": [
+          8.181957761000376,
+          8.270811788999708
+        ]
+      },
+      "candidate_vs_baseline_percent": 1.8672820300300819
+    },
+    {
+      "workload": "rav1d-safe",
+      "mode": "check",
+      "medians": {
+        "baseline": 7.50366807897808,
+        "candidate": 7.536599571991246
+      },
+      "range_seconds": {
+        "baseline": [
+          7.495255687012104,
+          7.506791798019549
+        ],
+        "candidate": [
+          7.494123460986884,
+          7.57736512698466
+        ]
+      },
+      "candidate_vs_baseline_percent": 0.43887193125486945
+    },
+    {
+      "workload": "magetypes",
+      "mode": "release",
+      "medians": {
+        "baseline": 2.8165534540021326,
+        "candidate": 2.9255928229831625
+      },
+      "range_seconds": {
+        "baseline": [
+          2.807090910995612,
+          2.8287879599956796
+        ],
+        "candidate": [
+          2.918046614009654,
+          2.932865278009558
+        ]
+      },
+      "candidate_vs_baseline_percent": 3.871375805990551
+    },
+    {
+      "workload": "zenav1-svt",
+      "mode": "release",
+      "medians": {
+        "baseline": 23.308116657019127,
+        "candidate": 23.56791026200517
+      },
+      "range_seconds": {
+        "baseline": [
+          23.159341475984547,
+          23.337368687003618
+        ],
+        "candidate": [
+          23.529086199996527,
+          23.64939599399804
+        ]
+      },
+      "candidate_vs_baseline_percent": 1.1146057350275296
+    },
+    {
+      "workload": "rav1d-safe",
+      "mode": "release",
+      "medians": {
+        "baseline": 11.16717258299468,
+        "candidate": 11.20384394802386
+      },
+      "range_seconds": {
+        "baseline": [
+          11.087356984993676,
+          11.17245599499438
+        ],
+        "candidate": [
+          11.165020709013334,
+          11.232520596007816
+        ]
+      },
+      "candidate_vs_baseline_percent": 0.3283854060339486
+    }
+  ],
+  "columns": [
+    "workload",
+    "variant",
+    "mode",
+    "repetition",
+    "seconds",
+    "max_rss_kib",
+    "exit_code",
+    "cargo_unit_seconds"
+  ],
+  "runs": [
+    [
+      "magetypes",
+      "baseline",
+      "check",
+      0,
+      2.559942318010144,
+      344164,
+      0,
+      {
+        "archmage-macros": 0.32,
+        "archmage": 0.07,
+        "magetypes": 0.91
+      }
+    ],
+    [
+      "magetypes",
+      "candidate",
+      "check",
+      0,
+      2.6768957689928357,
+      344396,
+      0,
+      {
+        "archmage-macros": 0.44,
+        "archmage": 0.08,
+        "magetypes": 0.92
+      }
+    ],
+    [
+      "zenav1-svt",
+      "baseline",
+      "check",
+      0,
+      8.12605372001417,
+      865772,
+      0,
+      {
+        "zenav1-svt-types": 0.1,
+        "archmage-macros": 0.31,
+        "archmage": 0.08,
+        "magetypes": 1.11,
+        "zenav1-svt-dsp": 1.84,
+        "zenav1-svt-encoder": 3.46,
+        "zenav1-svt": 0.05
+      }
+    ],
+    [
+      "zenav1-svt",
+      "candidate",
+      "check",
+      0,
+      8.270811788999708,
+      866124,
+      0,
+      {
+        "zenav1-svt-types": 0.1,
+        "archmage-macros": 0.45,
+        "archmage": 0.08,
+        "magetypes": 1.09,
+        "zenav1-svt-dsp": 1.84,
+        "zenav1-svt-encoder": 3.49,
+        "zenav1-svt": 0.05
+      }
+    ],
+    [
+      "rav1d-safe",
+      "baseline",
+      "check",
+      0,
+      7.50366807897808,
+      921068,
+      0,
+      {
+        "archmage-macros": 0.35,
+        "archmage": 0.09,
+        "rav1d-safe": 4.51
+      }
+    ],
+    [
+      "rav1d-safe",
+      "candidate",
+      "check",
+      0,
+      7.494123460986884,
+      920748,
+      0,
+      {
+        "archmage-macros": 0.49,
+        "archmage": 0.08,
+        "rav1d-safe": 4.5
+      }
+    ],
+    [
+      "magetypes",
+      "candidate",
+      "check",
+      1,
+      2.659013011987554,
+      344528,
+      0,
+      {
+        "archmage-macros": 0.43,
+        "archmage": 0.07,
+        "magetypes": 0.91
+      }
+    ],
+    [
+      "magetypes",
+      "baseline",
+      "check",
+      1,
+      2.5686491600063164,
+      344060,
+      0,
+      {
+        "archmage-macros": 0.31,
+        "archmage": 0.08,
+        "magetypes": 0.93
+      }
+    ],
+    [
+      "zenav1-svt",
+      "candidate",
+      "check",
+      1,
+      8.181957761000376,
+      866512,
+      0,
+      {
+        "zenav1-svt-types": 0.09,
+        "archmage-macros": 0.45,
+        "archmage": 0.08,
+        "magetypes": 1.1,
+        "zenav1-svt-dsp": 1.83,
+        "zenav1-svt-encoder": 3.41,
+        "zenav1-svt": 0.05
+      }
+    ],
+    [
+      "zenav1-svt",
+      "baseline",
+      "check",
+      1,
+      8.045943407021696,
+      866704,
+      0,
+      {
+        "zenav1-svt-types": 0.09,
+        "archmage-macros": 0.31,
+        "archmage": 0.08,
+        "magetypes": 1.09,
+        "zenav1-svt-dsp": 1.82,
+        "zenav1-svt-encoder": 3.41,
+        "zenav1-svt": 0.05
+      }
+    ],
+    [
+      "rav1d-safe",
+      "candidate",
+      "check",
+      1,
+      7.57736512698466,
+      920912,
+      0,
+      {
+        "archmage-macros": 0.5,
+        "archmage": 0.07,
+        "rav1d-safe": 4.57
+      }
+    ],
+    [
+      "rav1d-safe",
+      "baseline",
+      "check",
+      1,
+      7.506791798019549,
+      921480,
+      0,
+      {
+        "archmage-macros": 0.35,
+        "archmage": 0.08,
+        "rav1d-safe": 4.55
+      }
+    ],
+    [
+      "magetypes",
+      "baseline",
+      "check",
+      2,
+      2.550262353004655,
+      344416,
+      0,
+      {
+        "archmage-macros": 0.31,
+        "archmage": 0.08,
+        "magetypes": 0.92
+      }
+    ],
+    [
+      "magetypes",
+      "candidate",
+      "check",
+      2,
+      2.6917522180010565,
+      344640,
+      0,
+      {
+        "archmage-macros": 0.44,
+        "archmage": 0.07,
+        "magetypes": 0.92
+      }
+    ],
+    [
+      "zenav1-svt",
+      "baseline",
+      "check",
+      2,
+      8.051578904007329,
+      866612,
+      0,
+      {
+        "zenav1-svt-types": 0.1,
+        "archmage-macros": 0.31,
+        "archmage": 0.08,
+        "magetypes": 1.1,
+        "zenav1-svt-dsp": 1.82,
+        "zenav1-svt-encoder": 3.43,
+        "zenav1-svt": 0.05
+      }
+    ],
+    [
+      "zenav1-svt",
+      "candidate",
+      "check",
+      2,
+      8.201924590015551,
+      866604,
+      0,
+      {
+        "zenav1-svt-types": 0.1,
+        "archmage-macros": 0.44,
+        "archmage": 0.08,
+        "magetypes": 1.09,
+        "zenav1-svt-dsp": 1.83,
+        "zenav1-svt-encoder": 3.45,
+        "zenav1-svt": 0.05
+      }
+    ],
+    [
+      "rav1d-safe",
+      "baseline",
+      "check",
+      2,
+      7.495255687012104,
+      920928,
+      0,
+      {
+        "archmage-macros": 0.35,
+        "archmage": 0.08,
+        "rav1d-safe": 4.53
+      }
+    ],
+    [
+      "rav1d-safe",
+      "candidate",
+      "check",
+      2,
+      7.536599571991246,
+      920060,
+      0,
+      {
+        "archmage-macros": 0.49,
+        "archmage": 0.08,
+        "rav1d-safe": 4.52
+      }
+    ],
+    [
+      "magetypes",
+      "baseline",
+      "release",
+      0,
+      2.8287879599956796,
+      359296,
+      0,
+      {
+        "archmage-macros": 0.31,
+        "archmage": 0.22,
+        "magetypes": 1.15
+      }
+    ],
+    [
+      "magetypes",
+      "candidate",
+      "release",
+      0,
+      2.932865278009558,
+      359196,
+      0,
+      {
+        "archmage-macros": 0.43,
+        "archmage": 0.21,
+        "magetypes": 1.14
+      }
+    ],
+    [
+      "zenav1-svt",
+      "baseline",
+      "release",
+      0,
+      23.337368687003618,
+      1061780,
+      0,
+      {
+        "zenav1-svt-types": 0.12,
+        "archmage-macros": 1.29,
+        "archmage": 0.16,
+        "magetypes": 1.3,
+        "zenav1-svt-dsp": 8.02,
+        "zenav1-svt-encoder": 15.46,
+        "zenav1-svt": 0.14
+      }
+    ],
+    [
+      "zenav1-svt",
+      "candidate",
+      "release",
+      0,
+      23.529086199996527,
+      1058588,
+      0,
+      {
+        "zenav1-svt-types": 0.12,
+        "archmage-macros": 1.62,
+        "archmage": 0.16,
+        "magetypes": 1.29,
+        "zenav1-svt-dsp": 8.12,
+        "zenav1-svt-encoder": 15.29,
+        "zenav1-svt": 0.15
+      }
+    ],
+    [
+      "rav1d-safe",
+      "baseline",
+      "release",
+      0,
+      11.16717258299468,
+      1246920,
+      0,
+      {
+        "archmage-macros": 0.37,
+        "archmage": 0.14,
+        "rav1d-safe": 7.98
+      }
+    ],
+    [
+      "rav1d-safe",
+      "candidate",
+      "release",
+      0,
+      11.165020709013334,
+      1249296,
+      0,
+      {
+        "archmage-macros": 0.49,
+        "archmage": 0.14,
+        "rav1d-safe": 7.98
+      }
+    ],
+    [
+      "magetypes",
+      "candidate",
+      "release",
+      1,
+      2.9255928229831625,
+      358992,
+      0,
+      {
+        "archmage-macros": 0.43,
+        "archmage": 0.21,
+        "magetypes": 1.15
+      }
+    ],
+    [
+      "magetypes",
+      "baseline",
+      "release",
+      1,
+      2.807090910995612,
+      358820,
+      0,
+      {
+        "archmage-macros": 0.31,
+        "archmage": 0.22,
+        "magetypes": 1.13
+      }
+    ],
+    [
+      "zenav1-svt",
+      "candidate",
+      "release",
+      1,
+      23.64939599399804,
+      1059648,
+      0,
+      {
+        "zenav1-svt-types": 0.11,
+        "archmage-macros": 1.65,
+        "archmage": 0.17,
+        "magetypes": 1.31,
+        "zenav1-svt-dsp": 8.18,
+        "zenav1-svt-encoder": 15.33,
+        "zenav1-svt": 0.14
+      }
+    ],
+    [
+      "zenav1-svt",
+      "baseline",
+      "release",
+      1,
+      23.308116657019127,
+      1059432,
+      0,
+      {
+        "zenav1-svt-types": 0.11,
+        "archmage-macros": 1.3,
+        "archmage": 0.16,
+        "magetypes": 1.3,
+        "zenav1-svt-dsp": 8.11,
+        "zenav1-svt-encoder": 15.42,
+        "zenav1-svt": 0.14
+      }
+    ],
+    [
+      "rav1d-safe",
+      "candidate",
+      "release",
+      1,
+      11.232520596007816,
+      1249264,
+      0,
+      {
+        "archmage-macros": 0.48,
+        "archmage": 0.14,
+        "rav1d-safe": 8.0
+      }
+    ],
+    [
+      "rav1d-safe",
+      "baseline",
+      "release",
+      1,
+      11.17245599499438,
+      1251736,
+      0,
+      {
+        "archmage-macros": 0.35,
+        "archmage": 0.14,
+        "rav1d-safe": 8.01
+      }
+    ],
+    [
+      "magetypes",
+      "baseline",
+      "release",
+      2,
+      2.8165534540021326,
+      359416,
+      0,
+      {
+        "archmage-macros": 0.31,
+        "archmage": 0.21,
+        "magetypes": 1.15
+      }
+    ],
+    [
+      "magetypes",
+      "candidate",
+      "release",
+      2,
+      2.918046614009654,
+      359052,
+      0,
+      {
+        "archmage-macros": 0.43,
+        "archmage": 0.21,
+        "magetypes": 1.15
+      }
+    ],
+    [
+      "zenav1-svt",
+      "baseline",
+      "release",
+      2,
+      23.159341475984547,
+      1056844,
+      0,
+      {
+        "zenav1-svt-types": 0.11,
+        "archmage-macros": 1.3,
+        "archmage": 0.16,
+        "magetypes": 1.29,
+        "zenav1-svt-dsp": 8.11,
+        "zenav1-svt-encoder": 15.27,
+        "zenav1-svt": 0.14
+      }
+    ],
+    [
+      "zenav1-svt",
+      "candidate",
+      "release",
+      2,
+      23.56791026200517,
+      1061304,
+      0,
+      {
+        "zenav1-svt-types": 0.12,
+        "archmage-macros": 1.65,
+        "archmage": 0.16,
+        "magetypes": 1.27,
+        "zenav1-svt-dsp": 8.08,
+        "zenav1-svt-encoder": 15.35,
+        "zenav1-svt": 0.14
+      }
+    ],
+    [
+      "rav1d-safe",
+      "baseline",
+      "release",
+      2,
+      11.087356984993676,
+      1250340,
+      0,
+      {
+        "archmage-macros": 0.35,
+        "archmage": 0.14,
+        "rav1d-safe": 7.94
+      }
+    ],
+    [
+      "rav1d-safe",
+      "candidate",
+      "release",
+      2,
+      11.20384394802386,
+      1248880,
+      0,
+      {
+        "archmage-macros": 0.49,
+        "archmage": 0.14,
+        "rav1d-safe": 8.02
+      }
+    ]
+  ],
+  "run_heavy": {
+    "check": "run-heavy: done rc=0 110s | peak-RSS 0.88GiB | min-avail 26741MiB | peak-load 1.80",
+    "release": "run-heavy: done rc=0 225s | peak-RSS 1.19GiB | min-avail 26559MiB | peak-load 2.13"
+  }
+}

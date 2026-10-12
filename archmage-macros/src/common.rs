@@ -36,6 +36,34 @@ impl syn::parse::Parse for LightFn {
     }
 }
 
+impl LightFn {
+    /// Substitute the family placeholder without printing and reparsing the
+    /// entire function. Only syntax that contains `Token` needs to be parsed
+    /// again; the body stays opaque, including macro argument markers.
+    pub(crate) fn specialize_token(&mut self, token: &proc_macro2::TokenStream) -> syn::Result<()> {
+        for attr in &mut self.attrs {
+            specialize_syntax(&mut attr.meta, token)?;
+        }
+        specialize_syntax(&mut self.vis, token)?;
+        specialize_syntax(&mut self.sig, token)?;
+        self.body = replace_ident_in_tokens(std::mem::take(&mut self.body), "Token", token);
+        Ok(())
+    }
+}
+
+/// Preserve the parsed node when it has no placeholder. This also covers
+/// `Token` in generic bounds, return types, attributes and visibility paths.
+pub(crate) fn specialize_syntax<T: syn::parse::Parse + ToTokens>(
+    syntax: &mut T,
+    token: &proc_macro2::TokenStream,
+) -> syn::Result<()> {
+    let original = syntax.to_token_stream();
+    if tokens_contain_ident(&original, &["Token"]) {
+        *syntax = syn::parse2(replace_ident_in_tokens(original, "Token", token))?;
+    }
+    Ok(())
+}
+
 impl ToTokens for LightFn {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         for attr in &self.attrs {
@@ -133,18 +161,12 @@ pub(crate) fn drop_attrs_equal_to(attrs: &mut Vec<Attribute>, guard: &proc_macro
 
 /// Build a turbofish token stream from a function's generics.
 pub(crate) fn build_turbofish(generics: &syn::Generics) -> proc_macro2::TokenStream {
-    let params: Vec<proc_macro2::TokenStream> = generics
+    let params: Vec<_> = generics
         .params
         .iter()
         .filter_map(|param| match param {
-            GenericParam::Type(tp) => {
-                let ident = &tp.ident;
-                Some(quote! { #ident })
-            }
-            GenericParam::Const(cp) => {
-                let ident = &cp.ident;
-                Some(quote! { #ident })
-            }
+            GenericParam::Type(tp) => Some(&tp.ident),
+            GenericParam::Const(cp) => Some(&cp.ident),
             GenericParam::Lifetime(_) => None,
         })
         .collect();

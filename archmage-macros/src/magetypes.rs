@@ -62,7 +62,10 @@ pub(crate) fn magetypes_impl(
 
     // Dispatch presence is independent of the tier. Scan the original body
     // once, before making variants (the define preamble contains no dispatch).
-    let has_dispatch = tokens_contain_ident(&input_fn.body, &["incant", "dispatch_variant"]);
+    let has_dispatch = tokens_contain_ident(
+        &input_fn.body,
+        &["incant", "dispatch_variant", "attuned", "reattune"],
+    );
     // Token is still a placeholder here. Use the same type inspection as the
     // other tier macros, also recognizing that placeholder before substitution.
     // Do not mistake a vector parameter such as V<Token> for a token parameter.
@@ -102,7 +105,7 @@ pub(crate) fn magetypes_impl(
         // fallbacks retain runtime dispatch.
         if has_dispatch {
             let ctx = crate::rewrite::CallerContext {
-                tier_suffix: tier.suffix.to_string(),
+                tier_suffix: tier.suffix,
                 target_arch: tier.target_arch,
                 token_ident: quote::format_ident!("_"),
                 has_token: false,
@@ -111,48 +114,73 @@ pub(crate) fn magetypes_impl(
             variant_fn.body = crate::rewrite::rewrite_incant_in_body(variant_fn.body, &ctx);
         }
 
-        // Replace `Token` ident with the concrete token path at the token level.
-        // This is safe: each identifier is a discrete token tree, so `ScalarToken`,
-        // `IntoConcreteToken`, etc. are single Ident nodes that do NOT match "Token".
-        let variant_tokens = if tier.token_path.is_empty() {
-            // `default` tier has no token type — just emit the fn without replacement
-            variant_fn.to_token_stream()
-        } else {
-            let concrete_tokens: proc_macro2::TokenStream = tier
-                .token_path
-                .parse()
-                .expect("tier token_path must be valid tokens");
-            replace_ident_in_tokens(variant_fn.to_token_stream(), "Token", &concrete_tokens)
-        };
-
         let cfg_guard = tier.variant_cfg_guard();
+        let token = (!tier.token_path.is_empty()).then(|| {
+            tier.token_path
+                .parse::<TokenStream>()
+                .expect("tier token_path must be valid tokens")
+        });
 
-        variants.push(if !tier.is_fallback() {
-            // Non-fallback variants carry target_feature. The `rite` flag
-            // chooses which macro applies it:
-            //   - #[archmage::arcane]: safe wrapper + #[target_feature] inner
-            //     (trampoline pattern; callable from any context)
-            //   - #[archmage::rite(import_intrinsics)]: direct #[target_feature]
-            //     + #[inline], no wrapper (only callable from matching-feature
-            //     contexts, e.g. via `incant!` rewriting from another tier body)
-            let wrapper = if rite_flag {
-                let tier_name = quote::format_ident!("{}", tier.name);
-                quote! { #[archmage::rite(#tier_name, import_intrinsics)] }
-            } else if in_impl {
-                quote! { #[archmage::arcane(in_impl)] }
-            } else {
-                quote! { #[archmage::arcane] }
-            };
-            quote! {
-                #cfg_guard
-                #wrapper
-                #variant_tokens
+        // Fallbacks need no feature emitter. Substitute their output directly,
+        // without reparsing syntax that no later stage will inspect.
+        if tier.is_fallback() {
+            let mut function = variant_fn.to_token_stream();
+            if let Some(token) = &token {
+                function = replace_ident_in_tokens(function, "Token", token);
             }
+            variants.push(quote!(#cfg_guard #function));
+            continue;
+        }
+
+        // Keep the parsed function for the shared emitter. Only fields that
+        // contain the placeholder need reparsing; the body stays opaque.
+        if let Some(token) = &token
+            && let Err(error) = variant_fn.specialize_token(token)
+        {
+            return error.to_compile_error();
+        }
+        if tier.allow_unexpected_cfg {
+            variant_fn
+                .attrs
+                .insert(0, syn::parse_quote!(#[allow(unexpected_cfgs)]));
+        }
+        let lowered = if rite_flag {
+            let token = crate::generated::tier_to_canonical_token(tier.name)
+                .expect("resolved tier has a canonical token");
+            let context = crate::engine::feature::FeatureContext::from_tier_token(token)
+                .expect("registered feature context");
+            crate::engine::feature::emit(
+                variant_fn,
+                &SharedOptions {
+                    import_intrinsics: true,
+                    cfg_feature: tier.feature_gate.clone(),
+                    ..Default::default()
+                },
+                None,
+                false,
+                context,
+            )
+            .unwrap_or_else(|diagnostic| diagnostic)
         } else {
-            quote! {
-                #cfg_guard
-                #variant_tokens
-            }
+            crate::engine::boundary::expand(
+                variant_fn,
+                "arcane",
+                crate::engine::boundary::BoundaryOptions {
+                    in_impl,
+                    shared: SharedOptions {
+                        cfg_feature: tier.feature_gate.clone(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            )
+        };
+        // An unavailable variant must not expose a validation diagnostic
+        // either. Successful emitters guard every item themselves.
+        variants.push(if tokens_contain_ident(&lowered, &["compile_error"]) {
+            quote!(#cfg_guard #lowered)
+        } else {
+            lowered
         });
     }
 
@@ -161,4 +189,43 @@ pub(crate) fn magetypes_impl(
     };
 
     output
+}
+
+#[cfg(test)]
+mod specialization_tests {
+    use super::*;
+    use quote::ToTokens;
+
+    #[test]
+    fn substitution_preserves_all_function_parts_and_dispatch_markers() {
+        let mut function: LightFn = syn::parse_quote! {
+            #[some_attribute(Token, "Token")]
+            pub(in Token) fn kernel<T: Into<Token>>(proof: Token, x: T) -> Option<Token>
+            where Token: Copy
+            {
+                let _: Option<Token> = None;
+                incant!(helper::<Token>(Token, Some(Token::from_context())), [scalar]);
+                stringify!("Token", Token)
+            }
+        };
+        function
+            .specialize_token(&quote!(archmage::ScalarToken))
+            .unwrap();
+        let expected: LightFn = syn::parse_quote! {
+            #[some_attribute(archmage::ScalarToken, "Token")]
+            pub(in archmage::ScalarToken) fn kernel<T: Into<archmage::ScalarToken>>(
+                proof: archmage::ScalarToken, x: T
+            ) -> Option<archmage::ScalarToken>
+            where archmage::ScalarToken: Copy
+            {
+                let _: Option<archmage::ScalarToken> = None;
+                incant!(helper::<archmage::ScalarToken>(Token, Some(archmage::ScalarToken::from_context())), [scalar]);
+                stringify!("Token", archmage::ScalarToken)
+            }
+        };
+        assert_eq!(
+            function.to_token_stream().to_string(),
+            expected.to_token_stream().to_string()
+        );
+    }
 }

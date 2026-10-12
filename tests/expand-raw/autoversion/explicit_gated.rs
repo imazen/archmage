@@ -23,7 +23,7 @@ fn sum(data: &[f32; 4]) -> f32 {
     }
     sum_scalar(archmage::ScalarToken, data)
 }
-#[cfg(target_arch = "x86_64")]
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[doc(hidden)]
 #[allow(dead_code)]
 #[target_feature(
@@ -33,8 +33,7 @@ fn sum(data: &[f32; 4]) -> f32 {
 fn __arcane_sum_v4(_token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
     data.iter().sum()
 }
-#[cfg(target_arch = "x86_64")]
-#[cfg(feature = "avx512")]
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 #[allow(dead_code)]
 #[inline(always)]
 fn sum_v4(_token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {

@@ -6,7 +6,7 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: archmage.txt 570 lines (supported surface) | archmage.features.txt 384 added (features: avx512,forge-token-api,macros,safe_unaligned_simd,std,testable_dispatch) | archmage.internal.txt 86 lines (86 hidden + 0 excluded-feature)
+# files: archmage.txt 576 lines (supported surface) | archmage.features.txt 384 added (features: avx512,forge-token-api,macros,safe_unaligned_simd,std,testable_dispatch) | archmage.internal.txt 86 lines (86 hidden + 0 excluded-feature)
 
 ## summary
 #
@@ -18,27 +18,30 @@
 #   inherent methods                          327
 #   struct fields                              12
 #   enum variants                              27
-#   re-exports                                106
+#   re-exports                                112
 #   trait roster entries (type × trait)       164
 #   auto-trait-complete types                  23
 #   auto-trait exceptions                       1
 #
 # per-module pub lines:
-#   (root)                          117
+#   (root)                          120
 #   detect                            3
 #   intrinsics                       45
-#   prelude                         113
+#   prelude                         116
 #   testing                          13
 #   tokens                          329
 
-## items (544 lines)
+## items (550 lines)
 
 pub mod archmage
 pub use arcane
+pub use attune
+pub use attuned
 pub use autoversion
 pub use dispatch_variant
 pub use incant
 pub use magetypes
+pub use reattune
 pub use rite
 pub use simd_route
 pub use token_target_features
@@ -139,10 +142,13 @@ pub use prelude::_mm_storeu_si16
 pub use prelude::_mm_storeu_si32
 pub use prelude::_mm_storeu_si64
 pub use prelude::arcane
+pub use prelude::attune
+pub use prelude::attuned
 pub use prelude::autoversion
 pub use prelude::dispatch_variant
 pub use prelude::incant
 pub use prelude::magetypes
+pub use prelude::reattune
 pub use prelude::rite
 pub use prelude::simd_route
 pub use prelude::token_target_features

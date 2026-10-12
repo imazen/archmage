@@ -8,12 +8,41 @@ You pick a CPU tier, prove it's present once with `summon()`, and the type syste
 
 It runs on x86-64, AArch64 and WASM, is `no_std + alloc`, and needs Rust 1.89 or later.
 
+## 0.9.31 beta: unified macros
+
+This prerelease adds `#[attune]`, `attuned!`, and `reattune!`. Existing attributes
+and `incant!` remain supported. Use matching beta versions of archmage and
+magetypes so their tokens come from the same archmage package.
+
+```rust
+use archmage::prelude::*;
+
+// Generate direct tier functions and an ordinary callable dispatcher.
+#[attune(_*, dispatch)]
+fn scale(values: &mut [f32], factor: f32) {
+    for value in values {
+        *value *= factor;
+    }
+}
+
+let mut values = [2.0, 4.0];
+scale(&mut values, 0.5);
+assert_eq!(values, [1.0, 2.0]);
+```
+
+`#[attune(v3)]` adds features to one function; `#[attune(wrap)]` creates a proof
+wrapper using its token parameter. Bare `#[attune]` infers a direct `_v3` or
+proof-wrapper `_v3_t` suffix. A token parameter alone does not imply `wrap`.
+The [beta guide](https://github.com/imazen/archmage/blob/release/0.9.31-beta/docs/ATTUNE.md)
+covers the selector grammar, call and proof rules, inline policies, a legacy-attribute
+mapping, and current restrictions.
+
 ## Quick start
 
 ```toml
 [dependencies]
-archmage = "0.9.30"
-magetypes = "0.9.30"   # vector types such as f32x8
+archmage = "=0.9.31-beta"
+magetypes = "=0.9.31-beta"   # vector types such as f32x8
 ```
 
 Multiply a buffer by a gain, using AVX2, NEON or WASM SIMD where available:

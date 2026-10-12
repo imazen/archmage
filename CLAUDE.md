@@ -17,6 +17,13 @@ names are deprecated in the next 0.9 patch; `_t` remains supported in 0.10,
 where the short names become non-deprecated feature-context constructors. See
 [the migration guide](docs/TOKEN-CONSTRUCTOR-MIGRATION.md).
 
+The 0.9.31-beta unified macros (`#[attune]`, `attuned!`, `reattune!`) are
+documented in [docs/ATTUNE.md](docs/ATTUNE.md), the owning guide for the beta
+syntax, call and proof rules, inline policies, and the legacy-attribute
+mapping. The website reference is generated from that guide by `just generate`.
+The reviewed beta is being integrated through PR #129; earlier constructor
+experiments remain archived.
+
 ## CRITICAL: Every Conversation Health Check
 
 **Run these checks at the start of every conversation, even if the user doesn't ask:**
@@ -1131,6 +1138,14 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
 
 ### Resolved (each with its regression coverage)
 
+- **Docs mobile overflow and stylesheet 404 (2026-10-12):** Goyo requested
+  `css/custom-main.css` on every page, but it was absent. Wide helper syntax
+  also widened a 390px mobile page by 247px. The site stylesheet now constrains
+  content, code, and tables. `just docs-browser-check <output> target/site`
+  checks the built attunement path at 1440px and 390px, links, fragments,
+  resources, and desktop/mobile navigation; omit `target/site` to audit Pages.
+  It requires Playwright with Chromium (set `NODE_PATH` for an external install).
+
 - Fixed 2026-10-07 (issue #122 and the expansion-snapshot list): `#[arcane]`
   and `#[rite]` no longer rebind a wildcard parameter with an `impl Trait`
   bound (E0562); `#[rite]` renames tuple and wildcard parameters like
@@ -1212,6 +1227,26 @@ Design record for #116 (the `mul_add` contract):
   `benchmarks/transcendentals_fused_mul_add_2026-10-05.md`.
 
 ### Downstream and tooling notes
+
+- Beta release tooling (2026-10-10): cargo-semver-checks 0.51.0's
+  `safe_inherent_method_requires_more_target_features` lint conflates V4 and
+  V4x inherent impls, including when comparing the same rustdoc JSON to itself.
+  `xtask/check_semver.py` now requires a concrete-impl comparison alongside
+  ordinary semver checking. Only this Magetypes lint is replaced, with explicit
+  approval; every other lint remains enabled. Use `just semver magetypes`, not
+  the standalone Cargo command, for the complete guard. Evidence:
+  [beta validation](benchmarks/attune_beta_validation_2026-10-10.md).
+  The Rust 1.99 CI failure was reproduced and fixed on 2026-10-12: formats
+  60 (Rust 1.98) and 61 (Rust 1.99) are validated. Format 61 only changes
+  stability metadata; the impl/type/feature fields used here are unchanged.
+  Mixed formats and unknown formats remain errors. The precise check passes
+  on Rust 1.99 against published 0.9.30, including current main's backends.
+- Expansion snapshots (2026-10-10): cargo-expand 1.0.127 propagates the compiler's
+  nonzero exit status for intentionally invalid inputs; macrotest 1.2.1 treats
+  this as an expansion failure. CI pins cargo-expand 1.0.126 for the existing
+  snapshot contract. Compilation rejection is checked independently in
+  `tests/soundness_exploits.rs`; no snapshot expectations or classifications
+  change. The version is centralized in `.github/workflows/ci.yml`.
 
 - #117 (closed, not planned): published `jxl-encoder-simd 0.3.0` against main
   (checked 2026-10-07 with a path patch, `cargo check` on three targets):

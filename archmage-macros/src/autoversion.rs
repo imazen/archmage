@@ -349,7 +349,7 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
             quote::format_ident!("_")
         };
         let ctx = crate::rewrite::CallerContext {
-            tier_suffix: tier.suffix.to_string(),
+            tier_suffix: tier.suffix,
             target_arch: tier.target_arch,
             token_ident,
             has_token,
@@ -364,22 +364,31 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
         // (via quote_spanned! with the user's span). Warning on individual
         // variants would be confusing — the user didn't write _scalar or _v3.
         if !tier.is_fallback() {
-            let arcane_attr = if args.in_trait {
-                // The receiver is already a plain `_self` parameter.
-                quote! { #[archmage::arcane] }
-            } else if let Some(ref self_type) = args.self_type {
-                quote! { #[archmage::arcane(_self = #self_type)] }
-            } else if args.in_impl {
-                quote! { #[archmage::arcane(in_impl)] }
+            variant_fn
+                .attrs
+                .insert(0, parse_quote!(#[allow(dead_code)]));
+            if tier.allow_unexpected_cfg {
+                variant_fn
+                    .attrs
+                    .insert(0, parse_quote!(#[allow(unexpected_cfgs)]));
+            }
+            let self_type = if args.in_trait {
+                None
             } else {
-                quote! { #[archmage::arcane] }
+                args.self_type.clone()
             };
-            variants.push(quote! {
-                #cfg_guard
-                #[allow(dead_code)]
-                #arcane_attr
-                #variant_fn
-            });
+            let options = crate::engine::boundary::BoundaryOptions {
+                nested: self_type.is_some(),
+                self_type,
+                in_impl: !args.in_trait && args.in_impl,
+                shared: SharedOptions {
+                    cfg_feature: tier.feature_gate.clone(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            let variant = crate::engine::boundary::expand(variant_fn, "arcane", options);
+            variants.push(variant);
         } else {
             variants.push(quote! {
                 #cfg_guard

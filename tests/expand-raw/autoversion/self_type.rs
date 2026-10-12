@@ -32,26 +32,62 @@ impl P {
     }
     #[cfg(target_arch = "x86_64")]
     #[allow(dead_code)]
-    #[archmage::arcane(_self = P)]
+    #[inline(always)]
     fn apply_v4(&self, _token: archmage::X64V4Token, x: f32) -> f32 {
-        x * _self.f
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
+        )]
+        #[inline]
+        fn __simd_inner_apply_v4(
+            _self: &P,
+            _token: archmage::X64V4Token,
+            x: f32,
+        ) -> f32 {
+            x * _self.f
+        }
+        let _: () = <archmage::X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
+        unsafe { __simd_inner_apply_v4(self, _token, x) }
     }
     #[cfg(target_arch = "x86_64")]
     #[allow(dead_code)]
-    #[archmage::arcane(_self = P)]
+    #[inline(always)]
     fn apply_v3(&self, _token: archmage::X64V3Token, x: f32) -> f32 {
-        x * _self.f
+        #[target_feature(
+            enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
+        )]
+        #[inline]
+        fn __simd_inner_apply_v3(
+            _self: &P,
+            _token: archmage::X64V3Token,
+            x: f32,
+        ) -> f32 {
+            x * _self.f
+        }
+        let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
+        unsafe { __simd_inner_apply_v3(self, _token, x) }
     }
     #[cfg(target_arch = "aarch64")]
     #[allow(dead_code)]
-    #[archmage::arcane(_self = P)]
+    #[inline(always)]
     fn apply_neon(&self, _token: archmage::NeonToken, x: f32) -> f32 {
-        x * _self.f
+        #[target_feature(enable = "neon")]
+        #[inline]
+        fn __simd_inner_apply_neon(
+            _self: &P,
+            _token: archmage::NeonToken,
+            x: f32,
+        ) -> f32 {
+            x * _self.f
+        }
+        let _: () = <archmage::NeonToken>::__ARCHMAGE_ASSERT_TIER_72CB52B2;
+        unsafe { __simd_inner_apply_neon(self, _token, x) }
     }
     #[cfg(target_arch = "wasm32")]
+    #[target_feature(enable = "simd128")]
+    #[inline]
     #[allow(dead_code)]
-    #[archmage::arcane(_self = P)]
     fn apply_wasm128(&self, _token: archmage::Wasm128Token, x: f32) -> f32 {
+        let _self = self;
         x * _self.f
     }
     #[allow(dead_code)]

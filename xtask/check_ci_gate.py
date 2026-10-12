@@ -3,6 +3,8 @@
 import copy
 import json
 import os
+import re
+import subprocess
 from pathlib import Path
 import sys
 import unittest
@@ -35,6 +37,14 @@ def check_contract(ci, publish):
     require(jobs['storage-codegen']['if'] == "github.event_name == 'pull_request'",
             'Only the PR-base comparison may be skipped outside PRs')
     require('workflow_call' in ci['on'], 'CI must remain reusable')
+    semver = jobs['semver']
+    require(set(semver['strategy']['matrix']['crate']) == {'archmage', 'magetypes'},
+            'Semver must cover both libraries')
+    guard = [step for step in semver['steps'] if step.get('run') ==
+             'python3 -B xtask/check_semver.py ${{ matrix.crate }}']
+    require(len(guard) == 1 and 'if' not in guard[0]
+            and guard[0].get('continue-on-error', 'false') == 'false',
+            'Semver must require the ordinary and precise checks together')
     caller = publish['jobs']['full-ci']
     require(caller['uses'] == './.github/workflows/ci.yml',
             'Release must call CI from the same commit')
@@ -72,6 +82,23 @@ class GateTests(unittest.TestCase):
         self.required = check_contract(self.ci, self.publish)
         self.results = {name: {'result': 'success'} for name in self.required}
 
+    def test_release_tag_versions(self):
+        step = next(s for s in self.publish['jobs']['check-tags']['steps']
+                    if s.get('id') == 'version')
+        match = re.search(r'if \[\[ "\$TAG" =~ (.+) \]\]; then', step['run'])
+        self.assertIsNotNone(match, 'release tag validation must remain explicit')
+        script = 'if [[ "$TAG" =~ ' + match.group(1) + ' ]]; then printf "%s" "${BASH_REMATCH[1]}"; else exit 1; fi'
+        for tag, version in [('v0.9.31', '0.9.31'), ('v0.9.31-beta', '0.9.31-beta'),
+                             ('v0.9.31-beta.2', '0.9.31-beta.2'), ('v0.9', None),
+                             ('v0.9.31-beta!', None), ('v0.9.31-beta.', None),
+                             ('prefix-v0.9.31', None), ('v0.9.31-beta+suffix', None)]:
+            with self.subTest(tag=tag):
+                result = subprocess.run(['bash', '-c', script], env=dict(os.environ, TAG=tag),
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0 if version else 1)
+                if version:
+                    self.assertEqual(result.stdout, version)
+
     def test_complete_matrix(self):
         check_results(self.results, self.required, 'pull_request')
         self.results['storage-codegen']['result'] = 'skipped'
@@ -98,6 +125,18 @@ class GateTests(unittest.TestCase):
         self.ci['jobs']['new-test'] = {'runs-on': 'ubuntu-latest'}
         with self.assertRaises(ValueError):
             check_contract(self.ci, self.publish)
+
+    def test_precise_semver_check_cannot_be_bypassed(self):
+        steps = self.ci['jobs']['semver']['steps']
+        guard = next(s for s in steps if 'xtask/check_semver.py' in s.get('run', ''))
+        for key, value in [('if', 'false'), ('continue-on-error', 'true'),
+                           ('run', 'cargo semver-checks')]:
+            with self.subTest(key=key):
+                broken = copy.deepcopy(self.ci)
+                index = steps.index(guard)
+                broken['jobs']['semver']['steps'][index][key] = value
+                with self.assertRaises(ValueError):
+                    check_contract(broken, self.publish)
 
     def test_publish_cannot_bypass_ci(self):
         self.publish['jobs']['publish']['if'] = '${{ always() }}'

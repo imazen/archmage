@@ -8,6 +8,12 @@ weight = 2
 sidebar = true
 +++
 
+**Taking the path of attunement?** The [short beta guide](@/attunement/_index.md)
+starts with `#[attune(dispatch)]`, composes helpers, and adds vectors without
+requiring the spellcraft attributes first. This section keeps the existing
+spellcraft APIs and production examples.
+
+
 magetypes provides SIMD vector types with ordinary Rust operators. You write a
 kernel once, and it compiles for AVX2, AVX-512, NEON, WASM SIMD128 and scalar.
 

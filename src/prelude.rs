@@ -150,8 +150,8 @@ pub use crate::tokens::{Wasm128RelaxedToken, Wasm128Token};
 
 // -- Macros --
 pub use archmage_macros::{
-    arcane, autoversion, dispatch_variant, incant, magetypes, rite, simd_fn, simd_route,
-    token_target_features, token_target_features_boundary,
+    arcane, attune, attuned, autoversion, dispatch_variant, incant, magetypes, reattune, rite,
+    simd_fn, simd_route, token_target_features, token_target_features_boundary,
 };
 
 // -- Platform intrinsics: core::arch types + value ops + safe memory ops --
