@@ -76,3 +76,6 @@ with the [full call reference](@/attunement/reference.md#calls-and-proofs).
 explicit upgrade; nested `incant!` normally follows the caller's covered tier.
 
 **Next:** [Add vectors](@/attunement/vectors.md).
+
+[Inspect the helper-call expansion](@/attunement/expansions.md#covered_calls)
+to see how calls inside each tier retain their context.

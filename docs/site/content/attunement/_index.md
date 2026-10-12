@@ -21,6 +21,8 @@ here without learning `#[arcane]`, `#[rite]`, or `incant!` first.
 
 Keep the [complete reference](@/attunement/reference.md) nearby for explicit tiers,
 proofs, generics, methods, inlining, visibility, and legacy mappings.
+Use [See the Expansion](@/attunement/expansions.md) to compare source and generated
+code side by side, with target selection and mobile tabs.
 
 You need two spellings for this route:
 

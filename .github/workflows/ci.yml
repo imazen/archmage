@@ -79,6 +79,10 @@ jobs:
         run: cargo install cargo-expand --locked --version "${{ env.CARGO_EXPAND_VERSION }}"
       - name: Check generator contracts
         run: python3 -B -m unittest discover -s tests/attune_expansion -v
+      - name: Verify displayed website expansions
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal --component rustfmt --target aarch64-unknown-linux-gnu,wasm32-unknown-unknown
+          python3 xtask/site_expansions.py --check
       - name: Compile all target and gate combinations
         run: python3 -B tests/attune_expansion/run.py --out expansion-artifacts --keep-going
       - name: Retain source, raw output, and diagnostics

@@ -319,6 +319,13 @@ docs:
 docs-browser-check output site="":
     node xtask/check_site.cjs {{quote(output)}} {{quote(site)}}
 
+# Type-check and capture the displayed cargo-expand examples (pinned tools).
+docs-expand:
+    python3 xtask/site_expansions.py
+
+docs-expand-check:
+    python3 xtask/site_expansions.py --check
+
 # Serve the documentation locally (with auto-reload, port 3100)
 docs-serve:
     cd docs/site && zola serve --port 3100

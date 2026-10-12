@@ -40,6 +40,9 @@ assert_eq!(values, [1.0, 2.0, 3.0]);
 Callers pass ordinary data. They do not need to select a tier, summon a token,
 or write `unsafe`.
 
+[Compare the source with its expansion](@/attunement/expansions.md#dispatcher)
+to see the public dispatcher and private feature bodies.
+
 Archmage generates implementations for V3 (AVX2 and FMA), NEON, WASM SIMD128,
 and scalar, omitting variants for other architectures. The dispatcher chooses an
 available tier and calls its body. Scalar is the fallback. AVX-512 is an

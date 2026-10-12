@@ -14,6 +14,11 @@ not part of this beta.
 
 ## One function
 
+The [interactive expansion view](https://imazen.github.io/archmage/attunement/expansions/)
+compares source and actual `cargo expand` output for the main forms on x86-64,
+AArch64, and WASM. Architecture guards are generated automatically; that output
+shows the functions remaining after rustc evaluates the guards.
+
 | Definition | Meaning |
 | --- | --- |
 | `#[attune(v3)] fn work(...)` | Keep the name and signature; enable V3 features |

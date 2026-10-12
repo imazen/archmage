@@ -1,0 +1,15 @@
+[package]
+name = "archmage-site-expansion"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[features]
+avx512 = ["archmage/avx512", "magetypes/avx512"]
+
+[dependencies]
+archmage = { path = "../.." }
+magetypes = { path = "../../magetypes" }
+

@@ -1,0 +1,91 @@
+[[presets]]
+id = "x86_64"
+label = "x86-64"
+
+[[presets]]
+id = "x86_64-avx512"
+label = "x86-64 + avx512"
+
+[[presets]]
+id = "aarch64"
+label = "AArch64"
+
+[[presets]]
+id = "wasm32"
+label = "WebAssembly"
+
+[[examples]]
+id = "direct"
+title = "One direct feature body"
+note = "The name stays unchanged. The function exists only on x86-64 and requires a covered feature context."
+
+[[examples]]
+id = "inferred"
+title = "Infer a direct tier"
+note = "The _v3 suffix selects the same direct feature context."
+
+[[examples]]
+id = "wrap"
+title = "Wrap an existing proof"
+note = "An ordinary callable proof wrapper enters a private feature body."
+
+[[examples]]
+id = "inferred_wrap"
+title = "Infer a proof wrapper"
+note = "The _v3_t suffix inserts a proof parameter when the source omits one."
+
+[[examples]]
+id = "direct_family"
+title = "Generate direct variants"
+note = "The wildcard uses V3, NEON, WASM128 and scalar. Architecture guards leave the variants applicable to this target."
+
+[[examples]]
+id = "proof_family"
+title = "Generate proof wrappers"
+note = "Each applicable default tier gets an ordinary callable function with a token parameter."
+
+[[examples]]
+id = "dispatcher"
+title = "Generate a dispatcher"
+note = "The public function keeps its ordinary signature; its tier implementations are private."
+
+[[examples]]
+id = "all_outputs"
+title = "Generate every output form"
+note = "all combines direct variants, proof wrappers and the central dispatcher."
+
+[[examples]]
+id = "gates"
+title = "Add and remove tiers"
+note = "Compare x86-64 with and without avx512. Removing NEON leaves scalar as the AArch64 fallback."
+
+[[examples]]
+id = "output_options"
+title = "Choose visibility and inlining"
+note = "The V3 output becomes pub(crate); scalar remains private. Inline policies apply to their selected outputs."
+
+[[examples]]
+id = "vectors"
+title = "Define a vector alias"
+note = "Each body binds f32x8 to its actual tier token. Construction still uses the published _t API."
+
+[[examples]]
+id = "covered_calls"
+title = "Call a helper in context"
+note = "Inside each generated body, attuned! selects a covered helper without another runtime probe."
+
+[[examples]]
+id = "raw_register"
+title = "Wrap an intrinsic result"
+note = "from_raw wraps a native register without a token argument inside the matching feature context."
+
+[[examples]]
+id = "generic"
+title = "Keep generic parameters"
+note = "The dispatcher and each tier implementation retain the generic bound."
+
+[[examples]]
+id = "method"
+title = "Generate inherent methods"
+note = "Receiver methods can generate sibling variants. Trait implementations have additional restrictions described in the reference."
+

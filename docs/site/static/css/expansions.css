@@ -1,0 +1,36 @@
+/* The comparison uses the space normally reserved for the page outline. */
+.max-w-7xl:has(.expansion-browser) { grid-template-columns: minmax(0, 1fr); }
+.prose:has(.expansion-browser) { max-width: none; }
+.expansion-toolbar {
+    position: sticky;
+    top: 4rem;
+    z-index: 20;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+    padding: .75rem;
+    border: 1px solid #8886;
+    border-radius: .5rem;
+    background: var(--color-base-200, #172234);
+}
+.expansion-toolbar label { display: flex; align-items: center; gap: .5rem; min-width: 0; }
+.expansion-toolbar select { max-width: 100%; padding: .3rem; border: 1px solid #8888; border-radius: .3rem; background: var(--color-base-100, #101a2b); }
+.expansion-example { scroll-margin-top: 10rem; margin: 2.5rem 0; }
+.expansion-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
+.expansion-columns > div { min-width: 0; }
+.expansion-columns h3 { margin-top: 0; font-size: 1rem; }
+.expansion-columns pre { max-height: 36rem; overflow: auto; white-space: pre; overflow-wrap: normal; font-size: .8rem; }
+.expansion-preset[hidden] { display: none; }
+.expansion-mobile-tabs { display: none; }
+@media (max-width: 767px) {
+    .expansion-toolbar { gap: .5rem; }
+    .expansion-toolbar label { width: 100%; }
+    .expansion-toolbar select { flex: 1; min-width: 0; }
+    .expansion-columns { display: block; }
+    .expansion-mobile-tabs { display: flex; width: 100%; gap: .5rem; }
+    .expansion-mobile-tabs button { flex: 1; padding: .4rem; border: 1px solid #8888; border-radius: .3rem; }
+    .expansion-mobile-tabs button[aria-pressed=true] { background: #8884; font-weight: bold; }
+    .expansion-browser.js-enabled[data-view=source] .expanded-pane,
+    .expansion-browser.js-enabled[data-view=expanded] .source-pane { display: none; }
+    .expansion-example { scroll-margin-top: 15rem; }
+}

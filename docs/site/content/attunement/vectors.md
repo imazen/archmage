@@ -63,6 +63,7 @@ allocation as contiguous pixels.
 - [Memory operations](@/magetypes/memory/load-store.md): arrays, chunks, and bounds.
 - [Numerical precision](@/magetypes/math/precision.md): choose an operation's numerical contract.
 - [Full attunement reference](@/attunement/reference.md): explicit AVX-512 gates, generic signatures, proof wrappers, and output visibility.
+- [Vector expansion](@/attunement/expansions.md#vectors): the concrete aliases and feature bodies generated for each target.
 
 The shared Magetypes chapters include examples using the existing spellcraft
 attributes. The vector operations are the same; the attuned kernel above is the

@@ -11,7 +11,8 @@ const [output, local] = process.argv.slice(2);
 assert(output, 'provide a screenshot/report output directory');
 const base = 'https://imazen.github.io/archmage/';
 const pages = ['', 'attunement/', 'attunement/first-kernel/',
-    'attunement/helpers/', 'attunement/vectors/', 'attunement/reference/'];
+    'attunement/helpers/', 'attunement/vectors/', 'attunement/reference/',
+    'attunement/expansions/'];
 
 (async () => {
     await fs.mkdir(output, { recursive: true });
@@ -56,6 +57,17 @@ const pages = ['', 'attunement/', 'attunement/first-kernel/',
             }
             // Check every in-site link in the path's content, including fragments.
             for (const href of links) {
+                // Download links may use an attachment MIME type. Fetch through
+                // the page so the local routing and deployed audit are identical.
+                if (new URL(href).pathname.endsWith('.rs')) {
+                    const result = await page.evaluate(async href => {
+                        const response = await fetch(href);
+                        return { status: response.status, source: await response.text() };
+                    }, href);
+                    assert.equal(result.status, 200, href);
+                    assert.match(result.source, /pub mod [a-z_]+\s*\{/, href);
+                    continue;
+                }
                 // A fragment-only navigation otherwise has no HTTP response.
                 await page.goto('about:blank');
                 const response = await page.goto(href, { waitUntil: 'domcontentloaded' });
@@ -72,6 +84,30 @@ const pages = ['', 'attunement/', 'attunement/first-kernel/',
                 await page.locator('main').getByRole('link', { name: 'Attune a kernel', exact: true }).click();
             }
             await page.waitForURL(/\/attunement\/first-kernel\/?$/);
+            await page.goto(`${base}attunement/expansions/`, { waitUntil: 'networkidle' });
+            const comparison = page.locator('.expansion-browser');
+            assert.equal(await comparison.locator('.expansion-example').count(), 15);
+            for (const target of ['aarch64', 'wasm32', 'x86_64-avx512', 'x86_64']) {
+                await comparison.locator('.expansion-target').selectOption(target);
+                assert.equal(await comparison.locator('.expansion-preset:not([hidden])').count(), 15);
+                assert.equal(await comparison.locator(`.expansion-preset[data-preset="${target}"]:not([hidden])`).count(), 15);
+            }
+            if (viewport.width < 768) {
+                await comparison.locator('.expansion-jump').selectOption('vectors');
+                const toolbar = comparison.locator('.expansion-toolbar');
+                const bounds = await toolbar.boundingBox();
+                assert(bounds.y >= 60 && bounds.y <= 70, `mobile controls are not sticky: ${bounds.y}`);
+                await comparison.getByRole('button', { name: 'Expansion', exact: true }).click();
+                assert(await page.locator('#vectors .expanded-pane').isVisible());
+                assert(!(await page.locator('#vectors .source-pane').isVisible()));
+                await page.screenshot({ path: path.join(output, '390-expansion-sticky-tabs.png') });
+                await comparison.getByRole('button', { name: 'Source', exact: true }).click();
+                assert(await page.locator('#vectors .source-pane').isVisible());
+                assert(!(await page.locator('#vectors .expanded-pane').isVisible()));
+            } else {
+                assert(await page.locator('#direct .source-pane').isVisible());
+                assert(await page.locator('#direct .expanded-pane').isVisible());
+            }
             assert.deepEqual(errors, [], 'browser errors or missing site resources');
             await context.close();
         }

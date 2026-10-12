@@ -1,0 +1,59 @@
+{% set catalog = load_data(path="expansions.toml") %}
+<link rel="stylesheet" href="{{ get_url(path='css/expansions.css') }}">
+<div class="expansion-browser" data-view="source">
+  <div class="expansion-toolbar">
+    <label>Target
+      <select class="expansion-target" aria-label="Expansion target">
+        {% for preset in catalog.presets %}
+        <option value="{{ preset.id }}">{{ preset.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Example
+      <select class="expansion-jump" aria-label="Jump to example">
+        {% for example in catalog.examples %}
+        <option value="{{ example.id }}">{{ example.title }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="expansion-mobile-tabs" role="group" aria-label="Code view">
+      <button type="button" data-view="source" aria-pressed="true">Source</button>
+      <button type="button" data-view="expanded" aria-pressed="false">Expansion</button>
+    </div>
+  </div>
+  {% for example in catalog.examples %}
+  <section class="expansion-example" id="{{ example.id }}">
+    <h2>{{ example.title }}</h2>
+    <p>{{ example.note }}</p>
+    <div class="expansion-columns">
+      <div class="source-pane">
+        <h3>As written</h3>
+        {% set source_path = "static/expansions/source.rs" %}
+        {% set marker = "// example: " ~ example.id ~ "
+" %}
+        {% set source = load_data(path=source_path, format="plain") | split(pat=marker) | nth(n=1) | split(pat="// example: ") | first %}
+        {% set source_md = "```rust
+" ~ source ~ "
+```" %}
+        {{ source_md | markdown | safe }}
+        <a href="{{ get_url(path='expansions/source.rs') }}">Download all source</a>
+      </div>
+      <div class="expanded-pane">
+        <h3>After cargo expand</h3>
+        {% for preset in catalog.presets %}
+        <div class="expansion-preset" data-preset="{{ preset.id }}" {% if not loop.first %}hidden{% endif %}>
+          {% set expanded_path = "static/expansions/" ~ preset.id ~ ".rs" %}
+          {% set expanded = load_data(path=expanded_path, format="plain") | split(pat=marker) | nth(n=1) | split(pat="// example: ") | first %}
+          {% set expanded_md = "```rust
+" ~ expanded ~ "
+```" %}
+          {{ expanded_md | markdown | safe }}
+          <a href="{{ get_url(path='expansions/' ~ preset.id ~ '.rs') }}">Download this target’s expansions</a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endfor %}
+</div>
+<script src="{{ get_url(path='js/expansions.js') }}" defer></script>
