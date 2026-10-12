@@ -315,12 +315,13 @@ impl<T: F32x16Backend> f32x16<T> {
 
     /// Multiply-add with one rounding on every backend: `self * a + b`.
     ///
-    /// The same result on every backend, NaN payload/sign aside, as
-    /// `f32::mul_add` and `f64::mul_add` give in std. x86 v3/v4 and NEON
-    /// use FMA, at the cost of [`mul_add`](Self::mul_add). Scalar lanes
-    /// delegate to libm's hardware/software selection without an extra
-    /// Magetypes CPU probe. WASM fuses in software, relaxed SIMD included
-    /// because relaxed madd may round twice.
+    /// Computes the exact product plus addend, then rounds once. NaN
+    /// payload/sign are unspecified. x86 v3/v4 and NEON use FMA, at the
+    /// cost of [`mul_add`](Self::mul_add). Native scalar lanes delegate
+    /// to libm without an extra Magetypes CPU probe. WASM f32 uses f64
+    /// arithmetic with round-to-odd correction; WASM f64 uses libm.
+    /// WASM fuses in software even with relaxed SIMD, because relaxed
+    /// madd may round twice.
     /// [Historical software-fusion measurements](https://github.com/imazen/archmage/blob/main/benchmarks/mul_add_portable_zen5-m4pro_2026-10-05.md).
     #[inline(always)]
     pub fn mul_add_portable(self, a: Self, b: Self) -> Self {
