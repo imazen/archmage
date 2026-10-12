@@ -138,14 +138,19 @@ fn dist_simd(a: &[f32; 8], b: &[f32; 8]) -> f32 {
 
 **The rule:** `#[arcane(import_intrinsics)]` at the entry point, `#[rite(v3, import_intrinsics)]` for everything called from SIMD code (or `#[rite(import_intrinsics)]` with a token when using magetypes).
 
-### Explicit dispatch only
+### Dispatch granularity
 
-Magetypes arithmetic must not detect or upgrade CPU features internally.
-Runtime CPU selection belongs at user-requested dispatch boundaries
+Single-vector Magetypes arithmetic must not detect or upgrade CPU features
+internally. Select the arithmetic backend at user-requested dispatch boundaries
 (`attuned!`, `reattune!`, `incant!`, or an explicit user `summon()` call).
-A scalar backend stays scalar even on a machine with native SIMD. Portable
-f32 FMA uses f64 TwoSum with round-to-odd; portable f64 FMA uses libm with
-`force-soft-floats` so dependency feature unification cannot add detection.
+Scalar portable f32 FMA uses f64 TwoSum with round-to-odd; portable f64 FMA uses
+libm with `force-soft-floats` so dependency feature unification cannot add a
+per-operation probe.
+
+Whole-slice f16 conversion is a deliberate exception: its existing trait
+methods auto-upgrade once per buffer. Explicit-proof hardware alternatives
+may avoid that selection. Keep the slice exception out of register-level
+conversion and vector arithmetic.
 
 ### Generic kernels and feature contexts
 
@@ -1109,11 +1114,6 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 ## Known Bugs
 
 ### Open
-
-- Half-float slice conversion still probes for a stronger tier inside V3 and
-  NEON implementations (`simd/generic/convert_f16.rs`). Removing those probes
-  requires replacing the ARM test's CPU-dependent NaN expectations and deciding
-  how callers explicitly select the existing stronger-tier kernels.
 
 
 Expansion snapshots come in two sets, refreshed together by `just

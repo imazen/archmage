@@ -545,6 +545,43 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
         }
     }
 
+    // Whole-slice f16 conversion deliberately selects once per buffer.
+    // Per-vector arithmetic and register conversions must never pay that cost.
+    // The separate slice selectors are the only accepted detection sites.
+    let detection = Regex::new(
+        r"\b(?:summon|is_x86_feature_detected|is_aarch64_feature_detected|__cpuid|__cpuid_count)\b",
+    )
+    .expect("CPU detection rule regex");
+    for m in detection.find_iter(text) {
+        let in_slice_selector = rel == "magetypes/src/simd/generic/convert_f16.rs"
+            && [
+                "neon_f16_decode_select",
+                "neon_f16_encode_select",
+                "f16c_decode_select",
+                "f16c_encode_select",
+            ]
+            .iter()
+            .any(|name| {
+                let signature = format!("fn {name}(");
+                text.match_indices(&signature).any(|(start, _)| {
+                    let Some(open) = text[start..].find('{').map(|i| start + i) else {
+                        return false;
+                    };
+                    find_matching_brace(text, open)
+                        .is_some_and(|close| open < m.start() && m.start() < close)
+                })
+            });
+        if !in_slice_selector {
+            errors.push(format!(
+                "{}:{}: STRUCTURAL RULE: `{}` — hidden CPU detection in magetypes; \
+                 accept a caller-supplied proof or use an audited whole-slice selector.",
+                rel,
+                line_of(text, m.start()),
+                m.as_str()
+            ));
+        }
+    }
+
     // Every `unsafe` in magetypes lives in the storage file, where each one
     // states its invariant next to the others: blocks, impls, traits and
     // functions alike. Code that needs `unsafe` gets a helper there instead.
@@ -1056,6 +1093,62 @@ mod tests {
         let reg = test_registry();
         let scanner = Scanner::new(&reg).expect("scanner");
         scanner.scan_source(rel, src)
+    }
+
+    #[test]
+    fn hidden_cpu_detection_is_rejected_in_magetypes() {
+        for call in [
+            "X64V3Token::summon()",
+            "<X64V3Token as SimdToken>::summon()",
+            "std::is_x86_feature_detected!(\"fma\")",
+            "std::arch::is_aarch64_feature_detected!(\"fp16\")",
+            "core::arch::x86_64::__cpuid(1)",
+        ] {
+            let mut errors = Vec::new();
+            structural_rules(
+                "magetypes/src/nostd_math.rs",
+                &format!("fn arithmetic() {{ let _ = {call}; }}"),
+                &mut errors,
+            );
+            assert!(
+                errors.iter().any(|e| e.contains("hidden CPU detection")),
+                "{call}: {errors:?}"
+            );
+        }
+        let mut errors = Vec::new();
+        structural_rules(
+            "magetypes/src/nostd_math.rs",
+            "fn arithmetic(t: Arm64V2Token) { let _ = t.neon(); }",
+            &mut errors,
+        );
+        assert!(errors.is_empty(), "{errors:?}");
+        structural_rules(
+            "src/tokens/generated/x86.rs",
+            "fn detect() { X64V3Token::summon(); }",
+            &mut errors,
+        );
+        assert!(
+            errors.is_empty(),
+            "explicit archmage detection stays permitted: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn slice_detection_exception_does_not_cover_vector_methods() {
+        let mut errors = Vec::new();
+        structural_rules(
+            "magetypes/src/simd/generic/convert_f16.rs",
+            "fn neon_f16_decode_select() { if true { Arm64V2Token::summon(); } }",
+            &mut errors,
+        );
+        assert!(errors.is_empty(), "{errors:?}");
+        structural_rules(
+            "magetypes/src/simd/generic/convert_f16.rs",
+            "fn neon_f16_decode_select() {} fn register_convert() { Arm64V2Token::summon(); }",
+            &mut errors,
+        );
+        assert_eq!(errors.len(), 1, "{errors:?}");
+        assert!(errors[0].contains("hidden CPU detection"));
     }
 
     #[test]
