@@ -144,6 +144,10 @@
 
 ### [0.9.31-beta] - 2026-10-10
 
+#### Added
+
+- A simplified Path of Attunement on the docs site: kernels, covered helpers, Magetypes vectors and tails, with short legacy-syntax notes (fb554f82).
+
 #### Fixed
 
 - Require a concrete-impl target-feature comparison in semver and release CI; replace only the Magetypes lint that conflates V4 and V4x, retaining all other checks (94d828e2).
