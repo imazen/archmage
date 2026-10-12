@@ -483,3 +483,21 @@ consumer-compile out mode *args:
 # Check snapshots and positive compilation without refreshing expectations.
 expand-check:
     cargo test -p archmage --test macro_expand -- --test-threads=1
+
+# Check the independent, exact-rational FMA corpus without rewriting expectations.
+fma-fixtures-check:
+    python3 xtask/fma_vectors.py --check
+
+# Arithmetic contracts, including unfused scalar and backend-native fast paths.
+fma-contract:
+    cargo test -p magetypes --features avx512 --test fma_contract --test fused_arithmetic
+    cargo test -p magetypes --no-default-features --features w512 --test fma_contract --test fused_arithmetic
+
+# Exercise the native software fallback on x86 without FMA.
+fma-no-hardware:
+    CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="qemu-x86_64 -cpu Nehalem" cargo test -p magetypes --target x86_64-unknown-linux-gnu --test fma_contract --test fused_arithmetic
+    CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="qemu-x86_64 -cpu Nehalem" cargo test -p magetypes --no-default-features --features w512 --target x86_64-unknown-linux-gnu --test fma_contract --test fused_arithmetic
+
+# Dependency feature unification must not change portable rounding.
+fma-libm-soft:
+    cargo test -p magetypes --no-default-features --features w512,libm/force-soft-floats --test fma_contract

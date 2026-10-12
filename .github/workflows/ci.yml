@@ -46,6 +46,7 @@ jobs:
       - uses: actions/checkout@v7
       - run: python3 -m pip install PyYAML==6.0.3
       - run: python3 xtask/check_ci_gate.py --test
+      - run: python3 xtask/fma_vectors.py --check
       - run: python3 -B -m unittest discover -s xtask -p test_target_features.py -v
 
   website-examples:
@@ -146,6 +147,12 @@ jobs:
       - name: Run tests
         run: cargo test --features "${{ env.FEATURES }}"
 
+      - name: Portable and native FMA contracts (std and no_std)
+        run: |
+          cargo test -p magetypes --features "${{ env.FEATURES }}" --test fma_contract
+          cargo test -p magetypes --no-default-features --features w512 --test fma_contract
+          cargo test -p magetypes --no-default-features --features w512,libm/force-soft-floats --test fma_contract
+
       - name: Macro input, output, and diagnostic contracts
         run: |
           cargo test -p archmage-macros --lib
@@ -238,6 +245,12 @@ jobs:
       - name: Run tests
         run: cargo test --features "${{ env.FEATURES }}"
 
+      - name: Portable and native FMA contracts (std and no_std)
+        run: |
+          cargo test -p magetypes --features "${{ env.FEATURES }}" --test fma_contract
+          cargo test -p magetypes --no-default-features --features w512 --test fma_contract
+          cargo test -p magetypes --no-default-features --features w512,libm/force-soft-floats --test fma_contract
+
       - name: Macro input, output, and diagnostic contracts
         run: |
           cargo test -p archmage-macros --lib
@@ -326,6 +339,9 @@ jobs:
       - name: Test magetypes (cross/QEMU)
         run: cross test -p magetypes --features "${{ env.FEATURES }}" --target ${{ matrix.target }}
 
+      - name: Portable FMA contract (no_std, cross/QEMU)
+        run: cross test -p magetypes --no-default-features --features w512 --target ${{ matrix.target }} --test fma_contract
+
       # archmage-no-features-test compiles with #![deny(warnings)]. It
       # exercises #[autoversion] with explicit non-x86 tier lists — the
       # exact pattern that triggered issue #34's unused_imports warnings on
@@ -404,23 +420,35 @@ jobs:
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
         run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1
 
+      - name: Test baseline WASM scalar arithmetic
+        env:
+          ARCHMAGE_TEST_TIER: scalar
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
+        run: cargo test -p magetypes --no-default-features --features w512 --target wasm32-wasip1 --test fma_contract
+
       - name: Test relaxed WASM arithmetic
         env:
           RUSTFLAGS: "-C target-feature=+simd128,+relaxed-simd"
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
-        run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --test fused_arithmetic --test doc_examples --test scalar_parity
+        run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --test fma_contract --test fused_arithmetic --test doc_examples --test scalar_parity
 
       - name: Test no_std WASM arithmetic
         env:
           RUSTFLAGS: "-C target-feature=+simd128"
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
-        run: cargo test -p magetypes --no-default-features --features w512 --target wasm32-wasip1 --test fused_arithmetic --test doc_examples --test scalar_parity
+        run: cargo test -p magetypes --no-default-features --features w512 --target wasm32-wasip1 --test fma_contract --test fused_arithmetic --test doc_examples --test scalar_parity
+
+      - name: Test no_std relaxed WASM arithmetic
+        env:
+          RUSTFLAGS: "-C target-feature=+simd128,+relaxed-simd"
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime"
+        run: cargo test -p magetypes --no-default-features --features w512 --target wasm32-wasip1 --test fma_contract
 
       - name: Test relaxed WASM arithmetic without host FMA
         env:
           RUSTFLAGS: "-C target-feature=+simd128,+relaxed-simd"
           CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime -W relaxed-simd-deterministic=n -C cranelift-has-fma=false --env ARCHMAGE_EXPECT_RELAXED_FUSION=no"
-        run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --test fused_arithmetic --test doc_examples --test scalar_parity
+        run: cargo test -p magetypes --features "${{ env.FEATURES }}" --target wasm32-wasip1 --test fma_contract --test fused_arithmetic --test doc_examples --test scalar_parity
 
       - name: Run arch exercise (WASM)
         if: always()
@@ -579,6 +607,9 @@ jobs:
 
       - name: Run Miri on archmage
         run: cargo +${{ steps.miri_pin.outputs.toolchain }} miri test -p archmage --lib --features avx512
+
+      - name: Portable FMA contract under Miri (no_std)
+        run: cargo +${{ steps.miri_pin.outputs.toolchain }} miri test -p magetypes --no-default-features --features w512 --test fma_contract
 
       - name: Run Miri on miri_safe
         run: cargo +${{ steps.miri_pin.outputs.toolchain }} miri test --test miri_safe --features "${{ env.FEATURES }}"
