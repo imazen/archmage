@@ -37,6 +37,7 @@ default_thumbnail = ""
 gtag = ""
 
 nav = [
+    { name = "Attunement (beta)", url = "/attunement", type = "url", icon = "fa-solid fa-wand-magic-sparkles" },
     { name = "Archmage", url = "/archmage", type = "url", icon = "fa-solid fa-hat-wizard" },
     { name = "docs.rs", url = "https://docs.rs/archmage", type = "url", icon = "fa-solid fa-book" },
     { name = "Magetypes", url = "/magetypes", type = "url", icon = "fa-solid fa-shapes" },

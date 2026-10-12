@@ -8,6 +8,12 @@ weight = 1
 sidebar = true
 +++
 
+**Taking the path of attunement?** The [short beta guide](@/attunement/_index.md)
+starts with `#[attune(dispatch)]`, composes helpers, and adds vectors without
+requiring the spellcraft attributes first. This section keeps the existing
+spellcraft APIs and production examples.
+
+
 Archmage lets you write SIMD code in Rust without `unsafe`. You prove a CPU
 tier is present once, and the type system keeps every intrinsic call sound.
 

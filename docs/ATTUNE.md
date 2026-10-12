@@ -390,7 +390,7 @@ attributes keep their own defaults, so mixed files behave exactly as before.
 | `#[magetypes(define(f32x8), v3, neon, wasm128, scalar)] fn gain(token: Token, ...)` | `#[attune(_*_t, define(f32x8))] fn gain(token: Token, ...)` | Variant names gain `_t` (`gain_v3_t`), keeping token-first signatures and source visibility. Dispatch moves from `incant!` to `attuned!` or a dispatcher. |
 | `incant!(gain(plane, factor), [v3, scalar])` | `attuned!(gain(plane, factor), [_v3, _scalar])` | Call-list tier names take the `_` prefix. Outside a feature context the proof wrappers are called. `incant!` remains supported for legacy families and cannot dispatch unified direct bodies (E0133). |
 | `incant!(m(data) with token, [v3, scalar])` | `attuned!(m(data), [_v3, _scalar], using(token))` | `using(...)` selects by exact token type, evaluates once, and never probes. |
-| `#[autoversion] fn sum(data: &[f32]) -> f32` | No equivalent | Scalar auto-vectorization plus a generated dispatcher has no unified form; `#[autoversion]` remains supported. |
+| `#[autoversion] fn sum(data: &[f32]) -> f32` | `#[attune(dispatch)] fn sum(data: &[f32]) -> f32` | Same ordinary-loop dispatcher role. Unified defaults are V3/NEON/WASM128/scalar; legacy defaults also include V4. Unified dispatcher-only bodies are private and do not preserve the legacy suffixed API. Add explicit outputs/gates when migrating callers of those variants. |
 
 The migration is manual: no source converter and no replacement-deprecation
 machinery ship in this beta. A family can also be migrated incrementally, one
@@ -471,8 +471,8 @@ Remaining gaps, recorded rather than dropped:
 - The owner's README review and final publication approval.
 - Full remote CI on the final documentation commit.
 - No source converter or legacy deprecation warnings ship in this beta.
-- Published-site coverage of the unified macros is deferred; this guide is the
-  beta documentation until release.
+- The site source now includes a simplified [Path of Attunement](site/content/attunement/_index.md);
+  it will become public when the beta site changes are merged and deployed.
 - The syntax and rejection evidence lives in `archmage-macros/src/attune/` and
   `tests/attune_expansion/`; the corpus does not claim the full Cartesian
   product across independent groups.

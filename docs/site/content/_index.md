@@ -12,7 +12,8 @@ description = "Safely invoke your intrinsic power, using the tokens granted to y
 badge = "Rust 1.89+"
 gradient_opacity = 15
 cta_buttons = [
-    { text = "Get Started", url = "/archmage/getting-started/installation/", style = "primary" },
+    { text = "Path of Attunement (beta)", url = "/attunement/", style = "primary" },
+    { text = "Arcane Spellcraft", url = "/archmage/", style = "secondary" },
     { text = "Magetypes", url = "/magetypes/", style = "secondary" },
 ]
 
