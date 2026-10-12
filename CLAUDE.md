@@ -1126,6 +1126,16 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ### Open
 
+- **Scalar software FMA subnormal rounding (2026-10-12, open):** direct libm
+  0.2.16 in the WASM scalar f32x1 portable path returns `0x00010002` for
+  input bits `[0x97000800, 0x1cfff001, 0x00010002]`; correctly rounded is
+  `0x00010001`. The SIMD128 portable path passes that case. This independently
+  reproduces [Davidoff's counterexample](https://shnatsel.github.io/implementing-fma-finding-bugs-in-std/).
+  Exact rational arithmetic verifies the expected result. Earlier passing
+  benchmark cases missed it; do not treat those checks as proof of software
+  fallback correctness. The pending native-std candidate retains libm on WASM
+  and does not fix this. See [the relaxed SIMD investigation](benchmarks/relaxed_madd_2026-10-12.md).
+
 
 - **Direct-libm scalar FMA breaks Miri (2026-10-12, open):** on main
   `a3372cea`, `doc_examples::isa_quirks::scalar_tables` reaches libm's x86
