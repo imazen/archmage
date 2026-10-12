@@ -140,12 +140,13 @@ fn dist_simd(a: &[f32; 8], b: &[f32; 8]) -> f32 {
 
 ### Dispatch granularity
 
-Magetypes must not add CPU probes inside single-vector arithmetic. Scalar
+Magetypes must not add CPU probes inside single-vector arithmetic. Native scalar
 portable FMA delegates directly to libm's normal architecture implementation,
 including libm's own cached dispatch where applicable. Do not add an Archmage
 probe around that call or force libm's other dependents onto software.
 Native SIMD backends use direct FMA intrinsics. `fmaf_soft` remains the explicit
-software f32 helper.
+software f32 helper and implements scalar f32 portable FMA on WASM, in both
+std and no_std builds, to avoid libm 0.2.16's subnormal rounding bug.
 
 Whole-slice f16 conversion may auto-upgrade once per buffer. Explicit-proof
 hardware alternatives may avoid that selection. Keep the slice exception out
@@ -1126,17 +1127,6 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ### Open
 
-- **Scalar software FMA subnormal rounding (2026-10-12, open):** direct libm
-  0.2.16 in the WASM scalar f32x1 portable path returns `0x00010002` for
-  input bits `[0x97000800, 0x1cfff001, 0x00010002]`; correctly rounded is
-  `0x00010001`. The SIMD128 portable path passes that case. This independently
-  reproduces [Davidoff's counterexample](https://shnatsel.github.io/implementing-fma-finding-bugs-in-std/).
-  Exact rational arithmetic verifies the expected result. Earlier passing
-  benchmark cases missed it; do not treat those checks as proof of software
-  fallback correctness. The pending native-std candidate retains libm on WASM
-  and does not fix this. See [the relaxed SIMD investigation](benchmarks/relaxed_madd_2026-10-12.md).
-
-
 - **Direct-libm scalar FMA breaks Miri (2026-10-12, open):** on main
   `a3372cea`, `doc_examples::isa_quirks::scalar_tables` reaches libm's x86
   feature initializer through `nostd_math::fmaf`. Its CPUID inline assembly
@@ -1196,15 +1186,24 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
 
 ### Resolved (each with its regression coverage)
 
+- **WASM scalar f32 subnormal rounding (2026-10-12):** scalar portable FMA now
+  uses `fmaf_soft` in std and no_std builds. `software_subnormal_rounding` pins
+  [Davidoff's counterexample](https://shnatsel.github.io/implementing-fma-finding-bugs-in-std/)
+  to the independent expected bits `0x00010001`, covers both signs, add/sub,
+  and scalar f32x1/x4/x8/x16. Bare relaxed SIMD keeps its engine-selected madd.
+  Native no_std and f64 paths retain libm. The historical failure and timings
+  remain in [the investigation](benchmarks/relaxed_madd_2026-10-12.md).
+
 - Scalar portable FMA added an Archmage cache check around hardware/software
-  selection. The helpers now delegate directly to libm, with no extra feature
+  selection. Native helpers delegate directly to libm, with no extra feature
   probe and no `force-soft-floats` override. The W512 generator uses explicit
   lane expressions like W128/W256, avoiding extra input-array copies across
   libm calls in the assembly comparison. Existing fused-arithmetic assertions
   remain unchanged. Assembly evidence lives in the standalone
   `~/output/archmage/fma-libm-probe-20261012` repository; its `just check`
   compares scalar helpers and all six scalar vector widths with direct libm
-  calls on baseline x86-64, x86-64-v3, AArch64, and WASM.
+  calls on baseline x86-64, x86-64-v3, AArch64, and the earlier WASM path.
+  WASM scalar f32 now uses the corrected software helper described above.
 
 
 - **Expansion capture on fresh CI runners (2026-10-12):** The display generator

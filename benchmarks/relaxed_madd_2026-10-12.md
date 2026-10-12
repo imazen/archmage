@@ -75,8 +75,8 @@ correct fma result = 0x00010001
 
 The scalar f32x1 portable method in the direct-libm source above returns
 `0x00010002` in the strict WASM build. Its SIMD128 portable method passes the
-same assertion. This is an open correctness bug, not an acceptable performance
-tradeoff. Native no-FMA execution of this case has not been measured.
+same assertion. This was a correctness bug in that revision, not an acceptable
+performance tradeoff; the resolution below restores the corrected helper. Native no-FMA execution of this case has not been measured.
 
 An independent rational-arithmetic calculation gives the exact result in
 units of the minimum f32 subnormal as `9007405413171199 / 137438953472`.
@@ -88,6 +88,41 @@ The earlier software timing data remain measurements, but passing their
 selected input checks did not establish correctness on this example. The
 native-std candidate still explicitly leaves WASM on libm and therefore does
 not address this failure. No production FMA policy is changed by this report.
+
+## Correctness fix validation
+
+The follow-up fix routes WASM scalar f32 through the existing `fmaf_soft`
+helper in both std and no_std builds. Native libm selection, f64, and bare
+relaxed-SIMD madd are unchanged. This is a correctness fix; no new speedup
+is claimed for the corrected snapshot.
+
+`software_subnormal_rounding` first failed on the old WASM helper with
+65538 instead of 65537. It then passed on the corrected helper and portable
+add/sub for scalar f32x1/x4/x8/x16, including the sign-negated example.
+Expected bits come from the exact rational calculation above, independently
+of Rust or libm's FMA implementations.
+
+The fused-arithmetic, documentation-example, and scalar-parity suites passed
+with strict SIMD and relaxed SIMD, each with std enabled and disabled.
+They also passed with baseline compile flags `-simd128,-relaxed-simd`
+(the test runner still enabled SIMD for explicitly annotated test functions).
+Relaxed SIMD also passed with Wasmtime's host FMA code generation disabled,
+using the existing unfused-result assertions. Native fused-arithmetic tests,
+Clippy with warnings denied, generator/registry checks, and intrinsic
+soundness checks passed. Existing WASM warnings and the documentation test's
+preexisting ignored panic case were not changed.
+
+The validation used Rust 1.99.0 and Wasmtime 49.0.2 on the same host as the
+measurements above. Representative resource reports from `run-heavy`:
+
+```text
+native fused tests: rc=0 3s | peak-RSS 0.47GiB | min-avail 25927MiB | peak-load 0.44
+strict no_std suites: rc=0 3s | peak-RSS 0.36GiB | min-avail 25948MiB | peak-load 0.58
+relaxed, engine FMA off: rc=0 2s | peak-RSS 0.37GiB | min-avail 26030MiB | peak-load 0.45
+```
+
+Native scalar performance policy and the known libm/Miri CPUID failure are
+separate unresolved work; this WASM fix does not change either.
 
 ## Reproduction and resources
 

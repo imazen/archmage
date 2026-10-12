@@ -89,7 +89,9 @@
 
 #### Fixed
 
-- Scalar `mul_add_portable` / `mul_sub_portable` (including `f32x1` / `f64x1`) delegate directly to libm's normal FMA implementation instead of adding an Archmage feature probe. Libm's architecture selection is enabled without forcing its other dependents onto software. Native SIMD backends retain direct FMA instructions; the explicit `fmaf_soft` helper remains available. W512 scalar generation now uses the same explicit lane expressions as W128/W256 to avoid extra array copies around libm calls.
+- WASM scalar f32 portable multiply-add/subtract use the corrected f64/TwoSum/round-to-odd helper in std and no_std builds. This fixes a one-bit subnormal rounding error in the libm 0.2.16 path; bare relaxed-SIMD `mul_add` keeps the engine's madd instruction. (`cd7e87f0`)
+
+- Native scalar `mul_add_portable` / `mul_sub_portable` (including `f32x1` / `f64x1`) delegate directly to libm's normal FMA implementation instead of adding an Archmage feature probe. Libm's architecture selection is enabled without forcing its other dependents onto software. Native SIMD backends retain direct FMA instructions; the explicit `fmaf_soft` helper remains available. W512 scalar generation now uses the same explicit lane expressions as W128/W256 to avoid extra array copies around libm calls.
 
 #### QUEUED BREAKING CHANGES
 
