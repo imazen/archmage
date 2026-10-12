@@ -1127,6 +1127,19 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 ### Open
 
 
+- **Scalar portable FMA runtime regression (2026-10-12, open):** main
+  `a3372cea` matches direct libm but regresses against published 0.9.30 in
+  whole kernels. Intel global-V3 scalar f32x8 portable add takes 8.95× as long
+  for streams and 8.83× for chains; per-function V3 contexts also regress.
+  ARM scalar f32x4 streams take 3.05× as long on Neoverse-N1 and 2.06× on
+  M4 Pro, while chains improve. Disassembly shows per-lane indirect calls on
+  x86 and loss of vector FMA on ARM. Native SIMD controls and WASM have
+  different results; do not generalize the scalar regression to every path.
+  The [release-to-main ISA comparison](benchmarks/fma_libm_isa_comparison_2026-10-12.md)
+  retains the full measurement method, ratios, resource summaries, and artifact
+  hashes. Preserve native intrinsic lowering before releasing this change.
+
+
 Expansion snapshots come in two sets, refreshed together by `just
 expand-snapshots`: `tests/expand/**/*.expanded.rs` is what `cargo expand`
 prints, after rustc evaluates every `cfg` (a false gate removes the item, a
