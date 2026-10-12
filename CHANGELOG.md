@@ -1,5 +1,8 @@
 # Changelog
 
+The `0.9.31-beta.2` entries cover changes since `0.9.30`. The earlier
+`0.9.31-beta` version was prepared but never published.
+
 ## archmage
 
 ### [Unreleased]
@@ -9,11 +12,11 @@
 - Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)
 - Remove width traits `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` — use concrete tokens or tier traits (`HasX64V2`, `HasX64V4`) instead (deprecated since 0.9.9; `Has256BitSimd` only enables AVX, not AVX2/FMA)
 
-### [0.9.31-beta] - 2026-10-12
+### [0.9.31-beta.2] - 2026-10-12
 
 #### Added
 
-- Export `attune`, `attuned!`, and `reattune!` for direct feature bodies, proof wrappers, and runtime dispatch; legacy macro names remain supported (b22d0336).
+- Export `attune`, `attuned!`, and `reattune!` for direct feature bodies, proof wrappers, and runtime dispatch; legacy macro names remain supported (72910a29).
 
 ### [0.9.30] - 2026-10-07
 
@@ -38,20 +41,22 @@
 - Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with deprecation warning)
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 
-### [0.9.31-beta] - 2026-10-12
+### [0.9.31-beta.2] - 2026-10-12
 
 #### Added
 
-- `#[attune]` supports explicit tiers, conventional suffix inference, structured output selectors, per-output visibility and inline policies, and explicitly gated extra tiers (b22d0336).
-- `attuned!` uses covered feature contexts or an eligible enclosing proof; `using(...)` overrides proof inference and `reattune!` permits runtime reselection. Explicit tier lists require a guaranteed fallback (b22d0336).
+- `#[attune]` supports explicit tiers, conventional suffix inference, structured output selectors, per-output visibility and inline policies, and explicitly gated extra tiers (72910a29).
+- `attuned!` uses covered feature contexts or an eligible enclosing proof; `using(...)` overrides proof inference and `reattune!` permits runtime reselection. Explicit tier lists require a guaranteed fallback (72910a29).
+- `#[attune]` accepts flat selectors (`_*`, `_*_t`, `dispatch`/`_`, `all`) or grouped `make(...)`, `wrap`, `names(...)`, `define(...)`, tier removals, and per-output gates and visibility. Receiver methods and concrete trait implementations use the supported sibling/nested placement rules; `in_impl` handles receiverless associated functions (72910a29).
+- Inline policies can target feature bodies separately from proof wrappers and dispatchers: `inline(hint)`, `inline(none)`, `inline(never)`, and visibility-sensitive `inline(default)`. Policies apply to the operation body rather than only its trampoline; legacy inline defaults remain unchanged (72910a29).
 
 #### Changed
 
-- Legacy frontends and the new attributes share feature-body and proof-boundary emission; existing calling conventions and default inline behavior remain supported (b22d0336).
+- Legacy frontends and the new attributes share feature-body and proof-boundary emission; existing calling conventions and default inline behavior remain supported (72910a29).
 
 #### Fixed
 
-- Unavailable invocation candidates cannot demand an ambiguous parent-proof choice before an available fallback (b22d0336).
+- Unavailable invocation candidates cannot demand an ambiguous parent-proof choice before an available fallback (72910a29).
 
 ### [0.9.30] - 2026-10-07
 
@@ -87,12 +92,6 @@
 
 ### [Unreleased]
 
-#### Fixed
-
-- WASM scalar f32 portable multiply-add/subtract use the corrected f64/TwoSum/round-to-odd helper in std and no_std builds. This fixes a one-bit subnormal rounding error in the libm 0.2.16 path; bare relaxed-SIMD `mul_add` keeps the engine's madd instruction. (`cd7e87f0`)
-
-- Native scalar `mul_add_portable` / `mul_sub_portable` (including `f32x1` / `f64x1`) delegate directly to libm's normal FMA implementation instead of adding an Archmage feature probe. Libm's architecture selection is enabled without forcing its other dependents onto software. Native SIMD backends retain direct FMA instructions; the explicit `fmaf_soft` helper remains available. W512 scalar generation now uses the same explicit lane expressions as W128/W256 to avoid extra array copies around libm calls.
-
 #### QUEUED BREAKING CHANGES
 
 - Planned magetypes 0.10: reserve short constructor names for matching feature contexts; `_t(token, ...)` provides the preparatory migration spelling in 0.9. No constructor signatures change in this patch (772ef504).
@@ -100,15 +99,20 @@
 - Planned: make `w512` non-default in magetypes; users who need 512-bit types would add `features = ["w512"]`. This patch keeps the existing default features.
 - Remove `cast::Upcast` and `cast::Downcast`, and with them the `cast` module, which holds nothing else. Both are deprecated in 0.9.30 and were never implemented (b1b2ff67).
 
-### [0.9.31-beta] - 2026-10-12
+### [0.9.31-beta.2] - 2026-10-12
 
 #### Changed
 
-- Use the matching archmage beta so vector token types interoperate with its unified macros. Constructor signatures remain unchanged (567507af).
+- Use the matching archmage beta so vector token types interoperate with its unified macros. Constructor signatures remain unchanged (72910a29).
 
 #### Added
 
 - Complete the 128-/256-bit integer and `f64` backend, conversion, and bitcast trait implementations for `X64V4Token`, `X64V4xToken`, and `Avx512Fp16Token` under `avx512`, delegating to V3. These 90 additional implementations let generic kernels accept the stronger tokens without changing existing method signatures (dea3a461).
+
+#### Fixed
+
+- WASM scalar f32 portable multiply-add/subtract use the corrected f64/TwoSum/round-to-odd helper in std and no_std builds. This fixes a one-bit subnormal rounding error in the libm 0.2.16 path; bare relaxed-SIMD `mul_add` keeps the engine's madd instruction (`cd7e87f0`).
+- Native scalar `mul_add_portable` / `mul_sub_portable` (including `f32x1` / `f64x1`) delegate directly to libm's normal FMA implementation instead of adding an Archmage feature probe. Libm's architecture selection is enabled without forcing its other dependents onto software. Native SIMD backends retain direct FMA instructions; the explicit `fmaf_soft` helper remains available. W512 scalar generation now uses the same explicit lane expressions as W128/W256 to avoid extra array copies around libm calls (75eb736f, 9e462e61).
 
 ### [0.9.30] - 2026-10-07
 
@@ -152,18 +156,20 @@
 
 (none)
 
-### [0.9.31-beta] - 2026-10-12
+### [0.9.31-beta.2] - 2026-10-12
 
 #### Added
 
-- A simplified Path of Attunement on the docs site: kernels, covered helpers, Magetypes vectors and tails, with short legacy-syntax notes (fb554f82).
+- A simplified Path of Attunement on the docs site: kernels, covered helpers, Magetypes vectors and tails, with short legacy-syntax notes (72910a29).
+- Side-by-side source and real `cargo expand` output for x86-64, AVX-512, AArch64, and WASM; mobile tabs retain the selected example and scroll it below the controls (4df5f714, eb1d5922, 0d9ef633).
+- Compile and reject the unified syntax across architecture/gate combinations, retaining raw expansions and diagnostics; run the precise concrete-impl target-feature check alongside the remaining semver checks (72910a29).
+- Enforce the prohibition on hidden CPU detection in single-vector operations while retaining whole-slice f16 dispatch, and test WASM portable arithmetic with std disabled (570bc103, cd7e87f0).
 
 #### Fixed
 
-- Validate Rust 1.99 rustdoc format 61 alongside format 60 in the precise target-feature check, retaining rejection of unknown or mixed formats (cc630595).
-
-- Require a concrete-impl target-feature comparison in semver and release CI; replace only the Magetypes lint that conflates V4 and V4x, retaining all other checks (94d828e2).
-- Pin cargo-expand 1.0.126 for macrotest's intentionally invalid expansion inputs; retain existing snapshots and independent rejection checks (cd5a37de).
+- Validate Rust 1.99 rustdoc format 61 alongside format 60 in the precise target-feature check, retaining rejection of unknown or mixed formats (72910a29).
+- Pin cargo-expand 1.0.126 for macrotest's intentionally invalid expansion inputs; retain existing snapshots and independent rejection checks (e4a7719d).
+- Create expansion-capture scratch directories on fresh runners so the website expansion check works without a preexisting build tree (ac191f75).
 
 ### [0.9.30] - 2026-10-07
 

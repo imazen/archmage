@@ -1127,6 +1127,14 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 
 ### Open
 
+- **Native software f32 FMA subnormal rounding (2026-10-12, open):** CI on
+  `d08b649e` confirms the new independent `software_subnormal_rounding`
+  regression fails under SDE Nehalem and ARMv7/QEMU: direct libm 0.2.16
+  returns `0x00010002` instead of `0x00010001`. The WASM-only correction
+  does not cover these native software paths. Preserve the assertion and
+  correct the fallback before release. Evidence: [Nehalem job](https://github.com/imazen/archmage/actions/runs/38272203477/job/114888939641),
+  [ARMv7 job](https://github.com/imazen/archmage/actions/runs/38272203477/job/114888939658).
+
 - **Direct-libm scalar FMA breaks Miri (2026-10-12, open):** on main
   `a3372cea`, `doc_examples::isa_quirks::scalar_tables` reaches libm's x86
   feature initializer through `nostd_math::fmaf`. Its CPUID inline assembly
