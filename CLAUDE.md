@@ -1138,6 +1138,11 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
 
 ### Resolved (each with its regression coverage)
 
+- **Expansion-view tab scroll jump (2026-10-12):** Switching from source to
+  expansion changes earlier examples' heights. Preserve the visible example's
+  viewport position when changing tabs or target. The browser audit checks
+  sticky controls and the selected example's position, not just pane visibility.
+
 - **Docs mobile overflow and stylesheet 404 (2026-10-12):** Goyo requested
   `css/custom-main.css` on every page, but it was absent. Wide helper syntax
   also widened a 390px mobile page by 247px. The site stylesheet now constrains
