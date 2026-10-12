@@ -376,6 +376,26 @@ fn entry(x: u32) -> u32 {
 }
 ```
 
+## Imports and Cargo gates
+
+These definition options also work with the unified attribute:
+
+| Option | Effect |
+| --- | --- |
+| `import_intrinsics` | Import `archmage::intrinsics::{arch}::*` inside each architecture-specific body, including the safe memory operations. |
+| `import_magetypes` | Import the tier's Magetypes namespace and backend traits inside the body. Add Magetypes as a dependency; the attribute does not add it. |
+| `cfg(avx512)` | On a single function, add the calling crate's Cargo feature gate alongside its architecture gate. For example, `#[attune(v4, cfg(avx512))]`. |
+
+For a family, put gates on named selectors, such as
+`#[attune(_v3, _v4(cfg(avx512)))]`. To gate the whole family, use an outer
+`#[cfg(feature = "...")]`; a family-level `cfg(...)` option is rejected.
+Call-side lists must use matching gates. Cargo gates control which functions
+exist; CPU detection and target-feature contexts still determine which can run.
+
+Imports do not construct a token or change constructor signatures. Prefer
+`define(f32x8)` when the body needs a specific vector alias; use
+`Token::from_context()` and `_t(token, ...)` to construct vectors in this beta.
+
 ## Migrating from the legacy attributes
 
 Every migration below is spelling-only unless the table says otherwise. Legacy
@@ -469,10 +489,11 @@ examples with WASM covered by the raw expansion matrix.
 Remaining gaps, recorded rather than dropped:
 
 - The owner's README review and final publication approval.
-- Full remote CI on the final documentation commit.
+- Full remote CI on the final release commit.
 - No source converter or legacy deprecation warnings ship in this beta.
-- The site source now includes a simplified [Path of Attunement](site/content/attunement/_index.md);
-  it will become public when the beta site changes are merged and deployed.
+- The site includes the simplified [Path of Attunement](site/content/attunement/_index.md)
+  and a complete reference generated from this guide. Verify the deployed pages
+  at the final release commit.
 - The syntax and rejection evidence lives in `archmage-macros/src/attune/` and
   `tests/attune_expansion/`; the corpus does not claim the full Cartesian
   product across independent groups.
