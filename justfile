@@ -315,6 +315,10 @@ docs-test:
 docs:
     cd docs/site && zola build -o ../../target/site
 
+# Requires Playwright + Chromium; omit site for the deployed Pages audit.
+docs-browser-check output site="":
+    node xtask/check_site.cjs {{quote(output)}} {{quote(site)}}
+
 # Serve the documentation locally (with auto-reload, port 3100)
 docs-serve:
     cd docs/site && zola serve --port 3100
