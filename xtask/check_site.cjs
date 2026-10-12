@@ -99,7 +99,10 @@ const pages = ['', 'attunement/', 'attunement/first-kernel/',
                 const toolbar = comparison.locator('.expansion-toolbar');
                 const bounds = await toolbar.boundingBox();
                 assert(bounds.y >= 60 && bounds.y <= 70, `mobile controls are not sticky: ${bounds.y}`);
+                const selectedTop = (await page.locator('#vectors').boundingBox()).y;
                 await comparison.getByRole('button', { name: 'Expansion', exact: true }).click();
+                const switchedTop = (await page.locator('#vectors').boundingBox()).y;
+                assert(Math.abs(switchedTop - selectedTop) <= 1, `switching tabs moved the selected example: ${selectedTop} -> ${switchedTop}`);
                 assert(await page.locator('#vectors .expanded-pane').isVisible());
                 assert(!(await page.locator('#vectors .source-pane').isVisible()));
                 await page.screenshot({ path: path.join(output, '390-expansion-sticky-tabs.png') });

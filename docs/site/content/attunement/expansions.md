@@ -4,15 +4,19 @@ description = "Compare the source with real cargo-expand output"
 weight = 5
 +++
 
-Choose a target, then compare what you write with what Rust receives.
-Desktop shows both columns; on mobile, the Source and Expansion controls stay
-visible while you scroll. The same selection applies to every example.
+Choose a target and compare your source with real `cargo expand` output.
+Desktop shows both columns; mobile tabs stay visible as you scroll.
+
+<details>
+<summary>How to read these expansions</summary>
 
 These are complete module expansions from **Rust 1.99.0 and cargo-expand
 1.0.126**. Each fixture is type-checked before capture. Rust has already
 evaluated architecture and Cargo gates: an empty module means its function was
 excluded on that target. The generated architecture guards are automatic.
 This view shows macro expansion, not optimized assembly or a performance promise.
+
+</details>
 
 {{ expansion_browser() }}
 
