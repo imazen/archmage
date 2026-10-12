@@ -20,7 +20,9 @@ where the short names become non-deprecated feature-context constructors. See
 The 0.9.31-beta unified macros (`#[attune]`, `attuned!`, `reattune!`) are
 documented in [docs/ATTUNE.md](docs/ATTUNE.md), the owning guide for the beta
 syntax, call and proof rules, inline policies, and the legacy-attribute
-mapping. It ships on `release/0.9.31-beta`, not on main.
+mapping. The website reference is generated from that guide by `just generate`.
+The reviewed beta is being integrated through PR #129; earlier constructor
+experiments remain archived.
 
 ## CRITICAL: Every Conversation Health Check
 
@@ -1135,6 +1137,14 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
   `benchmarks/transcendental_precision_2026-10-05.md`.
 
 ### Resolved (each with its regression coverage)
+
+- **Docs mobile overflow and stylesheet 404 (2026-10-12):** Goyo requested
+  `css/custom-main.css` on every page, but it was absent. Wide helper syntax
+  also widened a 390px mobile page by 247px. The site stylesheet now constrains
+  content, code, and tables. `just docs-browser-check <output> target/site`
+  checks the built attunement path at 1440px and 390px, links, fragments,
+  resources, and desktop/mobile navigation; omit `target/site` to audit Pages.
+  It requires Playwright with Chromium (set `NODE_PATH` for an external install).
 
 - Fixed 2026-10-07 (issue #122 and the expansion-snapshot list): `#[arcane]`
   and `#[rite]` no longer rebind a wildcard parameter with an `impl Trait`

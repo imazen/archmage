@@ -9,7 +9,7 @@
 - Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)
 - Remove width traits `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` — use concrete tokens or tier traits (`HasX64V2`, `HasX64V4`) instead (deprecated since 0.9.9; `Has256BitSimd` only enables AVX, not AVX2/FMA)
 
-### [0.9.31-beta] - 2026-10-10
+### [0.9.31-beta] - 2026-10-12
 
 #### Added
 
@@ -38,7 +38,7 @@
 - Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with deprecation warning)
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 
-### [0.9.31-beta] - 2026-10-10
+### [0.9.31-beta] - 2026-10-12
 
 #### Added
 
@@ -94,11 +94,15 @@
 - Planned: make `w512` non-default in magetypes; users who need 512-bit types would add `features = ["w512"]`. This patch keeps the existing default features.
 - Remove `cast::Upcast` and `cast::Downcast`, and with them the `cast` module, which holds nothing else. Both are deprecated in 0.9.30 and were never implemented (b1b2ff67).
 
-### [0.9.31-beta] - 2026-10-10
+### [0.9.31-beta] - 2026-10-12
 
 #### Changed
 
 - Use the matching archmage beta so vector token types interoperate with its unified macros. Constructor signatures remain unchanged (567507af).
+
+#### Added
+
+- Complete the 128-/256-bit integer and `f64` backend, conversion, and bitcast trait implementations for `X64V4Token`, `X64V4xToken`, and `Avx512Fp16Token` under `avx512`, delegating to V3. These 90 additional implementations let generic kernels accept the stronger tokens without changing existing method signatures (dea3a461).
 
 ### [0.9.30] - 2026-10-07
 
@@ -142,13 +146,15 @@
 
 (none)
 
-### [0.9.31-beta] - 2026-10-10
+### [0.9.31-beta] - 2026-10-12
 
 #### Added
 
 - A simplified Path of Attunement on the docs site: kernels, covered helpers, Magetypes vectors and tails, with short legacy-syntax notes (fb554f82).
 
 #### Fixed
+
+- Validate Rust 1.99 rustdoc format 61 alongside format 60 in the precise target-feature check, retaining rejection of unknown or mixed formats (cc630595).
 
 - Require a concrete-impl target-feature comparison in semver and release CI; replace only the Magetypes lint that conflates V4 and V4x, retaining all other checks (94d828e2).
 - Pin cargo-expand 1.0.126 for macrotest's intentionally invalid expansion inputs; retain existing snapshots and independent rejection checks (cd5a37de).

@@ -102,3 +102,29 @@ Magetypes checks, and 2,040 safe inherent methods (40 feature-bearing) without
 increased requirements. Command: `RUSTUP_TOOLCHAIN=1.99.0 just attune-beta-semver`.
 Log: `~/tmp/archmage-merge-semver199-fixed.log`.
 Resource-limiter summary: `rc=0 8s | peak-RSS 0.42GiB | min-avail 25867MiB | peak-load 0.78`.
+
+## Final integration checks, 2026-10-12
+
+Implementation `cc6305959570e462a2c0ae9f94785390fa7915d8` passed
+`RUSTUP_TOOLCHAIN=1.99.0 just attune-beta-check` followed by
+`just attune-beta-packages`: generation, registry/token/soundness validation,
+Archmage all-target tests and doctests, Magetypes all-target tests and doctests
+with std/AVX-512, macro tests, and workspace publication dry-run. No upload
+occurred. Log: `~/tmp/archmage-merge-full-validation.log`.
+Resource-limiter summary: `rc=0 722s | peak-RSS 2.31GiB | min-avail 24688MiB | peak-load 2.49`.
+
+The approved API refresh changes only the x86-64 feature roster: 30 additional
+trait implementations for each of V4, V4x, and AVX512-FP16. There are no existing
+signature changes or removed implementations. `just api-doc-check` passes for
+all three architecture snapshots. The generated website reference and its
+examples pass `just check-generated` and `just docs-test` with default and
+AVX-512 features. Macro Clippy and xtask formatting checks pass.
+
+The local browser audit uses Playwright 1.64.0 / Chromium 156.0.8078.4. All six
+pages (landing page plus the five attunement pages) fit both 1440px and 390px
+viewports with zero document overflow; their in-site content links, fragment
+targets, resources, and desktop/mobile navigation pass. This found and fixed
+the missing site stylesheet and 247px mobile overflow on the helpers page.
+Command: `just docs-browser-check <output> target/site` after `just docs`.
+Screenshots and `report.json`: `~/output/archmage/site-beta-local-20261012-v5/`.
+Resource-limiter summary: `rc=0 12s | peak-RSS 0.30GiB | min-avail 25616MiB | peak-load 1.49`.
