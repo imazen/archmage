@@ -1132,3 +1132,117 @@ mod aarch64_neon {
         }
     }
 }
+
+// Explicit tier coverage is requested by the caller. A requested unavailable
+// CPU tier fails rather than silently falling back to software. The default
+// exercises the same slice contract through ScalarToken on every platform.
+#[test]
+fn explicit_slice_proof_contract() {
+    let tier = std::env::var("MAGETYPES_F16_TEST_TIER").unwrap_or_else(|_| "scalar".into());
+    match tier.as_str() {
+        "scalar" => check_explicit_slice_contract(
+            |input, output| archmage::ScalarToken.f16_to_f32_slice(input, output),
+            |input, output| archmage::ScalarToken.f32_to_f16_slice(input, output),
+        ),
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        "v4" => {
+            use archmage::SimdToken;
+            use magetypes::simd::generic::{f16_to_f32_slice_v4_t, f32_to_f16_slice_v4_t};
+            let token = archmage::X64V4Token::summon().expect("requested V4 CPU tier unavailable");
+            check_explicit_slice_contract(
+                |input, output| f16_to_f32_slice_v4_t(token, input, output),
+                |input, output| f32_to_f16_slice_v4_t(token, input, output),
+            );
+        }
+        #[cfg(target_arch = "aarch64")]
+        "arm_v2" => check_explicit_arm_v2(),
+        _ => panic!("unsupported explicit f16 test tier: {tier}"),
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+#[rustversion::since(1.94)]
+fn check_explicit_arm_v2() {
+    use archmage::SimdToken;
+    use magetypes::simd::generic::{f16_to_f32_slice_arm_v2_t, f32_to_f16_slice_arm_v2_t};
+    let token = archmage::Arm64V2Token::summon().expect("requested ARM-V2 CPU tier unavailable");
+    check_explicit_slice_contract(
+        |input, output| f16_to_f32_slice_arm_v2_t(token, input, output),
+        |input, output| f32_to_f16_slice_arm_v2_t(token, input, output),
+    );
+}
+
+#[cfg(target_arch = "aarch64")]
+#[rustversion::before(1.94)]
+fn check_explicit_arm_v2() {
+    panic!("explicit ARM-V2 f16 functions require Rust 1.94 or newer");
+}
+
+fn check_explicit_slice_contract(
+    decode: impl Fn(&[u16], &mut [f32]),
+    encode: impl Fn(&[f32], &mut [u16]),
+) {
+    let input: Vec<u16> = (0..=u16::MAX).step_by(MIRI_F16_STRIDE).collect();
+    let mut decoded = vec![0.0; input.len()];
+    decode(&input, &mut decoded);
+    for (&h, &value) in input.iter().zip(&decoded) {
+        if is_f16_nan(h) {
+            assert!(value.is_nan());
+        } else {
+            assert_eq!(value.to_bits(), ref_f16_to_f32(h).to_bits(), "{h:#06x}");
+        }
+    }
+    // Each f16 grid point and its f32 neighbors cover representable values
+    // and range edges, including subnormals, overflow, infinities and NaNs.
+    let values: Vec<f32> = input
+        .iter()
+        .flat_map(|&h| {
+            let bits = ref_f16_to_f32(h).to_bits();
+            [bits.wrapping_sub(1), bits, bits.wrapping_add(1)].map(f32::from_bits)
+        })
+        .collect();
+    let mut encoded = vec![0; values.len()];
+    encode(&values, &mut encoded);
+    for (&value, &h) in values.iter().zip(&encoded) {
+        if value.is_nan() {
+            assert!(is_f16_nan(h));
+        } else {
+            assert_eq!(h, ref_f32_to_f16(value), "{value:?}");
+        }
+    }
+    // Nonzero offsets and every tail length, with canaries around the output.
+    for len in 0..=65 {
+        let halves: Vec<u16> = (0..len).map(|i| ((i * 977 + 1) as u16) & 0x7bff).collect();
+        let mut out = vec![-123.0; len + 2];
+        decode(&halves, &mut out[1..len + 1]);
+        assert_eq!(out[0], -123.0);
+        assert_eq!(out[len + 1], -123.0);
+        for (&h, &f) in halves.iter().zip(&out[1..len + 1]) {
+            assert_eq!(f.to_bits(), ref_f16_to_f32(h).to_bits());
+        }
+        let mut back = vec![0xdead; len + 2];
+        encode(&out[1..len + 1], &mut back[1..len + 1]);
+        assert_eq!(back[0], 0xdead);
+        assert_eq!(back[len + 1], 0xdead);
+        assert_eq!(&back[1..len + 1], halves);
+    }
+    // Both too-short and too-long output must panic before touching it.
+    for len in [3, 5] {
+        let mut floats = vec![-123.0; len];
+        assert!(
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                decode(&[0; 4], &mut floats);
+            }))
+            .is_err()
+        );
+        assert_eq!(floats, vec![-123.0; len]);
+        let mut halves = vec![0xdead; len];
+        assert!(
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                encode(&[0.0; 4], &mut halves);
+            }))
+            .is_err()
+        );
+        assert_eq!(halves, vec![0xdead; len]);
+    }
+}

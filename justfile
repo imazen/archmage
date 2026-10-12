@@ -479,3 +479,7 @@ consumer-compile out mode *args:
 # Check snapshots and positive compilation without refreshing expectations.
 expand-check:
     cargo test -p archmage --test macro_expand -- --test-threads=1
+
+# Require a specific f16 slice tier; missing hardware is an error.
+test-f16-tier tier *args:
+    MAGETYPES_F16_TEST_TIER={{tier}} cargo test -p magetypes --test convert_f16_exhaustive {{args}} explicit_slice_proof_contract

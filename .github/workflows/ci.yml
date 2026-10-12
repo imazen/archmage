@@ -248,6 +248,11 @@ jobs:
       - name: Run token infrastructure tests (serialized)
         run: cargo test --features "${{ env.FEATURES }}" --test token_infrastructure -- --test-threads=1
 
+      - name: Explicit ARM-V2 half-float slice contract
+        env:
+          MAGETYPES_F16_TEST_TIER: arm_v2
+        run: cargo test -p magetypes --test convert_f16_exhaustive explicit_slice_proof_contract
+
       # Cobalt 100 / Neoverse N2 hardware assertions. GH `windows-11-arm`
       # and `ubuntu-24.04-arm` are both this CPU, so we know V2 + V3 must
       # detect. On Windows this is the load-bearing assertion that the
