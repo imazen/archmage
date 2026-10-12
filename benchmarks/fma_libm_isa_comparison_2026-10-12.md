@@ -201,6 +201,15 @@ command used `nice -n19` and BSD `/usr/bin/time -l`: normal runs reported
 22,691,840 bytes maximum RSS; short/subnormal runs reported 22,282,240 bytes.
 The Linux cgroup does not impose a remote Mac memory cap.
 
+The post-benchmark local `just ci` command returned success (156 s,
+`peak-RSS 1.27GiB`, `min-avail 23561MiB`, `peak-load 7.30`), but it explicitly
+skipped Miri and cross-platform checks because their tooling was unavailable
+in that invocation. It is not a complete release gate. The preceding main
+commit's [remote Miri job](https://github.com/imazen/archmage/actions/runs/38247453244)
+failed in libm's x86 CPUID inline assembly reached by scalar portable FMA.
+The benchmark's native ARM and WASM runs are separate from those skipped
+repository-wide checks. No test expectation or skip list was changed here.
+
 ## Reproduction and retained artifacts
 
 The experimental harness stays outside main, as required by release discipline.

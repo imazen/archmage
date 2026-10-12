@@ -1127,6 +1127,15 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
 ### Open
 
 
+- **Direct-libm scalar FMA breaks Miri (2026-10-12, open):** on main
+  `a3372cea`, `doc_examples::isa_quirks::scalar_tables` reaches libm's x86
+  feature initializer through `nostd_math::fmaf`. Its CPUID inline assembly
+  is unsupported by Miri. This is an interpreter limitation, not a reported
+  undefined-behavior finding. The [failed CI run](https://github.com/imazen/archmage/actions/runs/38247453244)
+  records the complete stack. Keep this release blocker visible when replacing
+  the scalar lowering; do not hide it by dropping the arithmetic test.
+
+
 - **Scalar portable FMA runtime regression (2026-10-12, open):** main
   `a3372cea` matches direct libm but regresses against published 0.9.30 in
   whole kernels. Intel global-V3 scalar f32x8 portable add takes 8.95× as long
