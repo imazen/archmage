@@ -33,6 +33,7 @@ def main():
     env["RUSTUP_TOOLCHAIN"] = TOOLCHAIN
     env["CARGO_TARGET_DIR"] = str(ROOT / "target/site-expansion")
     env.setdefault("TMPDIR", str(Path.home() / "tmp"))
+    Path(env["TMPDIR"]).mkdir(parents=True, exist_ok=True)
     env.pop("RUSTFLAGS", None)
     env.pop("CARGO_ENCODED_RUSTFLAGS", None)
     version = subprocess.check_output(["cargo", "expand", "--version"], env=env, text=True).strip()

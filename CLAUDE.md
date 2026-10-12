@@ -1138,6 +1138,11 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
 
 ### Resolved (each with its regression coverage)
 
+- **Expansion capture on fresh CI runners (2026-10-12):** The display generator
+  selected a scratch directory without creating it, so cargo-expand failed on
+  runners without that directory. It now creates its selected `TMPDIR` before
+  invoking Cargo. Verified against a previously absent scratch directory.
+
 - **Expansion-view tab scroll jump (2026-10-12):** Switching from source to
   expansion changes earlier examples' heights. Preserve the visible example's
   viewport position when changing tabs or target. The browser audit checks
