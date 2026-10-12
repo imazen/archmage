@@ -1226,13 +1226,11 @@ Design record for #116 (the `mul_add` contract):
   approval; every other lint remains enabled. Use `just semver magetypes`, not
   the standalone Cargo command, for the complete guard. Evidence:
   [beta validation](benchmarks/attune_beta_validation_2026-10-10.md).
-  The checker validates rustdoc JSON format 60 (local Rust 1.98.1). Remote CI
-  on 2026-10-10 runs stable Rust 1.99.0, whose newer rustdoc format makes the
-  precise step fail closed (`ValueError: Review the precise checker for this new
-  rustdoc format`) after the ordinary Magetypes checks pass (201 checks, 201
-  pass, 59 skip). The Semver (magetypes) job is red on every beta commit from
-  3067ce51 until the checker covers the new format or the job pins the
-  validated toolchain; it is tooling scope, unrelated to documentation.
+  The Rust 1.99 CI failure was reproduced and fixed on 2026-10-12: formats
+  60 (Rust 1.98) and 61 (Rust 1.99) are validated. Format 61 only changes
+  stability metadata; the impl/type/feature fields used here are unchanged.
+  Mixed formats and unknown formats remain errors. The precise check passes
+  on Rust 1.99 against published 0.9.30, including current main's backends.
 - Expansion snapshots (2026-10-10): cargo-expand 1.0.127 propagates the compiler's
   nonzero exit status for intentionally invalid inputs; macrotest 1.2.1 treats
   this as an expansion failure. CI pins cargo-expand 1.0.126 for the existing

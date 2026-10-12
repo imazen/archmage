@@ -18,6 +18,10 @@ mod x86_v4;
 mod x86_v4_f32_delegated;
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 mod x86_v4_f32_overrides;
+// The remaining W128 / W256 backends (f64 + int families) and the
+// float↔int convert/bitcast traits, forwarded to V3's the same way.
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+mod x86_v4_narrow_delegated;
 
 #[cfg(target_arch = "aarch64")]
 mod arm_neon;

@@ -77,7 +77,7 @@ mismatched targets, versions or features, and empty feature comparisons.
 
 Each run retains a fresh artifact directory under `target/semver-guard/`. The
 checker verifies both crates' resolved Cargo features and the rustdoc target.
-Cargo-semver-checks 0.51.0 and rustdoc JSON format 60 are the validated interface;
+Cargo-semver-checks 0.51.0 and rustdoc JSON formats 60 and 61 are validated;
 a new JSON format fails closed until reviewed. Because `CARGO_TARGET_DIR` makes
 baseline generation overwrite the current JSON, a second Magetypes pass reads
 the frozen baseline JSON and rebuilds only the current crate before comparison.
@@ -85,3 +85,20 @@ the frozen baseline JSON and rebuilds only the current crate before comparison.
 Validation command: `just attune-beta-semver`, under run-heavy with
 `--mem 16G --jobs 8`. Log: `~/tmp/attune-beta-precise-semver-isolated.log`.
 Resource-limiter summary: `rc=0 9s | peak-RSS 0.36GiB | min-avail 27680MiB | peak-load 0.31`.
+
+## Rust 1.99 and main integration, 2026-10-12
+
+The precise check's format-60 guard reproduced the CI failure on Rust 1.99.
+Comparing the official [Rust 1.98 schema](https://github.com/rust-lang/rust/blob/1.98.0/src/rustdoc-json-types/lib.rs)
+and [Rust 1.99 schema](https://github.com/rust-lang/rust/blob/1.99.0/src/rustdoc-json-types/lib.rs)
+shows format 61 changes only stability metadata serialization. The impls, type
+arguments, function headers, and target-feature attributes consumed here are
+unchanged. Both formats are now checked; mixed and unknown formats fail closed.
+Regression cases exercise strengthened requirements with format 61 as well.
+
+After integrating main's narrow AVX-512 backend delegation, the real Rust 1.99
+comparison against 0.9.30 passed: 202 ordinary Archmage checks, 201 ordinary
+Magetypes checks, and 2,040 safe inherent methods (40 feature-bearing) without
+increased requirements. Command: `RUSTUP_TOOLCHAIN=1.99.0 just attune-beta-semver`.
+Log: `~/tmp/archmage-merge-semver199-fixed.log`.
+Resource-limiter summary: `rc=0 8s | peak-RSS 0.42GiB | min-avail 25867MiB | peak-load 0.78`.

@@ -605,6 +605,48 @@ pub fn generate_backend_files() -> BTreeMap<String, String> {
         ),
     );
 
+    // 10d. Every other W128/W256 backend — f64, i8/i16/i32/i64, u8/u16/u32/u64
+    // — plus the float↔int `*Convert` and `*Bitcast` traits, delegated to
+    // V3 the same way. Without these, `T: F64x4Backend` / `T: F32x8Convert`
+    // generic kernels cannot accept a V4 token (the iwssim `+v4` blocker).
+    // Popcnt extension backends are excluded: they exist only natively on
+    // V4x (AVX-512 VPOPCNTDQ) and have no V3 impls to forward to.
+    {
+        let mut specs: Vec<(String, String)> = Vec::new();
+        for name in [
+            "f64x2", "f64x4", "i8x16", "i8x32", "i16x8", "i16x16", "i32x4", "i32x8", "i64x2",
+            "i64x4", "u8x16", "u8x32", "u16x8", "u16x16", "u32x4", "u32x8", "u64x2", "u64x4",
+        ] {
+            // `f64x4` → `F64x4Backend`, `u8x16` → `U8x16Backend`, …
+            let trait_name = format!("{}Backend", name[..1].to_uppercase() + &name[1..]);
+            specs.push((trait_name, files[&format!("backends/{name}.rs")].clone()));
+        }
+        for name in [
+            "F32x4Convert",
+            "F32x8Convert",
+            "U32x4Bitcast",
+            "U32x8Bitcast",
+            "I64x2Bitcast",
+            "I64x4Bitcast",
+        ] {
+            specs.push((name.to_string(), files["backends/convert.rs"].clone()));
+        }
+        for name in [
+            "I8x16Bitcast",
+            "I8x32Bitcast",
+            "I16x8Bitcast",
+            "I16x16Bitcast",
+            "U64x2Bitcast",
+            "U64x4Bitcast",
+        ] {
+            specs.push((name.to_string(), files["backends/convert_int.rs"].clone()));
+        }
+        files.insert(
+            "impls/x86_v4_narrow_delegated.rs".to_string(),
+            super::v4_delegation_gen::generate_narrow(&specs),
+        );
+    }
+
     // 11. impls/mod.rs
     files.insert("impls/mod.rs".to_string(), generate_impls_mod());
 
@@ -1062,6 +1104,10 @@ fn generate_impls_mod() -> String {
         mod x86_v4_f32_delegated;
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
         mod x86_v4_f32_overrides;
+        // The remaining W128 / W256 backends (f64 + int families) and the
+        // float↔int convert/bitcast traits, forwarded to V3's the same way.
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        mod x86_v4_narrow_delegated;
 
         #[cfg(target_arch = "aarch64")]
         mod arm_neon;

@@ -38,8 +38,12 @@ def check_artifacts(directory, version, baseline_version=None):
     for doc in (before, after):
         if doc['index'][str(doc['root'])]['name'] != 'magetypes':
             raise ValueError('Expected Magetypes rustdoc')
-        if doc['format_version'] != 60:
+        # Rust 1.99 (61) only changes StabilityLevel serialization from 1.98
+        # (60); impls, resolved types, signatures and target features are unchanged.
+        if doc['format_version'] not in (60, 61):
             raise ValueError('Review the precise checker for this new rustdoc format')
+    if before['format_version'] != after['format_version']:
+        raise ValueError('Rustdoc formats differ; build both with the same toolchain')
     if before['target'] != after['target']:
         raise ValueError('Rustdoc target contexts differ')
     if after['crate_version'] != version:

@@ -128,6 +128,22 @@ class SemverArtifactTests(unittest.TestCase):
         self.current.write_text(json.dumps(current))
         self.assertTrue(self.check())
 
+    def test_format_61_retains_positive_and_negative_comparisons(self):
+        for path in (self.baseline, self.current):
+            doc = json.loads(path.read_text())
+            doc['format_version'] = 61
+            path.write_text(json.dumps(doc))
+        self.test_complete_artifacts_pass_and_strengthening_fails()
+
+    def test_mixed_or_unknown_new_formats_fail(self):
+        for version in (61, 62):
+            with self.subTest(format=version):
+                current = json.loads(self.current.read_text())
+                current['format_version'] = version
+                self.current.write_text(json.dumps(current))
+                with self.assertRaises(ValueError):
+                    self.check()
+
     def test_missing_or_ambiguous_baseline_fails(self):
         duplicate = self.baseline.with_name('magetypes-duplicate.json')
         duplicate.write_text(self.baseline.read_text())
