@@ -111,8 +111,8 @@ The `0.9.31-beta.2` entries cover changes since `0.9.30`. The earlier
 
 #### Fixed
 
-- Correct portable f32 multiply-add/subtract subnormal rounding on all software backends using f64/TwoSum/round-to-odd, including WASM, no-FMA x86 and ARMv7. Portable f64 calls libm's integer implementation directly, avoiding its runtime CPU dispatcher and unsupported CPUID under Miri. Libm is pinned for this internal API; its other dependents are not forced onto software. Scalar hardware lowering is selected only by compile-time guarantees (std AArch64 NEON/x86 FMA). Native vector FMA and bare scalar/strict-WASM multiply-add remain unchanged; relaxed WASM keeps the engine's madd instruction.
-- Enforce portable expected bits with an independent exact-rational corpus across widths, add/subtract, signed zeros, subnormals, cancellation and overflow. CI covers std/no_std native and cross targets, strict/relaxed WASM and Miri; NaN payload/sign remain unspecified.
+- Correct portable f32 multiply-add/subtract subnormal rounding on all software backends using f64/TwoSum/round-to-odd, including WASM, no-FMA x86 and ARMv7. Portable f64 calls libm's integer implementation directly, avoiding its runtime CPU dispatcher and unsupported CPUID under Miri. Libm is pinned for this internal API; its other dependents are not forced onto software. Scalar hardware lowering is selected only by compile-time guarantees (std AArch64 NEON/x86 FMA). Native vector FMA and bare scalar/strict-WASM multiply-add remain unchanged; relaxed WASM keeps the engine's madd instruction (5dd1c917).
+- Enforce portable expected bits with an independent exact-rational corpus across widths, add/subtract, signed zeros, subnormals, cancellation and overflow. CI covers std/no_std native and cross targets, strict/relaxed WASM and Miri; NaN payload/sign remain unspecified (5dd1c917, 33093d1b).
 - W512 scalar generation uses the same explicit lane expressions as W128/W256 to avoid extra array copies around portable FMA calls (9e462e61).
 
 ### [0.9.30] - 2026-10-07
