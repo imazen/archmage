@@ -100,6 +100,7 @@ const pages = ['', 'attunement/', 'attunement/first-kernel/',
                 const bounds = await toolbar.boundingBox();
                 assert(bounds.y >= 60 && bounds.y <= 70, `mobile controls are not sticky: ${bounds.y}`);
                 const selectedTop = (await page.locator('#vectors').boundingBox()).y;
+                assert(Math.abs(selectedTop - bounds.y - bounds.height - 24) <= 1, 'jump did not align the example below the controls');
                 await comparison.getByRole('button', { name: 'Expansion', exact: true }).click();
                 const switchedTop = (await page.locator('#vectors').boundingBox()).y;
                 assert(Math.abs(switchedTop - selectedTop) <= 1, `switching tabs moved the selected example: ${selectedTop} -> ${switchedTop}`);

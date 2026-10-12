@@ -21,7 +21,10 @@
         }
     }));
     jump.addEventListener('change', () => {
-        document.getElementById(jump.value).scrollIntoView({ block: 'start', behavior: 'instant' });
+        const example = document.getElementById(jump.value);
+        example.scrollIntoView({ block: 'start', behavior: 'instant' });
+        const controlsBottom = browser.querySelector('.expansion-toolbar').getBoundingClientRect().bottom;
+        window.scrollBy({ top: example.getBoundingClientRect().top - controlsBottom - 24, behavior: 'instant' });
         history.replaceState(null, '', `#${jump.value}`);
     });
     for (const button of browser.querySelectorAll('button[data-view]')) {
