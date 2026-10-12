@@ -100,8 +100,9 @@ pub trait F32x16Backend: SimdToken + Sealed + Copy + 'static {
 
     /// Multiply-add with one rounding on every backend: `a * b + c`.
     ///
-    /// The same result everywhere, NaN payload/sign aside. Software
-    /// FMA where the hardware cannot fuse.
+    /// The same result everywhere with round-to-nearest and gradual
+    /// underflow, NaN payload/sign aside. Software FMA where the
+    /// selected backend has no guaranteed hardware FMA.
     fn mul_add_portable(self, a: Self::Repr, b: Self::Repr, c: Self::Repr) -> Self::Repr;
 
     /// Multiply-sub with one rounding on every backend: `a * b - c`.
