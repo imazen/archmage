@@ -39,7 +39,7 @@ CPU, width, compiler, baseline, and workload.
 | Same narrowing methods on [`i16x32`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i16x32.html) / [`i32x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i32x16.html) | Native AVX-512 | Narrow each input to a half and insert/concatenate. Unsigned destinations clamp signed inputs to zero before unsigned conversion. | Two zero clamps for unsigned output, plus the two conversions and concatenation needed for the operation. |
 | Same narrowing families at 128 bits; NEON / WASM widths | Native halves | Native signed-source saturating narrows already have the desired lane order. | No AVX2-style lane-order repair; polyfills still require composition. |
 | `v.shl_const::<N>()`, `v.shr_logical_const::<N>()`, `v.shr_arithmetic_const::<N>()` | Every backend | Const assertions reject invalid counts before execution. | **No runtime assertion.** Constant byte shifts can still require shift/mask emulation. |
-| `a.mul_add_portable(b, c)` / `a.mul_sub_portable(b, c)` on every float type | Scalar backend; WASM, relaxed SIMD included | Native hardware backends use FMA directly. Scalar f32 lanes widen to f64 and run TwoSum with round-to-odd (on WASM per `f64x2` half); f64 lanes call software `libm::fma`. No CPU feature probes occur inside arithmetic. | Scalar and WASM always use software fusion. Historical measurements are below; see [Fused arithmetic](#fused-arithmetic-and-reductions). |
+| `a.mul_add_portable(b, c)` / `a.mul_sub_portable(b, c)` on every float type | Scalar backend; WASM, relaxed SIMD included | Native hardware backends use FMA directly. Scalar lanes call libm's `fmaf` / `fma` without an extra Magetypes feature probe. WASM SIMD f32 uses f64 TwoSum with round-to-odd; f64 calls libm. | Libm selects its hardware or software implementation, including cached dispatch on x86. Historical measurements are below; see [Fused arithmetic](#fused-arithmetic-and-reductions). |
 
 `abs_diff`, `madd_adjacent`, `pairwise_widen_add`, saturating arithmetic, and
 `reduce_add_u32` sometimes need several instructions because an ISA lacks that
@@ -207,12 +207,20 @@ and on 1,024 dependent steps (chain); records:
 | WASM SIMD128, wasmtime on the 9950X3D | The same code as `a * b + c` | 8.2× (`f32x4`), 23× (`f64x2`) the time |
 | WASM relaxed SIMD, same | The engine's madd: 0.96–1.06× the time | 8.2× (`f32x4`), 24× (`f64x2`) the time |
 
-The scalar backend now always uses software fusion, including `f32x1` and
-`f64x1`. It never probes for a stronger CPU tier. The historical hardware rows
-above describe the removed implementation, not the current scalar path.
-`libm/force-soft-floats` prevents dependency feature unification from restoring
-hidden FMA dispatch; this also disables libm's architecture implementations for
-other users of the same libm version in the dependency graph.
+Scalar portable FMA now delegates directly to libm, including `f32x1` and
+`f64x1`. Magetypes adds no feature check around libm's dispatch and does not
+force software selection onto other libm dependents. On x86, libm selects an
+implementation through a cached function pointer; its normal architecture
+feature remains enabled for no_std builds too. On targets without a hardware
+implementation it uses software fusion.
+
+The scalar rows above measure earlier implementations, not the current libm
+path. An assembly comparison with Rust 1.99 checked the f32/f64 helpers and
+portable add/sub at all six scalar vector widths: each matches the corresponding
+direct libm expression on baseline x86-64, x86-64-v3, AArch64, and WASM after
+normalizing local label numbers. That establishes code-generation equivalence
+for those fixtures, not a runtime speedup. Native WASM SIMD's f32 software
+kernel is unchanged.
 
 With a native FMA backend, `mul_add` is the faster choice for dependency chains such as
 Horner polynomials, and elsewhere it costs nothing. Use `mul_add_portable` where

@@ -398,21 +398,21 @@ pub fn roundeven(x: f64) -> f64 {
     }
 }
 
-/// Correctly rounded software f32 fused multiply-add, including subnormals
-/// and signed zero.
+/// Correctly rounded f32 fused multiply-add, including subnormals and signed zero.
 ///
-/// Uses [`fmaf_soft`] without probing CPU features. Hardware backends select
-/// their own FMA intrinsics using the caller's token.
+/// Delegates directly to libm, including its architecture-specific selection.
+/// Magetypes adds no CPU detection or dispatch layer. Native vector backends
+/// use their own FMA intrinsics; [`fmaf_soft`] remains explicitly software-only.
 #[inline(always)]
 #[forbid(unsafe_code)]
 pub fn fmaf(a: f32, b: f32, c: f32) -> f32 {
-    fmaf_soft(a, b, c)
+    libm::fmaf(a, b, c)
 }
 
-/// Correctly rounded software f64 fused multiply-add.
+/// Correctly rounded f64 fused multiply-add through libm.
 ///
-/// Uses libm's no_std implementation with `force-soft-floats`, so enabling
-/// libm's architecture feature elsewhere cannot introduce runtime dispatch.
+/// Uses libm's normal architecture selection without an additional Magetypes
+/// feature probe. Other dependencies remain free to configure libm's features.
 #[inline(always)]
 #[forbid(unsafe_code)]
 pub fn fma(a: f64, b: f64, c: f64) -> f64 {

@@ -89,7 +89,7 @@
 
 #### Fixed
 
-- Scalar `mul_add_portable` / `mul_sub_portable` (including `f32x1` / `f64x1`) use software fusion without hidden CPU detection: f32 uses f64 TwoSum with round-to-odd; f64 uses libm with `force-soft-floats`. Native SIMD backends retain their direct FMA instructions. The libm feature also disables its architecture implementations for other users of the same dependency version.
+- Scalar `mul_add_portable` / `mul_sub_portable` (including `f32x1` / `f64x1`) delegate directly to libm's normal FMA implementation instead of adding an Archmage feature probe. Libm's architecture selection is enabled without forcing its other dependents onto software. Native SIMD backends retain direct FMA instructions; the explicit `fmaf_soft` helper remains available. W512 scalar generation now uses the same explicit lane expressions as W128/W256 to avoid extra array copies around libm calls.
 
 #### QUEUED BREAKING CHANGES
 

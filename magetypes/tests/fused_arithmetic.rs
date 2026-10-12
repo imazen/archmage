@@ -139,8 +139,8 @@ fn cases64() -> Vec<[f64; 3]> {
     cases
 }
 
-// The scalar entry points must preserve software single rounding on every
-// host. Exercise both the public fmaf entry and its reusable software helper.
+// Check single rounding through libm and through the explicit software f32
+// helper independently, including hosts where libm selects hardware FMA.
 #[test]
 fn software_rounding_against_std() {
     for [a, b, c] in cases32() {

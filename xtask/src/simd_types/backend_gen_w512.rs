@@ -974,6 +974,18 @@ pub(super) fn generate_w512_backend_trait(ty: &W512Type) -> String {
 /// Generate scalar backend implementation for a W512 float type.
 fn generate_scalar_float_impl(ty: &W512Type) -> String {
     let fma_fn = if ty.elem == "f32" { "fmaf" } else { "fma" };
+    // Match the explicit lane expressions used by the W128/W256 generator.
+    // A from_fn closure here can retain copies of all three input arrays
+    // across scalar libm calls after the generic wrapper has been inlined.
+    let fused_lanes = |negate: &str| {
+        let lanes = (0..ty.lanes)
+            .map(|i| format!("crate::nostd_math::{fma_fn}(a[{i}], b[{i}], {negate}c[{i}])"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!("[{lanes}]")
+    };
+    let fused_add = fused_lanes("");
+    let fused_sub = fused_lanes("-");
     let trait_name = ty.trait_name();
     let elem = ty.elem;
     let lanes = ty.lanes;
@@ -1096,10 +1108,10 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
             fn mul_sub(self, a: {array}, b: {array}, c: {array}) -> {array} {{ core::array::from_fn(|i| a[i] * b[i] - c[i]) }}
 
             #[inline(always)]
-            fn mul_add_portable(self, a: {array}, b: {array}, c: {array}) -> {array} {{ core::array::from_fn(|i| crate::nostd_math::{fma_fn}(a[i], b[i], c[i])) }}
+            fn mul_add_portable(self, a: {array}, b: {array}, c: {array}) -> {array} {{ {fused_add} }}
 
             #[inline(always)]
-            fn mul_sub_portable(self, a: {array}, b: {array}, c: {array}) -> {array} {{ core::array::from_fn(|i| crate::nostd_math::{fma_fn}(a[i], b[i], -c[i])) }}
+            fn mul_sub_portable(self, a: {array}, b: {array}, c: {array}) -> {array} {{ {fused_sub} }}
 
             #[inline(always)]
             fn simd_eq(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| if a[i] == b[i] {{ {elem}::from_bits(!0{uint}) }} else {{ {zero_lit} }}) }}

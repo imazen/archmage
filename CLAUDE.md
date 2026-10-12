@@ -140,17 +140,16 @@ fn dist_simd(a: &[f32; 8], b: &[f32; 8]) -> f32 {
 
 ### Dispatch granularity
 
-Single-vector Magetypes arithmetic must not detect or upgrade CPU features
-internally. Select the arithmetic backend at user-requested dispatch boundaries
-(`attuned!`, `reattune!`, `incant!`, or an explicit user `summon()` call).
-Scalar portable f32 FMA uses f64 TwoSum with round-to-odd; portable f64 FMA uses
-libm with `force-soft-floats` so dependency feature unification cannot add a
-per-operation probe.
+Magetypes must not add CPU probes inside single-vector arithmetic. Scalar
+portable FMA delegates directly to libm's normal architecture implementation,
+including libm's own cached dispatch where applicable. Do not add an Archmage
+probe around that call or force libm's other dependents onto software.
+Native SIMD backends use direct FMA intrinsics. `fmaf_soft` remains the explicit
+software f32 helper.
 
-Whole-slice f16 conversion is a deliberate exception: its existing trait
-methods auto-upgrade once per buffer. Explicit-proof hardware alternatives
-may avoid that selection. Keep the slice exception out of register-level
-conversion and vector arithmetic.
+Whole-slice f16 conversion may auto-upgrade once per buffer. Explicit-proof
+hardware alternatives may avoid that selection. Keep the slice exception out
+of register-level conversion and vector arithmetic.
 
 ### Generic kernels and feature contexts
 
@@ -1153,11 +1152,15 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
 
 ### Resolved (each with its regression coverage)
 
-- Scalar portable FMA probed for native hardware once per lane. The scalar
-  helpers now use software fusion directly, with libm `force-soft-floats`
-  preventing hidden dispatch through Cargo feature unification. Existing
-  `magetypes/tests/fused_arithmetic.rs` cases pass with `libm/arch` explicitly
-  enabled as well as without default features; no rounding expectations changed.
+- Scalar portable FMA added an Archmage cache check around hardware/software
+  selection. The helpers now delegate directly to libm, with no extra feature
+  probe and no `force-soft-floats` override. The W512 generator uses explicit
+  lane expressions like W128/W256, avoiding extra input-array copies across
+  libm calls in the assembly comparison. Existing fused-arithmetic assertions
+  remain unchanged. Assembly evidence lives in the standalone
+  `~/output/archmage/fma-libm-probe-20261012` repository; its `just check`
+  compares scalar helpers and all six scalar vector widths with direct libm
+  calls on baseline x86-64, x86-64-v3, AArch64, and WASM.
 
 
 - **Expansion capture on fresh CI runners (2026-10-12):** The display generator
