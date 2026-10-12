@@ -4,12 +4,12 @@ description = "Use Magetypes inside an attuned kernel and handle its tail"
 weight = 3
 +++
 
-Add Magetypes from the same beta branch so both crates use the same token types:
+Use matching beta versions so both crates use the same token types:
 
 ```toml
 [dependencies]
-archmage = { git = "https://github.com/imazen/archmage", branch = "release/0.9.31-beta" }
-magetypes = { git = "https://github.com/imazen/archmage", branch = "release/0.9.31-beta" }
+archmage = "=0.9.31-beta"
+magetypes = "=0.9.31-beta"
 ```
 
 `define(f32x8)` gives each generated body an eight-lane vector alias specialized
@@ -62,7 +62,7 @@ allocation as contiguous pixels.
 
 - [Memory operations](@/magetypes/memory/load-store.md): arrays, chunks, and bounds.
 - [Numerical precision](@/magetypes/math/precision.md): choose an operation's numerical contract.
-- [Full attunement reference](https://github.com/imazen/archmage/blob/release/0.9.31-beta/docs/ATTUNE.md): explicit AVX-512 gates, generic signatures, proof wrappers, and output visibility.
+- [Full attunement reference](@/attunement/reference.md): explicit AVX-512 gates, generic signatures, proof wrappers, and output visibility.
 
 The shared Magetypes chapters include examples using the existing spellcraft
 attributes. The vector operations are the same; the attuned kernel above is the

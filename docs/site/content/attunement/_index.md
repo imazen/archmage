@@ -19,6 +19,9 @@ here without learning `#[arcane]`, `#[rite]`, or `incant!` first.
 3. [Add vectors](@/attunement/vectors.md): Magetypes operations, complete chunks,
    and the remaining elements.
 
+Keep the [complete reference](@/attunement/reference.md) nearby for explicit tiers,
+proofs, generics, methods, inlining, visibility, and legacy mappings.
+
 You need two spellings for this route:
 
 | Spelling | Purpose |
@@ -35,7 +38,7 @@ an existing context; it is not needed for the basic path.
 
 The [Arcane Spellcraft guide](@/archmage/_index.md) covers the existing attributes
 and production examples. Those APIs remain supported. The
-[full attunement reference and migration table](https://github.com/imazen/archmage/blob/release/0.9.31-beta/docs/ATTUNE.md)
+[full attunement reference and migration table](@/attunement/reference.md)
 covers explicit proofs, visibility, inline policies, named tiers, and method and
 generic restrictions.
 

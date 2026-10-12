@@ -1,0 +1,16 @@
+/* Goyo loads this override on every page. Long syntax tables and code blocks
+   should scroll within the content column, without widening the mobile page. */
+.prose {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.prose pre,
+.prose table {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.prose table {
+    display: block;
+}

@@ -70,7 +70,7 @@ feature context. Use a dispatcher from ordinary code, or an attuned body that
 covers the helper's tier. Do not add an `unsafe` block just to bypass the error.
 
 For deliberate reselection, existing proof tokens, or sparse families, continue
-with the [full call reference](https://github.com/imazen/archmage/blob/release/0.9.31-beta/docs/ATTUNE.md#calls-and-proofs).
+with the [full call reference](@/attunement/reference.md#calls-and-proofs).
 
 *Legacy note for `reattune!`:* there is no separate legacy spelling for this
 explicit upgrade; nested `incant!` normally follows the caller's covered tier.
