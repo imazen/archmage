@@ -501,3 +501,7 @@ fma-no-hardware:
 # Dependency feature unification must not change portable rounding.
 fma-libm-soft:
     cargo test -p magetypes --no-default-features --features w512,libm/force-soft-floats --test fma_contract
+
+# Independently build/test the self-contained dispatch prototype (x86-64 host).
+artisanal-check:
+    bash experiments/artisanal-dispatch/tools/native-check.sh

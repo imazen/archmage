@@ -1,0 +1,20 @@
+rustc 1.99.0 (b940084d7 2026-09-28)
+Command: cargo rustc --release --example codegen --features std -- --emit=asm
+No target-cpu or target-feature flags.
+
+leaf_v3:
+	.cfi_startproc
+	vfmadd213ss	%xmm2, %xmm1, %xmm0
+	retq
+.Lfunc_end6:
+
+matching:
+	.cfi_startproc
+	vfmadd213ss	%xmm2, %xmm1, %xmm0
+	retq
+.Lfunc_end8:
+
+proof_boundary:
+	.cfi_startproc
+	jmp	_RNvNtCs4fq416hg3aV_7codegen7kernels7leaf_v3
+.Lfunc_end5:

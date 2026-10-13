@@ -1,0 +1,12 @@
+# Run with run-heavy; cross checks require the tools documented in README.
+check:
+    bash tools/check.sh
+
+ui:
+    python3 tools/ui.py
+
+count:
+    wc -l src/lib.rs macros/src/lib.rs macros/src/tiers.rs
+
+codegen:
+    python3 tools/codegen.py

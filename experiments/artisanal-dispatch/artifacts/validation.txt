@@ -1,0 +1,188 @@
+2026-10-13 validation
+Command: TMPDIR=<disk scratch> WASMTIME=<executable> run-heavy --mem 16G --jobs 2 -- bash tools/check.sh
+
+Implementation SHA-256:
+417cac1e53ab8e8c883e0c10d7a812a1e228eee874d4d6efe8fe08e87dac0528  src/lib.rs
+8a2b2e8c6306c7db1184f1d100d551554dac56ce038db5375ed4e12c59c08cab  macros/src/lib.rs
+6d69f3e5258e1951ad3f1204e21b8a09ec108a2780c8733db3cdb8470de8abd1  macros/src/tiers.rs
+
+run-heavy: mem-cap=16G (cgroup, hard) jobs=2/20 avail=25897MiB :: bash tools/check.sh
+    Checking artisanal-dispatch v0.0.0 (/home/lilith/output/archmage/artisanal-dispatch-20261013)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.04s
+   Compiling artisanal-dispatch v0.0.0 (/home/lilith/output/archmage/artisanal-dispatch-20261013)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.08s
+     Running unittests src/lib.rs (target/debug/deps/artisanal_dispatch-08d9d5d0ec30dfb1)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/behavior.rs (target/debug/deps/behavior-c4c0025a16933281)
+
+running 6 tests
+test argument_control_flow_and_hygiene ... ok
+test build_time_only_without_std ... ok
+test dispatch_order_fallback_and_argument_evaluation ... ok
+test opaque_arguments_nested_functions_and_context ... ok
+test qualified_paths_closures_and_cross_crate_proofs ... ok
+test generics_lifetimes_where_and_mutable_arguments ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/artisanal_dispatch_macros-0fbdb6e5a120de84)
+
+running 3 tests
+test audit::registry_is_acyclic_unique_and_architecture_preserving ... ok
+test audit::dispatch_emits_each_branch_and_each_argument_exactly_once ... ok
+test audit::feature_attributes_and_inline_choices_are_on_the_right_items ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests artisanal_dispatch
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests artisanal_dispatch_macros
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling artisanal-dispatch v0.0.0 (/home/lilith/output/archmage/artisanal-dispatch-20261013)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.06s
+     Running unittests src/lib.rs (target/debug/deps/artisanal_dispatch-13d69a0c2fb7fcb4)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/behavior.rs (target/debug/deps/behavior-c7eb1344376149c1)
+
+running 6 tests
+test argument_control_flow_and_hygiene ... ok
+test build_time_only_without_std ... ok
+test dispatch_order_fallback_and_argument_evaluation ... ok
+test opaque_arguments_nested_functions_and_context ... ok
+test qualified_paths_closures_and_cross_crate_proofs ... ok
+test generics_lifetimes_where_and_mutable_arguments ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests artisanal_dispatch
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+PASS associated.rs: `const` items in this context need a name
+PASS associated_tier.rs: `const` items in this context need a name
+PASS async_body.rs: requires a safe, synchronous Rust function
+PASS cfg_attr_features.rs: unsupported attribute on a feature body
+PASS const_body.rs: requires a safe, synchronous Rust function
+PASS context_baseline.rs: error[E0133]
+PASS destructure.rs: bridge arguments must be identifiers
+PASS early_fallback.rs: one final scalar fallback
+PASS empty_tiers.rs: one final scalar fallback
+PASS extern_body.rs: requires a safe, synchronous Rust function
+PASS extra_features.rs: unsupported attribute on a feature body
+PASS fake_proof.rs: mismatched types
+PASS forged.rs: error[E0603]
+PASS inline_always.rs: not inline(always)
+PASS method.rs: only free functions are supported
+PASS method_call.rs: expected function call expression
+PASS missing_fallback.rs: one final scalar fallback
+PASS outer_cfg_features.rs: unsupported attribute on a feature body
+PASS outer_features.rs: unsupported attribute on a feature body
+PASS raw_baseline.rs: error[E0133]
+PASS safe_fn_pointer.rs: mismatched types
+PASS shadow_associated.rs: `const` items in this context need a name
+PASS shadow_callee.rs: unsupported or reserved bridge argument
+PASS trait_default.rs: `const` items in this context need a name
+PASS unknown.rs: unknown tier
+PASS unknown_option.rs: unexpected token
+PASS unsafe_body.rs: requires a safe, synchronous Rust function
+PASS upgrade.rs: trait bound
+PASS weak_proof.rs: mismatched types
+PASS weaker_context.rs: error[E0133]
+PASS wrong_arch.rs: trait bound
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.02s
+    Checking artisanal-dispatch v0.0.0 (/home/lilith/output/archmage/artisanal-dispatch-20261013)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.04s
+   Compiling artisanal-dispatch v0.0.0 (/home/lilith/output/archmage/artisanal-dispatch-20261013)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.07s
+     Running tests/behavior.rs (target/x86_64-unknown-linux-gnu/debug/deps/behavior-c30f6f3e36dcdaab)
+
+running 6 tests
+test argument_control_flow_and_hygiene ... ok
+test build_time_only_without_std ... ok
+test dispatch_order_fallback_and_argument_evaluation ... ok
+test generics_lifetimes_where_and_mutable_arguments ... ok
+test opaque_arguments_nested_functions_and_context ... ok
+test qualified_paths_closures_and_cross_crate_proofs ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+   Compiling artisanal-dispatch v0.0.0 (/home/lilith/output/archmage/artisanal-dispatch-20261013)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.12s
+     Running tests/behavior.rs (target/aarch64-unknown-linux-gnu/debug/deps/behavior-6bd7befcf3587e8c)
+
+running 6 tests
+test argument_control_flow_and_hygiene ... ok
+test build_time_only_without_std ... ok
+test dispatch_order_fallback_and_argument_evaluation ... ok
+test generics_lifetimes_where_and_mutable_arguments ... ok
+test opaque_arguments_nested_functions_and_context ... ok
+test qualified_paths_closures_and_cross_crate_proofs ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+   Compiling artisanal-dispatch v0.0.0 (/home/lilith/output/archmage/artisanal-dispatch-20261013)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.12s
+     Running tests/behavior.rs (target/wasm32-wasip1/debug/deps/behavior-dbc4eda8aac27bf1.wasm)
+
+running 6 tests
+test argument_control_flow_and_hygiene ... ok
+test build_time_only_without_std ... ok
+test dispatch_order_fallback_and_argument_evaluation ... ok
+test generics_lifetimes_where_and_mutable_arguments ... ok
+test opaque_arguments_nested_functions_and_context ... ok
+test qualified_paths_closures_and_cross_crate_proofs ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling artisanal-dispatch v0.0.0 (/home/lilith/output/archmage/artisanal-dispatch-20261013)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.12s
+     Running tests/behavior.rs (target/wasm32-wasip1/debug/deps/behavior-40dc6e0cb0399a42.wasm)
+
+running 6 tests
+test argument_control_flow_and_hygiene ... ok
+test build_time_only_without_std ... ok
+test dispatch_order_fallback_and_argument_evaluation ... ok
+test generics_lifetimes_where_and_mutable_arguments ... ok
+test opaque_arguments_nested_functions_and_context ... ok
+test qualified_paths_closures_and_cross_crate_proofs ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling artisanal-dispatch v0.0.0 (/home/lilith/output/archmage/artisanal-dispatch-20261013)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.12s
+     Running tests/behavior.rs (target/wasm32-wasip1/debug/deps/behavior-a3e7307fb98bf683.wasm)
+
+running 6 tests
+test argument_control_flow_and_hygiene ... ok
+test build_time_only_without_std ... ok
+test dispatch_order_fallback_and_argument_evaluation ... ok
+test generics_lifetimes_where_and_mutable_arguments ... ok
+test opaque_arguments_nested_functions_and_context ... ok
+test qualified_paths_closures_and_cross_crate_proofs ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.01s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.01s
+    Finished `release` profile [optimized] target(s) in 0.00s
+codegen-expanded.rs 1806 bytes
+proofs-expanded.rs 20689 bytes
+run-heavy: done rc=0 2s | peak-RSS 0.17GiB | min-avail 25791MiB | peak-load 0.38

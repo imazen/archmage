@@ -3,7 +3,8 @@ members = [".", "archmage-macros", "magetypes", "xtask", "tests/no-features-crat
 # `apidoc/` is the CI-free public-API snapshot runner: excluded so plain
 # `cargo test` and every CI job never compile its dependency tree or run
 # rustdoc. Regenerate via `just api-doc`.
-exclude = ["apidoc"]
+# The independent dispatch prototype is not part of the release workspace.
+exclude = ["apidoc", "experiments/artisanal-dispatch"]
 
 [workspace.package]
 version = "0.9.31-beta.2"

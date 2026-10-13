@@ -1,0 +1,17 @@
+[workspace]
+members = ["macros"]
+resolver = "3"
+
+[package]
+name = "artisanal-dispatch"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.89"
+publish = false
+
+[features]
+default = []
+std = []
+
+[dependencies]
+artisanal-dispatch-macros = { path = "macros" }
