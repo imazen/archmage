@@ -8,8 +8,8 @@ Use matching beta versions so both crates use the same token types:
 
 ```toml
 [dependencies]
-archmage = "=0.9.31-beta.2"
-magetypes = "=0.9.31-beta.2"
+archmage = "=0.9.31-beta.1"
+magetypes = "=0.9.31-beta.1"
 ```
 
 `define(f32x8)` gives each generated body an eight-lane vector alias specialized
