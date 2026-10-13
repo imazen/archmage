@@ -1,8 +1,7 @@
 name: CPU Survey (Hardware Catalog)
 
 # Catalog-only: runners not already covered by CI or bench workflows.
-# CI covers: ubuntu-latest, windows-latest, ubuntu-24.04-arm, macos-14, macos-latest, windows-11-arm
-# Bench covers: macos-26-intel
+# CI covers: ubuntu-latest, windows-latest, ubuntu-24.04-arm, macos-latest, windows-11-arm
 on:
   workflow_dispatch:
 
@@ -25,11 +24,7 @@ jobs:
           # x86_64 Windows (specific versions)
           - { os: windows-2025, name: "Windows 2025 (x64)" }
           - { os: windows-2022, name: "Windows 2022 (x64)" }
-          # ARM64 macOS (specific versions)
-          - { os: macos-15, name: "macOS 15 (Apple M1)" }
-          - { os: macos-26, name: "macOS 26 (Apple M-series)" }
-          # x86_64 macOS
-          - { os: macos-15-intel, name: "macOS 15 Intel (Xeon W)" }
+          # macOS ARM64 is surveyed by CI/bench on macos-latest.
 
     steps:
       - uses: actions/checkout@v7

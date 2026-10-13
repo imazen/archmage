@@ -103,6 +103,16 @@ class GateTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     check_contract(ci, self.publish)
 
+    def test_required_platforms_and_arm_only_macos(self):
+        arm = self.ci['jobs']['test-aarch64']['strategy']['matrix']['include']
+        self.assertIn('windows-11-arm', [entry['os'] for entry in arm])
+        self.assertIn('macos-latest', [entry['os'] for entry in arm])
+        cross = self.ci['jobs']['test-cross']['strategy']['matrix']['target']
+        self.assertIn('i686-unknown-linux-gnu', cross)
+        for path in (ROOT / '.github/workflows').glob('*.yml'):
+            with self.subTest(workflow=path.name):
+                self.assertNotRegex(path.read_text(), r'macos-[a-z0-9-]*intel')
+
     def test_release_tag_versions(self):
         step = next(s for s in self.publish['jobs']['check-tags']['steps']
                     if s.get('id') == 'version')
@@ -110,6 +120,7 @@ class GateTests(unittest.TestCase):
         self.assertIsNotNone(match, 'release tag validation must remain explicit')
         script = 'if [[ "$TAG" =~ ' + match.group(1) + ' ]]; then printf "%s" "${BASH_REMATCH[1]}"; else exit 1; fi'
         for tag, version in [('v0.9.31', '0.9.31'), ('v0.9.31-beta', '0.9.31-beta'),
+                             ('v0.9.31-beta.1', '0.9.31-beta.1'),
                              ('v0.9.31-beta.2', '0.9.31-beta.2'), ('v0.9', None),
                              ('v0.9.31-beta!', None), ('v0.9.31-beta.', None),
                              ('prefix-v0.9.31', None), ('v0.9.31-beta+suffix', None)]:

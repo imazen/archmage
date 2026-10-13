@@ -31,9 +31,6 @@ jobs:
           - os: macos-latest
             name: macOS aarch64
             bench: tokens|archmage
-          - os: macos-26-intel
-            name: macOS x86_64
-            bench: summon_overhead|archmage asm_inspection|archmage asm_patterns|magetypes
           - os: windows-latest
             name: Windows x86_64
             bench: summon_overhead|archmage asm_inspection|archmage asm_patterns|magetypes
