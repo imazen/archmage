@@ -1,6 +1,6 @@
 # Changelog
 
-The `0.9.31-beta.2` entries cover changes since `0.9.30`. The earlier
+The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 `0.9.31-beta` version was prepared but never published.
 
 ## archmage
@@ -12,7 +12,7 @@ The `0.9.31-beta.2` entries cover changes since `0.9.30`. The earlier
 - Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)
 - Remove width traits `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` — use concrete tokens or tier traits (`HasX64V2`, `HasX64V4`) instead (deprecated since 0.9.9; `Has256BitSimd` only enables AVX, not AVX2/FMA)
 
-### [0.9.31-beta.2] - 2026-10-12
+### [0.9.31-beta.1] - 2026-10-13
 
 #### Added
 
@@ -41,7 +41,7 @@ The `0.9.31-beta.2` entries cover changes since `0.9.30`. The earlier
 - Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with deprecation warning)
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 
-### [0.9.31-beta.2] - 2026-10-12
+### [0.9.31-beta.1] - 2026-10-13
 
 #### Added
 
@@ -99,7 +99,7 @@ The `0.9.31-beta.2` entries cover changes since `0.9.30`. The earlier
 - Planned: make `w512` non-default in magetypes; users who need 512-bit types would add `features = ["w512"]`. This patch keeps the existing default features.
 - Remove `cast::Upcast` and `cast::Downcast`, and with them the `cast` module, which holds nothing else. Both are deprecated in 0.9.30 and were never implemented (b1b2ff67).
 
-### [0.9.31-beta.2] - 2026-10-12
+### [0.9.31-beta.1] - 2026-10-13
 
 #### Changed
 
@@ -161,7 +161,7 @@ The `0.9.31-beta.2` entries cover changes since `0.9.30`. The earlier
 
 - Preserve the self-contained, free-function-only [artisanal dispatch prototype](experiments/artisanal-dispatch/README.md) on main, with its proof/tier layer, audit, expansion and assembly evidence, and native CI checks. Its independent unpublished workspace adds no dependencies or exports to release crates (8416f708).
 
-### [0.9.31-beta.2] - 2026-10-12
+### [0.9.31-beta.1] - 2026-10-13
 
 #### Added
 
@@ -169,6 +169,10 @@ The `0.9.31-beta.2` entries cover changes since `0.9.30`. The earlier
 - Side-by-side source and real `cargo expand` output for x86-64, AVX-512, AArch64, and WASM; mobile tabs retain the selected example and scroll it below the controls (4df5f714, eb1d5922, 0d9ef633).
 - Compile and reject the unified syntax across architecture/gate combinations, retaining raw expansions and diagnostics; run the precise concrete-impl target-feature check alongside the remaining semver checks (72910a29).
 - Enforce the prohibition on hidden CPU detection in single-vector operations while retaining whole-slice f16 dispatch, and test WASM portable arithmetic with std disabled (570bc103, cd7e87f0).
+
+#### Changed
+
+- CI and benchmark macOS coverage now uses ARM64 on `macos-latest`; Windows ARM64 and cross-tested i686 remain required (2ca98915).
 
 #### Fixed
 

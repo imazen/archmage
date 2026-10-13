@@ -30,7 +30,7 @@ mapping. The website reference is generated from that guide by `just generate`.
 The reviewed unified-macro beta was merged in 72910a29 through PR #129;
 PR #127 was superseded. Earlier constructor experiments remain archived.
 
-## 0.9.31-beta.2 release gate
+## 0.9.31-beta.1 release gate
 
 Prepared against published 0.9.30 on 2026-10-12; 0.9.31-beta was never
 published. Local Archmage all-target tests/doctests, Magetypes all-target

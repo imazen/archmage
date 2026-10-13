@@ -25,7 +25,7 @@ MIT OR Apache-2.0.
 
 ## Unified macro beta
 
-Version `0.9.31-beta.2` adds `#[attune]`, `attuned!`, and `reattune!` through the
+Version `0.9.31-beta.1` adds `#[attune]`, `attuned!`, and `reattune!` through the
 archmage crate. Legacy attributes remain supported. Use the matching archmage
 version; its exact dependency pin keeps generated code and runtime APIs paired.
 See the [beta guide](https://github.com/imazen/archmage/blob/main/docs/ATTUNE.md).
