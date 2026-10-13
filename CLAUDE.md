@@ -9,6 +9,12 @@ implementation changes land on main; release-to-release diffs must contain no
 experimental APIs or measurement scaffolding. Preserve design work separately
 and review the diff against the last published release before pushing.
 
+Repository-only exception: `experiments/artisanal-dispatch/` is retained on main
+as an independent, unpublished workspace. It contains the self-contained
+free-function dispatch prototype and its audit evidence; it does not change
+Archmage or Magetypes exports or dependencies. Run `just artisanal-check` for
+its native checks. Its own README and AUDIT.md define the prototype contract.
+
 The unpublished constructor modes and `use(...)` / adaptive-alias experiments
 are preserved at bookmark `draft/context-constructors-2026-09-27` (commit
 `3ae7b632`). They are not the compatibility baseline. The migration API is the

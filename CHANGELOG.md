@@ -157,6 +157,10 @@ The `0.9.31-beta.2` entries cover changes since `0.9.30`. The earlier
 
 (none)
 
+#### Added
+
+- Preserve the self-contained, free-function-only [artisanal dispatch prototype](experiments/artisanal-dispatch/README.md) on main, with its proof/tier layer, audit, expansion and assembly evidence, and native CI checks. Its independent unpublished workspace adds no dependencies or exports to release crates (8416f708).
+
 ### [0.9.31-beta.2] - 2026-10-12
 
 #### Added
