@@ -384,13 +384,7 @@ pub mod covered_calls {
     #[inline]
     fn __attune_scale_v3(values: &mut [f32], factor: f32) {
         for value in values {
-            *value = {
-                '__attune_call_0: {
-                    {
-                        break '__attune_call_0 scale_one_v3(*value, factor);
-                    }
-                }
-            };
+            *value = ({ '__attune_call_0: { { scale_one_v3(*value, factor) } } });
         }
     }
     #[inline(always)]
@@ -404,13 +398,7 @@ pub mod covered_calls {
     #[inline]
     fn __attune_scale_scalar(values: &mut [f32], factor: f32) {
         for value in values {
-            *value = {
-                '__attune_call_0: {
-                    {
-                        break '__attune_call_0 scale_one_scalar(*value, factor);
-                    }
-                }
-            };
+            *value = ({ '__attune_call_0: { { scale_one_scalar(*value, factor) } } });
         }
     }
     #[inline(always)]

@@ -2499,7 +2499,23 @@ fn run_ci() -> Result<()> {
     if !clippy_default.success() {
         bail!("Clippy (default features) failed with warnings/errors");
     }
-    println!("  ✓ Clippy passed (default features)");
+    // Macro output only meets clippy in a consuming crate.
+    let clippy_consumer = std::process::Command::new("cargo")
+        .args([
+            "clippy",
+            "-p",
+            "archmage-no-features-test",
+            "--all-targets",
+            "--",
+            "-D",
+            "warnings",
+        ])
+        .status()
+        .context("Failed to run clippy (macro consumer crate)")?;
+    if !clippy_consumer.success() {
+        bail!("Clippy (macro consumer crate) failed with warnings/errors");
+    }
+    println!("  ✓ Clippy passed (default features + macro consumer crate)");
     println!("└─ Clippy check passed (default features) ───────────────────────────┘\n");
 
     // Proc-macro unit tests are not included by the root package's cargo test.

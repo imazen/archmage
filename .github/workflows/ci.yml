@@ -661,6 +661,11 @@ jobs:
       - name: Clippy (magetypes, default features)
         run: cargo clippy -p magetypes -- -D warnings
 
+      # Macro output only meets clippy in a consuming crate: this one calls
+      # every dispatch macro (attuned! in value position included).
+      - name: Clippy (macro consumer crate)
+        run: cargo clippy -p archmage-no-features-test --all-targets -- -D warnings
+
   # ==========================================================================
   # Clippy on aarch64 — the NEON backend impls are cfg'd out on x86, so
   # lints inside them were unreachable from the ubuntu-latest lane above.
@@ -702,6 +707,9 @@ jobs:
 
       - name: Clippy (magetypes, default features)
         run: cargo clippy -p magetypes -- -D warnings
+
+      - name: Clippy (macro consumer crate)
+        run: cargo clippy -p archmage-no-features-test --all-targets -- -D warnings
 
   # ==========================================================================
   # Format check

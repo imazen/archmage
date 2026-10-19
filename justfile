@@ -14,6 +14,7 @@ test-nightly:
 # Run clippy (excludes sleef which requires nightly)
 lint:
     cargo clippy --features "std avx512" -- -D warnings
+    cargo clippy -p archmage-no-features-test --all-targets -- -D warnings
 
 # Format code + regenerate the public-API surface snapshots (docs/public-api/).
 # The snapshot runner lives in the workspace-excluded apidoc/ package, so it

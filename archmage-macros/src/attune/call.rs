@@ -254,8 +254,12 @@ impl Call {
             let guaranteed = tier.name == "scalar"
                 || !runtime
                 || matches!(inherited, Some(Access::Guaranteed(_)));
+            // A guaranteed arm is the block's value, not a `break`: every later
+            // arm is cfg-guarded by `not(this arm's condition)`, so the surviving
+            // guaranteed arm is always the tail. A single-arm `break` makes
+            // clippy's diverging_sub_expression fire in `let`/argument position.
             let branch = if guaranteed {
-                quote!(break #label #invocation;)
+                invocation
             } else if let Some(Access::Conditional(value)) = &inherited {
                 let method = format_ident!("{}", tier.as_method);
                 quote!(if let Some(#proof_ident) = ::archmage::IntoConcreteToken::#method(#value) { break #label #invocation; })
@@ -400,7 +404,12 @@ fn rewrite_scoped(
             let expansion = syn::parse2::<Call>(group.stream())
                 .map(|call| call.expand_scoped(Some(caller), name == "reattune", parent, serial))
                 .unwrap_or_else(|error| error.to_compile_error());
-            out.extend(expansion);
+            // A bang macro at statement start still parses as an expression
+            // (`attuned!(f(x)) + 1`); a spliced bare block would end the
+            // statement there, so keep the expansion parenthesized.
+            let mut grouped = Group::new(Delimiter::Parenthesis, expansion);
+            grouped.set_span(proc_macro2::Span::mixed_site());
+            out.extend([TokenTree::Group(grouped)]);
             i = end + 3;
             continue;
         }

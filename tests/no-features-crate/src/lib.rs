@@ -99,6 +99,59 @@ impl Buffer {
 }
 
 // ============================================================================
+// attuned! in value position (clippy -D warnings runs on this crate)
+// ============================================================================
+//
+// A call that resolves to a single guaranteed arm (every covered call in an
+// #[attune] body, or a scalar-only list) used to expand to
+// `{ 'l: { { break 'l f(x); } } }`; in a `let`, argument or `return` clippy
+// reported diverging_sub_expression. A statement-start continuation such as
+// `attuned!(f(x)) + 1` in an #[attune] body did not parse.
+
+#[attune(make(_v3, _v3_t, _scalar, _scalar_t, _))]
+pub fn bump(x: u32) -> u32 {
+    x + 1
+}
+
+fn identity(x: u32) -> u32 {
+    x
+}
+
+pub fn scalar_let(x: u32) -> u32 {
+    let y = attuned!(bump(x), [_scalar]);
+    y * 2
+}
+
+pub fn scalar_arg(x: u32) -> u32 {
+    identity(attuned!(bump(x), [_scalar]))
+}
+
+#[attune(make(_v3, _v3_t, _scalar, _scalar_t, _))]
+pub fn covered_let(x: u32) -> u32 {
+    let y = attuned!(bump(x));
+    y * 2
+}
+
+#[attune(make(_v3, _v3_t, _scalar, _scalar_t, _))]
+pub fn covered_arg(x: u32) -> u32 {
+    let y = identity(attuned!(bump(x)));
+    y * 2
+}
+
+#[attune(make(_v3, _v3_t, _scalar, _scalar_t, _))]
+pub fn covered_return(x: u32) -> u32 {
+    if x == 0 {
+        return attuned!(bump(x));
+    }
+    x
+}
+
+#[attune(make(_v3, _v3_t, _scalar, _scalar_t, _))]
+pub fn covered_statement_start(x: u32) -> u32 {
+    attuned!(bump(x)) + attuned!(bump(x)).wrapping_mul(2)
+}
+
+// ============================================================================
 // Smoke tests
 // ============================================================================
 
@@ -168,6 +221,17 @@ mod tests {
         let _ = entropy_score(&data);
         let mut buf = [10u8, 20, 30, 200];
         premul_u8_impl(&mut buf);
+    }
+
+    #[test]
+    fn attuned_value_positions() {
+        assert_eq!(scalar_let(1), 4);
+        assert_eq!(scalar_arg(1), 2);
+        assert_eq!(covered_let(1), 4);
+        assert_eq!(covered_arg(1), 4);
+        assert_eq!(covered_return(0), 1);
+        assert_eq!(covered_return(5), 5);
+        assert_eq!(covered_statement_start(1), 6);
     }
 
     #[test]
