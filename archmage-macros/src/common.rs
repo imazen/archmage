@@ -19,7 +19,7 @@ pub(crate) struct LightFn {
 }
 
 impl syn::parse::Parse for LightFn {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let attrs = input.call(Attribute::parse_outer)?;
         let vis: syn::Visibility = input.parse()?;
         let sig: Signature = input.parse()?;
@@ -125,7 +125,7 @@ pub(crate) fn expect_as_allow<'a>(
                 && let syn::Meta::List(list) = &mut attr.meta
                 && let Some(last) = list.path.segments.last_mut()
             {
-                last.ident = syn::Ident::new("allow", last.ident.span());
+                last.ident = Ident::new("allow", last.ident.span());
             }
             attr
         })
@@ -253,25 +253,23 @@ pub(crate) fn replace_ident_in_tokens(
             if let Some(proc_macro2::TokenTree::Group(group)) = tokens.peek() {
                 let group = group.clone();
                 tokens.next();
-                let parser =
-                    |input: syn::parse::ParseStream| -> syn::Result<proc_macro2::TokenStream> {
-                        let path: syn::Path = input.parse()?;
-                        let args;
-                        syn::parenthesized!(args in input);
-                        let args = args.parse_terminated(syn::Expr::parse, syn::Token![,])?;
-                        let rest: proc_macro2::TokenStream = input.parse()?;
-                        let path =
-                            replace_ident_in_tokens(path.to_token_stream(), target, replacement);
-                        let args = args.iter().map(|arg| {
-                            if matches!(arg, syn::Expr::Path(p) if p.path.is_ident("Token")) {
-                                arg.to_token_stream()
-                            } else {
-                                replace_ident_in_tokens(arg.to_token_stream(), target, replacement)
-                            }
-                        });
-                        let rest = replace_ident_in_tokens(rest, target, replacement);
-                        Ok(quote! { #path(#(#args),*) #rest })
-                    };
+                let parser = |input: ParseStream<'_>| -> syn::Result<proc_macro2::TokenStream> {
+                    let path: syn::Path = input.parse()?;
+                    let args;
+                    syn::parenthesized!(args in input);
+                    let args = args.parse_terminated(syn::Expr::parse, syn::Token![,])?;
+                    let rest: proc_macro2::TokenStream = input.parse()?;
+                    let path = replace_ident_in_tokens(path.to_token_stream(), target, replacement);
+                    let args = args.iter().map(|arg| {
+                        if matches!(arg, syn::Expr::Path(p) if p.path.is_ident("Token")) {
+                            arg.to_token_stream()
+                        } else {
+                            replace_ident_in_tokens(arg.to_token_stream(), target, replacement)
+                        }
+                    });
+                    let rest = replace_ident_in_tokens(rest, target, replacement);
+                    Ok(quote! { #path(#(#args),*) #rest })
+                };
                 use syn::parse::{Parse, Parser};
                 let replaced = parser
                     .parse2(group.stream())
@@ -541,7 +539,7 @@ pub(crate) struct SharedOptions {
 /// Parse one of the shared options. Returns `Ok(true)` when `ident` named one.
 pub(crate) fn parse_shared_option(
     ident: &Ident,
-    input: syn::parse::ParseStream,
+    input: ParseStream<'_>,
     opts: &mut SharedOptions,
 ) -> syn::Result<bool> {
     match ident.to_string().as_str() {
@@ -574,7 +572,7 @@ pub(crate) fn parse_shared_option(
 /// missing, so `_mm512_loadu_ps` would resolve to the pointer-taking intrinsic.
 #[cfg(not(feature = "avx512"))]
 pub(crate) fn avx512_import_error(
-    sig: &syn::Signature,
+    sig: &Signature,
     import_intrinsics: bool,
     features: &[&str],
     token_desc: &str,
@@ -596,7 +594,7 @@ pub(crate) fn avx512_import_error(
 
 #[cfg(feature = "avx512")]
 pub(crate) fn avx512_import_error(
-    _sig: &syn::Signature,
+    _sig: &Signature,
     _import_intrinsics: bool,
     _features: &[&str],
     _token_desc: &str,
@@ -608,7 +606,7 @@ pub(crate) fn avx512_import_error(
 /// bound such as `SimdToken` gets its own explanation; `forms` lists the
 /// macro's accepted spellings.
 pub(crate) fn missing_token_error(
-    sig: &syn::Signature,
+    sig: &Signature,
     macro_name: &str,
     forms: &str,
 ) -> proc_macro2::TokenStream {
@@ -642,7 +640,7 @@ pub(crate) fn missing_token_error(
 /// nothing). `(a, b): (T, U)` becomes `__archmage_arg_1: (T, U)` plus
 /// `let (a, b): (T, U) = __archmage_arg_1;`. The type annotation is left off
 /// when the type is `impl Trait`, which a `let` cannot name.
-pub(crate) fn rename_non_ident_params(sig: &mut syn::Signature) -> Vec<proc_macro2::TokenStream> {
+pub(crate) fn rename_non_ident_params(sig: &mut Signature) -> Vec<proc_macro2::TokenStream> {
     let mut rebinds = Vec::new();
     let mut counter = 0u32;
     for arg in &mut sig.inputs {
@@ -657,7 +655,7 @@ pub(crate) fn rename_non_ident_params(sig: &mut syn::Signature) -> Vec<proc_macr
         let original_pat = pat_type.pat.clone();
         let ty = &pat_type.ty;
         if !matches!(original_pat.as_ref(), syn::Pat::Wild(_)) {
-            rebinds.push(if matches!(ty.as_ref(), syn::Type::ImplTrait(_)) {
+            rebinds.push(if matches!(ty.as_ref(), Type::ImplTrait(_)) {
                 quote! { let #original_pat = #generated; }
             } else {
                 quote! { let #original_pat: #ty = #generated; }
@@ -678,7 +676,7 @@ pub(crate) fn rename_non_ident_params(sig: &mut syn::Signature) -> Vec<proc_macr
 /// `find_token_param` synthesizes for it, so the nested dispatch rewrite and
 /// the tier assertions can refer to it; every other pattern is left as
 /// written. Returns the name when something was renamed.
-pub(crate) fn rename_wildcard_token(sig: &mut syn::Signature) -> Option<Ident> {
+pub(crate) fn rename_wildcard_token(sig: &mut Signature) -> Option<Ident> {
     let template = sig.clone();
     for arg in &mut sig.inputs {
         let syn::FnArg::Typed(pat_type) = arg else {
@@ -689,7 +687,7 @@ pub(crate) fn rename_wildcard_token(sig: &mut syn::Signature) -> Option<Ident> {
         }
         // Probe this parameter alone, with the function's generics so a
         // `T: HasX64V2` bound still resolves.
-        let probe = syn::Signature {
+        let probe = Signature {
             inputs: std::iter::once(syn::FnArg::Typed(pat_type.clone())).collect(),
             ..template.clone()
         };
@@ -724,7 +722,7 @@ pub(crate) fn prepend_to_body(
 /// with the receiver's own shape kept: `&'a self` becomes `_self: &'a Type`,
 /// `&mut self` becomes `_self: &mut Type`, `self: Box<Self>` becomes
 /// `_self: Box<Type>`, and `self` / `mut self` become `_self: Type`.
-pub(crate) fn nested_self_param(receiver: &syn::Receiver, self_ty: &syn::Type) -> syn::FnArg {
+pub(crate) fn nested_self_param(receiver: &syn::Receiver, self_ty: &Type) -> syn::FnArg {
     let ty: proc_macro2::TokenStream = match &receiver.kind {
         syn::ReceiverKind::Value => quote!(#self_ty),
         syn::ReceiverKind::Reference(_, lifetime, mutability) => {
@@ -787,7 +785,7 @@ pub(crate) fn replace_self_value_in_tokens(
 
 /// The identifiers of every parameter whose type is a token (concrete, trait
 /// bound or bounded generic), in signature order.
-pub(crate) fn token_param_idents(sig: &syn::Signature) -> Vec<String> {
+pub(crate) fn token_param_idents(sig: &Signature) -> Vec<String> {
     let mut out = Vec::new();
     for arg in &sig.inputs {
         let syn::FnArg::Typed(syn::PatType { pat, ty, .. }) = arg else {
@@ -821,7 +819,7 @@ pub(crate) fn token_param_idents(sig: &syn::Signature) -> Vec<String> {
 /// take their features from one token, and picking the first silently was
 /// the surprising rule that issue #122 reports.
 pub(crate) fn multiple_tokens_error(
-    sig: &syn::Signature,
+    sig: &Signature,
     macro_name: &str,
     idents: &[String],
 ) -> proc_macro2::TokenStream {

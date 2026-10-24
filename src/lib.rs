@@ -85,6 +85,8 @@
 #[cfg(feature = "std")]
 extern crate std;
 
+// Only no_std builds need `alloc` by name; std builds use the prelude.
+#[cfg(not(feature = "std"))]
 extern crate alloc;
 
 // Re-export macros from archmage-macros

@@ -8,8 +8,6 @@ use syn::{
 };
 
 use crate::common::*;
-#[allow(unused_imports)]
-use crate::common::{build_call_args, build_scalar_call_args};
 use crate::tiers::*;
 
 /// Input for the incant! macro
@@ -31,7 +29,7 @@ pub(crate) struct IncantInput {
 // suffix_path → moved to common.rs
 
 impl Parse for IncantInput {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         // Parse: function_path(arg1, arg2, ...) [with token_expr] [, [tier1, tier2, ...]]
         let func_path: syn::Path = input.parse()?;
 
@@ -320,9 +318,7 @@ pub(crate) fn gen_incant_passthrough(
     };
     let fallback_arm = if has_default {
         let fn_default = suffix_path(func_path, "default");
-        let default_args = args
-            .iter()
-            .filter(|a| !crate::common::is_bare_ident(a, "Token"));
+        let default_args = args.iter().filter(|a| !is_bare_ident(a, "Token"));
         quote! {
             break '__incant #fn_default(#(#default_args),*);
         }
@@ -380,9 +376,7 @@ pub(crate) fn gen_incant_entry(
     let fallback_call = if has_default {
         let fn_default = suffix_path(func_path, "default");
         // Default tier: strip Token marker from args if present (tokenless call)
-        let default_args = args
-            .iter()
-            .filter(|a| !crate::common::is_bare_ident(a, "Token"));
+        let default_args = args.iter().filter(|a| !is_bare_ident(a, "Token"));
         quote! { #fn_default(#(#default_args),*) }
     } else {
         let fn_scalar = suffix_path(func_path, "scalar");

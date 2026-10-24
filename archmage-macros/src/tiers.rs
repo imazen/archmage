@@ -32,7 +32,10 @@ pub(crate) const DEFAULT_TIER_NAMES: &[&str] = &["v4", "v3", "neon", "wasm128", 
 ///
 /// Accepts both `tier(cfg(feature))` (canonical) and `tier(feature)` (shorthand).
 /// Returns the combined `"tier(feature)"` string, or just `"tier"` if no gate.
-pub(crate) fn parse_tier_name_with_gate(ident: &Ident, input: ParseStream) -> syn::Result<String> {
+pub(crate) fn parse_tier_name_with_gate(
+    ident: &Ident,
+    input: ParseStream<'_>,
+) -> syn::Result<String> {
     if input.peek(syn::token::Paren) {
         let paren_content;
         syn::parenthesized!(paren_content in input);
@@ -66,7 +69,7 @@ pub(crate) fn parse_tier_name_with_gate(ident: &Ident, input: ParseStream) -> sy
 /// - `"+arm_v2"` — add/override this tier
 /// - `"-neon"` — remove this tier from defaults
 /// - `"v3"` — plain tier (override mode)
-pub(crate) fn parse_one_tier(input: ParseStream) -> syn::Result<String> {
+pub(crate) fn parse_one_tier(input: ParseStream<'_>) -> syn::Result<String> {
     let prefix = if input.peek(Token![+]) {
         let _: Token![+] = input.parse()?;
         "+"

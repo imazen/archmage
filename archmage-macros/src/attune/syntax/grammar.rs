@@ -76,7 +76,7 @@ impl Seen {
 }
 
 impl Parse for Definition {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let mut definition = Self {
             options: Options::default(),
             family: false,
@@ -188,7 +188,7 @@ impl Parse for Definition {
     }
 }
 
-fn comma(input: ParseStream) -> syn::Result<()> {
+fn comma(input: ParseStream<'_>) -> syn::Result<()> {
     if !input.is_empty() {
         input.parse::<Token![,]>()?;
     }
@@ -196,7 +196,7 @@ fn comma(input: ParseStream) -> syn::Result<()> {
 }
 
 impl Output {
-    fn parse(input: ParseStream, grouped: bool) -> syn::Result<Self> {
+    fn parse(input: ParseStream<'_>, grouped: bool) -> syn::Result<Self> {
         let mut options = OutputOptions::default();
         // Compatibility for the existing draft's positional make(...) grammar.
         // Flat syntax only accepts selector-local options.
@@ -223,7 +223,7 @@ impl Output {
     }
 
     fn after_name(
-        input: ParseStream,
+        input: ParseStream<'_>,
         name: Ident,
         action: Action,
         mut options: OutputOptions,

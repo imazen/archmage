@@ -37,7 +37,6 @@
 //! - [`Fail`](CompileTimePolicy::Fail): panic — use in CI with the
 //!   `testable_dispatch` feature enabled for full coverage
 
-use alloc::{format, string::String, vec::Vec};
 use std::sync::{Mutex, MutexGuard};
 
 use crate::CompileTimeGuaranteedError;

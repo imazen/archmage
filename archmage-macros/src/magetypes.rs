@@ -49,7 +49,7 @@ pub(crate) fn magetypes_impl(
     // Build the `define(...)` type-alias preamble once. Each alias RHS still
     // references `Token` — the per-tier substitution below rewrites it to the
     // concrete token type (`X64V3Token`, `ScalarToken`, etc.).
-    let define_preamble: proc_macro2::TokenStream = {
+    let define_preamble: TokenStream = {
         let aliases = defines.iter().map(|name| {
             let ident = quote::format_ident!("{name}");
             quote! {

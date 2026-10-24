@@ -315,7 +315,7 @@ pub fn magetypes(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// Returns `(rite_flag, in_impl, defines, tier_names)`. Tier names preserve the
 /// `+`/`-` modifier prefixes and `(cfg(feat))` gates for the tier resolver.
 fn parse_magetypes_attr(
-    input: syn::parse::ParseStream,
+    input: syn::parse::ParseStream<'_>,
 ) -> syn::Result<(bool, bool, Vec<String>, Vec<String>)> {
     use syn::Token;
     let mut rite_flag = false;
@@ -342,15 +342,15 @@ fn parse_magetypes_attr(
         };
 
         if peek_rite {
-            let _: syn::Ident = input.parse()?;
+            input.parse::<syn::Ident>()?;
             rite_flag = true;
         } else if peek_in_impl {
             // A receiver-less associated function in an inherent impl: the
             // generated #[arcane] variants must call their siblings as `Self::`.
-            let _: syn::Ident = input.parse()?;
+            input.parse::<syn::Ident>()?;
             in_impl = true;
         } else if peek_define {
-            let _: syn::Ident = input.parse()?;
+            input.parse::<syn::Ident>()?;
             let content;
             syn::parenthesized!(content in input);
             while !content.is_empty() {
@@ -484,7 +484,7 @@ fn parse_magetypes_attr(
 /// - `_scalar` for `ScalarToken`
 #[proc_macro]
 pub fn incant(input: TokenStream) -> TokenStream {
-    if let Some(expanded) = common::expanded_passthrough(&input.clone().into()) {
+    if let Some(expanded) = expanded_passthrough(&input.clone().into()) {
         return expanded.into();
     }
     let input = parse_macro_input!(input as IncantInput);
@@ -494,7 +494,7 @@ pub fn incant(input: TokenStream) -> TokenStream {
 /// Legacy alias for [`incant!`].
 #[proc_macro]
 pub fn simd_route(input: TokenStream) -> TokenStream {
-    if let Some(expanded) = common::expanded_passthrough(&input.clone().into()) {
+    if let Some(expanded) = expanded_passthrough(&input.clone().into()) {
         return expanded.into();
     }
     let input = parse_macro_input!(input as IncantInput);
@@ -510,7 +510,7 @@ pub fn simd_route(input: TokenStream) -> TokenStream {
 /// See [`incant!`] for full documentation and examples.
 #[proc_macro]
 pub fn dispatch_variant(input: TokenStream) -> TokenStream {
-    if let Some(expanded) = common::expanded_passthrough(&input.clone().into()) {
+    if let Some(expanded) = expanded_passthrough(&input.clone().into()) {
         return expanded.into();
     }
     let input = parse_macro_input!(input as IncantInput);
@@ -717,7 +717,7 @@ pub fn attune(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// overrides inference and is required to supply proof in unannotated callers.
 #[proc_macro]
 pub fn attuned(input: TokenStream) -> TokenStream {
-    if let Some(expanded) = common::expanded_passthrough(&input.clone().into()) {
+    if let Some(expanded) = expanded_passthrough(&input.clone().into()) {
         return expanded.into();
     }
     let input = parse_macro_input!(input as attune::call::Call);
@@ -728,7 +728,7 @@ pub fn attuned(input: TokenStream) -> TokenStream {
 /// fallback covered by the caller's feature context (or scalar outside one).
 #[proc_macro]
 pub fn reattune(input: TokenStream) -> TokenStream {
-    if let Some(expanded) = common::expanded_passthrough(&input.clone().into()) {
+    if let Some(expanded) = expanded_passthrough(&input.clone().into()) {
         return expanded.into();
     }
     let input = parse_macro_input!(input as attune::call::Call);

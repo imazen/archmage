@@ -35,7 +35,7 @@ pub(crate) struct AutoversionArgs {
 }
 
 impl Parse for AutoversionArgs {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let mut self_type = None;
         let mut tier_names = Vec::new();
         let mut cfg_feature = None;
@@ -45,7 +45,7 @@ impl Parse for AutoversionArgs {
         while !input.is_empty() {
             // Check for +tier/-tier (modify defaults) before consuming ident
             if input.peek(Token![+]) || input.peek(Token![-]) {
-                tier_names.push(crate::tiers::parse_one_tier(input)?);
+                tier_names.push(parse_one_tier(input)?);
             } else {
                 let ident: Ident = input.parse()?;
                 if ident == "_self" {
@@ -62,7 +62,7 @@ impl Parse for AutoversionArgs {
                     cfg_feature = Some(feat.to_string());
                 } else {
                     // Treat as tier name, optionally with cfg gate
-                    tier_names.push(crate::tiers::parse_tier_name_with_gate(&ident, input)?);
+                    tier_names.push(parse_tier_name_with_gate(&ident, input)?);
                 }
             }
             if input.peek(Token![,]) {
@@ -422,7 +422,7 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
     // ScalarToken wildcard gets a name too, which the dispatcher ignores.
     let mut dispatcher_sig = input_fn.sig.clone();
     dispatcher_sig.inputs = dispatcher_inputs.into_iter().collect();
-    let _ = rename_non_ident_params(&mut dispatcher_sig);
+    rename_non_ident_params(&mut dispatcher_sig);
     let dispatcher_inputs: Vec<FnArg> = dispatcher_sig.inputs.into_iter().collect();
 
     // Collect argument idents for dispatch calls (exclude self receiver

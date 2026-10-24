@@ -42,6 +42,10 @@ mod sealed {
 // undermining the entire token safety model.
 pub(crate) use sealed::Sealed;
 
+// With std, `Vec` comes from the prelude; importing it there is redundant.
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
+
 /// Marker trait for SIMD capability tokens.
 ///
 /// All tokens implement this trait, enabling generic code over different
@@ -68,7 +72,7 @@ pub(crate) use sealed::Sealed;
 ///     process_scalar(data)
 /// }
 /// ```
-pub trait SimdToken: sealed::Sealed + Copy + Clone + Send + Sync + 'static {
+pub trait SimdToken: Sealed + Copy + Clone + Send + Sync + 'static {
     /// Human-readable name for diagnostics and error messages.
     const NAME: &'static str;
 
@@ -196,7 +200,7 @@ pub use generated::*;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct ScalarToken;
 
-impl sealed::Sealed for ScalarToken {}
+impl Sealed for ScalarToken {}
 
 impl SimdToken for ScalarToken {
     const NAME: &'static str = "Scalar";
@@ -331,7 +335,7 @@ impl std::error::Error for CompileTimeGuaranteedError {}
 #[derive(Debug, Clone)]
 pub struct DisableAllSimdError {
     /// The individual errors for each token that could not be disabled.
-    pub errors: alloc::vec::Vec<CompileTimeGuaranteedError>,
+    pub errors: Vec<CompileTimeGuaranteedError>,
 }
 
 impl core::fmt::Display for DisableAllSimdError {
@@ -382,7 +386,7 @@ pub fn dangerously_disable_tokens_except_wasm(
     #[allow(unused)] disabled: bool,
 ) -> Result<(), DisableAllSimdError> {
     #[allow(unused_mut)]
-    let mut errors = alloc::vec::Vec::new();
+    let mut errors = Vec::new();
 
     // x86_64: disable V2 (cascades to Crypto, V3, V3Crypto, V4, V4x, Fp16)
     #[cfg(target_arch = "x86_64")]

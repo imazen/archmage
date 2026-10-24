@@ -8,7 +8,7 @@ use syn::{
 };
 
 impl Parse for crate::engine::boundary::BoundaryOptions {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let mut args = ArcaneArgs::default();
 
         while !input.is_empty() {

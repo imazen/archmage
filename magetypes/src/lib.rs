@@ -81,6 +81,8 @@
 #[cfg(feature = "std")]
 extern crate std;
 
+// Only the unit tests name `alloc` (they also run without std).
+#[cfg(test)]
 extern crate alloc;
 
 // Re-export archmage for convenience

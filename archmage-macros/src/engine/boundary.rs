@@ -19,7 +19,7 @@ fn gen_token_assertion(
     token_type_name: &Option<String>,
     token_type: &Option<Type>,
     suppress_const_test: bool,
-) -> proc_macro2::TokenStream {
+) -> TokenStream {
     if suppress_const_test {
         return quote! {};
     }
@@ -163,7 +163,7 @@ pub(crate) fn expand(
     // so contextual dispatch can use them.
     let wrapper_sig = {
         let mut sig = input_fn.sig.clone();
-        let _ = rename_non_ident_params(&mut sig);
+        rename_non_ident_params(&mut sig);
         sig
     };
     let wrapper_token_ident = find_token_param(&wrapper_sig)
@@ -202,7 +202,7 @@ pub(crate) fn expand(
     }
 
     // Build a single target_feature attribute with all features comma-joined
-    let features_csv = crate::token_discovery::features_csv(token_type_name.as_deref(), &features);
+    let features_csv = features_csv(token_type_name.as_deref(), &features);
     if args.body_inline == Some(InlinePolicy::Always) && !features.is_empty() {
         return syn::Error::new_spanned(
             &input_fn.sig.ident,

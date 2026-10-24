@@ -9,8 +9,6 @@
 //! `cargo xtask soundness` rejects the `unsafe` keyword and any other
 //! `allow(unsafe_code)` elsewhere in `magetypes/src`.
 
-use core::mem::{align_of, size_of};
-
 /// Plain storage with no padding, pointers, or invalid bit patterns.
 ///
 /// # Safety
@@ -328,7 +326,7 @@ pub(crate) fn store<Src: Pod, Dst: Pod>(src: Src, dest: &mut Dst) {
     // SAFETY: dest is exclusively borrowed and valid for exactly this many
     // bytes. Pod permits every source bit pattern as Dst; unaligned write
     // imposes no extra alignment and constructs no misaligned reference.
-    unsafe { core::ptr::write_unaligned((dest as *mut Dst).cast::<Src>(), src) }
+    unsafe { core::ptr::write_unaligned(core::ptr::from_mut(dest).cast::<Src>(), src) }
 }
 
 /// AVX-512 gather and scatter: the pointer-taking half of the `u32x16`,

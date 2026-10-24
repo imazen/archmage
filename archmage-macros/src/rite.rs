@@ -36,7 +36,7 @@ pub(crate) struct RiteArgs {
 pub(crate) const DEFAULT_TIER_SENTINEL: &str = "";
 
 impl Parse for RiteArgs {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let mut args = RiteArgs::default();
 
         // Tier list, assembled with `+`/`-` modifier support (issue #48).
@@ -224,7 +224,7 @@ pub(crate) fn rite_single_impl(mut input_fn: LightFn, args: RiteArgs) -> TokenSt
 /// Each variant is cfg-gated to its architecture and gets `#[inline]`.
 pub(crate) fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenStream {
     let fn_name = &input_fn.sig.ident;
-    let mut variants = proc_macro2::TokenStream::new();
+    let mut variants = TokenStream::new();
 
     for tier_token in &args.tier_tokens {
         let Some(tier) = FeatureContext::from_tier_token(tier_token) else {
@@ -242,7 +242,7 @@ pub(crate) fn rite_multi_tier_impl(input_fn: LightFn, args: &RiteArgs) -> TokenS
 
         // A multi-tier variant may still carry a token parameter; the rewrite
         // threads it through nested incant! calls when it does.
-        let tier = match crate::token_discovery::find_token_param(&variant_fn.sig) {
+        let tier = match find_token_param(&variant_fn.sig) {
             Some(info) => FeatureContext {
                 token_ident: Some(info.ident),
                 ..tier

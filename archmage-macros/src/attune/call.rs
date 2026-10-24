@@ -20,7 +20,7 @@ pub(crate) struct Call {
 }
 
 impl Parse for Call {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let path = input.parse()?;
         let inner;
         syn::parenthesized!(inner in input);
@@ -173,8 +173,8 @@ impl Call {
             proc_macro2::Span::mixed_site(),
         );
         *serial += 1;
-        let proof_ident = syn::Ident::new("__attune_proof", proc_macro2::Span::mixed_site());
-        let supplied_ident = syn::Ident::new("__attune_supplied", proc_macro2::Span::mixed_site());
+        let proof_ident = Ident::new("__attune_proof", proc_macro2::Span::mixed_site());
+        let supplied_ident = Ident::new("__attune_supplied", proc_macro2::Span::mixed_site());
         let args: Vec<_> = self
             .args
             .iter()

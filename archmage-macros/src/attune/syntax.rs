@@ -80,7 +80,7 @@ pub(super) fn selector(name: &str, span: Span) -> syn::Result<(&'static TierDesc
     Ok((tier, form))
 }
 
-pub(super) fn gate(input: ParseStream) -> syn::Result<Option<String>> {
+pub(super) fn gate(input: ParseStream<'_>) -> syn::Result<Option<String>> {
     if !input.peek(syn::token::Paren) {
         return Ok(None);
     }
@@ -104,7 +104,7 @@ pub(super) fn gate(input: ParseStream) -> syn::Result<Option<String>> {
     Ok(Some(value))
 }
 
-pub(super) fn parse_names(input: ParseStream) -> syn::Result<Vec<Rename>> {
+pub(super) fn parse_names(input: ParseStream<'_>) -> syn::Result<Vec<Rename>> {
     let inner;
     syn::parenthesized!(inner in input);
     let mut names: Vec<Rename> = Vec::new();
@@ -128,12 +128,12 @@ pub(super) fn parse_names(input: ParseStream) -> syn::Result<Vec<Rename>> {
 }
 
 impl Parse for Args {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         grammar::Definition::parse(input)?.resolve()
     }
 }
 
-fn parse_inline(input: ParseStream) -> syn::Result<Inline> {
+fn parse_inline(input: ParseStream<'_>) -> syn::Result<Inline> {
     let inner;
     syn::parenthesized!(inner in input);
     let value: Ident = inner.parse()?;
