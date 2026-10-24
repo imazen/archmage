@@ -71,6 +71,7 @@ static OWNER_THREAD: Mutex<Option<std::thread::ThreadId>> = Mutex::new(None);
 ///     assert_eq!(baseline, fallback);
 /// }
 /// ```
+#[derive(Debug)]
 pub struct TokenTestGuard {
     _inner: MutexGuard<'static, ()>,
 }

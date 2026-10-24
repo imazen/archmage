@@ -38,9 +38,9 @@ SIMD128 = "-Ctarget-feature=+simd128"
 # which reach path dependencies. Left out on purpose: unsafe_code (the token
 # and storage modules are audited unsafe), unused_results (idiomatic syn
 # parsing), variant_size_differences, unnameable_types (sealed traits),
-# unused_crate_dependencies (cfg-dependent deps), missing_copy/
-# missing_debug_implementations (would add public API), and nightly-only
-# lints.
+# unused_crate_dependencies (cfg-dependent deps), missing_copy_implementations
+# (CompileTimeGuaranteedError stays non-Copy so it can gain non-Copy fields),
+# and nightly-only lints.
 OPT_IN = " ".join("-W " + lint for lint in (
     "unused_qualifications", "trivial_numeric_casts", "trivial_casts",
     "unreachable_pub", "elided_lifetimes_in_paths", "let_underscore_drop",
@@ -49,7 +49,7 @@ OPT_IN = " ".join("-W " + lint for lint in (
     "missing_docs", "unsafe_op_in_unsafe_fn", "keyword_idents",
     "explicit_outlives_requirements", "macro_use_extern_crate",
     "meta_variable_misuse", "unit_bindings", "rust_2018_idioms",
-    "rust_2024_compatibility",
+    "rust_2024_compatibility", "missing_debug_implementations",
 ))
 CRATES = ["-p", "archmage", "-p", "magetypes", "-p", "archmage-macros", "--lib"]
 

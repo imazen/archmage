@@ -256,4 +256,5 @@
 /// No runtime role. Its existence ensures rustdoc scans the module's
 /// `//!` doctests when `cargo test --doc` runs.
 #[doc(hidden)]
+#[derive(Debug, Clone, Copy)]
 pub struct BypassAdversarialProofs;

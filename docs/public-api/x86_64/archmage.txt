@@ -19,7 +19,7 @@
 #   struct fields                              12
 #   enum variants                              27
 #   re-exports                                112
-#   trait roster entries (type × trait)       164
+#   trait roster entries (type × trait)       165
 #   auto-trait-complete types                  23
 #   auto-trait exceptions                       1
 #
@@ -589,7 +589,7 @@ pub type Sse2Token = tokens::X64V1Token [also: prelude, tokens]
 testing::CompileTimePolicy: Clone, Copy, Debug, Eq, PartialEq
 testing::PermutationReport: Clone, Debug, Display
 testing::TokenPermutation: Clone, Debug, Display
-testing::TokenTestGuard: Drop
+testing::TokenTestGuard: Debug, Drop
 tokens::Arm64V2Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasArm64V2, tokens::HasNeon, tokens::HasNeonAes, tokens::IntoConcreteToken, tokens::SimdToken
 tokens::Arm64V3Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::HasArm64V2, tokens::HasArm64V3, tokens::HasNeon, tokens::HasNeonAes, tokens::HasNeonSha3, tokens::IntoConcreteToken, tokens::SimdToken
 tokens::Avx512Fp16Token: Clone, Copy, Debug, tokens::Has128BitSimd, tokens::Has256BitSimd, tokens::Has512BitSimd, tokens::HasX64V2, tokens::HasX64V4, tokens::IntoConcreteToken, tokens::SimdToken

@@ -12,6 +12,10 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 - Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)
 - Remove width traits `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` — use concrete tokens or tier traits (`HasX64V2`, `HasX64V4`) instead (deprecated since 0.9.9; `Has256BitSimd` only enables AVX, not AVX2/FMA)
 
+#### Added
+
+- `testing::TokenTestGuard` implements `Debug`, so crates enabling `missing_debug_implementations` can derive it on types that hold the guard. `CompileTimeGuaranteedError` deliberately stays non-`Copy` so it can gain fields later.
+
 #### Fixed
 
 - No warnings on wasm32 from generated tokens (unused `unsafe` around safe target-feature calls) or in tests under `-Ctarget-cpu`; library warnings reach crates that depend on archmage by path and deny warnings (5f547440).
@@ -181,6 +185,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 - Preserve the self-contained, free-function-only [artisanal dispatch prototype](experiments/artisanal-dispatch/README.md) on main, with its proof/tier layer, audit, expansion and assembly evidence, and native CI checks. Its independent unpublished workspace adds no dependencies or exports to release crates (8416f708).
 - `xtask/warning_sweep.py` (`just warnings`) runs clippy over 19 target/feature/CPU configurations; the `warning-sweep` CI job requires it to report nothing. `tests/clippy-consumer` invokes every macro shape under the lints downstream crates commonly enable (pedantic, `missing_docs`, `unreachable_pub`, `rust_2018_idioms`, …) (56e12020, e0f6a7be, 7964e1cd).
 - Tests, benches, examples and xtask are warning-free on every swept configuration (1e47a3f7).
+- `missing_debug_implementations` joins the opt-in lint set; the hidden `bypass_adversarial::BypassAdversarialProofs` marker derives `Debug, Clone, Copy`.
 - A weekly `nightly-lints` workflow runs the warning sweep on the nightly toolchain and reports failures as a `nightly-lints` issue, ahead of new lints reaching stable.
 - The library crates are clean under the allow-by-default rustc lints a downstream crate may pass through `RUSTFLAGS` (which reach path dependencies): `unused_qualifications`, `trivial_casts`/`trivial_numeric_casts`, `unreachable_pub`, `rust_2018_idioms` and others; previously about 1,900 warnings, mostly in generated magetypes code. Generated files have qualified paths shortened to the names they import, and templates emit casts only between different types. Five `optin-*` warning-sweep configurations keep it that way (6b904214, 83a41b21, 2fb0463d).
 
