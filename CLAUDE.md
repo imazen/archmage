@@ -1221,8 +1221,11 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
   imports went unused; rewritten calls now go through the caller's path as
   `path!(@__archmage_expanded ...)` (`common::wrap_expanded`; calls inside
   bodies need the macro in scope). Forwarding wrappers allow pedantic
-  `used_underscore_binding`/`inline_always`; attune wildcard outputs allow
-  `dead_code`. Library warnings on wasm32/32-bit/target-cpu builds fixed in
+  `used_underscore_binding` (on the forwarding call statement only) and
+  `inline_always`; attune wildcard proof wrappers allow `dead_code`. No
+  macro-emitted lint level may cover the author's body (2026-10-24 audit:
+  `tests/compile_fail/author_lints_*`); `#[autoversion]`'s scalar fallback is
+  the one exception, so its nested items go unreported where only it compiles. Library warnings on wasm32/32-bit/target-cpu builds fixed in
   the generators. A nested default-tier `incant!` in a v4 body left its
   fallback unreachable when the caller's `avx512` feature was on; gated arms
   and the fallback are now mutually exclusive cfg blocks. Coverage:
