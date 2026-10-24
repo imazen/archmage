@@ -657,6 +657,9 @@ CI checks (all must pass):
    macro consumer crates `tests/no-features-crate` and `tests/clippy-consumer`
    (`--all-targets`). The `warning-sweep` CI job (`just warnings`) additionally
    lints every target/feature/CPU configuration in `xtask/warning_sweep.py`.
+   The weekly `nightly-lints` workflow runs the same sweep on the nightly
+   toolchain and opens a `nightly-lints` issue when it fails (not a CI gate);
+   reproduce with `RUSTUP_TOOLCHAIN=nightly just warnings`.
 8. `cargo test --features "std avx512"` — all tests pass
 9. **no_std compilation + tests** — archmage and magetypes build and test without `std`
 10. **No-features integration test** — `archmage-no-features-test` crate (zero features, `deny(warnings)`)
