@@ -81,6 +81,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "archmage-clippy-consumer"
+version = "0.0.0"
+dependencies = [
+ "archmage",
+ "magetypes",
+]
+
+[[package]]
 name = "archmage-macros"
 version = "0.9.31-beta.1"
 dependencies = [

@@ -1,0 +1,35 @@
+[package]
+name = "archmage-clippy-consumer"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.89"
+publish = false
+
+# Macro output is linted in the crate that invokes the macro, so downstream
+# `cargo clippy -D warnings` fails on any diagnostic our expansions produce.
+# This crate's hand-written code is clean under the lints downstream crates
+# commonly enable; every remaining diagnostic is the macros' to fix.
+# `just lint` and CI run clippy on it with -D warnings.
+
+[features]
+avx512 = ["archmage/avx512", "magetypes/avx512"]
+
+[dependencies]
+archmage = { path = "../.." }
+magetypes = { path = "../../magetypes" }
+
+[lints.rust]
+missing_docs = "warn"
+missing_debug_implementations = "warn"
+unreachable_pub = "warn"
+unused_qualifications = "warn"
+unsafe_op_in_unsafe_fn = "warn"
+trivial_casts = "warn"
+trivial_numeric_casts = "warn"
+unused_lifetimes = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+undocumented_unsafe_blocks = "warn"

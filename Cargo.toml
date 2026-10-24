@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "archmage-macros", "magetypes", "xtask", "tests/no-features-crate"]
+members = [".", "archmage-macros", "magetypes", "xtask", "tests/no-features-crate", "tests/clippy-consumer"]
 # `apidoc/` is the CI-free public-API snapshot runner: excluded so plain
 # `cargo test` and every CI job never compile its dependency tree or run
 # rustdoc. Regenerate via `just api-doc`.
