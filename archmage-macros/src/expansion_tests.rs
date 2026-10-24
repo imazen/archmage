@@ -1088,16 +1088,22 @@ fn nested_inner_fn_has_no_lint_levels_of_its_own() {
         "{output}"
     );
     assert_eq!(output.matches("too_many_arguments").count(), 1, "{output}");
-    // The wrapper adds only its own pedantic allows; the inner fn has no lint
-    // attributes of its own.
-    assert_eq!(output.matches("# [allow").count(), 2, "{output}");
+    // The wrapper adds `inline_always` for itself and `used_underscore_binding`
+    // on the forwarding call statement only; the inner fn, which holds the
+    // author's body, has no lint attributes of its own.
+    assert_eq!(output.matches("# [allow").count(), 3, "{output}");
     assert_eq!(
         output
-            .matches("# [allow (clippy :: inline_always , clippy :: used_underscore_binding)]")
+            .matches("# [allow (clippy :: inline_always)]")
             .count(),
         1,
         "{output}"
     );
+    let inner_start = output.find("fn __simd_inner_f").expect("inner fn");
+    let underscore = output
+        .find("# [allow (clippy :: used_underscore_binding)]")
+        .expect("forwarding-call allow");
+    assert!(underscore > inner_start, "{output}");
     let inner = &output[output.find("{ #").expect("nested inner fn")..];
     let inner = &inner[..inner.find("fn __simd_inner_f").expect("inner fn")];
     assert!(

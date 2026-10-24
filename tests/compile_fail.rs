@@ -58,6 +58,11 @@ fn ui_tests() {
     t.compile_fail("tests/compile_fail/two_token_params_arcane.rs");
     t.compile_fail("tests/compile_fail/two_token_params_rite.rs");
     t.compile_fail("tests/compile_fail/rite_in_trait.rs");
+
+    // Macro-emitted lint levels must not cover the author's code.
+    t.compile_fail("tests/compile_fail/author_lints_attune_wildcard_body.rs");
+    t.compile_fail("tests/compile_fail/author_lints_autoversion_body.rs");
+    t.compile_fail("tests/compile_fail/author_lints_autoversion_unused_method.rs");
     t.compile_fail("tests/compile_fail/rite_in_impl.rs");
 
     // #[autoversion] cannot share an `impl Trait` return between variants

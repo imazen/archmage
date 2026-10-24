@@ -33,7 +33,6 @@ fn sum(data: &[f32; 4]) -> f32 {
 }
 #[cfg(target_arch = "x86_64")]
 #[doc(hidden)]
-#[allow(dead_code)]
 #[target_feature(
     enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
 )]
@@ -44,14 +43,14 @@ fn __arcane_sum_v4(_token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
 #[cfg(target_arch = "x86_64")]
 #[allow(dead_code)]
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn sum_v4(_token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
     let _: () = <archmage::X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
-    unsafe { __arcane_sum_v4(_token, data) }
+    #[allow(clippy::used_underscore_binding)]
+    { unsafe { __arcane_sum_v4(_token, data) } }
 }
 #[cfg(target_arch = "x86_64")]
 #[doc(hidden)]
-#[allow(dead_code)]
 #[target_feature(
     enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
 )]
@@ -62,14 +61,14 @@ fn __arcane_sum_v3(_token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
 #[cfg(target_arch = "x86_64")]
 #[allow(dead_code)]
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn sum_v3(_token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
     let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    unsafe { __arcane_sum_v3(_token, data) }
+    #[allow(clippy::used_underscore_binding)]
+    { unsafe { __arcane_sum_v3(_token, data) } }
 }
 #[cfg(target_arch = "aarch64")]
 #[doc(hidden)]
-#[allow(dead_code)]
 #[target_feature(enable = "neon")]
 #[inline]
 fn __arcane_sum_neon(_token: archmage::NeonToken, data: &[f32; 4]) -> f32 {
@@ -78,10 +77,11 @@ fn __arcane_sum_neon(_token: archmage::NeonToken, data: &[f32; 4]) -> f32 {
 #[cfg(target_arch = "aarch64")]
 #[allow(dead_code)]
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn sum_neon(_token: archmage::NeonToken, data: &[f32; 4]) -> f32 {
     let _: () = <archmage::NeonToken>::__ARCHMAGE_ASSERT_TIER_72CB52B2;
-    unsafe { __arcane_sum_neon(_token, data) }
+    #[allow(clippy::used_underscore_binding)]
+    { unsafe { __arcane_sum_neon(_token, data) } }
 }
 #[cfg(target_arch = "wasm32")]
 #[target_feature(enable = "simd128")]

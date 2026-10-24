@@ -13,7 +13,7 @@ where
     x
 }
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn probe<T: HasX64V2>(token: T, x: f32) -> f32
 where
     T: HasX64V4,
@@ -25,6 +25,7 @@ where
         >(_: &__T) {}
         __archmage_assert_tier_trait(&token);
     }
-    unsafe { __arcane_probe::<T>(token, x) }
+    #[allow(clippy::used_underscore_binding)]
+    { unsafe { __arcane_probe::<T>(token, x) } }
 }
 fn main() {}

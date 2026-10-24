@@ -289,15 +289,10 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
         };
         let mut body = input.clone();
         body.sig.ident = direct_name.clone();
-        // A wildcard output may go unused; so may a hidden body that only an
-        // unused wildcard proof wrapper calls.
-        let unused_ok = match direct_selection {
-            Some(selection) => selection.wildcard,
-            None => args.dispatcher.is_none() && proof_selection.is_some_and(|s| s.wildcard),
-        };
-        if unused_ok {
-            body.attrs.push(parse_quote!(#[allow(dead_code)]));
-        }
+        // No lint levels here: this function holds the author's body, and an
+        // allow would also cover items nested in it. Unused wildcard bodies are
+        // not reported anyway: the proof wrappers that call them allow
+        // dead_code (they hold no author code), which keeps their callees live.
         // Direct outputs use their visibility override; hidden implementations
         // retain the source operation's policy before becoming private. Wrapper
         // visibility and inline overrides apply independently to wrappers.

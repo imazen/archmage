@@ -56,6 +56,10 @@ pub(crate) struct BoundaryOptions {
     /// impl, so the wrapper calls its sibling as `Self::__arcane_fn`. An
     /// attribute macro cannot see the enclosing impl, so this is spelled out.
     pub(crate) in_impl: bool,
+    /// Attributes for the forwarding wrapper only. In sibling mode the
+    /// wrapper holds no author code, so lint levels here never reach the
+    /// author's body; on wasm32 (one function) and in nested mode they do.
+    pub(crate) wrapper_attrs: Vec<Attribute>,
 }
 
 /// Shared implementation for arcane/arcane macros.
@@ -341,6 +345,8 @@ pub(crate) fn arcane_impl_wasm_safe(
     // Prepend target_feature + inline attrs, filtering user #[inline] to avoid duplicates
     let mut new_attrs = target_feature_attrs;
     new_attrs.extend(inline_attr);
+    // One function is both wrapper and body here.
+    new_attrs.extend(args.wrapper_attrs.iter().cloned());
     for attr in filter_inline_attrs(attrs) {
         new_attrs.push(attr.clone());
     }
@@ -463,16 +469,19 @@ fn emit_boundary(input: LightFn, options: &BoundaryOptions, parts: BoundaryParts
     let sibling = (!options.nested).then_some(&inner);
     let sibling_cfg = (!options.nested).then_some(&cfg_guard);
     let nested = options.nested.then_some(&inner);
-    // The wrapper only forwards the caller's parameters (`_token` included)
-    // and must always inline; neither is the downstream author's choice, so
-    // their pedantic lints are allowed here. In nested mode this also covers
-    // the documented `_self` binding in the body.
+    // The wrapper must always inline, which is not the author's choice. Its
+    // forwarding call passes the caller's parameters (`_token` included); that
+    // allow sits on the call statement alone, so in nested mode the author's
+    // body (the inner fn) keeps every lint level the author set.
+    let wrapper_attrs = &options.wrapper_attrs;
     quote! {
         #sibling_cfg #sibling
-        #cfg_guard #(#attrs)* #[inline(always)]
-        #[allow(clippy::inline_always, clippy::used_underscore_binding)]
+        #cfg_guard #(#attrs)* #(#wrapper_attrs)* #[inline(always)]
+        #[allow(clippy::inline_always)]
         #vis #wrapper_sig {
-            #nested #token_assertion #tier_trait_assertion #proof_call
+            #nested #token_assertion #tier_trait_assertion
+            #[allow(clippy::used_underscore_binding)]
+            { #proof_call }
         }
     }
 }

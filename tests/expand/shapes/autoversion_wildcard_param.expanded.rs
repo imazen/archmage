@@ -10,7 +10,6 @@ fn probe(__archmage_arg_0: f32, x: f32) -> f32 {
     probe_scalar(archmage::ScalarToken, __archmage_arg_0, x)
 }
 #[doc(hidden)]
-#[allow(dead_code)]
 #[target_feature(
     enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
 )]
@@ -20,10 +19,11 @@ fn __arcane_probe_v3(_token: archmage::X64V3Token, _: f32, x: f32) -> f32 {
 }
 #[allow(dead_code)]
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn probe_v3(_token: archmage::X64V3Token, __archmage_arg_0: f32, x: f32) -> f32 {
     let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    unsafe { __arcane_probe_v3(_token, __archmage_arg_0, x) }
+    #[allow(clippy::used_underscore_binding)]
+    { unsafe { __arcane_probe_v3(_token, __archmage_arg_0, x) } }
 }
 #[allow(dead_code)]
 fn probe_scalar(_token: archmage::ScalarToken, _: f32, x: f32) -> f32 {

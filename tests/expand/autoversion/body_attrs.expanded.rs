@@ -13,7 +13,6 @@ fn process(unused: f32) -> f32 {
     process_scalar(archmage::ScalarToken, unused)
 }
 #[doc(hidden)]
-#[allow(dead_code)]
 #[track_caller]
 #[expect(unused_variables)]
 #[target_feature(
@@ -23,14 +22,15 @@ fn process(unused: f32) -> f32 {
 fn __arcane_process_v3(_token: archmage::X64V3Token, unused: f32) -> f32 {
     1.0
 }
-#[allow(dead_code)]
 #[track_caller]
 #[allow(unused_variables)]
+#[allow(dead_code)]
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn process_v3(_token: archmage::X64V3Token, unused: f32) -> f32 {
     let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    unsafe { __arcane_process_v3(_token, unused) }
+    #[allow(clippy::used_underscore_binding)]
+    { unsafe { __arcane_process_v3(_token, unused) } }
 }
 #[allow(dead_code)]
 #[track_caller]

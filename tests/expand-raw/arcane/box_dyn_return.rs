@@ -12,9 +12,10 @@ fn __arcane_make_adder(token: X64V3Token, offset: f32) -> Box<dyn Fn(f32) -> f32
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn make_adder(token: X64V3Token, offset: f32) -> Box<dyn Fn(f32) -> f32> {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    unsafe { __arcane_make_adder(token, offset) }
+    #[allow(clippy::used_underscore_binding)]
+    { unsafe { __arcane_make_adder(token, offset) } }
 }
 fn main() {}

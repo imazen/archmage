@@ -33,9 +33,9 @@ pub(super) struct Selection {
     pub visibility: Option<Visibility>,
     pub inline: Option<Inline>,
     pub span: Span,
-    /// Expanded from `_*`, `_*_t`, `all` or `+tier`. Like `#[magetypes]` and
-    /// `#[autoversion]` variants, a wildcard output the caller never uses is
-    /// not dead code the author wrote; only explicit selectors keep the lint.
+    /// Expanded from `_*`, `_*_t`, `all` or `+tier`. An unused wildcard proof
+    /// wrapper is not dead code the author wrote, so the wrapper (which holds
+    /// no author code) allows dead_code; explicit selectors keep the lint.
     pub wildcard: bool,
 }
 

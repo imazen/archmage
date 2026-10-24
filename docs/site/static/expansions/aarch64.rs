@@ -24,12 +24,10 @@ pub mod direct_family {
     use archmage::prelude::*;
     #[target_feature(enable = "neon")]
     #[inline]
-    #[allow(dead_code)]
     pub fn add_one_neon(x: u32) -> u32 {
         x + 1
     }
     #[inline]
-    #[allow(dead_code)]
     pub fn add_one_scalar(x: u32) -> u32 {
         x + 1
     }
@@ -40,7 +38,6 @@ pub mod proof_family {
     use archmage::prelude::*;
     #[target_feature(enable = "neon")]
     #[inline]
-    #[allow(dead_code)]
     fn __attune_add_one_neon(x: u32) -> u32 {
         x + 1
     }
@@ -50,7 +47,6 @@ pub mod proof_family {
         unsafe { __attune_add_one_neon(x) }
     }
     #[inline]
-    #[allow(dead_code)]
     fn __attune_add_one_scalar(x: u32) -> u32 {
         x + 1
     }
@@ -123,7 +119,6 @@ pub mod all_outputs {
     use archmage::prelude::*;
     #[target_feature(enable = "neon")]
     #[inline]
-    #[allow(dead_code)]
     pub fn add_one_neon(x: u32) -> u32 {
         x + 1
     }
@@ -133,7 +128,6 @@ pub mod all_outputs {
         unsafe { add_one_neon(x) }
     }
     #[inline]
-    #[allow(dead_code)]
     pub fn add_one_scalar(x: u32) -> u32 {
         x + 1
     }
@@ -161,7 +155,6 @@ pub mod all_outputs {
 pub mod gates {
     use archmage::prelude::*;
     #[inline]
-    #[allow(dead_code)]
     pub fn add_one_scalar(x: u32) -> u32 {
         x + 1
     }
@@ -293,12 +286,10 @@ pub mod covered_calls {
     use archmage::prelude::*;
     #[target_feature(enable = "neon")]
     #[inline]
-    #[allow(dead_code)]
     fn scale_one_neon(value: f32, factor: f32) -> f32 {
         value * factor
     }
     #[inline]
-    #[allow(dead_code)]
     fn scale_one_scalar(value: f32, factor: f32) -> f32 {
         value * factor
     }
@@ -421,7 +412,6 @@ pub mod method {
     impl Gain {
         #[target_feature(enable = "neon")]
         #[inline]
-        #[allow(dead_code)]
         pub fn scale_neon(&self, values: &mut [f32]) {
             for value in values {
                 *value *= self.0;
@@ -437,7 +427,6 @@ pub mod method {
             unsafe { self.scale_neon(values) }
         }
         #[inline]
-        #[allow(dead_code)]
         pub fn scale_scalar(&self, values: &mut [f32]) {
             for value in values {
                 *value *= self.0;

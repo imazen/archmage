@@ -8,10 +8,10 @@ fn __arcane_fast_v4(_t: X64V4Token, x: f32) -> f32 {
     x * 4.0
 }
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn fast_v4(_t: X64V4Token, x: f32) -> f32 {
     let _: () = <X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
-    unsafe { __arcane_fast_v4(_t, x) }
+    #[allow(clippy::used_underscore_binding)] { unsafe { __arcane_fast_v4(_t, x) } }
 }
 #[doc(hidden)]
 #[target_feature(
@@ -22,10 +22,10 @@ fn __arcane_fast_v3(_t: X64V3Token, x: f32) -> f32 {
     x * 2.0
 }
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn fast_v3(_t: X64V3Token, x: f32) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    unsafe { __arcane_fast_v3(_t, x) }
+    #[allow(clippy::used_underscore_binding)] { unsafe { __arcane_fast_v3(_t, x) } }
 }
 fn fast_scalar(_t: ScalarToken, x: f32) -> f32 {
     x
@@ -45,9 +45,10 @@ fn __arcane_v3_with_upgrade(t: X64V3Token, x: f32) -> f32 {
     }
 }
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn v3_with_upgrade(t: X64V3Token, x: f32) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    unsafe { __arcane_v3_with_upgrade(t, x) }
+    #[allow(clippy::used_underscore_binding)]
+    { unsafe { __arcane_v3_with_upgrade(t, x) } }
 }
 fn main() {}

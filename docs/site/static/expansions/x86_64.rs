@@ -35,10 +35,11 @@ pub mod wrap {
         x + 1
     }
     #[inline(always)]
-    #[allow(clippy::inline_always, clippy::used_underscore_binding)]
+    #[allow(clippy::inline_always)]
     pub fn add_one(_token: X64V3Token, x: u32) -> u32 {
         let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-        unsafe { __arcane_add_one(_token, x) }
+        #[allow(clippy::used_underscore_binding)]
+        { unsafe { __arcane_add_one(_token, x) } }
     }
 }
 
@@ -54,10 +55,11 @@ pub mod inferred_wrap {
         x + 1
     }
     #[inline(always)]
-    #[allow(clippy::inline_always, clippy::used_underscore_binding)]
+    #[allow(clippy::inline_always)]
     pub fn add_one_v3_t(__attune_token: ::archmage::X64V3Token, x: u32) -> u32 {
         let _: () = <::archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-        unsafe { __arcane_add_one_v3_t(__attune_token, x) }
+        #[allow(clippy::used_underscore_binding)]
+        { unsafe { __arcane_add_one_v3_t(__attune_token, x) } }
     }
 }
 
@@ -68,12 +70,10 @@ pub mod direct_family {
         enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
     )]
     #[inline]
-    #[allow(dead_code)]
     pub fn add_one_v3(x: u32) -> u32 {
         x + 1
     }
     #[inline]
-    #[allow(dead_code)]
     pub fn add_one_scalar(x: u32) -> u32 {
         x + 1
     }
@@ -86,7 +86,6 @@ pub mod proof_family {
         enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
     )]
     #[inline]
-    #[allow(dead_code)]
     fn __attune_add_one_v3(x: u32) -> u32 {
         x + 1
     }
@@ -96,7 +95,6 @@ pub mod proof_family {
         unsafe { __attune_add_one_v3(x) }
     }
     #[inline]
-    #[allow(dead_code)]
     fn __attune_add_one_scalar(x: u32) -> u32 {
         x + 1
     }
@@ -173,7 +171,6 @@ pub mod all_outputs {
         enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
     )]
     #[inline]
-    #[allow(dead_code)]
     pub fn add_one_v3(x: u32) -> u32 {
         x + 1
     }
@@ -183,7 +180,6 @@ pub mod all_outputs {
         unsafe { add_one_v3(x) }
     }
     #[inline]
-    #[allow(dead_code)]
     pub fn add_one_scalar(x: u32) -> u32 {
         x + 1
     }
@@ -214,7 +210,6 @@ pub mod gates {
         enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
     )]
     #[inline]
-    #[allow(dead_code)]
     pub fn add_one_v3(x: u32) -> u32 {
         x + 1
     }
@@ -224,7 +219,6 @@ pub mod gates {
         unsafe { add_one_v3(x) }
     }
     #[inline]
-    #[allow(dead_code)]
     pub fn add_one_scalar(x: u32) -> u32 {
         x + 1
     }
@@ -382,12 +376,10 @@ pub mod covered_calls {
         enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
     )]
     #[inline]
-    #[allow(dead_code)]
     fn scale_one_v3(value: f32, factor: f32) -> f32 {
         value * factor
     }
     #[inline]
-    #[allow(dead_code)]
     fn scale_one_scalar(value: f32, factor: f32) -> f32 {
         value * factor
     }
@@ -527,7 +519,6 @@ pub mod method {
             enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
         )]
         #[inline]
-        #[allow(dead_code)]
         pub fn scale_v3(&self, values: &mut [f32]) {
             for value in values {
                 *value *= self.0;
@@ -543,7 +534,6 @@ pub mod method {
             unsafe { self.scale_v3(values) }
         }
         #[inline]
-        #[allow(dead_code)]
         pub fn scale_scalar(&self, values: &mut [f32]) {
             for value in values {
                 *value *= self.0;

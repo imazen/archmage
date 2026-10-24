@@ -8,10 +8,10 @@ fn __arcane_inner_v4(_t: X64V4Token, x: f32) -> f32 {
     x * 4.0
 }
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn inner_v4(_t: X64V4Token, x: f32) -> f32 {
     let _: () = <X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
-    unsafe { __arcane_inner_v4(_t, x) }
+    #[allow(clippy::used_underscore_binding)] { unsafe { __arcane_inner_v4(_t, x) } }
 }
 #[doc(hidden)]
 #[target_feature(
@@ -22,10 +22,10 @@ fn __arcane_inner_v3(_t: X64V3Token, x: f32) -> f32 {
     x * 2.0
 }
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn inner_v3(_t: X64V3Token, x: f32) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    unsafe { __arcane_inner_v3(_t, x) }
+    #[allow(clippy::used_underscore_binding)] { unsafe { __arcane_inner_v3(_t, x) } }
 }
 fn inner_scalar(_t: ScalarToken, x: f32) -> f32 {
     x
@@ -41,7 +41,6 @@ fn outer(x: f32) -> f32 {
     outer_scalar(archmage::ScalarToken, x)
 }
 #[doc(hidden)]
-#[allow(dead_code)]
 #[target_feature(
     enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
 )]
@@ -54,10 +53,10 @@ fn __arcane_outer_v3(_token: archmage::X64V3Token, x: f32) -> f32 {
 }
 #[allow(dead_code)]
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn outer_v3(_token: archmage::X64V3Token, x: f32) -> f32 {
     let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    unsafe { __arcane_outer_v3(_token, x) }
+    #[allow(clippy::used_underscore_binding)] { unsafe { __arcane_outer_v3(_token, x) } }
 }
 #[allow(dead_code)]
 fn outer_scalar(_token: archmage::ScalarToken, x: f32) -> f32 {

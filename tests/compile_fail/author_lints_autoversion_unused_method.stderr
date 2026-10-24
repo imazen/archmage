@@ -1,0 +1,14 @@
+error: method `total` is never used
+  --> tests/compile_fail/author_lints_autoversion_unused_method.rs:10:8
+   |
+ 8 | impl Buffer {
+   | ----------- method in this implementation
+ 9 |     #[autoversion]
+10 |     fn total(&self, data: &[f32]) -> f32 {
+   |        ^^^^^
+   |
+note: the lint level is defined here
+  --> tests/compile_fail/author_lints_autoversion_unused_method.rs:3:9
+   |
+ 3 | #![deny(dead_code)]
+   |         ^^^^^^^^^

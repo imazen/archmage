@@ -9,7 +9,7 @@ fn __arcane_process(token: impl HasX64V2, a: f32) -> f32 {
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn process(token: impl HasX64V2, a: f32) -> f32 {
     {
         #[inline(always)]
@@ -18,6 +18,6 @@ fn process(token: impl HasX64V2, a: f32) -> f32 {
         ) {}
         __archmage_assert_tier_trait(&token);
     }
-    unsafe { __arcane_process(token, a) }
+    #[allow(clippy::used_underscore_binding)] { unsafe { __arcane_process(token, a) } }
 }
 fn main() {}

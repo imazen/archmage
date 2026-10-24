@@ -9,9 +9,9 @@ fn __arcane_process(token: NeonToken, a: f32) -> f32 {
 }
 #[cfg(target_arch = "aarch64")]
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn process(token: NeonToken, a: f32) -> f32 {
     let _: () = <NeonToken>::__ARCHMAGE_ASSERT_TIER_72CB52B2;
-    unsafe { __arcane_process(token, a) }
+    #[allow(clippy::used_underscore_binding)] { unsafe { __arcane_process(token, a) } }
 }
 fn main() {}

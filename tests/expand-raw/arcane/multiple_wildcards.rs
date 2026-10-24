@@ -11,13 +11,14 @@ fn __arcane_process(__archmage_token: X64V3Token, _: f32, _: f32) -> f32 {
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn process(
     __archmage_arg_0: X64V3Token,
     __archmage_arg_1: f32,
     __archmage_arg_2: f32,
 ) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    unsafe { __arcane_process(__archmage_arg_0, __archmage_arg_1, __archmage_arg_2) }
+    #[allow(clippy::used_underscore_binding)]
+    { unsafe { __arcane_process(__archmage_arg_0, __archmage_arg_1, __archmage_arg_2) } }
 }
 fn main() {}

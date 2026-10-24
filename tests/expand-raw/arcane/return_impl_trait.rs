@@ -12,9 +12,10 @@ fn __arcane_make_iter(token: X64V3Token, data: &[f32]) -> impl Iterator<Item = &
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn make_iter(token: X64V3Token, data: &[f32]) -> impl Iterator<Item = &f32> {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    unsafe { __arcane_make_iter(token, data) }
+    #[allow(clippy::used_underscore_binding)]
+    { unsafe { __arcane_make_iter(token, data) } }
 }
 fn main() {}

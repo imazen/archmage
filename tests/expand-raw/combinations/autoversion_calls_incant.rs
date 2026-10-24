@@ -12,10 +12,10 @@ fn __arcane_inner_v3(token: archmage::X64V3Token, x: f32) -> f32 {
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn inner_v3(token: archmage::X64V3Token, x: f32) -> f32 {
     let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    unsafe { __arcane_inner_v3(token, x) }
+    #[allow(clippy::used_underscore_binding)] { unsafe { __arcane_inner_v3(token, x) } }
 }
 #[cfg(target_arch = "aarch64")]
 #[doc(hidden)]
@@ -27,10 +27,11 @@ fn __arcane_inner_neon(token: archmage::NeonToken, x: f32) -> f32 {
 }
 #[cfg(target_arch = "aarch64")]
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn inner_neon(token: archmage::NeonToken, x: f32) -> f32 {
     let _: () = <archmage::NeonToken>::__ARCHMAGE_ASSERT_TIER_72CB52B2;
-    unsafe { __arcane_inner_neon(token, x) }
+    #[allow(clippy::used_underscore_binding)]
+    { unsafe { __arcane_inner_neon(token, x) } }
 }
 fn inner_scalar(token: archmage::ScalarToken, x: f32) -> f32 {
     let _ = token;
@@ -55,7 +56,6 @@ fn outer(x: f32) -> f32 {
 }
 #[cfg(target_arch = "x86_64")]
 #[doc(hidden)]
-#[allow(dead_code)]
 #[target_feature(
     enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
 )]
@@ -68,14 +68,13 @@ fn __arcane_outer_v3(_token: archmage::X64V3Token, x: f32) -> f32 {
 #[cfg(target_arch = "x86_64")]
 #[allow(dead_code)]
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn outer_v3(_token: archmage::X64V3Token, x: f32) -> f32 {
     let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    unsafe { __arcane_outer_v3(_token, x) }
+    #[allow(clippy::used_underscore_binding)] { unsafe { __arcane_outer_v3(_token, x) } }
 }
 #[cfg(target_arch = "aarch64")]
 #[doc(hidden)]
-#[allow(dead_code)]
 #[target_feature(enable = "neon")]
 #[inline]
 fn __arcane_outer_neon(_token: archmage::NeonToken, x: f32) -> f32 {
@@ -86,10 +85,11 @@ fn __arcane_outer_neon(_token: archmage::NeonToken, x: f32) -> f32 {
 #[cfg(target_arch = "aarch64")]
 #[allow(dead_code)]
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn outer_neon(_token: archmage::NeonToken, x: f32) -> f32 {
     let _: () = <archmage::NeonToken>::__ARCHMAGE_ASSERT_TIER_72CB52B2;
-    unsafe { __arcane_outer_neon(_token, x) }
+    #[allow(clippy::used_underscore_binding)]
+    { unsafe { __arcane_outer_neon(_token, x) } }
 }
 #[allow(dead_code)]
 fn outer_scalar(_token: archmage::ScalarToken, x: f32) -> f32 {

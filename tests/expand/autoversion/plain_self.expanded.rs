@@ -17,7 +17,6 @@ impl P {
         self.apply_scalar(archmage::ScalarToken, x)
     }
     #[doc(hidden)]
-    #[allow(dead_code)]
     #[target_feature(
         enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
     )]
@@ -27,13 +26,13 @@ impl P {
     }
     #[allow(dead_code)]
     #[inline(always)]
-    #[allow(clippy::inline_always, clippy::used_underscore_binding)]
+    #[allow(clippy::inline_always)]
     fn apply_v4(&self, _token: archmage::X64V4Token, x: f32) -> f32 {
         let _: () = <archmage::X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
-        unsafe { self.__arcane_apply_v4(_token, x) }
+        #[allow(clippy::used_underscore_binding)]
+        { unsafe { self.__arcane_apply_v4(_token, x) } }
     }
     #[doc(hidden)]
-    #[allow(dead_code)]
     #[target_feature(
         enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
     )]
@@ -43,10 +42,11 @@ impl P {
     }
     #[allow(dead_code)]
     #[inline(always)]
-    #[allow(clippy::inline_always, clippy::used_underscore_binding)]
+    #[allow(clippy::inline_always)]
     fn apply_v3(&self, _token: archmage::X64V3Token, x: f32) -> f32 {
         let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-        unsafe { self.__arcane_apply_v3(_token, x) }
+        #[allow(clippy::used_underscore_binding)]
+        { unsafe { self.__arcane_apply_v3(_token, x) } }
     }
     #[allow(dead_code)]
     fn apply_scalar(&self, _token: archmage::ScalarToken, x: f32) -> f32 {

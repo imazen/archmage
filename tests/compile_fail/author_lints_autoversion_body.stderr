@@ -1,0 +1,11 @@
+error: function `nested_unused` is never used
+ --> tests/compile_fail/author_lints_autoversion_body.rs:9:8
+  |
+9 |     fn nested_unused() {}
+  |        ^^^^^^^^^^^^^
+  |
+note: the lint level is defined here
+ --> tests/compile_fail/author_lints_autoversion_body.rs:4:9
+  |
+4 | #![deny(dead_code)]
+  |         ^^^^^^^^^

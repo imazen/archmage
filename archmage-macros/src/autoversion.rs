@@ -360,13 +360,14 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
         let cfg_guard = tier.variant_cfg_guard();
 
         // All variants are private implementation details of the dispatcher.
-        // Suppress dead_code: if the dispatcher is unused, rustc warns on IT
-        // (via quote_spanned! with the user's span). Warning on individual
-        // variants would be confusing — the user didn't write _scalar or _v3.
+        // If the dispatcher is unused, rustc warns on IT (via quote_spanned!
+        // with the user's span); a variant must not warn too, and an unused
+        // variant method would join the dispatcher's diagnostic, whose
+        // macro-spanned member then suppresses it entirely. So dead_code is
+        // allowed on the SIMD variants' forwarding wrappers, which hold no
+        // author code and keep their body function live; the body keeps the
+        // author's lint levels, so items nested in it are still reported.
         if !tier.is_fallback() {
-            variant_fn
-                .attrs
-                .insert(0, parse_quote!(#[allow(dead_code)]));
             if tier.allow_unexpected_cfg {
                 variant_fn
                     .attrs
@@ -381,6 +382,7 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
                 nested: self_type.is_some(),
                 self_type,
                 in_impl: !args.in_trait && args.in_impl,
+                wrapper_attrs: vec![parse_quote!(#[allow(dead_code)])],
                 shared: SharedOptions {
                     cfg_feature: tier.feature_gate.clone(),
                     ..Default::default()
@@ -390,6 +392,9 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
             let variant = crate::engine::boundary::expand(variant_fn, "arcane", options);
             variants.push(variant);
         } else {
+            // The fallback is one function holding the body; it needs the allow
+            // itself. Its nested items are still reported from the SIMD copies
+            // wherever a SIMD tier compiles.
             variants.push(quote! {
                 #cfg_guard
                 #[allow(dead_code)]

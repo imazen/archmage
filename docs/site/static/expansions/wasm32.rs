@@ -24,12 +24,10 @@ pub mod direct_family {
     use archmage::prelude::*;
     #[target_feature(enable = "simd128")]
     #[inline]
-    #[allow(dead_code)]
     pub fn add_one_wasm128(x: u32) -> u32 {
         x + 1
     }
     #[inline]
-    #[allow(dead_code)]
     pub fn add_one_scalar(x: u32) -> u32 {
         x + 1
     }
@@ -40,7 +38,6 @@ pub mod proof_family {
     use archmage::prelude::*;
     #[target_feature(enable = "simd128")]
     #[inline]
-    #[allow(dead_code)]
     fn __attune_add_one_wasm128(x: u32) -> u32 {
         x + 1
     }
@@ -50,7 +47,6 @@ pub mod proof_family {
         __attune_add_one_wasm128(x)
     }
     #[inline]
-    #[allow(dead_code)]
     fn __attune_add_one_scalar(x: u32) -> u32 {
         x + 1
     }
@@ -123,7 +119,6 @@ pub mod all_outputs {
     use archmage::prelude::*;
     #[target_feature(enable = "simd128")]
     #[inline]
-    #[allow(dead_code)]
     pub fn add_one_wasm128(x: u32) -> u32 {
         x + 1
     }
@@ -133,7 +128,6 @@ pub mod all_outputs {
         add_one_wasm128(x)
     }
     #[inline]
-    #[allow(dead_code)]
     pub fn add_one_scalar(x: u32) -> u32 {
         x + 1
     }
@@ -162,7 +156,6 @@ pub mod gates {
     use archmage::prelude::*;
     #[target_feature(enable = "simd128")]
     #[inline]
-    #[allow(dead_code)]
     pub fn add_one_wasm128(x: u32) -> u32 {
         x + 1
     }
@@ -175,7 +168,6 @@ pub mod gates {
         add_one_wasm128(x)
     }
     #[inline]
-    #[allow(dead_code)]
     pub fn add_one_scalar(x: u32) -> u32 {
         x + 1
     }
@@ -315,12 +307,10 @@ pub mod covered_calls {
     use archmage::prelude::*;
     #[target_feature(enable = "simd128")]
     #[inline]
-    #[allow(dead_code)]
     fn scale_one_wasm128(value: f32, factor: f32) -> f32 {
         value * factor
     }
     #[inline]
-    #[allow(dead_code)]
     fn scale_one_scalar(value: f32, factor: f32) -> f32 {
         value * factor
     }
@@ -443,7 +433,6 @@ pub mod method {
     impl Gain {
         #[target_feature(enable = "simd128")]
         #[inline]
-        #[allow(dead_code)]
         pub fn scale_wasm128(&self, values: &mut [f32]) {
             for value in values {
                 *value *= self.0;
@@ -459,7 +448,6 @@ pub mod method {
             self.scale_wasm128(values)
         }
         #[inline]
-        #[allow(dead_code)]
         pub fn scale_scalar(&self, values: &mut [f32]) {
             for value in values {
                 *value *= self.0;

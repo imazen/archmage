@@ -9,9 +9,10 @@ fn __arcane_probe((lo, hi): (f32, f32), token: X64V3Token, x: f32) -> f32 {
     lo + hi + x
 }
 #[inline(always)]
-#[allow(clippy::inline_always, clippy::used_underscore_binding)]
+#[allow(clippy::inline_always)]
 fn probe(__archmage_arg_0: (f32, f32), token: X64V3Token, x: f32) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    unsafe { __arcane_probe(__archmage_arg_0, token, x) }
+    #[allow(clippy::used_underscore_binding)]
+    { unsafe { __arcane_probe(__archmage_arg_0, token, x) } }
 }
 fn main() {}
