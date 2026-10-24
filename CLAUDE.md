@@ -657,6 +657,10 @@ CI checks (all must pass):
    macro consumer crates `tests/no-features-crate` and `tests/clippy-consumer`
    (`--all-targets`). The `warning-sweep` CI job (`just warnings`) additionally
    lints every target/feature/CPU configuration in `xtask/warning_sweep.py`.
+   Its `optin-*` configurations build the library crates with the
+   allow-by-default rustc lints a downstream crate may pass via RUSTFLAGS
+   (list and exclusions in `OPT_IN`). Generated magetypes files get qualified
+   paths shortened by `xtask/src/simd_types/import_paths.rs` after rustfmt.
    The weekly `nightly-lints` workflow runs the same sweep on the nightly
    toolchain and opens a `nightly-lints` issue when it fails (not a CI gate);
    reproduce with `RUSTUP_TOOLCHAIN=nightly just warnings`.

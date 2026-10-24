@@ -182,6 +182,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 - `xtask/warning_sweep.py` (`just warnings`) runs clippy over 19 target/feature/CPU configurations; the `warning-sweep` CI job requires it to report nothing. `tests/clippy-consumer` invokes every macro shape under the lints downstream crates commonly enable (pedantic, `missing_docs`, `unreachable_pub`, `rust_2018_idioms`, …) (56e12020, e0f6a7be, 7964e1cd).
 - Tests, benches, examples and xtask are warning-free on every swept configuration (1e47a3f7).
 - A weekly `nightly-lints` workflow runs the warning sweep on the nightly toolchain and reports failures as a `nightly-lints` issue, ahead of new lints reaching stable.
+- The library crates are clean under the allow-by-default rustc lints a downstream crate may pass through `RUSTFLAGS` (which reach path dependencies): `unused_qualifications`, `trivial_casts`/`trivial_numeric_casts`, `unreachable_pub`, `rust_2018_idioms` and others; previously about 1,900 warnings, mostly in generated magetypes code. Generated files have qualified paths shortened to the names they import, and templates emit casts only between different types. Five `optin-*` warning-sweep configurations keep it that way (6b904214, 83a41b21, 2fb0463d).
 
 ### [0.9.31-beta.1] - 2026-10-13
 
