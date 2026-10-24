@@ -188,6 +188,17 @@ pub mod calls {
         attuned!(bump(z)).wrapping_add(attuned!(bump(y)))
     }
 
+    /// A brace-delimited call is a statement and needs no `;`; the rewrite
+    /// keeps the caller's delimiter so the next statement still parses.
+    #[attune(_*, dispatch)]
+    #[must_use]
+    pub fn braced(x: u32) -> u32 {
+        let mut y = x;
+        attuned! { bump_in_place(&mut y) }
+        y = y.wrapping_add(1);
+        y
+    }
+
     /// `reattune!` probes for stronger tiers from a covered context.
     #[attune(_*, dispatch)]
     #[must_use]

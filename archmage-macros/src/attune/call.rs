@@ -417,8 +417,8 @@ fn rewrite_scoped(
             // expression.
             out.extend(crate::common::wrap_expanded(
                 tokens[i..end + 2].iter().cloned(),
+                group,
                 expansion,
-                group.span(),
             ));
             i = end + 3;
             continue;

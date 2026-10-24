@@ -136,8 +136,8 @@ pub(crate) fn rewrite_incant_in_function(
                     // keeps bang-macro expression parsing.
                     Some(rewritten) => result.extend(crate::common::wrap_expanded(
                         tokens[i..i + 2].iter().cloned(),
+                        group,
                         rewritten,
-                        group.span(),
                     )),
                     // Not rewritten (passthrough / tokenless body / parse issue):
                     // emit the original `incant ! ( ... )` tokens verbatim so the

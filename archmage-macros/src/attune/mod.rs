@@ -389,7 +389,8 @@ fn proof_entry(
     args: &Args,
 ) -> syn::Result<TokenStream> {
     let mut wrapper = input.clone();
-    crate::common::rename_underscore_params(&mut wrapper.sig);
+    // Check the author's names before forwarding renames them; the renamed
+    // `__archmage_*` names cannot collide with the `__attune_*` callee.
     if let Some(error) = crate::engine::boundary::reserved_param_error(
         &wrapper.sig,
         &direct_name.to_string(),
@@ -397,6 +398,7 @@ fn proof_entry(
     ) {
         return Ok(error);
     }
+    crate::common::rename_underscore_params(&mut wrapper.sig);
     let invocation = forward(&wrapper.sig, direct_name, args.options.in_impl, None);
     let token: syn::Path = syn::parse_str(&format!("::{}", tier.token_path))?;
     let position = usize::from(matches!(

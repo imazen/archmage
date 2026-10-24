@@ -212,17 +212,17 @@ pub(crate) fn expanded_passthrough(
 }
 
 /// Re-emit a rewritten invocation through the caller's own macro path and
-/// bang (`path_and_bang`, copied verbatim): see [`EXPANDED_MARKER`].
+/// bang (`path_and_bang`, copied verbatim) and the caller's delimiter: see
+/// [`EXPANDED_MARKER`]. Keeping the delimiter keeps statement parsing as
+/// written (`attuned!{ f(x) }` needs no trailing `;`, `attuned!(f(x))` does).
 pub(crate) fn wrap_expanded(
     path_and_bang: impl IntoIterator<Item = proc_macro2::TokenTree>,
+    original: &proc_macro2::Group,
     expanded: proc_macro2::TokenStream,
-    span: proc_macro2::Span,
 ) -> proc_macro2::TokenStream {
+    let span = original.span();
     let marker = Ident::new(EXPANDED_MARKER, span);
-    let mut group = proc_macro2::Group::new(
-        proc_macro2::Delimiter::Parenthesis,
-        quote!(@ #marker #expanded),
-    );
+    let mut group = proc_macro2::Group::new(original.delimiter(), quote!(@ #marker #expanded));
     group.set_span(span);
     let mut out: proc_macro2::TokenStream = path_and_bang.into_iter().collect();
     out.extend([proc_macro2::TokenTree::Group(group)]);
