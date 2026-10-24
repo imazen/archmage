@@ -370,6 +370,16 @@ pub(super) fn all_w512_types() -> Vec<W512Type> {
 // Backend Trait Generation
 // ============================================================================
 
+/// `a[i]` reinterpreted as `via` for a wrapping operation, then back as
+/// `elem`. Emits no casts when the two types match (`trivial_numeric_casts`).
+fn via(elem: &str, via: &str, op: &str) -> String {
+    if elem == via {
+        format!("a[i].{op}")
+    } else {
+        format!("(a[i] as {via}).{op} as {elem}")
+    }
+}
+
 /// Generate a backend trait for a W512 float type.
 fn generate_float_backend_trait(ty: &W512Type) -> String {
     let trait_name = ty.trait_name();
@@ -832,15 +842,17 @@ fn w512_new_ops_scalar(ty: &W512Type) -> String {
             )
         };
 
+        let wrapping_shl_via = via(elem, uelem, "wrapping_shl(count)");
+        let wrapping_shr_via = via(elem, uelem, "wrapping_shr(count)");
         code.push_str(&formatdoc! {r#"
             #[inline(always)]
             fn shl_uniform(self, a: {array}, count: u32) -> {array} {{
-                core::array::from_fn(|i| if count >= {eb} {{ 0 }} else {{ (a[i] as {uelem}).wrapping_shl(count) as {elem} }})
+                core::array::from_fn(|i| if count >= {eb} {{ 0 }} else {{ {wrapping_shl_via} }})
             }}
 
             #[inline(always)]
             fn shr_logical_uniform(self, a: {array}, count: u32) -> {array} {{
-                core::array::from_fn(|i| if count >= {eb} {{ 0 }} else {{ (a[i] as {uelem}).wrapping_shr(count) as {elem} }})
+                core::array::from_fn(|i| if count >= {eb} {{ 0 }} else {{ {wrapping_shr_via} }})
             }}
 
             #[inline(always)]
@@ -1208,16 +1220,20 @@ fn generate_scalar_int_impl(ty: &W512Type) -> String {
     // For shifts of byte types, N could exceed bit width, so use wrapping
     let shl_body = match ty.elem_bits {
         8 => format!(
-            "core::array::from_fn(|i| if N < 8 {{ (a[i] as u8).wrapping_shl(N as u32) as {elem} }} else {{ 0 }})"
+            "core::array::from_fn(|i| if N < 8 {{ {} }} else {{ 0 }})",
+            via(elem, "u8", "wrapping_shl(N as u32)")
         ),
         16 => format!(
-            "core::array::from_fn(|i| if N < 16 {{ (a[i] as u16).wrapping_shl(N as u32) as {elem} }} else {{ 0 }})"
+            "core::array::from_fn(|i| if N < 16 {{ {} }} else {{ 0 }})",
+            via(elem, "u16", "wrapping_shl(N as u32)")
         ),
         32 => format!(
-            "core::array::from_fn(|i| if N < 32 {{ (a[i] as u32).wrapping_shl(N as u32) as {elem} }} else {{ 0 }})"
+            "core::array::from_fn(|i| if N < 32 {{ {} }} else {{ 0 }})",
+            via(elem, "u32", "wrapping_shl(N as u32)")
         ),
         64 => format!(
-            "core::array::from_fn(|i| if N < 64 {{ (a[i] as u64).wrapping_shl(N as u32) as {elem} }} else {{ 0 }})"
+            "core::array::from_fn(|i| if N < 64 {{ {} }} else {{ 0 }})",
+            via(elem, "u64", "wrapping_shl(N as u32)")
         ),
         _ => unreachable!(),
     };
@@ -1243,16 +1259,20 @@ fn generate_scalar_int_impl(ty: &W512Type) -> String {
 
     let shr_logical_body = match ty.elem_bits {
         8 => format!(
-            "core::array::from_fn(|i| if N < 8 {{ (a[i] as u8).wrapping_shr(N as u32) as {elem} }} else {{ 0 }})"
+            "core::array::from_fn(|i| if N < 8 {{ {} }} else {{ 0 }})",
+            via(elem, "u8", "wrapping_shr(N as u32)")
         ),
         16 => format!(
-            "core::array::from_fn(|i| if N < 16 {{ (a[i] as u16).wrapping_shr(N as u32) as {elem} }} else {{ 0 }})"
+            "core::array::from_fn(|i| if N < 16 {{ {} }} else {{ 0 }})",
+            via(elem, "u16", "wrapping_shr(N as u32)")
         ),
         32 => format!(
-            "core::array::from_fn(|i| if N < 32 {{ (a[i] as u32).wrapping_shr(N as u32) as {elem} }} else {{ 0 }})"
+            "core::array::from_fn(|i| if N < 32 {{ {} }} else {{ 0 }})",
+            via(elem, "u32", "wrapping_shr(N as u32)")
         ),
         64 => format!(
-            "core::array::from_fn(|i| if N < 64 {{ (a[i] as u64).wrapping_shr(N as u32) as {elem} }} else {{ 0 }})"
+            "core::array::from_fn(|i| if N < 64 {{ {} }} else {{ 0 }})",
+            via(elem, "u64", "wrapping_shr(N as u32)")
         ),
         _ => unreachable!(),
     };
@@ -1264,20 +1284,20 @@ fn generate_scalar_int_impl(ty: &W512Type) -> String {
 
     // Bitmask: extract high bit of each element lane
     let bitmask_body = format!(
-        "let mut mask = 0u64; for i in 0..{lanes} {{ if (a[i] as {sign_cast}) < 0 {{ mask |= 1u64 << i; }} }} mask",
-        sign_cast = if ty.is_signed() {
-            elem.to_string()
+        "let mut mask = 0u64; for i in 0..{lanes} {{ if {negative} {{ mask |= 1u64 << i; }} }} mask",
+        // Signed lanes test the sign directly; unsigned lanes reinterpret as
+        // signed for the sign-bit check.
+        negative = if ty.is_signed() {
+            "a[i] < 0".to_string()
         } else {
-            // For unsigned, interpret as signed for sign bit check
-            match ty.elem_bits {
-                8 => "i8".to_string(),
-                16 => "i16".to_string(),
-                32 => "i32".to_string(),
-                64 => "i64".to_string(),
-                _ => unreachable!(),
-            }
+            format!("(a[i] as {signed_elem}) < 0")
         },
     );
+    let lane_negative = if ty.is_signed() {
+        "v < 0".to_string()
+    } else {
+        format!("(v as {signed_elem}) < 0")
+    };
 
     formatdoc! {r#"
         impl {trait_name} for archmage::ScalarToken {{
@@ -1365,10 +1385,10 @@ fn generate_scalar_int_impl(ty: &W512Type) -> String {
 
         {new_ops}
             #[inline(always)]
-            fn all_true(self, a: {array}) -> bool {{ a.iter().all(|&v| (v as {signed_elem}) < 0) }}
+            fn all_true(self, a: {array}) -> bool {{ a.iter().all(|&v| {lane_negative}) }}
 
             #[inline(always)]
-            fn any_true(self, a: {array}) -> bool {{ a.iter().any(|&v| (v as {signed_elem}) < 0) }}
+            fn any_true(self, a: {array}) -> bool {{ a.iter().any(|&v| {lane_negative}) }}
 
             #[inline(always)]
             fn bitmask(self, a: {array}) -> u64 {{ {bitmask_body} }}
@@ -2647,6 +2667,8 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
     let epi = ty.x86_arith_suffix();
     let mm = ty.x86_minmax_suffix();
     let set1 = ty.x86_set1_suffix();
+    // `_mm512_set1_epi*` take the signed lane type; only unsigned lanes cast.
+    let splat_arg = if elem.starts_with('i') { "v" } else { "v as _" };
 
     // set1 cast for unsigned types: we need to cast -1 to the unsigned element type
     // then to the signed type that _mm512_set1_epiN expects
@@ -2766,7 +2788,7 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
 
             {arcane}
             fn splat(self, v: {elem}) -> __m512i {{
-                _mm512_set1_{set1}(v as _)
+                _mm512_set1_{set1}({splat_arg})
             }}
 
             {arcane}
@@ -2894,12 +2916,12 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
                 // directly. The `cmpneq` form this replaces answered a
                 // different question (lane nonzero) and disagreed with the
                 // V3 movemask backends.
-                _mm512_movepi{elem_bits}_mask(a) as u64 == {full_mask}
+                _mm512_movepi{elem_bits}_mask(a){mask_as_u64} == {full_mask}
             }}
 
             {arcane}
             fn any_true(self, a: __m512i) -> bool {{
-                _mm512_movepi{elem_bits}_mask(a) as u64 != 0
+                _mm512_movepi{elem_bits}_mask(a){mask_as_u64} != 0
             }}
 
             {arcane}
@@ -2909,11 +2931,13 @@ fn generate_x86_v4_int_impl_for_token(ty: &W512Type, token: &str) -> String {
                 _mm512_cmpneq_{blend_suffix}_mask(
                     _mm512_and_si512(a, _mm512_set1_{set1_signed}(1_{sign_type} << ({elem_bits} - 1))),
                     zero
-                ) as u64
+                ){mask_as_u64}
             }}
         {integer_methods}
         }}
     "#,
+        // 8-bit lanes have a 64-bit mask already; narrower masks widen.
+        mask_as_u64 = if elem_bits == 8 { "" } else { " as u64" },
         sign_type = match elem_bits {
             8 => "i8",
             16 => "i16",

@@ -264,12 +264,12 @@ fn gen_layout_asserts(ty: &SimdType) -> String {
         // assert fires at compile time.
         const _: () = {{
             assert!(
-                core::mem::size_of::<{name}<archmage::ScalarToken>>()
-                    == core::mem::size_of::<<archmage::ScalarToken as crate::simd::backends::{backend}>::Repr>()
+                size_of::<{name}<archmage::ScalarToken>>()
+                    == size_of::<<archmage::ScalarToken as crate::simd::backends::{backend}>::Repr>()
             );
             assert!(
-                core::mem::align_of::<{name}<archmage::ScalarToken>>()
-                    == core::mem::align_of::<<archmage::ScalarToken as crate::simd::backends::{backend}>::Repr>()
+                align_of::<{name}<archmage::ScalarToken>>()
+                    == align_of::<<archmage::ScalarToken as crate::simd::backends::{backend}>::Repr>()
             );
         }};
     "};
@@ -290,12 +290,12 @@ fn gen_layout_asserts(ty: &SimdType) -> String {
                 #[cfg(target_arch = "x86_64")]
                 const _: () = {{
                     assert!(
-                        core::mem::size_of::<{name}<archmage::X64V3Token>>()
-                            == core::mem::size_of::<<archmage::X64V3Token as crate::simd::backends::{backend}>::Repr>()
+                        size_of::<{name}<archmage::X64V3Token>>()
+                            == size_of::<<archmage::X64V3Token as crate::simd::backends::{backend}>::Repr>()
                     );
                     assert!(
-                        core::mem::align_of::<{name}<archmage::X64V3Token>>()
-                            == core::mem::align_of::<<archmage::X64V3Token as crate::simd::backends::{backend}>::Repr>()
+                        align_of::<{name}<archmage::X64V3Token>>()
+                            == align_of::<<archmage::X64V3Token as crate::simd::backends::{backend}>::Repr>()
                     );
                 }};
             "#});
@@ -309,12 +309,12 @@ fn gen_layout_asserts(ty: &SimdType) -> String {
                 #[cfg(target_arch = "x86_64")]
                 const _: () = {{
                     assert!(
-                        core::mem::size_of::<{name}<archmage::X64V3Token>>()
-                            == core::mem::size_of::<<archmage::X64V3Token as crate::simd::backends::{backend}>::Repr>()
+                        size_of::<{name}<archmage::X64V3Token>>()
+                            == size_of::<<archmage::X64V3Token as crate::simd::backends::{backend}>::Repr>()
                     );
                     assert!(
-                        core::mem::align_of::<{name}<archmage::X64V3Token>>()
-                            == core::mem::align_of::<<archmage::X64V3Token as crate::simd::backends::{backend}>::Repr>()
+                        align_of::<{name}<archmage::X64V3Token>>()
+                            == align_of::<<archmage::X64V3Token as crate::simd::backends::{backend}>::Repr>()
                     );
                 }};
 
@@ -324,12 +324,12 @@ fn gen_layout_asserts(ty: &SimdType) -> String {
                 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
                 const _: () = {{
                     assert!(
-                        core::mem::size_of::<{name}<archmage::X64V4Token>>()
-                            == core::mem::size_of::<<archmage::X64V4Token as crate::simd::backends::{backend}>::Repr>()
+                        size_of::<{name}<archmage::X64V4Token>>()
+                            == size_of::<<archmage::X64V4Token as crate::simd::backends::{backend}>::Repr>()
                     );
                     assert!(
-                        core::mem::align_of::<{name}<archmage::X64V4Token>>()
-                            == core::mem::align_of::<<archmage::X64V4Token as crate::simd::backends::{backend}>::Repr>()
+                        align_of::<{name}<archmage::X64V4Token>>()
+                            == align_of::<<archmage::X64V4Token as crate::simd::backends::{backend}>::Repr>()
                     );
                 }};
             "#});
@@ -342,12 +342,12 @@ fn gen_layout_asserts(ty: &SimdType) -> String {
         #[cfg(target_arch = "aarch64")]
         const _: () = {{
             assert!(
-                core::mem::size_of::<{name}<archmage::NeonToken>>()
-                    == core::mem::size_of::<<archmage::NeonToken as crate::simd::backends::{backend}>::Repr>()
+                size_of::<{name}<archmage::NeonToken>>()
+                    == size_of::<<archmage::NeonToken as crate::simd::backends::{backend}>::Repr>()
             );
             assert!(
-                core::mem::align_of::<{name}<archmage::NeonToken>>()
-                    == core::mem::align_of::<<archmage::NeonToken as crate::simd::backends::{backend}>::Repr>()
+                align_of::<{name}<archmage::NeonToken>>()
+                    == align_of::<<archmage::NeonToken as crate::simd::backends::{backend}>::Repr>()
             );
         }};
     "#});
@@ -359,12 +359,12 @@ fn gen_layout_asserts(ty: &SimdType) -> String {
         #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
         const _: () = {{
             assert!(
-                core::mem::size_of::<{name}<archmage::Wasm128Token>>()
-                    == core::mem::size_of::<<archmage::Wasm128Token as crate::simd::backends::{backend}>::Repr>()
+                size_of::<{name}<archmage::Wasm128Token>>()
+                    == size_of::<<archmage::Wasm128Token as crate::simd::backends::{backend}>::Repr>()
             );
             assert!(
-                core::mem::align_of::<{name}<archmage::Wasm128Token>>()
-                    == core::mem::align_of::<<archmage::Wasm128Token as crate::simd::backends::{backend}>::Repr>()
+                align_of::<{name}<archmage::Wasm128Token>>()
+                    == align_of::<<archmage::Wasm128Token as crate::simd::backends::{backend}>::Repr>()
             );
         }};
     "#});

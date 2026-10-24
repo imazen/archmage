@@ -2019,6 +2019,25 @@ pub(crate) use dispatch::*;
     }
     println!("  Formatted {} generated files", fmt_paths.len());
 
+    // Shorten fully qualified paths the file already imports (after rustfmt,
+    // so token-stream-built text is normalized), then reformat what changed.
+    let mut shortened = 0;
+    for rel in backend_files.keys().chain(generic_files.keys()) {
+        let path = simd_dir.join(rel);
+        let text = fs::read_to_string(&path)?;
+        let short = simd_types::import_paths::shorten_imported_paths(&text);
+        if short != text {
+            fs::write(&path, &short)?;
+            let _ = std::process::Command::new("rustfmt")
+                .arg("--edition")
+                .arg("2024")
+                .arg(&path)
+                .status();
+            shortened += 1;
+        }
+    }
+    println!("  Shortened imported paths in {shortened} generated files");
+
     // Generate reference documentation
     println!("\n=== Generating Reference Documentation ===");
     generate_reference_docs_new()?;

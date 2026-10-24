@@ -1514,6 +1514,12 @@ fn generate_scalar_int_impl(ty: &IntVecType) -> String {
         let uelem = ty.unsigned_elem();
         let eb = ty.elem_bits;
         let max_sh = eb - 1;
+        // Unsigned lanes shift directly; signed lanes reinterpret as unsigned.
+        let shr_logical_lane = if elem == uelem {
+            "x.wrapping_shr(count)".to_string()
+        } else {
+            format!("((x as {uelem}).wrapping_shr(count)) as {elem}")
+        };
         body.push_str(&formatdoc! {r#"
 
             #[inline(always)]
@@ -1527,7 +1533,7 @@ fn generate_scalar_int_impl(ty: &IntVecType) -> String {
                     if count >= {eb} {{
                         0
                     }} else {{
-                        ((x as {uelem}).wrapping_shr(count)) as {elem}
+                        {shr_logical_lane}
                     }}
                 }})
             }}

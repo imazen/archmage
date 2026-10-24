@@ -20,7 +20,7 @@ use archmage::{NeonToken, arcane};
 use crate::simd::backends::*;
 
 #[cfg(target_arch = "aarch64")]
-impl F32x4Backend for archmage::NeonToken {
+impl F32x4Backend for NeonToken {
     type Repr = float32x4_t;
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -292,7 +292,7 @@ impl F32x4Backend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl F32x8Backend for archmage::NeonToken {
+impl F32x8Backend for NeonToken {
     type Repr = [float32x4_t; 2];
 
     // ====== Construction ======
@@ -652,7 +652,7 @@ impl F32x8Backend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl F64x2Backend for archmage::NeonToken {
+impl F64x2Backend for NeonToken {
     type Repr = float64x2_t;
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -891,7 +891,7 @@ impl F64x2Backend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl F64x4Backend for archmage::NeonToken {
+impl F64x4Backend for NeonToken {
     type Repr = [float64x2_t; 2];
 
     // ====== Construction ======
@@ -1217,7 +1217,7 @@ impl F64x4Backend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl I32x4Backend for archmage::NeonToken {
+impl I32x4Backend for NeonToken {
     type Repr = int32x4_t;
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -1411,7 +1411,7 @@ impl I32x4Backend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl I32x8Backend for archmage::NeonToken {
+impl I32x8Backend for NeonToken {
     type Repr = [int32x4_t; 2];
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -1650,7 +1650,7 @@ impl I32x8Backend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl U32x4Backend for archmage::NeonToken {
+impl U32x4Backend for NeonToken {
     type Repr = uint32x4_t;
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -1809,7 +1809,7 @@ impl U32x4Backend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl U32x8Backend for archmage::NeonToken {
+impl U32x8Backend for NeonToken {
     type Repr = [uint32x4_t; 2];
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -1992,7 +1992,7 @@ impl U32x8Backend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl I64x2Backend for archmage::NeonToken {
+impl I64x2Backend for NeonToken {
     type Repr = int64x2_t;
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -2156,7 +2156,7 @@ impl I64x2Backend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl I64x4Backend for archmage::NeonToken {
+impl I64x4Backend for NeonToken {
     type Repr = [int64x2_t; 2];
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -2370,7 +2370,7 @@ impl I64x4Backend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl I8x16Backend for archmage::NeonToken {
+impl I8x16Backend for NeonToken {
     type Repr = int8x16_t;
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -2545,7 +2545,7 @@ impl I8x16Backend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl I8x32Backend for archmage::NeonToken {
+impl I8x32Backend for NeonToken {
     type Repr = [int8x16_t; 2];
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -2737,7 +2737,7 @@ impl I8x32Backend for archmage::NeonToken {
         // (clippy::needless_range_loop).
         let mut result = 0u32;
         for (i, v) in a.into_iter().enumerate() {
-            result |= <archmage::NeonToken as I8x16Backend>::bitmask(_self, v) << (i * 16);
+            result |= <NeonToken as I8x16Backend>::bitmask(_self, v) << (i * 16);
         }
         result
     }
@@ -2753,7 +2753,7 @@ impl I8x32Backend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl U8x16Backend for archmage::NeonToken {
+impl U8x16Backend for NeonToken {
     type Repr = uint8x16_t;
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -2935,7 +2935,7 @@ impl U8x16Backend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl U8x32Backend for archmage::NeonToken {
+impl U8x32Backend for NeonToken {
     type Repr = [uint8x16_t; 2];
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -3096,7 +3096,7 @@ impl U8x32Backend for archmage::NeonToken {
         // (clippy::needless_range_loop).
         let mut result = 0u32;
         for (i, v) in a.into_iter().enumerate() {
-            result |= <archmage::NeonToken as U8x16Backend>::bitmask(_self, v) << (i * 16);
+            result |= <NeonToken as U8x16Backend>::bitmask(_self, v) << (i * 16);
         }
         result
     }
@@ -3132,7 +3132,7 @@ impl U8x32Backend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl I16x8Backend for archmage::NeonToken {
+impl I16x8Backend for NeonToken {
     type Repr = int16x8_t;
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -3345,7 +3345,7 @@ impl I16x8Backend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl I16x16Backend for archmage::NeonToken {
+impl I16x16Backend for NeonToken {
     type Repr = [int16x8_t; 2];
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -3576,7 +3576,7 @@ impl I16x16Backend for archmage::NeonToken {
         // (clippy::needless_range_loop).
         let mut result = 0u32;
         for (i, v) in a.into_iter().enumerate() {
-            result |= <archmage::NeonToken as I16x8Backend>::bitmask(_self, v) << (i * 8);
+            result |= <NeonToken as I16x8Backend>::bitmask(_self, v) << (i * 8);
         }
         result
     }
@@ -3630,7 +3630,7 @@ impl I16x16Backend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl U16x8Backend for archmage::NeonToken {
+impl U16x8Backend for NeonToken {
     type Repr = uint16x8_t;
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -3801,7 +3801,7 @@ impl U16x8Backend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl U16x16Backend for archmage::NeonToken {
+impl U16x16Backend for NeonToken {
     type Repr = [uint16x8_t; 2];
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -3982,7 +3982,7 @@ impl U16x16Backend for archmage::NeonToken {
         // (clippy::needless_range_loop).
         let mut result = 0u32;
         for (i, v) in a.into_iter().enumerate() {
-            result |= <archmage::NeonToken as U16x8Backend>::bitmask(_self, v) << (i * 8);
+            result |= <NeonToken as U16x8Backend>::bitmask(_self, v) << (i * 8);
         }
         result
     }
@@ -4003,7 +4003,7 @@ impl U16x16Backend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl U64x2Backend for archmage::NeonToken {
+impl U64x2Backend for NeonToken {
     type Repr = uint64x2_t;
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -4135,7 +4135,7 @@ impl U64x2Backend for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl U64x4Backend for archmage::NeonToken {
+impl U64x4Backend for NeonToken {
     type Repr = [uint64x2_t; 2];
 
     #[arcane(suppress_const_test, _self = NeonToken)]
@@ -4299,14 +4299,14 @@ impl U64x4Backend for archmage::NeonToken {
         // (clippy::needless_range_loop).
         let mut result = 0u32;
         for (i, v) in a.into_iter().enumerate() {
-            result |= <archmage::NeonToken as U64x2Backend>::bitmask(_self, v) << (i * 2);
+            result |= <NeonToken as U64x2Backend>::bitmask(_self, v) << (i * 2);
         }
         result
     }
 }
 
 #[cfg(target_arch = "aarch64")]
-impl F32x4Convert for archmage::NeonToken {
+impl F32x4Convert for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_f32_to_i32(self, a: float32x4_t) -> int32x4_t {
         vreinterpretq_s32_f32(a)
@@ -4334,7 +4334,7 @@ impl F32x4Convert for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl F32x8Convert for archmage::NeonToken {
+impl F32x8Convert for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_f32_to_i32(self, a: [float32x4_t; 2]) -> [int32x4_t; 2] {
         [vreinterpretq_s32_f32(a[0]), vreinterpretq_s32_f32(a[1])]
@@ -4362,7 +4362,7 @@ impl F32x8Convert for archmage::NeonToken {
 }
 
 #[cfg(all(target_arch = "aarch64", feature = "w512"))]
-impl F32x16Convert for archmage::NeonToken {
+impl F32x16Convert for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_f32_to_i32(self, a: [float32x4_t; 4]) -> [int32x4_t; 4] {
         [
@@ -4415,7 +4415,7 @@ impl F32x16Convert for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl U32x4Bitcast for archmage::NeonToken {
+impl U32x4Bitcast for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_u32_to_i32(self, a: uint32x4_t) -> int32x4_t {
         vreinterpretq_s32_u32(a)
@@ -4428,7 +4428,7 @@ impl U32x4Bitcast for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl U32x8Bitcast for archmage::NeonToken {
+impl U32x8Bitcast for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_u32_to_i32(self, a: [uint32x4_t; 2]) -> [int32x4_t; 2] {
         [vreinterpretq_s32_u32(a[0]), vreinterpretq_s32_u32(a[1])]
@@ -4441,7 +4441,7 @@ impl U32x8Bitcast for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl I64x2Bitcast for archmage::NeonToken {
+impl I64x2Bitcast for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_i64_to_f64(self, a: int64x2_t) -> float64x2_t {
         vreinterpretq_f64_s64(a)
@@ -4454,7 +4454,7 @@ impl I64x2Bitcast for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl I64x4Bitcast for archmage::NeonToken {
+impl I64x4Bitcast for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_i64_to_f64(self, a: [int64x2_t; 2]) -> [float64x2_t; 2] {
         [vreinterpretq_f64_s64(a[0]), vreinterpretq_f64_s64(a[1])]
@@ -4467,7 +4467,7 @@ impl I64x4Bitcast for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl I8x16Bitcast for archmage::NeonToken {
+impl I8x16Bitcast for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_i8_to_u8(self, a: int8x16_t) -> uint8x16_t {
         vreinterpretq_u8_s8(a)
@@ -4479,7 +4479,7 @@ impl I8x16Bitcast for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl I8x32Bitcast for archmage::NeonToken {
+impl I8x32Bitcast for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_i8_to_u8(self, a: [int8x16_t; 2]) -> [uint8x16_t; 2] {
         [vreinterpretq_u8_s8(a[0]), vreinterpretq_u8_s8(a[1])]
@@ -4491,7 +4491,7 @@ impl I8x32Bitcast for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl I16x8Bitcast for archmage::NeonToken {
+impl I16x8Bitcast for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_i16_to_u16(self, a: int16x8_t) -> uint16x8_t {
         vreinterpretq_u16_s16(a)
@@ -4503,7 +4503,7 @@ impl I16x8Bitcast for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl I16x16Bitcast for archmage::NeonToken {
+impl I16x16Bitcast for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_i16_to_u16(self, a: [int16x8_t; 2]) -> [uint16x8_t; 2] {
         [vreinterpretq_u16_s16(a[0]), vreinterpretq_u16_s16(a[1])]
@@ -4515,7 +4515,7 @@ impl I16x16Bitcast for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl U64x2Bitcast for archmage::NeonToken {
+impl U64x2Bitcast for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_u64_to_i64(self, a: uint64x2_t) -> int64x2_t {
         vreinterpretq_s64_u64(a)
@@ -4527,7 +4527,7 @@ impl U64x2Bitcast for archmage::NeonToken {
 }
 
 #[cfg(target_arch = "aarch64")]
-impl U64x4Bitcast for archmage::NeonToken {
+impl U64x4Bitcast for NeonToken {
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn bitcast_u64_to_i64(self, a: [uint64x2_t; 2]) -> [int64x2_t; 2] {
         [vreinterpretq_s64_u64(a[0]), vreinterpretq_s64_u64(a[1])]
@@ -4539,28 +4539,28 @@ impl U64x4Bitcast for archmage::NeonToken {
 }
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
-impl F32x16Backend for archmage::NeonToken {
+impl F32x16Backend for NeonToken {
     type Repr = [float32x4_t; 4];
 
     #[inline(always)]
     fn splat(self, v: f32) -> [float32x4_t; 4] {
-        let q = <archmage::NeonToken as F32x4Backend>::splat(self, v);
+        let q = <NeonToken as F32x4Backend>::splat(self, v);
         [q, q, q, q]
     }
 
     #[inline(always)]
     fn zero(self) -> [float32x4_t; 4] {
-        let q = <archmage::NeonToken as F32x4Backend>::zero(self);
+        let q = <NeonToken as F32x4Backend>::zero(self);
         [q, q, q, q]
     }
 
     #[inline(always)]
     fn load(self, data: &[f32; 16]) -> [float32x4_t; 4] {
         [
-            <archmage::NeonToken as F32x4Backend>::load(self, data[0..4].try_into().unwrap()),
-            <archmage::NeonToken as F32x4Backend>::load(self, data[4..8].try_into().unwrap()),
-            <archmage::NeonToken as F32x4Backend>::load(self, data[8..12].try_into().unwrap()),
-            <archmage::NeonToken as F32x4Backend>::load(self, data[12..16].try_into().unwrap()),
+            <NeonToken as F32x4Backend>::load(self, data[0..4].try_into().unwrap()),
+            <NeonToken as F32x4Backend>::load(self, data[4..8].try_into().unwrap()),
+            <NeonToken as F32x4Backend>::load(self, data[8..12].try_into().unwrap()),
+            <NeonToken as F32x4Backend>::load(self, data[12..16].try_into().unwrap()),
         ]
     }
 
@@ -4575,10 +4575,10 @@ impl F32x16Backend for archmage::NeonToken {
         q2.copy_from_slice(&arr[8..12]);
         q3.copy_from_slice(&arr[12..16]);
         [
-            <archmage::NeonToken as F32x4Backend>::from_array(self, q0),
-            <archmage::NeonToken as F32x4Backend>::from_array(self, q1),
-            <archmage::NeonToken as F32x4Backend>::from_array(self, q2),
-            <archmage::NeonToken as F32x4Backend>::from_array(self, q3),
+            <NeonToken as F32x4Backend>::from_array(self, q0),
+            <NeonToken as F32x4Backend>::from_array(self, q1),
+            <NeonToken as F32x4Backend>::from_array(self, q2),
+            <NeonToken as F32x4Backend>::from_array(self, q3),
         ]
     }
 
@@ -4587,18 +4587,18 @@ impl F32x16Backend for archmage::NeonToken {
         let (o01, o23) = out.split_at_mut(8);
         let (o0, o1) = o01.split_at_mut(4);
         let (o2, o3) = o23.split_at_mut(4);
-        <archmage::NeonToken as F32x4Backend>::store(self, repr[0], o0.try_into().unwrap());
-        <archmage::NeonToken as F32x4Backend>::store(self, repr[1], o1.try_into().unwrap());
-        <archmage::NeonToken as F32x4Backend>::store(self, repr[2], o2.try_into().unwrap());
-        <archmage::NeonToken as F32x4Backend>::store(self, repr[3], o3.try_into().unwrap());
+        <NeonToken as F32x4Backend>::store(self, repr[0], o0.try_into().unwrap());
+        <NeonToken as F32x4Backend>::store(self, repr[1], o1.try_into().unwrap());
+        <NeonToken as F32x4Backend>::store(self, repr[2], o2.try_into().unwrap());
+        <NeonToken as F32x4Backend>::store(self, repr[3], o3.try_into().unwrap());
     }
 
     #[inline(always)]
     fn to_array(self, repr: [float32x4_t; 4]) -> [f32; 16] {
-        let a0 = <archmage::NeonToken as F32x4Backend>::to_array(self, repr[0]);
-        let a1 = <archmage::NeonToken as F32x4Backend>::to_array(self, repr[1]);
-        let a2 = <archmage::NeonToken as F32x4Backend>::to_array(self, repr[2]);
-        let a3 = <archmage::NeonToken as F32x4Backend>::to_array(self, repr[3]);
+        let a0 = <NeonToken as F32x4Backend>::to_array(self, repr[0]);
+        let a1 = <NeonToken as F32x4Backend>::to_array(self, repr[1]);
+        let a2 = <NeonToken as F32x4Backend>::to_array(self, repr[2]);
+        let a3 = <NeonToken as F32x4Backend>::to_array(self, repr[3]);
         let mut out = [0.0f32; 16];
         out[0..4].copy_from_slice(&a0);
         out[4..8].copy_from_slice(&a1);
@@ -4609,42 +4609,42 @@ impl F32x16Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn add(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::add(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::add(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn sub(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::sub(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::sub(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn mul(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::mul(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::mul(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn div(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::div(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::div(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn neg(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::neg(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::neg(self, a[i]))
     }
 
     #[inline(always)]
     fn min(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::min(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::min(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn max(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::max(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::max(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn sqrt(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::sqrt(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::sqrt(self, a[i]))
     }
 
     // Reciprocals delegate to the quarter backend so the full-precision
@@ -4652,42 +4652,42 @@ impl F32x16Backend for archmage::NeonToken {
     // (Without these the trait defaults make recip/rcp_approx the identity.)
     #[inline(always)]
     fn rcp_approx(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::rcp_approx(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::rcp_approx(self, a[i]))
     }
 
     #[inline(always)]
     fn rsqrt_approx(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::rsqrt_approx(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::rsqrt_approx(self, a[i]))
     }
 
     #[inline(always)]
     fn recip(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::recip(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::recip(self, a[i]))
     }
 
     #[inline(always)]
     fn rsqrt(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::rsqrt(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::rsqrt(self, a[i]))
     }
 
     #[inline(always)]
     fn abs(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::abs(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::abs(self, a[i]))
     }
 
     #[inline(always)]
     fn floor(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::floor(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::floor(self, a[i]))
     }
 
     #[inline(always)]
     fn ceil(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::ceil(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::ceil(self, a[i]))
     }
 
     #[inline(always)]
     fn round(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::round(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::round(self, a[i]))
     }
 
     #[inline(always)]
@@ -4697,9 +4697,7 @@ impl F32x16Backend for archmage::NeonToken {
         b: [float32x4_t; 4],
         c: [float32x4_t; 4],
     ) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as F32x4Backend>::mul_add(self, a[i], b[i], c[i])
-        })
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::mul_add(self, a[i], b[i], c[i]))
     }
 
     #[inline(always)]
@@ -4709,9 +4707,7 @@ impl F32x16Backend for archmage::NeonToken {
         b: [float32x4_t; 4],
         c: [float32x4_t; 4],
     ) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as F32x4Backend>::mul_sub(self, a[i], b[i], c[i])
-        })
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::mul_sub(self, a[i], b[i], c[i]))
     }
 
     #[inline(always)]
@@ -4722,7 +4718,7 @@ impl F32x16Backend for archmage::NeonToken {
         c: [float32x4_t; 4],
     ) -> [float32x4_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as F32x4Backend>::mul_add_portable(self, a[i], b[i], c[i])
+            <NeonToken as F32x4Backend>::mul_add_portable(self, a[i], b[i], c[i])
         })
     }
 
@@ -4734,28 +4730,28 @@ impl F32x16Backend for archmage::NeonToken {
         c: [float32x4_t; 4],
     ) -> [float32x4_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as F32x4Backend>::mul_sub_portable(self, a[i], b[i], c[i])
+            <NeonToken as F32x4Backend>::mul_sub_portable(self, a[i], b[i], c[i])
         })
     }
 
     #[inline(always)]
     fn reduce_add(self, a: [float32x4_t; 4]) -> f32 {
-        <archmage::NeonToken as F32x4Backend>::reduce_add(self, a[0])
-            + <archmage::NeonToken as F32x4Backend>::reduce_add(self, a[1])
-            + <archmage::NeonToken as F32x4Backend>::reduce_add(self, a[2])
-            + <archmage::NeonToken as F32x4Backend>::reduce_add(self, a[3])
+        <NeonToken as F32x4Backend>::reduce_add(self, a[0])
+            + <NeonToken as F32x4Backend>::reduce_add(self, a[1])
+            + <NeonToken as F32x4Backend>::reduce_add(self, a[2])
+            + <NeonToken as F32x4Backend>::reduce_add(self, a[3])
     }
 
     #[inline(always)]
     fn reduce_min(self, a: [float32x4_t; 4]) -> f32 {
         let m01 = {
-            let l = <archmage::NeonToken as F32x4Backend>::reduce_min(self, a[0]);
-            let r = <archmage::NeonToken as F32x4Backend>::reduce_min(self, a[1]);
+            let l = <NeonToken as F32x4Backend>::reduce_min(self, a[0]);
+            let r = <NeonToken as F32x4Backend>::reduce_min(self, a[1]);
             if l < r { l } else { r }
         };
         let m23 = {
-            let l = <archmage::NeonToken as F32x4Backend>::reduce_min(self, a[2]);
-            let r = <archmage::NeonToken as F32x4Backend>::reduce_min(self, a[3]);
+            let l = <NeonToken as F32x4Backend>::reduce_min(self, a[2]);
+            let r = <NeonToken as F32x4Backend>::reduce_min(self, a[3]);
             if l < r { l } else { r }
         };
         if m01 < m23 { m01 } else { m23 }
@@ -4764,13 +4760,13 @@ impl F32x16Backend for archmage::NeonToken {
     #[inline(always)]
     fn reduce_max(self, a: [float32x4_t; 4]) -> f32 {
         let m01 = {
-            let l = <archmage::NeonToken as F32x4Backend>::reduce_max(self, a[0]);
-            let r = <archmage::NeonToken as F32x4Backend>::reduce_max(self, a[1]);
+            let l = <NeonToken as F32x4Backend>::reduce_max(self, a[0]);
+            let r = <NeonToken as F32x4Backend>::reduce_max(self, a[1]);
             if l > r { l } else { r }
         };
         let m23 = {
-            let l = <archmage::NeonToken as F32x4Backend>::reduce_max(self, a[2]);
-            let r = <archmage::NeonToken as F32x4Backend>::reduce_max(self, a[3]);
+            let l = <NeonToken as F32x4Backend>::reduce_max(self, a[2]);
+            let r = <NeonToken as F32x4Backend>::reduce_max(self, a[3]);
             if l > r { l } else { r }
         };
         if m01 > m23 { m01 } else { m23 }
@@ -4778,32 +4774,32 @@ impl F32x16Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn simd_eq(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::simd_eq(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::simd_eq(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::simd_ne(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::simd_ne(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::simd_lt(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::simd_lt(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_le(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::simd_le(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::simd_le(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::simd_gt(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::simd_gt(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::simd_ge(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::simd_ge(self, a[i], b[i]))
     }
 
     #[inline(always)]
@@ -4814,55 +4810,55 @@ impl F32x16Backend for archmage::NeonToken {
         if_false: [float32x4_t; 4],
     ) -> [float32x4_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as F32x4Backend>::blend(self, mask[i], if_true[i], if_false[i])
+            <NeonToken as F32x4Backend>::blend(self, mask[i], if_true[i], if_false[i])
         })
     }
 
     #[inline(always)]
     fn not(self, a: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::not(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::not(self, a[i]))
     }
 
     #[inline(always)]
     fn bitand(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::bitand(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::bitand(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn bitor(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::bitor(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::bitor(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn bitxor(self, a: [float32x4_t; 4], b: [float32x4_t; 4]) -> [float32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F32x4Backend>::bitxor(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F32x4Backend>::bitxor(self, a[i], b[i]))
     }
 }
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
-impl F64x8Backend for archmage::NeonToken {
+impl F64x8Backend for NeonToken {
     type Repr = [float64x2_t; 4];
 
     #[inline(always)]
     fn splat(self, v: f64) -> [float64x2_t; 4] {
-        let q = <archmage::NeonToken as F64x2Backend>::splat(self, v);
+        let q = <NeonToken as F64x2Backend>::splat(self, v);
         [q, q, q, q]
     }
 
     #[inline(always)]
     fn zero(self) -> [float64x2_t; 4] {
-        let q = <archmage::NeonToken as F64x2Backend>::zero(self);
+        let q = <NeonToken as F64x2Backend>::zero(self);
         [q, q, q, q]
     }
 
     #[inline(always)]
     fn load(self, data: &[f64; 8]) -> [float64x2_t; 4] {
         [
-            <archmage::NeonToken as F64x2Backend>::load(self, data[0..2].try_into().unwrap()),
-            <archmage::NeonToken as F64x2Backend>::load(self, data[2..4].try_into().unwrap()),
-            <archmage::NeonToken as F64x2Backend>::load(self, data[4..6].try_into().unwrap()),
-            <archmage::NeonToken as F64x2Backend>::load(self, data[6..8].try_into().unwrap()),
+            <NeonToken as F64x2Backend>::load(self, data[0..2].try_into().unwrap()),
+            <NeonToken as F64x2Backend>::load(self, data[2..4].try_into().unwrap()),
+            <NeonToken as F64x2Backend>::load(self, data[4..6].try_into().unwrap()),
+            <NeonToken as F64x2Backend>::load(self, data[6..8].try_into().unwrap()),
         ]
     }
 
@@ -4877,10 +4873,10 @@ impl F64x8Backend for archmage::NeonToken {
         q2.copy_from_slice(&arr[4..6]);
         q3.copy_from_slice(&arr[6..8]);
         [
-            <archmage::NeonToken as F64x2Backend>::from_array(self, q0),
-            <archmage::NeonToken as F64x2Backend>::from_array(self, q1),
-            <archmage::NeonToken as F64x2Backend>::from_array(self, q2),
-            <archmage::NeonToken as F64x2Backend>::from_array(self, q3),
+            <NeonToken as F64x2Backend>::from_array(self, q0),
+            <NeonToken as F64x2Backend>::from_array(self, q1),
+            <NeonToken as F64x2Backend>::from_array(self, q2),
+            <NeonToken as F64x2Backend>::from_array(self, q3),
         ]
     }
 
@@ -4889,18 +4885,18 @@ impl F64x8Backend for archmage::NeonToken {
         let (o01, o23) = out.split_at_mut(4);
         let (o0, o1) = o01.split_at_mut(2);
         let (o2, o3) = o23.split_at_mut(2);
-        <archmage::NeonToken as F64x2Backend>::store(self, repr[0], o0.try_into().unwrap());
-        <archmage::NeonToken as F64x2Backend>::store(self, repr[1], o1.try_into().unwrap());
-        <archmage::NeonToken as F64x2Backend>::store(self, repr[2], o2.try_into().unwrap());
-        <archmage::NeonToken as F64x2Backend>::store(self, repr[3], o3.try_into().unwrap());
+        <NeonToken as F64x2Backend>::store(self, repr[0], o0.try_into().unwrap());
+        <NeonToken as F64x2Backend>::store(self, repr[1], o1.try_into().unwrap());
+        <NeonToken as F64x2Backend>::store(self, repr[2], o2.try_into().unwrap());
+        <NeonToken as F64x2Backend>::store(self, repr[3], o3.try_into().unwrap());
     }
 
     #[inline(always)]
     fn to_array(self, repr: [float64x2_t; 4]) -> [f64; 8] {
-        let a0 = <archmage::NeonToken as F64x2Backend>::to_array(self, repr[0]);
-        let a1 = <archmage::NeonToken as F64x2Backend>::to_array(self, repr[1]);
-        let a2 = <archmage::NeonToken as F64x2Backend>::to_array(self, repr[2]);
-        let a3 = <archmage::NeonToken as F64x2Backend>::to_array(self, repr[3]);
+        let a0 = <NeonToken as F64x2Backend>::to_array(self, repr[0]);
+        let a1 = <NeonToken as F64x2Backend>::to_array(self, repr[1]);
+        let a2 = <NeonToken as F64x2Backend>::to_array(self, repr[2]);
+        let a3 = <NeonToken as F64x2Backend>::to_array(self, repr[3]);
         let mut out = [0.0f64; 8];
         out[0..2].copy_from_slice(&a0);
         out[2..4].copy_from_slice(&a1);
@@ -4911,42 +4907,42 @@ impl F64x8Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn add(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::add(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::add(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn sub(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::sub(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::sub(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn mul(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::mul(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::mul(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn div(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::div(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::div(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn neg(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::neg(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::neg(self, a[i]))
     }
 
     #[inline(always)]
     fn min(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::min(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::min(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn max(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::max(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::max(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn sqrt(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::sqrt(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::sqrt(self, a[i]))
     }
 
     // Reciprocals delegate to the quarter backend so the full-precision
@@ -4954,42 +4950,42 @@ impl F64x8Backend for archmage::NeonToken {
     // (Without these the trait defaults make recip/rcp_approx the identity.)
     #[inline(always)]
     fn rcp_approx(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::rcp_approx(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::rcp_approx(self, a[i]))
     }
 
     #[inline(always)]
     fn rsqrt_approx(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::rsqrt_approx(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::rsqrt_approx(self, a[i]))
     }
 
     #[inline(always)]
     fn recip(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::recip(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::recip(self, a[i]))
     }
 
     #[inline(always)]
     fn rsqrt(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::rsqrt(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::rsqrt(self, a[i]))
     }
 
     #[inline(always)]
     fn abs(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::abs(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::abs(self, a[i]))
     }
 
     #[inline(always)]
     fn floor(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::floor(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::floor(self, a[i]))
     }
 
     #[inline(always)]
     fn ceil(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::ceil(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::ceil(self, a[i]))
     }
 
     #[inline(always)]
     fn round(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::round(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::round(self, a[i]))
     }
 
     #[inline(always)]
@@ -4999,9 +4995,7 @@ impl F64x8Backend for archmage::NeonToken {
         b: [float64x2_t; 4],
         c: [float64x2_t; 4],
     ) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as F64x2Backend>::mul_add(self, a[i], b[i], c[i])
-        })
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::mul_add(self, a[i], b[i], c[i]))
     }
 
     #[inline(always)]
@@ -5011,9 +5005,7 @@ impl F64x8Backend for archmage::NeonToken {
         b: [float64x2_t; 4],
         c: [float64x2_t; 4],
     ) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as F64x2Backend>::mul_sub(self, a[i], b[i], c[i])
-        })
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::mul_sub(self, a[i], b[i], c[i]))
     }
 
     #[inline(always)]
@@ -5024,7 +5016,7 @@ impl F64x8Backend for archmage::NeonToken {
         c: [float64x2_t; 4],
     ) -> [float64x2_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as F64x2Backend>::mul_add_portable(self, a[i], b[i], c[i])
+            <NeonToken as F64x2Backend>::mul_add_portable(self, a[i], b[i], c[i])
         })
     }
 
@@ -5036,28 +5028,28 @@ impl F64x8Backend for archmage::NeonToken {
         c: [float64x2_t; 4],
     ) -> [float64x2_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as F64x2Backend>::mul_sub_portable(self, a[i], b[i], c[i])
+            <NeonToken as F64x2Backend>::mul_sub_portable(self, a[i], b[i], c[i])
         })
     }
 
     #[inline(always)]
     fn reduce_add(self, a: [float64x2_t; 4]) -> f64 {
-        <archmage::NeonToken as F64x2Backend>::reduce_add(self, a[0])
-            + <archmage::NeonToken as F64x2Backend>::reduce_add(self, a[1])
-            + <archmage::NeonToken as F64x2Backend>::reduce_add(self, a[2])
-            + <archmage::NeonToken as F64x2Backend>::reduce_add(self, a[3])
+        <NeonToken as F64x2Backend>::reduce_add(self, a[0])
+            + <NeonToken as F64x2Backend>::reduce_add(self, a[1])
+            + <NeonToken as F64x2Backend>::reduce_add(self, a[2])
+            + <NeonToken as F64x2Backend>::reduce_add(self, a[3])
     }
 
     #[inline(always)]
     fn reduce_min(self, a: [float64x2_t; 4]) -> f64 {
         let m01 = {
-            let l = <archmage::NeonToken as F64x2Backend>::reduce_min(self, a[0]);
-            let r = <archmage::NeonToken as F64x2Backend>::reduce_min(self, a[1]);
+            let l = <NeonToken as F64x2Backend>::reduce_min(self, a[0]);
+            let r = <NeonToken as F64x2Backend>::reduce_min(self, a[1]);
             if l < r { l } else { r }
         };
         let m23 = {
-            let l = <archmage::NeonToken as F64x2Backend>::reduce_min(self, a[2]);
-            let r = <archmage::NeonToken as F64x2Backend>::reduce_min(self, a[3]);
+            let l = <NeonToken as F64x2Backend>::reduce_min(self, a[2]);
+            let r = <NeonToken as F64x2Backend>::reduce_min(self, a[3]);
             if l < r { l } else { r }
         };
         if m01 < m23 { m01 } else { m23 }
@@ -5066,13 +5058,13 @@ impl F64x8Backend for archmage::NeonToken {
     #[inline(always)]
     fn reduce_max(self, a: [float64x2_t; 4]) -> f64 {
         let m01 = {
-            let l = <archmage::NeonToken as F64x2Backend>::reduce_max(self, a[0]);
-            let r = <archmage::NeonToken as F64x2Backend>::reduce_max(self, a[1]);
+            let l = <NeonToken as F64x2Backend>::reduce_max(self, a[0]);
+            let r = <NeonToken as F64x2Backend>::reduce_max(self, a[1]);
             if l > r { l } else { r }
         };
         let m23 = {
-            let l = <archmage::NeonToken as F64x2Backend>::reduce_max(self, a[2]);
-            let r = <archmage::NeonToken as F64x2Backend>::reduce_max(self, a[3]);
+            let l = <NeonToken as F64x2Backend>::reduce_max(self, a[2]);
+            let r = <NeonToken as F64x2Backend>::reduce_max(self, a[3]);
             if l > r { l } else { r }
         };
         if m01 > m23 { m01 } else { m23 }
@@ -5080,32 +5072,32 @@ impl F64x8Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn simd_eq(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::simd_eq(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::simd_eq(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::simd_ne(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::simd_ne(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::simd_lt(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::simd_lt(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_le(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::simd_le(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::simd_le(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::simd_gt(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::simd_gt(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::simd_ge(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::simd_ge(self, a[i], b[i]))
     }
 
     #[inline(always)]
@@ -5116,55 +5108,55 @@ impl F64x8Backend for archmage::NeonToken {
         if_false: [float64x2_t; 4],
     ) -> [float64x2_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as F64x2Backend>::blend(self, mask[i], if_true[i], if_false[i])
+            <NeonToken as F64x2Backend>::blend(self, mask[i], if_true[i], if_false[i])
         })
     }
 
     #[inline(always)]
     fn not(self, a: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::not(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::not(self, a[i]))
     }
 
     #[inline(always)]
     fn bitand(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::bitand(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::bitand(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn bitor(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::bitor(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::bitor(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn bitxor(self, a: [float64x2_t; 4], b: [float64x2_t; 4]) -> [float64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as F64x2Backend>::bitxor(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as F64x2Backend>::bitxor(self, a[i], b[i]))
     }
 }
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
-impl I8x64Backend for archmage::NeonToken {
+impl I8x64Backend for NeonToken {
     type Repr = [int8x16_t; 4];
 
     #[inline(always)]
     fn splat(self, v: i8) -> [int8x16_t; 4] {
-        let q = <archmage::NeonToken as I8x16Backend>::splat(self, v);
+        let q = <NeonToken as I8x16Backend>::splat(self, v);
         [q, q, q, q]
     }
 
     #[inline(always)]
     fn zero(self) -> [int8x16_t; 4] {
-        let q = <archmage::NeonToken as I8x16Backend>::zero(self);
+        let q = <NeonToken as I8x16Backend>::zero(self);
         [q, q, q, q]
     }
 
     #[inline(always)]
     fn load(self, data: &[i8; 64]) -> [int8x16_t; 4] {
         [
-            <archmage::NeonToken as I8x16Backend>::load(self, data[0..16].try_into().unwrap()),
-            <archmage::NeonToken as I8x16Backend>::load(self, data[16..32].try_into().unwrap()),
-            <archmage::NeonToken as I8x16Backend>::load(self, data[32..48].try_into().unwrap()),
-            <archmage::NeonToken as I8x16Backend>::load(self, data[48..64].try_into().unwrap()),
+            <NeonToken as I8x16Backend>::load(self, data[0..16].try_into().unwrap()),
+            <NeonToken as I8x16Backend>::load(self, data[16..32].try_into().unwrap()),
+            <NeonToken as I8x16Backend>::load(self, data[32..48].try_into().unwrap()),
+            <NeonToken as I8x16Backend>::load(self, data[48..64].try_into().unwrap()),
         ]
     }
 
@@ -5179,10 +5171,10 @@ impl I8x64Backend for archmage::NeonToken {
         q2.copy_from_slice(&arr[32..48]);
         q3.copy_from_slice(&arr[48..64]);
         [
-            <archmage::NeonToken as I8x16Backend>::from_array(self, q0),
-            <archmage::NeonToken as I8x16Backend>::from_array(self, q1),
-            <archmage::NeonToken as I8x16Backend>::from_array(self, q2),
-            <archmage::NeonToken as I8x16Backend>::from_array(self, q3),
+            <NeonToken as I8x16Backend>::from_array(self, q0),
+            <NeonToken as I8x16Backend>::from_array(self, q1),
+            <NeonToken as I8x16Backend>::from_array(self, q2),
+            <NeonToken as I8x16Backend>::from_array(self, q3),
         ]
     }
 
@@ -5191,18 +5183,18 @@ impl I8x64Backend for archmage::NeonToken {
         let (o01, o23) = out.split_at_mut(32);
         let (o0, o1) = o01.split_at_mut(16);
         let (o2, o3) = o23.split_at_mut(16);
-        <archmage::NeonToken as I8x16Backend>::store(self, repr[0], o0.try_into().unwrap());
-        <archmage::NeonToken as I8x16Backend>::store(self, repr[1], o1.try_into().unwrap());
-        <archmage::NeonToken as I8x16Backend>::store(self, repr[2], o2.try_into().unwrap());
-        <archmage::NeonToken as I8x16Backend>::store(self, repr[3], o3.try_into().unwrap());
+        <NeonToken as I8x16Backend>::store(self, repr[0], o0.try_into().unwrap());
+        <NeonToken as I8x16Backend>::store(self, repr[1], o1.try_into().unwrap());
+        <NeonToken as I8x16Backend>::store(self, repr[2], o2.try_into().unwrap());
+        <NeonToken as I8x16Backend>::store(self, repr[3], o3.try_into().unwrap());
     }
 
     #[inline(always)]
     fn to_array(self, repr: [int8x16_t; 4]) -> [i8; 64] {
-        let a0 = <archmage::NeonToken as I8x16Backend>::to_array(self, repr[0]);
-        let a1 = <archmage::NeonToken as I8x16Backend>::to_array(self, repr[1]);
-        let a2 = <archmage::NeonToken as I8x16Backend>::to_array(self, repr[2]);
-        let a3 = <archmage::NeonToken as I8x16Backend>::to_array(self, repr[3]);
+        let a0 = <NeonToken as I8x16Backend>::to_array(self, repr[0]);
+        let a1 = <NeonToken as I8x16Backend>::to_array(self, repr[1]);
+        let a2 = <NeonToken as I8x16Backend>::to_array(self, repr[2]);
+        let a3 = <NeonToken as I8x16Backend>::to_array(self, repr[3]);
         let mut out = [0; 64];
         out[0..16].copy_from_slice(&a0);
         out[16..32].copy_from_slice(&a1);
@@ -5213,136 +5205,122 @@ impl I8x64Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn add(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I8x16Backend>::add(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I8x16Backend>::add(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn sub(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I8x16Backend>::sub(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I8x16Backend>::sub(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn neg(self, a: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I8x16Backend>::neg(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as I8x16Backend>::neg(self, a[i]))
     }
 
     #[inline(always)]
     fn min(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I8x16Backend>::min(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I8x16Backend>::min(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn max(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I8x16Backend>::max(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I8x16Backend>::max(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn abs(self, a: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I8x16Backend>::abs(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as I8x16Backend>::abs(self, a[i]))
     }
 
     #[inline(always)]
     fn reduce_add(self, a: [int8x16_t; 4]) -> i8 {
-        <archmage::NeonToken as I8x16Backend>::reduce_add(self, a[0])
-            .wrapping_add(<archmage::NeonToken as I8x16Backend>::reduce_add(
-                self, a[1],
-            ))
-            .wrapping_add(<archmage::NeonToken as I8x16Backend>::reduce_add(
-                self, a[2],
-            ))
-            .wrapping_add(<archmage::NeonToken as I8x16Backend>::reduce_add(
-                self, a[3],
-            ))
+        <NeonToken as I8x16Backend>::reduce_add(self, a[0])
+            .wrapping_add(<NeonToken as I8x16Backend>::reduce_add(self, a[1]))
+            .wrapping_add(<NeonToken as I8x16Backend>::reduce_add(self, a[2]))
+            .wrapping_add(<NeonToken as I8x16Backend>::reduce_add(self, a[3]))
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I8x16Backend>::shl_const::<N>(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as I8x16Backend>::shl_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as I8x16Backend>::shr_arithmetic_const::<N>(self, a[i])
-        })
+        core::array::from_fn(|i| <NeonToken as I8x16Backend>::shr_arithmetic_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as I8x16Backend>::shr_logical_const::<N>(self, a[i])
-        })
+        core::array::from_fn(|i| <NeonToken as I8x16Backend>::shr_logical_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn saturating_add(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as I8x16Backend>::saturating_add(self, a[i], b[i])
-        })
+        core::array::from_fn(|i| <NeonToken as I8x16Backend>::saturating_add(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn saturating_sub(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as I8x16Backend>::saturating_sub(self, a[i], b[i])
-        })
+        core::array::from_fn(|i| <NeonToken as I8x16Backend>::saturating_sub(self, a[i], b[i]))
     }
 
     // Reduce the quarters with vector AND/OR first, then ONE lane
     // reduction (fearless_simd's polyfill lesson; branchless).
     #[inline(always)]
     fn all_true(self, a: [int8x16_t; 4]) -> bool {
-        let c01 = <archmage::NeonToken as I8x16Backend>::bitand(self, a[0], a[1]);
-        let c23 = <archmage::NeonToken as I8x16Backend>::bitand(self, a[2], a[3]);
-        let c = <archmage::NeonToken as I8x16Backend>::bitand(self, c01, c23);
-        <archmage::NeonToken as I8x16Backend>::all_true(self, c)
+        let c01 = <NeonToken as I8x16Backend>::bitand(self, a[0], a[1]);
+        let c23 = <NeonToken as I8x16Backend>::bitand(self, a[2], a[3]);
+        let c = <NeonToken as I8x16Backend>::bitand(self, c01, c23);
+        <NeonToken as I8x16Backend>::all_true(self, c)
     }
 
     #[inline(always)]
     fn any_true(self, a: [int8x16_t; 4]) -> bool {
-        let c01 = <archmage::NeonToken as I8x16Backend>::bitor(self, a[0], a[1]);
-        let c23 = <archmage::NeonToken as I8x16Backend>::bitor(self, a[2], a[3]);
-        let c = <archmage::NeonToken as I8x16Backend>::bitor(self, c01, c23);
-        <archmage::NeonToken as I8x16Backend>::any_true(self, c)
+        let c01 = <NeonToken as I8x16Backend>::bitor(self, a[0], a[1]);
+        let c23 = <NeonToken as I8x16Backend>::bitor(self, a[2], a[3]);
+        let c = <NeonToken as I8x16Backend>::bitor(self, c01, c23);
+        <NeonToken as I8x16Backend>::any_true(self, c)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [int8x16_t; 4]) -> u64 {
-        let q0 = <archmage::NeonToken as I8x16Backend>::bitmask(self, a[0]) as u64;
-        let q1 = <archmage::NeonToken as I8x16Backend>::bitmask(self, a[1]) as u64;
-        let q2 = <archmage::NeonToken as I8x16Backend>::bitmask(self, a[2]) as u64;
-        let q3 = <archmage::NeonToken as I8x16Backend>::bitmask(self, a[3]) as u64;
+        let q0 = <NeonToken as I8x16Backend>::bitmask(self, a[0]) as u64;
+        let q1 = <NeonToken as I8x16Backend>::bitmask(self, a[1]) as u64;
+        let q2 = <NeonToken as I8x16Backend>::bitmask(self, a[2]) as u64;
+        let q3 = <NeonToken as I8x16Backend>::bitmask(self, a[3]) as u64;
         q0 | (q1 << 16) | (q2 << 32) | (q3 << 48)
     }
 
     #[inline(always)]
     fn simd_eq(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I8x16Backend>::simd_eq(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I8x16Backend>::simd_eq(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I8x16Backend>::simd_ne(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I8x16Backend>::simd_ne(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I8x16Backend>::simd_lt(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I8x16Backend>::simd_lt(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_le(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I8x16Backend>::simd_le(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I8x16Backend>::simd_le(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I8x16Backend>::simd_gt(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I8x16Backend>::simd_gt(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I8x16Backend>::simd_ge(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I8x16Backend>::simd_ge(self, a[i], b[i]))
     }
 
     #[inline(always)]
@@ -5353,28 +5331,28 @@ impl I8x64Backend for archmage::NeonToken {
         if_false: [int8x16_t; 4],
     ) -> [int8x16_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as I8x16Backend>::blend(self, mask[i], if_true[i], if_false[i])
+            <NeonToken as I8x16Backend>::blend(self, mask[i], if_true[i], if_false[i])
         })
     }
 
     #[inline(always)]
     fn not(self, a: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I8x16Backend>::not(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as I8x16Backend>::not(self, a[i]))
     }
 
     #[inline(always)]
     fn bitand(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I8x16Backend>::bitand(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I8x16Backend>::bitand(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn bitor(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I8x16Backend>::bitor(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I8x16Backend>::bitor(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn bitxor(self, a: [int8x16_t; 4], b: [int8x16_t; 4]) -> [int8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I8x16Backend>::bitxor(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I8x16Backend>::bitxor(self, a[i], b[i]))
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_i8_to_i16(self, a: [int8x16_t; 4]) -> [int16x8_t; 4] {
@@ -5399,28 +5377,28 @@ impl I8x64Backend for archmage::NeonToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
-impl U8x64Backend for archmage::NeonToken {
+impl U8x64Backend for NeonToken {
     type Repr = [uint8x16_t; 4];
 
     #[inline(always)]
     fn splat(self, v: u8) -> [uint8x16_t; 4] {
-        let q = <archmage::NeonToken as U8x16Backend>::splat(self, v);
+        let q = <NeonToken as U8x16Backend>::splat(self, v);
         [q, q, q, q]
     }
 
     #[inline(always)]
     fn zero(self) -> [uint8x16_t; 4] {
-        let q = <archmage::NeonToken as U8x16Backend>::zero(self);
+        let q = <NeonToken as U8x16Backend>::zero(self);
         [q, q, q, q]
     }
 
     #[inline(always)]
     fn load(self, data: &[u8; 64]) -> [uint8x16_t; 4] {
         [
-            <archmage::NeonToken as U8x16Backend>::load(self, data[0..16].try_into().unwrap()),
-            <archmage::NeonToken as U8x16Backend>::load(self, data[16..32].try_into().unwrap()),
-            <archmage::NeonToken as U8x16Backend>::load(self, data[32..48].try_into().unwrap()),
-            <archmage::NeonToken as U8x16Backend>::load(self, data[48..64].try_into().unwrap()),
+            <NeonToken as U8x16Backend>::load(self, data[0..16].try_into().unwrap()),
+            <NeonToken as U8x16Backend>::load(self, data[16..32].try_into().unwrap()),
+            <NeonToken as U8x16Backend>::load(self, data[32..48].try_into().unwrap()),
+            <NeonToken as U8x16Backend>::load(self, data[48..64].try_into().unwrap()),
         ]
     }
 
@@ -5435,10 +5413,10 @@ impl U8x64Backend for archmage::NeonToken {
         q2.copy_from_slice(&arr[32..48]);
         q3.copy_from_slice(&arr[48..64]);
         [
-            <archmage::NeonToken as U8x16Backend>::from_array(self, q0),
-            <archmage::NeonToken as U8x16Backend>::from_array(self, q1),
-            <archmage::NeonToken as U8x16Backend>::from_array(self, q2),
-            <archmage::NeonToken as U8x16Backend>::from_array(self, q3),
+            <NeonToken as U8x16Backend>::from_array(self, q0),
+            <NeonToken as U8x16Backend>::from_array(self, q1),
+            <NeonToken as U8x16Backend>::from_array(self, q2),
+            <NeonToken as U8x16Backend>::from_array(self, q3),
         ]
     }
 
@@ -5447,18 +5425,18 @@ impl U8x64Backend for archmage::NeonToken {
         let (o01, o23) = out.split_at_mut(32);
         let (o0, o1) = o01.split_at_mut(16);
         let (o2, o3) = o23.split_at_mut(16);
-        <archmage::NeonToken as U8x16Backend>::store(self, repr[0], o0.try_into().unwrap());
-        <archmage::NeonToken as U8x16Backend>::store(self, repr[1], o1.try_into().unwrap());
-        <archmage::NeonToken as U8x16Backend>::store(self, repr[2], o2.try_into().unwrap());
-        <archmage::NeonToken as U8x16Backend>::store(self, repr[3], o3.try_into().unwrap());
+        <NeonToken as U8x16Backend>::store(self, repr[0], o0.try_into().unwrap());
+        <NeonToken as U8x16Backend>::store(self, repr[1], o1.try_into().unwrap());
+        <NeonToken as U8x16Backend>::store(self, repr[2], o2.try_into().unwrap());
+        <NeonToken as U8x16Backend>::store(self, repr[3], o3.try_into().unwrap());
     }
 
     #[inline(always)]
     fn to_array(self, repr: [uint8x16_t; 4]) -> [u8; 64] {
-        let a0 = <archmage::NeonToken as U8x16Backend>::to_array(self, repr[0]);
-        let a1 = <archmage::NeonToken as U8x16Backend>::to_array(self, repr[1]);
-        let a2 = <archmage::NeonToken as U8x16Backend>::to_array(self, repr[2]);
-        let a3 = <archmage::NeonToken as U8x16Backend>::to_array(self, repr[3]);
+        let a0 = <NeonToken as U8x16Backend>::to_array(self, repr[0]);
+        let a1 = <NeonToken as U8x16Backend>::to_array(self, repr[1]);
+        let a2 = <NeonToken as U8x16Backend>::to_array(self, repr[2]);
+        let a3 = <NeonToken as U8x16Backend>::to_array(self, repr[3]);
         let mut out = [0; 64];
         out[0..16].copy_from_slice(&a0);
         out[16..32].copy_from_slice(&a1);
@@ -5469,132 +5447,118 @@ impl U8x64Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn add(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U8x16Backend>::add(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U8x16Backend>::add(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn sub(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U8x16Backend>::sub(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U8x16Backend>::sub(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn neg(self, a: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        let z = <archmage::NeonToken as U8x16Backend>::zero(self);
-        core::array::from_fn(|i| <archmage::NeonToken as U8x16Backend>::sub(self, z, a[i]))
+        let z = <NeonToken as U8x16Backend>::zero(self);
+        core::array::from_fn(|i| <NeonToken as U8x16Backend>::sub(self, z, a[i]))
     }
 
     #[inline(always)]
     fn min(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U8x16Backend>::min(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U8x16Backend>::min(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn max(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U8x16Backend>::max(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U8x16Backend>::max(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn reduce_add(self, a: [uint8x16_t; 4]) -> u8 {
-        <archmage::NeonToken as U8x16Backend>::reduce_add(self, a[0])
-            .wrapping_add(<archmage::NeonToken as U8x16Backend>::reduce_add(
-                self, a[1],
-            ))
-            .wrapping_add(<archmage::NeonToken as U8x16Backend>::reduce_add(
-                self, a[2],
-            ))
-            .wrapping_add(<archmage::NeonToken as U8x16Backend>::reduce_add(
-                self, a[3],
-            ))
+        <NeonToken as U8x16Backend>::reduce_add(self, a[0])
+            .wrapping_add(<NeonToken as U8x16Backend>::reduce_add(self, a[1]))
+            .wrapping_add(<NeonToken as U8x16Backend>::reduce_add(self, a[2]))
+            .wrapping_add(<NeonToken as U8x16Backend>::reduce_add(self, a[3]))
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U8x16Backend>::shl_const::<N>(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as U8x16Backend>::shl_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as U8x16Backend>::shr_logical_const::<N>(self, a[i])
-        })
+        core::array::from_fn(|i| <NeonToken as U8x16Backend>::shr_logical_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as U8x16Backend>::shr_logical_const::<N>(self, a[i])
-        })
+        core::array::from_fn(|i| <NeonToken as U8x16Backend>::shr_logical_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn saturating_add(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as U8x16Backend>::saturating_add(self, a[i], b[i])
-        })
+        core::array::from_fn(|i| <NeonToken as U8x16Backend>::saturating_add(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn saturating_sub(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as U8x16Backend>::saturating_sub(self, a[i], b[i])
-        })
+        core::array::from_fn(|i| <NeonToken as U8x16Backend>::saturating_sub(self, a[i], b[i]))
     }
 
     // Reduce the quarters with vector AND/OR first, then ONE lane
     // reduction (fearless_simd's polyfill lesson; branchless).
     #[inline(always)]
     fn all_true(self, a: [uint8x16_t; 4]) -> bool {
-        let c01 = <archmage::NeonToken as U8x16Backend>::bitand(self, a[0], a[1]);
-        let c23 = <archmage::NeonToken as U8x16Backend>::bitand(self, a[2], a[3]);
-        let c = <archmage::NeonToken as U8x16Backend>::bitand(self, c01, c23);
-        <archmage::NeonToken as U8x16Backend>::all_true(self, c)
+        let c01 = <NeonToken as U8x16Backend>::bitand(self, a[0], a[1]);
+        let c23 = <NeonToken as U8x16Backend>::bitand(self, a[2], a[3]);
+        let c = <NeonToken as U8x16Backend>::bitand(self, c01, c23);
+        <NeonToken as U8x16Backend>::all_true(self, c)
     }
 
     #[inline(always)]
     fn any_true(self, a: [uint8x16_t; 4]) -> bool {
-        let c01 = <archmage::NeonToken as U8x16Backend>::bitor(self, a[0], a[1]);
-        let c23 = <archmage::NeonToken as U8x16Backend>::bitor(self, a[2], a[3]);
-        let c = <archmage::NeonToken as U8x16Backend>::bitor(self, c01, c23);
-        <archmage::NeonToken as U8x16Backend>::any_true(self, c)
+        let c01 = <NeonToken as U8x16Backend>::bitor(self, a[0], a[1]);
+        let c23 = <NeonToken as U8x16Backend>::bitor(self, a[2], a[3]);
+        let c = <NeonToken as U8x16Backend>::bitor(self, c01, c23);
+        <NeonToken as U8x16Backend>::any_true(self, c)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [uint8x16_t; 4]) -> u64 {
-        let q0 = <archmage::NeonToken as U8x16Backend>::bitmask(self, a[0]) as u64;
-        let q1 = <archmage::NeonToken as U8x16Backend>::bitmask(self, a[1]) as u64;
-        let q2 = <archmage::NeonToken as U8x16Backend>::bitmask(self, a[2]) as u64;
-        let q3 = <archmage::NeonToken as U8x16Backend>::bitmask(self, a[3]) as u64;
+        let q0 = <NeonToken as U8x16Backend>::bitmask(self, a[0]) as u64;
+        let q1 = <NeonToken as U8x16Backend>::bitmask(self, a[1]) as u64;
+        let q2 = <NeonToken as U8x16Backend>::bitmask(self, a[2]) as u64;
+        let q3 = <NeonToken as U8x16Backend>::bitmask(self, a[3]) as u64;
         q0 | (q1 << 16) | (q2 << 32) | (q3 << 48)
     }
 
     #[inline(always)]
     fn simd_eq(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U8x16Backend>::simd_eq(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U8x16Backend>::simd_eq(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U8x16Backend>::simd_ne(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U8x16Backend>::simd_ne(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U8x16Backend>::simd_lt(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U8x16Backend>::simd_lt(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_le(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U8x16Backend>::simd_le(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U8x16Backend>::simd_le(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U8x16Backend>::simd_gt(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U8x16Backend>::simd_gt(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U8x16Backend>::simd_ge(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U8x16Backend>::simd_ge(self, a[i], b[i]))
     }
 
     #[inline(always)]
@@ -5605,28 +5569,28 @@ impl U8x64Backend for archmage::NeonToken {
         if_false: [uint8x16_t; 4],
     ) -> [uint8x16_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as U8x16Backend>::blend(self, mask[i], if_true[i], if_false[i])
+            <NeonToken as U8x16Backend>::blend(self, mask[i], if_true[i], if_false[i])
         })
     }
 
     #[inline(always)]
     fn not(self, a: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U8x16Backend>::not(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as U8x16Backend>::not(self, a[i]))
     }
 
     #[inline(always)]
     fn bitand(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U8x16Backend>::bitand(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U8x16Backend>::bitand(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn bitor(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U8x16Backend>::bitor(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U8x16Backend>::bitor(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn bitxor(self, a: [uint8x16_t; 4], b: [uint8x16_t; 4]) -> [uint8x16_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U8x16Backend>::bitxor(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U8x16Backend>::bitxor(self, a[i], b[i]))
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_u8_to_u16(self, a: [uint8x16_t; 4]) -> [uint16x8_t; 4] {
@@ -5687,28 +5651,28 @@ impl U8x64Backend for archmage::NeonToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
-impl I16x32Backend for archmage::NeonToken {
+impl I16x32Backend for NeonToken {
     type Repr = [int16x8_t; 4];
 
     #[inline(always)]
     fn splat(self, v: i16) -> [int16x8_t; 4] {
-        let q = <archmage::NeonToken as I16x8Backend>::splat(self, v);
+        let q = <NeonToken as I16x8Backend>::splat(self, v);
         [q, q, q, q]
     }
 
     #[inline(always)]
     fn zero(self) -> [int16x8_t; 4] {
-        let q = <archmage::NeonToken as I16x8Backend>::zero(self);
+        let q = <NeonToken as I16x8Backend>::zero(self);
         [q, q, q, q]
     }
 
     #[inline(always)]
     fn load(self, data: &[i16; 32]) -> [int16x8_t; 4] {
         [
-            <archmage::NeonToken as I16x8Backend>::load(self, data[0..8].try_into().unwrap()),
-            <archmage::NeonToken as I16x8Backend>::load(self, data[8..16].try_into().unwrap()),
-            <archmage::NeonToken as I16x8Backend>::load(self, data[16..24].try_into().unwrap()),
-            <archmage::NeonToken as I16x8Backend>::load(self, data[24..32].try_into().unwrap()),
+            <NeonToken as I16x8Backend>::load(self, data[0..8].try_into().unwrap()),
+            <NeonToken as I16x8Backend>::load(self, data[8..16].try_into().unwrap()),
+            <NeonToken as I16x8Backend>::load(self, data[16..24].try_into().unwrap()),
+            <NeonToken as I16x8Backend>::load(self, data[24..32].try_into().unwrap()),
         ]
     }
 
@@ -5723,10 +5687,10 @@ impl I16x32Backend for archmage::NeonToken {
         q2.copy_from_slice(&arr[16..24]);
         q3.copy_from_slice(&arr[24..32]);
         [
-            <archmage::NeonToken as I16x8Backend>::from_array(self, q0),
-            <archmage::NeonToken as I16x8Backend>::from_array(self, q1),
-            <archmage::NeonToken as I16x8Backend>::from_array(self, q2),
-            <archmage::NeonToken as I16x8Backend>::from_array(self, q3),
+            <NeonToken as I16x8Backend>::from_array(self, q0),
+            <NeonToken as I16x8Backend>::from_array(self, q1),
+            <NeonToken as I16x8Backend>::from_array(self, q2),
+            <NeonToken as I16x8Backend>::from_array(self, q3),
         ]
     }
 
@@ -5735,18 +5699,18 @@ impl I16x32Backend for archmage::NeonToken {
         let (o01, o23) = out.split_at_mut(16);
         let (o0, o1) = o01.split_at_mut(8);
         let (o2, o3) = o23.split_at_mut(8);
-        <archmage::NeonToken as I16x8Backend>::store(self, repr[0], o0.try_into().unwrap());
-        <archmage::NeonToken as I16x8Backend>::store(self, repr[1], o1.try_into().unwrap());
-        <archmage::NeonToken as I16x8Backend>::store(self, repr[2], o2.try_into().unwrap());
-        <archmage::NeonToken as I16x8Backend>::store(self, repr[3], o3.try_into().unwrap());
+        <NeonToken as I16x8Backend>::store(self, repr[0], o0.try_into().unwrap());
+        <NeonToken as I16x8Backend>::store(self, repr[1], o1.try_into().unwrap());
+        <NeonToken as I16x8Backend>::store(self, repr[2], o2.try_into().unwrap());
+        <NeonToken as I16x8Backend>::store(self, repr[3], o3.try_into().unwrap());
     }
 
     #[inline(always)]
     fn to_array(self, repr: [int16x8_t; 4]) -> [i16; 32] {
-        let a0 = <archmage::NeonToken as I16x8Backend>::to_array(self, repr[0]);
-        let a1 = <archmage::NeonToken as I16x8Backend>::to_array(self, repr[1]);
-        let a2 = <archmage::NeonToken as I16x8Backend>::to_array(self, repr[2]);
-        let a3 = <archmage::NeonToken as I16x8Backend>::to_array(self, repr[3]);
+        let a0 = <NeonToken as I16x8Backend>::to_array(self, repr[0]);
+        let a1 = <NeonToken as I16x8Backend>::to_array(self, repr[1]);
+        let a2 = <NeonToken as I16x8Backend>::to_array(self, repr[2]);
+        let a3 = <NeonToken as I16x8Backend>::to_array(self, repr[3]);
         let mut out = [0; 32];
         out[0..8].copy_from_slice(&a0);
         out[8..16].copy_from_slice(&a1);
@@ -5757,162 +5721,146 @@ impl I16x32Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn add(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I16x8Backend>::add(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::add(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn sub(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I16x8Backend>::sub(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::sub(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn mul(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I16x8Backend>::mul(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::mul(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn neg(self, a: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I16x8Backend>::neg(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::neg(self, a[i]))
     }
 
     #[inline(always)]
     fn min(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I16x8Backend>::min(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::min(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn max(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I16x8Backend>::max(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::max(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn abs(self, a: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I16x8Backend>::abs(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::abs(self, a[i]))
     }
 
     #[inline(always)]
     fn reduce_add(self, a: [int16x8_t; 4]) -> i16 {
-        <archmage::NeonToken as I16x8Backend>::reduce_add(self, a[0])
-            .wrapping_add(<archmage::NeonToken as I16x8Backend>::reduce_add(
-                self, a[1],
-            ))
-            .wrapping_add(<archmage::NeonToken as I16x8Backend>::reduce_add(
-                self, a[2],
-            ))
-            .wrapping_add(<archmage::NeonToken as I16x8Backend>::reduce_add(
-                self, a[3],
-            ))
+        <NeonToken as I16x8Backend>::reduce_add(self, a[0])
+            .wrapping_add(<NeonToken as I16x8Backend>::reduce_add(self, a[1]))
+            .wrapping_add(<NeonToken as I16x8Backend>::reduce_add(self, a[2]))
+            .wrapping_add(<NeonToken as I16x8Backend>::reduce_add(self, a[3]))
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I16x8Backend>::shl_const::<N>(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::shl_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as I16x8Backend>::shr_arithmetic_const::<N>(self, a[i])
-        })
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::shr_arithmetic_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as I16x8Backend>::shr_logical_const::<N>(self, a[i])
-        })
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::shr_logical_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn shl_uniform(self, a: [int16x8_t; 4], count: u32) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as I16x8Backend>::shl_uniform(self, a[i], count)
-        })
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::shl_uniform(self, a[i], count))
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: [int16x8_t; 4], count: u32) -> [int16x8_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as I16x8Backend>::shr_logical_uniform(self, a[i], count)
+            <NeonToken as I16x8Backend>::shr_logical_uniform(self, a[i], count)
         })
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: [int16x8_t; 4], count: u32) -> [int16x8_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as I16x8Backend>::shr_arithmetic_uniform(self, a[i], count)
+            <NeonToken as I16x8Backend>::shr_arithmetic_uniform(self, a[i], count)
         })
     }
 
     #[inline(always)]
     fn saturating_add(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as I16x8Backend>::saturating_add(self, a[i], b[i])
-        })
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::saturating_add(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn saturating_sub(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as I16x8Backend>::saturating_sub(self, a[i], b[i])
-        })
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::saturating_sub(self, a[i], b[i]))
     }
 
     // Reduce the quarters with vector AND/OR first, then ONE lane
     // reduction (fearless_simd's polyfill lesson; branchless).
     #[inline(always)]
     fn all_true(self, a: [int16x8_t; 4]) -> bool {
-        let c01 = <archmage::NeonToken as I16x8Backend>::bitand(self, a[0], a[1]);
-        let c23 = <archmage::NeonToken as I16x8Backend>::bitand(self, a[2], a[3]);
-        let c = <archmage::NeonToken as I16x8Backend>::bitand(self, c01, c23);
-        <archmage::NeonToken as I16x8Backend>::all_true(self, c)
+        let c01 = <NeonToken as I16x8Backend>::bitand(self, a[0], a[1]);
+        let c23 = <NeonToken as I16x8Backend>::bitand(self, a[2], a[3]);
+        let c = <NeonToken as I16x8Backend>::bitand(self, c01, c23);
+        <NeonToken as I16x8Backend>::all_true(self, c)
     }
 
     #[inline(always)]
     fn any_true(self, a: [int16x8_t; 4]) -> bool {
-        let c01 = <archmage::NeonToken as I16x8Backend>::bitor(self, a[0], a[1]);
-        let c23 = <archmage::NeonToken as I16x8Backend>::bitor(self, a[2], a[3]);
-        let c = <archmage::NeonToken as I16x8Backend>::bitor(self, c01, c23);
-        <archmage::NeonToken as I16x8Backend>::any_true(self, c)
+        let c01 = <NeonToken as I16x8Backend>::bitor(self, a[0], a[1]);
+        let c23 = <NeonToken as I16x8Backend>::bitor(self, a[2], a[3]);
+        let c = <NeonToken as I16x8Backend>::bitor(self, c01, c23);
+        <NeonToken as I16x8Backend>::any_true(self, c)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [int16x8_t; 4]) -> u64 {
-        let q0 = <archmage::NeonToken as I16x8Backend>::bitmask(self, a[0]) as u64;
-        let q1 = <archmage::NeonToken as I16x8Backend>::bitmask(self, a[1]) as u64;
-        let q2 = <archmage::NeonToken as I16x8Backend>::bitmask(self, a[2]) as u64;
-        let q3 = <archmage::NeonToken as I16x8Backend>::bitmask(self, a[3]) as u64;
+        let q0 = <NeonToken as I16x8Backend>::bitmask(self, a[0]) as u64;
+        let q1 = <NeonToken as I16x8Backend>::bitmask(self, a[1]) as u64;
+        let q2 = <NeonToken as I16x8Backend>::bitmask(self, a[2]) as u64;
+        let q3 = <NeonToken as I16x8Backend>::bitmask(self, a[3]) as u64;
         q0 | (q1 << 8) | (q2 << 16) | (q3 << 24)
     }
 
     #[inline(always)]
     fn simd_eq(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I16x8Backend>::simd_eq(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::simd_eq(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I16x8Backend>::simd_ne(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::simd_ne(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I16x8Backend>::simd_lt(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::simd_lt(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_le(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I16x8Backend>::simd_le(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::simd_le(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I16x8Backend>::simd_gt(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::simd_gt(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I16x8Backend>::simd_ge(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::simd_ge(self, a[i], b[i]))
     }
 
     #[inline(always)]
@@ -5923,28 +5871,28 @@ impl I16x32Backend for archmage::NeonToken {
         if_false: [int16x8_t; 4],
     ) -> [int16x8_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as I16x8Backend>::blend(self, mask[i], if_true[i], if_false[i])
+            <NeonToken as I16x8Backend>::blend(self, mask[i], if_true[i], if_false[i])
         })
     }
 
     #[inline(always)]
     fn not(self, a: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I16x8Backend>::not(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::not(self, a[i]))
     }
 
     #[inline(always)]
     fn bitand(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I16x8Backend>::bitand(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::bitand(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn bitor(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I16x8Backend>::bitor(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::bitor(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn bitxor(self, a: [int16x8_t; 4], b: [int16x8_t; 4]) -> [int16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I16x8Backend>::bitxor(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I16x8Backend>::bitxor(self, a[i], b[i]))
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_i16_to_i32(self, a: [int16x8_t; 4]) -> [int32x4_t; 4] {
@@ -6021,28 +5969,28 @@ impl I16x32Backend for archmage::NeonToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
-impl U16x32Backend for archmage::NeonToken {
+impl U16x32Backend for NeonToken {
     type Repr = [uint16x8_t; 4];
 
     #[inline(always)]
     fn splat(self, v: u16) -> [uint16x8_t; 4] {
-        let q = <archmage::NeonToken as U16x8Backend>::splat(self, v);
+        let q = <NeonToken as U16x8Backend>::splat(self, v);
         [q, q, q, q]
     }
 
     #[inline(always)]
     fn zero(self) -> [uint16x8_t; 4] {
-        let q = <archmage::NeonToken as U16x8Backend>::zero(self);
+        let q = <NeonToken as U16x8Backend>::zero(self);
         [q, q, q, q]
     }
 
     #[inline(always)]
     fn load(self, data: &[u16; 32]) -> [uint16x8_t; 4] {
         [
-            <archmage::NeonToken as U16x8Backend>::load(self, data[0..8].try_into().unwrap()),
-            <archmage::NeonToken as U16x8Backend>::load(self, data[8..16].try_into().unwrap()),
-            <archmage::NeonToken as U16x8Backend>::load(self, data[16..24].try_into().unwrap()),
-            <archmage::NeonToken as U16x8Backend>::load(self, data[24..32].try_into().unwrap()),
+            <NeonToken as U16x8Backend>::load(self, data[0..8].try_into().unwrap()),
+            <NeonToken as U16x8Backend>::load(self, data[8..16].try_into().unwrap()),
+            <NeonToken as U16x8Backend>::load(self, data[16..24].try_into().unwrap()),
+            <NeonToken as U16x8Backend>::load(self, data[24..32].try_into().unwrap()),
         ]
     }
 
@@ -6057,10 +6005,10 @@ impl U16x32Backend for archmage::NeonToken {
         q2.copy_from_slice(&arr[16..24]);
         q3.copy_from_slice(&arr[24..32]);
         [
-            <archmage::NeonToken as U16x8Backend>::from_array(self, q0),
-            <archmage::NeonToken as U16x8Backend>::from_array(self, q1),
-            <archmage::NeonToken as U16x8Backend>::from_array(self, q2),
-            <archmage::NeonToken as U16x8Backend>::from_array(self, q3),
+            <NeonToken as U16x8Backend>::from_array(self, q0),
+            <NeonToken as U16x8Backend>::from_array(self, q1),
+            <NeonToken as U16x8Backend>::from_array(self, q2),
+            <NeonToken as U16x8Backend>::from_array(self, q3),
         ]
     }
 
@@ -6069,18 +6017,18 @@ impl U16x32Backend for archmage::NeonToken {
         let (o01, o23) = out.split_at_mut(16);
         let (o0, o1) = o01.split_at_mut(8);
         let (o2, o3) = o23.split_at_mut(8);
-        <archmage::NeonToken as U16x8Backend>::store(self, repr[0], o0.try_into().unwrap());
-        <archmage::NeonToken as U16x8Backend>::store(self, repr[1], o1.try_into().unwrap());
-        <archmage::NeonToken as U16x8Backend>::store(self, repr[2], o2.try_into().unwrap());
-        <archmage::NeonToken as U16x8Backend>::store(self, repr[3], o3.try_into().unwrap());
+        <NeonToken as U16x8Backend>::store(self, repr[0], o0.try_into().unwrap());
+        <NeonToken as U16x8Backend>::store(self, repr[1], o1.try_into().unwrap());
+        <NeonToken as U16x8Backend>::store(self, repr[2], o2.try_into().unwrap());
+        <NeonToken as U16x8Backend>::store(self, repr[3], o3.try_into().unwrap());
     }
 
     #[inline(always)]
     fn to_array(self, repr: [uint16x8_t; 4]) -> [u16; 32] {
-        let a0 = <archmage::NeonToken as U16x8Backend>::to_array(self, repr[0]);
-        let a1 = <archmage::NeonToken as U16x8Backend>::to_array(self, repr[1]);
-        let a2 = <archmage::NeonToken as U16x8Backend>::to_array(self, repr[2]);
-        let a3 = <archmage::NeonToken as U16x8Backend>::to_array(self, repr[3]);
+        let a0 = <NeonToken as U16x8Backend>::to_array(self, repr[0]);
+        let a1 = <NeonToken as U16x8Backend>::to_array(self, repr[1]);
+        let a2 = <NeonToken as U16x8Backend>::to_array(self, repr[2]);
+        let a3 = <NeonToken as U16x8Backend>::to_array(self, repr[3]);
         let mut out = [0; 32];
         out[0..8].copy_from_slice(&a0);
         out[8..16].copy_from_slice(&a1);
@@ -6091,158 +6039,142 @@ impl U16x32Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn add(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U16x8Backend>::add(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::add(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn sub(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U16x8Backend>::sub(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::sub(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn mul(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U16x8Backend>::mul(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::mul(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn neg(self, a: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        let z = <archmage::NeonToken as U16x8Backend>::zero(self);
-        core::array::from_fn(|i| <archmage::NeonToken as U16x8Backend>::sub(self, z, a[i]))
+        let z = <NeonToken as U16x8Backend>::zero(self);
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::sub(self, z, a[i]))
     }
 
     #[inline(always)]
     fn min(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U16x8Backend>::min(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::min(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn max(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U16x8Backend>::max(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::max(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn reduce_add(self, a: [uint16x8_t; 4]) -> u16 {
-        <archmage::NeonToken as U16x8Backend>::reduce_add(self, a[0])
-            .wrapping_add(<archmage::NeonToken as U16x8Backend>::reduce_add(
-                self, a[1],
-            ))
-            .wrapping_add(<archmage::NeonToken as U16x8Backend>::reduce_add(
-                self, a[2],
-            ))
-            .wrapping_add(<archmage::NeonToken as U16x8Backend>::reduce_add(
-                self, a[3],
-            ))
+        <NeonToken as U16x8Backend>::reduce_add(self, a[0])
+            .wrapping_add(<NeonToken as U16x8Backend>::reduce_add(self, a[1]))
+            .wrapping_add(<NeonToken as U16x8Backend>::reduce_add(self, a[2]))
+            .wrapping_add(<NeonToken as U16x8Backend>::reduce_add(self, a[3]))
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U16x8Backend>::shl_const::<N>(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::shl_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as U16x8Backend>::shr_logical_const::<N>(self, a[i])
-        })
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::shr_logical_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as U16x8Backend>::shr_logical_const::<N>(self, a[i])
-        })
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::shr_logical_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn shl_uniform(self, a: [uint16x8_t; 4], count: u32) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as U16x8Backend>::shl_uniform(self, a[i], count)
-        })
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::shl_uniform(self, a[i], count))
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: [uint16x8_t; 4], count: u32) -> [uint16x8_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as U16x8Backend>::shr_logical_uniform(self, a[i], count)
+            <NeonToken as U16x8Backend>::shr_logical_uniform(self, a[i], count)
         })
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: [uint16x8_t; 4], count: u32) -> [uint16x8_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as U16x8Backend>::shr_logical_uniform(self, a[i], count)
+            <NeonToken as U16x8Backend>::shr_logical_uniform(self, a[i], count)
         })
     }
 
     #[inline(always)]
     fn saturating_add(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as U16x8Backend>::saturating_add(self, a[i], b[i])
-        })
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::saturating_add(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn saturating_sub(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as U16x8Backend>::saturating_sub(self, a[i], b[i])
-        })
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::saturating_sub(self, a[i], b[i]))
     }
 
     // Reduce the quarters with vector AND/OR first, then ONE lane
     // reduction (fearless_simd's polyfill lesson; branchless).
     #[inline(always)]
     fn all_true(self, a: [uint16x8_t; 4]) -> bool {
-        let c01 = <archmage::NeonToken as U16x8Backend>::bitand(self, a[0], a[1]);
-        let c23 = <archmage::NeonToken as U16x8Backend>::bitand(self, a[2], a[3]);
-        let c = <archmage::NeonToken as U16x8Backend>::bitand(self, c01, c23);
-        <archmage::NeonToken as U16x8Backend>::all_true(self, c)
+        let c01 = <NeonToken as U16x8Backend>::bitand(self, a[0], a[1]);
+        let c23 = <NeonToken as U16x8Backend>::bitand(self, a[2], a[3]);
+        let c = <NeonToken as U16x8Backend>::bitand(self, c01, c23);
+        <NeonToken as U16x8Backend>::all_true(self, c)
     }
 
     #[inline(always)]
     fn any_true(self, a: [uint16x8_t; 4]) -> bool {
-        let c01 = <archmage::NeonToken as U16x8Backend>::bitor(self, a[0], a[1]);
-        let c23 = <archmage::NeonToken as U16x8Backend>::bitor(self, a[2], a[3]);
-        let c = <archmage::NeonToken as U16x8Backend>::bitor(self, c01, c23);
-        <archmage::NeonToken as U16x8Backend>::any_true(self, c)
+        let c01 = <NeonToken as U16x8Backend>::bitor(self, a[0], a[1]);
+        let c23 = <NeonToken as U16x8Backend>::bitor(self, a[2], a[3]);
+        let c = <NeonToken as U16x8Backend>::bitor(self, c01, c23);
+        <NeonToken as U16x8Backend>::any_true(self, c)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [uint16x8_t; 4]) -> u64 {
-        let q0 = <archmage::NeonToken as U16x8Backend>::bitmask(self, a[0]) as u64;
-        let q1 = <archmage::NeonToken as U16x8Backend>::bitmask(self, a[1]) as u64;
-        let q2 = <archmage::NeonToken as U16x8Backend>::bitmask(self, a[2]) as u64;
-        let q3 = <archmage::NeonToken as U16x8Backend>::bitmask(self, a[3]) as u64;
+        let q0 = <NeonToken as U16x8Backend>::bitmask(self, a[0]) as u64;
+        let q1 = <NeonToken as U16x8Backend>::bitmask(self, a[1]) as u64;
+        let q2 = <NeonToken as U16x8Backend>::bitmask(self, a[2]) as u64;
+        let q3 = <NeonToken as U16x8Backend>::bitmask(self, a[3]) as u64;
         q0 | (q1 << 8) | (q2 << 16) | (q3 << 24)
     }
 
     #[inline(always)]
     fn simd_eq(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U16x8Backend>::simd_eq(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::simd_eq(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U16x8Backend>::simd_ne(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::simd_ne(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U16x8Backend>::simd_lt(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::simd_lt(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_le(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U16x8Backend>::simd_le(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::simd_le(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U16x8Backend>::simd_gt(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::simd_gt(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U16x8Backend>::simd_ge(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::simd_ge(self, a[i], b[i]))
     }
 
     #[inline(always)]
@@ -6253,28 +6185,28 @@ impl U16x32Backend for archmage::NeonToken {
         if_false: [uint16x8_t; 4],
     ) -> [uint16x8_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as U16x8Backend>::blend(self, mask[i], if_true[i], if_false[i])
+            <NeonToken as U16x8Backend>::blend(self, mask[i], if_true[i], if_false[i])
         })
     }
 
     #[inline(always)]
     fn not(self, a: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U16x8Backend>::not(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::not(self, a[i]))
     }
 
     #[inline(always)]
     fn bitand(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U16x8Backend>::bitand(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::bitand(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn bitor(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U16x8Backend>::bitor(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::bitor(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn bitxor(self, a: [uint16x8_t; 4], b: [uint16x8_t; 4]) -> [uint16x8_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U16x8Backend>::bitxor(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U16x8Backend>::bitxor(self, a[i], b[i]))
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn widen_low_u16_to_u32(self, a: [uint16x8_t; 4]) -> [uint32x4_t; 4] {
@@ -6309,28 +6241,28 @@ impl U16x32Backend for archmage::NeonToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
-impl I32x16Backend for archmage::NeonToken {
+impl I32x16Backend for NeonToken {
     type Repr = [int32x4_t; 4];
 
     #[inline(always)]
     fn splat(self, v: i32) -> [int32x4_t; 4] {
-        let q = <archmage::NeonToken as I32x4Backend>::splat(self, v);
+        let q = <NeonToken as I32x4Backend>::splat(self, v);
         [q, q, q, q]
     }
 
     #[inline(always)]
     fn zero(self) -> [int32x4_t; 4] {
-        let q = <archmage::NeonToken as I32x4Backend>::zero(self);
+        let q = <NeonToken as I32x4Backend>::zero(self);
         [q, q, q, q]
     }
 
     #[inline(always)]
     fn load(self, data: &[i32; 16]) -> [int32x4_t; 4] {
         [
-            <archmage::NeonToken as I32x4Backend>::load(self, data[0..4].try_into().unwrap()),
-            <archmage::NeonToken as I32x4Backend>::load(self, data[4..8].try_into().unwrap()),
-            <archmage::NeonToken as I32x4Backend>::load(self, data[8..12].try_into().unwrap()),
-            <archmage::NeonToken as I32x4Backend>::load(self, data[12..16].try_into().unwrap()),
+            <NeonToken as I32x4Backend>::load(self, data[0..4].try_into().unwrap()),
+            <NeonToken as I32x4Backend>::load(self, data[4..8].try_into().unwrap()),
+            <NeonToken as I32x4Backend>::load(self, data[8..12].try_into().unwrap()),
+            <NeonToken as I32x4Backend>::load(self, data[12..16].try_into().unwrap()),
         ]
     }
 
@@ -6345,10 +6277,10 @@ impl I32x16Backend for archmage::NeonToken {
         q2.copy_from_slice(&arr[8..12]);
         q3.copy_from_slice(&arr[12..16]);
         [
-            <archmage::NeonToken as I32x4Backend>::from_array(self, q0),
-            <archmage::NeonToken as I32x4Backend>::from_array(self, q1),
-            <archmage::NeonToken as I32x4Backend>::from_array(self, q2),
-            <archmage::NeonToken as I32x4Backend>::from_array(self, q3),
+            <NeonToken as I32x4Backend>::from_array(self, q0),
+            <NeonToken as I32x4Backend>::from_array(self, q1),
+            <NeonToken as I32x4Backend>::from_array(self, q2),
+            <NeonToken as I32x4Backend>::from_array(self, q3),
         ]
     }
 
@@ -6357,18 +6289,18 @@ impl I32x16Backend for archmage::NeonToken {
         let (o01, o23) = out.split_at_mut(8);
         let (o0, o1) = o01.split_at_mut(4);
         let (o2, o3) = o23.split_at_mut(4);
-        <archmage::NeonToken as I32x4Backend>::store(self, repr[0], o0.try_into().unwrap());
-        <archmage::NeonToken as I32x4Backend>::store(self, repr[1], o1.try_into().unwrap());
-        <archmage::NeonToken as I32x4Backend>::store(self, repr[2], o2.try_into().unwrap());
-        <archmage::NeonToken as I32x4Backend>::store(self, repr[3], o3.try_into().unwrap());
+        <NeonToken as I32x4Backend>::store(self, repr[0], o0.try_into().unwrap());
+        <NeonToken as I32x4Backend>::store(self, repr[1], o1.try_into().unwrap());
+        <NeonToken as I32x4Backend>::store(self, repr[2], o2.try_into().unwrap());
+        <NeonToken as I32x4Backend>::store(self, repr[3], o3.try_into().unwrap());
     }
 
     #[inline(always)]
     fn to_array(self, repr: [int32x4_t; 4]) -> [i32; 16] {
-        let a0 = <archmage::NeonToken as I32x4Backend>::to_array(self, repr[0]);
-        let a1 = <archmage::NeonToken as I32x4Backend>::to_array(self, repr[1]);
-        let a2 = <archmage::NeonToken as I32x4Backend>::to_array(self, repr[2]);
-        let a3 = <archmage::NeonToken as I32x4Backend>::to_array(self, repr[3]);
+        let a0 = <NeonToken as I32x4Backend>::to_array(self, repr[0]);
+        let a1 = <NeonToken as I32x4Backend>::to_array(self, repr[1]);
+        let a2 = <NeonToken as I32x4Backend>::to_array(self, repr[2]);
+        let a3 = <NeonToken as I32x4Backend>::to_array(self, repr[3]);
         let mut out = [0; 16];
         out[0..4].copy_from_slice(&a0);
         out[4..8].copy_from_slice(&a1);
@@ -6379,90 +6311,78 @@ impl I32x16Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn add(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I32x4Backend>::add(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I32x4Backend>::add(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn sub(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I32x4Backend>::sub(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I32x4Backend>::sub(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn mul(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I32x4Backend>::mul(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I32x4Backend>::mul(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn neg(self, a: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I32x4Backend>::neg(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as I32x4Backend>::neg(self, a[i]))
     }
 
     #[inline(always)]
     fn min(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I32x4Backend>::min(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I32x4Backend>::min(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn max(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I32x4Backend>::max(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I32x4Backend>::max(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn abs(self, a: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I32x4Backend>::abs(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as I32x4Backend>::abs(self, a[i]))
     }
 
     #[inline(always)]
     fn reduce_add(self, a: [int32x4_t; 4]) -> i32 {
-        <archmage::NeonToken as I32x4Backend>::reduce_add(self, a[0])
-            .wrapping_add(<archmage::NeonToken as I32x4Backend>::reduce_add(
-                self, a[1],
-            ))
-            .wrapping_add(<archmage::NeonToken as I32x4Backend>::reduce_add(
-                self, a[2],
-            ))
-            .wrapping_add(<archmage::NeonToken as I32x4Backend>::reduce_add(
-                self, a[3],
-            ))
+        <NeonToken as I32x4Backend>::reduce_add(self, a[0])
+            .wrapping_add(<NeonToken as I32x4Backend>::reduce_add(self, a[1]))
+            .wrapping_add(<NeonToken as I32x4Backend>::reduce_add(self, a[2]))
+            .wrapping_add(<NeonToken as I32x4Backend>::reduce_add(self, a[3]))
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I32x4Backend>::shl_const::<N>(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as I32x4Backend>::shl_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as I32x4Backend>::shr_arithmetic_const::<N>(self, a[i])
-        })
+        core::array::from_fn(|i| <NeonToken as I32x4Backend>::shr_arithmetic_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as I32x4Backend>::shr_logical_const::<N>(self, a[i])
-        })
+        core::array::from_fn(|i| <NeonToken as I32x4Backend>::shr_logical_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn shl_uniform(self, a: [int32x4_t; 4], count: u32) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as I32x4Backend>::shl_uniform(self, a[i], count)
-        })
+        core::array::from_fn(|i| <NeonToken as I32x4Backend>::shl_uniform(self, a[i], count))
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: [int32x4_t; 4], count: u32) -> [int32x4_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as I32x4Backend>::shr_logical_uniform(self, a[i], count)
+            <NeonToken as I32x4Backend>::shr_logical_uniform(self, a[i], count)
         })
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: [int32x4_t; 4], count: u32) -> [int32x4_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as I32x4Backend>::shr_arithmetic_uniform(self, a[i], count)
+            <NeonToken as I32x4Backend>::shr_arithmetic_uniform(self, a[i], count)
         })
     }
 
@@ -6470,57 +6390,57 @@ impl I32x16Backend for archmage::NeonToken {
     // reduction (fearless_simd's polyfill lesson; branchless).
     #[inline(always)]
     fn all_true(self, a: [int32x4_t; 4]) -> bool {
-        let c01 = <archmage::NeonToken as I32x4Backend>::bitand(self, a[0], a[1]);
-        let c23 = <archmage::NeonToken as I32x4Backend>::bitand(self, a[2], a[3]);
-        let c = <archmage::NeonToken as I32x4Backend>::bitand(self, c01, c23);
-        <archmage::NeonToken as I32x4Backend>::all_true(self, c)
+        let c01 = <NeonToken as I32x4Backend>::bitand(self, a[0], a[1]);
+        let c23 = <NeonToken as I32x4Backend>::bitand(self, a[2], a[3]);
+        let c = <NeonToken as I32x4Backend>::bitand(self, c01, c23);
+        <NeonToken as I32x4Backend>::all_true(self, c)
     }
 
     #[inline(always)]
     fn any_true(self, a: [int32x4_t; 4]) -> bool {
-        let c01 = <archmage::NeonToken as I32x4Backend>::bitor(self, a[0], a[1]);
-        let c23 = <archmage::NeonToken as I32x4Backend>::bitor(self, a[2], a[3]);
-        let c = <archmage::NeonToken as I32x4Backend>::bitor(self, c01, c23);
-        <archmage::NeonToken as I32x4Backend>::any_true(self, c)
+        let c01 = <NeonToken as I32x4Backend>::bitor(self, a[0], a[1]);
+        let c23 = <NeonToken as I32x4Backend>::bitor(self, a[2], a[3]);
+        let c = <NeonToken as I32x4Backend>::bitor(self, c01, c23);
+        <NeonToken as I32x4Backend>::any_true(self, c)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [int32x4_t; 4]) -> u64 {
-        let q0 = <archmage::NeonToken as I32x4Backend>::bitmask(self, a[0]) as u64;
-        let q1 = <archmage::NeonToken as I32x4Backend>::bitmask(self, a[1]) as u64;
-        let q2 = <archmage::NeonToken as I32x4Backend>::bitmask(self, a[2]) as u64;
-        let q3 = <archmage::NeonToken as I32x4Backend>::bitmask(self, a[3]) as u64;
+        let q0 = <NeonToken as I32x4Backend>::bitmask(self, a[0]) as u64;
+        let q1 = <NeonToken as I32x4Backend>::bitmask(self, a[1]) as u64;
+        let q2 = <NeonToken as I32x4Backend>::bitmask(self, a[2]) as u64;
+        let q3 = <NeonToken as I32x4Backend>::bitmask(self, a[3]) as u64;
         q0 | (q1 << 4) | (q2 << 8) | (q3 << 12)
     }
 
     #[inline(always)]
     fn simd_eq(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I32x4Backend>::simd_eq(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I32x4Backend>::simd_eq(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I32x4Backend>::simd_ne(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I32x4Backend>::simd_ne(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I32x4Backend>::simd_lt(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I32x4Backend>::simd_lt(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_le(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I32x4Backend>::simd_le(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I32x4Backend>::simd_le(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I32x4Backend>::simd_gt(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I32x4Backend>::simd_gt(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I32x4Backend>::simd_ge(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I32x4Backend>::simd_ge(self, a[i], b[i]))
     }
 
     #[inline(always)]
@@ -6531,28 +6451,28 @@ impl I32x16Backend for archmage::NeonToken {
         if_false: [int32x4_t; 4],
     ) -> [int32x4_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as I32x4Backend>::blend(self, mask[i], if_true[i], if_false[i])
+            <NeonToken as I32x4Backend>::blend(self, mask[i], if_true[i], if_false[i])
         })
     }
 
     #[inline(always)]
     fn not(self, a: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I32x4Backend>::not(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as I32x4Backend>::not(self, a[i]))
     }
 
     #[inline(always)]
     fn bitand(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I32x4Backend>::bitand(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I32x4Backend>::bitand(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn bitor(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I32x4Backend>::bitor(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I32x4Backend>::bitor(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn bitxor(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I32x4Backend>::bitxor(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I32x4Backend>::bitxor(self, a[i], b[i]))
     }
     #[arcane(suppress_const_test, _self = NeonToken)]
     fn narrow_saturating_i32_to_i16(self, a: [int32x4_t; 4], b: [int32x4_t; 4]) -> [int16x8_t; 4] {
@@ -6577,28 +6497,28 @@ impl I32x16Backend for archmage::NeonToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
-impl U32x16Backend for archmage::NeonToken {
+impl U32x16Backend for NeonToken {
     type Repr = [uint32x4_t; 4];
 
     #[inline(always)]
     fn splat(self, v: u32) -> [uint32x4_t; 4] {
-        let q = <archmage::NeonToken as U32x4Backend>::splat(self, v);
+        let q = <NeonToken as U32x4Backend>::splat(self, v);
         [q, q, q, q]
     }
 
     #[inline(always)]
     fn zero(self) -> [uint32x4_t; 4] {
-        let q = <archmage::NeonToken as U32x4Backend>::zero(self);
+        let q = <NeonToken as U32x4Backend>::zero(self);
         [q, q, q, q]
     }
 
     #[inline(always)]
     fn load(self, data: &[u32; 16]) -> [uint32x4_t; 4] {
         [
-            <archmage::NeonToken as U32x4Backend>::load(self, data[0..4].try_into().unwrap()),
-            <archmage::NeonToken as U32x4Backend>::load(self, data[4..8].try_into().unwrap()),
-            <archmage::NeonToken as U32x4Backend>::load(self, data[8..12].try_into().unwrap()),
-            <archmage::NeonToken as U32x4Backend>::load(self, data[12..16].try_into().unwrap()),
+            <NeonToken as U32x4Backend>::load(self, data[0..4].try_into().unwrap()),
+            <NeonToken as U32x4Backend>::load(self, data[4..8].try_into().unwrap()),
+            <NeonToken as U32x4Backend>::load(self, data[8..12].try_into().unwrap()),
+            <NeonToken as U32x4Backend>::load(self, data[12..16].try_into().unwrap()),
         ]
     }
 
@@ -6613,10 +6533,10 @@ impl U32x16Backend for archmage::NeonToken {
         q2.copy_from_slice(&arr[8..12]);
         q3.copy_from_slice(&arr[12..16]);
         [
-            <archmage::NeonToken as U32x4Backend>::from_array(self, q0),
-            <archmage::NeonToken as U32x4Backend>::from_array(self, q1),
-            <archmage::NeonToken as U32x4Backend>::from_array(self, q2),
-            <archmage::NeonToken as U32x4Backend>::from_array(self, q3),
+            <NeonToken as U32x4Backend>::from_array(self, q0),
+            <NeonToken as U32x4Backend>::from_array(self, q1),
+            <NeonToken as U32x4Backend>::from_array(self, q2),
+            <NeonToken as U32x4Backend>::from_array(self, q3),
         ]
     }
 
@@ -6625,18 +6545,18 @@ impl U32x16Backend for archmage::NeonToken {
         let (o01, o23) = out.split_at_mut(8);
         let (o0, o1) = o01.split_at_mut(4);
         let (o2, o3) = o23.split_at_mut(4);
-        <archmage::NeonToken as U32x4Backend>::store(self, repr[0], o0.try_into().unwrap());
-        <archmage::NeonToken as U32x4Backend>::store(self, repr[1], o1.try_into().unwrap());
-        <archmage::NeonToken as U32x4Backend>::store(self, repr[2], o2.try_into().unwrap());
-        <archmage::NeonToken as U32x4Backend>::store(self, repr[3], o3.try_into().unwrap());
+        <NeonToken as U32x4Backend>::store(self, repr[0], o0.try_into().unwrap());
+        <NeonToken as U32x4Backend>::store(self, repr[1], o1.try_into().unwrap());
+        <NeonToken as U32x4Backend>::store(self, repr[2], o2.try_into().unwrap());
+        <NeonToken as U32x4Backend>::store(self, repr[3], o3.try_into().unwrap());
     }
 
     #[inline(always)]
     fn to_array(self, repr: [uint32x4_t; 4]) -> [u32; 16] {
-        let a0 = <archmage::NeonToken as U32x4Backend>::to_array(self, repr[0]);
-        let a1 = <archmage::NeonToken as U32x4Backend>::to_array(self, repr[1]);
-        let a2 = <archmage::NeonToken as U32x4Backend>::to_array(self, repr[2]);
-        let a3 = <archmage::NeonToken as U32x4Backend>::to_array(self, repr[3]);
+        let a0 = <NeonToken as U32x4Backend>::to_array(self, repr[0]);
+        let a1 = <NeonToken as U32x4Backend>::to_array(self, repr[1]);
+        let a2 = <NeonToken as U32x4Backend>::to_array(self, repr[2]);
+        let a3 = <NeonToken as U32x4Backend>::to_array(self, repr[3]);
         let mut out = [0; 16];
         out[0..4].copy_from_slice(&a0);
         out[4..8].copy_from_slice(&a1);
@@ -6647,86 +6567,74 @@ impl U32x16Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn add(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U32x4Backend>::add(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U32x4Backend>::add(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn sub(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U32x4Backend>::sub(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U32x4Backend>::sub(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn mul(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U32x4Backend>::mul(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U32x4Backend>::mul(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn neg(self, a: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        let z = <archmage::NeonToken as U32x4Backend>::zero(self);
-        core::array::from_fn(|i| <archmage::NeonToken as U32x4Backend>::sub(self, z, a[i]))
+        let z = <NeonToken as U32x4Backend>::zero(self);
+        core::array::from_fn(|i| <NeonToken as U32x4Backend>::sub(self, z, a[i]))
     }
 
     #[inline(always)]
     fn min(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U32x4Backend>::min(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U32x4Backend>::min(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn max(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U32x4Backend>::max(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U32x4Backend>::max(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn reduce_add(self, a: [uint32x4_t; 4]) -> u32 {
-        <archmage::NeonToken as U32x4Backend>::reduce_add(self, a[0])
-            .wrapping_add(<archmage::NeonToken as U32x4Backend>::reduce_add(
-                self, a[1],
-            ))
-            .wrapping_add(<archmage::NeonToken as U32x4Backend>::reduce_add(
-                self, a[2],
-            ))
-            .wrapping_add(<archmage::NeonToken as U32x4Backend>::reduce_add(
-                self, a[3],
-            ))
+        <NeonToken as U32x4Backend>::reduce_add(self, a[0])
+            .wrapping_add(<NeonToken as U32x4Backend>::reduce_add(self, a[1]))
+            .wrapping_add(<NeonToken as U32x4Backend>::reduce_add(self, a[2]))
+            .wrapping_add(<NeonToken as U32x4Backend>::reduce_add(self, a[3]))
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U32x4Backend>::shl_const::<N>(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as U32x4Backend>::shl_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as U32x4Backend>::shr_logical_const::<N>(self, a[i])
-        })
+        core::array::from_fn(|i| <NeonToken as U32x4Backend>::shr_logical_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as U32x4Backend>::shr_logical_const::<N>(self, a[i])
-        })
+        core::array::from_fn(|i| <NeonToken as U32x4Backend>::shr_logical_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn shl_uniform(self, a: [uint32x4_t; 4], count: u32) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as U32x4Backend>::shl_uniform(self, a[i], count)
-        })
+        core::array::from_fn(|i| <NeonToken as U32x4Backend>::shl_uniform(self, a[i], count))
     }
 
     #[inline(always)]
     fn shr_logical_uniform(self, a: [uint32x4_t; 4], count: u32) -> [uint32x4_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as U32x4Backend>::shr_logical_uniform(self, a[i], count)
+            <NeonToken as U32x4Backend>::shr_logical_uniform(self, a[i], count)
         })
     }
 
     #[inline(always)]
     fn shr_arithmetic_uniform(self, a: [uint32x4_t; 4], count: u32) -> [uint32x4_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as U32x4Backend>::shr_logical_uniform(self, a[i], count)
+            <NeonToken as U32x4Backend>::shr_logical_uniform(self, a[i], count)
         })
     }
 
@@ -6734,57 +6642,57 @@ impl U32x16Backend for archmage::NeonToken {
     // reduction (fearless_simd's polyfill lesson; branchless).
     #[inline(always)]
     fn all_true(self, a: [uint32x4_t; 4]) -> bool {
-        let c01 = <archmage::NeonToken as U32x4Backend>::bitand(self, a[0], a[1]);
-        let c23 = <archmage::NeonToken as U32x4Backend>::bitand(self, a[2], a[3]);
-        let c = <archmage::NeonToken as U32x4Backend>::bitand(self, c01, c23);
-        <archmage::NeonToken as U32x4Backend>::all_true(self, c)
+        let c01 = <NeonToken as U32x4Backend>::bitand(self, a[0], a[1]);
+        let c23 = <NeonToken as U32x4Backend>::bitand(self, a[2], a[3]);
+        let c = <NeonToken as U32x4Backend>::bitand(self, c01, c23);
+        <NeonToken as U32x4Backend>::all_true(self, c)
     }
 
     #[inline(always)]
     fn any_true(self, a: [uint32x4_t; 4]) -> bool {
-        let c01 = <archmage::NeonToken as U32x4Backend>::bitor(self, a[0], a[1]);
-        let c23 = <archmage::NeonToken as U32x4Backend>::bitor(self, a[2], a[3]);
-        let c = <archmage::NeonToken as U32x4Backend>::bitor(self, c01, c23);
-        <archmage::NeonToken as U32x4Backend>::any_true(self, c)
+        let c01 = <NeonToken as U32x4Backend>::bitor(self, a[0], a[1]);
+        let c23 = <NeonToken as U32x4Backend>::bitor(self, a[2], a[3]);
+        let c = <NeonToken as U32x4Backend>::bitor(self, c01, c23);
+        <NeonToken as U32x4Backend>::any_true(self, c)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [uint32x4_t; 4]) -> u64 {
-        let q0 = <archmage::NeonToken as U32x4Backend>::bitmask(self, a[0]) as u64;
-        let q1 = <archmage::NeonToken as U32x4Backend>::bitmask(self, a[1]) as u64;
-        let q2 = <archmage::NeonToken as U32x4Backend>::bitmask(self, a[2]) as u64;
-        let q3 = <archmage::NeonToken as U32x4Backend>::bitmask(self, a[3]) as u64;
+        let q0 = <NeonToken as U32x4Backend>::bitmask(self, a[0]) as u64;
+        let q1 = <NeonToken as U32x4Backend>::bitmask(self, a[1]) as u64;
+        let q2 = <NeonToken as U32x4Backend>::bitmask(self, a[2]) as u64;
+        let q3 = <NeonToken as U32x4Backend>::bitmask(self, a[3]) as u64;
         q0 | (q1 << 4) | (q2 << 8) | (q3 << 12)
     }
 
     #[inline(always)]
     fn simd_eq(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U32x4Backend>::simd_eq(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U32x4Backend>::simd_eq(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U32x4Backend>::simd_ne(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U32x4Backend>::simd_ne(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U32x4Backend>::simd_lt(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U32x4Backend>::simd_lt(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_le(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U32x4Backend>::simd_le(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U32x4Backend>::simd_le(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U32x4Backend>::simd_gt(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U32x4Backend>::simd_gt(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U32x4Backend>::simd_ge(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U32x4Backend>::simd_ge(self, a[i], b[i]))
     }
 
     #[inline(always)]
@@ -6795,55 +6703,55 @@ impl U32x16Backend for archmage::NeonToken {
         if_false: [uint32x4_t; 4],
     ) -> [uint32x4_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as U32x4Backend>::blend(self, mask[i], if_true[i], if_false[i])
+            <NeonToken as U32x4Backend>::blend(self, mask[i], if_true[i], if_false[i])
         })
     }
 
     #[inline(always)]
     fn not(self, a: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U32x4Backend>::not(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as U32x4Backend>::not(self, a[i]))
     }
 
     #[inline(always)]
     fn bitand(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U32x4Backend>::bitand(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U32x4Backend>::bitand(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn bitor(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U32x4Backend>::bitor(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U32x4Backend>::bitor(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn bitxor(self, a: [uint32x4_t; 4], b: [uint32x4_t; 4]) -> [uint32x4_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U32x4Backend>::bitxor(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U32x4Backend>::bitxor(self, a[i], b[i]))
     }
 }
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
-impl I64x8Backend for archmage::NeonToken {
+impl I64x8Backend for NeonToken {
     type Repr = [int64x2_t; 4];
 
     #[inline(always)]
     fn splat(self, v: i64) -> [int64x2_t; 4] {
-        let q = <archmage::NeonToken as I64x2Backend>::splat(self, v);
+        let q = <NeonToken as I64x2Backend>::splat(self, v);
         [q, q, q, q]
     }
 
     #[inline(always)]
     fn zero(self) -> [int64x2_t; 4] {
-        let q = <archmage::NeonToken as I64x2Backend>::zero(self);
+        let q = <NeonToken as I64x2Backend>::zero(self);
         [q, q, q, q]
     }
 
     #[inline(always)]
     fn load(self, data: &[i64; 8]) -> [int64x2_t; 4] {
         [
-            <archmage::NeonToken as I64x2Backend>::load(self, data[0..2].try_into().unwrap()),
-            <archmage::NeonToken as I64x2Backend>::load(self, data[2..4].try_into().unwrap()),
-            <archmage::NeonToken as I64x2Backend>::load(self, data[4..6].try_into().unwrap()),
-            <archmage::NeonToken as I64x2Backend>::load(self, data[6..8].try_into().unwrap()),
+            <NeonToken as I64x2Backend>::load(self, data[0..2].try_into().unwrap()),
+            <NeonToken as I64x2Backend>::load(self, data[2..4].try_into().unwrap()),
+            <NeonToken as I64x2Backend>::load(self, data[4..6].try_into().unwrap()),
+            <NeonToken as I64x2Backend>::load(self, data[6..8].try_into().unwrap()),
         ]
     }
 
@@ -6858,10 +6766,10 @@ impl I64x8Backend for archmage::NeonToken {
         q2.copy_from_slice(&arr[4..6]);
         q3.copy_from_slice(&arr[6..8]);
         [
-            <archmage::NeonToken as I64x2Backend>::from_array(self, q0),
-            <archmage::NeonToken as I64x2Backend>::from_array(self, q1),
-            <archmage::NeonToken as I64x2Backend>::from_array(self, q2),
-            <archmage::NeonToken as I64x2Backend>::from_array(self, q3),
+            <NeonToken as I64x2Backend>::from_array(self, q0),
+            <NeonToken as I64x2Backend>::from_array(self, q1),
+            <NeonToken as I64x2Backend>::from_array(self, q2),
+            <NeonToken as I64x2Backend>::from_array(self, q3),
         ]
     }
 
@@ -6870,18 +6778,18 @@ impl I64x8Backend for archmage::NeonToken {
         let (o01, o23) = out.split_at_mut(4);
         let (o0, o1) = o01.split_at_mut(2);
         let (o2, o3) = o23.split_at_mut(2);
-        <archmage::NeonToken as I64x2Backend>::store(self, repr[0], o0.try_into().unwrap());
-        <archmage::NeonToken as I64x2Backend>::store(self, repr[1], o1.try_into().unwrap());
-        <archmage::NeonToken as I64x2Backend>::store(self, repr[2], o2.try_into().unwrap());
-        <archmage::NeonToken as I64x2Backend>::store(self, repr[3], o3.try_into().unwrap());
+        <NeonToken as I64x2Backend>::store(self, repr[0], o0.try_into().unwrap());
+        <NeonToken as I64x2Backend>::store(self, repr[1], o1.try_into().unwrap());
+        <NeonToken as I64x2Backend>::store(self, repr[2], o2.try_into().unwrap());
+        <NeonToken as I64x2Backend>::store(self, repr[3], o3.try_into().unwrap());
     }
 
     #[inline(always)]
     fn to_array(self, repr: [int64x2_t; 4]) -> [i64; 8] {
-        let a0 = <archmage::NeonToken as I64x2Backend>::to_array(self, repr[0]);
-        let a1 = <archmage::NeonToken as I64x2Backend>::to_array(self, repr[1]);
-        let a2 = <archmage::NeonToken as I64x2Backend>::to_array(self, repr[2]);
-        let a3 = <archmage::NeonToken as I64x2Backend>::to_array(self, repr[3]);
+        let a0 = <NeonToken as I64x2Backend>::to_array(self, repr[0]);
+        let a1 = <NeonToken as I64x2Backend>::to_array(self, repr[1]);
+        let a2 = <NeonToken as I64x2Backend>::to_array(self, repr[2]);
+        let a3 = <NeonToken as I64x2Backend>::to_array(self, repr[3]);
         let mut out = [0; 8];
         out[0..2].copy_from_slice(&a0);
         out[2..4].copy_from_slice(&a1);
@@ -6892,122 +6800,112 @@ impl I64x8Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn add(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I64x2Backend>::add(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I64x2Backend>::add(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn sub(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I64x2Backend>::sub(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I64x2Backend>::sub(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn neg(self, a: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I64x2Backend>::neg(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as I64x2Backend>::neg(self, a[i]))
     }
 
     #[inline(always)]
     fn min(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I64x2Backend>::min(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I64x2Backend>::min(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn max(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I64x2Backend>::max(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I64x2Backend>::max(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn abs(self, a: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I64x2Backend>::abs(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as I64x2Backend>::abs(self, a[i]))
     }
 
     #[inline(always)]
     fn reduce_add(self, a: [int64x2_t; 4]) -> i64 {
-        <archmage::NeonToken as I64x2Backend>::reduce_add(self, a[0])
-            .wrapping_add(<archmage::NeonToken as I64x2Backend>::reduce_add(
-                self, a[1],
-            ))
-            .wrapping_add(<archmage::NeonToken as I64x2Backend>::reduce_add(
-                self, a[2],
-            ))
-            .wrapping_add(<archmage::NeonToken as I64x2Backend>::reduce_add(
-                self, a[3],
-            ))
+        <NeonToken as I64x2Backend>::reduce_add(self, a[0])
+            .wrapping_add(<NeonToken as I64x2Backend>::reduce_add(self, a[1]))
+            .wrapping_add(<NeonToken as I64x2Backend>::reduce_add(self, a[2]))
+            .wrapping_add(<NeonToken as I64x2Backend>::reduce_add(self, a[3]))
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I64x2Backend>::shl_const::<N>(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as I64x2Backend>::shl_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as I64x2Backend>::shr_arithmetic_const::<N>(self, a[i])
-        })
+        core::array::from_fn(|i| <NeonToken as I64x2Backend>::shr_arithmetic_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as I64x2Backend>::shr_logical_const::<N>(self, a[i])
-        })
+        core::array::from_fn(|i| <NeonToken as I64x2Backend>::shr_logical_const::<N>(self, a[i]))
     }
 
     // Reduce the quarters with vector AND/OR first, then ONE lane
     // reduction (fearless_simd's polyfill lesson; branchless).
     #[inline(always)]
     fn all_true(self, a: [int64x2_t; 4]) -> bool {
-        let c01 = <archmage::NeonToken as I64x2Backend>::bitand(self, a[0], a[1]);
-        let c23 = <archmage::NeonToken as I64x2Backend>::bitand(self, a[2], a[3]);
-        let c = <archmage::NeonToken as I64x2Backend>::bitand(self, c01, c23);
-        <archmage::NeonToken as I64x2Backend>::all_true(self, c)
+        let c01 = <NeonToken as I64x2Backend>::bitand(self, a[0], a[1]);
+        let c23 = <NeonToken as I64x2Backend>::bitand(self, a[2], a[3]);
+        let c = <NeonToken as I64x2Backend>::bitand(self, c01, c23);
+        <NeonToken as I64x2Backend>::all_true(self, c)
     }
 
     #[inline(always)]
     fn any_true(self, a: [int64x2_t; 4]) -> bool {
-        let c01 = <archmage::NeonToken as I64x2Backend>::bitor(self, a[0], a[1]);
-        let c23 = <archmage::NeonToken as I64x2Backend>::bitor(self, a[2], a[3]);
-        let c = <archmage::NeonToken as I64x2Backend>::bitor(self, c01, c23);
-        <archmage::NeonToken as I64x2Backend>::any_true(self, c)
+        let c01 = <NeonToken as I64x2Backend>::bitor(self, a[0], a[1]);
+        let c23 = <NeonToken as I64x2Backend>::bitor(self, a[2], a[3]);
+        let c = <NeonToken as I64x2Backend>::bitor(self, c01, c23);
+        <NeonToken as I64x2Backend>::any_true(self, c)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [int64x2_t; 4]) -> u64 {
-        let q0 = <archmage::NeonToken as I64x2Backend>::bitmask(self, a[0]) as u64;
-        let q1 = <archmage::NeonToken as I64x2Backend>::bitmask(self, a[1]) as u64;
-        let q2 = <archmage::NeonToken as I64x2Backend>::bitmask(self, a[2]) as u64;
-        let q3 = <archmage::NeonToken as I64x2Backend>::bitmask(self, a[3]) as u64;
+        let q0 = <NeonToken as I64x2Backend>::bitmask(self, a[0]) as u64;
+        let q1 = <NeonToken as I64x2Backend>::bitmask(self, a[1]) as u64;
+        let q2 = <NeonToken as I64x2Backend>::bitmask(self, a[2]) as u64;
+        let q3 = <NeonToken as I64x2Backend>::bitmask(self, a[3]) as u64;
         q0 | (q1 << 2) | (q2 << 4) | (q3 << 6)
     }
 
     #[inline(always)]
     fn simd_eq(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I64x2Backend>::simd_eq(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I64x2Backend>::simd_eq(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I64x2Backend>::simd_ne(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I64x2Backend>::simd_ne(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I64x2Backend>::simd_lt(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I64x2Backend>::simd_lt(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_le(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I64x2Backend>::simd_le(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I64x2Backend>::simd_le(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I64x2Backend>::simd_gt(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I64x2Backend>::simd_gt(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I64x2Backend>::simd_ge(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I64x2Backend>::simd_ge(self, a[i], b[i]))
     }
 
     #[inline(always)]
@@ -7018,55 +6916,55 @@ impl I64x8Backend for archmage::NeonToken {
         if_false: [int64x2_t; 4],
     ) -> [int64x2_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as I64x2Backend>::blend(self, mask[i], if_true[i], if_false[i])
+            <NeonToken as I64x2Backend>::blend(self, mask[i], if_true[i], if_false[i])
         })
     }
 
     #[inline(always)]
     fn not(self, a: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I64x2Backend>::not(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as I64x2Backend>::not(self, a[i]))
     }
 
     #[inline(always)]
     fn bitand(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I64x2Backend>::bitand(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I64x2Backend>::bitand(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn bitor(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I64x2Backend>::bitor(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I64x2Backend>::bitor(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn bitxor(self, a: [int64x2_t; 4], b: [int64x2_t; 4]) -> [int64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as I64x2Backend>::bitxor(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as I64x2Backend>::bitxor(self, a[i], b[i]))
     }
 }
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "aarch64")]
-impl U64x8Backend for archmage::NeonToken {
+impl U64x8Backend for NeonToken {
     type Repr = [uint64x2_t; 4];
 
     #[inline(always)]
     fn splat(self, v: u64) -> [uint64x2_t; 4] {
-        let q = <archmage::NeonToken as U64x2Backend>::splat(self, v);
+        let q = <NeonToken as U64x2Backend>::splat(self, v);
         [q, q, q, q]
     }
 
     #[inline(always)]
     fn zero(self) -> [uint64x2_t; 4] {
-        let q = <archmage::NeonToken as U64x2Backend>::zero(self);
+        let q = <NeonToken as U64x2Backend>::zero(self);
         [q, q, q, q]
     }
 
     #[inline(always)]
     fn load(self, data: &[u64; 8]) -> [uint64x2_t; 4] {
         [
-            <archmage::NeonToken as U64x2Backend>::load(self, data[0..2].try_into().unwrap()),
-            <archmage::NeonToken as U64x2Backend>::load(self, data[2..4].try_into().unwrap()),
-            <archmage::NeonToken as U64x2Backend>::load(self, data[4..6].try_into().unwrap()),
-            <archmage::NeonToken as U64x2Backend>::load(self, data[6..8].try_into().unwrap()),
+            <NeonToken as U64x2Backend>::load(self, data[0..2].try_into().unwrap()),
+            <NeonToken as U64x2Backend>::load(self, data[2..4].try_into().unwrap()),
+            <NeonToken as U64x2Backend>::load(self, data[4..6].try_into().unwrap()),
+            <NeonToken as U64x2Backend>::load(self, data[6..8].try_into().unwrap()),
         ]
     }
 
@@ -7081,10 +6979,10 @@ impl U64x8Backend for archmage::NeonToken {
         q2.copy_from_slice(&arr[4..6]);
         q3.copy_from_slice(&arr[6..8]);
         [
-            <archmage::NeonToken as U64x2Backend>::from_array(self, q0),
-            <archmage::NeonToken as U64x2Backend>::from_array(self, q1),
-            <archmage::NeonToken as U64x2Backend>::from_array(self, q2),
-            <archmage::NeonToken as U64x2Backend>::from_array(self, q3),
+            <NeonToken as U64x2Backend>::from_array(self, q0),
+            <NeonToken as U64x2Backend>::from_array(self, q1),
+            <NeonToken as U64x2Backend>::from_array(self, q2),
+            <NeonToken as U64x2Backend>::from_array(self, q3),
         ]
     }
 
@@ -7093,18 +6991,18 @@ impl U64x8Backend for archmage::NeonToken {
         let (o01, o23) = out.split_at_mut(4);
         let (o0, o1) = o01.split_at_mut(2);
         let (o2, o3) = o23.split_at_mut(2);
-        <archmage::NeonToken as U64x2Backend>::store(self, repr[0], o0.try_into().unwrap());
-        <archmage::NeonToken as U64x2Backend>::store(self, repr[1], o1.try_into().unwrap());
-        <archmage::NeonToken as U64x2Backend>::store(self, repr[2], o2.try_into().unwrap());
-        <archmage::NeonToken as U64x2Backend>::store(self, repr[3], o3.try_into().unwrap());
+        <NeonToken as U64x2Backend>::store(self, repr[0], o0.try_into().unwrap());
+        <NeonToken as U64x2Backend>::store(self, repr[1], o1.try_into().unwrap());
+        <NeonToken as U64x2Backend>::store(self, repr[2], o2.try_into().unwrap());
+        <NeonToken as U64x2Backend>::store(self, repr[3], o3.try_into().unwrap());
     }
 
     #[inline(always)]
     fn to_array(self, repr: [uint64x2_t; 4]) -> [u64; 8] {
-        let a0 = <archmage::NeonToken as U64x2Backend>::to_array(self, repr[0]);
-        let a1 = <archmage::NeonToken as U64x2Backend>::to_array(self, repr[1]);
-        let a2 = <archmage::NeonToken as U64x2Backend>::to_array(self, repr[2]);
-        let a3 = <archmage::NeonToken as U64x2Backend>::to_array(self, repr[3]);
+        let a0 = <NeonToken as U64x2Backend>::to_array(self, repr[0]);
+        let a1 = <NeonToken as U64x2Backend>::to_array(self, repr[1]);
+        let a2 = <NeonToken as U64x2Backend>::to_array(self, repr[2]);
+        let a3 = <NeonToken as U64x2Backend>::to_array(self, repr[3]);
         let mut out = [0; 8];
         out[0..2].copy_from_slice(&a0);
         out[2..4].copy_from_slice(&a1);
@@ -7115,118 +7013,108 @@ impl U64x8Backend for archmage::NeonToken {
 
     #[inline(always)]
     fn add(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U64x2Backend>::add(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U64x2Backend>::add(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn sub(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U64x2Backend>::sub(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U64x2Backend>::sub(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn neg(self, a: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        let z = <archmage::NeonToken as U64x2Backend>::zero(self);
-        core::array::from_fn(|i| <archmage::NeonToken as U64x2Backend>::sub(self, z, a[i]))
+        let z = <NeonToken as U64x2Backend>::zero(self);
+        core::array::from_fn(|i| <NeonToken as U64x2Backend>::sub(self, z, a[i]))
     }
 
     #[inline(always)]
     fn min(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U64x2Backend>::min(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U64x2Backend>::min(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn max(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U64x2Backend>::max(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U64x2Backend>::max(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn reduce_add(self, a: [uint64x2_t; 4]) -> u64 {
-        <archmage::NeonToken as U64x2Backend>::reduce_add(self, a[0])
-            .wrapping_add(<archmage::NeonToken as U64x2Backend>::reduce_add(
-                self, a[1],
-            ))
-            .wrapping_add(<archmage::NeonToken as U64x2Backend>::reduce_add(
-                self, a[2],
-            ))
-            .wrapping_add(<archmage::NeonToken as U64x2Backend>::reduce_add(
-                self, a[3],
-            ))
+        <NeonToken as U64x2Backend>::reduce_add(self, a[0])
+            .wrapping_add(<NeonToken as U64x2Backend>::reduce_add(self, a[1]))
+            .wrapping_add(<NeonToken as U64x2Backend>::reduce_add(self, a[2]))
+            .wrapping_add(<NeonToken as U64x2Backend>::reduce_add(self, a[3]))
     }
 
     #[inline(always)]
     fn shl_const<const N: i32>(self, a: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U64x2Backend>::shl_const::<N>(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as U64x2Backend>::shl_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn shr_arithmetic_const<const N: i32>(self, a: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as U64x2Backend>::shr_logical_const::<N>(self, a[i])
-        })
+        core::array::from_fn(|i| <NeonToken as U64x2Backend>::shr_logical_const::<N>(self, a[i]))
     }
 
     #[inline(always)]
     fn shr_logical_const<const N: i32>(self, a: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| {
-            <archmage::NeonToken as U64x2Backend>::shr_logical_const::<N>(self, a[i])
-        })
+        core::array::from_fn(|i| <NeonToken as U64x2Backend>::shr_logical_const::<N>(self, a[i]))
     }
 
     // Reduce the quarters with vector AND/OR first, then ONE lane
     // reduction (fearless_simd's polyfill lesson; branchless).
     #[inline(always)]
     fn all_true(self, a: [uint64x2_t; 4]) -> bool {
-        let c01 = <archmage::NeonToken as U64x2Backend>::bitand(self, a[0], a[1]);
-        let c23 = <archmage::NeonToken as U64x2Backend>::bitand(self, a[2], a[3]);
-        let c = <archmage::NeonToken as U64x2Backend>::bitand(self, c01, c23);
-        <archmage::NeonToken as U64x2Backend>::all_true(self, c)
+        let c01 = <NeonToken as U64x2Backend>::bitand(self, a[0], a[1]);
+        let c23 = <NeonToken as U64x2Backend>::bitand(self, a[2], a[3]);
+        let c = <NeonToken as U64x2Backend>::bitand(self, c01, c23);
+        <NeonToken as U64x2Backend>::all_true(self, c)
     }
 
     #[inline(always)]
     fn any_true(self, a: [uint64x2_t; 4]) -> bool {
-        let c01 = <archmage::NeonToken as U64x2Backend>::bitor(self, a[0], a[1]);
-        let c23 = <archmage::NeonToken as U64x2Backend>::bitor(self, a[2], a[3]);
-        let c = <archmage::NeonToken as U64x2Backend>::bitor(self, c01, c23);
-        <archmage::NeonToken as U64x2Backend>::any_true(self, c)
+        let c01 = <NeonToken as U64x2Backend>::bitor(self, a[0], a[1]);
+        let c23 = <NeonToken as U64x2Backend>::bitor(self, a[2], a[3]);
+        let c = <NeonToken as U64x2Backend>::bitor(self, c01, c23);
+        <NeonToken as U64x2Backend>::any_true(self, c)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [uint64x2_t; 4]) -> u64 {
-        let q0 = <archmage::NeonToken as U64x2Backend>::bitmask(self, a[0]) as u64;
-        let q1 = <archmage::NeonToken as U64x2Backend>::bitmask(self, a[1]) as u64;
-        let q2 = <archmage::NeonToken as U64x2Backend>::bitmask(self, a[2]) as u64;
-        let q3 = <archmage::NeonToken as U64x2Backend>::bitmask(self, a[3]) as u64;
+        let q0 = <NeonToken as U64x2Backend>::bitmask(self, a[0]) as u64;
+        let q1 = <NeonToken as U64x2Backend>::bitmask(self, a[1]) as u64;
+        let q2 = <NeonToken as U64x2Backend>::bitmask(self, a[2]) as u64;
+        let q3 = <NeonToken as U64x2Backend>::bitmask(self, a[3]) as u64;
         q0 | (q1 << 2) | (q2 << 4) | (q3 << 6)
     }
 
     #[inline(always)]
     fn simd_eq(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U64x2Backend>::simd_eq(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U64x2Backend>::simd_eq(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_ne(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U64x2Backend>::simd_ne(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U64x2Backend>::simd_ne(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_lt(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U64x2Backend>::simd_lt(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U64x2Backend>::simd_lt(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_le(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U64x2Backend>::simd_le(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U64x2Backend>::simd_le(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_gt(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U64x2Backend>::simd_gt(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U64x2Backend>::simd_gt(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn simd_ge(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U64x2Backend>::simd_ge(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U64x2Backend>::simd_ge(self, a[i], b[i]))
     }
 
     #[inline(always)]
@@ -7237,27 +7125,27 @@ impl U64x8Backend for archmage::NeonToken {
         if_false: [uint64x2_t; 4],
     ) -> [uint64x2_t; 4] {
         core::array::from_fn(|i| {
-            <archmage::NeonToken as U64x2Backend>::blend(self, mask[i], if_true[i], if_false[i])
+            <NeonToken as U64x2Backend>::blend(self, mask[i], if_true[i], if_false[i])
         })
     }
 
     #[inline(always)]
     fn not(self, a: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U64x2Backend>::not(self, a[i]))
+        core::array::from_fn(|i| <NeonToken as U64x2Backend>::not(self, a[i]))
     }
 
     #[inline(always)]
     fn bitand(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U64x2Backend>::bitand(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U64x2Backend>::bitand(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn bitor(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U64x2Backend>::bitor(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U64x2Backend>::bitor(self, a[i], b[i]))
     }
 
     #[inline(always)]
     fn bitxor(self, a: [uint64x2_t; 4], b: [uint64x2_t; 4]) -> [uint64x2_t; 4] {
-        core::array::from_fn(|i| <archmage::NeonToken as U64x2Backend>::bitxor(self, a[i], b[i]))
+        core::array::from_fn(|i| <NeonToken as U64x2Backend>::bitxor(self, a[i], b[i]))
     }
 }

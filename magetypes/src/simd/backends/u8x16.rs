@@ -156,35 +156,31 @@ pub trait U8x16Backend: SimdToken + Sealed + Copy + 'static {
     /// Widen in natural lane order: result[i] = a[i + 0] as u16.
     fn widen_low_u8_to_u16(
         self,
-        a: <Self as super::U8x16Backend>::Repr,
+        a: <Self as U8x16Backend>::Repr,
     ) -> <Self as super::U16x8Backend>::Repr
     where
         Self: super::U16x8Backend;
     /// Widen in natural lane order: result[i] = a[i + 8] as u16.
     fn widen_high_u8_to_u16(
         self,
-        a: <Self as super::U8x16Backend>::Repr,
+        a: <Self as U8x16Backend>::Repr,
     ) -> <Self as super::U16x8Backend>::Repr
     where
         Self: super::U16x8Backend;
     /// Exact full-range absolute difference, with unsigned output lanes.
     fn abs_diff(
         self,
-        a: <Self as super::U8x16Backend>::Repr,
-        b: <Self as super::U8x16Backend>::Repr,
-    ) -> <Self as super::U8x16Backend>::Repr;
+        a: <Self as U8x16Backend>::Repr,
+        b: <Self as U8x16Backend>::Repr,
+    ) -> <Self as U8x16Backend>::Repr;
     /// Exact widening sum, at most 4080.
-    fn reduce_add_u32(self, a: <Self as super::U8x16Backend>::Repr) -> u32;
+    fn reduce_add_u32(self, a: <Self as U8x16Backend>::Repr) -> u32;
     /// Terminal sum of absolute byte differences. Reduce once after long accumulation loops where possible.
-    fn sum_abs_diff(
-        self,
-        a: <Self as super::U8x16Backend>::Repr,
-        b: <Self as super::U8x16Backend>::Repr,
-    ) -> u32;
+    fn sum_abs_diff(self, a: <Self as U8x16Backend>::Repr, b: <Self as U8x16Backend>::Repr) -> u32;
     /// Exact unsigned adjacent sums: output[k] = widened a[2*k] + widened a[2*k+1].
     fn pairwise_widen_add(
         self,
-        a: <Self as super::U8x16Backend>::Repr,
+        a: <Self as U8x16Backend>::Repr,
     ) -> <Self as super::U16x8Backend>::Repr
     where
         Self: super::U16x8Backend;

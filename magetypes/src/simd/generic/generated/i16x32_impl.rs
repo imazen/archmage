@@ -48,32 +48,24 @@ crate::simd_storage::impl_token_storage!(i16x32, I16x32Backend);
 // assert fires at compile time.
 const _: () = {
     assert!(
-        core::mem::size_of::<i16x32<archmage::ScalarToken>>()
-            == core::mem::size_of::<
-                <archmage::ScalarToken as crate::simd::backends::I16x32Backend>::Repr,
-            >()
+        size_of::<i16x32<archmage::ScalarToken>>()
+            == size_of::<<archmage::ScalarToken as I16x32Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<i16x32<archmage::ScalarToken>>()
-            == core::mem::align_of::<
-                <archmage::ScalarToken as crate::simd::backends::I16x32Backend>::Repr,
-            >()
+        align_of::<i16x32<archmage::ScalarToken>>()
+            == align_of::<<archmage::ScalarToken as I16x32Backend>::Repr>()
     );
 };
 
 #[cfg(target_arch = "x86_64")]
 const _: () = {
     assert!(
-        core::mem::size_of::<i16x32<archmage::X64V3Token>>()
-            == core::mem::size_of::<
-                <archmage::X64V3Token as crate::simd::backends::I16x32Backend>::Repr,
-            >()
+        size_of::<i16x32<archmage::X64V3Token>>()
+            == size_of::<<archmage::X64V3Token as I16x32Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<i16x32<archmage::X64V3Token>>()
-            == core::mem::align_of::<
-                <archmage::X64V3Token as crate::simd::backends::I16x32Backend>::Repr,
-            >()
+        align_of::<i16x32<archmage::X64V3Token>>()
+            == align_of::<<archmage::X64V3Token as I16x32Backend>::Repr>()
     );
 };
 
@@ -83,48 +75,36 @@ const _: () = {
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 const _: () = {
     assert!(
-        core::mem::size_of::<i16x32<archmage::X64V4Token>>()
-            == core::mem::size_of::<
-                <archmage::X64V4Token as crate::simd::backends::I16x32Backend>::Repr,
-            >()
+        size_of::<i16x32<archmage::X64V4Token>>()
+            == size_of::<<archmage::X64V4Token as I16x32Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<i16x32<archmage::X64V4Token>>()
-            == core::mem::align_of::<
-                <archmage::X64V4Token as crate::simd::backends::I16x32Backend>::Repr,
-            >()
+        align_of::<i16x32<archmage::X64V4Token>>()
+            == align_of::<<archmage::X64V4Token as I16x32Backend>::Repr>()
     );
 };
 
 #[cfg(target_arch = "aarch64")]
 const _: () = {
     assert!(
-        core::mem::size_of::<i16x32<archmage::NeonToken>>()
-            == core::mem::size_of::<
-                <archmage::NeonToken as crate::simd::backends::I16x32Backend>::Repr,
-            >()
+        size_of::<i16x32<archmage::NeonToken>>()
+            == size_of::<<archmage::NeonToken as I16x32Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<i16x32<archmage::NeonToken>>()
-            == core::mem::align_of::<
-                <archmage::NeonToken as crate::simd::backends::I16x32Backend>::Repr,
-            >()
+        align_of::<i16x32<archmage::NeonToken>>()
+            == align_of::<<archmage::NeonToken as I16x32Backend>::Repr>()
     );
 };
 
 #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 const _: () = {
     assert!(
-        core::mem::size_of::<i16x32<archmage::Wasm128Token>>()
-            == core::mem::size_of::<
-                <archmage::Wasm128Token as crate::simd::backends::I16x32Backend>::Repr,
-            >()
+        size_of::<i16x32<archmage::Wasm128Token>>()
+            == size_of::<<archmage::Wasm128Token as I16x32Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<i16x32<archmage::Wasm128Token>>()
-            == core::mem::align_of::<
-                <archmage::Wasm128Token as crate::simd::backends::I16x32Backend>::Repr,
-            >()
+        align_of::<i16x32<archmage::Wasm128Token>>()
+            == align_of::<<archmage::Wasm128Token as I16x32Backend>::Repr>()
     );
 };
 
@@ -601,7 +581,7 @@ impl<T: I16x32Backend> core::fmt::Debug for i16x32<T> {
     }
 }
 
-impl<T: crate::simd::backends::I16x32Backend + crate::simd::backends::U16x32Backend> i16x32<T> {
+impl<T: I16x32Backend + crate::simd::backends::U16x32Backend> i16x32<T> {
     /// Reinterpret all 32 lanes as u16x32, preserving every bit.
     #[inline(always)]
     pub fn bitcast_u16x32(self) -> super::u16x32<T> {
@@ -613,7 +593,7 @@ impl<T: crate::simd::backends::I16x32Backend + crate::simd::backends::U16x32Back
 // Widening (i16x32 -> i32x16)
 // ============================================================================
 
-impl<T: crate::simd::backends::I16x32Backend + crate::simd::backends::I32x16Backend> i16x32<T> {
+impl<T: I16x32Backend + crate::simd::backends::I32x16Backend> i16x32<T> {
     /// Sign-extend the low half of the lanes to `i32x16`.
     ///
     /// Result lane `i` is `self[i] as i32` for `i` in `0..16`.
@@ -623,7 +603,7 @@ impl<T: crate::simd::backends::I16x32Backend + crate::simd::backends::I32x16Back
     pub fn widen_low(self) -> super::i32x16<T> {
         super::i32x16::from_repr_unchecked(
             self.1,
-            <T as crate::simd::backends::I16x32Backend>::widen_low_i16_to_i32(self.1, self.0),
+            <T as I16x32Backend>::widen_low_i16_to_i32(self.1, self.0),
         )
     }
 
@@ -634,7 +614,7 @@ impl<T: crate::simd::backends::I16x32Backend + crate::simd::backends::I32x16Back
     pub fn widen_high(self) -> super::i32x16<T> {
         super::i32x16::from_repr_unchecked(
             self.1,
-            <T as crate::simd::backends::I16x32Backend>::widen_high_i16_to_i32(self.1, self.0),
+            <T as I16x32Backend>::widen_high_i16_to_i32(self.1, self.0),
         )
     }
 }
@@ -643,7 +623,7 @@ impl<T: crate::simd::backends::I16x32Backend + crate::simd::backends::I32x16Back
 // Saturating narrowing (i16x32 -> i8x64 / u8x64)
 // ============================================================================
 
-impl<T: crate::simd::backends::I16x32Backend> i16x32<T> {
+impl<T: I16x32Backend> i16x32<T> {
     /// Narrow `self` and `high` to `i8x64`, clamping each lane to
     /// the `i8` range.
     ///
@@ -658,9 +638,7 @@ impl<T: crate::simd::backends::I16x32Backend> i16x32<T> {
     {
         super::i8x64::from_repr_unchecked(
             self.1,
-            <T as crate::simd::backends::I16x32Backend>::narrow_saturating_i16_to_i8(
-                self.1, self.0, high.0,
-            ),
+            <T as I16x32Backend>::narrow_saturating_i16_to_i8(self.1, self.0, high.0),
         )
     }
 
@@ -677,25 +655,23 @@ impl<T: crate::simd::backends::I16x32Backend> i16x32<T> {
     {
         super::u8x64::from_repr_unchecked(
             self.1,
-            <T as crate::simd::backends::I16x32Backend>::narrow_saturating_i16_to_u8(
-                self.1, self.0, high.0,
-            ),
+            <T as I16x32Backend>::narrow_saturating_i16_to_u8(self.1, self.0, high.0),
         )
     }
 }
 
-impl<T: crate::simd::backends::I16x32Backend + crate::simd::backends::U16x32Backend> i16x32<T> {
+impl<T: I16x32Backend + crate::simd::backends::U16x32Backend> i16x32<T> {
     /// MIN.abs_diff(MAX) is u16::MAX.
     /// Exact lane-wise absolute difference, without saturation or wrapping.
     #[inline(always)]
     pub fn abs_diff(self, rhs: Self) -> super::u16x32<T> {
         super::u16x32::from_repr_unchecked(
             self.1,
-            <T as crate::simd::backends::I16x32Backend>::abs_diff(self.1, self.0, rhs.0),
+            <T as I16x32Backend>::abs_diff(self.1, self.0, rhs.0),
         )
     }
 }
-impl<T: crate::simd::backends::I16x32Backend + crate::simd::backends::I32x16Backend> i16x32<T> {
+impl<T: I16x32Backend + crate::simd::backends::I32x16Backend> i16x32<T> {
     /// Multiply signed lanes, then sum adjacent pairs into i32 lanes.
     /// Lane k uses exactly input lanes 2k and 2k+1, in that order.
     /// The sum wraps modulo 2^32: two MIN*MIN products yield i32::MIN.
@@ -704,7 +680,7 @@ impl<T: crate::simd::backends::I16x32Backend + crate::simd::backends::I32x16Back
     pub fn madd_adjacent(self, rhs: Self) -> super::i32x16<T> {
         super::i32x16::from_repr_unchecked(
             self.1,
-            <T as crate::simd::backends::I16x32Backend>::madd_adjacent(self.1, self.0, rhs.0),
+            <T as I16x32Backend>::madd_adjacent(self.1, self.0, rhs.0),
         )
     }
 }

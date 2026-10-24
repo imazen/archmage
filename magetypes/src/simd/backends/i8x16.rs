@@ -163,14 +163,14 @@ pub trait I8x16Backend: SimdToken + Sealed + Copy + 'static {
     /// Widen in natural lane order: result[i] = a[i + 0] as i16.
     fn widen_low_i8_to_i16(
         self,
-        a: <Self as super::I8x16Backend>::Repr,
+        a: <Self as I8x16Backend>::Repr,
     ) -> <Self as super::I16x8Backend>::Repr
     where
         Self: super::I16x8Backend;
     /// Widen in natural lane order: result[i] = a[i + 8] as i16.
     fn widen_high_i8_to_i16(
         self,
-        a: <Self as super::I8x16Backend>::Repr,
+        a: <Self as I8x16Backend>::Repr,
     ) -> <Self as super::I16x8Backend>::Repr
     where
         Self: super::I16x8Backend;

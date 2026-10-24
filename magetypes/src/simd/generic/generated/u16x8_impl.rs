@@ -48,64 +48,48 @@ crate::simd_storage::impl_token_storage!(u16x8, U16x8Backend);
 // assert fires at compile time.
 const _: () = {
     assert!(
-        core::mem::size_of::<u16x8<archmage::ScalarToken>>()
-            == core::mem::size_of::<
-                <archmage::ScalarToken as crate::simd::backends::U16x8Backend>::Repr,
-            >()
+        size_of::<u16x8<archmage::ScalarToken>>()
+            == size_of::<<archmage::ScalarToken as U16x8Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<u16x8<archmage::ScalarToken>>()
-            == core::mem::align_of::<
-                <archmage::ScalarToken as crate::simd::backends::U16x8Backend>::Repr,
-            >()
+        align_of::<u16x8<archmage::ScalarToken>>()
+            == align_of::<<archmage::ScalarToken as U16x8Backend>::Repr>()
     );
 };
 
 #[cfg(target_arch = "x86_64")]
 const _: () = {
     assert!(
-        core::mem::size_of::<u16x8<archmage::X64V3Token>>()
-            == core::mem::size_of::<
-                <archmage::X64V3Token as crate::simd::backends::U16x8Backend>::Repr,
-            >()
+        size_of::<u16x8<archmage::X64V3Token>>()
+            == size_of::<<archmage::X64V3Token as U16x8Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<u16x8<archmage::X64V3Token>>()
-            == core::mem::align_of::<
-                <archmage::X64V3Token as crate::simd::backends::U16x8Backend>::Repr,
-            >()
+        align_of::<u16x8<archmage::X64V3Token>>()
+            == align_of::<<archmage::X64V3Token as U16x8Backend>::Repr>()
     );
 };
 
 #[cfg(target_arch = "aarch64")]
 const _: () = {
     assert!(
-        core::mem::size_of::<u16x8<archmage::NeonToken>>()
-            == core::mem::size_of::<
-                <archmage::NeonToken as crate::simd::backends::U16x8Backend>::Repr,
-            >()
+        size_of::<u16x8<archmage::NeonToken>>()
+            == size_of::<<archmage::NeonToken as U16x8Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<u16x8<archmage::NeonToken>>()
-            == core::mem::align_of::<
-                <archmage::NeonToken as crate::simd::backends::U16x8Backend>::Repr,
-            >()
+        align_of::<u16x8<archmage::NeonToken>>()
+            == align_of::<<archmage::NeonToken as U16x8Backend>::Repr>()
     );
 };
 
 #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 const _: () = {
     assert!(
-        core::mem::size_of::<u16x8<archmage::Wasm128Token>>()
-            == core::mem::size_of::<
-                <archmage::Wasm128Token as crate::simd::backends::U16x8Backend>::Repr,
-            >()
+        size_of::<u16x8<archmage::Wasm128Token>>()
+            == size_of::<<archmage::Wasm128Token as U16x8Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<u16x8<archmage::Wasm128Token>>()
-            == core::mem::align_of::<
-                <archmage::Wasm128Token as crate::simd::backends::U16x8Backend>::Repr,
-            >()
+        align_of::<u16x8<archmage::Wasm128Token>>()
+            == align_of::<<archmage::Wasm128Token as U16x8Backend>::Repr>()
     );
 };
 
@@ -570,7 +554,7 @@ impl<T: crate::simd::backends::I16x8Bitcast> u16x8<T> {
 // Widening (u16x8 -> u32x4)
 // ============================================================================
 
-impl<T: crate::simd::backends::U16x8Backend + crate::simd::backends::U32x4Backend> u16x8<T> {
+impl<T: U16x8Backend + crate::simd::backends::U32x4Backend> u16x8<T> {
     /// Zero-extend the low half of the lanes to `u32x4`.
     ///
     /// Result lane `i` is `self[i] as u32` for `i` in `0..4`.
@@ -580,7 +564,7 @@ impl<T: crate::simd::backends::U16x8Backend + crate::simd::backends::U32x4Backen
     pub fn widen_low(self) -> super::u32x4<T> {
         super::u32x4::from_repr_unchecked(
             self.1,
-            <T as crate::simd::backends::U16x8Backend>::widen_low_u16_to_u32(self.1, self.0),
+            <T as U16x8Backend>::widen_low_u16_to_u32(self.1, self.0),
         )
     }
 
@@ -591,12 +575,12 @@ impl<T: crate::simd::backends::U16x8Backend + crate::simd::backends::U32x4Backen
     pub fn widen_high(self) -> super::u32x4<T> {
         super::u32x4::from_repr_unchecked(
             self.1,
-            <T as crate::simd::backends::U16x8Backend>::widen_high_u16_to_u32(self.1, self.0),
+            <T as U16x8Backend>::widen_high_u16_to_u32(self.1, self.0),
         )
     }
 }
 
-impl<T: crate::simd::backends::U16x8Backend> u16x8<T> {
+impl<T: U16x8Backend> u16x8<T> {
     /// Sum adjacent pairs into unsigned lanes twice as wide.
     ///
     /// Output lane `k` is `self[2*k] + self[2*k+1]`, with both
@@ -611,7 +595,7 @@ impl<T: crate::simd::backends::U16x8Backend> u16x8<T> {
     {
         super::u32x4::from_repr_unchecked(
             self.1,
-            <T as crate::simd::backends::U16x8Backend>::pairwise_widen_add(self.1, self.0),
+            <T as U16x8Backend>::pairwise_widen_add(self.1, self.0),
         )
     }
 }

@@ -48,64 +48,48 @@ crate::simd_storage::impl_token_storage!(i32x8, I32x8Backend);
 // assert fires at compile time.
 const _: () = {
     assert!(
-        core::mem::size_of::<i32x8<archmage::ScalarToken>>()
-            == core::mem::size_of::<
-                <archmage::ScalarToken as crate::simd::backends::I32x8Backend>::Repr,
-            >()
+        size_of::<i32x8<archmage::ScalarToken>>()
+            == size_of::<<archmage::ScalarToken as I32x8Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<i32x8<archmage::ScalarToken>>()
-            == core::mem::align_of::<
-                <archmage::ScalarToken as crate::simd::backends::I32x8Backend>::Repr,
-            >()
+        align_of::<i32x8<archmage::ScalarToken>>()
+            == align_of::<<archmage::ScalarToken as I32x8Backend>::Repr>()
     );
 };
 
 #[cfg(target_arch = "x86_64")]
 const _: () = {
     assert!(
-        core::mem::size_of::<i32x8<archmage::X64V3Token>>()
-            == core::mem::size_of::<
-                <archmage::X64V3Token as crate::simd::backends::I32x8Backend>::Repr,
-            >()
+        size_of::<i32x8<archmage::X64V3Token>>()
+            == size_of::<<archmage::X64V3Token as I32x8Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<i32x8<archmage::X64V3Token>>()
-            == core::mem::align_of::<
-                <archmage::X64V3Token as crate::simd::backends::I32x8Backend>::Repr,
-            >()
+        align_of::<i32x8<archmage::X64V3Token>>()
+            == align_of::<<archmage::X64V3Token as I32x8Backend>::Repr>()
     );
 };
 
 #[cfg(target_arch = "aarch64")]
 const _: () = {
     assert!(
-        core::mem::size_of::<i32x8<archmage::NeonToken>>()
-            == core::mem::size_of::<
-                <archmage::NeonToken as crate::simd::backends::I32x8Backend>::Repr,
-            >()
+        size_of::<i32x8<archmage::NeonToken>>()
+            == size_of::<<archmage::NeonToken as I32x8Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<i32x8<archmage::NeonToken>>()
-            == core::mem::align_of::<
-                <archmage::NeonToken as crate::simd::backends::I32x8Backend>::Repr,
-            >()
+        align_of::<i32x8<archmage::NeonToken>>()
+            == align_of::<<archmage::NeonToken as I32x8Backend>::Repr>()
     );
 };
 
 #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 const _: () = {
     assert!(
-        core::mem::size_of::<i32x8<archmage::Wasm128Token>>()
-            == core::mem::size_of::<
-                <archmage::Wasm128Token as crate::simd::backends::I32x8Backend>::Repr,
-            >()
+        size_of::<i32x8<archmage::Wasm128Token>>()
+            == size_of::<<archmage::Wasm128Token as I32x8Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<i32x8<archmage::Wasm128Token>>()
-            == core::mem::align_of::<
-                <archmage::Wasm128Token as crate::simd::backends::I32x8Backend>::Repr,
-            >()
+        align_of::<i32x8<archmage::Wasm128Token>>()
+            == align_of::<<archmage::Wasm128Token as I32x8Backend>::Repr>()
     );
 };
 
@@ -602,7 +586,7 @@ impl<T: crate::simd::backends::F32x8Convert> i32x8<T> {
 // Saturating narrowing (i32x8 -> i16x16 / u16x16)
 // ============================================================================
 
-impl<T: crate::simd::backends::I32x8Backend> i32x8<T> {
+impl<T: I32x8Backend> i32x8<T> {
     /// Narrow `self` and `high` to `i16x16`, clamping each lane to
     /// the `i16` range.
     ///
@@ -617,9 +601,7 @@ impl<T: crate::simd::backends::I32x8Backend> i32x8<T> {
     {
         super::i16x16::from_repr_unchecked(
             self.1,
-            <T as crate::simd::backends::I32x8Backend>::narrow_saturating_i32_to_i16(
-                self.1, self.0, high.0,
-            ),
+            <T as I32x8Backend>::narrow_saturating_i32_to_i16(self.1, self.0, high.0),
         )
     }
 
@@ -636,9 +618,7 @@ impl<T: crate::simd::backends::I32x8Backend> i32x8<T> {
     {
         super::u16x16::from_repr_unchecked(
             self.1,
-            <T as crate::simd::backends::I32x8Backend>::narrow_saturating_i32_to_u16(
-                self.1, self.0, high.0,
-            ),
+            <T as I32x8Backend>::narrow_saturating_i32_to_u16(self.1, self.0, high.0),
         )
     }
 }

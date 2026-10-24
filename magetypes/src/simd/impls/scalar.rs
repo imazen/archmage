@@ -7871,7 +7871,7 @@ impl U16x8Backend for archmage::ScalarToken {
             if count >= 16 {
                 0
             } else {
-                ((x as u16).wrapping_shr(count)) as u16
+                x.wrapping_shr(count)
             }
         })
     }
@@ -8443,7 +8443,7 @@ impl U16x16Backend for archmage::ScalarToken {
             if count >= 16 {
                 0
             } else {
-                ((x as u16).wrapping_shr(count)) as u16
+                x.wrapping_shr(count)
             }
         })
     }
@@ -10074,19 +10074,19 @@ impl I8x64Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn all_true(self, a: [i8; 64]) -> bool {
-        a.iter().all(|&v| (v as i8) < 0)
+        a.iter().all(|&v| v < 0)
     }
 
     #[inline(always)]
     fn any_true(self, a: [i8; 64]) -> bool {
-        a.iter().any(|&v| (v as i8) < 0)
+        a.iter().any(|&v| v < 0)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [i8; 64]) -> u64 {
         let mut mask = 0u64;
         for i in 0..64 {
-            if (a[i] as i8) < 0 {
+            if a[i] < 0 {
                 mask |= 1u64 << i;
             }
         }
@@ -10238,7 +10238,7 @@ impl U8x64Backend for archmage::ScalarToken {
     fn shl_const<const N: i32>(self, a: [u8; 64]) -> [u8; 64] {
         core::array::from_fn(|i| {
             if N < 8 {
-                (a[i] as u8).wrapping_shl(N as u32) as u8
+                a[i].wrapping_shl(N as u32)
             } else {
                 0
             }
@@ -10260,7 +10260,7 @@ impl U8x64Backend for archmage::ScalarToken {
     fn shr_logical_const<const N: i32>(self, a: [u8; 64]) -> [u8; 64] {
         core::array::from_fn(|i| {
             if N < 8 {
-                (a[i] as u8).wrapping_shr(N as u32) as u8
+                a[i].wrapping_shr(N as u32)
             } else {
                 0
             }
@@ -10545,19 +10545,19 @@ impl I16x32Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn all_true(self, a: [i16; 32]) -> bool {
-        a.iter().all(|&v| (v as i16) < 0)
+        a.iter().all(|&v| v < 0)
     }
 
     #[inline(always)]
     fn any_true(self, a: [i16; 32]) -> bool {
-        a.iter().any(|&v| (v as i16) < 0)
+        a.iter().any(|&v| v < 0)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [i16; 32]) -> u64 {
         let mut mask = 0u64;
         for i in 0..32 {
-            if (a[i] as i16) < 0 {
+            if a[i] < 0 {
                 mask |= 1u64 << i;
             }
         }
@@ -10741,7 +10741,7 @@ impl U16x32Backend for archmage::ScalarToken {
     fn shl_const<const N: i32>(self, a: [u16; 32]) -> [u16; 32] {
         core::array::from_fn(|i| {
             if N < 16 {
-                (a[i] as u16).wrapping_shl(N as u32) as u16
+                a[i].wrapping_shl(N as u32)
             } else {
                 0
             }
@@ -10763,7 +10763,7 @@ impl U16x32Backend for archmage::ScalarToken {
     fn shr_logical_const<const N: i32>(self, a: [u16; 32]) -> [u16; 32] {
         core::array::from_fn(|i| {
             if N < 16 {
-                (a[i] as u16).wrapping_shr(N as u32) as u16
+                a[i].wrapping_shr(N as u32)
             } else {
                 0
             }
@@ -10776,7 +10776,7 @@ impl U16x32Backend for archmage::ScalarToken {
             if count >= 16 {
                 0
             } else {
-                (a[i] as u16).wrapping_shl(count) as u16
+                a[i].wrapping_shl(count)
             }
         })
     }
@@ -10787,7 +10787,7 @@ impl U16x32Backend for archmage::ScalarToken {
             if count >= 16 {
                 0
             } else {
-                (a[i] as u16).wrapping_shr(count) as u16
+                a[i].wrapping_shr(count)
             }
         })
     }
@@ -11053,19 +11053,19 @@ impl I32x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn all_true(self, a: [i32; 16]) -> bool {
-        a.iter().all(|&v| (v as i32) < 0)
+        a.iter().all(|&v| v < 0)
     }
 
     #[inline(always)]
     fn any_true(self, a: [i32; 16]) -> bool {
-        a.iter().any(|&v| (v as i32) < 0)
+        a.iter().any(|&v| v < 0)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [i32; 16]) -> u64 {
         let mut mask = 0u64;
         for i in 0..16 {
-            if (a[i] as i32) < 0 {
+            if a[i] < 0 {
                 mask |= 1u64 << i;
             }
         }
@@ -11222,7 +11222,7 @@ impl U32x16Backend for archmage::ScalarToken {
     fn shl_const<const N: i32>(self, a: [u32; 16]) -> [u32; 16] {
         core::array::from_fn(|i| {
             if N < 32 {
-                (a[i] as u32).wrapping_shl(N as u32) as u32
+                a[i].wrapping_shl(N as u32)
             } else {
                 0
             }
@@ -11244,7 +11244,7 @@ impl U32x16Backend for archmage::ScalarToken {
     fn shr_logical_const<const N: i32>(self, a: [u32; 16]) -> [u32; 16] {
         core::array::from_fn(|i| {
             if N < 32 {
-                (a[i] as u32).wrapping_shr(N as u32) as u32
+                a[i].wrapping_shr(N as u32)
             } else {
                 0
             }
@@ -11257,7 +11257,7 @@ impl U32x16Backend for archmage::ScalarToken {
             if count >= 32 {
                 0
             } else {
-                (a[i] as u32).wrapping_shl(count) as u32
+                a[i].wrapping_shl(count)
             }
         })
     }
@@ -11268,7 +11268,7 @@ impl U32x16Backend for archmage::ScalarToken {
             if count >= 32 {
                 0
             } else {
-                (a[i] as u32).wrapping_shr(count) as u32
+                a[i].wrapping_shr(count)
             }
         })
     }
@@ -11473,19 +11473,19 @@ impl I64x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn all_true(self, a: [i64; 8]) -> bool {
-        a.iter().all(|&v| (v as i64) < 0)
+        a.iter().all(|&v| v < 0)
     }
 
     #[inline(always)]
     fn any_true(self, a: [i64; 8]) -> bool {
-        a.iter().any(|&v| (v as i64) < 0)
+        a.iter().any(|&v| v < 0)
     }
 
     #[inline(always)]
     fn bitmask(self, a: [i64; 8]) -> u64 {
         let mut mask = 0u64;
         for i in 0..8 {
-            if (a[i] as i64) < 0 {
+            if a[i] < 0 {
                 mask |= 1u64 << i;
             }
         }
@@ -11622,7 +11622,7 @@ impl U64x8Backend for archmage::ScalarToken {
     fn shl_const<const N: i32>(self, a: [u64; 8]) -> [u64; 8] {
         core::array::from_fn(|i| {
             if N < 64 {
-                (a[i] as u64).wrapping_shl(N as u32) as u64
+                a[i].wrapping_shl(N as u32)
             } else {
                 0
             }
@@ -11644,7 +11644,7 @@ impl U64x8Backend for archmage::ScalarToken {
     fn shr_logical_const<const N: i32>(self, a: [u64; 8]) -> [u64; 8] {
         core::array::from_fn(|i| {
             if N < 64 {
-                (a[i] as u64).wrapping_shr(N as u32) as u64
+                a[i].wrapping_shr(N as u32)
             } else {
                 0
             }

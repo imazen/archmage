@@ -1177,22 +1177,16 @@ impl I8x16Backend for archmage::X64V4Token {
         <archmage::X64V3Token as I8x16Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_i8_to_i16(
-        self,
-        a: <Self as crate::simd::backends::I8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x8Backend>::Repr
+    fn widen_low_i8_to_i16(self, a: <Self as I8x16Backend>::Repr) -> <Self as I16x8Backend>::Repr
     where
-        Self: crate::simd::backends::I16x8Backend,
+        Self: I16x8Backend,
     {
         <archmage::X64V3Token as I8x16Backend>::widen_low_i8_to_i16(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_i8_to_i16(
-        self,
-        a: <Self as crate::simd::backends::I8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x8Backend>::Repr
+    fn widen_high_i8_to_i16(self, a: <Self as I8x16Backend>::Repr) -> <Self as I16x8Backend>::Repr
     where
-        Self: crate::simd::backends::I16x8Backend,
+        Self: I16x8Backend,
     {
         <archmage::X64V3Token as I8x16Backend>::widen_high_i8_to_i16(self.v3(), a)
     }
@@ -1333,22 +1327,16 @@ impl I8x16Backend for archmage::X64V4xToken {
         <archmage::X64V3Token as I8x16Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_i8_to_i16(
-        self,
-        a: <Self as crate::simd::backends::I8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x8Backend>::Repr
+    fn widen_low_i8_to_i16(self, a: <Self as I8x16Backend>::Repr) -> <Self as I16x8Backend>::Repr
     where
-        Self: crate::simd::backends::I16x8Backend,
+        Self: I16x8Backend,
     {
         <archmage::X64V3Token as I8x16Backend>::widen_low_i8_to_i16(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_i8_to_i16(
-        self,
-        a: <Self as crate::simd::backends::I8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x8Backend>::Repr
+    fn widen_high_i8_to_i16(self, a: <Self as I8x16Backend>::Repr) -> <Self as I16x8Backend>::Repr
     where
-        Self: crate::simd::backends::I16x8Backend,
+        Self: I16x8Backend,
     {
         <archmage::X64V3Token as I8x16Backend>::widen_high_i8_to_i16(self.v3(), a)
     }
@@ -1489,22 +1477,16 @@ impl I8x16Backend for archmage::Avx512Fp16Token {
         <archmage::X64V3Token as I8x16Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_i8_to_i16(
-        self,
-        a: <Self as crate::simd::backends::I8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x8Backend>::Repr
+    fn widen_low_i8_to_i16(self, a: <Self as I8x16Backend>::Repr) -> <Self as I16x8Backend>::Repr
     where
-        Self: crate::simd::backends::I16x8Backend,
+        Self: I16x8Backend,
     {
         <archmage::X64V3Token as I8x16Backend>::widen_low_i8_to_i16(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_i8_to_i16(
-        self,
-        a: <Self as crate::simd::backends::I8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x8Backend>::Repr
+    fn widen_high_i8_to_i16(self, a: <Self as I8x16Backend>::Repr) -> <Self as I16x8Backend>::Repr
     where
-        Self: crate::simd::backends::I16x8Backend,
+        Self: I16x8Backend,
     {
         <archmage::X64V3Token as I8x16Backend>::widen_high_i8_to_i16(self.v3(), a)
     }
@@ -1645,22 +1627,16 @@ impl I8x32Backend for archmage::X64V4Token {
         <archmage::X64V3Token as I8x32Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_i8_to_i16(
-        self,
-        a: <Self as crate::simd::backends::I8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x16Backend>::Repr
+    fn widen_low_i8_to_i16(self, a: <Self as I8x32Backend>::Repr) -> <Self as I16x16Backend>::Repr
     where
-        Self: crate::simd::backends::I16x16Backend,
+        Self: I16x16Backend,
     {
         <archmage::X64V3Token as I8x32Backend>::widen_low_i8_to_i16(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_i8_to_i16(
-        self,
-        a: <Self as crate::simd::backends::I8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x16Backend>::Repr
+    fn widen_high_i8_to_i16(self, a: <Self as I8x32Backend>::Repr) -> <Self as I16x16Backend>::Repr
     where
-        Self: crate::simd::backends::I16x16Backend,
+        Self: I16x16Backend,
     {
         <archmage::X64V3Token as I8x32Backend>::widen_high_i8_to_i16(self.v3(), a)
     }
@@ -1801,22 +1777,16 @@ impl I8x32Backend for archmage::X64V4xToken {
         <archmage::X64V3Token as I8x32Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_i8_to_i16(
-        self,
-        a: <Self as crate::simd::backends::I8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x16Backend>::Repr
+    fn widen_low_i8_to_i16(self, a: <Self as I8x32Backend>::Repr) -> <Self as I16x16Backend>::Repr
     where
-        Self: crate::simd::backends::I16x16Backend,
+        Self: I16x16Backend,
     {
         <archmage::X64V3Token as I8x32Backend>::widen_low_i8_to_i16(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_i8_to_i16(
-        self,
-        a: <Self as crate::simd::backends::I8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x16Backend>::Repr
+    fn widen_high_i8_to_i16(self, a: <Self as I8x32Backend>::Repr) -> <Self as I16x16Backend>::Repr
     where
-        Self: crate::simd::backends::I16x16Backend,
+        Self: I16x16Backend,
     {
         <archmage::X64V3Token as I8x32Backend>::widen_high_i8_to_i16(self.v3(), a)
     }
@@ -1957,22 +1927,16 @@ impl I8x32Backend for archmage::Avx512Fp16Token {
         <archmage::X64V3Token as I8x32Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_i8_to_i16(
-        self,
-        a: <Self as crate::simd::backends::I8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x16Backend>::Repr
+    fn widen_low_i8_to_i16(self, a: <Self as I8x32Backend>::Repr) -> <Self as I16x16Backend>::Repr
     where
-        Self: crate::simd::backends::I16x16Backend,
+        Self: I16x16Backend,
     {
         <archmage::X64V3Token as I8x32Backend>::widen_low_i8_to_i16(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_i8_to_i16(
-        self,
-        a: <Self as crate::simd::backends::I8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x16Backend>::Repr
+    fn widen_high_i8_to_i16(self, a: <Self as I8x32Backend>::Repr) -> <Self as I16x16Backend>::Repr
     where
-        Self: crate::simd::backends::I16x16Backend,
+        Self: I16x16Backend,
     {
         <archmage::X64V3Token as I8x32Backend>::widen_high_i8_to_i16(self.v3(), a)
     }
@@ -2129,66 +2093,60 @@ impl I16x8Backend for archmage::X64V4Token {
         <archmage::X64V3Token as I16x8Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_i16_to_i32(
-        self,
-        a: <Self as crate::simd::backends::I16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I32x4Backend>::Repr
+    fn widen_low_i16_to_i32(self, a: <Self as I16x8Backend>::Repr) -> <Self as I32x4Backend>::Repr
     where
-        Self: crate::simd::backends::I32x4Backend,
+        Self: I32x4Backend,
     {
         <archmage::X64V3Token as I16x8Backend>::widen_low_i16_to_i32(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_i16_to_i32(
-        self,
-        a: <Self as crate::simd::backends::I16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I32x4Backend>::Repr
+    fn widen_high_i16_to_i32(self, a: <Self as I16x8Backend>::Repr) -> <Self as I32x4Backend>::Repr
     where
-        Self: crate::simd::backends::I32x4Backend,
+        Self: I32x4Backend,
     {
         <archmage::X64V3Token as I16x8Backend>::widen_high_i16_to_i32(self.v3(), a)
     }
     #[inline(always)]
     fn narrow_saturating_i16_to_i8(
         self,
-        a: <Self as crate::simd::backends::I16x8Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I8x16Backend>::Repr
+        a: <Self as I16x8Backend>::Repr,
+        b: <Self as I16x8Backend>::Repr,
+    ) -> <Self as I8x16Backend>::Repr
     where
-        Self: crate::simd::backends::I8x16Backend,
+        Self: I8x16Backend,
     {
         <archmage::X64V3Token as I16x8Backend>::narrow_saturating_i16_to_i8(self.v3(), a, b)
     }
     #[inline(always)]
     fn narrow_saturating_i16_to_u8(
         self,
-        a: <Self as crate::simd::backends::I16x8Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U8x16Backend>::Repr
+        a: <Self as I16x8Backend>::Repr,
+        b: <Self as I16x8Backend>::Repr,
+    ) -> <Self as U8x16Backend>::Repr
     where
-        Self: crate::simd::backends::U8x16Backend,
+        Self: U8x16Backend,
     {
         <archmage::X64V3Token as I16x8Backend>::narrow_saturating_i16_to_u8(self.v3(), a, b)
     }
     #[inline(always)]
     fn abs_diff(
         self,
-        a: <Self as crate::simd::backends::I16x8Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x8Backend>::Repr
+        a: <Self as I16x8Backend>::Repr,
+        b: <Self as I16x8Backend>::Repr,
+    ) -> <Self as U16x8Backend>::Repr
     where
-        Self: crate::simd::backends::U16x8Backend,
+        Self: U16x8Backend,
     {
         <archmage::X64V3Token as I16x8Backend>::abs_diff(self.v3(), a, b)
     }
     #[inline(always)]
     fn madd_adjacent(
         self,
-        a: <Self as crate::simd::backends::I16x8Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I32x4Backend>::Repr
+        a: <Self as I16x8Backend>::Repr,
+        b: <Self as I16x8Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr
     where
-        Self: crate::simd::backends::I32x4Backend,
+        Self: I32x4Backend,
     {
         <archmage::X64V3Token as I16x8Backend>::madd_adjacent(self.v3(), a, b)
     }
@@ -2345,66 +2303,60 @@ impl I16x8Backend for archmage::X64V4xToken {
         <archmage::X64V3Token as I16x8Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_i16_to_i32(
-        self,
-        a: <Self as crate::simd::backends::I16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I32x4Backend>::Repr
+    fn widen_low_i16_to_i32(self, a: <Self as I16x8Backend>::Repr) -> <Self as I32x4Backend>::Repr
     where
-        Self: crate::simd::backends::I32x4Backend,
+        Self: I32x4Backend,
     {
         <archmage::X64V3Token as I16x8Backend>::widen_low_i16_to_i32(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_i16_to_i32(
-        self,
-        a: <Self as crate::simd::backends::I16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I32x4Backend>::Repr
+    fn widen_high_i16_to_i32(self, a: <Self as I16x8Backend>::Repr) -> <Self as I32x4Backend>::Repr
     where
-        Self: crate::simd::backends::I32x4Backend,
+        Self: I32x4Backend,
     {
         <archmage::X64V3Token as I16x8Backend>::widen_high_i16_to_i32(self.v3(), a)
     }
     #[inline(always)]
     fn narrow_saturating_i16_to_i8(
         self,
-        a: <Self as crate::simd::backends::I16x8Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I8x16Backend>::Repr
+        a: <Self as I16x8Backend>::Repr,
+        b: <Self as I16x8Backend>::Repr,
+    ) -> <Self as I8x16Backend>::Repr
     where
-        Self: crate::simd::backends::I8x16Backend,
+        Self: I8x16Backend,
     {
         <archmage::X64V3Token as I16x8Backend>::narrow_saturating_i16_to_i8(self.v3(), a, b)
     }
     #[inline(always)]
     fn narrow_saturating_i16_to_u8(
         self,
-        a: <Self as crate::simd::backends::I16x8Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U8x16Backend>::Repr
+        a: <Self as I16x8Backend>::Repr,
+        b: <Self as I16x8Backend>::Repr,
+    ) -> <Self as U8x16Backend>::Repr
     where
-        Self: crate::simd::backends::U8x16Backend,
+        Self: U8x16Backend,
     {
         <archmage::X64V3Token as I16x8Backend>::narrow_saturating_i16_to_u8(self.v3(), a, b)
     }
     #[inline(always)]
     fn abs_diff(
         self,
-        a: <Self as crate::simd::backends::I16x8Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x8Backend>::Repr
+        a: <Self as I16x8Backend>::Repr,
+        b: <Self as I16x8Backend>::Repr,
+    ) -> <Self as U16x8Backend>::Repr
     where
-        Self: crate::simd::backends::U16x8Backend,
+        Self: U16x8Backend,
     {
         <archmage::X64V3Token as I16x8Backend>::abs_diff(self.v3(), a, b)
     }
     #[inline(always)]
     fn madd_adjacent(
         self,
-        a: <Self as crate::simd::backends::I16x8Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I32x4Backend>::Repr
+        a: <Self as I16x8Backend>::Repr,
+        b: <Self as I16x8Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr
     where
-        Self: crate::simd::backends::I32x4Backend,
+        Self: I32x4Backend,
     {
         <archmage::X64V3Token as I16x8Backend>::madd_adjacent(self.v3(), a, b)
     }
@@ -2561,66 +2513,60 @@ impl I16x8Backend for archmage::Avx512Fp16Token {
         <archmage::X64V3Token as I16x8Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_i16_to_i32(
-        self,
-        a: <Self as crate::simd::backends::I16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I32x4Backend>::Repr
+    fn widen_low_i16_to_i32(self, a: <Self as I16x8Backend>::Repr) -> <Self as I32x4Backend>::Repr
     where
-        Self: crate::simd::backends::I32x4Backend,
+        Self: I32x4Backend,
     {
         <archmage::X64V3Token as I16x8Backend>::widen_low_i16_to_i32(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_i16_to_i32(
-        self,
-        a: <Self as crate::simd::backends::I16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I32x4Backend>::Repr
+    fn widen_high_i16_to_i32(self, a: <Self as I16x8Backend>::Repr) -> <Self as I32x4Backend>::Repr
     where
-        Self: crate::simd::backends::I32x4Backend,
+        Self: I32x4Backend,
     {
         <archmage::X64V3Token as I16x8Backend>::widen_high_i16_to_i32(self.v3(), a)
     }
     #[inline(always)]
     fn narrow_saturating_i16_to_i8(
         self,
-        a: <Self as crate::simd::backends::I16x8Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I8x16Backend>::Repr
+        a: <Self as I16x8Backend>::Repr,
+        b: <Self as I16x8Backend>::Repr,
+    ) -> <Self as I8x16Backend>::Repr
     where
-        Self: crate::simd::backends::I8x16Backend,
+        Self: I8x16Backend,
     {
         <archmage::X64V3Token as I16x8Backend>::narrow_saturating_i16_to_i8(self.v3(), a, b)
     }
     #[inline(always)]
     fn narrow_saturating_i16_to_u8(
         self,
-        a: <Self as crate::simd::backends::I16x8Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U8x16Backend>::Repr
+        a: <Self as I16x8Backend>::Repr,
+        b: <Self as I16x8Backend>::Repr,
+    ) -> <Self as U8x16Backend>::Repr
     where
-        Self: crate::simd::backends::U8x16Backend,
+        Self: U8x16Backend,
     {
         <archmage::X64V3Token as I16x8Backend>::narrow_saturating_i16_to_u8(self.v3(), a, b)
     }
     #[inline(always)]
     fn abs_diff(
         self,
-        a: <Self as crate::simd::backends::I16x8Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x8Backend>::Repr
+        a: <Self as I16x8Backend>::Repr,
+        b: <Self as I16x8Backend>::Repr,
+    ) -> <Self as U16x8Backend>::Repr
     where
-        Self: crate::simd::backends::U16x8Backend,
+        Self: U16x8Backend,
     {
         <archmage::X64V3Token as I16x8Backend>::abs_diff(self.v3(), a, b)
     }
     #[inline(always)]
     fn madd_adjacent(
         self,
-        a: <Self as crate::simd::backends::I16x8Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I32x4Backend>::Repr
+        a: <Self as I16x8Backend>::Repr,
+        b: <Self as I16x8Backend>::Repr,
+    ) -> <Self as I32x4Backend>::Repr
     where
-        Self: crate::simd::backends::I32x4Backend,
+        Self: I32x4Backend,
     {
         <archmage::X64V3Token as I16x8Backend>::madd_adjacent(self.v3(), a, b)
     }
@@ -2777,66 +2723,60 @@ impl I16x16Backend for archmage::X64V4Token {
         <archmage::X64V3Token as I16x16Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_i16_to_i32(
-        self,
-        a: <Self as crate::simd::backends::I16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I32x8Backend>::Repr
+    fn widen_low_i16_to_i32(self, a: <Self as I16x16Backend>::Repr) -> <Self as I32x8Backend>::Repr
     where
-        Self: crate::simd::backends::I32x8Backend,
+        Self: I32x8Backend,
     {
         <archmage::X64V3Token as I16x16Backend>::widen_low_i16_to_i32(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_i16_to_i32(
-        self,
-        a: <Self as crate::simd::backends::I16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I32x8Backend>::Repr
+    fn widen_high_i16_to_i32(self, a: <Self as I16x16Backend>::Repr) -> <Self as I32x8Backend>::Repr
     where
-        Self: crate::simd::backends::I32x8Backend,
+        Self: I32x8Backend,
     {
         <archmage::X64V3Token as I16x16Backend>::widen_high_i16_to_i32(self.v3(), a)
     }
     #[inline(always)]
     fn narrow_saturating_i16_to_i8(
         self,
-        a: <Self as crate::simd::backends::I16x16Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I8x32Backend>::Repr
+        a: <Self as I16x16Backend>::Repr,
+        b: <Self as I16x16Backend>::Repr,
+    ) -> <Self as I8x32Backend>::Repr
     where
-        Self: crate::simd::backends::I8x32Backend,
+        Self: I8x32Backend,
     {
         <archmage::X64V3Token as I16x16Backend>::narrow_saturating_i16_to_i8(self.v3(), a, b)
     }
     #[inline(always)]
     fn narrow_saturating_i16_to_u8(
         self,
-        a: <Self as crate::simd::backends::I16x16Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U8x32Backend>::Repr
+        a: <Self as I16x16Backend>::Repr,
+        b: <Self as I16x16Backend>::Repr,
+    ) -> <Self as U8x32Backend>::Repr
     where
-        Self: crate::simd::backends::U8x32Backend,
+        Self: U8x32Backend,
     {
         <archmage::X64V3Token as I16x16Backend>::narrow_saturating_i16_to_u8(self.v3(), a, b)
     }
     #[inline(always)]
     fn abs_diff(
         self,
-        a: <Self as crate::simd::backends::I16x16Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x16Backend>::Repr
+        a: <Self as I16x16Backend>::Repr,
+        b: <Self as I16x16Backend>::Repr,
+    ) -> <Self as U16x16Backend>::Repr
     where
-        Self: crate::simd::backends::U16x16Backend,
+        Self: U16x16Backend,
     {
         <archmage::X64V3Token as I16x16Backend>::abs_diff(self.v3(), a, b)
     }
     #[inline(always)]
     fn madd_adjacent(
         self,
-        a: <Self as crate::simd::backends::I16x16Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I32x8Backend>::Repr
+        a: <Self as I16x16Backend>::Repr,
+        b: <Self as I16x16Backend>::Repr,
+    ) -> <Self as I32x8Backend>::Repr
     where
-        Self: crate::simd::backends::I32x8Backend,
+        Self: I32x8Backend,
     {
         <archmage::X64V3Token as I16x16Backend>::madd_adjacent(self.v3(), a, b)
     }
@@ -2993,66 +2933,60 @@ impl I16x16Backend for archmage::X64V4xToken {
         <archmage::X64V3Token as I16x16Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_i16_to_i32(
-        self,
-        a: <Self as crate::simd::backends::I16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I32x8Backend>::Repr
+    fn widen_low_i16_to_i32(self, a: <Self as I16x16Backend>::Repr) -> <Self as I32x8Backend>::Repr
     where
-        Self: crate::simd::backends::I32x8Backend,
+        Self: I32x8Backend,
     {
         <archmage::X64V3Token as I16x16Backend>::widen_low_i16_to_i32(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_i16_to_i32(
-        self,
-        a: <Self as crate::simd::backends::I16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I32x8Backend>::Repr
+    fn widen_high_i16_to_i32(self, a: <Self as I16x16Backend>::Repr) -> <Self as I32x8Backend>::Repr
     where
-        Self: crate::simd::backends::I32x8Backend,
+        Self: I32x8Backend,
     {
         <archmage::X64V3Token as I16x16Backend>::widen_high_i16_to_i32(self.v3(), a)
     }
     #[inline(always)]
     fn narrow_saturating_i16_to_i8(
         self,
-        a: <Self as crate::simd::backends::I16x16Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I8x32Backend>::Repr
+        a: <Self as I16x16Backend>::Repr,
+        b: <Self as I16x16Backend>::Repr,
+    ) -> <Self as I8x32Backend>::Repr
     where
-        Self: crate::simd::backends::I8x32Backend,
+        Self: I8x32Backend,
     {
         <archmage::X64V3Token as I16x16Backend>::narrow_saturating_i16_to_i8(self.v3(), a, b)
     }
     #[inline(always)]
     fn narrow_saturating_i16_to_u8(
         self,
-        a: <Self as crate::simd::backends::I16x16Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U8x32Backend>::Repr
+        a: <Self as I16x16Backend>::Repr,
+        b: <Self as I16x16Backend>::Repr,
+    ) -> <Self as U8x32Backend>::Repr
     where
-        Self: crate::simd::backends::U8x32Backend,
+        Self: U8x32Backend,
     {
         <archmage::X64V3Token as I16x16Backend>::narrow_saturating_i16_to_u8(self.v3(), a, b)
     }
     #[inline(always)]
     fn abs_diff(
         self,
-        a: <Self as crate::simd::backends::I16x16Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x16Backend>::Repr
+        a: <Self as I16x16Backend>::Repr,
+        b: <Self as I16x16Backend>::Repr,
+    ) -> <Self as U16x16Backend>::Repr
     where
-        Self: crate::simd::backends::U16x16Backend,
+        Self: U16x16Backend,
     {
         <archmage::X64V3Token as I16x16Backend>::abs_diff(self.v3(), a, b)
     }
     #[inline(always)]
     fn madd_adjacent(
         self,
-        a: <Self as crate::simd::backends::I16x16Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I32x8Backend>::Repr
+        a: <Self as I16x16Backend>::Repr,
+        b: <Self as I16x16Backend>::Repr,
+    ) -> <Self as I32x8Backend>::Repr
     where
-        Self: crate::simd::backends::I32x8Backend,
+        Self: I32x8Backend,
     {
         <archmage::X64V3Token as I16x16Backend>::madd_adjacent(self.v3(), a, b)
     }
@@ -3209,66 +3143,60 @@ impl I16x16Backend for archmage::Avx512Fp16Token {
         <archmage::X64V3Token as I16x16Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_i16_to_i32(
-        self,
-        a: <Self as crate::simd::backends::I16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I32x8Backend>::Repr
+    fn widen_low_i16_to_i32(self, a: <Self as I16x16Backend>::Repr) -> <Self as I32x8Backend>::Repr
     where
-        Self: crate::simd::backends::I32x8Backend,
+        Self: I32x8Backend,
     {
         <archmage::X64V3Token as I16x16Backend>::widen_low_i16_to_i32(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_i16_to_i32(
-        self,
-        a: <Self as crate::simd::backends::I16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I32x8Backend>::Repr
+    fn widen_high_i16_to_i32(self, a: <Self as I16x16Backend>::Repr) -> <Self as I32x8Backend>::Repr
     where
-        Self: crate::simd::backends::I32x8Backend,
+        Self: I32x8Backend,
     {
         <archmage::X64V3Token as I16x16Backend>::widen_high_i16_to_i32(self.v3(), a)
     }
     #[inline(always)]
     fn narrow_saturating_i16_to_i8(
         self,
-        a: <Self as crate::simd::backends::I16x16Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I8x32Backend>::Repr
+        a: <Self as I16x16Backend>::Repr,
+        b: <Self as I16x16Backend>::Repr,
+    ) -> <Self as I8x32Backend>::Repr
     where
-        Self: crate::simd::backends::I8x32Backend,
+        Self: I8x32Backend,
     {
         <archmage::X64V3Token as I16x16Backend>::narrow_saturating_i16_to_i8(self.v3(), a, b)
     }
     #[inline(always)]
     fn narrow_saturating_i16_to_u8(
         self,
-        a: <Self as crate::simd::backends::I16x16Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U8x32Backend>::Repr
+        a: <Self as I16x16Backend>::Repr,
+        b: <Self as I16x16Backend>::Repr,
+    ) -> <Self as U8x32Backend>::Repr
     where
-        Self: crate::simd::backends::U8x32Backend,
+        Self: U8x32Backend,
     {
         <archmage::X64V3Token as I16x16Backend>::narrow_saturating_i16_to_u8(self.v3(), a, b)
     }
     #[inline(always)]
     fn abs_diff(
         self,
-        a: <Self as crate::simd::backends::I16x16Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x16Backend>::Repr
+        a: <Self as I16x16Backend>::Repr,
+        b: <Self as I16x16Backend>::Repr,
+    ) -> <Self as U16x16Backend>::Repr
     where
-        Self: crate::simd::backends::U16x16Backend,
+        Self: U16x16Backend,
     {
         <archmage::X64V3Token as I16x16Backend>::abs_diff(self.v3(), a, b)
     }
     #[inline(always)]
     fn madd_adjacent(
         self,
-        a: <Self as crate::simd::backends::I16x16Backend>::Repr,
-        b: <Self as crate::simd::backends::I16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I32x8Backend>::Repr
+        a: <Self as I16x16Backend>::Repr,
+        b: <Self as I16x16Backend>::Repr,
+    ) -> <Self as I32x8Backend>::Repr
     where
-        Self: crate::simd::backends::I32x8Backend,
+        Self: I32x8Backend,
     {
         <archmage::X64V3Token as I16x16Backend>::madd_adjacent(self.v3(), a, b)
     }
@@ -3419,22 +3347,22 @@ impl I32x4Backend for archmage::X64V4Token {
     #[inline(always)]
     fn narrow_saturating_i32_to_i16(
         self,
-        a: <Self as crate::simd::backends::I32x4Backend>::Repr,
-        b: <Self as crate::simd::backends::I32x4Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x8Backend>::Repr
+        a: <Self as I32x4Backend>::Repr,
+        b: <Self as I32x4Backend>::Repr,
+    ) -> <Self as I16x8Backend>::Repr
     where
-        Self: crate::simd::backends::I16x8Backend,
+        Self: I16x8Backend,
     {
         <archmage::X64V3Token as I32x4Backend>::narrow_saturating_i32_to_i16(self.v3(), a, b)
     }
     #[inline(always)]
     fn narrow_saturating_i32_to_u16(
         self,
-        a: <Self as crate::simd::backends::I32x4Backend>::Repr,
-        b: <Self as crate::simd::backends::I32x4Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x8Backend>::Repr
+        a: <Self as I32x4Backend>::Repr,
+        b: <Self as I32x4Backend>::Repr,
+    ) -> <Self as U16x8Backend>::Repr
     where
-        Self: crate::simd::backends::U16x8Backend,
+        Self: U16x8Backend,
     {
         <archmage::X64V3Token as I32x4Backend>::narrow_saturating_i32_to_u16(self.v3(), a, b)
     }
@@ -3585,22 +3513,22 @@ impl I32x4Backend for archmage::X64V4xToken {
     #[inline(always)]
     fn narrow_saturating_i32_to_i16(
         self,
-        a: <Self as crate::simd::backends::I32x4Backend>::Repr,
-        b: <Self as crate::simd::backends::I32x4Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x8Backend>::Repr
+        a: <Self as I32x4Backend>::Repr,
+        b: <Self as I32x4Backend>::Repr,
+    ) -> <Self as I16x8Backend>::Repr
     where
-        Self: crate::simd::backends::I16x8Backend,
+        Self: I16x8Backend,
     {
         <archmage::X64V3Token as I32x4Backend>::narrow_saturating_i32_to_i16(self.v3(), a, b)
     }
     #[inline(always)]
     fn narrow_saturating_i32_to_u16(
         self,
-        a: <Self as crate::simd::backends::I32x4Backend>::Repr,
-        b: <Self as crate::simd::backends::I32x4Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x8Backend>::Repr
+        a: <Self as I32x4Backend>::Repr,
+        b: <Self as I32x4Backend>::Repr,
+    ) -> <Self as U16x8Backend>::Repr
     where
-        Self: crate::simd::backends::U16x8Backend,
+        Self: U16x8Backend,
     {
         <archmage::X64V3Token as I32x4Backend>::narrow_saturating_i32_to_u16(self.v3(), a, b)
     }
@@ -3751,22 +3679,22 @@ impl I32x4Backend for archmage::Avx512Fp16Token {
     #[inline(always)]
     fn narrow_saturating_i32_to_i16(
         self,
-        a: <Self as crate::simd::backends::I32x4Backend>::Repr,
-        b: <Self as crate::simd::backends::I32x4Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x8Backend>::Repr
+        a: <Self as I32x4Backend>::Repr,
+        b: <Self as I32x4Backend>::Repr,
+    ) -> <Self as I16x8Backend>::Repr
     where
-        Self: crate::simd::backends::I16x8Backend,
+        Self: I16x8Backend,
     {
         <archmage::X64V3Token as I32x4Backend>::narrow_saturating_i32_to_i16(self.v3(), a, b)
     }
     #[inline(always)]
     fn narrow_saturating_i32_to_u16(
         self,
-        a: <Self as crate::simd::backends::I32x4Backend>::Repr,
-        b: <Self as crate::simd::backends::I32x4Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x8Backend>::Repr
+        a: <Self as I32x4Backend>::Repr,
+        b: <Self as I32x4Backend>::Repr,
+    ) -> <Self as U16x8Backend>::Repr
     where
-        Self: crate::simd::backends::U16x8Backend,
+        Self: U16x8Backend,
     {
         <archmage::X64V3Token as I32x4Backend>::narrow_saturating_i32_to_u16(self.v3(), a, b)
     }
@@ -3917,22 +3845,22 @@ impl I32x8Backend for archmage::X64V4Token {
     #[inline(always)]
     fn narrow_saturating_i32_to_i16(
         self,
-        a: <Self as crate::simd::backends::I32x8Backend>::Repr,
-        b: <Self as crate::simd::backends::I32x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x16Backend>::Repr
+        a: <Self as I32x8Backend>::Repr,
+        b: <Self as I32x8Backend>::Repr,
+    ) -> <Self as I16x16Backend>::Repr
     where
-        Self: crate::simd::backends::I16x16Backend,
+        Self: I16x16Backend,
     {
         <archmage::X64V3Token as I32x8Backend>::narrow_saturating_i32_to_i16(self.v3(), a, b)
     }
     #[inline(always)]
     fn narrow_saturating_i32_to_u16(
         self,
-        a: <Self as crate::simd::backends::I32x8Backend>::Repr,
-        b: <Self as crate::simd::backends::I32x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x16Backend>::Repr
+        a: <Self as I32x8Backend>::Repr,
+        b: <Self as I32x8Backend>::Repr,
+    ) -> <Self as U16x16Backend>::Repr
     where
-        Self: crate::simd::backends::U16x16Backend,
+        Self: U16x16Backend,
     {
         <archmage::X64V3Token as I32x8Backend>::narrow_saturating_i32_to_u16(self.v3(), a, b)
     }
@@ -4083,22 +4011,22 @@ impl I32x8Backend for archmage::X64V4xToken {
     #[inline(always)]
     fn narrow_saturating_i32_to_i16(
         self,
-        a: <Self as crate::simd::backends::I32x8Backend>::Repr,
-        b: <Self as crate::simd::backends::I32x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x16Backend>::Repr
+        a: <Self as I32x8Backend>::Repr,
+        b: <Self as I32x8Backend>::Repr,
+    ) -> <Self as I16x16Backend>::Repr
     where
-        Self: crate::simd::backends::I16x16Backend,
+        Self: I16x16Backend,
     {
         <archmage::X64V3Token as I32x8Backend>::narrow_saturating_i32_to_i16(self.v3(), a, b)
     }
     #[inline(always)]
     fn narrow_saturating_i32_to_u16(
         self,
-        a: <Self as crate::simd::backends::I32x8Backend>::Repr,
-        b: <Self as crate::simd::backends::I32x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x16Backend>::Repr
+        a: <Self as I32x8Backend>::Repr,
+        b: <Self as I32x8Backend>::Repr,
+    ) -> <Self as U16x16Backend>::Repr
     where
-        Self: crate::simd::backends::U16x16Backend,
+        Self: U16x16Backend,
     {
         <archmage::X64V3Token as I32x8Backend>::narrow_saturating_i32_to_u16(self.v3(), a, b)
     }
@@ -4249,22 +4177,22 @@ impl I32x8Backend for archmage::Avx512Fp16Token {
     #[inline(always)]
     fn narrow_saturating_i32_to_i16(
         self,
-        a: <Self as crate::simd::backends::I32x8Backend>::Repr,
-        b: <Self as crate::simd::backends::I32x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x16Backend>::Repr
+        a: <Self as I32x8Backend>::Repr,
+        b: <Self as I32x8Backend>::Repr,
+    ) -> <Self as I16x16Backend>::Repr
     where
-        Self: crate::simd::backends::I16x16Backend,
+        Self: I16x16Backend,
     {
         <archmage::X64V3Token as I32x8Backend>::narrow_saturating_i32_to_i16(self.v3(), a, b)
     }
     #[inline(always)]
     fn narrow_saturating_i32_to_u16(
         self,
-        a: <Self as crate::simd::backends::I32x8Backend>::Repr,
-        b: <Self as crate::simd::backends::I32x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x16Backend>::Repr
+        a: <Self as I32x8Backend>::Repr,
+        b: <Self as I32x8Backend>::Repr,
+    ) -> <Self as U16x16Backend>::Repr
     where
-        Self: crate::simd::backends::U16x16Backend,
+        Self: U16x16Backend,
     {
         <archmage::X64V3Token as I32x8Backend>::narrow_saturating_i32_to_u16(self.v3(), a, b)
     }
@@ -5161,52 +5089,39 @@ impl U8x16Backend for archmage::X64V4Token {
         <archmage::X64V3Token as U8x16Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_u8_to_u16(
-        self,
-        a: <Self as crate::simd::backends::U8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x8Backend>::Repr
+    fn widen_low_u8_to_u16(self, a: <Self as U8x16Backend>::Repr) -> <Self as U16x8Backend>::Repr
     where
-        Self: crate::simd::backends::U16x8Backend,
+        Self: U16x8Backend,
     {
         <archmage::X64V3Token as U8x16Backend>::widen_low_u8_to_u16(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_u8_to_u16(
-        self,
-        a: <Self as crate::simd::backends::U8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x8Backend>::Repr
+    fn widen_high_u8_to_u16(self, a: <Self as U8x16Backend>::Repr) -> <Self as U16x8Backend>::Repr
     where
-        Self: crate::simd::backends::U16x8Backend,
+        Self: U16x8Backend,
     {
         <archmage::X64V3Token as U8x16Backend>::widen_high_u8_to_u16(self.v3(), a)
     }
     #[inline(always)]
     fn abs_diff(
         self,
-        a: <Self as crate::simd::backends::U8x16Backend>::Repr,
-        b: <Self as crate::simd::backends::U8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U8x16Backend>::Repr {
+        a: <Self as U8x16Backend>::Repr,
+        b: <Self as U8x16Backend>::Repr,
+    ) -> <Self as U8x16Backend>::Repr {
         <archmage::X64V3Token as U8x16Backend>::abs_diff(self.v3(), a, b)
     }
     #[inline(always)]
-    fn reduce_add_u32(self, a: <Self as crate::simd::backends::U8x16Backend>::Repr) -> u32 {
+    fn reduce_add_u32(self, a: <Self as U8x16Backend>::Repr) -> u32 {
         <archmage::X64V3Token as U8x16Backend>::reduce_add_u32(self.v3(), a)
     }
     #[inline(always)]
-    fn sum_abs_diff(
-        self,
-        a: <Self as crate::simd::backends::U8x16Backend>::Repr,
-        b: <Self as crate::simd::backends::U8x16Backend>::Repr,
-    ) -> u32 {
+    fn sum_abs_diff(self, a: <Self as U8x16Backend>::Repr, b: <Self as U8x16Backend>::Repr) -> u32 {
         <archmage::X64V3Token as U8x16Backend>::sum_abs_diff(self.v3(), a, b)
     }
     #[inline(always)]
-    fn pairwise_widen_add(
-        self,
-        a: <Self as crate::simd::backends::U8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x8Backend>::Repr
+    fn pairwise_widen_add(self, a: <Self as U8x16Backend>::Repr) -> <Self as U16x8Backend>::Repr
     where
-        Self: crate::simd::backends::U16x8Backend,
+        Self: U16x8Backend,
     {
         <archmage::X64V3Token as U8x16Backend>::pairwise_widen_add(self.v3(), a)
     }
@@ -5335,52 +5250,39 @@ impl U8x16Backend for archmage::X64V4xToken {
         <archmage::X64V3Token as U8x16Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_u8_to_u16(
-        self,
-        a: <Self as crate::simd::backends::U8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x8Backend>::Repr
+    fn widen_low_u8_to_u16(self, a: <Self as U8x16Backend>::Repr) -> <Self as U16x8Backend>::Repr
     where
-        Self: crate::simd::backends::U16x8Backend,
+        Self: U16x8Backend,
     {
         <archmage::X64V3Token as U8x16Backend>::widen_low_u8_to_u16(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_u8_to_u16(
-        self,
-        a: <Self as crate::simd::backends::U8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x8Backend>::Repr
+    fn widen_high_u8_to_u16(self, a: <Self as U8x16Backend>::Repr) -> <Self as U16x8Backend>::Repr
     where
-        Self: crate::simd::backends::U16x8Backend,
+        Self: U16x8Backend,
     {
         <archmage::X64V3Token as U8x16Backend>::widen_high_u8_to_u16(self.v3(), a)
     }
     #[inline(always)]
     fn abs_diff(
         self,
-        a: <Self as crate::simd::backends::U8x16Backend>::Repr,
-        b: <Self as crate::simd::backends::U8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U8x16Backend>::Repr {
+        a: <Self as U8x16Backend>::Repr,
+        b: <Self as U8x16Backend>::Repr,
+    ) -> <Self as U8x16Backend>::Repr {
         <archmage::X64V3Token as U8x16Backend>::abs_diff(self.v3(), a, b)
     }
     #[inline(always)]
-    fn reduce_add_u32(self, a: <Self as crate::simd::backends::U8x16Backend>::Repr) -> u32 {
+    fn reduce_add_u32(self, a: <Self as U8x16Backend>::Repr) -> u32 {
         <archmage::X64V3Token as U8x16Backend>::reduce_add_u32(self.v3(), a)
     }
     #[inline(always)]
-    fn sum_abs_diff(
-        self,
-        a: <Self as crate::simd::backends::U8x16Backend>::Repr,
-        b: <Self as crate::simd::backends::U8x16Backend>::Repr,
-    ) -> u32 {
+    fn sum_abs_diff(self, a: <Self as U8x16Backend>::Repr, b: <Self as U8x16Backend>::Repr) -> u32 {
         <archmage::X64V3Token as U8x16Backend>::sum_abs_diff(self.v3(), a, b)
     }
     #[inline(always)]
-    fn pairwise_widen_add(
-        self,
-        a: <Self as crate::simd::backends::U8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x8Backend>::Repr
+    fn pairwise_widen_add(self, a: <Self as U8x16Backend>::Repr) -> <Self as U16x8Backend>::Repr
     where
-        Self: crate::simd::backends::U16x8Backend,
+        Self: U16x8Backend,
     {
         <archmage::X64V3Token as U8x16Backend>::pairwise_widen_add(self.v3(), a)
     }
@@ -5509,52 +5411,39 @@ impl U8x16Backend for archmage::Avx512Fp16Token {
         <archmage::X64V3Token as U8x16Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_u8_to_u16(
-        self,
-        a: <Self as crate::simd::backends::U8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x8Backend>::Repr
+    fn widen_low_u8_to_u16(self, a: <Self as U8x16Backend>::Repr) -> <Self as U16x8Backend>::Repr
     where
-        Self: crate::simd::backends::U16x8Backend,
+        Self: U16x8Backend,
     {
         <archmage::X64V3Token as U8x16Backend>::widen_low_u8_to_u16(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_u8_to_u16(
-        self,
-        a: <Self as crate::simd::backends::U8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x8Backend>::Repr
+    fn widen_high_u8_to_u16(self, a: <Self as U8x16Backend>::Repr) -> <Self as U16x8Backend>::Repr
     where
-        Self: crate::simd::backends::U16x8Backend,
+        Self: U16x8Backend,
     {
         <archmage::X64V3Token as U8x16Backend>::widen_high_u8_to_u16(self.v3(), a)
     }
     #[inline(always)]
     fn abs_diff(
         self,
-        a: <Self as crate::simd::backends::U8x16Backend>::Repr,
-        b: <Self as crate::simd::backends::U8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U8x16Backend>::Repr {
+        a: <Self as U8x16Backend>::Repr,
+        b: <Self as U8x16Backend>::Repr,
+    ) -> <Self as U8x16Backend>::Repr {
         <archmage::X64V3Token as U8x16Backend>::abs_diff(self.v3(), a, b)
     }
     #[inline(always)]
-    fn reduce_add_u32(self, a: <Self as crate::simd::backends::U8x16Backend>::Repr) -> u32 {
+    fn reduce_add_u32(self, a: <Self as U8x16Backend>::Repr) -> u32 {
         <archmage::X64V3Token as U8x16Backend>::reduce_add_u32(self.v3(), a)
     }
     #[inline(always)]
-    fn sum_abs_diff(
-        self,
-        a: <Self as crate::simd::backends::U8x16Backend>::Repr,
-        b: <Self as crate::simd::backends::U8x16Backend>::Repr,
-    ) -> u32 {
+    fn sum_abs_diff(self, a: <Self as U8x16Backend>::Repr, b: <Self as U8x16Backend>::Repr) -> u32 {
         <archmage::X64V3Token as U8x16Backend>::sum_abs_diff(self.v3(), a, b)
     }
     #[inline(always)]
-    fn pairwise_widen_add(
-        self,
-        a: <Self as crate::simd::backends::U8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x8Backend>::Repr
+    fn pairwise_widen_add(self, a: <Self as U8x16Backend>::Repr) -> <Self as U16x8Backend>::Repr
     where
-        Self: crate::simd::backends::U16x8Backend,
+        Self: U16x8Backend,
     {
         <archmage::X64V3Token as U8x16Backend>::pairwise_widen_add(self.v3(), a)
     }
@@ -5683,52 +5572,39 @@ impl U8x32Backend for archmage::X64V4Token {
         <archmage::X64V3Token as U8x32Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_u8_to_u16(
-        self,
-        a: <Self as crate::simd::backends::U8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x16Backend>::Repr
+    fn widen_low_u8_to_u16(self, a: <Self as U8x32Backend>::Repr) -> <Self as U16x16Backend>::Repr
     where
-        Self: crate::simd::backends::U16x16Backend,
+        Self: U16x16Backend,
     {
         <archmage::X64V3Token as U8x32Backend>::widen_low_u8_to_u16(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_u8_to_u16(
-        self,
-        a: <Self as crate::simd::backends::U8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x16Backend>::Repr
+    fn widen_high_u8_to_u16(self, a: <Self as U8x32Backend>::Repr) -> <Self as U16x16Backend>::Repr
     where
-        Self: crate::simd::backends::U16x16Backend,
+        Self: U16x16Backend,
     {
         <archmage::X64V3Token as U8x32Backend>::widen_high_u8_to_u16(self.v3(), a)
     }
     #[inline(always)]
     fn abs_diff(
         self,
-        a: <Self as crate::simd::backends::U8x32Backend>::Repr,
-        b: <Self as crate::simd::backends::U8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U8x32Backend>::Repr {
+        a: <Self as U8x32Backend>::Repr,
+        b: <Self as U8x32Backend>::Repr,
+    ) -> <Self as U8x32Backend>::Repr {
         <archmage::X64V3Token as U8x32Backend>::abs_diff(self.v3(), a, b)
     }
     #[inline(always)]
-    fn reduce_add_u32(self, a: <Self as crate::simd::backends::U8x32Backend>::Repr) -> u32 {
+    fn reduce_add_u32(self, a: <Self as U8x32Backend>::Repr) -> u32 {
         <archmage::X64V3Token as U8x32Backend>::reduce_add_u32(self.v3(), a)
     }
     #[inline(always)]
-    fn sum_abs_diff(
-        self,
-        a: <Self as crate::simd::backends::U8x32Backend>::Repr,
-        b: <Self as crate::simd::backends::U8x32Backend>::Repr,
-    ) -> u32 {
+    fn sum_abs_diff(self, a: <Self as U8x32Backend>::Repr, b: <Self as U8x32Backend>::Repr) -> u32 {
         <archmage::X64V3Token as U8x32Backend>::sum_abs_diff(self.v3(), a, b)
     }
     #[inline(always)]
-    fn pairwise_widen_add(
-        self,
-        a: <Self as crate::simd::backends::U8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x16Backend>::Repr
+    fn pairwise_widen_add(self, a: <Self as U8x32Backend>::Repr) -> <Self as U16x16Backend>::Repr
     where
-        Self: crate::simd::backends::U16x16Backend,
+        Self: U16x16Backend,
     {
         <archmage::X64V3Token as U8x32Backend>::pairwise_widen_add(self.v3(), a)
     }
@@ -5857,52 +5733,39 @@ impl U8x32Backend for archmage::X64V4xToken {
         <archmage::X64V3Token as U8x32Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_u8_to_u16(
-        self,
-        a: <Self as crate::simd::backends::U8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x16Backend>::Repr
+    fn widen_low_u8_to_u16(self, a: <Self as U8x32Backend>::Repr) -> <Self as U16x16Backend>::Repr
     where
-        Self: crate::simd::backends::U16x16Backend,
+        Self: U16x16Backend,
     {
         <archmage::X64V3Token as U8x32Backend>::widen_low_u8_to_u16(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_u8_to_u16(
-        self,
-        a: <Self as crate::simd::backends::U8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x16Backend>::Repr
+    fn widen_high_u8_to_u16(self, a: <Self as U8x32Backend>::Repr) -> <Self as U16x16Backend>::Repr
     where
-        Self: crate::simd::backends::U16x16Backend,
+        Self: U16x16Backend,
     {
         <archmage::X64V3Token as U8x32Backend>::widen_high_u8_to_u16(self.v3(), a)
     }
     #[inline(always)]
     fn abs_diff(
         self,
-        a: <Self as crate::simd::backends::U8x32Backend>::Repr,
-        b: <Self as crate::simd::backends::U8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U8x32Backend>::Repr {
+        a: <Self as U8x32Backend>::Repr,
+        b: <Self as U8x32Backend>::Repr,
+    ) -> <Self as U8x32Backend>::Repr {
         <archmage::X64V3Token as U8x32Backend>::abs_diff(self.v3(), a, b)
     }
     #[inline(always)]
-    fn reduce_add_u32(self, a: <Self as crate::simd::backends::U8x32Backend>::Repr) -> u32 {
+    fn reduce_add_u32(self, a: <Self as U8x32Backend>::Repr) -> u32 {
         <archmage::X64V3Token as U8x32Backend>::reduce_add_u32(self.v3(), a)
     }
     #[inline(always)]
-    fn sum_abs_diff(
-        self,
-        a: <Self as crate::simd::backends::U8x32Backend>::Repr,
-        b: <Self as crate::simd::backends::U8x32Backend>::Repr,
-    ) -> u32 {
+    fn sum_abs_diff(self, a: <Self as U8x32Backend>::Repr, b: <Self as U8x32Backend>::Repr) -> u32 {
         <archmage::X64V3Token as U8x32Backend>::sum_abs_diff(self.v3(), a, b)
     }
     #[inline(always)]
-    fn pairwise_widen_add(
-        self,
-        a: <Self as crate::simd::backends::U8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x16Backend>::Repr
+    fn pairwise_widen_add(self, a: <Self as U8x32Backend>::Repr) -> <Self as U16x16Backend>::Repr
     where
-        Self: crate::simd::backends::U16x16Backend,
+        Self: U16x16Backend,
     {
         <archmage::X64V3Token as U8x32Backend>::pairwise_widen_add(self.v3(), a)
     }
@@ -6031,52 +5894,39 @@ impl U8x32Backend for archmage::Avx512Fp16Token {
         <archmage::X64V3Token as U8x32Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_u8_to_u16(
-        self,
-        a: <Self as crate::simd::backends::U8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x16Backend>::Repr
+    fn widen_low_u8_to_u16(self, a: <Self as U8x32Backend>::Repr) -> <Self as U16x16Backend>::Repr
     where
-        Self: crate::simd::backends::U16x16Backend,
+        Self: U16x16Backend,
     {
         <archmage::X64V3Token as U8x32Backend>::widen_low_u8_to_u16(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_u8_to_u16(
-        self,
-        a: <Self as crate::simd::backends::U8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x16Backend>::Repr
+    fn widen_high_u8_to_u16(self, a: <Self as U8x32Backend>::Repr) -> <Self as U16x16Backend>::Repr
     where
-        Self: crate::simd::backends::U16x16Backend,
+        Self: U16x16Backend,
     {
         <archmage::X64V3Token as U8x32Backend>::widen_high_u8_to_u16(self.v3(), a)
     }
     #[inline(always)]
     fn abs_diff(
         self,
-        a: <Self as crate::simd::backends::U8x32Backend>::Repr,
-        b: <Self as crate::simd::backends::U8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U8x32Backend>::Repr {
+        a: <Self as U8x32Backend>::Repr,
+        b: <Self as U8x32Backend>::Repr,
+    ) -> <Self as U8x32Backend>::Repr {
         <archmage::X64V3Token as U8x32Backend>::abs_diff(self.v3(), a, b)
     }
     #[inline(always)]
-    fn reduce_add_u32(self, a: <Self as crate::simd::backends::U8x32Backend>::Repr) -> u32 {
+    fn reduce_add_u32(self, a: <Self as U8x32Backend>::Repr) -> u32 {
         <archmage::X64V3Token as U8x32Backend>::reduce_add_u32(self.v3(), a)
     }
     #[inline(always)]
-    fn sum_abs_diff(
-        self,
-        a: <Self as crate::simd::backends::U8x32Backend>::Repr,
-        b: <Self as crate::simd::backends::U8x32Backend>::Repr,
-    ) -> u32 {
+    fn sum_abs_diff(self, a: <Self as U8x32Backend>::Repr, b: <Self as U8x32Backend>::Repr) -> u32 {
         <archmage::X64V3Token as U8x32Backend>::sum_abs_diff(self.v3(), a, b)
     }
     #[inline(always)]
-    fn pairwise_widen_add(
-        self,
-        a: <Self as crate::simd::backends::U8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x16Backend>::Repr
+    fn pairwise_widen_add(self, a: <Self as U8x32Backend>::Repr) -> <Self as U16x16Backend>::Repr
     where
-        Self: crate::simd::backends::U16x16Backend,
+        Self: U16x16Backend,
     {
         <archmage::X64V3Token as U8x32Backend>::pairwise_widen_add(self.v3(), a)
     }
@@ -6217,32 +6067,23 @@ impl U16x8Backend for archmage::X64V4Token {
         <archmage::X64V3Token as U16x8Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_u16_to_u32(
-        self,
-        a: <Self as crate::simd::backends::U16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U32x4Backend>::Repr
+    fn widen_low_u16_to_u32(self, a: <Self as U16x8Backend>::Repr) -> <Self as U32x4Backend>::Repr
     where
-        Self: crate::simd::backends::U32x4Backend,
+        Self: U32x4Backend,
     {
         <archmage::X64V3Token as U16x8Backend>::widen_low_u16_to_u32(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_u16_to_u32(
-        self,
-        a: <Self as crate::simd::backends::U16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U32x4Backend>::Repr
+    fn widen_high_u16_to_u32(self, a: <Self as U16x8Backend>::Repr) -> <Self as U32x4Backend>::Repr
     where
-        Self: crate::simd::backends::U32x4Backend,
+        Self: U32x4Backend,
     {
         <archmage::X64V3Token as U16x8Backend>::widen_high_u16_to_u32(self.v3(), a)
     }
     #[inline(always)]
-    fn pairwise_widen_add(
-        self,
-        a: <Self as crate::simd::backends::U16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U32x4Backend>::Repr
+    fn pairwise_widen_add(self, a: <Self as U16x8Backend>::Repr) -> <Self as U32x4Backend>::Repr
     where
-        Self: crate::simd::backends::U32x4Backend,
+        Self: U32x4Backend,
     {
         <archmage::X64V3Token as U16x8Backend>::pairwise_widen_add(self.v3(), a)
     }
@@ -6383,32 +6224,23 @@ impl U16x8Backend for archmage::X64V4xToken {
         <archmage::X64V3Token as U16x8Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_u16_to_u32(
-        self,
-        a: <Self as crate::simd::backends::U16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U32x4Backend>::Repr
+    fn widen_low_u16_to_u32(self, a: <Self as U16x8Backend>::Repr) -> <Self as U32x4Backend>::Repr
     where
-        Self: crate::simd::backends::U32x4Backend,
+        Self: U32x4Backend,
     {
         <archmage::X64V3Token as U16x8Backend>::widen_low_u16_to_u32(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_u16_to_u32(
-        self,
-        a: <Self as crate::simd::backends::U16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U32x4Backend>::Repr
+    fn widen_high_u16_to_u32(self, a: <Self as U16x8Backend>::Repr) -> <Self as U32x4Backend>::Repr
     where
-        Self: crate::simd::backends::U32x4Backend,
+        Self: U32x4Backend,
     {
         <archmage::X64V3Token as U16x8Backend>::widen_high_u16_to_u32(self.v3(), a)
     }
     #[inline(always)]
-    fn pairwise_widen_add(
-        self,
-        a: <Self as crate::simd::backends::U16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U32x4Backend>::Repr
+    fn pairwise_widen_add(self, a: <Self as U16x8Backend>::Repr) -> <Self as U32x4Backend>::Repr
     where
-        Self: crate::simd::backends::U32x4Backend,
+        Self: U32x4Backend,
     {
         <archmage::X64V3Token as U16x8Backend>::pairwise_widen_add(self.v3(), a)
     }
@@ -6549,32 +6381,23 @@ impl U16x8Backend for archmage::Avx512Fp16Token {
         <archmage::X64V3Token as U16x8Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_u16_to_u32(
-        self,
-        a: <Self as crate::simd::backends::U16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U32x4Backend>::Repr
+    fn widen_low_u16_to_u32(self, a: <Self as U16x8Backend>::Repr) -> <Self as U32x4Backend>::Repr
     where
-        Self: crate::simd::backends::U32x4Backend,
+        Self: U32x4Backend,
     {
         <archmage::X64V3Token as U16x8Backend>::widen_low_u16_to_u32(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_u16_to_u32(
-        self,
-        a: <Self as crate::simd::backends::U16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U32x4Backend>::Repr
+    fn widen_high_u16_to_u32(self, a: <Self as U16x8Backend>::Repr) -> <Self as U32x4Backend>::Repr
     where
-        Self: crate::simd::backends::U32x4Backend,
+        Self: U32x4Backend,
     {
         <archmage::X64V3Token as U16x8Backend>::widen_high_u16_to_u32(self.v3(), a)
     }
     #[inline(always)]
-    fn pairwise_widen_add(
-        self,
-        a: <Self as crate::simd::backends::U16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U32x4Backend>::Repr
+    fn pairwise_widen_add(self, a: <Self as U16x8Backend>::Repr) -> <Self as U32x4Backend>::Repr
     where
-        Self: crate::simd::backends::U32x4Backend,
+        Self: U32x4Backend,
     {
         <archmage::X64V3Token as U16x8Backend>::pairwise_widen_add(self.v3(), a)
     }
@@ -6715,32 +6538,23 @@ impl U16x16Backend for archmage::X64V4Token {
         <archmage::X64V3Token as U16x16Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_u16_to_u32(
-        self,
-        a: <Self as crate::simd::backends::U16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U32x8Backend>::Repr
+    fn widen_low_u16_to_u32(self, a: <Self as U16x16Backend>::Repr) -> <Self as U32x8Backend>::Repr
     where
-        Self: crate::simd::backends::U32x8Backend,
+        Self: U32x8Backend,
     {
         <archmage::X64V3Token as U16x16Backend>::widen_low_u16_to_u32(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_u16_to_u32(
-        self,
-        a: <Self as crate::simd::backends::U16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U32x8Backend>::Repr
+    fn widen_high_u16_to_u32(self, a: <Self as U16x16Backend>::Repr) -> <Self as U32x8Backend>::Repr
     where
-        Self: crate::simd::backends::U32x8Backend,
+        Self: U32x8Backend,
     {
         <archmage::X64V3Token as U16x16Backend>::widen_high_u16_to_u32(self.v3(), a)
     }
     #[inline(always)]
-    fn pairwise_widen_add(
-        self,
-        a: <Self as crate::simd::backends::U16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U32x8Backend>::Repr
+    fn pairwise_widen_add(self, a: <Self as U16x16Backend>::Repr) -> <Self as U32x8Backend>::Repr
     where
-        Self: crate::simd::backends::U32x8Backend,
+        Self: U32x8Backend,
     {
         <archmage::X64V3Token as U16x16Backend>::pairwise_widen_add(self.v3(), a)
     }
@@ -6881,32 +6695,23 @@ impl U16x16Backend for archmage::X64V4xToken {
         <archmage::X64V3Token as U16x16Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_u16_to_u32(
-        self,
-        a: <Self as crate::simd::backends::U16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U32x8Backend>::Repr
+    fn widen_low_u16_to_u32(self, a: <Self as U16x16Backend>::Repr) -> <Self as U32x8Backend>::Repr
     where
-        Self: crate::simd::backends::U32x8Backend,
+        Self: U32x8Backend,
     {
         <archmage::X64V3Token as U16x16Backend>::widen_low_u16_to_u32(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_u16_to_u32(
-        self,
-        a: <Self as crate::simd::backends::U16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U32x8Backend>::Repr
+    fn widen_high_u16_to_u32(self, a: <Self as U16x16Backend>::Repr) -> <Self as U32x8Backend>::Repr
     where
-        Self: crate::simd::backends::U32x8Backend,
+        Self: U32x8Backend,
     {
         <archmage::X64V3Token as U16x16Backend>::widen_high_u16_to_u32(self.v3(), a)
     }
     #[inline(always)]
-    fn pairwise_widen_add(
-        self,
-        a: <Self as crate::simd::backends::U16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U32x8Backend>::Repr
+    fn pairwise_widen_add(self, a: <Self as U16x16Backend>::Repr) -> <Self as U32x8Backend>::Repr
     where
-        Self: crate::simd::backends::U32x8Backend,
+        Self: U32x8Backend,
     {
         <archmage::X64V3Token as U16x16Backend>::pairwise_widen_add(self.v3(), a)
     }
@@ -7047,32 +6852,23 @@ impl U16x16Backend for archmage::Avx512Fp16Token {
         <archmage::X64V3Token as U16x16Backend>::clamp(self.v3(), a, lo, hi)
     }
     #[inline(always)]
-    fn widen_low_u16_to_u32(
-        self,
-        a: <Self as crate::simd::backends::U16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U32x8Backend>::Repr
+    fn widen_low_u16_to_u32(self, a: <Self as U16x16Backend>::Repr) -> <Self as U32x8Backend>::Repr
     where
-        Self: crate::simd::backends::U32x8Backend,
+        Self: U32x8Backend,
     {
         <archmage::X64V3Token as U16x16Backend>::widen_low_u16_to_u32(self.v3(), a)
     }
     #[inline(always)]
-    fn widen_high_u16_to_u32(
-        self,
-        a: <Self as crate::simd::backends::U16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U32x8Backend>::Repr
+    fn widen_high_u16_to_u32(self, a: <Self as U16x16Backend>::Repr) -> <Self as U32x8Backend>::Repr
     where
-        Self: crate::simd::backends::U32x8Backend,
+        Self: U32x8Backend,
     {
         <archmage::X64V3Token as U16x16Backend>::widen_high_u16_to_u32(self.v3(), a)
     }
     #[inline(always)]
-    fn pairwise_widen_add(
-        self,
-        a: <Self as crate::simd::backends::U16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U32x8Backend>::Repr
+    fn pairwise_widen_add(self, a: <Self as U16x16Backend>::Repr) -> <Self as U32x8Backend>::Repr
     where
-        Self: crate::simd::backends::U32x8Backend,
+        Self: U32x8Backend,
     {
         <archmage::X64V3Token as U16x16Backend>::pairwise_widen_add(self.v3(), a)
     }
@@ -8874,306 +8670,198 @@ impl I64x4Bitcast for archmage::Avx512Fp16Token {
 
 impl I8x16Bitcast for archmage::X64V4Token {
     #[inline(always)]
-    fn bitcast_i8_to_u8(
-        self,
-        a: <Self as crate::simd::backends::I8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U8x16Backend>::Repr {
+    fn bitcast_i8_to_u8(self, a: <Self as I8x16Backend>::Repr) -> <Self as U8x16Backend>::Repr {
         <archmage::X64V3Token as I8x16Bitcast>::bitcast_i8_to_u8(self.v3(), a)
     }
     #[inline(always)]
-    fn bitcast_u8_to_i8(
-        self,
-        a: <Self as crate::simd::backends::U8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I8x16Backend>::Repr {
+    fn bitcast_u8_to_i8(self, a: <Self as U8x16Backend>::Repr) -> <Self as I8x16Backend>::Repr {
         <archmage::X64V3Token as I8x16Bitcast>::bitcast_u8_to_i8(self.v3(), a)
     }
 }
 
 impl I8x16Bitcast for archmage::X64V4xToken {
     #[inline(always)]
-    fn bitcast_i8_to_u8(
-        self,
-        a: <Self as crate::simd::backends::I8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U8x16Backend>::Repr {
+    fn bitcast_i8_to_u8(self, a: <Self as I8x16Backend>::Repr) -> <Self as U8x16Backend>::Repr {
         <archmage::X64V3Token as I8x16Bitcast>::bitcast_i8_to_u8(self.v3(), a)
     }
     #[inline(always)]
-    fn bitcast_u8_to_i8(
-        self,
-        a: <Self as crate::simd::backends::U8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I8x16Backend>::Repr {
+    fn bitcast_u8_to_i8(self, a: <Self as U8x16Backend>::Repr) -> <Self as I8x16Backend>::Repr {
         <archmage::X64V3Token as I8x16Bitcast>::bitcast_u8_to_i8(self.v3(), a)
     }
 }
 
 impl I8x16Bitcast for archmage::Avx512Fp16Token {
     #[inline(always)]
-    fn bitcast_i8_to_u8(
-        self,
-        a: <Self as crate::simd::backends::I8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U8x16Backend>::Repr {
+    fn bitcast_i8_to_u8(self, a: <Self as I8x16Backend>::Repr) -> <Self as U8x16Backend>::Repr {
         <archmage::X64V3Token as I8x16Bitcast>::bitcast_i8_to_u8(self.v3(), a)
     }
     #[inline(always)]
-    fn bitcast_u8_to_i8(
-        self,
-        a: <Self as crate::simd::backends::U8x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I8x16Backend>::Repr {
+    fn bitcast_u8_to_i8(self, a: <Self as U8x16Backend>::Repr) -> <Self as I8x16Backend>::Repr {
         <archmage::X64V3Token as I8x16Bitcast>::bitcast_u8_to_i8(self.v3(), a)
     }
 }
 
 impl I8x32Bitcast for archmage::X64V4Token {
     #[inline(always)]
-    fn bitcast_i8_to_u8(
-        self,
-        a: <Self as crate::simd::backends::I8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U8x32Backend>::Repr {
+    fn bitcast_i8_to_u8(self, a: <Self as I8x32Backend>::Repr) -> <Self as U8x32Backend>::Repr {
         <archmage::X64V3Token as I8x32Bitcast>::bitcast_i8_to_u8(self.v3(), a)
     }
     #[inline(always)]
-    fn bitcast_u8_to_i8(
-        self,
-        a: <Self as crate::simd::backends::U8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I8x32Backend>::Repr {
+    fn bitcast_u8_to_i8(self, a: <Self as U8x32Backend>::Repr) -> <Self as I8x32Backend>::Repr {
         <archmage::X64V3Token as I8x32Bitcast>::bitcast_u8_to_i8(self.v3(), a)
     }
 }
 
 impl I8x32Bitcast for archmage::X64V4xToken {
     #[inline(always)]
-    fn bitcast_i8_to_u8(
-        self,
-        a: <Self as crate::simd::backends::I8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U8x32Backend>::Repr {
+    fn bitcast_i8_to_u8(self, a: <Self as I8x32Backend>::Repr) -> <Self as U8x32Backend>::Repr {
         <archmage::X64V3Token as I8x32Bitcast>::bitcast_i8_to_u8(self.v3(), a)
     }
     #[inline(always)]
-    fn bitcast_u8_to_i8(
-        self,
-        a: <Self as crate::simd::backends::U8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I8x32Backend>::Repr {
+    fn bitcast_u8_to_i8(self, a: <Self as U8x32Backend>::Repr) -> <Self as I8x32Backend>::Repr {
         <archmage::X64V3Token as I8x32Bitcast>::bitcast_u8_to_i8(self.v3(), a)
     }
 }
 
 impl I8x32Bitcast for archmage::Avx512Fp16Token {
     #[inline(always)]
-    fn bitcast_i8_to_u8(
-        self,
-        a: <Self as crate::simd::backends::I8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U8x32Backend>::Repr {
+    fn bitcast_i8_to_u8(self, a: <Self as I8x32Backend>::Repr) -> <Self as U8x32Backend>::Repr {
         <archmage::X64V3Token as I8x32Bitcast>::bitcast_i8_to_u8(self.v3(), a)
     }
     #[inline(always)]
-    fn bitcast_u8_to_i8(
-        self,
-        a: <Self as crate::simd::backends::U8x32Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I8x32Backend>::Repr {
+    fn bitcast_u8_to_i8(self, a: <Self as U8x32Backend>::Repr) -> <Self as I8x32Backend>::Repr {
         <archmage::X64V3Token as I8x32Bitcast>::bitcast_u8_to_i8(self.v3(), a)
     }
 }
 
 impl I16x8Bitcast for archmage::X64V4Token {
     #[inline(always)]
-    fn bitcast_i16_to_u16(
-        self,
-        a: <Self as crate::simd::backends::I16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x8Backend>::Repr {
+    fn bitcast_i16_to_u16(self, a: <Self as I16x8Backend>::Repr) -> <Self as U16x8Backend>::Repr {
         <archmage::X64V3Token as I16x8Bitcast>::bitcast_i16_to_u16(self.v3(), a)
     }
     #[inline(always)]
-    fn bitcast_u16_to_i16(
-        self,
-        a: <Self as crate::simd::backends::U16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x8Backend>::Repr {
+    fn bitcast_u16_to_i16(self, a: <Self as U16x8Backend>::Repr) -> <Self as I16x8Backend>::Repr {
         <archmage::X64V3Token as I16x8Bitcast>::bitcast_u16_to_i16(self.v3(), a)
     }
 }
 
 impl I16x8Bitcast for archmage::X64V4xToken {
     #[inline(always)]
-    fn bitcast_i16_to_u16(
-        self,
-        a: <Self as crate::simd::backends::I16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x8Backend>::Repr {
+    fn bitcast_i16_to_u16(self, a: <Self as I16x8Backend>::Repr) -> <Self as U16x8Backend>::Repr {
         <archmage::X64V3Token as I16x8Bitcast>::bitcast_i16_to_u16(self.v3(), a)
     }
     #[inline(always)]
-    fn bitcast_u16_to_i16(
-        self,
-        a: <Self as crate::simd::backends::U16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x8Backend>::Repr {
+    fn bitcast_u16_to_i16(self, a: <Self as U16x8Backend>::Repr) -> <Self as I16x8Backend>::Repr {
         <archmage::X64V3Token as I16x8Bitcast>::bitcast_u16_to_i16(self.v3(), a)
     }
 }
 
 impl I16x8Bitcast for archmage::Avx512Fp16Token {
     #[inline(always)]
-    fn bitcast_i16_to_u16(
-        self,
-        a: <Self as crate::simd::backends::I16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x8Backend>::Repr {
+    fn bitcast_i16_to_u16(self, a: <Self as I16x8Backend>::Repr) -> <Self as U16x8Backend>::Repr {
         <archmage::X64V3Token as I16x8Bitcast>::bitcast_i16_to_u16(self.v3(), a)
     }
     #[inline(always)]
-    fn bitcast_u16_to_i16(
-        self,
-        a: <Self as crate::simd::backends::U16x8Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x8Backend>::Repr {
+    fn bitcast_u16_to_i16(self, a: <Self as U16x8Backend>::Repr) -> <Self as I16x8Backend>::Repr {
         <archmage::X64V3Token as I16x8Bitcast>::bitcast_u16_to_i16(self.v3(), a)
     }
 }
 
 impl I16x16Bitcast for archmage::X64V4Token {
     #[inline(always)]
-    fn bitcast_i16_to_u16(
-        self,
-        a: <Self as crate::simd::backends::I16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x16Backend>::Repr {
+    fn bitcast_i16_to_u16(self, a: <Self as I16x16Backend>::Repr) -> <Self as U16x16Backend>::Repr {
         <archmage::X64V3Token as I16x16Bitcast>::bitcast_i16_to_u16(self.v3(), a)
     }
     #[inline(always)]
-    fn bitcast_u16_to_i16(
-        self,
-        a: <Self as crate::simd::backends::U16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x16Backend>::Repr {
+    fn bitcast_u16_to_i16(self, a: <Self as U16x16Backend>::Repr) -> <Self as I16x16Backend>::Repr {
         <archmage::X64V3Token as I16x16Bitcast>::bitcast_u16_to_i16(self.v3(), a)
     }
 }
 
 impl I16x16Bitcast for archmage::X64V4xToken {
     #[inline(always)]
-    fn bitcast_i16_to_u16(
-        self,
-        a: <Self as crate::simd::backends::I16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x16Backend>::Repr {
+    fn bitcast_i16_to_u16(self, a: <Self as I16x16Backend>::Repr) -> <Self as U16x16Backend>::Repr {
         <archmage::X64V3Token as I16x16Bitcast>::bitcast_i16_to_u16(self.v3(), a)
     }
     #[inline(always)]
-    fn bitcast_u16_to_i16(
-        self,
-        a: <Self as crate::simd::backends::U16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x16Backend>::Repr {
+    fn bitcast_u16_to_i16(self, a: <Self as U16x16Backend>::Repr) -> <Self as I16x16Backend>::Repr {
         <archmage::X64V3Token as I16x16Bitcast>::bitcast_u16_to_i16(self.v3(), a)
     }
 }
 
 impl I16x16Bitcast for archmage::Avx512Fp16Token {
     #[inline(always)]
-    fn bitcast_i16_to_u16(
-        self,
-        a: <Self as crate::simd::backends::I16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U16x16Backend>::Repr {
+    fn bitcast_i16_to_u16(self, a: <Self as I16x16Backend>::Repr) -> <Self as U16x16Backend>::Repr {
         <archmage::X64V3Token as I16x16Bitcast>::bitcast_i16_to_u16(self.v3(), a)
     }
     #[inline(always)]
-    fn bitcast_u16_to_i16(
-        self,
-        a: <Self as crate::simd::backends::U16x16Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I16x16Backend>::Repr {
+    fn bitcast_u16_to_i16(self, a: <Self as U16x16Backend>::Repr) -> <Self as I16x16Backend>::Repr {
         <archmage::X64V3Token as I16x16Bitcast>::bitcast_u16_to_i16(self.v3(), a)
     }
 }
 
 impl U64x2Bitcast for archmage::X64V4Token {
     #[inline(always)]
-    fn bitcast_u64_to_i64(
-        self,
-        a: <Self as crate::simd::backends::U64x2Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I64x2Backend>::Repr {
+    fn bitcast_u64_to_i64(self, a: <Self as U64x2Backend>::Repr) -> <Self as I64x2Backend>::Repr {
         <archmage::X64V3Token as U64x2Bitcast>::bitcast_u64_to_i64(self.v3(), a)
     }
     #[inline(always)]
-    fn bitcast_i64_to_u64(
-        self,
-        a: <Self as crate::simd::backends::I64x2Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U64x2Backend>::Repr {
+    fn bitcast_i64_to_u64(self, a: <Self as I64x2Backend>::Repr) -> <Self as U64x2Backend>::Repr {
         <archmage::X64V3Token as U64x2Bitcast>::bitcast_i64_to_u64(self.v3(), a)
     }
 }
 
 impl U64x2Bitcast for archmage::X64V4xToken {
     #[inline(always)]
-    fn bitcast_u64_to_i64(
-        self,
-        a: <Self as crate::simd::backends::U64x2Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I64x2Backend>::Repr {
+    fn bitcast_u64_to_i64(self, a: <Self as U64x2Backend>::Repr) -> <Self as I64x2Backend>::Repr {
         <archmage::X64V3Token as U64x2Bitcast>::bitcast_u64_to_i64(self.v3(), a)
     }
     #[inline(always)]
-    fn bitcast_i64_to_u64(
-        self,
-        a: <Self as crate::simd::backends::I64x2Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U64x2Backend>::Repr {
+    fn bitcast_i64_to_u64(self, a: <Self as I64x2Backend>::Repr) -> <Self as U64x2Backend>::Repr {
         <archmage::X64V3Token as U64x2Bitcast>::bitcast_i64_to_u64(self.v3(), a)
     }
 }
 
 impl U64x2Bitcast for archmage::Avx512Fp16Token {
     #[inline(always)]
-    fn bitcast_u64_to_i64(
-        self,
-        a: <Self as crate::simd::backends::U64x2Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I64x2Backend>::Repr {
+    fn bitcast_u64_to_i64(self, a: <Self as U64x2Backend>::Repr) -> <Self as I64x2Backend>::Repr {
         <archmage::X64V3Token as U64x2Bitcast>::bitcast_u64_to_i64(self.v3(), a)
     }
     #[inline(always)]
-    fn bitcast_i64_to_u64(
-        self,
-        a: <Self as crate::simd::backends::I64x2Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U64x2Backend>::Repr {
+    fn bitcast_i64_to_u64(self, a: <Self as I64x2Backend>::Repr) -> <Self as U64x2Backend>::Repr {
         <archmage::X64V3Token as U64x2Bitcast>::bitcast_i64_to_u64(self.v3(), a)
     }
 }
 
 impl U64x4Bitcast for archmage::X64V4Token {
     #[inline(always)]
-    fn bitcast_u64_to_i64(
-        self,
-        a: <Self as crate::simd::backends::U64x4Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I64x4Backend>::Repr {
+    fn bitcast_u64_to_i64(self, a: <Self as U64x4Backend>::Repr) -> <Self as I64x4Backend>::Repr {
         <archmage::X64V3Token as U64x4Bitcast>::bitcast_u64_to_i64(self.v3(), a)
     }
     #[inline(always)]
-    fn bitcast_i64_to_u64(
-        self,
-        a: <Self as crate::simd::backends::I64x4Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U64x4Backend>::Repr {
+    fn bitcast_i64_to_u64(self, a: <Self as I64x4Backend>::Repr) -> <Self as U64x4Backend>::Repr {
         <archmage::X64V3Token as U64x4Bitcast>::bitcast_i64_to_u64(self.v3(), a)
     }
 }
 
 impl U64x4Bitcast for archmage::X64V4xToken {
     #[inline(always)]
-    fn bitcast_u64_to_i64(
-        self,
-        a: <Self as crate::simd::backends::U64x4Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I64x4Backend>::Repr {
+    fn bitcast_u64_to_i64(self, a: <Self as U64x4Backend>::Repr) -> <Self as I64x4Backend>::Repr {
         <archmage::X64V3Token as U64x4Bitcast>::bitcast_u64_to_i64(self.v3(), a)
     }
     #[inline(always)]
-    fn bitcast_i64_to_u64(
-        self,
-        a: <Self as crate::simd::backends::I64x4Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U64x4Backend>::Repr {
+    fn bitcast_i64_to_u64(self, a: <Self as I64x4Backend>::Repr) -> <Self as U64x4Backend>::Repr {
         <archmage::X64V3Token as U64x4Bitcast>::bitcast_i64_to_u64(self.v3(), a)
     }
 }
 
 impl U64x4Bitcast for archmage::Avx512Fp16Token {
     #[inline(always)]
-    fn bitcast_u64_to_i64(
-        self,
-        a: <Self as crate::simd::backends::U64x4Backend>::Repr,
-    ) -> <Self as crate::simd::backends::I64x4Backend>::Repr {
+    fn bitcast_u64_to_i64(self, a: <Self as U64x4Backend>::Repr) -> <Self as I64x4Backend>::Repr {
         <archmage::X64V3Token as U64x4Bitcast>::bitcast_u64_to_i64(self.v3(), a)
     }
     #[inline(always)]
-    fn bitcast_i64_to_u64(
-        self,
-        a: <Self as crate::simd::backends::I64x4Backend>::Repr,
-    ) -> <Self as crate::simd::backends::U64x4Backend>::Repr {
+    fn bitcast_i64_to_u64(self, a: <Self as I64x4Backend>::Repr) -> <Self as U64x4Backend>::Repr {
         <archmage::X64V3Token as U64x4Bitcast>::bitcast_i64_to_u64(self.v3(), a)
     }
 }

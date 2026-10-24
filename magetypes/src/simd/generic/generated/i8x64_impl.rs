@@ -48,32 +48,24 @@ crate::simd_storage::impl_token_storage!(i8x64, I8x64Backend);
 // assert fires at compile time.
 const _: () = {
     assert!(
-        core::mem::size_of::<i8x64<archmage::ScalarToken>>()
-            == core::mem::size_of::<
-                <archmage::ScalarToken as crate::simd::backends::I8x64Backend>::Repr,
-            >()
+        size_of::<i8x64<archmage::ScalarToken>>()
+            == size_of::<<archmage::ScalarToken as I8x64Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<i8x64<archmage::ScalarToken>>()
-            == core::mem::align_of::<
-                <archmage::ScalarToken as crate::simd::backends::I8x64Backend>::Repr,
-            >()
+        align_of::<i8x64<archmage::ScalarToken>>()
+            == align_of::<<archmage::ScalarToken as I8x64Backend>::Repr>()
     );
 };
 
 #[cfg(target_arch = "x86_64")]
 const _: () = {
     assert!(
-        core::mem::size_of::<i8x64<archmage::X64V3Token>>()
-            == core::mem::size_of::<
-                <archmage::X64V3Token as crate::simd::backends::I8x64Backend>::Repr,
-            >()
+        size_of::<i8x64<archmage::X64V3Token>>()
+            == size_of::<<archmage::X64V3Token as I8x64Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<i8x64<archmage::X64V3Token>>()
-            == core::mem::align_of::<
-                <archmage::X64V3Token as crate::simd::backends::I8x64Backend>::Repr,
-            >()
+        align_of::<i8x64<archmage::X64V3Token>>()
+            == align_of::<<archmage::X64V3Token as I8x64Backend>::Repr>()
     );
 };
 
@@ -83,48 +75,36 @@ const _: () = {
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 const _: () = {
     assert!(
-        core::mem::size_of::<i8x64<archmage::X64V4Token>>()
-            == core::mem::size_of::<
-                <archmage::X64V4Token as crate::simd::backends::I8x64Backend>::Repr,
-            >()
+        size_of::<i8x64<archmage::X64V4Token>>()
+            == size_of::<<archmage::X64V4Token as I8x64Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<i8x64<archmage::X64V4Token>>()
-            == core::mem::align_of::<
-                <archmage::X64V4Token as crate::simd::backends::I8x64Backend>::Repr,
-            >()
+        align_of::<i8x64<archmage::X64V4Token>>()
+            == align_of::<<archmage::X64V4Token as I8x64Backend>::Repr>()
     );
 };
 
 #[cfg(target_arch = "aarch64")]
 const _: () = {
     assert!(
-        core::mem::size_of::<i8x64<archmage::NeonToken>>()
-            == core::mem::size_of::<
-                <archmage::NeonToken as crate::simd::backends::I8x64Backend>::Repr,
-            >()
+        size_of::<i8x64<archmage::NeonToken>>()
+            == size_of::<<archmage::NeonToken as I8x64Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<i8x64<archmage::NeonToken>>()
-            == core::mem::align_of::<
-                <archmage::NeonToken as crate::simd::backends::I8x64Backend>::Repr,
-            >()
+        align_of::<i8x64<archmage::NeonToken>>()
+            == align_of::<<archmage::NeonToken as I8x64Backend>::Repr>()
     );
 };
 
 #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 const _: () = {
     assert!(
-        core::mem::size_of::<i8x64<archmage::Wasm128Token>>()
-            == core::mem::size_of::<
-                <archmage::Wasm128Token as crate::simd::backends::I8x64Backend>::Repr,
-            >()
+        size_of::<i8x64<archmage::Wasm128Token>>()
+            == size_of::<<archmage::Wasm128Token as I8x64Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<i8x64<archmage::Wasm128Token>>()
-            == core::mem::align_of::<
-                <archmage::Wasm128Token as crate::simd::backends::I8x64Backend>::Repr,
-            >()
+        align_of::<i8x64<archmage::Wasm128Token>>()
+            == align_of::<<archmage::Wasm128Token as I8x64Backend>::Repr>()
     );
 };
 
@@ -547,7 +527,7 @@ impl<T: I8x64Backend> core::fmt::Debug for i8x64<T> {
 // Widening (i8x64 -> i16x32)
 // ============================================================================
 
-impl<T: crate::simd::backends::I8x64Backend + crate::simd::backends::I16x32Backend> i8x64<T> {
+impl<T: I8x64Backend + crate::simd::backends::I16x32Backend> i8x64<T> {
     /// Sign-extend the low half of the lanes to `i16x32`.
     ///
     /// Result lane `i` is `self[i] as i16` for `i` in `0..32`.
@@ -557,7 +537,7 @@ impl<T: crate::simd::backends::I8x64Backend + crate::simd::backends::I16x32Backe
     pub fn widen_low(self) -> super::i16x32<T> {
         super::i16x32::from_repr_unchecked(
             self.1,
-            <T as crate::simd::backends::I8x64Backend>::widen_low_i8_to_i16(self.1, self.0),
+            <T as I8x64Backend>::widen_low_i8_to_i16(self.1, self.0),
         )
     }
 
@@ -568,7 +548,7 @@ impl<T: crate::simd::backends::I8x64Backend + crate::simd::backends::I16x32Backe
     pub fn widen_high(self) -> super::i16x32<T> {
         super::i16x32::from_repr_unchecked(
             self.1,
-            <T as crate::simd::backends::I8x64Backend>::widen_high_i8_to_i16(self.1, self.0),
+            <T as I8x64Backend>::widen_high_i8_to_i16(self.1, self.0),
         )
     }
 }

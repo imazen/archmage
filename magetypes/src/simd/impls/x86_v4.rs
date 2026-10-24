@@ -34,7 +34,7 @@ use crate::simd::backends::*;
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl F32x16Backend for archmage::X64V4Token {
+impl F32x16Backend for X64V4Token {
     type Repr = __m512;
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -268,7 +268,7 @@ impl F32x16Backend for archmage::X64V4Token {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl F64x8Backend for archmage::X64V4Token {
+impl F64x8Backend for X64V4Token {
     type Repr = __m512d;
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -485,12 +485,12 @@ impl F64x8Backend for archmage::X64V4Token {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl I8x64Backend for archmage::X64V4Token {
+impl I8x64Backend for X64V4Token {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn splat(self, v: i8) -> __m512i {
-        _mm512_set1_epi8(v as _)
+        _mm512_set1_epi8(v)
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -665,19 +665,19 @@ impl I8x64Backend for archmage::X64V4Token {
         // directly. The `cmpneq` form this replaces answered a
         // different question (lane nonzero) and disagreed with the
         // V3 movemask backends.
-        _mm512_movepi8_mask(a) as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
+        _mm512_movepi8_mask(a) == 0xFFFF_FFFF_FFFF_FFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn any_true(self, a: __m512i) -> bool {
-        _mm512_movepi8_mask(a) as u64 != 0
+        _mm512_movepi8_mask(a) != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn bitmask(self, a: __m512i) -> u64 {
         // Extract high bit of each lane: compare < 0 for signed interpretation
         let zero = _mm512_setzero_si512();
-        _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero) as u64
+        _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero)
     }
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn widen_low_i8_to_i16(self, a: __m512i) -> __m512i {
@@ -692,7 +692,7 @@ impl I8x64Backend for archmage::X64V4Token {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl U8x64Backend for archmage::X64V4Token {
+impl U8x64Backend for X64V4Token {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -866,19 +866,19 @@ impl U8x64Backend for archmage::X64V4Token {
         // directly. The `cmpneq` form this replaces answered a
         // different question (lane nonzero) and disagreed with the
         // V3 movemask backends.
-        _mm512_movepi8_mask(a) as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
+        _mm512_movepi8_mask(a) == 0xFFFF_FFFF_FFFF_FFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn any_true(self, a: __m512i) -> bool {
-        _mm512_movepi8_mask(a) as u64 != 0
+        _mm512_movepi8_mask(a) != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn bitmask(self, a: __m512i) -> u64 {
         // Extract high bit of each lane: compare < 0 for signed interpretation
         let zero = _mm512_setzero_si512();
-        _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero) as u64
+        _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero)
     }
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn widen_low_u8_to_u16(self, a: __m512i) -> __m512i {
@@ -922,12 +922,12 @@ impl U8x64Backend for archmage::X64V4Token {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl I16x32Backend for archmage::X64V4Token {
+impl I16x32Backend for X64V4Token {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn splat(self, v: i16) -> __m512i {
-        _mm512_set1_epi16(v as _)
+        _mm512_set1_epi16(v)
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1167,7 +1167,7 @@ impl I16x32Backend for archmage::X64V4Token {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl U16x32Backend for archmage::X64V4Token {
+impl U16x32Backend for X64V4Token {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1385,12 +1385,12 @@ impl U16x32Backend for archmage::X64V4Token {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl I32x16Backend for archmage::X64V4Token {
+impl I32x16Backend for X64V4Token {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn splat(self, v: i32) -> __m512i {
-        _mm512_set1_epi32(v as _)
+        _mm512_set1_epi32(v)
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1600,7 +1600,7 @@ impl I32x16Backend for archmage::X64V4Token {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl U32x16Backend for archmage::X64V4Token {
+impl U32x16Backend for X64V4Token {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1791,12 +1791,12 @@ impl U32x16Backend for archmage::X64V4Token {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl I64x8Backend for archmage::X64V4Token {
+impl I64x8Backend for X64V4Token {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn splat(self, v: i64) -> __m512i {
-        _mm512_set1_epi64(v as _)
+        _mm512_set1_epi64(v)
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -1967,7 +1967,7 @@ impl I64x8Backend for archmage::X64V4Token {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl U64x8Backend for archmage::X64V4Token {
+impl U64x8Backend for X64V4Token {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -2142,7 +2142,7 @@ impl U64x8Backend for archmage::X64V4Token {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl F32x16Backend for archmage::X64V4xToken {
+impl F32x16Backend for X64V4xToken {
     type Repr = __m512;
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -2376,7 +2376,7 @@ impl F32x16Backend for archmage::X64V4xToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl F64x8Backend for archmage::X64V4xToken {
+impl F64x8Backend for X64V4xToken {
     type Repr = __m512d;
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -2593,12 +2593,12 @@ impl F64x8Backend for archmage::X64V4xToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl I8x64Backend for archmage::X64V4xToken {
+impl I8x64Backend for X64V4xToken {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn splat(self, v: i8) -> __m512i {
-        _mm512_set1_epi8(v as _)
+        _mm512_set1_epi8(v)
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -2773,19 +2773,19 @@ impl I8x64Backend for archmage::X64V4xToken {
         // directly. The `cmpneq` form this replaces answered a
         // different question (lane nonzero) and disagreed with the
         // V3 movemask backends.
-        _mm512_movepi8_mask(a) as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
+        _mm512_movepi8_mask(a) == 0xFFFF_FFFF_FFFF_FFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn any_true(self, a: __m512i) -> bool {
-        _mm512_movepi8_mask(a) as u64 != 0
+        _mm512_movepi8_mask(a) != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn bitmask(self, a: __m512i) -> u64 {
         // Extract high bit of each lane: compare < 0 for signed interpretation
         let zero = _mm512_setzero_si512();
-        _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero) as u64
+        _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero)
     }
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn widen_low_i8_to_i16(self, a: __m512i) -> __m512i {
@@ -2800,7 +2800,7 @@ impl I8x64Backend for archmage::X64V4xToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl U8x64Backend for archmage::X64V4xToken {
+impl U8x64Backend for X64V4xToken {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -2974,19 +2974,19 @@ impl U8x64Backend for archmage::X64V4xToken {
         // directly. The `cmpneq` form this replaces answered a
         // different question (lane nonzero) and disagreed with the
         // V3 movemask backends.
-        _mm512_movepi8_mask(a) as u64 == 0xFFFF_FFFF_FFFF_FFFFu64
+        _mm512_movepi8_mask(a) == 0xFFFF_FFFF_FFFF_FFFFu64
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn any_true(self, a: __m512i) -> bool {
-        _mm512_movepi8_mask(a) as u64 != 0
+        _mm512_movepi8_mask(a) != 0
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn bitmask(self, a: __m512i) -> u64 {
         // Extract high bit of each lane: compare < 0 for signed interpretation
         let zero = _mm512_setzero_si512();
-        _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero) as u64
+        _mm512_cmpneq_epi8_mask(_mm512_and_si512(a, _mm512_set1_epi8(1_i8 << (8 - 1))), zero)
     }
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn widen_low_u8_to_u16(self, a: __m512i) -> __m512i {
@@ -3030,12 +3030,12 @@ impl U8x64Backend for archmage::X64V4xToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl I16x32Backend for archmage::X64V4xToken {
+impl I16x32Backend for X64V4xToken {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn splat(self, v: i16) -> __m512i {
-        _mm512_set1_epi16(v as _)
+        _mm512_set1_epi16(v)
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3275,7 +3275,7 @@ impl I16x32Backend for archmage::X64V4xToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl U16x32Backend for archmage::X64V4xToken {
+impl U16x32Backend for X64V4xToken {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3493,12 +3493,12 @@ impl U16x32Backend for archmage::X64V4xToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl I32x16Backend for archmage::X64V4xToken {
+impl I32x16Backend for X64V4xToken {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn splat(self, v: i32) -> __m512i {
-        _mm512_set1_epi32(v as _)
+        _mm512_set1_epi32(v)
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3708,7 +3708,7 @@ impl I32x16Backend for archmage::X64V4xToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl U32x16Backend for archmage::X64V4xToken {
+impl U32x16Backend for X64V4xToken {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -3899,12 +3899,12 @@ impl U32x16Backend for archmage::X64V4xToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl I64x8Backend for archmage::X64V4xToken {
+impl I64x8Backend for X64V4xToken {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn splat(self, v: i64) -> __m512i {
-        _mm512_set1_epi64(v as _)
+        _mm512_set1_epi64(v)
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -4075,7 +4075,7 @@ impl I64x8Backend for archmage::X64V4xToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl U64x8Backend for archmage::X64V4xToken {
+impl U64x8Backend for X64V4xToken {
     type Repr = __m512i;
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -4250,7 +4250,7 @@ impl U64x8Backend for archmage::X64V4xToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl i8x64PopcntBackend for archmage::X64V4xToken {
+impl i8x64PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
         _mm512_popcnt_epi8(a)
@@ -4259,7 +4259,7 @@ impl i8x64PopcntBackend for archmage::X64V4xToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl u8x64PopcntBackend for archmage::X64V4xToken {
+impl u8x64PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
         _mm512_popcnt_epi8(a)
@@ -4268,7 +4268,7 @@ impl u8x64PopcntBackend for archmage::X64V4xToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl i16x32PopcntBackend for archmage::X64V4xToken {
+impl i16x32PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
         _mm512_popcnt_epi16(a)
@@ -4277,7 +4277,7 @@ impl i16x32PopcntBackend for archmage::X64V4xToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl u16x32PopcntBackend for archmage::X64V4xToken {
+impl u16x32PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
         _mm512_popcnt_epi16(a)
@@ -4286,7 +4286,7 @@ impl u16x32PopcntBackend for archmage::X64V4xToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl i32x16PopcntBackend for archmage::X64V4xToken {
+impl i32x16PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
         _mm512_popcnt_epi32(a)
@@ -4295,7 +4295,7 @@ impl i32x16PopcntBackend for archmage::X64V4xToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl u32x16PopcntBackend for archmage::X64V4xToken {
+impl u32x16PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
         _mm512_popcnt_epi32(a)
@@ -4304,7 +4304,7 @@ impl u32x16PopcntBackend for archmage::X64V4xToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl i64x8PopcntBackend for archmage::X64V4xToken {
+impl i64x8PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
         _mm512_popcnt_epi64(a)
@@ -4313,7 +4313,7 @@ impl i64x8PopcntBackend for archmage::X64V4xToken {
 
 #[cfg(feature = "w512")]
 #[cfg(target_arch = "x86_64")]
-impl u64x8PopcntBackend for archmage::X64V4xToken {
+impl u64x8PopcntBackend for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn popcnt(self, a: __m512i) -> __m512i {
         _mm512_popcnt_epi64(a)
@@ -4326,7 +4326,7 @@ impl u64x8PopcntBackend for archmage::X64V4xToken {
 
 #[cfg(all(target_arch = "x86_64", feature = "w512"))]
 #[cfg(feature = "w512")]
-impl F32x16Convert for archmage::X64V4Token {
+impl F32x16Convert for X64V4Token {
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn bitcast_f32_to_i32(self, a: __m512) -> __m512i {
         _mm512_castps_si512(a)
@@ -4365,7 +4365,7 @@ impl F32x16Convert for archmage::X64V4Token {
 
 #[cfg(all(target_arch = "x86_64", feature = "w512"))]
 #[cfg(feature = "w512")]
-impl F32x16Convert for archmage::X64V4xToken {
+impl F32x16Convert for X64V4xToken {
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn bitcast_f32_to_i32(self, a: __m512) -> __m512i {
         _mm512_castps_si512(a)

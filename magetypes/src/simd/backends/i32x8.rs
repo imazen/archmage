@@ -179,16 +179,16 @@ pub trait I32x8Backend: SimdToken + Sealed + Copy + 'static {
     /// Clamp to i16's range, then concatenate a's 8 lanes followed by b's.
     fn narrow_saturating_i32_to_i16(
         self,
-        a: <Self as super::I32x8Backend>::Repr,
-        b: <Self as super::I32x8Backend>::Repr,
+        a: <Self as I32x8Backend>::Repr,
+        b: <Self as I32x8Backend>::Repr,
     ) -> <Self as super::I16x16Backend>::Repr
     where
         Self: super::I16x16Backend;
     /// Clamp to u16's range, then concatenate a's 8 lanes followed by b's.
     fn narrow_saturating_i32_to_u16(
         self,
-        a: <Self as super::I32x8Backend>::Repr,
-        b: <Self as super::I32x8Backend>::Repr,
+        a: <Self as I32x8Backend>::Repr,
+        b: <Self as I32x8Backend>::Repr,
     ) -> <Self as super::U16x16Backend>::Repr
     where
         Self: super::U16x16Backend;

@@ -54,64 +54,48 @@ crate::simd_storage::impl_token_storage!(i64x4, I64x4Backend);
 // assert fires at compile time.
 const _: () = {
     assert!(
-        core::mem::size_of::<i64x4<archmage::ScalarToken>>()
-            == core::mem::size_of::<
-                <archmage::ScalarToken as crate::simd::backends::I64x4Backend>::Repr,
-            >()
+        size_of::<i64x4<archmage::ScalarToken>>()
+            == size_of::<<archmage::ScalarToken as I64x4Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<i64x4<archmage::ScalarToken>>()
-            == core::mem::align_of::<
-                <archmage::ScalarToken as crate::simd::backends::I64x4Backend>::Repr,
-            >()
+        align_of::<i64x4<archmage::ScalarToken>>()
+            == align_of::<<archmage::ScalarToken as I64x4Backend>::Repr>()
     );
 };
 
 #[cfg(target_arch = "x86_64")]
 const _: () = {
     assert!(
-        core::mem::size_of::<i64x4<archmage::X64V3Token>>()
-            == core::mem::size_of::<
-                <archmage::X64V3Token as crate::simd::backends::I64x4Backend>::Repr,
-            >()
+        size_of::<i64x4<archmage::X64V3Token>>()
+            == size_of::<<archmage::X64V3Token as I64x4Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<i64x4<archmage::X64V3Token>>()
-            == core::mem::align_of::<
-                <archmage::X64V3Token as crate::simd::backends::I64x4Backend>::Repr,
-            >()
+        align_of::<i64x4<archmage::X64V3Token>>()
+            == align_of::<<archmage::X64V3Token as I64x4Backend>::Repr>()
     );
 };
 
 #[cfg(target_arch = "aarch64")]
 const _: () = {
     assert!(
-        core::mem::size_of::<i64x4<archmage::NeonToken>>()
-            == core::mem::size_of::<
-                <archmage::NeonToken as crate::simd::backends::I64x4Backend>::Repr,
-            >()
+        size_of::<i64x4<archmage::NeonToken>>()
+            == size_of::<<archmage::NeonToken as I64x4Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<i64x4<archmage::NeonToken>>()
-            == core::mem::align_of::<
-                <archmage::NeonToken as crate::simd::backends::I64x4Backend>::Repr,
-            >()
+        align_of::<i64x4<archmage::NeonToken>>()
+            == align_of::<<archmage::NeonToken as I64x4Backend>::Repr>()
     );
 };
 
 #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 const _: () = {
     assert!(
-        core::mem::size_of::<i64x4<archmage::Wasm128Token>>()
-            == core::mem::size_of::<
-                <archmage::Wasm128Token as crate::simd::backends::I64x4Backend>::Repr,
-            >()
+        size_of::<i64x4<archmage::Wasm128Token>>()
+            == size_of::<<archmage::Wasm128Token as I64x4Backend>::Repr>()
     );
     assert!(
-        core::mem::align_of::<i64x4<archmage::Wasm128Token>>()
-            == core::mem::align_of::<
-                <archmage::Wasm128Token as crate::simd::backends::I64x4Backend>::Repr,
-            >()
+        align_of::<i64x4<archmage::Wasm128Token>>()
+            == align_of::<<archmage::Wasm128Token as I64x4Backend>::Repr>()
     );
 };
 
