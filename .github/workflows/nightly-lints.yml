@@ -55,7 +55,14 @@ jobs:
         with:
           script: |
             const LABEL = 'nightly-lints';
-            const failed = process.env.SWEEP_RESULT === 'failure';
+            const result = process.env.SWEEP_RESULT;
+            // Only a finished sweep says anything: a cancelled or skipped run
+            // neither opens nor closes the issue.
+            if (result !== 'success' && result !== 'failure') {
+              core.info(`Sweep ${result}; leaving the issue as it is.`);
+              return;
+            }
+            const failed = result === 'failure';
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const { data: open } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,

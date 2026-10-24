@@ -608,7 +608,7 @@ just miri                     # Run magetypes under Miri (detects UB)
 just audit                    # Scan for safety-critical code
 just intrinsics-refresh       # Re-extract intrinsics from current Rust
 just ci                       # Run ALL checks (must pass before push/publish)
-just warnings                 # clippy over 19 target/feature/CPU configs (CI: warning-sweep)
+just warnings                 # clippy over 24 target/feature/CPU configs (CI: warning-sweep)
 ```
 
 ## CI and Publishing Rules
@@ -1226,18 +1226,23 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
 - **Warnings in macro output and on untested targets (2026-10-23):** body
   rewrites spliced dispatch calls, so named `incant`/`attuned`/`reattune`
   imports went unused; rewritten calls now go through the caller's path as
-  `path!(@__archmage_expanded ...)` (`common::wrap_expanded`; calls inside
-  bodies need the macro in scope). Forwarding wrappers allow pedantic
-  `used_underscore_binding` (on the forwarding call statement only) and
-  `inline_always`; attune wildcard proof wrappers allow `dead_code`. No
+  `path!(@__archmage_expanded ...)` with the call's own delimiter
+  (`common::wrap_expanded`; calls inside bodies need the macro in scope).
+  Forwarding layers rename an author's `_x` parameter to `__archmage_x`
+  (`common::rename_underscore_params`; clippy exempts `__` names), so they
+  carry no `used_underscore_binding` allow; boundary wrappers carry no lint
+  levels at all. Attune proof wrappers allow `inline_always` only under the
+  default inline policy, and wildcard proof wrappers allow `dead_code`. No
   macro-emitted lint level may cover the author's body (2026-10-24 audit:
   `tests/compile_fail/author_lints_*`); `#[autoversion]`'s scalar fallback is
-  the one exception, so its nested items go unreported where only it compiles. Library warnings on wasm32/32-bit/target-cpu builds fixed in
+  the one exception, so its nested items go unreported where only it
+  compiles. Library warnings on wasm32/32-bit/target-cpu builds fixed in
   the generators. A nested default-tier `incant!` in a v4 body left its
   fallback unreachable when the caller's `avx512` feature was on; gated arms
   and the fallback are now mutually exclusive cfg blocks. Coverage:
   `tests/clippy-consumer` (strict lints, linted with -D warnings) and
-  `xtask/warning_sweep.py` (19 configurations, CI `warning-sweep`).
+  `xtask/warning_sweep.py` (24 configurations, five of them `optin-*`; CI
+  `warning-sweep`).
 
 - **`attuned!` single-arm `diverging_sub_expression` (2026-10-23):** a call
   resolving to one guaranteed arm expanded to `{ 'l: { { break 'l f(x); } } }`;
