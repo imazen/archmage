@@ -517,31 +517,6 @@ pub(crate) fn gen_tier_trait_assertion(
     }
 }
 
-#[cfg(test)]
-mod dispatch_marker_tests {
-    use super::*;
-
-    #[test]
-    fn substitutes_types_but_preserves_dispatch_markers() {
-        let source = quote! {
-            fn f(t: Token) {
-                archmage::incant!(callee::<Token>(Token, Token::from_context(), wrap::<Token>()), [scalar]);
-                dispatch_variant!(other(value, Token) with t);
-            }
-        };
-        let expected = quote! {
-            fn f(t: archmage::ScalarToken) {
-                archmage::incant!(callee::<archmage::ScalarToken>(Token, archmage::ScalarToken::from_context(), wrap::<archmage::ScalarToken>()), [scalar]);
-                dispatch_variant!(other(value, Token) with t);
-            }
-        };
-        assert_eq!(
-            replace_ident_in_tokens(source, "Token", &quote!(archmage::ScalarToken)).to_string(),
-            expected.to_string()
-        );
-    }
-}
-
 // ============================================================================
 // Helpers shared by #[arcane] and #[rite]
 // ============================================================================
@@ -868,4 +843,29 @@ pub(crate) fn multiple_tokens_error(
         idents.len()
     );
     syn::Error::new_spanned(sig, msg).to_compile_error()
+}
+
+#[cfg(test)]
+mod dispatch_marker_tests {
+    use super::*;
+
+    #[test]
+    fn substitutes_types_but_preserves_dispatch_markers() {
+        let source = quote! {
+            fn f(t: Token) {
+                archmage::incant!(callee::<Token>(Token, Token::from_context(), wrap::<Token>()), [scalar]);
+                dispatch_variant!(other(value, Token) with t);
+            }
+        };
+        let expected = quote! {
+            fn f(t: archmage::ScalarToken) {
+                archmage::incant!(callee::<archmage::ScalarToken>(Token, archmage::ScalarToken::from_context(), wrap::<archmage::ScalarToken>()), [scalar]);
+                dispatch_variant!(other(value, Token) with t);
+            }
+        };
+        assert_eq!(
+            replace_ident_in_tokens(source, "Token", &quote!(archmage::ScalarToken)).to_string(),
+            expected.to_string()
+        );
+    }
 }

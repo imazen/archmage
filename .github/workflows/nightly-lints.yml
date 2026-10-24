@@ -1,0 +1,110 @@
+name: Nightly lints
+
+# Early warning for lints and rustc warnings that will reach stable: the same
+# warning sweep CI runs (xtask/warning_sweep.py, every target/feature/CPU
+# configuration plus the strict-lint consumer crate), on the nightly toolchain.
+# It is not part of CI: a nightly-only lint must not block pushes. A failing
+# run opens (or updates) a `nightly-lints` issue; a green run closes it.
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: nightly-lints
+  cancel-in-progress: true
+
+jobs:
+  sweep:
+    name: Warning sweep (nightly)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: clippy
+          targets: i686-unknown-linux-gnu,aarch64-unknown-linux-gnu,aarch64-apple-darwin,aarch64-pc-windows-msvc,wasm32-wasip1,wasm32-unknown-unknown,armv7-unknown-linux-gnueabihf,thumbv7em-none-eabihf
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Toolchain
+        run: rustc --version && cargo clippy --version
+
+      - name: Sweep
+        run: python3 -B xtask/warning_sweep.py
+
+  report:
+    name: Report
+    needs: sweep
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v9
+        env:
+          SWEEP_RESULT: ${{ needs.sweep.result }}
+        with:
+          script: |
+            const LABEL = 'nightly-lints';
+            const failed = process.env.SWEEP_RESULT === 'failure';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: LABEL,
+            });
+            const existing = open[0];
+            if (!failed) {
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  issue_number: existing.number,
+                  body: `Nightly sweep is clean again — ${runUrl}`,
+                });
+                await github.rest.issues.update({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  issue_number: existing.number, state: 'closed',
+                });
+              }
+              return;
+            }
+            const body = [
+              `**The warning sweep fails on the nightly toolchain** at ${context.sha.slice(0, 8)}.`,
+              '',
+              `Run: ${runUrl}`,
+              '',
+              'These diagnostics will reach stable and the `warning-sweep` CI job.',
+              'Reproduce with `RUSTUP_TOOLCHAIN=nightly just warnings`.',
+              '',
+              'This issue closes itself when a nightly sweep goes green.',
+            ].join('\n');
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: existing.number, body,
+              });
+              return;
+            }
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner, repo: context.repo.repo, name: LABEL,
+              });
+            } catch {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner, repo: context.repo.repo, name: LABEL,
+                color: 'fbca04', description: 'Warning sweep fails on the nightly toolchain',
+              });
+            }
+            await github.rest.issues.create({
+              owner: context.repo.owner, repo: context.repo.repo,
+              title: `Nightly warning sweep fails (${context.sha.slice(0, 8)})`,
+              body, labels: [LABEL], assignees: ['lilith'],
+            });
