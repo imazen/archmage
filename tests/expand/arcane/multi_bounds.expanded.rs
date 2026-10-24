@@ -13,13 +13,11 @@ where
     a * b + c
 }
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn fma<T>(token: X64V3Token, a: T, b: T, c: T) -> T
 where
     T: Copy + Mul<Output = T> + Add<Output = T>,
 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __arcane_fma::<T>(token, a, b, c) } }
+    unsafe { __arcane_fma::<T>(token, a, b, c) }
 }
 fn main() {}

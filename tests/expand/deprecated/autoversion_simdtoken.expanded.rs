@@ -34,11 +34,9 @@ fn __arcane_process_v4(_token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
 #[allow(deprecated)]
 #[allow(dead_code)]
 #[inline(always)]
-#[allow(clippy::inline_always)]
-fn process_v4(_token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
+fn process_v4(__archmage_token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
     let _: () = <archmage::X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __arcane_process_v4(_token, data) } }
+    unsafe { __arcane_process_v4(__archmage_token, data) }
 }
 #[doc(hidden)]
 #[allow(deprecated)]
@@ -52,11 +50,9 @@ fn __arcane_process_v3(_token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
 #[allow(deprecated)]
 #[allow(dead_code)]
 #[inline(always)]
-#[allow(clippy::inline_always)]
-fn process_v3(_token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
+fn process_v3(__archmage_token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
     let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __arcane_process_v3(_token, data) } }
+    unsafe { __arcane_process_v3(__archmage_token, data) }
 }
 #[allow(dead_code)]
 #[allow(deprecated)]

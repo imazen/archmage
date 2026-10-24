@@ -672,6 +672,25 @@ pub(crate) fn rename_non_ident_params(sig: &mut Signature) -> Vec<proc_macro2::T
     rebinds
 }
 
+/// Forwarding layers (wrappers, proof wrappers, dispatchers) use every
+/// parameter, so an author's `_name` (conventionally "unused") would trip
+/// `clippy::used_underscore_binding` in them. Their bodies are generated, so
+/// such a parameter takes a reserved name instead (`_t` becomes
+/// `__archmage_t`; clippy exempts `__`-prefixed names). No rebinding: only
+/// the forwarding call reads it. Feature bodies keep the author's names.
+pub(crate) fn rename_underscore_params(sig: &mut Signature) {
+    for arg in &mut sig.inputs {
+        if let syn::FnArg::Typed(pat_type) = arg
+            && let syn::Pat::Ident(pat) = pat_type.pat.as_mut()
+        {
+            let name = pat.ident.to_string();
+            if name.starts_with('_') && !name.starts_with("__") && name.len() > 1 {
+                pat.ident = format_ident!("__archmage{}", name, span = pat.ident.span());
+            }
+        }
+    }
+}
+
 /// Give a wildcard token parameter (`_: X64V3Token`) the name
 /// `find_token_param` synthesizes for it, so the nested dispatch rewrite and
 /// the tier assertions can refer to it; every other pattern is left as

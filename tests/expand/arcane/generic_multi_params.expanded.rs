@@ -10,10 +10,8 @@ fn __arcane_add_items<T: Add<Output = T> + Copy>(token: X64V3Token, a: T, b: T) 
     a + b
 }
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn add_items<T: Add<Output = T> + Copy>(token: X64V3Token, a: T, b: T) -> T {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __arcane_add_items::<T>(token, a, b) } }
+    unsafe { __arcane_add_items::<T>(token, a, b) }
 }
 fn main() {}

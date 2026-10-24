@@ -8,10 +8,9 @@ fn __arcane_inner_v3(x: f32, _t: X64V3Token) -> f32 {
     x * 2.0
 }
 #[inline(always)]
-#[allow(clippy::inline_always)]
-fn inner_v3(x: f32, _t: X64V3Token) -> f32 {
+fn inner_v3(x: f32, __archmage_t: X64V3Token) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)] { unsafe { __arcane_inner_v3(x, _t) } }
+    unsafe { __arcane_inner_v3(x, __archmage_t) }
 }
 fn inner_scalar(x: f32, _t: ScalarToken) -> f32 {
     x
@@ -25,9 +24,8 @@ fn __arcane_outer(token: X64V3Token, x: f32) -> f32 {
     inner_v3(x, token)
 }
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn outer(token: X64V3Token, x: f32) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)] { unsafe { __arcane_outer(token, x) } }
+    unsafe { __arcane_outer(token, x) }
 }
 fn main() {}

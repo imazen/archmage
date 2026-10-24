@@ -42,11 +42,9 @@ impl P {
     #[cfg(target_arch = "x86_64")]
     #[allow(dead_code)]
     #[inline(always)]
-    #[allow(clippy::inline_always)]
-    fn apply_v4(&self, _token: archmage::X64V4Token, x: f32) -> f32 {
+    fn apply_v4(&self, __archmage_token: archmage::X64V4Token, x: f32) -> f32 {
         let _: () = <archmage::X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
-        #[allow(clippy::used_underscore_binding)]
-        { unsafe { self.__arcane_apply_v4(_token, x) } }
+        unsafe { self.__arcane_apply_v4(__archmage_token, x) }
     }
     #[cfg(target_arch = "x86_64")]
     #[doc(hidden)]
@@ -60,11 +58,9 @@ impl P {
     #[cfg(target_arch = "x86_64")]
     #[allow(dead_code)]
     #[inline(always)]
-    #[allow(clippy::inline_always)]
-    fn apply_v3(&self, _token: archmage::X64V3Token, x: f32) -> f32 {
+    fn apply_v3(&self, __archmage_token: archmage::X64V3Token, x: f32) -> f32 {
         let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-        #[allow(clippy::used_underscore_binding)]
-        { unsafe { self.__arcane_apply_v3(_token, x) } }
+        unsafe { self.__arcane_apply_v3(__archmage_token, x) }
     }
     #[cfg(target_arch = "aarch64")]
     #[doc(hidden)]
@@ -76,11 +72,9 @@ impl P {
     #[cfg(target_arch = "aarch64")]
     #[allow(dead_code)]
     #[inline(always)]
-    #[allow(clippy::inline_always)]
-    fn apply_neon(&self, _token: archmage::NeonToken, x: f32) -> f32 {
+    fn apply_neon(&self, __archmage_token: archmage::NeonToken, x: f32) -> f32 {
         let _: () = <archmage::NeonToken>::__ARCHMAGE_ASSERT_TIER_72CB52B2;
-        #[allow(clippy::used_underscore_binding)]
-        { unsafe { self.__arcane_apply_neon(_token, x) } }
+        unsafe { self.__arcane_apply_neon(__archmage_token, x) }
     }
     #[cfg(target_arch = "wasm32")]
     #[target_feature(enable = "simd128")]

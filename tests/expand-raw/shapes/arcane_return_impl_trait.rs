@@ -12,9 +12,8 @@ fn __arcane_probe(token: X64V3Token, n: u32) -> impl Iterator<Item = u32> {
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn probe(token: X64V3Token, n: u32) -> impl Iterator<Item = u32> {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)] { unsafe { __arcane_probe(token, n) } }
+    unsafe { __arcane_probe(token, n) }
 }
 fn main() {}

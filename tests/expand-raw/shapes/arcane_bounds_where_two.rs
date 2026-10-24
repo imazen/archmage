@@ -17,7 +17,6 @@ where
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn probe<T>(token: T, x: f32) -> f32
 where
     T: HasX64V2,
@@ -30,7 +29,6 @@ where
         >(_: &__T) {}
         __archmage_assert_tier_trait(&token);
     }
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __arcane_probe::<T>(token, x) } }
+    unsafe { __arcane_probe::<T>(token, x) }
 }
 fn main() {}

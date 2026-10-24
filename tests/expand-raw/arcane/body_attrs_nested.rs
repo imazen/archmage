@@ -6,7 +6,6 @@ use archmage::{arcane, X64V3Token};
 #[allow(clippy::too_many_arguments)]
 #[must_use]
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn process(token: X64V3Token, unused: f32) -> f32 {
     #[target_feature(
         enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
@@ -17,7 +16,6 @@ fn process(token: X64V3Token, unused: f32) -> f32 {
         1.0
     }
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __simd_inner_process(token, unused) } }
+    unsafe { __simd_inner_process(token, unused) }
 }
 fn main() {}

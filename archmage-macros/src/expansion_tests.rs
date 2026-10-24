@@ -1088,26 +1088,71 @@ fn nested_inner_fn_has_no_lint_levels_of_its_own() {
         "{output}"
     );
     assert_eq!(output.matches("too_many_arguments").count(), 1, "{output}");
-    // The wrapper adds `inline_always` for itself and `used_underscore_binding`
-    // on the forwarding call statement only; the inner fn, which holds the
-    // author's body, has no lint attributes of its own.
-    assert_eq!(output.matches("# [allow").count(), 3, "{output}");
-    assert_eq!(
-        output
-            .matches("# [allow (clippy :: inline_always)]")
-            .count(),
-        1,
-        "{output}"
-    );
-    let inner_start = output.find("fn __simd_inner_f").expect("inner fn");
-    let underscore = output
-        .find("# [allow (clippy :: used_underscore_binding)]")
-        .expect("forwarding-call allow");
-    assert!(underscore > inner_start, "{output}");
+    // The wrapper adds no lint levels of its own: forwarded parameters carry
+    // reserved names (no `used_underscore_binding`), and clippy does not
+    // report `inline_always` on the macro-spanned wrapper. The only allow is
+    // the author's, and the inner fn (the author's body) has none of its own.
+    assert_eq!(output.matches("# [allow").count(), 1, "{output}");
+    assert!(!output.contains("inline_always"), "{output}");
+    assert!(!output.contains("used_underscore_binding"), "{output}");
     let inner = &output[output.find("{ #").expect("nested inner fn")..];
     let inner = &inner[..inner.find("fn __simd_inner_f").expect("inner fn")];
     assert!(
         !inner.contains("allow") && !inner.contains("expect"),
         "{output}"
     );
+}
+
+/// Forwarding layers take reserved names for the author's `_name`
+/// parameters (clippy exempts `__`-prefixed names), so they need no
+/// `used_underscore_binding` allow; the feature bodies keep the author's
+/// names.
+#[test]
+fn forwarding_layers_rename_underscore_params() {
+    let arcane = expand(
+        "arcane",
+        quote!(),
+        quote!(
+            fn f(_t: X64V3Token, _scale: f32, x: f32) -> f32 {
+                x
+            }
+        ),
+    )
+    .unwrap()
+    .to_string();
+    assert!(
+        arcane.contains("fn __arcane_f (_t : X64V3Token , _scale : f32 , x : f32)"),
+        "{arcane}"
+    );
+    assert!(
+        arcane.contains("fn f (__archmage_t : X64V3Token , __archmage_scale : f32 , x : f32)"),
+        "{arcane}"
+    );
+    assert!(
+        arcane.contains("__arcane_f (__archmage_t , __archmage_scale , x)"),
+        "{arcane}"
+    );
+
+    let attune = expand(
+        "attune",
+        quote!(_v3, _scalar, dispatch),
+        quote!(
+            pub fn g(_bias: u32, x: u32) -> u32 {
+                x
+            }
+        ),
+    )
+    .unwrap()
+    .to_string();
+    assert!(
+        attune.contains("pub fn g_v3 (_bias : u32 , x : u32)"),
+        "{attune}"
+    );
+    assert!(
+        attune.contains("pub fn g (__archmage_bias : u32 , x : u32)"),
+        "{attune}"
+    );
+    for output in [&arcane, &attune] {
+        assert!(!output.contains("used_underscore_binding"), "{output}");
+    }
 }

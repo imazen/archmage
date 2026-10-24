@@ -12,7 +12,6 @@ fn __arcane_probe<T: HasX64V2 + HasX64V4>(__archmage_token: T, x: f32) -> f32 {
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn probe<T: HasX64V2 + HasX64V4>(__archmage_arg_0: T, x: f32) -> f32 {
     {
         #[inline(always)]
@@ -21,7 +20,6 @@ fn probe<T: HasX64V2 + HasX64V4>(__archmage_arg_0: T, x: f32) -> f32 {
         >(_: &__T) {}
         __archmage_assert_tier_trait(&__archmage_arg_0);
     }
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __arcane_probe::<T>(__archmage_arg_0, x) } }
+    unsafe { __arcane_probe::<T>(__archmage_arg_0, x) }
 }
 fn main() {}

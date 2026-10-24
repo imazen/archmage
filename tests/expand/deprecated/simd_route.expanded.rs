@@ -9,10 +9,9 @@ fn __arcane_compute_v3(_t: X64V3Token, x: f32) -> f32 {
     x
 }
 #[inline(always)]
-#[allow(clippy::inline_always)]
-fn compute_v3(_t: X64V3Token, x: f32) -> f32 {
+fn compute_v3(__archmage_t: X64V3Token, x: f32) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)] { unsafe { __arcane_compute_v3(_t, x) } }
+    unsafe { __arcane_compute_v3(__archmage_t, x) }
 }
 fn compute_scalar(_t: ScalarToken, x: f32) -> f32 {
     x

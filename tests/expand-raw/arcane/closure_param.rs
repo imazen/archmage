@@ -16,10 +16,8 @@ fn __arcane_apply(
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn apply(token: X64V3Token, data: &[f32; 4], f: impl Fn(f32) -> f32) -> [f32; 4] {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __arcane_apply(token, data, f) } }
+    unsafe { __arcane_apply(token, data, f) }
 }
 fn main() {}

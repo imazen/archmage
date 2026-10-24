@@ -17,11 +17,13 @@ impl Work for S {
         }
         #[allow(dead_code)]
         #[inline(always)]
-        #[allow(clippy::inline_always)]
-        fn merge_v3(_self: &S, _token: archmage::X64V3Token, other: &S) -> f32 {
+        fn merge_v3(
+            __archmage_self: &S,
+            __archmage_token: archmage::X64V3Token,
+            other: &S,
+        ) -> f32 {
             let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-            #[allow(clippy::used_underscore_binding)]
-            { unsafe { __arcane_merge_v3(_self, _token, other) } }
+            unsafe { __arcane_merge_v3(__archmage_self, __archmage_token, other) }
         }
         #[allow(dead_code)]
         fn merge_scalar(_self: &S, _token: archmage::ScalarToken, other: &S) -> f32 {

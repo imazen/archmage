@@ -16,13 +16,11 @@ where
     s
 }
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn sum_slice<T>(token: X64V3Token, data: &[T]) -> f32
 where
     T: Copy + Into<f32>,
 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __arcane_sum_slice::<T>(token, data) } }
+    unsafe { __arcane_sum_slice::<T>(token, data) }
 }
 fn main() {}

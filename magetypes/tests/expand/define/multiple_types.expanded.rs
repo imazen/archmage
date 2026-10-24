@@ -22,7 +22,6 @@ fn __arcane_kernel_v3(
     a + b
 }
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn kernel_v3(
     token: archmage::X64V3Token,
     data_8: &[f32; 8],
@@ -30,8 +29,7 @@ fn kernel_v3(
     bytes: &[u8; 16],
 ) -> f32 {
     let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __arcane_kernel_v3(token, data_8, data_4, bytes) } }
+    unsafe { __arcane_kernel_v3(token, data_8, data_4, bytes) }
 }
 fn kernel_scalar(
     token: archmage::ScalarToken,

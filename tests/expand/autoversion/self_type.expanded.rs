@@ -18,8 +18,7 @@ impl P {
     }
     #[allow(dead_code)]
     #[inline(always)]
-    #[allow(clippy::inline_always)]
-    fn apply_v4(&self, _token: archmage::X64V4Token, x: f32) -> f32 {
+    fn apply_v4(&self, __archmage_token: archmage::X64V4Token, x: f32) -> f32 {
         #[target_feature(
             enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
         )]
@@ -32,13 +31,11 @@ impl P {
             x * _self.f
         }
         let _: () = <archmage::X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
-        #[allow(clippy::used_underscore_binding)]
-        { unsafe { __simd_inner_apply_v4(self, _token, x) } }
+        unsafe { __simd_inner_apply_v4(self, __archmage_token, x) }
     }
     #[allow(dead_code)]
     #[inline(always)]
-    #[allow(clippy::inline_always)]
-    fn apply_v3(&self, _token: archmage::X64V3Token, x: f32) -> f32 {
+    fn apply_v3(&self, __archmage_token: archmage::X64V3Token, x: f32) -> f32 {
         #[target_feature(
             enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
         )]
@@ -51,8 +48,7 @@ impl P {
             x * _self.f
         }
         let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-        #[allow(clippy::used_underscore_binding)]
-        { unsafe { __simd_inner_apply_v3(self, _token, x) } }
+        unsafe { __simd_inner_apply_v3(self, __archmage_token, x) }
     }
     #[allow(dead_code)]
     fn apply_scalar(&self, _token: archmage::ScalarToken, x: f32) -> f32 {

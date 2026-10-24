@@ -4,7 +4,6 @@ struct Processor {
 }
 impl Processor {
     #[inline(always)]
-    #[allow(clippy::inline_always)]
     fn process(&self, token: X64V3Token, a: f32) -> f32 {
         #[target_feature(
             enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"
@@ -14,8 +13,7 @@ impl Processor {
             _self.val + a
         }
         let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-        #[allow(clippy::used_underscore_binding)]
-        { unsafe { __simd_inner_process(self, token, a) } }
+        unsafe { __simd_inner_process(self, token, a) }
     }
 }
 fn main() {}

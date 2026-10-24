@@ -20,10 +20,9 @@ fn __arcane_run_v3(token: archmage::X64V3Token, x: f32) -> f32 {
     dbl_v3(x) + 1.0
 }
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn run_v3(token: archmage::X64V3Token, x: f32) -> f32 {
     let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)] { unsafe { __arcane_run_v3(token, x) } }
+    unsafe { __arcane_run_v3(token, x) }
 }
 fn run_scalar(token: archmage::ScalarToken, x: f32) -> f32 {
     let _ = token;

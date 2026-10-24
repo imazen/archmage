@@ -42,7 +42,7 @@ pub mod proof_family {
         x + 1
     }
     #[inline(always)]
-    #[allow(clippy::inline_always, clippy::used_underscore_binding, dead_code)]
+    #[allow(clippy::inline_always, dead_code)]
     pub fn add_one_neon_t(__attune_token: ::archmage::NeonToken, x: u32) -> u32 {
         unsafe { __attune_add_one_neon(x) }
     }
@@ -51,7 +51,7 @@ pub mod proof_family {
         x + 1
     }
     #[inline(always)]
-    #[allow(clippy::inline_always, clippy::used_underscore_binding, dead_code)]
+    #[allow(clippy::inline_always, dead_code)]
     pub fn add_one_scalar_t(__attune_token: ::archmage::ScalarToken, x: u32) -> u32 {
         __attune_add_one_scalar(x)
     }
@@ -68,7 +68,7 @@ pub mod dispatcher {
         }
     }
     #[inline(always)]
-    #[allow(clippy::inline_always, clippy::used_underscore_binding)]
+    #[allow(clippy::inline_always)]
     fn __attune_scale_neon_t(
         __attune_token: ::archmage::NeonToken,
         values: &mut [f32],
@@ -83,7 +83,7 @@ pub mod dispatcher {
         }
     }
     #[inline(always)]
-    #[allow(clippy::inline_always, clippy::used_underscore_binding)]
+    #[allow(clippy::inline_always)]
     fn __attune_scale_scalar_t(
         __attune_token: ::archmage::ScalarToken,
         values: &mut [f32],
@@ -91,7 +91,6 @@ pub mod dispatcher {
     ) {
         __attune_scale_scalar(values, factor)
     }
-    #[allow(clippy::used_underscore_binding)]
     pub fn scale(values: &mut [f32], factor: f32) {
         '__attune_dispatch: {
             {
@@ -123,7 +122,7 @@ pub mod all_outputs {
         x + 1
     }
     #[inline(always)]
-    #[allow(clippy::inline_always, clippy::used_underscore_binding, dead_code)]
+    #[allow(clippy::inline_always, dead_code)]
     pub fn add_one_neon_t(__attune_token: ::archmage::NeonToken, x: u32) -> u32 {
         unsafe { add_one_neon(x) }
     }
@@ -132,11 +131,10 @@ pub mod all_outputs {
         x + 1
     }
     #[inline(always)]
-    #[allow(clippy::inline_always, clippy::used_underscore_binding, dead_code)]
+    #[allow(clippy::inline_always, dead_code)]
     pub fn add_one_scalar_t(__attune_token: ::archmage::ScalarToken, x: u32) -> u32 {
         add_one_scalar(x)
     }
-    #[allow(clippy::used_underscore_binding)]
     pub fn add_one(x: u32) -> u32 {
         '__attune_dispatch: {
             {
@@ -159,14 +157,13 @@ pub mod gates {
         x + 1
     }
     #[inline(always)]
-    #[allow(clippy::inline_always, clippy::used_underscore_binding)]
+    #[allow(clippy::inline_always)]
     fn __attune_add_one_scalar_t(
         __attune_token: ::archmage::ScalarToken,
         x: u32,
     ) -> u32 {
         add_one_scalar(x)
     }
-    #[allow(clippy::used_underscore_binding)]
     pub fn add_one(x: u32) -> u32 {
         '__attune_dispatch: {
             {
@@ -187,7 +184,7 @@ pub mod output_options {
         x + 1
     }
     #[inline(always)]
-    #[allow(clippy::inline_always, clippy::used_underscore_binding)]
+    #[allow(clippy::inline_always)]
     fn __attune_add_one_scalar_t(
         __attune_token: ::archmage::ScalarToken,
         x: u32,
@@ -195,7 +192,6 @@ pub mod output_options {
         add_one_scalar(x)
     }
     #[inline(always)]
-    #[allow(clippy::used_underscore_binding)]
     pub fn add_one(x: u32) -> u32 {
         '__attune_dispatch: {
             {
@@ -227,7 +223,7 @@ pub mod vectors {
         }
     }
     #[inline(always)]
-    #[allow(clippy::inline_always, clippy::used_underscore_binding)]
+    #[allow(clippy::inline_always)]
     fn __attune_scale_neon_t(
         __attune_token: ::archmage::NeonToken,
         values: &mut [f32],
@@ -250,7 +246,7 @@ pub mod vectors {
         }
     }
     #[inline(always)]
-    #[allow(clippy::inline_always, clippy::used_underscore_binding)]
+    #[allow(clippy::inline_always)]
     fn __attune_scale_scalar_t(
         __attune_token: ::archmage::ScalarToken,
         values: &mut [f32],
@@ -258,7 +254,6 @@ pub mod vectors {
     ) {
         __attune_scale_scalar(values, factor)
     }
-    #[allow(clippy::used_underscore_binding)]
     pub fn scale(values: &mut [f32], factor: f32) {
         '__attune_dispatch: {
             {
@@ -301,7 +296,7 @@ pub mod covered_calls {
         }
     }
     #[inline(always)]
-    #[allow(clippy::inline_always, clippy::used_underscore_binding)]
+    #[allow(clippy::inline_always)]
     fn __attune_scale_neon_t(
         __attune_token: ::archmage::NeonToken,
         values: &mut [f32],
@@ -316,7 +311,7 @@ pub mod covered_calls {
         }
     }
     #[inline(always)]
-    #[allow(clippy::inline_always, clippy::used_underscore_binding)]
+    #[allow(clippy::inline_always)]
     fn __attune_scale_scalar_t(
         __attune_token: ::archmage::ScalarToken,
         values: &mut [f32],
@@ -324,7 +319,6 @@ pub mod covered_calls {
     ) {
         __attune_scale_scalar(values, factor)
     }
-    #[allow(clippy::used_underscore_binding)]
     pub fn scale(values: &mut [f32], factor: f32) {
         '__attune_dispatch: {
             {
@@ -363,7 +357,7 @@ pub mod generic {
         }
     }
     #[inline(always)]
-    #[allow(clippy::inline_always, clippy::used_underscore_binding)]
+    #[allow(clippy::inline_always)]
     fn __attune_map_neon_t<F: Fn(f32) -> f32 + Copy>(
         __attune_token: ::archmage::NeonToken,
         values: &mut [f32],
@@ -378,7 +372,7 @@ pub mod generic {
         }
     }
     #[inline(always)]
-    #[allow(clippy::inline_always, clippy::used_underscore_binding)]
+    #[allow(clippy::inline_always)]
     fn __attune_map_scalar_t<F: Fn(f32) -> f32 + Copy>(
         __attune_token: ::archmage::ScalarToken,
         values: &mut [f32],
@@ -386,7 +380,6 @@ pub mod generic {
     ) {
         __attune_map_scalar::<F>(values, f)
     }
-    #[allow(clippy::used_underscore_binding)]
     pub fn map<F: Fn(f32) -> f32 + Copy>(values: &mut [f32], f: F) {
         '__attune_dispatch: {
             {
@@ -418,7 +411,7 @@ pub mod method {
             }
         }
         #[inline(always)]
-        #[allow(clippy::inline_always, clippy::used_underscore_binding)]
+        #[allow(clippy::inline_always)]
         fn __attune_scale_neon_t(
             &self,
             __attune_token: ::archmage::NeonToken,
@@ -433,7 +426,7 @@ pub mod method {
             }
         }
         #[inline(always)]
-        #[allow(clippy::inline_always, clippy::used_underscore_binding)]
+        #[allow(clippy::inline_always)]
         fn __attune_scale_scalar_t(
             &self,
             __attune_token: ::archmage::ScalarToken,
@@ -441,7 +434,6 @@ pub mod method {
         ) {
             self.scale_scalar(values)
         }
-        #[allow(clippy::used_underscore_binding)]
         pub fn scale(&self, values: &mut [f32]) {
             '__attune_dispatch: {
                 {

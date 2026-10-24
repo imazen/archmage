@@ -8,10 +8,9 @@ fn __arcane_v4_fast(_t: X64V4Token, x: f32) -> f32 {
     x * 4.0
 }
 #[inline(always)]
-#[allow(clippy::inline_always)]
-fn v4_fast(_t: X64V4Token, x: f32) -> f32 {
+fn v4_fast(__archmage_t: X64V4Token, x: f32) -> f32 {
     let _: () = <X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
-    #[allow(clippy::used_underscore_binding)] { unsafe { __arcane_v4_fast(_t, x) } }
+    unsafe { __arcane_v4_fast(__archmage_t, x) }
 }
 #[doc(hidden)]
 #[target_feature(
@@ -22,10 +21,8 @@ fn __arcane_v3_with_upgrade(_t: X64V3Token, x: f32) -> f32 {
     if let Some(v4) = X64V4Token::summon() { v4_fast(v4, x) } else { x * 2.0 }
 }
 #[inline(always)]
-#[allow(clippy::inline_always)]
-fn v3_with_upgrade(_t: X64V3Token, x: f32) -> f32 {
+fn v3_with_upgrade(__archmage_t: X64V3Token, x: f32) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __arcane_v3_with_upgrade(_t, x) } }
+    unsafe { __arcane_v3_with_upgrade(__archmage_t, x) }
 }
 fn main() {}

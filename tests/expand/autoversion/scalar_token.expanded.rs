@@ -22,11 +22,9 @@ fn __arcane_process_v4(token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
 }
 #[allow(dead_code)]
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn process_v4(token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
     let _: () = <archmage::X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __arcane_process_v4(token, data) } }
+    unsafe { __arcane_process_v4(token, data) }
 }
 #[doc(hidden)]
 #[target_feature(
@@ -38,11 +36,9 @@ fn __arcane_process_v3(token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
 }
 #[allow(dead_code)]
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn process_v3(token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
     let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __arcane_process_v3(token, data) } }
+    unsafe { __arcane_process_v3(token, data) }
 }
 #[allow(dead_code)]
 fn process_scalar(token: archmage::ScalarToken, data: &[f32; 4]) -> f32 {

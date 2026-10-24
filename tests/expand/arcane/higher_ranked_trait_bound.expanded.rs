@@ -12,13 +12,11 @@ where
     f(data)
 }
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn apply_ref<F>(token: X64V3Token, f: F, data: &[f32]) -> f32
 where
     F: for<'a> Fn(&'a [f32]) -> f32,
 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __arcane_apply_ref::<F>(token, f, data) } }
+    unsafe { __arcane_apply_ref::<F>(token, f, data) }
 }
 fn main() {}

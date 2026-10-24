@@ -26,9 +26,8 @@ fn __arcane_outer(token: X64V3Token, x: f32) -> f32 {
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn outer(token: X64V3Token, x: f32) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)] { unsafe { __arcane_outer(token, x) } }
+    unsafe { __arcane_outer(token, x) }
 }
 fn main() {}

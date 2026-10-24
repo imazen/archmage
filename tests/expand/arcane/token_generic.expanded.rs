@@ -6,7 +6,6 @@ fn __arcane_process<T: HasX64V2>(token: T, a: f32) -> f32 {
     a + 1.0
 }
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn process<T: HasX64V2>(token: T, a: f32) -> f32 {
     {
         #[inline(always)]
@@ -15,7 +14,6 @@ fn process<T: HasX64V2>(token: T, a: f32) -> f32 {
         ) {}
         __archmage_assert_tier_trait(&token);
     }
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __arcane_process::<T>(token, a) } }
+    unsafe { __arcane_process::<T>(token, a) }
 }
 fn main() {}

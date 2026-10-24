@@ -423,6 +423,7 @@ pub(crate) fn autoversion_impl(mut input_fn: LightFn, args: AutoversionArgs) -> 
     let mut dispatcher_sig = input_fn.sig.clone();
     dispatcher_sig.inputs = dispatcher_inputs.into_iter().collect();
     rename_non_ident_params(&mut dispatcher_sig);
+    crate::common::rename_underscore_params(&mut dispatcher_sig);
     let dispatcher_inputs: Vec<FnArg> = dispatcher_sig.inputs.into_iter().collect();
 
     // Collect argument idents for dispatch calls (exclude self receiver

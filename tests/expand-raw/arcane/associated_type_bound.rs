@@ -15,13 +15,11 @@ where
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn sum_iter<I>(token: X64V3Token, iter: I) -> f32
 where
     I: Iterator<Item = f32>,
 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __arcane_sum_iter::<I>(token, iter) } }
+    unsafe { __arcane_sum_iter::<I>(token, iter) }
 }
 fn main() {}

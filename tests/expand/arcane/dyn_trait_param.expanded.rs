@@ -9,10 +9,8 @@ fn __arcane_process(token: X64V3Token, callback: &dyn Fn(f32) -> f32, x: f32) ->
     callback(x)
 }
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn process(token: X64V3Token, callback: &dyn Fn(f32) -> f32, x: f32) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __arcane_process(token, callback, x) } }
+    unsafe { __arcane_process(token, callback, x) }
 }
 fn main() {}

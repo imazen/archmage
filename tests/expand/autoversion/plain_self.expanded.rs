@@ -26,11 +26,9 @@ impl P {
     }
     #[allow(dead_code)]
     #[inline(always)]
-    #[allow(clippy::inline_always)]
-    fn apply_v4(&self, _token: archmage::X64V4Token, x: f32) -> f32 {
+    fn apply_v4(&self, __archmage_token: archmage::X64V4Token, x: f32) -> f32 {
         let _: () = <archmage::X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
-        #[allow(clippy::used_underscore_binding)]
-        { unsafe { self.__arcane_apply_v4(_token, x) } }
+        unsafe { self.__arcane_apply_v4(__archmage_token, x) }
     }
     #[doc(hidden)]
     #[target_feature(
@@ -42,11 +40,9 @@ impl P {
     }
     #[allow(dead_code)]
     #[inline(always)]
-    #[allow(clippy::inline_always)]
-    fn apply_v3(&self, _token: archmage::X64V3Token, x: f32) -> f32 {
+    fn apply_v3(&self, __archmage_token: archmage::X64V3Token, x: f32) -> f32 {
         let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-        #[allow(clippy::used_underscore_binding)]
-        { unsafe { self.__arcane_apply_v3(_token, x) } }
+        unsafe { self.__arcane_apply_v3(__archmage_token, x) }
     }
     #[allow(dead_code)]
     fn apply_scalar(&self, _token: archmage::ScalarToken, x: f32) -> f32 {

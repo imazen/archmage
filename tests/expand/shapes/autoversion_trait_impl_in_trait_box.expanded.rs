@@ -17,11 +17,12 @@ impl Work for S {
         }
         #[allow(dead_code)]
         #[inline(always)]
-        #[allow(clippy::inline_always)]
-        fn consume_v3(_self: Box<S>, _token: archmage::X64V3Token) -> f32 {
+        fn consume_v3(
+            __archmage_self: Box<S>,
+            __archmage_token: archmage::X64V3Token,
+        ) -> f32 {
             let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-            #[allow(clippy::used_underscore_binding)]
-            { unsafe { __arcane_consume_v3(_self, _token) } }
+            unsafe { __arcane_consume_v3(__archmage_self, __archmage_token) }
         }
         #[allow(dead_code)]
         fn consume_scalar(_self: Box<S>, _token: archmage::ScalarToken) -> f32 {

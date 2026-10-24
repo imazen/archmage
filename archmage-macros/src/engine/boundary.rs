@@ -164,6 +164,7 @@ pub(crate) fn expand(
     let wrapper_sig = {
         let mut sig = input_fn.sig.clone();
         rename_non_ident_params(&mut sig);
+        crate::common::rename_underscore_params(&mut sig);
         sig
     };
     let wrapper_token_ident = find_token_param(&wrapper_sig)
@@ -469,19 +470,17 @@ fn emit_boundary(input: LightFn, options: &BoundaryOptions, parts: BoundaryParts
     let sibling = (!options.nested).then_some(&inner);
     let sibling_cfg = (!options.nested).then_some(&cfg_guard);
     let nested = options.nested.then_some(&inner);
-    // The wrapper must always inline, which is not the author's choice. Its
-    // forwarding call passes the caller's parameters (`_token` included); that
-    // allow sits on the call statement alone, so in nested mode the author's
-    // body (the inner fn) keeps every lint level the author set.
+    // The wrapper's parameters carry reserved names for any `_name` the author
+    // wrote (`rename_underscore_params`), so forwarding them trips no lint; in
+    // nested mode the author's body (the inner fn) keeps its own names. Clippy
+    // does not report `inline_always` on this macro-spanned wrapper, so it
+    // carries no lint levels of its own (measured 2026-10-24).
     let wrapper_attrs = &options.wrapper_attrs;
     quote! {
         #sibling_cfg #sibling
         #cfg_guard #(#attrs)* #(#wrapper_attrs)* #[inline(always)]
-        #[allow(clippy::inline_always)]
         #vis #wrapper_sig {
-            #nested #token_assertion #tier_trait_assertion
-            #[allow(clippy::used_underscore_binding)]
-            { #proof_call }
+            #nested #token_assertion #tier_trait_assertion #proof_call
         }
     }
 }

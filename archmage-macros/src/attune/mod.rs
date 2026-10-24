@@ -258,6 +258,9 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
     }
     let rebinds = rename_non_ident_params(&mut input.sig);
     prepend_to_body(&mut input.body, quote!(#(#rebinds)*));
+    // The dispatcher forwards; it takes reserved names for `_name` params.
+    let mut forward_sig = input.sig.clone();
+    crate::common::rename_underscore_params(&mut forward_sig);
     let base = input.sig.ident.clone();
     let mut tiers: Vec<_> = args.selections.iter().map(|s| s.tier).collect();
     if args.dispatcher.is_some() && !tiers.iter().any(|t| t.name == "scalar") {
@@ -326,20 +329,21 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
             )?);
             let token: syn::Path = syn::parse_str(&format!("::{}", tier.token_path))?;
             let invocation = forward(
-                &input.sig,
+                &forward_sig,
                 &proof_name,
                 args.options.in_impl,
                 Some(quote!(__attune_proof)),
             );
             let guard = gen_cfg_guard(tier.target_arch, gate);
             dispatch_arms.push(if tier.name == "scalar" {
-                let invocation = forward(&input.sig, &proof_name, args.options.in_impl, Some(quote!(::archmage::ScalarToken)));
+                let invocation = forward(&forward_sig, &proof_name, args.options.in_impl, Some(quote!(::archmage::ScalarToken)));
                 quote!(#guard { break '__attune_dispatch #invocation; })
             } else { quote!(#guard { if let Some(__attune_proof) = <#token as ::archmage::SimdToken>::summon() { break '__attune_dispatch #invocation; } }) });
         }
     }
     if let Some((visibility, inline)) = &args.dispatcher {
         let mut dispatcher = input;
+        dispatcher.sig.inputs = forward_sig.inputs.clone();
         // Expectations belong to the user-written operation. Forwarding layers
         // do not repeat that operation and cannot fulfill its expectations.
         dispatcher
@@ -367,10 +371,6 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
                 }
             })
             .collect();
-        // The dispatcher only forwards the caller's parameters.
-        dispatcher
-            .attrs
-            .push(syn::parse_quote!(#[allow(clippy::used_underscore_binding)]));
         dispatcher.body =
             quote! { #(let _ = #proofs;)* '__attune_dispatch: { #(#dispatch_arms)* } };
         specialize_syntax(&mut dispatcher.sig, &quote!(::archmage::ScalarToken))?;
@@ -389,6 +389,7 @@ fn proof_entry(
     args: &Args,
 ) -> syn::Result<TokenStream> {
     let mut wrapper = input.clone();
+    crate::common::rename_underscore_params(&mut wrapper.sig);
     if let Some(error) = crate::engine::boundary::reserved_param_error(
         &wrapper.sig,
         &direct_name.to_string(),
@@ -425,14 +426,16 @@ fn proof_entry(
     // The wrapper only forwards parameters; its default `inline(always)` is
     // ours, not the author's, so only an explicit policy keeps that lint. An
     // unused wildcard output is not dead code the author wrote.
-    let mut allowed: Vec<syn::Path> = vec![parse_quote!(clippy::used_underscore_binding)];
+    let mut allowed: Vec<syn::Path> = Vec::new();
     if explicit_inline.is_none() {
-        allowed.insert(0, parse_quote!(clippy::inline_always));
+        allowed.push(parse_quote!(clippy::inline_always));
     }
     if selection.is_some_and(|s| s.wildcard) {
         allowed.push(parse_quote!(dead_code));
     }
-    wrapper.attrs.push(parse_quote!(#[allow(#(#allowed),*)]));
+    if !allowed.is_empty() {
+        wrapper.attrs.push(parse_quote!(#[allow(#(#allowed),*)]));
+    }
     wrapper.body = if tier.name == "scalar" || tier.target_arch == Some("wasm32") {
         invocation
     } else {

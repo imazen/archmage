@@ -15,10 +15,8 @@ fn __arcane_first_n<'a, T: Copy, const N: usize>(
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn first_n<'a, T: Copy, const N: usize>(token: X64V3Token, data: &'a [T; N]) -> &'a T {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __arcane_first_n::<T, N>(token, data) } }
+    unsafe { __arcane_first_n::<T, N>(token, data) }
 }
 fn main() {}

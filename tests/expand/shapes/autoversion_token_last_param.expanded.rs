@@ -19,11 +19,9 @@ fn __arcane_sum_v3(x: u32, __archmage_token: archmage::X64V3Token) -> u32 {
 }
 #[allow(dead_code)]
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn sum_v3(x: u32, __archmage_arg_0: archmage::X64V3Token) -> u32 {
     let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __arcane_sum_v3(x, __archmage_arg_0) } }
+    unsafe { __arcane_sum_v3(x, __archmage_arg_0) }
 }
 #[allow(dead_code)]
 fn sum_scalar(x: u32, _: archmage::ScalarToken) -> u32 {

@@ -8,10 +8,8 @@ fn __arcane_process(__archmage_token: X64V3Token, a: f32) -> f32 {
     a * 2.0
 }
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn process(__archmage_arg_0: X64V3Token, a: f32) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __arcane_process(__archmage_arg_0, a) } }
+    unsafe { __arcane_process(__archmage_arg_0, a) }
 }
 fn main() {}

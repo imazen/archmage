@@ -16,11 +16,9 @@ impl S {
     }
     #[cfg(target_arch = "x86_64")]
     #[inline(always)]
-    #[allow(clippy::inline_always)]
     fn probe(&self, token: X64V3Token, x: f32) -> f32 {
         let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-        #[allow(clippy::used_underscore_binding)]
-        { unsafe { self.__arcane_probe(token, x) } }
+        unsafe { self.__arcane_probe(token, x) }
     }
 }
 fn main() {}

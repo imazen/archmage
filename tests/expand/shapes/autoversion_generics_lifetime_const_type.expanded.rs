@@ -22,14 +22,12 @@ fn __arcane_probe_v3<'a, U: Copy, const N: usize>(
 }
 #[allow(dead_code)]
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn probe_v3<'a, U: Copy, const N: usize>(
-    _token: archmage::X64V3Token,
+    __archmage_token: archmage::X64V3Token,
     xs: &'a [U; N],
 ) -> &'a [U; N] {
     let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __arcane_probe_v3::<U, N>(_token, xs) } }
+    unsafe { __arcane_probe_v3::<U, N>(__archmage_token, xs) }
 }
 #[allow(dead_code)]
 fn probe_scalar<'a, U: Copy, const N: usize>(

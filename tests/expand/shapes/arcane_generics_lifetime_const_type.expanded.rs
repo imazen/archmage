@@ -12,10 +12,8 @@ fn __arcane_probe<'a, U: Copy, const N: usize>(
     xs
 }
 #[inline(always)]
-#[allow(clippy::inline_always)]
 fn probe<'a, U: Copy, const N: usize>(token: X64V3Token, xs: &'a [U; N]) -> &'a [U; N] {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-    #[allow(clippy::used_underscore_binding)]
-    { unsafe { __arcane_probe::<U, N>(token, xs) } }
+    unsafe { __arcane_probe::<U, N>(token, xs) }
 }
 fn main() {}

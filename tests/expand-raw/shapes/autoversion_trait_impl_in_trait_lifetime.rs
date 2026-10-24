@@ -24,15 +24,13 @@ impl Work for S {
         #[cfg(target_arch = "x86_64")]
         #[allow(dead_code)]
         #[inline(always)]
-        #[allow(clippy::inline_always)]
         fn pick_v3<'a>(
-            _self: &'a S,
-            _token: archmage::X64V3Token,
+            __archmage_self: &'a S,
+            __archmage_token: archmage::X64V3Token,
             other: &'a f32,
         ) -> &'a f32 {
             let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
-            #[allow(clippy::used_underscore_binding)]
-            { unsafe { __arcane_pick_v3(_self, _token, other) } }
+            unsafe { __arcane_pick_v3(__archmage_self, __archmage_token, other) }
         }
         #[allow(dead_code)]
         fn pick_scalar<'a>(
