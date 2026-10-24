@@ -608,7 +608,7 @@ just miri                     # Run magetypes under Miri (detects UB)
 just audit                    # Scan for safety-critical code
 just intrinsics-refresh       # Re-extract intrinsics from current Rust
 just ci                       # Run ALL checks (must pass before push/publish)
-just warnings                 # clippy over 18 target/feature/CPU configs (CI: warning-sweep)
+just warnings                 # clippy over 19 target/feature/CPU configs (CI: warning-sweep)
 ```
 
 ## CI and Publishing Rules
