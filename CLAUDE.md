@@ -608,6 +608,7 @@ just miri                     # Run magetypes under Miri (detects UB)
 just audit                    # Scan for safety-critical code
 just intrinsics-refresh       # Re-extract intrinsics from current Rust
 just ci                       # Run ALL checks (must pass before push/publish)
+just warnings                 # clippy over 18 target/feature/CPU configs (CI: warning-sweep)
 ```
 
 ## CI and Publishing Rules
@@ -652,7 +653,10 @@ CI checks (all must pass):
 4. `cargo xtask parity` — parity check (0 issues remaining)
 5. Intrinsic soundness verification
 6. `cargo clippy --features "std avx512"` — zero warnings
-7. `cargo clippy -p magetypes` (default features) — zero warnings
+7. `cargo clippy -p magetypes` (default features) — zero warnings; also the
+   macro consumer crates `tests/no-features-crate` and `tests/clippy-consumer`
+   (`--all-targets`). The `warning-sweep` CI job (`just warnings`) additionally
+   lints every target/feature/CPU configuration in `xtask/warning_sweep.py`.
 8. `cargo test --features "std avx512"` — all tests pass
 9. **no_std compilation + tests** — archmage and magetypes build and test without `std`
 10. **No-features integration test** — `archmage-no-features-test` crate (zero features, `deny(warnings)`)
@@ -1219,8 +1223,11 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
   bodies need the macro in scope). Forwarding wrappers allow pedantic
   `used_underscore_binding`/`inline_always`; attune wildcard outputs allow
   `dead_code`. Library warnings on wasm32/32-bit/target-cpu builds fixed in
-  the generators. Coverage: `tests/clippy-consumer` (strict lints, linted
-  with -D warnings) and `xtask/warning_sweep.py` (18 configurations).
+  the generators. A nested default-tier `incant!` in a v4 body left its
+  fallback unreachable when the caller's `avx512` feature was on; gated arms
+  and the fallback are now mutually exclusive cfg blocks. Coverage:
+  `tests/clippy-consumer` (strict lints, linted with -D warnings) and
+  `xtask/warning_sweep.py` (18 configurations, CI `warning-sweep`).
 
 - **`attuned!` single-arm `diverging_sub_expression` (2026-10-23):** a call
   resolving to one guaranteed arm expanded to `{ 'l: { { break 'l f(x); } } }`;

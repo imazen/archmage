@@ -51,6 +51,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 - A qualified `archmage::incant!(f(x) without token)` inside a `#[rite]` body expanded to `archmage::f_v3(x)` (E0425); it now calls the caller's variant (739e5150).
 - Macro output no longer trips `clippy::pedantic` in the invoking crate: forwarding wrappers allow `used_underscore_binding` (they forward `_token`; also covers the documented `_self` body) and, where the `inline(always)` is the macro's rather than an explicit policy, `inline_always` (739e5150).
 - `#[attune]` outputs expanded from `_*`, `_*_t`, `all` or `+tier` allow `dead_code`, like `#[magetypes]`/`#[autoversion]` variants; explicit selectors keep the lint (739e5150).
+- A default-tier `incant!` nested in a v4 body no longer reports `unreachable_code` in the caller's crate when its `avx512` feature is on: gated guaranteed arms and the fallback are now mutually exclusive cfg blocks (44cb1e34).
 - Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with deprecation warning)
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 
@@ -177,6 +178,8 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 #### Added
 
 - Preserve the self-contained, free-function-only [artisanal dispatch prototype](experiments/artisanal-dispatch/README.md) on main, with its proof/tier layer, audit, expansion and assembly evidence, and native CI checks. Its independent unpublished workspace adds no dependencies or exports to release crates (8416f708).
+- `xtask/warning_sweep.py` (`just warnings`) runs clippy over 18 target/feature/CPU configurations; the `warning-sweep` CI job requires it to report nothing. `tests/clippy-consumer` invokes every macro shape under the lints downstream crates commonly enable (pedantic, `missing_docs`, `unreachable_pub`, `rust_2018_idioms`, …) (56e12020, e0f6a7be, 7964e1cd).
+- Tests, benches, examples and xtask are warning-free on every swept configuration (1e47a3f7).
 
 ### [0.9.31-beta.1] - 2026-10-13
 
