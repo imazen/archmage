@@ -1227,7 +1227,7 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
   fallback unreachable when the caller's `avx512` feature was on; gated arms
   and the fallback are now mutually exclusive cfg blocks. Coverage:
   `tests/clippy-consumer` (strict lints, linted with -D warnings) and
-  `xtask/warning_sweep.py` (18 configurations, CI `warning-sweep`).
+  `xtask/warning_sweep.py` (19 configurations, CI `warning-sweep`).
 
 - **`attuned!` single-arm `diverging_sub_expression` (2026-10-23):** a call
   resolving to one guaranteed arm expanded to `{ 'l: { { break 'l f(x); } } }`;
