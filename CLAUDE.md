@@ -1210,7 +1210,26 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
   below. Exhaustive precision probes:
   `benchmarks/transcendental_precision_2026-10-05.md`.
 
+- **`attuned!`/`reattune!` imports reported unused (2026-10-23, open):** when
+  the macros appear only inside `#[attune]` bodies, the attribute rewrites the
+  invocations before name resolution, so `use archmage::{attuned, reattune}`
+  warns `unused_imports` (an error under `deny(warnings)`). Glob/prelude
+  imports and calls outside attune bodies are unaffected. Candidate fix: emit
+  the rewritten expansion through a hidden passthrough arm of the user's own
+  macro path, which also removes the statement-start parentheses; it adds
+  macro input syntax, so it needs an API decision.
+
 ### Resolved (each with its regression coverage)
+
+- **`attuned!` single-arm `diverging_sub_expression` (2026-10-23):** a call
+  resolving to one guaranteed arm expanded to `{ 'l: { { break 'l f(x); } } }`;
+  clippy 1.99 descends single-statement blocks in `let`/argument/`return`/
+  assignment position and flagged the `break` (including the site's
+  `*value = attuned!(..)` example). Guaranteed arms are now the block tail
+  (62dd14e3). The same commit parenthesizes body-rewritten expansions so
+  `attuned!(f(x)) + 1` parses at statement start. Regression:
+  `tests/no-features-crate` value-position cases, linted by the new
+  consumer-crate clippy step in CI, `just lint` and `xtask ci`.
 
 - **WASM scalar f32 subnormal rounding (2026-10-12):** scalar portable FMA now
   uses `fmaf_soft` in std and no_std builds. `software_subnormal_rounding` pins
