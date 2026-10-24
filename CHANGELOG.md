@@ -12,6 +12,10 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 - Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)
 - Remove width traits `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` — use concrete tokens or tier traits (`HasX64V2`, `HasX64V4`) instead (deprecated since 0.9.9; `Has256BitSimd` only enables AVX, not AVX2/FMA)
 
+#### Fixed
+
+- No warnings on wasm32 from generated tokens (unused `unsafe` around safe target-feature calls) or in tests under `-Ctarget-cpu`; library warnings reach crates that depend on archmage by path and deny warnings (5f547440).
+
 ### [0.9.31-beta.1] - 2026-10-13
 
 #### Added
@@ -42,7 +46,11 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 #### Fixed
 
 - `attuned!`/`reattune!` calls that resolve to a single guaranteed arm (covered calls inside `#[attune]` bodies, scalar-only lists) no longer trigger `clippy::diverging_sub_expression` in `let`, argument, `return` or assignment position; the guaranteed arm is now the block's value instead of a `break` (62dd14e3).
-- Inside `#[attune]` bodies, `attuned!(f(x)) + 1` and `attuned!(f(x)).method()` at statement start now parse; the rewritten expansion is parenthesized (62dd14e3).
+- Inside `#[attune]` bodies, `attuned!(f(x)) + 1` and `attuned!(f(x)).method()` at statement start now parse (62dd14e3; now through the caller's macro path, 739e5150).
+- A named import of `incant!`/`dispatch_variant!`/`attuned!`/`reattune!` is no longer reported unused when every call sits inside a feature body that rewrites it: rewritten calls are re-emitted through the caller's own macro path. Such calls now need the macro in scope, like any macro call; code that relied on the rewrite to omit the import must add it (739e5150).
+- A qualified `archmage::incant!(f(x) without token)` inside a `#[rite]` body expanded to `archmage::f_v3(x)` (E0425); it now calls the caller's variant (739e5150).
+- Macro output no longer trips `clippy::pedantic` in the invoking crate: forwarding wrappers allow `used_underscore_binding` (they forward `_token`; also covers the documented `_self` body) and, where the `inline(always)` is the macro's rather than an explicit policy, `inline_always` (739e5150).
+- `#[attune]` outputs expanded from `_*`, `_*_t`, `all` or `+tier` allow `dead_code`, like `#[magetypes]`/`#[autoversion]` variants; explicit selectors keep the lint (739e5150).
 - Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with deprecation warning)
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 
@@ -103,6 +111,10 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 - Remove the six no-op `*_midp_precise` aliases (`exp2`/`exp`/`ln`/`log2`/`log10`/`pow` — each is literally `self.*_midp()`); `cbrt_midp_precise` stays, it does real denormal/zero handling. With the reciprocal tiers settling on `_portable` as the precise tier, a `_precise` suffix that does nothing is a naming lie.
 - Planned: make `w512` non-default in magetypes; users who need 512-bit types would add `features = ["w512"]`. This patch keeps the existing default features.
 - Remove `cast::Upcast` and `cast::Downcast`, and with them the `cast` module, which holds nothing else. Both are deprecated in 0.9.30 and were never implemented (b1b2ff67).
+
+#### Fixed
+
+- No warnings on wasm32 from the generated WASM backend (`<< 0` in bitmasks, parenthesized innermost `wrapping_add` arguments) or on i686/armv7/thumbv7em (storage helper only the native backends call) (5f547440).
 
 ### [0.9.31-beta.1] - 2026-10-13
 

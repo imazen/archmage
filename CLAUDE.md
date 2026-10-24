@@ -1210,16 +1210,17 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
   below. Exhaustive precision probes:
   `benchmarks/transcendental_precision_2026-10-05.md`.
 
-- **`attuned!`/`reattune!` imports reported unused (2026-10-23, open):** when
-  the macros appear only inside `#[attune]` bodies, the attribute rewrites the
-  invocations before name resolution, so `use archmage::{attuned, reattune}`
-  warns `unused_imports` (an error under `deny(warnings)`). Glob/prelude
-  imports and calls outside attune bodies are unaffected. Candidate fix: emit
-  the rewritten expansion through a hidden passthrough arm of the user's own
-  macro path, which also removes the statement-start parentheses; it adds
-  macro input syntax, so it needs an API decision.
-
 ### Resolved (each with its regression coverage)
+
+- **Warnings in macro output and on untested targets (2026-10-23):** body
+  rewrites spliced dispatch calls, so named `incant`/`attuned`/`reattune`
+  imports went unused; rewritten calls now go through the caller's path as
+  `path!(@__archmage_expanded ...)` (`common::wrap_expanded`; calls inside
+  bodies need the macro in scope). Forwarding wrappers allow pedantic
+  `used_underscore_binding`/`inline_always`; attune wildcard outputs allow
+  `dead_code`. Library warnings on wasm32/32-bit/target-cpu builds fixed in
+  the generators. Coverage: `tests/clippy-consumer` (strict lints, linted
+  with -D warnings) and `xtask/warning_sweep.py` (18 configurations).
 
 - **`attuned!` single-arm `diverging_sub_expression` (2026-10-23):** a call
   resolving to one guaranteed arm expanded to `{ 'l: { { break 'l f(x); } } }`;
