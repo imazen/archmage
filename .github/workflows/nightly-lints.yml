@@ -13,7 +13,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 concurrency:
   group: nightly-lints
@@ -46,6 +45,9 @@ jobs:
     needs: sweep
     if: ${{ always() }}
     runs-on: ubuntu-latest
+    # Only this job, which runs no repository code, may write issues.
+    permissions:
+      issues: write
     steps:
       - uses: actions/github-script@v9
         env:
