@@ -38,6 +38,11 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 - Remove `SimdToken` parameter support from `#[autoversion]` — use tokenless (recommended) or `ScalarToken` for `incant!` nesting (deprecated since 0.9.11)
 - Remove `_self = Type` without `in_trait` from `#[autoversion]` — plain `self` works in sibling mode; with `in_trait` it names the receiver type and stays
 - Deprecate `incant!` passthrough mode (`with token`) — zero downstream uses; `#[rite]` multi-tier or direct `IntoConcreteToken` dispatch are better alternatives
+
+#### Fixed
+
+- `attuned!`/`reattune!` calls that resolve to a single guaranteed arm (covered calls inside `#[attune]` bodies, scalar-only lists) no longer trigger `clippy::diverging_sub_expression` in `let`, argument, `return` or assignment position; the guaranteed arm is now the block's value instead of a `break` (62dd14e3).
+- Inside `#[attune]` bodies, `attuned!(f(x)) + 1` and `attuned!(f(x)).method()` at statement start now parse; the rewritten expansion is parenthesized (62dd14e3).
 - Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with deprecation warning)
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 
