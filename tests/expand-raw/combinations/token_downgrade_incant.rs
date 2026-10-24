@@ -26,9 +26,7 @@ fn helper_scalar(_t: ScalarToken, x: f32) -> f32 {
 )]
 #[inline]
 fn __arcane_v4_caller(token: X64V4Token, x: f32) -> f32 {
-    (::core::compile_error! {
-        "expected identifier"
-    }) + 1.0
+    helper_v3(token.v3(), x) + 1.0
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]

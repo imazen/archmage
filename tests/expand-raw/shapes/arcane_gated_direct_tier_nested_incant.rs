@@ -28,8 +28,10 @@ fn inner_scalar(_: ScalarToken, x: u32) -> u32 {
 )]
 #[inline]
 fn __arcane_outer(t: X64V3Token, x: u32) -> u32 {
-    ::core::compile_error! {
-        "expected identifier"
+    '__incant_rewrite: {
+        use archmage::SimdToken;
+        #[cfg(all(feature = "gated", not(any())))] { inner_v3(t, x) }
+        #[cfg(not(any(feature = "gated")))] { inner_scalar(archmage::ScalarToken, x) }
     }
 }
 #[cfg(target_arch = "x86_64")]

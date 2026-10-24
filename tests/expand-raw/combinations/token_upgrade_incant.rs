@@ -42,8 +42,12 @@ fn fast_scalar(_t: ScalarToken, x: f32) -> f32 {
 )]
 #[inline]
 fn __arcane_v3_with_upgrade(t: X64V3Token, x: f32) -> f32 {
-    ::core::compile_error! {
-        "expected identifier"
+    '__incant_rewrite: {
+        use archmage::SimdToken;
+        if let Some(__t) = archmage::X64V4Token::summon() {
+            break '__incant_rewrite fast_v4(__t, x);
+        }
+        fast_v3(t, x)
     }
 }
 #[cfg(target_arch = "x86_64")]

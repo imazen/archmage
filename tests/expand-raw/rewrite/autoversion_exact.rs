@@ -53,9 +53,7 @@ fn outer(x: f32) -> f32 {
 )]
 #[inline]
 fn __arcane_outer_v3(_token: archmage::X64V3Token, x: f32) -> f32 {
-    ::core::compile_error! {
-        "expected identifier"
-    }
+    inner_v3(_token, x)
 }
 #[cfg(target_arch = "x86_64")]
 #[allow(dead_code)]

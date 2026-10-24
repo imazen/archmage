@@ -51,9 +51,7 @@ fn inner_scalar(token: archmage::ScalarToken, x: f32) -> f32 {
 )]
 #[inline]
 fn __arcane_outer_v3(token: archmage::X64V3Token, x: f32) -> f32 {
-    ::core::compile_error! {
-        "expected identifier"
-    }
+    inner_v3(token, x)
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
@@ -67,9 +65,7 @@ fn outer_v3(token: archmage::X64V3Token, x: f32) -> f32 {
 #[target_feature(enable = "neon")]
 #[inline]
 fn __arcane_outer_neon(token: archmage::NeonToken, x: f32) -> f32 {
-    ::core::compile_error! {
-        "expected identifier"
-    }
+    inner_neon(token, x)
 }
 #[cfg(target_arch = "aarch64")]
 #[inline(always)]
@@ -83,9 +79,7 @@ fn outer_neon(token: archmage::NeonToken, x: f32) -> f32 {
 #[target_feature(enable = "simd128")]
 #[inline]
 fn outer_wasm128(token: archmage::Wasm128Token, x: f32) -> f32 {
-    ::core::compile_error! {
-        "expected identifier"
-    }
+    inner_wasm128(token, x)
 }
 fn outer_scalar(token: archmage::ScalarToken, x: f32) -> f32 {
     '__incant: {

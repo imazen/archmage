@@ -43,16 +43,12 @@ fn inner_scalar(token: archmage::ScalarToken, x: f32) -> f32 {
 )]
 #[inline]
 fn outer_v3(x: f32) -> f32 {
-    ::core::compile_error! {
-        "expected identifier"
-    }
+    inner_v3(archmage::X64V3Token::from_context(), x)
 }
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 #[inline]
 fn outer_neon(x: f32) -> f32 {
-    ::core::compile_error! {
-        "expected identifier"
-    }
+    inner_neon(archmage::NeonToken::from_context(), x)
 }
 fn main() {}

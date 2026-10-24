@@ -20,16 +20,12 @@ fn helper_neon(x: f32) -> f32 {
 )]
 #[inline]
 fn outer_v3(x: f32) -> f32 {
-    (::core::compile_error! {
-        "expected identifier"
-    }) + 1.0
+    helper_v3(x) + 1.0
 }
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 #[inline]
 fn outer_neon(x: f32) -> f32 {
-    (::core::compile_error! {
-        "expected identifier"
-    }) + 1.0
+    helper_neon(x) + 1.0
 }
 fn main() {}

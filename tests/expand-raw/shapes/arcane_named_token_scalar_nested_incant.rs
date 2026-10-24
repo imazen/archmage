@@ -10,9 +10,7 @@ fn inner_scalar(_: ScalarToken, x: u32) -> u32 {
 )]
 #[inline]
 fn __arcane_outer(t: X64V3Token, x: u32) -> u32 {
-    ::core::compile_error! {
-        "expected identifier"
-    }
+    inner_scalar(archmage::ScalarToken, x)
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]

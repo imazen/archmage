@@ -53,8 +53,15 @@ fn outer(x: f32) -> f32 {
 )]
 #[inline]
 fn __arcane_outer_v3(_token: archmage::X64V3Token, x: f32) -> f32 {
-    ::core::compile_error! {
-        "expected identifier"
+    '__incant_rewrite: {
+        use archmage::SimdToken;
+        #[allow(unexpected_cfgs)] #[cfg(feature = "avx512")]
+        {
+            if let Some(__t) = archmage::X64V4Token::summon() {
+                break '__incant_rewrite inner_v4(__t, x);
+            }
+        }
+        inner_v3(_token, x)
     }
 }
 #[cfg(target_arch = "x86_64")]

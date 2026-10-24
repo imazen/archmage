@@ -22,9 +22,7 @@ fn helper_neon(x: f32) -> f32 {
 #[inline]
 fn __arcane_outer(token: X64V3Token, x: f32) -> f32 {
     let _ = token;
-    (::core::compile_error! {
-        "expected identifier"
-    }) + 1.0
+    helper_v3(x) + 1.0
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]

@@ -25,8 +25,6 @@ fn inner_scalar(_t: ScalarToken, x: f32) -> f32 {
 )]
 #[inline]
 fn outer(x: f32) -> f32 {
-    ::core::compile_error! {
-        "expected identifier"
-    }
+    inner_v3(archmage::X64V3Token::from_context(), x)
 }
 fn main() {}

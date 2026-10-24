@@ -129,7 +129,24 @@ fn function_macro_name(mac: &syn::Macro) -> Option<String> {
     FUNCTION_MACROS.contains(&last.as_str()).then_some(last)
 }
 
+/// Body rewriters re-emit a call they already expanded as
+/// `path!(@__archmage_expanded tokens)` through any of these macros; like the
+/// real entry points, the harness takes the tokens verbatim.
+const PASSTHROUGH_MACROS: &[&str] = &[
+    "incant",
+    "dispatch_variant",
+    "simd_route",
+    "attuned",
+    "reattune",
+];
+
 fn expand_function_macro(mac: &syn::Macro) -> Option<TokenStream> {
+    let last = mac.path.segments.last()?.ident.to_string();
+    if PASSTHROUGH_MACROS.contains(&last.as_str())
+        && let Some(expanded) = crate::common::expanded_passthrough(&mac.tokens)
+    {
+        return Some(expanded);
+    }
     function_macro_name(mac)?;
     let input: super::IncantInput = match syn::parse2(mac.tokens.clone()) {
         Ok(input) => input,
@@ -161,6 +178,8 @@ impl VisitMut for Expander {
             && let Some(tokens) = expand_function_macro(&m.mac)
         {
             *expr = syn::parse2(tokens).expect("incant! output parses as an expression");
+            // A passthrough's tokens may hold further marked calls.
+            self.visit_expr_mut(expr);
             return;
         }
         syn::visit_mut::visit_expr_mut(self, expr);
@@ -170,8 +189,9 @@ impl VisitMut for Expander {
         if let syn::Stmt::Macro(m) = stmt
             && let Some(tokens) = expand_function_macro(&m.mac)
         {
-            let expr: syn::Expr =
+            let mut expr: syn::Expr =
                 syn::parse2(tokens).expect("incant! output parses as an expression");
+            self.visit_expr_mut(&mut expr);
             *stmt = syn::Stmt::Expr(expr, m.semi_token);
             return;
         }
@@ -224,6 +244,15 @@ fn raw_snapshots_match() {
             .replace("\r\n", "\n");
         let expanded = raw_expand(&source);
         count += 1;
+        // Inputs outside should-fail/ compile; a diagnostic in their raw
+        // expansion means the harness (or a macro) broke, not a new snapshot.
+        if !rel.starts_with("should-fail") {
+            assert!(
+                !expanded.contains("compile_error"),
+                "{} expands to a compile_error!:\n{expanded}",
+                rel.display()
+            );
+        }
         let current = std::fs::read_to_string(&output)
             .ok()
             .map(|c| c.replace("\r\n", "\n"));

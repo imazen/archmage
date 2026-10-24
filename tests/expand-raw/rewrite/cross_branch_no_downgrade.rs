@@ -27,8 +27,12 @@ fn inner_scalar(_t: ScalarToken, x: f32) -> f32 {
 )]
 #[inline]
 fn __arcane_outer(token: X64V4Token, x: f32) -> f32 {
-    ::core::compile_error! {
-        "expected identifier"
+    '__incant_rewrite: {
+        use archmage::SimdToken;
+        if let Some(__t) = archmage::X64V3CryptoToken::summon() {
+            break '__incant_rewrite inner_v3_crypto(__t, x);
+        }
+        inner_scalar(archmage::ScalarToken, x)
     }
 }
 #[cfg(target_arch = "x86_64")]
