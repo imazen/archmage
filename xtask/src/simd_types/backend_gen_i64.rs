@@ -1678,7 +1678,10 @@ fn generate_wasm_polyfill_i64_impl(ty: &I64VecType) -> String {
         },
         bitmask = {
             let items: Vec<String> = (0..sub_count)
-                .map(|i| format!("((i64x2_bitmask(a[{i}]) as u32) << {})", i * 2))
+                .map(|i| match i {
+                    0 => "(i64x2_bitmask(a[0]) as u32)".to_string(),
+                    _ => format!("((i64x2_bitmask(a[{i}]) as u32) << {})", i * 2),
+                })
                 .collect();
             items.join(" | ")
         },

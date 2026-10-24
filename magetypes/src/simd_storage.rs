@@ -312,6 +312,16 @@ pub(crate) fn cast<Src: Pod, Dst: Pod>(src: Src) -> Dst {
 }
 
 /// Write exactly one destination, even if it is less aligned than Src.
+/// Only the native SIMD backends store through it; the unit test below
+/// still exercises it on every architecture.
+#[cfg_attr(
+    not(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    )),
+    allow(dead_code)
+)]
 #[inline(always)]
 pub(crate) fn store<Src: Pod, Dst: Pod>(src: Src, dest: &mut Dst) {
     const { assert!(size_of::<Src>() == size_of::<Dst>()) };

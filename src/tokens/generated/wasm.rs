@@ -36,10 +36,11 @@ impl SimdToken for Wasm128Token {
     fn summon() -> Option<Self> {
         #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
         {
-            // SAFETY: the required wasm features are compile-time
-            // enabled; a runtime that validated this module supports
-            // them (wasm has no runtime feature detection).
-            Some(unsafe { Self::from_context() })
+            // The required wasm features are compile-time enabled; a
+            // runtime that validated this module supports them (wasm has
+            // no runtime feature detection). wasm32 `#[target_feature]`
+            // functions are safe to call, so no `unsafe` is needed.
+            Some(Self::from_context())
         }
         #[cfg(not(all(target_arch = "wasm32", target_feature = "simd128")))]
         {
@@ -153,10 +154,11 @@ impl SimdToken for Wasm128RelaxedToken {
             target_feature = "relaxed-simd"
         ))]
         {
-            // SAFETY: the required wasm features are compile-time
-            // enabled; a runtime that validated this module supports
-            // them (wasm has no runtime feature detection).
-            Some(unsafe { Self::from_context() })
+            // The required wasm features are compile-time enabled; a
+            // runtime that validated this module supports them (wasm has
+            // no runtime feature detection). wasm32 `#[target_feature]`
+            // functions are safe to call, so no `unsafe` is needed.
+            Some(Self::from_context())
         }
         #[cfg(not(all(
             target_arch = "wasm32",
@@ -228,10 +230,9 @@ impl Wasm128RelaxedToken {
     /// Zero-cost: compiles away entirely.
     #[inline(always)]
     pub fn wasm128(self) -> Wasm128Token {
-        // SAFETY: holding `self` proves this CPU has WASM Relaxed SIMD's
-        // full feature set, a superset of WASM SIMD128's (registry-
-        // verified hierarchy), so the ancestor token's claim holds.
-        unsafe { Wasm128Token::from_context() }
+        // Holding `self` proves WASM Relaxed SIMD's feature set, a superset
+        // of WASM SIMD128's; wasm32 target-feature calls are safe.
+        Wasm128Token::from_context()
     }
 }
 

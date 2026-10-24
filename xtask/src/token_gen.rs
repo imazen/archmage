@@ -693,10 +693,11 @@ fn gen_summon_wasm(token: &TokenDef) -> String {
         {INDENT}fn summon() -> Option<Self> {{
         {INDENT}    #[cfg(all(target_arch = \"wasm32\", {all_conditions}))]
         {INDENT}    {{
-        {INDENT}        // SAFETY: the required wasm features are compile-time
-        {INDENT}        // enabled; a runtime that validated this module supports
-        {INDENT}        // them (wasm has no runtime feature detection).
-        {INDENT}        Some(unsafe {{ Self::from_context() }})
+        {INDENT}        // The required wasm features are compile-time enabled; a
+        {INDENT}        // runtime that validated this module supports them (wasm has
+        {INDENT}        // no runtime feature detection). wasm32 `#[target_feature]`
+        {INDENT}        // functions are safe to call, so no `unsafe` is needed.
+        {INDENT}        Some(Self::from_context())
         {INDENT}    }}
         {INDENT}    #[cfg(not(all(target_arch = \"wasm32\", {all_conditions})))]
         {INDENT}    {{
@@ -737,6 +738,9 @@ fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
 
     out.push_str(&format!("\nimpl {name} {{\n"));
 
+    // wasm32 `#[target_feature]` functions are safe to call; an `unsafe`
+    // block there is reported as unused.
+    let wasm = token.arch == "wasm";
     for ancestor in &targets {
         let anc_name = &ancestor.name;
         let short = ancestor
@@ -745,30 +749,51 @@ fn gen_extraction_methods(out: &mut String, reg: &Registry, token: &TokenDef) {
             .unwrap_or("MISSING_SHORT_NAME");
         let anc_display = ancestor.display_name.as_deref().unwrap_or(anc_name);
 
-        out.push_str(&formatdoc! {"
+        let doc = formatdoc! {"
             {INDENT}/// Extract a {anc_name} — guaranteed because {token_display} implies {anc_display}.
             {INDENT}///
             {INDENT}/// Zero-cost: compiles away entirely.
             {INDENT}#[inline(always)]
-            {INDENT}pub fn {short}(self) -> {anc_name} {{
-            {INDENT}    // SAFETY: holding `self` proves this CPU has {token_display}'s
-            {INDENT}    // full feature set, a superset of {anc_display}'s (registry-
-            {INDENT}    // verified hierarchy), so the ancestor token's claim holds.
-            {INDENT}    unsafe {{ {anc_name}::from_context() }}
-            {INDENT}}}
-        "});
+        "};
+        out.push_str(&doc);
+        out.push_str(&if wasm {
+            formatdoc! {"
+                {INDENT}pub fn {short}(self) -> {anc_name} {{
+                {INDENT}    // Holding `self` proves {token_display}'s feature set, a superset
+                {INDENT}    // of {anc_display}'s; wasm32 target-feature calls are safe.
+                {INDENT}    {anc_name}::from_context()
+                {INDENT}}}
+            "}
+        } else {
+            formatdoc! {"
+                {INDENT}pub fn {short}(self) -> {anc_name} {{
+                {INDENT}    // SAFETY: holding `self` proves this CPU has {token_display}'s
+                {INDENT}    // full feature set, a superset of {anc_display}'s (registry-
+                {INDENT}    // verified hierarchy), so the ancestor token's claim holds.
+                {INDENT}    unsafe {{ {anc_name}::from_context() }}
+                {INDENT}}}
+            "}
+        });
 
         // Extraction aliases for this ancestor (e.g., .avx512() for X64V4Token)
         for alias_name in &ancestor.extraction_aliases {
+            let body = if wasm {
+                formatdoc! {"
+                    {INDENT}    self.{short}()
+                "}
+            } else {
+                formatdoc! {"
+                    {INDENT}    // SAFETY: identical to `.{short}()` — self's feature set is a
+                    {INDENT}    // registry-verified superset of {anc_display}'s.
+                    {INDENT}    unsafe {{ {anc_name}::from_context() }}
+                "}
+            };
             out.push_str(&formatdoc! {"
 
                 {INDENT}/// Get a {anc_name} (alias for `.{short}()`)
                 {INDENT}#[inline(always)]
                 {INDENT}pub fn {alias_name}(self) -> {anc_name} {{
-                {INDENT}    // SAFETY: identical to `.{short}()` — self's feature set is a
-                {INDENT}    // registry-verified superset of {anc_display}'s.
-                {INDENT}    unsafe {{ {anc_name}::from_context() }}
-                {INDENT}}}
+                {body}{INDENT}}}
             "});
         }
     }

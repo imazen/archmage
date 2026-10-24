@@ -877,8 +877,9 @@ mod tests {
     #[test]
     #[cfg(target_feature = "avx2")]
     fn test_compile_time_avx2() {
-        // This should compile to just `true`
-        assert!(is_x86_feature_available!("avx2"));
+        // A const item proves it compiles to just `true`.
+        const AVX2: bool = is_x86_feature_available!("avx2");
+        const { assert!(AVX2) };
     }
 
     /// Test that compile-time known features return true for SSE2

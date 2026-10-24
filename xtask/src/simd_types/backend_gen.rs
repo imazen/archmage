@@ -6142,7 +6142,10 @@ fn generate_wasm_polyfill_i32_impl(ty: &I32VecType) -> String {
         },
         bitmask = {
             let items: Vec<String> = (0..sub_count)
-                .map(|i| format!("((i32x4_bitmask(a[{i}]) as u32) << {})", i * 4))
+                .map(|i| match i {
+                    0 => "(i32x4_bitmask(a[0]) as u32)".to_string(),
+                    _ => format!("((i32x4_bitmask(a[{i}]) as u32) << {})", i * 4),
+                })
                 .collect();
             items.join(" | ")
         },
@@ -7454,8 +7457,16 @@ fn generate_wasm_native_u32_impl(ty: &U32VecType) -> String {
     let array = ty.array_type();
     let lanes = ty.lanes;
 
+    // Only method receivers need the cast parenthesized; the innermost
+    // argument does not (clippy::double_parens, unused_parens).
     let reduce_add_body = (0..lanes)
-        .map(|j| format!("(i32x4_extract_lane::<{j}>(a) as u32)"))
+        .map(|j| {
+            if j + 1 == lanes {
+                format!("i32x4_extract_lane::<{j}>(a) as u32")
+            } else {
+                format!("(i32x4_extract_lane::<{j}>(a) as u32)")
+            }
+        })
         .collect::<Vec<_>>()
         .join(".wrapping_add(")
         + &")".repeat(lanes - 1);
@@ -7578,6 +7589,9 @@ fn generate_wasm_polyfill_u32_impl(ty: &U32VecType) -> String {
                 items.push(format!("(i32x4_extract_lane::<{j}>(a[{i}]) as u32)"));
             }
         }
+        // The innermost argument needs no parentheses around its cast.
+        let last = items.pop().expect("at least one lane");
+        items.push(last[1..last.len() - 1].to_string());
         items.join(".wrapping_add(") + &")".repeat(items.len() - 1)
     };
 
@@ -7754,7 +7768,10 @@ fn generate_wasm_polyfill_u32_impl(ty: &U32VecType) -> String {
         },
         bitmask = {
             let items: Vec<String> = (0..sub_count)
-                .map(|i| format!("((i32x4_bitmask(a[{i}]) as u32) << {})", i * 4))
+                .map(|i| match i {
+                    0 => "(i32x4_bitmask(a[0]) as u32)".to_string(),
+                    _ => format!("((i32x4_bitmask(a[{i}]) as u32) << {})", i * 4),
+                })
                 .collect();
             items.join(" | ")
         },

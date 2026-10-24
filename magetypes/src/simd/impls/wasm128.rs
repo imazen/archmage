@@ -1224,7 +1224,7 @@ impl I32x8Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn bitmask(self, a: [v128; 2]) -> u32 {
-        ((i32x4_bitmask(a[0]) as u32) << 0) | ((i32x4_bitmask(a[1]) as u32) << 4)
+        (i32x4_bitmask(a[0]) as u32) | ((i32x4_bitmask(a[1]) as u32) << 4)
     }
     #[inline(always)]
     fn narrow_saturating_i32_to_i16(self, a: [v128; 2], b: [v128; 2]) -> [v128; 2] {
@@ -1328,8 +1328,7 @@ impl U32x4Backend for archmage::Wasm128Token {
     fn reduce_add(self, a: v128) -> u32 {
         (i32x4_extract_lane::<0>(a) as u32).wrapping_add(
             (i32x4_extract_lane::<1>(a) as u32).wrapping_add(
-                (i32x4_extract_lane::<2>(a) as u32)
-                    .wrapping_add((i32x4_extract_lane::<3>(a) as u32)),
+                (i32x4_extract_lane::<2>(a) as u32).wrapping_add(i32x4_extract_lane::<3>(a) as u32),
             ),
         )
     }
@@ -1494,7 +1493,7 @@ impl U32x8Backend for archmage::Wasm128Token {
                         (i32x4_extract_lane::<0>(a[1]) as u32).wrapping_add(
                             (i32x4_extract_lane::<1>(a[1]) as u32).wrapping_add(
                                 (i32x4_extract_lane::<2>(a[1]) as u32)
-                                    .wrapping_add((i32x4_extract_lane::<3>(a[1]) as u32)),
+                                    .wrapping_add(i32x4_extract_lane::<3>(a[1]) as u32),
                             ),
                         ),
                     ),
@@ -1564,7 +1563,7 @@ impl U32x8Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn bitmask(self, a: [v128; 2]) -> u32 {
-        ((i32x4_bitmask(a[0]) as u32) << 0) | ((i32x4_bitmask(a[1]) as u32) << 4)
+        (i32x4_bitmask(a[0]) as u32) | ((i32x4_bitmask(a[1]) as u32) << 4)
     }
 }
 
@@ -1895,7 +1894,7 @@ impl I64x4Backend for archmage::Wasm128Token {
 
     #[inline(always)]
     fn bitmask(self, a: [v128; 2]) -> u32 {
-        ((i64x2_bitmask(a[0]) as u32) << 0) | ((i64x2_bitmask(a[1]) as u32) << 2)
+        (i64x2_bitmask(a[0]) as u32) | ((i64x2_bitmask(a[1]) as u32) << 2)
     }
 }
 
