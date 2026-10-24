@@ -3,7 +3,10 @@
 //! Requires `archmage::testing`, which is gated on the `std` feature.
 #![cfg(feature = "std")]
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(any(
+    target_arch = "x86_64",
+    all(target_arch = "aarch64", feature = "testable_dispatch")
+))]
 use archmage::SimdToken;
 #[cfg(target_arch = "x86_64")]
 use archmage::testing::lock_token_testing;
@@ -217,6 +220,10 @@ fn fail_policy_succeeds_with_testable_dispatch() {
                 if name == archmage::X64V3Token::NAME {
                     assert!(archmage::X64V3Token::summon().is_none());
                 }
+            }
+            #[cfg(target_arch = "aarch64")]
+            if name == archmage::NeonToken::NAME {
+                assert!(archmage::NeonToken::summon().is_none());
             }
         }
     });
