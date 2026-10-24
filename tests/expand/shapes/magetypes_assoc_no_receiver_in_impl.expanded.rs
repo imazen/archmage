@@ -13,6 +13,7 @@ impl S {
         Self::offset() + x
     }
     #[inline(always)]
+    #[allow(clippy::inline_always, clippy::used_underscore_binding)]
     fn probe_v3(token: archmage::X64V3Token, x: f32) -> f32 {
         let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
         unsafe { Self::__arcane_probe_v3(token, x) }

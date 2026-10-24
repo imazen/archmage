@@ -11,6 +11,7 @@ unsafe fn __arcane_process(token: X64V3Token, ptr: *const f32) -> f32 {
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 unsafe fn process(token: X64V3Token, ptr: *const f32) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
     unsafe { __arcane_process(token, ptr) }

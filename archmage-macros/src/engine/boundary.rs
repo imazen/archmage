@@ -463,9 +463,15 @@ fn emit_boundary(input: LightFn, options: &BoundaryOptions, parts: BoundaryParts
     let sibling = (!options.nested).then_some(&inner);
     let sibling_cfg = (!options.nested).then_some(&cfg_guard);
     let nested = options.nested.then_some(&inner);
+    // The wrapper only forwards the caller's parameters (`_token` included)
+    // and must always inline; neither is the downstream author's choice, so
+    // their pedantic lints are allowed here. In nested mode this also covers
+    // the documented `_self` binding in the body.
     quote! {
         #sibling_cfg #sibling
-        #cfg_guard #(#attrs)* #[inline(always)] #vis #wrapper_sig {
+        #cfg_guard #(#attrs)* #[inline(always)]
+        #[allow(clippy::inline_always, clippy::used_underscore_binding)]
+        #vis #wrapper_sig {
             #nested #token_assertion #tier_trait_assertion #proof_call
         }
     }

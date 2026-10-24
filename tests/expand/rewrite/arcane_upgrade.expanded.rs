@@ -1,4 +1,4 @@
-use archmage::{arcane, X64V3Token, X64V4Token, ScalarToken};
+use archmage::{arcane, incant, X64V3Token, X64V4Token, ScalarToken};
 #[doc(hidden)]
 #[target_feature(
     enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe,pclmulqdq,aes,avx512f,avx512bw,avx512cd,avx512dq,avx512vl"
@@ -8,6 +8,7 @@ fn __arcane_inner_v4(_t: X64V4Token, x: f32) -> f32 {
     x * 4.0
 }
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn inner_v4(_t: X64V4Token, x: f32) -> f32 {
     let _: () = <X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
     unsafe { __arcane_inner_v4(_t, x) }
@@ -21,6 +22,7 @@ fn __arcane_inner_v3(_t: X64V3Token, x: f32) -> f32 {
     x * 2.0
 }
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn inner_v3(_t: X64V3Token, x: f32) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
     unsafe { __arcane_inner_v3(_t, x) }
@@ -40,6 +42,7 @@ fn __arcane_outer(token: X64V3Token, x: f32) -> f32 {
     }
 }
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn outer(token: X64V3Token, x: f32) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
     unsafe { __arcane_outer(token, x) }

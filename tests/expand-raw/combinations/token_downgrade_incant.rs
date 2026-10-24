@@ -11,6 +11,7 @@ fn __arcane_helper_v3(_t: X64V3Token, x: f32) -> f32 {
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn helper_v3(_t: X64V3Token, x: f32) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
     unsafe { __arcane_helper_v3(_t, x) }
@@ -25,10 +26,13 @@ fn helper_scalar(_t: ScalarToken, x: f32) -> f32 {
 )]
 #[inline]
 fn __arcane_v4_caller(token: X64V4Token, x: f32) -> f32 {
-    helper_v3(token.v3(), x) + 1.0
+    (::core::compile_error! {
+        "expected identifier"
+    }) + 1.0
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn v4_caller(token: X64V4Token, x: f32) -> f32 {
     let _: () = <X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
     unsafe { __arcane_v4_caller(token, x) }

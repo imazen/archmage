@@ -30,6 +30,7 @@ fn __arcane_sum_v3(_token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
 #[cfg(target_arch = "x86_64")]
 #[allow(dead_code)]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn sum_v3(_token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
     let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
     unsafe { __arcane_sum_v3(_token, data) }
@@ -45,6 +46,7 @@ fn __arcane_sum_neon(_token: archmage::NeonToken, data: &[f32; 4]) -> f32 {
 #[cfg(target_arch = "aarch64")]
 #[allow(dead_code)]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn sum_neon(_token: archmage::NeonToken, data: &[f32; 4]) -> f32 {
     let _: () = <archmage::NeonToken>::__ARCHMAGE_ASSERT_TIER_72CB52B2;
     unsafe { __arcane_sum_neon(_token, data) }

@@ -484,6 +484,9 @@ fn parse_magetypes_attr(
 /// - `_scalar` for `ScalarToken`
 #[proc_macro]
 pub fn incant(input: TokenStream) -> TokenStream {
+    if let Some(expanded) = common::expanded_passthrough(&input.clone().into()) {
+        return expanded.into();
+    }
     let input = parse_macro_input!(input as IncantInput);
     incant_impl(input).into()
 }
@@ -491,6 +494,9 @@ pub fn incant(input: TokenStream) -> TokenStream {
 /// Legacy alias for [`incant!`].
 #[proc_macro]
 pub fn simd_route(input: TokenStream) -> TokenStream {
+    if let Some(expanded) = common::expanded_passthrough(&input.clone().into()) {
+        return expanded.into();
+    }
     let input = parse_macro_input!(input as IncantInput);
     incant_impl(input).into()
 }
@@ -504,6 +510,9 @@ pub fn simd_route(input: TokenStream) -> TokenStream {
 /// See [`incant!`] for full documentation and examples.
 #[proc_macro]
 pub fn dispatch_variant(input: TokenStream) -> TokenStream {
+    if let Some(expanded) = common::expanded_passthrough(&input.clone().into()) {
+        return expanded.into();
+    }
     let input = parse_macro_input!(input as IncantInput);
     incant_impl(input).into()
 }
@@ -708,6 +717,9 @@ pub fn attune(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// overrides inference and is required to supply proof in unannotated callers.
 #[proc_macro]
 pub fn attuned(input: TokenStream) -> TokenStream {
+    if let Some(expanded) = common::expanded_passthrough(&input.clone().into()) {
+        return expanded.into();
+    }
     let input = parse_macro_input!(input as attune::call::Call);
     input.expand(None, false).into()
 }
@@ -716,6 +728,9 @@ pub fn attuned(input: TokenStream) -> TokenStream {
 /// fallback covered by the caller's feature context (or scalar outside one).
 #[proc_macro]
 pub fn reattune(input: TokenStream) -> TokenStream {
+    if let Some(expanded) = common::expanded_passthrough(&input.clone().into()) {
+        return expanded.into();
+    }
     let input = parse_macro_input!(input as attune::call::Call);
     input.expand(None, true).into()
 }

@@ -23,6 +23,7 @@ fn __arcane_probe_v3<'a, U: Copy, const N: usize>(
 }
 #[allow(dead_code)]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn probe_v3<'a, U: Copy, const N: usize>(
     _token: archmage::X64V3Token,
     xs: &'a [U; N],

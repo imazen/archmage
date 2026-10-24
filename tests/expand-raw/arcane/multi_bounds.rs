@@ -16,6 +16,7 @@ where
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn fma<T>(token: X64V3Token, a: T, b: T, c: T) -> T
 where
     T: Copy + Mul<Output = T> + Add<Output = T>,

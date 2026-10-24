@@ -13,6 +13,7 @@ where
     x
 }
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn probe<T>(token: T, x: f32) -> f32
 where
     T: HasX64V4,

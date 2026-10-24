@@ -22,6 +22,7 @@ impl Work for S {
         }
         #[allow(dead_code)]
         #[inline(always)]
+        #[allow(clippy::inline_always, clippy::used_underscore_binding)]
         fn pick_v3<'a>(
             _self: &'a S,
             _token: archmage::X64V3Token,

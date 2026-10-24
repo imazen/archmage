@@ -9,6 +9,7 @@ fn __arcane_process(token: impl HasX64V2, a: f32) -> f32 {
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn process(token: impl HasX64V2, a: f32) -> f32 {
     {
         #[inline(always)]

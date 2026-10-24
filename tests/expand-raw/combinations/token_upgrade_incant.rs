@@ -11,6 +11,7 @@ fn __arcane_fast_v4(_t: X64V4Token, x: f32) -> f32 {
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn fast_v4(_t: X64V4Token, x: f32) -> f32 {
     let _: () = <X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
     unsafe { __arcane_fast_v4(_t, x) }
@@ -26,6 +27,7 @@ fn __arcane_fast_v3(_t: X64V3Token, x: f32) -> f32 {
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn fast_v3(_t: X64V3Token, x: f32) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
     unsafe { __arcane_fast_v3(_t, x) }
@@ -40,16 +42,13 @@ fn fast_scalar(_t: ScalarToken, x: f32) -> f32 {
 )]
 #[inline]
 fn __arcane_v3_with_upgrade(t: X64V3Token, x: f32) -> f32 {
-    '__incant_rewrite: {
-        use archmage::SimdToken;
-        if let Some(__t) = archmage::X64V4Token::summon() {
-            break '__incant_rewrite fast_v4(__t, x);
-        }
-        fast_v3(t, x)
+    ::core::compile_error! {
+        "expected identifier"
     }
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn v3_with_upgrade(t: X64V3Token, x: f32) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
     unsafe { __arcane_v3_with_upgrade(t, x) }

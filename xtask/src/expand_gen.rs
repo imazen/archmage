@@ -587,7 +587,7 @@ fn gen_rewrite_tests(files: &mut Vec<TestFile>) {
             path: format!("rewrite/{name}.rs"),
             content: format!(
                 "// Rewrite: {desc}\n\
-                 use archmage::{{arcane, X64V3Token, X64V4Token, ScalarToken}};\n\
+                 use archmage::{{arcane, incant, X64V3Token, X64V4Token, ScalarToken}};\n\
                  {callee_defs}\
                  #[arcane]\n\
                  fn outer(token: {token_type}, x: f32) -> f32 {{\n\
@@ -603,7 +603,7 @@ fn gen_rewrite_tests(files: &mut Vec<TestFile>) {
         path: "rewrite/arcane_token_last.rs".to_string(),
         content: format!(
             "// Rewrite: explicit Token marker, token last in callee\n\
-             use archmage::{{arcane, X64V3Token, ScalarToken}};\n\
+             use archmage::{{arcane, incant, X64V3Token, ScalarToken}};\n\
              {callee_defs_last}\
              #[arcane]\n\
              fn outer(token: X64V3Token, x: f32) -> f32 {{\n\
@@ -617,7 +617,7 @@ fn gen_rewrite_tests(files: &mut Vec<TestFile>) {
     files.push(TestFile {
         path: "rewrite/scalar_fallback.rs".to_string(),
         content: "// Rewrite: x86 caller, callee only has neon — scalar fallback\n\
-                  use archmage::{arcane, X64V3Token, NeonToken, ScalarToken};\n\
+                  use archmage::{arcane, incant, X64V3Token, NeonToken, ScalarToken};\n\
                   #[arcane] fn inner_neon(_t: NeonToken, x: f32) -> f32 { x * 2.0 }\n\
                   fn inner_scalar(_t: ScalarToken, x: f32) -> f32 { x }\n\
                   #[arcane]\n\
@@ -659,7 +659,7 @@ fn gen_rewrite_tests(files: &mut Vec<TestFile>) {
     files.push(TestFile {
         path: "rewrite/rite_exact.rs".to_string(),
         content: "// Rewrite: rite caller, exact match\n\
-             use archmage::{rite, arcane, X64V3Token, ScalarToken};\n\
+             use archmage::{rite, arcane, incant, X64V3Token, ScalarToken};\n\
              #[arcane] fn inner_v3(_t: X64V3Token, x: f32) -> f32 { x * 2.0 }\n\
              fn inner_scalar(_t: ScalarToken, x: f32) -> f32 { x }\n\
              #[rite]\n\

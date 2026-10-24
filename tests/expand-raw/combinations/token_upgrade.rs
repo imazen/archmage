@@ -11,6 +11,7 @@ fn __arcane_v4_fast(_t: X64V4Token, x: f32) -> f32 {
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn v4_fast(_t: X64V4Token, x: f32) -> f32 {
     let _: () = <X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
     unsafe { __arcane_v4_fast(_t, x) }
@@ -26,6 +27,7 @@ fn __arcane_v3_with_upgrade(_t: X64V3Token, x: f32) -> f32 {
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn v3_with_upgrade(_t: X64V3Token, x: f32) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
     unsafe { __arcane_v3_with_upgrade(_t, x) }

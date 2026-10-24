@@ -15,6 +15,7 @@ where
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn apply_ref<F>(token: X64V3Token, f: F, data: &[f32]) -> f32
 where
     F: for<'a> Fn(&'a [f32]) -> f32,

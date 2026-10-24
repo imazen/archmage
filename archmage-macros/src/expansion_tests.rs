@@ -649,21 +649,31 @@ fn nested_dispatch_rewrites_have_exact_outputs() {
         derive_token: false,
     };
     for (input, expected) in [
+        // Rewritten calls are re-emitted through the caller's macro path with
+        // the already-expanded marker (common::wrap_expanded).
         (
             quote!(({ incant!(f(Token, x), [v3, scalar]) })),
-            quote!(({ f_v3(token, x) })),
+            quote!(({ incant!(@__archmage_expanded f_v3(token, x)) })),
         ),
         (
             quote!([dispatch_variant!(f(x) without token)]),
-            quote!([f_v3(x)]),
+            quote!([dispatch_variant!(@__archmage_expanded f_v3(x))]),
         ),
         (
             quote!(|| { incant!(f(x), [v2, scalar]) }),
-            quote!(|| { f_v2(token.v2(), x) }),
+            quote!(|| { incant!(@__archmage_expanded f_v2(token.v2(), x)) }),
         ),
         (
             quote!(incant!(f(Token, x), [neon, default])),
-            quote!(f_default(x)),
+            quote!(incant!(@__archmage_expanded f_default(x))),
+        ),
+        (
+            quote!(archmage::incant!(f(x) without token) * 2.0),
+            quote!(archmage::incant!(@__archmage_expanded f_v3(x)) * 2.0),
+        ),
+        (
+            quote!(incant!(@__archmage_expanded f_v3(x))),
+            quote!(incant!(@__archmage_expanded f_v3(x))),
         ),
         (
             quote!(
@@ -695,7 +705,10 @@ fn nested_dispatch_rewrites_have_exact_outputs() {
     };
     let output =
         rewrite::rewrite_incant_in_body(quote!(incant!(f(Token, x), [neon, default])), &ctx);
-    assert_eq!(output.to_string(), quote!(f_default(x)).to_string());
+    assert_eq!(
+        output.to_string(),
+        quote!(incant!(@__archmage_expanded f_default(x))).to_string()
+    );
     let output = rewrite::rewrite_incant_in_body(quote!(incant!(f(x))), &ctx).to_string();
     assert!(output.contains("f_v3 (archmage :: X64V3Token :: from_context () , x)"));
 }
@@ -1074,6 +1087,21 @@ fn nested_inner_fn_has_no_lint_levels_of_its_own() {
         1,
         "{output}"
     );
-    assert_eq!(output.matches("# [allow").count(), 1, "{output}");
     assert_eq!(output.matches("too_many_arguments").count(), 1, "{output}");
+    // The wrapper adds only its own pedantic allows; the inner fn has no lint
+    // attributes of its own.
+    assert_eq!(output.matches("# [allow").count(), 2, "{output}");
+    assert_eq!(
+        output
+            .matches("# [allow (clippy :: inline_always , clippy :: used_underscore_binding)]")
+            .count(),
+        1,
+        "{output}"
+    );
+    let inner = &output[output.find("{ #").expect("nested inner fn")..];
+    let inner = &inner[..inner.find("fn __simd_inner_f").expect("inner fn")];
+    assert!(
+        !inner.contains("allow") && !inner.contains("expect"),
+        "{output}"
+    );
 }

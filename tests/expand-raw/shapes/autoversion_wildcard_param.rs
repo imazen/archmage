@@ -24,6 +24,7 @@ fn __arcane_probe_v3(_token: archmage::X64V3Token, _: f32, x: f32) -> f32 {
 #[cfg(target_arch = "x86_64")]
 #[allow(dead_code)]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn probe_v3(_token: archmage::X64V3Token, __archmage_arg_0: f32, x: f32) -> f32 {
     let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
     unsafe { __arcane_probe_v3(_token, __archmage_arg_0, x) }

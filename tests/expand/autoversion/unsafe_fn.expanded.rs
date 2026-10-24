@@ -31,6 +31,7 @@ unsafe fn __arcane_process_v4(
 }
 #[allow(dead_code)]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 unsafe fn process_v4(_token: archmage::X64V4Token, ptr: *const f32, len: usize) -> f32 {
     let _: () = <archmage::X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
     unsafe { __arcane_process_v4(_token, ptr, len) }
@@ -54,6 +55,7 @@ unsafe fn __arcane_process_v3(
 }
 #[allow(dead_code)]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 unsafe fn process_v3(_token: archmage::X64V3Token, ptr: *const f32, len: usize) -> f32 {
     let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
     unsafe { __arcane_process_v3(_token, ptr, len) }

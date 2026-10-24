@@ -289,6 +289,15 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
         };
         let mut body = input.clone();
         body.sig.ident = direct_name.clone();
+        // A wildcard output may go unused; so may a hidden body that only an
+        // unused wildcard proof wrapper calls.
+        let unused_ok = match direct_selection {
+            Some(selection) => selection.wildcard,
+            None => args.dispatcher.is_none() && proof_selection.is_some_and(|s| s.wildcard),
+        };
+        if unused_ok {
+            body.attrs.push(parse_quote!(#[allow(dead_code)]));
+        }
         // Direct outputs use their visibility override; hidden implementations
         // retain the source operation's policy before becoming private. Wrapper
         // visibility and inline overrides apply independently to wrappers.
@@ -363,6 +372,10 @@ fn family(mut input: LightFn, args: Args) -> syn::Result<TokenStream> {
                 }
             })
             .collect();
+        // The dispatcher only forwards the caller's parameters.
+        dispatcher
+            .attrs
+            .push(syn::parse_quote!(#[allow(clippy::used_underscore_binding)]));
         dispatcher.body =
             quote! { #(let _ = #proofs;)* '__attune_dispatch: { #(#dispatch_arms)* } };
         specialize_syntax(&mut dispatcher.sig, &quote!(::archmage::ScalarToken))?;
@@ -408,12 +421,23 @@ fn proof_entry(
     wrapper
         .attrs
         .retain(|attr| !attr.path().is_ident("inline") && !attr.path().is_ident("expect"));
+    let explicit_inline = selection.and_then(|s| s.inline);
     wrapper.attrs.extend(
-        selection
-            .and_then(|s| s.inline)
+        explicit_inline
             .unwrap_or(Inline::Always)
             .attribute(&wrapper.vis),
     );
+    // The wrapper only forwards parameters; its default `inline(always)` is
+    // ours, not the author's, so only an explicit policy keeps that lint. An
+    // unused wildcard output is not dead code the author wrote.
+    let mut allowed: Vec<syn::Path> = vec![parse_quote!(clippy::used_underscore_binding)];
+    if explicit_inline.is_none() {
+        allowed.insert(0, parse_quote!(clippy::inline_always));
+    }
+    if selection.is_some_and(|s| s.wildcard) {
+        allowed.push(parse_quote!(dead_code));
+    }
+    wrapper.attrs.push(parse_quote!(#[allow(#(#allowed),*)]));
     wrapper.body = if tier.name == "scalar" || tier.target_arch == Some("wasm32") {
         invocation
     } else {

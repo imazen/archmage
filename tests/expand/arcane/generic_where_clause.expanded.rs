@@ -16,6 +16,7 @@ where
     s
 }
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn sum_slice<T>(token: X64V3Token, data: &[T]) -> f32
 where
     T: Copy + Into<f32>,

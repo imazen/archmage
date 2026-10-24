@@ -372,6 +372,7 @@ token-migration-arm:
 expand-snapshots:
     cargo run -p xtask -- gen-expand
     MACROTEST=overwrite cargo test -p archmage --test macro_expand -- --test-threads=1
+    MACROTEST=overwrite cargo test -p magetypes --test macro_expand -- --test-threads=1
     ARCHMAGE_RAW_SNAPSHOTS=overwrite cargo test -p archmage-macros raw_snapshots
 
 # Regenerate magetypes/tests/harvest_shapes.rs from snapshots of consumer

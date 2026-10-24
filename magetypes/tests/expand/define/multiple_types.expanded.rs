@@ -22,6 +22,7 @@ fn __arcane_kernel_v3(
     a + b
 }
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn kernel_v3(
     token: archmage::X64V3Token,
     data_8: &[f32; 8],

@@ -54,6 +54,7 @@ impl Parse for Call {
                         visibility: None,
                         inline: None,
                         span: name.span(),
+                        wildcard: false,
                     });
                     if !inner.is_empty() {
                         inner.parse::<Token![,]>()?;
@@ -99,6 +100,7 @@ impl Parse for Call {
                         visibility: None,
                         inline: None,
                         span: input.span(),
+                        wildcard: false,
                     })
                     .collect()
             }),
@@ -401,15 +403,23 @@ fn rewrite_scoped(
             && matches!(tokens.get(end + 1), Some(TokenTree::Punct(p)) if p.as_char() == '!')
             && let Some(TokenTree::Group(group)) = tokens.get(end + 2)
         {
+            if crate::common::expanded_passthrough(&group.stream()).is_some() {
+                // Already rewritten by an enclosing pass.
+                out.extend(tokens[i..end + 3].iter().cloned());
+                i = end + 3;
+                continue;
+            }
             let expansion = syn::parse2::<Call>(group.stream())
                 .map(|call| call.expand_scoped(Some(caller), name == "reattune", parent, serial))
                 .unwrap_or_else(|error| error.to_compile_error());
-            // A bang macro at statement start still parses as an expression
-            // (`attuned!(f(x)) + 1`); a spliced bare block would end the
-            // statement there, so keep the expansion parenthesized.
-            let mut grouped = Group::new(Delimiter::Parenthesis, expansion);
-            grouped.set_span(proc_macro2::Span::mixed_site());
-            out.extend([TokenTree::Group(grouped)]);
+            // Through the caller's own path: the import stays used, and a
+            // statement-start `attuned!(f(x)) + 1` keeps parsing as one
+            // expression.
+            out.extend(crate::common::wrap_expanded(
+                tokens[i..end + 2].iter().cloned(),
+                expansion,
+                group.span(),
+            ));
             i = end + 3;
             continue;
         }

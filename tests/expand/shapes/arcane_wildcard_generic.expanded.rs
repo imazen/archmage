@@ -9,6 +9,7 @@ fn __arcane_probe<T: HasX64V2 + HasX64V4>(__archmage_token: T, x: f32) -> f32 {
     x
 }
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn probe<T: HasX64V2 + HasX64V4>(__archmage_arg_0: T, x: f32) -> f32 {
     {
         #[inline(always)]

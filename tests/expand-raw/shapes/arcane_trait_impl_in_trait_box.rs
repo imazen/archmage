@@ -9,6 +9,7 @@ trait Work {
 impl Work for S {
     #[cfg(target_arch = "x86_64")]
     #[inline(always)]
+    #[allow(clippy::inline_always, clippy::used_underscore_binding)]
     fn consume(self: Box<Self>, token: X64V3Token) -> f32 {
         #[target_feature(
             enable = "sse,sse2,sse3,ssse3,sse4.1,sse4.2,popcnt,cmpxchg16b,avx,avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe"

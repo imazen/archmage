@@ -9,6 +9,7 @@ fn __arcane_process(a: f32, token: X64V3Token, b: f32) -> f32 {
     a + b
 }
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn process(a: f32, token: X64V3Token, b: f32) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
     unsafe { __arcane_process(a, token, b) }

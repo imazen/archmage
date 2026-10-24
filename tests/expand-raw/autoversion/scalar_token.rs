@@ -39,6 +39,7 @@ fn __arcane_process_v4(token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
 #[cfg(target_arch = "x86_64")]
 #[allow(dead_code)]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn process_v4(token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
     let _: () = <archmage::X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
     unsafe { __arcane_process_v4(token, data) }
@@ -56,6 +57,7 @@ fn __arcane_process_v3(token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
 #[cfg(target_arch = "x86_64")]
 #[allow(dead_code)]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn process_v3(token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
     let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
     unsafe { __arcane_process_v3(token, data) }
@@ -71,6 +73,7 @@ fn __arcane_process_neon(token: archmage::NeonToken, data: &[f32; 4]) -> f32 {
 #[cfg(target_arch = "aarch64")]
 #[allow(dead_code)]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn process_neon(token: archmage::NeonToken, data: &[f32; 4]) -> f32 {
     let _: () = <archmage::NeonToken>::__ARCHMAGE_ASSERT_TIER_72CB52B2;
     unsafe { __arcane_process_neon(token, data) }

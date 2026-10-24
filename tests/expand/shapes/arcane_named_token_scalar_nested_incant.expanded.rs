@@ -11,6 +11,7 @@ fn __arcane_outer(t: X64V3Token, x: u32) -> u32 {
     inner_scalar(archmage::ScalarToken, x)
 }
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn outer(t: X64V3Token, x: u32) -> u32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
     unsafe { __arcane_outer(t, x) }

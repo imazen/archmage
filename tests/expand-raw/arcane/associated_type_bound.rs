@@ -15,6 +15,7 @@ where
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn sum_iter<I>(token: X64V3Token, iter: I) -> f32
 where
     I: Iterator<Item = f32>,

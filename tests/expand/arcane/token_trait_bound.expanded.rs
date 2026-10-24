@@ -6,6 +6,7 @@ fn __arcane_process(token: impl HasX64V2, a: f32) -> f32 {
     a + 1.0
 }
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn process(token: impl HasX64V2, a: f32) -> f32 {
     {
         #[inline(always)]

@@ -22,10 +22,13 @@ fn helper_neon(x: f32) -> f32 {
 #[inline]
 fn __arcane_outer(token: X64V3Token, x: f32) -> f32 {
     let _ = token;
-    helper_v3(x) + 1.0
+    (::core::compile_error! {
+        "expected identifier"
+    }) + 1.0
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn outer(token: X64V3Token, x: f32) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
     unsafe { __arcane_outer(token, x) }

@@ -18,6 +18,7 @@ fn __arcane_process(token: X64V3Token, unused: f32) -> f32 {
 #[allow(clippy::too_many_arguments)]
 #[must_use]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn process(token: X64V3Token, unused: f32) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
     unsafe { __arcane_process(token, unused) }

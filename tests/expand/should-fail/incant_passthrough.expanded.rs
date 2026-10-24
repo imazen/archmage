@@ -8,6 +8,7 @@ fn __arcane_inner_v3(_token: X64V3Token, x: f32) -> f32 {
     x * 2.0
 }
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn inner_v3(_token: X64V3Token, x: f32) -> f32 {
     let _: () = <X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
     unsafe { __arcane_inner_v3(_token, x) }

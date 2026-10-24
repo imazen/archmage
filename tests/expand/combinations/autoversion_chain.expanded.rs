@@ -23,6 +23,7 @@ fn __arcane_inner_v4(_token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
 }
 #[allow(dead_code)]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn inner_v4(_token: archmage::X64V4Token, data: &[f32; 4]) -> f32 {
     let _: () = <archmage::X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
     unsafe { __arcane_inner_v4(_token, data) }
@@ -38,6 +39,7 @@ fn __arcane_inner_v3(_token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
 }
 #[allow(dead_code)]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn inner_v3(_token: archmage::X64V3Token, data: &[f32; 4]) -> f32 {
     let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
     unsafe { __arcane_inner_v3(_token, data) }
@@ -70,6 +72,7 @@ fn __arcane_outer_v4(_token: archmage::X64V4Token, data: &[f32; 4], scale: f32) 
 }
 #[allow(dead_code)]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn outer_v4(_token: archmage::X64V4Token, data: &[f32; 4], scale: f32) -> f32 {
     let _: () = <archmage::X64V4Token>::__ARCHMAGE_ASSERT_TIER_FE1B900C;
     unsafe { __arcane_outer_v4(_token, data, scale) }
@@ -85,6 +88,7 @@ fn __arcane_outer_v3(_token: archmage::X64V3Token, data: &[f32; 4], scale: f32) 
 }
 #[allow(dead_code)]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn outer_v3(_token: archmage::X64V3Token, data: &[f32; 4], scale: f32) -> f32 {
     let _: () = <archmage::X64V3Token>::__ARCHMAGE_ASSERT_TIER_F38B284B;
     unsafe { __arcane_outer_v3(_token, data, scale) }

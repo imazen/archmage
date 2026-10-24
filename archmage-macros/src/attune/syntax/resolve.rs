@@ -16,7 +16,7 @@ impl Definition {
                 continue;
             }
             match output.target {
-                Target::Tier(tier, form) => push(&mut args, output, tier, form, None),
+                Target::Tier(tier, form) => push(&mut args, output, tier, form, None, false),
                 Target::Wildcard(form) => defaults(&mut args, output, form),
                 Target::All => {
                     defaults(&mut args, output, Form::Direct);
@@ -37,6 +37,7 @@ impl Definition {
                     visibility: None,
                     inline: None,
                     span: self.span,
+                    wildcard: false,
                 });
             }
         }
@@ -62,7 +63,7 @@ impl Definition {
                     for wildcard in &self.outputs {
                         match wildcard.target {
                             Target::Wildcard(form) => {
-                                push(&mut args, output, tier, form, Some(&wildcard.options));
+                                push(&mut args, output, tier, form, Some(&wildcard.options), true);
                                 found = true;
                             }
                             Target::All => {
@@ -72,6 +73,7 @@ impl Definition {
                                     tier,
                                     Form::Direct,
                                     Some(&wildcard.options),
+                                    true,
                                 );
                                 push(
                                     &mut args,
@@ -79,6 +81,7 @@ impl Definition {
                                     tier,
                                     Form::Proof,
                                     Some(&wildcard.options),
+                                    true,
                                 );
                                 found = true;
                             }
@@ -98,7 +101,7 @@ impl Definition {
                                 "hidden dispatcher additions accept cfg only; select an explicit output for visibility or inline policy",
                             ));
                         }
-                        push(&mut args, output, tier, Form::Hidden, None);
+                        push(&mut args, output, tier, Form::Hidden, None, false);
                     }
                 }
             }
@@ -179,6 +182,7 @@ fn push(
     tier: &'static TierDescriptor,
     form: Form,
     inherited: Option<&OutputOptions>,
+    wildcard: bool,
 ) {
     args.selections.push(Selection {
         tier,
@@ -195,12 +199,13 @@ fn push(
             .inline
             .or_else(|| inherited.and_then(|o| o.inline)),
         span: output.span,
+        wildcard,
     });
 }
 
 fn defaults(args: &mut Args, output: &Output, form: Form) {
     for name in DEFAULTS {
-        push(args, output, find_tier(name).unwrap(), form, None);
+        push(args, output, find_tier(name).unwrap(), form, None, true);
     }
 }
 
@@ -237,10 +242,11 @@ fn validate_outputs(args: &mut Args, span: Span) -> syn::Result<()> {
                 "a tier's direct, proof and dispatcher implementations must have the same feature gate",
             ));
         }
-        if let Some(old) = prior
+        if let Some(j) = prior
             .iter()
-            .find(|s| s.tier.name == selection.tier.name && s.form == selection.form)
+            .position(|s| s.tier.name == selection.tier.name && s.form == selection.form)
         {
+            let old = &prior[j];
             if old.inline != selection.inline
                 || !same_visibility(&old.visibility, &selection.visibility)
             {
@@ -249,6 +255,9 @@ fn validate_outputs(args: &mut Args, span: Span) -> syn::Result<()> {
                     "conflicting policies for the same output",
                 ));
             }
+            // An explicit selector of the same output wins over a wildcard.
+            let wildcard = selection.wildcard;
+            args.selections[j].wildcard &= wildcard;
             args.selections.remove(i);
         } else {
             i += 1;

@@ -16,6 +16,7 @@ where
 }
 #[cfg(target_arch = "x86_64")]
 #[inline(always)]
+#[allow(clippy::inline_always, clippy::used_underscore_binding)]
 fn probe<T: Copy>(token: T, x: f32) -> f32
 where
     T: HasX64V4,

@@ -188,6 +188,47 @@ pub(crate) fn tokens_contain_ident(tokens: &proc_macro2::TokenStream, names: &[&
     })
 }
 
+/// Marker for a dispatch-macro invocation that a body rewriter already
+/// expanded. Rewriters emit `<the caller's macro path>!(@__archmage_expanded
+/// tokens)` instead of splicing `tokens` directly, so the caller's import of
+/// that macro is used (no `unused_imports`) and the result keeps bang-macro
+/// expression parsing (`incant!(f(x)) + 1` at statement start). A path cannot
+/// begin with `@`, so the marker never collides with user input.
+const EXPANDED_MARKER: &str = "__archmage_expanded";
+
+/// The already-expanded tokens of a marked invocation, if `input` is one.
+pub(crate) fn expanded_passthrough(
+    input: &proc_macro2::TokenStream,
+) -> Option<proc_macro2::TokenStream> {
+    let mut tokens = input.clone().into_iter();
+    match (tokens.next(), tokens.next()) {
+        (Some(proc_macro2::TokenTree::Punct(at)), Some(proc_macro2::TokenTree::Ident(marker)))
+            if at.as_char() == '@' && marker == EXPANDED_MARKER =>
+        {
+            Some(tokens.collect())
+        }
+        _ => None,
+    }
+}
+
+/// Re-emit a rewritten invocation through the caller's own macro path and
+/// bang (`path_and_bang`, copied verbatim): see [`EXPANDED_MARKER`].
+pub(crate) fn wrap_expanded(
+    path_and_bang: impl IntoIterator<Item = proc_macro2::TokenTree>,
+    expanded: proc_macro2::TokenStream,
+    span: proc_macro2::Span,
+) -> proc_macro2::TokenStream {
+    let marker = Ident::new(EXPANDED_MARKER, span);
+    let mut group = proc_macro2::Group::new(
+        proc_macro2::Delimiter::Parenthesis,
+        quote!(@ #marker #expanded),
+    );
+    group.set_span(span);
+    let mut out: proc_macro2::TokenStream = path_and_bang.into_iter().collect();
+    out.extend([proc_macro2::TokenTree::Group(group)]);
+    out
+}
+
 /// Replace all occurrences of a named identifier in a token stream.
 ///
 /// Recurses into groups (braces, parens, brackets). Each matching `Ident` is

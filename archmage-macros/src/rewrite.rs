@@ -122,10 +122,23 @@ pub(crate) fn rewrite_incant_in_function(
         {
             // Try to parse the incant arguments
             let inner = group.stream();
+            if crate::common::expanded_passthrough(&inner).is_some() {
+                // Already rewritten by an enclosing pass.
+                result.extend(tokens[i..i + 3].iter().cloned());
+                i += 3;
+                continue;
+            }
             if let Ok(input) = syn::parse2::<IncantInput>(inner) {
                 match rewrite_single_incant(&input, ctx) {
-                    // Rewrote this incant! call to a direct tier call.
-                    Some(rewritten) => result.extend(rewritten),
+                    // Rewrote this incant! call to a direct tier call. Emit it
+                    // through the caller's `incant!` (any path prefix was
+                    // already copied): the import stays used and the call
+                    // keeps bang-macro expression parsing.
+                    Some(rewritten) => result.extend(crate::common::wrap_expanded(
+                        tokens[i..i + 2].iter().cloned(),
+                        rewritten,
+                        group.span(),
+                    )),
                     // Not rewritten (passthrough / tokenless body / parse issue):
                     // emit the original `incant ! ( ... )` tokens verbatim so the
                     // standalone `incant!` macro expands them unchanged (byte-identical).
@@ -615,7 +628,9 @@ mod tests {
         ctx.derive_token = true;
         let result = rewrite_incant_in_body(body, &ctx).to_string();
         assert!(result.contains("fn nested () { incant !"), "{result}");
-        assert!(result.contains("work_v3"), "{result}");
-        assert!(!result.contains("dispatch_variant"), "{result}");
+        assert!(
+            result.contains("dispatch_variant ! (@ __archmage_expanded work_v3"),
+            "{result}"
+        );
     }
 }
