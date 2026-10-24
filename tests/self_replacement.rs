@@ -735,6 +735,8 @@ mod self_replacement_tests {
 
     impl DeepNesting for Point {
         #[arcane(_self = Point)]
+        // The nested `let`s are the point: Self replacement in each position.
+        #[allow(clippy::let_and_return)]
         fn deep_transform(&self, _token: X64V3Token) -> Self {
             // Self nested inside: if → block → method call → struct literal
             let result = {
@@ -864,7 +866,7 @@ mod self_replacement_tests {
             Self: Sized + Clone,
         {
             // Vec<Self> in parameter, Self in where clause
-            dest.push(_self.clone());
+            dest.push(*_self);
             dest.push(Self::new(_self.x * 2.0, _self.y * 2.0));
         }
     }

@@ -133,7 +133,7 @@ macro_rules! bitmask_tests {
 #[cfg(target_arch = "x86_64")]
 #[cfg(not(miri))]
 mod x86_tests {
-    use super::*;
+
     #[allow(unused_imports)]
     use super::{mask_n_u32, mask_n_u64};
     use archmage::{SimdToken, X64V3Token};
@@ -282,7 +282,7 @@ mod x86_tests {
 // ============================================================================
 #[cfg(test)]
 mod scalar_tests {
-    use super::*;
+
     #[allow(unused_imports)]
     use super::{mask_n_u32, mask_n_u64};
     use archmage::{ScalarToken, SimdToken};

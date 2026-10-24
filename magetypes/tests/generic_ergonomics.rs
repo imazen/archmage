@@ -8,7 +8,9 @@
 
 #![allow(dead_code)]
 
-use archmage::{ScalarToken, SimdToken};
+use archmage::ScalarToken;
+#[cfg(target_arch = "x86_64")]
+use archmage::SimdToken;
 use magetypes::simd::backends::{F32x4Backend, F32x8Backend, F32x8Convert};
 use magetypes::simd::generic::{f32x4, f32x8, i32x8};
 
@@ -27,9 +29,9 @@ fn sum_f32x8<T: F32x8Backend>(token: T, data: &[f32]) -> f32 {
     let mut acc = f32x8::<T>::zero_t(token);
     let (chunks, remainder) = data.split_at(data.len() - data.len() % 8);
 
-    for chunk in chunks.chunks_exact(8) {
-        let v = f32x8::<T>::load_t(token, chunk.try_into().unwrap());
-        acc = acc + v;
+    for chunk in chunks.as_chunks::<8>().0 {
+        let v = f32x8::<T>::load_t(token, chunk);
+        acc += v;
     }
 
     let mut total = acc.reduce_add();
@@ -161,7 +163,7 @@ fn apply_gamma_correction<T: F32x8Backend + F32x8Convert>(token: T, rgba_pixels:
     let r = r * scale;
     let g = g * scale;
     let b = b * scale;
-    let a = a; // Alpha unchanged
+    // Alpha unchanged.
 
     *rgba_pixels = f32x8::<T>::store_8_rgba_u8(r, g, b, a);
 }

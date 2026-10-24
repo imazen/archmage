@@ -418,7 +418,7 @@ mod x86_impl {
     /// Each output is a weighted sum of `n_points` inputs spaced `stride` apart.
     #[arcane]
     pub fn reduce_horizontal_f32(
-        token: X64V3Token,
+        _token: X64V3Token,
         input: &[f32],
         output: &mut [f32],
         weights: &[f32],

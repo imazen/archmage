@@ -8,10 +8,9 @@
 //! the documented divergence can't silently change shape.
 
 use archmage::{ScalarToken, SimdToken};
-use magetypes::simd::backends::{F32x4Convert, F32x8Convert};
-use magetypes::simd::generic::{f32x4, f32x8};
 #[cfg(feature = "w512")]
-use magetypes::simd::{backends::F32x16Convert, generic::f32x16};
+use magetypes::simd::generic::f32x16;
+use magetypes::simd::generic::{f32x4, f32x8};
 
 /// Every interesting class: in-range (incl. fractional + negative), the exact
 /// f32 values nearest the i32 boundary from both sides, overflow both ways,

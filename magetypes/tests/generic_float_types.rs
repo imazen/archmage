@@ -186,7 +186,7 @@ fn f64x2_basic_arithmetic() {
 #[test]
 fn f64x2_load_store_roundtrip() {
     if let Some(t) = X64V3Token::summon() {
-        let data = [3.14, 2.72];
+        let data = [1.5, 2.25];
         let v = f64x2::load_t(t, &data);
         let mut out = [0.0f64; 2];
         v.store(&mut out);

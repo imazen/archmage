@@ -104,7 +104,7 @@ mod x86_impl {
         // 3 rows of gradient data
         let row0: Vec<u8> = (0..width).map(|i| (i * 4).min(255) as u8).collect();
         let row1: Vec<u8> = (0..width).map(|_| 128u8).collect();
-        let row2: Vec<u8> = (0..width).map(|i| (255 - i * 4).max(0) as u8).collect();
+        let row2: Vec<u8> = (0..width).map(|i| (255 - i * 4) as u8).collect();
         let inputs: Vec<&[u8]> = vec![&row0, &row1, &row2];
 
         // Equal weights for box filter: 1/3 ≈ 10923/32768

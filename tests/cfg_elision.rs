@@ -68,7 +68,7 @@ mod x86_stub_tests {
 #[cfg(target_arch = "aarch64")]
 mod arm_stub_tests {
     #[cfg(feature = "avx512")]
-    use archmage::{Avx512Fp16Token, X64V4Token, X64V4xToken};
+    use archmage::X64V4Token;
     use archmage::{SimdToken, X64V2Token, X64V3Token};
 
     #[test]
@@ -245,34 +245,27 @@ fn platform_name_matches_cfg() {
 // This tests that we can use cfg to select different implementations.
 
 fn get_simd_width() -> usize {
-    #[cfg(target_arch = "x86_64")]
+    // x86 can do 256-bit (AVX2) or 512-bit (AVX-512)
+    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
     {
-        // x86 can do 256-bit (AVX2) or 512-bit (AVX-512)
-        #[cfg(feature = "avx512")]
-        return 512;
-        #[cfg(not(feature = "avx512"))]
-        return 256;
+        512
     }
-
-    #[cfg(target_arch = "aarch64")]
+    #[cfg(all(target_arch = "x86_64", not(feature = "avx512")))]
     {
-        // ARM NEON is 128-bit
-        return 128;
+        256
     }
-
-    #[cfg(target_arch = "wasm32")]
+    // ARM NEON and WASM SIMD are 128-bit
+    #[cfg(any(target_arch = "aarch64", target_arch = "wasm32"))]
     {
-        // WASM SIMD is 128-bit
-        return 128;
+        128
     }
-
     #[cfg(not(any(
         target_arch = "x86_64",
         target_arch = "aarch64",
         target_arch = "wasm32"
     )))]
     {
-        return 0; // No SIMD
+        0 // No SIMD
     }
 }
 
@@ -525,7 +518,7 @@ mod compiletime_dispatch_elision {
             // This is the "fast path" that completely skips summon()
             // summon().unwrap() is safe here because compiled_with() == Some(true)
             let token = X64V3Token::summon().unwrap();
-            return sum_avx2(token, data);
+            sum_avx2(token, data)
         }
 
         // Only compiled when AVX2 is NOT a compile-time feature

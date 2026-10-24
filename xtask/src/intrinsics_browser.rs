@@ -646,7 +646,7 @@ pub fn generate_intrinsics_browser(reg: &Registry) -> Result<()> {
         .collect();
 
     // Get Rust version
-    let rust_version = std::process::Command::new("rustc")
+    let _rust_version = std::process::Command::new("rustc")
         .arg("--version")
         .output()
         .ok()
@@ -684,19 +684,6 @@ pub fn generate_intrinsics_browser(reg: &Registry) -> Result<()> {
     )?;
 
     Ok(())
-}
-
-/// Get current date as YYYY-MM-DD string in UTC (no chrono dependency).
-fn chrono_date() -> String {
-    let output = std::process::Command::new("date")
-        .arg("-u")
-        .arg("+%Y-%m-%d")
-        .output()
-        .ok()
-        .and_then(|o| String::from_utf8(o.stdout).ok());
-    output
-        .map(|s| s.trim().to_string())
-        .unwrap_or_else(|| "unknown".to_string())
 }
 
 // ============================================================================

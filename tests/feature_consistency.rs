@@ -10,6 +10,8 @@
 //! tests verify that X64* tokens are stubs on non-x86_64 targets (including
 //! 32-bit x86). Run on i686 to verify:
 //!   cross test --target i686-unknown-linux-gnu --test feature_consistency
+// Checks that the deprecated `Avx2FmaToken` alias is the same type as X64V3Token.
+#![allow(deprecated)]
 
 use archmage::SimdToken;
 use archmage::*;

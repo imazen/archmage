@@ -183,7 +183,10 @@ mod subtractive {
 // +tier(cfg(feature)): add a cfg gate to a default tier
 // ============================================================================
 
+// `#[cfg]` strips an item together with its own `#[allow]`, so the deliberately
+// unknown feature is allowed on the module.
 #[cfg(target_arch = "x86_64")]
+#[allow(unexpected_cfgs)]
 mod additive_cfg_gate {
     use super::*;
 
@@ -244,6 +247,8 @@ mod incant_modifiers {
         x + 3.0
     }
 
+    // Only x86_64 dispatch reaches the added v1 tier.
+    #[cfg(target_arch = "x86_64")]
     fn im_v1(_: X64V1Token, x: f32) -> f32 {
         x + 1.0
     }

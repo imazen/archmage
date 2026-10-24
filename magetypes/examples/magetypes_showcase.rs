@@ -319,15 +319,15 @@ mod batch_norm {
         let inv_std = f32x8::splat_t(token, gamma / (var + eps).sqrt());
         let beta_v = f32x8::splat_t(token, beta);
 
-        for chunk in data.chunks_exact_mut(8) {
-            let x = f32x8::from_array_t(token, chunk.as_ref().try_into().unwrap());
+        for chunk in data.as_chunks_mut::<8>().0 {
+            let x = f32x8::from_array_t(token, *chunk);
             // (x - mean) * inv_std + beta
             let normalized = (x - mean_v).mul_add(inv_std, beta_v);
-            normalized.store(chunk.try_into().unwrap());
+            normalized.store(chunk);
         }
 
         let inv_std_scalar = gamma / (var + eps).sqrt();
-        for x in data.chunks_exact_mut(8).into_remainder() {
+        for x in data.as_chunks_mut::<8>().1 {
             *x = (*x - mean) * inv_std_scalar + beta;
         }
     }
@@ -369,14 +369,14 @@ mod layer_norm {
         let inv_std = f32x8::splat_t(token, gamma / (var + eps).sqrt());
         let beta_v = f32x8::splat_t(token, beta);
 
-        for chunk in data.chunks_exact_mut(8) {
-            let x = f32x8::from_array_t(token, chunk.as_ref().try_into().unwrap());
+        for chunk in data.as_chunks_mut::<8>().0 {
+            let x = f32x8::from_array_t(token, *chunk);
             let normalized = (x - mean_v).mul_add(inv_std, beta_v);
-            normalized.store(chunk.try_into().unwrap());
+            normalized.store(chunk);
         }
 
         let inv_std_scalar = gamma / (var + eps).sqrt();
-        for x in data.chunks_exact_mut(8).into_remainder() {
+        for x in data.as_chunks_mut::<8>().1 {
             *x = (*x - mean) * inv_std_scalar + beta;
         }
     }
@@ -384,12 +384,12 @@ mod layer_norm {
     #[rite]
     fn compute_mean(token: X64V3Token, data: &[f32]) -> f32 {
         let mut sum = f32x8::zero_t(token);
-        for chunk in data.chunks_exact(8) {
-            let v = f32x8::from_array_t(token, chunk.try_into().unwrap());
+        for chunk in data.as_chunks::<8>().0 {
+            let v = f32x8::from_array_t(token, *chunk);
             sum += v;
         }
         let mut total = sum.reduce_add();
-        for &x in data.chunks_exact(8).remainder() {
+        for &x in data.as_chunks::<8>().1 {
             total += x;
         }
         total / data.len() as f32
@@ -400,14 +400,14 @@ mod layer_norm {
         let mean_v = f32x8::splat_t(token, mean);
         let mut sum_sq = f32x8::zero_t(token);
 
-        for chunk in data.chunks_exact(8) {
-            let v = f32x8::from_array_t(token, chunk.try_into().unwrap());
+        for chunk in data.as_chunks::<8>().0 {
+            let v = f32x8::from_array_t(token, *chunk);
             let diff = v - mean_v;
             sum_sq = diff.mul_add(diff, sum_sq);
         }
 
         let mut total = sum_sq.reduce_add();
-        for &x in data.chunks_exact(8).remainder() {
+        for &x in data.as_chunks::<8>().1 {
             let diff = x - mean;
             total += diff * diff;
         }
@@ -449,9 +449,9 @@ mod cosine_similarity {
         let mut norm_a = f32x8::zero_t(token);
         let mut norm_b = f32x8::zero_t(token);
 
-        for (a_chunk, b_chunk) in a.chunks_exact(8).zip(b.chunks_exact(8)) {
-            let va = f32x8::from_array_t(token, a_chunk.try_into().unwrap());
-            let vb = f32x8::from_array_t(token, b_chunk.try_into().unwrap());
+        for (a_chunk, b_chunk) in a.as_chunks::<8>().0.iter().zip(b.as_chunks::<8>().0) {
+            let va = f32x8::from_array_t(token, *a_chunk);
+            let vb = f32x8::from_array_t(token, *b_chunk);
 
             dot = va.mul_add(vb, dot);
             norm_a = va.mul_add(va, norm_a);
@@ -462,12 +462,7 @@ mod cosine_similarity {
         let mut norm_a_sum = norm_a.reduce_add();
         let mut norm_b_sum = norm_b.reduce_add();
 
-        for (&x, &y) in a
-            .chunks_exact(8)
-            .remainder()
-            .iter()
-            .zip(b.chunks_exact(8).remainder())
-        {
+        for (&x, &y) in a.as_chunks::<8>().1.iter().zip(b.as_chunks::<8>().1) {
             dot_sum += x * y;
             norm_a_sum += x * x;
             norm_b_sum += y * y;
@@ -513,26 +508,26 @@ mod softmax {
         let max_v = f32x8::splat_t(token, max_val);
         let mut sum_vec = f32x8::zero_t(token);
 
-        for chunk in data.chunks_exact_mut(8) {
-            let v = f32x8::from_array_t(token, chunk.as_ref().try_into().unwrap());
+        for chunk in data.as_chunks_mut::<8>().0 {
+            let v = f32x8::from_array_t(token, *chunk);
             let e = (v - max_v).exp_lowp();
-            e.store(chunk.try_into().unwrap());
+            e.store(chunk);
             sum_vec += e;
         }
 
         let mut sum = sum_vec.reduce_add();
-        for x in data.chunks_exact_mut(8).into_remainder() {
+        for x in data.as_chunks_mut::<8>().1 {
             *x = (*x - max_val).exp();
             sum += *x;
         }
 
         // Normalize
         let inv = f32x8::splat_t(token, 1.0 / sum);
-        for chunk in data.chunks_exact_mut(8) {
-            let v = f32x8::from_array_t(token, chunk.as_ref().try_into().unwrap());
-            (v * inv).store(chunk.try_into().unwrap());
+        for chunk in data.as_chunks_mut::<8>().0 {
+            let v = f32x8::from_array_t(token, *chunk);
+            (v * inv).store(chunk);
         }
-        for x in data.chunks_exact_mut(8).into_remainder() {
+        for x in data.as_chunks_mut::<8>().1 {
             *x /= sum;
         }
     }
@@ -540,12 +535,12 @@ mod softmax {
     #[rite]
     fn find_max(token: X64V3Token, data: &[f32]) -> f32 {
         let mut max_vec = f32x8::splat_t(token, f32::NEG_INFINITY);
-        for chunk in data.chunks_exact(8) {
-            let v = f32x8::from_array_t(token, chunk.try_into().unwrap());
+        for chunk in data.as_chunks::<8>().0 {
+            let v = f32x8::from_array_t(token, *chunk);
             max_vec = max_vec.max(v);
         }
         let mut max_val = max_vec.reduce_max();
-        for &x in data.chunks_exact(8).remainder() {
+        for &x in data.as_chunks::<8>().1 {
             max_val = max_val.max(x);
         }
         max_val

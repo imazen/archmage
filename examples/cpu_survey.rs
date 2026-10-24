@@ -122,14 +122,14 @@ use core::arch::x86_64::__cpuid;
 #[cfg(any(target_arch = "x86_64", target_arch = "x86"))]
 fn cpuid_brand_string() -> Option<String> {
     // Check if extended CPUID leaves 0x80000002..0x80000004 are supported
-    let max_ext = unsafe { __cpuid(0x80000000) }.eax;
+    let max_ext = __cpuid(0x80000000).eax;
     if max_ext < 0x80000004 {
         return None;
     }
 
     let mut brand = [0u8; 48];
     for (i, leaf) in (0x80000002u32..=0x80000004).enumerate() {
-        let result = unsafe { __cpuid(leaf) };
+        let result = __cpuid(leaf);
         let offset = i * 16;
         brand[offset..offset + 4].copy_from_slice(&result.eax.to_le_bytes());
         brand[offset + 4..offset + 8].copy_from_slice(&result.ebx.to_le_bytes());
@@ -155,11 +155,11 @@ fn read_proc_cpuinfo_arm() -> Option<String> {
     let mut part = None;
     for line in content.lines() {
         if let Some(value) = line.strip_prefix("CPU implementer") {
-            let value = value.trim_start_matches(|c: char| c == ' ' || c == '\t' || c == ':');
+            let value = value.trim_start_matches([' ', '\t', ':']);
             implementer = Some(value.to_string());
         }
         if let Some(value) = line.strip_prefix("CPU part") {
-            let value = value.trim_start_matches(|c: char| c == ' ' || c == '\t' || c == ':');
+            let value = value.trim_start_matches([' ', '\t', ':']);
             part = Some(value.to_string());
         }
         if implementer.is_some() && part.is_some() {
@@ -174,8 +174,7 @@ fn read_proc_cpuinfo_arm() -> Option<String> {
             for line in content.lines() {
                 for prefix in &["Hardware", "model name"] {
                     if let Some(value) = line.strip_prefix(prefix) {
-                        let value =
-                            value.trim_start_matches(|c: char| c == ' ' || c == '\t' || c == ':');
+                        let value = value.trim_start_matches([' ', '\t', ':']);
                         if !value.is_empty() {
                             return Some(value.to_string());
                         }
@@ -321,9 +320,7 @@ fn windows_arm_cpu_name() -> Option<String> {
         // Extract model number: "Model D49" -> 0xd49
         if let Some(model_pos) = ident.find("Model ") {
             let model_str = &ident[model_pos + 6..];
-            let model_end = model_str
-                .find(|c: char| c == ' ' || c == ',')
-                .unwrap_or(model_str.len());
+            let model_end = model_str.find([' ', ',']).unwrap_or(model_str.len());
             let model_hex = &model_str[..model_end];
             // Windows gives uppercase hex without 0x prefix
             if let Ok(model_num) = u32::from_str_radix(model_hex.trim_start_matches("0x"), 16) {

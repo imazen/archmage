@@ -257,7 +257,7 @@ impl AccuracyStats {
         // Track worst 5
         if self.worst_inputs.len() < 5 || ulp > self.worst_inputs.last().map(|w| w.3).unwrap_or(0) {
             self.worst_inputs.push((input, got, expected, ulp));
-            self.worst_inputs.sort_by(|a, b| b.3.cmp(&a.3));
+            self.worst_inputs.sort_by_key(|w| core::cmp::Reverse(w.3));
             self.worst_inputs.truncate(5);
         }
     }
@@ -1091,7 +1091,7 @@ fn accuracy_regional_breakdown() {
         let valid: Vec<f32> = inputs
             .iter()
             .copied()
-            .filter(|&v| v >= -126.0 && v < 128.0)
+            .filter(|&v| (-126.0..128.0).contains(&v))
             .collect();
         if valid.is_empty() {
             continue;

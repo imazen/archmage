@@ -23,6 +23,11 @@
 //!   cargo bench -p magetypes --bench mul_add_cost                     # aarch64
 //! Redraw code layout once (Zen 5 placement effects) and compare:
 //!   RUSTFLAGS="--cfg mul_add_cost_redraw" cargo bench -p magetypes --bench mul_add_cost
+// Kernels exist only for x86_64 and aarch64; elsewhere the harness is empty.
+#![cfg_attr(
+    not(any(target_arch = "x86_64", target_arch = "aarch64")),
+    allow(dead_code, unused_macros, unused_variables)
+)]
 
 /// Vectors per stream pass and steps per chain.
 const N: usize = 1024;

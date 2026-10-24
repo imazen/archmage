@@ -103,6 +103,7 @@ fn avx512_tokens_accessible_from_prelude() {
 
 #[test]
 fn stubs_return_none_on_wrong_arch() {
+    #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
     use archmage::prelude::*;
     // On x86_64, NeonToken::summon() returns None (it's a stub)
     #[cfg(target_arch = "x86_64")]

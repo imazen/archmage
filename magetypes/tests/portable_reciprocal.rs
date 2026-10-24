@@ -66,8 +66,8 @@ fn measure(
 ) -> (u64, f64) {
     let mut h = 0xcbf2_9ce4_8422_2325u64;
     let mut err = 0.0f64;
-    for chunk in data.chunks_exact(4) {
-        let arr: [f32; 4] = chunk.try_into().unwrap();
+    for chunk in data.as_chunks::<4>().0 {
+        let arr: [f32; 4] = *chunk;
         let out = op(f32x4::<Tok>::from_array_t(token, arr)).to_array();
         for (&x, &y) in arr.iter().zip(out.iter()) {
             fnv(&mut h, y.to_bits());
@@ -141,8 +141,8 @@ fn portable_reciprocal_bit_identity_and_precision() {
 macro_rules! collect_bits {
     ($ty:ty, $lanes:literal, $token:expr, $data:expr, $method:ident) => {{
         let mut out: Vec<u32> = Vec::with_capacity($data.len());
-        for chunk in $data.chunks_exact($lanes) {
-            let arr: [f32; $lanes] = chunk.try_into().unwrap();
+        for chunk in $data.as_chunks::<$lanes>().0 {
+            let arr: [f32; $lanes] = *chunk;
             let r = <$ty>::from_array_t($token, arr).$method().to_array();
             out.extend(r.iter().map(|v| v.to_bits()));
         }

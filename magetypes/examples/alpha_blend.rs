@@ -63,11 +63,11 @@ mod x86_impl {
         debug_assert!(data.len() % 4 == 0, "Must be RGBA pixels");
 
         // Process 2 pixels (8 floats) at a time
-        for chunk in data.chunks_exact_mut(8) {
-            let arr: &[f32; 8] = (&*chunk).try_into().unwrap();
+        for chunk in data.as_chunks_mut::<8>().0 {
+            let arr: &[f32; 8] = &*chunk;
             let pixels = f32x8::load_t(token, arr);
             let result = premultiply_2px(token, pixels);
-            let out: &mut [f32; 8] = chunk.try_into().unwrap();
+            let out: &mut [f32; 8] = chunk;
             result.store(out);
         }
 
@@ -137,11 +137,11 @@ mod x86_impl {
         debug_assert!(data.len() % 4 == 0, "Must be RGBA pixels");
 
         // Process 2 pixels (8 floats) at a time
-        for chunk in data.chunks_exact_mut(8) {
-            let arr: &[f32; 8] = (&*chunk).try_into().unwrap();
+        for chunk in data.as_chunks_mut::<8>().0 {
+            let arr: &[f32; 8] = &*chunk;
             let pixels = f32x8::load_t(token, arr);
             let result = unpremultiply_2px(token, pixels);
-            let out: &mut [f32; 8] = chunk.try_into().unwrap();
+            let out: &mut [f32; 8] = chunk;
             result.store(out);
         }
 
@@ -199,13 +199,18 @@ mod x86_impl {
         debug_assert!(src.len() % 4 == 0, "Must be RGBA pixels");
 
         // Process 2 pixels at a time
-        for (src_chunk, dst_chunk) in src.chunks_exact(8).zip(dst.chunks_exact_mut(8)) {
-            let src_arr: &[f32; 8] = src_chunk.try_into().unwrap();
-            let dst_arr: &[f32; 8] = (&*dst_chunk).try_into().unwrap();
+        for (src_chunk, dst_chunk) in src
+            .as_chunks::<8>()
+            .0
+            .iter()
+            .zip(dst.as_chunks_mut::<8>().0)
+        {
+            let src_arr: &[f32; 8] = src_chunk;
+            let dst_arr: &[f32; 8] = &*dst_chunk;
             let s = f32x8::load_t(token, src_arr);
             let d = f32x8::load_t(token, dst_arr);
             let result = composite_over_2px(token, s, d);
-            let out: &mut [f32; 8] = dst_chunk.try_into().unwrap();
+            let out: &mut [f32; 8] = dst_chunk;
             result.store(out);
         }
 
@@ -227,7 +232,7 @@ mod x86_impl {
     // ============================================================================
 
     fn premultiply_alpha_scalar(data: &mut [f32]) {
-        for chunk in data.chunks_exact_mut(4) {
+        for chunk in data.as_chunks_mut::<4>().0 {
             let alpha = chunk[3];
             chunk[0] *= alpha;
             chunk[1] *= alpha;
@@ -237,7 +242,7 @@ mod x86_impl {
 
     fn unpremultiply_alpha_scalar(data: &mut [f32]) {
         const ALPHA_EPSILON: f32 = 1.0 / 255.0;
-        for chunk in data.chunks_exact_mut(4) {
+        for chunk in data.as_chunks_mut::<4>().0 {
             let alpha = chunk[3];
             if alpha > ALPHA_EPSILON {
                 let inv_alpha = 1.0 / alpha;
@@ -253,7 +258,12 @@ mod x86_impl {
     }
 
     fn composite_over_scalar(src: &[f32], dst: &mut [f32]) {
-        for (src_chunk, dst_chunk) in src.chunks_exact(4).zip(dst.chunks_exact_mut(4)) {
+        for (src_chunk, dst_chunk) in src
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .zip(dst.as_chunks_mut::<4>().0)
+        {
             let src_alpha = src_chunk[3];
             let inv_src_alpha = 1.0 - src_alpha;
             dst_chunk[0] = src_chunk[0] + dst_chunk[0] * inv_src_alpha;

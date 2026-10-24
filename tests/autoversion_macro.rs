@@ -747,7 +747,7 @@ fn const_generic_explicit_tiers() {
 
 // Const generic with lifetime
 #[autoversion]
-fn first_n_sum<'a, const N: usize>(_token: SimdToken, data: &'a [f32]) -> f32 {
+fn first_n_sum<const N: usize>(_token: SimdToken, data: &[f32]) -> f32 {
     let mut s = 0.0f32;
     let end = N.min(data.len());
     let mut i = 0;

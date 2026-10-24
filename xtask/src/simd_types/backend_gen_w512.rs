@@ -1159,7 +1159,7 @@ fn generate_scalar_float_impl(ty: &W512Type) -> String {
             fn bitxor(self, a: {array}, b: {array}) -> {array} {{ core::array::from_fn(|i| {elem}::from_bits(a[i].to_bits() ^ b[i].to_bits())) }}
         }}
     "#,
-        elem_name = format!("{zero_lit}"),
+        elem_name = zero_lit.to_string(),
         uint = if elem == "f32" { "u32" } else { "u64" },
         floor_fn = if elem == "f32" { "floorf" } else { "floor" },
         ceil_fn = if elem == "f32" { "ceilf" } else { "ceil" },
@@ -1199,14 +1199,11 @@ fn generate_scalar_int_impl(ty: &W512Type) -> String {
     };
 
     let neg_impl = if ty.is_signed() {
-        format!("core::array::from_fn(|i| a[i].wrapping_neg())")
+        "core::array::from_fn(|i| a[i].wrapping_neg())".to_string()
     } else {
         // For unsigned: negate via wrapping
         format!("core::array::from_fn(|i| (0{elem}).wrapping_sub(a[i]))")
     };
-
-    let cmp_signed = if ty.is_signed() { "" } else { "" };
-    let _ = cmp_signed;
 
     // For shifts of byte types, N could exceed bit width, so use wrapping
     let shl_body = match ty.elem_bits {
@@ -1232,18 +1229,14 @@ fn generate_scalar_int_impl(ty: &W512Type) -> String {
         )
     } else {
         match ty.elem_bits {
-            8 => format!(
-                "core::array::from_fn(|i| if N < 8 {{ a[i].wrapping_shr(N as u32) }} else {{ 0 }})"
-            ),
-            16 => format!(
-                "core::array::from_fn(|i| if N < 16 {{ a[i].wrapping_shr(N as u32) }} else {{ 0 }})"
-            ),
-            32 => format!(
-                "core::array::from_fn(|i| if N < 32 {{ a[i].wrapping_shr(N as u32) }} else {{ 0 }})"
-            ),
-            64 => format!(
-                "core::array::from_fn(|i| if N < 64 {{ a[i].wrapping_shr(N as u32) }} else {{ 0 }})"
-            ),
+            8 => "core::array::from_fn(|i| if N < 8 { a[i].wrapping_shr(N as u32) } else { 0 })"
+                .to_string(),
+            16 => "core::array::from_fn(|i| if N < 16 { a[i].wrapping_shr(N as u32) } else { 0 })"
+                .to_string(),
+            32 => "core::array::from_fn(|i| if N < 32 { a[i].wrapping_shr(N as u32) } else { 0 })"
+                .to_string(),
+            64 => "core::array::from_fn(|i| if N < 64 { a[i].wrapping_shr(N as u32) } else { 0 })"
+                .to_string(),
             _ => unreachable!(),
         }
     };

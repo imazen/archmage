@@ -683,13 +683,13 @@ mod wasm_storage {
             fn $name() {
                 let token = Wasm128Token::summon().expect("SIMD128 enabled for this test");
                 let input: [$elem; $lanes] = core::array::from_fn(|i| (i * 3 + 1) as $elem);
-                let loaded = $ty::<Wasm128Token>::load(token, &input);
+                let loaded = $ty::<Wasm128Token>::load_t(token, &input);
                 assert_eq!(loaded.to_array(), input);
                 let mut output = [0 as $elem; $lanes];
-                $ty::<Wasm128Token>::from_array(token, input).store(&mut output);
+                $ty::<Wasm128Token>::from_array_t(token, input).store(&mut output);
                 assert_eq!(output, input);
                 let mut slice = [0 as $elem; $lanes + 1];
-                let (chunks, tail) = $ty::<Wasm128Token>::partition_slice_mut(token, &mut slice);
+                let (chunks, tail) = $ty::<Wasm128Token>::partition_slice_mut_t(token, &mut slice);
                 assert_eq!(chunks.len(), 1);
                 assert_eq!(tail.len(), 1);
                 loaded.store(&mut chunks[0]);

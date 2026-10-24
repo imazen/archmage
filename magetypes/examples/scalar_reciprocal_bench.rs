@@ -5,6 +5,9 @@
 //! ```sh
 //! cargo run --release -p magetypes --example scalar_reciprocal_bench --features std
 //! ```
+// Measured loop shapes stay as recorded; `as_chunks` would change the codegen
+// that the recorded results describe.
+#![allow(clippy::chunks_exact_to_as_chunks)]
 
 #[cfg(feature = "std")]
 fn main() {

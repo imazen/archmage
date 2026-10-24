@@ -2,7 +2,13 @@
 //! Run in release mode; --samples-only also works under Wasmtime/QEMU.
 //! Baselines deliberately lack the advertised exceptional-input contract.
 //! OP and FIX are consts: selection is outside the measured vector loop.
-use archmage::{ScalarToken, SimdToken};
+use archmage::ScalarToken;
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
+use archmage::SimdToken;
 use std::{
     hint::black_box,
     time::{Duration, Instant},
@@ -264,8 +270,8 @@ mod neon {
             .iter()
             .zip(output.as_chunks_mut::<4>().0.iter_mut())
         {
-            let v = V::from_array(token, core::array::from_fn(|i| f32::from_bits(a[i])));
-            let one = V::splat(token, 1.0);
+            let v = V::from_array_t(token, core::array::from_fn(|i| f32::from_bits(a[i])));
+            let one = V::splat_t(token, 1.0);
             let result = match OP {
                 0 => {
                     let i = if FIX {
@@ -316,8 +322,8 @@ mod wasm {
             .iter()
             .zip(output.as_chunks_mut::<4>().0.iter_mut())
         {
-            let v = V::from_array(token, core::array::from_fn(|i| f32::from_bits(a[i])));
-            let one = V::splat(token, 1.0);
+            let v = V::from_array_t(token, core::array::from_fn(|i| f32::from_bits(a[i])));
+            let one = V::splat_t(token, 1.0);
             let result = match OP {
                 0 => {
                     let i = if FIX {

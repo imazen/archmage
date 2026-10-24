@@ -61,7 +61,7 @@ pub(super) fn generate(source: &str) -> String {
                     } else {
                         format_ident!("argument_{index}")
                     };
-                    arg.pat = Box::new(syn::parse_quote!(#ident));
+                    *arg.pat = syn::parse_quote!(#ident);
                 }
                 let Pat::Ident(pat) = &*arg.pat else {
                     panic!("constructor pattern: {name}")

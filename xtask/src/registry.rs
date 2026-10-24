@@ -357,16 +357,16 @@ impl Registry {
                     bail!("Token {} references unknown parent: {}", token.name, parent);
                 }
                 // Parent must be same arch
-                if let Some(parent_def) = self.token.iter().find(|t| t.name == *parent) {
-                    if parent_def.arch != token.arch {
-                        bail!(
-                            "Token {} (arch={}) has parent {} (arch={}) — must be same arch",
-                            token.name,
-                            token.arch,
-                            parent,
-                            parent_def.arch
-                        );
-                    }
+                if let Some(parent_def) = self.token.iter().find(|t| t.name == *parent)
+                    && parent_def.arch != token.arch
+                {
+                    bail!(
+                        "Token {} (arch={}) has parent {} (arch={}) — must be same arch",
+                        token.name,
+                        token.arch,
+                        parent,
+                        parent_def.arch
+                    );
                 }
             }
 

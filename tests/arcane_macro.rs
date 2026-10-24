@@ -1,6 +1,8 @@
 //! Tests for the #[arcane] attribute macro.
 
 #![allow(unused)]
+// Several cases still spell the token as the deprecated `Avx2FmaToken` alias.
+#![allow(deprecated)]
 
 #[cfg(target_arch = "x86_64")]
 mod x86_tests {
@@ -510,8 +512,8 @@ mod x86_tests {
     #[test]
     fn test_arcane_const_generic() {
         if let Some(token) = X64V3Token::summon() {
-            let result: [f32; 4] = fill_array(token, 3.14);
-            assert_eq!(result, [3.14; 4]);
+            let result: [f32; 4] = fill_array(token, 1.25);
+            assert_eq!(result, [1.25; 4]);
         }
     }
 
@@ -546,11 +548,11 @@ mod x86_tests {
         src: &[f32],
     ) -> [[f32; COLS]; ROWS] {
         let mut out = [[0.0f32; COLS]; ROWS];
-        for r in 0..ROWS {
-            for c in 0..COLS {
+        for (r, row) in out.iter_mut().enumerate() {
+            for (c, slot) in row.iter_mut().enumerate() {
                 let idx = r * COLS + c;
                 if idx < src.len() {
-                    out[r][c] = src[idx];
+                    *slot = src[idx];
                 }
             }
         }

@@ -3,20 +3,23 @@
 //! Neoverse box), not QEMU:
 //!
 //!   1. **original**   — the pre-change methods: raw `vrsqrteq`/`vrecpeq` 8-bit
-//!                       estimate, then (for full precision) two *manual* Newton
-//!                       steps built from `mul`/`sub` + 0.5/3.0/2.0 splats.
+//!      estimate, then (for full precision) two *manual* Newton
+//!      steps built from `mul`/`sub` + 0.5/3.0/2.0 splats.
 //!   2. **frsqrts**    — the current shipped fast methods: the native NEON
-//!                       Newton-Raphson assist instructions FRSQRTS/FRECPS, with
-//!                       `_approx` taking one step (~16-bit) and full taking two.
+//!      Newton-Raphson assist instructions FRSQRTS/FRECPS, with
+//!      `_approx` taking one step (~16-bit) and full taking two.
 //!   3. **portable**   — the deterministic `_portable` family: an integer
-//!                       bit-trick seed + non-FMA Newton step(s), full precision
-//!                       via IEEE div/sqrt.
+//!      bit-trick seed + non-FMA Newton step(s), full precision
+//!      via IEEE div/sqrt.
 //!
 //! Each kernel streams an L1-resident f32 array (load → op → store). Load/store
 //! is identical across kernels, so the deltas reflect the op cost.
 //!
 //! Run on the ARM box:
 //!   cargo bench -p magetypes --bench rsqrt_arm --features std
+// Measured loop shapes stay as recorded; `as_chunks` would change the codegen
+// that the recorded results describe.
+#![allow(clippy::chunks_exact_to_as_chunks)]
 
 use zenbench::criterion_compat::*;
 use zenbench::{criterion_group, criterion_main};

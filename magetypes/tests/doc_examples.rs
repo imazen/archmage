@@ -8,7 +8,9 @@
 
 #![allow(dead_code, unused_variables)]
 
-use archmage::{ScalarToken, SimdToken};
+use archmage::ScalarToken;
+#[cfg(target_arch = "x86_64")]
+use archmage::SimdToken;
 use magetypes::simd::backends::{F32x8Backend, F32x8Convert, I32x8Backend};
 use magetypes::simd::generic::{f32x8, i32x8};
 
@@ -323,12 +325,11 @@ mod reductions {
     }
 
     fn find_max<T: F32x8Backend>(token: T, data: &[f32]) -> f32 {
-        let chunks = data.chunks_exact(8);
-        let remainder = chunks.remainder();
+        let (chunks, remainder) = data.as_chunks::<8>();
 
         let mut max_v = f32x8::<T>::splat_t(token, f32::NEG_INFINITY);
         for chunk in chunks {
-            let v = f32x8::<T>::load_t(token, chunk.try_into().unwrap());
+            let v = f32x8::<T>::load_t(token, chunk);
             max_v = max_v.max(v);
         }
 
@@ -635,8 +636,8 @@ mod chunked {
     fn process_large<T: F32x8Backend>(token: T, data: &mut [f32]) {
         let (chunks, remainder) = data.split_at_mut(data.len() - data.len() % 8);
 
-        for chunk in chunks.chunks_exact_mut(8) {
-            let chunk_arr: &mut [f32; 8] = chunk.try_into().unwrap();
+        for chunk in chunks.as_chunks_mut::<8>().0 {
+            let chunk_arr: &mut [f32; 8] = chunk;
             let v = f32x8::<T>::from_array_t(token, *chunk_arr);
             let result = v * v;
             result.store(chunk_arr);
@@ -648,14 +649,13 @@ mod chunked {
     }
 
     fn sum_array<T: F32x8Backend>(token: T, data: &[f32]) -> f32 {
-        let chunks = data.chunks_exact(8);
-        let remainder = chunks.remainder();
+        let (chunks, remainder) = data.as_chunks::<8>();
 
         let mut acc = f32x8::<T>::zero_t(token);
         for chunk in chunks {
-            let chunk_arr: &[f32; 8] = chunk.try_into().unwrap();
+            let chunk_arr: &[f32; 8] = chunk;
             let v = f32x8::<T>::from_array_t(token, *chunk_arr);
-            acc = acc + v;
+            acc += v;
         }
 
         let mut total = acc.reduce_add();
@@ -884,7 +884,13 @@ mod gaussian {
 mod fma_expected;
 mod isa_quirks {
     use crate::fma_expected::FmaExpected;
-    use archmage::{ScalarToken, SimdToken};
+    use archmage::ScalarToken;
+    #[cfg(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    ))]
+    use archmage::SimdToken;
     use magetypes::simd::generic::*;
 
     macro_rules! check_float {

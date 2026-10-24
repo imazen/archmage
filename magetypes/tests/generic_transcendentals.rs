@@ -91,7 +91,16 @@ mod tests {
     #[test]
     fn f32x8_ln_lowp() {
         if let Some(t) = X64V3Token::summon() {
-            let vals = [1.0, 2.718_281_8, 10.0, 0.5, 100.0, 0.1, 7.389, 20.0];
+            let vals = [
+                1.0,
+                core::f32::consts::E,
+                10.0,
+                0.5,
+                100.0,
+                0.1,
+                7.389,
+                20.0,
+            ];
             let input = f32x8::from_array_t(t, vals);
             let result = input.ln_lowp().to_array();
             let expected: [f32; 8] = core::array::from_fn(|i| vals[i].ln());
@@ -595,7 +604,10 @@ mod tests {
                     // pow(0, x) via log2->exp2 is undefined, skip
                     continue;
                 }
-                assert!(v >= 0.0 && v <= 1.0001, "gamma lane {i}: {v} out of range");
+                assert!(
+                    (0.0..=1.0001).contains(&v),
+                    "gamma lane {i}: {v} out of range"
+                );
                 let expected = linear[i].powf(1.0 / 2.2);
                 assert!(
                     ((v - expected) / expected).abs() < 5e-5,
@@ -1160,7 +1172,10 @@ mod tests {
             let result = gamma_correct_16(t, &linear, 2.2);
 
             for (i, &v) in result.iter().enumerate() {
-                assert!(v >= 0.0 && v <= 1.0001, "gamma lane {i}: {v} out of range");
+                assert!(
+                    (0.0..=1.0001).contains(&v),
+                    "gamma lane {i}: {v} out of range"
+                );
                 let expected = linear[i].powf(1.0 / 2.2);
                 assert!(
                     ((v - expected) / expected).abs() < 5e-5,

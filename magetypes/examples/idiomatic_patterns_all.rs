@@ -172,7 +172,7 @@ fn clamp01_impl(token: Token, plane: &mut [f32]) {
 
 #[autoversion]
 fn apply_color_matrix(rgb: &mut [f32], mat: [[f32; 3]; 3]) {
-    for pixel in rgb.chunks_exact_mut(3) {
+    for pixel in rgb.as_chunks_mut::<3>().0 {
         let (r, g, b) = (pixel[0], pixel[1], pixel[2]);
         pixel[0] = mat[0][0] * r + mat[0][1] * g + mat[0][2] * b;
         pixel[1] = mat[1][0] * r + mat[1][1] * g + mat[1][2] * b;
@@ -294,7 +294,7 @@ fn main() {
     let mut plane = vec![1.0f32; 19]; // 2 full f32x8 chunks + 3 tail
     scale_plane(&mut plane, 2.0);
     assert!(
-        approx_eq(&plane, &vec![2.0; 19], 1e-6),
+        approx_eq(&plane, &[2.0; 19], 1e-6),
         "[A] scale_plane: {plane:?}"
     );
     println!("  [A] inline #[magetypes] scale_plane           OK");
@@ -324,7 +324,7 @@ fn main() {
         let mut plane = vec![3.0f32; 37];
         scale_plane(&mut plane, 0.5);
         assert!(
-            approx_eq(&plane, &vec![1.5; 37], 1e-6),
+            approx_eq(&plane, &[1.5; 37], 1e-6),
             "[C] scale_plane (v4x/v4/v3/neon/wasm128/scalar): {plane:?}"
         );
         #[cfg(all(target_arch = "x86_64", feature = "avx512"))]

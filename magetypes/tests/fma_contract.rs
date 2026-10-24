@@ -2,7 +2,13 @@
 //! Portable results are bit-exact except NaNs, under round-to-nearest with
 //! gradual underflow. Bare arithmetic follows the backend's native contract.
 #![forbid(unsafe_code)]
-use archmage::{ScalarToken, SimdToken, magetypes};
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
+use archmage::SimdToken;
+use archmage::{ScalarToken, magetypes};
 #[path = "common/fma_vectors.rs"]
 mod fixtures;
 #[path = "common/fma_expected.rs"]

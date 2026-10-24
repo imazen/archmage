@@ -143,10 +143,7 @@ mod arcane_contracts_x86 {
         // Self in return type
         #[arcane(_self = SimdVec8)]
         fn doubled(&self, token: X64V3Token) -> Self {
-            let mut data = [0.0f32; 8];
-            for i in 0..8 {
-                data[i] = _self.data[i] * 2.0;
-            }
+            let data: [f32; 8] = core::array::from_fn(|i| _self.data[i] * 2.0);
             SimdVec8 { data }
         }
     }

@@ -1,5 +1,6 @@
 //! Tests for `partition_slice()` and `partition_slice_mut()` on magetypes SIMD types.
 
+#[cfg(target_arch = "x86_64")]
 use archmage::SimdToken;
 
 #[cfg(target_arch = "x86_64")]

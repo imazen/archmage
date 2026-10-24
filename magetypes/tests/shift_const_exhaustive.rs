@@ -21,6 +21,9 @@
 //! The out-of-range side of the contract (`N == lane_bits`, negative `N`
 //! fail to compile identically on every backend) is pinned by the
 //! `compile_fail` doctests in `magetypes/src/simd/mod.rs`.
+// Each case runs in an immediately-called closure so a failing assertion
+// reports its own frame.
+#![allow(clippy::redundant_closure_call)]
 
 use archmage::{ScalarToken, SimdToken};
 use magetypes::simd::generic::{

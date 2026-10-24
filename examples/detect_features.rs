@@ -12,6 +12,7 @@
 //! feature comparison because it uses different feature name strings than
 //! `cfg!(target_feature)` on some Rust versions, causing compilation errors.
 
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 use archmage::SimdToken;
 
 fn main() {
@@ -191,11 +192,13 @@ fn yn(b: bool) -> &'static str {
     if b { "YES" } else { "no" }
 }
 
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 fn report(name: &str, detected: bool) {
     let icon = if detected { "[+]" } else { "[ ]" };
     println!("  {icon} {name}");
 }
 
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 fn report_token(name: &str, available: bool) {
     let icon = if available { "[+]" } else { "[ ]" };
     println!("  {icon} {name}::summon()");

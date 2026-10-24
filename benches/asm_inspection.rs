@@ -743,13 +743,7 @@ mod x86_impl {
     fn bench_dct(c: &mut Criterion) {
         let coeffs = dct8_coefficients();
         let rows: Vec<[f32; 8]> = (0..100)
-            .map(|i| {
-                let mut r = [0.0f32; 8];
-                for j in 0..8 {
-                    r[j] = (i * 8 + j) as f32;
-                }
-                r
-            })
+            .map(|i| core::array::from_fn(|j| (i * 8 + j) as f32))
             .collect();
 
         if let Some(token) = Desktop64::summon() {
@@ -816,24 +810,24 @@ mod x86_impl {
         }
 
         #[cfg(feature = "avx512")]
-        if let Some(v4_token) = X64V4Token::summon() {
-            if let Some(token) = v3_token {
-                // -- V4 downcast to V3 ---
-                c.bench_function("nest_v4_down_v3_arcane", |b| {
-                    b.iter(|| nest_v4_down_v3_arcane(v4_token, black_box(&data), black_box(&other)))
-                });
-                c.bench_function("nest_v4_down_v3_bare", |b| {
-                    b.iter(|| nest_v4_down_v3_bare(black_box(&data), black_box(&other)))
-                });
+        if let Some(v4_token) = X64V4Token::summon()
+            && let Some(token) = v3_token
+        {
+            // -- V4 downcast to V3 ---
+            c.bench_function("nest_v4_down_v3_arcane", |b| {
+                b.iter(|| nest_v4_down_v3_arcane(v4_token, black_box(&data), black_box(&other)))
+            });
+            c.bench_function("nest_v4_down_v3_bare", |b| {
+                b.iter(|| nest_v4_down_v3_bare(black_box(&data), black_box(&other)))
+            });
 
-                // -- V3 upgrade to V4 (uses real AVX-512 zmm instructions) ---
-                c.bench_function("nest_v3_up_v4_arcane", |b| {
-                    b.iter(|| nest_v3_up_v4_arcane(token, black_box(&data), black_box(&other)))
-                });
-                c.bench_function("nest_v3_up_v4_bare", |b| {
-                    b.iter(|| nest_v3_up_v4_bare(black_box(&data), black_box(&other)))
-                });
-            }
+            // -- V3 upgrade to V4 (uses real AVX-512 zmm instructions) ---
+            c.bench_function("nest_v3_up_v4_arcane", |b| {
+                b.iter(|| nest_v3_up_v4_arcane(token, black_box(&data), black_box(&other)))
+            });
+            c.bench_function("nest_v3_up_v4_bare", |b| {
+                b.iter(|| nest_v3_up_v4_bare(black_box(&data), black_box(&other)))
+            });
         }
     }
 

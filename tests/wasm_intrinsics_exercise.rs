@@ -271,9 +271,9 @@ fn exercise_conversions(token: Wasm128Token) {
     black_box(f64x2_convert_low_u32x4(i));
 
     // Float demote/promote
-    let dd = f64x2_splat(3.14);
+    let dd = f64x2_splat(1.5);
     black_box(f32x4_demote_f64x2_zero(dd));
-    let ff = f32x4_splat(3.14);
+    let ff = f32x4_splat(1.5);
     black_box(f64x2_promote_low_f32x4(ff));
 
     // Extend (widen)

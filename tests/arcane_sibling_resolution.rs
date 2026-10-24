@@ -15,8 +15,11 @@ macro_rules! sibling_resolution_cases {
     ($token:ident) => {
         use archmage::prelude::*;
 
+        // The impostors exist only to be shadowed; nothing may call them.
+        #[allow(dead_code)]
         const IMPOSTOR: f32 = -1.0;
 
+        #[allow(dead_code)]
         mod impostor {
             use archmage::$token;
             /// Same name and signature as the generated sibling of `kernel`.

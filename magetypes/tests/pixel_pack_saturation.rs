@@ -4,7 +4,13 @@
 //! reference). The x86 V4/V4x f32x4/f32x8 paths delegate to V3, so each is
 //! checked separately.
 
-use archmage::{ScalarToken, SimdToken};
+use archmage::ScalarToken;
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
+use archmage::SimdToken;
 use magetypes::simd::backends::{F32x4Backend, F32x8Backend};
 use magetypes::simd::generic::{f32x4, f32x8};
 
@@ -38,8 +44,8 @@ fn plane<const N: usize>(k: usize, c: usize) -> [f32; N] {
 }
 
 fn check4<T: F32x4Backend>(t: T, name: &str) {
-    for chunk in EDGES.chunks_exact(4) {
-        let lanes: [f32; 4] = chunk.try_into().unwrap();
+    for chunk in EDGES.as_chunks::<4>().0 {
+        let lanes: [f32; 4] = *chunk;
         let want: [u8; 4] = core::array::from_fn(|i| expected(lanes[i]));
         assert_eq!(
             f32x4::<T>::from_array_t(t, lanes).to_u8(),
@@ -57,8 +63,8 @@ fn check4<T: F32x4Backend>(t: T, name: &str) {
 }
 
 fn check8<T: F32x8Backend>(t: T, name: &str) {
-    for chunk in EDGES.chunks_exact(8) {
-        let lanes: [f32; 8] = chunk.try_into().unwrap();
+    for chunk in EDGES.as_chunks::<8>().0 {
+        let lanes: [f32; 8] = *chunk;
         let want: [u8; 8] = core::array::from_fn(|i| expected(lanes[i]));
         assert_eq!(
             f32x8::<T>::from_array_t(t, lanes).to_u8(),

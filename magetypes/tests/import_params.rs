@@ -119,8 +119,8 @@ mod x86_tests {
         #[arcane(import_intrinsics, import_magetypes)]
         fn process_batch(token: X64V3Token, data: &[f32]) -> f32 {
             let mut total = 0.0f32;
-            for chunk in data.chunks_exact(8) {
-                total += scale_chunk(token, chunk.try_into().unwrap());
+            for chunk in data.as_chunks::<8>().0 {
+                total += scale_chunk(token, chunk);
             }
             total
         }

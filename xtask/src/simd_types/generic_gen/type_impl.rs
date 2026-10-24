@@ -38,8 +38,8 @@ fn gen_header(ty: &SimdType) -> String {
     let backend = backend_trait(ty);
 
     let token_examples = match ty.width {
-        SimdWidth::W512 => format!("`X64V4Token`, `ScalarToken`"),
-        _ => format!("`X64V3Token`, `NeonToken`, `ScalarToken`"),
+        SimdWidth::W512 => "`X64V4Token`, `ScalarToken`".to_string(),
+        _ => "`X64V3Token`, `NeonToken`, `ScalarToken`".to_string(),
     };
 
     let example_block = if ty.elem.is_float() && lanes >= 8 {
@@ -1372,11 +1372,11 @@ fn gen_scalar_broadcast(ty: &SimdType) -> String {
     let backend = backend_trait(ty);
 
     let header_comment = if ty.elem.is_float() {
-        format!("Scalar broadcast operators (v + 2.0, v * 0.5, etc.)")
+        "Scalar broadcast operators (v + 2.0, v * 0.5, etc.)".to_string()
     } else if has_mul(ty.elem) {
-        format!("Scalar broadcast operators (v + 2, v * 3, etc.)")
+        "Scalar broadcast operators (v + 2, v * 3, etc.)".to_string()
     } else {
-        format!("Scalar broadcast operators (v + 2, etc.)")
+        "Scalar broadcast operators (v + 2, etc.)".to_string()
     };
 
     let mut code = formatdoc! {"

@@ -2,7 +2,13 @@
 //! round once with hardware FMA, twice on the scalar backend and strict WASM, and as the
 //! engine chooses with relaxed WASM. NaN payloads are unspecified.
 #![forbid(unsafe_code)]
-use archmage::{ScalarToken, SimdToken, incant, magetypes};
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
+use archmage::SimdToken;
+use archmage::{ScalarToken, incant, magetypes};
 use magetypes::nostd_math;
 #[path = "common/fma_expected.rs"]
 mod fma_expected;

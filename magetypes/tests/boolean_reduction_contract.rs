@@ -17,6 +17,11 @@
 //! Every assertion below uses inputs that are *not* comparison masks, because
 //! that is the only place the rules differ — an all-ones or all-zeros vector
 //! cannot tell them apart, and every pre-existing test used exactly those.
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
 use archmage::SimdToken;
 use magetypes::simd::backends::{
     I8x16Backend, I16x8Backend, I16x16Backend, I32x4Backend, I32x8Backend, I64x2Backend,
@@ -181,7 +186,7 @@ where
 /// `X64V4Token` implements only the 512-bit backend traits (it has no
 /// `I32x4Backend`/`I32x8Backend` — see the AVX-512 narrow-width gap tracked
 /// separately), so its arm can only exercise `i32x16`.
-#[cfg(feature = "w512")]
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
 fn check_w512_only<T>(token: T)
 where
     T: Copy + I32x16Backend + I16x32Backend + U16x32Backend,

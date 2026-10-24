@@ -496,7 +496,7 @@ fn test_cbrt_all_variants_comprehensive() {
         .copied()
         .filter(|x| x.is_finite() && x.abs() > 1e37)
         .collect();
-    while extremes.len() % 8 != 0 {
+    while !extremes.len().is_multiple_of(8) {
         extremes.push(1e38); // pad
     }
 

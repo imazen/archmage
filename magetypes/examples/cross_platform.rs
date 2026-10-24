@@ -68,11 +68,10 @@ fn sum_of_squares_avx2(token: archmage::X64V3Token, data: &[f32]) -> f32 {
     use magetypes::simd::f32x8;
 
     let mut acc = f32x8::zero_t(token);
-    let chunks = data.chunks_exact(8);
-    let remainder = chunks.remainder();
+    let (chunks, remainder) = data.as_chunks::<8>();
 
     for chunk in chunks {
-        let arr: &[f32; 8] = chunk.try_into().unwrap();
+        let arr: &[f32; 8] = chunk;
         let v = f32x8::load_t(token, arr);
         acc = v.mul_add(v, acc); // v * v + acc using FMA - single vfmadd instruction!
     }
@@ -91,11 +90,10 @@ fn sum_of_squares_sse(token: archmage::X64V3Token, data: &[f32]) -> f32 {
     use magetypes::simd::f32x4;
 
     let mut acc = f32x4::zero_t(token);
-    let chunks = data.chunks_exact(4);
-    let remainder = chunks.remainder();
+    let (chunks, remainder) = data.as_chunks::<4>();
 
     for chunk in chunks {
-        let arr: &[f32; 4] = chunk.try_into().unwrap();
+        let arr: &[f32; 4] = chunk;
         let v = f32x4::load_t(token, arr);
         acc += v * v; // Addition and multiplication inline properly!
     }
@@ -114,11 +112,10 @@ fn sum_of_squares_neon(token: archmage::NeonToken, data: &[f32]) -> f32 {
     use magetypes::simd::f32x4;
 
     let mut acc = f32x4::zero_t(token);
-    let chunks = data.chunks_exact(4);
-    let remainder = chunks.remainder();
+    let (chunks, remainder) = data.as_chunks::<4>();
 
     for chunk in chunks {
-        let arr: &[f32; 4] = chunk.try_into().unwrap();
+        let arr: &[f32; 4] = chunk;
         let v = f32x4::load_t(token, arr);
         acc = v.mul_add(v, acc);
     }
@@ -180,8 +177,8 @@ fn polynomial_eval_avx2(token: archmage::X64V3Token, data: &mut [f32], a: f32, b
 
     let (chunks, remainder) = data.split_at_mut(data.len() - data.len() % 8);
 
-    for chunk in chunks.chunks_exact_mut(8) {
-        let arr: &[f32; 8] = (&*chunk).try_into().unwrap();
+    for chunk in chunks.as_chunks_mut::<8>().0 {
+        let arr: &[f32; 8] = &*chunk;
         let x = f32x8::load_t(token, arr);
 
         // a*x^2 + b*x + c using FMA chain - each mul_add is a single vfmadd instruction!
@@ -189,7 +186,7 @@ fn polynomial_eval_avx2(token: archmage::X64V3Token, data: &mut [f32], a: f32, b
         // = x.mul_add(x.mul_add(a, b), c)
         let result = x.mul_add(x.mul_add(a_v, b_v), c_v);
 
-        let out: &mut [f32; 8] = chunk.try_into().unwrap();
+        let out: &mut [f32; 8] = chunk;
         result.store(out);
     }
 
@@ -210,11 +207,11 @@ fn polynomial_eval_neon(token: archmage::NeonToken, data: &mut [f32], a: f32, b:
 
     let (chunks, remainder) = data.split_at_mut(data.len() - data.len() % 4);
 
-    for chunk in chunks.chunks_exact_mut(4) {
-        let arr: &[f32; 4] = (&*chunk).try_into().unwrap();
+    for chunk in chunks.as_chunks_mut::<4>().0 {
+        let arr: &[f32; 4] = &*chunk;
         let x = f32x4::load_t(token, arr);
         let result = x.mul_add(x.mul_add(a_v, b_v), c_v);
-        let out: &mut [f32; 4] = chunk.try_into().unwrap();
+        let out: &mut [f32; 4] = chunk;
         result.store(out);
     }
 
@@ -241,7 +238,7 @@ fn print_platform_info() {
             println!("Not available");
         }
         print!("  AVX2+FMA:  ");
-        if archmage::Avx2FmaToken::summon().is_some() {
+        if archmage::X64V3Token::summon().is_some() {
             println!("Available (8 x f32)");
         } else {
             println!("Not available");

@@ -244,7 +244,7 @@ mod x86_impl {
 
     /// Store 8 f32x8 vectors back to 8x8 block
     #[arcane]
-    fn store_block(token: X64V3Token, vecs: &[f32x8; 8], block: &mut [f32; 64]) {
+    fn store_block(_token: X64V3Token, vecs: &[f32x8; 8], block: &mut [f32; 64]) {
         vecs[0].store((&mut block[0..8]).try_into().unwrap());
         vecs[1].store((&mut block[8..16]).try_into().unwrap());
         vecs[2].store((&mut block[16..24]).try_into().unwrap());

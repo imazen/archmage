@@ -295,7 +295,10 @@ mod into_concrete {
         assert!(token.as_x64v3().is_none());
     }
 
+    // The forge needs `unsafe` everywhere except wasm32, where target-feature
+    // calls are safe.
     #[test]
+    #[allow(unused_unsafe)]
     fn wasm128_relaxed_into_concrete() {
         let token = if let Some(t) = Wasm128RelaxedToken::summon() {
             t

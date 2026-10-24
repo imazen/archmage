@@ -6,6 +6,8 @@
 //!
 //! For implementation_name() tests covering all magetypes SIMD types,
 //! see magetypes' own exhaustive_intrinsics test.
+// Covers the deprecated `Avx2FmaToken` alias alongside the current names.
+#![allow(deprecated)]
 
 use archmage::SimdToken;
 
@@ -49,13 +51,11 @@ fn test_cross_platform_token_types_exist() {
 /// Test that summon() works correctly for the current platform.
 #[test]
 fn test_summon_behavior() {
-    use archmage::{Arm64, NeonToken, Wasm128Token};
-
     // On x86_64, Desktop64/Avx512Token may succeed
     #[cfg(target_arch = "x86_64")]
     {
         // X64V2Token covers SSE4.2 which is baseline on modern x86_64
-        use archmage::X64V2Token;
+        use archmage::{Arm64, NeonToken, Wasm128Token, X64V2Token};
         // Note: X64V2Token may not be available on very old processors
         let _ = X64V2Token::summon();
 
@@ -71,7 +71,7 @@ fn test_summon_behavior() {
     // On aarch64, NEON is always available
     #[cfg(target_arch = "aarch64")]
     {
-        use archmage::Desktop64;
+        use archmage::{Arm64, Desktop64, NeonToken, Wasm128Token};
         assert!(NeonToken::summon().is_some(), "NEON is baseline on AArch64");
         assert!(Arm64::summon().is_some(), "Arm64 is baseline on AArch64");
 
@@ -94,7 +94,7 @@ fn test_summon_behavior() {
     // On WASM, SIMD128 may be available
     #[cfg(target_arch = "wasm32")]
     {
-        use archmage::Desktop64;
+        use archmage::{Desktop64, NeonToken};
         // x86 and ARM tokens should return None on WASM
         assert!(
             Desktop64::summon().is_none(),
@@ -108,6 +108,7 @@ fn test_summon_behavior() {
 /// Run with: ARCHMAGE_DISABLE=1 cargo test test_disable_archmage_env
 #[test]
 fn test_disable_archmage_env() {
+    #[cfg(target_arch = "x86_64")]
     use archmage::{SimdToken, X64V2Token};
 
     // This test verifies the mechanism works - actual disable testing

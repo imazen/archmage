@@ -104,8 +104,8 @@ pub fn public_api(data: &[f32]) -> f32 {
 #[arcane(import_intrinsics)]  // Boundary: called from non-SIMD code
 fn process_simd(token: X64V3Token, data: &[f32]) -> f32 {
     let mut sum = 0.0;
-    for chunk in data.chunks_exact(8) {
-        sum += process_chunk(chunk.try_into().unwrap());  // no token needed!
+    for chunk in data.as_chunks::<8>().0 {
+        sum += process_chunk(chunk);  // no token needed!
     }
     sum
 }

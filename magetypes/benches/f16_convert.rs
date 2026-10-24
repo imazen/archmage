@@ -12,6 +12,7 @@
 //!     hardware path.
 //!   * built with **rustc < 1.94** (e.g. 1.93) → `NeonToken` takes the branchless
 //!     NEON-f32x4 software kernel.
+//!
 //! `ScalarToken` is the pure-scalar branchless baseline in both builds (and the
 //! direct answer to "is the HW path even worth it vs scalar?").
 //!
@@ -25,7 +26,7 @@
 //! With `--features "std avx512"` this binary measures, same process:
 //!   * `scalar/*` — branchless software baseline.
 //!   * `f16c/*`   — `X64V3Token` slice (the production path; summons-up to the
-//!                  best tier, so 16-wide AVX-512F on a V4 CPU, else 8-wide F16C).
+//!     best tier, so 16-wide AVX-512F on a V4 CPU, else 8-wide F16C).
 //!
 //! The 8-wide-vs-16-wide *width* isolation lives in the dedicated microbench in
 //! `benchmarks/f16_convert_zen4-7950x_2026-06-01.md` (the production path here
@@ -69,13 +70,13 @@ fn bench_decode(c: &mut Criterion) {
         let input = f16_input(n);
         let mut out = vec![0.0f32; n];
 
-        c.bench_function(&format!("decode/scalar/{n}"), |b| {
+        c.bench_function(format!("decode/scalar/{n}"), |b| {
             b.iter(|| ScalarToken.f16_to_f32_slice(black_box(&input), black_box(&mut out)))
         });
 
         #[cfg(target_arch = "aarch64")]
         if let Some(nt) = archmage::NeonToken::summon() {
-            c.bench_function(&format!("decode/neon/{n}"), |b| {
+            c.bench_function(format!("decode/neon/{n}"), |b| {
                 b.iter(|| nt.f16_to_f32_slice(black_box(&input), black_box(&mut out)))
             });
         }
@@ -84,7 +85,7 @@ fn bench_decode(c: &mut Criterion) {
         // best tier, so 16-wide AVX-512F on a V4 CPU, else 8-wide F16C).
         #[cfg(target_arch = "x86_64")]
         if let Some(t) = archmage::X64V3Token::summon() {
-            c.bench_function(&format!("decode/f16c/{n}"), |b| {
+            c.bench_function(format!("decode/f16c/{n}"), |b| {
                 b.iter(|| t.f16_to_f32_slice(black_box(&input), black_box(&mut out)))
             });
         }
@@ -96,13 +97,13 @@ fn bench_encode(c: &mut Criterion) {
         let input = f32_input(n);
         let mut out = vec![0u16; n];
 
-        c.bench_function(&format!("encode/scalar/{n}"), |b| {
+        c.bench_function(format!("encode/scalar/{n}"), |b| {
             b.iter(|| ScalarToken.f32_to_f16_slice(black_box(&input), black_box(&mut out)))
         });
 
         #[cfg(target_arch = "aarch64")]
         if let Some(nt) = archmage::NeonToken::summon() {
-            c.bench_function(&format!("encode/neon/{n}"), |b| {
+            c.bench_function(format!("encode/neon/{n}"), |b| {
                 b.iter(|| nt.f32_to_f16_slice(black_box(&input), black_box(&mut out)))
             });
         }
@@ -110,7 +111,7 @@ fn bench_encode(c: &mut Criterion) {
         // x86-64: `f16c` = V3 slice (production path; summons-up to best). See decode.
         #[cfg(target_arch = "x86_64")]
         if let Some(t) = archmage::X64V3Token::summon() {
-            c.bench_function(&format!("encode/f16c/{n}"), |b| {
+            c.bench_function(format!("encode/f16c/{n}"), |b| {
                 b.iter(|| t.f32_to_f16_slice(black_box(&input), black_box(&mut out)))
             });
         }

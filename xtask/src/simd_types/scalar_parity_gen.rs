@@ -36,6 +36,11 @@ fn file_header() -> String {
         #![allow(clippy::approx_constant)]
         #![allow(clippy::excessive_precision)]
         #![allow(clippy::float_cmp)]
+        // Other architectures have no native backend to compare against.
+        #![cfg_attr(
+            not(any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "wasm32")),
+            allow(dead_code, unused_macros)
+        )]
 
         #[path = "common/fma_expected.rs"]
         mod fma_expected;
@@ -81,6 +86,8 @@ fn comparison_helpers() -> String {
         }}
 
         /// f32 comparison with ULP tolerance, treating NaN==NaN and ±0 as equal.
+        // Emitted for every element type; the current type list uses a subset.
+        #[allow(dead_code)]
         fn assert_f32_ulps(scalar: &[f32], native: &[f32], op: &str, input: &[f32], max_ulps: u32) {{
             assert_eq!(scalar.len(), native.len(), "{{op}}: length mismatch");
             for i in 0..scalar.len() {{
@@ -106,6 +113,8 @@ fn comparison_helpers() -> String {
         }}
 
         /// f64 comparison with ULP tolerance, treating all NaN values as equal.
+        // Emitted for every element type; the current type list uses a subset.
+        #[allow(dead_code)]
         fn assert_f64_ulps(scalar: &[f64], native: &[f64], op: &str, input: &[f64], max_ulps: u64) {{
             assert_eq!(scalar.len(), native.len(), "{{op}}: length mismatch");
             for i in 0..scalar.len() {{
@@ -208,16 +217,22 @@ fn comparison_helpers() -> String {
         }}
 
         /// Bit-exact u16 comparison.
+        // Emitted for every element type; the current type list uses a subset.
+        #[allow(dead_code)]
         fn assert_u16_exact(scalar: &[u16], native: &[u16], op: &str, input: &[u16]) {{
             assert_eq!(scalar, native, "{{op}} divergence: scalar={{scalar:?}} native={{native:?}} input={{input:?}}");
         }}
 
         /// Bit-exact i8 comparison.
+        // Emitted for every element type; the current type list uses a subset.
+        #[allow(dead_code)]
         fn assert_i8_exact(scalar: &[i8], native: &[i8], op: &str, input: &[i8]) {{
             assert_eq!(scalar, native, "{{op}} divergence: scalar={{scalar:?}} native={{native:?}} input={{input:?}}");
         }}
 
         /// Bit-exact u8 comparison.
+        // Emitted for every element type; the current type list uses a subset.
+        #[allow(dead_code)]
         fn assert_u8_exact(scalar: &[u8], native: &[u8], op: &str, input: &[u8]) {{
             assert_eq!(scalar, native, "{{op}} divergence: scalar={{scalar:?}} native={{native:?}} input={{input:?}}");
         }}
@@ -412,17 +427,6 @@ fn gen_float_type_tests(code: &mut String, elem: &str, lanes: usize) {
     } else {
         "assert_f64_exact"
     };
-    let assert_ulps = if elem == "f32" {
-        "assert_f32_ulps"
-    } else {
-        "assert_f64_ulps"
-    };
-    let assert_approx = if elem == "f32" {
-        "assert_f32_approx"
-    } else {
-        "assert_f32_approx"
-    }; // f64 approx reuses f32 pattern logic
-    let ulp_1 = if elem == "f32" { "1u32" } else { "1u64" };
 
     code.push_str(&formatdoc! {r#"
         mod {type_name}_parity {{
@@ -448,6 +452,7 @@ fn gen_float_type_tests(code: &mut String, elem: &str, lanes: usize) {
             }}
 
             /// Like run_unary but skips chunks containing NaN or infinity.
+            #[allow(dead_code)]
             fn run_unary_finite(
                 op: &str,
                 f: impl Fn(generic::{type_name}<ScalarToken>, generic::{type_name}<$native_token>) -> (

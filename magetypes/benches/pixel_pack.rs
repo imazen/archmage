@@ -26,6 +26,9 @@
 //!   cargo bench -p magetypes --bench pixel_pack --features avx512
 //! Redraw code layout once (Zen 5 placement effects) and compare:
 //!   RUSTFLAGS="--cfg pixel_pack_redraw" cargo bench -p magetypes --bench pixel_pack --features avx512
+// Measured loop shapes stay as recorded; `as_chunks` would change the codegen
+// that the recorded results describe.
+#![allow(clippy::chunks_exact_to_as_chunks)]
 
 #[cfg(target_arch = "x86_64")]
 mod kernels {
@@ -559,7 +562,8 @@ fn bench_pixel_pack(suite: &mut zenbench::prelude::Suite) {
             f(v4, &src, &mut out);
             out
         };
-        let checks: [(fn(archmage::X64V4Token, &[f32], &mut [u8]), &Vec<u8>, &str); 11] = [
+        type Kernel = fn(archmage::X64V4Token, &[f32], &mut [u8]);
+        let checks: [(Kernel, &Vec<u8>, &str); 11] = [
             (v4::to_u8_shipped, &want, "shipped V4 f32x8 to_u8"),
             (v4::to_u8_v3_form, &want, "V3-form f32x8 to_u8"),
             (v4::to_u8_clamp_both_vpmovdb, &want, "vpmovdb f32x8 to_u8"),

@@ -29,10 +29,10 @@ use archmage::{
     // x86 tokens
     X64V1Token,
     X64V2Token,
-    X64V3CryptoToken,
-    X64V3GfniCryptoToken,
     X64V3Token,
 };
+#[cfg(target_arch = "x86_64")]
+use archmage::{X64V3CryptoToken, X64V3GfniCryptoToken};
 
 #[cfg(feature = "avx512")]
 use archmage::{Avx512Fp16Token, Avx512Token, Server64, X64V4Token, X64V4xToken};
@@ -787,7 +787,6 @@ fn avx512_feature_strings() {
     assert!(v4x_features.contains("vaes"));
 }
 
-#[test]
 // ============================================================================
 // testable_dispatch feature flag
 // ============================================================================
@@ -839,6 +838,8 @@ fn disable_all_tokens_except_wasm() {
     use archmage::dangerously_disable_tokens_except_wasm;
 
     let result = dangerously_disable_tokens_except_wasm(true);
+    // Only x86 asserts on it; other architectures exercise the call.
+    let _ = &result;
 
     // On x86 without -Ctarget-cpu, this should succeed
     #[cfg(all(

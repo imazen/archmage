@@ -12,6 +12,9 @@
 //! cargo run --release -p magetypes --example wasm_reciprocal_bench \
 //!   --target wasm32-wasip1 --features std
 //! ```
+// Measured loop shapes stay as recorded; `as_chunks` would change the codegen
+// that the recorded results describe.
+#![allow(clippy::chunks_exact_to_as_chunks)]
 
 #[cfg(all(target_arch = "wasm32", feature = "std"))]
 fn main() {

@@ -303,10 +303,7 @@ fn f32x8_store_8_rgba_u8() {
 #[test]
 fn f32x8_rgba_load_store_roundtrip() {
     if let Some(t) = X64V3Token::summon() {
-        let mut rgba = [0u8; 32];
-        for i in 0..32 {
-            rgba[i] = i as u8;
-        }
+        let rgba: [u8; 32] = core::array::from_fn(|i| i as u8);
         let (r, g, b, a) = f32x8::<X64V3Token>::load_8_rgba_u8_t(t, &rgba);
         let out = f32x8::<X64V3Token>::store_8_rgba_u8(r, g, b, a);
         assert_eq!(rgba, out);
@@ -325,10 +322,10 @@ fn f32x8_transpose_8x8() {
         });
         f32x8::<X64V3Token>::transpose_8x8(&mut rows);
         // After transpose: rows[i][j] should be (j*8 + i) as f32
-        for i in 0..8 {
-            let arr = rows[i].to_array();
-            for j in 0..8 {
-                assert_eq!(arr[j], (j * 8 + i) as f32, "rows[{i}][{j}]");
+        for (i, row) in rows.iter().enumerate() {
+            let arr = row.to_array();
+            for (j, &x) in arr.iter().enumerate() {
+                assert_eq!(x, (j * 8 + i) as f32, "rows[{i}][{j}]");
             }
         }
     }
@@ -341,10 +338,10 @@ fn f32x8_transpose_8x8_copy() {
             f32x8::<X64V3Token>::from_array_t(t, core::array::from_fn(|j| (i * 8 + j) as f32))
         });
         let transposed = f32x8::<X64V3Token>::transpose_8x8_copy(rows);
-        for i in 0..8 {
-            let arr = transposed[i].to_array();
-            for j in 0..8 {
-                assert_eq!(arr[j], (j * 8 + i) as f32, "transposed[{i}][{j}]");
+        for (i, row) in transposed.iter().enumerate() {
+            let arr = row.to_array();
+            for (j, &x) in arr.iter().enumerate() {
+                assert_eq!(x, (j * 8 + i) as f32, "transposed[{i}][{j}]");
             }
         }
     }
@@ -369,10 +366,10 @@ fn f32x8_load_store_8x8() {
     if let Some(t) = X64V3Token::summon() {
         let block: [f32; 64] = core::array::from_fn(|i| i as f32);
         let rows = f32x8::<X64V3Token>::load_8x8_t(t, &block);
-        for i in 0..8 {
-            let arr = rows[i].to_array();
-            for j in 0..8 {
-                assert_eq!(arr[j], (i * 8 + j) as f32);
+        for (i, row) in rows.iter().enumerate() {
+            let arr = row.to_array();
+            for (j, &x) in arr.iter().enumerate() {
+                assert_eq!(x, (i * 8 + j) as f32);
             }
         }
         let mut out = [0.0_f32; 64];
@@ -678,20 +675,17 @@ fn f32x8_scalar_transpose_8x8() {
         f32x8::<ScalarToken>::from_array_t(t, core::array::from_fn(|j| (i * 8 + j) as f32))
     });
     f32x8::<ScalarToken>::transpose_8x8(&mut rows);
-    for i in 0..8 {
-        let arr = rows[i].to_array();
-        for j in 0..8 {
-            assert_eq!(arr[j], (j * 8 + i) as f32, "scalar rows[{i}][{j}]");
+    for (i, row) in rows.iter().enumerate() {
+        let arr = row.to_array();
+        for (j, &x) in arr.iter().enumerate() {
+            assert_eq!(x, (j * 8 + i) as f32, "scalar rows[{i}][{j}]");
         }
     }
 }
 
 #[test]
 fn f32x8_scalar_rgba_roundtrip() {
-    let mut rgba = [0u8; 32];
-    for i in 0..32 {
-        rgba[i] = i as u8;
-    }
+    let rgba: [u8; 32] = core::array::from_fn(|i| i as u8);
     let (r, g, b, a) = f32x8::<ScalarToken>::load_8_rgba_u8_t(ScalarToken, &rgba);
     let out = f32x8::<ScalarToken>::store_8_rgba_u8(r, g, b, a);
     assert_eq!(rgba, out);

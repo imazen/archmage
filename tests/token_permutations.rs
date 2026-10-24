@@ -3,8 +3,11 @@
 //! Requires `archmage::testing`, which is gated on the `std` feature.
 #![cfg(feature = "std")]
 
+#[cfg(target_arch = "x86_64")]
 use archmage::SimdToken;
-use archmage::testing::{CompileTimePolicy, for_each_token_permutation, lock_token_testing};
+#[cfg(target_arch = "x86_64")]
+use archmage::testing::lock_token_testing;
+use archmage::testing::{CompileTimePolicy, for_each_token_permutation};
 
 /// Verify that permutations run and the "all enabled" state is always included.
 #[test]
@@ -152,7 +155,8 @@ fn cascade_disabling_works() {
 #[cfg(target_arch = "x86_64")]
 #[test]
 fn no_duplicate_effective_states() {
-    let mut states: Vec<(bool, bool, bool, bool, bool, bool, bool, bool, bool)> = Vec::new();
+    type State = (bool, bool, bool, bool, bool, bool, bool, bool, bool);
+    let mut states: Vec<State> = Vec::new();
 
     let _ = for_each_token_permutation(CompileTimePolicy::Warn, |_perm| {
         let state = (

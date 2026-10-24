@@ -9,6 +9,11 @@
 //! Output format (one JSON object per line):
 //! {"type":"f32x4","op":"round","input":[0.5,-0.5,1.5,-1.5],"output":[0.0,-0.0,2.0,-2.0]}
 
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
 use archmage::SimdToken;
 use magetypes::simd::generic;
 
@@ -175,8 +180,8 @@ fn exercise_f32x4<
 >(
     token: T,
 ) {
-    for chunk in F32_EDGE.chunks_exact(4) {
-        let input: [f32; 4] = chunk.try_into().unwrap();
+    for chunk in F32_EDGE.as_chunks::<4>().0 {
+        let input: [f32; 4] = *chunk;
         let input_s = fmt_f32_array(&input);
         let v = generic::f32x4::<T>::from_array_t(token, input);
 
@@ -214,9 +219,14 @@ fn exercise_f32x4<
     }
 
     // Binary ops
-    for (ca, cb) in F32_EDGE.chunks_exact(4).zip(F32_EDGE_B.chunks_exact(4)) {
-        let a: [f32; 4] = ca.try_into().unwrap();
-        let b: [f32; 4] = cb.try_into().unwrap();
+    for (ca, cb) in F32_EDGE
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .zip(F32_EDGE_B.as_chunks::<4>().0)
+    {
+        let a: [f32; 4] = *ca;
+        let b: [f32; 4] = *cb;
         let input_s = fmt_f32_array(&a);
         let va = generic::f32x4::<T>::from_array_t(token, a);
         let vb = generic::f32x4::<T>::from_array_t(token, b);
@@ -265,8 +275,8 @@ fn exercise_f32x4<
         .filter(|&&x| x.is_finite() && x.abs() < 2147483520.0)
         .copied()
         .collect();
-    for chunk in safe.chunks_exact(4) {
-        let input: [f32; 4] = chunk.try_into().unwrap();
+    for chunk in safe.as_chunks::<4>().0 {
+        let input: [f32; 4] = *chunk;
         let input_s = fmt_f32_array(&input);
         let v = generic::f32x4::<T>::from_array_t(token, input);
         emit(
@@ -289,8 +299,8 @@ fn exercise_f32x8<
 >(
     token: T,
 ) {
-    for chunk in F32_EDGE.chunks_exact(8) {
-        let input: [f32; 8] = chunk.try_into().unwrap();
+    for chunk in F32_EDGE.as_chunks::<8>().0 {
+        let input: [f32; 8] = *chunk;
         let input_s = fmt_f32_array(&input);
         let v = generic::f32x8::<T>::from_array_t(token, input);
 
@@ -321,9 +331,14 @@ fn exercise_f32x8<
         emit("f32x8", "neg", &input_s, &fmt_f32_array(&(-v).to_array()));
     }
 
-    for (ca, cb) in F32_EDGE.chunks_exact(8).zip(F32_EDGE_B.chunks_exact(8)) {
-        let a: [f32; 8] = ca.try_into().unwrap();
-        let b: [f32; 8] = cb.try_into().unwrap();
+    for (ca, cb) in F32_EDGE
+        .as_chunks::<8>()
+        .0
+        .iter()
+        .zip(F32_EDGE_B.as_chunks::<8>().0)
+    {
+        let a: [f32; 8] = *ca;
+        let b: [f32; 8] = *cb;
         let input_s = fmt_f32_array(&a);
         let va = generic::f32x8::<T>::from_array_t(token, a);
         let vb = generic::f32x8::<T>::from_array_t(token, b);
@@ -371,8 +386,8 @@ fn exercise_f32x8<
         .filter(|&&x| x.is_finite() && x.abs() < 2147483520.0)
         .copied()
         .collect();
-    for chunk in safe.chunks_exact(8) {
-        let input: [f32; 8] = chunk.try_into().unwrap();
+    for chunk in safe.as_chunks::<8>().0 {
+        let input: [f32; 8] = *chunk;
         let input_s = fmt_f32_array(&input);
         let v = generic::f32x8::<T>::from_array_t(token, input);
         emit(
@@ -385,8 +400,8 @@ fn exercise_f32x8<
 }
 
 fn exercise_i32x4<T: magetypes::simd::backends::I32x4Backend>(token: T) {
-    for chunk in I32_EDGE.chunks_exact(4) {
-        let input: [i32; 4] = chunk.try_into().unwrap();
+    for chunk in I32_EDGE.as_chunks::<4>().0 {
+        let input: [i32; 4] = *chunk;
         let input_s = fmt_i32_array(&input);
         let v = generic::i32x4::<T>::from_array_t(token, input);
 
@@ -406,11 +421,13 @@ fn exercise_i32x4<T: magetypes::simd::backends::I32x4Backend>(token: T) {
     }
 
     for (ca, cb) in I32_EDGE
-        .chunks_exact(4)
-        .zip(I32_EDGE.chunks_exact(4).skip(1))
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .zip(I32_EDGE.as_chunks::<4>().0.iter().skip(1))
     {
-        let a: [i32; 4] = ca.try_into().unwrap();
-        let b: [i32; 4] = cb.try_into().unwrap();
+        let a: [i32; 4] = *ca;
+        let b: [i32; 4] = *cb;
         let input_s = fmt_i32_array(&a);
         let va = generic::i32x4::<T>::from_array_t(token, a);
         let vb = generic::i32x4::<T>::from_array_t(token, b);

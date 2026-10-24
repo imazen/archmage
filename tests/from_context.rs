@@ -15,7 +15,13 @@
 
 #![forbid(unsafe_code)]
 
-use archmage::{ScalarToken, SimdToken, arcane, rite};
+use archmage::{ScalarToken, SimdToken};
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
+use archmage::{arcane, rite};
 
 // ============================================================================
 // x86-64

@@ -25,11 +25,10 @@ mod x86_impl {
     #[arcane]
     fn sum_polyfill(token: X64V3Token, data: &[f32]) -> f32 {
         let mut acc = poly::f32xN::zero_t(token);
-        let chunks = data.chunks_exact(poly::LANES_F32);
-        let remainder = chunks.remainder();
+        let (chunks, remainder) = data.as_chunks::<{ poly::LANES_F32 }>();
 
         for chunk in chunks {
-            let arr: &[f32; 8] = chunk.try_into().unwrap();
+            let arr: &[f32; 8] = chunk;
             let v = poly::f32xN::load_t(token, arr);
             acc += v;
         }
@@ -47,11 +46,10 @@ mod x86_impl {
         use magetypes::simd::f32x4;
 
         let mut acc = f32x4::zero_t(token);
-        let chunks = data.chunks_exact(4);
-        let remainder = chunks.remainder();
+        let (chunks, remainder) = data.as_chunks::<4>();
 
         for chunk in chunks {
-            let arr: &[f32; 4] = chunk.try_into().unwrap();
+            let arr: &[f32; 4] = chunk;
             let v = f32x4::load_t(token, arr);
             acc += v;
         }
@@ -69,11 +67,10 @@ mod x86_impl {
         use magetypes::simd::f32x8;
 
         let mut acc = f32x8::zero_t(token);
-        let chunks = data.chunks_exact(8);
-        let remainder = chunks.remainder();
+        let (chunks, remainder) = data.as_chunks::<8>();
 
         for chunk in chunks {
-            let arr: &[f32; 8] = chunk.try_into().unwrap();
+            let arr: &[f32; 8] = chunk;
             let v = f32x8::load_t(token, arr);
             acc += v;
         }

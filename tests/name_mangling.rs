@@ -115,6 +115,7 @@ mod x86_tiers {
     #[test]
     fn scalar_suffix() {
         assert_eq!(av_all_x86_scalar(ScalarToken, 1.0), 2.0);
+        assert_eq!(av_all_x86(1.0), 2.0);
     }
 }
 
@@ -173,6 +174,7 @@ mod arm_tiers {
     #[test]
     fn scalar_suffix() {
         assert_eq!(av_all_arm_scalar(ScalarToken, 1.0), 2.0);
+        assert_eq!(av_all_arm(1.0), 2.0);
     }
 }
 
@@ -203,6 +205,7 @@ mod wasm_tiers {
     #[test]
     fn scalar_suffix() {
         assert_eq!(av_all_wasm_scalar(ScalarToken, 1.0), 2.0);
+        assert_eq!(av_all_wasm(1.0), 2.0);
     }
 }
 
@@ -470,6 +473,8 @@ fn add_incant_v3(_: X64V3Token, x: f32) -> f32 {
     x + 300.0
 }
 
+// Only x86_64 dispatch reaches the added v1 tier.
+#[cfg(target_arch = "x86_64")]
 fn add_incant_v1(_: X64V1Token, x: f32) -> f32 {
     x + 100.0
 }
@@ -477,6 +482,11 @@ fn add_incant_v1(_: X64V1Token, x: f32) -> f32 {
 #[arcane]
 fn add_incant_neon(_: NeonToken, x: f32) -> f32 {
     x + 500.0
+}
+
+#[arcane]
+fn add_incant_wasm128(_: archmage::Wasm128Token, x: f32) -> f32 {
+    x + 600.0
 }
 
 fn add_incant_scalar(_: ScalarToken, x: f32) -> f32 {

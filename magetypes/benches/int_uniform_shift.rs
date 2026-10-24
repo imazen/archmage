@@ -21,6 +21,9 @@
 //! (memory-bandwidth-bound), because the per-call scalar work the uniform form
 //! adds — one `min`, one lane splat — is loop-invariant and amortises away as
 //! the slice grows. The tiny sizes are where it is visible at all.
+// Measured loop shapes stay as recorded; `as_chunks` would change the codegen
+// that the recorded results describe.
+#![allow(clippy::chunks_exact_to_as_chunks)]
 
 use archmage::SimdToken;
 use magetypes::simd::generic::{u16x8, u32x4};

@@ -15,7 +15,9 @@
     target_arch = "wasm32"
 ))]
 
-use archmage::{ScalarToken, SimdToken};
+use archmage::ScalarToken;
+#[cfg(not(any(target_arch = "aarch64", target_arch = "wasm32")))]
+use archmage::SimdToken;
 
 // =============================================================================
 // Basic function generation
@@ -331,7 +333,9 @@ mod token_not_substring {
 
 #[cfg(not(target_arch = "wasm32"))] // magetypes is non-wasm dev-dep
 mod generic_magetypes_dispatch {
-    use archmage::{ScalarToken, arcane, incant};
+    #[cfg(not(target_arch = "aarch64"))]
+    use archmage::arcane;
+    use archmage::{ScalarToken, incant};
     use magetypes::simd::backends::F32x8Backend;
     use magetypes::simd::generic::f32x8;
 
@@ -378,7 +382,7 @@ mod generic_magetypes_dispatch {
 /// `_wasm128`, and `_scalar` variants even when the template had a doc comment.
 #[deny(missing_docs)]
 mod attr_propagation {
-    use archmage::{ScalarToken, SimdToken, magetypes};
+    use archmage::{ScalarToken, magetypes};
 
     /// Documented function — doc must propagate to all variants.
     #[magetypes]

@@ -29,8 +29,8 @@ mod pattern1 {
     #[arcane]
     fn process_simd(token: X64V3Token, data: &[f32]) -> f32 {
         let mut sum = 0.0;
-        for chunk in data.chunks_exact(8) {
-            sum += process_chunk(token, chunk.try_into().unwrap());
+        for chunk in data.as_chunks::<8>().0 {
+            sum += process_chunk(token, chunk);
         }
         sum
     }
@@ -148,8 +148,8 @@ mod mistake5_correct {
     #[arcane]
     fn process_simd(token: X64V3Token, data: &[f32]) -> f32 {
         let mut sum = f32x8::zero_t(token);
-        for chunk in data.chunks_exact(8) {
-            let v = f32x8::from_array_t(token, chunk.try_into().unwrap());
+        for chunk in data.as_chunks::<8>().0 {
+            let v = f32x8::from_array_t(token, *chunk);
             sum += v;
         }
         sum.reduce_add()
@@ -189,21 +189,21 @@ mod explicit_dispatch {
     #[arcane]
     fn process_avx2(token: X64V3Token, data: &[f32]) -> f32 {
         let mut sum = f32x8::zero_t(token);
-        for chunk in data.chunks_exact(8) {
-            let v = f32x8::from_array_t(token, chunk.try_into().unwrap());
+        for chunk in data.as_chunks::<8>().0 {
+            let v = f32x8::from_array_t(token, *chunk);
             sum += v;
         }
-        sum.reduce_add() + data.chunks_exact(8).remainder().iter().sum::<f32>()
+        sum.reduce_add() + data.as_chunks::<8>().1.iter().sum::<f32>()
     }
 
     #[arcane]
     fn process_neon(token: Arm64, data: &[f32]) -> f32 {
         let mut sum = f32x4::zero_t(token);
-        for chunk in data.chunks_exact(4) {
-            let v = f32x4::from_array_t(token, chunk.try_into().unwrap());
+        for chunk in data.as_chunks::<4>().0 {
+            let v = f32x4::from_array_t(token, chunk);
             sum += v;
         }
-        sum.reduce_add() + data.chunks_exact(4).remainder().iter().sum::<f32>()
+        sum.reduce_add() + data.as_chunks::<4>().1.iter().sum::<f32>()
     }
 
     fn process_scalar(data: &[f32]) -> f32 {
@@ -282,13 +282,13 @@ mod rms_normalize {
     fn sum_squares_avx2(token: X64V3Token, data: &[f32]) -> f32 {
         let mut acc = f32x8::zero_t(token);
 
-        for chunk in data.chunks_exact(8) {
-            let v = f32x8::from_array_t(token, chunk.try_into().unwrap());
+        for chunk in data.as_chunks::<8>().0 {
+            let v = f32x8::from_array_t(token, *chunk);
             acc = v.mul_add(v, acc);
         }
 
         let mut sum = acc.reduce_add();
-        for &x in data.chunks_exact(8).remainder() {
+        for &x in data.as_chunks::<8>().1 {
             sum += x * x;
         }
         sum
@@ -298,13 +298,11 @@ mod rms_normalize {
     fn scale_avx2(token: X64V3Token, data: &mut [f32], scale: f32) {
         let s = f32x8::splat_t(token, scale);
 
-        let chunks = data.len() / 8;
-        for i in 0..chunks {
-            let chunk = &mut data[i * 8..(i + 1) * 8];
-            let v = f32x8::from_array_t(token, chunk.as_ref().try_into().unwrap());
-            (v * s).store(chunk.try_into().unwrap());
+        for chunk in data.as_chunks_mut::<8>().0 {
+            let v = f32x8::from_array_t(token, *chunk);
+            (v * s).store(chunk);
         }
-        for x in data.chunks_exact_mut(8).into_remainder() {
+        for x in data.as_chunks_mut::<8>().1 {
             *x *= scale;
         }
     }
@@ -348,29 +346,26 @@ mod softmax {
         let max_v = f32x8::splat_t(token, max_val);
         let mut sum_vec = f32x8::zero_t(token);
 
-        let chunks = data.len() / 8;
-        for i in 0..chunks {
-            let chunk = &mut data[i * 8..(i + 1) * 8];
-            let v = f32x8::from_array_t(token, chunk.as_ref().try_into().unwrap());
+        for chunk in data.as_chunks_mut::<8>().0 {
+            let v = f32x8::from_array_t(token, *chunk);
             let e = (v - max_v).exp_lowp();
-            e.store(chunk.try_into().unwrap());
+            e.store(chunk);
             sum_vec += e;
         }
 
         let mut sum = sum_vec.reduce_add();
-        for x in data.chunks_exact_mut(8).into_remainder() {
+        for x in data.as_chunks_mut::<8>().1 {
             *x = (*x - max_val).exp();
             sum += *x;
         }
 
         // Normalize
         let inv = f32x8::splat_t(token, 1.0 / sum);
-        for i in 0..chunks {
-            let chunk = &mut data[i * 8..(i + 1) * 8];
-            let v = f32x8::from_array_t(token, chunk.as_ref().try_into().unwrap());
-            (v * inv).store(chunk.try_into().unwrap());
+        for chunk in data.as_chunks_mut::<8>().0 {
+            let v = f32x8::from_array_t(token, *chunk);
+            (v * inv).store(chunk);
         }
-        for x in data.chunks_exact_mut(8).into_remainder() {
+        for x in data.as_chunks_mut::<8>().1 {
             *x /= sum;
         }
     }
@@ -379,13 +374,13 @@ mod softmax {
     fn reduce_max(token: X64V3Token, data: &[f32]) -> f32 {
         let mut max_vec = f32x8::splat_t(token, f32::NEG_INFINITY);
 
-        for chunk in data.chunks_exact(8) {
-            let v = f32x8::from_array_t(token, chunk.try_into().unwrap());
+        for chunk in data.as_chunks::<8>().0 {
+            let v = f32x8::from_array_t(token, *chunk);
             max_vec = max_vec.max(v);
         }
 
         let mut max_val = max_vec.reduce_max();
-        for &x in data.chunks_exact(8).remainder() {
+        for &x in data.as_chunks::<8>().1 {
             max_val = max_val.max(x);
         }
         max_val
@@ -448,19 +443,14 @@ mod dot_product {
     fn dot_avx2(token: X64V3Token, a: &[f32], b: &[f32]) -> f32 {
         let mut acc = f32x8::zero_t(token);
 
-        for (a_chunk, b_chunk) in a.chunks_exact(8).zip(b.chunks_exact(8)) {
-            let va = f32x8::from_array_t(token, a_chunk.try_into().unwrap());
-            let vb = f32x8::from_array_t(token, b_chunk.try_into().unwrap());
+        for (a_chunk, b_chunk) in a.as_chunks::<8>().0.iter().zip(b.as_chunks::<8>().0) {
+            let va = f32x8::from_array_t(token, *a_chunk);
+            let vb = f32x8::from_array_t(token, *b_chunk);
             acc = va.mul_add(vb, acc);
         }
 
         let mut sum = acc.reduce_add();
-        for (x, y) in a
-            .chunks_exact(8)
-            .remainder()
-            .iter()
-            .zip(b.chunks_exact(8).remainder())
-        {
+        for (x, y) in a.as_chunks::<8>().1.iter().zip(b.as_chunks::<8>().1) {
             sum += x * y;
         }
         sum
@@ -470,19 +460,14 @@ mod dot_product {
     fn dot_neon(token: Arm64, a: &[f32], b: &[f32]) -> f32 {
         let mut acc = f32x4::zero_t(token);
 
-        for (a_chunk, b_chunk) in a.chunks_exact(4).zip(b.chunks_exact(4)) {
-            let va = f32x4::from_array_t(token, a_chunk.try_into().unwrap());
-            let vb = f32x4::from_array_t(token, b_chunk.try_into().unwrap());
+        for (a_chunk, b_chunk) in a.as_chunks::<4>().0.iter().zip(b.as_chunks::<4>().0) {
+            let va = f32x4::from_array_t(token, a_chunk);
+            let vb = f32x4::from_array_t(token, b_chunk);
             acc = va.mul_add(vb, acc);
         }
 
         let mut sum = acc.reduce_add();
-        for (x, y) in a
-            .chunks_exact(4)
-            .remainder()
-            .iter()
-            .zip(b.chunks_exact(4).remainder())
-        {
+        for (x, y) in a.as_chunks::<4>().1.iter().zip(b.as_chunks::<4>().1) {
             sum += x * y;
         }
         sum

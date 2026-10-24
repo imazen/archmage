@@ -47,6 +47,11 @@ fn generate_cross_arch_parity() -> String {
         /// - x86_64: X64V3Token
         /// - aarch64: NeonToken
         /// - wasm32: Wasm128Token
+        #[cfg(any(
+            target_arch = "x86_64",
+            target_arch = "aarch64",
+            target_arch = "wasm32"
+        ))]
         macro_rules! w128_parity_suite {{
             ($token_ty:ty) => {{
                 use archmage::SimdToken;

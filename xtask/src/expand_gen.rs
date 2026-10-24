@@ -62,7 +62,7 @@ pub fn generate_expand_tests(expand_dir: &Path) -> anyhow::Result<()> {
 
 fn gen_arcane_tests(files: &mut Vec<TestFile>) {
     // Expansion modes
-    for (mode, mode_attr, self_line, token_param) in [
+    for (mode, mode_attr, self_line, _token_param) in [
         ("sibling", "#[arcane]", "", "token: X64V3Token"),
         ("nested", "#[arcane(nested)]", "", "token: X64V3Token"),
         (

@@ -6,7 +6,17 @@
 //! token of each architecture (X64V3Token / NeonToken / Wasm128Token) so the
 //! restored native pack+interleave is verified identical everywhere.
 
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
 use archmage::SimdToken;
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
 use magetypes::simd::generic::f32x8;
 
 #[cfg(target_arch = "x86_64")]

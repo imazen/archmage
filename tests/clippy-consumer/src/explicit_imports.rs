@@ -26,7 +26,14 @@ pub mod attune_calls {
     }
 }
 
-/// `incant!` only inside `#[rite]` bodies.
+/// `incant!` only inside `#[rite]` bodies. `#[rite(v3, neon, wasm128)]`
+/// emits nothing on other architectures, so code (and imports) that use it
+/// is gated the same way.
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
 pub mod rite_calls {
     use archmage::{incant, rite};
 

@@ -1265,7 +1265,7 @@ fn generate_scalar_int_impl(ty: &IntVecType) -> String {
     };
 
     let min_lanes = || -> String {
-        let cmp = if ty.signed { "<" } else { "<" };
+        let cmp = "<";
         let items: Vec<String> = (0..lanes)
             .map(|i| format!("if a[{i}] {cmp} b[{i}] {{ a[{i}] }} else {{ b[{i}] }}"))
             .collect();
@@ -1273,7 +1273,7 @@ fn generate_scalar_int_impl(ty: &IntVecType) -> String {
     };
 
     let max_lanes = || -> String {
-        let cmp = if ty.signed { ">" } else { ">" };
+        let cmp = ">";
         let items: Vec<String> = (0..lanes)
             .map(|i| format!("if a[{i}] {cmp} b[{i}] {{ a[{i}] }} else {{ b[{i}] }}"))
             .collect();
@@ -1629,7 +1629,7 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
         format!("{from_u}(vmvnq_u{}(vceqq_{ns}(a, b)))", &ns[1..])
     } else if ty.elem_bits == 64 {
         // NEON lacks vmvnq_u64 — use XOR with all-ones
-        format!("veorq_u64(vceqq_u64(a, b), vdupq_n_u64(u64::MAX))")
+        "veorq_u64(vceqq_u64(a, b), vdupq_n_u64(u64::MAX))".to_string()
     } else {
         format!("vmvnq_{ns}(vceqq_{ns}(a, b))")
     };
@@ -1640,11 +1640,7 @@ fn generate_neon_native_int_impl(ty: &IntVecType) -> String {
         format!("vbslq_{ns}(mask, if_true, if_false)")
     };
 
-    let not_body = if ty.signed {
-        format!("vmvnq_{ns}(a)")
-    } else {
-        format!("vmvnq_{ns}(a)")
-    };
+    let not_body = format!("vmvnq_{ns}(a)");
 
     // For u64, there's no vmvnq_u64, need different approach
     let not_body = if ty.elem_bits == 64 {
@@ -2392,8 +2388,8 @@ fn generate_neon_polyfill_int_impl(ty: &IntVecType) -> String {
             format!("v{red}vq_{ss}(vreinterpretq_{ss}_{ns}({folded})) < 0")
         }
     };
-    let all_true_items = vec![reduce(&fold("and"), "max", "&")];
-    let any_true_items = vec![reduce(&fold("orr"), "min", "|")];
+    let all_true_items = [reduce(&fold("and"), "max", "&")];
+    let any_true_items = [reduce(&fold("orr"), "min", "|")];
 
     code.push_str(&formatdoc! {r#"
 
@@ -3154,11 +3150,11 @@ fn generate_wasm_polyfill_int_impl(ty: &IntVecType) -> String {
             format!("v128_{op}({acc}, a[{i}])")
         })
     };
-    let all_true_items = vec![format!(
+    let all_true_items = [format!(
         "{bitmask_fn}({}) as u64 == {full_mask}",
         fold("and")
     )];
-    let any_true_items = vec![format!("{bitmask_fn}({}) != 0", fold("or"))];
+    let any_true_items = [format!("{bitmask_fn}({}) != 0", fold("or"))];
 
     code.push_str(&formatdoc! {r#"
 

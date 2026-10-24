@@ -189,7 +189,9 @@ mod pattern_feature_traits {
 // - impl Has256BitSimd → X64V3Token directly
 // - impl Has512BitSimd → impl HasX64V4 or X64V4Token
 
+// Demonstrates the deprecated pattern on purpose.
 #[cfg(target_arch = "x86_64")]
+#[allow(deprecated)]
 mod pattern_width_traits_deprecated {
     use archmage::intrinsics::x86_64::*;
     use archmage::{Has256BitSimd, SimdToken, X64V3Token, arcane};
@@ -428,11 +430,10 @@ mod pattern_manual_dispatch_x86 {
     #[arcane(import_intrinsics)]
     pub fn sum_v3(token: X64V3Token, data: &[f32]) -> f32 {
         let mut acc = _mm256_setzero_ps();
-        let chunks = data.chunks_exact(8);
-        let remainder = chunks.remainder();
+        let (chunks, remainder) = data.as_chunks::<8>();
 
         for chunk in chunks {
-            let v = _mm256_loadu_ps(chunk.first_chunk().unwrap());
+            let v = _mm256_loadu_ps(chunk);
             acc = _mm256_add_ps(acc, v);
         }
 
@@ -499,7 +500,7 @@ mod pattern_separate_platforms_x86 {
 
     #[arcane(import_intrinsics)]
     pub fn process_x86(token: X64V3Token, data: &mut [f32]) {
-        for chunk in data.chunks_exact_mut(8) {
+        for chunk in data.as_chunks_mut::<8>().0 {
             let v = _mm256_loadu_ps(chunk.first_chunk().unwrap());
             let processed = _mm256_mul_ps(v, v); // Square
             _mm256_storeu_ps(chunk.first_chunk_mut().unwrap(), processed);
@@ -523,7 +524,7 @@ mod pattern_separate_platforms_arm {
 
     #[arcane(import_intrinsics)]
     pub fn process_arm(token: NeonToken, data: &mut [f32]) {
-        for chunk in data.chunks_exact_mut(4) {
+        for chunk in data.as_chunks_mut::<4>().0 {
             let v = vld1q_f32(chunk.first_chunk().unwrap());
             let processed = vmulq_f32(v, v); // Square
             vst1q_f32(chunk.first_chunk_mut().unwrap(), processed);

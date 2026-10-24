@@ -494,32 +494,6 @@ impl Registry {
         out.push_str("];\n");
     }
 
-    fn gen_token_requires_avx512(&self, out: &mut String) {
-        out.push_str(concat!(
-            "/// Returns true if this token's features include any AVX-512 features.\n",
-            "///\n",
-            "/// Used by `#[arcane]`/`#[rite]` to error when `import_intrinsics` is used\n",
-            "/// with a token that needs 512-bit safe memory ops but the `avx512` feature\n",
-            "/// is not enabled on archmage.\n",
-            "///\n",
-            "/// Generated from token-registry.toml.\n",
-            "#[cfg_attr(feature = \"avx512\", allow(dead_code))]\n",
-            "pub(crate) fn token_requires_avx512(token_name: &str) -> bool {\n",
-        ));
-
-        // Collect all avx512 token patterns into a single matches!() call
-        let mut patterns = Vec::new();
-        for token in &self.token {
-            let has_avx512 = token.features.iter().any(|f| f.starts_with("avx512"));
-            if has_avx512 {
-                patterns.push(Self::match_pattern(token));
-            }
-        }
-        let all_patterns = patterns.join(" | ");
-        out.push_str(&format!("    matches!(token_name, {all_patterns})\n"));
-        out.push_str("}\n");
-    }
-
     /// Build a match pattern like `"Name" | "Alias1" | "Alias2"` for a token.
     fn match_pattern(token: &TokenDef) -> String {
         let mut names: Vec<&str> = vec![&token.name];

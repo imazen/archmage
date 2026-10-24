@@ -63,7 +63,7 @@ fn check_backend<T: F32x8Convert>(token: T, tier: &str) {
             // the true value is subnormal — the midp tier saturates `exp` to
             // inf near x ≈ -88.7, so lanes there land at 0 or a subnormal
             // (both acceptable), never NaN.
-            if ws >= f32::MIN_POSITIVE && ws < 1.0 {
+            if (f32::MIN_POSITIVE..1.0).contains(&ws) {
                 let rel = ((gs - ws) / ws).abs();
                 assert!(
                     rel <= REL_TOL,

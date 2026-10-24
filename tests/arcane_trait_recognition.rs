@@ -11,6 +11,8 @@
 //! it means the proc macro's recognition maps are out of sync.
 
 #![allow(unused)]
+// The macros must keep recognizing the deprecated aliases and width traits.
+#![allow(deprecated)]
 
 // =============================================================================
 // x86_64 tests

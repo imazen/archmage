@@ -2,7 +2,8 @@
 //!
 //! These tests verify the token system's logic without executing
 //! actual SIMD instructions.
-
+// Covers the deprecated `Avx2FmaToken` alias and width traits.
+#![allow(deprecated)]
 // Only run these tests on x86_64 where the tokens are available
 #![cfg(target_arch = "x86_64")]
 
