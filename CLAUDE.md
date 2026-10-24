@@ -1184,6 +1184,12 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
   The [release-to-main ISA comparison](benchmarks/fma_libm_isa_comparison_2026-10-12.md)
   retains the full measurement method, ratios, resource summaries, and artifact
   hashes. Preserve native intrinsic lowering before releasing this change.
+  Recheck of the shipped compile-time selection (`5dd1c917`) on Zen 5,
+  2026-10-24: global x86-64-v3 builds match 0.9.30; baseline builds take
+  1.02–1.38× (f32 x4+) and 3.0–5.9× (f64) as long, and scalar types inside a
+  V3 function 1.45–3.6× (f32) and 5.7–11.9× (f64)
+  ([recheck](benchmarks/fma_portable_recheck_zen5_2026-10-24.md)). Intel, ARM
+  and WASM not rerun.
 
 
 Expansion snapshots come in two sets, refreshed together by `just
