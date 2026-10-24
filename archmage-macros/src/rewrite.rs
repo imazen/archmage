@@ -280,9 +280,15 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<Tok
     }
 
     // The direct calls (guaranteed hits, no summon). A gated tier becomes a
-    // `#[cfg(feature)]` arm; the first ungated one is the terminal call.
+    // `#[cfg(feature)]` arm; the first ungated one is the terminal call. Each
+    // later arm, and the fallback, is guarded by `not(any(earlier gates))`, so
+    // exactly one guaranteed arm survives cfg evaluation and it is the
+    // block's value: no unconditional `break` leaves the fallback unreachable
+    // (unreachable_code in the caller's crate when the gate is on).
     let caller_ident = token_ident.to_string();
     let mut direct_arms = Vec::new();
+    let mut direct_gates: Vec<&str> = Vec::new();
+    let mut gates_allow_unexpected = false;
     let mut terminal = None;
     for rt in &direct_tiers {
         let fn_suffixed = suffix_path(func_path, rt.suffix);
@@ -299,16 +305,19 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<Tok
         let call = quote! { #fn_suffixed(#call_args) };
         match &rt.feature_gate {
             Some(feat) => {
+                gates_allow_unexpected |= rt.allow_unexpected_cfg;
                 let allow_attr = if rt.allow_unexpected_cfg {
                     quote! { #[allow(unexpected_cfgs)] }
                 } else {
                     quote! {}
                 };
+                let prior = &direct_gates;
                 direct_arms.push(quote! {
                     #allow_attr
-                    #[cfg(feature = #feat)]
-                    { break '__incant_rewrite #call; }
+                    #[cfg(all(feature = #feat, not(any(#(feature = #prior),*))))]
+                    { #call }
                 });
+                direct_gates.push(feat.as_str());
             }
             None => {
                 terminal = Some(call);
@@ -352,12 +361,26 @@ fn rewrite_single_incant(input: &IncantInput, ctx: &CallerContext) -> Option<Tok
         fallback_call
     } else {
         // Upgrade attempts, gated direct calls, then the guaranteed fallback
+        let fallback = if direct_gates.is_empty() {
+            fallback_call
+        } else {
+            let allow_attr = if gates_allow_unexpected {
+                quote! { #[allow(unexpected_cfgs)] }
+            } else {
+                quote! {}
+            };
+            quote! {
+                #allow_attr
+                #[cfg(not(any(#(feature = #direct_gates),*)))]
+                { #fallback_call }
+            }
+        };
         quote! {
             '__incant_rewrite: {
                 use archmage::SimdToken;
                 #(#upgrade_arms)*
                 #(#direct_arms)*
-                #fallback_call
+                #fallback
             }
         }
     })

@@ -10,7 +10,7 @@ fn inner_scalar(_: ScalarToken, x: u32) -> u32 {
 fn __arcane_outer(t: X64V3Token, x: u32) -> u32 {
     '__incant_rewrite: {
         use archmage::SimdToken;
-        inner_scalar(archmage::ScalarToken, x)
+        { inner_scalar(archmage::ScalarToken, x) }
     }
 }
 #[inline(always)]

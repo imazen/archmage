@@ -138,3 +138,25 @@ impl Kernel for Summer {
         out.iter().sum::<f32>() + _self.bias
     }
 }
+
+#[magetypes(define(f32x8), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+fn clamp_impl(token: Token, plane: &mut [f32]) {
+    let _ = token;
+    for value in plane {
+        *value = value.clamp(0.0, 1.0);
+    }
+}
+
+// A nested default-tier `incant!` in every variant, the v4 one included: a
+// gated guaranteed arm must not leave the fallback unreachable.
+#[magetypes(define(f32x8), v4(cfg(avx512)), v3, neon, wasm128, scalar)]
+fn clamp_twice_impl(token: Token, plane: &mut [f32]) {
+    let _ = token;
+    incant!(clamp_impl(plane));
+    incant!(clamp_impl(plane));
+}
+
+/// Clamps through nested dispatch.
+pub fn clamp_twice(plane: &mut [f32]) {
+    incant!(clamp_twice_impl(plane));
+}
