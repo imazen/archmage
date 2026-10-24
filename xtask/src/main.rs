@@ -2089,13 +2089,13 @@ fn parse_simd_methods(content: &str) -> Vec<ParsedType> {
         // Track impl blocks
         if let Some(cap) = impl_re.captures(trimmed) {
             // Save previous type if any
-            if let Some(type_name) = current_type.take() {
-                if !current_methods.is_empty() {
-                    types.push(ParsedType {
-                        name: type_name,
-                        methods: std::mem::take(&mut current_methods),
-                    });
-                }
+            if let Some(type_name) = current_type.take()
+                && !current_methods.is_empty()
+            {
+                types.push(ParsedType {
+                    name: type_name,
+                    methods: std::mem::take(&mut current_methods),
+                });
             }
             current_type = Some(cap[1].to_string());
             in_impl_block = true;
@@ -2139,13 +2139,13 @@ fn parse_simd_methods(content: &str) -> Vec<ParsedType> {
     }
 
     // Save last type
-    if let Some(type_name) = current_type {
-        if !current_methods.is_empty() {
-            types.push(ParsedType {
-                name: type_name,
-                methods: current_methods,
-            });
-        }
+    if let Some(type_name) = current_type
+        && !current_methods.is_empty()
+    {
+        types.push(ParsedType {
+            name: type_name,
+            methods: current_methods,
+        });
     }
 
     types
@@ -2505,6 +2505,8 @@ fn run_ci() -> Result<()> {
             "clippy",
             "-p",
             "archmage-no-features-test",
+            "-p",
+            "archmage-clippy-consumer",
             "--all-targets",
             "--",
             "-D",
@@ -2892,7 +2894,7 @@ impl StepTimer {
         self.close();
         let total = self.started.map(|s| s.elapsed()).unwrap_or_default();
         let mut sorted: Vec<_> = self.done.iter().collect();
-        sorted.sort_by(|a, b| b.1.cmp(&a.1));
+        sorted.sort_by_key(|step| std::cmp::Reverse(step.1));
         println!(
             "=== ci step times (slowest first; total {:.0} s) ===",
             total.as_secs_f64()

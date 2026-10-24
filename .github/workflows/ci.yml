@@ -663,8 +663,8 @@ jobs:
 
       # Macro output only meets clippy in a consuming crate: this one calls
       # every dispatch macro (attuned! in value position included).
-      - name: Clippy (macro consumer crate)
-        run: cargo clippy -p archmage-no-features-test --all-targets -- -D warnings
+      - name: Clippy (macro consumer crates)
+        run: cargo clippy -p archmage-no-features-test -p archmage-clippy-consumer --all-targets -- -D warnings
 
   # ==========================================================================
   # Clippy on aarch64 — the NEON backend impls are cfg'd out on x86, so
@@ -708,8 +708,33 @@ jobs:
       - name: Clippy (magetypes, default features)
         run: cargo clippy -p magetypes -- -D warnings
 
-      - name: Clippy (macro consumer crate)
-        run: cargo clippy -p archmage-no-features-test --all-targets -- -D warnings
+      - name: Clippy (macro consumer crates)
+        run: cargo clippy -p archmage-no-features-test -p archmage-clippy-consumer --all-targets -- -D warnings
+
+  # ==========================================================================
+  # Warning sweep: clippy -D warnings semantics over every target, feature and
+  # CPU-flag configuration (xtask/warning_sweep.py), including the strict-lint
+  # consumer crate. Macro output is linted in the caller's crate and library
+  # warnings reach path dependents, so any diagnostic here fails downstream.
+  # ==========================================================================
+  warning-sweep:
+    name: Warning sweep
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+          targets: i686-unknown-linux-gnu,aarch64-unknown-linux-gnu,aarch64-apple-darwin,aarch64-pc-windows-msvc,wasm32-wasip1,wasm32-unknown-unknown,armv7-unknown-linux-gnueabihf,thumbv7em-none-eabihf
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Sweep
+        run: python3 -B xtask/warning_sweep.py
 
   # ==========================================================================
   # Format check
@@ -1163,6 +1188,7 @@ jobs:
       - fuzz
       - clippy
       - clippy-aarch64
+      - warning-sweep
       - fmt
       - docs
       - msrv

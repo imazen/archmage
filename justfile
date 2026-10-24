@@ -14,7 +14,13 @@ test-nightly:
 # Run clippy (excludes sleef which requires nightly)
 lint:
     cargo clippy --features "std avx512" -- -D warnings
-    cargo clippy -p archmage-no-features-test --all-targets -- -D warnings
+    cargo clippy -p archmage-no-features-test -p archmage-clippy-consumer --all-targets -- -D warnings
+
+# Clippy over every target/feature/CPU configuration (needs the rustup targets
+# listed in .github/workflows/ci.yml's warning-sweep job). --pedantic adds
+# clippy::pedantic and reports macro-expansion spans only.
+warnings *ARGS:
+    python3 -B xtask/warning_sweep.py {{ARGS}}
 
 # Format code + regenerate the public-API surface snapshots (docs/public-api/).
 # The snapshot runner lives in the workspace-excluded apidoc/ package, so it
