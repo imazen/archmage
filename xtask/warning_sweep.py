@@ -34,6 +34,24 @@ WS_WASM = ["--workspace", "--lib", "--bins", "--tests", "--examples"]
 LIBS = ["-p", "archmage", "-p", "magetypes", "--lib"]
 AVX512 = ["--features", "archmage/avx512,magetypes/avx512"]
 SIMD128 = "-Ctarget-feature=+simd128"
+# Allow-by-default rustc lints a downstream crate may pass through RUSTFLAGS,
+# which reach path dependencies. Left out on purpose: unsafe_code (the token
+# and storage modules are audited unsafe), unused_results (idiomatic syn
+# parsing), variant_size_differences, unnameable_types (sealed traits),
+# unused_crate_dependencies (cfg-dependent deps), missing_copy/
+# missing_debug_implementations (would add public API), and nightly-only
+# lints.
+OPT_IN = " ".join("-W " + lint for lint in (
+    "unused_qualifications", "trivial_numeric_casts", "trivial_casts",
+    "unreachable_pub", "elided_lifetimes_in_paths", "let_underscore_drop",
+    "redundant_imports", "unused_extern_crates", "unused_import_braces",
+    "unused_lifetimes", "redundant_lifetimes", "single_use_lifetimes",
+    "missing_docs", "unsafe_op_in_unsafe_fn", "keyword_idents",
+    "explicit_outlives_requirements", "macro_use_extern_crate",
+    "meta_variable_misuse", "unit_bindings", "rust_2018_idioms",
+    "rust_2024_compatibility",
+))
+CRATES = ["-p", "archmage", "-p", "magetypes", "-p", "archmage-macros", "--lib"]
 
 # (name, target or None for host, cargo args, extra RUSTFLAGS)
 CONFIGS = [
@@ -58,6 +76,12 @@ CONFIGS = [
     ("wasm32-scalar", "wasm32-unknown-unknown", LIBS, ""),
     ("armv7", "armv7-unknown-linux-gnueabihf", LIBS, ""),
     ("thumbv7em-nostd", "thumbv7em-none-eabihf", LIBS + ["--no-default-features"], ""),
+    # The library crates under the opt-in rustc lints above.
+    ("optin-x86_64", "x86_64-unknown-linux-gnu", CRATES + AVX512, OPT_IN),
+    ("optin-aarch64", "aarch64-unknown-linux-gnu", CRATES, OPT_IN),
+    ("optin-wasm32", "wasm32-wasip1", CRATES, OPT_IN + " " + SIMD128),
+    ("optin-i686", "i686-unknown-linux-gnu", CRATES, OPT_IN),
+    ("optin-nostd", "x86_64-unknown-linux-gnu", CRATES + ["--no-default-features"], OPT_IN),
 ]
 
 
