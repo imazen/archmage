@@ -6,8 +6,9 @@
 //! - other x86_64 std builds check archmage's cached V3 token once per call
 //!   for f64 and send each lane through the FMA instruction when the CPU has
 //!   it (the one runtime check in vector arithmetic; see `fma_lanes`);
-//! - no_std builds use a token only when `summon` is a compile-time constant
-//!   (V3 or NEON target features);
+//! - no_std builds use a token only when the target features prove it at
+//!   compile time (V3 or NEON); archmage cannot detect at run time without
+//!   std, and its `summon` would otherwise still load a cache to answer None;
 //! - everything else, and f32 without a compile-time guarantee, uses software.
 //!
 //! The software forms process a whole array with no data-dependent branch per
@@ -100,13 +101,18 @@ token_or_software_fma! {
     /// every lane through the FMA instruction: on CPUs with FMA that measured
     /// 0.09-0.43x the software path's time, and about 1.0x without. Lanes pass
     /// in float registers, two per call; an array or SIMD-vector argument would
-    /// go through memory. Without std, and on AArch64, `summon` is a
-    /// compile-time constant. Results equal the software path's bit for bit.
+    /// go through memory. Without std the token path is compiled only when
+    /// the target features prove FMA, where `summon` folds to `Some` (archmage
+    /// cannot detect at run time without std). Results equal the software
+    /// path's bit for bit.
     #[inline(always)]
     pub(crate) fn fma_lanes<const N: usize>(a: [f64; N], b: [f64; N], c: [f64; N]) -> [f64; N] {
         #[cfg(all(
             not(miri),
-            any(target_arch = "x86_64", all(target_arch = "aarch64", target_feature = "neon"))
+            any(
+                all(target_arch = "x86_64", any(feature = "std", target_feature = "fma")),
+                all(target_arch = "aarch64", target_feature = "neon")
+            )
         ))]
         if let Some(token) = hw::token() {
             // Two lanes per call: an f64 pair travels in xmm registers both
@@ -135,7 +141,7 @@ token_or_software_fma! {
 #[cfg(all(
     not(miri),
     any(
-        target_arch = "x86_64",
+        all(target_arch = "x86_64", any(feature = "std", target_feature = "fma")),
         all(target_arch = "aarch64", target_feature = "neon")
     ),
     not(all(
