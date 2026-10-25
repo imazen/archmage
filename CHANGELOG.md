@@ -118,6 +118,10 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 - Planned: make `w512` non-default in magetypes; users who need 512-bit types would add `features = ["w512"]`. This patch keeps the existing default features.
 - Remove `cast::Upcast` and `cast::Downcast`, and with them the `cast` module, which holds nothing else. Both are deprecated in 0.9.30 and were never implemented (b1b2ff67).
 
+#### Changed
+
+- Software `mul_add_portable`/`mul_sub_portable` (the scalar backend without a compile-time FMA guarantee, and WASM f64) run over whole lane arrays without a branch per lane, so they vectorize: f32 rounds once through f64, f64 uses a double-double product, and the rare halfway or out-of-range lanes take an exact per-lane path. Results are unchanged. Interleaved on a Ryzen 9 7900X and a Core Ultra 7 265K, vector shapes take 0.14–0.70× the previous time; on WASM, f64 vectors take 0.34–0.45×. magetypes no longer depends on libm: the exact f64 FMA is ported from libm 0.2.16 (MIT) (06291ec2).
+
 #### Fixed
 
 - No warnings on wasm32 from the generated WASM backend (`<< 0` in bitmasks, parenthesized innermost `wrapping_add` arguments) or on i686/armv7/thumbv7em (storage helper only the native backends call) (5f547440).

@@ -39,7 +39,7 @@ CPU, width, compiler, baseline, and workload.
 | Same narrowing methods on [`i16x32`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i16x32.html) / [`i32x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i32x16.html) | Native AVX-512 | Narrow each input to a half and insert/concatenate. Unsigned destinations clamp signed inputs to zero before unsigned conversion. | Two zero clamps for unsigned output, plus the two conversions and concatenation needed for the operation. |
 | Same narrowing families at 128 bits; NEON / WASM widths | Native halves | Native signed-source saturating narrows already have the desired lane order. | No AVX2-style lane-order repair; polyfills still require composition. |
 | `v.shl_const::<N>()`, `v.shr_logical_const::<N>()`, `v.shr_arithmetic_const::<N>()` | Every backend | Const assertions reject invalid counts before execution. | **No runtime assertion.** Constant byte shifts can still require shift/mask emulation. |
-| `a.mul_add_portable(b, c)` / `a.mul_sub_portable(b, c)` on every float type | Scalar backend; WASM, relaxed SIMD included | Native hardware backends use FMA directly. Native scalar lanes call libm without an extra Magetypes feature probe. WASM scalar and SIMD f32 use f64 TwoSum with round-to-odd; f64 calls libm. | Libm selects its hardware or software implementation, including cached dispatch on x86. Historical measurements are below; see [Fused arithmetic](#fused-arithmetic-and-reductions). |
+| `a.mul_add_portable(b, c)` / `a.mul_sub_portable(b, c)` on every float type | Scalar backend; WASM, relaxed SIMD included | Native hardware backends use FMA directly. The scalar backend uses the FMA instruction when the build guarantees one, else software; WASM always uses software. Software f32 rounds once through f64 (WASM SIMD f32 rounds to odd); software f64 uses a double-double product. Both check rare lanes into an exact path. | No CPU detection. The software forms have no per-lane branch, so they vectorize on SSE2 and WASM SIMD; measurements are below; see [Fused arithmetic](#fused-arithmetic-and-reductions). |
 
 `abs_diff`, `madd_adjacent`, `pairwise_widen_add`, saturating arithmetic, and
 `reduce_add_u32` sometimes need several instructions because an ISA lacks that
@@ -204,14 +204,20 @@ and on 1,024 dependent steps (chain); records:
 | Historical scalar hardware path (removed before 0.9.31-beta; AArch64 always; x86-64 built with `-Ctarget-cpu` from Haswell/Zen 1 on), Neoverse-N1 and 9950X3D | The same code as `a * b + c` | The same instruction as `mul_add`: 0.92–1.03× in streams, 0.65–0.78× in chains ([record](https://github.com/imazen/archmage/blob/main/benchmarks/fma_scalar_backend_2026-10-07.md)) |
 | Historical scalar cached-dispatch path (removed before 0.9.31-beta), default x86-64 build on 9950X3D | The same code as `a * b + c` | A cached check and a call per lane: 2.7–3.0× (f64), 2.9–5.7× (f32) the time |
 | Scalar software algorithm (measured on the 9950X3D and M4 Pro before the hardware experiment) | The same code as `a * b + c` | 2.7–15.5× (f32), 9.1–29.5× (f64) the time |
-| WASM SIMD128, wasmtime on the 9950X3D | The same code as `a * b + c` | 8.2× (`f32x4`), 23× (`f64x2`) the time |
-| WASM relaxed SIMD, same | The engine's madd: 0.96–1.06× the time | 8.2× (`f32x4`), 24× (`f64x2`) the time |
+| Historical WASM SIMD128 (per-lane f64), wasmtime on the 9950X3D | The same code as `a * b + c` | 8.2× (`f32x4`), 23× (`f64x2`) the time |
+| Historical WASM relaxed SIMD, same | The engine's madd: 0.96–1.06× the time | 8.2× (`f32x4`), 24× (`f64x2`) the time |
+| Scalar software, array form (current), baseline x86-64 on the Ryzen 9 7900X | The same code as `a * b + c` | 1.7–8.8× (f32), 5.4–27× (f64) the time; inside a V3 function 3.8–4.3× (f32), 7.1–8.4× (f64) ([record](https://github.com/imazen/archmage/blob/main/benchmarks/soft_fma_simd_2026-10-24.md)) |
+| WASM SIMD128 (current), wasmtime 47 on the 7900X | The same code as `a * b + c` | 7.9–11× (`f32x4`), 9.2–13.5× (`f64x2`) the time |
 
-Portable software fallbacks use f64/TwoSum/round-to-odd for f32 and libm's
-integer-significand implementation for f64. They do not probe the CPU. The f32
-algorithm avoids libm 0.2.16's subnormal double-rounding bug. We pin libm because
-calling its generic f64 implementation directly requires its internal API;
-other dependents retain their own libm feature selection.
+Portable software fallbacks work on whole lane arrays without a branch per
+lane, so LLVM vectorizes them. f32 computes the exact product in f64, adds
+once and narrows; a lane goes to the exact round-to-odd path only when the f64
+sum is halfway between two f32 values or lies in f32's subnormal range, the
+only cases where narrowing can round differently. f64 uses Dekker's product and
+TwoSum, rounds to nearest, and sends lanes whose final addition lands exactly
+halfway after an inexact inner addition, or that leave the safe exponent
+range, to an exact integer implementation ported from libm 0.2.16. They do not
+probe the CPU.
 
 Scalar helpers use hardware only when the build guarantees it: with `std`,
 AArch64 NEON or x86 FMA-enabled builds use Rust's `mul_add`. Other scalar
@@ -233,8 +239,8 @@ portable add/sub at all six scalar vector widths: each matched the corresponding
 direct libm expression on baseline x86-64, x86-64-v3, AArch64, and WASM after
 normalizing local label numbers. That establishes code-generation equivalence
 for those fixtures, not a runtime speedup. Native WASM SIMD's f32 software
-kernel is unchanged. The scalar f32 WASM helper now uses the same rounding
-algorithm; it no longer matches direct libm. See the
+kernel still rounds to odd. The scalar helpers now use the array algorithm
+above and no longer match direct libm. See the
 [relaxed SIMD investigation](https://github.com/imazen/archmage/blob/main/benchmarks/relaxed_madd_2026-10-12.md)
 for the independent counterexample and measured distinction between bare
 relaxed madd and portable software fusion.

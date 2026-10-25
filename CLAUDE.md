@@ -165,11 +165,17 @@ fn dist_simd(a: &[f32; 8], b: &[f32; 8]) -> f32 {
 ### Dispatch granularity
 
 Magetypes must not add CPU probes inside single-vector arithmetic. Portable
-software FMA uses f64/TwoSum/round-to-odd for f32 and pinned libm's generic
-integer implementation for f64; neither dispatches. Compile-time-guaranteed
+software FMA (`magetypes/src/soft_fma.rs`) works on whole lane arrays with no
+per-lane branch, so LLVM vectorizes it: f32 rounds once through f64 and sends
+only sums that are f32 midpoints or f32-subnormal to round-to-odd; f64 uses a
+double-double product and sends halfway or out-of-range lanes to an exact
+integer FMA ported from libm 0.2.16 (magetypes no longer depends on libm).
+Neither dispatches. Keep the exact paths out of line and per lane (float
+returns): a `&mut` result moved the hot loop's value through memory (f32x1
+chains 1.4-1.5x slower), and an array return through a general register.
+Compile-time-guaranteed
 std AArch64 NEON and x86 FMA builds use Rust's hardware lowering. Other scalar
-contexts, including no_std, use software regardless of other dependents' libm
-features. Native SIMD backends retain direct FMA intrinsics. Bare scalar and
+contexts, including no_std, use software. Native SIMD backends retain direct FMA intrinsics. Bare scalar and
 strict-WASM `mul_add` remain multiply then add; relaxed WASM uses native madd.
 The independent corpus in `tests/fma_contract.rs` enforces portable expected
 bits and backend-specific bare behavior; never substitute std as its oracle.
@@ -1191,7 +1197,10 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
   ([recheck](benchmarks/fma_portable_recheck_zen5_2026-10-24.md)). Quiet
   i265 (Arrow Lake) and r7900x (Zen 4) reruns agree: global V3 and native
   vectors unchanged; baseline f64 4.2–7.1×, scalar f64 inside V3 6.3–7.4×.
-  ARM and WASM not rerun.
+  The vectorizable software path (`06291ec2`) cut main's time to 0.14–0.70×
+  for vector shapes; against 0.9.30, baseline f32 vectors are now faster
+  (0.48–0.58×) while f64 still takes 2.3–6.3× and f32x1 chains about 2×
+  ([report](benchmarks/soft_fma_simd_2026-10-24.md)). ARM not rerun.
 
 
 Expansion snapshots come in two sets, refreshed together by `just
