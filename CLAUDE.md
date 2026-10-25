@@ -1188,8 +1188,10 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
   2026-10-24: global x86-64-v3 builds match 0.9.30; baseline builds take
   1.02–1.38× (f32 x4+) and 3.0–5.9× (f64) as long, and scalar types inside a
   V3 function 1.45–3.6× (f32) and 5.7–11.9× (f64)
-  ([recheck](benchmarks/fma_portable_recheck_zen5_2026-10-24.md)). Intel, ARM
-  and WASM not rerun.
+  ([recheck](benchmarks/fma_portable_recheck_zen5_2026-10-24.md)). Quiet
+  i265 (Arrow Lake) and r7900x (Zen 4) reruns agree: global V3 and native
+  vectors unchanged; baseline f64 4.2–7.1×, scalar f64 inside V3 6.3–7.4×.
+  ARM and WASM not rerun.
 
 
 Expansion snapshots come in two sets, refreshed together by `just
