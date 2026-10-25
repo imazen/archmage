@@ -600,11 +600,17 @@ fn gen_float_type_tests(code: &mut String, elem: &str, lanes: usize) {
         "#});
     }
 
-    // mul_add/mul_sub follow each token's rounding contract (mul_add_expected);
-    // the _portable forms round once on every backend (fused_expected).
-    for op in &["mul_add", "mul_sub", "mul_add_portable", "mul_sub_portable"] {
+    // The _relaxed forms follow each token's rounding contract
+    // (mul_add_expected); the _fused forms round once on every backend
+    // (fused_expected). _portable is the same backend call as _fused.
+    for op in &[
+        "mul_add_relaxed",
+        "mul_sub_relaxed",
+        "mul_add_fused",
+        "mul_sub_fused",
+    ] {
         let sign = if op.starts_with("mul_sub") { "-" } else { "" };
-        let (oracle_s, oracle_n) = if op.ends_with("_portable") {
+        let (oracle_s, oracle_n) = if op.ends_with("_fused") {
             (
                 format!("fused_expected(b[i], {sign}c[i])"),
                 format!("fused_expected(b[i], {sign}c[i])"),

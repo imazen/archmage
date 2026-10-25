@@ -82,7 +82,7 @@ fn dot_product<T: F32x8Backend>(token: T, a: &[f32], b: &[f32]) -> f32 {
     for i in 0..chunks {
         let va = f32x8::<T>::load_t(token, a[i * 8..][..8].try_into().unwrap());
         let vb = f32x8::<T>::load_t(token, b[i * 8..][..8].try_into().unwrap());
-        acc = va.mul_add(vb, acc); // FMA: acc += va * vb
+        acc = va.mul_add_relaxed(vb, acc); // FMA: acc += va * vb
     }
 
     let mut total = acc.reduce_add();

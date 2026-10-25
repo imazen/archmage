@@ -64,11 +64,11 @@ impl<T: F32x4Convert> f32x4<T> {
 
         let m = mantissa - splat_f32::<T>(self.1, 1.0);
 
-        let yp = splat_f32::<T>(self.1, P2).mul_add(m, splat_f32::<T>(self.1, P1));
-        let yp = yp.mul_add(m, splat_f32::<T>(self.1, P0));
+        let yp = splat_f32::<T>(self.1, P2).mul_add_relaxed(m, splat_f32::<T>(self.1, P1));
+        let yp = yp.mul_add_relaxed(m, splat_f32::<T>(self.1, P0));
 
-        let yq = splat_f32::<T>(self.1, Q2).mul_add(m, splat_f32::<T>(self.1, Q1));
-        let yq = yq.mul_add(m, splat_f32::<T>(self.1, Q0));
+        let yq = splat_f32::<T>(self.1, Q2).mul_add_relaxed(m, splat_f32::<T>(self.1, Q1));
+        let yq = yq.mul_add_relaxed(m, splat_f32::<T>(self.1, Q0));
 
         yp / yq + exp_val
     }
@@ -96,9 +96,9 @@ impl<T: F32x4Convert> f32x4<T> {
         let xi = x.floor();
         let xf = x - xi;
 
-        let poly = splat_f32::<T>(self.1, C3).mul_add(xf, splat_f32::<T>(self.1, C2));
-        let poly = poly.mul_add(xf, splat_f32::<T>(self.1, C1));
-        let poly = poly.mul_add(xf, splat_f32::<T>(self.1, C0));
+        let poly = splat_f32::<T>(self.1, C3).mul_add_relaxed(xf, splat_f32::<T>(self.1, C2));
+        let poly = poly.mul_add_relaxed(xf, splat_f32::<T>(self.1, C1));
+        let poly = poly.mul_add_relaxed(xf, splat_f32::<T>(self.1, C0));
 
         let xi_i32 = xi.to_i32_round();
         let scale_bits = (xi_i32 + splat_i32::<T>(self.1, 127)).shl_const::<23>();
@@ -195,11 +195,11 @@ impl<T: F32x4Convert> f32x4<T> {
         let y = (a - one) / (a + one);
         let y2 = y * y;
 
-        let poly = splat_f32::<T>(self.1, C3).mul_add(y2, splat_f32::<T>(self.1, C2));
-        let poly = poly.mul_add(y2, splat_f32::<T>(self.1, C1));
-        let poly = poly.mul_add(y2, splat_f32::<T>(self.1, C0));
+        let poly = splat_f32::<T>(self.1, C3).mul_add_relaxed(y2, splat_f32::<T>(self.1, C2));
+        let poly = poly.mul_add_relaxed(y2, splat_f32::<T>(self.1, C1));
+        let poly = poly.mul_add_relaxed(y2, splat_f32::<T>(self.1, C0));
 
-        poly.mul_add(y, n)
+        poly.mul_add_relaxed(y, n)
     }
 
     /// Mid-precision base-2 logarithm with edge case handling.
@@ -253,12 +253,12 @@ impl<T: F32x4Convert> f32x4<T> {
         let xi = self.round().min(splat_f32::<T>(self.1, 127.0));
         let xf = self - xi;
 
-        let poly = splat_f32::<T>(self.1, C6).mul_add(xf, splat_f32::<T>(self.1, C5));
-        let poly = poly.mul_add(xf, splat_f32::<T>(self.1, C4));
-        let poly = poly.mul_add(xf, splat_f32::<T>(self.1, C3));
-        let poly = poly.mul_add(xf, splat_f32::<T>(self.1, C2));
-        let poly = poly.mul_add(xf, splat_f32::<T>(self.1, C1));
-        let poly = poly.mul_add(xf, splat_f32::<T>(self.1, C0));
+        let poly = splat_f32::<T>(self.1, C6).mul_add_relaxed(xf, splat_f32::<T>(self.1, C5));
+        let poly = poly.mul_add_relaxed(xf, splat_f32::<T>(self.1, C4));
+        let poly = poly.mul_add_relaxed(xf, splat_f32::<T>(self.1, C3));
+        let poly = poly.mul_add_relaxed(xf, splat_f32::<T>(self.1, C2));
+        let poly = poly.mul_add_relaxed(xf, splat_f32::<T>(self.1, C1));
+        let poly = poly.mul_add_relaxed(xf, splat_f32::<T>(self.1, C0));
 
         let xi_i32 = xi.to_i32_round();
         let scale_bits = (xi_i32 + splat_i32::<T>(self.1, 127)).shl_const::<23>();

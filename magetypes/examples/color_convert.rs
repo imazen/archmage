@@ -61,7 +61,7 @@ mod x86_impl {
         let r = y + v_shifted * kr_v;
 
         // G = Y - 0.344 * U' - 0.714 * V'
-        let g = u_shifted.mul_add(kg_u, v_shifted.mul_add(kg_v, y));
+        let g = u_shifted.mul_add_relaxed(kg_u, v_shifted.mul_add_relaxed(kg_v, y));
 
         // B = Y + 1.772 * U'
         let b = y + u_shifted * kb_u;
@@ -98,13 +98,19 @@ mod x86_impl {
         let kv_b = f32x8::splat_t(token, -0.081312);
 
         // Y = 0.299*R + 0.587*G + 0.114*B
-        let y = r.mul_add(ky_r, g.mul_add(ky_g, b * ky_b));
+        let y = r.mul_add_relaxed(ky_r, g.mul_add_relaxed(ky_g, b * ky_b));
 
         // U = -0.169*R - 0.331*G + 0.5*B + 128
-        let u = r.mul_add(ku_r, g.mul_add(ku_g, b.mul_add(ku_b, offset)));
+        let u = r.mul_add_relaxed(
+            ku_r,
+            g.mul_add_relaxed(ku_g, b.mul_add_relaxed(ku_b, offset)),
+        );
 
         // V = 0.5*R - 0.419*G - 0.081*B + 128
-        let v = r.mul_add(kv_r, g.mul_add(kv_g, b.mul_add(kv_b, offset)));
+        let v = r.mul_add_relaxed(
+            kv_r,
+            g.mul_add_relaxed(kv_g, b.mul_add_relaxed(kv_b, offset)),
+        );
 
         // Clamp to [0, 255]
         (y.clamp(zero, max), u.clamp(zero, max), v.clamp(zero, max))

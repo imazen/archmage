@@ -142,7 +142,7 @@ macro_rules! w128_parity_suite {
                 let b = f32x4::from_array_t(token, [2.0, 3.0, 4.0, 5.0]);
                 let c = f32x4::from_array_t(token, [0.5, 0.5, 0.5, 0.5]);
                 // a * b + c
-                let result = a.mul_add(b, c);
+                let result = a.mul_add_relaxed(b, c);
                 assert_eq!(result.to_array(), [2.5, 6.5, 12.5, 20.5]);
             }
         }

@@ -1387,6 +1387,17 @@ Earlier entries from the expansion-test list:
 
 Design record for #116 (the `mul_add` contract):
 
+- 2026-10-25 (user decision): `mul_add`/`mul_sub` are deprecated so that
+  backend-dependent rounding is an explicit opt-in. `mul_add_relaxed`/
+  `mul_sub_relaxed` keep the contract below; `mul_add_fused`/`mul_sub_fused`
+  are the single-rounding forms, the same operation as `mul_add_portable`/
+  `mul_sub_portable` (not deprecated yet). After 0.10 ships the deprecation,
+  `mul_add`/`mul_sub` return in 0.11 as the fused forms, matching
+  `f32::mul_add`. The scalar backend's relaxed form stays multiply-then-add:
+  it keeps scalar-vs-SIMD tests exposing rounding assumptions, and a separate
+  multiply-add beats FMA for one-accumulator reductions
+  (`benchmarks/fused_vs_separate_2026-10-25.md`).
+
 - #116, final form (user decision 2026-10-05): `mul_add`/`mul_sub` keep the
   0.9.29 contract: one rounding where the hardware fuses (x86 v3/v4, NEON), a
   multiply then an add on the scalar backend and strict WASM. Relaxed WASM emits

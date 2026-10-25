@@ -817,7 +817,7 @@ mod w512_tests {
             let c = f32x16::splat_t(token, 1.0);
 
             // a * b + c = 2 * 3 + 1 = 7
-            let result = a.mul_add(b, c);
+            let result = a.mul_add_relaxed(b, c);
             assert_eq!(result.to_array(), [7.0; 16]);
         }
     }
@@ -989,7 +989,7 @@ mod arm_tests {
             let c = f32x4::splat_t(token, 1.0);
 
             // a * b + c = 2 * 3 + 1 = 7
-            let result = a.mul_add(b, c);
+            let result = a.mul_add_relaxed(b, c);
             assert_eq!(result.to_array(), [7.0, 7.0, 7.0, 7.0]);
         }
     }

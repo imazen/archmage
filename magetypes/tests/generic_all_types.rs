@@ -85,8 +85,8 @@ macro_rules! float_tests {
                 let a = $ty::<ScalarToken>::splat_t(t, 2.0 as $elem);
                 let b = $ty::<ScalarToken>::splat_t(t, 3.0 as $elem);
                 let c = $ty::<ScalarToken>::splat_t(t, 1.0 as $elem);
-                assert_eq!(a.mul_add(b, c).to_array(), [7.0 as $elem; $lanes]);
-                assert_eq!(a.mul_sub(b, c).to_array(), [5.0 as $elem; $lanes]);
+                assert_eq!(a.mul_add_relaxed(b, c).to_array(), [7.0 as $elem; $lanes]);
+                assert_eq!(a.mul_sub_relaxed(b, c).to_array(), [5.0 as $elem; $lanes]);
             }
 
             #[test]
@@ -648,7 +648,8 @@ fn generic_euclidean_dist_sq<T: F32x8Backend>(token: T, a: &[f32; 8], b: &[f32; 
     let va = f32x8::<T>::load_t(token, a);
     let vb = f32x8::<T>::load_t(token, b);
     let diff = va - vb;
-    diff.mul_add(diff, f32x8::<T>::zero_t(token)).reduce_add()
+    diff.mul_add_relaxed(diff, f32x8::<T>::zero_t(token))
+        .reduce_add()
 }
 
 #[test]

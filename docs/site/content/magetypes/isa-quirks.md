@@ -39,7 +39,7 @@ CPU, width, compiler, baseline, and workload.
 | Same narrowing methods on [`i16x32`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i16x32.html) / [`i32x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i32x16.html) | Native AVX-512 | Narrow each input to a half and insert/concatenate. Unsigned destinations clamp signed inputs to zero before unsigned conversion. | Two zero clamps for unsigned output, plus the two conversions and concatenation needed for the operation. |
 | Same narrowing families at 128 bits; NEON / WASM widths | Native halves | Native signed-source saturating narrows already have the desired lane order. | No AVX2-style lane-order repair; polyfills still require composition. |
 | `v.shl_const::<N>()`, `v.shr_logical_const::<N>()`, `v.shr_arithmetic_const::<N>()` | Every backend | Const assertions reject invalid counts before execution. | **No runtime assertion.** Constant byte shifts can still require shift/mask emulation. |
-| `a.mul_add_portable(b, c)` / `a.mul_sub_portable(b, c)` on every float type | Scalar backend; WASM, relaxed SIMD included | Native hardware backends use FMA directly. The scalar backend uses the FMA instruction when the build guarantees one (and for x86_64 f64 with `std`, when a cached runtime check finds it), else software; WASM always uses software. Software f32 rounds once through f64 (WASM SIMD f32 rounds to odd); software f64 uses a double-double product. Both check rare lanes into an exact path. | The software forms have no per-lane branch, so they vectorize on SSE2 and WASM SIMD. f64 on x86_64 with `std` checks a cached CPU flag once per call to use the FMA instruction; nothing else detects. Measurements are below; see [Fused arithmetic](#fused-arithmetic-and-reductions). |
+| `a.mul_add_fused(b, c)` / `a.mul_sub_fused(b, c)` (also spelled `mul_add_portable` / `mul_sub_portable`) on every float type | Scalar backend; WASM, relaxed SIMD included | Native hardware backends use FMA directly. The scalar backend uses the FMA instruction when the build guarantees one (and for x86_64 f64 with `std`, when a cached runtime check finds it), else software; WASM always uses software. Software f32 rounds once through f64 (WASM SIMD f32 rounds to odd); software f64 uses a double-double product. Both check rare lanes into an exact path. | The software forms have no per-lane branch, so they vectorize on SSE2 and WASM SIMD. f64 on x86_64 with `std` checks a cached CPU flag once per call to use the FMA instruction; nothing else detects. Measurements are below; see [Fused arithmetic](#fused-arithmetic-and-reductions). |
 
 `abs_diff`, `madd_adjacent`, `pairwise_widen_add`, saturating arithmetic, and
 `reduce_add_u32` sometimes need several instructions because an ISA lacks that
@@ -165,20 +165,20 @@ codegen review rather than silently changing a published operation here.
 
 | Example | x86 / NEON | WASM / scalar | What we fix up |
 |---|---|---|---|
-| `a.mul_add(b, -1)` where `a = 1 + 2^-23`, `b = 1 - 2^-23` | `-2^-46` (fused) | `0` (multiply, then add); relaxed WASM: either | Nothing: `mul_add` fuses only where the hardware does. |
-| `a.mul_add_portable(b, -1)`, same inputs | `-2^-46` (fused) | `-2^-46` (fused in software) | Software single rounding where the hardware cannot fuse. |
+| `a.mul_add_relaxed(b, -1)` where `a = 1 + 2^-23`, `b = 1 - 2^-23` | `-2^-46` (fused) | `0` (multiply, then add); relaxed WASM: either | Nothing: `mul_add_relaxed` fuses only where the hardware does. |
+| `a.mul_add_fused(b, -1)`, same inputs | `-2^-46` (fused) | `-2^-46` (fused in software) | Software single rounding where the hardware cannot fuse. |
 | Floating-point `reduce_add` | Association depends on backend and vector shape | Association depends on backend and vector shape | Nothing: no universal cross-backend ULP or relative-error bound. |
 
-`mul_add` and `mul_sub` round once on x86 v3/v4 and NEON, and twice (multiply,
+`mul_add_relaxed` and `mul_sub_relaxed` round once on x86 v3/v4 and NEON, and twice (multiply,
 then add) on the scalar backend and strict WASM; relaxed WASM follows the
-engine's rounding choice. `mul_add_portable` and `mul_sub_portable` round once on
+engine's rounding choice. `mul_add_fused` and `mul_sub_fused` round once on
 every backend, so their results match bit for bit. NaN payloads and signs remain
 unspecified. One and two roundings can differ near cancellation or intermediate
 overflow.
 
-On relaxed WASM, `mul_add` emits relaxed multiply-add directly, without a
+On relaxed WASM, `mul_add_relaxed` emits relaxed multiply-add directly, without a
 probe, cached load, or runtime branch. A non-fusing engine may round twice, so
-`mul_add_portable` never uses it: it fuses in software in every WASM build. A relaxed-SIMD
+`mul_add_fused` never uses it: it fuses in software in every WASM build. A relaxed-SIMD
 token proves instruction availability, not fusion; the
 [relaxed-SIMD specification](https://github.com/WebAssembly/relaxed-simd/blob/main/proposals/relaxed-simd/Overview.md)
 permits either rounding behavior. Modules built with relaxed SIMD still require
@@ -191,17 +191,17 @@ add (source checked 2026-09-27). This choice occurs during code generation, not
 as a per-operation branch in the generated kernel. Thus relaxed-SIMD support
 alone does not imply fusion on older CPUs or VMs that hide FMA.
 
-Single rounding has a price where the hardware cannot fuse, and `mul_add` does
+Single rounding has a price where the hardware cannot fuse, and `mul_add_relaxed` does
 not pay it. Measured against `a * b + c` on 1,024 L1-resident vectors (stream)
 and on 1,024 dependent steps (chain); records:
 [per backend](https://github.com/imazen/archmage/blob/main/benchmarks/mul_add_portable_zen5-m4pro_2026-10-05.md),
 [WASM](https://github.com/imazen/archmage/blob/main/benchmarks/mul_add_wasm_wasmtime_zen5-9950x3d_2026-10-05.md).
 
-| Backend, machine | `mul_add` | `mul_add_portable` |
+| Backend, machine | `mul_add_relaxed` | `mul_add_fused` |
 |---|---|---|
-| AVX2 and AVX-512, Ryzen 9 9950X3D | Chains take 29–38% less time; streams −10% to +6%, within code-placement noise | The same instruction as `mul_add` |
-| NEON, Apple M4 Pro | Chains take 24–31% less time; streams −5% to +8% | The same instruction as `mul_add` |
-| Historical scalar hardware path (removed before 0.9.31-beta; AArch64 always; x86-64 built with `-Ctarget-cpu` from Haswell/Zen 1 on), Neoverse-N1 and 9950X3D | The same code as `a * b + c` | The same instruction as `mul_add`: 0.92–1.03× in streams, 0.65–0.78× in chains ([record](https://github.com/imazen/archmage/blob/main/benchmarks/fma_scalar_backend_2026-10-07.md)) |
+| AVX2 and AVX-512, Ryzen 9 9950X3D | Chains take 29–38% less time; streams −10% to +6%, within code-placement noise | The same instruction as `mul_add_relaxed` |
+| NEON, Apple M4 Pro | Chains take 24–31% less time; streams −5% to +8% | The same instruction as `mul_add_relaxed` |
+| Historical scalar hardware path (removed before 0.9.31-beta; AArch64 always; x86-64 built with `-Ctarget-cpu` from Haswell/Zen 1 on), Neoverse-N1 and 9950X3D | The same code as `a * b + c` | The same instruction as `mul_add_relaxed`: 0.92–1.03× in streams, 0.65–0.78× in chains ([record](https://github.com/imazen/archmage/blob/main/benchmarks/fma_scalar_backend_2026-10-07.md)) |
 | Historical scalar cached-dispatch path (removed before 0.9.31-beta), default x86-64 build on 9950X3D | The same code as `a * b + c` | A cached check and a call per lane: 2.7–3.0× (f64), 2.9–5.7× (f32) the time |
 | Scalar software algorithm (measured on the 9950X3D and M4 Pro before the hardware experiment) | The same code as `a * b + c` | 2.7–15.5× (f32), 9.1–29.5× (f64) the time |
 | Historical WASM SIMD128 (per-lane f64), wasmtime on the 9950X3D | The same code as `a * b + c` | 8.2× (`f32x4`), 23× (`f64x2`) the time |
@@ -251,12 +251,18 @@ above and no longer match direct libm. See the
 for the independent counterexample and measured distinction between bare
 relaxed madd and portable software fusion.
 
-With a native FMA backend, `mul_add` is the faster choice for dependency chains such as
-Horner polynomials, and elsewhere it costs nothing. Use `mul_add_portable` where
-identical results on every backend matter more than speed.
+On a native FMA backend, `mul_add_relaxed` is one FMA: the faster choice for dependency
+chains through the multiplicand, such as Horner polynomials. When the chain runs only
+through the addend (a reduction with one accumulator), a separate `a * b + acc` takes
+0.49–0.80× the time of FMA on Arrow Lake and Zen 4, because the add finishes sooner than
+an FMA; with enough independent accumulators the two are equal
+([measurements](https://github.com/imazen/archmage/blob/main/benchmarks/fused_vs_separate_2026-10-25.md)).
+Use `mul_add_fused` where identical results on every backend matter more than speed.
+`mul_add` and `mul_sub` are deprecated so that backend-dependent rounding is an explicit
+choice; in magetypes 0.11 they become the fused operations.
 
 The generic transcendentals (`exp2_midp`, `log2_midp`, `pow_midp` and the rest)
-evaluate their polynomials with `mul_add`, so their last bits depend on the
+evaluate their polynomials with `mul_add_relaxed`, so their last bits depend on the
 backend. Over every f32 input, 0.3–0.8% of exp/log results differ by 1–3 ULP
 between the scalar backend and AVX2, and about 11% of `pow_midp(2.4)` results
 by up to 178 ULP; the maxima against the true value move by at most 0.43 ULP

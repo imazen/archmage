@@ -75,45 +75,54 @@ mod x86_impl {
         let out0 = (v0 + v1 + v2 + v3 + v4 + v5 + v6 + v7) * c0;
 
         // Row 1: Use FMA chain
-        let out1 = v0.mul_add(
+        let out1 = v0.mul_add_relaxed(
             c10,
-            v1.mul_add(
+            v1.mul_add_relaxed(
                 c11,
-                v2.mul_add(
+                v2.mul_add_relaxed(
                     c12,
-                    v3.mul_add(
+                    v3.mul_add_relaxed(
                         c13,
-                        v4.mul_add(nc13, v5.mul_add(nc12, v6.mul_add(nc11, v7 * nc10))),
+                        v4.mul_add_relaxed(
+                            nc13,
+                            v5.mul_add_relaxed(nc12, v6.mul_add_relaxed(nc11, v7 * nc10)),
+                        ),
                     ),
                 ),
             ),
         );
 
         // Row 2
-        let out2 = v0.mul_add(
+        let out2 = v0.mul_add_relaxed(
             c20,
-            v1.mul_add(
+            v1.mul_add_relaxed(
                 c21,
-                v2.mul_add(
+                v2.mul_add_relaxed(
                     nc21,
-                    v3.mul_add(
+                    v3.mul_add_relaxed(
                         nc20,
-                        v4.mul_add(nc20, v5.mul_add(nc21, v6.mul_add(c21, v7 * c20))),
+                        v4.mul_add_relaxed(
+                            nc20,
+                            v5.mul_add_relaxed(nc21, v6.mul_add_relaxed(c21, v7 * c20)),
+                        ),
                     ),
                 ),
             ),
         );
 
         // Row 3
-        let out3 = v0.mul_add(
+        let out3 = v0.mul_add_relaxed(
             c11,
-            v1.mul_add(
+            v1.mul_add_relaxed(
                 nc13,
-                v2.mul_add(
+                v2.mul_add_relaxed(
                     nc10,
-                    v3.mul_add(
+                    v3.mul_add_relaxed(
                         nc12,
-                        v4.mul_add(c12, v5.mul_add(c10, v6.mul_add(c13, v7 * nc11))),
+                        v4.mul_add_relaxed(
+                            c12,
+                            v5.mul_add_relaxed(c10, v6.mul_add_relaxed(c13, v7 * nc11)),
+                        ),
                     ),
                 ),
             ),
@@ -123,45 +132,54 @@ mod x86_impl {
         let out4 = (v0 - v1 - v2 + v3 + v4 - v5 - v6 + v7) * c0;
 
         // Row 5
-        let out5 = v0.mul_add(
+        let out5 = v0.mul_add_relaxed(
             c12,
-            v1.mul_add(
+            v1.mul_add_relaxed(
                 nc10,
-                v2.mul_add(
+                v2.mul_add_relaxed(
                     c13,
-                    v3.mul_add(
+                    v3.mul_add_relaxed(
                         c11,
-                        v4.mul_add(nc11, v5.mul_add(nc13, v6.mul_add(c10, v7 * nc12))),
+                        v4.mul_add_relaxed(
+                            nc11,
+                            v5.mul_add_relaxed(nc13, v6.mul_add_relaxed(c10, v7 * nc12)),
+                        ),
                     ),
                 ),
             ),
         );
 
         // Row 6
-        let out6 = v0.mul_add(
+        let out6 = v0.mul_add_relaxed(
             c21,
-            v1.mul_add(
+            v1.mul_add_relaxed(
                 nc20,
-                v2.mul_add(
+                v2.mul_add_relaxed(
                     c20,
-                    v3.mul_add(
+                    v3.mul_add_relaxed(
                         nc21,
-                        v4.mul_add(nc21, v5.mul_add(c20, v6.mul_add(nc20, v7 * c21))),
+                        v4.mul_add_relaxed(
+                            nc21,
+                            v5.mul_add_relaxed(c20, v6.mul_add_relaxed(nc20, v7 * c21)),
+                        ),
                     ),
                 ),
             ),
         );
 
         // Row 7
-        let out7 = v0.mul_add(
+        let out7 = v0.mul_add_relaxed(
             c13,
-            v1.mul_add(
+            v1.mul_add_relaxed(
                 nc12,
-                v2.mul_add(
+                v2.mul_add_relaxed(
                     c11,
-                    v3.mul_add(
+                    v3.mul_add_relaxed(
                         nc10,
-                        v4.mul_add(c10, v5.mul_add(nc11, v6.mul_add(c12, v7 * nc13))),
+                        v4.mul_add_relaxed(
+                            c10,
+                            v5.mul_add_relaxed(nc11, v6.mul_add_relaxed(c12, v7 * nc13)),
+                        ),
                     ),
                 ),
             ),

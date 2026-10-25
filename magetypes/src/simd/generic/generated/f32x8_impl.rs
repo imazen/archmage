@@ -250,47 +250,66 @@ impl<T: F32x8Backend> f32x8<T> {
         Self(T::round(self.1, self.0), self.1)
     }
 
-    /// Multiply-add: `self * a + b`, fused where the hardware fuses.
+    /// Multiply-add, fused or not depending on the backend: `self * a + b`.
     ///
-    /// For one rounding on every backend, use
-    /// [`mul_add_portable`](Self::mul_add_portable).
+    /// x86 v3/v4 and NEON use FMA, one rounding. The scalar backend and
+    /// WASM built without `relaxed-simd` multiply, round, add and round
+    /// again. Builds with `relaxed-simd` use the engine's madd, which may
+    /// round either way. Results can therefore differ between backends in
+    /// the last bit; for one rounding on every backend use
+    /// [`mul_add_fused`](Self::mul_add_fused). NaN payload/sign are
+    /// unspecified.
     ///
-    /// x86 v3/v4 and NEON use FMA, one rounding: about as fast as
-    /// `self * a + b` in streaming loops, and 24–38% less time in
-    /// dependency chains such as Horner polynomials. The scalar backend
-    /// and WASM built without `relaxed-simd` multiply, round, add and
-    /// round again, at the speed of `self * a + b`. Builds with
-    /// `relaxed-simd` use the engine's madd, which may round either way.
-    /// Results can therefore differ between backends in the last bit.
-    /// NaN payload/sign are unspecified.
+    /// Neither lowering is fastest everywhere. FMA takes about 0.63x the
+    /// time of a separate multiply and add when the dependency runs
+    /// through the multiplicand (Horner polynomials), and the same time in
+    /// streams; a separate `self * a + b` takes 0.49-0.80x the time of FMA
+    /// when it runs only through the addend (one-accumulator reductions)
+    /// on Arrow Lake and Zen 4.
+    /// [Measurements](https://github.com/imazen/archmage/blob/main/benchmarks/fused_vs_separate_2026-10-25.md).
     #[inline(always)]
-    pub fn mul_add(self, a: Self, b: Self) -> Self {
+    pub fn mul_add_relaxed(self, a: Self, b: Self) -> Self {
         Self(T::mul_add(self.1, self.0, a.0, b.0), self.1)
     }
 
-    /// Multiply-sub: `self * a - b`.
+    /// Multiply-sub, fused or not depending on the backend: `self * a - b`.
     ///
-    /// Same rounding contract as [`mul_add`](Self::mul_add). For one
-    /// rounding on every backend, use
-    /// [`mul_sub_portable`](Self::mul_sub_portable).
+    /// Same contract as [`mul_add_relaxed`](Self::mul_add_relaxed). For
+    /// one rounding on every backend, use
+    /// [`mul_sub_fused`](Self::mul_sub_fused).
     #[inline(always)]
-    pub fn mul_sub(self, a: Self, b: Self) -> Self {
+    pub fn mul_sub_relaxed(self, a: Self, b: Self) -> Self {
         Self(T::mul_sub(self.1, self.0, a.0, b.0), self.1)
     }
 
     /// Multiply-add with one rounding on every backend: `self * a + b`.
     ///
-    /// Computes the exact product plus addend, then rounds once. NaN
-    /// payload/sign are unspecified. x86 v3/v4 and NEON use FMA, at the
-    /// cost of [`mul_add`](Self::mul_add). The scalar backend uses the
-    /// FMA instruction when the build guarantees one (x86 `fma`, AArch64
-    /// `neon`), and for f64 on x86_64 with std also when a cached
-    /// runtime check finds it. Otherwise it fuses in software, as WASM
-    /// does: f32 through one f64 rounding, f64 through a double-double
-    /// product, each with an exact path for rare lanes. The result is
-    /// the same either way. WASM fuses in software even with relaxed
-    /// SIMD, because relaxed madd may round twice.
-    /// [Historical software-fusion measurements](https://github.com/imazen/archmage/blob/main/benchmarks/mul_add_portable_zen5-m4pro_2026-10-05.md).
+    /// Computes the exact product plus addend, then rounds once, like
+    /// `f32::mul_add`. NaN payload/sign are unspecified. x86 v3/v4 and
+    /// NEON use FMA, at the cost of [`mul_add_relaxed`](Self::mul_add_relaxed).
+    /// The scalar backend uses the FMA instruction when the build
+    /// guarantees one (x86 `fma`, AArch64 `neon`), and for f64 on x86_64
+    /// with std also when a cached runtime check finds it. Otherwise it
+    /// fuses in software, as WASM does: f32 through one f64 rounding, f64
+    /// through a double-double product, each with an exact path for rare
+    /// lanes. The result is the same either way. WASM fuses in software
+    /// even with relaxed SIMD, because relaxed madd may round twice.
+    #[inline(always)]
+    pub fn mul_add_fused(self, a: Self, b: Self) -> Self {
+        Self(T::mul_add_portable(self.1, self.0, a.0, b.0), self.1)
+    }
+
+    /// Multiply-sub with one rounding on every backend: `self * a - b`.
+    ///
+    /// Same contract and cost as [`mul_add_fused`](Self::mul_add_fused).
+    #[inline(always)]
+    pub fn mul_sub_fused(self, a: Self, b: Self) -> Self {
+        Self(T::mul_sub_portable(self.1, self.0, a.0, b.0), self.1)
+    }
+
+    /// Multiply-add with one rounding on every backend: `self * a + b`.
+    ///
+    /// The same operation as [`mul_add_fused`](Self::mul_add_fused).
     #[inline(always)]
     pub fn mul_add_portable(self, a: Self, b: Self) -> Self {
         Self(T::mul_add_portable(self.1, self.0, a.0, b.0), self.1)
@@ -298,11 +317,40 @@ impl<T: F32x8Backend> f32x8<T> {
 
     /// Multiply-sub with one rounding on every backend: `self * a - b`.
     ///
-    /// Same contract and cost as
-    /// [`mul_add_portable`](Self::mul_add_portable).
+    /// The same operation as [`mul_sub_fused`](Self::mul_sub_fused).
     #[inline(always)]
     pub fn mul_sub_portable(self, a: Self, b: Self) -> Self {
         Self(T::mul_sub_portable(self.1, self.0, a.0, b.0), self.1)
+    }
+
+    /// Multiply-add whose rounding depends on the backend: `self * a + b`.
+    ///
+    /// Deprecated so that backend-dependent rounding is an explicit
+    /// choice. [`mul_add_relaxed`](Self::mul_add_relaxed) keeps this
+    /// behavior; [`mul_add_fused`](Self::mul_add_fused) rounds once
+    /// everywhere. In magetypes 0.11 `mul_add` becomes the fused
+    /// operation, matching `f32::mul_add`.
+    #[deprecated(
+        since = "0.9.31",
+        note = "use mul_add_relaxed (today's behavior: fused where the hardware fuses, rounded twice elsewhere) or mul_add_fused (one rounding everywhere); mul_add becomes the fused operation in magetypes 0.11"
+    )]
+    #[inline(always)]
+    pub fn mul_add(self, a: Self, b: Self) -> Self {
+        self.mul_add_relaxed(a, b)
+    }
+
+    /// Multiply-sub whose rounding depends on the backend: `self * a - b`.
+    ///
+    /// Deprecated like [`mul_add`](Self::mul_add):
+    /// [`mul_sub_relaxed`](Self::mul_sub_relaxed) keeps this behavior,
+    /// [`mul_sub_fused`](Self::mul_sub_fused) rounds once everywhere.
+    #[deprecated(
+        since = "0.9.31",
+        note = "use mul_sub_relaxed (today's behavior: fused where the hardware fuses, rounded twice elsewhere) or mul_sub_fused (one rounding everywhere); mul_sub becomes the fused operation in magetypes 0.11"
+    )]
+    #[inline(always)]
+    pub fn mul_sub(self, a: Self, b: Self) -> Self {
+        self.mul_sub_relaxed(a, b)
     }
 
     // ====== Comparisons ======
