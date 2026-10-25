@@ -99,9 +99,9 @@ token_or_software_fma! {
     /// a cached runtime check (archmage's `summon`, once per call) that sends
     /// every lane through the FMA instruction: on CPUs with FMA that measured
     /// 0.09-0.43x the software path's time, and about 1.0x without. Lanes pass
-    /// in float registers, one call each; an array argument would go through
-    /// memory. Without std, and on AArch64, `summon` is a compile-time
-    /// constant. Results equal the software path's bit for bit.
+    /// in float registers, two per call; an array or SIMD-vector argument would
+    /// go through memory. Without std, and on AArch64, `summon` is a
+    /// compile-time constant. Results equal the software path's bit for bit.
     #[inline(always)]
     pub(crate) fn fma_lanes<const N: usize>(a: [f64; N], b: [f64; N], c: [f64; N]) -> [f64; N] {
         #[cfg(all(
@@ -109,7 +109,22 @@ token_or_software_fma! {
             any(target_arch = "x86_64", all(target_arch = "aarch64", target_feature = "neon"))
         ))]
         if let Some(token) = hw::token() {
-            return core::array::from_fn(|i| hw::fma(token, a[i], b[i], c[i]));
+            // Two lanes per call: an f64 pair travels in xmm registers both
+            // ways, and fewer calls means fewer spills (every call clobbers
+            // the XMM registers). f64x4 streams took 0.60-0.67x the time of
+            // one call per lane; chains and single lanes were unchanged.
+            let mut out = [0.0; N];
+            let mut i = 0;
+            while i + 1 < N {
+                let (x, y) = hw::fma2(token, a[i], a[i + 1], b[i], b[i + 1], c[i], c[i + 1]);
+                out[i] = x;
+                out[i + 1] = y;
+                i += 2;
+            }
+            if i < N {
+                out[i] = hw::fma(token, a[i], b[i], c[i]);
+            }
+            return out;
         }
         f64_soft::fma_soft_lanes(a, b, c)
     }
@@ -146,6 +161,26 @@ mod hw {
 
     #[cfg(target_arch = "x86_64")]
     #[archmage::arcane]
+    pub(super) fn fma2(
+        _token: archmage::X64V3Token,
+        a0: f64,
+        a1: f64,
+        b0: f64,
+        b1: f64,
+        c0: f64,
+        c1: f64,
+    ) -> (f64, f64) {
+        // Two scalar FMAs, not one packed: inlined into a V3 caller, LLVM
+        // merges scalar lanes into one wide FMA, while packing and unpacking
+        // left shuffles on the critical path (f64x4 chains 2.5x slower).
+        use core::arch::x86_64::*;
+        let fma1 =
+            |a, b, c| _mm_cvtsd_f64(_mm_fmadd_sd(_mm_set_sd(a), _mm_set_sd(b), _mm_set_sd(c)));
+        (fma1(a0, b0, c0), fma1(a1, b1, c1))
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[archmage::arcane]
     pub(super) fn fma(_token: archmage::X64V3Token, a: f64, b: f64, c: f64) -> f64 {
         use core::arch::x86_64::*;
         _mm_cvtsd_f64(_mm_fmadd_sd(_mm_set_sd(a), _mm_set_sd(b), _mm_set_sd(c)))
@@ -162,6 +197,23 @@ mod hw {
     pub(super) fn fmaf(_token: archmage::X64V3Token, a: f32, b: f32, c: f32) -> f32 {
         use core::arch::x86_64::*;
         _mm_cvtss_f32(_mm_fmadd_ss(_mm_set_ss(a), _mm_set_ss(b), _mm_set_ss(c)))
+    }
+
+    #[cfg(target_arch = "aarch64")]
+    #[archmage::arcane]
+    pub(super) fn fma2(
+        _token: archmage::NeonToken,
+        a0: f64,
+        a1: f64,
+        b0: f64,
+        b1: f64,
+        c0: f64,
+        c1: f64,
+    ) -> (f64, f64) {
+        use core::arch::aarch64::*;
+        let fma1 =
+            |a, b, c| vget_lane_f64::<0>(vfma_f64(vdup_n_f64(c), vdup_n_f64(a), vdup_n_f64(b)));
+        (fma1(a0, b0, c0), fma1(a1, b1, c1))
     }
 
     #[cfg(target_arch = "aarch64")]
