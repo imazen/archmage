@@ -271,7 +271,9 @@ chains through the multiplicand, such as Horner polynomials. When the chain runs
 through the addend (a reduction with one accumulator), a separate `a * b + acc` takes
 0.49–0.80× the time of FMA on Arrow Lake and Zen 4, because the add finishes sooner than
 an FMA; with enough independent accumulators the two are equal
-([measurements](https://github.com/imazen/archmage/blob/main/benchmarks/fused_vs_separate_2026-10-25.md)).
+([measurements](https://github.com/imazen/archmage/blob/main/benchmarks/fused_vs_separate_2026-10-25.md);
+loop patterns and examples:
+[Reductions](@/magetypes/operations/reductions.md#multiply-add-in-loops-which-form-is-faster)).
 Use `mul_add_fused` where identical results on every backend matter more than speed.
 `mul_add` and `mul_sub` are deprecated so that backend-dependent rounding is an explicit
 choice; in magetypes 0.11 they become the fused operations.
