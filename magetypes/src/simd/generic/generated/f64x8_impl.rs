@@ -298,12 +298,13 @@ impl<T: F64x8Backend> f64x8<T> {
     /// Computes the exact product plus addend, then rounds once. NaN
     /// payload/sign are unspecified. x86 v3/v4 and NEON use FMA, at the
     /// cost of [`mul_add`](Self::mul_add). The scalar backend uses the
-    /// FMA instruction when the build guarantees one (std with x86
-    /// `fma` or AArch64 `neon`); otherwise it fuses in software with no
-    /// CPU detection, as WASM does: f32 through f64 arithmetic rounded
-    /// to odd, f64 through a double-double product with an exact
-    /// integer fallback for extreme lanes. WASM fuses in software even
-    /// with relaxed SIMD, because relaxed madd may round twice.
+    /// FMA instruction when the build guarantees one (x86 `fma`, AArch64
+    /// `neon`), and for f64 on x86_64 with std also when a cached
+    /// runtime check finds it. Otherwise it fuses in software, as WASM
+    /// does: f32 through one f64 rounding, f64 through a double-double
+    /// product, each with an exact path for rare lanes. The result is
+    /// the same either way. WASM fuses in software even with relaxed
+    /// SIMD, because relaxed madd may round twice.
     /// [Historical software-fusion measurements](https://github.com/imazen/archmage/blob/main/benchmarks/mul_add_portable_zen5-m4pro_2026-10-05.md).
     #[inline(always)]
     pub fn mul_add_portable(self, a: Self, b: Self) -> Self {

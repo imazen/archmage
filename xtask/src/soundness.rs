@@ -547,30 +547,35 @@ fn structural_rules(rel: &str, text: &str, errors: &mut Vec<String>) {
 
     // Whole-slice f16 conversion deliberately selects once per buffer.
     // Per-vector arithmetic and register conversions must never pay that cost.
-    // The separate slice selectors are the only accepted detection sites.
+    // The one measured exception is scalar f64 portable FMA's cached token
+    // check (soft_fma.rs `token`, approved 2026-10-24: identical output,
+    // 0.09-0.43x the software time with FMA, about 1.0x without). These named
+    // functions are the only accepted detection sites.
     let detection = Regex::new(
         r"\b(?:summon|is_x86_feature_detected|is_aarch64_feature_detected|__cpuid|__cpuid_count)\b",
     )
     .expect("CPU detection rule regex");
+    let audited: &[&str] = match rel {
+        "magetypes/src/simd/generic/convert_f16.rs" => &[
+            "neon_f16_decode_select",
+            "neon_f16_encode_select",
+            "f16c_decode_select",
+            "f16c_encode_select",
+        ],
+        "magetypes/src/soft_fma.rs" => &["token"],
+        _ => &[],
+    };
     for m in detection.find_iter(text) {
-        let in_slice_selector = rel == "magetypes/src/simd/generic/convert_f16.rs"
-            && [
-                "neon_f16_decode_select",
-                "neon_f16_encode_select",
-                "f16c_decode_select",
-                "f16c_encode_select",
-            ]
-            .iter()
-            .any(|name| {
-                let signature = format!("fn {name}(");
-                text.match_indices(&signature).any(|(start, _)| {
-                    let Some(open) = text[start..].find('{').map(|i| start + i) else {
-                        return false;
-                    };
-                    find_matching_brace(text, open)
-                        .is_some_and(|close| open < m.start() && m.start() < close)
-                })
-            });
+        let in_slice_selector = audited.iter().any(|name| {
+            let signature = format!("fn {name}(");
+            text.match_indices(&signature).any(|(start, _)| {
+                let Some(open) = text[start..].find('{').map(|i| start + i) else {
+                    return false;
+                };
+                find_matching_brace(text, open)
+                    .is_some_and(|close| open < m.start() && m.start() < close)
+            })
+        });
         if !in_slice_selector {
             errors.push(format!(
                 "{}:{}: STRUCTURAL RULE: `{}` — hidden CPU detection in magetypes; \
@@ -1258,6 +1263,31 @@ mod tests {
         );
         assert_eq!(errors.len(), 1, "{errors:?}");
         assert!(errors[0].contains("hidden CPU detection"));
+    }
+
+    #[test]
+    fn soft_fma_detection_exception_is_one_function() {
+        let mut errors = Vec::new();
+        structural_rules(
+            "magetypes/src/soft_fma.rs",
+            "mod hw { pub(super) fn token() -> Option<Token> { Token::summon() } }",
+            &mut errors,
+        );
+        assert!(errors.is_empty(), "{errors:?}");
+        structural_rules(
+            "magetypes/src/soft_fma.rs",
+            "fn token() {} fn fmaf_lanes() { X64V3Token::summon(); }",
+            &mut errors,
+        );
+        assert_eq!(errors.len(), 1, "{errors:?}");
+        assert!(errors[0].contains("hidden CPU detection"));
+        let mut errors = Vec::new();
+        structural_rules(
+            "magetypes/src/nostd_math.rs",
+            "fn token() { X64V3Token::summon(); }",
+            &mut errors,
+        );
+        assert_eq!(errors.len(), 1, "the exception is per file: {errors:?}");
     }
 
     #[test]

@@ -1,20 +1,27 @@
-//! Correctly rounded fused multiply-add over lane arrays, without runtime CPU
-//! detection.
+//! Correctly rounded fused multiply-add over lane arrays.
 //!
-//! Builds whose target features guarantee an FMA instruction (std with x86
-//! `fma` or AArch64 `neon`, outside Miri) use Rust's `mul_add`. Everything
-//! else uses software. The software forms process a whole array with no
-//! data-dependent branch per lane, so LLVM can vectorize them wherever the
-//! target has SIMD registers. Their common path rounds to nearest; the rare
-//! lanes where that could differ from one rounding (a halfway intermediate,
-//! or a value outside the fast path's safe range) take one branch per array
-//! to an exact per-lane implementation. NaN payloads and signs are
-//! unspecified; round-to-nearest and gradual underflow are assumed, as in the
-//! native vector implementations.
+//! Hardware selection, outside Miri:
+//! - std builds whose target features guarantee FMA (x86 `fma`, AArch64
+//!   `neon`) use Rust's `mul_add`;
+//! - other x86_64 std builds check archmage's cached V3 token once per call
+//!   for f64 and send each lane through the FMA instruction when the CPU has
+//!   it (the one runtime check in vector arithmetic; see `fma_lanes`);
+//! - no_std builds use a token only when `summon` is a compile-time constant
+//!   (V3 or NEON target features);
+//! - everything else, and f32 without a compile-time guarantee, uses software.
+//!
+//! The software forms process a whole array with no data-dependent branch per
+//! lane, so LLVM can vectorize them wherever the target has SIMD registers.
+//! Their common path rounds to nearest; the rare lanes where that could differ
+//! from one rounding (a halfway intermediate, or a value outside the fast
+//! path's safe range) take one branch per array to an exact per-lane
+//! implementation. Hardware and software results are bit-identical; NaN
+//! payloads and signs are unspecified; round-to-nearest and gradual underflow
+//! are assumed, as in the native vector implementations.
 #![forbid(unsafe_code)]
 
-/// True when the build guarantees a correctly rounded FMA instruction.
-macro_rules! hardware_fma {
+/// The build guarantees an FMA instruction and std provides `mul_add`.
+macro_rules! std_hardware_fma {
     ($($item:item)*) => {$(
         #[cfg(all(
             not(miri),
@@ -28,8 +35,9 @@ macro_rules! hardware_fma {
     )*};
 }
 
-/// The complement of [`hardware_fma`].
-macro_rules! software_fma {
+/// The complement of [`std_hardware_fma`]: token-proven hardware where a token
+/// is available, software otherwise.
+macro_rules! token_or_software_fma {
     ($($item:item)*) => {$(
         #[cfg(not(all(
             not(miri),
@@ -43,7 +51,7 @@ macro_rules! software_fma {
     )*};
 }
 
-hardware_fma! {
+std_hardware_fma! {
     /// `a[i] * b[i] + c[i]` rounded once, per lane.
     #[inline(always)]
     pub(crate) fn fmaf_lanes<const N: usize>(a: [f32; N], b: [f32; N], c: [f32; N]) -> [f32; N] {
@@ -65,7 +73,121 @@ hardware_fma! {
     }
 }
 
-/// [`software_fma`] plus test builds, which exercise the software path everywhere.
+token_or_software_fma! {
+    /// `a[i] * b[i] + c[i]` rounded once, per lane. Hardware only when a
+    /// token is proven at compile time (no_std V3 or NEON builds: `summon`
+    /// folds to a constant); otherwise software. f32 takes no runtime check:
+    /// its vectorized software path measured as fast as or faster than a
+    /// per-call hardware path in baseline builds.
+    #[inline(always)]
+    pub(crate) fn fmaf_lanes<const N: usize>(a: [f32; N], b: [f32; N], c: [f32; N]) -> [f32; N] {
+        #[cfg(all(
+            not(miri),
+            not(feature = "std"),
+            any(
+                all(target_arch = "x86_64", target_feature = "fma"),
+                all(target_arch = "aarch64", target_feature = "neon")
+            )
+        ))]
+        if let Some(token) = hw::token() {
+            return core::array::from_fn(|i| hw::fmaf(token, a[i], b[i], c[i]));
+        }
+        fmaf_soft_lanes(a, b, c)
+    }
+
+    /// `a[i] * b[i] + c[i]` rounded once, per lane. On x86_64 with std this is
+    /// a cached runtime check (archmage's `summon`, once per call) that sends
+    /// every lane through the FMA instruction: on CPUs with FMA that measured
+    /// 0.09-0.43x the software path's time, and about 1.0x without. Lanes pass
+    /// in float registers, one call each; an array argument would go through
+    /// memory. Without std, and on AArch64, `summon` is a compile-time
+    /// constant. Results equal the software path's bit for bit.
+    #[inline(always)]
+    pub(crate) fn fma_lanes<const N: usize>(a: [f64; N], b: [f64; N], c: [f64; N]) -> [f64; N] {
+        #[cfg(all(
+            not(miri),
+            any(target_arch = "x86_64", all(target_arch = "aarch64", target_feature = "neon"))
+        ))]
+        if let Some(token) = hw::token() {
+            return core::array::from_fn(|i| hw::fma(token, a[i], b[i], c[i]));
+        }
+        f64_soft::fma_soft_lanes(a, b, c)
+    }
+}
+
+/// Token-proven FMA, one lane per call so the operands stay in float
+/// registers. Inside a caller with the same features the call inlines.
+#[cfg(all(
+    not(miri),
+    any(
+        target_arch = "x86_64",
+        all(target_arch = "aarch64", target_feature = "neon")
+    ),
+    not(all(
+        feature = "std",
+        any(
+            all(target_arch = "aarch64", target_feature = "neon"),
+            all(target_arch = "x86_64", target_feature = "fma")
+        )
+    ))
+))]
+mod hw {
+    use archmage::SimdToken;
+
+    #[cfg(target_arch = "x86_64")]
+    pub(super) type Token = archmage::X64V3Token;
+    #[cfg(target_arch = "aarch64")]
+    pub(super) type Token = archmage::NeonToken;
+
+    #[inline(always)]
+    pub(super) fn token() -> Option<Token> {
+        Token::summon()
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[archmage::arcane]
+    pub(super) fn fma(_token: archmage::X64V3Token, a: f64, b: f64, c: f64) -> f64 {
+        use core::arch::x86_64::*;
+        _mm_cvtsd_f64(_mm_fmadd_sd(_mm_set_sd(a), _mm_set_sd(b), _mm_set_sd(c)))
+    }
+
+    #[cfg(all(
+        target_arch = "x86_64",
+        all(
+            not(feature = "std"),
+            any(target_arch = "aarch64", target_feature = "fma")
+        )
+    ))]
+    #[archmage::arcane]
+    pub(super) fn fmaf(_token: archmage::X64V3Token, a: f32, b: f32, c: f32) -> f32 {
+        use core::arch::x86_64::*;
+        _mm_cvtss_f32(_mm_fmadd_ss(_mm_set_ss(a), _mm_set_ss(b), _mm_set_ss(c)))
+    }
+
+    #[cfg(target_arch = "aarch64")]
+    #[archmage::arcane]
+    pub(super) fn fma(_token: archmage::NeonToken, a: f64, b: f64, c: f64) -> f64 {
+        use core::arch::aarch64::*;
+        // vfma_f64(acc, x, y) = acc + x * y, fused.
+        vget_lane_f64::<0>(vfma_f64(vdup_n_f64(c), vdup_n_f64(a), vdup_n_f64(b)))
+    }
+
+    #[cfg(all(
+        target_arch = "aarch64",
+        all(
+            not(feature = "std"),
+            any(target_arch = "aarch64", target_feature = "fma")
+        )
+    ))]
+    #[archmage::arcane]
+    pub(super) fn fmaf(_token: archmage::NeonToken, a: f32, b: f32, c: f32) -> f32 {
+        use core::arch::aarch64::*;
+        vget_lane_f32::<0>(vfma_f32(vdup_n_f32(c), vdup_n_f32(a), vdup_n_f32(b)))
+    }
+}
+
+/// [`token_or_software_fma`] plus test builds, which exercise the software
+/// path everywhere.
 macro_rules! software_fma_or_test {
     ($($item:item)*) => {$(
         #[cfg(any(test, not(all(
@@ -78,20 +200,6 @@ macro_rules! software_fma_or_test {
         ))))]
         $item
     )*};
-}
-
-software_fma! {
-    /// `a[i] * b[i] + c[i]` rounded once, per lane.
-    #[inline(always)]
-    pub(crate) fn fmaf_lanes<const N: usize>(a: [f32; N], b: [f32; N], c: [f32; N]) -> [f32; N] {
-        fmaf_soft_lanes(a, b, c)
-    }
-
-    /// `a[i] * b[i] + c[i]` rounded once, per lane.
-    #[inline(always)]
-    pub(crate) fn fma_lanes<const N: usize>(a: [f64; N], b: [f64; N], c: [f64; N]) -> [f64; N] {
-        f64_soft::fma_soft_lanes(a, b, c)
-    }
 }
 
 /// The 29 low f64 significand bits that narrowing to f32 drops.
