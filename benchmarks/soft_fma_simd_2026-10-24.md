@@ -256,6 +256,18 @@ Engine rounds twice (`-C cranelift-has-fma=false`):
 The probe is a large win on fusing engines and costs 9–20% on engines that
 round twice, so it is held for a decision rather than shipped.
 
+A cached probe is only sound if an engine's tiers agree. V8 in node 26.7.0
+on dev (2026-10-25) agrees with itself: with relaxed madd on host inputs, the
+Liftoff-only (`--liftoff --no-wasm-tier-up`), TurboFan-only (`--no-liftoff`)
+and default tier-up runs all fused, for f32 and f64, including all 2,000,000
+iterations of a loop that tiers up mid-run. Under `qemu-x86_64 -cpu Nehalem`
+(no FMA) the same three runs all rounded twice. Wasmtime's choice follows
+`cranelift-has-fma` (tables above). SpiderMonkey and JavaScriptCore were not
+tested. Harness: a `no_std` cdylib built with
+`-C target-feature=+simd128,+relaxed-simd` exporting `f32x4_relaxed_madd` /
+`f64x2_relaxed_madd` on the probe inputs, run by a small node script
+(`~/tmp/wasm-relaxed-tiers` on dev).
+
 ## Residual: calls in baseline callers (same day)
 
 With the runtime check, the f64 hardware path in a baseline function is one
