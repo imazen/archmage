@@ -1,6 +1,7 @@
 # Changelog
 
-The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
+The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
+`0.9.31-beta.2` entries changes since `0.9.31-beta.1`. The earlier
 `0.9.31-beta` version was prepared but never published.
 
 ## archmage
@@ -11,6 +12,12 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 
 - Remove `guaranteed()` from `SimdToken` trait — use `compiled_with()` instead (deprecated since 0.6.0, zero callers)
 - Remove width traits `Has128BitSimd`, `Has256BitSimd`, `Has512BitSimd` — use concrete tokens or tier traits (`HasX64V2`, `HasX64V4`) instead (deprecated since 0.9.9; `Has256BitSimd` only enables AVX, not AVX2/FMA)
+
+### [0.9.31-beta.2] - 2026-10-25
+
+#### Changed
+
+- archmage depends on archmage-macros at exactly `0.9.31-beta.2`, so the archmage-macros changes below arrive with this release.
 
 #### Added
 
@@ -48,6 +55,8 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 - Deprecate `incant!` passthrough mode (`with token`) — zero downstream uses; `#[rite]` multi-tier or direct `IntoConcreteToken` dispatch are better alternatives
 - Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with a deprecation warning)
 - Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
+
+### [0.9.31-beta.2] - 2026-10-25
 
 #### Fixed
 
@@ -119,6 +128,8 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 - Remove the six no-op `*_midp_precise` aliases (`exp2`/`exp`/`ln`/`log2`/`log10`/`pow` — each is literally `self.*_midp()`); `cbrt_midp_precise` stays, it does real denormal/zero handling. With the reciprocal tiers settling on `_portable` as the precise tier, a `_precise` suffix that does nothing is a naming lie.
 - Planned: make `w512` non-default in magetypes; users who need 512-bit types would add `features = ["w512"]`. This patch keeps the existing default features.
 - Remove `cast::Upcast` and `cast::Downcast`, and with them the `cast` module, which holds nothing else. Both are deprecated in 0.9.30 and were never implemented (b1b2ff67).
+
+### [0.9.31-beta.2] - 2026-10-25
 
 #### Added
 
@@ -197,6 +208,8 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 #### QUEUED BREAKING CHANGES
 
 (none)
+
+### [0.9.31-beta.2] - 2026-10-25
 
 #### Added
 

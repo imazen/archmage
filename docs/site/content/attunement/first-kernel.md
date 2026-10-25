@@ -12,11 +12,11 @@ same dispatcher role; generated variant names and visibility differ.
 
 ## Install the beta
 
-This guide uses the 0.9.31-beta.1 API. Select the prerelease explicitly:
+This guide uses the 0.9.31-beta.2 API. Select the prerelease explicitly:
 
 ```toml
 [dependencies]
-archmage = "=0.9.31-beta.1"
+archmage = "=0.9.31-beta.2"
 ```
 
 ## Write and call a kernel

@@ -14,8 +14,8 @@ token proving its CPU features, so using it takes no `unsafe` in your code.
 
 ```toml
 [dependencies]
-magetypes = "=0.9.31-beta.1"
-archmage  = "=0.9.31-beta.1"   # the macros and tokens
+magetypes = "=0.9.31-beta.2"
+archmage  = "=0.9.31-beta.2"   # the macros and tokens
 ```
 
 Multiply a buffer by a factor, using AVX2, NEON or WASM SIMD where available:
@@ -54,10 +54,12 @@ assert_eq!(plane, [1.0; 11]);
   loop, as here, not inside it.
 - Constructors ending in `_t` take the token as their first argument.
 
-`0.9.31-beta.1` is the matching release for the archmage unified-macro beta:
+`0.9.31-beta.2` is the matching release for the archmage unified-macro beta:
 existing vector and constructor signatures are preserved, and `_t(token, ...)`
-remains token-first. The beta adds narrow-vector trait implementations for
-AVX-512 tokens and corrects portable FMA software rounding. The
+remains token-first. The betas add narrow-vector trait implementations for
+AVX-512 tokens, correct portable FMA software rounding, add
+`mul_add_relaxed`/`mul_add_fused` (deprecating `mul_add`/`mul_sub`), and make
+portable FMA faster where the hardware cannot fuse. The
 [beta guide](https://github.com/imazen/archmage/blob/main/docs/ATTUNE.md)
 documents `#[attune]`, `attuned!`, and `reattune!`.
 

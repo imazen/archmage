@@ -30,23 +30,20 @@ mapping. The website reference is generated from that guide by `just generate`.
 The reviewed unified-macro beta was merged in 72910a29 through PR #129;
 PR #127 was superseded. Earlier constructor experiments remain archived.
 
-## 0.9.31-beta.1 release gate
+## 0.9.31-beta.2 release gate
 
-Prepared against published 0.9.30 on 2026-10-12; 0.9.31-beta was never
-published. Local Archmage all-target tests/doctests, Magetypes all-target
-tests/doctests with std and AVX-512, macro tests, workspace packaging dry-run,
-generation/registry/soundness checks, Markdown examples, Clippy, and the
-precise semver guard pass. No existing signatures changed; the public API
-additions are the unified macro exports and narrow AVX-512 trait impls.
-
-Portable FMA rounding and Miri pass local regression checks; full CI still
-must confirm them on the release commit. The final scalar FMA implementation
-has not yet been rebenchmarked against the published release, so the native
-performance gate below remains open. README AVX-512 coverage and beta-guide
-links are corrected, and fresh three-target API snapshots plus semver checks
-against published 0.9.30 pass. Do not tag or publish until the full matrix is
-green, the performance gate is resolved, and the user reviews the final
-READMEs and authorizes publication.
+0.9.31-beta.1 was published 2026-10-13. beta.2 (prepared 2026-10-25) adds
+`mul_add_relaxed`/`mul_add_fused` with `mul_add`/`mul_sub` deprecated, the
+FMA performance work (vectorized software path, f64 runtime check, pair
+calls, relaxed-WASM probe), libm removal, and the macro-hygiene fixes.
+Against published 0.9.30: `cargo-semver-checks` passes for archmage and
+magetypes, `just ci` passes, and the packages are 124/108/263 KB. The user
+accepted the remaining scalar FMA slowdowns against 0.9.30 for this beta
+(f32x1 chains 1.97x, f32x8 chains inside V3 functions 1.94x, two f64 shapes
+1.20x; `benchmarks/soft_fma_simd_2026-10-24.md`) and the macro-import
+requirement for rewritten calls. Tag only after full CI is green on the
+release commit and the user has reviewed the READMEs and said to publish.
+For 0.9.31 stable, rerun ARM after this week's FMA changes.
 
 ## CRITICAL: Every Conversation Health Check
 
