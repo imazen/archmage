@@ -755,10 +755,15 @@ If ANY check fails:
    Concrete sequence after pushing the release commit:
 
    ```bash
-   git tag v{version} archmage-macros-v{version} magetypes-v{version} <commit>
+   git tag v{version} <commit>                  # git tag takes one name per call
+   git tag archmage-macros-v{version} <commit>
+   git tag magetypes-v{version} <commit>
    git push origin v{version} archmage-macros-v{version} magetypes-v{version}
    gh release create v{version} --title "v{version}" --notes-file <notes>   # only this one
    ```
+
+   For a `-beta.N` version add `--prerelease` to `gh release create`; the
+   publish workflow fires on prereleases too (0.9.31-beta.1 and beta.2).
 
    The single `v{version}` GitHub release fires one publish workflow run that publishes all three crates in dep order (archmage-macros → archmage → magetypes).
 
