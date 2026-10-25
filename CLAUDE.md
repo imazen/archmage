@@ -172,9 +172,14 @@ instruction. On r7900x/i265 that took 0.09-0.43x the software path's time and
 beat std's per-lane libcall; a simulated CPU without FMA paid 1.00-1.07x (one
 row 1.14x). f32 does not get it: its software path is vectorized, and
 per-call hardware paths lost on f32x8 (array calls: chains 1.4-1.7x; per-lane
-calls: streams 1.2-1.9x). Hardware calls take
-one lane per call in float registers; an array argument went through memory
-and lost on chains.
+calls: streams 1.2-1.9x). Hardware calls take two
+lanes as scalar f64 arguments (`647f2d3d`): pairs travel in xmm0-5 and return
+in xmm0/xmm1, while arrays and `__m128d` go through memory under the Rust ABI.
+The pair function does two scalar FMAs so LLVM still merges lanes into one
+wide FMA when it inlines into a V3 caller (packed pairs left shuffles on the
+chain: 2.5x slower there). Calls clobber every XMM register, so baseline
+f64x4 chains still spill; only inline asm removed that, and it lost inside V3
+functions.
 
 Portable software FMA (`magetypes/src/soft_fma.rs`) works on whole lane arrays
 with no per-lane branch, so LLVM vectorizes it: f32 rounds once through f64 and

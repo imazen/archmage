@@ -255,3 +255,41 @@ Engine rounds twice (`-C cranelift-has-fma=false`):
 
 The probe is a large win on fusing engines and costs 9–20% on engines that
 round twice, so it is held for a decision rather than shipped.
+
+## Residual: calls in baseline callers (same day)
+
+With the runtime check, the f64 hardware path in a baseline function is one
+call per lane into a V3 function. The SysV ABI makes every XMM register
+caller-saved, so the disassembly of an f64x4 chain shows each lane's result
+spilled to the stack between calls and the accumulator stored and reloaded
+every iteration. Inside a V3 function the same code inlines into one
+`vfmadd213pd ymm` and runs at std's inline speed (743 vs 684 ns), so the
+residual is only in baseline callers.
+
+Under the Rust ABI an `f64` pair is passed in `xmm0`–`xmm5` and returned in
+`xmm0`/`xmm1`, while `[f64; 2]` and `__m128d` go through memory (checked in the
+emitted assembly). Two lanes per call halves the calls with every operand in a
+register. Interleaved prototypes (data: `interleaved-residual/`):
+
+- pair calls: f64x4 streams 0.60–0.67×, chains 0.96–1.00×, single lanes and
+  V3 callers 1.00–1.05×, simulated no-FMA 0.98–1.10×;
+- inline asm `vfmadd231sd`, no call (upper bound, bench only): baseline f64x4
+  streams 0.26–0.30×, chains 0.61–0.69×, but 1.14–2.42× inside V3 functions,
+  where the asm block stops LLVM from merging lanes, and it needs `unsafe`.
+
+The first pair implementation used one packed `_mm_fmadd_pd` with set/unpack
+shuffles; inlined into a V3 caller it kept two 128-bit FMAs plus shuffles on
+the chain (f64x4 chain 2.51× slower). Two scalar FMAs per pair merge into one
+`vfmadd ymm` again. The shipped version (`647f2d3d`), real code on i265,
+against the per-lane calls (`eae93cb0`), 12 alternating passes:
+
+| Shape | Baseline caller | Inside a V3 function |
+|---|---:|---:|
+| f64x1 stream / chain | 0.98–1.00× / 1.00× | 1.00–1.02× / 1.00× |
+| f64x2 stream / chain | 0.53–0.54× / 0.36× | |
+| f64x4 stream / chain | 0.62–0.67× / 0.99× | 1.00× / 1.00× |
+| f64x8 stream / chain | 0.81–0.84× / 0.75× | |
+
+r7900x could not run this round (its disk was full from other work). The
+remaining gap, baseline f64x4 chains at about 3.8 µs against 0.74 µs inside
+V3, is the cost of a call clobbering the XMM registers; no safe form removed it.
