@@ -122,11 +122,11 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 
 #### Added
 
-- `mul_add_relaxed`/`mul_sub_relaxed` (backend-dependent rounding, the previous `mul_add`/`mul_sub` behavior) and `mul_add_fused`/`mul_sub_fused` (one rounding everywhere, the same operation as `mul_add_portable`/`mul_sub_portable`, which stay) on every float vector type and on `f32x1`/`f64x1` (PENDING).
+- `mul_add_relaxed`/`mul_sub_relaxed` (backend-dependent rounding, the previous `mul_add`/`mul_sub` behavior) and `mul_add_fused`/`mul_sub_fused` (one rounding everywhere, the same operation as `mul_add_portable`/`mul_sub_portable`, which stay) on every float vector type and on `f32x1`/`f64x1` (#138).
 
 #### Deprecated
 
-- `mul_add`/`mul_sub`, so that backend-dependent rounding is an explicit choice: use `mul_add_relaxed` for the previous behavior or `mul_add_fused` for one rounding. In 0.11 they return as the fused operations (queued above) (PENDING).
+- `mul_add`/`mul_sub`, so that backend-dependent rounding is an explicit choice: use `mul_add_relaxed` for the previous behavior or `mul_add_fused` for one rounding. In 0.11 they return as the fused operations (queued above) (#138).
 
 #### Changed
 
