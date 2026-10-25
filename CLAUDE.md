@@ -179,7 +179,10 @@ The pair function does two scalar FMAs so LLVM still merges lanes into one
 wide FMA when it inlines into a V3 caller (packed pairs left shuffles on the
 chain: 2.5x slower there). Calls clobber every XMM register, so baseline
 f64x4 chains still spill; only inline asm removed that, and it lost inside V3
-functions.
+functions. `xtask/codegen.py` probes `mul_add_portable` for every float
+type and tier, plus scalar types inside a V3 function; it flags the packed-pair
+regression. CI runs it only on pull requests, so after changing `soft_fma.rs`
+run `just codegen-diff` (default: `origin/main` against `HEAD`).
 
 Portable software FMA (`magetypes/src/soft_fma.rs`) works on whole lane arrays
 with no per-lane branch, so LLVM vectorizes it: f32 rounds once through f64 and

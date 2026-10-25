@@ -355,6 +355,12 @@ bench-arm-codegen-macos:
       nice -n 19 /usr/bin/time -l cargo bench --locked -p magetypes --bench generic_vs_concrete -- --format=llm \
       2>&1 | tee "$audit_log"
 
+# Compare optimized consumer codegen between two revisions on x86_64, AArch64
+# and WASM (CI runs this only for pull requests). Covers mul_add_portable in
+# plain and V3 callers; run it after changing magetypes/src/soft_fma.rs.
+codegen-diff base="origin/main" head="HEAD":
+    python3 xtask/codegen.py {{base}} {{head}}
+
 # Integer APIs, independent intrinsic references and ARM accumulation fusion.
 integer-codegen:
     PYTHONDONTWRITEBYTECODE=1 python3 xtask/codegen.py --integer-ops

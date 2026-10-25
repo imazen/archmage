@@ -1975,7 +1975,28 @@ def main():
                                     simd,
                                     "a.mul_add(b,c)",
                                 ),
+                                # Correctly rounded FMA: hardware where proven or
+                                # runtime-checked, software otherwise. Scalar-tier
+                                # code differs between a plain caller and a V3
+                                # caller (lanes must still merge into one wide FMA).
+                                (
+                                    "fma_portable",
+                                    f"a: {simd}, b: {simd}, c: {simd}",
+                                    simd,
+                                    "a.mul_add_portable(b,c)",
+                                ),
                             ]
+                        if tier == "scalar" and elem.startswith("f"):
+                            # Scalar types inside a V3 function (vector tails):
+                            # portable FMA must inline to the wide instruction.
+                            funcs.append(
+                                (
+                                    "fma_portable_in_v3",
+                                    f"a: {simd}, b: {simd}, c: {simd}",
+                                    simd,
+                                    "a.mul_add_portable(b,c)",
+                                )
+                            )
                         # Ordinary callers must not acquire hidden feature calls,
                         # stack temporaries or dispatch overhead. Check both contexts.
                         if tier != "scalar":
@@ -1992,6 +2013,8 @@ def main():
                                 and not op.endswith("_plain")
                                 else ""
                             )
+                            if op.endswith("_in_v3"):
+                                attr = '#[target_feature(enable = "avx2,fma,bmi1,bmi2,f16c,lzcnt,movbe")]\n'
                             parts.append(
                                 f"#[unsafe(no_mangle)]\n{attr}#[inline(never)]\npub fn {name}_{op}(token: {token}, {args}) -> {result} {{ {body} }}\n"
                             )
