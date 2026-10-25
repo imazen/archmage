@@ -92,6 +92,9 @@ pub use archmage;
 #[doc(hidden)]
 pub mod nostd_math;
 
+// Correctly rounded FMA over lane arrays: hardware when guaranteed, else software.
+mod soft_fma;
+
 // Every `unsafe` in magetypes lives in this module: the crate root denies
 // `unsafe_code`, and this is the only module that allows it.
 #[allow(unsafe_code)]

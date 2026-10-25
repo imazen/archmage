@@ -91,16 +91,7 @@ fn wide_sum(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
 
 #[archmage::rite]
 pub(crate) fn fused_f64x2(_token: Wasm128Token, a: v128, b: v128, c: v128) -> v128 {
-    w::f64x2(
-        crate::nostd_math::fma(
-            w::f64x2_extract_lane::<0>(a),
-            w::f64x2_extract_lane::<0>(b),
-            w::f64x2_extract_lane::<0>(c),
-        ),
-        crate::nostd_math::fma(
-            w::f64x2_extract_lane::<1>(a),
-            w::f64x2_extract_lane::<1>(b),
-            w::f64x2_extract_lane::<1>(c),
-        ),
-    )
+    let lanes = |v: v128| [w::f64x2_extract_lane::<0>(v), w::f64x2_extract_lane::<1>(v)];
+    let [lo, hi] = crate::soft_fma::fma_lanes(lanes(a), lanes(b), lanes(c));
+    w::f64x2(lo, hi)
 }

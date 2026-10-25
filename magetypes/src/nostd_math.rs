@@ -398,89 +398,27 @@ pub fn roundeven(x: f64) -> f64 {
     }
 }
 
-// Only compile-time feature guarantees select hardware here. Per-vector operations
-// must not probe the CPU; native vector backends have their own proof-bound FMA.
-macro_rules! portable_fma {
-    ($name:ident, $float:ty, $software:expr) => {
-        /// Correctly rounded fused multiply-add, without runtime CPU detection.
-        /// NaN payloads and signs are unspecified; assumes round-to-nearest and
-        /// gradual underflow, as do the native vector implementations.
-        #[inline(always)]
-        #[forbid(unsafe_code)]
-        pub fn $name(a: $float, b: $float, c: $float) -> $float {
-            #[cfg(all(
-                not(miri),
-                feature = "std",
-                any(
-                    all(target_arch = "aarch64", target_feature = "neon"),
-                    all(
-                        any(target_arch = "x86", target_arch = "x86_64"),
-                        target_feature = "fma"
-                    )
-                )
-            ))]
-            {
-                a.mul_add(b, c)
-            }
-            #[cfg(not(all(
-                not(miri),
-                feature = "std",
-                any(
-                    all(target_arch = "aarch64", target_feature = "neon"),
-                    all(
-                        any(target_arch = "x86", target_arch = "x86_64"),
-                        target_feature = "fma"
-                    )
-                )
-            )))]
-            {
-                ($software)(a, b, c)
-            }
-        }
-    };
+/// Correctly rounded fused multiply-add, without runtime CPU detection.
+/// Hardware where the build guarantees it, else software; see `soft_fma`.
+/// NaN payloads and signs are unspecified; assumes round-to-nearest and
+/// gradual underflow, as do the native vector implementations.
+#[inline(always)]
+pub fn fmaf(a: f32, b: f32, c: f32) -> f32 {
+    crate::soft_fma::fmaf_lanes([a], [b], [c])[0]
 }
 
-portable_fma!(fmaf, f32, fmaf_soft);
-// Bypass libm's architecture dispatcher, and reuse its integer-significand
-// implementation. The dependency is pinned because this is an unstable API.
-portable_fma!(fma, f64, |a, b, c| libm::generic::fma_round(
-    a,
-    b,
-    c,
-    libm::support::Round::Nearest
-)
-.val);
-
-/// Software f32 fused multiply-add, correctly rounded, without CPU detection.
-///
-/// The product is exact in f64 (48 significant bits, exponent range fits).
-/// TwoSum recovers the exact addition error. If the rounded sum is even and
-/// inexact, move one f64 ULP toward the exact result to round to odd. Narrowing
-/// that odd result to f32 avoids double rounding, including at underflow.
-/// All finite f32 products and residuals are normal in f64, so TwoSum cannot
-/// overflow or underflow. NaN payload and sign follow ordinary Rust semantics.
+/// Correctly rounded fused multiply-add, without runtime CPU detection.
+/// Hardware where the build guarantees it, else software; see `soft_fma`.
 #[inline(always)]
-#[forbid(unsafe_code)]
+pub fn fma(a: f64, b: f64, c: f64) -> f64 {
+    crate::soft_fma::fma_lanes([a], [b], [c])[0]
+}
+
+/// Software f32 fused multiply-add, correctly rounded, without CPU detection:
+/// exact f64 product, TwoSum, round to odd, narrow.
+#[inline(always)]
 pub fn fmaf_soft(a: f32, b: f32, c: f32) -> f32 {
-    let product = f64::from(a) * f64::from(b);
-    let addend = f64::from(c);
-    let sum = product + addend;
-    if !sum.is_finite() {
-        return sum as f32;
-    }
-    let virtual_addend = sum - product;
-    let error = (product - (sum - virtual_addend)) + (addend - virtual_addend);
-    let bits = sum.to_bits();
-    if error != 0.0 && bits & 1 == 0 {
-        let odd = if (error > 0.0) == (sum > 0.0) {
-            bits + 1
-        } else {
-            bits - 1
-        };
-        f64::from_bits(odd) as f32
-    } else {
-        sum as f32
-    }
+    crate::soft_fma::fmaf_soft_lanes([a], [b], [c])[0]
 }
 
 // ============================================================================

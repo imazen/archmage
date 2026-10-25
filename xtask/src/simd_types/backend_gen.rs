@@ -2105,16 +2105,21 @@ fn generate_scalar_float_impl(ty: &FloatVecType) -> String {
         format!("[{}]", items.join(", "))
     };
 
+    // Whole-array call: the software form is branch-free per lane, so LLVM
+    // can vectorize it.
     let fused_lanes = |negate: &str| -> String {
-        let items: Vec<String> = (0..lanes)
-            .map(|i| {
-                format!(
-                    "crate::nostd_math::{}(a[{i}], b[{i}], {negate}c[{i}])",
-                    if elem == "f32" { "fmaf" } else { "fma" }
-                )
-            })
-            .collect();
-        format!("[{}]", items.join(", "))
+        let fma_fn = if elem == "f32" {
+            "fmaf_lanes"
+        } else {
+            "fma_lanes"
+        };
+        let addend = if negate.is_empty() {
+            "c".to_string()
+        } else {
+            let items: Vec<String> = (0..lanes).map(|i| format!("-c[{i}]")).collect();
+            format!("[{}]", items.join(", "))
+        };
+        format!("crate::soft_fma::{fma_fn}(a, b, {addend})")
     };
 
     let bitwise_unary_lanes = |op: &str| -> String {

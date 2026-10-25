@@ -142,7 +142,33 @@ fn cases64() -> Vec<[f64; 3]> {
     for _ in 0..4096 {
         cases.push(core::array::from_fn(|_| f64::from_bits(random(&mut state))));
     }
+    // Normal operands (the software double-double path), with cancellation
+    // against the rounded product and addends whose ULP sits near the
+    // product's rounding bit.
+    for _ in 0..2048 {
+        cases.extend(normal_cases64(&mut state));
+    }
     cases
+}
+
+/// Random sign and significand, binary exponent uniform in `-span..=span`.
+fn normal64(state: &mut u64, span: u64) -> f64 {
+    let r = random(state);
+    let exponent = 1023 + (r % (2 * span + 1)) - span;
+    f64::from_bits(exponent << 52 | random(state) >> 12 | r & 1 << 63)
+}
+
+fn normal_cases64(state: &mut u64) -> [[f64; 3]; 4] {
+    let (a, b) = (normal64(state, 60), normal64(state, 60));
+    let p = a * b;
+    let nudge = (random(state) % 64 + 1) as f64 * f64::EPSILON;
+    let far = f64::from_bits((1023 + 60 + random(state) % 60) << 52);
+    [
+        [a, b, normal64(state, 130)],
+        [a, b, -p],
+        [a, b, -p * (1.0 + nudge)],
+        [a, b, far],
+    ]
 }
 
 // Check single rounding through libm and through the explicit software f32
@@ -167,6 +193,9 @@ fn random_software_rounding_against_std() {
         same32(nostd_math::fmaf_soft(a, b, c), a.fused_expected(b, c));
         let [a, b, c] = core::array::from_fn(|_| f64::from_bits(random(&mut state)));
         same64(nostd_math::fma(a, b, c), a.fused_expected(b, c));
+        for [a, b, c] in normal_cases64(&mut state) {
+            same64(nostd_math::fma(a, b, c), a.fused_expected(b, c));
+        }
     }
 }
 

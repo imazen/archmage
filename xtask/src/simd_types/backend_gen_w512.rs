@@ -986,16 +986,24 @@ pub(super) fn generate_w512_backend_trait(ty: &W512Type) -> String {
 
 /// Generate scalar backend implementation for a W512 float type.
 fn generate_scalar_float_impl(ty: &W512Type) -> String {
-    let fma_fn = if ty.elem == "f32" { "fmaf" } else { "fma" };
-    // Match the explicit lane expressions used by the W128/W256 generator.
-    // A from_fn closure here can retain copies of all three input arrays
-    // across scalar libm calls after the generic wrapper has been inlined.
+    let fma_fn = if ty.elem == "f32" {
+        "fmaf_lanes"
+    } else {
+        "fma_lanes"
+    };
+    // Whole-array call, as in the W128/W256 generator; negation uses explicit
+    // lane expressions rather than a closure.
     let fused_lanes = |negate: &str| {
-        let lanes = (0..ty.lanes)
-            .map(|i| format!("crate::nostd_math::{fma_fn}(a[{i}], b[{i}], {negate}c[{i}])"))
-            .collect::<Vec<_>>()
-            .join(", ");
-        format!("[{lanes}]")
+        let addend = if negate.is_empty() {
+            "c".to_string()
+        } else {
+            let lanes = (0..ty.lanes)
+                .map(|i| format!("-c[{i}]"))
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("[{lanes}]")
+        };
+        format!("crate::soft_fma::{fma_fn}(a, b, {addend})")
     };
     let fused_add = fused_lanes("");
     let fused_sub = fused_lanes("-");

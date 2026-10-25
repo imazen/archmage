@@ -207,22 +207,12 @@ impl F32x4Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn mul_add_portable(self, a: [f32; 4], b: [f32; 4], c: [f32; 4]) -> [f32; 4] {
-        [
-            crate::nostd_math::fmaf(a[0], b[0], c[0]),
-            crate::nostd_math::fmaf(a[1], b[1], c[1]),
-            crate::nostd_math::fmaf(a[2], b[2], c[2]),
-            crate::nostd_math::fmaf(a[3], b[3], c[3]),
-        ]
+        crate::soft_fma::fmaf_lanes(a, b, c)
     }
 
     #[inline(always)]
     fn mul_sub_portable(self, a: [f32; 4], b: [f32; 4], c: [f32; 4]) -> [f32; 4] {
-        [
-            crate::nostd_math::fmaf(a[0], b[0], -c[0]),
-            crate::nostd_math::fmaf(a[1], b[1], -c[1]),
-            crate::nostd_math::fmaf(a[2], b[2], -c[2]),
-            crate::nostd_math::fmaf(a[3], b[3], -c[3]),
-        ]
+        crate::soft_fma::fmaf_lanes(a, b, [-c[0], -c[1], -c[2], -c[3]])
     }
 
     // ====== Comparisons ======
@@ -619,30 +609,16 @@ impl F32x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn mul_add_portable(self, a: [f32; 8], b: [f32; 8], c: [f32; 8]) -> [f32; 8] {
-        [
-            crate::nostd_math::fmaf(a[0], b[0], c[0]),
-            crate::nostd_math::fmaf(a[1], b[1], c[1]),
-            crate::nostd_math::fmaf(a[2], b[2], c[2]),
-            crate::nostd_math::fmaf(a[3], b[3], c[3]),
-            crate::nostd_math::fmaf(a[4], b[4], c[4]),
-            crate::nostd_math::fmaf(a[5], b[5], c[5]),
-            crate::nostd_math::fmaf(a[6], b[6], c[6]),
-            crate::nostd_math::fmaf(a[7], b[7], c[7]),
-        ]
+        crate::soft_fma::fmaf_lanes(a, b, c)
     }
 
     #[inline(always)]
     fn mul_sub_portable(self, a: [f32; 8], b: [f32; 8], c: [f32; 8]) -> [f32; 8] {
-        [
-            crate::nostd_math::fmaf(a[0], b[0], -c[0]),
-            crate::nostd_math::fmaf(a[1], b[1], -c[1]),
-            crate::nostd_math::fmaf(a[2], b[2], -c[2]),
-            crate::nostd_math::fmaf(a[3], b[3], -c[3]),
-            crate::nostd_math::fmaf(a[4], b[4], -c[4]),
-            crate::nostd_math::fmaf(a[5], b[5], -c[5]),
-            crate::nostd_math::fmaf(a[6], b[6], -c[6]),
-            crate::nostd_math::fmaf(a[7], b[7], -c[7]),
-        ]
+        crate::soft_fma::fmaf_lanes(
+            a,
+            b,
+            [-c[0], -c[1], -c[2], -c[3], -c[4], -c[5], -c[6], -c[7]],
+        )
     }
 
     // ====== Comparisons ======
@@ -977,18 +953,12 @@ impl F64x2Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn mul_add_portable(self, a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> [f64; 2] {
-        [
-            crate::nostd_math::fma(a[0], b[0], c[0]),
-            crate::nostd_math::fma(a[1], b[1], c[1]),
-        ]
+        crate::soft_fma::fma_lanes(a, b, c)
     }
 
     #[inline(always)]
     fn mul_sub_portable(self, a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> [f64; 2] {
-        [
-            crate::nostd_math::fma(a[0], b[0], -c[0]),
-            crate::nostd_math::fma(a[1], b[1], -c[1]),
-        ]
+        crate::soft_fma::fma_lanes(a, b, [-c[0], -c[1]])
     }
 
     // ====== Comparisons ======
@@ -1315,22 +1285,12 @@ impl F64x4Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn mul_add_portable(self, a: [f64; 4], b: [f64; 4], c: [f64; 4]) -> [f64; 4] {
-        [
-            crate::nostd_math::fma(a[0], b[0], c[0]),
-            crate::nostd_math::fma(a[1], b[1], c[1]),
-            crate::nostd_math::fma(a[2], b[2], c[2]),
-            crate::nostd_math::fma(a[3], b[3], c[3]),
-        ]
+        crate::soft_fma::fma_lanes(a, b, c)
     }
 
     #[inline(always)]
     fn mul_sub_portable(self, a: [f64; 4], b: [f64; 4], c: [f64; 4]) -> [f64; 4] {
-        [
-            crate::nostd_math::fma(a[0], b[0], -c[0]),
-            crate::nostd_math::fma(a[1], b[1], -c[1]),
-            crate::nostd_math::fma(a[2], b[2], -c[2]),
-            crate::nostd_math::fma(a[3], b[3], -c[3]),
-        ]
+        crate::soft_fma::fma_lanes(a, b, [-c[0], -c[1], -c[2], -c[3]])
     }
 
     // ====== Comparisons ======
@@ -9480,46 +9440,19 @@ impl F32x16Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn mul_add_portable(self, a: [f32; 16], b: [f32; 16], c: [f32; 16]) -> [f32; 16] {
-        [
-            crate::nostd_math::fmaf(a[0], b[0], c[0]),
-            crate::nostd_math::fmaf(a[1], b[1], c[1]),
-            crate::nostd_math::fmaf(a[2], b[2], c[2]),
-            crate::nostd_math::fmaf(a[3], b[3], c[3]),
-            crate::nostd_math::fmaf(a[4], b[4], c[4]),
-            crate::nostd_math::fmaf(a[5], b[5], c[5]),
-            crate::nostd_math::fmaf(a[6], b[6], c[6]),
-            crate::nostd_math::fmaf(a[7], b[7], c[7]),
-            crate::nostd_math::fmaf(a[8], b[8], c[8]),
-            crate::nostd_math::fmaf(a[9], b[9], c[9]),
-            crate::nostd_math::fmaf(a[10], b[10], c[10]),
-            crate::nostd_math::fmaf(a[11], b[11], c[11]),
-            crate::nostd_math::fmaf(a[12], b[12], c[12]),
-            crate::nostd_math::fmaf(a[13], b[13], c[13]),
-            crate::nostd_math::fmaf(a[14], b[14], c[14]),
-            crate::nostd_math::fmaf(a[15], b[15], c[15]),
-        ]
+        crate::soft_fma::fmaf_lanes(a, b, c)
     }
 
     #[inline(always)]
     fn mul_sub_portable(self, a: [f32; 16], b: [f32; 16], c: [f32; 16]) -> [f32; 16] {
-        [
-            crate::nostd_math::fmaf(a[0], b[0], -c[0]),
-            crate::nostd_math::fmaf(a[1], b[1], -c[1]),
-            crate::nostd_math::fmaf(a[2], b[2], -c[2]),
-            crate::nostd_math::fmaf(a[3], b[3], -c[3]),
-            crate::nostd_math::fmaf(a[4], b[4], -c[4]),
-            crate::nostd_math::fmaf(a[5], b[5], -c[5]),
-            crate::nostd_math::fmaf(a[6], b[6], -c[6]),
-            crate::nostd_math::fmaf(a[7], b[7], -c[7]),
-            crate::nostd_math::fmaf(a[8], b[8], -c[8]),
-            crate::nostd_math::fmaf(a[9], b[9], -c[9]),
-            crate::nostd_math::fmaf(a[10], b[10], -c[10]),
-            crate::nostd_math::fmaf(a[11], b[11], -c[11]),
-            crate::nostd_math::fmaf(a[12], b[12], -c[12]),
-            crate::nostd_math::fmaf(a[13], b[13], -c[13]),
-            crate::nostd_math::fmaf(a[14], b[14], -c[14]),
-            crate::nostd_math::fmaf(a[15], b[15], -c[15]),
-        ]
+        crate::soft_fma::fmaf_lanes(
+            a,
+            b,
+            [
+                -c[0], -c[1], -c[2], -c[3], -c[4], -c[5], -c[6], -c[7], -c[8], -c[9], -c[10],
+                -c[11], -c[12], -c[13], -c[14], -c[15],
+            ],
+        )
     }
 
     #[inline(always)]
@@ -9758,30 +9691,16 @@ impl F64x8Backend for archmage::ScalarToken {
 
     #[inline(always)]
     fn mul_add_portable(self, a: [f64; 8], b: [f64; 8], c: [f64; 8]) -> [f64; 8] {
-        [
-            crate::nostd_math::fma(a[0], b[0], c[0]),
-            crate::nostd_math::fma(a[1], b[1], c[1]),
-            crate::nostd_math::fma(a[2], b[2], c[2]),
-            crate::nostd_math::fma(a[3], b[3], c[3]),
-            crate::nostd_math::fma(a[4], b[4], c[4]),
-            crate::nostd_math::fma(a[5], b[5], c[5]),
-            crate::nostd_math::fma(a[6], b[6], c[6]),
-            crate::nostd_math::fma(a[7], b[7], c[7]),
-        ]
+        crate::soft_fma::fma_lanes(a, b, c)
     }
 
     #[inline(always)]
     fn mul_sub_portable(self, a: [f64; 8], b: [f64; 8], c: [f64; 8]) -> [f64; 8] {
-        [
-            crate::nostd_math::fma(a[0], b[0], -c[0]),
-            crate::nostd_math::fma(a[1], b[1], -c[1]),
-            crate::nostd_math::fma(a[2], b[2], -c[2]),
-            crate::nostd_math::fma(a[3], b[3], -c[3]),
-            crate::nostd_math::fma(a[4], b[4], -c[4]),
-            crate::nostd_math::fma(a[5], b[5], -c[5]),
-            crate::nostd_math::fma(a[6], b[6], -c[6]),
-            crate::nostd_math::fma(a[7], b[7], -c[7]),
-        ]
+        crate::soft_fma::fma_lanes(
+            a,
+            b,
+            [-c[0], -c[1], -c[2], -c[3], -c[4], -c[5], -c[6], -c[7]],
+        )
     }
 
     #[inline(always)]
