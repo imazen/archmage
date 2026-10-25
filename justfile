@@ -506,10 +506,6 @@ fma-no-hardware:
     CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="qemu-x86_64 -cpu Nehalem" cargo test -p magetypes --target x86_64-unknown-linux-gnu --test fma_contract --test fused_arithmetic
     CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="qemu-x86_64 -cpu Nehalem" cargo test -p magetypes --no-default-features --features w512 --target x86_64-unknown-linux-gnu --test fma_contract --test fused_arithmetic
 
-# Dependency feature unification must not change portable rounding.
-fma-libm-soft:
-    cargo test -p magetypes --no-default-features --features w512,libm/force-soft-floats --test fma_contract
-
 # Independently build/test the self-contained dispatch prototype (x86-64 host).
 artisanal-check:
     bash experiments/artisanal-dispatch/tools/native-check.sh

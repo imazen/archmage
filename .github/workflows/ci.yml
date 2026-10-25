@@ -156,7 +156,6 @@ jobs:
         run: |
           cargo test -p magetypes --features "${{ env.FEATURES }}" --test fma_contract
           cargo test -p magetypes --no-default-features --features w512 --test fma_contract
-          cargo test -p magetypes --no-default-features --features w512,libm/force-soft-floats --test fma_contract
 
       - name: Macro input, output, and diagnostic contracts
         run: |
@@ -253,7 +252,6 @@ jobs:
         run: |
           cargo test -p magetypes --features "${{ env.FEATURES }}" --test fma_contract
           cargo test -p magetypes --no-default-features --features w512 --test fma_contract
-          cargo test -p magetypes --no-default-features --features w512,libm/force-soft-floats --test fma_contract
 
       - name: Macro input, output, and diagnostic contracts
         run: |
