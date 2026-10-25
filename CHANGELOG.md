@@ -46,6 +46,8 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 - Remove `SimdToken` parameter support from `#[autoversion]` — use tokenless (recommended) or `ScalarToken` for `incant!` nesting (deprecated since 0.9.11)
 - Remove `_self = Type` without `in_trait` from `#[autoversion]` — plain `self` works in sibling mode; with `in_trait` it names the receiver type and stays
 - Deprecate `incant!` passthrough mode (`with token`) — zero downstream uses; `#[rite]` multi-tier or direct `IntoConcreteToken` dispatch are better alternatives
+- Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with a deprecation warning)
+- Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 
 #### Fixed
 
@@ -57,8 +59,6 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 - Unused `#[attune]` wildcard proof wrappers (`_*_t`, `all`, `+tier`) allow `dead_code` on the wrapper, which holds no author code; explicit selectors keep the lint (739e5150; narrowed, 38a8a58f).
 - Macro-emitted lint levels no longer cover the author's code: items nested in `#[attune(_*)]` bodies and in `#[autoversion]` SIMD-variant bodies report `dead_code` again (autoversion's had never been reported), and an underscore binding used in a nested `#[arcane(_self = ...)]` body reports `used_underscore_binding`. `#[autoversion]` allows `dead_code` on the SIMD variants' forwarding wrappers and the scalar fallback, so where only the fallback compiles (wasm32, i686) its nested items stay unreported (38a8a58f).
 - A default-tier `incant!` nested in a v4 body no longer reports `unreachable_code` in the caller's crate when its `avx512` feature is on: gated guaranteed arms and the fallback are now mutually exclusive cfg blocks (44cb1e34).
-- Require `scalar` or `default` in explicit `incant!` tier lists (currently auto-appended with deprecation warning)
-- Require explicit `tier(cfg(feature))` syntax — remove implicit `cfg_feature` auto-gating on v4/v4x
 
 ### [0.9.31-beta.1] - 2026-10-13
 
@@ -113,7 +113,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 
 #### QUEUED BREAKING CHANGES
 
-- Planned: `mul_add`/`mul_sub` become the fused, single-rounding operations, matching `f32::mul_add`. A 0.9 patch first adds `mul_add_relaxed`/`mul_sub_relaxed` (today's `mul_add`: fused where the hardware fuses, multiply then add on the scalar backend and strict WASM, the engine's madd with relaxed SIMD) and `mul_add_fused`/`mul_sub_fused` (today's `mul_add_portable`/`mul_sub_portable`, which stay as the same operation), and deprecates `mul_add`/`mul_sub` pointing at both. After the deprecation has shipped through a full release (0.10), `mul_add`/`mul_sub` return undeprecated as the fused forms (0.11). Calls still on `mul_add` then round once everywhere, at software-FMA cost on the scalar backend without FMA hardware and on strict WASM. Neither form is fastest everywhere: separate multiply-add is faster for single-accumulator reductions, fused for Horner chains (`benchmarks/fused_vs_separate_2026-10-25.md`).
+- Planned: `mul_add`/`mul_sub` become the fused, single-rounding operations, matching `f32::mul_add`. Step one is in this release: `mul_add_relaxed`/`mul_sub_relaxed` (the previous `mul_add`: fused where the hardware fuses, multiply then add on the scalar backend and strict WASM, the engine's madd with relaxed SIMD) and `mul_add_fused`/`mul_sub_fused` (the same operation as `mul_add_portable`/`mul_sub_portable`, which stay), with `mul_add`/`mul_sub` deprecated pointing at both (#138). After the deprecation has shipped through a full release (0.10), `mul_add`/`mul_sub` return undeprecated as the fused forms (0.11). Calls still on `mul_add` then round once everywhere, at software-FMA cost on the scalar backend without FMA hardware and on strict WASM. Neither form is fastest everywhere: separate multiply-add is faster for single-accumulator reductions, fused for Horner chains (`benchmarks/fused_vs_separate_2026-10-25.md`).
 - Planned magetypes 0.10: deprecate the one-lane wrappers `f32x1`, `f64x1`, `i8x1`, `u8x1`, `i16x1`, `u16x1`, `i32x1`, `u32x1`, `i64x1`, `u64x1` (no production users across the zen checkouts; the scalar tier uses the generic `*<ScalarToken>` types and tails get plain slices), the comparison traits `SimdEq`, `SimdNe`, `SimdLt`, `SimdLe`, `SimdGt`, `SimdGe` (never implemented; the vector types have inherent `simd_*` methods), and `SimdTypes` and `WidthDispatch` (no users, tests or docs). Removal follows in a later breaking release.
 - Planned magetypes 0.10: reserve short constructor names for matching feature contexts; `_t(token, ...)` provides the preparatory migration spelling in 0.9. No constructor signatures change in this patch (772ef504).
 - Remove the six no-op `*_midp_precise` aliases (`exp2`/`exp`/`ln`/`log2`/`log10`/`pow` — each is literally `self.*_midp()`); `cbrt_midp_precise` stays, it does real denormal/zero handling. With the reciprocal tiers settling on `_portable` as the precise tier, a `_precise` suffix that does nothing is a naming lie.
