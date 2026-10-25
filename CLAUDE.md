@@ -164,19 +164,31 @@ fn dist_simd(a: &[f32; 8], b: &[f32; 8]) -> f32 {
 
 ### Dispatch granularity
 
-Magetypes must not add CPU probes inside single-vector arithmetic. Portable
-software FMA (`magetypes/src/soft_fma.rs`) works on whole lane arrays with no
-per-lane branch, so LLVM vectorizes it: f32 rounds once through f64 and sends
-only sums that are f32 midpoints or f32-subnormal to round-to-odd; f64 uses a
-double-double product and sends halfway or out-of-range lanes to an exact
-integer FMA ported from libm 0.2.16 (magetypes no longer depends on libm).
-Neither dispatches. Keep the exact paths out of line and per lane (float
-returns): a `&mut` result moved the hot loop's value through memory (f32x1
-chains 1.4-1.5x slower), and an array return through a general register.
-Compile-time-guaranteed
-std AArch64 NEON and x86 FMA builds use Rust's hardware lowering. Other scalar
-contexts, including no_std, use software. Native SIMD backends retain direct FMA intrinsics. Bare scalar and
-strict-WASM `mul_add` remain multiply then add; relaxed WASM uses native madd.
+Magetypes must not add CPU probes inside single-vector arithmetic, with one
+measured exception (user, 2026-10-24: allowed when the output is identical and
+the win consistent; `eae93cb0`): portable f64 FMA on x86_64 std builds checks archmage's
+cached V3 token once per call and sends each lane through the FMA
+instruction. On r7900x/i265 that took 0.09-0.43x the software path's time and
+beat std's per-lane libcall; a simulated CPU without FMA paid 1.00-1.07x (one
+row 1.14x). f32 does not get it: its software path is vectorized, and
+per-call hardware paths lost on f32x8 (array calls: chains 1.4-1.7x; per-lane
+calls: streams 1.2-1.9x). Hardware calls take
+one lane per call in float registers; an array argument went through memory
+and lost on chains.
+
+Portable software FMA (`magetypes/src/soft_fma.rs`) works on whole lane arrays
+with no per-lane branch, so LLVM vectorizes it: f32 rounds once through f64 and
+sends only sums that are f32 midpoints or f32-subnormal to round-to-odd; f64
+uses a double-double product and sends halfway or out-of-range lanes to an
+exact integer FMA ported from libm 0.2.16 (magetypes no longer depends on
+libm). Keep the exact paths out of line and per lane (float returns): a `&mut`
+result moved the hot loop's value through memory (f32x1 chains 1.4-1.5x
+slower), and an array return through a general register. Std builds with
+compile-time AArch64 NEON or x86 FMA use Rust's `mul_add`; no_std builds use
+token-proven intrinsics when `summon` is a compile-time constant (V3 or NEON
+target features); other contexts use software. Native SIMD backends retain
+direct FMA intrinsics. Bare scalar and strict-WASM `mul_add` remain multiply
+then add; relaxed WASM uses native madd.
 The independent corpus in `tests/fma_contract.rs` enforces portable expected
 bits and backend-specific bare behavior; never substitute std as its oracle.
 

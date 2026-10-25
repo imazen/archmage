@@ -177,3 +177,81 @@ WASM (wasmtime 47, r7900x)
 harness (`interleaved/`, binary SHA-256 in `b.sha256`), per-process results
 and harness (`cross-process/`), emitted assembly for x86-64, WASM and RISC-V
 (`asm/`).
+
+## Follow-up: a runtime check for f64 (same day)
+
+std's `mul_add` on baseline x86-64 calls compiler-builtins' `fma`, which runs
+CPUID on first use, caches a function pointer, and then makes one indirect
+call per lane to a `vfmadd`. Results from hardware FMA and the software path
+are bit-identical, so a runtime check changes speed, not output.
+
+Three designs were compared interleaved in one binary on i265 and r7900x
+(data: `interleaved-rt/`): the software path; archmage's cached
+`X64V3Token::summon()` once per call, then one V3 call for the whole array;
+and the same check with one V3 call per lane, operands in float registers. A
+second process disabled the V3 token (`dangerously_disable_token_process_wide`)
+to simulate a CPU without FMA.
+
+- f64, per-lane calls: 0.09–0.43× the software path's time for every shape,
+  both hosts, both inputs; faster than std (0.40–0.71×). Without FMA:
+  1.00–1.07×, one row 1.14× (i265 f64x4 stream, random).
+- f32: no design was a consistent win. Array calls lost on f32x8 chains
+  (1.37–1.69×: the array goes through memory every step); per-lane calls lost
+  on f32x8 streams (1.20–1.89×). The vectorized software path stays.
+- Inside a V3 function every design inlines and runs at hardware speed.
+
+Shipped: f64 per-lane with the cached check on x86_64 std builds; no_std
+builds use a token only when `summon` is a compile-time constant. The final
+code, cross-process on r7900x against the pushed array software (normal
+inputs; random agrees):
+
+
+| Case | 0.9.30 | main | pushed (array software) | candidate (f64 runtime check) | std | candidate / pushed | candidate / std | candidate / 0.9.30 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| scalar f32x1 chain | 1128 | 2490 | 2222 | 2220 | 1546 | 1.00× | 1.44× | 1.97× |
+| scalar f32x1 stream | 1316 | 1118 | 756 | 758 | 1687 | 1.00× | 0.45× | 0.58× |
+| scalar f32x8 chain | 7313 | 7243 | 4243 | 4228 | 12711 | 1.00× | 0.33× | 0.58× |
+| scalar f32x8 stream | 8435 | 9370 | 4087 | 4090 | 13861 | 1.00× | 0.30× | 0.48× |
+| scalar f64x1 chain | 940 | 5708 | 5950 | 942 | 1545 | 0.16× | 0.61× | 1.00× |
+| scalar f64x1 stream | 943 | 4478 | 4698 | 1135 | 1785 | 0.24× | 0.64× | 1.20× |
+| scalar f64x4 chain | 3754 | 16297 | 10746 | 4494 | 6316 | 0.42× | 0.71× | 1.20× |
+| scalar f64x4 stream | 4158 | 18014 | 11744 | 3753 | 6758 | 0.32× | 0.56× | 0.90× |
+| inside V3 f32x8 chain | 2450 | 7294 | 4740 | 4745 | 706 | 1.00× | 6.72× | 1.94× |
+| inside V3 f32x8 stream | 5635 | 8153 | 2889 | 2880 | 763 | 1.00× | 3.77× | 0.51× |
+| inside V3 f64x4 chain | 2432 | 16117 | 7760 | 729 | 703 | 0.09× | 1.04× | 0.30× |
+| inside V3 f64x4 stream | 2844 | 18036 | 6370 | 765 | 765 | 0.12× | 1.00× | 0.27× |
+
+### WASM: a cached probe of relaxed madd (not shipped)
+
+The relaxed-SIMD proposal lets each environment choose fused or unfused
+`madd` per operator but requires a fixed choice ("each environment globally
+chooses a fixed projection for each operator"). A probe on a pair where the
+two differ, cached in an atomic, can therefore select the single instruction
+for the `_portable` forms. Measured in relaxed builds on r7900x, wasmtime 47:
+
+Engine fuses (host FMA):
+
+
+| Case | main | pushed | candidate (probe) | std | a * b + c | candidate / pushed |
+|---|---:|---:|---:|---:|---:|---:|
+| scalar f64x4 chain | 37140 | 14513 | 14510 | 29371 | 1109 | 1.00× |
+| scalar f64x4 stream | 39898 | 13792 | 13803 | 27535 | 874 | 1.00× |
+| wasm f32x4 chain | 8639 | 8636 | 2667 | 5450 | 1103 | 0.31× |
+| wasm f32x4 stream | 6303 | 6298 | 1775 | 6770 | 574 | 0.28× |
+| wasm f64x2 chain | 21816 | 10068 | 4188 | 15980 | 1108 | 0.42× |
+| wasm f64x2 stream | 20486 | 7740 | 3410 | 14538 | 576 | 0.44× |
+
+Engine rounds twice (`-C cranelift-has-fma=false`):
+
+
+| Case | main | pushed | candidate (probe) | std | a * b + c | candidate / pushed |
+|---|---:|---:|---:|---:|---:|---:|
+| scalar f64x4 chain | 37170 | 14518 | 14519 | 29271 | 1110 | 1.00× |
+| scalar f64x4 stream | 39944 | 13798 | 13814 | 27357 | 886 | 1.00× |
+| wasm f32x4 chain | 8615 | 8652 | 10398 | 5439 | 1092 | 1.20× |
+| wasm f32x4 stream | 6312 | 6302 | 6906 | 6801 | 575 | 1.10× |
+| wasm f64x2 chain | 22018 | 10068 | 11618 | 15897 | 1092 | 1.15× |
+| wasm f64x2 stream | 20509 | 7751 | 8471 | 14692 | 576 | 1.09× |
+
+The probe is a large win on fusing engines and costs 9–20% on engines that
+round twice, so it is held for a decision rather than shipped.

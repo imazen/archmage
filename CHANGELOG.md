@@ -120,6 +120,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 
 #### Changed
 
+- Scalar-backend f64 `mul_add_portable`/`mul_sub_portable` on x86_64 with `std` now check archmage's cached V3 token once per call and use the FMA instruction per lane when the CPU has it: 0.09–0.43× the software path's time on a Ryzen 9 7900X and a Core Ultra 7 265K, faster than std's `mul_add`; about 1.0× on a simulated CPU without FMA. no_std builds reach the FMA instruction through a compile-time token (V3 or NEON target features) instead of software. Results are unchanged (eae93cb0).
 - Software `mul_add_portable`/`mul_sub_portable` (the scalar backend without a compile-time FMA guarantee, and WASM f64) run over whole lane arrays without a branch per lane, so they vectorize: f32 rounds once through f64, f64 uses a double-double product, and the rare halfway or out-of-range lanes take an exact per-lane path. Results are unchanged. Interleaved on a Ryzen 9 7900X and a Core Ultra 7 265K, vector shapes take 0.14–0.70× the previous time; on WASM, f64 vectors take 0.34–0.45×. magetypes no longer depends on libm: the exact f64 FMA is ported from libm 0.2.16 (MIT) (06291ec2).
 
 #### Fixed

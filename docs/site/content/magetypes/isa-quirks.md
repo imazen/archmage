@@ -39,7 +39,7 @@ CPU, width, compiler, baseline, and workload.
 | Same narrowing methods on [`i16x32`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i16x32.html) / [`i32x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i32x16.html) | Native AVX-512 | Narrow each input to a half and insert/concatenate. Unsigned destinations clamp signed inputs to zero before unsigned conversion. | Two zero clamps for unsigned output, plus the two conversions and concatenation needed for the operation. |
 | Same narrowing families at 128 bits; NEON / WASM widths | Native halves | Native signed-source saturating narrows already have the desired lane order. | No AVX2-style lane-order repair; polyfills still require composition. |
 | `v.shl_const::<N>()`, `v.shr_logical_const::<N>()`, `v.shr_arithmetic_const::<N>()` | Every backend | Const assertions reject invalid counts before execution. | **No runtime assertion.** Constant byte shifts can still require shift/mask emulation. |
-| `a.mul_add_portable(b, c)` / `a.mul_sub_portable(b, c)` on every float type | Scalar backend; WASM, relaxed SIMD included | Native hardware backends use FMA directly. The scalar backend uses the FMA instruction when the build guarantees one, else software; WASM always uses software. Software f32 rounds once through f64 (WASM SIMD f32 rounds to odd); software f64 uses a double-double product. Both check rare lanes into an exact path. | No CPU detection. The software forms have no per-lane branch, so they vectorize on SSE2 and WASM SIMD; measurements are below; see [Fused arithmetic](#fused-arithmetic-and-reductions). |
+| `a.mul_add_portable(b, c)` / `a.mul_sub_portable(b, c)` on every float type | Scalar backend; WASM, relaxed SIMD included | Native hardware backends use FMA directly. The scalar backend uses the FMA instruction when the build guarantees one (and for x86_64 f64 with `std`, when a cached runtime check finds it), else software; WASM always uses software. Software f32 rounds once through f64 (WASM SIMD f32 rounds to odd); software f64 uses a double-double product. Both check rare lanes into an exact path. | The software forms have no per-lane branch, so they vectorize on SSE2 and WASM SIMD. f64 on x86_64 with `std` checks a cached CPU flag once per call to use the FMA instruction; nothing else detects. Measurements are below; see [Fused arithmetic](#fused-arithmetic-and-reductions). |
 
 `abs_diff`, `madd_adjacent`, `pairwise_widen_add`, saturating arithmetic, and
 `reduce_add_u32` sometimes need several instructions because an ISA lacks that
@@ -207,6 +207,7 @@ and on 1,024 dependent steps (chain); records:
 | Historical WASM SIMD128 (per-lane f64), wasmtime on the 9950X3D | The same code as `a * b + c` | 8.2× (`f32x4`), 23× (`f64x2`) the time |
 | Historical WASM relaxed SIMD, same | The engine's madd: 0.96–1.06× the time | 8.2× (`f32x4`), 24× (`f64x2`) the time |
 | Scalar software, array form (current), baseline x86-64 on the Ryzen 9 7900X | The same code as `a * b + c` | 1.7–8.8× (f32), 5.4–27× (f64) the time; inside a V3 function 3.8–4.3× (f32), 7.1–8.4× (f64) ([record](https://github.com/imazen/archmage/blob/main/benchmarks/soft_fma_simd_2026-10-24.md)) |
+| Scalar f64 with the cached runtime check (current), x86_64 `std` on the 7900X | The same code as `a * b + c` | 0.86–6.6× the time (one call per lane); inside a V3 function 0.67–1.0×, where the call inlines |
 | WASM SIMD128 (current), wasmtime 47 on the 7900X | The same code as `a * b + c` | 7.9–11× (`f32x4`), 9.2–13.5× (`f64x2`) the time |
 
 Portable software fallbacks work on whole lane arrays without a branch per
@@ -219,10 +220,15 @@ halfway after an inexact inner addition, or that leave the safe exponent
 range, to an exact integer implementation ported from libm 0.2.16. They do not
 probe the CPU.
 
-Scalar helpers use hardware only when the build guarantees it: with `std`,
-AArch64 NEON or x86 FMA-enabled builds use Rust's `mul_add`. Other scalar
-contexts (including all `no_std` builds) use software,
-including baseline x86 even on a CPU with FMA. Native vector backends retain
+Scalar helpers use the FMA instruction when the build guarantees it: with
+`std`, AArch64 NEON or x86 FMA-enabled builds use Rust's `mul_add`; without
+`std`, V3 or NEON target features let a compile-time token reach the
+intrinsic. For f64 on x86_64 with `std`, a cached runtime check (archmage's V3
+token, once per call) also selects the instruction on CPUs that have it: on a
+Ryzen 9 7900X and a Core Ultra 7 265K that took 0.09–0.43× the software path's
+time. f32 stays in software without a compile-time guarantee, because its
+vectorized software path measured as fast as a per-call hardware path or
+faster. Results are identical on every path. Native vector backends retain
 their token-proven FMA intrinsics. Strict and relaxed WASM portable operations
 both use software. The bit-exact contract assumes round-to-nearest and gradual
 underflow; NaN payloads and signs are unspecified.
