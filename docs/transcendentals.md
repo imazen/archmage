@@ -202,13 +202,13 @@ let m = mantissa - 1.0;
 const P0: f32 = -1.850_383_34e-6;
 const P1: f32 = 1.428_716_05;
 const P2: f32 = 0.742_458_73;
-let yp = P2.mul_add(m, P1).mul_add(m, P0);
+let yp = P2.mul_add_relaxed(m, P1).mul_add_relaxed(m, P0);
 
 // Denominator: Q2*m^2 + Q1*m + Q0
 const Q0: f32 = 0.990_328_14;
 const Q1: f32 = 1.009_671_86;
 const Q2: f32 = 0.174_093_43;
-let yq = Q2.mul_add(m, Q1).mul_add(m, Q0);
+let yq = Q2.mul_add_relaxed(m, Q1).mul_add_relaxed(m, Q0);
 
 yp / yq + exp_val
 ```
@@ -245,7 +245,7 @@ const C1: f32 = 0.961_800_76;
 const C2: f32 = 0.576_974_45;
 const C3: f32 = 0.434_411_97;
 
-let poly = C3.mul_add(y2, C2).mul_add(y2, C1).mul_add(y2, C0);
+let poly = C3.mul_add_relaxed(y2, C2).mul_add_relaxed(y2, C1).mul_add_relaxed(y2, C0);
 y * poly + n
 ```
 
@@ -267,7 +267,7 @@ const C1: f32 = 0.693_147_18; // ln(2)
 const C2: f32 = 0.240_226_5;
 const C3: f32 = 0.055_504_11;
 
-let poly = C3.mul_add(xf, C2).mul_add(xf, C1).mul_add(xf, C0);
+let poly = C3.mul_add_relaxed(xf, C2).mul_add_relaxed(xf, C1).mul_add_relaxed(xf, C0);
 
 // Scale by 2^integer using bit manipulation
 let scale_bits = ((xi as i32 + 127) << 23) as u32;
@@ -297,12 +297,12 @@ const C6: f32 = 0.000_154_47;
 let xi = x.round().min(127.0);
 let xf = x - xi;
 
-let poly = C6.mul_add(xf, C5)
-    .mul_add(xf, C4)
-    .mul_add(xf, C3)
-    .mul_add(xf, C2)
-    .mul_add(xf, C1)
-    .mul_add(xf, C0);
+let poly = C6.mul_add_relaxed(xf, C5)
+    .mul_add_relaxed(xf, C4)
+    .mul_add_relaxed(xf, C3)
+    .mul_add_relaxed(xf, C2)
+    .mul_add_relaxed(xf, C1)
+    .mul_add_relaxed(xf, C0);
 
 // Scale by 2^integer using IEEE 754 bit trick
 let scale_bits = ((xi as i32 + 127) << 23) as u32;

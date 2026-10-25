@@ -745,7 +745,7 @@ fn max() {
 }
 
 #[test]
-fn mul_add() {
+fn mul_add_relaxed() {
     let token_s = ScalarToken;
     if let Some(token_n) = <$native_token>::summon() {
         for ((ca, cb), cc) in super::F32_EDGE_A.chunks_exact(4)
@@ -761,20 +761,20 @@ fn mul_add() {
             let an = generic::f32x4::<$native_token>::from_array_t(token_n, a);
             let bn = generic::f32x4::<$native_token>::from_array_t(token_n, b);
             let cn = generic::f32x4::<$native_token>::from_array_t(token_n, c);
-            let s = as_.mul_add(bs, cs).to_array();
-            let n = an.mul_add(bn, cn).to_array();
+            let s = as_.mul_add_relaxed(bs, cs).to_array();
+            let n = an.mul_add_relaxed(bn, cn).to_array();
             let expected_s: [f32; 4] = core::array::from_fn(|i|
                 a[i].mul_add_expected(b[i], c[i], token_s));
             let expected_n: [f32; 4] = core::array::from_fn(|i|
                 a[i].mul_add_expected(b[i], c[i], token_n));
-            super::assert_f32_exact(&s, &expected_s, "scalar f32x4::mul_add", &a);
-            super::assert_f32_exact(&n, &expected_n, "native f32x4::mul_add", &a);
+            super::assert_f32_exact(&s, &expected_s, "scalar f32x4::mul_add_relaxed", &a);
+            super::assert_f32_exact(&n, &expected_n, "native f32x4::mul_add_relaxed", &a);
         }
     }
 }
 
 #[test]
-fn mul_sub() {
+fn mul_sub_relaxed() {
     let token_s = ScalarToken;
     if let Some(token_n) = <$native_token>::summon() {
         for ((ca, cb), cc) in super::F32_EDGE_A.chunks_exact(4)
@@ -790,20 +790,20 @@ fn mul_sub() {
             let an = generic::f32x4::<$native_token>::from_array_t(token_n, a);
             let bn = generic::f32x4::<$native_token>::from_array_t(token_n, b);
             let cn = generic::f32x4::<$native_token>::from_array_t(token_n, c);
-            let s = as_.mul_sub(bs, cs).to_array();
-            let n = an.mul_sub(bn, cn).to_array();
+            let s = as_.mul_sub_relaxed(bs, cs).to_array();
+            let n = an.mul_sub_relaxed(bn, cn).to_array();
             let expected_s: [f32; 4] = core::array::from_fn(|i|
                 a[i].mul_add_expected(b[i], -c[i], token_s));
             let expected_n: [f32; 4] = core::array::from_fn(|i|
                 a[i].mul_add_expected(b[i], -c[i], token_n));
-            super::assert_f32_exact(&s, &expected_s, "scalar f32x4::mul_sub", &a);
-            super::assert_f32_exact(&n, &expected_n, "native f32x4::mul_sub", &a);
+            super::assert_f32_exact(&s, &expected_s, "scalar f32x4::mul_sub_relaxed", &a);
+            super::assert_f32_exact(&n, &expected_n, "native f32x4::mul_sub_relaxed", &a);
         }
     }
 }
 
 #[test]
-fn mul_add_portable() {
+fn mul_add_fused() {
     let token_s = ScalarToken;
     if let Some(token_n) = <$native_token>::summon() {
         for ((ca, cb), cc) in super::F32_EDGE_A.chunks_exact(4)
@@ -819,20 +819,20 @@ fn mul_add_portable() {
             let an = generic::f32x4::<$native_token>::from_array_t(token_n, a);
             let bn = generic::f32x4::<$native_token>::from_array_t(token_n, b);
             let cn = generic::f32x4::<$native_token>::from_array_t(token_n, c);
-            let s = as_.mul_add_portable(bs, cs).to_array();
-            let n = an.mul_add_portable(bn, cn).to_array();
+            let s = as_.mul_add_fused(bs, cs).to_array();
+            let n = an.mul_add_fused(bn, cn).to_array();
             let expected_s: [f32; 4] = core::array::from_fn(|i|
                 a[i].fused_expected(b[i], c[i]));
             let expected_n: [f32; 4] = core::array::from_fn(|i|
                 a[i].fused_expected(b[i], c[i]));
-            super::assert_f32_exact(&s, &expected_s, "scalar f32x4::mul_add_portable", &a);
-            super::assert_f32_exact(&n, &expected_n, "native f32x4::mul_add_portable", &a);
+            super::assert_f32_exact(&s, &expected_s, "scalar f32x4::mul_add_fused", &a);
+            super::assert_f32_exact(&n, &expected_n, "native f32x4::mul_add_fused", &a);
         }
     }
 }
 
 #[test]
-fn mul_sub_portable() {
+fn mul_sub_fused() {
     let token_s = ScalarToken;
     if let Some(token_n) = <$native_token>::summon() {
         for ((ca, cb), cc) in super::F32_EDGE_A.chunks_exact(4)
@@ -848,14 +848,14 @@ fn mul_sub_portable() {
             let an = generic::f32x4::<$native_token>::from_array_t(token_n, a);
             let bn = generic::f32x4::<$native_token>::from_array_t(token_n, b);
             let cn = generic::f32x4::<$native_token>::from_array_t(token_n, c);
-            let s = as_.mul_sub_portable(bs, cs).to_array();
-            let n = an.mul_sub_portable(bn, cn).to_array();
+            let s = as_.mul_sub_fused(bs, cs).to_array();
+            let n = an.mul_sub_fused(bn, cn).to_array();
             let expected_s: [f32; 4] = core::array::from_fn(|i|
                 a[i].fused_expected(b[i], -c[i]));
             let expected_n: [f32; 4] = core::array::from_fn(|i|
                 a[i].fused_expected(b[i], -c[i]));
-            super::assert_f32_exact(&s, &expected_s, "scalar f32x4::mul_sub_portable", &a);
-            super::assert_f32_exact(&n, &expected_n, "native f32x4::mul_sub_portable", &a);
+            super::assert_f32_exact(&s, &expected_s, "scalar f32x4::mul_sub_fused", &a);
+            super::assert_f32_exact(&n, &expected_n, "native f32x4::mul_sub_fused", &a);
         }
     }
 }
@@ -1237,7 +1237,7 @@ fn max() {
 }
 
 #[test]
-fn mul_add() {
+fn mul_add_relaxed() {
     let token_s = ScalarToken;
     if let Some(token_n) = <$native_token>::summon() {
         for ((ca, cb), cc) in super::F32_EDGE_A.chunks_exact(8)
@@ -1253,20 +1253,20 @@ fn mul_add() {
             let an = generic::f32x8::<$native_token>::from_array_t(token_n, a);
             let bn = generic::f32x8::<$native_token>::from_array_t(token_n, b);
             let cn = generic::f32x8::<$native_token>::from_array_t(token_n, c);
-            let s = as_.mul_add(bs, cs).to_array();
-            let n = an.mul_add(bn, cn).to_array();
+            let s = as_.mul_add_relaxed(bs, cs).to_array();
+            let n = an.mul_add_relaxed(bn, cn).to_array();
             let expected_s: [f32; 8] = core::array::from_fn(|i|
                 a[i].mul_add_expected(b[i], c[i], token_s));
             let expected_n: [f32; 8] = core::array::from_fn(|i|
                 a[i].mul_add_expected(b[i], c[i], token_n));
-            super::assert_f32_exact(&s, &expected_s, "scalar f32x8::mul_add", &a);
-            super::assert_f32_exact(&n, &expected_n, "native f32x8::mul_add", &a);
+            super::assert_f32_exact(&s, &expected_s, "scalar f32x8::mul_add_relaxed", &a);
+            super::assert_f32_exact(&n, &expected_n, "native f32x8::mul_add_relaxed", &a);
         }
     }
 }
 
 #[test]
-fn mul_sub() {
+fn mul_sub_relaxed() {
     let token_s = ScalarToken;
     if let Some(token_n) = <$native_token>::summon() {
         for ((ca, cb), cc) in super::F32_EDGE_A.chunks_exact(8)
@@ -1282,20 +1282,20 @@ fn mul_sub() {
             let an = generic::f32x8::<$native_token>::from_array_t(token_n, a);
             let bn = generic::f32x8::<$native_token>::from_array_t(token_n, b);
             let cn = generic::f32x8::<$native_token>::from_array_t(token_n, c);
-            let s = as_.mul_sub(bs, cs).to_array();
-            let n = an.mul_sub(bn, cn).to_array();
+            let s = as_.mul_sub_relaxed(bs, cs).to_array();
+            let n = an.mul_sub_relaxed(bn, cn).to_array();
             let expected_s: [f32; 8] = core::array::from_fn(|i|
                 a[i].mul_add_expected(b[i], -c[i], token_s));
             let expected_n: [f32; 8] = core::array::from_fn(|i|
                 a[i].mul_add_expected(b[i], -c[i], token_n));
-            super::assert_f32_exact(&s, &expected_s, "scalar f32x8::mul_sub", &a);
-            super::assert_f32_exact(&n, &expected_n, "native f32x8::mul_sub", &a);
+            super::assert_f32_exact(&s, &expected_s, "scalar f32x8::mul_sub_relaxed", &a);
+            super::assert_f32_exact(&n, &expected_n, "native f32x8::mul_sub_relaxed", &a);
         }
     }
 }
 
 #[test]
-fn mul_add_portable() {
+fn mul_add_fused() {
     let token_s = ScalarToken;
     if let Some(token_n) = <$native_token>::summon() {
         for ((ca, cb), cc) in super::F32_EDGE_A.chunks_exact(8)
@@ -1311,20 +1311,20 @@ fn mul_add_portable() {
             let an = generic::f32x8::<$native_token>::from_array_t(token_n, a);
             let bn = generic::f32x8::<$native_token>::from_array_t(token_n, b);
             let cn = generic::f32x8::<$native_token>::from_array_t(token_n, c);
-            let s = as_.mul_add_portable(bs, cs).to_array();
-            let n = an.mul_add_portable(bn, cn).to_array();
+            let s = as_.mul_add_fused(bs, cs).to_array();
+            let n = an.mul_add_fused(bn, cn).to_array();
             let expected_s: [f32; 8] = core::array::from_fn(|i|
                 a[i].fused_expected(b[i], c[i]));
             let expected_n: [f32; 8] = core::array::from_fn(|i|
                 a[i].fused_expected(b[i], c[i]));
-            super::assert_f32_exact(&s, &expected_s, "scalar f32x8::mul_add_portable", &a);
-            super::assert_f32_exact(&n, &expected_n, "native f32x8::mul_add_portable", &a);
+            super::assert_f32_exact(&s, &expected_s, "scalar f32x8::mul_add_fused", &a);
+            super::assert_f32_exact(&n, &expected_n, "native f32x8::mul_add_fused", &a);
         }
     }
 }
 
 #[test]
-fn mul_sub_portable() {
+fn mul_sub_fused() {
     let token_s = ScalarToken;
     if let Some(token_n) = <$native_token>::summon() {
         for ((ca, cb), cc) in super::F32_EDGE_A.chunks_exact(8)
@@ -1340,14 +1340,14 @@ fn mul_sub_portable() {
             let an = generic::f32x8::<$native_token>::from_array_t(token_n, a);
             let bn = generic::f32x8::<$native_token>::from_array_t(token_n, b);
             let cn = generic::f32x8::<$native_token>::from_array_t(token_n, c);
-            let s = as_.mul_sub_portable(bs, cs).to_array();
-            let n = an.mul_sub_portable(bn, cn).to_array();
+            let s = as_.mul_sub_fused(bs, cs).to_array();
+            let n = an.mul_sub_fused(bn, cn).to_array();
             let expected_s: [f32; 8] = core::array::from_fn(|i|
                 a[i].fused_expected(b[i], -c[i]));
             let expected_n: [f32; 8] = core::array::from_fn(|i|
                 a[i].fused_expected(b[i], -c[i]));
-            super::assert_f32_exact(&s, &expected_s, "scalar f32x8::mul_sub_portable", &a);
-            super::assert_f32_exact(&n, &expected_n, "native f32x8::mul_sub_portable", &a);
+            super::assert_f32_exact(&s, &expected_s, "scalar f32x8::mul_sub_fused", &a);
+            super::assert_f32_exact(&n, &expected_n, "native f32x8::mul_sub_fused", &a);
         }
     }
 }
@@ -1729,7 +1729,7 @@ fn max() {
 }
 
 #[test]
-fn mul_add() {
+fn mul_add_relaxed() {
     let token_s = ScalarToken;
     if let Some(token_n) = <$native_token>::summon() {
         for ((ca, cb), cc) in super::F64_EDGE_A.chunks_exact(2)
@@ -1745,20 +1745,20 @@ fn mul_add() {
             let an = generic::f64x2::<$native_token>::from_array_t(token_n, a);
             let bn = generic::f64x2::<$native_token>::from_array_t(token_n, b);
             let cn = generic::f64x2::<$native_token>::from_array_t(token_n, c);
-            let s = as_.mul_add(bs, cs).to_array();
-            let n = an.mul_add(bn, cn).to_array();
+            let s = as_.mul_add_relaxed(bs, cs).to_array();
+            let n = an.mul_add_relaxed(bn, cn).to_array();
             let expected_s: [f64; 2] = core::array::from_fn(|i|
                 a[i].mul_add_expected(b[i], c[i], token_s));
             let expected_n: [f64; 2] = core::array::from_fn(|i|
                 a[i].mul_add_expected(b[i], c[i], token_n));
-            super::assert_f64_exact(&s, &expected_s, "scalar f64x2::mul_add", &a);
-            super::assert_f64_exact(&n, &expected_n, "native f64x2::mul_add", &a);
+            super::assert_f64_exact(&s, &expected_s, "scalar f64x2::mul_add_relaxed", &a);
+            super::assert_f64_exact(&n, &expected_n, "native f64x2::mul_add_relaxed", &a);
         }
     }
 }
 
 #[test]
-fn mul_sub() {
+fn mul_sub_relaxed() {
     let token_s = ScalarToken;
     if let Some(token_n) = <$native_token>::summon() {
         for ((ca, cb), cc) in super::F64_EDGE_A.chunks_exact(2)
@@ -1774,20 +1774,20 @@ fn mul_sub() {
             let an = generic::f64x2::<$native_token>::from_array_t(token_n, a);
             let bn = generic::f64x2::<$native_token>::from_array_t(token_n, b);
             let cn = generic::f64x2::<$native_token>::from_array_t(token_n, c);
-            let s = as_.mul_sub(bs, cs).to_array();
-            let n = an.mul_sub(bn, cn).to_array();
+            let s = as_.mul_sub_relaxed(bs, cs).to_array();
+            let n = an.mul_sub_relaxed(bn, cn).to_array();
             let expected_s: [f64; 2] = core::array::from_fn(|i|
                 a[i].mul_add_expected(b[i], -c[i], token_s));
             let expected_n: [f64; 2] = core::array::from_fn(|i|
                 a[i].mul_add_expected(b[i], -c[i], token_n));
-            super::assert_f64_exact(&s, &expected_s, "scalar f64x2::mul_sub", &a);
-            super::assert_f64_exact(&n, &expected_n, "native f64x2::mul_sub", &a);
+            super::assert_f64_exact(&s, &expected_s, "scalar f64x2::mul_sub_relaxed", &a);
+            super::assert_f64_exact(&n, &expected_n, "native f64x2::mul_sub_relaxed", &a);
         }
     }
 }
 
 #[test]
-fn mul_add_portable() {
+fn mul_add_fused() {
     let token_s = ScalarToken;
     if let Some(token_n) = <$native_token>::summon() {
         for ((ca, cb), cc) in super::F64_EDGE_A.chunks_exact(2)
@@ -1803,20 +1803,20 @@ fn mul_add_portable() {
             let an = generic::f64x2::<$native_token>::from_array_t(token_n, a);
             let bn = generic::f64x2::<$native_token>::from_array_t(token_n, b);
             let cn = generic::f64x2::<$native_token>::from_array_t(token_n, c);
-            let s = as_.mul_add_portable(bs, cs).to_array();
-            let n = an.mul_add_portable(bn, cn).to_array();
+            let s = as_.mul_add_fused(bs, cs).to_array();
+            let n = an.mul_add_fused(bn, cn).to_array();
             let expected_s: [f64; 2] = core::array::from_fn(|i|
                 a[i].fused_expected(b[i], c[i]));
             let expected_n: [f64; 2] = core::array::from_fn(|i|
                 a[i].fused_expected(b[i], c[i]));
-            super::assert_f64_exact(&s, &expected_s, "scalar f64x2::mul_add_portable", &a);
-            super::assert_f64_exact(&n, &expected_n, "native f64x2::mul_add_portable", &a);
+            super::assert_f64_exact(&s, &expected_s, "scalar f64x2::mul_add_fused", &a);
+            super::assert_f64_exact(&n, &expected_n, "native f64x2::mul_add_fused", &a);
         }
     }
 }
 
 #[test]
-fn mul_sub_portable() {
+fn mul_sub_fused() {
     let token_s = ScalarToken;
     if let Some(token_n) = <$native_token>::summon() {
         for ((ca, cb), cc) in super::F64_EDGE_A.chunks_exact(2)
@@ -1832,14 +1832,14 @@ fn mul_sub_portable() {
             let an = generic::f64x2::<$native_token>::from_array_t(token_n, a);
             let bn = generic::f64x2::<$native_token>::from_array_t(token_n, b);
             let cn = generic::f64x2::<$native_token>::from_array_t(token_n, c);
-            let s = as_.mul_sub_portable(bs, cs).to_array();
-            let n = an.mul_sub_portable(bn, cn).to_array();
+            let s = as_.mul_sub_fused(bs, cs).to_array();
+            let n = an.mul_sub_fused(bn, cn).to_array();
             let expected_s: [f64; 2] = core::array::from_fn(|i|
                 a[i].fused_expected(b[i], -c[i]));
             let expected_n: [f64; 2] = core::array::from_fn(|i|
                 a[i].fused_expected(b[i], -c[i]));
-            super::assert_f64_exact(&s, &expected_s, "scalar f64x2::mul_sub_portable", &a);
-            super::assert_f64_exact(&n, &expected_n, "native f64x2::mul_sub_portable", &a);
+            super::assert_f64_exact(&s, &expected_s, "scalar f64x2::mul_sub_fused", &a);
+            super::assert_f64_exact(&n, &expected_n, "native f64x2::mul_sub_fused", &a);
         }
     }
 }
@@ -2149,7 +2149,7 @@ fn max() {
 }
 
 #[test]
-fn mul_add() {
+fn mul_add_relaxed() {
     let token_s = ScalarToken;
     if let Some(token_n) = <$native_token>::summon() {
         for ((ca, cb), cc) in super::F64_EDGE_A.chunks_exact(4)
@@ -2165,20 +2165,20 @@ fn mul_add() {
             let an = generic::f64x4::<$native_token>::from_array_t(token_n, a);
             let bn = generic::f64x4::<$native_token>::from_array_t(token_n, b);
             let cn = generic::f64x4::<$native_token>::from_array_t(token_n, c);
-            let s = as_.mul_add(bs, cs).to_array();
-            let n = an.mul_add(bn, cn).to_array();
+            let s = as_.mul_add_relaxed(bs, cs).to_array();
+            let n = an.mul_add_relaxed(bn, cn).to_array();
             let expected_s: [f64; 4] = core::array::from_fn(|i|
                 a[i].mul_add_expected(b[i], c[i], token_s));
             let expected_n: [f64; 4] = core::array::from_fn(|i|
                 a[i].mul_add_expected(b[i], c[i], token_n));
-            super::assert_f64_exact(&s, &expected_s, "scalar f64x4::mul_add", &a);
-            super::assert_f64_exact(&n, &expected_n, "native f64x4::mul_add", &a);
+            super::assert_f64_exact(&s, &expected_s, "scalar f64x4::mul_add_relaxed", &a);
+            super::assert_f64_exact(&n, &expected_n, "native f64x4::mul_add_relaxed", &a);
         }
     }
 }
 
 #[test]
-fn mul_sub() {
+fn mul_sub_relaxed() {
     let token_s = ScalarToken;
     if let Some(token_n) = <$native_token>::summon() {
         for ((ca, cb), cc) in super::F64_EDGE_A.chunks_exact(4)
@@ -2194,20 +2194,20 @@ fn mul_sub() {
             let an = generic::f64x4::<$native_token>::from_array_t(token_n, a);
             let bn = generic::f64x4::<$native_token>::from_array_t(token_n, b);
             let cn = generic::f64x4::<$native_token>::from_array_t(token_n, c);
-            let s = as_.mul_sub(bs, cs).to_array();
-            let n = an.mul_sub(bn, cn).to_array();
+            let s = as_.mul_sub_relaxed(bs, cs).to_array();
+            let n = an.mul_sub_relaxed(bn, cn).to_array();
             let expected_s: [f64; 4] = core::array::from_fn(|i|
                 a[i].mul_add_expected(b[i], -c[i], token_s));
             let expected_n: [f64; 4] = core::array::from_fn(|i|
                 a[i].mul_add_expected(b[i], -c[i], token_n));
-            super::assert_f64_exact(&s, &expected_s, "scalar f64x4::mul_sub", &a);
-            super::assert_f64_exact(&n, &expected_n, "native f64x4::mul_sub", &a);
+            super::assert_f64_exact(&s, &expected_s, "scalar f64x4::mul_sub_relaxed", &a);
+            super::assert_f64_exact(&n, &expected_n, "native f64x4::mul_sub_relaxed", &a);
         }
     }
 }
 
 #[test]
-fn mul_add_portable() {
+fn mul_add_fused() {
     let token_s = ScalarToken;
     if let Some(token_n) = <$native_token>::summon() {
         for ((ca, cb), cc) in super::F64_EDGE_A.chunks_exact(4)
@@ -2223,20 +2223,20 @@ fn mul_add_portable() {
             let an = generic::f64x4::<$native_token>::from_array_t(token_n, a);
             let bn = generic::f64x4::<$native_token>::from_array_t(token_n, b);
             let cn = generic::f64x4::<$native_token>::from_array_t(token_n, c);
-            let s = as_.mul_add_portable(bs, cs).to_array();
-            let n = an.mul_add_portable(bn, cn).to_array();
+            let s = as_.mul_add_fused(bs, cs).to_array();
+            let n = an.mul_add_fused(bn, cn).to_array();
             let expected_s: [f64; 4] = core::array::from_fn(|i|
                 a[i].fused_expected(b[i], c[i]));
             let expected_n: [f64; 4] = core::array::from_fn(|i|
                 a[i].fused_expected(b[i], c[i]));
-            super::assert_f64_exact(&s, &expected_s, "scalar f64x4::mul_add_portable", &a);
-            super::assert_f64_exact(&n, &expected_n, "native f64x4::mul_add_portable", &a);
+            super::assert_f64_exact(&s, &expected_s, "scalar f64x4::mul_add_fused", &a);
+            super::assert_f64_exact(&n, &expected_n, "native f64x4::mul_add_fused", &a);
         }
     }
 }
 
 #[test]
-fn mul_sub_portable() {
+fn mul_sub_fused() {
     let token_s = ScalarToken;
     if let Some(token_n) = <$native_token>::summon() {
         for ((ca, cb), cc) in super::F64_EDGE_A.chunks_exact(4)
@@ -2252,14 +2252,14 @@ fn mul_sub_portable() {
             let an = generic::f64x4::<$native_token>::from_array_t(token_n, a);
             let bn = generic::f64x4::<$native_token>::from_array_t(token_n, b);
             let cn = generic::f64x4::<$native_token>::from_array_t(token_n, c);
-            let s = as_.mul_sub_portable(bs, cs).to_array();
-            let n = an.mul_sub_portable(bn, cn).to_array();
+            let s = as_.mul_sub_fused(bs, cs).to_array();
+            let n = an.mul_sub_fused(bn, cn).to_array();
             let expected_s: [f64; 4] = core::array::from_fn(|i|
                 a[i].fused_expected(b[i], -c[i]));
             let expected_n: [f64; 4] = core::array::from_fn(|i|
                 a[i].fused_expected(b[i], -c[i]));
-            super::assert_f64_exact(&s, &expected_s, "scalar f64x4::mul_sub_portable", &a);
-            super::assert_f64_exact(&n, &expected_n, "native f64x4::mul_sub_portable", &a);
+            super::assert_f64_exact(&s, &expected_s, "scalar f64x4::mul_sub_fused", &a);
+            super::assert_f64_exact(&n, &expected_n, "native f64x4::mul_sub_fused", &a);
         }
     }
 }

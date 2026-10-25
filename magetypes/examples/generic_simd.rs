@@ -42,7 +42,7 @@ fn dot_product<T: F32x8Backend>(token: T, a: &[f32], b: &[f32]) -> f32 {
     for (ac, bc) in a.as_chunks::<8>().0.iter().zip(b.as_chunks::<8>().0) {
         let va = f32x8::<T>::load_t(token, ac);
         let vb = f32x8::<T>::load_t(token, bc);
-        acc = va.mul_add(vb, acc); // a*b + acc — single FMA on AVX2
+        acc = va.mul_add_relaxed(vb, acc); // a*b + acc — single FMA on AVX2
     }
 
     let mut total = acc.reduce_add();
@@ -60,7 +60,7 @@ fn euclidean_distance<T: F32x8Backend>(token: T, a: &[f32], b: &[f32]) -> f32 {
         let va = f32x8::<T>::load_t(token, ac);
         let vb = f32x8::<T>::load_t(token, bc);
         let diff = va - vb;
-        acc = diff.mul_add(diff, acc);
+        acc = diff.mul_add_relaxed(diff, acc);
     }
 
     let mut total = acc.reduce_add();
@@ -80,9 +80,9 @@ fn cosine_similarity<T: F32x8Backend>(token: T, a: &[f32], b: &[f32]) -> f32 {
     for (ac, bc) in a.as_chunks::<8>().0.iter().zip(b.as_chunks::<8>().0) {
         let va = f32x8::<T>::load_t(token, ac);
         let vb = f32x8::<T>::load_t(token, bc);
-        dot = va.mul_add(vb, dot);
-        norm_a = va.mul_add(va, norm_a);
-        norm_b = vb.mul_add(vb, norm_b);
+        dot = va.mul_add_relaxed(vb, dot);
+        norm_a = va.mul_add_relaxed(va, norm_a);
+        norm_b = vb.mul_add_relaxed(vb, norm_b);
     }
 
     let mut dot_sum = dot.reduce_add();
@@ -136,7 +136,7 @@ fn batch_normalize<T: F32x8Backend>(token: T, data: &mut [f32], eps: f32) {
     for chunk in data.as_chunks::<8>().0 {
         let v = f32x8::<T>::load_t(token, chunk);
         let diff = v - mean_v;
-        var_v = diff.mul_add(diff, var_v);
+        var_v = diff.mul_add_relaxed(diff, var_v);
     }
     let mut var = var_v.reduce_add();
     for &x in data.as_chunks::<8>().1 {

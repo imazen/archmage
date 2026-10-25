@@ -73,7 +73,7 @@ fn sum_of_squares_avx2(token: archmage::X64V3Token, data: &[f32]) -> f32 {
     for chunk in chunks {
         let arr: &[f32; 8] = chunk;
         let v = f32x8::load_t(token, arr);
-        acc = v.mul_add(v, acc); // v * v + acc using FMA - single vfmadd instruction!
+        acc = v.mul_add_relaxed(v, acc); // v * v + acc using FMA - single vfmadd instruction!
     }
 
     let mut sum = acc.reduce_add();
@@ -117,7 +117,7 @@ fn sum_of_squares_neon(token: archmage::NeonToken, data: &[f32]) -> f32 {
     for chunk in chunks {
         let arr: &[f32; 4] = chunk;
         let v = f32x4::load_t(token, arr);
-        acc = v.mul_add(v, acc);
+        acc = v.mul_add_relaxed(v, acc);
     }
 
     let mut sum = acc.reduce_add();
@@ -184,7 +184,7 @@ fn polynomial_eval_avx2(token: archmage::X64V3Token, data: &mut [f32], a: f32, b
         // a*x^2 + b*x + c using FMA chain - each mul_add is a single vfmadd instruction!
         // = x.mul_add(a*x + b, c)
         // = x.mul_add(x.mul_add(a, b), c)
-        let result = x.mul_add(x.mul_add(a_v, b_v), c_v);
+        let result = x.mul_add_relaxed(x.mul_add_relaxed(a_v, b_v), c_v);
 
         let out: &mut [f32; 8] = chunk;
         result.store(out);
@@ -210,7 +210,7 @@ fn polynomial_eval_neon(token: archmage::NeonToken, data: &mut [f32], a: f32, b:
     for chunk in chunks.as_chunks_mut::<4>().0 {
         let arr: &[f32; 4] = &*chunk;
         let x = f32x4::load_t(token, arr);
-        let result = x.mul_add(x.mul_add(a_v, b_v), c_v);
+        let result = x.mul_add_relaxed(x.mul_add_relaxed(a_v, b_v), c_v);
         let out: &mut [f32; 4] = chunk;
         result.store(out);
     }

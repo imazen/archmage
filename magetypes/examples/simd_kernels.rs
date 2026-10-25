@@ -101,15 +101,15 @@ mod x86_impl {
 
         let r0 = u0 + u1;
         let r2 = u0 - u1;
-        let r1 = u2.mul_add(
+        let r1 = u2.mul_add_relaxed(
             f32x8::splat_t(token, 0.541196100146197),
             u3 * f32x8::splat_t(token, 1.3065629648763764),
         );
-        let r3 = u2.mul_add(
+        let r3 = u2.mul_add_relaxed(
             f32x8::splat_t(token, 0.541196100146197),
             u3 * f32x8::splat_t(token, -1.3065629648763764),
         );
-        let r1 = r1.mul_add(sqrt2, r3);
+        let r1 = r1.mul_add_relaxed(sqrt2, r3);
 
         // Stage 3: Scaled second half
         let s4 = t4 * wc0;
@@ -125,17 +125,17 @@ mod x86_impl {
 
         let p0 = v0 + v1;
         let p2 = v0 - v1;
-        let p1 = v2.mul_add(
+        let p1 = v2.mul_add_relaxed(
             f32x8::splat_t(token, 0.541196100146197),
             v3 * f32x8::splat_t(token, 1.3065629648763764),
         );
-        let p3 = v2.mul_add(
+        let p3 = v2.mul_add_relaxed(
             f32x8::splat_t(token, 0.541196100146197),
             v3 * f32x8::splat_t(token, -1.3065629648763764),
         );
 
         // B<4> cumulative
-        let q0 = p0.mul_add(sqrt2, p1);
+        let q0 = p0.mul_add_relaxed(sqrt2, p1);
         let q1 = p1 + p2;
         let q2 = p2 + p3;
 
@@ -232,13 +232,19 @@ mod x86_impl {
         let kcr_b = f32x8::splat_t(token, -0.081312);
 
         // Y = 0.299*R + 0.587*G + 0.114*B
-        let y = r.mul_add(ky_r, g.mul_add(ky_g, b * ky_b));
+        let y = r.mul_add_relaxed(ky_r, g.mul_add_relaxed(ky_g, b * ky_b));
 
         // Cb = -0.169*R - 0.331*G + 0.5*B + 128
-        let cb = r.mul_add(kcb_r, g.mul_add(kcb_g, b.mul_add(kcb_b, offset)));
+        let cb = r.mul_add_relaxed(
+            kcb_r,
+            g.mul_add_relaxed(kcb_g, b.mul_add_relaxed(kcb_b, offset)),
+        );
 
         // Cr = 0.5*R - 0.419*G - 0.081*B + 128
-        let cr = r.mul_add(kcr_r, g.mul_add(kcr_g, b.mul_add(kcr_b, offset)));
+        let cr = r.mul_add_relaxed(
+            kcr_r,
+            g.mul_add_relaxed(kcr_g, b.mul_add_relaxed(kcr_b, offset)),
+        );
 
         (y, cb, cr)
     }
@@ -343,7 +349,7 @@ mod x86_impl {
         let x_042_approx = sqrt_sqrt_x * x_0125; // x^0.375 ≈ x^0.417
 
         let gamma_result = x_042_approx
-            .mul_add(gamma_scale, offset)
+            .mul_add_relaxed(gamma_scale, offset)
             .max(f32x8::zero_t(token))
             .min(one);
 

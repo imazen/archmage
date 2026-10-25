@@ -120,34 +120,69 @@ impl f32x1 {
     }
 
     /// Multiply-add: `self * b + c`, computed as a multiply then an add (two
-    /// roundings), like the scalar backend's vector `mul_add`.
+    /// roundings), like the scalar backend's vector `mul_add_relaxed`.
     ///
-    /// For one rounding, use [`mul_add_portable`](Self::mul_add_portable).
+    /// For one rounding, use [`mul_add_fused`](Self::mul_add_fused).
     #[inline(always)]
-    pub fn mul_add(self, b: Self, c: Self) -> Self {
+    pub fn mul_add_relaxed(self, b: Self, c: Self) -> Self {
         Self(self.0 * b.0 + c.0)
     }
 
     /// Multiply-subtract: `self * b - c`. Same contract as
-    /// [`mul_add`](Self::mul_add).
+    /// [`mul_add_relaxed`](Self::mul_add_relaxed).
     #[inline(always)]
-    pub fn mul_sub(self, b: Self, c: Self) -> Self {
+    pub fn mul_sub_relaxed(self, b: Self, c: Self) -> Self {
         Self(self.0 * b.0 - c.0)
     }
 
     /// Multiply-add with one rounding: `self * b + c`, the FMA instruction
-    /// where the CPU has one and correctly rounded software otherwise. NaN
-    /// payload/sign are unspecified.
+    /// where the build guarantees one and correctly rounded software
+    /// otherwise. NaN payload/sign are unspecified.
     #[inline(always)]
-    pub fn mul_add_portable(self, b: Self, c: Self) -> Self {
+    pub fn mul_add_fused(self, b: Self, c: Self) -> Self {
         Self(crate::nostd_math::fmaf(self.0, b.0, c.0))
     }
 
     /// Multiply-subtract with one rounding: `self * b - c`. Same contract as
-    /// [`mul_add_portable`](Self::mul_add_portable).
+    /// [`mul_add_fused`](Self::mul_add_fused).
+    #[inline(always)]
+    pub fn mul_sub_fused(self, b: Self, c: Self) -> Self {
+        Self(crate::nostd_math::fmaf(self.0, b.0, -c.0))
+    }
+
+    /// The same operation as [`mul_add_fused`](Self::mul_add_fused).
+    #[inline(always)]
+    pub fn mul_add_portable(self, b: Self, c: Self) -> Self {
+        self.mul_add_fused(b, c)
+    }
+
+    /// The same operation as [`mul_sub_fused`](Self::mul_sub_fused).
     #[inline(always)]
     pub fn mul_sub_portable(self, b: Self, c: Self) -> Self {
-        Self(crate::nostd_math::fmaf(self.0, b.0, -c.0))
+        self.mul_sub_fused(b, c)
+    }
+
+    /// Multiply-add as a multiply then an add. Deprecated so that the
+    /// rounding is an explicit choice: [`mul_add_relaxed`](Self::mul_add_relaxed)
+    /// keeps this behavior, [`mul_add_fused`](Self::mul_add_fused) rounds once.
+    #[deprecated(
+        since = "0.9.31",
+        note = "use mul_add_relaxed (today's behavior: multiply then add here) or mul_add_fused (one rounding); mul_add becomes the fused operation in magetypes 0.11"
+    )]
+    #[inline(always)]
+    pub fn mul_add(self, b: Self, c: Self) -> Self {
+        self.mul_add_relaxed(b, c)
+    }
+
+    /// Multiply-subtract as a multiply then a subtract. Deprecated like
+    /// [`mul_add`](Self::mul_add).
+    #[deprecated(
+        since = "0.9.31",
+        note = "use mul_sub_relaxed (today's behavior: multiply then subtract here) or mul_sub_fused (one rounding); mul_sub becomes the fused operation in magetypes 0.11"
+    )]
+    #[inline(always)]
+    pub fn mul_sub(self, b: Self, c: Self) -> Self {
+        self.mul_sub_relaxed(b, c)
     }
 }
 
@@ -255,20 +290,38 @@ impl f64x1 {
     }
 
     /// Multiply-add: `self * b + c`, computed as a multiply then an add (two
-    /// roundings), like the scalar backend's vector `mul_add`.
+    /// roundings), like the scalar backend's vector `mul_add_relaxed`.
     ///
-    /// For one rounding, use [`mul_add_portable`](Self::mul_add_portable).
+    /// For one rounding, use [`mul_add_fused`](Self::mul_add_fused).
     #[inline(always)]
-    pub fn mul_add(self, b: Self, c: Self) -> Self {
+    pub fn mul_add_relaxed(self, b: Self, c: Self) -> Self {
         Self(self.0 * b.0 + c.0)
     }
 
     /// Multiply-add with one rounding: `self * b + c`, the FMA instruction
-    /// where the CPU has one and correctly rounded software otherwise. NaN
-    /// payload/sign are unspecified.
+    /// where the build guarantees one or (x86_64 with std) the CPU has one,
+    /// correctly rounded software otherwise. NaN payload/sign are unspecified.
+    #[inline(always)]
+    pub fn mul_add_fused(self, b: Self, c: Self) -> Self {
+        Self(crate::nostd_math::fma(self.0, b.0, c.0))
+    }
+
+    /// The same operation as [`mul_add_fused`](Self::mul_add_fused).
     #[inline(always)]
     pub fn mul_add_portable(self, b: Self, c: Self) -> Self {
-        Self(crate::nostd_math::fma(self.0, b.0, c.0))
+        self.mul_add_fused(b, c)
+    }
+
+    /// Multiply-add as a multiply then an add. Deprecated so that the
+    /// rounding is an explicit choice: [`mul_add_relaxed`](Self::mul_add_relaxed)
+    /// keeps this behavior, [`mul_add_fused`](Self::mul_add_fused) rounds once.
+    #[deprecated(
+        since = "0.9.31",
+        note = "use mul_add_relaxed (today's behavior: multiply then add here) or mul_add_fused (one rounding); mul_add becomes the fused operation in magetypes 0.11"
+    )]
+    #[inline(always)]
+    pub fn mul_add(self, b: Self, c: Self) -> Self {
+        self.mul_add_relaxed(b, c)
     }
 }
 

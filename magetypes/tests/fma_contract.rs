@@ -39,8 +39,8 @@ macro_rules! check {
             let minus_z = magetypes::simd::generic::$ty::from_array_t($token, c.map(|v| -v));
             let add = x.mul_add_portable(y, z).to_array();
             let sub = x.mul_sub_portable(y, minus_z).to_array();
-            let fast_add = x.mul_add(y, z).to_array();
-            let fast_sub = x.mul_sub(y, minus_z).to_array();
+            let fast_add = x.mul_add_relaxed(y, z).to_array();
+            let fast_sub = x.mul_sub_relaxed(y, minus_z).to_array();
             for i in 0..$n {
                 let expected = $float::from_bits(rows[i][3]);
                 same!(add[i], expected);
@@ -83,13 +83,13 @@ fn scalar_and_software_contract() {
         use magetypes::simd::f32x1 as V;
         same!(V(a).mul_add_portable(V(b), V(c)).0, expected);
         same!(V(a).mul_sub_portable(V(b), V(-c)).0, expected);
-        same!(V(a).mul_add(V(b), V(c)).0, a * b + c);
+        same!(V(a).mul_add_relaxed(V(b), V(c)).0, a * b + c);
     }
     for [a, b, c, expected] in fixtures::F64.map(|row| row.map(f64::from_bits)) {
         same!(magetypes::nostd_math::fma(a, b, c), expected);
         use magetypes::simd::f64x1 as V;
         same!(V(a).mul_add_portable(V(b), V(c)).0, expected);
-        same!(V(a).mul_add(V(b), V(c)).0, a * b + c);
+        same!(V(a).mul_add_relaxed(V(b), V(c)).0, a * b + c);
     }
 }
 

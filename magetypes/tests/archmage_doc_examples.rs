@@ -284,7 +284,7 @@ mod rms_normalize {
 
         for chunk in data.as_chunks::<8>().0 {
             let v = f32x8::from_array_t(token, *chunk);
-            acc = v.mul_add(v, acc);
+            acc = v.mul_add_relaxed(v, acc);
         }
 
         let mut sum = acc.reduce_add();
@@ -446,7 +446,7 @@ mod dot_product {
         for (a_chunk, b_chunk) in a.as_chunks::<8>().0.iter().zip(b.as_chunks::<8>().0) {
             let va = f32x8::from_array_t(token, *a_chunk);
             let vb = f32x8::from_array_t(token, *b_chunk);
-            acc = va.mul_add(vb, acc);
+            acc = va.mul_add_relaxed(vb, acc);
         }
 
         let mut sum = acc.reduce_add();

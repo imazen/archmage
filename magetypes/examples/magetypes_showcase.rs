@@ -70,7 +70,7 @@ mod comparison {
         let va = f32x8::from_array_t(token, *a);
         let vb = f32x8::from_array_t(token, *b);
         let vc = f32x8::from_array_t(token, *c);
-        va.mul_add(vb, vc).to_array()
+        va.mul_add_relaxed(vb, vc).to_array()
     }
 }
 
@@ -322,7 +322,7 @@ mod batch_norm {
         for chunk in data.as_chunks_mut::<8>().0 {
             let x = f32x8::from_array_t(token, *chunk);
             // (x - mean) * inv_std + beta
-            let normalized = (x - mean_v).mul_add(inv_std, beta_v);
+            let normalized = (x - mean_v).mul_add_relaxed(inv_std, beta_v);
             normalized.store(chunk);
         }
 
@@ -371,7 +371,7 @@ mod layer_norm {
 
         for chunk in data.as_chunks_mut::<8>().0 {
             let x = f32x8::from_array_t(token, *chunk);
-            let normalized = (x - mean_v).mul_add(inv_std, beta_v);
+            let normalized = (x - mean_v).mul_add_relaxed(inv_std, beta_v);
             normalized.store(chunk);
         }
 
@@ -403,7 +403,7 @@ mod layer_norm {
         for chunk in data.as_chunks::<8>().0 {
             let v = f32x8::from_array_t(token, *chunk);
             let diff = v - mean_v;
-            sum_sq = diff.mul_add(diff, sum_sq);
+            sum_sq = diff.mul_add_relaxed(diff, sum_sq);
         }
 
         let mut total = sum_sq.reduce_add();
@@ -453,9 +453,9 @@ mod cosine_similarity {
             let va = f32x8::from_array_t(token, *a_chunk);
             let vb = f32x8::from_array_t(token, *b_chunk);
 
-            dot = va.mul_add(vb, dot);
-            norm_a = va.mul_add(va, norm_a);
-            norm_b = vb.mul_add(vb, norm_b);
+            dot = va.mul_add_relaxed(vb, dot);
+            norm_a = va.mul_add_relaxed(va, norm_a);
+            norm_b = vb.mul_add_relaxed(vb, norm_b);
         }
 
         let mut dot_sum = dot.reduce_add();

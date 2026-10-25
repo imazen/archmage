@@ -82,7 +82,7 @@ macro_rules! kernels {
             form!(stream_unfused, chain_unfused, $vec, $token, |x, y, z| x * y
                 + z);
             form!(stream_fast, chain_fast, $vec, $token, |x, y, z| x
-                .mul_add(y, z));
+                .mul_add_relaxed(y, z));
             form!(stream_portable, chain_portable, $vec, $token, |x, y, z| x
                 .mul_add_portable(y, z));
         }

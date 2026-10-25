@@ -120,6 +120,14 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 - Planned: make `w512` non-default in magetypes; users who need 512-bit types would add `features = ["w512"]`. This patch keeps the existing default features.
 - Remove `cast::Upcast` and `cast::Downcast`, and with them the `cast` module, which holds nothing else. Both are deprecated in 0.9.30 and were never implemented (b1b2ff67).
 
+#### Added
+
+- `mul_add_relaxed`/`mul_sub_relaxed` (backend-dependent rounding, the previous `mul_add`/`mul_sub` behavior) and `mul_add_fused`/`mul_sub_fused` (one rounding everywhere, the same operation as `mul_add_portable`/`mul_sub_portable`, which stay) on every float vector type and on `f32x1`/`f64x1` (#138).
+
+#### Deprecated
+
+- `mul_add`/`mul_sub`, so that backend-dependent rounding is an explicit choice: use `mul_add_relaxed` for the previous behavior or `mul_add_fused` for one rounding. In 0.11 they return as the fused operations (queued above) (#138).
+
 #### Changed
 
 - The runtime-checked f64 hardware path takes two lanes per call, operands and results in registers: f64x2 0.36–0.53×, f64x4 streams 0.62–0.67×, f64x8 0.75–0.84× the previous time on a Core Ultra 7 265K; single lanes, f64x4 chains and V3 callers unchanged (647f2d3d).

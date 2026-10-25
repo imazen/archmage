@@ -242,7 +242,7 @@ mod operators {
         let b = f32x8::<T>::splat_t(token, 3.0);
         let c = f32x8::<T>::splat_t(token, 1.0);
 
-        let result = a.mul_add(b, c);
+        let result = a.mul_add_relaxed(b, c);
         assert_eq!(result.to_array(), [7.0; 8]);
     }
 
@@ -949,7 +949,7 @@ mod isa_quirks {
             let y = $ty::splat_t(token, 1.0 - f32::EPSILON);
             let z = $ty::splat_t(token, -1.0);
             let expected = (1.0 + f32::EPSILON).mul_add_expected(1.0 - f32::EPSILON, -1.0, token);
-            assert_eq!(x.mul_add(y, z).to_array(), [expected; $lanes]);
+            assert_eq!(x.mul_add_relaxed(y, z).to_array(), [expected; $lanes]);
             // One rounding keeps the exact -2^-46 on every backend. Built from
             // bits: Miri perturbs powi by design.
             assert_eq!(

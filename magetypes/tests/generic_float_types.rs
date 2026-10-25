@@ -83,7 +83,7 @@ fn f32x4_mul_add() {
         let a = f32x4::from_array_t(t, [1.0, 2.0, 3.0, 4.0]);
         let b = f32x4::from_array_t(t, [5.0, 6.0, 7.0, 8.0]);
         let c = f32x4::from_array_t(t, [10.0, 20.0, 30.0, 40.0]);
-        let r = a.mul_add(b, c);
+        let r = a.mul_add_relaxed(b, c);
         assert_eq!(r.to_array(), [15.0, 32.0, 51.0, 72.0]);
     }
 }
@@ -219,7 +219,7 @@ fn f64x2_mul_add() {
         let a = f64x2::from_array_t(t, [1.0, 2.0]);
         let b = f64x2::from_array_t(t, [3.0, 4.0]);
         let c = f64x2::from_array_t(t, [10.0, 20.0]);
-        assert_eq!(a.mul_add(b, c).to_array(), [13.0, 28.0]);
+        assert_eq!(a.mul_add_relaxed(b, c).to_array(), [13.0, 28.0]);
     }
 }
 
@@ -322,7 +322,7 @@ fn f64x4_mul_add() {
         let a = f64x4::from_array_t(t, [1.0, 2.0, 3.0, 4.0]);
         let b = f64x4::from_array_t(t, [5.0, 6.0, 7.0, 8.0]);
         let c = f64x4::from_array_t(t, [10.0, 20.0, 30.0, 40.0]);
-        assert_eq!(a.mul_add(b, c).to_array(), [15.0, 32.0, 51.0, 72.0]);
+        assert_eq!(a.mul_add_relaxed(b, c).to_array(), [15.0, 32.0, 51.0, 72.0]);
     }
 }
 

@@ -59,7 +59,7 @@ mod x86_impl {
                 let vals = f32x8::load_t(token, input_arr);
                 let weight = f32x8::splat_t(token, w);
                 // acc += vals * weight
-                acc = vals.mul_add(weight, acc);
+                acc = vals.mul_add_relaxed(weight, acc);
             }
 
             let out_arr: &mut [f32; 8] = (&mut output[chunk_start..chunk_start + 8])

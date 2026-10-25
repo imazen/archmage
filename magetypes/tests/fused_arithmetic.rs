@@ -276,8 +276,8 @@ macro_rules! check {
             let a = magetypes::simd::generic::$ty::from_array_t($token, cases.map(|v| v[0]));
             let b = magetypes::simd::generic::$ty::from_array_t($token, cases.map(|v| v[1]));
             let c = magetypes::simd::generic::$ty::from_array_t($token, cases.map(|v| v[2]));
-            let add = a.mul_add(b, c).to_array();
-            let sub = a.mul_sub(b, c).to_array();
+            let add = a.mul_add_relaxed(b, c).to_array();
+            let sub = a.mul_sub_relaxed(b, c).to_array();
             let add_portable = a.mul_add_portable(b, c).to_array();
             let sub_portable = a.mul_sub_portable(b, c).to_array();
             for i in 0..$n {
@@ -326,8 +326,8 @@ fn rounding_contract_across_widths_and_tokens() {
     for &[x, y, z] in &a {
         use magetypes::simd::f32x1 as V;
         let s = |v| V::splat_t(ScalarToken, v);
-        same32(s(x).mul_add(s(y), s(z)).to_array()[0], x * y + z);
-        same32(s(x).mul_sub(s(y), s(z)).to_array()[0], x * y - z);
+        same32(s(x).mul_add_relaxed(s(y), s(z)).to_array()[0], x * y + z);
+        same32(s(x).mul_sub_relaxed(s(y), s(z)).to_array()[0], x * y - z);
         same32(
             s(x).mul_add_portable(s(y), s(z)).to_array()[0],
             x.fused_expected(y, z),
@@ -340,7 +340,7 @@ fn rounding_contract_across_widths_and_tokens() {
     for &[x, y, z] in &b {
         use magetypes::simd::f64x1 as V;
         let s = |v| V::splat_t(ScalarToken, v);
-        same64(s(x).mul_add(s(y), s(z)).to_array()[0], x * y + z);
+        same64(s(x).mul_add_relaxed(s(y), s(z)).to_array()[0], x * y + z);
         same64(
             s(x).mul_add_portable(s(y), s(z)).to_array()[0],
             x.fused_expected(y, z),
@@ -424,5 +424,71 @@ fn relaxed_engine_projection() {
     if let Ok(expected) = std::env::var("ARCHMAGE_EXPECT_RELAXED_FUSION") {
         assert!(matches!(expected.as_str(), "yes" | "no"));
         assert_eq!((x != 0, y != 0), (expected == "yes", expected == "yes"));
+    }
+}
+
+/// The deprecated `mul_add`/`mul_sub` forward to `_relaxed`, and `_portable`
+/// is the same operation as `_fused`, on vector and one-lane types.
+#[test]
+#[allow(deprecated)]
+fn renamed_multiply_add_forwards() {
+    use magetypes::simd::generic::{f32x8, f64x4};
+    let t = ScalarToken;
+    for [a, b, c] in cases32()
+        .as_chunks::<8>()
+        .0
+        .iter()
+        .map(|rows| [0, 1, 2].map(|k| core::array::from_fn::<f32, 8, _>(|i| rows[i][k])))
+    {
+        let (x, y, z) = (
+            f32x8::from_array_t(t, a),
+            f32x8::from_array_t(t, b),
+            f32x8::from_array_t(t, c),
+        );
+        let same = |p: f32x8<ScalarToken>, q: f32x8<ScalarToken>| {
+            for (p, q) in p.to_array().iter().zip(q.to_array()) {
+                same32(*p, q);
+            }
+        };
+        same(x.mul_add(y, z), x.mul_add_relaxed(y, z));
+        same(x.mul_sub(y, z), x.mul_sub_relaxed(y, z));
+        same(x.mul_add_portable(y, z), x.mul_add_fused(y, z));
+        same(x.mul_sub_portable(y, z), x.mul_sub_fused(y, z));
+        let (p, q, r) = (
+            magetypes::simd::f32x1(a[0]),
+            magetypes::simd::f32x1(b[0]),
+            magetypes::simd::f32x1(c[0]),
+        );
+        same32(p.mul_add(q, r).0, p.mul_add_relaxed(q, r).0);
+        same32(p.mul_sub(q, r).0, p.mul_sub_relaxed(q, r).0);
+        same32(p.mul_add_portable(q, r).0, p.mul_add_fused(q, r).0);
+    }
+    for [a, b, c] in cases64()
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|rows| [0, 1, 2].map(|k| core::array::from_fn::<f64, 4, _>(|i| rows[i][k])))
+    {
+        let (x, y, z) = (
+            f64x4::from_array_t(t, a),
+            f64x4::from_array_t(t, b),
+            f64x4::from_array_t(t, c),
+        );
+        let same = |p: f64x4<ScalarToken>, q: f64x4<ScalarToken>| {
+            for (p, q) in p.to_array().iter().zip(q.to_array()) {
+                same64(*p, q);
+            }
+        };
+        same(x.mul_add(y, z), x.mul_add_relaxed(y, z));
+        same(x.mul_sub(y, z), x.mul_sub_relaxed(y, z));
+        same(x.mul_add_portable(y, z), x.mul_add_fused(y, z));
+        same(x.mul_sub_portable(y, z), x.mul_sub_fused(y, z));
+        let (p, q, r) = (
+            magetypes::simd::f64x1(a[0]),
+            magetypes::simd::f64x1(b[0]),
+            magetypes::simd::f64x1(c[0]),
+        );
+        same64(p.mul_add(q, r).0, p.mul_add_relaxed(q, r).0);
+        same64(p.mul_add_portable(q, r).0, p.mul_add_fused(q, r).0);
     }
 }

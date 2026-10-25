@@ -161,9 +161,9 @@ fn mul_add_mul_sub() {
         let c = f32x8::<X64V3Token>::splat_t(token, 1.0);
 
         // a * b + c = 2*3+1 = 7
-        assert_eq!(a.mul_add(b, c).to_array(), [7.0; 8]);
+        assert_eq!(a.mul_add_relaxed(b, c).to_array(), [7.0; 8]);
         // a * b - c = 2*3-1 = 5
-        assert_eq!(a.mul_sub(b, c).to_array(), [5.0; 8]);
+        assert_eq!(a.mul_sub_relaxed(b, c).to_array(), [5.0; 8]);
     }
 }
 
@@ -428,8 +428,8 @@ fn scalar_math() {
     let a = f32x8::<ScalarToken>::splat_t(token, 2.0);
     let b = f32x8::<ScalarToken>::splat_t(token, 3.0);
     let c = f32x8::<ScalarToken>::splat_t(token, 1.0);
-    assert_eq!(a.mul_add(b, c).to_array(), [7.0; 8]);
-    assert_eq!(a.mul_sub(b, c).to_array(), [5.0; 8]);
+    assert_eq!(a.mul_add_relaxed(b, c).to_array(), [7.0; 8]);
+    assert_eq!(a.mul_sub_relaxed(b, c).to_array(), [5.0; 8]);
 }
 
 #[test]

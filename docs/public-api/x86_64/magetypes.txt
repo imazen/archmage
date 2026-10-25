@@ -6,14 +6,14 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2672 lines (supported surface) | magetypes.features.txt 96 added (features: avx512,std,w512) | magetypes.internal.txt 36 lines (48 hidden + 0 excluded-feature)
+# files: magetypes.txt 2676 lines (supported surface) | magetypes.features.txt 96 added (features: avx512,std,w512) | magetypes.internal.txt 36 lines (48 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                12
 #   pub types (struct/enum/trait/alias)       377
 #   pub consts/statics                        228
-#   free functions                           3826
+#   free functions                           3886
 #   inherent methods                         1251
 #   enum variants                               1
 #   re-exports                                  2
@@ -25,10 +25,10 @@
 # per-module pub lines:
 #   (root)                          321
 #   cast                              3
-#   prelude                        3674
-#   simd                           1699
+#   prelude                        3722
+#   simd                           1711
 
-## items (2448 lines)
+## items (2452 lines)
 
 pub mod magetypes
 pub use archmage
@@ -2181,9 +2181,13 @@ pub fn simd::f32x1::load_t(archmage::tokens::ScalarToken, &[f32; 1]) -> Self [al
 pub fn simd::f32x1::max(self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>, simd::f32x1]
 pub fn simd::f32x1::min(self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, prelude::i16x16<T>, prelude::i16x32<T>, prelude::i16x8<T>, prelude::i32x16<T>, prelude::i32x4<T>, prelude::i32x8<T>, prelude::i64x2<T>, prelude::i64x4<T>, prelude::i64x8<T>, prelude::i8x16<T>, prelude::i8x32<T>, prelude::i8x64<T>, prelude::u16x16<T>, prelude::u16x32<T>, prelude::u16x8<T>, prelude::u32x16<T>, prelude::u32x4<T>, prelude::u32x8<T>, prelude::u64x2<T>, prelude::u64x4<T>, prelude::u64x8<T>, prelude::u8x16<T>, prelude::u8x32<T>, prelude::u8x64<T>, simd::f32x1]
 pub fn simd::f32x1::mul_add(self, Self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1, simd::f64x1]
+pub fn simd::f32x1::mul_add_fused(self, Self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1, simd::f64x1]
 pub fn simd::f32x1::mul_add_portable(self, Self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1, simd::f64x1]
+pub fn simd::f32x1::mul_add_relaxed(self, Self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1, simd::f64x1]
 pub fn simd::f32x1::mul_sub(self, Self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1]
+pub fn simd::f32x1::mul_sub_fused(self, Self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1]
 pub fn simd::f32x1::mul_sub_portable(self, Self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1]
+pub fn simd::f32x1::mul_sub_relaxed(self, Self, Self) -> Self [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, prelude::f64x2<T>, prelude::f64x4<T>, prelude::f64x8<T>, simd::f32x1]
 pub fn simd::f32x1::reduce_add(self) -> f32 [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, simd::f32x1]
 pub fn simd::f32x1::reduce_max(self) -> f32 [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, simd::f32x1]
 pub fn simd::f32x1::reduce_min(self) -> f32 [also: prelude::f32x16<T>, prelude::f32x4<T>, prelude::f32x8<T>, simd::f32x1]
