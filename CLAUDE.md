@@ -1236,8 +1236,12 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
   i265 (Arrow Lake) and r7900x (Zen 4) reruns agree: global V3 and native
   vectors unchanged; baseline f64 4.2–7.1×, scalar f64 inside V3 6.3–7.4×.
   The vectorizable software path (`06291ec2`) cut main's time to 0.14–0.70×
-  for vector shapes; against 0.9.30, baseline f32 vectors are now faster
-  (0.48–0.58×) while f64 still takes 2.3–6.3× and f32x1 chains about 2×
+  for vector shapes. With the f64 runtime check (`eae93cb0`), r7900x against
+  0.9.30: baseline f32 vectors 0.48–0.58×, f64 inside V3 0.27–0.30×, f64x4
+  streams 0.90×; still slower: f32x1 chains 1.97×, f32x8 chains inside a V3
+  function 1.94× (f32 has no runtime check; per-call hardware paths lost in
+  baseline builds), f64x1 streams and f64x4 chains 1.20× (measured before
+  the pair calls, `647f2d3d`, which left chains unchanged)
   ([report](benchmarks/soft_fma_simd_2026-10-24.md)). ARM not rerun.
 
 
