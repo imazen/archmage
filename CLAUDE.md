@@ -716,6 +716,12 @@ CI checks (all must pass):
 15. **ARM64 cross-compilation + tests** (requires `cross` + Docker)
 16. **WASM cross-compilation + tests** (requires `wasmtime` + `wasm32-wasip1` target)
 17. **ARM64 clippy** (requires `cross` + Docker)
+18. **Consumer codegen vs `origin/main`** — `xtask/codegen.py` compares
+    optimized code for about 1,600 probes per ISA (x86_64, AArch64, WASM),
+    including `mul_add_portable` in plain and V3 callers; any difference
+    without a reviewed exception fails. CI runs it only for pull requests,
+    so `just ci` runs it for work pushed straight to main (`just codegen-diff`
+    alone).
 
 **Note:** Parity check reports 0 issues. All W128 types have identical APIs across x86/ARM/WASM.
 

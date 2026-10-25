@@ -2420,7 +2420,7 @@ fn run_ci() -> Result<()> {
     let mut timer = StepTimer::default();
 
     // Step 1: Generate all code
-    timer.begin("Step 1/18: Regenerating code");
+    timer.begin("Step 1/19: Regenerating code");
     generate_all()?;
     println!("└─ Code generation complete ─────────────────────────────────────────┘\n");
 
@@ -2438,7 +2438,7 @@ fn run_ci() -> Result<()> {
     println!("└─ Formatting check complete ─────────────────────────────────────────┘\n");
 
     // Step 2: Check for clean worktree
-    timer.begin("Step 2/18: Checking for uncommitted changes");
+    timer.begin("Step 2/19: Checking for uncommitted changes");
     let status = std::process::Command::new("git")
         .args(["status", "--porcelain"])
         .output()
@@ -2461,24 +2461,24 @@ fn run_ci() -> Result<()> {
     let miri = BackgroundStep::miri();
 
     // Step 3: Intrinsic soundness verification (structure-aware scanner)
-    timer.begin("Step 3/18: Verifying intrinsic soundness");
+    timer.begin("Step 3/19: Verifying intrinsic soundness");
     let reg = registry::Registry::load(&PathBuf::from("token-registry.toml"))?;
     soundness::verify(&reg)?;
     println!("└─ Soundness verification passed ────────────────────────────────────┘\n");
 
-    timer.begin("Step 4/18: Validating tokens, delegation, budgets, licenses");
+    timer.begin("Step 4/19: Validating tokens, delegation, budgets, licenses");
     validate_after_soundness(&reg)?;
     println!("└─ Validation passed ───────────────────────────────────────────────┘\n");
 
     // Step 5: Parity check (strict mode - fails on any issues)
-    timer.begin("Step 5/18: Checking API parity (strict)");
+    timer.begin("Step 5/19: Checking API parity (strict)");
     check_api_parity(true)?;
     println!("└─ Parity check passed ──────────────────────────────────────────────┘\n");
 
     // Step 6: xtask self-tests — the soundness scanner's own regression
     // tests (planted violations must fail, gated code must pass) plus the
     // registry tests. Without this step a rotted checker passes silently.
-    timer.begin("Step 6/18: Testing the verifiers (cargo test -p xtask)");
+    timer.begin("Step 6/19: Testing the verifiers (cargo test -p xtask)");
     let xtask_tests = std::process::Command::new("cargo")
         .args(["test", "-p", "xtask"])
         .status()
@@ -2498,7 +2498,7 @@ fn run_ci() -> Result<()> {
     );
 
     // Step 7: Clippy
-    timer.begin("Step 7/18: Running clippy");
+    timer.begin("Step 7/19: Running clippy");
     let clippy = std::process::Command::new("cargo")
         .args(["clippy", "--features", "std avx512", "--", "-D", "warnings"])
         .status()
@@ -2510,7 +2510,7 @@ fn run_ci() -> Result<()> {
     println!("└─ Clippy check passed ──────────────────────────────────────────────┘\n");
 
     // Step 8: Clippy with default features (catches warnings hidden by avx512)
-    timer.begin("Step 8/18: Running clippy (default features)");
+    timer.begin("Step 8/19: Running clippy (default features)");
     let clippy_default = std::process::Command::new("cargo")
         .args(["clippy", "-p", "magetypes", "--", "-D", "warnings"])
         .status()
@@ -2558,7 +2558,7 @@ fn run_ci() -> Result<()> {
     }
 
     // Step 9: Tests
-    timer.begin("Step 9/18: Running tests");
+    timer.begin("Step 9/19: Running tests");
     let tests = std::process::Command::new("cargo")
         .args(["test", "--features", "std avx512"])
         .status()
@@ -2569,14 +2569,14 @@ fn run_ci() -> Result<()> {
     println!("└─ All tests passed ─────────────────────────────────────────────────┘\n");
 
     // Step 10: no_std compilation and tests
-    timer.begin("Step 10/18: no_std compilation + tests");
+    timer.begin("Step 10/19: no_std compilation + tests");
     if let Some(elapsed) = nostd.finish()? {
         timer.record("no_std (ran concurrently with Steps 7-9)", elapsed);
     }
     println!("└─ no_std checks passed ───────────────────────────────────────────────┘\n");
 
     // Step 11: No-features integration test (catches silent cfg elimination)
-    timer.begin("Step 11/18: No-features integration test");
+    timer.begin("Step 11/19: No-features integration test");
     let no_features = std::process::Command::new("cargo")
         .args(["test", "-p", "archmage-no-features-test"])
         .status()
@@ -2593,7 +2593,7 @@ fn run_ci() -> Result<()> {
     println!("└─ No-features test passed ──────────────────────────────────────────┘\n");
 
     // Step 12: Format check
-    timer.begin("Step 12/18: Checking code formatting");
+    timer.begin("Step 12/19: Checking code formatting");
     let fmt = std::process::Command::new("cargo")
         .args(["fmt", "--", "--check"])
         .status()
@@ -2607,7 +2607,7 @@ fn run_ci() -> Result<()> {
     // Step 13: Public-API snapshot check (mirrors CI's "Public API Check" job).
     // The runner lives in the workspace-excluded apidoc/ package; check mode
     // fails if docs/public-api/ is stale instead of regenerating it.
-    timer.begin("Step 13/18: Checking public-API snapshots");
+    timer.begin("Step 13/19: Checking public-API snapshots");
     let apidoc = std::process::Command::new("cargo")
         .args(["test", "--manifest-path", "apidoc/Cargo.toml"])
         .env("ZEN_API_DOC", "check")
@@ -2623,7 +2623,7 @@ fn run_ci() -> Result<()> {
     println!("└─ Public-API snapshot check passed ─────────────────────────────────┘\n");
 
     // Step 14: Documentation build (catches broken doc links)
-    timer.begin("Step 14/18: Building documentation");
+    timer.begin("Step 14/19: Building documentation");
     let doc = std::process::Command::new("cargo")
         .args(["doc", "--features", "std avx512", "--no-deps"])
         .env("RUSTDOCFLAGS", "-Dwarnings")
@@ -2636,14 +2636,14 @@ fn run_ci() -> Result<()> {
     println!("└─ Documentation check passed ─────────────────────────────────────────┘\n");
 
     // Step 13: Miri testing (UB detection)
-    timer.begin("Step 15/18: Running Miri (UB detection)");
+    timer.begin("Step 15/19: Running Miri (UB detection)");
     if let Some(elapsed) = miri.finish()? {
         timer.record("Miri (ran concurrently with Steps 3-14)", elapsed);
     }
     println!("└─ Miri check complete ──────────────────────────────────────────────┘\n");
 
     // Step 14: ARM64 cross-compilation + tests
-    timer.begin("Step 16/18: ARM64 cross-compilation + tests");
+    timer.begin("Step 16/19: ARM64 cross-compilation + tests");
     let cross_ok = std::process::Command::new("cross")
         .arg("--version")
         .output()
@@ -2686,7 +2686,7 @@ fn run_ci() -> Result<()> {
     println!("└─ ARM64 cross-compilation complete ───────────────────────────────┘\n");
 
     // Step 15: WASM cross-compilation + tests
-    timer.begin("Step 17/18: WASM cross-compilation + tests");
+    timer.begin("Step 17/19: WASM cross-compilation + tests");
     let wasmtime_ok = std::process::Command::new("wasmtime")
         .arg("--version")
         .output()
@@ -2731,7 +2731,7 @@ fn run_ci() -> Result<()> {
     println!("└─ WASM cross-compilation complete ───────────────────────────────┘\n");
 
     // Step 16: ARM64 clippy
-    timer.begin("Step 18/18: ARM64 clippy");
+    timer.begin("Step 18/19: ARM64 clippy");
     if cross_ok && docker_ok {
         let arm_clippy = std::process::Command::new("cargo")
             .args([
@@ -2754,6 +2754,38 @@ fn run_ci() -> Result<()> {
         println!("  ⚠ ARM64 clippy skipped (requires cross tooling — see Step 11)");
     }
     println!("└─ ARM64 clippy complete ─────────────────────────────────────────┘\n");
+
+    // Step 19: optimized consumer codegen against the last pushed main, on
+    // x86_64, AArch64 and WASM. CI runs xtask/codegen.py only for pull
+    // requests; work pushed straight to main is compared here instead.
+    timer.begin("Step 19/19: Comparing consumer codegen with origin/main");
+    let rev = |r: &str| -> Result<String> {
+        let out = std::process::Command::new("git")
+            .args(["rev-parse", r])
+            .output()
+            .with_context(|| format!("Failed to resolve {r}"))?;
+        if !out.status.success() {
+            bail!("git rev-parse {r} failed; fetch origin first (jj git fetch)");
+        }
+        Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+    };
+    let (base, head) = (rev("origin/main")?, rev("HEAD")?);
+    if base == head {
+        println!("  ✓ HEAD is origin/main; nothing to compare");
+    } else {
+        let codegen = std::process::Command::new("python3")
+            .args(["xtask/codegen.py", &base, &head])
+            .status()
+            .context("Failed to run xtask/codegen.py")?;
+        if !codegen.success() {
+            bail!(
+                "Consumer codegen differs from origin/main without a reviewed exception \
+                 (xtask/codegen.py); inspect the printed instructions"
+            );
+        }
+        println!("  ✓ Codegen matches origin/main or differs only as reviewed");
+    }
+    println!("└─ Codegen comparison complete ────────────────────────────────────┘\n");
 
     timer.finish();
     println!("╔══════════════════════════════════════════════════════════════════╗");
