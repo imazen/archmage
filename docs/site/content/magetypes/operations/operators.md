@@ -12,8 +12,7 @@ in [gain](@/magetypes/examples/generic-kernels.md) and
 | Arithmetic | `a + b`, `a - b`, `a * b`, `a / b`, `-a` | Availability depends on element type |
 | Assignment | `+=`, `-=`, `*=` | Same vector semantics |
 | Multiply-add | `a.mul_add_relaxed(b, c)`, `a.mul_sub_relaxed(b, c)` | One rounding where the hardware fuses (x86 v3/v4, NEON), two on the scalar backend and strict WASM; relaxed WASM follows the engine |
-| Fused multiply-add | `a.mul_add_fused(b, c)`, `a.mul_sub_fused(b, c)` | One rounding on every backend, like `f32::mul_add`; software where the hardware cannot fuse. `mul_add_portable` is the same operation; `mul_add`/`mul_sub` are deprecated and become fused in 0.11 |
-| Fused multiply-add | `a.mul_add_portable(b, c)`, `a.mul_sub_portable(b, c)` | One rounding on every backend; software on the scalar backend and WASM, several times slower than `a * b + c` there |
+| Fused multiply-add | `a.mul_add_fused(b, c)`, `a.mul_sub_fused(b, c)` | One rounding on every backend, like `f32::mul_add`. Software on the scalar backend without FMA and on strict WASM, several times slower than `a * b + c` there; relaxed WASM uses the engine's madd when it fuses. `mul_add_portable`/`mul_sub_portable` are the same operation; `mul_add`/`mul_sub` are deprecated and become fused in 0.11 |
 | Comparisons | `simd_eq`, `simd_ne`, `simd_lt`, `simd_le`, `simd_gt`, `simd_ge` | Produce vector lane masks, not Rust scalar booleans |
 | Selection | `f32x8::blend(mask, yes, no)` | Use comparison-generated canonical masks |
 | Min/max | `min`, `max` | NaN and signed-zero behavior needs the ISA contract |

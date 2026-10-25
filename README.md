@@ -232,10 +232,10 @@ lists every `unsafe` in both crates.
 - With the `avx512` feature, AVX-512 tokens also support the 128- and
   256-bit float and integer types. These narrower backend, conversion and
   bitcast implementations delegate to V3; 512-bit types use AVX-512.
-- Some floating-point results differ between backends. `mul_add` rounds once
-  where the hardware fuses (x86 v3/v4, NEON) and twice on the scalar backend and
-  strict WASM; `mul_add_portable` rounds once everywhere, in software where
-  needed. [ISA quirks and fixups](https://imazen.github.io/archmage/magetypes/isa-quirks/)
+- Some floating-point results differ between backends. `mul_add_relaxed`
+  rounds once where the hardware fuses (x86 v3/v4, NEON) and twice on the scalar
+  backend and strict WASM; `mul_add_fused` rounds once everywhere, in software
+  where needed. `mul_add` is deprecated and becomes the fused form in 0.11. [ISA quirks and fixups](https://imazen.github.io/archmage/magetypes/isa-quirks/)
   lists every difference, and
   [Transcendentals](https://imazen.github.io/archmage/magetypes/math/transcendentals/)
   gives each function's domain and precision.

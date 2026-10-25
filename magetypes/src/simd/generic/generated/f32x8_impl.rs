@@ -292,8 +292,10 @@ impl<T: F32x8Backend> f32x8<T> {
     /// with std also when a cached runtime check finds it. Otherwise it
     /// fuses in software, as WASM does: f32 through one f64 rounding, f64
     /// through a double-double product, each with an exact path for rare
-    /// lanes. The result is the same either way. WASM fuses in software
-    /// even with relaxed SIMD, because relaxed madd may round twice.
+    /// lanes. The result is the same either way. Relaxed-SIMD WASM uses
+    /// the engine's relaxed madd when a cached probe shows it rounds
+    /// once (the specification fixes that choice per engine), and
+    /// software otherwise.
     #[inline(always)]
     pub fn mul_add_fused(self, a: Self, b: Self) -> Self {
         Self(T::mul_add_portable(self.1, self.0, a.0, b.0), self.1)

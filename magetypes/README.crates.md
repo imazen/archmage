@@ -239,10 +239,10 @@ has the details.
 - Transcendentals are approximations with documented error:
   [Transcendentals](https://imazen.github.io/archmage/magetypes/math/transcendentals/)
   gives each function's domain and precision.
-- Some floating-point results differ between backends. `mul_add` rounds once
-  where the hardware fuses (x86 v3/v4, NEON) and twice on the scalar backend and
-  strict WASM; `mul_add_portable` rounds once everywhere, in software where
-  needed. [ISA quirks and fixups](https://imazen.github.io/archmage/magetypes/isa-quirks/)
+- Some floating-point results differ between backends. `mul_add_relaxed`
+  rounds once where the hardware fuses (x86 v3/v4, NEON) and twice on the scalar
+  backend and strict WASM; `mul_add_fused` rounds once everywhere, in software
+  where needed. `mul_add` is deprecated and becomes the fused form in 0.11. [ISA quirks and fixups](https://imazen.github.io/archmage/magetypes/isa-quirks/)
   lists every difference.
 
 ## License

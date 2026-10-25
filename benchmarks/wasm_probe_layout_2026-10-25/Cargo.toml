@@ -1,0 +1,20 @@
+# Standalone: not a workspace member. Build and run from this directory:
+#   RUSTFLAGS="-C target-feature=+simd128,+relaxed-simd" \
+#     cargo build --release --target wasm32-wasip1
+#   wasmtime run target/wasm32-wasip1/release/probe_layout.wasm
+#   wasmtime run -C cranelift-has-fma=false target/wasm32-wasip1/release/probe_layout.wasm
+[package]
+name = "probe_layout"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+magetypes = { path = "../../magetypes" }
+archmage = { path = "../.." }
+
+[profile.release]
+opt-level = 3
+codegen-units = 1

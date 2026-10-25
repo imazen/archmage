@@ -1,0 +1,61 @@
+# 2026-10-25T08:51:03Z dev (Ryzen 9 9950X3D), wasmtime 40.0.1 (918e5dc77 2026-01-07), archmage working copy lqurtpkupukm
+=== wasmtime run 
+probe fuses: true
+chain (1024 dependent steps)
+  plain                 1115 ns   1.00x plain
+  madd                   724 ns   0.65x plain
+  soft                  9891 ns   8.87x plain
+  probe_inline          2467 ns   2.21x plain
+  probe_outline         2515 ns   2.26x plain
+  probe_cold            2559 ns   2.29x plain
+  one_cold               761 ns   0.68x plain
+  check_nocall           756 ns   0.68x plain
+  nocall_full            762 ns   0.68x plain
+  magetypes_fused        762 ns   0.68x plain
+  f64_plain_k           1132 ns   1.02x plain
+  f64_madd_k             724 ns   0.65x plain
+  f64_magetypes_fused      1739 ns   1.56x plain
+stream (1024 vectors)
+  plain                  595 ns   1.00x plain
+  madd                   595 ns   1.00x plain
+  soft                  5929 ns   9.96x plain
+  probe_inline          1756 ns   2.95x plain
+  probe_outline         1399 ns   2.35x plain
+  probe_cold            1348 ns   2.26x plain
+  one_cold              1246 ns   2.09x plain
+  check_nocall           748 ns   1.26x plain
+  nocall_full            884 ns   1.49x plain
+  magetypes_fused        861 ns   1.45x plain
+  f64_plain_k            595 ns   1.00x plain
+  f64_madd_k             594 ns   1.00x plain
+  f64_magetypes_fused      1230 ns   2.07x plain
+=== wasmtime run -C cranelift-has-fma=false
+probe fuses: false
+chain (1024 dependent steps)
+  plain                 1112 ns   1.00x plain
+  madd                  1112 ns   1.00x plain
+  soft                  9869 ns   8.87x plain
+  probe_inline         11504 ns  10.34x plain
+  probe_outline        13212 ns  11.88x plain
+  probe_cold           13202 ns  11.87x plain
+  one_cold             13201 ns  11.87x plain
+  check_nocall          1111 ns   1.00x plain
+  nocall_full           9866 ns   8.87x plain
+  magetypes_fused       9857 ns   8.86x plain
+  f64_plain_k           1126 ns   1.01x plain
+  f64_madd_k            1112 ns   1.00x plain
+  f64_magetypes_fused     11580 ns  10.41x plain
+stream (1024 vectors)
+  plain                  595 ns   1.00x plain
+  madd                   595 ns   1.00x plain
+  soft                  5925 ns   9.96x plain
+  probe_inline          6697 ns  11.26x plain
+  probe_outline         6562 ns  11.03x plain
+  probe_cold            6559 ns  11.02x plain
+  one_cold              6861 ns  11.53x plain
+  check_nocall           632 ns   1.06x plain
+  nocall_full           5965 ns  10.03x plain
+  magetypes_fused       5971 ns  10.04x plain
+  f64_plain_k            595 ns   1.00x plain
+  f64_madd_k             595 ns   1.00x plain
+  f64_magetypes_fused      6701 ns  11.26x plain

@@ -164,8 +164,16 @@ fn dist_simd(a: &[f32; 8], b: &[f32; 8]) -> f32 {
 
 ### Dispatch granularity
 
-Magetypes must not add CPU probes inside single-vector arithmetic, with one
-measured exception (user, 2026-10-24: allowed when the output is identical and
+Magetypes must not add CPU probes inside single-vector arithmetic, with two
+measured exceptions. The second (user, 2026-10-25): relaxed-SIMD WASM
+`mul_add_fused` caches a probe of whether the engine's relaxed madd rounds once
+(the relaxed-SIMD spec fixes that per engine; V8 agrees across tiers) and uses
+it when it does. Keep the probe and f32 software path inline with no call
+site: any call site in the caller's loop, even a cold one, made wasmtime keep
+loop state in memory (f32x4 chains 3.2x, streams 2.0x). f64's software path
+goes behind one `#[inline(never)]` call because its exact path calls per lane
+(`benchmarks/wasm_probe_layout_2026-10-25/`). `wasm_fma::tests` pins the
+cached answer per CI runner via `ARCHMAGE_EXPECT_RELAXED_FUSION`. The first (user, 2026-10-24: allowed when the output is identical and
 the win consistent; `eae93cb0`): portable f64 FMA on x86_64 std builds checks archmage's
 cached V3 token once per call and sends each lane through the FMA
 instruction. On r7900x/i265 that took 0.09-0.43x the software path's time and
@@ -1395,7 +1403,8 @@ Design record for #116 (the `mul_add` contract):
   backend-dependent rounding is an explicit opt-in. `mul_add_relaxed`/
   `mul_sub_relaxed` keep the contract below; `mul_add_fused`/`mul_sub_fused`
   are the single-rounding forms, the same operation as `mul_add_portable`/
-  `mul_sub_portable` (not deprecated yet). After 0.10 ships the deprecation,
+  `mul_sub_portable` (not deprecated yet). Relaxed WASM's fused forms use
+  relaxed madd where the cached probe shows it fuses (dispatch section). After 0.10 ships the deprecation,
   `mul_add`/`mul_sub` return in 0.11 as the fused forms, matching
   `f32::mul_add`. The scalar backend's relaxed form stays multiply-then-add:
   it keeps scalar-vs-SIMD tests exposing rounding assumptions, and a separate

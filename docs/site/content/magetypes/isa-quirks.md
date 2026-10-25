@@ -39,7 +39,7 @@ CPU, width, compiler, baseline, and workload.
 | Same narrowing methods on [`i16x32`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i16x32.html) / [`i32x16`](https://docs.rs/magetypes/latest/magetypes/simd/generic/struct.i32x16.html) | Native AVX-512 | Narrow each input to a half and insert/concatenate. Unsigned destinations clamp signed inputs to zero before unsigned conversion. | Two zero clamps for unsigned output, plus the two conversions and concatenation needed for the operation. |
 | Same narrowing families at 128 bits; NEON / WASM widths | Native halves | Native signed-source saturating narrows already have the desired lane order. | No AVX2-style lane-order repair; polyfills still require composition. |
 | `v.shl_const::<N>()`, `v.shr_logical_const::<N>()`, `v.shr_arithmetic_const::<N>()` | Every backend | Const assertions reject invalid counts before execution. | **No runtime assertion.** Constant byte shifts can still require shift/mask emulation. |
-| `a.mul_add_fused(b, c)` / `a.mul_sub_fused(b, c)` (also spelled `mul_add_portable` / `mul_sub_portable`) on every float type | Scalar backend; WASM, relaxed SIMD included | Native hardware backends use FMA directly. The scalar backend uses the FMA instruction when the build guarantees one (and for x86_64 f64 with `std`, when a cached runtime check finds it), else software; WASM always uses software. Software f32 rounds once through f64 (WASM SIMD f32 rounds to odd); software f64 uses a double-double product. Both check rare lanes into an exact path. | The software forms have no per-lane branch, so they vectorize on SSE2 and WASM SIMD. f64 on x86_64 with `std` checks a cached CPU flag once per call to use the FMA instruction; nothing else detects. Measurements are below; see [Fused arithmetic](#fused-arithmetic-and-reductions). |
+| `a.mul_add_fused(b, c)` / `a.mul_sub_fused(b, c)` (also spelled `mul_add_portable` / `mul_sub_portable`) on every float type | Scalar backend; WASM | Native hardware backends use FMA directly. The scalar backend uses the FMA instruction when the build guarantees one (and for x86_64 f64 with `std`, when a cached runtime check finds it), else software. Relaxed-SIMD WASM uses relaxed madd when a cached probe shows the engine fuses it, else software; strict WASM always uses software. Software f32 rounds once through f64 (WASM SIMD f32 rounds to odd); software f64 uses a double-double product. Both check rare lanes into an exact path. | The software forms have no per-lane branch, so they vectorize on SSE2 and WASM SIMD. Two cached checks run once per call: the x86_64 `std` f64 CPU flag, and the relaxed-WASM fusion probe (per element type). Nothing else detects. Measurements are below; see [Fused arithmetic](#fused-arithmetic-and-reductions). |
 
 `abs_diff`, `madd_adjacent`, `pairwise_widen_add`, saturating arithmetic, and
 `reduce_add_u32` sometimes need several instructions because an ISA lacks that
@@ -177,11 +177,24 @@ unspecified. One and two roundings can differ near cancellation or intermediate
 overflow.
 
 On relaxed WASM, `mul_add_relaxed` emits relaxed multiply-add directly, without a
-probe, cached load, or runtime branch. A non-fusing engine may round twice, so
-`mul_add_fused` never uses it: it fuses in software in every WASM build. A relaxed-SIMD
-token proves instruction availability, not fusion; the
+probe, cached load, or runtime branch. A relaxed-SIMD token proves instruction
+availability, not fusion: the
 [relaxed-SIMD specification](https://github.com/WebAssembly/relaxed-simd/blob/main/proposals/relaxed-simd/Overview.md)
-permits either rounding behavior. Modules built with relaxed SIMD still require
+permits either rounding behavior, but requires each environment to make one
+fixed choice per operator. `mul_add_fused` relies on that: on first use it
+evaluates one input whose fused and unfused results differ, caches the answer
+per element type, and then uses relaxed madd on engines that fuse and the
+software path on engines that round twice. The result is the same either way.
+The probe and the f32 software path are inline with no call site, and the f64
+software path sits behind a single call: any call site in a loop made
+wasmtime keep loop state in memory, even when the call never ran. With
+wasmtime 40 on a Ryzen 9 9950X3D, a fusing engine runs f32x4 in 0.08× (chain)
+and 0.15× (stream) of the software path's time, within 5–45% of bare relaxed
+madd; engines that round twice measured the same as plain software
+([layout experiment](https://github.com/imazen/archmage/blob/main/benchmarks/wasm_probe_layout_2026-10-25/README.md)).
+V8 (node 26.7.0) made the same choice in its baseline and optimizing tiers,
+with and without host FMA
+([tier check](https://github.com/imazen/archmage/blob/main/benchmarks/soft_fma_simd_2026-10-24.md)). Modules built with relaxed SIMD still require
 an engine that supports those instructions; the arithmetic fallback does not
 make such modules loadable on older engines.
 
@@ -209,6 +222,7 @@ and on 1,024 dependent steps (chain); records:
 | Scalar software, array form (current), baseline x86-64 on the Ryzen 9 7900X | The same code as `a * b + c` | 1.7–8.8× (f32), 5.4–27× (f64) the time; inside a V3 function 3.8–4.3× (f32), 7.1–8.4× (f64) ([record](https://github.com/imazen/archmage/blob/main/benchmarks/soft_fma_simd_2026-10-24.md)) |
 | Scalar f64 with the cached runtime check (current), x86_64 `std` on the 7900X | The same code as `a * b + c` | 0.86–6.6× the time (one call per lane); inside a V3 function 0.67–1.0×, where the call inlines |
 | WASM SIMD128 (current), wasmtime 47 on the 7900X | The same code as `a * b + c` | 7.9–11× (`f32x4`), 9.2–13.5× (`f64x2`) the time |
+| WASM relaxed SIMD (current), wasmtime 40 on the 9950X3D | The engine's madd: 0.65–1.0× the time | Fusing engine: 0.68–1.45× (`f32x4`), 1.6–2.1× (`f64x2`); engine that rounds twice: 8.9–10× (`f32x4`), 10.4–11.3× (`f64x2`) the time ([record](https://github.com/imazen/archmage/blob/main/benchmarks/wasm_probe_layout_2026-10-25/README.md)) |
 
 Portable software fallbacks work on whole lane arrays without a branch per
 lane, so LLVM vectorizes them. f32 computes the exact product in f64, adds
@@ -229,8 +243,9 @@ Ryzen 9 7900X and a Core Ultra 7 265K that took 0.09–0.43× the software path'
 time. f32 stays in software without a compile-time guarantee, because its
 vectorized software path measured as fast as a per-call hardware path or
 faster. Results are identical on every path. Native vector backends retain
-their token-proven FMA intrinsics. Strict and relaxed WASM portable operations
-both use software. The bit-exact contract assumes round-to-nearest and gradual
+their token-proven FMA intrinsics. Strict WASM portable operations use
+software; relaxed WASM uses the engine's madd when the cached probe shows it
+fuses. The bit-exact contract assumes round-to-nearest and gradual
 underflow; NaN payloads and signs are unspecified.
 
 CI checks committed expected bits generated with Python exact rational
