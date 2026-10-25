@@ -67,5 +67,5 @@ hardware conversion path once per buffer. They are an intentional exception to
 `i32x4::f16_to_f32` and `f32x4::to_f16` do not perform that whole-buffer dispatch.
 A V4 holder can extract `.v3()` to reach the supported slice converter surface.
 NaN bit handling and hardware availability vary with target and Rust version;
-consult the [F16Convert API](https://docs.rs/magetypes/latest/magetypes/simd/trait.F16Convert.html)
+consult the [F16Convert API](https://docs.rs/magetypes/latest/magetypes/simd/generic/trait.F16Convert.html)
 and exhaustive conversion tests for that contract.
