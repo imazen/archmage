@@ -123,7 +123,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 #### Added
 
 - `mul_add_relaxed`/`mul_sub_relaxed` (backend-dependent rounding, the previous `mul_add`/`mul_sub` behavior) and `mul_add_fused`/`mul_sub_fused` (one rounding everywhere, the same operation as `mul_add_portable`/`mul_sub_portable`, which stay) on every float vector type and on `f32x1`/`f64x1` (#138).
-- rustdoc search aliases `fma`/`fmadd`/`fmla` on `mul_add_fused` and `fms`/`fmsub`/`fmls` on `mul_sub_fused` (PENDING).
+- rustdoc search aliases `fma`/`fmadd`/`fmla` on `mul_add_fused` and `fms`/`fmsub`/`fmls` on `mul_sub_fused` (e90c03a9).
 
 #### Deprecated
 
@@ -131,7 +131,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 
 #### Changed
 
-- Relaxed-SIMD WASM `mul_add_fused`/`mul_sub_fused` (and `_portable`) use the engine's relaxed madd when a cached probe, evaluated once per element type, shows that it rounds once; engines that round twice keep the software path. The relaxed-SIMD specification fixes that choice per engine, and V8 made the same choice in every tier. Results are unchanged. With wasmtime 40 on a Ryzen 9 9950X3D, a fusing engine runs f32x4 in 0.08–0.15× and f64x2 in 0.15–0.18× of the software path's time; engines that round twice measured the same as before (PENDING).
+- Relaxed-SIMD WASM `mul_add_fused`/`mul_sub_fused` (and `_portable`) use the engine's relaxed madd when a cached probe, evaluated once per element type, shows that it rounds once; engines that round twice keep the software path. The relaxed-SIMD specification fixes that choice per engine, and V8 made the same choice in every tier. Results are unchanged. With wasmtime 40 on a Ryzen 9 9950X3D, a fusing engine runs f32x4 in 0.08–0.15× and f64x2 in 0.15–0.18× of the software path's time; engines that round twice measured the same as before (4042687c).
 - The runtime-checked f64 hardware path takes two lanes per call, operands and results in registers: f64x2 0.36–0.53×, f64x4 streams 0.62–0.67×, f64x8 0.75–0.84× the previous time on a Core Ultra 7 265K; single lanes, f64x4 chains and V3 callers unchanged (647f2d3d).
 - Scalar-backend f64 `mul_add_portable`/`mul_sub_portable` on x86_64 with `std` now check archmage's cached V3 token once per call and use the FMA instruction per lane when the CPU has it: 0.09–0.43× the software path's time on a Ryzen 9 7900X and a Core Ultra 7 265K, faster than std's `mul_add`; about 1.0× on a simulated CPU without FMA. no_std builds reach the FMA instruction through a compile-time token (V3 or NEON target features) instead of software. Results are unchanged (eae93cb0).
 - Software `mul_add_portable`/`mul_sub_portable` (the scalar backend without a compile-time FMA guarantee, and WASM f64) run over whole lane arrays without a branch per lane, so they vectorize: f32 rounds once through f64, f64 uses a double-double product, and the rare halfway or out-of-range lanes take an exact per-lane path. Results are unchanged. Interleaved on a Ryzen 9 7900X and a Core Ultra 7 265K, vector shapes take 0.14–0.70× the previous time; on WASM, f64 vectors take 0.34–0.45×. magetypes no longer depends on libm: the exact f64 FMA is ported from libm 0.2.16 (MIT) (06291ec2).
