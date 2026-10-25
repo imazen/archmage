@@ -138,6 +138,7 @@ impl f32x1 {
     /// Multiply-add with one rounding: `self * b + c`, the FMA instruction
     /// where the build guarantees one and correctly rounded software
     /// otherwise. NaN payload/sign are unspecified.
+    #[doc(alias = "fma", alias = "fmadd", alias = "fmla")]
     #[inline(always)]
     pub fn mul_add_fused(self, b: Self, c: Self) -> Self {
         Self(crate::nostd_math::fmaf(self.0, b.0, c.0))
@@ -145,6 +146,7 @@ impl f32x1 {
 
     /// Multiply-subtract with one rounding: `self * b - c`. Same contract as
     /// [`mul_add_fused`](Self::mul_add_fused).
+    #[doc(alias = "fms", alias = "fmsub", alias = "fmls")]
     #[inline(always)]
     pub fn mul_sub_fused(self, b: Self, c: Self) -> Self {
         Self(crate::nostd_math::fmaf(self.0, b.0, -c.0))
@@ -301,6 +303,7 @@ impl f64x1 {
     /// Multiply-add with one rounding: `self * b + c`, the FMA instruction
     /// where the build guarantees one or (x86_64 with std) the CPU has one,
     /// correctly rounded software otherwise. NaN payload/sign are unspecified.
+    #[doc(alias = "fma", alias = "fmadd", alias = "fmla")]
     #[inline(always)]
     pub fn mul_add_fused(self, b: Self, c: Self) -> Self {
         Self(crate::nostd_math::fma(self.0, b.0, c.0))

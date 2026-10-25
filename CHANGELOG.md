@@ -123,6 +123,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`. The earlier
 #### Added
 
 - `mul_add_relaxed`/`mul_sub_relaxed` (backend-dependent rounding, the previous `mul_add`/`mul_sub` behavior) and `mul_add_fused`/`mul_sub_fused` (one rounding everywhere, the same operation as `mul_add_portable`/`mul_sub_portable`, which stay) on every float vector type and on `f32x1`/`f64x1` (#138).
+- rustdoc search aliases `fma`/`fmadd`/`fmla` on `mul_add_fused` and `fms`/`fmsub`/`fmls` on `mul_sub_fused` (PENDING).
 
 #### Deprecated
 

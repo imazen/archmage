@@ -296,6 +296,7 @@ impl<T: F32x8Backend> f32x8<T> {
     /// the engine's relaxed madd when a cached probe shows it rounds
     /// once (the specification fixes that choice per engine), and
     /// software otherwise.
+    #[doc(alias = "fma", alias = "fmadd", alias = "fmla")]
     #[inline(always)]
     pub fn mul_add_fused(self, a: Self, b: Self) -> Self {
         Self(T::mul_add_portable(self.1, self.0, a.0, b.0), self.1)
@@ -304,6 +305,7 @@ impl<T: F32x8Backend> f32x8<T> {
     /// Multiply-sub with one rounding on every backend: `self * a - b`.
     ///
     /// Same contract and cost as [`mul_add_fused`](Self::mul_add_fused).
+    #[doc(alias = "fms", alias = "fmsub", alias = "fmls")]
     #[inline(always)]
     pub fn mul_sub_fused(self, a: Self, b: Self) -> Self {
         Self(T::mul_sub_portable(self.1, self.0, a.0, b.0), self.1)
