@@ -242,9 +242,9 @@ fn process_chunk(_: X64V1Token, chunk: &mut [f32; 4]) {
 | `_mm_or_pd` | Computes the bitwise OR of `a` and `b` | orps | 1/1, 1/1 |
 | `_mm_or_ps` | Bitwise OR of packed single-precision (32-bit) floating-poin... | orps | 1/1, 1/1 |
 | `_mm_or_si128` | Computes the bitwise OR of 128 bits (representing integer da... | orps | 1/1, 1/1 |
-| `_mm_packs_epi16` | Converts packed signed 16-bit integers from `a` and `b` to p... | packsswb | 1/1, 1/1 |
-| `_mm_packs_epi32` | Converts packed signed 32-bit integers from `a` and `b` to p... | packssdw | 1/1, 1/1 |
-| `_mm_packus_epi16` | Converts packed signed 16-bit integers from `a` and `b` to p... | packuswb | 1/1, 1/1 |
+| `_mm_packs_epi16` | Converts packed 16-bit integers from `a` and `b` to packed 8... | packsswb | 1/1, 1/1 |
+| `_mm_packs_epi32` | Converts packed 32-bit integers from `a` and `b` to packed 1... | packssdw | 1/1, 1/1 |
+| `_mm_packus_epi16` | Converts packed 16-bit integers from `a` and `b` to packed 8... | packuswb | 1/1, 1/1 |
 | `_mm_prefetch` | Fetch the cache line that contains address `p` using the giv... | prefetcht0 | — |
 | `_mm_rcp_ps` | Returns the approximate reciprocal of packed single-precisio... | rcpps | 5/1, 4/1 |
 | `_mm_rcp_ss` | Returns the approximate reciprocal of the first single-preci... | rcpss | 5/1, 4/1 |
@@ -405,7 +405,7 @@ fn process_chunk(_: X64V1Token, chunk: &mut [f32; 4]) {
 | `_mm_stream_pd` | Stores a 128-bit floating point vector of ` | — |
 | `_mm_stream_ps` | Stores `a` into the memory at `mem_addr` using a non-tempora... | — |
 | `_mm_stream_si128` | Stores a 128-bit integer vector to a 128-bit aligned memory ... | — |
-| `_mm_stream_si32` | Stores a 32-bit integer value in the specified memory locati... | — |
-| `_mm_stream_si64` | Stores a 64-bit integer value in the specified memory locati... | — |
+| `_mm_stream_si32` | Stores a 32-bit integer value in a 4-byte aligned memory loc... | — |
+| `_mm_stream_si64` | Stores a 64-bit integer value in an 8-byte aligned memory lo... | — |
 
 
