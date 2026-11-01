@@ -892,19 +892,19 @@ fn process_chunk(_: NeonToken, chunk: &mut [f32; 4]) {
 | `vfmss_lane_f32` | Floating-point fused multiply-subtract to accumulator | fmsub | — |
 | `vfmss_laneq_f32` | Floating-point fused multiply-subtract to accumulator | fmsub | — |
 | `vget_high_f16` | Duplicate vector element to vector | nop | — |
-| `vget_high_f32` | Duplicate vector element to vector or scalar | "vmov" | — |
+| `vget_high_f32` | Duplicate vector element to vector or scalar | vmov | — |
 | `vget_high_f64` | Duplicate vector element to vector or scalar | nop | — |
-| `vget_high_p16` | Duplicate vector element to vector or scalar | "vmov" | — |
-| `vget_high_p64` | Duplicate vector element to vector or scalar | "vmov" | — |
-| `vget_high_p8` | Duplicate vector element to vector or scalar | "vmov" | — |
-| `vget_high_s16` | Duplicate vector element to vector or scalar | "vmov" | — |
-| `vget_high_s32` | Duplicate vector element to vector or scalar | "vmov" | — |
-| `vget_high_s64` | Duplicate vector element to vector or scalar | "vmov" | — |
-| `vget_high_s8` | Duplicate vector element to vector or scalar | "vmov" | — |
-| `vget_high_u16` | Duplicate vector element to vector or scalar | "vmov" | — |
-| `vget_high_u32` | Duplicate vector element to vector or scalar | "vmov" | — |
-| `vget_high_u64` | Duplicate vector element to vector or scalar | "vmov" | — |
-| `vget_high_u8` | Duplicate vector element to vector or scalar | "vmov" | — |
+| `vget_high_p16` | Duplicate vector element to vector or scalar | vmov | — |
+| `vget_high_p64` | Duplicate vector element to vector or scalar | vmov | — |
+| `vget_high_p8` | Duplicate vector element to vector or scalar | vmov | — |
+| `vget_high_s16` | Duplicate vector element to vector or scalar | vmov | — |
+| `vget_high_s32` | Duplicate vector element to vector or scalar | vmov | — |
+| `vget_high_s64` | Duplicate vector element to vector or scalar | vmov | — |
+| `vget_high_s8` | Duplicate vector element to vector or scalar | vmov | — |
+| `vget_high_u16` | Duplicate vector element to vector or scalar | vmov | — |
+| `vget_high_u32` | Duplicate vector element to vector or scalar | vmov | — |
+| `vget_high_u64` | Duplicate vector element to vector or scalar | vmov | — |
+| `vget_high_u8` | Duplicate vector element to vector or scalar | vmov | — |
 | `vget_lane_f32` | Move vector element to general-purpose register | nop | — |
 | `vget_lane_f64` | Duplicate vector element to vector or scalar | nop | — |
 | `vget_lane_p16` | Move vector element to general-purpose register | nop | — |

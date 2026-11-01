@@ -3715,7 +3715,7 @@
     },
     {
       "a": "x86_64",
-      "d": "Converts packed signed 16-bit integers from `a` and `b` to packed 8-bit integers using signed saturation  [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_packs_epi16)",
+      "d": "Converts packed 16-bit integers from `a` and `b` to packed 8-bit integers using signed saturation  [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_packs_epi16)",
       "f": "avx2",
       "ins": "vpacksswb",
       "n": "_mm256_packs_epi16",
@@ -3727,7 +3727,7 @@
     },
     {
       "a": "x86_64",
-      "d": "Converts packed signed 32-bit integers from `a` and `b` to packed 16-bit integers using signed saturation  [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_packs_epi32)",
+      "d": "Converts packed 32-bit integers from `a` and `b` to packed 16-bit integers using signed saturation  [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_packs_epi32)",
       "f": "avx2",
       "ins": "vpackssdw",
       "n": "_mm256_packs_epi32",
@@ -3739,7 +3739,7 @@
     },
     {
       "a": "x86_64",
-      "d": "Converts packed signed 16-bit integers from `a` and `b` to packed 8-bit integers using unsigned saturation  [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_packus_epi16)",
+      "d": "Converts packed 16-bit integers from `a` and `b` to packed 8-bit integers using unsigned saturation  [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_packus_epi16)",
       "f": "avx2",
       "ins": "vpackuswb",
       "n": "_mm256_packus_epi16",
@@ -3751,7 +3751,7 @@
     },
     {
       "a": "x86_64",
-      "d": "Converts packed signed 32-bit integers from `a` and `b` to packed 16-bit integers using unsigned saturation  [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_packus_epi32)",
+      "d": "Converts packed 32-bit integers from `a` and `b` to packed 16-bit integers using unsigned saturation  [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_packus_epi32)",
       "f": "avx2",
       "ins": "vpackusdw",
       "n": "_mm256_packus_epi32",
@@ -10446,7 +10446,7 @@
       "ins": "vpackssdw",
       "n": "_mm512_mask_packs_epi32",
       "s": true,
-      "sig": "fn _mm512_mask_packs_epi32( src: __m512i, k: __mmask32, a: __m512i, b: __m512i, ) -> __m512i",
+      "sig": "fn _mm512_mask_packs_epi32(src: __m512i, k: __mmask32, a: __m512i, b: __m512i) -> __m512i",
       "t": "X64V4Token",
       "tc": "Pack XMM",
       "u": false
@@ -10470,7 +10470,7 @@
       "ins": "vpackssdw",
       "n": "_mm256_mask_packs_epi32",
       "s": true,
-      "sig": "fn _mm256_mask_packs_epi32( src: __m256i, k: __mmask16, a: __m256i, b: __m256i, ) -> __m256i",
+      "sig": "fn _mm256_mask_packs_epi32(src: __m256i, k: __mmask16, a: __m256i, b: __m256i) -> __m256i",
       "t": "X64V4Token",
       "tc": "Pack YMM",
       "u": false
@@ -10530,7 +10530,7 @@
       "ins": "vpacksswb",
       "n": "_mm512_mask_packs_epi16",
       "s": true,
-      "sig": "fn _mm512_mask_packs_epi16( src: __m512i, k: __mmask64, a: __m512i, b: __m512i, ) -> __m512i",
+      "sig": "fn _mm512_mask_packs_epi16(src: __m512i, k: __mmask64, a: __m512i, b: __m512i) -> __m512i",
       "t": "X64V4Token",
       "tc": "Pack XMM",
       "u": false
@@ -10554,7 +10554,7 @@
       "ins": "vpacksswb",
       "n": "_mm256_mask_packs_epi16",
       "s": true,
-      "sig": "fn _mm256_mask_packs_epi16( src: __m256i, k: __mmask32, a: __m256i, b: __m256i, ) -> __m256i",
+      "sig": "fn _mm256_mask_packs_epi16(src: __m256i, k: __mmask32, a: __m256i, b: __m256i) -> __m256i",
       "t": "X64V4Token",
       "tc": "Pack YMM",
       "u": false
@@ -10614,7 +10614,7 @@
       "ins": "vpackusdw",
       "n": "_mm512_mask_packus_epi32",
       "s": true,
-      "sig": "fn _mm512_mask_packus_epi32( src: __m512i, k: __mmask32, a: __m512i, b: __m512i, ) -> __m512i",
+      "sig": "fn _mm512_mask_packus_epi32(src: __m512i, k: __mmask32, a: __m512i, b: __m512i) -> __m512i",
       "t": "X64V4Token",
       "tc": "Pack XMM",
       "u": false
@@ -10638,7 +10638,7 @@
       "ins": "vpackusdw",
       "n": "_mm256_mask_packus_epi32",
       "s": true,
-      "sig": "fn _mm256_mask_packus_epi32( src: __m256i, k: __mmask16, a: __m256i, b: __m256i, ) -> __m256i",
+      "sig": "fn _mm256_mask_packus_epi32(src: __m256i, k: __mmask16, a: __m256i, b: __m256i) -> __m256i",
       "t": "X64V4Token",
       "tc": "Pack YMM",
       "u": false
@@ -10698,7 +10698,7 @@
       "ins": "vpackuswb",
       "n": "_mm512_mask_packus_epi16",
       "s": true,
-      "sig": "fn _mm512_mask_packus_epi16( src: __m512i, k: __mmask64, a: __m512i, b: __m512i, ) -> __m512i",
+      "sig": "fn _mm512_mask_packus_epi16(src: __m512i, k: __mmask64, a: __m512i, b: __m512i) -> __m512i",
       "t": "X64V4Token",
       "tc": "Pack XMM",
       "u": false
@@ -10722,7 +10722,7 @@
       "ins": "vpackuswb",
       "n": "_mm256_mask_packus_epi16",
       "s": true,
-      "sig": "fn _mm256_mask_packus_epi16( src: __m256i, k: __mmask32, a: __m256i, b: __m256i, ) -> __m256i",
+      "sig": "fn _mm256_mask_packus_epi16(src: __m256i, k: __mmask32, a: __m256i, b: __m256i) -> __m256i",
       "t": "X64V4Token",
       "tc": "Pack YMM",
       "u": false
@@ -67593,7 +67593,7 @@
     },
     {
       "a": "x86_64",
-      "d": "Stores a 32-bit integer value in the specified memory location. To minimize caching, the data is flagged as non-temporal (unlikely to be used again soon).  [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_stream_si32)  # Safety of non-temporal stores  After using this intrinsic, but before any other access to the memory that this intrinsic mutates, a call to [`_mm_sfence`] must be performed by the thread that used the intrinsic. In particular, functions that call this intrinsic should generally call `_mm_sfence` before they return.  See [`_mm_sfence`] for details.",
+      "d": "Stores a 32-bit integer value in a 4-byte aligned memory location. To minimize caching, the data is flagged as non-temporal (unlikely to be used again soon).  [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_stream_si32)  # Safety of non-temporal stores  After using this intrinsic, but before any other access to the memory that this intrinsic mutates, a call to [`_mm_sfence`] must be performed by the thread that used the intrinsic. In particular, functions that call this intrinsic should generally call `_mm_sfence` before they return.  See [`_mm_sfence`] for details.",
       "f": "sse2",
       "ins": "movnti",
       "n": "_mm_stream_si32",
@@ -67616,7 +67616,7 @@
     },
     {
       "a": "x86_64",
-      "d": "Converts packed signed 16-bit integers from `a` and `b` to packed 8-bit integers using signed saturation.  [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_packs_epi16)",
+      "d": "Converts packed 16-bit integers from `a` and `b` to packed 8-bit integers using signed saturation.  [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_packs_epi16)",
       "f": "sse2",
       "ins": "packsswb",
       "n": "_mm_packs_epi16",
@@ -67628,7 +67628,7 @@
     },
     {
       "a": "x86_64",
-      "d": "Converts packed signed 32-bit integers from `a` and `b` to packed 16-bit integers using signed saturation.  [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_packs_epi32)",
+      "d": "Converts packed 32-bit integers from `a` and `b` to packed 16-bit integers using signed saturation.  [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_packs_epi32)",
       "f": "sse2",
       "ins": "packssdw",
       "n": "_mm_packs_epi32",
@@ -67640,7 +67640,7 @@
     },
     {
       "a": "x86_64",
-      "d": "Converts packed signed 16-bit integers from `a` and `b` to packed 8-bit integers using unsigned saturation.  [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_packus_epi16)",
+      "d": "Converts packed 16-bit integers from `a` and `b` to packed 8-bit integers using unsigned saturation.  [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_packus_epi16)",
       "f": "sse2",
       "ins": "packuswb",
       "n": "_mm_packus_epi16",
@@ -69400,7 +69400,7 @@
     },
     {
       "a": "x86_64",
-      "d": "Converts packed signed 32-bit integers from `a` and `b` to packed 16-bit integers using unsigned saturation  [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_packus_epi32)",
+      "d": "Converts packed 32-bit integers from `a` and `b` to packed 16-bit integers using unsigned saturation  [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_packus_epi32)",
       "f": "sse4.1",
       "ins": "packusdw",
       "n": "_mm_packus_epi32",
@@ -70045,7 +70045,7 @@
     },
     {
       "a": "x86_64",
-      "d": "Extracts the bit range specified by `y` from the lower 64 bits of `x`.  The `[13:8]` bits of `y` specify the index of the bit-range to extract. The `[5:0]` bits of `y` specify the length of the bit-range to extract. All other bits are ignored.  If the length is zero, it is interpreted as `64`. If the length and index are zero, the lower 64 bits of `x` are extracted.  If `length == 0 && index > 0` or `length + index > 64` the result is undefined.",
+      "d": "Extracts the bit range specified by `y` from the lower 64 bits of `x`.  The `[13:8]` bits of `y` specify the index of the bit-range to extract. The `[5:0]` bits of `y` specify the length of the bit-range to extract. All other bits are ignored.  If the length is zero, it is interpreted as `64`. If the length and index are zero, the lower 64 bits of `x` are extracted.  If `length == 0 && index > 0` or `length + index > 64` the result is undefined.  The extracted bits are saved in the least-significant bit positions of the lower quadword of the destination; the remaining bits in the lower quadword of the destination register are cleared to 0. The upper quadword of the destination register is undefined.",
       "f": "sse4a",
       "ins": "extrq",
       "n": "_mm_extract_si64",
@@ -70055,7 +70055,7 @@
     },
     {
       "a": "x86_64",
-      "d": "Extracts the specified bits from the lower 64 bits of the 128-bit integer vector operand at the index `idx` and of the length `len`.  `idx` specifies the index of the LSB. `len` specifies the number of bits to extract. If length and index are both zero, bits `[63:0]` of parameter `x` are extracted. It is a compile-time error for `len + idx` to be greater than 64 or for `len` to be zero and `idx` to be non-zero.  Returns a 128-bit integer vector whose lower 64 bits contain the extracted bits.",
+      "d": "Extracts the specified bits from the lower 64 bits of the 128-bit integer vector operand at the index `idx` and of the length `len`.  `idx` specifies the index of the LSB. `len` specifies the number of bits to extract. If length and index are both zero, bits `[63:0]` of parameter `x` are extracted. It is a compile-time error for `len + idx` to be greater than 64 or for `len` to be zero and `idx` to be non-zero.  The extracted bits are saved in the least-significant bit positions of the lower quadword of the destination; the remaining bits in the lower quadword of the destination register are cleared to 0. The upper quadword of the destination register is undefined.",
       "f": "sse4a",
       "ins": "extrq",
       "n": "_mm_extracti_si64",
@@ -70065,7 +70065,7 @@
     },
     {
       "a": "x86_64",
-      "d": "Inserts the `[length:0]` bits of `y` into `x` at `index`.  The bits of `y`:  - `[69:64]` specify the `length`, - `[77:72]` specify the index.  If the `length` is zero it is interpreted as `64`. If `index + length > 64` or `index > 0 && length == 0` the result is undefined.",
+      "d": "Inserts the `[length:0]` bits of `y` into `x` at `index`.  The bits of `y`:  - `[69:64]` specify the `length`, - `[77:72]` specify the index.  If the `length` is zero it is interpreted as `64`. If `index + length > 64` or `index > 0 && length == 0` the result is undefined.  The upper 64 bits of the destination are undefined.",
       "f": "sse4a",
       "ins": "insertq",
       "n": "_mm_insert_si64",
@@ -70075,7 +70075,7 @@
     },
     {
       "a": "x86_64",
-      "d": "Inserts the `len` least-significant bits from the lower 64 bits of the 128-bit integer vector operand `y` into the lower 64 bits of the 128-bit integer vector operand `x` at the index `idx` and of the length `len`.  `idx` specifies the index of the LSB. `len` specifies the number of bits to insert. If length and index are both zero, bits `[63:0]` of parameter `x` are replaced with bits `[63:0]` of parameter `y`. It is a compile-time error for `len + idx` to be greater than 64 or for `len` to be zero and `idx` to be non-zero.",
+      "d": "Inserts the `len` least-significant bits from the lower 64 bits of the 128-bit integer vector operand `y` into the lower 64 bits of the 128-bit integer vector operand `x` at the index `idx` and of the length `len`.  `idx` specifies the index of the LSB. `len` specifies the number of bits to insert. If length and index are both zero, bits `[63:0]` of parameter `x` are replaced with bits `[63:0]` of parameter `y`. It is a compile-time error for `len + idx` to be greater than 64 or for `len` to be zero and `idx` to be non-zero.  The upper 64 bits of the destination are undefined.",
       "f": "sse4a",
       "ins": "insertq",
       "n": "_mm_inserti_si64",
@@ -71010,26 +71010,6 @@
       "s": false,
       "sig": "fn __tile_stream_loaddrs(dst: *mut __tile1024i, base: *u8, stride: usize)",
       "tc": "Store XMM",
-      "u": true
-    },
-    {
-      "a": "x86_64",
-      "d": "Perform matrix multiplication of two tiles a and b, containing packed single precision (32-bit) floating-point elements, which are converted to TF32 (tensor-float32) format, and accumulate the results into a packed single precision tile. For each possible combination of (row of a, column of b), it performs - convert to TF32 - multiply the corresponding elements of a and b - accumulate the results into the corresponding row and column of dst using round-to-nearest-even rounding mode. Output FP32 denormals are always flushed to zero, input single precision denormals are always handled and *not* treated as zero.",
-      "f": "amx-tf32",
-      "ins": "tmmultf32ps",
-      "n": "_tile_mmultf32ps",
-      "s": false,
-      "sig": "fn _tile_mmultf32ps<DST: i32, A: i32, B: i32>()",
-      "u": true
-    },
-    {
-      "a": "x86_64",
-      "d": "Perform matrix multiplication of two tiles a and b, containing packed single precision (32-bit) floating-point elements, which are converted to TF32 (tensor-float32) format, and accumulate the results into a packed single precision tile. For each possible combination of (row of a, column of b), it performs - convert to TF32 - multiply the corresponding elements of a and b - accumulate the results into the corresponding row and column of dst using round-to-nearest-even rounding mode. Output FP32 denormals are always flushed to zero, input single precision denormals are always handled and *not* treated as zero. The shape of the tile is specified in the struct of [`__tile1024i`]. The register of the tile is allocated by the compiler.",
-      "f": "amx-tf32",
-      "ins": "tmmultf32ps",
-      "n": "__tile_mmultf32ps",
-      "s": false,
-      "sig": "fn __tile_mmultf32ps(dst: *mut __tile1024i, a: __tile1024i, b: __tile1024i)",
       "u": true
     },
     {
@@ -72069,7 +72049,7 @@
     },
     {
       "a": "x86_64",
-      "d": "Stores a 64-bit integer value in the specified memory location. To minimize caching, the data is flagged as non-temporal (unlikely to be used again soon).  [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_stream_si64)  # Safety of non-temporal stores  After using this intrinsic, but before any other access to the memory that this intrinsic mutates, a call to [`_mm_sfence`] must be performed by the thread that used the intrinsic. In particular, functions that call this intrinsic should generally call `_mm_sfence` before they return.  See [`_mm_sfence`] for details.",
+      "d": "Stores a 64-bit integer value in an 8-byte aligned memory location. To minimize caching, the data is flagged as non-temporal (unlikely to be used again soon).  [Intel's documentation](https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm_stream_si64)  # Safety of non-temporal stores  After using this intrinsic, but before any other access to the memory that this intrinsic mutates, a call to [`_mm_sfence`] must be performed by the thread that used the intrinsic. In particular, functions that call this intrinsic should generally call `_mm_sfence` before they return.  See [`_mm_sfence`] for details.",
       "f": "sse2",
       "ins": "movnti",
       "n": "_mm_stream_si64",
@@ -78005,7 +77985,7 @@
       "a": "aarch64",
       "d": "Duplicate vector element to vector or scalar [Arm's documentation](https://developer.arm.com/architectures/instruction-sets/intrinsics/vget_high_f32)",
       "f": "neon",
-      "ins": "\"vmov\"",
+      "ins": "vmov",
       "n": "vget_high_f32",
       "s": true,
       "sig": "fn vget_high_f32(a: float32x4_t) -> float32x2_t",
@@ -78016,7 +77996,7 @@
       "a": "aarch64",
       "d": "Duplicate vector element to vector or scalar [Arm's documentation](https://developer.arm.com/architectures/instruction-sets/intrinsics/vget_high_p16)",
       "f": "neon",
-      "ins": "\"vmov\"",
+      "ins": "vmov",
       "n": "vget_high_p16",
       "s": true,
       "sig": "fn vget_high_p16(a: poly16x8_t) -> poly16x4_t",
@@ -78027,7 +78007,7 @@
       "a": "aarch64",
       "d": "Duplicate vector element to vector or scalar [Arm's documentation](https://developer.arm.com/architectures/instruction-sets/intrinsics/vget_high_p8)",
       "f": "neon",
-      "ins": "\"vmov\"",
+      "ins": "vmov",
       "n": "vget_high_p8",
       "s": true,
       "sig": "fn vget_high_p8(a: poly8x16_t) -> poly8x8_t",
@@ -78038,7 +78018,7 @@
       "a": "aarch64",
       "d": "Duplicate vector element to vector or scalar [Arm's documentation](https://developer.arm.com/architectures/instruction-sets/intrinsics/vget_high_s16)",
       "f": "neon",
-      "ins": "\"vmov\"",
+      "ins": "vmov",
       "n": "vget_high_s16",
       "s": true,
       "sig": "fn vget_high_s16(a: int16x8_t) -> int16x4_t",
@@ -78049,7 +78029,7 @@
       "a": "aarch64",
       "d": "Duplicate vector element to vector or scalar [Arm's documentation](https://developer.arm.com/architectures/instruction-sets/intrinsics/vget_high_s32)",
       "f": "neon",
-      "ins": "\"vmov\"",
+      "ins": "vmov",
       "n": "vget_high_s32",
       "s": true,
       "sig": "fn vget_high_s32(a: int32x4_t) -> int32x2_t",
@@ -78060,7 +78040,7 @@
       "a": "aarch64",
       "d": "Duplicate vector element to vector or scalar [Arm's documentation](https://developer.arm.com/architectures/instruction-sets/intrinsics/vget_high_s8)",
       "f": "neon",
-      "ins": "\"vmov\"",
+      "ins": "vmov",
       "n": "vget_high_s8",
       "s": true,
       "sig": "fn vget_high_s8(a: int8x16_t) -> int8x8_t",
@@ -78071,7 +78051,7 @@
       "a": "aarch64",
       "d": "Duplicate vector element to vector or scalar [Arm's documentation](https://developer.arm.com/architectures/instruction-sets/intrinsics/vget_high_u16)",
       "f": "neon",
-      "ins": "\"vmov\"",
+      "ins": "vmov",
       "n": "vget_high_u16",
       "s": true,
       "sig": "fn vget_high_u16(a: uint16x8_t) -> uint16x4_t",
@@ -78082,7 +78062,7 @@
       "a": "aarch64",
       "d": "Duplicate vector element to vector or scalar [Arm's documentation](https://developer.arm.com/architectures/instruction-sets/intrinsics/vget_high_u32)",
       "f": "neon",
-      "ins": "\"vmov\"",
+      "ins": "vmov",
       "n": "vget_high_u32",
       "s": true,
       "sig": "fn vget_high_u32(a: uint32x4_t) -> uint32x2_t",
@@ -78093,7 +78073,7 @@
       "a": "aarch64",
       "d": "Duplicate vector element to vector or scalar [Arm's documentation](https://developer.arm.com/architectures/instruction-sets/intrinsics/vget_high_u8)",
       "f": "neon",
-      "ins": "\"vmov\"",
+      "ins": "vmov",
       "n": "vget_high_u8",
       "s": true,
       "sig": "fn vget_high_u8(a: uint8x16_t) -> uint8x8_t",
@@ -78104,7 +78084,7 @@
       "a": "aarch64",
       "d": "Duplicate vector element to vector or scalar [Arm's documentation](https://developer.arm.com/architectures/instruction-sets/intrinsics/vget_high_p64)",
       "f": "neon",
-      "ins": "\"vmov\"",
+      "ins": "vmov",
       "n": "vget_high_p64",
       "s": true,
       "sig": "fn vget_high_p64(a: poly64x2_t) -> poly64x1_t",
@@ -78115,7 +78095,7 @@
       "a": "aarch64",
       "d": "Duplicate vector element to vector or scalar [Arm's documentation](https://developer.arm.com/architectures/instruction-sets/intrinsics/vget_high_s64)",
       "f": "neon",
-      "ins": "\"vmov\"",
+      "ins": "vmov",
       "n": "vget_high_s64",
       "s": true,
       "sig": "fn vget_high_s64(a: int64x2_t) -> int64x1_t",
@@ -78126,7 +78106,7 @@
       "a": "aarch64",
       "d": "Duplicate vector element to vector or scalar [Arm's documentation](https://developer.arm.com/architectures/instruction-sets/intrinsics/vget_high_u64)",
       "f": "neon",
-      "ins": "\"vmov\"",
+      "ins": "vmov",
       "n": "vget_high_u64",
       "s": true,
       "sig": "fn vget_high_u64(a: uint64x2_t) -> uint64x1_t",
@@ -153013,16 +152993,6 @@
     },
     {
       "a": "aarch64",
-      "d": "Interleave even elements from two inputs [Arm's documentation](https://developer.arm.com/architectures/instruction-sets/intrinsics/svtrn1_b8)",
-      "f": "sve",
-      "ins": "trn1",
-      "n": "svtrn1_b8",
-      "s": false,
-      "sig": "fn svtrn1_b8(op1: svbool_t, op2: svbool_t) -> svbool_t",
-      "u": false
-    },
-    {
-      "a": "aarch64",
       "d": "Interleave even elements from two inputs [Arm's documentation](https://developer.arm.com/architectures/instruction-sets/intrinsics/svtrn1_b16)",
       "f": "sve",
       "ins": "trn1",
@@ -153153,6 +153123,16 @@
     },
     {
       "a": "aarch64",
+      "d": "Interleave even elements from two inputs [Arm's documentation](https://developer.arm.com/architectures/instruction-sets/intrinsics/svtrn1[_b8])",
+      "f": "sve",
+      "ins": "trn1",
+      "n": "svtrn1_b8",
+      "s": false,
+      "sig": "fn svtrn1_b8(op1: svbool_t, op2: svbool_t) -> svbool_t",
+      "u": false
+    },
+    {
+      "a": "aarch64",
       "d": "Interleave even quadwords from two inputs [Arm's documentation](https://developer.arm.com/architectures/instruction-sets/intrinsics/svtrn1q[_f32])",
       "f": "sve,f64mm",
       "ins": "trn1",
@@ -153249,16 +153229,6 @@
       "n": "svtrn1q_u64",
       "s": false,
       "sig": "fn svtrn1q_u64(op1: svuint64_t, op2: svuint64_t) -> svuint64_t",
-      "u": false
-    },
-    {
-      "a": "aarch64",
-      "d": "Interleave odd elements from two inputs [Arm's documentation](https://developer.arm.com/architectures/instruction-sets/intrinsics/svtrn2_b8)",
-      "f": "sve",
-      "ins": "trn2",
-      "n": "svtrn2_b8",
-      "s": false,
-      "sig": "fn svtrn2_b8(op1: svbool_t, op2: svbool_t) -> svbool_t",
       "u": false
     },
     {
@@ -153389,6 +153359,16 @@
       "n": "svtrn2_u64",
       "s": false,
       "sig": "fn svtrn2_u64(op1: svuint64_t, op2: svuint64_t) -> svuint64_t",
+      "u": false
+    },
+    {
+      "a": "aarch64",
+      "d": "Interleave odd elements from two inputs [Arm's documentation](https://developer.arm.com/architectures/instruction-sets/intrinsics/svtrn2[_b8])",
+      "f": "sve",
+      "ins": "trn2",
+      "n": "svtrn2_b8",
+      "s": false,
+      "sig": "fn svtrn2_b8(op1: svbool_t, op2: svbool_t) -> svbool_t",
       "u": false
     },
     {
