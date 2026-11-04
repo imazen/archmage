@@ -1,0 +1,44 @@
+[package]
+name = "magemath"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+description = "Vector and fixed-array math on magetypes with the same bits on every CPU: archmage-dispatched fused kernels, tested against the zenmath scalar functions."
+include = [
+    "src/**",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE*",
+]
+
+[features]
+default = ["std"]
+# Runtime CPU detection for the dispatchers. Without it `summon()` only sees
+# compile-time target features, so a no_std build dispatches to what the build
+# guarantees. The kernels themselves are `no_std`.
+std = ["magetypes/std", "archmage/std"]
+# Native AVX-512 tier (`+v4x` dispatch arm). Pulls magetypes' 512-bit backends.
+avx512 = ["magetypes/avx512", "archmage/avx512"]
+
+[dependencies]
+# f32x8 and its backends. 512-bit types (`w512`) are left off: magemath does not
+# use them, and they were 9% of magetypes' `cargo check` time (docs/DESIGN.md).
+magetypes = { version = "0.9.31-beta.2", path = "../magetypes", default-features = false }
+archmage = { version = "0.9.31-beta.2", path = "..", default-features = false }
+
+[dev-dependencies]
+# Scalar mirrors: the oracle for every tier's bits. Also used by the doctests.
+zenmath = { version = "0.9.31-beta.2", path = "../zenmath" }
+# Token-disable permutations in tests/dispatch.rs.
+archmage = { version = "0.9.31-beta.2", path = "..", features = ["std"] }
+
+# zenbench does not build for wasm32; examples/wasm_cost.rs covers it there.
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+zenbench = "0.1.10"
+
+[[bench]]
+name = "portable_cost"
+harness = false

@@ -233,6 +233,14 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 (none)
 
+#### Added
+
+- `zenmath` and `magemath`, unpublished draft crates. `zenmath` holds scalar math with defined bits on every target. `magemath::portable` holds `f32x8` kernels with the same bits on every tier and as the `zenmath` functions, with slice and fixed-array dispatchers.
+
+#### Fixed
+
+- `docs/transcendentals.md` no longer says the log functions return NaN for NaN. They return a finite value on every backend, and `exp2_midp` returns 2^-126 on x86 and the scalar backend but NaN on NEON and WASM. The page now tables the measured results.
+
 ### [0.9.31] - 2026-11-07
 
 #### Changed

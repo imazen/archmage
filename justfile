@@ -544,3 +544,60 @@ release-compat-recheck source output inventory:
 
 release-compat-audit directory source *options:
     python3 xtask/release_compat/audit.py {{directory}} --source {{source}} {{options}}
+
+# ====== zenmath / magemath ======
+
+# Portable-kernel contract on this host: every tier against the mirrors, with no
+# tolerance. A tier this CPU lacks fails unless MAGEMATH_SKIP_TIERS names it. On an
+# ARM box (no AVX-512 there, so v4x is compiled out) this is the NEON run too.
+test-magemath:
+    cargo test -p zenmath
+    cargo test -p zenmath --features std
+    cargo test -p magemath
+    cargo test -p magemath --features avx512
+    cargo test -p magemath --features avx512 --release
+    cargo test -p magemath --features zenmath/std --test golden --test parity
+
+# Same on WASM: strict, relaxed on an engine that fuses, relaxed on one that rounds
+# twice (the kernels' cached probe must send it to software), and no SIMD.
+test-magemath-wasm:
+    RUSTFLAGS="-Ctarget-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime run" cargo test -p magemath --target wasm32-wasip1 --tests
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime run" cargo test -p magemath --target wasm32-wasip1 --tests
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime run -W relaxed-simd-deterministic=n -C cranelift-has-fma=false" cargo test -p magemath --target wasm32-wasip1 --tests
+    CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime run" cargo test -p magemath --target wasm32-wasip1 --tests
+    CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime run" cargo test -p zenmath --target wasm32-wasip1 --tests
+
+# Same on x86 without FMA: the dispatchers must fall to the scalar tier and agree.
+test-magemath-no-fma:
+    MAGEMATH_SKIP_TIERS=v3,v4x CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="qemu-x86_64 -cpu Nehalem" cargo test -p magemath --target x86_64-unknown-linux-gnu --tests
+
+# Same on 32-bit x86, which has only the scalar tier.
+test-magemath-i686:
+    CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_RUNNER="qemu-i386" cargo test -p magemath --target i686-unknown-linux-gnu --tests
+
+# Same with FMA and AVX2 compiled in: the scalar tier then uses hardware FMA.
+test-magemath-v3-build:
+    RUSTFLAGS="-Ctarget-cpu=x86-64-v3" cargo test -p magemath --tests
+
+# Every 2^32 input, every op, every tier: minutes on many cores, so not on dev.
+# Run through run-heavy.
+magemath-exhaustive:
+    cargo test -p magemath --features avx512 --release --test exhaustive -- --ignored --nocapture
+
+# Rewrite the golden files from the mirrors after an intentional kernel change.
+# Review the edges.txt diff: it shows every special-case result that moved.
+magemath-golden-regen:
+    cargo test -p magemath --test golden regenerate -- --ignored
+
+# portable vs relaxed vs unchecked, per tier. Not on dev.
+magemath-bench:
+    cargo bench -p magemath --bench portable_cost
+
+# The same forms on WASM, where zenbench does not build.
+magemath-bench-wasm:
+    RUSTFLAGS="-Ctarget-feature=+simd128" cargo build -p magemath --example wasm_cost --release --target wasm32-wasip1
+    wasmtime run target/wasm32-wasip1/release/examples/wasm_cost.wasm
+
+# Rebuild the compile-time table in magemath/docs/DESIGN.md. Not on dev.
+magemath-compile-time scratch:
+    benchmarks/magemath_portable_cost_2026-11-05/compile_time.sh . {{scratch}}

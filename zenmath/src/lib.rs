@@ -1,0 +1,55 @@
+//! Portable scalar math with defined bits on every target.
+//!
+//! `zenmath` provides dependency-free, `no_std` scalar implementations for
+//! callers that need portable math without SIMD types. Vector and fixed-array
+//! math lives in `magemath` (this workspace), which uses this crate as the
+//! oracle its kernels are tested against.
+//!
+//! ## What is here
+//!
+//! - **Correctly rounded primitives** ([`scalar`]): `sqrt`/`floor`/`ceil`/
+//!   `round`/`roundeven` for f32 and f64 and `fmaf` for f32, bit-identical to
+//!   `std` on finite inputs (NaN payloads may differ, documented per function).
+//! - **f32 transcendentals** ([`scalar`]): `log2`/`exp2`/`ln`/`exp`/`log10`/`pow`/
+//!   `cbrt` at `_lowp` and `_midp`, plus `cbrt_midp_precise`, `sigmoid_midp` and
+//!   `silu_midp`. Each is the scalar form of the same-named kernel in
+//!   `magemath::portable`, with the same bits on every tier.
+//! - **Low-precision f64 transcendentals** ([`scalar`]): `log2`/`exp2`/`ln`/
+//!   `exp`/`log10`/`pow` `_lowp_f64`, about 1% relative error. No vector form yet.
+//! - **Planned, empty today**: special functions (`special` feature) and bit-exact
+//!   libm-convention ports (`exact` feature). Both stay behind features so callers
+//!   who don't need them don't compile them.
+//!
+//! ## Accuracy tiers
+//!
+//! Names carry the precision contract, matching magetypes:
+//!
+//! - `*_lowp`: perceptual and audio work. 0.56% relative error for `exp2`, about
+//!   6e-6 absolute for `log2`, 3e-5 relative for `cbrt`.
+//! - `*_midp`: general numerical work. At most 4.5 ULP logs, 3.2 ULP `cbrt`,
+//!   1.9 ULP `exp2` below x = 127.5.
+//! - `*_precise`: `cbrt_midp_precise` extends `cbrt_midp` over the whole f32 range.
+//!
+//! The measured figures per input band are in `docs/transcendentals.md`.
+//!
+//! ## Provenance
+//!
+//! The scalar core is ported from `magetypes::nostd_math` (itself derived from
+//! compiler-builtins/libm, from musl; MIT). The f32 `_midp` functions start from
+//! `zensim::det_math`. `magetypes` does not depend on this crate and keeps its own
+//! copies, because its `f32x8` methods have their own bit contract.
+
+#![no_std]
+#![forbid(unsafe_code)]
+
+// Only `fmaf` uses std, and only for `f32::mul_add`, which gives the same bits.
+#[cfg(feature = "std")]
+extern crate std;
+
+pub mod scalar;
+
+#[cfg(feature = "special")]
+pub mod special;
+
+#[cfg(feature = "exact")]
+pub mod exact;

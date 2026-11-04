@@ -1,0 +1,29 @@
+[package]
+name = "zenmath"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+description = "Scalar math with defined bits on every target: correctly rounded sqrt, rounding and fused multiply-add, and lowp/midp transcendentals. No dependencies, no_std."
+include = [
+    "src/**",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE*",
+]
+
+[features]
+# `no_std` scalar core with no dependencies.
+default = []
+# `fmaf` calls `f32::mul_add` instead of the software path. The bits are identical.
+std = []
+# Scalar special functions (erf/erfc/gamma/beta/Student-t, ...). Empty today; only
+# zenmetrics-style consumers will need them.
+special = []
+# Bit-exact libm-convention ports (fdlibm/msun and glibc algorithms), for callers
+# whose contract is "same bits as a named libm on every platform". Empty today.
+exact = []
+
+[dependencies]
