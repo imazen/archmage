@@ -1216,6 +1216,7 @@ fn process(_token: X64V3Token, data: &[f32; 8]) -> [f32; 8] {
   `exp2_midp(NaN)` is 2^-126 on x86 and scalar but NaN on NEON and WASM, because
   it clamps with `max`/`min`. Docs corrected in `docs/transcendentals.md`; the
   methods are unchanged, since any fix needs its own bit-contract review.
+  `magemath::portable` returns NaN on every backend.
 
 - **Portable FMA rounding and Miri (2026-10-12, fixed locally; CI pending):**
   The all-target f32 round-to-odd fallback fixes the independent subnormal

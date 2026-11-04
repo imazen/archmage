@@ -16,6 +16,10 @@ ULP) and for about 11% of `pow_midp` results (by up to 178 ULP for n = 2.4 on
 `cbrt` uses no `mul_add` and returned the same bits on both. NEON fuses like
 AVX2 and strict WASM rounds twice like the scalar backend; neither was measured.
 
+For the same bits on every backend, use `magemath::portable`: these polynomials
+with `mul_add_fused` and NaN out for NaN in. Its accuracy stays within the figures
+below on every band tested (`magemath/tests/reference.rs`).
+
 ### midp tier
 
 | Function | Domain | Max ULP | Mean ULP | Max rel. error |
@@ -118,7 +122,7 @@ log and pow functions also have `_unchecked`; the midp tier adds `_precise`.
 
 **Edge cases**: 0 → -inf, negative → NaN, +inf → +inf for the midp log functions. The lowp logs have no edge handling: results for 0 and negatives are finite and meaningless.
 
-**NaN inputs are not handled, and the results differ by backend** (measured 2026-11-05): among the operations listed below, only `cbrt_midp` returns NaN on all four measured backends.
+**NaN inputs are not handled, and the results differ by backend** (measured 2026-11-05): among the operations listed below, only `cbrt_midp` returns NaN on all four measured backends. `magemath::portable` returns NaN for all of these on every backend.
 
 | Function, NaN input | Scalar, x86 V3 | NEON, WASM |
 |---------------------|----------------|------------|
