@@ -1,0 +1,16 @@
+# Compile-only probe: see ../README.md. Not a workspace member.
+[package]
+name = "asm_probe"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+magemath = { path = "../../../magemath", features = ["avx512"] }
+magetypes = { path = "../../../magetypes", default-features = false, features = ["std"] }
+archmage = { path = "../../.." }
+
+[workspace]
