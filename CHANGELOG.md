@@ -122,7 +122,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 #### Added
 
-- Generic `log2_midp_fused`, `exp2_midp_fused` and `pow_midp_fused` share the existing approximation with explicit fused evaluation on all widths, including scalar backends. Ordinary midp methods retain their rounding behavior.
+- Generic `log2_midp_fused`, `exp2_midp_fused` and `pow_midp_fused` share the existing approximation with explicit fused evaluation on all widths, including scalar backends. Ordinary midp methods retain their rounding behavior (`05b41829`).
 
 
 #### QUEUED BREAKING CHANGES
