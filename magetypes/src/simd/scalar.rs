@@ -8,6 +8,42 @@
 use archmage::ScalarToken;
 use core::ops::{Add, Div, Mul, Neg, Sub};
 
+/// Scalar companion of [`super::generic::f32x4::log2_midp_fused`].
+///
+/// Uses the same approximation and fused multiply-add evaluation as the vector
+/// method. Positive normal inputs are supported; subnormals are not normalized.
+/// Zero returns negative infinity, negatives NaN and positive infinity infinity.
+#[inline(always)]
+pub fn log2_midp_fused(x: f32) -> f32 {
+    super::generic::f32x4::splat_t(ScalarToken, x)
+        .log2_midp_fused()
+        .to_array()[0]
+}
+
+/// Scalar companion of [`super::generic::f32x4::exp2_midp_fused`].
+///
+/// Uses the same approximation and clamping: below -126 returns zero, at or
+/// above 128 returns infinity. Fused evaluation does not improve the polynomial
+/// near overflow. Software FMA can be costly on WASM.
+#[inline(always)]
+pub fn exp2_midp_fused(x: f32) -> f32 {
+    super::generic::f32x4::splat_t(ScalarToken, x)
+        .exp2_midp_fused()
+        .to_array()[0]
+}
+
+/// Scalar companion of [`super::generic::f32x4::pow_midp_fused`].
+///
+/// Shares the fused log2/exp2 approximation with the vector method. This is not
+/// a general IEEE `powf`: subnormal inputs/results and negative bases are not
+/// supported as they would be by libm. Software FMA can be costly on WASM.
+#[inline(always)]
+pub fn pow_midp_fused(x: f32, n: f32) -> f32 {
+    super::generic::f32x4::splat_t(ScalarToken, x)
+        .pow_midp_fused(n)
+        .to_array()[0]
+}
+
 /// Scalar f32 with SIMD-compatible API.
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(transparent)]

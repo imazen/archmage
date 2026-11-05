@@ -339,7 +339,8 @@ MIT OR Apache-2.0
 midp approximations with one rounding per multiply-add on every backend.
 They are available on generic `f32x4`, `f32x8` and `f32x16`, including
 `ScalarToken` backends. Scalar equivalents therefore share the same algorithm;
-consumers do not need to copy its coefficients or Horner chains.
+consumers do not need to copy its coefficients or Horner chains. Plain `f32`
+companions with the same names live in `magetypes::simd::scalar`.
 
 The ordinary midp methods retain relaxed multiply-add. Fused evaluation does
 not add subnormal support or turn these approximations into IEEE `powf`.

@@ -6,14 +6,14 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: magetypes.txt 2648 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 36 lines (48 hidden + 0 excluded-feature)
+# files: magetypes.txt 2651 lines (supported surface) | magetypes.features.txt 12 added (features: avx512,std,w512) | magetypes.internal.txt 36 lines (48 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                12
 #   pub types (struct/enum/trait/alias)       287
 #   pub consts/statics                        228
-#   free functions                           3804
+#   free functions                           3810
 #   inherent methods                         1251
 #   enum variants                               1
 #   re-exports                                  2
@@ -26,9 +26,9 @@
 #   (root)                          321
 #   cast                              3
 #   prelude                        3640
-#   simd                           1621
+#   simd                           1627
 
-## items (2424 lines)
+## items (2427 lines)
 
 pub mod magetypes
 pub use archmage
@@ -2289,6 +2289,9 @@ pub fn simd::SimdLt::simd_lt(self, Rhs) -> Self::Output
 pub trait simd::SimdNe<Rhs>
 pub type simd::SimdNe::Output
 pub fn simd::SimdNe::simd_ne(self, Rhs) -> Self::Output
+pub fn simd::exp2_midp_fused(f32) -> f32 [also: simd::scalar]
+pub fn simd::log2_midp_fused(f32) -> f32 [also: simd::scalar]
+pub fn simd::pow_midp_fused(f32, f32) -> f32 [also: simd::scalar]
 pub type simd::f32x16 = prelude::f32x16<archmage::tokens::generated::wasm::Wasm128Token>
 pub type simd::f32x4 = prelude::f32x4<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]
 pub type simd::f32x8 = prelude::f32x8<archmage::tokens::generated::wasm::Wasm128Token> [also: simd::wasm128]

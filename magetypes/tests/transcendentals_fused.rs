@@ -68,7 +68,25 @@ macro_rules! compare {
                 scalar_e.exp2_midp_fused().to_array().map(f32::to_bits),
                 native_e.exp2_midp().to_array().map(f32::to_bits)
             );
+            assert_eq!(
+                values
+                    .map(magetypes::simd::scalar::log2_midp_fused)
+                    .map(f32::to_bits),
+                native.log2_midp().to_array().map(f32::to_bits)
+            );
+            assert_eq!(
+                exponents
+                    .map(magetypes::simd::scalar::exp2_midp_fused)
+                    .map(f32::to_bits),
+                native_e.exp2_midp().to_array().map(f32::to_bits)
+            );
             for gamma in [0.25, 0.5, 1.8, 2.2] {
+                assert_eq!(
+                    values
+                        .map(|x| magetypes::simd::scalar::pow_midp_fused(x, gamma))
+                        .map(f32::to_bits),
+                    native.pow_midp(gamma).to_array().map(f32::to_bits)
+                );
                 assert_eq!(
                     scalar.pow_midp_fused(gamma).to_array().map(f32::to_bits),
                     native.pow_midp(gamma).to_array().map(f32::to_bits)
