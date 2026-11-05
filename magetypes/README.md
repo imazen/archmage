@@ -332,3 +332,16 @@ MIT OR Apache-2.0
 [imageflow-dotnet]: https://github.com/imazen/imageflow-dotnet
 [imageflow-node]: https://github.com/imazen/imageflow-node
 [imageflow-go]: https://github.com/imazen/imageflow-go
+
+### Fused transcendental evaluation
+
+`log2_midp_fused`, `exp2_midp_fused` and `pow_midp_fused` use the existing
+midp approximations with one rounding per multiply-add on every backend.
+They are available on generic `f32x4`, `f32x8` and `f32x16`, including
+`ScalarToken` backends. Scalar equivalents therefore share the same algorithm;
+consumers do not need to copy its coefficients or Horner chains.
+
+The ordinary midp methods retain relaxed multiply-add. Fused evaluation does
+not add subnormal support or turn these approximations into IEEE `powf`.
+Software FMA can be costly on WASM. The `_midp_precise` aliases retain their
+existing behavior and are not substitutes for the fused methods.

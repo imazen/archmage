@@ -175,6 +175,37 @@ pub(super) fn gen_transcendentals(
                 self.pow_lowp(n)
             }}
 
+            // Shared rounding policy for the midp log2/exp2 approximation.
+            #[inline(always)]
+            fn transcendental_madd<const FUSED: bool>(self, a: Self, b: Self) -> Self {{
+                if FUSED {{ self.mul_add_fused(a, b) }} else {{ self.mul_add_relaxed(a, b) }}
+            }}
+
+            /// Like [`log2_midp`](Self::log2_midp), with one rounding per multiply-add
+            /// on every backend, including scalar and WASM. This preserves the same
+            /// approximation and domain limits; it does not add subnormal support.
+            #[inline(always)]
+            pub fn log2_midp_fused(self) -> Self {{
+                self.log2_midp_with_fma::<true>()
+            }}
+
+            /// Like [`exp2_midp`](Self::exp2_midp), with one rounding per multiply-add
+            /// on every backend. Software FMA can be costly on WASM. Clamping and
+            /// the approximation range are unchanged.
+            #[inline(always)]
+            pub fn exp2_midp_fused(self) -> Self {{
+                self.exp2_midp_with_fma::<true>()
+            }}
+
+            /// Like [`pow_midp`](Self::pow_midp), using the fused log2/exp2 variants.
+            /// Available for scalar backends at every vector width as well as SIMD.
+            /// Software FMA can be costly on WASM; this is a rounding contract,
+            /// not a more accurate approximation or a full IEEE `powf` replacement.
+            #[inline(always)]
+            pub fn pow_midp_fused(self, n: f32) -> Self {{
+                (self.log2_midp_fused() * splat_f32::<T>(self.1,n)).exp2_midp_fused()
+            }}
+
             // ====== Mid-Precision Transcendentals ======
 
             /// Mid-precision base-2 logarithm (at most 4.5 ULP).
@@ -183,6 +214,11 @@ pub(super) fn gen_transcendentals(
             /// Result is undefined for x <= 0.
             #[inline(always)]
             pub fn log2_midp_unchecked(self) -> Self {{
+                self.log2_midp_unchecked_with_fma::<false>()
+            }}
+
+            #[inline(always)]
+            fn log2_midp_unchecked_with_fma<const FUSED: bool>(self) -> Self {{
                 const SQRT2_OVER_2: u32 = 0x3f35_04f3;
                 const ONE_BITS: u32 = 0x3f80_0000;
                 const MANTISSA_MASK: i32 = 0x007f_ffff_u32 as i32;
@@ -207,11 +243,11 @@ pub(super) fn gen_transcendentals(
                 let y = (a - one) / (a + one);
                 let y2 = y * y;
 
-                let poly = splat_f32::<T>(self.1,C3).mul_add_relaxed(y2, splat_f32::<T>(self.1,C2));
-                let poly = poly.mul_add_relaxed(y2, splat_f32::<T>(self.1,C1));
-                let poly = poly.mul_add_relaxed(y2, splat_f32::<T>(self.1,C0));
+                let poly = splat_f32::<T>(self.1,C3).transcendental_madd::<FUSED>(y2, splat_f32::<T>(self.1,C2));
+                let poly = poly.transcendental_madd::<FUSED>(y2, splat_f32::<T>(self.1,C1));
+                let poly = poly.transcendental_madd::<FUSED>(y2, splat_f32::<T>(self.1,C0));
 
-                poly.mul_add_relaxed(y, n)
+                poly.transcendental_madd::<FUSED>(y, n)
             }}
 
             /// Mid-precision base-2 logarithm with edge case handling.
@@ -219,7 +255,12 @@ pub(super) fn gen_transcendentals(
             /// Returns -inf for 0, NaN for negative values, +inf for +inf.
             #[inline(always)]
             pub fn log2_midp(self) -> Self {{
-                let result = self.log2_midp_unchecked();
+                self.log2_midp_with_fma::<false>()
+            }}
+
+            #[inline(always)]
+            fn log2_midp_with_fma<const FUSED: bool>(self) -> Self {{
+                let result = self.log2_midp_unchecked_with_fma::<FUSED>();
                 let zero = splat_f32::<T>(self.1,0.0);
                 let result = Self::blend(
                     self.simd_eq(zero),
@@ -249,6 +290,11 @@ pub(super) fn gen_transcendentals(
             /// ~1000x less polynomial truncation error than floor-based splitting.
             #[inline(always)]
             pub fn exp2_midp_unchecked(self) -> Self {{
+                self.exp2_midp_unchecked_with_fma::<false>()
+            }}
+
+            #[inline(always)]
+            fn exp2_midp_unchecked_with_fma<const FUSED: bool>(self) -> Self {{
                 const C0: f32 = 1.0;
                 const C1: f32 = core::f32::consts::LN_2;
                 const C2: f32 = 0.240_226_46;
@@ -266,12 +312,12 @@ pub(super) fn gen_transcendentals(
                 let xi = self.round().min(splat_f32::<T>(self.1,127.0));
                 let xf = self - xi;
 
-                let poly = splat_f32::<T>(self.1,C6).mul_add_relaxed(xf, splat_f32::<T>(self.1,C5));
-                let poly = poly.mul_add_relaxed(xf, splat_f32::<T>(self.1,C4));
-                let poly = poly.mul_add_relaxed(xf, splat_f32::<T>(self.1,C3));
-                let poly = poly.mul_add_relaxed(xf, splat_f32::<T>(self.1,C2));
-                let poly = poly.mul_add_relaxed(xf, splat_f32::<T>(self.1,C1));
-                let poly = poly.mul_add_relaxed(xf, splat_f32::<T>(self.1,C0));
+                let poly = splat_f32::<T>(self.1,C6).transcendental_madd::<FUSED>(xf, splat_f32::<T>(self.1,C5));
+                let poly = poly.transcendental_madd::<FUSED>(xf, splat_f32::<T>(self.1,C4));
+                let poly = poly.transcendental_madd::<FUSED>(xf, splat_f32::<T>(self.1,C3));
+                let poly = poly.transcendental_madd::<FUSED>(xf, splat_f32::<T>(self.1,C2));
+                let poly = poly.transcendental_madd::<FUSED>(xf, splat_f32::<T>(self.1,C1));
+                let poly = poly.transcendental_madd::<FUSED>(xf, splat_f32::<T>(self.1,C0));
 
                 let xi_i32 = xi.to_i32_round();
                 let scale_bits = (xi_i32 + splat_i32::<T>(self.1,127)).shl_const::<23>();
@@ -285,12 +331,17 @@ pub(super) fn gen_transcendentals(
             /// inf for x >= 128.
             #[inline(always)]
             pub fn exp2_midp(self) -> Self {{
+                self.exp2_midp_with_fma::<false>()
+            }}
+
+            #[inline(always)]
+            fn exp2_midp_with_fma<const FUSED: bool>(self) -> Self {{
                 let underflow_limit = splat_f32::<T>(self.1,-126.0);
                 let overflow_limit = splat_f32::<T>(self.1,128.0);
 
                 // Clamp to prevent overflow in intermediate calculations
                 let clamped = self.max(underflow_limit).min(overflow_limit);
-                let result = clamped.exp2_midp_unchecked();
+                let result = clamped.exp2_midp_unchecked_with_fma::<FUSED>();
 
                 // Handle edge cases: large negative → 0, large positive → inf
                 // 2^128 > f32::MAX, so >= 128 must return inf

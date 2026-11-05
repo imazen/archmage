@@ -515,3 +515,7 @@ fma-no-hardware:
 # Independently build/test the self-contained dispatch prototype (x86-64 host).
 artisanal-check:
     bash experiments/artisanal-dispatch/tools/native-check.sh
+
+# Shared fused transcendental contract, including the scalar equivalent.
+test-transcendentals-fused:
+    cargo test -p magetypes --features avx512 --release --test transcendentals_fused
