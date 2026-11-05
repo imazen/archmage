@@ -1,7 +1,9 @@
 //! The native FMA implementation predates the fused scalar variants and is the
 //! compatibility oracle. Exercise each width, including native/polyfill x16.
 #![forbid(unsafe_code)]
-use archmage::{ScalarToken, SimdToken, arcane};
+#[cfg(target_arch = "x86_64")]
+use archmage::SimdToken;
+use archmage::{ScalarToken, arcane};
 #[cfg(feature = "w512")]
 use magetypes::simd::generic::f32x16;
 use magetypes::simd::generic::{f32x4, f32x8};
@@ -39,6 +41,7 @@ fn scalar_rails_and_widths() {
     }
 }
 
+#[cfg(target_arch = "x86_64")]
 macro_rules! compare {
     ($token:ident, $vector:ident, $width:literal) => {{
         for i in 0..4096u32 {
