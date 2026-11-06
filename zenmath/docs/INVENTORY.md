@@ -1,8 +1,9 @@
 # Existing math inventory and migration review
 
 Reviewed 2026-11-05. This reconciles work already implemented in
-`zenmetrics-math`; it is not a proposal to reimplement that crate. No consumer
-migration or new public API is authorized by this review.
+`zenmetrics-math`; it is not a proposal to reimplement that crate. The later owner request authorizes draft Rust ports of the consumed CORE-MATH
+subset; see [port coverage and validation](CORE_MATH.md). Consumer migration
+remains separate.
 
 ## What exists and where it belongs
 
@@ -13,7 +14,7 @@ Existing downstream tests and numerical claims have not been rerun for this revi
 
 | Existing implementation | Present home | Migration assessment |
 |---|---|---|
-| f32/f64 sqrt, floor, ceil, round-away, round-even; f32 fused multiply-add | `zenmath::scalar` | Already here. Preserve primitive semantics independently of any host libm. f64 FMA is absent. |
+| f32/f64 sqrt, floor, ceil, round-away, round-even; f32 fused multiply-add | `zenmath::scalar` | Already here. Preserve primitive semantics independently of any host libm. f64 FMA has since been ported; validation is tracked in CORE_MATH.md. |
 | f32 lowp/midp log2, exp2, ln, exp, log10, pow, cbrt; full-range midp cbrt; sigmoid and SiLU | zenmath scalar mirrors; magemath portable/relaxed f32x8 kernel, array and slice surfaces | Already here as draft. Portable rounding remains fused pending the owner's decision. These approximations do not reproduce named libms. |
 | f64 lowp log2/exp2/ln/exp/log10/pow | zenmath scalar | Already here, but not full-range, high-accuracy replacements for statistics. `exp2_lowp_f64` clamps to [-1022, 1022]; do not advertise a universal relative-error bound. |
 | `libm 0.2.16` f32 pow and exp lane ports | `zenmetrics-math/src/fdlibm.rs` | Reuse the eight-lane implementations in magemath's future compatibility family; supply pinned scalar fallback through zenmath. Sixteen-lane code remains in its existing consumer until width expansion is approved. |
