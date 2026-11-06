@@ -85,7 +85,11 @@ pub(crate) fn pow<T: F64x4Backend>(t: T, x: [f32; 4], y: [f32; 4]) -> [f32; 4] {
     use powf_tables::*;
     // f32 integers above 2^24 are even. Inspect exponent/fraction bits so
     // negative nonintegers keep the complete scalar domain/special path.
-    let parity = y.map(integer_parity);
+    let parity = if x.iter().any(|v| v.is_sign_negative()) {
+        y.map(integer_parity)
+    } else {
+        [(true, false); 4]
+    };
     let valid: [bool; 4] = core::array::from_fn(|i| {
         x[i].abs() > 0.0
             && x[i].is_finite()

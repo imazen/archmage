@@ -1,8 +1,7 @@
 //! Frozen pre-optimization packed CORE-MATH power branch baseline.
 //! Source: archmage8eacda2f, magemath/src/correct/mod.rs. Experimental only.
+use crate::powf_tables;
 use magetypes::simd::{backends::F64x4Backend, generic::f64x4};
-#[path = "../../../magemath/src/correct/powf_tables.rs"]
-mod powf_tables;
 #[inline(always)]
 fn v<T: F64x4Backend>(t: T, a: [f64; 4]) -> f64x4<T> {
     f64x4::from_array_t(t, a)

@@ -1,5 +1,8 @@
 #![forbid(unsafe_code)]
 mod baseline;
+mod eager;
+#[path = "../../../magemath/src/correct/powf_tables.rs"]
+mod powf_tables;
 use archmage::prelude::*;
 #[attune(_*, dispatch)]
 fn branch_baseline(x: &mut [f32], y: &[f32]) {
@@ -11,6 +14,18 @@ fn branch_baseline(x: &mut [f32], y: &[f32]) {
         .zip(y.as_chunks::<4>().0)
     {
         *chunk = baseline::pow(token, *chunk, *ys);
+    }
+}
+#[attune(_*, dispatch)]
+fn eager_packed(x: &mut [f32], y: &[f32]) {
+    let token = Token::from_context();
+    for (chunk, ys) in x
+        .as_chunks_mut::<4>()
+        .0
+        .iter_mut()
+        .zip(y.as_chunks::<4>().0)
+    {
+        *chunk = eager::pow(token, *chunk, *ys);
     }
 }
 #[cfg(not(target_arch = "wasm32"))]
@@ -61,6 +76,7 @@ fn main() {
                 }
                 for (name, f) in [
                     ("branch_baseline", branch_baseline as fn(&mut [f32], &[f32])),
+                    ("eager_packed", eager_packed),
                     ("packed_sign", magemath::portable::slice::pow_f32),
                 ] {
                     let input = input.clone();
@@ -74,7 +90,7 @@ fn main() {
                         })
                     });
                 }
-                g.baseline("branch_baseline");
+                g.baseline("eager_packed");
             });
         }
     })
