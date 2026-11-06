@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 
@@ -23,6 +24,8 @@ def main():
     files.update((root/'.cargo').rglob('*'))
     manifest=''.join(f'{sha(p)}  {p.relative_to(root)}\n' for p in sorted(files) if p.is_file())
     (args.out/'sources.sha256').write_text(manifest)
+    shutil.copyfile(binary,args.out/'zenmath-gamma-opt')
+    if sha(binary)!=sha(args.out/'zenmath-gamma-opt'):raise ValueError('binary retention copy mismatch')
     compiler=subprocess.check_output(['rustup','run','1.99.1','rustc','-vV'],text=True)
     (args.out/'rustc.txt').write_text(compiler)
     compiler_path=Path(os.environ['RUSTC'])

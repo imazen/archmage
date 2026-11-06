@@ -16,7 +16,11 @@ Independent directed MPFR checks passed on13687 decode and13690 encode inputs,
 including inverse images of output midpoints, boundaries and fallback rails.
 Containment is required even when CORE rescue returns the correct output bits.
 This corpus is boundary-biased; its rescue counts do not represent throughput inputs.
-No exhaustive domain sweep or speed result is claimed yet.
+No exhaustive domain sweep is claimed yet. Scalar and packed measurements are in [RESULTS.md](RESULTS.md).
+The16-center degree5 scalar candidate wins all8 scalar groups against std;
+packed global-coefficient degree13 decode/15 encode leads array4/8 results.
+[PIECEWISE-BOUND.md](PIECEWISE-BOUND.md) and [VECTOR-BOUND.md](VECTOR-BOUND.md)
+state their certificate arguments. All use the same exact CORE contract.
 
 The first linked binary SHA256 is
 `935622b2dcc84fda918cc796801602a190bfa4cf818478efcf674866995218f3`.
@@ -30,7 +34,7 @@ The successful build log is adjacent `build-initial-v3.log`:
 run-heavy rc0/29s/peak RSS0.48GiB/min available47417MiB/peak load2.19.
 The earlier v2 clippy failure is retained separately. Source/binary/compiler
 identities and actual Cargo fingerprints are in `identity/`; `oracle-results.csv`
-retains all52 sample rescue counts. Durable mirror pending timing completion.
+retains all52 sample rescue counts. Durable mirror content audit pending; all frozen source/binaries retained.
 
 All builds/toolchains/temp/output are local to the isolated task directory;
 NAS is used for durable artifacts only. Timing uses zenbench with its shared

@@ -1,8 +1,14 @@
 #![forbid(unsafe_code)]
 mod generated;
 mod kernel;
+mod piecewise;
+mod piecewise_generated;
 #[cfg(target_arch = "x86_64")]
 mod timing;
+#[cfg(target_arch = "x86_64")]
+mod vector;
+#[cfg(target_arch = "x86_64")]
+mod vector_oracle;
 use std::{
     error::Error,
     fs::File,
@@ -38,7 +44,7 @@ fn facts() {
 fn oracle(input: &Path, output: &Path) -> Result<(), Box<dyn Error>> {
     let mut out = File::create_new(output)?;
     writeln!(out, "kind,degree,layout,records,domain_records,rescues")?;
-    let mut counts = [[[0u64; 3]; 26]; 2];
+    let mut counts = [[[0u64; 3]; 32]; 2];
     for (line_number, line) in BufReader::new(File::open(input)?).lines().enumerate() {
         let line = line?;
         if line_number == 0 {
@@ -71,7 +77,11 @@ fn oracle(input: &Path, output: &Path) -> Result<(), Box<dyn Error>> {
         let x = f32::from_bits(xb);
         let mut failure = None;
         let mut visit = |n: usize, l: usize, value: kernel::Evaluation| {
-            let row = &mut counts[k][(n - 8) * 2 + l];
+            let row = &mut counts[k][if n < 8 {
+                26 + (n - 3) * 2 + l
+            } else {
+                (n - 8) * 2 + l
+            }];
             row[0] += 1;
             let inside =
                 xb >= (if k == 0 {
@@ -106,8 +116,10 @@ fn oracle(input: &Path, output: &Path) -> Result<(), Box<dyn Error>> {
         };
         if k == 0 {
             kernel::each::<0>(x, &mut visit);
+            piecewise::each::<0>(x, &mut visit);
         } else {
             kernel::each::<1>(x, &mut visit);
+            piecewise::each::<1>(x, &mut visit);
         }
         if let Some(failure) = failure {
             return Err(failure.into());
@@ -121,7 +133,7 @@ fn oracle(input: &Path, output: &Path) -> Result<(), Box<dyn Error>> {
             writeln!(
                 out,
                 "{k},{},{},{},{},{}",
-                i / 2 + 8,
+                if i < 26 { i / 2 + 8 } else { (i - 26) / 2 + 3 },
                 i % 2,
                 row[0],
                 row[1],
@@ -129,7 +141,9 @@ fn oracle(input: &Path, output: &Path) -> Result<(), Box<dyn Error>> {
             )?;
         }
     }
-    println!("MPFR all52 combinations:bit equality AND interval containment passed");
+    println!(
+        "MPFR all64 combinations (52 global +12 piecewise):bit equality AND interval containment passed"
+    );
     Ok(())
 }
 fn main() -> Result<(), Box<dyn Error>> {
@@ -138,7 +152,21 @@ fn main() -> Result<(), Box<dyn Error>> {
         Some("facts") => facts(),
         Some("oracle") if args.len() == 4 => oracle(Path::new(&args[2]), Path::new(&args[3]))?,
         #[cfg(target_arch = "x86_64")]
-        Some("bench") if args.len() == 3 => timing::run(Path::new(&args[2]))?,
+        Some("bench") if args.len() == 3 => timing::run(Path::new(&args[2]), false, false)?,
+        #[cfg(target_arch = "x86_64")]
+        Some("bench-refine") if args.len() == 3 => timing::run(Path::new(&args[2]), true, false)?,
+        #[cfg(target_arch = "x86_64")]
+        Some("bench-piecewise") if args.len() == 3 => {
+            timing::run(Path::new(&args[2]), false, true)?
+        }
+        #[cfg(target_arch = "x86_64")]
+        Some("bench-vector") if args.len() == 3 => timing::run_vector(Path::new(&args[2]))?,
+        #[cfg(target_arch = "x86_64")]
+        Some("vector-oracle") if args.len() == 4 => {
+            vector_oracle::run(Path::new(&args[2]), Path::new(&args[3]))?
+        }
+        #[cfg(target_arch = "x86_64")]
+        Some("rescue-counts") if args.len() == 3 => timing::rescue_counts(Path::new(&args[2]))?,
         _ => return Err("usage:facts | oracle INPUT.csv OUTPUT.csv | bench OUTPUT.json".into()),
     }
     Ok(())

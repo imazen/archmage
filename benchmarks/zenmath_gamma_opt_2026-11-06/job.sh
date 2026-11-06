@@ -21,20 +21,31 @@ case "${1:?job required}" in
   just validate-tokens
   just soundness
   ;;
+ analysis-build)
+  "$(rustup which --toolchain 1.99.1 rustfmt)" --edition 2024 src/bin/paired.rs
+  cargo +1.99.1 clippy --locked --release --bin paired -- -D warnings
+  cargo +1.99.1 build --locked --release --bin paired
+  ;;
+ paired)
+  shift;exec "$CARGO_TARGET_DIR/release/paired" "$@"
+  ;;
  freeze)
   python3 freeze.py "${2:?output directory required}"
   ;;
  build)
-  mkdir -p "$GAMMA_TASK_ROOT/runs/initial-v3"
-  python3 generate.py --rust src/generated.rs --rustfmt "$(rustup which --toolchain 1.99.1 rustfmt)" --proof "$GAMMA_TASK_ROOT/runs/initial-v3/bound-proof.json" --summary "$GAMMA_TASK_ROOT/runs/initial-v3/bound-summary.csv"
-  python3 oracle.py --out "$GAMMA_TASK_ROOT/runs/initial-v3/oracle.csv"
-  cargo +1.99.1 update
+  : "${GAMMA_RUN_DIR:?unique run directory required}"
+  mkdir "$GAMMA_RUN_DIR"
+  python3 generate.py --rust src/generated.rs --rustfmt "$(rustup which --toolchain 1.99.1 rustfmt)" --proof "$GAMMA_RUN_DIR/bound-proof.json" --summary "$GAMMA_RUN_DIR/bound-summary.csv"
+  python3 generate_piecewise.py --rust src/piecewise_generated.rs --rustfmt "$(rustup which --toolchain 1.99.1 rustfmt)" --proof "$GAMMA_RUN_DIR/piece-bound-proof.json" --summary "$GAMMA_RUN_DIR/piece-bound-summary.csv"
+  python3 oracle.py --out "$GAMMA_RUN_DIR/oracle.csv"
+  cargo +1.99.1 fetch --locked
   cargo +1.99.1 fmt
-  cargo +1.99.1 test --release
-  cargo +1.99.1 clippy --all-targets --release -- -D warnings
-  cargo +1.99.1 build --release
+  cargo +1.99.1 test --locked --release
+  cargo +1.99.1 clippy --locked --all-targets --release -- -D warnings
+  cargo +1.99.1 build --locked --release
   "$CARGO_TARGET_DIR/release/zenmath-gamma-opt" facts
-  "$CARGO_TARGET_DIR/release/zenmath-gamma-opt" oracle "$GAMMA_TASK_ROOT/runs/initial-v3/oracle.csv" "$GAMMA_TASK_ROOT/runs/initial-v3/oracle-results.csv"
+  "$CARGO_TARGET_DIR/release/zenmath-gamma-opt" oracle "$GAMMA_RUN_DIR/oracle.csv" "$GAMMA_RUN_DIR/oracle-results.csv"
+  "$CARGO_TARGET_DIR/release/zenmath-gamma-opt" vector-oracle "$GAMMA_RUN_DIR/oracle.csv" "$GAMMA_RUN_DIR/vector-oracle-results.csv"
   ;;
  *) shift;exec "$CARGO_TARGET_DIR/release/zenmath-gamma-opt" "$@" ;;
 esac

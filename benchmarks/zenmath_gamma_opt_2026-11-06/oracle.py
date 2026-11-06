@@ -47,6 +47,10 @@ def main():
                 for m in [1.0,1.5]:
                     b=bits32(math.ldexp(m,e))
                     for d in range(-8,9):add(b+d,'power2-or-mantissa-split')
+            for e in range(-9,1):
+                for j in range(33):
+                    b=bits32(math.ldexp(1+j/32,e))
+                    for d in range(-8,9):add(b+d,'piecewise-center-or-edge')
             rng=random.Random(0x47414d4d41+k)
             for _ in range(args.samples):add(rng.randrange(start,end+1),'random-bits')
             for i in range(args.samples):add(start+(end-start)*i//(args.samples-1),'stratified-bits')
