@@ -2,7 +2,7 @@
 #![cfg(feature = "archmage")]
 use archmage::prelude::*;
 use zenmath::{
-    scalar as oracle,
+    scalar::reference as oracle,
     simd::{array, scalar, slice},
 };
 #[path = "data/fma_vectors.rs"]
@@ -960,17 +960,17 @@ fn genuine_scalar_context_contract() {
         (
             "scalar exp",
             Box::new(|x| scalar::expf_scalar_t(ScalarToken, x)),
-            oracle::reference::expf,
+            oracle::expf,
         ),
         (
             "scalar ln",
             Box::new(|x| scalar::logf_scalar_t(ScalarToken, x)),
-            oracle::reference::logf,
+            oracle::logf,
         ),
         (
             "scalar log2",
             Box::new(|x| scalar::log2f_scalar_t(ScalarToken, x)),
-            oracle::reference::log2f,
+            oracle::log2f,
         ),
     ];
     let mut power: Vec<(&str, Binary)> = vec![(
@@ -982,17 +982,17 @@ fn genuine_scalar_context_contract() {
         unary.push((
             "v3 expf",
             Box::new(move |x| scalar::expf_v3_t(t, x)),
-            oracle::reference::expf,
+            oracle::expf,
         ));
         unary.push((
             "v3 logf",
             Box::new(move |x| scalar::logf_v3_t(t, x)),
-            oracle::reference::logf,
+            oracle::logf,
         ));
         unary.push((
             "v3 log2f",
             Box::new(move |x| scalar::log2f_v3_t(t, x)),
-            oracle::reference::log2f,
+            oracle::log2f,
         ));
         power.push(("v3 pow", Box::new(move |x, y| scalar::powf_v3_t(t, x, y))));
     }
@@ -1001,17 +1001,17 @@ fn genuine_scalar_context_contract() {
         unary.push((
             "v4x expf",
             Box::new(move |x| scalar::expf_v4x_t(t, x)),
-            oracle::reference::expf,
+            oracle::expf,
         ));
         unary.push((
             "v4x logf",
             Box::new(move |x| scalar::logf_v4x_t(t, x)),
-            oracle::reference::logf,
+            oracle::logf,
         ));
         unary.push((
             "v4x log2f",
             Box::new(move |x| scalar::log2f_v4x_t(t, x)),
-            oracle::reference::log2f,
+            oracle::log2f,
         ));
         power.push(("v4x pow", Box::new(move |x, y| scalar::powf_v4x_t(t, x, y))));
     }
@@ -1020,17 +1020,17 @@ fn genuine_scalar_context_contract() {
         unary.push((
             "neon expf",
             Box::new(move |x| scalar::expf_neon_t(t, x)),
-            oracle::reference::expf,
+            oracle::expf,
         ));
         unary.push((
             "neon logf",
             Box::new(move |x| scalar::logf_neon_t(t, x)),
-            oracle::reference::logf,
+            oracle::logf,
         ));
         unary.push((
             "neon log2f",
             Box::new(move |x| scalar::log2f_neon_t(t, x)),
-            oracle::reference::log2f,
+            oracle::log2f,
         ));
         power.push((
             "neon pow",
@@ -1042,17 +1042,17 @@ fn genuine_scalar_context_contract() {
         unary.push((
             "wasm128 expf",
             Box::new(move |x| scalar::expf_wasm128_t(t, x)),
-            oracle::reference::expf,
+            oracle::expf,
         ));
         unary.push((
             "wasm128 logf",
             Box::new(move |x| scalar::logf_wasm128_t(t, x)),
-            oracle::reference::logf,
+            oracle::logf,
         ));
         unary.push((
             "wasm128 log2f",
             Box::new(move |x| scalar::log2f_wasm128_t(t, x)),
-            oracle::reference::log2f,
+            oracle::log2f,
         ));
         power.push((
             "wasm128 pow",
@@ -1087,9 +1087,79 @@ fn genuine_scalar_context_contract() {
             11.,
             f32::from_bits(state.rotate_left(13)),
         ][i % 9];
-        let want = oracle::reference::powf(x, y);
+        let want = oracle::powf(x, y);
         for (label, fun) in &power {
             eq32(fun(x, y), want, label, x.to_bits());
         }
+    }
+}
+
+#[test]
+fn ordinary_facade_matches_independent_reference() {
+    type Unary32 = (&'static str, fn(f32) -> f32, fn(f32) -> f32);
+    type Unary64 = (&'static str, fn(f64) -> f64, fn(f64) -> f64);
+    let ops32: [Unary32; 9] = [
+        ("sqrt", zenmath::scalar::sqrtf, oracle::sqrtf),
+        ("floor", zenmath::scalar::floorf, oracle::floorf),
+        ("ceil", zenmath::scalar::ceilf, oracle::ceilf),
+        ("round", zenmath::scalar::roundf, oracle::roundf),
+        ("roundeven", zenmath::scalar::roundevenf, oracle::roundevenf),
+        ("exp", zenmath::scalar::expf, oracle::expf),
+        ("ln", zenmath::scalar::logf, oracle::logf),
+        ("log2", zenmath::scalar::log2f, oracle::log2f),
+        (
+            "pow2.4",
+            |x| zenmath::scalar::powf(x, 2.4),
+            |x| oracle::powf(x, 2.4),
+        ),
+    ];
+    let ops64: [Unary64; 5] = [
+        ("sqrt", zenmath::scalar::sqrt, oracle::sqrt),
+        ("floor", zenmath::scalar::floor, oracle::floor),
+        ("ceil", zenmath::scalar::ceil, oracle::ceil),
+        ("round", zenmath::scalar::round, oracle::round),
+        ("roundeven", zenmath::scalar::roundeven, oracle::roundeven),
+    ];
+    let mut state = 0x9a17d13c5930u64;
+    for i in 0..20000 {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        let bits = if i < 16 {
+            [
+                0, 0x80000000, 1, 0x80000001, 0x3effffff, 0x3f000000, 0x3f000001, 0xbeffffff,
+                0xbf000000, 0xbf000001, 0x3fbfffff, 0x3fc00000, 0x3fc00001, 0x7f800000, 0xff800000,
+                0x7fc00001,
+            ][i]
+        } else {
+            state as u32
+        };
+        let x = f32::from_bits(bits);
+        for &(name, got, want) in &ops32 {
+            eq32(got(x), want(x), name, bits);
+        }
+        let bits = if i < 4 {
+            [0, 1, 0x8000000000000000, 0x7ff0000000000000][i]
+        } else {
+            state
+        };
+        let x = f64::from_bits(bits);
+        for &(name, got, want) in &ops64 {
+            eq64(got(x), want(x), name, bits);
+        }
+    }
+    for [a, b, c, want] in vectors::F32 {
+        eq32(
+            zenmath::scalar::fmaf(f32::from_bits(a), f32::from_bits(b), f32::from_bits(c)),
+            f32::from_bits(want),
+            "facade fmaf",
+            a,
+        );
+    }
+    for [a, b, c, want] in vectors::F64 {
+        eq64(
+            zenmath::scalar::fma(f64::from_bits(a), f64::from_bits(b), f64::from_bits(c)),
+            f64::from_bits(want),
+            "facade fma",
+            a,
+        );
     }
 }

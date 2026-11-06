@@ -22,3 +22,6 @@ check-freeze:
     python3 test-freeze.py
 analyze input output:
     cargo run --release --manifest-path analysis/Cargo.toml -- {{input}} {{output}}
+
+build-cost output:
+    python3 build-cost.py {{output}}
