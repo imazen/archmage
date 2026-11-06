@@ -3,7 +3,10 @@ use portable_f32_study::{CANDIDATES, eval};
 use std::{env, fs, path::Path};
 fn main() {
     let args: Vec<_> = env::args().collect();
-    assert_eq!(args.len(), 4, "results OP RECORDS OUTPUT_DIRECTORY");
+    assert!(
+        (4..=5).contains(&args.len()),
+        "results OP RECORDS OUTPUT_DIRECTORY [CANDIDATE]"
+    );
     let data = fs::read(&args[2]).expect("records required");
     assert!(!data.is_empty() && data.len() % 12 == 0);
     let mut x = Vec::new();
@@ -18,6 +21,12 @@ fn main() {
     }
     fs::create_dir_all(&args[3]).unwrap();
     for candidate in CANDIDATES {
+        if args.get(4).is_some_and(|c| c != candidate) {
+            continue;
+        }
+        if !portable_f32_study::supports(candidate, &args[1]) {
+            continue;
+        }
         let mut out = x.clone();
         eval(candidate, &args[1], &mut out, &y);
         let bits: Vec<u8> = out.iter().flat_map(|v| v.to_bits().to_le_bytes()).collect();

@@ -21,6 +21,9 @@ fn main() {
                     .max_rounds(60)
                     .max_wall_time(Duration::from_secs(2));
                 for candidate in CANDIDATES {
+                    if !portable_f32_study::supports(candidate, op) {
+                        continue;
+                    }
                     let input: Vec<f32> = (0..1024)
                         .map(|i| {
                             let t = ((i * 719) % 1024) as f32 / 1024.0;

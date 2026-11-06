@@ -1,7 +1,12 @@
 #![forbid(unsafe_code)]
 use archmage::prelude::*;
+mod arm_pow_core;
+pub fn supports(candidate: &str, op: &str) -> bool {
+    candidate != "arm_pow_core_fallback" || op == "pow"
+}
 pub const CANDIDATES: &[&str] = &[
     "std",
+    "arm_pow_core_fallback",
     "metallic",
     "core_scalar",
     "core_vector",
@@ -68,6 +73,12 @@ pub fn eval(candidate: &str, op: &str, x: &mut [f32], y: &[f32]) {
         };
     }
     match candidate {
+        "arm_pow_core_fallback" => {
+            assert_eq!(op, "pow");
+            x.iter_mut()
+                .zip(y)
+                .for_each(|(a, b)| *a = arm_pow_core::powf_arm_core(*a, *b));
+        }
         "std" => scalar!(f32::exp, f32::ln, f32::log2, f32::powf),
         "core_scalar" => scalar!(
             zenmath::scalar::expf,
