@@ -108,7 +108,7 @@ on implementation freeze `5a9cc685`. Keep that exact numerical/build source
 across ISA builds; do not relabel earlier results after driver updates.
 
 The subsequent driver revision catches a signalled subprocess, archives an old
-summary and persists its return code/signal in `FAILURE.txt`. Its regression
+summary and appends its return code/signal atomically to `FAILURE.txt`, retaining any existing Rust diagnostic bytes exactly. Its regression
 covers SIGTERM15 without relying on the child to write a failure marker. Matrix
 subprocesses now use `sys.executable`, preserving the selected interpreter.
 This matters when a PATH shim reintroduces environment variables. Existing

@@ -48,4 +48,20 @@ class SignalTests(unittest.TestCase):
             self.assertIn('signal=15',(out/'FAILURE.txt').read_text())
             self.assertEqual(len(list(out.glob('summary.txt.*.bak'))),1)
 
+    def test_subprocess_metadata_preserves_existing_failure_bytes(self):
+        with tempfile.TemporaryDirectory(dir=Path.home()/'tmp') as name:
+            root=Path(name);build=root/'build';build.mkdir();out=root/'run';out.mkdir()
+            binary=root/'binary';binary.write_text('test')
+            manifest='test source\n'
+            identity=dict(binary=str(binary),binary_sha256=drive.sha(binary),source_sha256=hashlib.sha256(manifest.encode()).hexdigest(),runner='')
+            (build/'build.json').write_text(json.dumps(identity))
+            original=b'MISMATCH chunk=91 input=3f800000 actual=00000000 reference=3f800000\nrerun exact bytes\xff\x00'
+            (out/'FAILURE.txt').write_bytes(original)
+            args=SimpleNamespace(build=build,out=out,op='exp',backend='reference',threads=1,start=0,count=11,chunk=7,compare=True,resume=True)
+            with patch.object(drive,'sources',return_value=manifest),patch.object(drive.subprocess,'run',side_effect=subprocess.CalledProcessError(1,['test'])):
+                with self.assertRaises(subprocess.CalledProcessError):drive.run(args)
+            result=(out/'FAILURE.txt').read_bytes()
+            self.assertEqual(result[:len(original)],original)
+            self.assertIn(b'child returncode=1; signal=none',result)
+
 if __name__=='__main__': unittest.main()

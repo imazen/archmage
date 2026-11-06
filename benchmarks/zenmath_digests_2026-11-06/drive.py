@@ -79,7 +79,10 @@ def run(args):
                 import time
                 summary.rename(args.out/f'summary.txt.{time.time_ns()}.bak')
             pending=args.out/'FAILURE.pending'
-            pending.write_text(f'child returncode={error.returncode}; signal={-error.returncode if error.returncode < 0 else "none"}\ncommand={json.dumps(command)}\n')
+            failure=args.out/'FAILURE.txt'
+            original=failure.read_bytes() if failure.exists() else b''
+            metadata=f'child returncode={error.returncode}; signal={-error.returncode if error.returncode < 0 else "none"}\ncommand={json.dumps(command)}\n'.encode()
+            pending.write_bytes(original + (b'\n' if original else b'') + metadata)
             pending.replace(args.out/'FAILURE.txt')
             raise
 
