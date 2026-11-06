@@ -1132,6 +1132,7 @@ pub use crate::core_math::atan2f;
 pub use crate::core_math::cbrt;
 pub use crate::core_math::exp;
 pub use crate::core_math::exp2;
+pub use crate::core_math::log;
 pub use crate::core_math::log2;
 pub use crate::core_math::tanf;
 pub use crate::core_math::{expm1f, log1pf};

@@ -51,3 +51,6 @@ mod exp;
 pub use exp::exp;
 mod log2;
 pub use log2::log2;
+mod log;
+mod log_accurate;
+pub use log::log;
