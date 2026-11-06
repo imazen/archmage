@@ -3,6 +3,8 @@ name = "pow-behavior-study"
 version = "0.0.0"
 edition = "2024"
 publish = false
+[features]
+probe-extra = []
 [workspace]
 [dependencies]
 archmage = { path = "../.." }

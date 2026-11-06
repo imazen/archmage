@@ -5,3 +5,20 @@ lint:
     cargo clippy --locked --all-targets -- -D warnings
 bench out:
     target/release/pow-behavior-study {{out}}
+contracts:
+    cd ../.. && cargo test -p zenmath --test pow_policy
+    cd ../.. && cargo test -p magemath --test pow_policy --test pow_sign
+    cd ../.. && cargo test -p zenmath --doc
+oracle records out:
+    cd ../.. && cargo run --release -p magemath --example pow_policy_check -- {{records}} {{out}}
+negative-oracle source out:
+    python3 negative_oracle.py {{source}} {{out}}
+policy-bench out:
+    target/release/policy_cost {{out}}
+codegen:
+    cargo rustc --release --bin codegen -- --emit=asm
+
+functional:
+    cd ../.. && cargo test -p zenmath -p magemath --lib --tests --examples
+    cd ../.. && cargo test -p zenmath -p magemath --doc
+    cd ../.. && cargo test -p zenmath -p magemath --no-default-features --lib --tests --examples
