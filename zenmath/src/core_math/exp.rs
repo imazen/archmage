@@ -726,10 +726,10 @@ fn accurate(x: f64) -> f64 {
         denormal(h + fl)
     } else {
         (fh, fl) = two(fh, fl);
-        if fl.to_bits().wrapping_add(4) & 0xfffffffffffff <= 4 {
-            if let Some(v) = DB.iter().find(|v| v[0] == x) {
-                fh = v[1] + v[2];
-            }
+        if fl.to_bits().wrapping_add(4) & 0xfffffffffffff <= 4
+            && let Some(v) = DB.iter().find(|v| v[0] == x)
+        {
+            fh = v[1] + v[2];
         }
         scale(fh, ie)
     }
