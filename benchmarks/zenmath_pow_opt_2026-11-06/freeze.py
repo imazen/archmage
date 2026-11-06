@@ -11,6 +11,9 @@ out.mkdir(parents=True, exist_ok=False)
 files = []
 for folder in [
     "src",
+    "xtask/src",
+    "tests/no-features-crate/src",
+    "tests/clippy-consumer/src",
     "archmage-macros/src",
     "magetypes/src",
     "zenmath/src",
@@ -27,6 +30,9 @@ for folder in [
 for folder in [
     ".",
     "archmage-macros",
+    "xtask",
+    "tests/no-features-crate",
+    "tests/clippy-consumer",
     "magetypes",
     "zenmath",
     "magemath",
@@ -43,7 +49,8 @@ for folder in [
 study = root / "benchmarks/zenmath_pow_opt_2026-11-06"
 for pattern in ["*.py", "*.sh", "justfile"]:
     files.extend(study.glob(pattern))
-files.append(root / "token-registry.toml")
+for relative in ["token-registry.toml", "magemath/README.md", "magemath/docs/POW_BEHAVIOR.md", "benchmarks/zenmath_pow_opt_2026-11-06/baseline/magemath/README.md", "benchmarks/zenmath_pow_opt_2026-11-06/baseline/magemath/docs/POW_BEHAVIOR.md"]:
+    files.append(root / relative)
 files = sorted(set(files))
 manifest = "".join(
     hashlib.sha256(p.read_bytes()).hexdigest() + "  " + str(p.relative_to(root)) + "\n"

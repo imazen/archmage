@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 use archmage::prelude::*;
+pub mod feedback;
 pub mod transfer;
 use zenmath::{PowBehavior as B, PowConsistency as C, PowRange as R};
 pub const CUTOFF: f32 = 0.003041282560127521_f64 as f32;

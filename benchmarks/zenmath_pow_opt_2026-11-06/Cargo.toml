@@ -7,6 +7,7 @@ publish = false
 [workspace]
 [features]
 default = ["runtime"]
+wasm-host = ["zenbench/wasm"]
 runtime = ["zenmath/runtime-dispatch", "oldzenmath/runtime-dispatch"]
 avx512 = ["archmage/avx512", "magemath/avx512", "zenmath/avx512"]
 [dependencies]
@@ -21,3 +22,7 @@ zenbench = { version = "=0.1.11", default-features = false }
 [profile.release]
 lto = "thin"
 debug = 1
+
+[[bin]]
+name="wasm-host"
+required-features=["wasm-host"]
