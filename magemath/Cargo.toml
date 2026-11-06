@@ -19,7 +19,7 @@ default = ["std"]
 # Runtime CPU detection for the dispatchers. Without it `summon()` only sees
 # compile-time target features, so a no_std build dispatches to what the build
 # guarantees. The kernels themselves are `no_std`.
-std = ["magetypes/std", "archmage/std"]
+std = ["magetypes/std", "archmage/std", "zenmath/std"]
 # Native AVX-512 tier (`+v4x` dispatch arm). Pulls magetypes' 512-bit backends.
 avx512 = ["magetypes/avx512", "archmage/avx512"]
 
@@ -29,9 +29,10 @@ avx512 = ["magetypes/avx512", "archmage/avx512"]
 magetypes = { version = "0.9.31-beta.2", path = "../magetypes", default-features = false }
 archmage = { version = "0.9.31-beta.2", path = "..", default-features = false }
 
-[dev-dependencies]
-# Scalar mirrors: the oracle for every tier's bits. Also used by the doctests.
+# Accurate fallback for exceptional or rounding-ambiguous CORE-MATH lanes.
 zenmath = { version = "0.9.31-beta.2", path = "../zenmath" }
+
+[dev-dependencies]
 # Token-disable permutations in tests/dispatch.rs.
 archmage = { version = "0.9.31-beta.2", path = "..", features = ["std"] }
 

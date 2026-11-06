@@ -645,3 +645,13 @@ zenmath-core-bench-hardware output:
 
 zenmath-core-hard-cases records:
     bash zenmath/tools/check-core-hard-cases.sh '{{records}}'
+
+# Correct-rounding vector checks and cost study (run-heavy on eligible hosts).
+magemath-core-check function records:
+    cargo run -p magemath --release --example core_math_vector_check -- '{{function}}' '{{records}}'
+
+magemath-core-cost output:
+    cargo run -p magemath --release --example core_math_vector_cost -- '{{output}}'
+
+magemath-core-exhaustive:
+    cargo test -p magemath --release --test core_exhaustive -- --ignored --nocapture
