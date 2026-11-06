@@ -146,6 +146,27 @@ as an assertion that exceptional inputs never occur. These are implementation
 details to check in generated IR, not a stronger numerical promise than Rust's
 public contract. See [LLVM's flag definitions](https://llvm.org/docs/LangRef.html#fast-math-flags).
 
+## Algebraic methods in an external crate
+
+A separate crate can define its own extension trait and implement it for
+Magetypes vectors. Rust permits implementing a local trait for another crate's
+type; adding inherent methods to that foreign type is not permitted. Importing
+the trait enables method syntax without changing ordinary vector operators.
+See [trait coherence](https://doc.rust-lang.org/reference/items/implementations.html#trait-implementation-coherence).
+
+The generic vector's stored token is private, but its public mutable lane
+indexing permits a tokenless implementation: take `mut self`, apply each scalar
+algebraic operation to the corresponding lanes, then return `self`. This
+preserves the original proof and requires neither CPU detection nor unsafe
+code. An alternative accepts the caller's token and reconstructs the result
+with `from_array_t`. Inlining and optimization determine whether the temporary
+lane representation disappears.
+
+The separate extension crate can require Rust 1.98 while Magetypes retains its
+existing minimum. This does not make algebraic methods part of Magetypes' own
+API. A horizontal algebraic reduction also needs an explicit method; ordinary
+`reduce_add` does not acquire algebraic permissions from its input values.
+
 ## What changed in Magetypes' betas
 
 The benchmark baseline uses the Magetypes source tree from `v0.9.31-beta.2`.
