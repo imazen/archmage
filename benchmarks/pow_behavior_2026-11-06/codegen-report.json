@@ -1,0 +1,61 @@
+{
+  "base": {
+    "file_bytes": 457624,
+    "sections": {
+      ".rodata": 27304,
+      ".text": 274133
+    },
+    "build": {
+      "wall_seconds": "14.10",
+      "user_seconds": "25.70",
+      "system_seconds": "2.11",
+      "max_rss_kb": "503944"
+    },
+    "default_legacy_normalized_equal": true,
+    "debug_assertion_text_present": false,
+    "debug_input_symbol_present": false
+  },
+  "extra": {
+    "file_bytes": 460888,
+    "sections": {
+      ".rodata": 27320,
+      ".text": 277237
+    },
+    "build": {
+      "wall_seconds": "14.15",
+      "user_seconds": "25.66",
+      "system_seconds": "2.19",
+      "max_rss_kb": "503404"
+    },
+    "default_legacy_normalized_equal": true,
+    "debug_assertion_text_present": false,
+    "debug_input_symbol_present": false
+  },
+  "o0": {
+    "file_bytes": 1020984,
+    "sections": {
+      ".rodata": 27628,
+      ".text": 594259
+    },
+    "build": {
+      "wall_seconds": "5.04",
+      "user_seconds": "12.82",
+      "system_seconds": "1.95",
+      "max_rss_kb": "454636"
+    },
+    "default_legacy_normalized_equal": false,
+    "debug_assertion_text_present": false,
+    "debug_input_symbol_present": false
+  },
+  "optimized_debug_policy_equivalence": {
+    "both_calls_share_precondition_body": true,
+    "call_sites": [
+      "15b23:\te8 a8 ea ff ff       \tcall   145d0 <codegen::precondition>",
+      "15b34:\te8 97 ea ff ff       \tcall   145d0 <codegen::precondition>"
+    ]
+  },
+  "one_extra_signed_policy": {
+    "file_bytes": 3264,
+    "text_bytes": 3104
+  }
+}
