@@ -42,9 +42,12 @@ because a per-call hardware path measured slower (repo `CLAUDE.md`, Dispatch gra
 A std-enabled dispatcher selects V3 where available; explicit ScalarToken calls
 and no_std builds without compile-time V3 can still use the software path.
 
-The original portable-only revision was checked for every f32: all 2^32 inputs matched the mirrors on scalar, v3, v4x and
-NEON, and about 230,000 per op matched on WASM (strict, relaxed on engines that fuse
-and engines that don't), qemu without FMA, and i686.
+The three-surface revision passed all-input mirror comparisons: 234/234 x86
+operation/surface/tier combinations and 156/156 ARM combinations, each over all
+2^32 f32 patterns. Power uses named fixed exponents, not all pairs. Sampled
+parity and goldens also passed on WASM (strict, relaxed fusing/non-fusing, no
+SIMD), qemu without FMA, and i686. The [record](../../benchmarks/magemath_rounding_cost_2026-11-05/README.md)
+separates mirror equality, mathematical accuracy, and unmeasured platforms.
 
 ## What it costs
 

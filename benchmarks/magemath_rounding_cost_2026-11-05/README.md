@@ -1,6 +1,6 @@
 # Polynomial rounding comparison, 2026-11-05
 
-Draft verification; ARM exhaustive remains in progress. Portable remains fused; the owner has not changed
+Draft verification complete for the requested local matrix. Portable remains fused; the owner has not changed
 its rounding contract. `relaxed` is a real surface with the same special-value
 handling and backend-dependent rounding. `unfused` is a prototype.
 
@@ -167,6 +167,19 @@ Both tests passed in 641.46 s. Resource wrapper: `done rc=0 648s | peak-RSS
 0.41GiB | min-avail 14199MiB | peak-load 31.36`. Another build shared the host;
 this is correctness evidence, not a timing comparison.
 
+Neoverse-N1, source `6a8539b6`: all 156 combinations (26 entries, three surfaces,
+scalar/NEON) also match over all 2^32 patterns. Command:
+
+```sh
+cargo test -p magemath --release --test exhaustive -- --ignored --nocapture --test-threads=1
+```
+
+Both exhaustive tests passed in 1776.81 s. The ARM validation batch finished
+`done rc=0 1869s | peak-RSS 0.43GiB | min-avail 26810MiB | peak-load 14.28`.
+All 26 difference rows below are identical on ARM and x86 (checked from logs).
+Final ARM default/std independent FMA tests and clippy pass on `ceb21505`:
+`done rc=0 3s | peak-RSS 0.15GiB | min-avail 28446MiB | peak-load 10.65`.
+
 The following distance counts representable values between fused and unfused
 mirror results over all 2^32 inputs, including inputs outside accuracy domains.
 Signed zeros have distance zero in this distance statistic; the parity tests
@@ -220,7 +233,7 @@ not a proof of correctly rounded transcendentals.
 | Generate, registry, token safety, soundness | pass; generation left tracked source unchanged | native_review.log |
 | Native debug/release, global V3, Rust 1.89 | pass | x86_tests.log |
 | Real AVX-512 debug/release | pass | avx512_review.log |
-| ARM debug/release, std mirrors, clippy and docs | pass; exhaustive still running | arm_review.log |
+| ARM debug/release, std mirrors, clippy and docs | pass, including exhaustive | arm_review.log |
 | WASM strict, relaxed fusing, relaxed forced non-fusing, no SIMD | pass | wasm_review.log |
 | No-FMA Nehalem emulation | pass | wasm_review.log |
 | i686 via cross | pass | cross_review_fixed.log |
@@ -278,7 +291,13 @@ families remain absent. All changes remain on the draft bookmark; nothing pushed
 
 ## Artifacts
 
-Raw logs are preserved on dev at
-`/mnt/v/output/archmage/magemath-rounding-2026-11-05/`. Final hashes, mirror,
-the final ARM exhaustive completion marker are pending. Native/WASM timings,
-assembly and compile-time tables above are complete.
+Raw logs, zenbench result files, assembly, source patch and SHA256SUMS are at
+`/mnt/v/output/archmage/magemath-rounding-2026-11-05/`, mirrored at
+`/mnt/tower/output/archmage/magemath-rounding-2026-11-05/`.
+The source patch captures `297f12df` against main for the owned implementation,
+benchmarks and supporting docs, excluding CLAUDE.md. Subsequent edits are report
+updates. SHA256SUMS binds each artifact; its SHA256 is
+`f0e3fac9fd56ce111575e9271bd27d1cc3aaa7cb3f52bfe83dd2beb091919bf2`.
+Native tables come from bench_5900xt.log, bench_i265.log and bench_n1.log;
+WASM from wasm_review.log; compile-time from compile_rounding.log; assembly
+from asm_x86.log and asm_arm_clean.log with the .s files beside them.
