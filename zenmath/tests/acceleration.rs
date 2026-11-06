@@ -864,6 +864,14 @@ fn required_tier_inventory() {
             );
         }
     }
+    if let Ok(forbidden) = std::env::var("ZENMATH_FORBID_TIERS") {
+        for name in forbidden.split(',').filter(|n| !n.is_empty()) {
+            assert!(
+                tiers.iter().any(|(n, ok)| *n == name && !*ok),
+                "forbidden validation tier available: {name}"
+            );
+        }
+    }
 }
 
 #[cfg(all(target_arch = "x86_64", feature = "avx512"))]

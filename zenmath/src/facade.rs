@@ -11,7 +11,11 @@ pub mod reference {
 // mixed/loss cases as well as improvements; explicit proof APIs remain available.
 #[cfg(all(
     feature = "runtime-dispatch",
-    any(target_arch = "x86_64", target_arch = "aarch64")
+    any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    )
 ))]
 macro_rules! primitive {
     ($name:ident, $ty:ty) => {
@@ -23,7 +27,11 @@ macro_rules! primitive {
 }
 #[cfg(all(
     feature = "runtime-dispatch",
-    any(target_arch = "x86_64", target_arch = "aarch64")
+    any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    )
 ))]
 mod selected {
     primitive!(sqrtf, f32);
@@ -34,11 +42,11 @@ mod selected {
     primitive!(roundf, f32);
     primitive!(round, f64);
 
-    #[cfg(target_arch = "x86_64")]
+    #[cfg(any(target_arch = "x86_64", target_arch = "wasm32"))]
     primitive!(roundeven, f64);
-    #[cfg(target_arch = "aarch64")]
+    #[cfg(any(target_arch = "aarch64", target_arch = "wasm32"))]
     primitive!(roundevenf, f32);
-    #[cfg(target_arch = "aarch64")]
+    #[cfg(any(target_arch = "aarch64", target_arch = "wasm32"))]
     primitive!(ceilf, f32);
 
     #[cfg(target_arch = "x86_64")]
@@ -47,6 +55,7 @@ mod selected {
         crate::simd::scalar::fma(x, y, z)
     }
 
+    #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
     #[inline]
     pub fn powf(x: f32, y: f32) -> f32 {
         use archmage::SimdToken;
@@ -61,12 +70,29 @@ mod selected {
         crate::reference::powf(x, y)
     }
 }
+#[cfg(all(feature = "runtime-dispatch", target_arch = "x86_64"))]
+pub use selected::fma;
 #[cfg(all(
     feature = "runtime-dispatch",
     any(target_arch = "x86_64", target_arch = "aarch64")
 ))]
-pub use selected::{ceil, floor, floorf, powf, round, roundf, sqrt, sqrtf};
-#[cfg(all(feature = "runtime-dispatch", target_arch = "aarch64"))]
+pub use selected::powf;
+#[cfg(all(
+    feature = "runtime-dispatch",
+    any(target_arch = "x86_64", target_arch = "wasm32")
+))]
+pub use selected::roundeven;
+#[cfg(all(
+    feature = "runtime-dispatch",
+    any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    )
+))]
+pub use selected::{ceil, floor, floorf, round, roundf, sqrt, sqrtf};
+#[cfg(all(
+    feature = "runtime-dispatch",
+    any(target_arch = "aarch64", target_arch = "wasm32")
+))]
 pub use selected::{ceilf, roundevenf};
-#[cfg(all(feature = "runtime-dispatch", target_arch = "x86_64"))]
-pub use selected::{fma, roundeven};
