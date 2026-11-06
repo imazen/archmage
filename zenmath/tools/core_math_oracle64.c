@@ -18,7 +18,7 @@ static double parse_value(char *start,char **end) {
 static int equal(double a,double b) {return bits(a)==bits(b)||(isnan(a)&&isnan(b));}
 static void oracle(const char *op,mpfr_t z,mpfr_t x,mpfr_t y,mpfr_rnd_t rnd) {
 #define OP(name) if(!strcmp(op,#name)) {mpfr_##name(z,x,rnd);return;}
- OP(exp2) OP(exp) OP(log2) OP(log) OP(log10) OP(cbrt) OP(sin) OP(cos) OP(tan) OP(atan) OP(tanh) OP(log1p) OP(expm1)
+ OP(asinh) OP(atanh) OP(exp2) OP(exp) OP(log2) OP(log) OP(log10) OP(cbrt) OP(sin) OP(cos) OP(tan) OP(atan) OP(tanh) OP(log1p) OP(expm1)
  if(!strcmp(op,"pow")) {mpfr_pow(z,x,y,rnd);return;}
  if(!strcmp(op,"atan2")) {mpfr_atan2(z,x,y,rnd);return;}
  fprintf(stderr,"unknown function %s\n",op);exit(2);

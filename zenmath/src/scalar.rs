@@ -1144,6 +1144,9 @@ pub use crate::core_math::{expm1f, log1pf};
 
 pub use crate::core_math::atan2;
 
+pub use crate::core_math::asinh;
+pub use crate::core_math::atanh;
 pub use crate::core_math::pow;
 pub use crate::core_math::tan;
+pub use crate::core_math::tanh;
 pub use crate::core_math::{acosf, hypotf};

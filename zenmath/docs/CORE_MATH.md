@@ -12,7 +12,8 @@ emulate errno, exception flags, dynamic rounding modes, or NaN payloads.
 
 ## Coverage and remaining work
 
-Missing after expanding the production consumer audit: f64 atanh/asinh/tanh. Production call sites still need a precision-aware
+All 33 functions in the expanded port set are implemented: 17 binary32 and
+16 binary64. Cross-platform validation and performance work remain. Production call sites still need a precision-aware
 inventory that excludes tests and examples. Compatibility extraction remains
 separate; the existing zenmetrics-math ports have not moved.
 
@@ -97,3 +98,9 @@ f32 acos and hypot passed 200,000 MPFR samples each. Hypot also passed its
 7,244 upstream cases; its sNaN/Inf result is checked against the explicit
 CORE-MATH NaN contract because MPFR has no signaling NaN. The upstream acosf
 directory has no worst-case input file, so no full hard-case pass is claimed.
+
+All 33 functions passed 200,000 MPFR samples each in the complete baseline
+x86 release rerun (`validation-all.log`). The new f64 atanh/tanh/asinh ports
+also passed all upstream hard cases: 31,113 / 31,450 / 1,174,907 respectively.
+The complete run includes ordinary tests, independent FMA tests, direct
+256-bit power fallback tests, and clippy; peak RSS 0.21 GiB, exit zero.
