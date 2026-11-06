@@ -39,3 +39,5 @@ mod expm1f;
 mod log1pf;
 pub use expm1f::expm1f;
 pub use log1pf::log1pf;
+mod tanf;
+pub use tanf::tanf;

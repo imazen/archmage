@@ -2,6 +2,10 @@
 //! See their retained copyright and MIT license notices.
 #[inline(never)]
 pub(super) fn big(u: u32) -> (f64, i32) {
+    big_scaled(u, 147)
+}
+#[inline(never)]
+pub(super) fn big_scaled(u: u32, offset: u32) -> (f64, i32) {
     const IPI: [u64; 4] = [
         0xfe5163abdebbc562,
         0xdb6295993c439041,
@@ -18,7 +22,7 @@ pub(super) fn big(u: u32) -> (f64, i32) {
     let p3l = p3 as u64;
     let p2l = p2 as u64;
     let p1l = p1 as u64;
-    let s = e - 147;
+    let s = e - offset;
     let (i, a) = if s < 64 {
         (
             (p3h << s) | (p3l >> (64 - s)),

@@ -14,6 +14,7 @@ fn main() {
         "tanhf" => |x, _| scalar::tanhf(x),
         "atanf" => |x, _| scalar::atanf(x),
         "log10f" => |x, _| scalar::log10f(x),
+        "tanf" => |x, _| scalar::tanf(x),
         "sinf" => |x, _| scalar::sinf(x),
         "cosf" => |x, _| scalar::cosf(x),
         "log1pf" => |x, _| scalar::log1pf(x),
