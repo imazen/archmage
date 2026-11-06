@@ -168,6 +168,15 @@ patches. The extension library also compiled with `no_std` on Rust 1.98.1.
 These checks establish API compatibility; they do not establish performance
 on every backend.
 
+The external-consumer experiment also checks optimized code without LTO.
+Its V3 f32 polynomial contains packed eight-lane algebraic operations in LLVM
+IR. In the actual timed executable, the tokenless extension, explicit-token
+extension and consumer-local lane map each use six packed FMA instructions
+per 16 values in the main loop, with direct vector loads/stores and no
+extension calls or temporary-array stack traffic there. The function's
+assertion frame is outside the loop. This is evidence for these compiled
+kernels, not a guarantee that every algebraic expression has zero overhead.
+
 The separate extension crate can require Rust 1.98 while Magetypes retains its
 existing minimum. This does not make algebraic methods part of Magetypes' own
 API. A horizontal algebraic reduction also needs an explicit method; ordinary
