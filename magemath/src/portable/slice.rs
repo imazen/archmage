@@ -16,8 +16,8 @@ crate::surface::slice_surface!();
 #[archmage::attune(_*, _*_t, dispatch(inline(hint)), +v4x(cfg(avx512)))]
 pub fn exp_f32(data: &mut [f32]) {
     let token = Token::from_context();
-    let (chunks, tail) = data.as_chunks_mut::<4>();
-    let mut pad = [1.0; 4];
+    let (chunks, tail) = data.as_chunks_mut::<8>();
+    let mut pad = [1.0; 8];
     pad[..tail.len()].copy_from_slice(tail);
     for i in 0..chunks.len() + usize::from(!tail.is_empty()) {
         let a = if i < chunks.len() {
@@ -25,7 +25,9 @@ pub fn exp_f32(data: &mut [f32]) {
         } else {
             &mut pad
         };
-        *a = crate::correct::exp(token, *a);
+        let lo = crate::correct::exp(token, core::array::from_fn(|i| a[i]));
+        let hi = crate::correct::exp(token, core::array::from_fn(|i| a[i + 4]));
+        *a = core::array::from_fn(|i| if i < 4 { lo[i] } else { hi[i - 4] });
     }
     tail.copy_from_slice(&pad[..tail.len()]);
 }
@@ -34,8 +36,8 @@ pub fn exp_f32(data: &mut [f32]) {
 #[archmage::attune(_*, _*_t, dispatch(inline(hint)), +v4x(cfg(avx512)))]
 pub fn ln_f32(data: &mut [f32]) {
     let token = Token::from_context();
-    let (chunks, tail) = data.as_chunks_mut::<4>();
-    let mut pad = [1.0; 4];
+    let (chunks, tail) = data.as_chunks_mut::<8>();
+    let mut pad = [1.0; 8];
     pad[..tail.len()].copy_from_slice(tail);
     for i in 0..chunks.len() + usize::from(!tail.is_empty()) {
         let a = if i < chunks.len() {
@@ -43,7 +45,9 @@ pub fn ln_f32(data: &mut [f32]) {
         } else {
             &mut pad
         };
-        *a = crate::correct::log::<_, false>(token, *a);
+        let lo = crate::correct::log::<_, false>(token, core::array::from_fn(|i| a[i]));
+        let hi = crate::correct::log::<_, false>(token, core::array::from_fn(|i| a[i + 4]));
+        *a = core::array::from_fn(|i| if i < 4 { lo[i] } else { hi[i - 4] });
     }
     tail.copy_from_slice(&pad[..tail.len()]);
 }
@@ -52,8 +56,8 @@ pub fn ln_f32(data: &mut [f32]) {
 #[archmage::attune(_*, _*_t, dispatch(inline(hint)), +v4x(cfg(avx512)))]
 pub fn log2_f32(data: &mut [f32]) {
     let token = Token::from_context();
-    let (chunks, tail) = data.as_chunks_mut::<4>();
-    let mut pad = [1.0; 4];
+    let (chunks, tail) = data.as_chunks_mut::<8>();
+    let mut pad = [1.0; 8];
     pad[..tail.len()].copy_from_slice(tail);
     for i in 0..chunks.len() + usize::from(!tail.is_empty()) {
         let a = if i < chunks.len() {
@@ -61,7 +65,9 @@ pub fn log2_f32(data: &mut [f32]) {
         } else {
             &mut pad
         };
-        *a = crate::correct::log::<_, true>(token, *a);
+        let lo = crate::correct::log::<_, true>(token, core::array::from_fn(|i| a[i]));
+        let hi = crate::correct::log::<_, true>(token, core::array::from_fn(|i| a[i + 4]));
+        *a = core::array::from_fn(|i| if i < 4 { lo[i] } else { hi[i - 4] });
     }
     tail.copy_from_slice(&pad[..tail.len()]);
 }
@@ -75,11 +81,11 @@ pub fn pow_f32(data: &mut [f32], exponents: &[f32]) {
         "power slice lengths must match"
     );
     let token = Token::from_context();
-    let (chunks, tail) = data.as_chunks_mut::<4>();
-    let (ys, yt) = exponents.as_chunks::<4>();
-    let mut pad = [1.0; 4];
+    let (chunks, tail) = data.as_chunks_mut::<8>();
+    let (ys, yt) = exponents.as_chunks::<8>();
+    let mut pad = [1.0; 8];
     pad[..tail.len()].copy_from_slice(tail);
-    let mut py = [1.0; 4];
+    let mut py = [1.0; 8];
     py[..yt.len()].copy_from_slice(yt);
     for i in 0..chunks.len() + usize::from(!tail.is_empty()) {
         let (a, b) = if i < chunks.len() {
@@ -87,7 +93,17 @@ pub fn pow_f32(data: &mut [f32], exponents: &[f32]) {
         } else {
             (&mut pad, py)
         };
-        *a = crate::correct::pow(token, *a, b);
+        let lo = crate::correct::pow(
+            token,
+            core::array::from_fn(|i| a[i]),
+            core::array::from_fn(|i| b[i]),
+        );
+        let hi = crate::correct::pow(
+            token,
+            core::array::from_fn(|i| a[i + 4]),
+            core::array::from_fn(|i| b[i + 4]),
+        );
+        *a = core::array::from_fn(|i| if i < 4 { lo[i] } else { hi[i - 4] });
     }
     tail.copy_from_slice(&pad[..tail.len()]);
 }
