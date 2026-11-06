@@ -571,9 +571,9 @@ test-magemath-wasm:
 test-magemath-no-fma:
     MAGEMATH_SKIP_TIERS=v3,v4x CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="qemu-x86_64 -cpu Nehalem" cargo test -p magemath --target x86_64-unknown-linux-gnu --tests
 
-# Same on 32-bit x86, which has only the scalar tier.
+# Same on 32-bit x86, which has only the scalar tier. Cross supplies its C runtime.
 test-magemath-i686:
-    CARGO_TARGET_I686_UNKNOWN_LINUX_GNU_RUNNER="qemu-i386" cargo test -p magemath --target i686-unknown-linux-gnu --tests
+    cross test -p magemath --target i686-unknown-linux-gnu --tests
 
 # Same with FMA and AVX2 compiled in: the scalar tier then uses hardware FMA.
 test-magemath-v3-build:

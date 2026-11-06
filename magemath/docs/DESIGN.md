@@ -1,10 +1,10 @@
 # magemath design record
 
-Why `magemath` is shaped the way it is, what the measurements said, and the rules
-for extending it. Numbers are from [the 2026-11-05 run](../../benchmarks/magemath_portable_cost_2026-11-05/README.md),
-which has the hosts, conditions and raw output. Those cost tables describe the
-original portable-only revision. In that record, “relaxed” means magetypes' methods,
-not the new `magemath::relaxed` surface. Current three-surface measurements are pending.
+The [rounding comparison](../../benchmarks/magemath_rounding_cost_2026-11-05/README.md)
+records the current three-surface measurements and validation. The earlier
+[portable-only record](../../benchmarks/magemath_portable_cost_2026-11-05/README.md)
+contains the slice-tail experiment. Its “relaxed” column means magetypes methods;
+the current record calls those `method` and uses `relaxed` for this crate's surface.
 
 ## The contract
 
@@ -47,33 +47,34 @@ and engines that don't), qemu without FMA, and i686.
 
 ## What it costs
 
-Fused in hardware (x86, NEON), `portable` midp is at least as fast as the relaxed method
-it matches, because `exp2_midp` drops a clamp. `portable` lowp pays for specials the
-relaxed lowp methods don't have.
+Separate multiply/add trades native polynomial throughput for removal of software
+FMA. Unfused time relative to fused, paired 95% intervals across the five streaming
+kernels (exp2/log2 midp and lowp, plus pow_midp(2.4)):
 
-| time vs the relaxed method, paired 95% CI | Ryzen 9 5900XT, V3 | Neoverse-N1, NEON |
+| backend | streaming interval endpoints across operations | exp2 feedback |
 |---|---:|---:|
-| `exp2_midp` | -7.5% to -3.9% | -9.4% to -8.6% |
-| `log2_midp` | -5.4% to -0.8% | -0.5% to +0.5% |
-| `pow_midp(2.4)` | -7.3% to -3.2% | -2.7% to -1.8% |
-| `exp2_lowp` | +19.2% to +20.6% | +12.3% to +13.3% |
-| `log2_lowp` | +54.4% to +55.4% | +33.8% to +34.9% |
+| Ryzen 5900XT V3 | +16.6% to +51.9% | +29.2% to +35.5% |
+| Core Ultra 265K V3 | +11.5% to +33.2% | +9.4% to +11.1% |
+| Neoverse-N1 NEON | +7.1% to +21.7% | +13.3% to +14.4% |
+| Ryzen 5900XT scalar | −76.5% to −50.6% | −48.0% to −40.9% |
+| Core Ultra 265K scalar | −79.7% to −50.5% | −50.6% to −49.0% |
+| Neoverse-N1 scalar | −3.9% to +3.7% | +1.9% to +2.4% |
 
-Fused in software, the cost is large, and it is the price of the contract:
+The scalar vector backend fuses in software on baseline x86 but in hardware on
+std-enabled AArch64. Zenmath without std uses software FMA on both. Its measured
+per-lane streaming costs, raw data, conditions and resource summaries are in the
+[comparison](../../benchmarks/magemath_rounding_cost_2026-11-05/README.md).
+These are workload-specific measurements; `relaxed` names a rounding contract,
+not a guarantee that it beats every alternative in every kernel.
 
-| how much slower than the relaxed method | range over those five ops |
-|---|---:|
-| x86-64 scalar tier (only CPUs without V3) | 2.0-5.0x |
-| strict WASM | 10-25x |
-| relaxed WASM, engine fuses | 1.1-3.7x |
-| relaxed WASM, engine rounds twice | 7.8-22x |
+## Rounding and accuracy
 
-A caller that accepts backend-dependent rounding can use `magemath::relaxed`,
-which retains the portable special-value handling. The table above compares the
-original portable-only revision against magetypes methods; it does not time the
-new relaxed surface. On a fusing engine every
-multiply-add also reads the cached probe. Whether that explains the remaining gap is
-unmeasured, and hoisting the check above a whole kernel would need a magetypes change.
+Accuracy bounds are unchanged across all three surfaces. Changing rounding is
+still a bit-contract change: the exhaustive x86 scan found up to 2–3 ULP between
+midp logs, 178 ULP for pow_midp(2.4), and 93,472 ULP for pow_lowp(2.4), over all
+input patterns. The lowp polynomial has interval-boundary steps; ULP distance
+between two approximations is not the same as relative error against the truth.
+No tolerance was added to mirror comparisons or golden tests.
 
 ## Module boundary
 
@@ -156,54 +157,38 @@ wins or ties otherwise. This also means `magemath` needs `zenmath` only as a tes
 
 ## Compile time
 
-| | cold, including dependencies |
-|---|---:|
-| `zenmath` check / build --release | 0.13 s / 0.14 s |
-| `magetypes` check, no `w512` / default features | 3.49 s / 3.83 s |
-| `magemath` check / build --release | 3.62 s / 3.84 s |
-| `magemath` build --release with non-inline dispatchers | 4.89 s |
-| `magemath` check / build --release, `avx512` | 4.57 s / 5.03 s |
+Core Ultra 7 265K, Rust 1.99.0, medians of three cold builds including dependencies:
 
-| a downstream crate calling | rebuild of that crate alone | stripped binary |
+| public surfaces | check | release build |
 |---|---:|---:|
-| nothing | 0.14 s | 363,128 B |
-| one slice op | 0.22 s | 376,544 B |
-| all 21 slice ops | 1.13 s | 493,560 B |
+| portable only | 2.49 s | 2.63 s |
+| portable + relaxed | 2.56 s | 2.72 s |
+| portable + relaxed + unfused prototype | 2.65 s | 2.82 s |
+| all three with avx512 | 3.23 s | 3.54 s |
 
-`magemath` adds 0.13 s of `cargo check` to magetypes, and leaving off `w512` saves more than
-that (0.34 s). Everything `#[attune]` generates here is `#[inline]`, so `magemath` emits no
-machine code of its own and a crate pays LLVM only for the ops it calls. Non-inline
-dispatchers cost every dependent build another 1.05 s, mostly for the scalar tier: on x86-64
-with `avx512`, that tier was 94% of the crate's machine code (96,483 of 102,449
-instructions), and it runs only on CPUs without V3. No feature gates for lowp or the
-activations: with inlining they cost nothing until called, so a gate would save only a
-fraction of that 0.13 s.
+Relaxed adds 0.07 s / 0.09 s; the unfused prototype adds 0.09 s / 0.10 s.
+Non-inline dispatchers take 3.68 s for the all-surface release build. A downstream
+caller rebuilds in 0.08 s with no calls, 0.16 s with one portable slice op, and
+0.84 s with all 21 portable operations. Its stripped binaries are 363,128,
+376,544 and 493,528 bytes respectively. The [measurement record](../../benchmarks/magemath_rounding_cost_2026-11-05/README.md#compile-time)
+has all repetitions, command and resource summary.
+
+The private Step policy shares bodies; public wrappers add some type checking
+and macro expansion. Inline dispatchers keep unused operations out of the caller's
+machine code. Feature gates for individual precision levels are not justified by
+these costs. Keep the public rounding contract in the module path.
 
 ## Register residency
 
-Checked in optimized assembly on 2026-11-05 (`cargo rustc --release -- --emit=asm`,
-`codegen-units=1`), for a function that loads `&[f32; 8]`, runs the kernels and stores:
+The current V3 and AArch64 assembly probes confirm separate multiply/add in
+unfused kernels: no FMA instructions. Exp2 uses 35 instructions fused versus 41
+unfused on V3, and 76 versus 81 on NEON. An exp2→log2 chain uses 66 versus 76
+on V3 and 141 versus 152 on NEON. Each has one load/store, zero stack references,
+and zero calls. Counts, commands and artifacts are in the [assembly record](../../benchmarks/magemath_rounding_cost_2026-11-05/README.md#assembly).
 
-| v3 function | instructions | `vfmadd` | non-constant memory ops | stack refs | calls |
-|---|---:|---:|---:|---:|---:|
-| `exp2_midp` | 35 | 6 | 2 | 0 | 0 |
-| `f32x8::exp2_midp` (relaxed) | 37 | 6 | 2 | 0 | 0 |
-| `exp2_midp_unchecked` | 26 | 6 | 2 | 0 | 0 |
-| `log2_midp` | 38 | 4 | 2 | 0 | 0 |
-| `f32x8::log2_midp` (relaxed) | 38 | 4 | 2 | 0 | 0 |
-| `log2_midp_unchecked` | 27 | 4 | 2 | 0 | 0 |
-| `exp2_midp` then `log2_midp` | 66 | 10 | 2 | 0 | 0 |
-| `pow_midp` then `pow_midp` | 121 | 20 | 2 | 0 | 0 |
-| `array::exp2_midp_f32x8_v3` then `array::log2_midp_f32x8_v3` | 67 | 10 | 2 | 0 | 0 |
-
-The two memory operations are the one load and one store. Each chain is one region
-with nothing spilled. NEON looks the same, at twice the width: `exp2_midp` is 76
-instructions with 12 `fmla` and one `ldp` and `stp`; `exp2_midp` then `log2_midp` is
-141 with 20.
-
-So chain `kernels` from one `#[attune]` body, or call direct variants from a matching
-context. A runtime-dispatched op can't share a region with its neighbors, so each
-call through a dispatcher reloads and stores.
+Chain `kernels` in one `#[attune]` body, or call direct variants from a matching
+feature context. A runtime dispatcher is a separate entry point, so composing
+several dispatched array calls need not retain registers across them.
 
 ## Goldens
 

@@ -11,20 +11,29 @@
 //! Run (no `-Ctarget-cpu=native`, not on a machine doing other work):
 //!   cargo bench -p magemath --bench portable_cost
 
+#[cfg(not(target_arch = "wasm32"))]
 #[path = "support/forms.rs"]
 mod forms;
 
+#[cfg(not(target_arch = "wasm32"))]
 use archmage::prelude::*;
+#[cfg(not(target_arch = "wasm32"))]
 use forms::*;
+#[cfg(not(target_arch = "wasm32"))]
 use std::hint::black_box;
+#[cfg(not(target_arch = "wasm32"))]
 use zenbench::prelude::*;
 
+#[cfg(not(target_arch = "wasm32"))]
 const N: usize = 1024;
 
+#[cfg(not(target_arch = "wasm32"))]
 type Form<T> = fn(T, &[[f32; 8]], &mut [[f32; 8]]);
+#[cfg(not(target_arch = "wasm32"))]
 type PerLane = fn(f32) -> f32;
 
 /// Generates a `fn(T, input, out)` calling `$family` on exactly `T`'s tier.
+#[cfg(not(target_arch = "wasm32"))]
 macro_rules! on_tier {
     ($($family:ident)::+) => {
         |t: T, input: &[[f32; 8]], out: &mut [[f32; 8]]| {
@@ -37,6 +46,7 @@ macro_rules! on_tier {
     };
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn group<T: IntoConcreteToken + Copy + Send + Sync + 'static>(
     suite: &mut Suite,
     label: String,
@@ -73,6 +83,7 @@ fn group<T: IntoConcreteToken + Copy + Send + Sync + 'static>(
     });
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 macro_rules! op_group {
     ($suite:expr, $tier:expr, $token:expr, $with_per_lane:expr, $op:ident, $input:expr, $fused:expr, $unfused:expr, $std:expr) => {
         group(
@@ -103,6 +114,7 @@ macro_rules! op_group {
     };
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn tier_groups<T: IntoConcreteToken + Copy + Send + Sync + 'static>(
     suite: &mut Suite,
     tier: &str,
@@ -181,6 +193,7 @@ fn tier_groups<T: IntoConcreteToken + Copy + Send + Sync + 'static>(
 
 /// The shipped slice body against the alternatives its shape was chosen over:
 /// a separate loop and tail, and a tail through the scalar mirror.
+#[cfg(not(target_arch = "wasm32"))]
 mod tails {
     use archmage::prelude::*;
     use magemath::portable::kernels;
@@ -211,6 +224,7 @@ mod tails {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn tail_groups(suite: &mut Suite) {
     use magemath::portable::slice::exp2_midp_f32;
     for len in [1usize, 7, 8, 9, 15, 1031] {
@@ -249,6 +263,7 @@ fn tail_groups(suite: &mut Suite) {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn bench_portable(suite: &mut Suite) {
     #[cfg(target_arch = "x86_64")]
     match X64V3Token::summon() {
@@ -264,4 +279,10 @@ fn bench_portable(suite: &mut Suite) {
     tail_groups(suite);
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 zenbench::main!(bench_portable);
+
+#[cfg(target_arch = "wasm32")]
+fn main() {
+    panic!("zenbench is native-only; run just magemath-bench-wasm for WASM measurements");
+}

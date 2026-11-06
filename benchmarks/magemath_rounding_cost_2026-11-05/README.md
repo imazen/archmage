@@ -52,6 +52,33 @@ Resource summaries from inherited logs:
 - N1: `rc=0`, 821.5 s reported by zenbench. The inherited run used nice without
   run-heavy; it contains no peak-RSS measurement. No ARM benchmark memory claim.
 
+## WASM cost
+
+Wasmtime 40.0.1 on Ryzen 5900XT, Rust 1.99.1, source `7ee10a19`.
+`just magemath-bench-wasm` runs all three configurations. Numbers are best of
+200 passes, ns per element, not paired statistics. The matching WASM tests
+explicitly assert once-rounding for the default relaxed engine and twice-rounding
+for `-W relaxed-simd-deterministic=n -C cranelift-has-fma=false`.
+
+| operation | strict fused / unfused | relaxed fusing fused / unfused | relaxed non-fusing fused / unfused |
+|---|---:|---:|---:|
+| exp2_midp | 20.527 / 0.913 | 1.735 / 0.928 | 13.703 / 0.951 |
+| log2_midp | 12.500 / 0.699 | 1.384 / 0.709 | 9.800 / 0.731 |
+| pow_midp | 35.637 / 2.606 | 4.574 / 2.455 | 26.260 / 2.419 |
+| exp2_lowp | 8.144 / 0.455 | 0.778 / 0.464 | 6.204 / 0.460 |
+| log2_lowp | 8.622 / 0.570 | 0.980 / 0.575 | 7.659 / 0.559 |
+| feedback | 20.679 / 1.532 | 2.660 / 1.533 | 15.333 / 1.533 |
+
+On the fusing engine the relaxed kernel bypasses the fused API's cached fusion
+check. Its streaming costs (exp2_midp, log2_midp, pow_midp, exp2_lowp, log2_lowp)
+are 0.707, 0.615, 2.004, 0.387 and 0.469 ns/element. The forced non-fusing
+engine's relaxed surface follows the unfused mirror exactly in the tests.
+
+The WASM/no-FMA batch later stopped at i686 linking because the host lacked
+32-bit C runtime files. Its completed WASM timing and tests remain valid. The
+batch resource summary is `done rc=101 211s | peak-RSS 0.82GiB | min-avail
+46993MiB | peak-load 3.72`. i686 is retried with the installed cross image.
+
 ## Scalar mirror cost
 
 `zenmath` default features (no std): fused mirrors always use software FMA,

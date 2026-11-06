@@ -1304,6 +1304,14 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
   and the complement of equality for all generic float widths, including signalling
   NaNs; the documented x86 behavior change is recorded in the changelog.
 
+  benchmark was compiled on WASM even though zenbench is a non-WASM dependency.
+  The benchmark items are now target-gated; invoking that executable on WASM
+  fails with a pointer to `just magemath-bench-wasm`. That recipe runs strict,
+  fusing relaxed and forced non-fusing relaxed SIMD. WASM all-target clippy
+  and rustdoc pass with warnings denied. The parity runner can pin engine
+  rounding with `MAGEMATH_EXPECT_RELAXED_ROUNDING=once|twice`; the recipe sets it
+  through the wasmtime runner so a misconfigured engine cannot silently pass.
+
 - **Warnings in macro output and on untested targets (2026-10-23):** body
   rewrites spliced dispatch calls, so named `incant`/`attuned`/`reattune`
   imports went unused; rewritten calls now go through the caller's path as

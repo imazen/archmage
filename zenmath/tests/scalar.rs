@@ -371,3 +371,26 @@ mod unfused_specials {
         assert_eq!(silu_midp_f32(0.0), 0.0);
     }
 }
+
+#[test]
+fn fmaf_independent_rounding_edges() {
+    // Expected bits from the exact-rational corpus in
+    // magetypes/tests/common/fma_vectors.rs, not the platform std/libm.
+    // The first case is the subnormal counterexample documented at
+    // https://shnatsel.github.io/implementing-fma-finding-bugs-in-std/
+    for [a, b, c, expected] in [
+        [0x9700_0800, 0x1cff_f001, 0x0001_0002, 0x0001_0001],
+        [0x1700_0800, 0x1cff_f001, 0x8001_0002, 0x8001_0001],
+        [0x8000_0001, 0x0000_0001, 0x0000_0000, 0x8000_0000],
+        [0x8000_0001, 0x3f00_0000, 0x0000_0000, 0x8000_0000],
+        [0xbf80_0001, 0x3f80_0001, 0x3f80_0002, 0xa880_0000],
+        [0xff7f_ffff, 0x4000_0000, 0x7f7f_ffff, 0xff7f_ffff],
+    ] {
+        let result = fmaf(f32::from_bits(a), f32::from_bits(b), f32::from_bits(c));
+        assert_eq!(
+            result.to_bits(),
+            expected,
+            "fmaf({a:08x}, {b:08x}, {c:08x})"
+        );
+    }
+}
