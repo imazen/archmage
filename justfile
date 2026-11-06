@@ -614,3 +614,4 @@ test-zenmath-fma:
     cargo test -p zenmath --features std --test scalar fmaf_independent -- --nocapture
     cargo test -p zenmath --target wasm32-wasip1 --test scalar fmaf_independent -- --nocapture
     cargo test -p zenmath --features std --target wasm32-wasip1 --test scalar fmaf_independent -- --nocapture
+    CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="qemu-x86_64 -cpu Nehalem" cargo test -p zenmath --features std --target x86_64-unknown-linux-gnu --test scalar fmaf_independent -- --nocapture

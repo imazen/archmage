@@ -46,7 +46,7 @@
 #![no_std]
 #![forbid(unsafe_code)]
 
-// Only native `fmaf` uses std, and only for `f32::mul_add`, which gives the same bits.
+// fmaf uses std only when target features guarantee hardware fused arithmetic.
 #[cfg(feature = "std")]
 extern crate std;
 

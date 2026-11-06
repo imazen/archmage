@@ -1304,12 +1304,15 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
   and the complement of equality for all generic float widths, including signalling
   NaNs; the documented x86 behavior change is recorded in the changelog.
 
-- **Draft zenmath std WASM FMA (2026-11-05):** Rust 1.99.1 WASI
+- **Draft zenmath std software FMA (2026-11-05):** Rust 1.99.1 WASI
+  and native x86 under Nehalem emulation
   `f32::mul_add` returns `0x00010002` for the independent subnormal case
   whose correctly rounded answer is `0x00010001`. zenmath now uses its
-  software FMA on WASM even with `std`. Native std retains `mul_add`.
+  software FMA unless std and compile-time x86 FMA or AArch64 NEON
+  guarantee hardware fusion. No new runtime probe is added.
   Regression: `zenmath/tests/scalar.rs::fmaf_independent_rounding_edges`;
-  native and WASM default/std checks pass. No magetypes source changed.
+  native, Nehalem emulation, global V3, and WASM checks pass.
+  No magetypes source changed.
 
 - **Draft magemath WASM all-target clippy (2026-11-05):** its native zenbench
   benchmark was compiled on WASM even though zenbench is a non-WASM dependency.
