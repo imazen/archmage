@@ -49,3 +49,5 @@ mod exp2;
 pub use exp2::exp2;
 mod exp;
 pub use exp::exp;
+mod log2;
+pub use log2::log2;
