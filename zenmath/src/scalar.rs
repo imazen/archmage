@@ -25,6 +25,9 @@
 //! product, TwoSum error recovery, round-to-odd narrowing — ported from
 //! `magetypes::soft_fma`, MIT). `fma` (f64) lands with the f64 midp
 //! mirrors that need it.
+//!
+//! [`unfused`] holds the same functions with each polynomial step a plain
+//! multiply and then add: two roundings, no FMA, on every target.
 
 // ============================================================================
 // Square root — Goldschmidt iteration
@@ -622,6 +625,31 @@ pub fn fmaf(a: f32, b: f32, c: f32) -> f32 {
 // `exp2_midp(NaN)` is 2^-126 on x86 and its scalar backend, NaN on NEON and
 // WASM; its `log2_midp(NaN)` is a finite value on all of them.
 
+/// One polynomial step, `a * b + c`.
+trait Step {
+    fn madd(a: f32, b: f32, c: f32) -> f32;
+}
+
+/// One rounding: [`fmaf`].
+struct Fused;
+
+impl Step for Fused {
+    #[inline(always)]
+    fn madd(a: f32, b: f32, c: f32) -> f32 {
+        fmaf(a, b, c)
+    }
+}
+
+/// Two roundings: multiply, then add. Rust never contracts these into an FMA.
+struct Unfused;
+
+impl Step for Unfused {
+    #[inline(always)]
+    fn madd(a: f32, b: f32, c: f32) -> f32 {
+        a * b + c
+    }
+}
+
 /// Specials shared by the log family: 0 → −inf, negative or NaN → NaN, +inf → +inf.
 #[inline(always)]
 fn log_specials(x: f32, r: f32) -> f32 {
@@ -644,6 +672,11 @@ fn log_specials(x: f32, r: f32) -> f32 {
 /// inputs are outside the domain: finite, but inaccurate.
 #[inline]
 pub fn log2_lowp_f32(x: f32) -> f32 {
+    log2_lowp_with::<Fused>(x)
+}
+
+#[inline]
+fn log2_lowp_with<S: Step>(x: f32) -> f32 {
     const OFFSET: i32 = 0x3f2a_aaab;
     const P0: f32 = -1.850_383_3e-6;
     const P1: f32 = 1.428_716_1;
@@ -656,8 +689,8 @@ pub fn log2_lowp_f32(x: f32) -> f32 {
     let exp_shifted = x_bits.wrapping_sub(OFFSET) >> 23;
     let mantissa = f32::from_bits(x_bits.wrapping_sub(exp_shifted << 23) as u32);
     let m = mantissa - 1.0;
-    let yp = fmaf(fmaf(P2, m, P1), m, P0);
-    let yq = fmaf(fmaf(Q2, m, Q1), m, Q0);
+    let yp = S::madd(S::madd(P2, m, P1), m, P0);
+    let yq = S::madd(S::madd(Q2, m, Q1), m, Q0);
     log_specials(x, yp / yq + exp_shifted as f32)
 }
 
@@ -665,8 +698,13 @@ pub fn log2_lowp_f32(x: f32) -> f32 {
 /// 1.23% above. Clamps its input to that range instead of saturating, so
 /// x < -126 returns 2^-126 and x ≥ 127.99 stays finite. NaN → NaN.
 #[inline]
-#[allow(clippy::manual_clamp)] // Written as the vector kernel's .max().min().
 pub fn exp2_lowp_f32(x: f32) -> f32 {
+    exp2_lowp_with::<Fused>(x)
+}
+
+#[inline]
+#[allow(clippy::manual_clamp)] // Written as the vector kernel's .max().min().
+fn exp2_lowp_with<S: Step>(x: f32) -> f32 {
     const C1: f32 = core::f32::consts::LN_2;
     const C2: f32 = 0.240_226_5;
     const C3: f32 = 0.055_504_11;
@@ -677,33 +715,53 @@ pub fn exp2_lowp_f32(x: f32) -> f32 {
     let clamped = x.max(-126.0).min(127.99);
     let xi = floorf(clamped);
     let xf = clamped - xi;
-    let poly = fmaf(fmaf(fmaf(C3, xf, C2), xf, C1), xf, 1.0);
+    let poly = S::madd(S::madd(S::madd(C3, xf, C2), xf, C1), xf, 1.0);
     poly * f32::from_bits(((xi as i32).wrapping_add(127) << 23) as u32)
 }
 
 /// Low-precision `ln`: `log2_lowp · LN_2` (at most 8.5e-6 absolute error).
 #[inline]
 pub fn ln_lowp_f32(x: f32) -> f32 {
-    log2_lowp_f32(x) * core::f32::consts::LN_2
+    ln_lowp_with::<Fused>(x)
+}
+
+#[inline]
+fn ln_lowp_with<S: Step>(x: f32) -> f32 {
+    log2_lowp_with::<S>(x) * core::f32::consts::LN_2
 }
 
 /// Low-precision `e^x`: `exp2_lowp(x · LOG2_E)`.
 #[inline]
 pub fn exp_lowp_f32(x: f32) -> f32 {
-    exp2_lowp_f32(x * core::f32::consts::LOG2_E)
+    exp_lowp_with::<Fused>(x)
+}
+
+#[inline]
+fn exp_lowp_with<S: Step>(x: f32) -> f32 {
+    exp2_lowp_with::<S>(x * core::f32::consts::LOG2_E)
 }
 
 /// Low-precision `log10`: `log2_lowp · (LN_2 / LN_10)` (at most 5.8e-6 absolute error).
 #[inline]
 pub fn log10_lowp_f32(x: f32) -> f32 {
-    log2_lowp_f32(x) * (core::f32::consts::LN_2 / core::f32::consts::LN_10)
+    log10_lowp_with::<Fused>(x)
+}
+
+#[inline]
+fn log10_lowp_with<S: Step>(x: f32) -> f32 {
+    log2_lowp_with::<S>(x) * (core::f32::consts::LN_2 / core::f32::consts::LN_10)
 }
 
 /// Low-precision `x^n`: `exp2_lowp(log2_lowp(x) · n)`. Returns +0 for ±0 at
 /// every `n`, NaN for negative or NaN `x` and for +inf with `n` = 0.
 #[inline]
 pub fn pow_lowp_f32(x: f32, n: f32) -> f32 {
-    let r = exp2_lowp_f32(log2_lowp_f32(x) * n);
+    pow_lowp_with::<Fused>(x, n)
+}
+
+#[inline]
+fn pow_lowp_with<S: Step>(x: f32, n: f32) -> f32 {
+    let r = exp2_lowp_with::<S>(log2_lowp_with::<S>(x) * n);
     if x == 0.0 { 0.0 } else { r }
 }
 
@@ -731,6 +789,11 @@ pub fn cbrt_lowp_f32(x: f32) -> f32 {
 /// about -127, not -139.5.
 #[inline]
 pub fn log2_midp_f32(x: f32) -> f32 {
+    log2_midp_with::<Fused>(x)
+}
+
+#[inline]
+fn log2_midp_with<S: Step>(x: f32) -> f32 {
     const SQRT2_OVER_2: u32 = 0x3f35_04f3;
     const ONE_BITS: u32 = 0x3f80_0000;
     const MANTISSA_MASK: i32 = 0x007f_ffff;
@@ -745,16 +808,21 @@ pub fn log2_midp_f32(x: f32) -> f32 {
     let a = f32::from_bits(((adjusted & MANTISSA_MASK) as u32).wrapping_add(SQRT2_OVER_2));
     let y = (a - 1.0) / (a + 1.0);
     let y2 = y * y;
-    let poly = fmaf(fmaf(fmaf(C3, y2, C2), y2, C1), y2, C0);
-    log_specials(x, fmaf(poly, y, n))
+    let poly = S::madd(S::madd(S::madd(C3, y2, C2), y2, C1), y2, C0);
+    log_specials(x, S::madd(poly, y, n))
 }
 
 /// Mid-precision `2^x`: at most 1.9 ULP for x below 127.5, up to 134.1 ULP in
 /// [127.5, 128). Ties-to-even split (|frac| ≤ 0.5), degree-6 Horner, exponent
 /// bits. x < -126 → 0, x ≥ 128 → +inf, NaN → NaN.
 #[inline]
-#[allow(clippy::manual_clamp)] // Written as the vector kernel's .max().min().
 pub fn exp2_midp_f32(x: f32) -> f32 {
+    exp2_midp_with::<Fused>(x)
+}
+
+#[inline]
+#[allow(clippy::manual_clamp)] // Written as the vector kernel's .max().min().
+fn exp2_midp_with<S: Step>(x: f32) -> f32 {
     const C1: f32 = core::f32::consts::LN_2;
     const C2: f32 = 0.240_226_46;
     const C3: f32 = 0.055_504_545;
@@ -773,9 +841,13 @@ pub fn exp2_midp_f32(x: f32) -> f32 {
     }
     let xi = roundevenf(x).min(127.0);
     let xf = x - xi;
-    let poly = fmaf(
-        fmaf(
-            fmaf(fmaf(fmaf(fmaf(C6, xf, C5), xf, C4), xf, C3), xf, C2),
+    let poly = S::madd(
+        S::madd(
+            S::madd(
+                S::madd(S::madd(S::madd(C6, xf, C5), xf, C4), xf, C3),
+                xf,
+                C2,
+            ),
             xf,
             C1,
         ),
@@ -788,20 +860,35 @@ pub fn exp2_midp_f32(x: f32) -> f32 {
 /// Mid-precision `ln`: `log2_midp · LN_2` (at most 4.1 ULP).
 #[inline]
 pub fn ln_midp_f32(x: f32) -> f32 {
-    log2_midp_f32(x) * core::f32::consts::LN_2
+    ln_midp_with::<Fused>(x)
+}
+
+#[inline]
+fn ln_midp_with<S: Step>(x: f32) -> f32 {
+    log2_midp_with::<S>(x) * core::f32::consts::LN_2
 }
 
 /// Mid-precision `e^x`: `exp2_midp(x · LOG2_E)`. Error grows with |x|: 2.0 ULP
 /// for |x| ≤ 1, 8.2 for |x| ≤ 10, 64.1 on [-87, 88.5].
 #[inline]
 pub fn exp_midp_f32(x: f32) -> f32 {
-    exp2_midp_f32(x * core::f32::consts::LOG2_E)
+    exp_midp_with::<Fused>(x)
+}
+
+#[inline]
+fn exp_midp_with<S: Step>(x: f32) -> f32 {
+    exp2_midp_with::<S>(x * core::f32::consts::LOG2_E)
 }
 
 /// Mid-precision `log10`: `log2_midp · (LN_2 / LN_10)` (at most 4.5 ULP).
 #[inline]
 pub fn log10_midp_f32(x: f32) -> f32 {
-    log2_midp_f32(x) * (core::f32::consts::LN_2 / core::f32::consts::LN_10)
+    log10_midp_with::<Fused>(x)
+}
+
+#[inline]
+fn log10_midp_with<S: Step>(x: f32) -> f32 {
+    log2_midp_with::<S>(x) * (core::f32::consts::LN_2 / core::f32::consts::LN_10)
 }
 
 /// Mid-precision `x^n`: `exp2_midp(log2_midp(x) · n)`. Error grows with
@@ -809,7 +896,12 @@ pub fn log10_midp_f32(x: f32) -> f32 {
 /// `x`, and where `log2(x) · n` is 0 · inf: `x` = 0 or +inf with `n` = 0.
 #[inline]
 pub fn pow_midp_f32(x: f32, n: f32) -> f32 {
-    exp2_midp_f32(log2_midp_f32(x) * n)
+    pow_midp_with::<Fused>(x, n)
+}
+
+#[inline]
+fn pow_midp_with<S: Step>(x: f32, n: f32) -> f32 {
+    exp2_midp_with::<S>(log2_midp_with::<S>(x) * n)
 }
 
 /// Mid-precision cube root: at most 3.2 ULP for magnitudes in
@@ -853,11 +945,119 @@ pub fn cbrt_midp_precise_f32(x: f32) -> f32 {
 /// exactly 0 or 1 because the division is exact. NaN → NaN.
 #[inline]
 pub fn sigmoid_midp_f32(x: f32) -> f32 {
-    1.0 / (exp_midp_f32(-x) + 1.0)
+    sigmoid_midp_with::<Fused>(x)
+}
+
+#[inline]
+fn sigmoid_midp_with<S: Step>(x: f32) -> f32 {
+    1.0 / (exp_midp_with::<S>(-x) + 1.0)
 }
 
 /// Mid-precision SiLU / swish `x · sigmoid(x)`. NaN → NaN.
 #[inline]
 pub fn silu_midp_f32(x: f32) -> f32 {
-    x * sigmoid_midp_f32(x)
+    silu_midp_with::<Fused>(x)
+}
+
+#[inline]
+fn silu_midp_with<S: Step>(x: f32) -> f32 {
+    x * sigmoid_midp_with::<S>(x)
+}
+
+/// The same functions with each polynomial step a plain multiply and then add:
+/// two roundings, on every target. No `fmaf`, so no software path and no
+/// dependence on `std`. Specials match the functions in the parent module, and the
+/// accuracy bounds in `docs/transcendentals.md` hold for both roundings; finite
+/// results can differ in the last bits.
+///
+/// The functions with no multiply-add step are the same either way, and are
+/// re-exported so this module is a complete set of mirrors.
+pub mod unfused {
+    pub use super::{
+        cbrt_lowp_f32, cbrt_midp_f32, cbrt_midp_precise_f32, ceilf, floorf, roundevenf, sqrtf,
+    };
+
+    /// [`super::log2_lowp_f32`] with two roundings per polynomial step.
+    #[inline]
+    pub fn log2_lowp_f32(x: f32) -> f32 {
+        super::log2_lowp_with::<super::Unfused>(x)
+    }
+
+    /// [`super::exp2_lowp_f32`] with two roundings per polynomial step.
+    #[inline]
+    pub fn exp2_lowp_f32(x: f32) -> f32 {
+        super::exp2_lowp_with::<super::Unfused>(x)
+    }
+
+    /// [`super::ln_lowp_f32`] with two roundings per polynomial step.
+    #[inline]
+    pub fn ln_lowp_f32(x: f32) -> f32 {
+        super::ln_lowp_with::<super::Unfused>(x)
+    }
+
+    /// [`super::exp_lowp_f32`] with two roundings per polynomial step.
+    #[inline]
+    pub fn exp_lowp_f32(x: f32) -> f32 {
+        super::exp_lowp_with::<super::Unfused>(x)
+    }
+
+    /// [`super::log10_lowp_f32`] with two roundings per polynomial step.
+    #[inline]
+    pub fn log10_lowp_f32(x: f32) -> f32 {
+        super::log10_lowp_with::<super::Unfused>(x)
+    }
+
+    /// [`super::pow_lowp_f32`] with two roundings per polynomial step.
+    #[inline]
+    pub fn pow_lowp_f32(x: f32, n: f32) -> f32 {
+        super::pow_lowp_with::<super::Unfused>(x, n)
+    }
+
+    /// [`super::log2_midp_f32`] with two roundings per polynomial step.
+    #[inline]
+    pub fn log2_midp_f32(x: f32) -> f32 {
+        super::log2_midp_with::<super::Unfused>(x)
+    }
+
+    /// [`super::exp2_midp_f32`] with two roundings per polynomial step.
+    #[inline]
+    pub fn exp2_midp_f32(x: f32) -> f32 {
+        super::exp2_midp_with::<super::Unfused>(x)
+    }
+
+    /// [`super::ln_midp_f32`] with two roundings per polynomial step.
+    #[inline]
+    pub fn ln_midp_f32(x: f32) -> f32 {
+        super::ln_midp_with::<super::Unfused>(x)
+    }
+
+    /// [`super::exp_midp_f32`] with two roundings per polynomial step.
+    #[inline]
+    pub fn exp_midp_f32(x: f32) -> f32 {
+        super::exp_midp_with::<super::Unfused>(x)
+    }
+
+    /// [`super::log10_midp_f32`] with two roundings per polynomial step.
+    #[inline]
+    pub fn log10_midp_f32(x: f32) -> f32 {
+        super::log10_midp_with::<super::Unfused>(x)
+    }
+
+    /// [`super::pow_midp_f32`] with two roundings per polynomial step.
+    #[inline]
+    pub fn pow_midp_f32(x: f32, n: f32) -> f32 {
+        super::pow_midp_with::<super::Unfused>(x, n)
+    }
+
+    /// [`super::sigmoid_midp_f32`] with two roundings per polynomial step.
+    #[inline]
+    pub fn sigmoid_midp_f32(x: f32) -> f32 {
+        super::sigmoid_midp_with::<super::Unfused>(x)
+    }
+
+    /// [`super::silu_midp_f32`] with two roundings per polynomial step.
+    #[inline]
+    pub fn silu_midp_f32(x: f32) -> f32 {
+        super::silu_midp_with::<super::Unfused>(x)
+    }
 }

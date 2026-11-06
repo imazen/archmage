@@ -1,14 +1,11 @@
-//! What `magemath::portable` costs against magetypes' relaxed methods, per tier.
+//! What each `magemath` surface costs, per tier, against the others and against
+//! magetypes' methods.
 //!
-//! Each group streams 1,024 `[f32; 8]` values, L1-resident, through one form:
-//!
-//! - `portable`: the fused kernel, with its edge handling.
-//! - `unchecked`: the `_unchecked` fused kernel, no edge handling at all. The gap
-//!   to `portable` is what edge handling costs.
-//! - `relaxed`: the matching `f32x8` method.
-//!
-//! Scalar-tier groups add `mirror` (`zenmath::scalar`, per lane) and `std`.
-//! `exp2_midp slice tail` compares the padded tail against a scalar one.
+//! Each group streams 1,024 `[f32; 8]` values, L1-resident, through one form; the
+//! forms are listed in `support/forms.rs`, and `fused` is the baseline. Scalar-tier
+//! groups add the `zenmath` mirrors per lane (`mirror_fused`, `mirror_unfused`) and
+//! `std`. `exp2_midp feedback` runs the kernels with each result feeding the next
+//! call. `exp2_midp slice tail` compares the padded tail against a scalar one.
 //! zenbench does not build for wasm32: see `examples/wasm_cost.rs`.
 //!
 //! Run (no `-Ctarget-cpu=native`, not on a machine doing other work):
@@ -29,10 +26,10 @@ type PerLane = fn(f32) -> f32;
 
 /// Generates a `fn(T, input, out)` calling `$family` on exactly `T`'s tier.
 macro_rules! on_tier {
-    ($family:ident) => {
+    ($($family:ident)::+) => {
         |t: T, input: &[[f32; 8]], out: &mut [[f32; 8]]| {
             attuned!(
-                $family(input, out),
+                $($family)::+(input, out),
                 [_v4x(cfg(avx512)), _v3, _neon, _wasm128, _scalar],
                 using(t)
             )
@@ -72,8 +69,38 @@ fn group<T: IntoConcreteToken + Copy + Send + Sync + 'static>(
                 })
             });
         }
-        g.baseline("relaxed");
+        g.baseline("fused");
     });
+}
+
+macro_rules! op_group {
+    ($suite:expr, $tier:expr, $token:expr, $with_per_lane:expr, $op:ident, $input:expr, $fused:expr, $unfused:expr, $std:expr) => {
+        group(
+            $suite,
+            format!("{}, {}", stringify!($op), $tier),
+            $token,
+            $input,
+            vec![
+                ("fused", on_tier!($op::fused)),
+                ("fused_unchecked", on_tier!($op::fused_unchecked)),
+                ("unfused", on_tier!($op::unfused)),
+                ("unfused_unchecked", on_tier!($op::unfused_unchecked)),
+                ("relaxed", on_tier!($op::relaxed)),
+                ("relaxed_unchecked", on_tier!($op::relaxed_unchecked)),
+                ("method", on_tier!($op::method)),
+            ],
+            if $with_per_lane {
+                let lanes: Vec<(&'static str, PerLane)> = vec![
+                    ("mirror_fused", $fused),
+                    ("mirror_unfused", $unfused),
+                    ("std", $std),
+                ];
+                lanes
+            } else {
+                vec![]
+            },
+        );
+    };
 }
 
 fn tier_groups<T: IntoConcreteToken + Copy + Send + Sync + 'static>(
@@ -83,72 +110,72 @@ fn tier_groups<T: IntoConcreteToken + Copy + Send + Sync + 'static>(
     with_per_lane: bool,
 ) {
     use zenmath::scalar as zs;
-    let lanes = |a: PerLane, b: PerLane| {
-        if with_per_lane {
-            vec![("mirror", a), ("std", b)]
-        } else {
-            vec![]
-        }
-    };
-    group(
+    use zenmath::scalar::unfused as zu;
+    op_group!(
         suite,
-        format!("exp2_midp, {tier}"),
+        tier,
         token,
+        with_per_lane,
+        exp2_midp,
         inputs(-20.0, 20.0, N),
-        vec![
-            ("portable", on_tier!(exp2_midp_portable)),
-            ("relaxed", on_tier!(exp2_midp_relaxed)),
-            ("unchecked", on_tier!(exp2_midp_unchecked)),
-        ],
-        lanes(zs::exp2_midp_f32, f32::exp2),
+        zs::exp2_midp_f32,
+        zu::exp2_midp_f32,
+        f32::exp2
     );
-    group(
+    op_group!(
         suite,
-        format!("log2_midp, {tier}"),
+        tier,
         token,
+        with_per_lane,
+        log2_midp,
         inputs(0.001, 1000.0, N),
-        vec![
-            ("portable", on_tier!(log2_midp_portable)),
-            ("relaxed", on_tier!(log2_midp_relaxed)),
-            ("unchecked", on_tier!(log2_midp_unchecked)),
-        ],
-        lanes(zs::log2_midp_f32, f32::log2),
+        zs::log2_midp_f32,
+        zu::log2_midp_f32,
+        f32::log2
     );
-    group(
+    op_group!(
         suite,
-        format!("pow_midp(2.4), {tier}"),
+        tier,
         token,
+        with_per_lane,
+        pow_midp,
         inputs(0.001, 1.0, N),
-        vec![
-            ("portable", on_tier!(pow_midp_portable)),
-            ("relaxed", on_tier!(pow_midp_relaxed)),
-            ("unchecked", on_tier!(pow_midp_unchecked)),
-        ],
-        lanes(|x| zs::pow_midp_f32(x, 2.4), |x| x.powf(2.4)),
+        |x| zs::pow_midp_f32(x, 2.4),
+        |x| zu::pow_midp_f32(x, 2.4),
+        |x| x.powf(2.4)
     );
-    group(
+    op_group!(
         suite,
-        format!("exp2_lowp, {tier}"),
+        tier,
         token,
+        with_per_lane,
+        exp2_lowp,
         inputs(-20.0, 20.0, N),
-        vec![
-            ("portable", on_tier!(exp2_lowp_portable)),
-            ("unchecked", on_tier!(exp2_lowp_unchecked)),
-            ("relaxed", on_tier!(exp2_lowp_relaxed)),
-        ],
-        lanes(zs::exp2_lowp_f32, f32::exp2),
+        zs::exp2_lowp_f32,
+        zu::exp2_lowp_f32,
+        f32::exp2
+    );
+    op_group!(
+        suite,
+        tier,
+        token,
+        with_per_lane,
+        log2_lowp,
+        inputs(0.001, 1000.0, N),
+        zs::log2_lowp_f32,
+        zu::log2_lowp_f32,
+        f32::log2
     );
     group(
         suite,
-        format!("log2_lowp, {tier}"),
+        format!("exp2_midp feedback, {tier}"),
         token,
-        inputs(0.001, 1000.0, N),
+        inputs(0.5, 0.6, N),
         vec![
-            ("portable", on_tier!(log2_lowp_portable)),
-            ("unchecked", on_tier!(log2_lowp_unchecked)),
-            ("relaxed", on_tier!(log2_lowp_relaxed)),
+            ("fused", on_tier!(feedback_fused)),
+            ("unfused", on_tier!(feedback_unfused)),
         ],
-        lanes(zs::log2_lowp_f32, f32::log2),
+        vec![],
     );
 }
 

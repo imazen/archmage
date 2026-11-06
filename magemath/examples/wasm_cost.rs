@@ -32,9 +32,12 @@ fn time(name: &str, input: &[[f32; 8]], run: impl Fn(&[[f32; 8]], &mut [[f32; 8]
 }
 
 macro_rules! timed {
-    ($input:expr, $($family:ident),+) => {
-        $(time(stringify!($family), $input, |i, o| {
-            attuned!($family(i, o), [_v4x(cfg(avx512)), _v3, _neon, _wasm128, _scalar])
+    ($input:expr, $op:ident) => {
+        timed!(@forms $input, $op, fused, fused_unchecked, unfused, unfused_unchecked, relaxed, relaxed_unchecked, method);
+    };
+    (@forms $input:expr, $op:ident, $($form:ident),+) => {
+        $(time(concat!(stringify!($op), " ", stringify!($form)), $input, |i, o| {
+            attuned!($op::$form(i, o), [_v4x(cfg(avx512)), _v3, _neon, _wasm128, _scalar])
         });)+
     };
 }
@@ -43,34 +46,9 @@ fn main() {
     let exp_input = inputs(-20.0, 20.0, N);
     let log_input = inputs(0.001, 1000.0, N);
     let pow_input = inputs(0.001, 1.0, N);
-    timed!(
-        &exp_input,
-        exp2_midp_portable,
-        exp2_midp_relaxed,
-        exp2_midp_unchecked
-    );
-    timed!(
-        &log_input,
-        log2_midp_portable,
-        log2_midp_relaxed,
-        log2_midp_unchecked
-    );
-    timed!(
-        &pow_input,
-        pow_midp_portable,
-        pow_midp_relaxed,
-        pow_midp_unchecked
-    );
-    timed!(
-        &exp_input,
-        exp2_lowp_portable,
-        exp2_lowp_unchecked,
-        exp2_lowp_relaxed
-    );
-    timed!(
-        &log_input,
-        log2_lowp_portable,
-        log2_lowp_unchecked,
-        log2_lowp_relaxed
-    );
+    timed!(&exp_input, exp2_midp);
+    timed!(&log_input, log2_midp);
+    timed!(&pow_input, pow_midp);
+    timed!(&exp_input, exp2_lowp);
+    timed!(&log_input, log2_lowp);
 }

@@ -9,9 +9,32 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 const BLOCK: u64 = 1 << 16;
 
+fn threads() -> usize {
+    std::thread::available_parallelism().map_or(1, usize::from)
+}
+
 fn check_tier<T: IntoConcreteToken + Copy + Send + Sync>(tier: &str, token: T) {
-    let threads = std::thread::available_parallelism().map_or(1, usize::from);
-    for op in OPS {
+    let rounding = relaxed_rounding(tier, token);
+    check_surface(tier, "portable", token, fused::slice_on::<T>, fused::OPS);
+    check_surface(tier, "unfused", token, unfused::slice_on::<T>, unfused::OPS);
+    check_surface(
+        tier,
+        "relaxed",
+        token,
+        relaxed::slice_on::<T>,
+        rounding.ops(),
+    );
+}
+
+fn check_surface<T: Copy + Send + Sync>(
+    tier: &str,
+    surface: &str,
+    token: T,
+    slice: fn(T, &str, &mut [f32]),
+    mirrors: &[Op],
+) {
+    let threads = threads();
+    for op in mirrors {
         let next = AtomicU64::new(0);
         std::thread::scope(|s| {
             for _ in 0..threads {
@@ -27,7 +50,7 @@ fn check_tier<T: IntoConcreteToken + Copy + Send + Sync>(tier: &str, token: T) {
                             *x = f32::from_bits((start + i as u64) as u32);
                         }
                         got.copy_from_slice(&input);
-                        slice_on(token, op.name, &mut got);
+                        slice(token, op.name, &mut got);
                         for (&g, &x) in got.iter().zip(&input) {
                             assert_same(tier, op.name, x, g, (op.mirror)(x));
                         }
@@ -35,7 +58,7 @@ fn check_tier<T: IntoConcreteToken + Copy + Send + Sync>(tier: &str, token: T) {
                 });
             }
         });
-        println!("{tier} {}: all 2^32 inputs match", op.name);
+        println!("{tier} {surface} {}: all 2^32 inputs match", op.name);
     }
 }
 
@@ -54,5 +77,69 @@ fn all_inputs_all_tiers() {
     #[cfg(target_arch = "aarch64")]
     if let Some(token) = require::<NeonToken>("neon") {
         check_tier("neon", token);
+    }
+}
+
+/// Distance between two results in representable values; NaN against non-NaN
+/// is `u64::MAX`, since no number of ULPs covers it.
+fn ulp_distance(a: f32, b: f32) -> u64 {
+    if a.is_nan() || b.is_nan() {
+        return if a.is_nan() == b.is_nan() {
+            0
+        } else {
+            u64::MAX
+        };
+    }
+    let line = |x: f32| -> i64 {
+        let magnitude = i64::from(x.to_bits() & 0x7fff_ffff);
+        if x.is_sign_negative() {
+            -magnitude
+        } else {
+            magnitude
+        }
+    };
+    line(a).abs_diff(line(b))
+}
+
+/// What choosing one rounding over the other changes: over all 2^32 inputs, how
+/// many results differ and by how much. This prints a table and asserts only that
+/// NaN-ness agrees, because specials must not depend on the rounding.
+#[test]
+#[ignore = "takes minutes on many cores; run through just magemath-exhaustive"]
+fn rounding_gap() {
+    println!("op, inputs differing of 2^32, max ULP apart");
+    for (once, twice) in fused::OPS.iter().zip(unfused::OPS) {
+        let next = AtomicU64::new(0);
+        let differing = AtomicU64::new(0);
+        let widest = AtomicU64::new(0);
+        std::thread::scope(|s| {
+            for _ in 0..threads() {
+                s.spawn(|| {
+                    loop {
+                        let start = next.fetch_add(BLOCK, Ordering::Relaxed);
+                        if start >= 1 << 32 {
+                            return;
+                        }
+                        let (mut count, mut most) = (0, 0);
+                        for i in 0..BLOCK {
+                            let x = f32::from_bits((start + i) as u32);
+                            let (a, b) = ((once.mirror)(x), (twice.mirror)(x));
+                            let gap = ulp_distance(a, b);
+                            assert_ne!(gap, u64::MAX, "{}({x:e}): {a:e} vs {b:e}", once.name);
+                            count += u64::from(gap != 0);
+                            most = most.max(gap);
+                        }
+                        differing.fetch_add(count, Ordering::Relaxed);
+                        widest.fetch_max(most, Ordering::Relaxed);
+                    }
+                });
+            }
+        });
+        println!(
+            "{}, {}, {}",
+            once.name,
+            differing.load(Ordering::Relaxed),
+            widest.load(Ordering::Relaxed)
+        );
     }
 }

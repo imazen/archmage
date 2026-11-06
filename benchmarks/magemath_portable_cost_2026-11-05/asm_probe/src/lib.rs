@@ -1,6 +1,8 @@
 #![allow(clippy::all)]
 use archmage::prelude::*;
 use magemath::portable::kernels;
+use magemath::relaxed::kernels as relaxed;
+use magemath::unfused::kernels as unfused;
 
 macro_rules! probe {
     ($tier:ident, $token:ident, $($name:ident = |$t:ident, $v:ident| $body:expr;)*) => {$(
@@ -26,6 +28,12 @@ pub mod x86 {
         log2_unchecked = |t, v| kernels::log2_midp_unchecked(t, v);
         chain_exp2_log2 = |t, v| kernels::log2_midp(t, kernels::exp2_midp(t, v));
         chain_gamma = |t, v| kernels::pow_midp(t, kernels::pow_midp(t, v, 2.4), 1.0 / 2.4);
+        exp2_unfused = |t, v| unfused::exp2_midp(t, v);
+        log2_unfused = |t, v| unfused::log2_midp(t, v);
+        chain_unfused = |t, v| unfused::log2_midp(t, unfused::exp2_midp(t, v));
+        chain_gamma_unfused = |t, v| unfused::pow_midp(t, unfused::pow_midp(t, v, 2.4), 1.0 / 2.4);
+        exp2_rel_kernel = |t, v| relaxed::exp2_midp(t, v);
+        log2_rel_kernel = |t, v| relaxed::log2_midp(t, v);
     );
     #[attune(v3)]
     #[inline(never)]
@@ -42,5 +50,7 @@ pub mod arm {
         exp2_relaxed = |t, v| v.exp2_midp();
         log2_portable = |t, v| kernels::log2_midp(t, v);
         chain_exp2_log2 = |t, v| kernels::log2_midp(t, kernels::exp2_midp(t, v));
+        exp2_unfused = |t, v| unfused::exp2_midp(t, v);
+        chain_unfused = |t, v| unfused::log2_midp(t, unfused::exp2_midp(t, v));
     );
 }

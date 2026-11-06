@@ -6,7 +6,7 @@
 //! - `golden/edges.txt`: readable input and output bits per op for
 //!   `common::named_edges`, so a change to a special case shows in the diff.
 //! - `golden/digests.txt`: an FNV-1a digest of every op's outputs over
-//!   `common::corpus`, about 230,000 inputs per op.
+//!   `common::corpus`, about 230,000 inputs per op, for both sets of mirrors.
 //!
 //! Regenerate after an intentional kernel change, and review the edges diff:
 //! `just magemath-golden-regen`.
@@ -33,6 +33,8 @@ fn digest(values: impl Iterator<Item = f32>) -> u64 {
 /// Digest key for the corpus itself, so a changed generator reads as that and
 /// not as every op changing at once.
 const INPUTS: &str = "(inputs)";
+/// Digest key prefix for `zenmath::scalar::unfused`.
+const UNFUSED: &str = "unfused/";
 
 #[cfg(not(target_arch = "wasm32"))]
 fn digests_text(corpus: &[f32]) -> String {
@@ -40,9 +42,11 @@ fn digests_text(corpus: &[f32]) -> String {
         String::from("# op  fnv1a64 of output bits over common::corpus (NaN canonical)\n");
     let inputs = digest(corpus.iter().copied());
     text += &format!("{INPUTS} {inputs:016x}\n");
-    for op in OPS {
-        let d = digest(corpus.iter().map(|&x| (op.mirror)(x)));
-        text += &format!("{} {d:016x}\n", op.name);
+    for (prefix, ops) in [("", fused::OPS), (UNFUSED, unfused::OPS)] {
+        for op in ops {
+            let d = digest(corpus.iter().map(|&x| (op.mirror)(x)));
+            text += &format!("{prefix}{} {d:016x}\n", op.name);
+        }
     }
     text
 }
@@ -51,7 +55,7 @@ fn digests_text(corpus: &[f32]) -> String {
 fn edges_text() -> String {
     let mut text =
         String::from("# op  input_bits  output_bits (hex; every NaN written 7fc00000)\n");
-    for op in OPS {
+    for op in fused::OPS {
         for x in named_edges() {
             let y = (op.mirror)(x);
             let bits = if y.is_nan() { 0x7fc0_0000 } else { y.to_bits() };
@@ -81,14 +85,12 @@ fn corpus_is_unchanged() {
 #[test]
 fn mirrors_match_digests() {
     let corpus = corpus();
-    for op in OPS {
-        let got = digest(corpus.iter().map(|&x| (op.mirror)(x)));
-        assert_eq!(
-            got,
-            golden_digest(op.name),
-            "{}: mirror bits moved",
-            op.name
-        );
+    for (prefix, ops) in [("", fused::OPS), (UNFUSED, unfused::OPS)] {
+        for op in ops {
+            let got = digest(corpus.iter().map(|&x| (op.mirror)(x)));
+            let key = format!("{prefix}{}", op.name);
+            assert_eq!(got, golden_digest(&key), "{key}: mirror bits moved");
+        }
     }
 }
 
@@ -101,13 +103,16 @@ fn mirrors_match_edge_table() {
         let want = u32::from_str_radix(fields.next().unwrap(), 16).unwrap();
         let x = f32::from_bits(u32::from_str_radix(fields.next().unwrap(), 16).unwrap());
         let name = fields.next().unwrap();
-        let op = OPS.iter().find(|o| o.name == name).expect("op in table");
+        let op = fused::OPS
+            .iter()
+            .find(|o| o.name == name)
+            .expect("op in table");
         assert_same("edge", name, x, (op.mirror)(x), f32::from_bits(want));
         rows += 1;
     }
     assert_eq!(
         rows,
-        OPS.len() * named_edges().len(),
+        fused::OPS.len() * named_edges().len(),
         "edges.txt is stale: regenerate"
     );
 }

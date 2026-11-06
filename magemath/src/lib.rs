@@ -42,8 +42,13 @@
 // there is no safety contract to document.
 #![allow(clippy::missing_safety_doc)]
 
+mod bodies;
+mod surface;
+
 pub mod native;
 pub mod portable;
+pub mod relaxed;
+pub mod unfused;
 
 /// Keeps the README's examples compiling and passing.
 #[doc = include_str!("../README.md")]

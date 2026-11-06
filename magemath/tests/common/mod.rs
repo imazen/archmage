@@ -2,10 +2,8 @@
 #![allow(dead_code)] // Each test binary uses part of this module.
 
 use archmage::prelude::*;
-use magemath::portable::{array as arr, slice as sli};
-use zenmath::scalar as zs;
 
-/// One portable op: its name in the golden files and its scalar mirror.
+/// One op: its name in the golden files and its scalar mirror.
 #[derive(Clone, Copy)]
 pub struct Op {
     pub name: &'static str,
@@ -59,35 +57,91 @@ macro_rules! ops {
     };
 }
 
-ops! {
-    "sqrt", sqrt_f32x8, sqrt_f32, zs::sqrtf;
-    "floor", floor_f32x8, floor_f32, zs::floorf;
-    "ceil", ceil_f32x8, ceil_f32, zs::ceilf;
-    "roundeven", roundeven_f32x8, roundeven_f32, zs::roundevenf;
+/// The op table over one `magemath` surface and one set of mirrors.
+macro_rules! surface {
+    ($module:ident, $surface:ident, $($zs:ident)::+) => {
+        pub mod $module {
+            use super::*;
+            use magemath::$surface::{array as arr, slice as sli};
+            use $($zs)::+ as zs;
 
-    "log2_lowp", log2_lowp_f32x8, log2_lowp_f32, zs::log2_lowp_f32;
-    "exp2_lowp", exp2_lowp_f32x8, exp2_lowp_f32, zs::exp2_lowp_f32;
-    "ln_lowp", ln_lowp_f32x8, ln_lowp_f32, zs::ln_lowp_f32;
-    "exp_lowp", exp_lowp_f32x8, exp_lowp_f32, zs::exp_lowp_f32;
-    "log10_lowp", log10_lowp_f32x8, log10_lowp_f32, zs::log10_lowp_f32;
-    "pow_lowp(2.4)", pow_lowp_f32x8, pow_lowp_f32, |x| zs::pow_lowp_f32(x, 2.4), 2.4;
-    "pow_lowp(-1)", pow_lowp_f32x8, pow_lowp_f32, |x| zs::pow_lowp_f32(x, -1.0), -1.0;
-    "pow_lowp(0)", pow_lowp_f32x8, pow_lowp_f32, |x| zs::pow_lowp_f32(x, 0.0), 0.0;
-    "cbrt_lowp", cbrt_lowp_f32x8, cbrt_lowp_f32, zs::cbrt_lowp_f32;
+            ops! {
+                "sqrt", sqrt_f32x8, sqrt_f32, zs::sqrtf;
+                "floor", floor_f32x8, floor_f32, zs::floorf;
+                "ceil", ceil_f32x8, ceil_f32, zs::ceilf;
+                "roundeven", roundeven_f32x8, roundeven_f32, zs::roundevenf;
 
-    "log2_midp", log2_midp_f32x8, log2_midp_f32, zs::log2_midp_f32;
-    "exp2_midp", exp2_midp_f32x8, exp2_midp_f32, zs::exp2_midp_f32;
-    "ln_midp", ln_midp_f32x8, ln_midp_f32, zs::ln_midp_f32;
-    "exp_midp", exp_midp_f32x8, exp_midp_f32, zs::exp_midp_f32;
-    "log10_midp", log10_midp_f32x8, log10_midp_f32, zs::log10_midp_f32;
-    "pow_midp(2.4)", pow_midp_f32x8, pow_midp_f32, |x| zs::pow_midp_f32(x, 2.4), 2.4;
-    "pow_midp(0.4166667)", pow_midp_f32x8, pow_midp_f32, |x| zs::pow_midp_f32(x, 1.0 / 2.4), 1.0 / 2.4;
-    "pow_midp(-1)", pow_midp_f32x8, pow_midp_f32, |x| zs::pow_midp_f32(x, -1.0), -1.0;
-    "pow_midp(0)", pow_midp_f32x8, pow_midp_f32, |x| zs::pow_midp_f32(x, 0.0), 0.0;
-    "cbrt_midp", cbrt_midp_f32x8, cbrt_midp_f32, zs::cbrt_midp_f32;
-    "cbrt_midp_precise", cbrt_midp_precise_f32x8, cbrt_midp_precise_f32, zs::cbrt_midp_precise_f32;
-    "sigmoid_midp", sigmoid_midp_f32x8, sigmoid_midp_f32, zs::sigmoid_midp_f32;
-    "silu_midp", silu_midp_f32x8, silu_midp_f32, zs::silu_midp_f32;
+                "log2_lowp", log2_lowp_f32x8, log2_lowp_f32, zs::log2_lowp_f32;
+                "exp2_lowp", exp2_lowp_f32x8, exp2_lowp_f32, zs::exp2_lowp_f32;
+                "ln_lowp", ln_lowp_f32x8, ln_lowp_f32, zs::ln_lowp_f32;
+                "exp_lowp", exp_lowp_f32x8, exp_lowp_f32, zs::exp_lowp_f32;
+                "log10_lowp", log10_lowp_f32x8, log10_lowp_f32, zs::log10_lowp_f32;
+                "pow_lowp(2.4)", pow_lowp_f32x8, pow_lowp_f32, |x| zs::pow_lowp_f32(x, 2.4), 2.4;
+                "pow_lowp(-1)", pow_lowp_f32x8, pow_lowp_f32, |x| zs::pow_lowp_f32(x, -1.0), -1.0;
+                "pow_lowp(0)", pow_lowp_f32x8, pow_lowp_f32, |x| zs::pow_lowp_f32(x, 0.0), 0.0;
+                "cbrt_lowp", cbrt_lowp_f32x8, cbrt_lowp_f32, zs::cbrt_lowp_f32;
+
+                "log2_midp", log2_midp_f32x8, log2_midp_f32, zs::log2_midp_f32;
+                "exp2_midp", exp2_midp_f32x8, exp2_midp_f32, zs::exp2_midp_f32;
+                "ln_midp", ln_midp_f32x8, ln_midp_f32, zs::ln_midp_f32;
+                "exp_midp", exp_midp_f32x8, exp_midp_f32, zs::exp_midp_f32;
+                "log10_midp", log10_midp_f32x8, log10_midp_f32, zs::log10_midp_f32;
+                "pow_midp(2.4)", pow_midp_f32x8, pow_midp_f32, |x| zs::pow_midp_f32(x, 2.4), 2.4;
+                "pow_midp(0.4166667)", pow_midp_f32x8, pow_midp_f32, |x| zs::pow_midp_f32(x, 1.0 / 2.4), 1.0 / 2.4;
+                "pow_midp(-1)", pow_midp_f32x8, pow_midp_f32, |x| zs::pow_midp_f32(x, -1.0), -1.0;
+                "pow_midp(0)", pow_midp_f32x8, pow_midp_f32, |x| zs::pow_midp_f32(x, 0.0), 0.0;
+                "cbrt_midp", cbrt_midp_f32x8, cbrt_midp_f32, zs::cbrt_midp_f32;
+                "cbrt_midp_precise", cbrt_midp_precise_f32x8, cbrt_midp_precise_f32, zs::cbrt_midp_precise_f32;
+                "sigmoid_midp", sigmoid_midp_f32x8, sigmoid_midp_f32, zs::sigmoid_midp_f32;
+                "silu_midp", silu_midp_f32x8, silu_midp_f32, zs::silu_midp_f32;
+            }
+        }
+    };
+}
+
+surface!(fused, portable, zenmath::scalar);
+surface!(unfused, unfused, zenmath::scalar::unfused);
+// `relaxed::OPS` carries the fused mirrors only to fill the table: which mirrors
+// `relaxed` must equal depends on the tier. See `Rounding`.
+surface!(relaxed, relaxed, zenmath::scalar);
+
+/// How a polynomial step rounds, which decides the mirrors `relaxed` must equal.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Rounding {
+    Once,
+    Twice,
+}
+
+impl Rounding {
+    pub fn ops(self) -> &'static [Op] {
+        match self {
+            Rounding::Once => fused::OPS,
+            Rounding::Twice => unfused::OPS,
+        }
+    }
+}
+
+/// What `mul_add_relaxed` does on `tier`. On relaxed WASM the engine chooses; a
+/// wrong answer here cannot pass, since the caller then compares every result.
+pub fn relaxed_rounding<T: IntoConcreteToken + Copy>(tier: &str, token: T) -> Rounding {
+    match tier {
+        "v3" | "v4x" | "neon" => Rounding::Once,
+        "wasm128" if cfg!(target_feature = "relaxed-simd") => {
+            let input = corpus();
+            let mut got = input.clone();
+            relaxed::slice_on(token, "exp2_midp", &mut got);
+            let fused_bits = got
+                .iter()
+                .zip(&input)
+                .all(|(&g, &x)| same_bits(g, zenmath::scalar::exp2_midp_f32(x)));
+            if fused_bits {
+                Rounding::Once
+            } else {
+                Rounding::Twice
+            }
+        }
+        _ => Rounding::Twice,
+    }
 }
 
 /// The hand-picked inputs whose results `tests/golden/edges.txt` spells out.
