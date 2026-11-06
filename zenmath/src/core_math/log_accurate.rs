@@ -3123,6 +3123,12 @@ const P_2: [D; 13] = [
 ];
 
 pub(super) fn accurate(x: f64) -> f64 {
+    accurate_base(x, false)
+}
+pub(super) fn accurate10(x: f64) -> f64 {
+    accurate_base(x, true)
+}
+fn accurate_base(x: f64, base10: bool) -> f64 {
     let bits = x.to_bits();
     let e = ((bits >> 52) & 0x7ff) as i64;
     let hi = (bits & 0xfffffffffffff) + if e != 0 { 1 << 52 } else { 0 };
@@ -3147,6 +3153,17 @@ pub(super) fn accurate(x: f64) -> f64 {
     }
     p = z.mul(p);
     let result = _LOG_INV_2[i - 128].add(p).add(LOG2.muli(e));
+    let result = if base10 {
+        D {
+            hi: 0xde5bd8a937287195,
+            lo: 0x355baaafad33dc32,
+            ex: -2,
+            sgn: 0,
+        }
+        .mul(result)
+    } else {
+        result
+    };
     let mut r = f64::from_bits((result.hi >> 11) | (0x3ff << 52) | (result.sgn << 63));
     let rd = f64::from_bits(0x3c90000000000000)
         + if (result.hi >> 10) & 1 != 0 {

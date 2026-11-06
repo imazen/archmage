@@ -7,6 +7,7 @@ fn main() {
     let function: fn(f64, f64) -> f64 = match args[1].as_str() {
         "exp" => |x, _| scalar::exp(x),
         "log" => |x, _| scalar::log(x),
+        "log10" => |x, _| scalar::log10(x),
         "log2" => |x, _| scalar::log2(x),
         "exp2" => |x, _| scalar::exp2(x),
         "cbrt" => |x, _| scalar::cbrt(x),
