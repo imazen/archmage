@@ -290,3 +290,29 @@ compiler/libc/OS vary together, so this is neither an exhaustive bound nor an
 isolated ISA experiment. Rust std does not promise portable transcendental
 bits; an implementation that happens to agree on another sampled operation
 has not acquired that guarantee.
+
+## The same accurate operations on other targets
+
+Ordinary-input throughput, ns/value, written **std / correct packed**. Native
+packed entries use the named proof context and include the slice-adapter copy.
+These are per-platform comparisons, not a controlled comparison between CPUs.
+
+| Target | exp | ln | log2 | varying-exponent powf |
+|---|---:|---:|---:|---:|
+| Ryzen 7900X, V3 | 2.382 / 1.558 | 2.465 / 1.575 | 2.245 / 1.706 | 4.972 / 8.642 |
+| Neoverse-N1, NEON | 5.871 / 4.593 | 5.998 / 4.958 | 5.982 / 4.969 | 11.224 / 20.244 |
+| Strict WASM, Wasmtime 49.0.5 on Ryzen 5900XT | 3.544 / 4.100 | 3.791 / 5.794 | 3.546 / 5.194 | 8.936 / 41.837 |
+
+WASM constructs its case/input/output buffers per host invocation, amortized
+over 256 repetitions of 1024 values; native allocation occurs outside timing.
+Its absolute times include that wrapper cost. The WASM run took 466 seconds
+under the resource wrapper, with peak RSS 0.43 GiB. Native resource summaries
+appear above. Correct packed math is not a speed improvement everywhere:
+strict-WASM software fusion and power's accurate fallback costs remain visible.
+
+The retained matrix covers 4568 math throughput cells, 180 algebraic cells and
+343 representative native feedback cells, each with at least 30 rounds. One
+additional cell, metallic general power on WASM special inputs, traps and has
+an explicit failure record. Windows and macOS timings are unavailable; no Zen 5
+performance is claimed. The feedback study covers exp, ln, log2 and sqrt; it
+is not a complete instruction-latency matrix.
