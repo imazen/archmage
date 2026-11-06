@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import drive
+import audit_matrix
 
 class PrepareTests(unittest.TestCase):
     def test_existing_identity_is_never_overwritten(self):
@@ -63,5 +64,16 @@ class SignalTests(unittest.TestCase):
             result=(out/'FAILURE.txt').read_bytes()
             self.assertEqual(result[:len(original)],original)
             self.assertIn(b'child returncode=1; signal=none',result)
+
+class MatrixLabelTests(unittest.TestCase):
+    def test_mislabeled_backend_is_rejected(self):
+        with self.assertRaisesRegex(ValueError,'backend'):
+            audit_matrix.validate_cell_labels(dict(op='exp',backend='reference',target=audit_matrix.ARM),'exp','neon',audit_matrix.ARM)
+    def test_mislabeled_operation_is_rejected(self):
+        with self.assertRaisesRegex(ValueError,'op'):
+            audit_matrix.validate_cell_labels(dict(op='ln',backend='neon',target=audit_matrix.ARM),'exp','neon',audit_matrix.ARM)
+    def test_mislabeled_target_is_rejected(self):
+        with self.assertRaisesRegex(ValueError,'target'):
+            audit_matrix.validate_cell_labels(dict(op='exp',backend='neon',target=audit_matrix.X86),'exp','neon',audit_matrix.ARM)
 
 if __name__=='__main__': unittest.main()

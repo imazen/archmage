@@ -35,3 +35,9 @@ build-v3:
 
 pairs-fixture:
     PYTHONDONTWRITEBYTECODE=1 python3 extract_pairs.py
+
+audit-matrix *args:
+    python3 audit_matrix.py {{args}}
+
+verify-archive *args:
+    python3 verify_archive.py {{args}}
