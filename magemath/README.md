@@ -98,3 +98,10 @@ an f64 reference, and `tests/exhaustive.rs` covers all 2^32 inputs. Recipes:
 
 A tier your CPU lacks fails the run rather than vanishing from it. Name it in
 `MAGEMATH_SKIP_TIERS` (for example `MAGEMATH_SKIP_TIERS=v4x`) to skip it.
+
+## Draft compile-time power behavior
+
+`PowBehavior` selects per-operation power semantics through validated const bits.
+Existing power calls keep their results. Correctly rounded, Midp and Lowp policies
+share scalar/packed behavior; the near-one-ULP prototype is not a supported preset.
+See [power behavior](docs/POW_BEHAVIOR.md) for mode order, preconditions and examples.

@@ -30,10 +30,10 @@ mode!(PowInfinity,"Input-infinity handling after explicit input transformations.
     Preserve=0=>"Use ordinary power semantics.",RejectInputsToNaN=1=>"Either infinite transformed operand forces NaN, including identity cases.");
 mode!(PowRange,"Explicit input transformation or precondition, never an unchecked hint.",
     Full=0=>"Complete mathematical/special handling, with CORE rescue outside approximation working inputs.",
-    ClampUnitInterval=1=>"Clamp the base to [0,1] using ordered comparisons; preserve NaNs and negative zero.",
-    PositiveNormalPrecondition=2=>"Approximation only: positive normal base, finite exponent, polynomial exponent in [-126,127.5]. Release evaluates the named approximation formula without CORE rescue, also on violations.");
+    ClampUnitInterval=1=>"Clamp the base to `[0,1]` using ordered comparisons; preserve NaNs and negative zero.",
+    PositiveNormalPrecondition=2=>"Approximation only: positive normal base, finite exponent, polynomial exponent in `[-126,127.5]`. Release evaluates the named approximation formula without CORE rescue, also on violations.");
 mode!(PowOutput,"Explicit final output transformation; NaNs are retained.",
-    Preserve=0=>"Preserve the result.",SaturateFinite=1=>"Replace infinities with signed f32::MAX.",ClampUnitInterval=2=>"Clamp the result to [0,1], preserving NaN and negative zero.");
+    Preserve=0=>"Preserve the result.",SaturateFinite=1=>"Replace infinities with signed f32::MAX.",ClampUnitInterval=2=>"Clamp the result to `[0,1]`, preserving NaN and negative zero.");
 
 /// Draft compile-time power contract, transported as a private packed `u64`.
 ///

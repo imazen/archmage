@@ -38,3 +38,10 @@ shared; finite result bits can differ.
 The [existing implementation inventory](docs/INVENTORY.md) records the
 zenmetrics-math ports, scalar special functions, versioned compatibility targets
 and proposed extraction order.
+
+## Draft compile-time power behavior
+
+`PowBehavior` selects per-operation power semantics through validated const bits.
+Existing power calls keep their results. Correctly rounded, Midp and Lowp policies
+share scalar/packed behavior; the near-one-ULP prototype is not a supported preset.
+See [the power behavior guide](../magemath/docs/POW_BEHAVIOR.md) for modes, precedence and packed entry points.
