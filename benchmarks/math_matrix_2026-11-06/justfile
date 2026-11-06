@@ -9,3 +9,33 @@ validate out:
     target/release/validate {{out}}
 bench out:
     target/release/timing {{out}}
+feedback out:
+    target/release/latency {{out}}
+algebraic out:
+    target/release/algebraic {{out}}
+wasm-build:
+    bash run-wasm-build.sh
+wasm-host-build:
+    cargo build --release --features wasm-bench --bin wasm-host
+wasm-validate:
+    bash isolate-wasm.sh
+wasm-bench module catalog out traps:
+    target/release/wasm-host {{module}} {{catalog}} {{out}} {{traps}}
+health-docs:
+    bash run-health-docs.sh
+analyze artifacts:
+    python3 analyze-values.py {{artifacts}}
+summary artifacts:
+    python3 summarize.py {{artifacts}} results
+paired artifacts:
+    python3 paired-probes.py {{artifacts}} results/algebraic-paired.csv
+codegen artifacts:
+    python3 extract-codegen.py {{artifacts}} codegen
+snapshot out:
+    python3 snapshot.py {{out}}
+audit artifacts:
+    python3 final-audit.py {{artifacts}} results/coverage.csv
+cross artifacts:
+    python3 cross-scalar.py {{artifacts}} results/cross-scalar.csv
+engine runner module out:
+    bash isolate-engine.sh {{runner}} {{module}} {{out}}

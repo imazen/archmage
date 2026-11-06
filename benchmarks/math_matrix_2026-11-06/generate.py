@@ -11,16 +11,17 @@ def add(op,label,expr,width=1,ty='f32',vector=False,context=False,buffer=False):
     name=f'k{len(rows)}'; n=width
     rows.append(dict(operation=op,candidate=label,width=n,dtype=ty,source_expression=expr))
     if not vector and not context and not buffer:
-        body=f'for ((o,&a),&b) in out.iter_mut().zip(x).zip(y) {{ *o = {expr}; }}'
+        body=f'for ((o,&a),&b) in out.iter_mut().zip(x).zip(y) {{ let _=b; *o = {expr}; }}'
         src.append(f'fn {name}(x: &[{ty}], y: &[{ty}], out: &mut [{ty}]) {{ {body} }}')
         regs.append(f'v.push(Case {{ op:"{op}", label:"{label}/baseline", run:Box::new({name}) }});')
     else:
         vt=f'{ty}x{width}'
-        body=f'for ((o,a),b) in out.chunks_exact_mut({n}).zip(x.chunks_exact({n})).zip(y.chunks_exact({n})) {{ let a={vt}::load_t(t,a.try_into().unwrap()); let b={vt}::load_t(t,b.try_into().unwrap()); let r={expr}; r.store(o.try_into().unwrap()); }}'
-        if context: body=f'for ((o,&a),&b) in out.iter_mut().zip(x).zip(y) {{ *o = {expr}; }}'
-        if buffer: body=expr
+        body=f'for ((o,a),b) in out.as_chunks_mut::<{n}>().0.iter_mut().zip(x.as_chunks::<{n}>().0.iter()).zip(y.as_chunks::<{n}>().0.iter()) {{ let a={vt}::load_t(t,a); let b={vt}::load_t(t,b); let _=b; let r={expr}; r.store(o); }}'
+        body=f'assert_eq!(x.len(),y.len());assert_eq!(x.len(),out.len());assert_eq!(x.len()%{n},0);'+body
+        if context: body=f'for ((o,&a),&b) in out.iter_mut().zip(x).zip(y) {{ let _=b; *o = {expr}; }}'
+        if buffer: body='assert_eq!(x.len(),y.len());assert_eq!(x.len(),out.len());'+expr
         define=f',define({vt})' if vector and not buffer else ''
-        src.append(f'#[attune(_*_t,+v4x(cfg(avx512)){define})]\nfn {name}(t:Token,x:&[{ty}],y:&[{ty}],out:&mut[{ty}]) {{ {body} }}')
+        src.append(f'#[attune(_*_t,+v4x(cfg(avx512)){define})]\nfn {name}(t:Token,x:&[{ty}],y:&[{ty}],out:&mut[{ty}]) {{ let _=t; let _=y; {body} }}')
         for tier,token,cfg in [('scalar','ScalarToken',None),('v3','X64V3Token','target_arch="x86_64"'),('v4x','X64V4xToken','all(target_arch="x86_64",feature="avx512")'),('neon','NeonToken','target_arch="aarch64"'),('wasm128','Wasm128Token','all(target_arch="wasm32",target_feature="simd128")')]:
             pre=f'#[cfg({cfg})]' if cfg else ''
             regs.append(f'{pre} if let Some(t)={token}::summon() {{ v.push(Case{{op:"{op}",label:"{label}/{tier}/x{n}",run:Box::new(move |x,y,o| {name}_{tier}_t(t,x,y,o))}}); }}')
@@ -56,7 +57,7 @@ for op in ops:
             expr=expr.replace('&vec![2.4; x.len()]','y')
             add(op,'magemath_correct_proof',expr,8,vector=True,buffer=True)
             name=f'k{len(rows)}';rows.append(dict(operation=op,candidate='magemath_correct_dispatch',width=8,dtype='f32',source_expression=expr))
-            src.append(f'fn {name}(x:&[f32],y:&[f32],out:&mut[f32]) {{out.copy_from_slice(x); magemath::portable::slice::{mm}_f32(out{args.replace("&vec![2.4; x.len()]","y")});}}')
+            src.append(f'fn {name}(x:&[f32],y:&[f32],out:&mut[f32]) {{let _=y;out.copy_from_slice(x); magemath::portable::slice::{mm}_f32(out{args.replace("&vec![2.4; x.len()]","y")});}}')
             regs.append(f'v.push(Case{{op:"{op}",label:"magemath_correct_dispatch/runtime/x8",run:Box::new({name})}});')
         if op=='powf':
             for p in ['MIDP','LOWP']:
@@ -79,7 +80,7 @@ for op in ops:
 for label,e in [('std','a.log2()'),('zenmath_correct','zenmath::scalar::log2(a)'),('libm','libm::log2(a)'),('fpmath','fpmath::log2(a)'),('metallic','metallic::log2(a)'),('zenmath_lowp','zenmath::scalar::log2_lowp_f64(a)')]:
     add('log2_f64',label,e,ty='f64')
     if label in ['std','zenmath_correct']: add('log2_f64',label+'_loop_context',e,ty='f64',context=True)
-for w in [2,4,8]:add('log2_f64','magetypes_lowp','a.log2_lowp()',w,ty='f64',vector=True)
+# No public generic f64 vector log2 method at this revision (compile verified).
 src.append('pub fn cases32()->Vec<Case<f32>> { let mut v=Vec::new();'+''.join(r for r in regs if '"log2_f64"' not in r)+'v }')
 src.append('pub fn cases64()->Vec<Case<f64>> { let mut v=Vec::new();'+''.join(r for r in regs if '"log2_f64"' in r)+'v }')
 (root/'src/generated.rs').write_text('\n'.join(src)+'\n')
