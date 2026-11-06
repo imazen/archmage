@@ -371,7 +371,10 @@ fn run_admitted(c: &Config) -> Result<(), String> {
         }
     });
     #[cfg(target_arch = "wasm32")]
-    work();
+    {
+        debug_assert_eq!(c.threads, 1);
+        work();
+    }
     let errors = errors.into_inner().unwrap();
     if !errors.is_empty() {
         let e = errors.join("\n");
