@@ -497,7 +497,6 @@ pub fn powf(x0: f32, y0: f32) -> f32 {
     let x = x0 as f64;
     let mut y = y0 as f64;
     let tx = x.to_bits();
-    let ty = y.to_bits();
     if x.abs() == 1.0 {
         if x < 0.0 {
             if y0.is_nan() {
