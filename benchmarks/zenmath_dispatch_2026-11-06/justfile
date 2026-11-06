@@ -13,3 +13,7 @@ unification:
     cargo rustc --manifest-path compile-consumer/Cargo.toml --release --features unified-std -- --emit=llvm-ir
     cargo run --manifest-path compile-consumer/Cargo.toml --release --features unified-std
     python3 check-unification.py compile-consumer/target/release/deps/zenmath_compile_consumer-*.ll
+freeze out *binaries:
+    python3 freeze.py {{out}} {{binaries}}
+dependency-identities snapshot:
+    python3 dependencies.py {{snapshot}}

@@ -9,10 +9,10 @@ fn main() {
     let mut filters = Vec::new();
     let mut i = 2;
     while i < args.len() {
-        assert_eq!(args[i], "--group", "expected explicit --group filter");
+        assert_eq!(args[i], "--study-group", "expected explicit --study-group filter");
         filters.push(
             args.get(i + 1)
-                .expect("--group needs a full group name")
+                .expect("--study-group needs a full group name")
                 .clone(),
         );
         i += 2;
@@ -120,6 +120,16 @@ fn main() {
             matched.contains(name),
             "requested group not measured: {name}"
         );
+    }
+    let measured: std::collections::BTreeSet<_> = result
+        .comparisons
+        .iter()
+        .map(|g| g.group_name.clone())
+        .collect();
+    assert_eq!(measured, matched, "registered groups differ from measured groups");
+    if !filters.is_empty() {
+        let requested = filters.iter().cloned().collect();
+        assert_eq!(measured, requested, "requested groups differ from measured groups");
     }
     result.save(output).unwrap();
 }
