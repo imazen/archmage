@@ -1,7 +1,7 @@
 # Frozen f32 digest results
 
 Missing coverage at this stage: WASM SIMD128, native V4/V4x8,
-additional power-family cross-ISA comparisons, and final mirrored archive.
+and final all-target audits/mirrored archive.
 There is no exhaustive f64, arbitrary power-pair, or FMA-ternary claim.
 
 The first audited cross-ISA matrix passes for exp, ln, log2 and pow with exponent
@@ -71,3 +71,18 @@ The local artifact and NAS mirror have that same digest:
 `/mnt/v/output/archmage/zenmath-digests-2026-11-06/i265-native-source-results.tar.zst`
 and `/mnt/tower/output/archmage/zenmath-digests-2026-11-06/i265-native-source-results.tar.zst`.
 This is an intermediate archive; WASM and V4 results are not in it.
+
+## Additional fixed exponent families
+
+Each exponent below has complete scalar-reference/NEON/V3 agreement in raw and
+canonical hashes, nine full-domain cells total. Every base pattern is covered;
+this is not an exhaustive sweep of arbitrary base/exponent pairs.
+
+| Exponent | Exact f32 bits | Canonical aggregate of chunks |
+|---|---|---|
+| 0.5 | `3f000000` | `33cb939b87e403af3e815cd9aad4a910` |
+| 2 | `40000000` | `cdd4ff3a267bfbbb60116c6bf071ddde` |
+| -1 | `bf800000` | `38121fc6af1910ef0393d193e7abbfb7` |
+
+Full per-chunk audit/comparator log:
+`/mnt/v/output/archmage/zenmath-digests-2026-11-06/arm-v3-pow-families-comparison.txt`.
