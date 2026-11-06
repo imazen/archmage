@@ -1,0 +1,7 @@
+build:
+    cargo build --locked --release
+lint:
+    cargo fmt --check
+    cargo clippy --locked --all-targets -- -D warnings
+bench out:
+    target/release/pow-behavior-study {{out}}

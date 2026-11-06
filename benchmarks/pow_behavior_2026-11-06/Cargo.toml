@@ -1,0 +1,15 @@
+[package]
+name = "pow-behavior-study"
+version = "0.0.0"
+edition = "2024"
+publish = false
+[workspace]
+[dependencies]
+archmage = { path = "../.." }
+magetypes = { path = "../../magetypes", default-features = false, features = ["std"] }
+magemath = { path = "../../magemath" }
+zenmath = { path = "../../zenmath", features = ["std"] }
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+zenbench = { version = "=0.1.11", default-features = false }
+[profile.release]
+lto = "thin"
