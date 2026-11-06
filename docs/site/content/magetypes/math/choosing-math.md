@@ -201,7 +201,11 @@ not single-call latency. No `target-cpu=native` was used.
 | f32 round, ties away | 0.738 | 0.045 | 1.135 | unavailable |
 | f64 log2 | 2.402 | 1.780 | 8.146 | unavailable |
 
-Packed exp/ln/log2/pow are Magemath's correct f32x8 proof entry points;
+Packed exp/ln/log2/pow are Magemath's correct f32x8 proof slice entry points;
+their measured adapter copies the input into the in-place output buffer.
+That copy is included for both proof and runtime-dispatch controls; other
+candidates write directly to their output buffer. These are complete API
+workload measurements rather than isolated polynomial instruction costs;
 sqrt/floor/ceil are Magetypes f32x8 methods. There is no accurate packed log10
 or f64 log2 API behind the unavailable cells. Scalar sqrt uses the software
 Goldschmidt algorithm even in a std-enabled Zenmath build. Rust's scalar-looking
@@ -274,3 +278,15 @@ V3 cancellation example, repeating `[1e20_f32, 1, -1e20_f32, 1]` 256 times gives
 with the explicit vector reductions. The real sum of the represented inputs
 is 512. This example demonstrates differing evaluation orders; it establishes
 no accuracy guarantee for algebraic arithmetic.
+
+## Observed cross-platform std differences
+
+Adding `log10` to the earlier four-function study found differences in Rust std:
+258 of 1024 ordinary ARM results and 105 of 1024 WASM results differed from the
+x86 result, by at most one representable step. For input bits `0x405523d7`, the
+x86 result is `0x3f05c193` and ARM/WASM return `0x3f05c194`. Correct Zenmath
+results agree across the checked targets. The input corpus is finite and
+compiler/libc/OS vary together, so this is neither an exhaustive bound nor an
+isolated ISA experiment. Rust std does not promise portable transcendental
+bits; an implementation that happens to agree on another sampled operation
+has not acquired that guarantee.
