@@ -1,0 +1,11 @@
+[workspace]
+[package]
+name = "core-math-rust-cost"
+version = "0.0.0"
+edition = "2024"
+publish = false
+[features]
+std = ["zenmath/std"]
+[dependencies]
+zenmath = { path = "../../zenmath" }
+zenbench = "=0.1.10"

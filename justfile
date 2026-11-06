@@ -635,3 +635,13 @@ core-math-study-analyze csv analyzer:
 # Exact-bit checks against externally generated MPFR records; use run-heavy on an eligible host.
 zenmath-core-check records:
     bash zenmath/tools/check-core-math.sh '{{records}}'
+
+# Scalar CORE-MATH stream costs; std is a comparison, not an accuracy oracle.
+zenmath-core-bench output:
+    cargo run --release --manifest-path benchmarks/core_math_rust_2026-11-05/Cargo.toml -- '{{output}}'
+
+zenmath-core-bench-hardware output:
+    cargo run --release --features std --manifest-path benchmarks/core_math_rust_2026-11-05/Cargo.toml -- '{{output}}'
+
+zenmath-core-hard-cases records:
+    bash zenmath/tools/check-core-hard-cases.sh '{{records}}'
