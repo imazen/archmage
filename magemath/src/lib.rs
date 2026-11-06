@@ -25,6 +25,10 @@
 //! Every generated function is `#[inline]`, so `magemath` itself codegens nothing
 //! for them: a crate pays for the ops it calls, in its own build.
 //!
+//! Correctly rounded `exp`, `ln`, `log2`, and `pow` f32 array/slice APIs
+//! use private packed binary64 kernels and complete `zenmath` fallbacks.
+//! They are separate from the approximation kernels below.
+//!
 //! ## Accuracy tiers
 //!
 //! Names carry the precision contract, matching magetypes; the figures per op

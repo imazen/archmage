@@ -655,3 +655,7 @@ magemath-core-cost output:
 
 magemath-core-exhaustive:
     cargo test -p magemath --release --test core_exhaustive -- --ignored --nocapture
+
+# Summarize paired CORE-MATH vector measurements (one or more JSON files).
+magemath-core-summary +files:
+    python3 benchmarks/core_math_vector_2026-11-06/summarize.py {{files}}

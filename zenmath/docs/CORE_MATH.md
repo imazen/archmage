@@ -29,6 +29,10 @@ Explicit FMA uses software by default. `std` plus compile-time x86 FMA or
 AArch64 NEON selects hardware fused arithmetic. Ordinary `a * b + c` retains
 two roundings. There is no runtime CPU dispatch in these scalar ports yet.
 
+The four f32 operations `expf`, `logf`, `log2f`, and `powf` also have packed
+implementations with runtime dispatch in `magemath::portable` array/slice APIs.
+See [vector validation and performance](../../benchmarks/core_math_vector_2026-11-06/README.md).
+
 ## Consumer scope
 
 The inventory includes CPU scalar operations in the reviewed zen crate sources,

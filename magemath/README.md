@@ -19,9 +19,16 @@ Every result in `portable` equals the matching `zenmath::scalar` function on
 x86 v3 and v4x, NEON, WASM (strict and relaxed), and the scalar tier. NaN results
 agree in being NaN, with payload and sign unspecified.
 
+The correctly rounded `portable::array::{exp_f32x8,ln_f32x8,log2_f32x8,pow_f32x8}`
+and `portable::slice::{exp_f32,ln_f32,log2_f32,pow_f32}` use CORE-MATH algorithms.
+`pow` accepts one exponent per input. They handle subnormals and IEEE special
+values, assuming nearest-even rounding and gradual underflow. Common paths
+use four binary64 lanes; difficult lanes use the complete `zenmath` fallback.
+See [validation and performance](../benchmarks/core_math_vector_2026-11-06/README.md).
+
 magetypes' `f32x8::exp2_midp`-style methods do not promise that: their polynomial
 steps round twice on the scalar backend and strict WASM, and NaN input gives a
-different answer per ISA. `portable` uses the same polynomials with one rounding
+different answer per ISA. The lowp/midp `portable` functions use the same polynomials with one rounding
 everywhere and NaN out for NaN in.
 
 `relaxed` exposes the same operations and special-value handling, with backend

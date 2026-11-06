@@ -157,7 +157,10 @@ which is a second code path for one operation, and slower in most cases:
 | length 1031 | 271 | 288 | 336 |
 
 The shipped shape loses at length 1 and at exact multiples of 8 by about a nanosecond, and
-wins or ties otherwise. This also means `magemath` needs `zenmath` only as a test oracle.
+wins or ties otherwise. These approximation kernels need no scalar fallback. The correctly rounded
+CORE-MATH family added separately uses `zenmath` as a production dependency
+for exceptional and ambiguous lanes; see the
+[vector implementation record](../../benchmarks/core_math_vector_2026-11-06/README.md).
 
 ## Compile time
 
@@ -281,3 +284,12 @@ powf was substantially more expensive than the hardware-helper and V3 paths.
 The Rust exp2 experiment found a useful baseline bit-widening optimization that
 loses on V3. SIMD costs, ARM/WASM, f64, and full hard-case validation remain
 unmeasured in this study; do not extrapolate its scalar numbers to magemath.
+
+The subsequent Rust port covers all 33 selected scalar functions, including their
+accurate paths ([coverage](../../zenmath/docs/CORE_MATH.md)). Four f32 operations
+now have packed common paths: exp, ln, log2 and pow. They use private f64x4
+arithmetic to preserve CORE-MATH's binary64 intermediates, with f32 array/slice
+interfaces and scalar accurate fallbacks. The
+[vector study](../../benchmarks/core_math_vector_2026-11-06/README.md) records
+cross-target correctness, assembly and measured layout choices. This is not a
+claim that every input distribution benefits from SIMD.

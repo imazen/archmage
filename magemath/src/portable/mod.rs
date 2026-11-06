@@ -6,7 +6,7 @@
 //! unspecified. `tests/parity.rs` and `tests/golden.rs` check it per tier with
 //! no tolerance.
 //!
-//! Polynomial steps use fused multiply-add. On x86 V3/V4x and NEON that is a
+//! The lowp/midp polynomial steps use fused multiply-add. On x86 V3/V4x and NEON that is a
 //! hardware instruction; strict WASM and baseline x86 scalar use software.
 //! [`crate::relaxed`] keeps the same special-value handling and uses each
 //! backend's multiply-add rounding. Its finite results may differ across tiers;
@@ -18,7 +18,12 @@
 //! - [`slice`](mod@slice): `&mut [f32]` bulk ops.
 //! - [`array`](mod@array): `[f32; 8]` ops.
 //!
-//! ## Specials
+//! The unsuffixed `exp_f32`, `ln_f32`, `log2_f32`, and `pow_f32` slice
+//! functions (and their array counterparts) are correctly rounded CORE-MATH
+//! ports. They preserve the source algorithm's individual fused or separate
+//! steps and support subnormals. They assume nearest-even and gradual underflow.
+//!
+//! ## Approximation specials
 //!
 //! | ops | NaN | other inputs |
 //! |---|---|---|
@@ -32,7 +37,7 @@
 //! | `cbrt_midp_precise` | NaN | ±0 and ±inf return themselves; every other input is in domain |
 //! | `sigmoid_midp`, `silu_midp` | NaN | saturate exactly: `sigmoid` to 0 or 1 |
 //!
-//! Subnormal inputs to the log family are outside the accuracy domain: finite,
+//! Subnormal inputs to the lowp/midp log family are outside the accuracy domain: finite,
 //! and the same on every tier, but about -127 rather than the true value.
 //!
 //! Per-ISA kernels that do *not* share this contract belong in [`crate::native`].

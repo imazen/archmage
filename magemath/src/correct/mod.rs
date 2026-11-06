@@ -1,6 +1,8 @@
 //! CORE-MATH common paths evaluated four binary64 lanes at a time.
 //! Preserve the scalar operation order and rounding tests. Exceptional lanes
 //! and ambiguous results use the complete zenmath implementation, individually.
+//! Built on CORE-MATH revision 660067dfd3e751c8f07acc31c899ff410aa7206e.
+//! Per-function upstream MIT notices are retained in the adjacent table modules.
 use magetypes::simd::{backends::F64x4Backend, generic::f64x4};
 mod expf_tables;
 mod log2f_tables;
