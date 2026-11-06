@@ -2,6 +2,7 @@
 """Check retained matrix, input identity, build identities and report coverage."""
 from pathlib import Path
 import csv, hashlib, json, struct, sys
+repo = Path(__file__).resolve().parents[2]
 root = Path(sys.argv[1])
 sha = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
 coverage = []
@@ -50,7 +51,7 @@ for target, prefix, tiers in [('native', 'timing-', {'scalar','v3','v4x'}), ('ar
     for line in manifest.read_text().splitlines():
         h, p = line.split('  ',1)
         if '/consumer/src/' in p or '/ext/src/' in p:
-            local = Path(p)
+            local = repo / p
             assert sha(local)==h, (target,p)
 assert sum(c['cells'] for c in coverage)==644
 print(json.dumps(dict(coverage=coverage,cells=644,accuracy_case_band_mode_rows=1288,input_bits_equal_within_oracle_groups=True,frozen_binary_hashes_verified=True,kernel_sources_unchanged=True),indent=2))
