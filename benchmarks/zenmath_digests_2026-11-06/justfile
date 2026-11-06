@@ -1,0 +1,24 @@
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+# Run on an admitted compute host, with TMPDIR/CARGO_TARGET_DIR outside source.
+check:
+    PYTHONDONTWRITEBYTECODE=1 python3 -m unittest test_drive.py
+    cargo +1.99.0 fmt --check
+    cargo +1.99.0 test --release
+    cargo +1.99.0 clippy --all-targets --release -- -D warnings
+
+build:
+    cargo +1.99.0 build --release
+
+# Root health checks must be run remotely under run-heavy.
+health:
+    cd ../.. && just generate && just validate-registry && just validate-tokens && just soundness
+
+run *args:
+    cargo +1.99.0 run --release -- {{args}}
+
+fmt:
+    cargo +1.99.0 fmt
+
+matrix *args:
+    python3 matrix.py {{args}}
