@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 mod kernels;
+#[cfg(test)]
+mod pow_mpfr_cases;
 use kernels::{Kernel, Op};
 use std::{
     collections::BTreeMap,
@@ -371,7 +373,10 @@ fn run_admitted(c: &Config) -> Result<(), String> {
         }
     });
     #[cfg(target_arch = "wasm32")]
-    work();
+    {
+        debug_assert_eq!(c.threads, 1);
+        work();
+    }
     let errors = errors.into_inner().unwrap();
     if !errors.is_empty() {
         let e = errors.join("\n");
@@ -620,6 +625,30 @@ mod tests {
                         op.reference(f32::from_bits(*bits)).to_bits()
                     );
                 }
+            }
+        }
+    }
+    #[test]
+    fn independent_mpfr_power_pairs() {
+        let mut backends = vec!["reference", "packed-scalar", "scalar-context"];
+        #[cfg(target_arch = "x86_64")]
+        backends.extend(["v3", "scalar-v3"]);
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        backends.extend(["v4x", "v4x8", "scalar-v4x"]);
+        #[cfg(target_arch = "aarch64")]
+        backends.extend(["neon", "scalar-neon"]);
+        #[cfg(target_arch = "wasm32")]
+        backends.extend(["wasm128", "scalar-wasm128"]);
+        for [x, y, expected] in pow_mpfr_cases::POWF {
+            for backend in &backends {
+                let kernel = kernels::select(backend, Op::Pow(y)).unwrap();
+                let mut values = [f32::from_bits(x)];
+                kernel(&mut values);
+                assert!(
+                    same(values[0], f32::from_bits(expected)),
+                    "MPFR pow {backend} x={x:08x} y={y:08x} actual={:08x} expected={expected:08x}",
+                    values[0].to_bits()
+                );
             }
         }
     }

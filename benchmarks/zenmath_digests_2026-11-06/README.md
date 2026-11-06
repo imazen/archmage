@@ -1,5 +1,8 @@
 # Zenmath exhaustive f32 digests (local draft)
 
+**Completed:** 89/89 selected full-domain cells, verified across ARM, x86 and
+WASM. [Results and archived identities](RESULTS.md) record scope and exact hashes.
+
 Independent unpublished harness for source freeze `5a9cc685`. It changes no
 production crate and uses `zenmath::scalar::reference` explicitly. Hash equality
 is regression evidence, not a proof of correctness or an accuracy oracle. Existing
@@ -8,8 +11,7 @@ independent MPFR and exact FMA fixtures remain unchanged.
 Each cell evaluates input bit patterns in ascending unsigned-u32 order. The
 complete unary domain has exactly **4,294,967,296** inputs. A power cell covers
 that domain for one explicitly named exponent, never all input pairs. For
-example `pow:4019999a` means the exact f32 representation of 2.4. Suggested
-additional families are `pow:3f000000` (0.5), `pow:40000000` (2), and
+example `pow:4019999a` means the exact f32 representation of 2.4. Additional tested families are `pow:3f000000` (0.5), `pow:40000000` (2), and
 `pow:bf800000` (-1). No exhaustive f64 or FMA-ternary claim is made.
 
 `reference` runs the non-dispatch scalar algorithms. `packed-scalar` runs their
@@ -72,7 +74,9 @@ python3 drive.py run --build "$RUN_ROOT/build" --op exp --backend neon \
   --threads 4 --compare --out "$RUN_ROOT/exp-neon"
 ```
 
-`prepare` refuses existing identity directories. It pins Rust1.99.0 and verifies the compiler, target and source SHA embedded at build time before recording a SHA-256 source-file manifest, executable SHA-256, rustc version,
+`prepare` refuses existing identity directories. It pins Rust1.99.0 and verifies
+the embedded compiler, target and source SHA before recording the source
+manifest, executable SHA-256 and rustc version,
 target and configured rounding/underflow assumption. Full rustc identity is
 saved separately. `run` verifies the source and executable have not changed,
 records its exact command, and invokes the binary. Add `--count 65537` for bounded
@@ -80,9 +84,12 @@ smoke checks; use a new directory for every configuration. Add `--resume` only
 for an interrupted matching run. WASM requires threads1 and an explicit runner
 and target at `prepare`; grant its output directory through the WASI runner.
 
-`python3 drive.py compare --auditor <local-compatible-binary> <run>...` checks source revision/digest, operation,
+`python3 drive.py compare --auditor <local-compatible-binary> <run>...` checks
+source revision/digest, operation,
 domain, chunking and hash scheme before comparing canonical aggregates and
-per-chunk canonical digests. The read-only auditor independently verifies every chunk checksum, exact ordered coverage, saved chunk files and completion summary; any failure marker rejects the run. Binary hashes may differ between target builds;
+per-chunk canonical digests. The read-only auditor verifies chunk checksums,
+exact coverage, saved files and completion summaries; a failure marker rejects
+the run. Binary hashes may differ between target builds;
 source identities must match. Preserve differing-source results separately.
 Raw equality is reported separately because NaN payloads may differ.
 
@@ -108,7 +115,8 @@ on implementation freeze `5a9cc685`. Keep that exact numerical/build source
 across ISA builds; do not relabel earlier results after driver updates.
 
 The subsequent driver revision catches a signalled subprocess, archives an old
-summary and appends its return code/signal atomically to `FAILURE.txt`, retaining any existing Rust diagnostic bytes exactly. Its regression
+summary and appends its return code/signal atomically to `FAILURE.txt`, retaining
+existing Rust diagnostic bytes exactly. Its regression
 covers SIGTERM15 without relying on the child to write a failure marker. Matrix
 subprocesses now use `sys.executable`, preserving the selected interpreter.
 This matters when a PATH shim reintroduces environment variables. Existing
@@ -116,3 +124,29 @@ binaries do not change behavior when runtime RUSTFLAGS changes; compilation
 fingerprints establish effective build flags. Interrupted chunks remain partial
 and are preserved. Driver-only validation is separate from the frozen exhaustive
 matrix and does not establish a new numerical source matrix.
+
+## Independent power-pair accuracy fixtures
+
+The separate, later harness tests retain the existing208 MPFR power-pair cases
+from `zenmath/tests/core_math.rs`, including their exact expected result bits.
+`just pairs-fixture` extracts that data without changing its production source;
+the copied fixture records the source-file SHA-256 and CORE-MATH revision.
+The proof kernels are checked against those independent expectations, with NaNs
+compared under the documented numerical policy. This bounded pair corpus is
+separate from the full-domain fixed-exponent sweeps and is not an exhaustive
+power-pair claim. Its validation/source identity is distinct from frozen v1
+exhaustive results.
+
+## Final audit and archive verification
+
+Use caller-selected `--isa x86-v3` without default features on a V3-only host;
+`--isa x86-v4x` covers V4x4/V4x8/scalar V4x without repeating V3. Unsupported
+proofs fail visibly. `audit_matrix.py` requires89 distinct complete cells and
+checks each planned operation, backend, target and source before invoking the
+frozen auditor/comparator. Its negative tests reject mislabeled records.
+
+`verify_archive.py` checks accepted archive/index identities, then compares
+SHA-256 for every required archived chunk, auxiliary file, source, executable
+and original cell log against the audited originals. It writes a new report and
+compressed per-file manifest; it never rewrites the archive. Exact artifact
+names, identities and verification results are in [RESULTS.md](RESULTS.md).
