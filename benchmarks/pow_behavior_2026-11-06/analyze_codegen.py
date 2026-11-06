@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Retain reproducible size/build and normalized wrapper-codegen evidence."""
-import difflib,json,re,sys
+import json,re,sys
 from pathlib import Path
 root=Path(sys.argv[1]);report={}
 def instructions(mode,name):
@@ -19,6 +19,7 @@ def instructions(mode,name):
  return result
 for mode in ['base','extra','o0']:
  binary=(root/mode).read_bytes();legacy=instructions(mode,'legacy');default=instructions(mode,'default_policy')
+ assert legacy and default, (mode, 'missing legacy/default instructions')
  sections={}
  for line in (root/f'size-{mode}.txt').read_text().splitlines():
   fields=line.split()
