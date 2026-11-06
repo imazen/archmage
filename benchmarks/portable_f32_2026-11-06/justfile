@@ -29,3 +29,5 @@ wasm-host:
 
 replay:
     bash replay.sh
+summary artifacts:
+    python3 summarize.py {{artifacts}} results
