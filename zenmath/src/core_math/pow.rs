@@ -265,7 +265,7 @@ fn exact(x: f64, y: f64, sign: u64) -> Option<f64> {
     let (mut e, mut m) = extract(x);
     if m == 1 {
         let g = e as f64 * y;
-        if g == crate::scalar::roundeven(g) {
+        if g == crate::scalar::roundeven(g) && fma(e as f64, y, -g) == 0.0 {
             if g > 1023.0 {
                 return Some(f64::INFINITY.copysign(if sign == 0 { 1.0 } else { -1.0 }));
             }
@@ -446,3 +446,13 @@ pub fn pow(mut x: f64, y: f64) -> f64 {
 #[cfg(test)]
 #[path = "pow_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+mod exact_power_tests {
+    #[test]
+    fn rounded_integer_product_is_not_exact() {
+        // 3 * binary64(1/3) rounds to 1, but the exact product is below 1.
+        assert!(super::exact(8.0, 1.0 / 3.0, 0).is_none());
+        assert_eq!(super::exact(16.0, 0.25, 0), Some(2.0));
+    }
+}
