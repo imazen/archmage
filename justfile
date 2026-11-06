@@ -562,8 +562,8 @@ test-magemath:
 # twice (the kernels' cached probe must send it to software), and no SIMD.
 test-magemath-wasm:
     RUSTFLAGS="-Ctarget-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime run" cargo test -p magemath --target wasm32-wasip1 --tests
-    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime run" cargo test -p magemath --target wasm32-wasip1 --tests
-    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime run -W relaxed-simd-deterministic=n -C cranelift-has-fma=false" cargo test -p magemath --target wasm32-wasip1 --tests
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime run --env MAGEMATH_EXPECT_RELAXED_ROUNDING=once" cargo test -p magemath --target wasm32-wasip1 --tests
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime run --env MAGEMATH_EXPECT_RELAXED_ROUNDING=twice -W relaxed-simd-deterministic=n -C cranelift-has-fma=false" cargo test -p magemath --target wasm32-wasip1 --tests
     CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime run" cargo test -p magemath --target wasm32-wasip1 --tests
     CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime run" cargo test -p zenmath --target wasm32-wasip1 --tests
 
@@ -582,14 +582,14 @@ test-magemath-v3-build:
 # Every 2^32 input, every op, every tier: minutes on many cores, so not on dev.
 # Run through run-heavy.
 magemath-exhaustive:
-    cargo test -p magemath --features avx512 --release --test exhaustive -- --ignored --nocapture
+    cargo test -p magemath --features avx512 --release --test exhaustive -- --ignored --nocapture --test-threads=1
 
 # Rewrite the golden files from the mirrors after an intentional kernel change.
 # Review the edges.txt diff: it shows every special-case result that moved.
 magemath-golden-regen:
     cargo test -p magemath --test golden regenerate -- --ignored
 
-# portable vs relaxed vs unchecked, per tier. Not on dev.
+# Fused, unfused prototype, relaxed kernels, unchecked forms and magetypes methods. Not on dev.
 magemath-bench:
     cargo bench -p magemath --bench portable_cost
 

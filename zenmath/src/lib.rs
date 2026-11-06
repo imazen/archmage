@@ -14,6 +14,9 @@
 //!   `cbrt` at `_lowp` and `_midp`, plus `cbrt_midp_precise`, `sigmoid_midp` and
 //!   `silu_midp`. Each is the scalar form of the same-named kernel in
 //!   `magemath::portable`, with the same bits on every tier.
+//! - **Two-rounding prototype** ([`scalar::unfused`]): the same f32
+//!   approximations with separate multiply/add, independent of software FMA
+//!   and the `std` feature. Its final inclusion is pending a design decision.
 //! - **Low-precision f64 transcendentals** ([`scalar`]): `log2`/`exp2`/`ln`/
 //!   `exp`/`log10`/`pow` `_lowp_f64`, about 1% relative error. No vector form yet.
 //! - **Planned, empty today**: special functions (`special` feature) and bit-exact

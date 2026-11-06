@@ -10,7 +10,16 @@ use std::sync::atomic::{AtomicU64, Ordering};
 const BLOCK: u64 = 1 << 16;
 
 fn threads() -> usize {
-    std::thread::available_parallelism().map_or(1, usize::from)
+    let available = std::thread::available_parallelism().map_or(1, usize::from);
+    let limit = std::env::var("RAYON_NUM_THREADS")
+        .map(|value| {
+            value
+                .parse::<usize>()
+                .expect("RAYON_NUM_THREADS must be a positive integer")
+        })
+        .unwrap_or_else(|_| available.saturating_sub(4).max(1));
+    assert!(limit > 0, "RAYON_NUM_THREADS must be positive");
+    available.min(limit)
 }
 
 fn check_tier<T: IntoConcreteToken + Copy + Send + Sync>(tier: &str, token: T) {

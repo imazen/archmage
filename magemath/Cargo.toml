@@ -6,7 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 publish = false
-description = "Vector and fixed-array math on magetypes with the same bits on every CPU: archmage-dispatched fused kernels, tested against the zenmath scalar functions."
+description = "Vector and fixed-array math on magetypes: portable fused and backend-relaxed kernels, with archmage dispatch and zenmath scalar mirrors."
 include = [
     "src/**",
     "Cargo.toml",

@@ -134,11 +134,20 @@ pub fn relaxed_rounding<T: IntoConcreteToken + Copy>(tier: &str, token: T) -> Ro
                 .iter()
                 .zip(&input)
                 .all(|(&g, &x)| same_bits(g, zenmath::scalar::exp2_midp_f32(x)));
-            if fused_bits {
+            let rounding = if fused_bits {
                 Rounding::Once
             } else {
                 Rounding::Twice
+            };
+            if let Ok(expected) = std::env::var("MAGEMATH_EXPECT_RELAXED_ROUNDING") {
+                let expected = match expected.as_str() {
+                    "once" => Rounding::Once,
+                    "twice" => Rounding::Twice,
+                    _ => panic!("MAGEMATH_EXPECT_RELAXED_ROUNDING must be once or twice"),
+                };
+                assert_eq!(rounding, expected, "relaxed WASM engine rounding");
             }
+            rounding
         }
         _ => Rounding::Twice,
     }

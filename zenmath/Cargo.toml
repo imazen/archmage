@@ -6,7 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 publish = false
-description = "Scalar math with defined bits on every target: correctly rounded sqrt, rounding and fused multiply-add, and lowp/midp transcendentals. No dependencies, no_std."
+description = "Scalar math with defined bits on every target: correctly rounded sqrt, rounding and fused multiply-add, and lowp/midp transcendentals with fused and experimental unfused mirrors. No dependencies, no_std."
 include = [
     "src/**",
     "Cargo.toml",

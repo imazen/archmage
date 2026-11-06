@@ -9,6 +9,10 @@
 //!
 //! - [`portable`]: ISA-consistent kernels. Same bits everywhere, including the
 //!   scalar tier and strict WASM. The default.
+//! - [`relaxed`]: the same operations and special-value handling, with polynomial
+//!   rounding selected by the backend. Finite results may differ across tiers.
+//! - [`unfused`]: draft experiment using two roundings on every tier; not a
+//!   settled public API.
 //! - [`native`]: reserved for per-ISA kernels that give up that guarantee.
 //!
 //! ## Dispatch model

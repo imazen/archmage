@@ -1,6 +1,6 @@
 # magemath
 
-Vector and fixed-array math on `magetypes`, with the same bits on every CPU.
+Vector and fixed-array math on `magetypes`, with portable and relaxed surfaces.
 
 **Status: draft, unpublished.** `f32x8` only; `f32x4`, `f32x16` and f64 wait on a
 caller.
@@ -24,12 +24,14 @@ steps round twice on the scalar backend and strict WASM, and NaN input gives a
 different answer per ISA. `portable` uses the same polynomials with one rounding
 everywhere and NaN out for NaN in.
 
-On x86 and NEON the midp kernels are at least as fast as those methods, and the lowp
-kernels take 12-55% longer because they handle specials the methods don't. Where the
-hardware can't fuse the price is software FMA: 2-5x on the x86-64 scalar tier (CPUs without
-V3), 10-25x on strict WASM, 1.1-3.7x on relaxed WASM with an engine that fuses
-([measurements](docs/DESIGN.md#what-it-costs)). Use the magetypes methods when you want
-the fastest result per tier and don't need matching bits.
+`relaxed` exposes the same operations and special-value handling, with backend
+rounding: fused on V3/V4x and NEON, separate multiply/add on the scalar backend
+and strict WASM, and the engine's choice on relaxed WASM. NaN inputs still return
+NaN. Both surfaces have the same documented accuracy bounds.
+
+`unfused` is a draft experiment with separate multiply/add on every tier. Its
+final name and inclusion are pending the portable-rounding decision. The
+[design record](docs/DESIGN.md) tracks the contracts and measurements.
 
 ## Modules
 
@@ -38,6 +40,8 @@ the fastest result per tier and don't need matching bits.
 | `portable::kernels` | one token-generic `f32x8` function per op, to chain inside your own `#[attune]` body, plus `*_unchecked` forms for hot loops with known-valid inputs (18-38% less time on x86 and NEON) |
 | `portable::slice` | `&mut [f32]` bulk ops |
 | `portable::array` | `[f32; 8]` ops |
+| `relaxed::{kernels,slice,array}` | the same API with backend-dependent rounding |
+| `unfused::{kernels,slice,array}` | prototype with two roundings on every tier |
 | `native` | reserved for kernels whose bits differ by tier; empty |
 
 Each `slice` and `array` op is an `#[attune]` family: a dispatcher, `_v3_t`-style

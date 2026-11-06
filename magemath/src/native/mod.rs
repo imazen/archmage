@@ -1,12 +1,10 @@
-//! Reserved for per-ISA kernels whose bits differ by tier. Empty on purpose.
+//! Reserved for ISA-specific kernels. Empty until a caller demonstrates a need.
 //!
-//! Nothing lands here without a caller whose measured need [`crate::portable`]
-//! cannot meet. Faster-but-less-consistent results do not need this module yet:
-//! magetypes' `f32x8::exp2_midp`-style methods are already that, and are one
-//! method call away. This is the home for what they are not, such as a kernel
-//! with its own polynomial for a narrow input range, or per-ISA table lookups.
+//! [`crate::portable`] provides matching bits and [`crate::relaxed`] provides
+//! backend-dependent polynomial rounding with the same special-value handling.
+//! This module is reserved for other ISA-specific choices, such as reciprocal
+//! estimates or per-ISA tables, with separately documented contracts.
 //!
-//! The rules for anything added, and the reasoning, are in `docs/DESIGN.md`:
-//! same names as `portable` under this module, so the import path states the
-//! contract; never wired into a `portable` dispatcher; goldens per tier; and the
-//! accuracy bounds of `tests/reference.rs` still apply.
+//! A narrow input range alone does not make a kernel native: a range-specific
+//! polynomial can still be portable. Never wire native kernels into a portable
+//! dispatcher. The design record is `docs/DESIGN.md`.

@@ -51,4 +51,13 @@ fn main() {
     timed!(&pow_input, pow_midp);
     timed!(&exp_input, exp2_lowp);
     timed!(&log_input, log2_lowp);
+    for (name, fused) in [("feedback fused", true), ("feedback unfused", false)] {
+        time(name, &log_input, |i, o| {
+            if fused {
+                attuned!(feedback_fused(i, o), [_wasm128, _scalar]);
+            } else {
+                attuned!(feedback_unfused(i, o), [_wasm128, _scalar]);
+            }
+        });
+    }
 }

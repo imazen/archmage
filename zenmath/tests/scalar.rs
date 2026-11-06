@@ -303,3 +303,71 @@ fn cbrt_within_documented_error() {
         assert!(relb < 5e-4, "cbrt_lowp_f32({x}) rel err {relb}");
     }
 }
+
+// The two-rounding mirrors retain the same special-value contracts.
+mod unfused_specials {
+    use zenmath::scalar::unfused::*;
+
+    #[test]
+    fn nan_input_returns_nan() {
+        // transcendentals.md's rule for this layer. magetypes leaves it to min/max
+        // and bit tricks, which give a finite answer on some or all backends.
+        for f in [
+            log2_lowp_f32 as fn(f32) -> f32,
+            exp2_lowp_f32,
+            ln_lowp_f32,
+            exp_lowp_f32,
+            log10_lowp_f32,
+            cbrt_lowp_f32,
+            log2_midp_f32,
+            exp2_midp_f32,
+            ln_midp_f32,
+            exp_midp_f32,
+            log10_midp_f32,
+            cbrt_midp_f32,
+            cbrt_midp_precise_f32,
+            sigmoid_midp_f32,
+            silu_midp_f32,
+        ] {
+            assert!(f(f32::NAN).is_nan());
+            assert!(f(-f32::NAN).is_nan());
+        }
+        for n in [0.0f32, 1.0, 2.4, -1.0] {
+            assert!(pow_midp_f32(f32::NAN, n).is_nan());
+            assert!(pow_lowp_f32(f32::NAN, n).is_nan());
+        }
+    }
+
+    #[test]
+    fn log_specials_on_every_precision() {
+        for f in [log2_lowp_f32 as fn(f32) -> f32, log2_midp_f32] {
+            assert_eq!(f(0.0), f32::NEG_INFINITY);
+            assert_eq!(f(-0.0), f32::NEG_INFINITY);
+            assert!(f(-1.0).is_nan());
+            assert!(f(f32::NEG_INFINITY).is_nan());
+            assert_eq!(f(f32::INFINITY), f32::INFINITY);
+            assert!(f(1.0).abs() < 2e-6);
+        }
+    }
+
+    #[test]
+    fn cbrt_precise_covers_the_range() {
+        assert_eq!(cbrt_midp_precise_f32(f32::INFINITY), f32::INFINITY);
+        assert_eq!(cbrt_midp_precise_f32(f32::NEG_INFINITY), f32::NEG_INFINITY);
+        assert_eq!(cbrt_midp_precise_f32(-0.0).to_bits(), (-0.0f32).to_bits());
+        for x in [f32::MAX, 1e36, f32::MIN_POSITIVE, f32::from_bits(1), 1e-42] {
+            let want = (x as f64).cbrt();
+            let rel = ((cbrt_midp_precise_f32(x) as f64 - want) / want).abs();
+            assert!(rel < 5e-7, "cbrt_midp_precise_f32({x:e}) rel err {rel:e}");
+        }
+    }
+
+    #[test]
+    fn sigmoid_rails_are_exact() {
+        assert_eq!(sigmoid_midp_f32(100.0), 1.0);
+        assert_eq!(sigmoid_midp_f32(-100.0), 0.0);
+        assert_eq!(sigmoid_midp_f32(0.0), 0.5);
+        assert_eq!(silu_midp_f32(100.0), 100.0);
+        assert_eq!(silu_midp_f32(0.0), 0.0);
+    }
+}

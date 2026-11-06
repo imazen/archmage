@@ -6,12 +6,12 @@
 //! unspecified. `tests/parity.rs` and `tests/golden.rs` check it per tier with
 //! no tolerance.
 //!
-//! The cost falls only where the hardware cannot fuse. On x86 and NEON these use
-//! the same fused instructions as magetypes' `f32x8::exp2_midp`-style methods,
-//! while the scalar tier and strict WASM use software FMA. If you want the fastest
-//! result per tier and can accept 1-2 ULP of difference between tiers and
-//! per-ISA NaN results, call those magetypes methods directly. `docs/DESIGN.md` has
-//! the measurements.
+//! Polynomial steps use fused multiply-add. On x86 V3/V4x and NEON that is a
+//! hardware instruction; strict WASM and baseline x86 scalar use software.
+//! [`crate::relaxed`] keeps the same special-value handling and uses each
+//! backend's multiply-add rounding. Its finite results may differ across tiers;
+//! the size of the difference depends on the operation and input band.
+//! `docs/DESIGN.md` records the contracts and measured costs.
 //!
 //! - [`kernels`]: token-generic `f32x8` kernels, to compose inside your own
 //!   `#[attune]` bodies.

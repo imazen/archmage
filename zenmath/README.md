@@ -18,6 +18,13 @@ These are approximations with published bounds
 ([`docs/transcendentals.md`](../docs/transcendentals.md)), not libm replacements for
 callers who need the correctly rounded value.
 
+`scalar::unfused` is a draft mirror family using separate multiply/add for
+polynomial steps. It needs no software FMA and is independent of the `std`
+feature. It mirrors `magemath::unfused` and the two-rounding `relaxed` backends;
+`scalar` continues to mirror fused `portable`. The final inclusion of `unfused`
+is pending the rounding decision. Special-value rules and accuracy bounds are
+shared; finite result bits can differ.
+
 ## Features
 
 | feature | contents |

@@ -2,7 +2,9 @@
 
 Why `magemath` is shaped the way it is, what the measurements said, and the rules
 for extending it. Numbers are from [the 2026-11-05 run](../../benchmarks/magemath_portable_cost_2026-11-05/README.md),
-which has the hosts, conditions and raw output.
+which has the hosts, conditions and raw output. Those cost tables describe the
+original portable-only revision. In that record, “relaxed” means magetypes' methods,
+not the new `magemath::relaxed` surface. Current three-surface measurements are pending.
 
 ## The contract
 
@@ -14,7 +16,7 @@ once where the hardware fuses and twice on the scalar backend and strict WASM,
 because the fused form made those backends 1.5-23x slower
 ([#116 record](../../benchmarks/transcendentals_fused_mul_add_2026-10-05.md)). So
 callers who need matching bits and callers who need the fastest result per tier want
-different code, and magemath is the first group's.
+different contracts. Magemath exposes both through `portable` and `relaxed`.
 
 The first draft of this crate wrapped the relaxed methods and tolerated 4 ULP on the
 scalar tier. Its tests passed on x86 and failed on NEON and WASM:
@@ -28,11 +30,9 @@ scalar tier. Its tests passed on x86 and failed on NEON and WASM:
   The goldens had pinned those values. The full table is in
   [`docs/transcendentals.md`](../../docs/transcendentals.md).
 
-Hence the kernels in `portable::kernels`: the same polynomials as magetypes, every step
+Hence `portable::kernels`: the same polynomials as magetypes, every step
 `mul_add_fused`, and NaN handled without relying on anything ISA-specific. On x86 and
-NEON `mul_add_fused` is the same instruction as `mul_add_relaxed`, and
-`kernels_equal_magetypes_where_hardware_fuses` stops the two copies of each polynomial
-from drifting apart.
+NEON `mul_add_fused` is the same instruction as `mul_add_relaxed`, and the parity tests compare in-domain results with the magetypes methods.
 
 Where the hardware can't fuse, `mul_add_fused` picks a path, and every path gives the same
 bits. Relaxed WASM uses the engine's madd once a cached probe shows it fuses, and
@@ -41,8 +41,8 @@ matching tier goes straight to the vectorized software path, with no runtime CPU
 because a per-call hardware path measured slower (repo `CLAUDE.md`, Dispatch granularity).
 That is only reached on CPUs without V3 anyway: the dispatcher picks the v3 tier first.
 
-The result holds for every f32: all 2^32 inputs match the mirrors on scalar, v3, v4x and
-NEON, and about 230,000 per op match on WASM (strict, relaxed on engines that fuse
+The original portable-only revision was checked for every f32: all 2^32 inputs matched the mirrors on scalar, v3, v4x and
+NEON, and about 230,000 per op matched on WASM (strict, relaxed on engines that fuse
 and engines that don't), qemu without FMA, and i686.
 
 ## What it costs
@@ -68,8 +68,10 @@ Fused in software, the cost is large, and it is the price of the contract:
 | relaxed WASM, engine fuses | 1.1-3.7x |
 | relaxed WASM, engine rounds twice | 7.8-22x |
 
-So a WASM build that wants these kernels should enable relaxed SIMD, and a WASM caller that
-doesn't need matching bits should use the magetypes methods. On a fusing engine every
+A caller that accepts backend-dependent rounding can use `magemath::relaxed`,
+which retains the portable special-value handling. The table above compares the
+original portable-only revision against magetypes methods; it does not time the
+new relaxed surface. On a fusing engine every
 multiply-add also reads the cached probe. Whether that explains the remaining gap is
 unmeasured, and hoisting the check above a whole kernel would need a magetypes change.
 
@@ -78,13 +80,22 @@ unmeasured, and hoisting the check above a whole kernel would need a magetypes c
 | layer | bits across tiers | when to use it |
 |---|---|---|
 | `portable` | identical | default; anything that must reproduce across machines |
-| magetypes `f32x8` methods | 1-2 ULP apart where the hardware can't fuse; NaN differs | the fastest result per tier, when bits needn't match |
+| `relaxed` | backend-dependent rounding; NaN inputs remain NaN | callers that accept rounding differences |
+| `unfused` (prototype) | identical, two roundings per polynomial step | evaluate the alternative portable contract |
+| magetypes `f32x8` methods | backend-dependent rounding and specials | existing method API |
 | `native` (empty) | may differ by design | a measured need neither of the above meets |
 
-Same op names in different modules, so the import path states the contract. A trait
-policy (zenmetrics-math's `MathPolicy`) was the alternative. It earns its keep there,
-where kernels are generic over several whole math conventions, but here it would put
-a generic parameter on every signature to express what one `use` line already says.
+Same op names in different modules, so the import path states the contract. The
+private `Step` trait shares polynomial bodies across `Fused`, `Relaxed` and
+`Unfused`; it is not exposed in public signatures. Public kernels remain generic
+only over the vector backend. A public policy parameter is unnecessary here.
+
+`portable` currently stays fused, matching `zenmath::scalar`. `relaxed` uses
+`mul_add_relaxed`: V3/V4x and NEON round once, scalar and strict WASM round twice,
+and relaxed WASM follows the engine. The `unfused` experiment uses `a * b + c`
+and mirrors `zenmath::scalar::unfused`. The owner chooses whether that becomes
+portable's contract. Such a change also changes the scalar mirrors and golden
+bits; it is not an implementation-only optimization. No choice has been made.
 
 A `native` kernel must never be wired into a `portable` dispatcher. "Range-specific" does
 not by itself mean `native`: a new polynomial built from fused ops and IEEE operations
@@ -241,7 +252,7 @@ and zenjpegai's Cephes-derived `exp`.
 ## Not done
 
 - `f32x4`, `f32x16`, f64 vectors: waiting on a caller. `kernels` is written for `f32x8`;
-  other widths would mean another copy of the bodies, or generating them.
+  other widths need a reviewed extension of the shared bodies.
 - `zenmath::special` and `zenmath::exact` are empty placeholders.
 - No consumer has migrated. zensr's `exp_midp_portable` is the nearest candidate, but it
   deliberately gives NaN the x86 answer (2^-126) so its model goldens hold; moving it to

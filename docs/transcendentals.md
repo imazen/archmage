@@ -19,6 +19,10 @@ AVX2 and strict WASM rounds twice like the scalar backend; neither was measured.
 For the same bits on every backend, use `magemath::portable`: these polynomials
 with `mul_add_fused` and NaN out for NaN in. Its accuracy stays within the figures
 below on every band tested (`magemath/tests/reference.rs`).
+`magemath::relaxed` exposes the same operations and NaN handling with the backend's
+rounding choice; the draft `unfused` experiment uses two roundings everywhere.
+All three surfaces are tested against these same bounds. The contracts and
+rounding decision are recorded in [`magemath/docs/DESIGN.md`](../magemath/docs/DESIGN.md).
 
 ### midp tier
 
