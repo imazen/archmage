@@ -235,7 +235,8 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 #### Added
 
-- Optional intrinsic-only Zenmath accurate exp/ln/log2/pow kernels shared by Magemath, preserving existing public signatures and numerical policies (820ec097).
+- Optional intrinsic-only Zenmath accurate exp/ln/log2/pow kernels shared by Magemath, preserving existing public signatures and numerical policies; explicit primitive/context APIs and selectively accelerated ordinary scalar names retain independent reference access (820ec097, 5a9cc685, 907e91ed, 20281eac).
+- Dispatch study with matched branch/pointer controls, actual V3/V4x widths, native/NEON/WASM validation and cold consumer build costs; automatic x86 packed routing prefers measured V3 width (9b8282bb).
 
 - Prototype algebraic vector extension traits in an independent unpublished crate, compatible with published Magetypes 0.9.30 and 0.9.31-beta.2; retain the production API and MSRV (c07166bc).
 - Complete the available scalar/vector math benchmark matrix across x86, AArch64 and strict WASM: 5,091 measured cells, independent MPFR checks, algebraic codegen evidence and explicit missing/failed cases (2fe299eb).

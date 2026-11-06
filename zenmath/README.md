@@ -34,7 +34,7 @@ shared; finite result bits can differ.
 | *(default)* | `no_std` core, no dependencies |
 | `std` | `fmaf` and `fma` use hardware `mul_add` with compile-time x86 FMA or AArch64 NEON; otherwise it retains software FMA. The results are identical; the feature changes only how they are computed |
 | `archmage` | optional proof/compile-time-only accurate packed f32 exp/ln/log2/pow; no runtime probing from unifying archmage/std |
-| `runtime-dispatch` | explicit native CPU selection at array/slice boundaries; implies std and archmage/std |
+| `runtime-dispatch` | selective ordinary scalar acceleration and once-per-array/slice native selection; implies std and archmage/std |
 | `avx512` | V4x proofs: four-input path shares V3 width; eight-input/wide paths use eight native f64 lanes |
 | `special` | placeholder for erf, gamma and friends; empty today |
 | `exact` | placeholder for bit-exact fdlibm and glibc ports; empty today |
@@ -49,3 +49,5 @@ and proposed extraction order.
 Existing power calls keep their results. Correctly rounded, Midp and Lowp policies
 share scalar/packed behavior; the near-one-ULP prototype is not a supported preset.
 See [the power behavior guide](../magemath/docs/POW_BEHAVIOR.md) for modes, precedence and packed entry points.
+
+The [acceleration record](docs/ACCELERATION.md) lists exact ordinary names, proof APIs, measured policy limits and independent reference access.
