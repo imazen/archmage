@@ -17,6 +17,7 @@ expected = [
     ("native/timing-facade-repeat.json", 2, 24, True, True),
     ("wasm/timing-wasm-policy-v2.json", 3, 24, True, True),
 ]
+suites = {}
 for path, groups, cells, clean, ordinary in expected:
     suite = json.loads((base / path).read_text())
     assert not suite["unreliable"] and not suite["incomplete"], path
@@ -34,6 +35,88 @@ for path, groups, cells, clean, ordinary in expected:
                 path
             )
     print(f"PASS {path}: {groups} groups/{cells} cells")
+ops32 = [
+    "sqrt",
+    "floor",
+    "ceil",
+    "trunc",
+    "roundeven",
+    "round",
+    "fma",
+    "exp",
+    "ln",
+    "log2",
+    "pow",
+    "pow_rescue",
+]
+ops64 = ops32[:7]
+modes = ["stream1", "stream16", "stream1024", "stream65536", "feedback"]
+full_names = {
+    f"{op}/{ty}/{mode}"
+    for ty, ops in [("f32", ops32), ("f64", ops64)]
+    for op in ops
+    for mode in modes
+    if not (op == "pow_rescue" and mode == "feedback")
+}
+assert len(full_names) == 94
+for path in [
+    "native/timing-native.json",
+    "arm/timing-arm.json",
+    "wasm/timing-wasm49-final.json",
+]:
+    assert {g["group_name"] for g in suites[path]["comparisons"]} == full_names, path
+
+
+def verify_replacements(original_path, repeat_path, expected_names):
+    original = {g["group_name"]: g for g in suites[original_path]["comparisons"]}
+    repeat = {g["group_name"]: g for g in suites[repeat_path]["comparisons"]}
+    dirty = {
+        name
+        for name, g in original.items()
+        if any(r["gate_clean"] is not True for r in g["samples"])
+    }
+    assert set(repeat) == dirty, (
+        "replacement coverage differs from rejected groups",
+        original_path,
+        dirty,
+        set(repeat),
+    )
+    effective = original | repeat
+    assert set(effective) == expected_names, (
+        "effective coverage differs",
+        original_path,
+    )
+    assert all(
+        r["gate_clean"] is True for g in effective.values() for r in g["samples"]
+    ), ("effective dirty group", original_path)
+    print(
+        f"PASS effective {original_path}: {len(effective)} unique expected groups, all clean; exact rejected-group replacement"
+    )
+
+
+verify_replacements(
+    "native/timing-native.json", "native/timing-native-rerun-v2.json", full_names
+)
+facade_names = {
+    "sqrt/f32/stream1",
+    "sqrt/f32/stream65536",
+    "sqrt/f32/feedback",
+    "floor/f32/stream65536",
+    "round/f32/stream65536",
+    "pow/f32/stream65536",
+    "pow/f32/feedback",
+    "sqrt/f64/stream65536",
+    "fma/f64/stream1",
+    "fma/f64/stream65536",
+    "fma/f64/feedback",
+    "round/f64/stream65536",
+}
+verify_replacements(
+    "native/timing-facade-native.json", "native/timing-facade-repeat.json", facade_names
+)
+assert {
+    g["group_name"] for g in suites["wasm/timing-wasm-policy-v2.json"]["comparisons"]
+} == {"sqrt/f32/stream65536", "floor/f32/stream65536", "round/f64/feedback"}
 for name in [
     "native/frozen-source",
     "native/frozen-rerun-v2",
