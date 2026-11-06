@@ -1146,3 +1146,4 @@ pub use crate::core_math::atan2;
 
 pub use crate::core_math::pow;
 pub use crate::core_math::tan;
+pub use crate::core_math::{acosf, hypotf};

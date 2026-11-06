@@ -76,3 +76,7 @@ mod pow_int;
 mod pow_q_tables;
 mod pow_tables;
 pub use pow::pow;
+mod acosf;
+mod hypotf;
+pub use acosf::acosf;
+pub use hypotf::hypotf;

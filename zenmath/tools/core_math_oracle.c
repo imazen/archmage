@@ -18,7 +18,8 @@ static float parse_value(char *start,char **end) {
 static int equal(float a,float b) {return bits(a)==bits(b)||(isnan(a)&&isnan(b));}
 static void oracle(const char *op,mpfr_t z,mpfr_t x,mpfr_t y,mpfr_rnd_t rnd) {
 #define OP(name) if(!strcmp(op,#name "f")) {mpfr_##name(z,x,rnd);return;}
- OP(exp2) OP(exp) OP(log2) OP(log) OP(log10) OP(cbrt) OP(sin) OP(cos) OP(tan) OP(atan) OP(tanh) OP(log1p) OP(expm1)
+ OP(acos) OP(exp2) OP(exp) OP(log2) OP(log) OP(log10) OP(cbrt) OP(sin) OP(cos) OP(tan) OP(atan) OP(tanh) OP(log1p) OP(expm1)
+ if(!strcmp(op,"hypotf")) {mpfr_hypot(z,x,y,rnd);return;}
  if(!strcmp(op,"powf")) {mpfr_pow(z,x,y,rnd);return;}
  if(!strcmp(op,"atan2f")) {mpfr_atan2(z,x,y,rnd);return;}
  fprintf(stderr,"unknown function %s\n",op);exit(2);
@@ -49,9 +50,9 @@ int main(int argc,char **argv) {
   do {mpfr_set_prec(lo,precision);mpfr_set_prec(hi,precision);oracle(op,lo,x,y,MPFR_RNDD);oracle(op,hi,x,y,MPFR_RNDU);lower=mpfr_get_flt(lo,MPFR_RNDN);upper=mpfr_get_flt(hi,MPFR_RNDN);precision*=2;
    if(precision>16384&&!equal(lower,upper)) {fprintf(stderr,"unresolved %s %08x %08x\n",op,bits(a),bits(b));return 3;}
   } while(!equal(lower,upper));
-  // MPFR has no signaling NaN. CORE-MATH pow propagates sNaN even for
-  // pow(sNaN,0) and pow(1,sNaN); preserve this explicit special-value contract.
-  if(!strcmp(op,"powf") && (((bits(a)&0x7fffffffU)>0x7f800000U && !(bits(a)&0x400000U)) || ((bits(b)&0x7fffffffU)>0x7f800000U && !(bits(b)&0x400000U))))lower=NAN;
+  // MPFR has no signaling NaN. CORE-MATH pow and hypot propagate sNaN,
+  // including pow(sNaN,0), pow(1,sNaN), and hypot(sNaN,Inf).
+  if((!strcmp(op,"powf") || !strcmp(op,"hypotf")) && (((bits(a)&0x7fffffffU)>0x7f800000U && !(bits(a)&0x400000U)) || ((bits(b)&0x7fffffffU)>0x7f800000U && !(bits(b)&0x400000U))))lower=NAN;
   uint32_t words[]={bits(a),bits(b),bits(lower)};
   for(int w=0;w<3;w++) for(int j=0;j<4;j++) if(fputc((words[w]>>(8*j))&255,out)==EOF)return 2;
  }

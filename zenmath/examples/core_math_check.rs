@@ -10,6 +10,8 @@ fn main() {
         "log2f" => |x, _| scalar::log2f(x),
         "logf" => |x, _| scalar::logf(x),
         "cbrtf" => |x, _| scalar::cbrtf(x),
+        "acosf" => |x, _| scalar::acosf(x),
+        "hypotf" => scalar::hypotf,
         "powf" => scalar::powf,
         "tanhf" => |x, _| scalar::tanhf(x),
         "atanf" => |x, _| scalar::atanf(x),

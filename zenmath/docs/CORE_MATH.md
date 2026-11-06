@@ -12,8 +12,7 @@ emulate errno, exception flags, dynamic rounding modes, or NaN payloads.
 
 ## Coverage and remaining work
 
-Missing after expanding the production consumer audit: f32 acos/hypot and
-f64 atanh/asinh/tanh. Production call sites still need a precision-aware
+Missing after expanding the production consumer audit: f64 atanh/asinh/tanh. Production call sites still need a precision-aware
 inventory that excludes tests and examples. Compatibility extraction remains
 separate; the existing zenmetrics-math ports have not moved.
 
@@ -93,3 +92,8 @@ zenfilters `document/quad.rs::interior_angle`, f32 hypot in zenjxl-decoder
 f64 tanh in zenjpegai `encoder/lh.rs::cum_logit`, and f64 asinh in zensimx
 `metric/steerfix_packet.rs`. These are added to the required port set rather
 than treating the earlier metric-focused inventory as complete.
+
+f32 acos and hypot passed 200,000 MPFR samples each. Hypot also passed its
+7,244 upstream cases; its sNaN/Inf result is checked against the explicit
+CORE-MATH NaN contract because MPFR has no signaling NaN. The upstream acosf
+directory has no worst-case input file, so no full hard-case pass is claimed.
