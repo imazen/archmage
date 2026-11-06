@@ -43,3 +43,5 @@ mod tanf;
 pub use tanf::tanf;
 mod atan2f;
 pub use atan2f::atan2f;
+mod cbrt;
+pub use cbrt::cbrt;
