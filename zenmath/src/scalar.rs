@@ -1150,3 +1150,6 @@ pub use crate::core_math::pow;
 pub use crate::core_math::tan;
 pub use crate::core_math::tanh;
 pub use crate::core_math::{acosf, hypotf};
+
+#[doc(inline)]
+pub use crate::__pow_policy::powf_with;
