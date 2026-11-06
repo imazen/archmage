@@ -11,7 +11,15 @@ for cc in gcc /opt/intel/oneapi/compiler/latest/bin/icx; do
  for cpu in x86-64 x86-64-v3; do
   flags=(-O3 -march="$cpu" -ffp-contract=off -frounding-math)
   if [[ $name == icx ]]; then flags+=(-fp-model=strict); fi
-  "$cc" "${flags[@]}" -fPIC -shared "${sources[@]}" -lm -o "$output/$name-$cpu.so"
+  objects=()
+  mkdir -p "$output/$name-$cpu"
+  for source in "${sources[@]}"; do
+   object="$output/$name-$cpu/$(basename "${source%.c}").o"
+   "$cc" "${flags[@]}" -fPIC -c "$source" -o "$object"
+   objects+=("$object")
+  done
+  # Use the same system libm for both compilers' explicit builtin libcalls.
+  gcc -shared "${objects[@]}" -lm -o "$output/$name-$cpu.so"
   objdump -d -Mintel "$output/$name-$cpu.so" > "$output/$name-$cpu.asm"
  done
 done
