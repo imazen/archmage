@@ -266,3 +266,18 @@ zenmetrics-math fdlibm/glibc ports and statistics functions with these draft
 crates. Reuse that work; `exact` and `special` are placeholders, not replacements
 that have already been implemented. Preserve versioned bit contracts separately
 from the approximation rounding decision above.
+
+## Correctly rounded default candidates (2026-11-05)
+
+The owner proposed a correctly rounded core as the default, retaining named
+libc compatibility choices. The first [CORE-MATH compiler study](../../benchmarks/core_math_cost_2026-11-05/README.md)
+measures eight scalar f32 functions on Intel, plus a safe-Rust exp2 translation.
+This does not change the current approximation surfaces or settle their rounding
+choice. Correctly rounded results can remain identical across baseline and FMA
+implementations; ISA optimization is separate from the result contract.
+
+GCC/ICX and contraction choices varied by function. Baseline software-helper
+powf was substantially more expensive than the hardware-helper and V3 paths.
+The Rust exp2 experiment found a useful baseline bit-widening optimization that
+loses on V3. SIMD costs, ARM/WASM, f64, and full hard-case validation remain
+unmeasured in this study; do not extrapolate its scalar numbers to magemath.

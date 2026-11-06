@@ -62,7 +62,7 @@ Recommendations below are design guidance, not additional exported modules.
 | glibc 2.43 oracle environment | The existing `zenmetrics/benchmarks/clean_panel_2026-10-19/ORACLE_NATIVE_CONTRACT.md` records 2.43. Use that retained consumer environment as the first compatibility comparison, rather than assuming the port's 2.40 source label identifies the oracle. This review did not rerun that oracle or verify its library binary. |
 | glibc 2.44 | Current upstream release at review time; use as a comparison target, not an automatic replacement for the historical contract. Keep a second implementation only where a consumer needs differing bits. Pin architecture, IFUNC/FMA path and compilation choices as well as version. |
 | Arm optimized-routines v26.07 (`4be260a`) | Candidate source for modern exp/log/pow algorithms and native SIMD work, after the existing ports are reused. It includes correctly rounded AdvSIMD expf. Evaluate the actual function, not a blanket accuracy claim for the library. |
-| CORE-MATH, per-function immutable commit | Preferred research source for new correctly rounded functions; no moving-master contract. Start with required f32 functions, then required f64 functions. Bring hard cases and proofs/tests; specials need our explicit wrapper semantics. No commit is selected until a function is chosen. |
+| CORE-MATH, per-function immutable commit | Preferred research source for new correctly rounded functions; no moving-master contract. Start with required f32 functions, then required f64 functions. Bring hard cases and proofs/tests; specials need our explicit wrapper semantics. The first eight-f32 compiler study pins `660067dfd3e751c8f07acc31c899ff410aa7206e`; this is a research baseline, not a promoted implementation. See [the measured study](../../benchmarks/core_math_cost_2026-11-05/README.md). |
 | LLVM libc, per-function release/commit | Alternative correctly rounded implementation and independent comparison. Check its function-specific accuracy table and build configuration; do not assume every routine or configuration is correctly rounded. |
 | musl 1.2.6 | Useful independent comparison and source lineage. Do not add a separate public compatibility family without a consumer requiring its results. Rust libm is derived from musl but is not synonymous with this release. |
 | SLEEF 3.9.0 | Candidate for future bounded-error SIMD/range-reduction work. No portable-bit or correct-rounding promise follows from using SLEEF; inspect the chosen variant and fusion policy. |
@@ -112,3 +112,24 @@ Source check: glibc 2.40 has both `e_powf.c` and `e_powf-fma.c` in
 carries LGPL-2.1-or-later, so the existing mixed-source port needs file-level
 provenance review before extraction into MIT/Apache crates. The Arm algorithm
 lineage is a candidate source, not evidence that every glibc line has its license.
+
+## Default versus compatibility: measured follow-up
+
+The owner proposed correctly rounded core functions as the default, with named
+`compat` choices for callers reproducing a libc. The [CORE-MATH compiler study](../../benchmarks/core_math_cost_2026-11-05/README.md)
+supports that separation: all eight tested CORE-MATH f32 functions matched
+MPFR on 200,000 inputs each under eight compiler/ISA/contraction configurations,
+while the host glibc differed on six functions. This is sampled validation, not
+exhaustive certification or permission to migrate existing consumers.
+
+Baseline x86-64 remains the proposed deployment floor. ISA-specific FMA paths
+can preserve the same correctly rounded final bits; they need not expose another
+numerical contract. Hardware selection matters most for the measured powf:
+GCC baseline took 7.441 ns/value with the hardware-dispatched libc FMA helper,
+25.989 with its software helper, and contracted V3 took 5.366 in the normal run.
+The separate software-helper run is not a paired CPU comparison.
+
+The standalone safe-Rust exp2 translation also exposes a baseline LLVM conversion
+dependency: exact bit widening improved 2.684 to 1.702 ns/value, but lost on V3
+(1.715 versus the ordinary cast's 1.466). Keep optimization choices per target
+and function, with identical result gates. No new exports or defaults were added.

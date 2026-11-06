@@ -615,3 +615,19 @@ test-zenmath-fma:
     cargo test -p zenmath --target wasm32-wasip1 --test scalar fmaf_independent -- --nocapture
     cargo test -p zenmath --features std --target wasm32-wasip1 --test scalar fmaf_independent -- --nocapture
     CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="qemu-x86_64 -cpu Nehalem" cargo test -p zenmath --features std --target x86_64-unknown-linux-gnu --test scalar fmaf_independent -- --nocapture
+
+# Standalone CORE-MATH research; run on an eligible benchmark host under run-heavy.
+core-math-study-build upstream output:
+    bash benchmarks/core_math_cost_2026-11-05/build.sh {{upstream}} {{output}}
+
+core-math-study-run output:
+    bash benchmarks/core_math_cost_2026-11-05/run.sh {{output}}
+
+core-math-study-rust output:
+    bash benchmarks/core_math_cost_2026-11-05/rust.sh {{output}}
+
+core-math-study-tuning output:
+    bash benchmarks/core_math_cost_2026-11-05/tuning.sh {{output}}
+
+core-math-study-analyze csv analyzer:
+    python3 benchmarks/core_math_cost_2026-11-05/analyze.py {{csv}} {{analyzer}}
