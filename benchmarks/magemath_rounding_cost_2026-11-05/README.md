@@ -1,6 +1,6 @@
 # Polynomial rounding comparison, 2026-11-05
 
-Draft verification in progress. Portable remains fused; the owner has not changed
+Draft verification; ARM exhaustive remains in progress. Portable remains fused; the owner has not changed
 its rounding contract. `relaxed` is a real surface with the same special-value
 handling and backend-dependent rounding. `unfused` is a prototype.
 
@@ -206,8 +206,72 @@ In particular, lowp power can cross a polynomial interval boundary; a large ULP
 distance there does not by itself violate its relative-error bound. Accuracy
 checks retain the published bounds for all three surfaces.
 
+## Cross-target verification and review
+
+No numerical threshold or golden output was relaxed. Three surfaces run the same
+accuracy bounds; mirror parity is bitwise except that NaN payloads are unspecified.
+The exhaustive scan varies every f32 input for each of 26 operation entries; power
+uses the listed fixed exponents, not all 2^64 base/exponent pairs. Accuracy tests
+sample broad bands and exhaust narrow bands against f64 std references. They are
+not a proof of correctly rounded transcendentals.
+
+| Check | Result | Raw log |
+|---|---|---|
+| Generate, registry, token safety, soundness | pass; generation left tracked source unchanged | native_review.log |
+| Native debug/release, global V3, Rust 1.89 | pass | x86_tests.log |
+| Real AVX-512 debug/release | pass | avx512_review.log |
+| ARM debug/release, std mirrors, clippy and docs | pass; exhaustive still running | arm_review.log |
+| WASM strict, relaxed fusing, relaxed forced non-fusing, no SIMD | pass | wasm_review.log |
+| No-FMA Nehalem emulation | pass | wasm_review.log |
+| i686 via cross | pass | cross_review_fixed.log |
+| Native/WASM all-feature all-target clippy and rustdoc | pass | native_review.log, cross_review_fixed.log, final_portability.log |
+| Native no-default features, updated zenmath MSRV, final native docs | pass | final_portability.log |
+| Independent FMA edge cases and WASM std mirror parity | pass after fix | mirror_edges_fixed.log |
+
+The first i686 attempt failed to link because the host lacks 32-bit startup objects
+and libraries. No host packages were changed. The recipe now uses cross 0.2.5 and
+its i686 image, which passed. WASM all-target clippy exposed that the native
+zenbench harness compiled without its excluded WASM dependency; native benchmark
+items now have target gates and its WASM entry tells callers to use the WASM recipe.
+
+Review added independent exact-bit FMA cases. Rust 1.99.1 WASI std failed
+`fmaf(0x97000800, 0x1cfff001, 0x00010002)`: returned `0x00010002`, expected
+`0x00010001` (`mirror_edges_failure.log`). Commit `902d8b95` keeps zenmath's
+software FMA on WASM even with std. Native std remains unchanged. The six cases,
+zenmath's full WASM std tests, and magemath WASM std golden/parity pass. This does
+not change measured polynomial kernels or their goldens.
+
+Additional resource summaries:
+
+- cross/WASM lint+docs: `done rc=0 69s | peak-RSS 0.32GiB | min-avail 46975MiB | peak-load 1.45`.
+- repaired FMA tests: `done rc=0 43s | peak-RSS 0.80GiB | min-avail 47232MiB | peak-load 1.23`.
+- final native checks: `done rc=0 5s | peak-RSS 0.39GiB | min-avail 20739MiB | peak-load 0.02`.
+
+## Decision still required
+
+Recommendation: choose separate multiply/add for the portable *approximation*
+family and retain native rounding in relaxed. It avoids software FMA on strict
+WASM and baseline x86; native-throughput callers retain fused relaxed kernels.
+This is a recommendation, not a change: portable and zenmath's ordinary mirrors
+remain fused until the owner approves. Correctly rounded FMA itself stays fused.
+Versioned libm ports must preserve their own evaluation order independently.
+
+If accepted, change portable to the unfused body, migrate its scalar mirrors and
+review golden/edge changes, then remove the public third surface. If rejected,
+keep fused portable and remove the unfused public prototype while retaining
+benchmark evidence. Do not silently add a permanent third public family.
+
+## Limits
+
+No Zen 5 or V4x timing, no engine other than Wasmtime, no native Windows ARM or
+macOS ARM run, and no Miri run. The full project's just ci was not run for this
+unpublished draft; the four startup health checks passed. Neither crate is wired
+into release CI yet and no consumer has migrated. f64 vector and special/exact
+families remain absent. All changes remain on the draft bookmark; nothing pushed.
+
 ## Artifacts
 
 Raw logs are preserved on dev at
 `/mnt/v/output/archmage/magemath-rounding-2026-11-05/`. Final hashes, mirror,
-native/WASM timing tables, assembly and compile-time results are pending.
+the final ARM exhaustive completion marker are pending. Native/WASM timings,
+assembly and compile-time tables above are complete.

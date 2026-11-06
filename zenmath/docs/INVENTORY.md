@@ -75,7 +75,9 @@ Upstream verification: [Rust libm releases](https://github.com/rust-lang/compile
 [musl release history](https://musl.libc.org/releases.html),
 [SLEEF releases](https://github.com/shibatch/sleef/releases),
 [OpenLibm releases](https://github.com/JuliaMath/openlibm/releases).
-Versions are observations on this review date, not update policies. Per-file
+Versions are observations on this review date, not update policies. The glibc
+website lists 2.44, but the bminor GitHub mirror returned 404 for that tag during
+this review; no 2.44 source comparison or compatibility claim has been made. Per-file
 license/provenance follows each reused function; ownership of the surrounding
 consumer does not replace third-party notices.
 
@@ -101,3 +103,10 @@ consumer does not replace third-party notices.
 No new scalar or vector implementations were added for this inventory review.
 The source inventory is established work; the remaining job is contract-preserving
 extraction, completion of the host-dependent glibc fallback, and targeted gaps.
+
+Source check: glibc 2.40 has both `e_powf.c` and `e_powf-fma.c` in
+`sysdeps/x86_64/fpu/multiarch`. Its
+[generic powf file](https://github.com/bminor/glibc/blob/glibc-2.40/sysdeps/ieee754/flt-32/e_powf.c)
+carries LGPL-2.1-or-later, so the existing mixed-source port needs file-level
+provenance review before extraction into MIT/Apache crates. The Arm algorithm
+lineage is a candidate source, not evidence that every glibc line has its license.
