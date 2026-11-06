@@ -5,6 +5,7 @@ fn main() {
     use std::{hint::black_box, time::Duration};
     use zenbench::prelude::*;
     let suite = |s: &mut Suite| {
+        s.cpu_policy(zenbench::platform::CpuPolicy::Performance);
         for (group, op, fixed) in [
             ("exp", "exp", true),
             ("ln", "ln", true),

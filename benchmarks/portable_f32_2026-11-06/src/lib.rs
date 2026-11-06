@@ -11,49 +11,49 @@ pub const CANDIDATES: &[&str] = &[
     "magetypes_midp",
     "magetypes_lowp",
 ];
-macro_rules! approx {
-    ($name:ident,$exp:ident,$ln:ident,$log2:ident,$pow:ident) => {
+macro_rules! unary {
+    ($name:ident, $method:ident) => {
         #[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
-        fn $name(token: Token, op: &str, x: &mut [f32], y: &[f32]) {
-            let n = x.len();
-            for start in (0..n).step_by(8) {
-                let len = (n - start).min(8);
+        fn $name(token: Token, x: &mut [f32], _y: &[f32]) {
+            for chunk in x.chunks_mut(8) {
                 let mut a = [1.0; 8];
-                a[..len].copy_from_slice(&x[start..start + len]);
-                let v = f32x8::from_array_t(token, a);
-                let out = match op {
-                    "exp" => v.$exp(),
-                    "ln" => v.$ln(),
-                    "log2" => v.$log2(),
-                    // The public approximation accepts a scalar exponent. Evaluate
-                    // each lane's own exponent; do not substitute a fixed exponent.
-                    "pow" => {
-                        if y[start..start + len]
-                            .iter()
-                            .all(|b| b.to_bits() == y[start].to_bits())
-                        {
-                            v.$pow(y[start])
-                        } else {
-                            let r = core::array::from_fn(|i| {
-                                if i < len {
-                                    f32x8::splat_t(token, a[i]).$pow(y[start + i]).to_array()[0]
-                                } else {
-                                    1.0
-                                }
-                            });
-                            f32x8::from_array_t(token, r)
-                        }
-                    }
-                    _ => panic!("unknown op"),
-                }
-                .to_array();
-                x[start..start + len].copy_from_slice(&out[..len]);
+                a[..chunk.len()].copy_from_slice(chunk);
+                let out = f32x8::from_array_t(token, a).$method().to_array();
+                chunk.copy_from_slice(&out[..chunk.len()]);
             }
         }
     };
 }
-approx!(mid, exp_midp, ln_midp, log2_midp, pow_midp);
-approx!(low, exp_lowp, ln_lowp, log2_lowp, pow_lowp);
+unary!(exp_mid, exp_midp);
+unary!(ln_mid, ln_midp);
+unary!(log2_mid, log2_midp);
+unary!(exp_low, exp_lowp);
+unary!(ln_low, ln_lowp);
+unary!(log2_low, log2_lowp);
+macro_rules! power {
+    ($name:ident,$method:ident) => {
+        #[magetypes(define(f32x8), v3, neon, wasm128, scalar)]
+        fn $name(token: Token, x: &mut [f32], y: &[f32]) {
+            if y.iter().all(|b| b.to_bits() == y[0].to_bits()) {
+                let exponent = y[0];
+                for chunk in x.chunks_mut(8) {
+                    let mut a = [1.0; 8];
+                    a[..chunk.len()].copy_from_slice(chunk);
+                    let out = f32x8::from_array_t(token, a).$method(exponent).to_array();
+                    chunk.copy_from_slice(&out[..chunk.len()]);
+                }
+            } else {
+                // API adapter: public pow takes a scalar exponent, so this
+                // general-exponent control uses one splat/pow/extract per lane.
+                for (a, b) in x.iter_mut().zip(y) {
+                    *a = f32x8::splat_t(token, *a).$method(*b).to_array()[0];
+                }
+            }
+        }
+    };
+}
+power!(pow_mid, pow_midp);
+power!(pow_low, pow_lowp);
 pub fn eval(candidate: &str, op: &str, x: &mut [f32], y: &[f32]) {
     assert_eq!(x.len(), y.len());
     macro_rules! scalar {
@@ -96,8 +96,20 @@ pub fn eval(candidate: &str, op: &str, x: &mut [f32], y: &[f32]) {
             "pow" => magemath::portable::slice::pow_f32(x, y),
             _ => panic!("unknown op"),
         },
-        "magetypes_midp" => incant!(mid(op, x, y), [v3, neon, wasm128, scalar]),
-        "magetypes_lowp" => incant!(low(op, x, y), [v3, neon, wasm128, scalar]),
+        "magetypes_midp" => match op {
+            "exp" => incant!(exp_mid(x, y), [v3, neon, wasm128, scalar]),
+            "ln" => incant!(ln_mid(x, y), [v3, neon, wasm128, scalar]),
+            "log2" => incant!(log2_mid(x, y), [v3, neon, wasm128, scalar]),
+            "pow" => incant!(pow_mid(x, y), [v3, neon, wasm128, scalar]),
+            _ => panic!("unknown op"),
+        },
+        "magetypes_lowp" => match op {
+            "exp" => incant!(exp_low(x, y), [v3, neon, wasm128, scalar]),
+            "ln" => incant!(ln_low(x, y), [v3, neon, wasm128, scalar]),
+            "log2" => incant!(log2_low(x, y), [v3, neon, wasm128, scalar]),
+            "pow" => incant!(pow_low(x, y), [v3, neon, wasm128, scalar]),
+            _ => panic!("unknown op"),
+        },
         _ => panic!("unknown candidate"),
     }
 }
