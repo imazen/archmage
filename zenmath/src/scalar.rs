@@ -1118,3 +1118,6 @@ pub mod unfused {
         super::silu_midp_with::<super::Unfused>(x)
     }
 }
+
+// Correctly rounded full-range functions, separate from the approximation tiers.
+pub use crate::core_math::{cbrtf, exp2f, expf, log2f, logf};

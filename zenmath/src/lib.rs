@@ -57,3 +57,5 @@ pub mod special;
 
 #[cfg(feature = "exact")]
 pub mod exact;
+
+mod core_math;
