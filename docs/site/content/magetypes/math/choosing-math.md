@@ -103,3 +103,12 @@ one execution; NaNs and infinities can behave differently. It remains safe Rust,
 but it cannot implement the portable-bit contract. Fused multiply-add is a much
 narrower choice: it promises one rounding rather than granting general algebraic
 rewrites. See Rust's [algebraic-operator contract](https://doc.rust-lang.org/core/primitive.f32.html#algebraic-operators).
+
+For Rust 1.99.0 specifically, the compiler's
+[`LLVMRustSetAlgebraicMath`](https://github.com/rust-lang/rust/blob/1.99.0/compiler/rustc_llvm/llvm-wrapper/RustWrapper.cpp#L583)
+sets LLVM's `reassoc`, `contract`, `arcp` and `nsz` flags on each affected
+instruction. These permit reassociation, contraction, reciprocal transforms and
+ignoring signed zero. It does not set `nnan` or `ninf`; do not describe the API
+as an assertion that exceptional inputs never occur. These are implementation
+details to check in generated IR, not a stronger numerical promise than Rust's
+public contract. See [LLVM's flag definitions](https://llvm.org/docs/LangRef.html#fast-math-flags).
