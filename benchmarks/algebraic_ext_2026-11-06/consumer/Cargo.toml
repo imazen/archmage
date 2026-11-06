@@ -14,3 +14,6 @@ archmage = "=0.9.31-beta.2"
 magetypes = { version = "=0.9.31-beta.2", features = ["std", "w512"] }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 zenbench = { version = "=0.1.11", default-features = false }
+[[bin]]
+name = "wasm-host"
+required-features = ["wasm-bench"]
