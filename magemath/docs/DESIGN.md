@@ -302,3 +302,12 @@ precision, fixed rounding sequences and explicit range preconditions. Const
 validation rejects unsupported combinations; optional debug assertions check
 original inputs. Scalar, packed array and once-per-buffer slice operations share
 the contract. Existing signatures and output-bit contracts remain unchanged.
+
+## Shared intrinsic-only accurate kernels
+
+The correctly rounded four-function common paths and tables now live in
+`zenmath::simd`; Magemath delegates through proof-only adapters. There is no
+Zenmath-to-Magetypes dependency. Existing public signatures, scalar rescue and
+PowBehavior precedence are preserved. See
+[the acceleration record](../../zenmath/docs/ACCELERATION.md) for feature
+unification, intermediate width and ongoing measurement limits.

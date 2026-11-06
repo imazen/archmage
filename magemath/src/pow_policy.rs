@@ -5,7 +5,7 @@ use magetypes::simd::{
 };
 use zenmath::__pow_policy as shared;
 #[inline(always)]
-fn core<T: F64x4Backend>(t: T, x: [f32; 8], y: [f32; 8]) -> [f32; 8] {
+fn core<T: F64x4Backend + archmage::IntoConcreteToken>(t: T, x: [f32; 8], y: [f32; 8]) -> [f32; 8] {
     let lo = crate::correct::pow(
         t,
         core::array::from_fn(|i| x[i]),
@@ -19,7 +19,7 @@ fn core<T: F64x4Backend>(t: T, x: [f32; 8], y: [f32; 8]) -> [f32; 8] {
     core::array::from_fn(|i| if i < 4 { lo[i] } else { hi[i - 4] })
 }
 #[inline(always)]
-pub(crate) fn array<T: F32x8Convert + F64x4Backend, const P: u64>(
+pub(crate) fn array<T: F32x8Convert + F64x4Backend + archmage::IntoConcreteToken, const P: u64>(
     t: T,
     x: [f32; 8],
     y: [f32; 8],

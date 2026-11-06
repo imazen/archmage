@@ -1042,6 +1042,9 @@ dependencies = [
 [[package]]
 name = "zenmath"
 version = "0.9.31-beta.2"
+dependencies = [
+ "archmage",
+]
 
 [[package]]
 name = "zerocopy"

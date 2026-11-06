@@ -1,9 +1,9 @@
 //! Portable scalar math with defined bits on every target.
 //!
 //! `zenmath` provides dependency-free, `no_std` scalar implementations for
-//! callers that need portable math without SIMD types. Vector and fixed-array
-//! math lives in `magemath` (this workspace), which uses this crate as the
-//! oracle its kernels are tested against.
+//! callers that need portable math without SIMD types. Optional `simd` math
+//! uses Archmage proofs and safe intrinsics without Magetypes. `magemath`
+//! adapts its correctly rounded array/slice operations to that shared layer.
 //!
 //! ## What is here
 //!
@@ -74,3 +74,7 @@ pub use __pow_policy::{
     PowBehavior, PowConsistency, PowInfinity, PowNaN, PowOutput, PowPrecision, PowRange, PowSign,
     SubnormalInputs, SubnormalOutputs,
 };
+
+/// Intrinsic-only accurate array/slice math, with explicit feature proofs.
+#[cfg(feature = "archmage")]
+pub mod simd;

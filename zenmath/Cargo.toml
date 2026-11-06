@@ -20,6 +20,10 @@ default = []
 # With compile-time x86 FMA or AArch64 NEON, fmaf uses hardware mul_add.
 # Otherwise it stays in software, even with std, to preserve subnormal rounding.
 std = []
+# Proof and compile-time acceleration; CPU probes require runtime-dispatch.
+archmage = ["dep:archmage"]
+runtime-dispatch = ["std", "archmage", "archmage/std"]
+avx512 = ["archmage", "archmage/avx512"]
 # Scalar special functions (erf/erfc/gamma/beta/Student-t, ...). Empty today; only
 # zenmetrics-style consumers will need them.
 special = []
@@ -28,3 +32,4 @@ special = []
 exact = []
 
 [dependencies]
+archmage = { version = "0.9.31-beta.2", path = "..", default-features = false, optional = true }

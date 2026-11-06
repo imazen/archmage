@@ -21,7 +21,7 @@ default = ["std"]
 # guarantees. The kernels themselves are `no_std`.
 std = ["magetypes/std", "archmage/std", "zenmath/std"]
 # Native AVX-512 tier (`+v4x` dispatch arm). Pulls magetypes' 512-bit backends.
-avx512 = ["magetypes/avx512", "archmage/avx512"]
+avx512 = ["magetypes/avx512", "archmage/avx512", "zenmath/avx512"]
 
 [dependencies]
 # f32x8 and its backends. 512-bit types (`w512`) are left off: magemath does not
@@ -30,7 +30,7 @@ magetypes = { version = "0.9.31-beta.2", path = "../magetypes", default-features
 archmage = { version = "0.9.31-beta.2", path = "..", default-features = false }
 
 # Accurate fallback for exceptional or rounding-ambiguous CORE-MATH lanes.
-zenmath = { version = "0.9.31-beta.2", path = "../zenmath" }
+zenmath = { version = "0.9.31-beta.2", path = "../zenmath", features = ["archmage"] }
 
 [dev-dependencies]
 # Token-disable permutations in tests/dispatch.rs.
