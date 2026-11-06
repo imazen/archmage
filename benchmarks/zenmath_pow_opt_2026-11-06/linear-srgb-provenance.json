@@ -1,0 +1,36 @@
+{
+  "local_revision": "8900ffc87cd50b249bae19c99d874431e055d888",
+  "published_version": "0.6.12",
+  "files": [
+    {
+      "path": "scalar.rs",
+      "local_sha256": "7f8eeb8a0728d07b9bbd4704232df84870c6ac3adfa1674908da423112f927e0",
+      "release_sha256": "96e3a163e2ad78289886797e5e004b595b6d6730604d3aeba89363ca5ec19a07",
+      "identical": false
+    },
+    {
+      "path": "default.rs",
+      "local_sha256": "227cbf714b9e46f07888c258b56f641f4745ca9670b33d3ab4d641663092c87f",
+      "release_sha256": "8dd6365a21dfd8a2efdfdc0cc79ead89c8bd0db928a1c686eb4a0e3b77aee21b",
+      "identical": false
+    },
+    {
+      "path": "rational_poly.rs",
+      "local_sha256": "5014d40fc815a3489c48002da73e9dc1d580fb9618de142604c9cfa671a43b06",
+      "release_sha256": "c90349e6100ead81094507cd00bfe5439117051308cba094421e481cb1ac5322",
+      "identical": false
+    },
+    {
+      "path": "mlaf.rs",
+      "local_sha256": "225f6fe0ca8b6fbbc61edc932a1570fe75fe208b9757e9783068d878cbff6b73",
+      "release_sha256": "225f6fe0ca8b6fbbc61edc932a1570fe75fe208b9757e9783068d878cbff6b73",
+      "identical": true
+    },
+    {
+      "path": "simd.rs",
+      "local_sha256": "a5342d8c4a744df62399022e9942c39b578e18a485f749724fbb07746eb39c17",
+      "release_sha256": "582acdeca89ec2224409fde3b5fdc056f4bd21edc30c37c338061b35aafa1d7d",
+      "identical": false
+    }
+  ]
+}

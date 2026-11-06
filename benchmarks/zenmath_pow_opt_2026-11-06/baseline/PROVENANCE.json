@@ -1,0 +1,401 @@
+{
+  "revision": "4ccaf1cf",
+  "adaptation": "Only package manifests renamed to coexist in the unpublished study; Rust sources are byte-identical frozen files.",
+  "files": [
+    {
+      "path": "zenmath/src/core_math/acosf.rs",
+      "sha256": "794d46970806eec78617ef14b21f71917fe95e00a8753dd29402942fd634559e",
+      "bytes": 5015
+    },
+    {
+      "path": "zenmath/src/core_math/asinh.rs",
+      "sha256": "5d365bc4a155c10cf48a566cda3c4e80bd607b91fcfc6555f484889bd1c9971f",
+      "bytes": 40131
+    },
+    {
+      "path": "zenmath/src/core_math/atan.rs",
+      "sha256": "9e5f8bb579171fd21401735df4f7b96b539ccc4b7bb9ea2d3289f30b3f2c39a6",
+      "bytes": 22198
+    },
+    {
+      "path": "zenmath/src/core_math/atan2.rs",
+      "sha256": "0c3a04927580fcecf48dd65270f49f15cfad7f61d6b73fa699e6df403f998c63",
+      "bytes": 22596
+    },
+    {
+      "path": "zenmath/src/core_math/atan2_tint.rs",
+      "sha256": "d86c885ee26fc4b594176268d48ae0575f5c46c181cc86ae4cfba978fd9dffa8",
+      "bytes": 8666
+    },
+    {
+      "path": "zenmath/src/core_math/atan2f.rs",
+      "sha256": "e5b3a58fa28f05cb44dbe953a6f5eba28b9acf4515dfd7aa5dce27df4190f1d4",
+      "bytes": 9083
+    },
+    {
+      "path": "zenmath/src/core_math/atanf.rs",
+      "sha256": "8e7f96860c2e2bff7314fd5be893dd333d801b6f42171616647e0b4a1bcc43a2",
+      "bytes": 3123
+    },
+    {
+      "path": "zenmath/src/core_math/atanh.rs",
+      "sha256": "f778af59cb044cc33516d62b26199cf6e52322fa93b271a21268686a8d665a48",
+      "bytes": 34769
+    },
+    {
+      "path": "zenmath/src/core_math/cbrt.rs",
+      "sha256": "68dad27cfb4eee418e2a14ff39a3337bf562d79eb6339b6113c592b6caa6cc76",
+      "bytes": 4444
+    },
+    {
+      "path": "zenmath/src/core_math/cbrtf.rs",
+      "sha256": "fdd59f130929de6a6c31107cb3d118f38751d917dfaa6266d9dbc4e5acb9efa8",
+      "bytes": 3264
+    },
+    {
+      "path": "zenmath/src/core_math/cos.rs",
+      "sha256": "b1995b0bfea1cfd39674eb1cd3a9f1b55e3200a36b23a25148617bb305fe41ae",
+      "bytes": 5227
+    },
+    {
+      "path": "zenmath/src/core_math/cosf.rs",
+      "sha256": "c2019415c66086cba030e991ae6415fd6561e224787a310bf890652be4576145",
+      "bytes": 4777
+    },
+    {
+      "path": "zenmath/src/core_math/exp.rs",
+      "sha256": "5e2292b775d4fe01a9a9d9befe34fa168784bcf6fa0fb2c749d2551203841dcf",
+      "bytes": 21619
+    },
+    {
+      "path": "zenmath/src/core_math/exp2.rs",
+      "sha256": "972ad8d5756f56f68cf2e44b6289060546aeb31351b0f7e64b279117578965dc",
+      "bytes": 21269
+    },
+    {
+      "path": "zenmath/src/core_math/exp2f.rs",
+      "sha256": "f8c11716d252a4139c6e850168f566ada74dc8d1e441f69e6dff190fac42b7d4",
+      "bytes": 7410
+    },
+    {
+      "path": "zenmath/src/core_math/expf.rs",
+      "sha256": "4ad3f24acad0d7486e9ddee1e488d2fd2785282daa1ed706731a43991d678f81",
+      "bytes": 4940
+    },
+    {
+      "path": "zenmath/src/core_math/expm1f.rs",
+      "sha256": "5ae7e525e0562f23c994bf997ef61577d8371b22a24c36f9fb263ed8ec3eb51c",
+      "bytes": 4999
+    },
+    {
+      "path": "zenmath/src/core_math/fma.rs",
+      "sha256": "79f301a53f99b1cc5ad94c018821039621cf2f9b4532c4f6cd0bf4f298999303",
+      "bytes": 10686
+    },
+    {
+      "path": "zenmath/src/core_math/hypotf.rs",
+      "sha256": "81fb038e291f133e0e81635cc4d8efa8cbc31f9ce153bc356a0339f61f371e1e",
+      "bytes": 2739
+    },
+    {
+      "path": "zenmath/src/core_math/log.rs",
+      "sha256": "fb864d249fb4aa7cce0b82b6da95ea6b5d39505a3ae2506d8c21d28c2c26e15c",
+      "bytes": 55017
+    },
+    {
+      "path": "zenmath/src/core_math/log10.rs",
+      "sha256": "c5c017d63dccc55a0222b312a71c6c8c6ffd097a04ae0f067ef69d25eab4048a",
+      "bytes": 54849
+    },
+    {
+      "path": "zenmath/src/core_math/log10f.rs",
+      "sha256": "a402288fdf4d7b1c63b85d71ef8d5023c35178e1a3afdfa8a2a3ac3558d2e70c",
+      "bytes": 8489
+    },
+    {
+      "path": "zenmath/src/core_math/log1p.rs",
+      "sha256": "cce55765aa73318c6dda0aac535b0f4570ddba78838c0eee4b562852c8313a9b",
+      "bytes": 33109
+    },
+    {
+      "path": "zenmath/src/core_math/log1pf.rs",
+      "sha256": "a93d36bcbb832ae91cfb04e75046f043baf732560810d90390d3fbf77fb664e8",
+      "bytes": 6316
+    },
+    {
+      "path": "zenmath/src/core_math/log2.rs",
+      "sha256": "790598e5fd7f2b933e784b61f15c5f955118d5b704a82be1f72517dada5c086d",
+      "bytes": 29184
+    },
+    {
+      "path": "zenmath/src/core_math/log2f.rs",
+      "sha256": "d5221bbd4735e5e1085b604bf982b77847f44679429cb389f326d25e9a7828ac",
+      "bytes": 7976
+    },
+    {
+      "path": "zenmath/src/core_math/log_accurate.rs",
+      "sha256": "586958cf83c180a1f1cdbe1425574a1ca1a77a59cd143e125fc24e57f3826917",
+      "bytes": 58080
+    },
+    {
+      "path": "zenmath/src/core_math/logf.rs",
+      "sha256": "ac73ac064abfd6db73dc4166e16d1af9254ee221c51ad3b3132bff1622a8b040",
+      "bytes": 8454
+    },
+    {
+      "path": "zenmath/src/core_math/mod.rs",
+      "sha256": "d24154297d84228c231969728a0a275a770f97ec56604d4ea425fb08eba6c6ed",
+      "bytes": 1752
+    },
+    {
+      "path": "zenmath/src/core_math/pow.rs",
+      "sha256": "2ad3eedf9772adad735228fa228acde03b70db4d9b1989f688fbbd8e3c622381",
+      "bytes": 13008
+    },
+    {
+      "path": "zenmath/src/core_math/pow_d_tables.rs",
+      "sha256": "6ad3d2c2553f313bfd8dad9e05ef59cd1a3c8dc973d0455153b69cfb6ee40d81",
+      "bytes": 64425
+    },
+    {
+      "path": "zenmath/src/core_math/pow_int.rs",
+      "sha256": "6498071bce4977485c9387968fadce92b26b1d63791d674c26467209cef00443",
+      "bytes": 14446
+    },
+    {
+      "path": "zenmath/src/core_math/pow_q_tables.rs",
+      "sha256": "38f7ad0ea2a3e63e8cf6704699d7be9a9344c52b0755882e03e9747dac7aabed",
+      "bytes": 97546
+    },
+    {
+      "path": "zenmath/src/core_math/pow_tables.rs",
+      "sha256": "56493fced7bba0fb8341370c787b0c8d7a31fa3aecd72e6d34294b95ee1e556c",
+      "bytes": 40544
+    },
+    {
+      "path": "zenmath/src/core_math/pow_tests.rs",
+      "sha256": "79d21fcbf1476c0b647abf4b1fb5221fdbaf5707f45d69865ffa0b5b2b7766a4",
+      "bytes": 15784
+    },
+    {
+      "path": "zenmath/src/core_math/powf.rs",
+      "sha256": "06d88b425f06d942bd416e9cd4e920a25695b41535a4e353f689725d5830ad87",
+      "bytes": 19037
+    },
+    {
+      "path": "zenmath/src/core_math/sin.rs",
+      "sha256": "d57423bd82c7be4d3dbd27e7d0e7b42492ad65ad4a5f10726e8fa2d03f1a5f3b",
+      "bytes": 62456
+    },
+    {
+      "path": "zenmath/src/core_math/sinf.rs",
+      "sha256": "a68b4ddb7f2dd16cd9f55baaa4649dfa9f0edc3c6b66f8606daf8612c89625a0",
+      "bytes": 4812
+    },
+    {
+      "path": "zenmath/src/core_math/tan.rs",
+      "sha256": "5f4646af548e686f26bd5be7d98331d8fb82be3e1c1a38afcf0f5f1884e6d825",
+      "bytes": 117434
+    },
+    {
+      "path": "zenmath/src/core_math/tanf.rs",
+      "sha256": "896d571cacbfd3c7817740b961737f19f49332db8bfd119aff6fd68b2cda3a97",
+      "bytes": 3910
+    },
+    {
+      "path": "zenmath/src/core_math/tanh.rs",
+      "sha256": "8719f1d4dc167a6240c7eb6e3930a1fad4ca28aaf767ff3078c35a8b11a42eec",
+      "bytes": 24530
+    },
+    {
+      "path": "zenmath/src/core_math/tanhf.rs",
+      "sha256": "6b1c80133628911e09284298f00ba56bafb7420692f34db9e72437b4ba7b6992",
+      "bytes": 3134
+    },
+    {
+      "path": "zenmath/src/core_math/trig_reduce.rs",
+      "sha256": "09987da96edd35a36a1ed0d8b1aca231f93d8e7f1d38385cb20e9a210c58a0f4",
+      "bytes": 1825
+    },
+    {
+      "path": "zenmath/src/exact.rs",
+      "sha256": "dfa1893ecf7c570516c9e4f58627728697c633f41b6743364fe0976d63a27afd",
+      "bytes": 1660
+    },
+    {
+      "path": "zenmath/src/facade.rs",
+      "sha256": "c279702ffa6dce7e919c36d87fbd0aea69050b18bf36660501f8559cc900deaa",
+      "bytes": 2869
+    },
+    {
+      "path": "zenmath/src/lib.rs",
+      "sha256": "3967af05ae082070ec9acd03289fe01ae0084ba6ad2aeac5ae61710665c47f04",
+      "bytes": 3787
+    },
+    {
+      "path": "zenmath/src/pow_policy.rs",
+      "sha256": "0e729c04c90e5030b0d3443cbdc368d037e867139b02e8b82dc76f098860d487",
+      "bytes": 13710
+    },
+    {
+      "path": "zenmath/src/scalar.rs",
+      "sha256": "0740aa0a0411b168cd5b3f590f96a2739e6f21c52c2a11c53344a7aae3df6355",
+      "bytes": 37909
+    },
+    {
+      "path": "zenmath/src/simd/array.rs",
+      "sha256": "3bb534e33f2a74ea0673ca9d4bb2a6794c673b6b56d0910c080543779d828a5b",
+      "bytes": 4943
+    },
+    {
+      "path": "zenmath/src/simd/context.rs",
+      "sha256": "d7c50874fcebb7fdebc0a19d1d3bc68b1d8aeda7ec3b0c594b6d16b09bf54103",
+      "bytes": 1640
+    },
+    {
+      "path": "zenmath/src/simd/correct/expf_tables.rs",
+      "sha256": "e207132bc72c372b62e351264a366dc4bf737c37adabaf602738bbd8b67eedf8",
+      "bytes": 3094
+    },
+    {
+      "path": "zenmath/src/simd/correct/log2f_tables.rs",
+      "sha256": "1ea1ad4e1e844563d1a0113efb21517b0b36895046a33e1f35a825ac82b2d341",
+      "bytes": 6769
+    },
+    {
+      "path": "zenmath/src/simd/correct/logf_tables.rs",
+      "sha256": "b879e04b0661c19fbfa645dad1081dfe6b6e044236192f53a242b351c084dda7",
+      "bytes": 6766
+    },
+    {
+      "path": "zenmath/src/simd/correct/mod.rs",
+      "sha256": "d970b388d3aff02d23ba6689fd55921a464dd1b9c25aad2e5fb14a264dace4fc",
+      "bytes": 7889
+    },
+    {
+      "path": "zenmath/src/simd/correct/powf_tables.rs",
+      "sha256": "33afefbd6c71ad01cabdb75dadc004d618efec658ac3103f3f5000e998afa0d9",
+      "bytes": 7369
+    },
+    {
+      "path": "zenmath/src/simd/mod.rs",
+      "sha256": "c7e5c44f3426fbe8c1d19df395fe411021328cd51ad526f2637d6f318a134030",
+      "bytes": 1502
+    },
+    {
+      "path": "zenmath/src/simd/packed.rs",
+      "sha256": "39e7b011da6ae6141de1668aef4e0a88fbeed05c34e324b47566462dbadaf87b",
+      "bytes": 12103
+    },
+    {
+      "path": "zenmath/src/simd/scalar.rs",
+      "sha256": "ca568daab6caedec1dc80bc21c070314f2c7b54a2772ccd4e15491f220b16f8f",
+      "bytes": 21955
+    },
+    {
+      "path": "zenmath/src/simd/slice.rs",
+      "sha256": "e48a2f2674b9f9f0f1f72a1037814fafdd8ea4ce0a8340352a5b79138ff044f1",
+      "bytes": 8491
+    },
+    {
+      "path": "zenmath/src/simd/soft_fma.rs",
+      "sha256": "4976982a5a6481ec23718c1e7c0b7a278352c881c194bfa97bee25c781c2833d",
+      "bytes": 3646
+    },
+    {
+      "path": "zenmath/src/special.rs",
+      "sha256": "2bf3109ad77e735307c4f5829495fde7c2408a5e60ddd7b15ca04b53cfb37e01",
+      "bytes": 930
+    },
+    {
+      "path": "magemath/src/bodies.rs",
+      "sha256": "a53b8b0689fd8e85dc21c59fe6c960197bbb87d6ef1a04ee5072bc480d27bd43",
+      "bytes": 12508
+    },
+    {
+      "path": "magemath/src/correct/mod.rs",
+      "sha256": "28e522366b57531b7c6d3f8c81506924775b61fce44984a9f742c6f61240f78d",
+      "bytes": 1208
+    },
+    {
+      "path": "magemath/src/lib.rs",
+      "sha256": "8aa78032bb8c9f262c08299b9e1869ff773b31ebb06406322b376f5a24385ffb",
+      "bytes": 2917
+    },
+    {
+      "path": "magemath/src/native/mod.rs",
+      "sha256": "2317d39a24bdb2dd8f8fcbdb5b0d75258591b0cdf4e40c15f5b5ce37f2791273",
+      "bytes": 612
+    },
+    {
+      "path": "magemath/src/portable/array.rs",
+      "sha256": "9a4392f0566dd6ceeacb9a95ecf8447aa5e21c4ddb2657b2d26341e26beff0f8",
+      "bytes": 3177
+    },
+    {
+      "path": "magemath/src/portable/kernels.rs",
+      "sha256": "5e4e364cf7ce4b8f041ce0a1ed54c7f20ed44493e1bb6df2b59f6350ac3d9b47",
+      "bytes": 2283
+    },
+    {
+      "path": "magemath/src/portable/mod.rs",
+      "sha256": "4cb4e82f1154fd09b75aa2a6510e7a2abec16efe58296a1d45d8af28cf1da1e8",
+      "bytes": 2659
+    },
+    {
+      "path": "magemath/src/portable/slice.rs",
+      "sha256": "85f4f70e233691ebe14561720e2bb6f47ea79cf6334e4980dd126c5542088ca7",
+      "bytes": 4582
+    },
+    {
+      "path": "magemath/src/pow_policy.rs",
+      "sha256": "0d790a788910dcf049f2d5ecd12cd558e790ca6f026b2bc448cb72fe66f71c52",
+      "bytes": 2663
+    },
+    {
+      "path": "magemath/src/relaxed/array.rs",
+      "sha256": "07113c5ef3b4b11cd5b1da06bddeeafd5164bcc4c0c1e9ebe42b223108e44cf3",
+      "bytes": 307
+    },
+    {
+      "path": "magemath/src/relaxed/kernels.rs",
+      "sha256": "9b4b03c9917c4a0dd5b5a2301154ddb62c583b94cfb04fbdddf2800cb1acc99d",
+      "bytes": 678
+    },
+    {
+      "path": "magemath/src/relaxed/mod.rs",
+      "sha256": "5afa6cdc4d2f09e43a9ecdd8df0dea682bdc2a2833a020b741cca0ae6a1caafc",
+      "bytes": 1068
+    },
+    {
+      "path": "magemath/src/relaxed/slice.rs",
+      "sha256": "ce18a5ff3eb484299be422040b4ab01f93698796edd0df7aef1aa34e393a06c6",
+      "bytes": 494
+    },
+    {
+      "path": "magemath/src/surface.rs",
+      "sha256": "516de7b70adcbcccddeb82fc46a88983083af9b39b0980d8afea3a11dd1f2e9e",
+      "bytes": 9865
+    },
+    {
+      "path": "magemath/src/unfused/array.rs",
+      "sha256": "46c66ca517b6a3ef20607e8bcf86634d5b963b2d87a91be47e8ae1977d56affa",
+      "bytes": 94
+    },
+    {
+      "path": "magemath/src/unfused/kernels.rs",
+      "sha256": "ef95857312ab4b1055dde3d15d3a54392db4c5b3eaf0bbaf32ab42fb629fc06d",
+      "bytes": 123
+    },
+    {
+      "path": "magemath/src/unfused/mod.rs",
+      "sha256": "d15a1f57b1616b289becb115ad630326131e9a851f313af98e0aea6ac34bccf8",
+      "bytes": 349
+    },
+    {
+      "path": "magemath/src/unfused/slice.rs",
+      "sha256": "1343ab1a3a574683d40b76838044a2a91ae2e60a04056af40d3c7182322071ad",
+      "bytes": 107
+    }
+  ]
+}
