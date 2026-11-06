@@ -8,19 +8,24 @@ for f in exp2 log2 exp log cbrt sin tanh pow; do sources+=("$upstream/src/binary
 for cc in gcc /opt/intel/oneapi/compiler/latest/bin/icx; do
  name=$(basename "$cc")
  "$cc" --version > "$output/$name.version"
+ for contract in off on; do
  for cpu in x86-64 x86-64-v3; do
-  flags=(-O3 -march="$cpu" -ffp-contract=off -frounding-math)
+  flags=(-O3 -march="$cpu" -frounding-math)
   if [[ $name == icx ]]; then flags+=(-fp-model=strict); fi
+  flags+=(-ffp-contract="$contract")
+  suffix="$name-$cpu"
+  if [[ $contract == on ]]; then suffix+=-contract; fi
   objects=()
-  mkdir -p "$output/$name-$cpu"
+  mkdir -p "$output/$suffix"
   for source in "${sources[@]}"; do
-   object="$output/$name-$cpu/$(basename "${source%.c}").o"
+   object="$output/$suffix/$(basename "${source%.c}").o"
    "$cc" "${flags[@]}" -fPIC -c "$source" -o "$object"
    objects+=("$object")
   done
   # Use the same system libm for both compilers' explicit builtin libcalls.
-  gcc -shared "${objects[@]}" -lm -o "$output/$name-$cpu.so"
-  objdump -d -Mintel "$output/$name-$cpu.so" > "$output/$name-$cpu.asm"
+  gcc -shared "${objects[@]}" -lm -o "$output/$suffix.so"
+  objdump -d -Mintel "$output/$suffix.so" > "$output/$suffix.asm"
+ done
  done
 done
 prefix=$HOME/tmp/core-math-study/deps/usr/include

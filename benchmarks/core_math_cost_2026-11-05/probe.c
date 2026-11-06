@@ -42,6 +42,9 @@ int main(int argc, char **argv) {
    fn[v][op]=dlsym(handles[v],sym); if(!fn[v][op]) { fprintf(stderr,"missing %s\n",sym); return 2; }
   }
  }
+ Dl_info info; void *fma_address=dlsym(handles[count-1],"fma");
+ if(!fma_address || !dladdr(fma_address,&info)) return 2;
+ fprintf(stderr,"libc-fma %s offset=0x%zx\n",info.dli_fname,(size_t)((char*)fma_address-(char*)info.dli_fbase));
  fesetround(FE_TONEAREST);
  mpfr_t x,y,lo,hi; mpfr_inits2(128,x,y,lo,hi,(mpfr_ptr)0);
  FILE *golden=fopen("exp2-golden.bin","wb");
@@ -52,6 +55,7 @@ int main(int argc, char **argv) {
   for(int i=0;i<100000;i++) {
    float a=from_bits(random_bits()),b=from_bits(random_bits());
    if(i<12) { const uint32_t edge[]={0,0x80000000,1,0x80000001,0x007fffff,0x00800000,0x7f7fffff,0xff7fffff,0x7f800000,0xff800000,0x7fc00000,0x3f800000}; a=from_bits(edge[i]); b=2.4f; }
+   if(op==0 && i>=12 && i<15) {const uint32_t hard[]={0x3b429d37,0xbcf3a937,0xb8d3d026}; a=from_bits(hard[i-12]);}
    mpfr_set_flt(x,a,MPFR_RNDN); mpfr_set_flt(y,b,MPFR_RNDN);
    mpfr_prec_t precision=128;
    float lower,upper;
