@@ -778,7 +778,7 @@ pub fn atan(x: f64) -> f64 {
         let i = ((at >> 51) as i64 - 2030) as usize;
         let u = x.to_bits() & 0x7ffffffffffff;
         let ut = u >> 35;
-        let ut2 = ut * ut >> 16;
+        let ut2 = (ut * ut) >> 16;
         let i = (((INDEX[i][0] << 16) + ut * INDEX[i][1] - ut2 * INDEX[i][2]) >> 25) as usize;
         let sg = signed(1.0, x);
         let ta = sg * A[i][0];
