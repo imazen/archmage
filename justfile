@@ -595,8 +595,14 @@ magemath-bench:
 
 # The same forms on WASM, where zenbench does not build.
 magemath-bench-wasm:
+    @echo 'Strict SIMD'
     RUSTFLAGS="-Ctarget-feature=+simd128" cargo build -p magemath --example wasm_cost --release --target wasm32-wasip1
     wasmtime run target/wasm32-wasip1/release/examples/wasm_cost.wasm
+    RUSTFLAGS="-Ctarget-feature=+simd128,+relaxed-simd" cargo build -p magemath --example wasm_cost --release --target wasm32-wasip1
+    @echo 'Relaxed SIMD, default engine'
+    wasmtime run target/wasm32-wasip1/release/examples/wasm_cost.wasm
+    @echo 'Relaxed SIMD, forced non-fusing engine'
+    wasmtime run -W relaxed-simd-deterministic=n -C cranelift-has-fma=false target/wasm32-wasip1/release/examples/wasm_cost.wasm
 
 # Rebuild the compile-time table in magemath/docs/DESIGN.md. Not on dev.
 magemath-compile-time scratch:
