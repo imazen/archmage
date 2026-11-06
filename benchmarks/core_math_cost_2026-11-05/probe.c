@@ -44,6 +44,8 @@ int main(int argc, char **argv) {
  }
  fesetround(FE_TONEAREST);
  mpfr_t x,y,lo,hi; mpfr_inits2(128,x,y,lo,hi,(mpfr_ptr)0);
+ FILE *golden=fopen("exp2-golden.bin","wb");
+ if(!golden) return 2;
  puts("kind,op,variant,round,value");
  for(int op=0;op<8;op++) {
   unsigned mismatches[count]; memset(mismatches,0,sizeof mismatches);
@@ -58,6 +60,7 @@ int main(int argc, char **argv) {
     lower=mpfr_get_flt(lo,MPFR_RNDN); upper=mpfr_get_flt(hi,MPFR_RNDN); precision*=2;
     if(precision>16384 && !equal(lower,upper)) { fprintf(stderr,"unresolved oracle %s %08x %08x\n",names[op],bits(a),bits(b)); return 3; }
    } while(!equal(lower,upper));
+   if(op==0) { uint32_t record[]={bits(a),bits(lower)}; if(fwrite(record,sizeof record,1,golden)!=1) return 2; }
    for(int v=0;v<count;v++) {
     float result=op==7?((binary)fn[v][op])(a,b):((unary)fn[v][op])(a);
     if(!equal(result,lower)) { if(mismatches[v]++<3) fprintf(stderr,"mismatch %s %s %08x %08x got=%08x expected=%08x\n",names[op],argv[v+1],bits(a),bits(b),bits(result),bits(lower)); }
@@ -65,6 +68,7 @@ int main(int argc, char **argv) {
   }
   for(int v=0;v<count;v++) { printf("mismatch,%s,%s,0,%u\n",names[op],argv[v+1],mismatches[v]); if(v<count-1) failures+=mismatches[v]; }
  }
+ fclose(golden);
  mpfr_clears(x,y,lo,hi,(mpfr_ptr)0);
  if(failures) return 1;
  float input[N],output[N]; volatile float sink=0;
