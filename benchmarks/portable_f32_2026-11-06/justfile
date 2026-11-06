@@ -8,3 +8,15 @@ results op records out:
     target/release/results {{op}} {{records}} {{out}}
 bench out:
     target/release/timing {{out}}
+
+# A single-candidate call isolates a crashing external candidate from others.
+candidate op records out name:
+    target/release/results {{op}} {{records}} {{out}} {{name}}
+analyze out:
+    python3 analyze.py {{out}} --true-real
+search out:
+    python3 search.py target/release/results {{out}}
+identity:
+    bash identity.sh
+cross-targets:
+    cd ../.. && bash benchmarks/portable_f32_2026-11-06/run-targets.sh
