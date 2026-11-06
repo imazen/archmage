@@ -7,6 +7,16 @@ fn main() {
         (4..=5).contains(&args.len()),
         "results OP RECORDS OUTPUT_DIRECTORY [CANDIDATE]"
     );
+    if let Some(candidate) = args.get(4) {
+        assert!(
+            CANDIDATES.contains(&candidate.as_str()),
+            "unknown candidate"
+        );
+        assert!(
+            portable_f32_study::supports(candidate, &args[1]),
+            "candidate does not support operation"
+        );
+    }
     let data = fs::read(&args[2]).expect("records required");
     assert!(!data.is_empty() && data.len() % 12 == 0);
     let mut x = Vec::new();
