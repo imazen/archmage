@@ -13,6 +13,24 @@ throughput while retaining identical tested output bits. It is a prototype, not 
 newly proven global bound. See [candidate research](RESEARCH.md) for primary sources,
 coverage, guarantees and omissions. There is no universal-fastest claim.
 
+## Coverage of the requested scalar inventory
+
+This is not an all-operations/all-widths benchmark matrix. Of the requested nine
+f32 operations plus f64 log2, six have zenmath-versus-std interleaved measurements:
+
+| Requested operations | Scalar vs std | Multiple libraries + packed implementations |
+|---|---|---|
+| f32 exp, ln, log2, powf | This study and the earlier scalar study | This study; fixed-array/slice kernels, not every vector width/tier |
+| f32 log10; f64 log2 | [33-function scalar study](../core_math_rust_2026-11-05/README.md) | Not covered here |
+| f32 sqrt, floor, ceil, round | Not measured for zenmath by these studies | Not covered here |
+
+The older [Magetypes fallback benchmark](../../magetypes/benches/nostd_math_perf.rs)
+sets up zenbench groups for its own scalar sqrt/floor/round versus std (and FMA),
+but does not benchmark zenmath, ceil, or packed versions. It is not a substitute
+for the missing comparisons. The [power-policy study](../pow_behavior_2026-11-06/README.md)
+adds same-contract scalar/packed policy comparisons and a frozen sign-path
+baseline; its correctness matrix is broader than its performance matrix.
+
 ## Throughput, ns/value
 
 All candidates receive the same 1024-value arrays, copy, and black-box consumption.
