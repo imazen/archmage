@@ -3,22 +3,22 @@
 Unavailable first: Windows/macOS execution, Magetypes f64 vector log2 and other
 missing public APIs listed in [MATRIX.md](MATRIX.md). One WASM cell,
 metallic general pow/specials, traps. No global approximation error proof,
-Zen5 speed claim, or full instruction-latency matrix is made.
+Zen 5 speed claim, or full instruction-latency matrix is made.
 
 The requested nine f32 operations and f64 log2 have **4,568 of 4,569 runnable throughput
 cells**, plus 180 algebraic and 343 representative native feedback cells:
-**5,091 total**, all at least 30 rounds, complete/reliable per zenbench. Uniform2.4
+**5,091 total**, all at least 30 rounds, complete/reliable per zenbench. Uniform 2.4
 power and separately labeled ties-even rounding are extra controls.
 [Exact coverage](results/coverage.csv), [source/API inventory](api-matrix.csv),
 [accuracy](ACCURACY.md), [algebraic codegen/results](CODEGEN.md) and
 [feedback units](FEEDBACK.md) give the scope and limitations.
 
-This is unpublished draft work based on77b2545b. No production API, MSRV,
+This is unpublished draft work based on 77b2545b. No production API, MSRV,
 math contract or established expectation changed. No push/PR/release.
 
 ## Matching CPU context matters
 
-Intel ordinary inputs,1,024 values, mean ns/value. Baseline is the default
+Intel ordinary inputs, 1,024 values, mean ns/value. Baseline is the default
 x86-64 build; V3 is an explicit feature context in the same binary. The scalar
 Zenmath primitives use their software algorithms even when std is enabled.
 
@@ -48,7 +48,7 @@ not ranked without the CSV's paired intervals.
 Same Intel ordinary workload, ns/value, directly invoking each pinned public
 function. Missing APIs are never supplied by std adapters.
 
-| Operation | libm0.2.16 | fpmath0.2.0 | micromath2.1.0 | metallic0.3.1 |
+| Operation | libm 0.2.16 | fpmath 0.2.0 | micromath 2.1.0 | metallic 0.3.1 |
 |---|---:|---:|---:|---:|
 | powf | 15.7930 | 6.7524 | 7.8627 | 38.5720 |
 | exp | 2.1969 | 1.2080 | 3.6720 | 20.3451 |
@@ -71,15 +71,15 @@ not add another force-soft-floats timing build.
 
 ## Precision and portability findings
 
-Independent directed MPFR checked 1,024 records in every 4,568 accepted math cell.
+Independent directed MPFR checked 1,024 records in each of the 4,568 accepted math cells.
 Correctly rounded Zenmath/Magemath matched all references on the four measured
 targets; this is sampled evidence rather than a global proof. Approximation
 errors, specials and signed zeros remain recorded even outside stated domains.
 
 [Scalar consistency](results/cross-scalar.csv) finds std log10 differs from
-x86 on258/1024ordinary ARM values and105/1024WASM values, at most one
+x86 on 258/1024 ordinary ARM values and 105/1024 WASM values, at most one
 representable step. Example x=`405523d7`: x86=`3f05c193`, ARM/WASM=`3f05c194`.
-The ARM std log10 observed true-error upper bound is1.446035ULP in this sample.
+The ARM std log10 observed true-error upper bound is 1.446035 ULP in this sample.
 Compiler/libc/OS are confounded; this does not isolate ISA causality or create a
 uniform std guarantee. Other sampled std scalar cells agreed across targets.
 Micromath power also differs on ARM specials. Full correctly rounded candidates
@@ -93,21 +93,21 @@ instructions. Plain vector Add/Mul stays unflagged. Actual timed thin-LTO
 binary disassembly confirms the key V3/NEON patterns, not merely a separate
 non-LTO probe: [CODEGEN.md](CODEGEN.md).
 
-Intel V3 automatic algebraic dot measures0.026155 versus0.374579ns/value for
+Intel V3 automatic algebraic dot measures 0.026155 versus 0.374579 ns/value for
 the ordinary ordered loop. Counterexamples matter: NEON array dot costs
-0.349417 versus0.092628explicit fused; its main loop has ten lane shuffles
+0.349417 versus 0.092628 explicit fused; its main loop has ten lane shuffles
 and eight two-lane additions per 16 values, no loop spills/calls. Intel array
-versus fused is a near tie (paired delta[-0.000320,0.002096]ns/value).
+versus fused is a near tie (paired delta [-0.000320, 0.002096] ns/value).
 Ryzen V4x algebraic polynomial is slower than ordinary, with paired delta
-[0.002288,0.032111]ns/value. No uniform algebraic or array-map recommendation.
-Cancellation snapshots show ordinary1, automatic/array algebraic512 and
-explicit vector0 on the documented repeated input. No result bound is inferred.
+[0.002288, 0.032111] ns/value. No uniform algebraic or array-map recommendation.
+Cancellation snapshots show ordinary 1, automatic/array algebraic 512 and
+explicit vector 0 on the documented repeated input. No result bound is inferred.
 
 ## Reproduction and measurement limits
 
 Use the directory justfile, runner scripts and retained per-build manifests.
 Native timings use baseline compilation plus explicit proofs, one whole-buffer
-feature region, interleaved zenbench0.1.11, matched inputs and observed outputs.
+feature region, interleaved zenbench 0.1.11, matched inputs and observed outputs.
 Intel uses an enforced performance-core cpuset; timing on Neoverse uses a quiet
 machine separate from its build machine. Builds have per-job resource budgets;
 zenbench admission controls benchmark isolation. No heavy work ran on dev.
@@ -118,23 +118,23 @@ over 256 repeats of 1,024 values. Algebraic WASM wrappers do likewise. Native an
 WASM therefore have different wrapper costs; within-platform comparisons retain
 their stated workload, while absolute native-vs-WASM comparisons include that
 wrapper difference. Host calls and module setup are not per-vector kernel costs.
-The WasmBench engine is locked49.0.5; strict SIMD is enabled without relaxed SIMD.
+The WasmBench engine is locked 49.0.5; strict SIMD is enabled without relaxed SIMD.
 Numerical engine-validation details are in ACCURACY.md.
 
-Every CSV retains rounds, MAD and paired95% time-delta intervals versus its
+Every CSV retains rounds, MAD and paired 95% time-delta intervals versus its
 baseline. Single-process intervals are not between-run reproducibility claims;
 some cells show substantial drift/outliers, preserved rather than hidden.
-No rerun was made solely to chase a favorable close result. The first3-second
+No rerun was made solely to chase a favorable close result. The first 3-second
 wall-budget passes had empty cells; those are archived as invalid/incomplete,
-not accepted as zero-time measurements. Final runs use30-second group budgets.
+not accepted as zero-time measurements. Final runs use 30-second group budgets.
 
 Actual final guide/reductions Rust fences passed native default, AVX-512 and
 strict WASM (three actual examples per configuration). All four repository
 health commands and scoped native/ARM/WASM lints passed; full logs and tested
 doc hashes remain in [ARTIFACTS.md](ARTIFACTS.md).
 
-Windows is unmeasured after a fresh2026-11-06 probe: the existing Windows
+Windows is unmeasured after a fresh 2026-11-06 probe: the existing Windows
 cmd.exe is present, but `timeout 15s /mnt/c/Windows/System32/cmd.exe /c ver`
-returns rc1 with WSL UtilAcceptVsock accept4 failure110. The exact command,
+returns rc 1 with WSL UtilAcceptVsock accept4 failure 110. The exact command,
 full output and host observation are retained privately in the archive.
 No OS restart or mac connection was attempted.

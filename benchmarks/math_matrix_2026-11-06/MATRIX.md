@@ -1,15 +1,15 @@
 # Matrix scope and explicit unavailable cells
 
-Unavailable: no executed Windows or macOS target; no Zen5 timing. All identified
+Unavailable: no executed Windows or macOS target; no Zen 5 timing. All identified
 eligible timing hosts currently run Linux; the returned mac is excluded by the
 owner. QEMU is not substituted for another OS. No full feedback-latency matrix:
 only the four native representative recurrences in [FEEDBACK.md](FEEDBACK.md).
 
 The requested nine f32 operations (powf, exp, ln, log2, log10, sqrt, floor,
-ceil, ties-away round) and scalar f64 log2 are covered. Uniform2.4 power and
-separate ties-even roundeven are additional controls, for12operation groups.
+ceil, ties-away round) and scalar f64 log2 are covered. Uniform 2.4 power and
+separate ties-even roundeven are additional controls, for 12 operation groups.
 Every group uses ordinary, finite edge-heavy and special data. The exact
-222source kernel families/expressions are in [api-matrix.csv](api-matrix.csv).
+222 source kernel families/expressions are in [api-matrix.csv](api-matrix.csv).
 [coverage.csv](results/coverage.csv) records accepted cells/rounds per run.
 Every accepted cell has at least 30 rounds; incomplete first passes are archived.
 
@@ -17,7 +17,7 @@ Every accepted cell has at least 30 rounds; incomplete first passes are archived
 
 Scalar: std and correctly rounded Zenmath at baseline, plus whole scalar loops
 inside explicit scalar/V3/V4x/NEON/WASM128 contexts. Other alternatives are
-libm0.2.16, fpmath0.2.0, micromath2.1.0, metallic0.3.1 where public APIs exist;
+libm 0.2.16, fpmath 0.2.0, micromath 2.1.0, metallic 0.3.1 where public APIs exist;
 Zenmath portable/unfused midp/lowp are additional approximation controls.
 
 Magetypes widths f32x4/x8/x16 cover lowp/midp/midp_precise and native primitives.
@@ -27,10 +27,10 @@ the existing PowBehavior policy, with a different exponent per lane. No
 splat/pow/extract scalar-exponent adapter is timed as a packed general kernel.
 
 Correct Magemath proof and once-buffer runtime-dispatch controls use public
-slice APIs. Their existing common path processes4f32 inputs with4f64
+slice APIs. Their existing common path processes 4 f32 inputs with 4 f64
 intermediates per chunk. The `/x8` label identifies the public Magemath family,
-not a claim that the correct slice loop's internal chunk is8. Approximate
-f32x8 bodies operate on the actual8-lane vector. Both controls include the
+not a claim that the correct slice loop's internal chunk is 8. Approximate
+f32x8 bodies operate on the actual 8-lane vector. Both controls include the
 same input-to-in-place-buffer copy required by that slice API; other output
 kernels directly write the provided output slice. This is a measured API-shape
 cost and is disclosed, not hidden as a pure register-kernel comparison.
@@ -49,7 +49,7 @@ cost and is disclosed, not hidden as a pure register-kernel comparison.
   compiler minimum for algebraic operators does not create these APIs.
 
 A runtime failure is separate from an unavailable API: Metallic's WASM
-powf/special cell traps. Its other23operation/dataset checks succeeded;
+powf/special cell traps. Its other 23 operation/dataset checks succeeded;
 [ACCURACY.md](ACCURACY.md) and the trap manifest identify the exact hole.
 
 ## Tiers, compilation and admission
@@ -64,8 +64,8 @@ requirements assert expected native tiers; WASM inventories are checked for
 both scalar and wasm128. Unsupported tiers never become timed omissions
 presented as completion.
 
-Intel timings run CPU0 in enforced performance-core cpuset0–7; Ryzen runs CPU0;
-Neoverse runs CPU0 on a quiet homogeneous host. zenbench admission owns benchmark
+Intel timings run CPU 0 in enforced performance-core cpuset 0–7; Ryzen runs CPU 0;
+Neoverse runs CPU 0 on a quiet homogeneous host. zenbench admission owns benchmark
 isolation. Builds use explicit memory/thread budgets, not a global exclusive
 heavy-job lock. Every heavy job runs through run-heavy with full retained logs.
 

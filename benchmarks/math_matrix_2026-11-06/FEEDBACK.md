@@ -4,8 +4,8 @@ Only f32 exp, ln, log2 and sqrt are measured here. All operations' throughput
 and available widths are covered separately. Integer-rounding fixed points
 and general power were not added as purported instruction-latency measurements.
 
-Each scalar case performs 1024 dependent evaluations from initial0.5, storing
-all results. Each x8 case performs128 dependent vector evaluations, i.e. eight
+Each scalar case performs 1024 dependent evaluations from initial 0.5, storing
+all results. Each x8 case performs 128 dependent vector evaluations, i.e. eight
 independent lane chains, also storing 1,024 results. Values quickly converge to
 fixed points. Mapping is part of the measured loop:
 

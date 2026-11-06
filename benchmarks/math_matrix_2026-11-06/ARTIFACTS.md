@@ -38,10 +38,10 @@ and checksums are pinned in the committed Cargo.lock (SHA256
 
 ## Validation evidence
 
-- `accuracy.csv`:4568 independent MPFR file results; each1024records.
-- `wasm49/`: the identical retained module under official Wasmtime49.0.5,
-  including1046same-corpus output files and independent MPFR results.
-  `reference/equality.csv` confirms every file is byte-identical to40.0.1.
+- `accuracy.csv`:4568 independent MPFR file results; each 1024 records.
+- `wasm49/`: the identical retained module under official Wasmtime 49.0.5,
+  including 1046 same-corpus output files and independent MPFR results.
+  `reference/equality.csv` confirms every file is byte-identical to 40.0.1.
   CLI source: https://github.com/bytecodealliance/wasmtime/releases/tag/v49.0.5
   CLI SHA256 `04c48a2507d614209dfbaa45397e842a5c79f64fe75e5bd4d3b95cdf667fec5d`;
   validator module `2693722331f2f828746fbd84875eeb1d2e54f8109766e4c7484d0cb12c1b3c5c`.
@@ -54,11 +54,11 @@ and checksums are pinned in the committed Cargo.lock (SHA256
   reductions `5fc5ae004caf8f2d1f0d0c8bc0bdec5898b5d9f41c5386a7ac393363d007ce66`.
   Later guide prose differs, but its two Rust fences are byte-identical; combined
   fence hash `e60d3c5524602422b8dbabfc451f614c91a9e1d79647f8ec34cd1d3a15f0063a`.
-- `r7900x/algebraic-evidence/`: actual1.89.0 compile failure and1.98.1 success,
+- `r7900x/algebraic-evidence/`: actual 1.89.0 compile failure and 1.98.1 success,
   retained optimized per-operator IR with the four precise algebraic flags.
 - `windows/windows-exact-probe.log`: fresh existing executable probe,
   command `timeout 15s /mnt/c/Windows/System32/cmd.exe /c ver`, internal
-  UtilAcceptVsock accept4 timeout110 and rc1. No Windows execution claimed.
+  UtilAcceptVsock accept4 timeout 110 and rc 1. No Windows execution claimed.
 - `workspace-safety/`: backup and every-file hash verification around the
   shared-store jj stale-workspace recovery; no WIP was lost.
 
@@ -68,12 +68,12 @@ Each value below is copied from the full run-heavy summary, not estimated.
 
 | Accepted run/log | rc / wall | Peak RSS | Min available | Peak load |
 |---|---|---|---|---|
-| Intel matrix+algebraic `i265/logs/matrix-i265-timing.log` |0 /192s |0.04GiB |22565MiB |1.74 |
-| Ryzen matrix+algebraic `r7900x/logs/matrix-timing-final.log` |0 /328s |0.11GiB |18143MiB |2.06 |
-| Neoverse matrix+algebraic `arm/logs/matrix-timing-final.log` |0 /194s |0.03GiB |14875MiB |1.02 |
-| WASM matrix+algebraic `wasm/logs/matrix-wasm-timing.log` |0 /466s |0.43GiB |47565MiB |1.82 |
-| Final all-feature native/scoped WASM lint `wasm/logs/matrix-final-lint.log` |0 /51s |1.23GiB |46324MiB |2.43 |
-| Four health checks+three doc configurations `tested-docs/matrix-health-docs.log` |0 /26s |0.57GiB |17708MiB |0.60 |
+| Intel matrix+algebraic `i265/logs/matrix-i265-timing.log` | 0 / 192 s | 0.04 GiB |22565 MiB | 1.74 |
+| Ryzen matrix+algebraic `r7900x/logs/matrix-timing-final.log` | 0 / 328 s | 0.11 GiB |18143 MiB |2.06 |
+| Neoverse matrix+algebraic `arm/logs/matrix-timing-final.log` | 0 / 194 s | 0.03 GiB |14875 MiB | 1.02 |
+| WASM matrix+algebraic `wasm/logs/matrix-wasm-timing.log` | 0 / 466 s | 0.43 GiB |47565 MiB | 1.82 |
+| Final all-feature native/scoped WASM lint `wasm/logs/matrix-final-lint.log` | 0 / 51 s | 1.23 GiB |46324 MiB |2.43 |
+| Four health checks+three doc configurations `tested-docs/matrix-health-docs.log` | 0 / 26 s | 0.57 GiB |17708 MiB | 0.60 |
 
 Additional full logs retain build failures/fixes, empty first-pass cells,
 initial stale zenbench reservation diagnosis, feedback runs, ARM builds,
@@ -86,3 +86,14 @@ The initial NAS rsync attempted group metadata updates rejected by the share.
 The repeat uses `rsync -a --no-owner --no-group`; file contents are verified
 independently with SHA256 rather than treating ownership metadata errors as
 successful transfer. No benchmark data was discarded.
+
+## Cloud build-cache cleanup
+
+After archiving and SHA256-checking the ARM validator, timing, algebraic and
+feedback binaries on the NAS, both Cargo output directories created on
+`zen-arm-xl` were removed: `~/tmp/math-matrix-sol/target-codegen` and
+`~/tmp/math-matrix-sol/benchmarks/math_matrix_2026-11-06/target`.
+No Cargo or rustc process was active. A final search found no target directory
+in that task copy. No target directory was created on the ARM timing host;
+its runtime binaries remain preserved. Logs: `arm/cleanup/owned-targets.log`
+and `arm/cleanup/timing-host-targets.log`.
