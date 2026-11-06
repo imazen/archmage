@@ -65,3 +65,12 @@ pub mod special;
 pub mod exact;
 
 mod core_math;
+
+// Same-workspace implementation bridge used by magemath to share precedence.
+#[doc(hidden)]
+#[path = "pow_policy.rs"]
+pub mod __pow_policy;
+pub use __pow_policy::{
+    PowBehavior, PowConsistency, PowInfinity, PowNaN, PowOutput, PowPrecision, PowRange, PowSign,
+    SubnormalInputs, SubnormalOutputs,
+};

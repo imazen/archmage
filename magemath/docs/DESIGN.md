@@ -294,10 +294,11 @@ interfaces and scalar accurate fallbacks. The
 cross-target correctness, assembly and measured layout choices. This is not a
 claim that every input distribution benefits from SIMD.
 
-## Proposed power policy
+## Compile-time power policy
 
-The owner's proposed `PowBehavior` packed const-generic policy is recorded in
-[POW_BEHAVIOR.md](POW_BEHAVIOR.md). It separates result semantics, accuracy,
-bit consistency and range hints, with typed presets and compile-time validation.
-This is a proposal; existing public signatures and numerical contracts remain
-unchanged pending implementation review.
+The implemented draft `PowBehavior` API is documented in
+[POW_BEHAVIOR.md](POW_BEHAVIOR.md). Typed presets separate result semantics,
+precision, fixed rounding sequences and explicit range preconditions. Const
+validation rejects unsupported combinations; optional debug assertions check
+original inputs. Scalar, packed array and once-per-buffer slice operations share
+the contract. Existing signatures and output-bit contracts remain unchanged.

@@ -63,3 +63,14 @@ pub mod unfused;
 #[doc = include_str!("../README.md")]
 #[cfg(doctest)]
 struct ReadmeDoctests;
+
+mod pow_policy;
+pub use zenmath::{
+    PowBehavior, PowConsistency, PowInfinity, PowNaN, PowOutput, PowPrecision, PowRange, PowSign,
+    SubnormalInputs, SubnormalOutputs,
+};
+
+/// Keeps the exact draft power-guide fence compiling and executing.
+#[doc=include_str!("../docs/POW_BEHAVIOR.md")]
+#[cfg(doctest)]
+struct PowBehaviorDoctests;

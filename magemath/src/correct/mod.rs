@@ -83,15 +83,23 @@ pub(crate) fn exp<T: F64x4Backend>(t: T, x: [f32; 4]) -> [f32; 4] {
 #[inline(always)]
 pub(crate) fn pow<T: F64x4Backend>(t: T, x: [f32; 4], y: [f32; 4]) -> [f32; 4] {
     use powf_tables::*;
+    // f32 integers above 2^24 are even. Inspect exponent/fraction bits so
+    // negative nonintegers keep the complete scalar domain/special path.
+    let parity = if x.iter().any(|v| v.is_sign_negative()) {
+        y.map(integer_parity)
+    } else {
+        [(true, false); 4]
+    };
     let valid: [bool; 4] = core::array::from_fn(|i| {
-        x[i] > 0.0
+        x[i].abs() > 0.0
             && x[i].is_finite()
-            && x[i] != 1.0
+            && x[i].abs() != 1.0
             && y[i].is_finite()
             && y[i] != 0.0
             && y[i] != 1.0
+            && (!x[i].is_sign_negative() || parity[i].0)
     });
-    let xx: [f64; 4] = core::array::from_fn(|i| if valid[i] { x[i] as f64 } else { 1.0 });
+    let xx: [f64; 4] = core::array::from_fn(|i| if valid[i] { x[i].abs() as f64 } else { 1.0 });
     let yy = v(
         t,
         core::array::from_fn(|i| if valid[i] { y[i] as f64 } else { 0.0 }),
@@ -145,7 +153,9 @@ pub(crate) fn pow<T: F64x4Backend>(t: T, x: [f32; 4], y: [f32; 4]) -> [f32; 4] {
     let rr = (s + (s * h) * (c0 + h2 * (c2 + h2 * c4))).to_array();
     core::array::from_fn(|i| {
         if in_range[i] && (rr[i].to_bits().wrapping_add(468) & 0xfffffff) > 936 {
-            rr[i] as f32
+            let magnitude = (rr[i] as f32).to_bits();
+            let sign = (x[i].to_bits() & 0x80000000) & (0u32.wrapping_sub(u32::from(parity[i].1)));
+            f32::from_bits(magnitude | sign)
         } else {
             zenmath::scalar::powf(x[i], y[i])
         }
@@ -180,4 +190,20 @@ fn rescue<const OP: u8>(x: [f32; 4], y: [f32; 4], mut out: [f32; 4], needs: [boo
         }
     }
     out
+}
+
+// (integer, odd integer), including signed zero; infinity and NaN are neither.
+#[inline(always)]
+fn integer_parity(y: f32) -> (bool, bool) {
+    let bits = y.to_bits() & 0x7fffffff;
+    let exponent = (bits >> 23) as i32 - 127;
+    if exponent >= 24 {
+        return (bits < 0x7f800000, false);
+    }
+    if exponent < 0 {
+        return (bits == 0, false);
+    }
+    let shift = (23 - exponent) as u32;
+    let integer = bits & ((1u32 << shift) - 1) == 0;
+    (integer, integer && ((bits >> shift) & 1) != 0)
 }

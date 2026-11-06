@@ -51,3 +51,17 @@ pub fn pow_f32x8(a: [f32; 8], b: [f32; 8]) -> [f32; 8] {
     );
     core::array::from_fn(|i| if i < 4 { lo[i] } else { hi[i - 4] })
 }
+
+/// Power with a shared [`zenmath::PowBehavior`] const policy, packed per lane.
+/// Default retains the existing packed CORE path. Transformed correctly rounded
+/// policies use the same packed kernel; approximation policies use packed
+/// log2×per-lane exponent→exp2 and complete scalar rescue where contracted.
+/// CPU tier and power policy are independent.
+/// ```compile_fail
+/// let _=magemath::portable::array::pow_f32x8_with::<{1u64<<63}>([2.0;8],[3.0;8]);
+/// ```
+#[archmage::attune(_*, _*_t, dispatch(inline(hint)), +v4x(cfg(avx512)))]
+pub fn pow_f32x8_with<const P: u64>(a: [f32; 8], b: [f32; 8]) -> [f32; 8] {
+    let token = Token::from_context();
+    crate::pow_policy::array::<_, P>(token, a, b)
+}
