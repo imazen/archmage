@@ -19,7 +19,7 @@ packets = [dict(baseline=rows[op, baseline], candidate=rows[op, variant],
 result = subprocess.run([str(analyzer)], input=json.dumps(packets), text=True,
                         capture_output=True, check=True)
 analyses = json.loads(result.stdout)
-writer = csv.writer(sys.stdout)
+writer = csv.writer(sys.stdout, lineterminator="\n")
 writer.writerow(['op', 'variant', 'ns_per_element', 'pct_vs_baseline',
                  'ci_lower_ns', 'ci_upper_ns', 'significant'])
 for (op, variant), analysis in zip(keys, analyses):
