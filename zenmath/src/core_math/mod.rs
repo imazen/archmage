@@ -56,3 +56,5 @@ mod log_accurate;
 pub use log::log;
 mod log10;
 pub use log10::log10;
+mod atan;
+pub use atan::atan;
