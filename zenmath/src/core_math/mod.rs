@@ -67,3 +67,6 @@ pub use cos::cos;
 mod atan2;
 mod atan2_tint;
 pub use atan2::atan2;
+
+mod tan;
+pub use tan::tan;

@@ -12,13 +12,13 @@ emulate errno, exception flags, dynamic rounding modes, or NaN payloads.
 
 ## Coverage and remaining work
 
-Missing: consumer-used f64 pow and tan. Production call sites still need a precision-aware
+Missing: consumer-used f64 pow. Production call sites still need a precision-aware
 inventory that excludes tests and examples. Compatibility extraction remains
 separate; the existing zenmetrics-math ports have not moved.
 
 Present in `scalar`: f32 exp2f, expf, log2f, logf, log10f, powf, cbrtf, sinf,
 cosf, tanf, atanf, atan2f, tanhf, log1pf and expm1f. `sincosf` composes the
-individual functions. Binary64 cbrt, exp2, exp, log, log2, log10, atan, log1p, sin, cos and atan2 are ported. Explicit f64 FMA uses
+individual functions. Binary64 cbrt, exp2, exp, log, log2, log10, atan, log1p, sin, cos, atan2 and tan are ported. Explicit f64 FMA uses
 safe software arithmetic unless the std configuration guarantees hardware.
 Ordinary multiplication followed by addition keeps two roundings.
 
@@ -73,3 +73,9 @@ records on baseline x86-64. Atan2 also passed the samples and full upstream
 corpus in debug, and the complete crate passes all-target/all-feature clippy.
 Its 192-bit accurate path retains the upstream fail-closed check for unresolved
 rounding. These new functions still require the cross-platform reruns.
+
+Binary64 tangent passed 200,000 MPFR samples and all 1,098,260 upstream hard
+cases in debug and release on baseline x86-64. Its retained 128-bit
+significand converts with integer nearest-even rounding. The release validation
+plus all ordinary tests and clippy passed (`validation16c.log`, peak RSS
+0.19 GiB, exit zero). Cross-target validation is still required.

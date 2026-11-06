@@ -8,6 +8,6 @@ cargo build -p zenmath --examples --release
 for f in exp2f expf log2f logf log10f cbrtf powf sinf cosf tanf atanf atan2f tanhf log1pf expm1f; do
     "${CARGO_TARGET_DIR:-target}/release/examples/core_math_check" "$f" "$records/$f.bin"
 done
-for f in cbrt exp2 exp log2 log log10 atan log1p sin cos atan2; do
+for f in cbrt exp2 exp log2 log log10 atan log1p sin cos atan2 tan; do
     "${CARGO_TARGET_DIR:-target}/release/examples/core_math_check64" "$f" "$records/$f.bin"
 done
