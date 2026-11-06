@@ -143,3 +143,11 @@ packed eight-lane arithmetic, but without those flags. This verifies that the
 array representation can carry algebraic permissions through vectorization;
 it does not guarantee the same lowering for every kernel or compiler.
 The reproducible probes live in `benchmarks/math_matrix_2026-11-06/`.
+
+The corresponding x86 V3 assembly contracts the lane-map polynomial into three
+`vfmadd213ps` instructions per eight values. Its hot loop loads inputs and stores
+outputs directly, with no temporary array on the stack and no calls. The function
+still has a small stack frame for the input-length assertions and cold panic
+paths. The algebraic dot loop uses four independent YMM FMA accumulators and
+reduces them afterward. This is observed lowering, not an ABI or optimizer
+promise.
