@@ -19,7 +19,7 @@ fn main() {
     }
     let mut matched = std::collections::BTreeSet::new();
     let enabled = |name: &str| filters.is_empty() || filters.iter().any(|f| f == name);
-    zenbench::run(|s| {
+    let result = zenbench::run(|s| {
         s.cpu_policy(zenbench::platform::CpuPolicy::Performance);
         for op in OPS32.iter().copied() {
             for mode in [
@@ -114,13 +114,12 @@ fn main() {
                 });
             }
         }
-    })
-    .save(output)
-    .unwrap();
+    });
     for name in &filters {
         assert!(
             matched.contains(name),
             "requested group not measured: {name}"
         );
     }
+    result.save(output).unwrap();
 }
