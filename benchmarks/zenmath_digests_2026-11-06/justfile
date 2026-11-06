@@ -32,3 +32,6 @@ check-v3:
 
 build-v3:
     cargo +1.99.0 build --no-default-features --release
+
+pairs-fixture:
+    PYTHONDONTWRITEBYTECODE=1 python3 extract_pairs.py

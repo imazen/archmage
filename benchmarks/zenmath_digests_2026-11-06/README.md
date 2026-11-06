@@ -116,3 +116,15 @@ binaries do not change behavior when runtime RUSTFLAGS changes; compilation
 fingerprints establish effective build flags. Interrupted chunks remain partial
 and are preserved. Driver-only validation is separate from the frozen exhaustive
 matrix and does not establish a new numerical source matrix.
+
+## Independent power-pair accuracy fixtures
+
+The separate, later harness tests retain the existing208 MPFR power-pair cases
+from `zenmath/tests/core_math.rs`, including their exact expected result bits.
+`just pairs-fixture` extracts that data without changing its production source;
+the copied fixture records the source-file SHA-256 and CORE-MATH revision.
+The proof kernels are checked against those independent expectations, with NaNs
+compared under the documented numerical policy. This bounded pair corpus is
+separate from the full-domain fixed-exponent sweeps and is not an exhaustive
+power-pair claim. Its validation/source identity is distinct from frozen v1
+exhaustive results.
