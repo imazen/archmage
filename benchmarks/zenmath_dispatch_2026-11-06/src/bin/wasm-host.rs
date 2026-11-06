@@ -3,6 +3,14 @@ use std::{hint::black_box, time::Duration};
 use zenbench::{prelude::*, wasm::WasmBench};
 fn main() {
     let args: Vec<_> = std::env::args().collect();
+    assert_eq!((args.len() - 4) % 2, 0, "--study-group needs a name");
+    let requested: std::collections::BTreeSet<String> = args[4..]
+        .chunks_exact(2)
+        .map(|p| {
+            assert_eq!(p[0], "--study-group");
+            p[1].clone()
+        })
+        .collect();
     let w = WasmBench::from_file(&args[1]).unwrap();
     let catalog = std::fs::read_to_string(&args[2]).unwrap();
     let export = w
@@ -29,6 +37,14 @@ fn main() {
         }
     }
     assert_eq!(groups.len(), 37, "incomplete validated WASM catalog");
+    if !requested.is_empty() {
+        for cases in groups.values() {
+            assert!(
+                cases.iter().any(|(_, name)| name == "ordinary/baseline"),
+                "targeted catalog omits actual ordinary facade"
+            );
+        }
+    }
     let result = zenbench::run(|s| {
         s.cpu_policy(zenbench::platform::CpuPolicy::Performance);
         for ((group, feedback, ty, op), cases) in groups {
@@ -51,7 +67,11 @@ fn main() {
                 } else {
                     format!("stream{n}")
                 };
-                s.group(format!("{op}/{ty}/{mode}"), |g| {
+                let group_name = format!("{op}/{ty}/{mode}");
+                if !requested.is_empty() && !requested.contains(&group_name) {
+                    continue;
+                }
+                s.group(group_name, |g| {
                     g.throughput(Throughput::Elements((steps * repeats) as u64));
                     g.config()
                         .warmup_time(Duration::from_millis(10))
@@ -78,7 +98,28 @@ fn main() {
             }
         }
     });
-    assert_eq!(result.comparisons.len(), 94, "incomplete WASM timing matrix");
-    result.save(&args[3])
-    .unwrap();
+    if requested.is_empty() {
+        assert_eq!(
+            result.comparisons.len(),
+            94,
+            "incomplete WASM timing matrix"
+        );
+    } else {
+        for g in &result.comparisons {
+            assert!(
+                g.benchmarks.iter().any(|b| b.name == "ordinary/baseline"),
+                "targeted result omits actual ordinary facade"
+            );
+        }
+        let measured = result
+            .comparisons
+            .iter()
+            .map(|g| g.group_name.clone())
+            .collect();
+        assert_eq!(
+            requested, measured,
+            "requested WASM groups differ from measured groups"
+        );
+    }
+    result.save(&args[3]).unwrap();
 }

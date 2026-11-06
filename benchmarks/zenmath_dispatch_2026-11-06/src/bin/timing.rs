@@ -9,7 +9,10 @@ fn main() {
     let mut filters = Vec::new();
     let mut i = 2;
     while i < args.len() {
-        assert_eq!(args[i], "--study-group", "expected explicit --study-group filter");
+        assert_eq!(
+            args[i], "--study-group",
+            "expected explicit --study-group filter"
+        );
         filters.push(
             args.get(i + 1)
                 .expect("--study-group needs a full group name")
@@ -126,10 +129,16 @@ fn main() {
         .iter()
         .map(|g| g.group_name.clone())
         .collect();
-    assert_eq!(measured, matched, "registered groups differ from measured groups");
+    assert_eq!(
+        measured, matched,
+        "registered groups differ from measured groups"
+    );
     if !filters.is_empty() {
         let requested = filters.iter().cloned().collect();
-        assert_eq!(measured, requested, "requested groups differ from measured groups");
+        assert_eq!(
+            measured, requested,
+            "requested groups differ from measured groups"
+        );
     }
     result.save(output).unwrap();
 }

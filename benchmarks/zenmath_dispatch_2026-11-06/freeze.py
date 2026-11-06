@@ -15,6 +15,10 @@ for folder in [
     "magetypes/src",
     "zenmath/src",
     "magemath/src",
+    "zenmath/tests",
+    "magemath/tests",
+    "benchmarks/zenmath_dispatch_2026-11-06/compile-consumer/src",
+    "benchmarks/zenmath_dispatch_2026-11-06/analysis/src",
     "benchmarks/zenmath_dispatch_2026-11-06/src",
 ]:
     files.extend(p for p in (root / folder).rglob("*") if p.is_file())
@@ -25,11 +29,16 @@ for folder in [
     "zenmath",
     "magemath",
     "benchmarks/zenmath_dispatch_2026-11-06",
+    "benchmarks/zenmath_dispatch_2026-11-06/compile-consumer",
+    "benchmarks/zenmath_dispatch_2026-11-06/analysis",
 ]:
     for n in ["Cargo.toml", "Cargo.lock"]:
         p = root / folder / n
         if p.exists():
             files.append(p)
+study = root / "benchmarks/zenmath_dispatch_2026-11-06"
+for pattern in ["*.py", "*.sh", "justfile"]:
+    files.extend(study.glob(pattern))
 files.append(root / "token-registry.toml")
 files = sorted(set(files))
 manifest = "".join(

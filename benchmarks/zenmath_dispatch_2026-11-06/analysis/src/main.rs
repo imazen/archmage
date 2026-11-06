@@ -75,6 +75,13 @@ fn main() {
         if names.contains(&"ordinary/baseline") {
             pairs.push(("branch/baseline", "ordinary/baseline"));
         }
+        if names.contains(&"packed4/v3") {
+            for candidate in ["packed4/v4x", "packed8/v4x"] {
+                if names.contains(&candidate) {
+                    pairs.push(("packed4/v3", candidate));
+                }
+            }
+        }
         for name in &names {
             if name.starts_with("packed8/") {
                 if let Some(&p) = names.iter().find(|n| n.starts_with("packed4/v4x")) {

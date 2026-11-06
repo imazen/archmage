@@ -154,7 +154,10 @@ for ty, suf, ops in [("f32", "32", OPS), ("f64", "64", OPS[:7])]:
                 ("std", stdexpr),
                 ("branch", f"{base}_branch(x,y,z)"),
                 ("cached", f"{base}_cached(x,y,z)"),
-                ("ordinary", ref if op == "trunc" else f"zenmath::scalar::{api}({actual_args})"),
+                (
+                    "ordinary",
+                    ref if op == "trunc" else f"zenmath::scalar::{api}({actual_args})",
+                ),
             ]:
                 source += [
                     f"#[inline(never)]\npub fn {prefix}_{form}({sig}){{\n{body(expression, feedback)}}}\n"
