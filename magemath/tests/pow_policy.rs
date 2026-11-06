@@ -132,3 +132,30 @@ fn precondition_violations_follow_named_formula_without_debug_flag() {
         assert!(got.to_bits() == want.to_bits() || got.is_nan() && want.is_nan());
     }
 }
+
+#[archmage::attune(_v3, _v3_t)]
+fn matching_context(a: [f32; 8], b: [f32; 8]) -> [f32; 8] {
+    const P: u64 = B::CORRECT.sign(PowSign::SignedMagnitude).to_u64();
+    magemath::portable::array::pow_f32x8_with_v3::<P>(a, b)
+}
+#[test]
+fn explicit_proof_and_matching_context() {
+    #[cfg(target_arch = "x86_64")]
+    {
+        use archmage::SimdToken;
+        if let Some(token) = archmage::X64V3Token::summon() {
+            const P: u64 = B::CORRECT.sign(PowSign::SignedMagnitude).to_u64();
+            let a = [-4.0; 8];
+            let b = [0.5; 8];
+            assert_eq!(
+                magemath::portable::array::pow_f32x8_with_v3_t::<P>(token, a, b),
+                [-2.0; 8]
+            );
+            assert_eq!(matching_context_v3_t(token, a, b), [-2.0; 8]);
+            let mut x = [-4.0; 11];
+            let y = [0.5; 11];
+            magemath::portable::slice::pow_f32_with_v3_t::<P>(token, &mut x, &y);
+            assert_eq!(x, [-2.0; 11]);
+        }
+    }
+}
