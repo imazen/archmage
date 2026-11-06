@@ -1,0 +1,10 @@
+# Run on an eligible host through run-heavy. Dedicated targets avoid stale exports.
+build:
+    cargo build --release --bins
+lint:
+    cargo fmt --check
+    cargo clippy --all-targets -- -D warnings
+results op records out:
+    target/release/results {{op}} {{records}} {{out}}
+bench out:
+    target/release/timing {{out}}
