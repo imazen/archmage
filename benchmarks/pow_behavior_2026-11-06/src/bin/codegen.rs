@@ -33,6 +33,12 @@ fn signed(a: [f32; 8], b: [f32; 8]) -> [f32; 8] {
     >(a, b)
 }
 fn main() {
+    std::hint::black_box([
+        legacy as fn([f32; 8], [f32; 8]) -> [f32; 8],
+        default_policy,
+        precondition,
+        asserted_precondition,
+    ]);
     let a = std::hint::black_box([0.5; 8]);
     let b = std::hint::black_box([2.4; 8]);
     assert_eq!(
