@@ -13,7 +13,7 @@ HERE=Path(__file__).resolve().parent
 p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('--build',type=Path,required=True)
 p.add_argument('--out',type=Path,required=True)
-p.add_argument('--isa',choices=['arm','x86','wasm'],required=True)
+p.add_argument('--isa',choices=['arm','x86','x86-v3','wasm'],required=True)
 p.add_argument('--group',choices=['top','primitives','pow-families'],default='top')
 p.add_argument('--threads',type=int,default=4)
 p.add_argument('--count',type=int,default=2**32)
@@ -21,14 +21,14 @@ a=p.parse_args()
 if not 1<=a.threads<=4 or (a.isa=='wasm' and a.threads!=1): p.error('invalid thread budget')
 if a.group=='top':
     ops=['exp','ln','log2','pow:4019999a']
-    backends={'arm':['neon','reference','packed-scalar','scalar-neon'], 'x86':['v3','v4x8','v4x','scalar-v3','scalar-v4x'], 'wasm':['wasm128','scalar-wasm128']}[a.isa]
+    backends={'arm':['neon','reference','packed-scalar','scalar-neon'], 'x86':['v3','v4x8','v4x','scalar-v3','scalar-v4x'], 'x86-v3':['v3','scalar-v3'], 'wasm':['wasm128','scalar-wasm128']}[a.isa]
     cells=[(op,backend) for backend in backends for op in ops]
 elif a.group=='primitives':
     ops=['sqrt','floor','ceil','trunc','round','roundeven']
-    if a.isa=='x86': cells=[(op,'v1' if op=='sqrt' else 'v2') for op in ops]
+    if a.isa in ['x86','x86-v3']: cells=[(op,'v1' if op=='sqrt' else 'v2') for op in ops]
     else: cells=[(op,backend) for backend in (['neon','reference'] if a.isa=='arm' else ['wasm128']) for op in ops]
 else:
-    cells=[(op,backend) for backend in ({'arm':['neon','reference'],'x86':['v3','v4x8'],'wasm':['wasm128']}[a.isa]) for op in ['pow:3f000000','pow:40000000','pow:bf800000']]
+    cells=[(op,backend) for backend in ({'arm':['neon','reference'],'x86':['v3','v4x8'],'x86-v3':['v3'],'wasm':['wasm128']}[a.isa]) for op in ['pow:3f000000','pow:40000000','pow:bf800000']]
 a.out.mkdir(parents=True,exist_ok=True)
 plan=dict(isa=a.isa,group=a.group,threads=a.threads,count=a.count,cells=cells,build=str(a.build))
 planpath=a.out/'plan.json'
