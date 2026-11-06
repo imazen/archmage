@@ -151,3 +151,48 @@ still has a small stack frame for the input-length assertions and cold panic
 paths. The algebraic dot loop uses four independent YMM FMA accumulators and
 reduces them afterward. This is observed lowering, not an ABI or optimizer
 promise.
+
+## Current performance: Intel Core Ultra 7 265K
+
+These are means in **ns/value**, from 60 interleaved rounds per group over 1024
+ordinary inputs. Lower is better. The binary targets baseline x86-64; the packed
+column enters a V3 feature context once per buffer. Inputs and outputs are
+black-boxed, and allocation is outside the measurement. This is throughput,
+not single-call latency. No `target-cpu=native` was used.
+
+| Operation | Rust std loop | Zenmath correct scalar loop | Packed V3 |
+|---|---:|---:|---:|
+| f32 exp | 1.218 | 1.704 | 0.849 |
+| f32 ln | 1.413 | 1.878 | 1.077 |
+| f32 log2 | 1.231 | 1.691 | 1.174 |
+| f32 powf, varying exponents | 2.682 | 19.404 | 7.005 |
+| f32 log10 | 1.987 | 2.147 | unavailable |
+| f32 sqrt | 0.166 | 2.670 | 0.086 |
+| f32 floor | 0.892 | 0.946 | 0.035 |
+| f32 ceil | 0.850 | 0.674 | 0.052 |
+| f32 round, ties away | 0.738 | 1.135 | unavailable |
+| f64 log2 | 2.402 | 8.146 | unavailable |
+
+Packed exp/ln/log2/pow are Magemath's correct f32x8 proof entry points;
+sqrt/floor/ceil are Magetypes f32x8 methods. There is no accurate packed log10
+or f64 log2 API behind the unavailable cells. Scalar sqrt uses the software
+Goldschmidt algorithm even in a std-enabled Zenmath build. Rust's scalar-looking
+loop may itself auto-vectorize, as the primitive results illustrate.
+
+The approximate Magetypes V3 f32x8 midp methods measured 0.248 for exp, 0.227
+for ln, 0.195 for log2, and 0.218 for log10. Those are different numerical
+contracts. Fixed-exponent `pow_midp(2.4)` measured 0.555; it must not be compared
+as though it accepted a different exponent in every lane. The packed Midp
+PowBehavior path with varying exponents measured 3.597.
+
+The same run's correctly rounded packed once-buffer dispatchers measured 0.862
+for exp, 1.088 for ln, 1.187 for log2 and 7.865 for varying-exponent power.
+These separate measurements include dispatch; subtracting means is not a
+standalone dispatch-overhead benchmark.
+
+The source, paired intervals, input bands and full platform matrix belong to
+`benchmarks/math_matrix_2026-11-06/`. This table uses run
+`18e58575f2368e39-141766-0bad75c208d51a68`, binary SHA-256
+`8c0450faa9bb53343dacf6ad3b8fa75d4dd34aa51c78ee71ded7a30b7ebfd6ce`.
+Resource wrapper: 192 seconds, peak RSS 0.04 GiB. Near ties need the paired
+intervals; these means alone do not establish a universal ranking.
