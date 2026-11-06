@@ -52,8 +52,13 @@ int main(int argc, char **argv) {
  puts("kind,op,variant,round,value");
  for(int op=0;op<8;op++) {
   unsigned mismatches[count]; memset(mismatches,0,sizeof mismatches);
-  for(int i=0;i<100000;i++) {
+  for(int i=0;i<200000;i++) {
    float a=from_bits(random_bits()),b=from_bits(random_bits());
+   if(i>=100000) {
+    float t=(random_bits()>>8)*0x1p-24f;
+    a=(op==1||op==3||op==7)?0.001f+16*t:-8+16*t;
+    b=-8+16*((random_bits()>>8)*0x1p-24f);
+   }
    if(i<12) { const uint32_t edge[]={0,0x80000000,1,0x80000001,0x007fffff,0x00800000,0x7f7fffff,0xff7fffff,0x7f800000,0xff800000,0x7fc00000,0x3f800000}; a=from_bits(edge[i]); b=2.4f; }
    if(op==0 && i>=12 && i<15) {const uint32_t hard[]={0x3b429d37,0xbcf3a937,0xb8d3d026}; a=from_bits(hard[i-12]);}
    mpfr_set_flt(x,a,MPFR_RNDN); mpfr_set_flt(y,b,MPFR_RNDN);
