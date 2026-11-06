@@ -259,3 +259,18 @@ algebraic vector API could make those permissions easier to express, but it
 would need its own reviewed semantics and codegen checks. Do not apply these
 permissions to the correct-rounding kernels: their proofs depend on the stated
 sequence of rounded operations, including error-recovery steps.
+
+Disassembly of the actual thin-LTO timing executables confirms both the V3
+polynomial FMAs and the ARM lane-array reduction's extra shuffles. The ARM
+array loop uses four vector multiplies, ten lane rearrangements and eight
+two-lane additions per sixteen values; its main loop does not contract to FMA.
+The array-minus-fused timing difference has a paired 95% interval of
+0.237–0.281 ns/value in this run. The matrix's `CODEGEN.md` identifies the exact
+symbols, binary hashes and extracted loops.
+
+Changed association can also produce large result differences. In the retained
+V3 cancellation example, repeating `[1e20_f32, 1, -1e20_f32, 1]` 256 times gives
+1 with the ordered scalar loop, 512 with the automatic algebraic loop, and 0
+with the explicit vector reductions. The real sum of the represented inputs
+is 512. This example demonstrates differing evaluation orders; it establishes
+no accuracy guarantee for algebraic arithmetic.
