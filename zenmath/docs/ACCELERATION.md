@@ -95,3 +95,22 @@ policies and approximation rescue. `scalar::reference::powf_with` retains the
 non-dispatch core; the shared policy bridge remains reference-only. Approximation
 polynomial arithmetic is unchanged by this routing choice. Magemath approximation
 rescue already calls ordinary scalar powf and does not gain another dispatcher.
+
+### Generic power policy contexts
+
+With `runtime-dispatch`, ordinary `scalar::powf_with` enters one whole native
+context for MIDP/LOWP arithmetic on x86 V3 and NEON. The shared polynomial bodies
+retain their coefficients, nesting and explicit fused/separate choice. The
+reference API remains non-dispatch. LOWP with separate arithmetic and an explicit
+positive-normal precondition retains the inline reference path: the native
+boundary gave no clear benefit in the measured gamma controls. Correct rescue
+inside a selected context calls its private correct core without another probe.
+
+The native study retained a linked executable (SHA-256
+`53872df6bef2b696287456d098d60a8643b692e693cfb93d6fc44ac93c5273c5`)
+whose eight policy bodies contain no calls. Fused MIDP has ten scalar FMAs and
+one rounding instruction; fused LOWP has seven FMAs and one rounding instruction.
+Separate variants have no FMAs. This establishes elimination of per-step helper
+calls for that executable; callers still pay a whole-policy feature boundary.
+See `benchmarks/zenmath_pow_opt_2026-11-06` for the exact extraction and paired
+measurements. NEON performance is not established by this x86 observation.

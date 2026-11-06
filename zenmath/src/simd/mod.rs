@@ -42,3 +42,9 @@ pub mod slice;
 
 /// Scalar hardware primitives and whole-algorithm feature contexts.
 pub mod scalar;
+
+#[cfg(all(
+    feature = "runtime-dispatch",
+    any(target_arch = "x86_64", target_arch = "aarch64")
+))]
+pub(crate) mod policy;

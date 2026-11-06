@@ -339,6 +339,25 @@ pub(crate) fn evaluate_with_core<const P: u64>(
     y: f32,
     core: impl Fn(f32, f32) -> f32,
 ) -> f32 {
+    evaluate::<P>(
+        x,
+        y,
+        core,
+        polynomial_exponent::<P>,
+        exponential::<P>,
+        formula::<P>,
+    )
+}
+
+#[inline(always)]
+pub(crate) fn evaluate<const P: u64>(
+    x: f32,
+    y: f32,
+    core: impl Fn(f32, f32) -> f32,
+    exponent: impl Fn(f32, f32) -> f32,
+    exponential: impl Fn(f32) -> f32,
+    formula: impl Fn(f32, f32) -> f32,
+) -> f32 {
     const {
         validate(P);
     }
@@ -349,11 +368,11 @@ pub(crate) fn evaluate_with_core<const P: u64>(
     let out = if P & 3 == 0 {
         core(p.x, p.y)
     } else if (P >> 9) & 3 == 2 {
-        formula::<P>(p.x, p.y)
+        formula(p.x, p.y)
     } else if working_input(p) {
-        let z = polynomial_exponent::<P>(p.x.abs(), p.y);
+        let z = exponent(p.x.abs(), p.y);
         if (-126.0..=127.5).contains(&z) {
-            mathematical_sign(p, exponential::<P>(z))
+            mathematical_sign(p, exponential(z))
         } else {
             core(p.x, p.y)
         }

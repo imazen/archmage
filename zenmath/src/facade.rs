@@ -103,5 +103,12 @@ pub use selected::{ceilf, roundevenf};
 #[cfg(feature = "runtime-dispatch")]
 #[inline(always)]
 pub fn powf_with<const P: u64>(x: f32, y: f32) -> f32 {
-    crate::__pow_policy::evaluate_with_core::<P>(x, y, powf)
+    #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
+    {
+        crate::simd::policy::select::<P>(x, y)
+    }
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+    {
+        crate::__pow_policy::evaluate_with_core::<P>(x, y, powf)
+    }
 }

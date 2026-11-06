@@ -734,6 +734,14 @@ pub fn log2_lowp_f32(x: f32) -> f32 {
 
 #[inline]
 fn log2_lowp_with<S: Step>(x: f32) -> f32 {
+    log2_lowp_evaluate(x, S::madd)
+}
+
+// One shared polynomial body; proof contexts supply the same fused or separate
+// operations and exact rounding primitive without per-step runtime selection.
+#[inline(always)]
+#[allow(clippy::manual_clamp)]
+pub(crate) fn log2_lowp_evaluate(x: f32, madd: impl Fn(f32, f32, f32) -> f32) -> f32 {
     const OFFSET: i32 = 0x3f2a_aaab;
     const P0: f32 = -1.850_383_3e-6;
     const P1: f32 = 1.428_716_1;
@@ -746,8 +754,8 @@ fn log2_lowp_with<S: Step>(x: f32) -> f32 {
     let exp_shifted = x_bits.wrapping_sub(OFFSET) >> 23;
     let mantissa = f32::from_bits(x_bits.wrapping_sub(exp_shifted << 23) as u32);
     let m = mantissa - 1.0;
-    let yp = S::madd(S::madd(P2, m, P1), m, P0);
-    let yq = S::madd(S::madd(Q2, m, Q1), m, Q0);
+    let yp = madd(madd(P2, m, P1), m, P0);
+    let yq = madd(madd(Q2, m, Q1), m, Q0);
     log_specials(x, yp / yq + exp_shifted as f32)
 }
 
@@ -762,6 +770,18 @@ pub fn exp2_lowp_f32(x: f32) -> f32 {
 #[inline]
 #[allow(clippy::manual_clamp)] // Written as the vector kernel's .max().min().
 fn exp2_lowp_with<S: Step>(x: f32) -> f32 {
+    exp2_lowp_evaluate(x, S::madd, floorf)
+}
+
+// One shared polynomial body; proof contexts supply the same fused or separate
+// operations and exact rounding primitive without per-step runtime selection.
+#[inline(always)]
+#[allow(clippy::manual_clamp)]
+pub(crate) fn exp2_lowp_evaluate(
+    x: f32,
+    madd: impl Fn(f32, f32, f32) -> f32,
+    round: impl Fn(f32) -> f32,
+) -> f32 {
     const C1: f32 = core::f32::consts::LN_2;
     const C2: f32 = 0.240_226_5;
     const C3: f32 = 0.055_504_11;
@@ -770,9 +790,9 @@ fn exp2_lowp_with<S: Step>(x: f32) -> f32 {
         return f32::NAN;
     }
     let clamped = x.max(-126.0).min(127.99);
-    let xi = floorf(clamped);
+    let xi = round(clamped);
     let xf = clamped - xi;
-    let poly = S::madd(S::madd(S::madd(C3, xf, C2), xf, C1), xf, 1.0);
+    let poly = madd(madd(madd(C3, xf, C2), xf, C1), xf, 1.0);
     poly * f32::from_bits(((xi as i32).wrapping_add(127) << 23) as u32)
 }
 
@@ -851,6 +871,14 @@ pub fn log2_midp_f32(x: f32) -> f32 {
 
 #[inline]
 fn log2_midp_with<S: Step>(x: f32) -> f32 {
+    log2_midp_evaluate(x, S::madd)
+}
+
+// One shared polynomial body; proof contexts supply the same fused or separate
+// operations and exact rounding primitive without per-step runtime selection.
+#[inline(always)]
+#[allow(clippy::manual_clamp)]
+pub(crate) fn log2_midp_evaluate(x: f32, madd: impl Fn(f32, f32, f32) -> f32) -> f32 {
     const SQRT2_OVER_2: u32 = 0x3f35_04f3;
     const ONE_BITS: u32 = 0x3f80_0000;
     const MANTISSA_MASK: i32 = 0x007f_ffff;
@@ -865,8 +893,8 @@ fn log2_midp_with<S: Step>(x: f32) -> f32 {
     let a = f32::from_bits(((adjusted & MANTISSA_MASK) as u32).wrapping_add(SQRT2_OVER_2));
     let y = (a - 1.0) / (a + 1.0);
     let y2 = y * y;
-    let poly = S::madd(S::madd(S::madd(C3, y2, C2), y2, C1), y2, C0);
-    log_specials(x, S::madd(poly, y, n))
+    let poly = madd(madd(madd(C3, y2, C2), y2, C1), y2, C0);
+    log_specials(x, madd(poly, y, n))
 }
 
 /// Mid-precision `2^x`: at most 1.9 ULP for x below 127.5, up to 134.1 ULP in
@@ -880,6 +908,18 @@ pub fn exp2_midp_f32(x: f32) -> f32 {
 #[inline]
 #[allow(clippy::manual_clamp)] // Written as the vector kernel's .max().min().
 fn exp2_midp_with<S: Step>(x: f32) -> f32 {
+    exp2_midp_evaluate(x, S::madd, roundevenf)
+}
+
+// One shared polynomial body; proof contexts supply the same fused or separate
+// operations and exact rounding primitive without per-step runtime selection.
+#[inline(always)]
+#[allow(clippy::manual_clamp)]
+pub(crate) fn exp2_midp_evaluate(
+    x: f32,
+    madd: impl Fn(f32, f32, f32) -> f32,
+    round: impl Fn(f32) -> f32,
+) -> f32 {
     const C1: f32 = core::f32::consts::LN_2;
     const C2: f32 = 0.240_226_46;
     const C3: f32 = 0.055_504_545;
@@ -896,15 +936,11 @@ fn exp2_midp_with<S: Step>(x: f32) -> f32 {
     if x >= 128.0 {
         return f32::INFINITY;
     }
-    let xi = roundevenf(x).min(127.0);
+    let xi = round(x).min(127.0);
     let xf = x - xi;
-    let poly = S::madd(
-        S::madd(
-            S::madd(
-                S::madd(S::madd(S::madd(C6, xf, C5), xf, C4), xf, C3),
-                xf,
-                C2,
-            ),
+    let poly = madd(
+        madd(
+            madd(madd(madd(madd(C6, xf, C5), xf, C4), xf, C3), xf, C2),
             xf,
             C1,
         ),
