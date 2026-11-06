@@ -12,7 +12,7 @@ portable math without SIMD types.
 | `fmaf` | fused multiply-add, correctly rounded; software except native `std` builds |
 | `log2_midp_f32`, `exp2_midp_f32`, `ln_midp_f32`, `exp_midp_f32`, `log10_midp_f32`, `pow_midp_f32`, `cbrt_midp_f32`, `cbrt_midp_precise_f32`, `sigmoid_midp_f32`, `silu_midp_f32` | scalar forms of `magemath::portable`, same bits on every tier |
 | `log2_lowp_f32`, `exp2_lowp_f32`, `ln_lowp_f32`, `exp_lowp_f32`, `log10_lowp_f32`, `pow_lowp_f32`, `cbrt_lowp_f32` | same, at lower precision |
-| `log2_lowp_f64`, `exp2_lowp_f64`, `ln_lowp_f64`, `exp_lowp_f64`, `log10_lowp_f64`, `pow_lowp_f64` | about 1% relative error; no vector form yet |
+| `log2_lowp_f64`, `exp2_lowp_f64`, `ln_lowp_f64`, `exp_lowp_f64`, `log10_lowp_f64`, `pow_lowp_f64` | clamped approximations, not full-range libm replacements; no vector form yet |
 
 These are approximations with published bounds
 ([`docs/transcendentals.md`](../docs/transcendentals.md)), not libm replacements for
@@ -33,3 +33,7 @@ shared; finite result bits can differ.
 | `std` | Native `fmaf` calls `f32::mul_add`; WASM retains software FMA. The results are identical; the feature changes only how they are computed |
 | `special` | placeholder for erf, gamma and friends; empty today |
 | `exact` | placeholder for bit-exact fdlibm and glibc ports; empty today |
+
+The [existing implementation inventory](docs/INVENTORY.md) records the
+zenmetrics-math ports, scalar special functions, versioned compatibility targets
+and proposed extraction order.

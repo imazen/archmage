@@ -253,3 +253,11 @@ and zenjpegai's Cephes-derived `exp`.
   took 4.5-8.5x the time of the scalar-tier vector kernel on aarch64, where `std`'s
   `mul_add` is one instruction. A scalar-only consumer on FMA hardware should try the
   `std` feature; that path's bits are verified, its speed is not measured.
+
+## Existing implementation inventory
+
+The [migration review](../../zenmath/docs/INVENTORY.md) reconciles the existing
+zenmetrics-math fdlibm/glibc ports and statistics functions with these draft
+crates. Reuse that work; `exact` and `special` are placeholders, not replacements
+that have already been implemented. Preserve versioned bit contracts separately
+from the approximation rounding decision above.

@@ -15,7 +15,8 @@
 //!   `POSITIVE_NORMAL` coverage gates compile out bookkeeping.
 //! - **glibc** (`zenmetrics-math/src/glibc.rs`): Szabolcs Nagy's
 //!   `e_powf.c` (glibc ≥2.28 `__powf`), different algorithm, different
-//!   bits.
+//!   bits. Its exceptional lanes still call the host libm, so the current
+//!   consumer implementation is not yet a complete portable port.
 //!
 //! Scalar exact ports follow the same rule: the algorithm is pinned to a
 //! named libm convention, never "whatever the platform libm does".
@@ -23,3 +24,7 @@
 //! Vector exact ports need the fdlibm lane-transcription pattern
 //! generalized beyond pow/exp/log/log2, plus f64 vector coverage
 //! (currently only `f64x4` pow/log/log2 exist).
+
+//! The migration inventory and version-selection review are maintained in
+//! `zenmath/docs/INVENTORY.md`. Compatibility means a pinned implementation,
+//! not correct rounding and not equality to every release of that lineage.

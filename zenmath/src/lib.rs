@@ -18,7 +18,8 @@
 //!   approximations with separate multiply/add, independent of software FMA
 //!   and the `std` feature. Its final inclusion is pending a design decision.
 //! - **Low-precision f64 transcendentals** ([`scalar`]): `log2`/`exp2`/`ln`/
-//!   `exp`/`log10`/`pow` `_lowp_f64`, about 1% relative error. No vector form yet.
+//!   `exp`/`log10`/`pow` `_lowp_f64`, with clamped domains rather than a
+//!   full-range libm contract. No vector form yet.
 //! - **Planned, empty today**: special functions (`special` feature) and bit-exact
 //!   libm-convention ports (`exact` feature). Both stay behind features so callers
 //!   who don't need them don't compile them.
