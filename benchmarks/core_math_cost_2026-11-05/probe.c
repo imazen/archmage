@@ -74,6 +74,7 @@ int main(int argc, char **argv) {
  float input[N],output[N]; volatile float sink=0;
  for(int op=0;op<8;op++) {
   for(int i=0;i<N;i++) { float t=(random_bits()>>8)*0x1p-24f; input[i]=(op==1||op==3||op==7)?0.001f+16*t:-8+16*t; }
+  if(op==0) { FILE *file=fopen("exp2-input.bin","wb"); if(!file || fwrite(input,sizeof input,1,file)!=1) return 2; fclose(file); }
   for(int round=-2;round<ROUNDS;round++) for(int k=0;k<count;k++) {
    int v=(k+round+2)%count; double start=now();
    for(int j=0;j<REPEAT;j++) { for(int i=0;i<N;i++) output[i]=op==7?((binary)fn[v][op])(input[i],2.4f):((unary)fn[v][op])(input[i]); sink=output[j%N]; }
