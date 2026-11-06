@@ -607,3 +607,10 @@ magemath-bench-wasm:
 # Rebuild the compile-time table in magemath/docs/DESIGN.md. Not on dev.
 magemath-compile-time scratch:
     benchmarks/magemath_portable_cost_2026-11-05/compile_time.sh . {{scratch}}
+
+# Independent FMA regressions, including the WASI std implementation boundary.
+test-zenmath-fma:
+    cargo test -p zenmath --test scalar fmaf_independent -- --nocapture
+    cargo test -p zenmath --features std --test scalar fmaf_independent -- --nocapture
+    cargo test -p zenmath --target wasm32-wasip1 --test scalar fmaf_independent -- --nocapture
+    cargo test -p zenmath --features std --target wasm32-wasip1 --test scalar fmaf_independent -- --nocapture

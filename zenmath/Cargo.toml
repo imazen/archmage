@@ -17,7 +17,7 @@ include = [
 [features]
 # `no_std` scalar core with no dependencies.
 default = []
-# `fmaf` calls `f32::mul_add` instead of the software path. The bits are identical.
+# Native `fmaf` calls `f32::mul_add` instead of the software path. The bits are identical.
 std = []
 # Scalar special functions (erf/erfc/gamma/beta/Student-t, ...). Empty today; only
 # zenmetrics-style consumers will need them.

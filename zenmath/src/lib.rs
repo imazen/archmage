@@ -8,8 +8,8 @@
 //! ## What is here
 //!
 //! - **Correctly rounded primitives** ([`scalar`]): `sqrt`/`floor`/`ceil`/
-//!   `round`/`roundeven` for f32 and f64 and `fmaf` for f32, bit-identical to
-//!   `std` on finite inputs (NaN payloads may differ, documented per function).
+//!   `round`/`roundeven` for f32 and f64 and `fmaf` for f32. FMA is checked against independent exact-bit cases; platform
+//!   `std` is not its oracle. NaN payloads may differ.
 //! - **f32 transcendentals** ([`scalar`]): `log2`/`exp2`/`ln`/`exp`/`log10`/`pow`/
 //!   `cbrt` at `_lowp` and `_midp`, plus `cbrt_midp_precise`, `sigmoid_midp` and
 //!   `silu_midp`. Each is the scalar form of the same-named kernel in
@@ -45,7 +45,7 @@
 #![no_std]
 #![forbid(unsafe_code)]
 
-// Only `fmaf` uses std, and only for `f32::mul_add`, which gives the same bits.
+// Only native `fmaf` uses std, and only for `f32::mul_add`, which gives the same bits.
 #[cfg(feature = "std")]
 extern crate std;
 

@@ -20,8 +20,8 @@
 //! (NaN results match in NaN-ness only). `tests/parity.rs` and `tests/golden.rs`
 //! in `magemath` enforce that.
 //!
-//! `fmaf` is correctly rounded on every target: `std` builds use the
-//! hardware/libm `mul_add`; `no_std` builds use a software path (exact f64
+//! `fmaf` is correctly rounded on every target: `std` builds outside WASM use
+//! hardware/libm `mul_add`; WASM and `no_std` builds use a software path (exact f64
 //! product, TwoSum error recovery, round-to-odd narrowing — ported from
 //! `magetypes::soft_fma`, MIT). `fma` (f64) lands with the f64 midp
 //! mirrors that need it.
@@ -528,25 +528,26 @@ pub fn pow_lowp_f64(x: f64, n: f64) -> f64 {
 // Fused multiply-add — correctly rounded everywhere
 // ============================================================================
 //
-// Ported from `magetypes::soft_fma` (MIT). `std` builds call `mul_add`
-// (hardware FMA or libm — correctly rounded); `no_std` builds run the
+// Ported from `magetypes::soft_fma` (MIT). Native `std` builds call `mul_add`.
+// WASM uses software even with std: Rust 1.99.1 WASI mul_add fails the
+// independent subnormal regression in tests/scalar.rs. Other no_std builds use the
 // software path: the f32 product is exact in f64, the f64 sum's error is
 // recovered by TwoSum, and round-to-odd narrowing avoids double rounding.
 // Both paths produce the unique correctly-rounded result, so bits match.
 
 /// Low 29 bits of an f64 sum's mantissa — the bits an f32 rounding drops.
-#[cfg(not(feature = "std"))]
+#[cfg(any(not(feature = "std"), target_arch = "wasm32"))]
 const F32_DROPPED: u32 = (1 << 29) - 1;
 /// A sum sitting exactly on an f32 halfway point (bit 28 of the dropped field).
-#[cfg(not(feature = "std"))]
+#[cfg(any(not(feature = "std"), target_arch = "wasm32"))]
 const F32_HALFWAY: u32 = 1 << 28;
 /// High word of the smallest normal f32's exponent field, biased.
-#[cfg(not(feature = "std"))]
+#[cfg(any(not(feature = "std"), target_arch = "wasm32"))]
 const F32_MIN_NORMAL_HIGH: u32 = ((1023 - 126) << 20) as u32;
 
 /// Knuth's TwoSum: `s + e == a + b` exactly, `s` rounded to nearest.
 #[inline(always)]
-#[cfg(not(feature = "std"))]
+#[cfg(any(not(feature = "std"), target_arch = "wasm32"))]
 fn two_sum(a: f64, b: f64) -> (f64, f64) {
     let s = a + b;
     let virtual_b = s - a;
@@ -556,7 +557,7 @@ fn two_sum(a: f64, b: f64) -> (f64, f64) {
 
 /// Rounds `sum + error` (an exact TwoSum pair) to odd, branch-free.
 #[inline(always)]
-#[cfg(not(feature = "std"))]
+#[cfg(any(not(feature = "std"), target_arch = "wasm32"))]
 fn round_to_odd(sum: f64, error: f64, apply: bool) -> f64 {
     let inexact = apply & (error != 0.0);
     let overshot = inexact & ((error > 0.0) != (sum > 0.0));
@@ -569,7 +570,7 @@ fn round_to_odd(sum: f64, error: f64, apply: bool) -> f64 {
 /// including at underflow.
 #[cold]
 #[inline(never)]
-#[cfg(not(feature = "std"))]
+#[cfg(any(not(feature = "std"), target_arch = "wasm32"))]
 fn fmaf_exact(a: f32, b: f32, c: f32) -> f32 {
     let product = f64::from(a) * f64::from(b);
     let (sum, error) = two_sum(product, f64::from(c));
@@ -578,7 +579,7 @@ fn fmaf_exact(a: f32, b: f32, c: f32) -> f32 {
 
 /// Software f32 fused multiply-add, correctly rounded, no CPU detection.
 #[inline(always)]
-#[cfg(not(feature = "std"))]
+#[cfg(any(not(feature = "std"), target_arch = "wasm32"))]
 fn fmaf_soft(a: f32, b: f32, c: f32) -> f32 {
     let sum = f64::from(a) * f64::from(b) + f64::from(c);
     let bits = sum.to_bits();
@@ -597,17 +598,17 @@ fn fmaf_soft(a: f32, b: f32, c: f32) -> f32 {
 
 /// Fused multiply-add `a * b + c`, correctly rounded (single rounding).
 ///
-/// `std` builds use `f32::mul_add` (hardware FMA or libm); `no_std` builds
-/// use a software path. Both produce the unique correctly-rounded result, so
+/// Native `std` builds use `f32::mul_add` (hardware FMA or libm); WASM
+/// and `no_std` builds use a software path. Both produce the unique correctly-rounded result, so
 /// bits are identical — only speed differs. NaN payloads/signs are
 /// unspecified; assumes round-to-nearest and gradual underflow.
 #[inline(always)]
 pub fn fmaf(a: f32, b: f32, c: f32) -> f32 {
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "std", not(target_arch = "wasm32")))]
     {
         a.mul_add(b, c)
     }
-    #[cfg(not(feature = "std"))]
+    #[cfg(any(not(feature = "std"), target_arch = "wasm32"))]
     {
         fmaf_soft(a, b, c)
     }
