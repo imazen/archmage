@@ -45,3 +45,5 @@ mod atan2f;
 pub use atan2f::atan2f;
 mod cbrt;
 pub use cbrt::cbrt;
+mod exp2;
+pub use exp2::exp2;
