@@ -467,7 +467,9 @@ pub fn log2_lowp_f64(x: f64) -> f64 {
 
 /// Low-precision base-2 exponential (2^x) for f64.
 ///
-/// Degree-4 polynomial on the fractional part.
+/// Degree-4 polynomial on the fractional part. Inputs between the zero/inf
+/// rails are clamped to [-1022, 1022]; this is not a full-range exponential
+/// approximation (for example, 1023 returns 2^1022).
 #[inline(always)]
 pub fn exp2_lowp_f64(x: f64) -> f64 {
     if x.is_nan() {

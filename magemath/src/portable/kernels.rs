@@ -28,7 +28,8 @@
 //!
 //! - Every polynomial step is [`mul_add_fused`](f32x8::mul_add_fused), which
 //!   rounds once on every backend. On x86 and NEON it is the same instruction
-//!   as `mul_add_relaxed`. On the scalar tier and strict WASM it is software,
+//!   as `mul_add_relaxed`. Baseline x86 scalar and strict WASM use software;
+//!   scalar builds with compile-time FMA may use hardware,
 //!   and relaxed WASM uses the engine's madd once a cached probe shows it fuses.
 //! - NaN input gives NaN output, without depending on anything that differs by
 //!   ISA. `min`, `max` and `simd_ne` treat NaN differently per backend, so a NaN

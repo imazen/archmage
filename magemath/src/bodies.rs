@@ -5,7 +5,8 @@
 //! import path, not a type argument.
 //!
 //! Polynomials and operand order are magetypes' generated transcendentals. Two
-//! rules keep the results independent of the ISA, whichever `Step` runs:
+//! rules keep special-value handling independent of the ISA. Finite polynomial
+//! results still depend on the selected `Step`:
 //!
 //! - NaN input gives NaN output without depending on anything that differs by
 //!   ISA. `min`, `max` and `simd_ne` treat NaN differently per backend, so a NaN
@@ -41,7 +42,7 @@ impl Step for Unfused {
     }
 }
 
-/// Whatever the tier does fastest: one rounding on x86 v3/v4x and NEON, two on
+/// Backend rounding: one rounding on x86 v3/v4x and NEON, two on
 /// the scalar tier and strict WASM, the engine's choice on relaxed WASM.
 pub(crate) struct Relaxed;
 

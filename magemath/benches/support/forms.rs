@@ -4,7 +4,7 @@
 //!
 //! - `fused`, `fused_unchecked`: `magemath::portable`, one rounding per step.
 //! - `unfused`, `unfused_unchecked`: `magemath::unfused`, multiply then add.
-//! - `relaxed`, `relaxed_unchecked`: `magemath::relaxed`, the tier's fastest.
+//! - `relaxed`, `relaxed_unchecked`: `magemath::relaxed`, backend-dependent rounding.
 //! - `method`: the matching magetypes `f32x8` method.
 
 use archmage::prelude::*;
