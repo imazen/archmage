@@ -70,3 +70,9 @@ pub use atan2::atan2;
 
 mod tan;
 pub use tan::tan;
+mod pow;
+mod pow_d_tables;
+mod pow_int;
+mod pow_q_tables;
+mod pow_tables;
+pub use pow::pow;

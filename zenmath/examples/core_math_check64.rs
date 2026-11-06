@@ -8,6 +8,7 @@ fn main() {
         "exp" => |x, _| scalar::exp(x),
         "log" => |x, _| scalar::log(x),
         "log10" => |x, _| scalar::log10(x),
+        "pow" => scalar::pow,
         "atan2" => scalar::atan2,
         "tan" => |x, _| scalar::tan(x),
         "atan" => |x, _| scalar::atan(x),

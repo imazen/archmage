@@ -12,13 +12,14 @@ emulate errno, exception flags, dynamic rounding modes, or NaN payloads.
 
 ## Coverage and remaining work
 
-Missing: consumer-used f64 pow. Production call sites still need a precision-aware
+Missing after expanding the production consumer audit: f32 acos/hypot and
+f64 atanh/asinh/tanh. Production call sites still need a precision-aware
 inventory that excludes tests and examples. Compatibility extraction remains
 separate; the existing zenmetrics-math ports have not moved.
 
 Present in `scalar`: f32 exp2f, expf, log2f, logf, log10f, powf, cbrtf, sinf,
 cosf, tanf, atanf, atan2f, tanhf, log1pf and expm1f. `sincosf` composes the
-individual functions. Binary64 cbrt, exp2, exp, log, log2, log10, atan, log1p, sin, cos, atan2 and tan are ported. Explicit f64 FMA uses
+individual functions. Binary64 cbrt, exp2, exp, log, log2, log10, atan, log1p, sin, cos, atan2, tan and pow are ported. Explicit f64 FMA uses
 safe software arithmetic unless the std configuration guarantees hardware.
 Ordinary multiplication followed by addition keeps two roundings.
 
@@ -79,3 +80,16 @@ cases in debug and release on baseline x86-64. Its retained 128-bit
 significand converts with integer nearest-even rounding. The release validation
 plus all ordinary tests and clippy passed (`validation16c.log`, peak RSS
 0.19 GiB, exit zero). Cross-target validation is still required.
+
+Binary64 pow passed 200,000 MPFR samples and all 1,003,179 upstream hard cases
+in debug and release on baseline x86-64. A direct test of its 256-bit stage
+also passed selected MPFR pairs; exact fractional powers are proved using
+integer roots and exponent divisibility. All tests and clippy passed
+(`validation17c.log`, peak RSS 0.21 GiB, exit zero).
+
+The broader production-source audit found additional callers: f32 acos in
+zenfilters `document/quad.rs::interior_angle`, f32 hypot in zenjxl-decoder
+`features/spline.rs::Point::abs`, f64 atanh in zenmetrics-stats `panel.rs::mrr_h`,
+f64 tanh in zenjpegai `encoder/lh.rs::cum_logit`, and f64 asinh in zensimx
+`metric/steerfix_packet.rs`. These are added to the required port set rather
+than treating the earlier metric-focused inventory as complete.
