@@ -47,10 +47,17 @@ pub(crate) fn log<T: F64x4Backend, const TWO: bool>(t: T, x: [f32; 4]) -> [f32; 
     let f = (el + z * c(t, b[0])) + (z * z) * (c(t, b[1]) + z * c(t, b[2]));
     let lo = f.to_array().map(|a| a as f32);
     let hi = (f + c(t, err)).to_array().map(|a| a as f32);
-    let needs: [bool; 4] = core::array::from_fn(|i| {
-        bits[i] != u[i] || m[i] == 0 || lo[i].to_bits() != hi[i].to_bits()
-    });
-    finish::<1>(x, [if TWO { 2.0 } else { 0.0 }; 4], lo, needs)
+    core::array::from_fn(|i| {
+        if bits[i] != u[i] || m[i] == 0 || lo[i].to_bits() != hi[i].to_bits() {
+            if TWO {
+                zenmath::scalar::log2f(x[i])
+            } else {
+                zenmath::scalar::logf(x[i])
+            }
+        } else {
+            lo[i]
+        }
+    })
 }
 
 #[inline(always)]
@@ -74,8 +81,13 @@ pub(crate) fn exp<T: F64x4Backend>(t: T, x: [f32; 4]) -> [f32; 4] {
     let r = ((c(t, B[0]) + h * c(t, B[1])) + (h * h) * (c(t, B[2]) + h * c(t, B[3]))) * s;
     let hi = r.to_array().map(|a| a as f32);
     let lo = (r - r * c(t, 1.45e-10)).to_array().map(|a| a as f32);
-    let needs = core::array::from_fn(|i| !valid[i] || hi[i].to_bits() != lo[i].to_bits());
-    finish::<0>(x, [0.0; 4], hi, needs)
+    core::array::from_fn(|i| {
+        if valid[i] && hi[i].to_bits() == lo[i].to_bits() {
+            hi[i]
+        } else {
+            zenmath::scalar::expf(x[i])
+        }
+    })
 }
 
 #[inline(always)]
@@ -141,39 +153,11 @@ pub(crate) fn pow<T: F64x4Backend>(t: T, x: [f32; 4], y: [f32; 4]) -> [f32; 4] {
     let c2 = c(t, FAST_CE[2]) + h * c(t, FAST_CE[3]);
     let c4 = c(t, FAST_CE[4]) + h * c(t, FAST_CE[5]);
     let rr = (s + (s * h) * (c0 + h2 * (c2 + h2 * c4))).to_array();
-    let needs = core::array::from_fn(|i| {
-        !in_range[i] || (rr[i].to_bits().wrapping_add(468) & 0xfffffff) <= 936
-    });
-    finish::<2>(x, y, rr.map(|a| a as f32), needs)
-}
-
-// Keep scalar calls off the common path, with one combined lane test.
-#[inline(always)]
-fn finish<const OP: u8>(x: [f32; 4], y: [f32; 4], out: [f32; 4], needs: [bool; 4]) -> [f32; 4] {
-    if needs.into_iter().any(|v| v) {
-        rescue::<OP>(x, y, out, needs)
-    } else {
-        out
-    }
-}
-#[cold]
-#[inline(never)]
-fn rescue<const OP: u8>(x: [f32; 4], y: [f32; 4], mut out: [f32; 4], needs: [bool; 4]) -> [f32; 4] {
-    for i in 0..4 {
-        if needs[i] {
-            out[i] = match OP {
-                0 => zenmath::scalar::expf(x[i]),
-                1 => {
-                    if y[i] == 2.0 {
-                        zenmath::scalar::log2f(x[i])
-                    } else {
-                        zenmath::scalar::logf(x[i])
-                    }
-                }
-                2 => zenmath::scalar::powf(x[i], y[i]),
-                _ => unreachable!(),
-            };
+    core::array::from_fn(|i| {
+        if in_range[i] && (rr[i].to_bits().wrapping_add(468) & 0xfffffff) > 936 {
+            rr[i] as f32
+        } else {
+            zenmath::scalar::powf(x[i], y[i])
         }
-    }
-    out
+    })
 }
