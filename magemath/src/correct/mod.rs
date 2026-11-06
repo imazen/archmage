@@ -47,10 +47,33 @@ pub(crate) fn log<T: F64x4Backend, const TWO: bool>(t: T, x: [f32; 4]) -> [f32; 
     let f = (el + z * c(t, b[0])) + (z * z) * (c(t, b[1]) + z * c(t, b[2]));
     let lo = f.to_array().map(|a| a as f32);
     let hi = (f + c(t, err)).to_array().map(|a| a as f32);
-    let needs: [bool; 4] = core::array::from_fn(|i| {
-        bits[i] != u[i] || m[i] == 0 || lo[i].to_bits() != hi[i].to_bits()
+    // Resolve IEEE rails without a scalar call. Only subnormals and ambiguous
+    // finite rounding intervals need the accurate implementation.
+    let handled = x.map(|a| a <= 0.0 || !a.is_finite());
+    let powers = core::array::from_fn::<_, 4, _>(|i| {
+        bits[i] == u[i] && m[i] == 0 && (TWO || bits[i] == 0x3f800000)
     });
-    finish::<1>(x, [if TWO { 2.0 } else { 0.0 }; 4], lo, needs)
+    let out = core::array::from_fn(|i| {
+        if x[i] == 0.0 {
+            f32::NEG_INFINITY
+        } else if x[i] < 0.0 || x[i].is_nan() {
+            f32::NAN
+        } else if x[i] == f32::INFINITY {
+            f32::INFINITY
+        } else if powers[i] {
+            if TWO {
+                ((u[i] >> 23) as i32 - 127) as f32
+            } else {
+                0.0
+            }
+        } else {
+            lo[i]
+        }
+    });
+    let needs = core::array::from_fn(|i| {
+        !handled[i] && !powers[i] && (bits[i] != u[i] || lo[i].to_bits() != hi[i].to_bits())
+    });
+    finish::<1>(x, [if TWO { 2.0 } else { 0.0 }; 4], out, needs)
 }
 
 #[inline(always)]
@@ -74,8 +97,11 @@ pub(crate) fn exp<T: F64x4Backend>(t: T, x: [f32; 4]) -> [f32; 4] {
     let r = ((c(t, B[0]) + h * c(t, B[1])) + (h * h) * (c(t, B[2]) + h * c(t, B[3]))) * s;
     let hi = r.to_array().map(|a| a as f32);
     let lo = (r - r * c(t, 1.45e-10)).to_array().map(|a| a as f32);
-    let needs = core::array::from_fn(|i| !valid[i] || hi[i].to_bits() != lo[i].to_bits());
-    finish::<0>(x, [0.0; 4], hi, needs)
+    let needs = core::array::from_fn(|i| {
+        !x[i].is_nan() && (!valid[i] || hi[i].to_bits() != lo[i].to_bits())
+    });
+    let out = core::array::from_fn(|i| if x[i].is_nan() { f32::NAN } else { hi[i] });
+    finish::<0>(x, [0.0; 4], out, needs)
 }
 
 #[inline(always)]
@@ -142,7 +168,9 @@ pub(crate) fn pow<T: F64x4Backend>(t: T, x: [f32; 4], y: [f32; 4]) -> [f32; 4] {
     let c4 = c(t, FAST_CE[4]) + h * c(t, FAST_CE[5]);
     let rr = (s + (s * h) * (c0 + h2 * (c2 + h2 * c4))).to_array();
     core::array::from_fn(|i| {
-        if in_range[i] && (rr[i].to_bits().wrapping_add(468) & 0xfffffff) > 936 {
+        if (x[i].is_nan() && y[i] != 0.0) || (y[i].is_nan() && x[i] != 1.0) {
+            f32::NAN
+        } else if in_range[i] && (rr[i].to_bits().wrapping_add(468) & 0xfffffff) > 936 {
             rr[i] as f32
         } else {
             zenmath::scalar::powf(x[i], y[i])
