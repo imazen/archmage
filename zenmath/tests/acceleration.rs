@@ -865,3 +865,88 @@ fn required_tier_inventory() {
         }
     }
 }
+
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[test]
+fn eight_binary64_lane_contract() {
+    if let Some(t) = X64V4xToken::summon() {
+        let mut state = 0x3457b397u32;
+        for _ in 0..8192 {
+            let x: [f32; 8] = core::array::from_fn(|_| {
+                state = state.wrapping_mul(1664525).wrapping_add(1013904223);
+                f32::from_bits(state)
+            });
+            let y: [f32; 8] = core::array::from_fn(|i| [-3., -1., 0., 0.5, 1., 2., 2.4, 17.][i]);
+            for (got, op, label) in [
+                (
+                    array::exp_f32x8_v4x_t(t, x),
+                    oracle::expf as fn(f32) -> f32,
+                    "wide exp",
+                ),
+                (array::ln_f32x8_v4x_t(t, x), oracle::logf, "wide ln"),
+                (array::log2_f32x8_v4x_t(t, x), oracle::log2f, "wide log2"),
+            ] {
+                for i in 0..8 {
+                    eq32(got[i], op(x[i]), label, x[i].to_bits());
+                }
+            }
+            let got = array::pow_f32x8_v4x_t(t, x, y);
+            for i in 0..8 {
+                eq32(got[i], oracle::powf(x[i], y[i]), "wide pow", x[i].to_bits());
+            }
+        }
+        for n in 0..=17 {
+            let x: Vec<_> = (0..n)
+                .map(|i| {
+                    f32::from_bits(
+                        [
+                            0, 0x80000000, 1, 0x7fffff, 0x3f800000, 0xbf800000, 0x40000000,
+                            0x7f800000, 0x7fc00001,
+                        ][i % 9],
+                    )
+                })
+                .collect();
+            let y: Vec<_> = (0..n).map(|i| [0., 2.4, -3., 0.5][i % 4]).collect();
+            type S = fn(X64V4xToken, &mut [f32]);
+            for (op, fun) in [
+                (
+                    oracle::expf as fn(f32) -> f32,
+                    slice::exp_f32_wide_v4x_t as S,
+                ),
+                (oracle::logf, slice::ln_f32_wide_v4x_t),
+                (oracle::log2f, slice::log2_f32_wide_v4x_t),
+            ] {
+                let mut a = x.clone();
+                fun(t, &mut a);
+                for i in 0..n {
+                    eq32(a[i], op(x[i]), "wide tail", x[i].to_bits());
+                }
+            }
+            let mut a = x.clone();
+            slice::pow_f32_wide_v4x_t(t, &mut a, &y);
+            for i in 0..n {
+                eq32(
+                    a[i],
+                    oracle::powf(x[i], y[i]),
+                    "wide power tail",
+                    x[i].to_bits(),
+                );
+            }
+        }
+        let mut x = [2., 3., 4.];
+        let saved = x;
+        assert!(
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| slice::pow_f32_wide_v4x_t(
+                t,
+                &mut x,
+                &[2.]
+            )))
+            .is_err()
+        );
+        assert_eq!(x, saved);
+    } else {
+        println!(
+            "UNAVAILABLE eight-binary64 AVX-512; required_tier_inventory enforces caller expectations"
+        );
+    }
+}

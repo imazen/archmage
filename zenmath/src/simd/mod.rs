@@ -1,6 +1,7 @@
 //! Accurate packed f32 math without Magetypes. Four f32 inputs are evaluated
 //! using four binary64 intermediates (256 bits on V3, two registers on NEON/WASM).
-//! The V4x proof currently reuses that same 256-bit kernel, not a 512-bit kernel.
+//! The four-input V4x proof reuses that same 256-bit kernel. Separate eight-input
+//! V4x proof entries use eight native AVX-512 binary64 lanes.
 //!
 //! Arrays and slices expose direct `_v3` feature-context bodies and `_v3_t`
 //! proof entries (and corresponding NEON/WASM/scalar forms). Internal kernels

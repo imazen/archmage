@@ -1,9 +1,9 @@
 //! Private four-lane binary64 arithmetic. No detection or Magetypes dependency.
 use core::ops::{Add, Mul, Sub};
-pub(super) trait Backend: Copy {
+pub(super) trait Backend<const N: usize = 4>: Copy {
     type Raw: Copy;
-    fn load(self, a: [f64; 4]) -> Self::Raw;
-    fn store(self, a: Self::Raw) -> [f64; 4];
+    fn load(self, a: [f64; N]) -> Self::Raw;
+    fn store(self, a: Self::Raw) -> [f64; N];
     fn add(self, a: Self::Raw, b: Self::Raw) -> Self::Raw;
     fn sub(self, a: Self::Raw, b: Self::Raw) -> Self::Raw;
     fn mul(self, a: Self::Raw, b: Self::Raw) -> Self::Raw;
@@ -11,13 +11,13 @@ pub(super) trait Backend: Copy {
     fn floor(self, a: Self::Raw) -> Self::Raw;
 }
 #[derive(Clone, Copy)]
-pub(super) struct V<T: Backend> {
+pub(super) struct V<T: Backend<N>, const N: usize = 4> {
     raw: T::Raw,
     token: T,
 }
-impl<T: Backend> V<T> {
+impl<T: Backend<N>, const N: usize> V<T, N> {
     #[inline(always)]
-    pub fn from_array_t(token: T, a: [f64; 4]) -> Self {
+    pub fn from_array_t(token: T, a: [f64; N]) -> Self {
         Self {
             raw: token.load(a),
             token,
@@ -25,10 +25,10 @@ impl<T: Backend> V<T> {
     }
     #[inline(always)]
     pub fn splat_t(token: T, x: f64) -> Self {
-        Self::from_array_t(token, [x; 4])
+        Self::from_array_t(token, [x; N])
     }
     #[inline(always)]
-    pub fn to_array(self) -> [f64; 4] {
+    pub fn to_array(self) -> [f64; N] {
         self.token.store(self.raw)
     }
     #[inline(always)]
@@ -48,7 +48,7 @@ impl<T: Backend> V<T> {
 }
 macro_rules! op {
     ($tr:ident, $method:ident) => {
-        impl<T: Backend> $tr for V<T> {
+        impl<T: Backend<N>, const N: usize> $tr for V<T, N> {
             type Output = Self;
             #[inline(always)]
             fn $method(self, b: Self) -> Self {
@@ -63,8 +63,8 @@ macro_rules! op {
 op!(Add, add);
 op!(Sub, sub);
 op!(Mul, mul);
-impl Backend for archmage::ScalarToken {
-    type Raw = [f64; 4];
+impl<const N: usize> Backend<N> for archmage::ScalarToken {
+    type Raw = [f64; N];
     #[inline(always)]
     fn load(self, a: Self::Raw) -> Self::Raw {
         a
@@ -340,5 +340,73 @@ impl Backend for archmage::X64V4xToken {
     #[inline(always)]
     fn floor(self, a: Self::Raw) -> Self::Raw {
         self.v3().floor(a)
+    }
+}
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+mod v4x_wide {
+    use super::Backend;
+    use archmage::X64V4xToken;
+    use archmage::intrinsics::x86_64::*;
+    type Raw = __m512d;
+    #[archmage::attune(wrap)]
+    fn load(_token: X64V4xToken, a: [f64; 8]) -> Raw {
+        _mm512_loadu_pd(&a)
+    }
+    #[archmage::attune(wrap)]
+    fn store(_token: X64V4xToken, a: Raw) -> [f64; 8] {
+        let mut out = [0.; 8];
+        _mm512_storeu_pd(&mut out, a);
+        out
+    }
+    #[archmage::attune(wrap)]
+    fn add(_token: X64V4xToken, a: Raw, b: Raw) -> Raw {
+        _mm512_add_pd(a, b)
+    }
+    #[archmage::attune(wrap)]
+    fn sub(_token: X64V4xToken, a: Raw, b: Raw) -> Raw {
+        _mm512_sub_pd(a, b)
+    }
+    #[archmage::attune(wrap)]
+    fn mul(_token: X64V4xToken, a: Raw, b: Raw) -> Raw {
+        _mm512_mul_pd(a, b)
+    }
+    #[archmage::attune(wrap)]
+    fn fma(_token: X64V4xToken, a: Raw, b: Raw, c: Raw) -> Raw {
+        _mm512_fmadd_pd(a, b, c)
+    }
+    #[archmage::attune(wrap)]
+    fn floor(_token: X64V4xToken, a: Raw) -> Raw {
+        _mm512_roundscale_pd::<{ _MM_FROUND_TO_NEG_INF | _MM_FROUND_NO_EXC }>(a)
+    }
+    impl Backend<8> for X64V4xToken {
+        type Raw = Raw;
+        #[inline(always)]
+        fn load(self, a: [f64; 8]) -> Raw {
+            load(self, a)
+        }
+        #[inline(always)]
+        fn store(self, a: Raw) -> [f64; 8] {
+            store(self, a)
+        }
+        #[inline(always)]
+        fn add(self, a: Raw, b: Raw) -> Raw {
+            add(self, a, b)
+        }
+        #[inline(always)]
+        fn sub(self, a: Raw, b: Raw) -> Raw {
+            sub(self, a, b)
+        }
+        #[inline(always)]
+        fn mul(self, a: Raw, b: Raw) -> Raw {
+            mul(self, a, b)
+        }
+        #[inline(always)]
+        fn fma(self, a: Raw, b: Raw, c: Raw) -> Raw {
+            fma(self, a, b, c)
+        }
+        #[inline(always)]
+        fn floor(self, a: Raw) -> Raw {
+            floor(self, a)
+        }
     }
 }

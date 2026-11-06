@@ -58,3 +58,13 @@ asserted by validation caller configuration. The separate compile consumer
 unifies `archmage/std` without runtime dispatch: optimized consumer floor/exp
 bodies contain no CPU selection, stronger-tier call or detector reference.
 Default/accelerated/runtime compile and cold build costs remain to be measured.
+
+## Wider proof candidate
+
+With `avx512`, `array::*_f32x8_v4x(_t)` and `slice::*_f32_wide_v4x(_t)`
+evaluate eight f32 inputs with eight binary64 intermediates in actual AVX-512
+registers. They reuse the same const-width formulas and tables, not two V3
+calls. The original four-input V4x entry still uses four binary64 lanes. No
+512-bit automatic selection policy has been chosen from timings yet. Exact
+mixed-bit samples and lengths 0 through 17 passed on native V4x, together with
+legacy Magemath core/policy regressions, clippy and Rust 1.89 checking.

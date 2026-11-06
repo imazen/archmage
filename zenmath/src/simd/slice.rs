@@ -69,12 +69,12 @@ pub fn ln_f32(data: &mut [f32]) {
     let (chunks, tail) = data.as_chunks_mut::<4>();
     for (i, chunk) in chunks.iter_mut().enumerate() {
         let _ = i;
-        *chunk = super::correct::log::<_, false>(token, *chunk);
+        *chunk = super::correct::log::<_, false, 4>(token, *chunk);
     }
     if !tail.is_empty() {
         let mut x = [1.; 4];
         x[..tail.len()].copy_from_slice(tail);
-        let out = super::correct::log::<_, false>(token, x);
+        let out = super::correct::log::<_, false, 4>(token, x);
         tail.copy_from_slice(&out[..tail.len()]);
     }
 }
@@ -119,12 +119,12 @@ pub fn log2_f32(data: &mut [f32]) {
     let (chunks, tail) = data.as_chunks_mut::<4>();
     for (i, chunk) in chunks.iter_mut().enumerate() {
         let _ = i;
-        *chunk = super::correct::log::<_, true>(token, *chunk);
+        *chunk = super::correct::log::<_, true, 4>(token, *chunk);
     }
     if !tail.is_empty() {
         let mut x = [1.; 4];
         x[..tail.len()].copy_from_slice(tail);
-        let out = super::correct::log::<_, true>(token, x);
+        let out = super::correct::log::<_, true, 4>(token, x);
         tail.copy_from_slice(&out[..tail.len()]);
     }
 }
@@ -207,4 +207,80 @@ pub fn pow_f32(data: &mut [f32], exponents: &[f32]) {
         return pow_f32_wasm128_t(token, data, exponents);
     }
     pow_f32_scalar_t(ScalarToken, data, exponents)
+}
+
+/// Whole buffer using eight native AVX-512 binary64 intermediates.
+#[archmage::attune(_v4x(cfg(avx512)), _v4x_t(cfg(avx512)))]
+pub fn exp_f32_wide(data: &mut [f32]) {
+    let token = Token::from_context();
+    let (chunks, tail) = data.as_chunks_mut::<8>();
+    for (i, chunk) in chunks.iter_mut().enumerate() {
+        let _ = i;
+        *chunk = super::correct::exp(token, *chunk);
+    }
+    if !tail.is_empty() {
+        let mut x = [1.; 8];
+        x[..tail.len()].copy_from_slice(tail);
+        let out = super::correct::exp(token, x);
+        tail.copy_from_slice(&out[..tail.len()]);
+    }
+}
+
+/// Whole buffer using eight native AVX-512 binary64 intermediates.
+#[archmage::attune(_v4x(cfg(avx512)), _v4x_t(cfg(avx512)))]
+pub fn ln_f32_wide(data: &mut [f32]) {
+    let token = Token::from_context();
+    let (chunks, tail) = data.as_chunks_mut::<8>();
+    for (i, chunk) in chunks.iter_mut().enumerate() {
+        let _ = i;
+        *chunk = super::correct::log::<_, false, 8>(token, *chunk);
+    }
+    if !tail.is_empty() {
+        let mut x = [1.; 8];
+        x[..tail.len()].copy_from_slice(tail);
+        let out = super::correct::log::<_, false, 8>(token, x);
+        tail.copy_from_slice(&out[..tail.len()]);
+    }
+}
+
+/// Whole buffer using eight native AVX-512 binary64 intermediates.
+#[archmage::attune(_v4x(cfg(avx512)), _v4x_t(cfg(avx512)))]
+pub fn log2_f32_wide(data: &mut [f32]) {
+    let token = Token::from_context();
+    let (chunks, tail) = data.as_chunks_mut::<8>();
+    for (i, chunk) in chunks.iter_mut().enumerate() {
+        let _ = i;
+        *chunk = super::correct::log::<_, true, 8>(token, *chunk);
+    }
+    if !tail.is_empty() {
+        let mut x = [1.; 8];
+        x[..tail.len()].copy_from_slice(tail);
+        let out = super::correct::log::<_, true, 8>(token, x);
+        tail.copy_from_slice(&out[..tail.len()]);
+    }
+}
+
+/// Whole buffer using eight native AVX-512 binary64 intermediates.
+#[archmage::attune(_v4x(cfg(avx512)), _v4x_t(cfg(avx512)))]
+pub fn pow_f32_wide(data: &mut [f32], exponents: &[f32]) {
+    let token = Token::from_context();
+    assert_eq!(
+        data.len(),
+        exponents.len(),
+        "power input lengths must match"
+    );
+    let (chunks, tail) = data.as_chunks_mut::<8>();
+    for (i, chunk) in chunks.iter_mut().enumerate() {
+        let y = core::array::from_fn(|j| exponents[i * 8 + j]);
+        *chunk = super::correct::pow(token, *chunk, y);
+    }
+    if !tail.is_empty() {
+        let mut x = [1.; 8];
+        x[..tail.len()].copy_from_slice(tail);
+        let mut y = [1.; 8];
+        let offset = chunks.len() * 8;
+        y[..tail.len()].copy_from_slice(&exponents[offset..]);
+        let out = super::correct::pow(token, x, y);
+        tail.copy_from_slice(&out[..tail.len()]);
+    }
 }

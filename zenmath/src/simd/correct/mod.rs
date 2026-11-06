@@ -10,16 +10,16 @@ mod logf_tables;
 mod powf_tables;
 
 #[inline(always)]
-fn v<T: Backend>(t: T, a: [f64; 4]) -> V<T> {
+fn v<T: Backend<N>, const N: usize>(t: T, a: [f64; N]) -> V<T, N> {
     V::from_array_t(t, a)
 }
 #[inline(always)]
-fn c<T: Backend>(t: T, a: f64) -> V<T> {
+fn c<T: Backend<N>, const N: usize>(t: T, a: f64) -> V<T, N> {
     V::splat_t(t, a)
 }
 
 #[inline(always)]
-pub(crate) fn log<T: Backend, const TWO: bool>(t: T, x: [f32; 4]) -> [f32; 4] {
+pub(crate) fn log<T: Backend<N>, const TWO: bool, const N: usize>(t: T, x: [f32; N]) -> [f32; N] {
     let bits = x.map(f32::to_bits);
     // Keep non-normal lanes harmless until the scalar rescue.
     let u = bits.map(|b| {
@@ -49,14 +49,14 @@ pub(crate) fn log<T: Backend, const TWO: bool>(t: T, x: [f32; 4]) -> [f32; 4] {
     let f = (el + z * c(t, b[0])) + (z * z) * (c(t, b[1]) + z * c(t, b[2]));
     let lo = f.to_array().map(|a| a as f32);
     let hi = (f + c(t, err)).to_array().map(|a| a as f32);
-    let needs: [bool; 4] = core::array::from_fn(|i| {
+    let needs: [bool; N] = core::array::from_fn(|i| {
         bits[i] != u[i] || m[i] == 0 || lo[i].to_bits() != hi[i].to_bits()
     });
-    finish::<1>(x, [if TWO { 2.0 } else { 0.0 }; 4], lo, needs)
+    finish::<1, N>(x, [if TWO { 2.0 } else { 0.0 }; N], lo, needs)
 }
 
 #[inline(always)]
-pub(crate) fn exp<T: Backend>(t: T, x: [f32; 4]) -> [f32; 4] {
+pub(crate) fn exp<T: Backend<N>, const N: usize>(t: T, x: [f32; N]) -> [f32; N] {
     use expf_tables::*;
     // The vector path covers the scalar fast-range predicate exactly.
     let valid = x.map(|a| (0x6f93813e..=0x8562e42e).contains(&a.to_bits().wrapping_shl(1)));
@@ -77,20 +77,20 @@ pub(crate) fn exp<T: Backend>(t: T, x: [f32; 4]) -> [f32; 4] {
     let hi = r.to_array().map(|a| a as f32);
     let lo = (r - r * c(t, 1.45e-10)).to_array().map(|a| a as f32);
     let needs = core::array::from_fn(|i| !valid[i] || hi[i].to_bits() != lo[i].to_bits());
-    finish::<0>(x, [0.0; 4], hi, needs)
+    finish::<0, N>(x, [0.0; N], hi, needs)
 }
 
 #[inline(always)]
-pub(crate) fn pow<T: Backend>(t: T, x: [f32; 4], y: [f32; 4]) -> [f32; 4] {
+pub(crate) fn pow<T: Backend<N>, const N: usize>(t: T, x: [f32; N], y: [f32; N]) -> [f32; N] {
     use powf_tables::*;
     // f32 integers above 2^24 are even. Inspect exponent/fraction bits so
     // negative nonintegers keep the complete scalar domain/special path.
     let parity = if x.iter().any(|v| v.is_sign_negative()) {
         y.map(integer_parity)
     } else {
-        [(true, false); 4]
+        [(true, false); N]
     };
-    let valid: [bool; 4] = core::array::from_fn(|i| {
+    let valid: [bool; N] = core::array::from_fn(|i| {
         x[i].abs() > 0.0
             && x[i].is_finite()
             && x[i].abs() != 1.0
@@ -99,7 +99,7 @@ pub(crate) fn pow<T: Backend>(t: T, x: [f32; 4], y: [f32; 4]) -> [f32; 4] {
             && y[i] != 1.0
             && (!x[i].is_sign_negative() || parity[i].0)
     });
-    let xx: [f64; 4] = core::array::from_fn(|i| if valid[i] { x[i].abs() as f64 } else { 1.0 });
+    let xx: [f64; N] = core::array::from_fn(|i| if valid[i] { x[i].abs() as f64 } else { 1.0 });
     let yy = v(
         t,
         core::array::from_fn(|i| if valid[i] { y[i] as f64 } else { 0.0 }),
@@ -126,7 +126,7 @@ pub(crate) fn pow<T: Backend>(t: T, x: [f32; 4], y: [f32; 4]) -> [f32; 4] {
     let zt = (e - v(t, j.map(|i| FAST_LIX[i][0]))) * yy;
     let z = l * yy + zt;
     let zz = z.to_array();
-    let in_range: [bool; 4] = core::array::from_fn(|i| {
+    let in_range: [bool; N] = core::array::from_fn(|i| {
         valid[i]
             && (-2400.0..=2048.0).contains(&zz[i])
             && zz[i].abs() >= f64::from_bits(0x3e50000000000000)
@@ -164,17 +164,27 @@ pub(crate) fn pow<T: Backend>(t: T, x: [f32; 4], y: [f32; 4]) -> [f32; 4] {
 
 // Keep scalar calls off the common path, with one combined lane test.
 #[inline(always)]
-fn finish<const OP: u8>(x: [f32; 4], y: [f32; 4], out: [f32; 4], needs: [bool; 4]) -> [f32; 4] {
+fn finish<const OP: u8, const N: usize>(
+    x: [f32; N],
+    y: [f32; N],
+    out: [f32; N],
+    needs: [bool; N],
+) -> [f32; N] {
     if needs.into_iter().any(|v| v) {
-        rescue::<OP>(x, y, out, needs)
+        rescue::<OP, N>(x, y, out, needs)
     } else {
         out
     }
 }
 #[cold]
 #[inline(never)]
-fn rescue<const OP: u8>(x: [f32; 4], y: [f32; 4], mut out: [f32; 4], needs: [bool; 4]) -> [f32; 4] {
-    for i in 0..4 {
+fn rescue<const OP: u8, const N: usize>(
+    x: [f32; N],
+    y: [f32; N],
+    mut out: [f32; N],
+    needs: [bool; N],
+) -> [f32; N] {
+    for i in 0..N {
         if needs[i] {
             out[i] = match OP {
                 0 => crate::scalar::expf(x[i]),

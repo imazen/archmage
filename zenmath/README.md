@@ -35,7 +35,7 @@ shared; finite result bits can differ.
 | `std` | `fmaf` and `fma` use hardware `mul_add` with compile-time x86 FMA or AArch64 NEON; otherwise it retains software FMA. The results are identical; the feature changes only how they are computed |
 | `archmage` | optional proof/compile-time-only accurate packed f32 exp/ln/log2/pow; no runtime probing from unifying archmage/std |
 | `runtime-dispatch` | explicit native CPU selection at array/slice boundaries; implies std and archmage/std |
-| `avx512` | additional V4x proof entries; currently the same four f64 lanes as V3 |
+| `avx512` | V4x proofs: four-input path shares V3 width; eight-input/wide paths use eight native f64 lanes |
 | `special` | placeholder for erf, gamma and friends; empty today |
 | `exact` | placeholder for bit-exact fdlibm and glibc ports; empty today |
 
