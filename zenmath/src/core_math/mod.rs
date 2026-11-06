@@ -28,3 +28,5 @@ pub use atanf::atanf;
 pub use fma::fma;
 pub use log10f::log10f;
 pub use tanhf::tanhf;
+mod powf;
+pub use powf::powf;
