@@ -36,7 +36,8 @@ There are three independent promises:
    ties-to-even, with gradual underflow. Use an independent high-precision or
    exact-rational oracle. Hardware/std is an implementation option, not the
    definition. This review reproduced Rust 1.99.1 WASI `mul_add` returning
-   `0x00010002` where `0x00010001` is required; zenmath now uses software there.
+   `0x00010002` where `0x00010001` is required; zenmath now uses software there and on native builds without compile-time
+   hardware FMA, which reproduced the same failure under Nehalem emulation.
 2. **Compatibility with a named algorithm/version**. Preserve its constants,
    evaluation order, fusion, exceptional paths and final rounding, even when
    another algorithm has lower error. Equality to a libm is not correct rounding.

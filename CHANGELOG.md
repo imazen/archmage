@@ -240,7 +240,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 #### Fixed
 
-- Draft zenmath uses software FMA on WASM even with `std`, preserving the independently checked subnormal rounding contract (902d8b95).
+- Draft zenmath delegates FMA to std only with compile-time x86 FMA or AArch64 NEON; software elsewhere preserves independently checked subnormal rounding, including WASM and native no-FMA builds (ceb21505).
 - `docs/transcendentals.md` no longer says the log functions return NaN for NaN. They return a finite value on every backend, and `exp2_midp` returns 2^-126 on x86 and the scalar backend but NaN on NEON and WASM. The page now tables the measured results.
 
 ### [0.9.31] - 2026-11-07

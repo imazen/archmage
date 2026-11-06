@@ -252,8 +252,9 @@ and zenjpegai's Cephes-derived `exp`.
   behind the `avx512` feature until someone times it. Miri has not been run.
 - `zenmath` without `std` runs `fmaf` in software on every target. Its midp functions
   took 4.5-8.5x the time of the scalar-tier vector kernel on aarch64, where `std`'s
-  `mul_add` is one instruction. A scalar-only consumer on FMA hardware should try the
-  `std` feature; that path's bits are verified, its speed is not measured.
+  `mul_add` is one instruction. A scalar-only consumer with compile-time x86 FMA or AArch64 NEON can use
+  the `std` feature for hardware FMA; other builds retain software because
+  std software FMA failed independent edge tests. This feature's speed is not measured.
 
 ## Existing implementation inventory
 

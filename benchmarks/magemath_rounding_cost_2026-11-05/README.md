@@ -237,7 +237,14 @@ items now have target gates and its WASM entry tells callers to use the WASM rec
 Review added independent exact-bit FMA cases. Rust 1.99.1 WASI std failed
 `fmaf(0x97000800, 0x1cfff001, 0x00010002)`: returned `0x00010002`, expected
 `0x00010001` (`mirror_edges_failure.log`). Commit `902d8b95` keeps zenmath's
-software FMA on WASM even with std. Native std remains unchanged. The six cases,
+software FMA on WASM even with std. A follow-up Nehalem run found the same std failure (`fma_nofma.log`).
+Commit `ceb21505` permits std delegation only with compile-time x86 FMA or
+AArch64 NEON, using software elsewhere without a runtime CPU probe. Native
+std, Nehalem, global V3, WASM std, mirror parity and both clippy targets pass
+(`fma_hardware_gate.log`: `done rc=0 11s | peak-RSS 0.43GiB | min-avail 47414MiB | peak-load 0.30`).
+The failed native test ran with glibc 2.43 installed, but its binary has a local
+hidden fmaf symbol: this is evidence against delegating to Rust std, not proof
+that the failure came from glibc. The six cases,
 zenmath's full WASM std tests, and magemath WASM std golden/parity pass. This does
 not change measured polynomial kernels or their goldens.
 
