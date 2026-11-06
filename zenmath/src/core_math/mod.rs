@@ -35,3 +35,7 @@ mod sinf;
 mod trig_reduce;
 pub use cosf::cosf;
 pub use sinf::sinf;
+mod expm1f;
+mod log1pf;
+pub use expm1f::expm1f;
+pub use log1pf::log1pf;

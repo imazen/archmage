@@ -14,6 +14,10 @@ fn main() {
         "tanhf" => |x, _| scalar::tanhf(x),
         "atanf" => |x, _| scalar::atanf(x),
         "log10f" => |x, _| scalar::log10f(x),
+        "sinf" => |x, _| scalar::sinf(x),
+        "cosf" => |x, _| scalar::cosf(x),
+        "log1pf" => |x, _| scalar::log1pf(x),
+        "expm1f" => |x, _| scalar::expm1f(x),
         _ => panic!("unknown function"),
     };
     let data = std::fs::read(&args[2]).expect("MPFR records required");

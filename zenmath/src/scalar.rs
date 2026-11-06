@@ -1128,3 +1128,4 @@ pub use crate::core_math::{cosf, sinf};
 pub fn sincosf(x: f32) -> (f32, f32) {
     (sinf(x), cosf(x))
 }
+pub use crate::core_math::{expm1f, log1pf};
