@@ -32,3 +32,6 @@ fn available<T: archmage::SimdToken>() -> Option<T> {
 
 pub mod array;
 pub mod slice;
+
+/// Scalar hardware primitives and whole-algorithm feature contexts.
+pub mod scalar;

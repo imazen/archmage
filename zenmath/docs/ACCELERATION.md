@@ -39,3 +39,22 @@ strategy, actual wider candidates and full-domain cross-ISA hashes are still
 being evaluated. No speed claim follows from replacing a dependency or passing
 finite fixtures. The scalar auto-dispatch policy will follow measured data;
 losing selector candidates stay experimental.
+
+## Scalar instruction entries
+
+`simd::scalar` supplies f32/f64 sqrt, floor, ceil, trunc, ties-even and ties-away
+rounding, plus fused multiply-add. x86 sqrt uses baseline V1; rounding uses V2
+SSE4.1; FMA uses V3. NEON uses the corresponding instructions. Strict WASM
+rounding/sqrt uses SIMD128 instructions and fused FMA keeps exact software.
+Ties-away rounding uses truncation plus a fractional comparison on x86/WASM;
+it never adds 0.5 before truncating. Scalar direct contexts for the full four
+CORE-MATH algorithms are also available; they call the actual scalar algorithm,
+not replicated vector lanes. No production legacy scalar call is redirected yet.
+
+Independent exact F32/F64 FMA fixtures and full-bit primitive samples passed on
+native x86, including signed zero and subnormal cases. Targeted predecessor/
+successor cases around ±0.5/±1.5 supplement random bits. Runtime-tier presence is
+asserted by validation caller configuration. The separate compile consumer
+unifies `archmage/std` without runtime dispatch: optimized consumer floor/exp
+bodies contain no CPU selection, stronger-tier call or detector reference.
+Default/accelerated/runtime compile and cold build costs remain to be measured.

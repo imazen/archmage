@@ -671,3 +671,18 @@ magemath-core-comparison output:
 
 magemath-core-comparison-summary +files:
     python3 benchmarks/core_math_comparison_2026-11-06/summarize.py {{files}}
+
+# Optional intrinsic-only math; all CPU work runs on admitted remote hosts.
+zenmath-dispatch-generate:
+    python3 zenmath/tools/generate-primitives.py
+    cargo fmt -p zenmath
+
+zenmath-dispatch-check:
+    cargo test -p zenmath --features archmage --test acceleration
+    cargo test -p zenmath --features runtime-dispatch,avx512 --test acceleration
+    cargo test -p magemath --all-features --tests
+
+zenmath-dispatch-unification:
+    cargo rustc --manifest-path benchmarks/zenmath_dispatch_2026-11-06/compile-consumer/Cargo.toml --release --features unified-std -- --emit=llvm-ir
+    cargo run --manifest-path benchmarks/zenmath_dispatch_2026-11-06/compile-consumer/Cargo.toml --release --features unified-std
+    python3 benchmarks/zenmath_dispatch_2026-11-06/check-unification.py benchmarks/zenmath_dispatch_2026-11-06/compile-consumer/target/release/deps/zenmath_compile_consumer-*.ll

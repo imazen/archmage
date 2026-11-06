@@ -6,7 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 publish = false
-description = "Portable scalar math: safe Rust CORE-MATH ports, rounding primitives and bounded-error approximations. No dependencies, no_std."
+description = "Portable scalar math: safe Rust CORE-MATH ports, rounding primitives and bounded-error approximations. Dependency-free by default, no_std."
 include = [
     "src/**",
     "Cargo.toml",
