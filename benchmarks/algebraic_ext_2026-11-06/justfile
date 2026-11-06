@@ -1,5 +1,6 @@
 generate:
     python3 generate-consumer.py
+    cargo fmt -p algebraic-ext-consumer
 fmt:
     cargo fmt -p algebraic-ext-consumer -p algebraic-magetypes-prototype --check
 lint:
