@@ -16,6 +16,11 @@ mod soft_fma;
 
 /// Selection is outside every packed loop. This guard is deliberately owned by
 /// Zenmath, rather than depending on whether Archmage's std feature is unified.
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
 #[inline(always)]
 fn available<T: archmage::SimdToken>() -> Option<T> {
     #[cfg(feature = "runtime-dispatch")]

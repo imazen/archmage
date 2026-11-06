@@ -28,7 +28,8 @@ fn main() {
                 .push((p[3].parse().unwrap(), p[6].to_owned()));
         }
     }
-    zenbench::run(|s| {
+    assert_eq!(groups.len(), 37, "incomplete validated WASM catalog");
+    let result = zenbench::run(|s| {
         s.cpu_policy(zenbench::platform::CpuPolicy::Performance);
         for ((group, feedback, ty, op), cases) in groups {
             let sizes: Vec<i32> = if feedback != 0 {
@@ -76,7 +77,8 @@ fn main() {
                 });
             }
         }
-    })
-    .save(&args[3])
+    });
+    assert_eq!(result.comparisons.len(), 94, "incomplete WASM timing matrix");
+    result.save(&args[3])
     .unwrap();
 }

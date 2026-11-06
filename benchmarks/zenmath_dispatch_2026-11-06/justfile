@@ -25,3 +25,6 @@ analyze input output:
 
 build-cost output:
     python3 build-cost.py {{output}}
+
+final-validation:
+    cd ../.. && bash benchmarks/zenmath_dispatch_2026-11-06/final-validation.sh
