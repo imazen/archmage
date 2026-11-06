@@ -20,10 +20,19 @@ expected = [
 suites = {}
 for path, groups, cells, clean, ordinary in expected:
     suite = json.loads((base / path).read_text())
+    suites[path] = suite
+    group_names = [g["group_name"] for g in suite["comparisons"]]
+    assert len(group_names) == len(set(group_names)), ("duplicate groups", path)
     assert not suite["unreliable"] and not suite["incomplete"], path
     assert len(suite["comparisons"]) == groups, path
     assert sum(len(g["benchmarks"]) for g in suite["comparisons"]) == cells, path
     for group in suite["comparisons"]:
+        case_names = [b["name"] for b in group["benchmarks"]]
+        assert len(case_names) == len(set(case_names)), (
+            "duplicate cases",
+            path,
+            group["group_name"],
+        )
         assert group["completed_rounds"] >= 30
         if clean:
             assert all(r["gate_clean"] is True for r in group["samples"]), (
