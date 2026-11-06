@@ -188,24 +188,28 @@ column enters a V3 feature context once per buffer. Inputs and outputs are
 black-boxed, and allocation is outside the measurement. This is throughput,
 not single-call latency. No `target-cpu=native` was used.
 
-| Operation | Rust std loop | Zenmath correct scalar loop | Correct packed V3 |
-|---|---:|---:|---:|
-| f32 exp | 1.218 | 1.704 | 0.849 |
-| f32 ln | 1.413 | 1.878 | 1.077 |
-| f32 log2 | 1.231 | 1.691 | 1.174 |
-| f32 powf, varying exponents | 2.682 | 19.404 | 7.005 |
-| f32 log10 | 1.987 | 2.147 | unavailable |
-| f32 sqrt | 0.166 | 2.670 | 0.086 |
-| f32 floor | 0.892 | 0.946 | 0.035 |
-| f32 ceil | 0.850 | 0.674 | 0.052 |
-| f32 round, ties away | 0.738 | 1.135 | unavailable |
-| f64 log2 | 2.402 | 8.146 | unavailable |
+| Operation | std baseline | std V3 loop | Zenmath correct baseline | Correct packed V3 |
+|---|---:|---:|---:|---:|
+| f32 exp | 1.218 | 1.248 | 1.704 | 0.849 |
+| f32 ln | 1.413 | 1.239 | 1.878 | 1.077 |
+| f32 log2 | 1.231 | 1.254 | 1.691 | 1.174 |
+| f32 powf, varying exponents | 2.682 | 2.693 | 19.404 | 7.005 |
+| f32 log10 | 1.987 | 1.702 | 2.147 | unavailable |
+| f32 sqrt | 0.166 | 0.084 | 2.670 | 0.086 |
+| f32 floor | 0.892 | 0.029 | 0.946 | 0.035 |
+| f32 ceil | 0.850 | 0.043 | 0.674 | 0.052 |
+| f32 round, ties away | 0.738 | 0.045 | 1.135 | unavailable |
+| f64 log2 | 2.402 | 1.780 | 8.146 | unavailable |
 
 Packed exp/ln/log2/pow are Magemath's correct f32x8 proof entry points;
 sqrt/floor/ceil are Magetypes f32x8 methods. There is no accurate packed log10
 or f64 log2 API behind the unavailable cells. Scalar sqrt uses the software
 Goldschmidt algorithm even in a std-enabled Zenmath build. Rust's scalar-looking
-loop may itself auto-vectorize, as the primitive results illustrate.
+loop may itself auto-vectorize. With the same V3 context, std sqrt/floor/ceil
+already matches or beats the explicit-vector means here; std ties-away round
+also vectorizes. The baseline-to-V3 improvement should not be credited to a
+new math algorithm. Zenmath's software primitive paths remain a clear
+optimization opportunity, without requiring an MSRV increase.
 
 The approximate Magetypes V3 f32x8 midp methods measured 0.248 for exp, 0.227
 for ln, 0.195 for log2, and 0.218 for log10. Those are different numerical
