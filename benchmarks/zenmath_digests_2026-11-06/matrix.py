@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import subprocess
 import os
+import sys
 import time
 
 HERE=Path(__file__).resolve().parent
@@ -42,7 +43,7 @@ record('starting')
 try:
     for op,backend in cells:
         name=op.replace(':','-')+'-'+backend;out=a.out/name
-        command=['python3',str(HERE/'drive.py'),'run','--build',str(a.build),'--out',str(out),'--op',op,'--backend',backend,'--threads',str(a.threads),'--count',str(a.count),'--compare']
+        command=[sys.executable,str(HERE/'drive.py'),'run','--build',str(a.build),'--out',str(out),'--op',op,'--backend',backend,'--threads',str(a.threads),'--count',str(a.count),'--compare']
         if (out/'metadata.txt').exists(): command.append('--resume')
         logfile=a.out/(name+f'.{time.time_ns()}.log')
         with logfile.open('x') as log:

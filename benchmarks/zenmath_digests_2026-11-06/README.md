@@ -99,3 +99,20 @@ recording its PID, current child PID, exact command and completed/required cells
 Groups are top functions, primitives, and additional fixed-power families.
 Never infer liveness from the JSON alone: check the recorded process and chunk
 artifacts. All matrix cells use direct per-output reference comparisons.
+
+## Driver updates and preserved numerical evidence
+
+The initial exhaustive matrix uses harness source stamp
+`59e78dde6dee12778662beff2c215a88029e73381bc159fb5dcc77f47a46f64c`
+on implementation freeze `5a9cc685`. Keep that exact numerical/build source
+across ISA builds; do not relabel earlier results after driver updates.
+
+The subsequent driver revision catches a signalled subprocess, archives an old
+summary and persists its return code/signal in `FAILURE.txt`. Its regression
+covers SIGTERM15 without relying on the child to write a failure marker. Matrix
+subprocesses now use `sys.executable`, preserving the selected interpreter.
+This matters when a PATH shim reintroduces environment variables. Existing
+binaries do not change behavior when runtime RUSTFLAGS changes; compilation
+fingerprints establish effective build flags. Interrupted chunks remain partial
+and are preserved. Driver-only validation is separate from the frozen exhaustive
+matrix and does not establish a new numerical source matrix.

@@ -1,4 +1,6 @@
 import hashlib
+import json
+import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 import tempfile
@@ -29,5 +31,21 @@ class PrepareTests(unittest.TestCase):
             original=(args.out/'build.json').read_bytes()
             with self.assertRaises(ValueError): drive.prepare(args)
             self.assertEqual((args.out/'build.json').read_bytes(),original)
+
+class SignalTests(unittest.TestCase):
+    def test_signalled_child_retires_summary_and_records_failure(self):
+        with tempfile.TemporaryDirectory(dir=Path.home()/'tmp') as name:
+            root=Path(name);build=root/'build';build.mkdir();out=root/'run';out.mkdir()
+            binary=root/'binary';binary.write_text('test')
+            manifest='test source\n'
+            identity=dict(binary=str(binary),binary_sha256=drive.sha(binary),source_sha256=hashlib.sha256(manifest.encode()).hexdigest(),runner='')
+            (build/'build.json').write_text(json.dumps(identity))
+            (out/'summary.txt').write_text('status=COMPLETE-F32-DOMAIN\n')
+            args=SimpleNamespace(build=build,out=out,op='exp',backend='reference',threads=1,start=0,count=11,chunk=7,compare=True,resume=True)
+            with patch.object(drive,'sources',return_value=manifest),patch.object(drive.subprocess,'run',side_effect=subprocess.CalledProcessError(-15,['test'])):
+                with self.assertRaises(subprocess.CalledProcessError): drive.run(args)
+            self.assertFalse((out/'summary.txt').exists())
+            self.assertIn('signal=15',(out/'FAILURE.txt').read_text())
+            self.assertEqual(len(list(out.glob('summary.txt.*.bak'))),1)
 
 if __name__=='__main__': unittest.main()

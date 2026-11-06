@@ -71,7 +71,17 @@ def run(args):
     import fcntl
     with (args.out / 'run.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        subprocess.run(command, check=True)
+        try:
+            subprocess.run(command, check=True)
+        except subprocess.CalledProcessError as error:
+            summary=args.out/'summary.txt'
+            if summary.exists():
+                import time
+                summary.rename(args.out/f'summary.txt.{time.time_ns()}.bak')
+            pending=args.out/'FAILURE.pending'
+            pending.write_text(f'child returncode={error.returncode}; signal={-error.returncode if error.returncode < 0 else "none"}\ncommand={json.dumps(command)}\n')
+            pending.replace(args.out/'FAILURE.txt')
+            raise
 
 def compare(args):
     records = []

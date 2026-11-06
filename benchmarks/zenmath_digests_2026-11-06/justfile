@@ -22,3 +22,6 @@ fmt:
 
 matrix *args:
     python3 matrix.py {{args}}
+
+inspect root:
+    python3 inspect.py {{root}}
