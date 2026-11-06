@@ -235,6 +235,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 #### Added
 
+- Add a math guide covering numerical contracts, matched-feature std comparisons, Rust 1.98 algebraic operations and measured vector lowering; keep the production MSRV at 1.89 (62779f4b, f6d28a1a).
 - Draft magemath adds correctly rounded packed f32 exp, ln, log2 and pow array/slice APIs, with per-lane accurate fallback and once-per-buffer dispatch (42fa8553, 5c9335d4).
 - Draft zenmath adds 17 f32 and 16 f64 safe Rust CORE-MATH ports, with independent MPFR regressions and ARM/WASM/i686/no-FMA validation (0cbf7740).
 - `magemath::relaxed` shares the portable operations and special-value handling with backend-dependent rounding. `magemath::unfused` and `zenmath::scalar::unfused` are experiments pending the portable-rounding decision (71015113).

@@ -333,7 +333,12 @@ docs-test:
     python3 xtask/check_docs.py
     python3 xtask/check_docs.py --features avx512
 
-# Test Markdown examples using the selected target and configured Cargo runner.
+# Math guide examples use algebraic float methods (Rust 1.98+).
+math-docs-test:
+    python3 xtask/check_docs.py docs/site/content/magetypes/math/choosing-math.md docs/site/content/magetypes/operations/reductions.md
+    python3 xtask/check_docs.py --features avx512 docs/site/content/magetypes/math/choosing-math.md docs/site/content/magetypes/operations/reductions.md
+
+# Test Markdown examples on another target using its configured Cargo runner.
 docs-test-target target *pages:
     python3 xtask/check_docs.py --target {{target}} {{pages}}
 
