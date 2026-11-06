@@ -1,3 +1,5 @@
+// Exercises retained legacy transcendental contracts during migration.
+#![allow(deprecated)]
 //! Contract pins for the reciprocal tier grid.
 //!
 //! Three tiers, three contracts (see the generic type docs):

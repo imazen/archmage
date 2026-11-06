@@ -1,3 +1,5 @@
+// Exercises retained legacy transcendental contracts during migration.
+#![allow(deprecated)]
 //! Brute force accuracy tests for transcendental functions
 //!
 //! Tests all transcendental functions against std:: implementations

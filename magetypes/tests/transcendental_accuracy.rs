@@ -1,3 +1,5 @@
+// Exercises retained legacy transcendental contracts during migration.
+#![allow(deprecated)]
 //! Accuracy validation: compare all transcendental functions against std/libm.
 //!
 //! Tests a wide range of inputs including edge cases (zero, denormals, very large,

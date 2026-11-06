@@ -1,3 +1,5 @@
+// Exercises retained legacy transcendental contracts during migration.
+#![allow(deprecated)]
 //! `cbrt_midp_precise` covers the whole f32 range. `cbrt_midp` and `cbrt_lowp`
 //! are fast and documented for magnitudes below `f32::MAX / 3`: their Halley step
 //! forms `y³ + 2x`, which overflows above that and returns NaN (±inf for a few

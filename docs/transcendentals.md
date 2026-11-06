@@ -6,6 +6,49 @@ The [2026-11-06 math matrix](../benchmarks/math_matrix_2026-11-06/README.md)
 compares current scalar and vector APIs with std and other implementations on
 x86, AArch64 and strict WASM. The accuracy study below retains its original scope.
 
+## Migration to Zenmath and Magemath
+
+Magetypes' lowp and midp transcendental methods are deprecated in the local
+math draft. They retain their existing implementations and numerical behavior
+through the migration; deprecation does not change their rounding, exceptional
+inputs, or accuracy. This includes the unchecked and precise variants, sigmoid,
+and SiLU. Basic arithmetic, rounding, square root, reciprocal and FMA stay in
+Magetypes.
+
+Zenmath owns scalar and intrinsic-only math. Magemath provides math over
+Magetypes vectors. High-precision, normal std/libm-style, and configurable
+transcendentals have separate feature-selection requirements; precision and
+cross-ISA consistency remain distinct contracts. Cargo features are additive:
+they select available implementations, while named APIs and per-call policies
+select behavior. Feature unification must not change existing result bits.
+Correct rounding is a more specific contract than the phrase "high precision".
+A method with the same name
+is not necessarily a bit-compatible replacement: compare its NaN, subnormal,
+and fused/separate rounding rules before migrating.
+
+The intended dependency graph lets Magetypes and Zenmath compile independently
+after their shared dependencies, with Magemath depending on both. A temporary
+Magetypes dependency on Zenmath is permitted if needed during migration; remove
+it when the legacy methods retire. Deprecation itself adds no dependency.
+Zenmath and Magemath are unpublished drafts, so this is a migration plan rather
+than a recommendation to switch a released consumer immediately.
+
+Current migration gaps (before removing any legacy method):
+
+| Legacy surface | Draft destination | Remaining work |
+|---|---|---|
+| f32x8 lowp/midp log, exp, pow families | Magemath portable/relaxed kernels and array/slice forms | Select the matching rounding and special-value contract; same names do not promise identical exceptional results |
+| f32x8 cbrt variants | Magemath exposes the operations | Its bodies still delegate to Magetypes; move these implementations before removal |
+| f32x4 and f32x16 transcendental methods | Magemath currently documents f32x8 only | Add replacement widths or an explicit array/slice migration path; do not remove these methods yet |
+| Scalar transcendental math | Zenmath scalar functions | Complete feature separation and document accuracy independently of portability |
+
+
+Deprecation validation (2026-11-06): regeneration, registry validation, token
+validation and intrinsic soundness passed. Magetypes all-target Clippy with
+`std avx512` and the `generic_transcendentals`, `sigmoid_silu`, and
+`exp2_lowp_range` tests passed on Ryzen 5900XT with Rust 1.99.1. The change adds
+attributes and migration documentation; arithmetic bodies are unchanged.
+
 ## Accuracy Summary
 
 Measured over every f32 input in each band against an f64 `std` reference, on

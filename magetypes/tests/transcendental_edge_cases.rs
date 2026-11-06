@@ -1,3 +1,5 @@
+// Exercises retained legacy transcendental contracts during migration.
+#![allow(deprecated)]
 //! Tests that transcendental functions handle edge cases correctly.
 //!
 //! Covers: cbrt (all variants), pow (all variants), log2/exp2/ln/exp (midp)

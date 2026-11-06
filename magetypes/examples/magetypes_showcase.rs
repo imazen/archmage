@@ -1,3 +1,5 @@
+// Exercises retained legacy transcendental contracts during migration.
+#![allow(deprecated)]
 //! Magetypes Showcase: Boilerplate Elimination
 //!
 //! Demonstrates how magetypes reduces SIMD code from verbose intrinsic calls

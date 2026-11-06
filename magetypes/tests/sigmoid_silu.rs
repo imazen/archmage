@@ -1,3 +1,5 @@
+// Exercises retained legacy transcendental contracts during migration.
+#![allow(deprecated)]
 //! `sigmoid_midp` / `silu_midp` accuracy and rail behavior on every backend.
 //!
 //! Regression coverage for <https://github.com/imazen/archmage/issues/64>:
