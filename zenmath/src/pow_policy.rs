@@ -305,6 +305,20 @@ fn formula<const P: u64>(x: f32, y: f32) -> f32 {
 /// ```compile_fail
 /// let _=zenmath::scalar::powf_with::<3>(2.0,3.0);
 /// ```
+/// Reserved field values and conflicting preconditions also fail:
+/// ```compile_fail
+/// let _=zenmath::scalar::powf_with::<{3u64<<3}>(2.0,3.0);
+/// ```
+/// ```compile_fail
+/// use zenmath::{PowBehavior,PowRange,PowSign};
+/// const P:u64=PowBehavior::MIDP.range(PowRange::PositiveNormalPrecondition).sign(PowSign::SignedMagnitude).to_u64();
+/// let _=zenmath::scalar::powf_with::<P>(2.0,3.0);
+/// ```
+/// ```compile_fail
+/// use zenmath::PowBehavior;
+/// const P:u64=PowBehavior::CORRECT.debug_assertions(true).to_u64();
+/// let _=zenmath::scalar::powf_with::<P>(2.0,3.0);
+/// ```
 /// Correct rounding cannot select a different polynomial rounding sequence:
 /// ```compile_fail
 /// use zenmath::{PowBehavior,PowConsistency};
