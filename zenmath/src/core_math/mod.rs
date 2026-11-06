@@ -47,3 +47,5 @@ mod cbrt;
 pub use cbrt::cbrt;
 mod exp2;
 pub use exp2::exp2;
+mod exp;
+pub use exp::exp;

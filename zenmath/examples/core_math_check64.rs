@@ -5,6 +5,7 @@ fn main() {
     let args: Vec<_> = std::env::args().collect();
     assert_eq!(args.len(), 3, "usage: core_math_check64 FUNCTION RECORDS");
     let function: fn(f64, f64) -> f64 = match args[1].as_str() {
+        "exp" => |x, _| scalar::exp(x),
         "exp2" => |x, _| scalar::exp2(x),
         "cbrt" => |x, _| scalar::cbrt(x),
         _ => panic!("unknown function"),
