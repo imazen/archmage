@@ -659,3 +659,10 @@ magemath-core-exhaustive:
 # Summarize paired CORE-MATH vector measurements (one or more JSON files).
 magemath-core-summary +files:
     python3 benchmarks/core_math_vector_2026-11-06/summarize.py {{files}}
+
+# Same-input comparison of distinct math accuracy contracts; pow exponent is 2.4.
+magemath-core-comparison output:
+    cargo run -p magemath --release --example core_math_comparison -- {{output}}
+
+magemath-core-comparison-summary +files:
+    python3 benchmarks/core_math_comparison_2026-11-06/summarize.py {{files}}

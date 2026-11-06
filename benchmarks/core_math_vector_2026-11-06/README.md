@@ -151,3 +151,8 @@ Intel profile: rc=0 18s | peak-RSS 0.02GiB | min-avail 22909MiB | peak-load 0.60
 ARM timing: rc=0 17s | peak-RSS 0.01GiB | min-avail 14890MiB | peak-load 0.23
 AMD V4x: rc=0 20s | peak-RSS 0.04GiB | min-avail 18554MiB | peak-load 0.61
 ```
+
+A subsequent [same-input comparison](../core_math_comparison_2026-11-06/README.md)
+adds Rust std and magetypes lowp/midp methods. The core-only speedups above are
+not speedups over those implementations: correctly rounded pow remains slower
+than std, and the approximation methods are substantially faster.
