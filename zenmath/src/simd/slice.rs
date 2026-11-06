@@ -32,10 +32,6 @@ pub fn exp_f32(data: &mut [f32]) {
 /// Select exp once for this slice. Runtime probes require `runtime-dispatch`.
 #[inline]
 pub fn exp_f32(data: &mut [f32]) {
-    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-    if let Some(token) = super::available::<X64V4xToken>() {
-        return exp_f32_v4x_t(token, data);
-    }
     #[cfg(target_arch = "x86_64")]
     if let Some(token) = super::available::<X64V3Token>() {
         return exp_f32_v3_t(token, data);
@@ -82,10 +78,6 @@ pub fn ln_f32(data: &mut [f32]) {
 /// Select ln once for this slice. Runtime probes require `runtime-dispatch`.
 #[inline]
 pub fn ln_f32(data: &mut [f32]) {
-    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-    if let Some(token) = super::available::<X64V4xToken>() {
-        return ln_f32_v4x_t(token, data);
-    }
     #[cfg(target_arch = "x86_64")]
     if let Some(token) = super::available::<X64V3Token>() {
         return ln_f32_v3_t(token, data);
@@ -132,10 +124,6 @@ pub fn log2_f32(data: &mut [f32]) {
 /// Select log2 once for this slice. Runtime probes require `runtime-dispatch`.
 #[inline]
 pub fn log2_f32(data: &mut [f32]) {
-    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-    if let Some(token) = super::available::<X64V4xToken>() {
-        return log2_f32_v4x_t(token, data);
-    }
     #[cfg(target_arch = "x86_64")]
     if let Some(token) = super::available::<X64V3Token>() {
         return log2_f32_v3_t(token, data);
@@ -190,10 +178,6 @@ pub fn pow_f32(data: &mut [f32], exponents: &[f32]) {
 /// Select pow once for this slice. Runtime probes require `runtime-dispatch`.
 #[inline]
 pub fn pow_f32(data: &mut [f32], exponents: &[f32]) {
-    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-    if let Some(token) = super::available::<X64V4xToken>() {
-        return pow_f32_v4x_t(token, data, exponents);
-    }
     #[cfg(target_arch = "x86_64")]
     if let Some(token) = super::available::<X64V3Token>() {
         return pow_f32_v3_t(token, data, exponents);
