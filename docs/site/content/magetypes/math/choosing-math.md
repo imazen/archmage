@@ -162,6 +162,12 @@ code. An alternative accepts the caller's token and reconstructs the result
 with `from_array_t`. Inlining and optimization determine whether the temporary
 lane representation disappears.
 
+A separate consumer of the prototype compiled and ran its five-operation
+fixture against published Magetypes 0.9.30 and 0.9.31-beta.2, with no path
+patches. The extension library also compiled with `no_std` on Rust 1.98.1.
+These checks establish API compatibility; they do not establish performance
+on every backend.
+
 The separate extension crate can require Rust 1.98 while Magetypes retains its
 existing minimum. This does not make algebraic methods part of Magetypes' own
 API. A horizontal algebraic reduction also needs an explicit method; ordinary
