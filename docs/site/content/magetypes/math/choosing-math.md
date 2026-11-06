@@ -308,7 +308,8 @@ over 256 repetitions of 1024 values; native allocation occurs outside timing.
 Its absolute times include that wrapper cost. The WASM run took 466 seconds
 under the resource wrapper, with peak RSS 0.43 GiB. Native resource summaries
 appear above. Correct packed math is not a speed improvement everywhere:
-strict-WASM software fusion and power's accurate fallback costs remain visible.
+the accurate packed implementations are slower than std in these strict-WASM cells,
+and accurate power is slower on all three targets above.
 
 The retained matrix covers 4568 math throughput cells, 180 algebraic cells and
 343 representative native feedback cells, each with at least 30 rounds. One

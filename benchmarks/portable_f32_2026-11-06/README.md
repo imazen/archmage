@@ -13,6 +13,10 @@ throughput while retaining identical tested output bits. It is a prototype, not 
 newly proven global bound. See [candidate research](RESEARCH.md) for primary sources,
 coverage, guarantees and omissions. There is no universal-fastest claim.
 
+The subsequent [complete available-API matrix](../math_matrix_2026-11-06/README.md)
+extends these experiments to the requested scalar inventory, existing vector
+widths and algebraic kernels, with explicit unavailable and failed cells.
+
 ## Coverage of the requested scalar inventory
 
 This is not an all-operations/all-widths benchmark matrix. Of the requested nine

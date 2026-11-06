@@ -2,6 +2,10 @@
 
 This document describes the algorithms, accuracy, and benchmark results for transcendental function implementations in archmage's SIMD types.
 
+The [2026-11-06 math matrix](../benchmarks/math_matrix_2026-11-06/README.md)
+compares current scalar and vector APIs with std and other implementations on
+x86, AArch64 and strict WASM. The accuracy study below retains its original scope.
+
 ## Accuracy Summary
 
 Measured over every f32 input in each band against an f64 `std` reference, on
