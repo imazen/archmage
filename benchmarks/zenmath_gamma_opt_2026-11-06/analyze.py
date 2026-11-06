@@ -8,7 +8,7 @@ from pathlib import Path
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('input',type=Path)
-    parser.add_argument('--mode',choices=['coarse','refine','piecewise','vector'],required=True)
+    parser.add_argument('--mode',choices=['coarse','refine','piecewise','vector','transfer'],required=True)
     parser.add_argument('--out',type=Path,required=True);args=parser.parse_args()
     d=json.loads(args.input.read_text())
     if d.get('incomplete',False) or d['unreliable']:raise ValueError('unreliable timing')
@@ -21,7 +21,9 @@ def main():
     if args.mode=='vector':
         names={n for n in names if not n.startswith(('piece_h','piece_e3'))}
         names.update(f'array{w}_piece_e{n}' for w in [4,8] for n in [4,5])
-    expected={f'{kind}/{dist}/{n}' for kind in ['decode','encode'] for dist in ['values','bits'] for n in [64,4096]}
+    if args.mode=='transfer':names={'std','core_reference','midp_full_approx','midp_precondition_approx','piece_e4','piece_e5','global','f64_curve_std_distinct'}
+    prefix='C0/' if args.mode=='transfer' else ''
+    expected={f'{prefix}{kind}/{dist}/{n}' for kind in ['decode','encode'] for dist in ['values','bits'] for n in [64,4096]}
     groups=d['comparisons']
     if len(groups)!=8 or {g['group_name'] for g in groups}!=expected:raise ValueError('group inventory')
     with args.out.open('x') as output:

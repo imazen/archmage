@@ -332,3 +332,78 @@ pub(crate) fn run_vector(path: &Path) -> Result<(), Box<dyn std::error::Error>> 
     results.save(path)?;
     Ok(())
 }
+
+fn transfer_stream<const K: usize, const M: usize>(input: &[f32], output: &mut [f32]) {
+    for (y, &x) in output.iter_mut().zip(input) {
+        *y = crate::transfer::evaluate::<K, M>(x);
+    }
+}
+fn curve_stream<const K: usize>(input: &[f32], output: &mut [f32]) {
+    for (y, &x) in output.iter_mut().zip(input) {
+        *y = crate::transfer::f64_curve::<K>(x) as f32;
+    }
+}
+pub(crate) fn run_transfer(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    fn kind<const K: usize>(suite: &mut Suite) {
+        for n in [64usize, 4096] {
+            for distribution in ["values", "bits"] {
+                let input: Vec<f32> = (0..n)
+                    .map(|i| {
+                        let j = (i * 719) % n;
+                        if distribution == "bits" {
+                            f32::from_bits(
+                                (u64::from(1.0f32.to_bits()) * j as u64 / (n - 1) as u64) as u32,
+                            )
+                        } else {
+                            j as f32 / (n - 1) as f32
+                        }
+                    })
+                    .collect();
+                suite.group(
+                    format!(
+                        "C0/{}/{distribution}/{n}",
+                        if K == 0 { "decode" } else { "encode" }
+                    ),
+                    |group| {
+                        group.throughput(Throughput::Elements(n as u64));
+                        group
+                            .config()
+                            .warmup_time(Duration::from_millis(200))
+                            .min_rounds(50)
+                            .max_rounds(100)
+                            .max_wall_time(Duration::from_secs(30));
+                        let methods: [(&str, Stream); 8] = [
+                            ("std", transfer_stream::<K, 0>),
+                            ("core_reference", transfer_stream::<K, 1>),
+                            ("midp_full_approx", transfer_stream::<K, 2>),
+                            ("midp_precondition_approx", transfer_stream::<K, 3>),
+                            ("piece_e4", transfer_stream::<K, 4>),
+                            ("piece_e5", transfer_stream::<K, 5>),
+                            ("global", transfer_stream::<K, 6>),
+                            ("f64_curve_std_distinct", curve_stream::<K>),
+                        ];
+                        for (name, fun) in methods {
+                            let input = input.clone();
+                            let mut output = vec![0.0; n];
+                            fun(&input, &mut output);
+                            group.bench(name, move |b| {
+                                b.iter(|| {
+                                    fun(black_box(&input), black_box(&mut output));
+                                    black_box(&output);
+                                })
+                            });
+                        }
+                        group.baseline("std");
+                    },
+                );
+            }
+        }
+    }
+    let results = zenbench::run(|suite| {
+        suite.cpu_policy(zenbench::platform::CpuPolicy::Performance);
+        kind::<0>(suite);
+        kind::<1>(suite);
+    });
+    results.save(path)?;
+    Ok(())
+}

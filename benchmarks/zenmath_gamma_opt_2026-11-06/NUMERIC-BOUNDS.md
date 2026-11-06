@@ -1,14 +1,14 @@
 # Generated initial numeric budgets
 
 MPFR4.2.2,1024-bit directed operations; exact rational error budgets.
-Source generator and runtime remain under root review; no full sweep yet.
+Initial generated budgets; proof/runtime reviewed. Final selected sweep coverage is in RESULTS.md.
 
 ## Exact power domains (inclusive)
 
 - decode: exponent`0x4019999a`, inputbits`0x3db71074..=0x3f800000`, count29945741.
 - encode: exponent`0x3ed55555`, inputbits`0x3b475041..=0x3f800000`, count70823872.
 
-Rust actual-C0 preprocessing equality is a smoke gate, not assumed from this script.
+Rust actual-C0 preprocessing equality passed the smoke gate.
 
 | Kind | Degree | Layout | Tail upper | Eval upper | Largest absolute pad | Max suffix upper |
 |---|---:|---|---:|---:|---|---:|
@@ -32,7 +32,7 @@ Rust actual-C0 preprocessing equality is a smoke gate, not assumed from this scr
 Every suffix/node is bounded below8, every coefficient below2. Generator proves
 y-Delta positive and y+Delta finite before using bit-adjacent outward endpoints.
 Other degrees8..20 are retained in the full CSV/JSON. All scalar52 combinations
-will be smoke-tested; exhaustive sweeps will cover timing finalists only.
+passed smoke; eight timing finalist paths received exhaustive admitted-domain coverage.
 
 Full numerical certificates (generated data, not committed):
 `/mnt/tower/output/archmage/zenmath-gamma-opt-2026-11-06/r5900xt/runs/initial-bound-proof.json`

@@ -38,6 +38,7 @@ case "${1:?job required}" in
   python3 generate.py --rust src/generated.rs --rustfmt "$(rustup which --toolchain 1.99.1 rustfmt)" --proof "$GAMMA_RUN_DIR/bound-proof.json" --summary "$GAMMA_RUN_DIR/bound-summary.csv"
   python3 generate_piecewise.py --rust src/piecewise_generated.rs --rustfmt "$(rustup which --toolchain 1.99.1 rustfmt)" --proof "$GAMMA_RUN_DIR/piece-bound-proof.json" --summary "$GAMMA_RUN_DIR/piece-bound-summary.csv"
   python3 oracle.py --out "$GAMMA_RUN_DIR/oracle.csv"
+  python3 transfer_oracle.py "$GAMMA_RUN_DIR/transfer-oracle.csv"
   cargo +1.99.1 fetch --locked
   cargo +1.99.1 fmt
   cargo +1.99.1 test --locked --release
@@ -45,6 +46,7 @@ case "${1:?job required}" in
   cargo +1.99.1 build --locked --release
   "$CARGO_TARGET_DIR/release/zenmath-gamma-opt" facts
   "$CARGO_TARGET_DIR/release/zenmath-gamma-opt" oracle "$GAMMA_RUN_DIR/oracle.csv" "$GAMMA_RUN_DIR/oracle-results.csv"
+  "$CARGO_TARGET_DIR/release/zenmath-gamma-opt" transfer-oracle "$GAMMA_RUN_DIR/transfer-oracle.csv" "$GAMMA_RUN_DIR/transfer-oracle-results.csv"
   "$CARGO_TARGET_DIR/release/zenmath-gamma-opt" vector-oracle "$GAMMA_RUN_DIR/oracle.csv" "$GAMMA_RUN_DIR/vector-oracle-results.csv"
   ;;
  *) shift;exec "$CARGO_TARGET_DIR/release/zenmath-gamma-opt" "$@" ;;

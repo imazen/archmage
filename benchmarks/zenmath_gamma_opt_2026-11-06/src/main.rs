@@ -3,8 +3,10 @@ mod generated;
 mod kernel;
 mod piecewise;
 mod piecewise_generated;
+mod sweep;
 #[cfg(target_arch = "x86_64")]
 mod timing;
+mod transfer;
 #[cfg(target_arch = "x86_64")]
 mod vector;
 #[cfg(target_arch = "x86_64")]
@@ -150,6 +152,20 @@ fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<_> = std::env::args().collect();
     match args.get(1).map(String::as_str) {
         Some("facts") => facts(),
+        Some("transfer-oracle") if args.len() == 4 => {
+            transfer::oracle(Path::new(&args[2]), Path::new(&args[3]))?
+        }
+        #[cfg(target_arch = "x86_64")]
+        Some("bench-transfer") if args.len() == 3 => timing::run_transfer(Path::new(&args[2]))?,
+        Some("sweep" | "audit") if args.len() == 8 => sweep::run(
+            args[1] == "audit",
+            args[2].parse()?,
+            &args[3],
+            args[4].parse()?,
+            Path::new(&args[5]),
+            &args[6],
+            &args[7],
+        )?,
         Some("oracle") if args.len() == 4 => oracle(Path::new(&args[2]), Path::new(&args[3]))?,
         #[cfg(target_arch = "x86_64")]
         Some("bench") if args.len() == 3 => timing::run(Path::new(&args[2]), false, false)?,
