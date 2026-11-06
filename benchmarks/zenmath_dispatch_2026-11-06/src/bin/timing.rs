@@ -5,6 +5,20 @@ use zenmath_dispatch_study::*;
 fn main() {
     verify();
     let output = std::env::args().nth(1).expect("output JSON");
+    let args: Vec<String> = std::env::args().collect();
+    let mut filters = Vec::new();
+    let mut i = 2;
+    while i < args.len() {
+        assert_eq!(args[i], "--group", "expected explicit --group filter");
+        filters.push(
+            args.get(i + 1)
+                .expect("--group needs a full group name")
+                .clone(),
+        );
+        i += 2;
+    }
+    let mut matched = std::collections::BTreeSet::new();
+    let enabled = |name: &str| filters.is_empty() || filters.iter().any(|f| f == name);
     zenbench::run(|s| {
         s.cpu_policy(zenbench::platform::CpuPolicy::Performance);
         for op in OPS32.iter().copied() {
@@ -24,7 +38,12 @@ fn main() {
                 } else {
                     mode.strip_prefix("stream").unwrap().parse().unwrap()
                 };
-                s.group(format!("{op}/f32/{mode}"), |g| {
+                let group_name = format!("{op}/f32/{mode}");
+                if !enabled(&group_name) {
+                    continue;
+                }
+                matched.insert(group_name.clone());
+                s.group(group_name, |g| {
                     g.throughput(Throughput::Elements(if feedback { 1024 } else { n as u64 }));
                     g.config()
                         .warmup_time(Duration::from_millis(10))
@@ -64,7 +83,12 @@ fn main() {
                 } else {
                     mode.strip_prefix("stream").unwrap().parse().unwrap()
                 };
-                s.group(format!("{op}/f64/{mode}"), |g| {
+                let group_name = format!("{op}/f64/{mode}");
+                if !enabled(&group_name) {
+                    continue;
+                }
+                matched.insert(group_name.clone());
+                s.group(group_name, |g| {
                     g.throughput(Throughput::Elements(if feedback { 1024 } else { n as u64 }));
                     g.config()
                         .warmup_time(Duration::from_millis(10))
@@ -93,4 +117,10 @@ fn main() {
     })
     .save(output)
     .unwrap();
+    for name in &filters {
+        assert!(
+            matched.contains(name),
+            "requested group not measured: {name}"
+        );
+    }
 }
