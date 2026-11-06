@@ -1,0 +1,15 @@
+generate:
+    python3 generate.py
+    cargo fmt --manifest-path Cargo.toml
+check:
+    cargo fmt --check
+    cargo clippy --features avx512,native-bench --all-targets -- -D warnings
+    cargo test --features avx512,native-bench --release --lib
+build:
+    cargo build --release --features avx512,native-bench --bin timing --bin proof
+time output:
+    target/release/timing {{output}}
+unification:
+    cargo rustc --manifest-path compile-consumer/Cargo.toml --release --features unified-std -- --emit=llvm-ir
+    cargo run --manifest-path compile-consumer/Cargo.toml --release --features unified-std
+    python3 check-unification.py compile-consumer/target/release/deps/zenmath_compile_consumer-*.ll
