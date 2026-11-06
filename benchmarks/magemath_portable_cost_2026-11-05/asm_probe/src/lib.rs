@@ -1,6 +1,7 @@
 #![allow(clippy::all)]
 use archmage::prelude::*;
 use magemath::portable::kernels;
+#[cfg(target_arch = "x86_64")]
 use magemath::relaxed::kernels as relaxed;
 use magemath::unfused::kernels as unfused;
 
