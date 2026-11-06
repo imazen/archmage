@@ -1,0 +1,12 @@
+[package]
+name = "algebraic-magetypes-prototype"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.98"
+publish = false
+license = "MIT OR Apache-2.0"
+[features]
+default = []
+avx512 = ["magetypes/avx512"]
+[dependencies]
+magetypes = { version = ">=0.9.30, <=0.9.31-beta.2", default-features = false, features = ["w512"] }

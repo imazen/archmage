@@ -1,0 +1,97 @@
+# native/timed-codegen/thin.disasm:25329
+# Binary hash: 2fc63f6e84b5caaa6685c14be67fbd16286ddf38ffc72d64c3f991587c8ab4c5  target-thin/release/timing
+000000000007af20 <algebraic_ext_consumer::generated::__attune_poly_token_f32_v3>:
+   7af20:	48 83 ec 18          	sub    $0x18,%rsp
+   7af24:	48 89 74 24 08       	mov    %rsi,0x8(%rsp)
+   7af29:	48 89 14 24          	mov    %rdx,(%rsp)
+   7af2d:	48 39 d6             	cmp    %rdx,%rsi
+   7af30:	0f 85 0d 01 00 00    	jne    7b043 <algebraic_ext_consumer::generated::__attune_poly_token_f32_v3+0x123>
+   7af36:	48 89 74 24 10       	mov    %rsi,0x10(%rsp)
+   7af3b:	4c 89 04 24          	mov    %r8,(%rsp)
+   7af3f:	4c 39 c6             	cmp    %r8,%rsi
+   7af42:	0f 85 09 01 00 00    	jne    7b051 <algebraic_ext_consumer::generated::__attune_poly_token_f32_v3+0x131>
+   7af48:	48 89 f0             	mov    %rsi,%rax
+   7af4b:	48 83 e0 07          	and    $0x7,%rax
+   7af4f:	48 89 04 24          	mov    %rax,(%rsp)
+   7af53:	0f 85 11 01 00 00    	jne    7b06a <algebraic_ext_consumer::generated::__attune_poly_token_f32_v3+0x14a>
+   7af59:	48 85 f6             	test   %rsi,%rsi
+   7af5c:	0f 84 d9 00 00 00    	je     7b03b <algebraic_ext_consumer::generated::__attune_poly_token_f32_v3+0x11b>
+   7af62:	48 83 fe 08          	cmp    $0x8,%rsi
+   7af66:	75 07                	jne    7af6f <algebraic_ext_consumer::generated::__attune_poly_token_f32_v3+0x4f>
+   7af68:	31 c0                	xor    %eax,%eax
+   7af6a:	e9 94 00 00 00       	jmp    7b003 <algebraic_ext_consumer::generated::__attune_poly_token_f32_v3+0xe3>
+   7af6f:	48 89 f0             	mov    %rsi,%rax
+   7af72:	48 c1 e8 03          	shr    $0x3,%rax
+   7af76:	48 ba fe ff ff ff ff 	movabs $0x3fffffffffffffe,%rdx
+   7af7d:	ff ff 03 
+   7af80:	48 21 c2             	and    %rax,%rdx
+   7af83:	41 b8 20 00 00 00    	mov    $0x20,%r8d
+   7af89:	31 c0                	xor    %eax,%eax
+   7af8b:	c4 e2 7d 18 05 e4 d1 	vbroadcastss -0x62e1c(%rip),%ymm0        # 18178 <anon.806942782b6154e88a9ea786e1c44da3.18.llvm.2953812277088775676+0x38>
+   7af92:	f9 ff 
+   7af94:	c4 e2 7d 18 0d 7b d1 	vbroadcastss -0x62e85(%rip),%ymm1        # 18118 <anon.f317be449bf0cee3789d12ca367089a2.40.llvm.1223403572246277750+0x18>
+   7af9b:	f9 ff 
+   7af9d:	c4 e2 7d 18 15 7a d0 	vbroadcastss -0x62f86(%rip),%ymm2        # 18020 <anon.d91c92250040590ee5992f708a60f930.25.llvm.15459993428774991901+0x10>
+   7afa4:	f9 ff 
+   7afa6:	66 2e 0f 1f 84 00 00 	cs nopw 0x0(%rax,%rax,1)
+   7afad:	00 00 00 
+   7afb0:	c4 a1 7c 10 5c 07 e0 	vmovups -0x20(%rdi,%r8,1),%ymm3
+   7afb7:	c5 fc 28 e0          	vmovaps %ymm0,%ymm4
+   7afbb:	c4 e2 65 a8 e1       	vfmadd213ps %ymm1,%ymm3,%ymm4
+   7afc0:	c4 e2 65 a8 e2       	vfmadd213ps %ymm2,%ymm3,%ymm4
+   7afc5:	c4 e2 65 a8 e2       	vfmadd213ps %ymm2,%ymm3,%ymm4
+   7afca:	c4 a1 7c 11 64 01 e0 	vmovups %ymm4,-0x20(%rcx,%r8,1)
+   7afd1:	48 83 c0 02          	add    $0x2,%rax
+   7afd5:	c4 a1 7c 10 1c 07    	vmovups (%rdi,%r8,1),%ymm3
+   7afdb:	c5 fc 28 e0          	vmovaps %ymm0,%ymm4
+   7afdf:	c4 e2 65 a8 e1       	vfmadd213ps %ymm1,%ymm3,%ymm4
+   7afe4:	c4 e2 65 a8 e2       	vfmadd213ps %ymm2,%ymm3,%ymm4
+   7afe9:	c4 e2 65 a8 e2       	vfmadd213ps %ymm2,%ymm3,%ymm4
+   7afee:	c4 a1 7c 11 24 01    	vmovups %ymm4,(%rcx,%r8,1)
+   7aff4:	49 83 c0 40          	add    $0x40,%r8
+   7aff8:	48 39 c2             	cmp    %rax,%rdx
+   7affb:	75 b3                	jne    7afb0 <algebraic_ext_consumer::generated::__attune_poly_token_f32_v3+0x90>
+   7affd:	40 f6 c6 08          	test   $0x8,%sil
+   7b001:	74 38                	je     7b03b <algebraic_ext_consumer::generated::__attune_poly_token_f32_v3+0x11b>
+   7b003:	48 c1 e0 05          	shl    $0x5,%rax
+   7b007:	c5 fc 10 04 07       	vmovups (%rdi,%rax,1),%ymm0
+   7b00c:	c4 e2 7d 18 0d 63 d1 	vbroadcastss -0x62e9d(%rip),%ymm1        # 18178 <anon.806942782b6154e88a9ea786e1c44da3.18.llvm.2953812277088775676+0x38>
+   7b013:	f9 ff 
+   7b015:	c4 e2 7d 18 15 fa d0 	vbroadcastss -0x62f06(%rip),%ymm2        # 18118 <anon.f317be449bf0cee3789d12ca367089a2.40.llvm.1223403572246277750+0x18>
+   7b01c:	f9 ff 
+   7b01e:	c4 e2 7d 18 1d f9 cf 	vbroadcastss -0x63007(%rip),%ymm3        # 18020 <anon.d91c92250040590ee5992f708a60f930.25.llvm.15459993428774991901+0x10>
+   7b025:	f9 ff 
+   7b027:	c4 e2 7d b8 d1       	vfmadd231ps %ymm1,%ymm0,%ymm2
+   7b02c:	c4 e2 7d a8 d3       	vfmadd213ps %ymm3,%ymm0,%ymm2
+   7b031:	c4 e2 7d a8 d3       	vfmadd213ps %ymm3,%ymm0,%ymm2
+   7b036:	c5 fc 11 14 01       	vmovups %ymm2,(%rcx,%rax,1)
+   7b03b:	48 83 c4 18          	add    $0x18,%rsp
+   7b03f:	c5 f8 77             	vzeroupper
+   7b042:	c3                   	ret
+   7b043:	4c 8d 0d 06 d9 15 00 	lea    0x15d906(%rip),%r9        # 1d8950 <anon.e3becbfd9d9309d7348029d5fa319ae3.2.llvm.11080585718961047662+0x1038>
+   7b04a:	48 8d 74 24 08       	lea    0x8(%rsp),%rsi
+   7b04f:	eb 0c                	jmp    7b05d <algebraic_ext_consumer::generated::__attune_poly_token_f32_v3+0x13d>
+   7b051:	4c 8d 0d 10 d9 15 00 	lea    0x15d910(%rip),%r9        # 1d8968 <anon.e3becbfd9d9309d7348029d5fa319ae3.2.llvm.11080585718961047662+0x1050>
+   7b058:	48 8d 74 24 10       	lea    0x10(%rsp),%rsi
+   7b05d:	48 89 e2             	mov    %rsp,%rdx
+   7b060:	31 ff                	xor    %edi,%edi
+   7b062:	31 c9                	xor    %ecx,%ecx
+   7b064:	ff 15 4e 6a 16 00    	call   *0x166a4e(%rip)        # 1e1ab8 <_DYNAMIC+0x340>
+   7b06a:	48 8d 15 5f ca f9 ff 	lea    -0x635a1(%rip),%rdx        # 17ad0 <anon.574165b9a1e3cebd535338bb0d7973a0.751.llvm.2316785571840406366>
+   7b071:	4c 8d 0d 08 d9 15 00 	lea    0x15d908(%rip),%r9        # 1d8980 <anon.e3becbfd9d9309d7348029d5fa319ae3.2.llvm.11080585718961047662+0x1068>
+   7b078:	48 89 e6             	mov    %rsp,%rsi
+   7b07b:	31 ff                	xor    %edi,%edi
+   7b07d:	31 c9                	xor    %ecx,%ecx
+   7b07f:	ff 15 33 6a 16 00    	call   *0x166a33(%rip)        # 1e1ab8 <_DYNAMIC+0x340>
+   7b085:	cc                   	int3
+   7b086:	cc                   	int3
+   7b087:	cc                   	int3
+   7b088:	cc                   	int3
+   7b089:	cc                   	int3
+   7b08a:	cc                   	int3
+   7b08b:	cc                   	int3
+   7b08c:	cc                   	int3
+   7b08d:	cc                   	int3
+   7b08e:	cc                   	int3
+   7b08f:	cc                   	int3
+

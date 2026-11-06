@@ -1,0 +1,35 @@
+generate:
+    python3 generate-consumer.py
+    cargo fmt -p algebraic-ext-consumer
+fmt:
+    cargo fmt -p algebraic-ext-consumer -p algebraic-magetypes-prototype --check
+lint:
+    cargo clippy --all-targets --features avx512 -- -D warnings
+native-check:
+    bash check-native.sh
+build:
+    bash build-native.sh
+bench mode out:
+    target-{{mode}}/release/timing {{out}}
+results mode out:
+    target-{{mode}}/release/results {{out}}
+published:
+    cargo run --release --manifest-path published-beta/Cargo.toml
+    cargo run --release --manifest-path published-030/Cargo.toml
+
+build-arm:
+    bash build-arm.sh
+build-wasm:
+    bash build-wasm.sh
+health:
+    bash health.sh
+validate-wasm runner:
+    bash validate-wasm.sh {{runner}}
+observe root:
+    python3 analyze.py {{root}}
+summarize raw out:
+    python3 summarize.py {{raw}} {{out}}
+extract raw:
+    python3 extract.py {{raw}} codegen
+final-audit raw:
+    python3 audit.py {{raw}}

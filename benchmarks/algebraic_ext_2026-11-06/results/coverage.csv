@@ -1,0 +1,7 @@
+target,lto,groups,cells,min_rounds,incomplete,unreliable
+native,off,8,138,60,False,False
+native,thin,8,138,60,False,False
+arm,off,8,92,60,False,False
+arm,thin,8,92,60,False,False
+wasm,off,8,92,30,False,False
+wasm,thin,8,92,32,False,False
