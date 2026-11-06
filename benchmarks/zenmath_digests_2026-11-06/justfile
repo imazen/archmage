@@ -24,4 +24,11 @@ matrix *args:
     python3 matrix.py {{args}}
 
 inspect root:
-    python3 inspect.py {{root}}
+    python3 inspect_runs.py {{root}}
+
+check-v3:
+    cargo +1.99.0 test --no-default-features --release
+    cargo +1.99.0 clippy --no-default-features --all-targets --release -- -D warnings
+
+build-v3:
+    cargo +1.99.0 build --no-default-features --release
