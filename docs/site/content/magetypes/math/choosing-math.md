@@ -12,7 +12,7 @@ Rust's standard library nor a correctly rounded implementation promises those bi
 
 | Surface | Contract | Use |
 |---|---|---|
-| Rust `std` float methods | Method-specific precision; transcendental results may vary by platform and version | A platform baseline when reproducibility is unnecessary |
+| [Rust `std` float methods](https://doc.rust-lang.org/std/primitive.f32.html#method.powf) | Method-specific precision; transcendental results may vary by platform and version | A platform baseline when reproducibility is unnecessary |
 | Magetypes `_midp` / `_lowp` | Approximation families with documented domains and ISA differences | Vector kernels with an explicit error budget |
 | Magetypes `mul_add_fused` | Single rounding | Algorithms that require FMA semantics |
 | Magetypes `mul_add_relaxed` | Backend-dependent fused or separate arithmetic | Explicitly accepted rounding differences |
@@ -112,3 +112,19 @@ ignoring signed zero. It does not set `nnan` or `ninf`; do not describe the API
 as an assertion that exceptional inputs never occur. These are implementation
 details to check in generated IR, not a stronger numerical promise than Rust's
 public contract. See [LLVM's flag definitions](https://llvm.org/docs/LangRef.html#fast-math-flags).
+
+## What changed in Magetypes' betas
+
+The benchmark baseline uses the Magetypes source tree from `v0.9.31-beta.2`.
+The draft math work has not replaced its transcendental polynomials or changed
+its public math behavior. The complete `magetypes/` tree matches that tag in
+this study, not merely the polynomial files.
+
+Beta.1 corrected portable f32 FMA's subnormal rounding and supplied narrower
+AVX-512 backend coverage. Beta.2 added the explicit `_fused` and `_relaxed`
+multiply-add/subtract names, vectorized the software FMA path, added cached
+hardware selection for portable scalar-backend f64 FMA, and used a cached
+fusion check for relaxed WASM. The exact software fallback was vendored and
+the libm dependency removed. These changes affect math kernel costs without
+replacing the existing approximation families. See the
+[versioned changelog](https://github.com/imazen/archmage/blob/v0.9.31-beta.2/CHANGELOG.md).
