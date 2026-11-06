@@ -1123,3 +1123,8 @@ pub mod unfused {
 pub use crate::core_math::powf;
 pub use crate::core_math::{atanf, fma, log10f, tanhf};
 pub use crate::core_math::{cbrtf, exp2f, expf, log2f, logf};
+pub use crate::core_math::{cosf, sinf};
+/// Correctly rounded sine and cosine (nearest-even).
+pub fn sincosf(x: f32) -> (f32, f32) {
+    (sinf(x), cosf(x))
+}

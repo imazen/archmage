@@ -30,3 +30,8 @@ pub use log10f::log10f;
 pub use tanhf::tanhf;
 mod powf;
 pub use powf::powf;
+mod cosf;
+mod sinf;
+mod trig_reduce;
+pub use cosf::cosf;
+pub use sinf::sinf;
