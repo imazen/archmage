@@ -235,6 +235,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 #### Added
 
+- Prototype algebraic vector extension traits in an independent unpublished crate, compatible with published Magetypes 0.9.30 and 0.9.31-beta.2; retain the production API and MSRV (c07166bc).
 - Complete the available scalar/vector math benchmark matrix across x86, AArch64 and strict WASM: 5,091 measured cells, independent MPFR checks, algebraic codegen evidence and explicit missing/failed cases (2fe299eb).
 - Add a math guide covering numerical contracts, matched-feature std comparisons, Rust 1.98 algebraic operations and measured vector lowering; keep the production MSRV at 1.89 (62779f4b, f6d28a1a).
 - Draft magemath adds correctly rounded packed f32 exp, ln, log2 and pow array/slice APIs, with per-lane accurate fallback and once-per-buffer dispatch (42fa8553, 5c9335d4).
