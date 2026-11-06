@@ -102,6 +102,33 @@ remains nightly-only and currently supplies no algebraic methods. The underlying
 [`fadd_algebraic` intrinsic](https://doc.rust-lang.org/core/intrinsics/fn.fadd_algebraic.html)
 is also nightly-only; the scalar methods are the stable entry point.
 
+For a Magetypes value, an explicit lane map expresses the permissions in safe
+Rust. This complete example requires Rust 1.98+. The polynomial is an arithmetic
+example, not an accurate implementation of `exp`:
+
+```rust
+use archmage::prelude::*;
+
+#[attune(_*_t, define(f32x8))]
+fn cubic(token: Token, input: [f32; 8]) -> [f32; 8] {
+    let value = f32x8::from_array_t(token, input);
+    let lanes = value.to_array().map(|x| {
+        0.166_666_67_f32.algebraic_mul(x)
+            .algebraic_add(0.5).algebraic_mul(x)
+            .algebraic_add(1.0).algebraic_mul(x)
+            .algebraic_add(1.0)
+    });
+    f32x8::from_array_t(token, lanes).to_array()
+}
+
+let result = attuned!(cubic([0.5; 8]));
+std::hint::black_box(result);
+```
+
+This gives the compiler permission to transform each lane's arithmetic. It
+cannot force a particular instruction sequence. The reduction counterexample
+below is why the map should be benchmarked inside its actual consuming loop.
+
 Algebraic arithmetic may reassociate, replace division with reciprocal
 multiplication, combine operations, and disregard signed zero. Its precision
 is unspecified. Identical inputs need not produce identical outputs even within
