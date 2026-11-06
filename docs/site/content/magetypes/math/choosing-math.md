@@ -134,3 +134,12 @@ fusion check for relaxed WASM. The exact software fallback was vendored and
 the libm dependency removed. These changes affect math kernel costs without
 replacing the existing approximation families. See the
 [versioned changelog](https://github.com/imazen/archmage/blob/v0.9.31-beta.2/CHANGELOG.md).
+
+In the study's optimized V3 IR, `poly_array_algebraic_f32` lowers its lane map
+to `<8 x float>` multiply/add operations carrying all four algebraic flags.
+`dot_algebraic_f32` becomes packed eight-lane operations followed by
+`llvm.vector.reduce.fadd.v8f32`. The ordinary Magetypes polynomial also uses
+packed eight-lane arithmetic, but without those flags. This verifies that the
+array representation can carry algebraic permissions through vectorization;
+it does not guarantee the same lowering for every kernel or compiler.
+The reproducible probes live in `benchmarks/math_matrix_2026-11-06/`.
