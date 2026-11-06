@@ -47,7 +47,7 @@ pub fn cbrtf(x: f32) -> f32 {
     let mut au = u.wrapping_shl(1);
     let sgn = u >> 31;
     let mut e = au >> 24;
-    if au < 1 << 24 || au >= 0xff000000 {
+    if !(1 << 24..0xff000000).contains(&au) {
         if au >= 0xff000000 {
             return x + x;
         }

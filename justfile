@@ -631,3 +631,7 @@ core-math-study-tuning output:
 
 core-math-study-analyze csv analyzer:
     python3 benchmarks/core_math_cost_2026-11-05/analyze.py {{csv}} {{analyzer}}
+
+# Exact-bit checks against externally generated MPFR records; use run-heavy on an eligible host.
+zenmath-core-check records:
+    bash zenmath/tools/check-core-math.sh '{{records}}'

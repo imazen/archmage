@@ -12,7 +12,7 @@ fn main() {
     let data = std::fs::read(&args[2]).expect("MPFR records required");
     assert!(!data.is_empty() && data.len() % 24 == 0);
     let mut failed = 0;
-    for record in data.chunks_exact(24) {
+    for record in data.as_chunks::<24>().0 {
         let input = u64::from_le_bytes(record[..8].try_into().unwrap());
         let expected = u64::from_le_bytes(record[16..].try_into().unwrap());
         let y = u64::from_le_bytes(record[8..16].try_into().unwrap());

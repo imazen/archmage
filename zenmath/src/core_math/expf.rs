@@ -114,7 +114,7 @@ pub fn expf(x: f32) -> f32 {
     let big = f64::from_bits(0x42d8000000000000);
     let u = (a + big).to_bits();
     let ux = t.wrapping_shl(1);
-    if ux > 0x8562e42e || ux < 0x6f93813e {
+    if !(0x6f93813e..=0x8562e42e).contains(&ux) {
         if ux < 0x6f93813e {
             return (1.0 + z * (1.0 + z * 0.5)) as f32;
         }

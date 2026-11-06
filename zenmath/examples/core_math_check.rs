@@ -25,7 +25,7 @@ fn main() {
     let data = std::fs::read(&args[2]).expect("MPFR records required");
     assert!(!data.is_empty() && data.len() % 12 == 0);
     let mut failed = 0;
-    for record in data.chunks_exact(12) {
+    for record in data.as_chunks::<12>().0 {
         let input = u32::from_le_bytes(record[..4].try_into().unwrap());
         let expected = u32::from_le_bytes(record[8..].try_into().unwrap());
         let y = u32::from_le_bytes(record[4..8].try_into().unwrap());

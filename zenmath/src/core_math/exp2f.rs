@@ -110,7 +110,7 @@ pub fn exp2f(x: f32) -> f32 {
         }
     }
     let ux = t.wrapping_shl(1);
-    if ux >= 0x86000000 || ux < 0x65000000 {
+    if !(0x65000000..0x86000000).contains(&ux) {
         if ux < 0x65000000 {
             return 1.0 + x;
         }
