@@ -1,0 +1,8 @@
+platform,group,a,b,rounds,mean_a,mean_b,delta_b_minus_a,ci95_lo,ci95_hi,method
+i265,dot/f32,dot_vector_fused/v3,dot_array_algebraic/v3,60,0.05695499767726247,0.05757778594904393,0.0006227882717814616,-0.00031965065762495107,0.002095838779115871,all retained rounds; paired mean difference bootstrap seed20261106 10000resamples
+arm,dot/f32,dot_vector_fused/neon,dot_array_algebraic/neon,60,0.09262847667925525,0.34941673719132715,0.2567882605120719,0.23726769171650805,0.28123183238457833,all retained rounds; paired mean difference bootstrap seed20261106 10000resamples
+arm,dot/f32,dot_vector_fused/neon,dot_algebraic/neon,60,0.09262847667925525,0.0909936035153231,-0.0016348731639321623,-0.0035441417085579265,-0.0004102251524014347,all retained rounds; paired mean difference bootstrap seed20261106 10000resamples
+r7900x,poly/f32,poly_ordinary/v4x,poly_algebraic/v4x,60,0.05050656120072648,0.06731921694035004,0.016812655739623556,0.0022879770624648966,0.032110898343014685,all retained rounds; paired mean difference bootstrap seed20261106 10000resamples
+i265,dot/f32,dot_ordinary/v3,dot_algebraic/v3,60,0.37457909157227853,0.026154618604882513,-0.34842447296739604,-0.37563834630461695,-0.33001376632565393,all retained rounds; paired mean difference bootstrap seed20261106 10000resamples
+r7900x,dot/f32,dot_ordinary/v3,dot_algebraic/v3,60,0.6981380503376733,0.04724055699158184,-0.6508974933460914,-0.7132009742202127,-0.5936550662968969,all retained rounds; paired mean difference bootstrap seed20261106 10000resamples
+arm,poly/f32,poly_vector_fused/neon,poly_array_algebraic/neon,60,0.3474218086334927,0.32132542436333295,-0.02609638427015976,-0.02812552293789861,-0.023873602489725757,all retained rounds; paired mean difference bootstrap seed20261106 10000resamples

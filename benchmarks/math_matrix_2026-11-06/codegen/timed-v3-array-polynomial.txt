@@ -1,0 +1,97 @@
+# Actual timed binary, SHA256 retained in artifact timed-codegen folder
+# r7900x/timed-codegen/algebraic-timed-x86.disasm:36901
+000000000007e520 <math_matrix_study::algebraic::__attune_poly_array_algebraic_f32_v3>:
+   7e520:	48 83 ec 18          	sub    $0x18,%rsp
+   7e524:	48 89 74 24 08       	mov    %rsi,0x8(%rsp)
+   7e529:	48 89 14 24          	mov    %rdx,(%rsp)
+   7e52d:	48 39 d6             	cmp    %rdx,%rsi
+   7e530:	0f 85 0d 01 00 00    	jne    7e643 <math_matrix_study::algebraic::__attune_poly_array_algebraic_f32_v3+0x123>
+   7e536:	48 89 74 24 10       	mov    %rsi,0x10(%rsp)
+   7e53b:	4c 89 04 24          	mov    %r8,(%rsp)
+   7e53f:	4c 39 c6             	cmp    %r8,%rsi
+   7e542:	0f 85 09 01 00 00    	jne    7e651 <math_matrix_study::algebraic::__attune_poly_array_algebraic_f32_v3+0x131>
+   7e548:	48 89 f0             	mov    %rsi,%rax
+   7e54b:	48 83 e0 07          	and    $0x7,%rax
+   7e54f:	48 89 04 24          	mov    %rax,(%rsp)
+   7e553:	0f 85 11 01 00 00    	jne    7e66a <math_matrix_study::algebraic::__attune_poly_array_algebraic_f32_v3+0x14a>
+   7e559:	48 85 f6             	test   %rsi,%rsi
+   7e55c:	0f 84 d9 00 00 00    	je     7e63b <math_matrix_study::algebraic::__attune_poly_array_algebraic_f32_v3+0x11b>
+   7e562:	48 83 fe 08          	cmp    $0x8,%rsi
+   7e566:	75 07                	jne    7e56f <math_matrix_study::algebraic::__attune_poly_array_algebraic_f32_v3+0x4f>
+   7e568:	31 c0                	xor    %eax,%eax
+   7e56a:	e9 94 00 00 00       	jmp    7e603 <math_matrix_study::algebraic::__attune_poly_array_algebraic_f32_v3+0xe3>
+   7e56f:	48 89 f0             	mov    %rsi,%rax
+   7e572:	48 c1 e8 03          	shr    $0x3,%rax
+   7e576:	48 ba fe ff ff ff ff 	movabs $0x3fffffffffffffe,%rdx
+   7e57d:	ff ff 03 
+   7e580:	48 21 c2             	and    %rax,%rdx
+   7e583:	41 b8 20 00 00 00    	mov    $0x20,%r8d
+   7e589:	31 c0                	xor    %eax,%eax
+   7e58b:	c4 e2 7d 18 05 dc 6a 	vbroadcastss -0x69524(%rip),%ymm0        # 15070 <anon.806942782b6154e88a9ea786e1c44da3.18.llvm.2953812277088775676+0x38>
+   7e592:	f9 ff 
+   7e594:	c4 e2 7d 18 0d 73 6a 	vbroadcastss -0x6958d(%rip),%ymm1        # 15010 <anon.f317be449bf0cee3789d12ca367089a2.40.llvm.1223403572246277750+0x18>
+   7e59b:	f9 ff 
+   7e59d:	c4 e2 7d 18 15 7a 69 	vbroadcastss -0x69686(%rip),%ymm2        # 14f20 <anon.d91c92250040590ee5992f708a60f930.25.llvm.15459993428774991901+0x10>
+   7e5a4:	f9 ff 
+   7e5a6:	66 2e 0f 1f 84 00 00 	cs nopw 0x0(%rax,%rax,1)
+   7e5ad:	00 00 00 
+   7e5b0:	c4 a1 7c 10 5c 07 e0 	vmovups -0x20(%rdi,%r8,1),%ymm3
+   7e5b7:	c5 fc 28 e0          	vmovaps %ymm0,%ymm4
+   7e5bb:	c4 e2 65 a8 e1       	vfmadd213ps %ymm1,%ymm3,%ymm4
+   7e5c0:	c4 e2 65 a8 e2       	vfmadd213ps %ymm2,%ymm3,%ymm4
+   7e5c5:	c4 e2 65 a8 e2       	vfmadd213ps %ymm2,%ymm3,%ymm4
+   7e5ca:	c4 a1 7c 11 64 01 e0 	vmovups %ymm4,-0x20(%rcx,%r8,1)
+   7e5d1:	48 83 c0 02          	add    $0x2,%rax
+   7e5d5:	c4 a1 7c 10 1c 07    	vmovups (%rdi,%r8,1),%ymm3
+   7e5db:	c5 fc 28 e0          	vmovaps %ymm0,%ymm4
+   7e5df:	c4 e2 65 a8 e1       	vfmadd213ps %ymm1,%ymm3,%ymm4
+   7e5e4:	c4 e2 65 a8 e2       	vfmadd213ps %ymm2,%ymm3,%ymm4
+   7e5e9:	c4 e2 65 a8 e2       	vfmadd213ps %ymm2,%ymm3,%ymm4
+   7e5ee:	c4 a1 7c 11 24 01    	vmovups %ymm4,(%rcx,%r8,1)
+   7e5f4:	49 83 c0 40          	add    $0x40,%r8
+   7e5f8:	48 39 c2             	cmp    %rax,%rdx
+   7e5fb:	75 b3                	jne    7e5b0 <math_matrix_study::algebraic::__attune_poly_array_algebraic_f32_v3+0x90>
+   7e5fd:	40 f6 c6 08          	test   $0x8,%sil
+   7e601:	74 38                	je     7e63b <math_matrix_study::algebraic::__attune_poly_array_algebraic_f32_v3+0x11b>
+   7e603:	48 c1 e0 05          	shl    $0x5,%rax
+   7e607:	c5 fc 10 04 07       	vmovups (%rdi,%rax,1),%ymm0
+   7e60c:	c4 e2 7d 18 0d 5b 6a 	vbroadcastss -0x695a5(%rip),%ymm1        # 15070 <anon.806942782b6154e88a9ea786e1c44da3.18.llvm.2953812277088775676+0x38>
+   7e613:	f9 ff 
+   7e615:	c4 e2 7d 18 15 f2 69 	vbroadcastss -0x6960e(%rip),%ymm2        # 15010 <anon.f317be449bf0cee3789d12ca367089a2.40.llvm.1223403572246277750+0x18>
+   7e61c:	f9 ff 
+   7e61e:	c4 e2 7d 18 1d f9 68 	vbroadcastss -0x69707(%rip),%ymm3        # 14f20 <anon.d91c92250040590ee5992f708a60f930.25.llvm.15459993428774991901+0x10>
+   7e625:	f9 ff 
+   7e627:	c4 e2 7d b8 d1       	vfmadd231ps %ymm1,%ymm0,%ymm2
+   7e62c:	c4 e2 7d a8 d3       	vfmadd213ps %ymm3,%ymm0,%ymm2
+   7e631:	c4 e2 7d a8 d3       	vfmadd213ps %ymm3,%ymm0,%ymm2
+   7e636:	c5 fc 11 14 01       	vmovups %ymm2,(%rcx,%rax,1)
+   7e63b:	48 83 c4 18          	add    $0x18,%rsp
+   7e63f:	c5 f8 77             	vzeroupper
+   7e642:	c3                   	ret
+   7e643:	4c 8d 0d be da 13 00 	lea    0x13dabe(%rip),%r9        # 1bc108 <anon.821506ce466ee6646de7777fa3b94a42.2.llvm.17558855145083318336+0x648>
+   7e64a:	48 8d 74 24 08       	lea    0x8(%rsp),%rsi
+   7e64f:	eb 0c                	jmp    7e65d <math_matrix_study::algebraic::__attune_poly_array_algebraic_f32_v3+0x13d>
+   7e651:	4c 8d 0d c8 da 13 00 	lea    0x13dac8(%rip),%r9        # 1bc120 <anon.821506ce466ee6646de7777fa3b94a42.2.llvm.17558855145083318336+0x660>
+   7e658:	48 8d 74 24 10       	lea    0x10(%rsp),%rsi
+   7e65d:	48 89 e2             	mov    %rsp,%rdx
+   7e660:	31 ff                	xor    %edi,%edi
+   7e662:	31 c9                	xor    %ecx,%ecx
+   7e664:	ff 15 b6 4b 14 00    	call   *0x144bb6(%rip)        # 1c3220 <_DYNAMIC+0x498>
+   7e66a:	48 8d 15 67 6f f9 ff 	lea    -0x69099(%rip),%rdx        # 155d8 <anon.574165b9a1e3cebd535338bb0d7973a0.751.llvm.2316785571840406366>
+   7e671:	4c 8d 0d c0 da 13 00 	lea    0x13dac0(%rip),%r9        # 1bc138 <anon.821506ce466ee6646de7777fa3b94a42.2.llvm.17558855145083318336+0x678>
+   7e678:	48 89 e6             	mov    %rsp,%rsi
+   7e67b:	31 ff                	xor    %edi,%edi
+   7e67d:	31 c9                	xor    %ecx,%ecx
+   7e67f:	ff 15 9b 4b 14 00    	call   *0x144b9b(%rip)        # 1c3220 <_DYNAMIC+0x498>
+   7e685:	cc                   	int3
+   7e686:	cc                   	int3
+   7e687:	cc                   	int3
+   7e688:	cc                   	int3
+   7e689:	cc                   	int3
+   7e68a:	cc                   	int3
+   7e68b:	cc                   	int3
+   7e68c:	cc                   	int3
+   7e68d:	cc                   	int3
+   7e68e:	cc                   	int3
+   7e68f:	cc                   	int3
+

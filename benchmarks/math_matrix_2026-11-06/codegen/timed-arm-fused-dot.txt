@@ -1,0 +1,66 @@
+# Actual timed binary, SHA256 retained in artifact timed-codegen folder
+# arm/timed-codegen/algebraic-timed-arm.disasm:34725
+000000000002cfa0 <math_matrix_study::algebraic::cases_f32::{closure#19}>:
+   2cfa0:	d100c3ff 	sub	sp, sp, #0x30
+   2cfa4:	a9027bfd 	stp	x29, x30, [sp, #32]
+   2cfa8:	910083fd 	add	x29, sp, #0x20
+   2cfac:	eb04005f 	cmp	x2, x4
+   2cfb0:	f90007e2 	str	x2, [sp, #8]
+   2cfb4:	f81f83a4 	stur	x4, [x29, #-8]
+   2cfb8:	540003a1 	b.ne	2d02c <math_matrix_study::algebraic::cases_f32::{closure#19}+0x8c>  // b.any
+   2cfbc:	eb06005f 	cmp	x2, x6
+   2cfc0:	f81f83a2 	stur	x2, [x29, #-8]
+   2cfc4:	f9000be6 	str	x6, [sp, #16]
+   2cfc8:	54000401 	b.ne	2d048 <math_matrix_study::algebraic::cases_f32::{closure#19}+0xa8>  // b.any
+   2cfcc:	f2400848 	ands	x8, x2, #0x7
+   2cfd0:	f81f83a8 	stur	x8, [x29, #-8]
+   2cfd4:	54000481 	b.ne	2d064 <math_matrix_study::algebraic::cases_f32::{closure#19}+0xc4>  // b.any
+   2cfd8:	b4000562 	cbz	x2, 2d084 <math_matrix_study::algebraic::cases_f32::{closure#19}+0xe4>
+   2cfdc:	6f00e400 	movi	v0.2d, #0x0
+   2cfe0:	6f00e401 	movi	v1.2d, #0x0
+   2cfe4:	d343fc48 	lsr	x8, x2, #3
+   2cfe8:	91004029 	add	x9, x1, #0x10
+   2cfec:	9100406a 	add	x10, x3, #0x10
+   2cff0:	ad7f8923 	ldp	q3, q2, [x9, #-16]
+   2cff4:	f1000508 	subs	x8, x8, #0x1
+   2cff8:	ad7f9544 	ldp	q4, q5, [x10, #-16]
+   2cffc:	91008129 	add	x9, x9, #0x20
+   2d000:	9100814a 	add	x10, x10, #0x20
+   2d004:	4e23cc81 	fmla	v1.4s, v4.4s, v3.4s
+   2d008:	4e22cca0 	fmla	v0.4s, v5.4s, v2.4s
+   2d00c:	54ffff21 	b.ne	2cff0 <math_matrix_study::algebraic::cases_f32::{closure#19}+0x50>  // b.any
+   2d010:	4e20d420 	fadd	v0.4s, v1.4s, v0.4s
+   2d014:	6e20d400 	faddp	v0.4s, v0.4s, v0.4s
+   2d018:	7e30d800 	faddp	s0, v0.2s
+   2d01c:	bd0000a0 	str	s0, [x5]
+   2d020:	a9427bfd 	ldp	x29, x30, [sp, #32]
+   2d024:	9100c3ff 	add	sp, sp, #0x30
+   2d028:	d65f03c0 	ret
+   2d02c:	f0000ac5 	adrp	x5, 188000 <anon.3d203e8f6e3a099bd054f06b06c9d35e.96.llvm.5928411646807769440+0xc0>
+   2d030:	913e00a5 	add	x5, x5, #0xf80
+   2d034:	910023e1 	add	x1, sp, #0x8
+   2d038:	d10023a2 	sub	x2, x29, #0x8
+   2d03c:	2a1f03e0 	mov	w0, wzr
+   2d040:	aa1f03e3 	mov	x3, xzr
+   2d044:	97ff7fc9 	bl	cf68 <core::panicking::assert_failed::<usize, usize>>
+   2d048:	f0000ac5 	adrp	x5, 188000 <anon.3d203e8f6e3a099bd054f06b06c9d35e.96.llvm.5928411646807769440+0xc0>
+   2d04c:	913e60a5 	add	x5, x5, #0xf98
+   2d050:	d10023a1 	sub	x1, x29, #0x8
+   2d054:	910043e2 	add	x2, sp, #0x10
+   2d058:	2a1f03e0 	mov	w0, wzr
+   2d05c:	aa1f03e3 	mov	x3, xzr
+   2d060:	97ff7fc2 	bl	cf68 <core::panicking::assert_failed::<usize, usize>>
+   2d064:	90000842 	adrp	x2, 135000 <anon.31da665b0c03f451510e3fae87f833e2.37.llvm.11862216782044322464+0x130>
+   2d068:	910c4042 	add	x2, x2, #0x310
+   2d06c:	f0000ac5 	adrp	x5, 188000 <anon.3d203e8f6e3a099bd054f06b06c9d35e.96.llvm.5928411646807769440+0xc0>
+   2d070:	913f20a5 	add	x5, x5, #0xfc8
+   2d074:	d10023a1 	sub	x1, x29, #0x8
+   2d078:	2a1f03e0 	mov	w0, wzr
+   2d07c:	aa1f03e3 	mov	x3, xzr
+   2d080:	97ff7fba 	bl	cf68 <core::panicking::assert_failed::<usize, usize>>
+   2d084:	f0000ac2 	adrp	x2, 188000 <anon.3d203e8f6e3a099bd054f06b06c9d35e.96.llvm.5928411646807769440+0xc0>
+   2d088:	913ec042 	add	x2, x2, #0xfb0
+   2d08c:	aa1f03e0 	mov	x0, xzr
+   2d090:	aa1f03e1 	mov	x1, xzr
+   2d094:	97ff8006 	bl	d0ac <core::panicking::panic_bounds_check>
+
