@@ -518,9 +518,22 @@ impl Math for Software {
 
 #[inline(always)]
 pub(crate) fn powf_with_math<M: Math>(math: M, x0: f32, y0: f32) -> f32 {
+    // Most transfer/polynomial callers have positive normal bases and finite
+    // nonidentity exponents. Classify those with integer bits before widening
+    // or walking the IEEE special/parity cases. Both routes share every
+    // arithmetic operation and the accurate fallback below.
+    let xb = x0.to_bits();
+    let yb = y0.to_bits();
+    let ay = yb & 0x7fff_ffff;
+    if xb.wrapping_sub(0x0080_0000) < 0x7f00_0000
+        && xb != 0x3f80_0000
+        && ay.wrapping_sub(1) < 0x7f7f_ffff
+        && yb != 0x3f80_0000
+    {
+        return common(math, x0, y0, false);
+    }
     let x = x0 as f64;
-    let mut y = y0 as f64;
-    let tx = x.to_bits();
+    let y = y0 as f64;
     if x.abs() == 1.0 {
         if x < 0.0 {
             if y0.is_nan() {
@@ -569,6 +582,17 @@ pub(crate) fn powf_with_math<M: Math>(math: M, x0: f32, y0: f32) -> f32 {
         };
     }
     let negative = x.is_sign_negative() && isodd(y0);
+    common(math, x0, y0, negative)
+}
+
+// Keep the positive fast entry and the existing negative/special classifier on
+// one formula. Always inline so native proof arithmetic stays in its caller's
+// feature context rather than introducing per-step target-feature boundaries.
+#[inline(always)]
+fn common<M: Math>(math: M, x0: f32, y0: f32, negative: bool) -> f32 {
+    let x = x0 as f64;
+    let mut y = y0 as f64;
+    let tx = x.to_bits();
     let m = tx & 0x000fffffffffffff;
     let mut e = ((tx >> 52) & 2047) as i32 - 1023;
     let j = ((m + (1_u64 << 46)) >> 47) as usize;
