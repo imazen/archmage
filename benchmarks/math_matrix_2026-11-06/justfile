@@ -1,0 +1,11 @@
+generate:
+    python3 generate.py
+build:
+    cargo build --release --features avx512 --bins
+lint:
+    cargo fmt --check
+    cargo clippy --all-targets --features avx512 -- -D warnings
+validate out:
+    target/release/validate {{out}}
+bench out:
+    target/release/timing {{out}}

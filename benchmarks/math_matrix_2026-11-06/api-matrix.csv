@@ -1,0 +1,226 @@
+operation,candidate,width,dtype,source_expression
+powf,std,1,f32,a.powf(b)
+powf,std_loop_context,1,f32,a.powf(b)
+powf,zenmath_correct_loop_context,1,f32,"zenmath::scalar::powf(a, b)"
+powf,zenmath_correct,1,f32,"zenmath::scalar::powf(a, b)"
+powf,libm,1,f32,"libm::powf(a, b)"
+powf,fpmath,1,f32,"fpmath::pow(a, b)"
+powf,micromath,1,f32,micromath::F32(a).powf(micromath::F32(b)).0
+powf,metallic,1,f32,"metallic::powf(a, b)"
+powf,zenmath_portable_midp,1,f32,"zenmath::scalar::pow_midp_f32(a, b)"
+powf,zenmath_unfused_midp,1,f32,"zenmath::scalar::unfused::pow_midp_f32(a, b)"
+powf,zenmath_portable_lowp,1,f32,"zenmath::scalar::pow_lowp_f32(a, b)"
+powf,zenmath_unfused_lowp,1,f32,"zenmath::scalar::unfused::pow_lowp_f32(a, b)"
+powf,magemath_correct_proof,8,f32,"out.copy_from_slice(x); archmage::attuned!(magemath::portable::slice::pow_f32(out, y));"
+powf,magemath_correct_dispatch,8,f32,"out.copy_from_slice(x); archmage::attuned!(magemath::portable::slice::pow_f32(out, y));"
+powf,magemath_policy_midp,8,f32,"out.copy_from_slice(x); archmage::attuned!(magemath::portable::slice::pow_f32_with::<{magemath::PowBehavior::MIDP.to_u64()}>(out,y));"
+powf,magemath_policy_lowp,8,f32,"out.copy_from_slice(x); archmage::attuned!(magemath::portable::slice::pow_f32_with::<{magemath::PowBehavior::LOWP.to_u64()}>(out,y));"
+pow_fixed,std,1,f32,a.powf(2.4)
+pow_fixed,std_loop_context,1,f32,a.powf(2.4)
+pow_fixed,zenmath_correct_loop_context,1,f32,"zenmath::scalar::powf(a, 2.4)"
+pow_fixed,zenmath_correct,1,f32,"zenmath::scalar::powf(a, 2.4)"
+pow_fixed,libm,1,f32,"libm::powf(a, 2.4)"
+pow_fixed,fpmath,1,f32,"fpmath::pow(a, 2.4)"
+pow_fixed,micromath,1,f32,micromath::F32(a).powf(micromath::F32(2.4)).0
+pow_fixed,metallic,1,f32,"metallic::powf(a, 2.4)"
+pow_fixed,zenmath_portable_midp,1,f32,"zenmath::scalar::pow_midp_f32(a, 2.4)"
+pow_fixed,zenmath_unfused_midp,1,f32,"zenmath::scalar::unfused::pow_midp_f32(a, 2.4)"
+pow_fixed,magemath_portable_midp,8,f32,"magemath::portable::kernels::pow_midp(t,a, 2.4)"
+pow_fixed,magemath_unfused_midp,8,f32,"magemath::unfused::kernels::pow_midp(t,a, 2.4)"
+pow_fixed,magemath_relaxed_midp,8,f32,"magemath::relaxed::kernels::pow_midp(t,a, 2.4)"
+pow_fixed,zenmath_portable_lowp,1,f32,"zenmath::scalar::pow_lowp_f32(a, 2.4)"
+pow_fixed,zenmath_unfused_lowp,1,f32,"zenmath::scalar::unfused::pow_lowp_f32(a, 2.4)"
+pow_fixed,magemath_portable_lowp,8,f32,"magemath::portable::kernels::pow_lowp(t,a, 2.4)"
+pow_fixed,magemath_unfused_lowp,8,f32,"magemath::unfused::kernels::pow_lowp(t,a, 2.4)"
+pow_fixed,magemath_relaxed_lowp,8,f32,"magemath::relaxed::kernels::pow_lowp(t,a, 2.4)"
+pow_fixed,magemath_correct_proof,8,f32,"out.copy_from_slice(x); archmage::attuned!(magemath::portable::slice::pow_f32(out, y));"
+pow_fixed,magemath_correct_dispatch,8,f32,"out.copy_from_slice(x); archmage::attuned!(magemath::portable::slice::pow_f32(out, y));"
+pow_fixed,magetypes_midp,4,f32,a.pow_midp(2.4)
+pow_fixed,magetypes_lowp,4,f32,a.pow_lowp(2.4)
+pow_fixed,magetypes_midp,8,f32,a.pow_midp(2.4)
+pow_fixed,magetypes_lowp,8,f32,a.pow_lowp(2.4)
+pow_fixed,magetypes_midp,16,f32,a.pow_midp(2.4)
+pow_fixed,magetypes_lowp,16,f32,a.pow_lowp(2.4)
+exp,std,1,f32,a.exp()
+exp,std_loop_context,1,f32,a.exp()
+exp,zenmath_correct_loop_context,1,f32,zenmath::scalar::expf(a)
+exp,zenmath_correct,1,f32,zenmath::scalar::expf(a)
+exp,libm,1,f32,libm::expf(a)
+exp,fpmath,1,f32,fpmath::exp(a)
+exp,micromath,1,f32,micromath::F32(a).exp().0
+exp,metallic,1,f32,metallic::expf(a)
+exp,zenmath_portable_midp,1,f32,zenmath::scalar::exp_midp_f32(a)
+exp,zenmath_unfused_midp,1,f32,zenmath::scalar::unfused::exp_midp_f32(a)
+exp,magemath_portable_midp,8,f32,"magemath::portable::kernels::exp_midp(t,a)"
+exp,magemath_unfused_midp,8,f32,"magemath::unfused::kernels::exp_midp(t,a)"
+exp,magemath_relaxed_midp,8,f32,"magemath::relaxed::kernels::exp_midp(t,a)"
+exp,zenmath_portable_lowp,1,f32,zenmath::scalar::exp_lowp_f32(a)
+exp,zenmath_unfused_lowp,1,f32,zenmath::scalar::unfused::exp_lowp_f32(a)
+exp,magemath_portable_lowp,8,f32,"magemath::portable::kernels::exp_lowp(t,a)"
+exp,magemath_unfused_lowp,8,f32,"magemath::unfused::kernels::exp_lowp(t,a)"
+exp,magemath_relaxed_lowp,8,f32,"magemath::relaxed::kernels::exp_lowp(t,a)"
+exp,magemath_correct_proof,8,f32,out.copy_from_slice(x); archmage::attuned!(magemath::portable::slice::exp_f32(out));
+exp,magemath_correct_dispatch,8,f32,out.copy_from_slice(x); archmage::attuned!(magemath::portable::slice::exp_f32(out));
+exp,magetypes_midp,4,f32,a.exp_midp()
+exp,magetypes_lowp,4,f32,a.exp_lowp()
+exp,magetypes_midp_precise,4,f32,a.exp_midp_precise()
+exp,magetypes_midp,8,f32,a.exp_midp()
+exp,magetypes_lowp,8,f32,a.exp_lowp()
+exp,magetypes_midp_precise,8,f32,a.exp_midp_precise()
+exp,magetypes_midp,16,f32,a.exp_midp()
+exp,magetypes_lowp,16,f32,a.exp_lowp()
+exp,magetypes_midp_precise,16,f32,a.exp_midp_precise()
+ln,std,1,f32,a.ln()
+ln,std_loop_context,1,f32,a.ln()
+ln,zenmath_correct_loop_context,1,f32,zenmath::scalar::logf(a)
+ln,zenmath_correct,1,f32,zenmath::scalar::logf(a)
+ln,libm,1,f32,libm::logf(a)
+ln,fpmath,1,f32,fpmath::ln(a)
+ln,micromath,1,f32,micromath::F32(a).ln().0
+ln,metallic,1,f32,metallic::logf(a)
+ln,zenmath_portable_midp,1,f32,zenmath::scalar::ln_midp_f32(a)
+ln,zenmath_unfused_midp,1,f32,zenmath::scalar::unfused::ln_midp_f32(a)
+ln,magemath_portable_midp,8,f32,"magemath::portable::kernels::ln_midp(t,a)"
+ln,magemath_unfused_midp,8,f32,"magemath::unfused::kernels::ln_midp(t,a)"
+ln,magemath_relaxed_midp,8,f32,"magemath::relaxed::kernels::ln_midp(t,a)"
+ln,zenmath_portable_lowp,1,f32,zenmath::scalar::ln_lowp_f32(a)
+ln,zenmath_unfused_lowp,1,f32,zenmath::scalar::unfused::ln_lowp_f32(a)
+ln,magemath_portable_lowp,8,f32,"magemath::portable::kernels::ln_lowp(t,a)"
+ln,magemath_unfused_lowp,8,f32,"magemath::unfused::kernels::ln_lowp(t,a)"
+ln,magemath_relaxed_lowp,8,f32,"magemath::relaxed::kernels::ln_lowp(t,a)"
+ln,magemath_correct_proof,8,f32,out.copy_from_slice(x); archmage::attuned!(magemath::portable::slice::ln_f32(out));
+ln,magemath_correct_dispatch,8,f32,out.copy_from_slice(x); archmage::attuned!(magemath::portable::slice::ln_f32(out));
+ln,magetypes_midp,4,f32,a.ln_midp()
+ln,magetypes_lowp,4,f32,a.ln_lowp()
+ln,magetypes_midp_precise,4,f32,a.ln_midp_precise()
+ln,magetypes_midp,8,f32,a.ln_midp()
+ln,magetypes_lowp,8,f32,a.ln_lowp()
+ln,magetypes_midp_precise,8,f32,a.ln_midp_precise()
+ln,magetypes_midp,16,f32,a.ln_midp()
+ln,magetypes_lowp,16,f32,a.ln_lowp()
+ln,magetypes_midp_precise,16,f32,a.ln_midp_precise()
+log2,std,1,f32,a.log2()
+log2,std_loop_context,1,f32,a.log2()
+log2,zenmath_correct_loop_context,1,f32,zenmath::scalar::log2f(a)
+log2,zenmath_correct,1,f32,zenmath::scalar::log2f(a)
+log2,libm,1,f32,libm::log2f(a)
+log2,fpmath,1,f32,fpmath::log2(a)
+log2,micromath,1,f32,micromath::F32(a).log2().0
+log2,metallic,1,f32,metallic::log2f(a)
+log2,zenmath_portable_midp,1,f32,zenmath::scalar::log2_midp_f32(a)
+log2,zenmath_unfused_midp,1,f32,zenmath::scalar::unfused::log2_midp_f32(a)
+log2,magemath_portable_midp,8,f32,"magemath::portable::kernels::log2_midp(t,a)"
+log2,magemath_unfused_midp,8,f32,"magemath::unfused::kernels::log2_midp(t,a)"
+log2,magemath_relaxed_midp,8,f32,"magemath::relaxed::kernels::log2_midp(t,a)"
+log2,zenmath_portable_lowp,1,f32,zenmath::scalar::log2_lowp_f32(a)
+log2,zenmath_unfused_lowp,1,f32,zenmath::scalar::unfused::log2_lowp_f32(a)
+log2,magemath_portable_lowp,8,f32,"magemath::portable::kernels::log2_lowp(t,a)"
+log2,magemath_unfused_lowp,8,f32,"magemath::unfused::kernels::log2_lowp(t,a)"
+log2,magemath_relaxed_lowp,8,f32,"magemath::relaxed::kernels::log2_lowp(t,a)"
+log2,magemath_correct_proof,8,f32,out.copy_from_slice(x); archmage::attuned!(magemath::portable::slice::log2_f32(out));
+log2,magemath_correct_dispatch,8,f32,out.copy_from_slice(x); archmage::attuned!(magemath::portable::slice::log2_f32(out));
+log2,magetypes_midp,4,f32,a.log2_midp()
+log2,magetypes_lowp,4,f32,a.log2_lowp()
+log2,magetypes_midp_precise,4,f32,a.log2_midp_precise()
+log2,magetypes_midp,8,f32,a.log2_midp()
+log2,magetypes_lowp,8,f32,a.log2_lowp()
+log2,magetypes_midp_precise,8,f32,a.log2_midp_precise()
+log2,magetypes_midp,16,f32,a.log2_midp()
+log2,magetypes_lowp,16,f32,a.log2_lowp()
+log2,magetypes_midp_precise,16,f32,a.log2_midp_precise()
+log10,std,1,f32,a.log10()
+log10,std_loop_context,1,f32,a.log10()
+log10,zenmath_correct_loop_context,1,f32,zenmath::scalar::log10f(a)
+log10,zenmath_correct,1,f32,zenmath::scalar::log10f(a)
+log10,libm,1,f32,libm::log10f(a)
+log10,fpmath,1,f32,fpmath::log10(a)
+log10,micromath,1,f32,micromath::F32(a).log10().0
+log10,metallic,1,f32,metallic::log10f(a)
+log10,zenmath_portable_midp,1,f32,zenmath::scalar::log10_midp_f32(a)
+log10,zenmath_unfused_midp,1,f32,zenmath::scalar::unfused::log10_midp_f32(a)
+log10,magemath_portable_midp,8,f32,"magemath::portable::kernels::log10_midp(t,a)"
+log10,magemath_unfused_midp,8,f32,"magemath::unfused::kernels::log10_midp(t,a)"
+log10,magemath_relaxed_midp,8,f32,"magemath::relaxed::kernels::log10_midp(t,a)"
+log10,zenmath_portable_lowp,1,f32,zenmath::scalar::log10_lowp_f32(a)
+log10,zenmath_unfused_lowp,1,f32,zenmath::scalar::unfused::log10_lowp_f32(a)
+log10,magemath_portable_lowp,8,f32,"magemath::portable::kernels::log10_lowp(t,a)"
+log10,magemath_unfused_lowp,8,f32,"magemath::unfused::kernels::log10_lowp(t,a)"
+log10,magemath_relaxed_lowp,8,f32,"magemath::relaxed::kernels::log10_lowp(t,a)"
+log10,magetypes_midp,4,f32,a.log10_midp()
+log10,magetypes_lowp,4,f32,a.log10_lowp()
+log10,magetypes_midp_precise,4,f32,a.log10_midp_precise()
+log10,magetypes_midp,8,f32,a.log10_midp()
+log10,magetypes_lowp,8,f32,a.log10_lowp()
+log10,magetypes_midp_precise,8,f32,a.log10_midp_precise()
+log10,magetypes_midp,16,f32,a.log10_midp()
+log10,magetypes_lowp,16,f32,a.log10_lowp()
+log10,magetypes_midp_precise,16,f32,a.log10_midp_precise()
+sqrt,std,1,f32,a.sqrt()
+sqrt,std_loop_context,1,f32,a.sqrt()
+sqrt,zenmath_correct_loop_context,1,f32,zenmath::scalar::sqrtf(a)
+sqrt,zenmath_correct,1,f32,zenmath::scalar::sqrtf(a)
+sqrt,libm,1,f32,libm::sqrtf(a)
+sqrt,fpmath,1,f32,fpmath::sqrt(a)
+sqrt,micromath,1,f32,micromath::F32(a).sqrt().0
+sqrt,magemath_portable,8,f32,"magemath::portable::kernels::sqrt(t,a)"
+sqrt,magemath_unfused,8,f32,"magemath::unfused::kernels::sqrt(t,a)"
+sqrt,magemath_relaxed,8,f32,"magemath::relaxed::kernels::sqrt(t,a)"
+sqrt,magetypes_default,4,f32,a.sqrt()
+sqrt,magetypes_default,8,f32,a.sqrt()
+sqrt,magetypes_default,16,f32,a.sqrt()
+floor,std,1,f32,a.floor()
+floor,std_loop_context,1,f32,a.floor()
+floor,zenmath_correct_loop_context,1,f32,zenmath::scalar::floorf(a)
+floor,zenmath_correct,1,f32,zenmath::scalar::floorf(a)
+floor,libm,1,f32,libm::floorf(a)
+floor,fpmath,1,f32,fpmath::floor(a)
+floor,micromath,1,f32,micromath::F32(a).floor().0
+floor,magemath_portable,8,f32,"magemath::portable::kernels::floor(t,a)"
+floor,magemath_unfused,8,f32,"magemath::unfused::kernels::floor(t,a)"
+floor,magemath_relaxed,8,f32,"magemath::relaxed::kernels::floor(t,a)"
+floor,magetypes_default,4,f32,a.floor()
+floor,magetypes_default,8,f32,a.floor()
+floor,magetypes_default,16,f32,a.floor()
+ceil,std,1,f32,a.ceil()
+ceil,std_loop_context,1,f32,a.ceil()
+ceil,zenmath_correct_loop_context,1,f32,zenmath::scalar::ceilf(a)
+ceil,zenmath_correct,1,f32,zenmath::scalar::ceilf(a)
+ceil,libm,1,f32,libm::ceilf(a)
+ceil,fpmath,1,f32,fpmath::ceil(a)
+ceil,micromath,1,f32,micromath::F32(a).ceil().0
+ceil,magemath_portable,8,f32,"magemath::portable::kernels::ceil(t,a)"
+ceil,magemath_unfused,8,f32,"magemath::unfused::kernels::ceil(t,a)"
+ceil,magemath_relaxed,8,f32,"magemath::relaxed::kernels::ceil(t,a)"
+ceil,magetypes_default,4,f32,a.ceil()
+ceil,magetypes_default,8,f32,a.ceil()
+ceil,magetypes_default,16,f32,a.ceil()
+round,std,1,f32,a.round()
+round,std_loop_context,1,f32,a.round()
+round,zenmath_correct_loop_context,1,f32,zenmath::scalar::roundf(a)
+round,zenmath_correct,1,f32,zenmath::scalar::roundf(a)
+round,libm,1,f32,libm::roundf(a)
+round,fpmath,1,f32,fpmath::round(a)
+round,micromath,1,f32,micromath::F32(a).round().0
+round,metallic,1,f32,metallic::roundf(a)
+roundeven,std,1,f32,a.round_ties_even()
+roundeven,std_loop_context,1,f32,a.round_ties_even()
+roundeven,zenmath_correct_loop_context,1,f32,zenmath::scalar::roundevenf(a)
+roundeven,zenmath_correct,1,f32,zenmath::scalar::roundevenf(a)
+roundeven,libm,1,f32,libm::rintf(a)
+roundeven,magemath_portable,8,f32,"magemath::portable::kernels::roundeven(t,a)"
+roundeven,magemath_unfused,8,f32,"magemath::unfused::kernels::roundeven(t,a)"
+roundeven,magemath_relaxed,8,f32,"magemath::relaxed::kernels::roundeven(t,a)"
+roundeven,magetypes_default,4,f32,a.round()
+roundeven,magetypes_default,8,f32,a.round()
+roundeven,magetypes_default,16,f32,a.round()
+log2_f64,std,1,f64,a.log2()
+log2_f64,std_loop_context,1,f64,a.log2()
+log2_f64,zenmath_correct,1,f64,zenmath::scalar::log2(a)
+log2_f64,zenmath_correct_loop_context,1,f64,zenmath::scalar::log2(a)
+log2_f64,libm,1,f64,libm::log2(a)
+log2_f64,fpmath,1,f64,fpmath::log2(a)
+log2_f64,metallic,1,f64,metallic::log2(a)
+log2_f64,zenmath_lowp,1,f64,zenmath::scalar::log2_lowp_f64(a)
+log2_f64,magetypes_lowp,2,f64,a.log2_lowp()
+log2_f64,magetypes_lowp,4,f64,a.log2_lowp()
+log2_f64,magetypes_lowp,8,f64,a.log2_lowp()
