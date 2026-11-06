@@ -60,3 +60,5 @@ mod atan;
 pub use atan::atan;
 mod log1p;
 pub use log1p::log1p;
+mod sin;
+pub use sin::sin;
