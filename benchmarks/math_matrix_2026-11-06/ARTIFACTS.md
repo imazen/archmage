@@ -3,7 +3,8 @@
 Raw generated data, binaries and full logs are outside git on **dev**:
 `/mnt/v/output/archmage/math-matrix-2026-11-06/`.
 NAS mirror: `/mnt/tower/output/archmage/math-matrix-2026-11-06/`.
-`SHA256SUMS` covers every retained file; `MANIFEST.meta.json` records date,
+`SHA256SUMS` covers all payload files (excluding the manifest, control metadata
+and verification log); `MANIFEST.meta.json` records date,
 file count, bytes and manifest hash. The final report records verification.
 No R2 upload was made. These local paths were checked on dev; other hosts'
 `/mnt/v` trees are not assumed identical.
@@ -80,3 +81,8 @@ version probes, and exact source snapshot identities. A dead reservation was
 renamed only after recorded PID absence and an unlocked guard were verified;
 no live benchmark lock was bypassed. No benchmark/build process remains ours
 at completion. The coordinator owns integration and jj-workspace cleanup.
+
+The initial NAS rsync attempted group metadata updates rejected by the share.
+The repeat uses `rsync -a --no-owner --no-group`; file contents are verified
+independently with SHA256 rather than treating ownership metadata errors as
+successful transfer. No benchmark data was discarded.
