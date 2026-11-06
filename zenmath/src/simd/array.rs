@@ -22,10 +22,6 @@ pub fn exp_f32x4(x: [f32; 4]) -> [f32; 4] {
 /// Select exp once for this array. Runtime probes require `runtime-dispatch`.
 #[inline]
 pub fn exp_f32x4(x: [f32; 4]) -> [f32; 4] {
-    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-    if let Some(token) = super::available::<X64V4xToken>() {
-        return exp_f32x4_v4x_t(token, x);
-    }
     #[cfg(target_arch = "x86_64")]
     if let Some(token) = super::available::<X64V3Token>() {
         return exp_f32x4_v3_t(token, x);
@@ -62,10 +58,6 @@ pub fn ln_f32x4(x: [f32; 4]) -> [f32; 4] {
 /// Select ln once for this array. Runtime probes require `runtime-dispatch`.
 #[inline]
 pub fn ln_f32x4(x: [f32; 4]) -> [f32; 4] {
-    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-    if let Some(token) = super::available::<X64V4xToken>() {
-        return ln_f32x4_v4x_t(token, x);
-    }
     #[cfg(target_arch = "x86_64")]
     if let Some(token) = super::available::<X64V3Token>() {
         return ln_f32x4_v3_t(token, x);
@@ -102,10 +94,6 @@ pub fn log2_f32x4(x: [f32; 4]) -> [f32; 4] {
 /// Select log2 once for this array. Runtime probes require `runtime-dispatch`.
 #[inline]
 pub fn log2_f32x4(x: [f32; 4]) -> [f32; 4] {
-    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-    if let Some(token) = super::available::<X64V4xToken>() {
-        return log2_f32x4_v4x_t(token, x);
-    }
     #[cfg(target_arch = "x86_64")]
     if let Some(token) = super::available::<X64V3Token>() {
         return log2_f32x4_v3_t(token, x);
@@ -142,10 +130,6 @@ pub fn pow_f32x4(x: [f32; 4], y: [f32; 4]) -> [f32; 4] {
 /// Select pow once for this array. Runtime probes require `runtime-dispatch`.
 #[inline]
 pub fn pow_f32x4(x: [f32; 4], y: [f32; 4]) -> [f32; 4] {
-    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-    if let Some(token) = super::available::<X64V4xToken>() {
-        return pow_f32x4_v4x_t(token, x, y);
-    }
     #[cfg(target_arch = "x86_64")]
     if let Some(token) = super::available::<X64V3Token>() {
         return pow_f32x4_v3_t(token, x, y);

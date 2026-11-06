@@ -154,6 +154,10 @@ for ty, suf, ops in [("f32", "32", OPS), ("f64", "64", OPS[:7])]:
                 ("std", stdexpr),
                 ("branch", f"{base}_branch(x,y,z)"),
                 ("cached", f"{base}_cached(x,y,z)"),
+                (
+                    "ordinary",
+                    ref if op == "trunc" else f"zenmath::scalar::{api}({actual_args})",
+                ),
             ]:
                 source += [
                     f"#[inline(never)]\npub fn {prefix}_{form}({sig}){{\n{body(expression, feedback)}}}\n"
@@ -193,7 +197,7 @@ for ty, suf, ops in [("f32", "32", OPS), ("f64", "64", OPS[:7])]:
             source += [
                 f"pub fn {prefix}_cases()->Vec<Case<{ty}>>{{let mut v:Vec<Case<{ty}>>=vec![\n"
             ]
-            for form in ["reference", "std", "branch", "cached"]:
+            for form in ["reference", "std", "branch", "cached", "ordinary"]:
                 source += [
                     f'Case{{name:"{form}/baseline",run:Box::new({prefix}_{form}) as Kernel<{ty}>}},\n'
                 ]

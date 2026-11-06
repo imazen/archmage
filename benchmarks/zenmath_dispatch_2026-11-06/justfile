@@ -13,3 +13,33 @@ unification:
     cargo rustc --manifest-path compile-consumer/Cargo.toml --release --features unified-std -- --emit=llvm-ir
     cargo run --manifest-path compile-consumer/Cargo.toml --release --features unified-std
     python3 check-unification.py compile-consumer/target/release/deps/zenmath_compile_consumer-*.ll
+freeze out *binaries:
+    python3 freeze.py {{out}} {{binaries}}
+dependency-identities snapshot:
+    python3 dependencies.py {{snapshot}}
+
+check-freeze:
+    python3 test-freeze.py
+analyze input output:
+    cargo run --release --manifest-path analysis/Cargo.toml -- {{input}} {{output}}
+
+build-cost output:
+    python3 build-cost.py {{output}}
+
+final-validation:
+    cd ../.. && bash benchmarks/zenmath_dispatch_2026-11-06/final-validation.sh
+
+build-wasm:
+    cd ../.. && bash benchmarks/zenmath_dispatch_2026-11-06/build-wasm.sh
+test-wasm engine target log tiers:
+    python3 test-wasm.py {{engine}} {{target}} {{log}} --require-tiers {{tiers}}
+
+final-audit artifacts mirror:
+    python3 audit.py {{artifacts}} {{mirror}}
+
+report-tables artifacts:
+    python3 report-tables.py {{artifacts}} RESULTS.md
+codegen assembly output *symbols:
+    python3 extract-codegen.py {{assembly}} {{output}} {{symbols}}
+no-fma:
+    ZENMATH_REQUIRE_TIERS=scalar,v1,v2 ZENMATH_FORBID_TIERS=v3,v4x CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER='qemu-x86_64 -cpu Nehalem' cargo test --manifest-path ../../Cargo.toml -p zenmath --all-features --release --target x86_64-unknown-linux-gnu --test acceleration -- --nocapture

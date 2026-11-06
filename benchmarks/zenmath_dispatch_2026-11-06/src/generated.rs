@@ -141,6 +141,17 @@ pub fn sqrt_f32_stream_cached(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [
         out[i] = sqrt_f32_cached(x, y, z);
     }
 }
+#[inline(never)]
+pub fn sqrt_f32_stream_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    for i in 0..input.len() {
+        let (x, y, z) = (input[i], ys[i], zs[i]);
+        let _ = (y, z);
+        out[i] = zenmath::scalar::sqrtf(x);
+    }
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -249,6 +260,10 @@ pub fn sqrt_f32_stream_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(sqrt_f32_stream_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(sqrt_f32_stream_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -416,6 +431,21 @@ pub fn sqrt_f32_feedback_cached(input: &[f32], ys: &[f32], zs: &[f32], out: &mut
     }
     out[0] = value;
 }
+#[inline(never)]
+pub fn sqrt_f32_feedback_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    assert!(!input.is_empty());
+    let mut value = input[0];
+    let (y, z) = (ys[0], zs[0]);
+    let _ = (y, z);
+    for _ in 0..1024 {
+        let x = value.abs() + 0.125;
+        value = zenmath::scalar::sqrtf(x);
+    }
+    out[0] = value;
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -552,6 +582,10 @@ pub fn sqrt_f32_feedback_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(sqrt_f32_feedback_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(sqrt_f32_feedback_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -796,6 +830,17 @@ pub fn floor_f32_stream_cached(input: &[f32], ys: &[f32], zs: &[f32], out: &mut 
         out[i] = floor_f32_cached(x, y, z);
     }
 }
+#[inline(never)]
+pub fn floor_f32_stream_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    for i in 0..input.len() {
+        let (x, y, z) = (input[i], ys[i], zs[i]);
+        let _ = (y, z);
+        out[i] = zenmath::scalar::floorf(x);
+    }
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -904,6 +949,10 @@ pub fn floor_f32_stream_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(floor_f32_stream_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(floor_f32_stream_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -1071,6 +1120,21 @@ pub fn floor_f32_feedback_cached(input: &[f32], ys: &[f32], zs: &[f32], out: &mu
     }
     out[0] = value;
 }
+#[inline(never)]
+pub fn floor_f32_feedback_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    assert!(!input.is_empty());
+    let mut value = input[0];
+    let (y, z) = (ys[0], zs[0]);
+    let _ = (y, z);
+    for _ in 0..1024 {
+        let x = value * 0.125 + 0.375;
+        value = zenmath::scalar::floorf(x);
+    }
+    out[0] = value;
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -1207,6 +1271,10 @@ pub fn floor_f32_feedback_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(floor_f32_feedback_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(floor_f32_feedback_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -1451,6 +1519,17 @@ pub fn ceil_f32_stream_cached(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [
         out[i] = ceil_f32_cached(x, y, z);
     }
 }
+#[inline(never)]
+pub fn ceil_f32_stream_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    for i in 0..input.len() {
+        let (x, y, z) = (input[i], ys[i], zs[i]);
+        let _ = (y, z);
+        out[i] = zenmath::scalar::ceilf(x);
+    }
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -1559,6 +1638,10 @@ pub fn ceil_f32_stream_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(ceil_f32_stream_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(ceil_f32_stream_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -1726,6 +1809,21 @@ pub fn ceil_f32_feedback_cached(input: &[f32], ys: &[f32], zs: &[f32], out: &mut
     }
     out[0] = value;
 }
+#[inline(never)]
+pub fn ceil_f32_feedback_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    assert!(!input.is_empty());
+    let mut value = input[0];
+    let (y, z) = (ys[0], zs[0]);
+    let _ = (y, z);
+    for _ in 0..1024 {
+        let x = value * 0.125 + 0.375;
+        value = zenmath::scalar::ceilf(x);
+    }
+    out[0] = value;
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -1862,6 +1960,10 @@ pub fn ceil_f32_feedback_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(ceil_f32_feedback_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(ceil_f32_feedback_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -2106,6 +2208,17 @@ pub fn trunc_f32_stream_cached(input: &[f32], ys: &[f32], zs: &[f32], out: &mut 
         out[i] = trunc_f32_cached(x, y, z);
     }
 }
+#[inline(never)]
+pub fn trunc_f32_stream_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    for i in 0..input.len() {
+        let (x, y, z) = (input[i], ys[i], zs[i]);
+        let _ = (y, z);
+        out[i] = zenmath::scalar::reference::floorf(x.abs()).copysign(x);
+    }
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -2214,6 +2327,10 @@ pub fn trunc_f32_stream_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(trunc_f32_stream_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(trunc_f32_stream_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -2381,6 +2498,21 @@ pub fn trunc_f32_feedback_cached(input: &[f32], ys: &[f32], zs: &[f32], out: &mu
     }
     out[0] = value;
 }
+#[inline(never)]
+pub fn trunc_f32_feedback_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    assert!(!input.is_empty());
+    let mut value = input[0];
+    let (y, z) = (ys[0], zs[0]);
+    let _ = (y, z);
+    for _ in 0..1024 {
+        let x = value * 0.125 + 0.375;
+        value = zenmath::scalar::reference::floorf(x.abs()).copysign(x);
+    }
+    out[0] = value;
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -2517,6 +2649,10 @@ pub fn trunc_f32_feedback_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(trunc_f32_feedback_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(trunc_f32_feedback_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -2761,6 +2897,17 @@ pub fn roundeven_f32_stream_cached(input: &[f32], ys: &[f32], zs: &[f32], out: &
         out[i] = roundeven_f32_cached(x, y, z);
     }
 }
+#[inline(never)]
+pub fn roundeven_f32_stream_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    for i in 0..input.len() {
+        let (x, y, z) = (input[i], ys[i], zs[i]);
+        let _ = (y, z);
+        out[i] = zenmath::scalar::roundevenf(x);
+    }
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -2869,6 +3016,10 @@ pub fn roundeven_f32_stream_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(roundeven_f32_stream_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(roundeven_f32_stream_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -3036,6 +3187,21 @@ pub fn roundeven_f32_feedback_cached(input: &[f32], ys: &[f32], zs: &[f32], out:
     }
     out[0] = value;
 }
+#[inline(never)]
+pub fn roundeven_f32_feedback_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    assert!(!input.is_empty());
+    let mut value = input[0];
+    let (y, z) = (ys[0], zs[0]);
+    let _ = (y, z);
+    for _ in 0..1024 {
+        let x = value * 0.125 + 0.375;
+        value = zenmath::scalar::roundevenf(x);
+    }
+    out[0] = value;
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -3172,6 +3338,10 @@ pub fn roundeven_f32_feedback_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(roundeven_f32_feedback_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(roundeven_f32_feedback_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -3418,6 +3588,17 @@ pub fn round_f32_stream_cached(input: &[f32], ys: &[f32], zs: &[f32], out: &mut 
         out[i] = round_f32_cached(x, y, z);
     }
 }
+#[inline(never)]
+pub fn round_f32_stream_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    for i in 0..input.len() {
+        let (x, y, z) = (input[i], ys[i], zs[i]);
+        let _ = (y, z);
+        out[i] = zenmath::scalar::roundf(x);
+    }
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -3526,6 +3707,10 @@ pub fn round_f32_stream_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(round_f32_stream_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(round_f32_stream_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -3693,6 +3878,21 @@ pub fn round_f32_feedback_cached(input: &[f32], ys: &[f32], zs: &[f32], out: &mu
     }
     out[0] = value;
 }
+#[inline(never)]
+pub fn round_f32_feedback_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    assert!(!input.is_empty());
+    let mut value = input[0];
+    let (y, z) = (ys[0], zs[0]);
+    let _ = (y, z);
+    for _ in 0..1024 {
+        let x = value * 0.125 + 0.375;
+        value = zenmath::scalar::roundf(x);
+    }
+    out[0] = value;
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -3829,6 +4029,10 @@ pub fn round_f32_feedback_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(round_f32_feedback_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(round_f32_feedback_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -4073,6 +4277,17 @@ pub fn fma_f32_stream_cached(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f
         out[i] = fma_f32_cached(x, y, z);
     }
 }
+#[inline(never)]
+pub fn fma_f32_stream_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    for i in 0..input.len() {
+        let (x, y, z) = (input[i], ys[i], zs[i]);
+        let _ = (y, z);
+        out[i] = zenmath::scalar::fmaf(x, y, z);
+    }
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -4181,6 +4396,10 @@ pub fn fma_f32_stream_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(fma_f32_stream_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(fma_f32_stream_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -4348,6 +4567,21 @@ pub fn fma_f32_feedback_cached(input: &[f32], ys: &[f32], zs: &[f32], out: &mut 
     }
     out[0] = value;
 }
+#[inline(never)]
+pub fn fma_f32_feedback_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    assert!(!input.is_empty());
+    let mut value = input[0];
+    let (y, z) = (ys[0], zs[0]);
+    let _ = (y, z);
+    for _ in 0..1024 {
+        let (x, y, z) = (value, 0.999_f32, 0.0001_f32);
+        value = zenmath::scalar::fmaf(x, y, z);
+    }
+    out[0] = value;
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -4484,6 +4718,10 @@ pub fn fma_f32_feedback_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(fma_f32_feedback_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(fma_f32_feedback_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -4728,6 +4966,17 @@ pub fn exp_f32_stream_cached(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f
         out[i] = exp_f32_cached(x, y, z);
     }
 }
+#[inline(never)]
+pub fn exp_f32_stream_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    for i in 0..input.len() {
+        let (x, y, z) = (input[i], ys[i], zs[i]);
+        let _ = (y, z);
+        out[i] = zenmath::scalar::expf(x);
+    }
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -4836,6 +5085,10 @@ pub fn exp_f32_stream_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(exp_f32_stream_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(exp_f32_stream_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -5063,6 +5316,21 @@ pub fn exp_f32_feedback_cached(input: &[f32], ys: &[f32], zs: &[f32], out: &mut 
     }
     out[0] = value;
 }
+#[inline(never)]
+pub fn exp_f32_feedback_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    assert!(!input.is_empty());
+    let mut value = input[0];
+    let (y, z) = (ys[0], zs[0]);
+    let _ = (y, z);
+    for _ in 0..1024 {
+        let x = -value.abs() * 0.125;
+        value = zenmath::scalar::expf(x);
+    }
+    out[0] = value;
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -5199,6 +5467,10 @@ pub fn exp_f32_feedback_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(exp_f32_feedback_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(exp_f32_feedback_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -5443,6 +5715,17 @@ pub fn ln_f32_stream_cached(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f3
         out[i] = ln_f32_cached(x, y, z);
     }
 }
+#[inline(never)]
+pub fn ln_f32_stream_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    for i in 0..input.len() {
+        let (x, y, z) = (input[i], ys[i], zs[i]);
+        let _ = (y, z);
+        out[i] = zenmath::scalar::logf(x);
+    }
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -5551,6 +5834,10 @@ pub fn ln_f32_stream_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(ln_f32_stream_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(ln_f32_stream_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -5778,6 +6065,21 @@ pub fn ln_f32_feedback_cached(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [
     }
     out[0] = value;
 }
+#[inline(never)]
+pub fn ln_f32_feedback_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    assert!(!input.is_empty());
+    let mut value = input[0];
+    let (y, z) = (ys[0], zs[0]);
+    let _ = (y, z);
+    for _ in 0..1024 {
+        let x = value.abs() + 1.1;
+        value = zenmath::scalar::logf(x);
+    }
+    out[0] = value;
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -5914,6 +6216,10 @@ pub fn ln_f32_feedback_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(ln_f32_feedback_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(ln_f32_feedback_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -6158,6 +6464,17 @@ pub fn log2_f32_stream_cached(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [
         out[i] = log2_f32_cached(x, y, z);
     }
 }
+#[inline(never)]
+pub fn log2_f32_stream_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    for i in 0..input.len() {
+        let (x, y, z) = (input[i], ys[i], zs[i]);
+        let _ = (y, z);
+        out[i] = zenmath::scalar::log2f(x);
+    }
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -6266,6 +6583,10 @@ pub fn log2_f32_stream_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(log2_f32_stream_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(log2_f32_stream_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -6493,6 +6814,21 @@ pub fn log2_f32_feedback_cached(input: &[f32], ys: &[f32], zs: &[f32], out: &mut
     }
     out[0] = value;
 }
+#[inline(never)]
+pub fn log2_f32_feedback_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    assert!(!input.is_empty());
+    let mut value = input[0];
+    let (y, z) = (ys[0], zs[0]);
+    let _ = (y, z);
+    for _ in 0..1024 {
+        let x = value.abs() + 1.1;
+        value = zenmath::scalar::log2f(x);
+    }
+    out[0] = value;
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -6629,6 +6965,10 @@ pub fn log2_f32_feedback_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(log2_f32_feedback_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(log2_f32_feedback_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -6873,6 +7213,17 @@ pub fn pow_f32_stream_cached(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f
         out[i] = pow_f32_cached(x, y, z);
     }
 }
+#[inline(never)]
+pub fn pow_f32_stream_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    for i in 0..input.len() {
+        let (x, y, z) = (input[i], ys[i], zs[i]);
+        let _ = (y, z);
+        out[i] = zenmath::scalar::powf(x, y);
+    }
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -6981,6 +7332,10 @@ pub fn pow_f32_stream_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(pow_f32_stream_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(pow_f32_stream_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -7208,6 +7563,21 @@ pub fn pow_f32_feedback_cached(input: &[f32], ys: &[f32], zs: &[f32], out: &mut 
     }
     out[0] = value;
 }
+#[inline(never)]
+pub fn pow_f32_feedback_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    assert!(!input.is_empty());
+    let mut value = input[0];
+    let (y, z) = (ys[0], zs[0]);
+    let _ = (y, z);
+    for _ in 0..1024 {
+        let (x, y) = (value.abs() * 0.125 + 0.75, 2.4);
+        value = zenmath::scalar::powf(x, y);
+    }
+    out[0] = value;
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -7344,6 +7714,10 @@ pub fn pow_f32_feedback_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(pow_f32_feedback_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(pow_f32_feedback_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -7588,6 +7962,17 @@ pub fn pow_rescue_f32_stream_cached(input: &[f32], ys: &[f32], zs: &[f32], out: 
         out[i] = pow_rescue_f32_cached(x, y, z);
     }
 }
+#[inline(never)]
+pub fn pow_rescue_f32_stream_ordinary(input: &[f32], ys: &[f32], zs: &[f32], out: &mut [f32]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    for i in 0..input.len() {
+        let (x, y, z) = (input[i], ys[i], zs[i]);
+        let _ = (y, z);
+        out[i] = zenmath::scalar::powf(x, y);
+    }
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -7696,6 +8081,10 @@ pub fn pow_rescue_f32_stream_cases() -> Vec<Case<f32>> {
         Case {
             name: "cached/baseline",
             run: Box::new(pow_rescue_f32_stream_cached) as Kernel<f32>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(pow_rescue_f32_stream_ordinary) as Kernel<f32>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -8016,6 +8405,17 @@ pub fn sqrt_f64_stream_cached(input: &[f64], ys: &[f64], zs: &[f64], out: &mut [
         out[i] = sqrt_f64_cached(x, y, z);
     }
 }
+#[inline(never)]
+pub fn sqrt_f64_stream_ordinary(input: &[f64], ys: &[f64], zs: &[f64], out: &mut [f64]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    for i in 0..input.len() {
+        let (x, y, z) = (input[i], ys[i], zs[i]);
+        let _ = (y, z);
+        out[i] = zenmath::scalar::sqrt(x);
+    }
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -8124,6 +8524,10 @@ pub fn sqrt_f64_stream_cases() -> Vec<Case<f64>> {
         Case {
             name: "cached/baseline",
             run: Box::new(sqrt_f64_stream_cached) as Kernel<f64>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(sqrt_f64_stream_ordinary) as Kernel<f64>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -8291,6 +8695,21 @@ pub fn sqrt_f64_feedback_cached(input: &[f64], ys: &[f64], zs: &[f64], out: &mut
     }
     out[0] = value;
 }
+#[inline(never)]
+pub fn sqrt_f64_feedback_ordinary(input: &[f64], ys: &[f64], zs: &[f64], out: &mut [f64]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    assert!(!input.is_empty());
+    let mut value = input[0];
+    let (y, z) = (ys[0], zs[0]);
+    let _ = (y, z);
+    for _ in 0..1024 {
+        let x = value.abs() + 0.125;
+        value = zenmath::scalar::sqrt(x);
+    }
+    out[0] = value;
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -8427,6 +8846,10 @@ pub fn sqrt_f64_feedback_cases() -> Vec<Case<f64>> {
         Case {
             name: "cached/baseline",
             run: Box::new(sqrt_f64_feedback_cached) as Kernel<f64>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(sqrt_f64_feedback_ordinary) as Kernel<f64>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -8671,6 +9094,17 @@ pub fn floor_f64_stream_cached(input: &[f64], ys: &[f64], zs: &[f64], out: &mut 
         out[i] = floor_f64_cached(x, y, z);
     }
 }
+#[inline(never)]
+pub fn floor_f64_stream_ordinary(input: &[f64], ys: &[f64], zs: &[f64], out: &mut [f64]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    for i in 0..input.len() {
+        let (x, y, z) = (input[i], ys[i], zs[i]);
+        let _ = (y, z);
+        out[i] = zenmath::scalar::floor(x);
+    }
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -8779,6 +9213,10 @@ pub fn floor_f64_stream_cases() -> Vec<Case<f64>> {
         Case {
             name: "cached/baseline",
             run: Box::new(floor_f64_stream_cached) as Kernel<f64>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(floor_f64_stream_ordinary) as Kernel<f64>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -8946,6 +9384,21 @@ pub fn floor_f64_feedback_cached(input: &[f64], ys: &[f64], zs: &[f64], out: &mu
     }
     out[0] = value;
 }
+#[inline(never)]
+pub fn floor_f64_feedback_ordinary(input: &[f64], ys: &[f64], zs: &[f64], out: &mut [f64]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    assert!(!input.is_empty());
+    let mut value = input[0];
+    let (y, z) = (ys[0], zs[0]);
+    let _ = (y, z);
+    for _ in 0..1024 {
+        let x = value * 0.125 + 0.375;
+        value = zenmath::scalar::floor(x);
+    }
+    out[0] = value;
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -9082,6 +9535,10 @@ pub fn floor_f64_feedback_cases() -> Vec<Case<f64>> {
         Case {
             name: "cached/baseline",
             run: Box::new(floor_f64_feedback_cached) as Kernel<f64>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(floor_f64_feedback_ordinary) as Kernel<f64>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -9326,6 +9783,17 @@ pub fn ceil_f64_stream_cached(input: &[f64], ys: &[f64], zs: &[f64], out: &mut [
         out[i] = ceil_f64_cached(x, y, z);
     }
 }
+#[inline(never)]
+pub fn ceil_f64_stream_ordinary(input: &[f64], ys: &[f64], zs: &[f64], out: &mut [f64]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    for i in 0..input.len() {
+        let (x, y, z) = (input[i], ys[i], zs[i]);
+        let _ = (y, z);
+        out[i] = zenmath::scalar::ceil(x);
+    }
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -9434,6 +9902,10 @@ pub fn ceil_f64_stream_cases() -> Vec<Case<f64>> {
         Case {
             name: "cached/baseline",
             run: Box::new(ceil_f64_stream_cached) as Kernel<f64>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(ceil_f64_stream_ordinary) as Kernel<f64>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -9601,6 +10073,21 @@ pub fn ceil_f64_feedback_cached(input: &[f64], ys: &[f64], zs: &[f64], out: &mut
     }
     out[0] = value;
 }
+#[inline(never)]
+pub fn ceil_f64_feedback_ordinary(input: &[f64], ys: &[f64], zs: &[f64], out: &mut [f64]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    assert!(!input.is_empty());
+    let mut value = input[0];
+    let (y, z) = (ys[0], zs[0]);
+    let _ = (y, z);
+    for _ in 0..1024 {
+        let x = value * 0.125 + 0.375;
+        value = zenmath::scalar::ceil(x);
+    }
+    out[0] = value;
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -9737,6 +10224,10 @@ pub fn ceil_f64_feedback_cases() -> Vec<Case<f64>> {
         Case {
             name: "cached/baseline",
             run: Box::new(ceil_f64_feedback_cached) as Kernel<f64>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(ceil_f64_feedback_ordinary) as Kernel<f64>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -9981,6 +10472,17 @@ pub fn trunc_f64_stream_cached(input: &[f64], ys: &[f64], zs: &[f64], out: &mut 
         out[i] = trunc_f64_cached(x, y, z);
     }
 }
+#[inline(never)]
+pub fn trunc_f64_stream_ordinary(input: &[f64], ys: &[f64], zs: &[f64], out: &mut [f64]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    for i in 0..input.len() {
+        let (x, y, z) = (input[i], ys[i], zs[i]);
+        let _ = (y, z);
+        out[i] = zenmath::scalar::reference::floor(x.abs()).copysign(x);
+    }
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -10089,6 +10591,10 @@ pub fn trunc_f64_stream_cases() -> Vec<Case<f64>> {
         Case {
             name: "cached/baseline",
             run: Box::new(trunc_f64_stream_cached) as Kernel<f64>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(trunc_f64_stream_ordinary) as Kernel<f64>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -10256,6 +10762,21 @@ pub fn trunc_f64_feedback_cached(input: &[f64], ys: &[f64], zs: &[f64], out: &mu
     }
     out[0] = value;
 }
+#[inline(never)]
+pub fn trunc_f64_feedback_ordinary(input: &[f64], ys: &[f64], zs: &[f64], out: &mut [f64]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    assert!(!input.is_empty());
+    let mut value = input[0];
+    let (y, z) = (ys[0], zs[0]);
+    let _ = (y, z);
+    for _ in 0..1024 {
+        let x = value * 0.125 + 0.375;
+        value = zenmath::scalar::reference::floor(x.abs()).copysign(x);
+    }
+    out[0] = value;
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -10392,6 +10913,10 @@ pub fn trunc_f64_feedback_cases() -> Vec<Case<f64>> {
         Case {
             name: "cached/baseline",
             run: Box::new(trunc_f64_feedback_cached) as Kernel<f64>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(trunc_f64_feedback_ordinary) as Kernel<f64>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -10636,6 +11161,17 @@ pub fn roundeven_f64_stream_cached(input: &[f64], ys: &[f64], zs: &[f64], out: &
         out[i] = roundeven_f64_cached(x, y, z);
     }
 }
+#[inline(never)]
+pub fn roundeven_f64_stream_ordinary(input: &[f64], ys: &[f64], zs: &[f64], out: &mut [f64]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    for i in 0..input.len() {
+        let (x, y, z) = (input[i], ys[i], zs[i]);
+        let _ = (y, z);
+        out[i] = zenmath::scalar::roundeven(x);
+    }
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -10744,6 +11280,10 @@ pub fn roundeven_f64_stream_cases() -> Vec<Case<f64>> {
         Case {
             name: "cached/baseline",
             run: Box::new(roundeven_f64_stream_cached) as Kernel<f64>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(roundeven_f64_stream_ordinary) as Kernel<f64>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -10911,6 +11451,21 @@ pub fn roundeven_f64_feedback_cached(input: &[f64], ys: &[f64], zs: &[f64], out:
     }
     out[0] = value;
 }
+#[inline(never)]
+pub fn roundeven_f64_feedback_ordinary(input: &[f64], ys: &[f64], zs: &[f64], out: &mut [f64]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    assert!(!input.is_empty());
+    let mut value = input[0];
+    let (y, z) = (ys[0], zs[0]);
+    let _ = (y, z);
+    for _ in 0..1024 {
+        let x = value * 0.125 + 0.375;
+        value = zenmath::scalar::roundeven(x);
+    }
+    out[0] = value;
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -11047,6 +11602,10 @@ pub fn roundeven_f64_feedback_cases() -> Vec<Case<f64>> {
         Case {
             name: "cached/baseline",
             run: Box::new(roundeven_f64_feedback_cached) as Kernel<f64>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(roundeven_f64_feedback_ordinary) as Kernel<f64>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -11293,6 +11852,17 @@ pub fn round_f64_stream_cached(input: &[f64], ys: &[f64], zs: &[f64], out: &mut 
         out[i] = round_f64_cached(x, y, z);
     }
 }
+#[inline(never)]
+pub fn round_f64_stream_ordinary(input: &[f64], ys: &[f64], zs: &[f64], out: &mut [f64]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    for i in 0..input.len() {
+        let (x, y, z) = (input[i], ys[i], zs[i]);
+        let _ = (y, z);
+        out[i] = zenmath::scalar::round(x);
+    }
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -11401,6 +11971,10 @@ pub fn round_f64_stream_cases() -> Vec<Case<f64>> {
         Case {
             name: "cached/baseline",
             run: Box::new(round_f64_stream_cached) as Kernel<f64>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(round_f64_stream_ordinary) as Kernel<f64>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -11568,6 +12142,21 @@ pub fn round_f64_feedback_cached(input: &[f64], ys: &[f64], zs: &[f64], out: &mu
     }
     out[0] = value;
 }
+#[inline(never)]
+pub fn round_f64_feedback_ordinary(input: &[f64], ys: &[f64], zs: &[f64], out: &mut [f64]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    assert!(!input.is_empty());
+    let mut value = input[0];
+    let (y, z) = (ys[0], zs[0]);
+    let _ = (y, z);
+    for _ in 0..1024 {
+        let x = value * 0.125 + 0.375;
+        value = zenmath::scalar::round(x);
+    }
+    out[0] = value;
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -11704,6 +12293,10 @@ pub fn round_f64_feedback_cases() -> Vec<Case<f64>> {
         Case {
             name: "cached/baseline",
             run: Box::new(round_f64_feedback_cached) as Kernel<f64>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(round_f64_feedback_ordinary) as Kernel<f64>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -11948,6 +12541,17 @@ pub fn fma_f64_stream_cached(input: &[f64], ys: &[f64], zs: &[f64], out: &mut [f
         out[i] = fma_f64_cached(x, y, z);
     }
 }
+#[inline(never)]
+pub fn fma_f64_stream_ordinary(input: &[f64], ys: &[f64], zs: &[f64], out: &mut [f64]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    for i in 0..input.len() {
+        let (x, y, z) = (input[i], ys[i], zs[i]);
+        let _ = (y, z);
+        out[i] = zenmath::scalar::fma(x, y, z);
+    }
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -12056,6 +12660,10 @@ pub fn fma_f64_stream_cases() -> Vec<Case<f64>> {
         Case {
             name: "cached/baseline",
             run: Box::new(fma_f64_stream_cached) as Kernel<f64>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(fma_f64_stream_ordinary) as Kernel<f64>,
         },
     ];
     #[cfg(target_arch = "x86_64")]
@@ -12223,6 +12831,21 @@ pub fn fma_f64_feedback_cached(input: &[f64], ys: &[f64], zs: &[f64], out: &mut 
     }
     out[0] = value;
 }
+#[inline(never)]
+pub fn fma_f64_feedback_ordinary(input: &[f64], ys: &[f64], zs: &[f64], out: &mut [f64]) {
+    assert_eq!(input.len(), out.len());
+    assert_eq!(input.len(), ys.len());
+    assert_eq!(input.len(), zs.len());
+    assert!(!input.is_empty());
+    let mut value = input[0];
+    let (y, z) = (ys[0], zs[0]);
+    let _ = (y, z);
+    for _ in 0..1024 {
+        let (x, y, z) = (value, 0.999_f64, 0.0001_f64);
+        value = zenmath::scalar::fma(x, y, z);
+    }
+    out[0] = value;
+}
 #[archmage::attune(
     _scalar,
     _scalar_t,
@@ -12359,6 +12982,10 @@ pub fn fma_f64_feedback_cases() -> Vec<Case<f64>> {
         Case {
             name: "cached/baseline",
             run: Box::new(fma_f64_feedback_cached) as Kernel<f64>,
+        },
+        Case {
+            name: "ordinary/baseline",
+            run: Box::new(fma_f64_feedback_ordinary) as Kernel<f64>,
         },
     ];
     #[cfg(target_arch = "x86_64")]

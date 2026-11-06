@@ -1,87 +1,89 @@
 # Optional Archmage acceleration
 
-Zenmath's default scalar core remains dependency-free, no_std, Rust 1.89 and
-forbid unsafe. The optional `archmage` feature adds intrinsic-only packed math.
-There is no Magetypes dependency and no Archmage-to-Zenmath dependency.
-`runtime-dispatch` explicitly enables native CPU selection and implies std;
-`avx512` compiles additional proof entries. These are implementation choices,
-not numerical policies: unifying features must not change contracted bits.
+Zenmath defaults to dependency-free `no_std`, Rust 1.89 and `forbid(unsafe_code)`.
+`archmage` adds intrinsic-only proof/context APIs. `runtime-dispatch` adds native
+selection and implies `std` plus `archmage/std`. No Zenmath dependency on Magetypes,
+or Archmage dependency on Zenmath, is introduced. Feature unification preserves
+the numerical contracts.
 
-`simd::array::{exp_f32x4, ln_f32x4, log2_f32x4, pow_f32x4}` and corresponding
-`simd::slice` operations share the previous Magemath CORE-MATH common paths.
-Magemath's existing correct array, slice and power-policy APIs delegate to them.
-The upstream MIT notices, polynomial order, fused points, ambiguity predicates
-and per-lane scalar rescue are retained. Default scalar functions remain the
-independently callable oracle; no fallback calls a dispatcher recursively.
+`simd::array` and `simd::slice` share the existing Magemath accurate f32 exp, ln,
+log2 and pow algorithms. Magemath delegates through proof adapters. Polynomial
+order, fused points, ambiguity predicates, accurate fallback and upstream MIT
+notices are retained. Explicit `*_v3` context bodies compose inside matching
+feature functions; `*_v3_t` accepts a held proof. NEON, WASM and scalar equivalents
+remain available. Kernels never probe. Tails are bounded; power checks both
+lengths before mutation.
 
-Each operation has direct feature bodies (`*_v3`) and explicit proof entries
-(`*_v3_t`, and NEON/WASM/scalar equivalents). Use a matching feature body to
-compose a loop; the proof bridge enters from an ordinary context. Kernels do
-not summon tokens or select an ISA. Four f32 values use four f64 intermediates:
-256 bits on V3, two 128-bit registers on NEON/WASM. V4x currently reuses this
-same four-lane kernel; its suffix does not imply a 512-bit algorithm.
+Four inputs use four f64 intermediates: 256 bits on V3, two 128-bit registers on
+NEON/WASM. Four-input V4x keeps that width. With `avx512`, explicit
+`*_f32x8_v4x(_t)` arrays and `*_f32_wide_v4x(_t)` slices use eight actual f64 lanes.
+Automatic x86 array/slice selection prefers V3; the measured
+[width comparison](../../benchmarks/zenmath_dispatch_2026-11-06/WIDTHS.md) records
+per-operation paired intervals and limits. An ISA suffix is not a speed guarantee.
 
-Selection is outside the packed loop. Without Zenmath's own runtime feature,
-`compiled_with() == Some(true)` is required before asking Archmage for a proof.
-In that case Archmage documents that proof acquisition is constant-folded.
-This explicitly prevents runtime probing when another dependency merely unifies
-`archmage/std`. WASM selection relies on module features, never an engine probe.
-Independent no_std consumers must check this behavior without test dependencies.
+Without Zenmath's own runtime feature, selection requires
+`compiled_with() == Some(true)` before proof acquisition. Another dependency
+unifying `archmage/std` cannot enable runtime probing. An external consumer
+verifies this in optimized IR. WASM uses module-load feature guarantees, never
+engine detection.
 
-The scalar/WASM f64 fused software common path reuses Magetypes' whole-array
-Dekker/TwoSum algorithm (source at b1316a4e). It combines rare-lane checks before
-cold exact scalar rescue instead of branching through scalar FMA in each lane.
-Hardware V3/NEON use native packed FMA. All paths assume nearest-even and gradual
-underflow; NaN payloads/signs are unspecified, signed zero is part of the contract.
+The scalar/WASM f64 fused software path reuses Magetypes' whole-array
+Dekker/TwoSum common path and combined rare-lane rescue. V3/NEON use native FMA.
+All paths assume nearest-even rounding and gradual underflow. Signed zero is
+preserved; NaN payloads and signs are unspecified.
 
-This is an implementation record, not a performance recommendation. Dispatch
-strategy, actual wider candidates and full-domain cross-ISA hashes are still
-being evaluated. No speed claim follows from replacing a dependency or passing
-finite fixtures. The scalar auto-dispatch policy will follow measured data;
-losing selector candidates stay experimental.
+## Ordinary scalar policy
 
-## Scalar instruction entries
+Ordinary `scalar` names accelerate only with **`runtime-dispatch`**. With default,
+`std` alone, or `archmage` alone, the facade retains its reference implementations.
+The explicit proof/context APIs remain usable with `archmage` alone.
 
-`simd::scalar` supplies f32/f64 sqrt, floor, ceil, trunc, ties-even and ties-away
-rounding, plus fused multiply-add. x86 sqrt uses baseline V1; rounding uses V2
-SSE4.1; FMA uses V3. NEON uses the corresponding instructions. Strict WASM
-rounding/sqrt uses SIMD128 instructions and fused FMA keeps exact software.
-Ties-away rounding uses truncation plus a fractional comparison on x86/WASM;
-it never adds 0.5 before truncating. Scalar direct contexts for the full four
-CORE-MATH algorithms are also available; they call the actual scalar algorithm,
-not replicated vector lanes. No production legacy scalar call is redirected yet.
+| Target | Ordinary accelerated names |
+|---|---|
+| x86-64 | `sqrtf`, `sqrt`, `floorf`, `floor`, `ceil`, `roundf`, `round`, `roundeven`, `fma`, `powf` |
+| AArch64 | `sqrtf`, `sqrt`, `floorf`, `floor`, `ceilf`, `ceil`, `roundf`, `round`, `roundevenf`, `powf` |
+| WASM | `sqrtf`, `sqrt`, `floorf`, `floor`, `ceilf`, `ceil`, `roundf`, `round`, `roundevenf`, `roundeven`; SIMD128 module guarantee, reference fallback in strict no-SIMD modules |
+| Other targets | Reference facade |
 
-Independent exact F32/F64 FMA fixtures and full-bit primitive samples passed on
-native x86, including signed zero and subnormal cases. Targeted predecessor/
-successor cases around ±0.5/±1.5 supplement random bits. Runtime-tier presence is
-asserted by validation caller configuration. The separate compile consumer
-unifies `archmage/std` without runtime dispatch: optimized consumer floor/exp
-bodies contain no CPU selection, stronger-tier call or detector reference.
-Default/accelerated/runtime compile and cold build costs remain to be measured.
+Other names retain reference code. In particular, f32 FMA and scalar exp/ln/log2
+had mixed results or regressions; x86 ceilf and roundevenf are not redirected.
+These are workload-informed choices, not claims that dispatch always wins.
+Single-value calls include wrapper/indirect benchmark costs and frequently tie.
+WASM FMA and transcendentals retain reference code, including the power rescue
+mixture that regressed in the measured context. The simpler cached-feature branch is a design tie-break where measurements do
+not distinguish selectors. Safe cached pointers won some x86 FMA comparisons but
+had no universal advantage; they remain benchmark-only and carry the real proof,
+including its match cost. They do not implement IFUNC.
 
-## Wider proof candidate
+`scalar::reference` exposes the original non-dispatch algorithms. Internal
+polynomial steps, vector rescue and policy fallback call private reference paths,
+never the facade. Historical compile-time hardware FMA under `std` is retained
+inside that reference. Thus “non-dispatch” does not mean “always software”.
 
-With `avx512`, `array::*_f32x8_v4x(_t)` and `slice::*_f32_wide_v4x(_t)`
-evaluate eight f32 inputs with eight binary64 intermediates in actual AVX-512
-registers. They reuse the same const-width formulas and tables, not two V3
-calls. The original four-input V4x entry still uses four binary64 lanes. No
-512-bit automatic selection policy has been chosen from timings yet. Exact
-mixed-bit samples and lengths 0 through 17 passed on native V4x, together with
-legacy Magemath core/policy regressions, clippy and Rust 1.89 checking.
+## Explicit primitives and context bodies
 
-## Full scalar context bodies and non-dispatch reference
+`simd::scalar` supplies f32/f64 sqrt, floor, ceil, trunc, roundeven, ties-away
+round and FMA. x86 uses V1 sqrt, V2 rounding and V3 FMA; NEON uses native
+instructions. Strict WASM has SIMD sqrt/rounding and exact software FMA.
+Ties-away rounding avoids the double-rounding error of adding 0.5 first.
 
-The scalar exp/ln/log2 context entries now inline shared complete algorithm
-bodies. Scalar pow uses a private arithmetic strategy at the two original fused
-operations and floor: V3/NEON proofs provide exact native instructions without
-probing per step. The scalar software strategy and rare accurate pow fallback
-remain independent. This retains polynomial order and the existing fallback
-algorithm; it does not contract formerly separate multiply/add operations.
+The full scalar exp/ln/log2 bodies inline in their feature contexts. Pow's private
+arithmetic strategy specializes its original two fused operations and floor;
+linked V3/NEON code contains native FMA and no per-polynomial-step CPU probes.
+Rare accurate pow rescue retains the original software algorithm. Scalar contexts
+do not replicate a scalar value into a vector to disguise its cost.
 
-`scalar::reference` exposes the original non-dispatch scalar algorithms. Internal
-vector rescue, scalar polynomial steps and power-policy fallback call those
-private reference paths, not the ordinary API facade. The historical std plus
-compile-time FMA choice remains inside the reference f32 fused helper. This
-reference is independent of runtime selection, not a claim that it never uses
-an instruction guaranteed by the build. Ordinary scalar names will be wired to
-acceleration only after matched dispatch measurements justify the choice.
+Scalar intrinsics need not optimize like semantic Rust builtins. The linked V3
+floor loop uses scalar `vroundss`; the std context control can vectorize better.
+Use the measured controls, not an assumption that explicit instructions are best.
+
+## Evidence and limits
+
+The [dispatch study](../../benchmarks/zenmath_dispatch_2026-11-06/README.md)
+records native x86, NEON and strict WASM throughput/feedback controls, direct
+paired intervals, linked codegen, cold build costs and artifact identities.
+The separate [digest study](../../benchmarks/zenmath_digests_2026-11-06/README.md)
+validated 89 full-domain cells against production kernels frozen at `5a9cc685`.
+Final facade and selector changes alter routing only; direct final tests cover
+those changes. The frozen kernel sweeps are not labeled as sweeps of later facade
+source.
