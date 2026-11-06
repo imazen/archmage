@@ -8,6 +8,7 @@ publish = false
 
 [features]
 soft = ["libm/force-soft-floats"]
+wasm-bench = ["zenbench/wasm"]
 
 [dependencies]
 archmage = { path = "../.." }
@@ -24,3 +25,8 @@ zenbench = { version = "=0.1.11", default-features = false }
 
 [profile.release]
 lto = "thin"
+
+[[bin]]
+name = "wasm-host"
+path = "src/bin/wasm-host.rs"
+required-features = ["wasm-bench"]

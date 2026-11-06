@@ -3,3 +3,4 @@
 /.zenbench/
 
 /__pycache__/
+/target-*/
