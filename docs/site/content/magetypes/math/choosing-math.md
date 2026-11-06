@@ -29,6 +29,12 @@ The draft scalar set includes f32 `powf`, `expf`, `logf`, `log2f`, `log10f`,
 from zero; `roundevenf` is a separate operation. Do not benchmark ties-even
 vector rounding as though it were Rust's `round`.
 
+The remaining packed API gaps are explicit: no correctly rounded Magemath
+`log10`, no generic Magetypes f64 vector `log2`, and no ties-away vector `round`
+in either crate at this revision. Approximate f32 `log10` and ties-even vector
+rounding are available. A scalar loop inside a feature context is a useful
+benchmark control, but is not a missing packed implementation.
+
 See [precision levels](@/magetypes/math/precision.md) and
 [ISA differences](@/magetypes/isa-quirks.md) before substituting methods.
 Magetypes' existing transcendental NaN and subnormal behavior is not a full
