@@ -39,7 +39,8 @@ bits. Relaxed WASM uses the engine's madd once a cached probe shows it fuses, an
 otherwise software. f64 on x86-64 with std checks a cached V3 token. f32 outside a
 matching tier goes straight to the vectorized software path, with no runtime CPU check,
 because a per-call hardware path measured slower (repo `CLAUDE.md`, Dispatch granularity).
-That is only reached on CPUs without V3 anyway: the dispatcher picks the v3 tier first.
+A std-enabled dispatcher selects V3 where available; explicit ScalarToken calls
+and no_std builds without compile-time V3 can still use the software path.
 
 The original portable-only revision was checked for every f32: all 2^32 inputs matched the mirrors on scalar, v3, v4x and
 NEON, and about 230,000 per op matched on WASM (strict, relaxed on engines that fuse
@@ -205,8 +206,8 @@ get per-tier goldens because that is their contract.
 | `tests/exhaustive.rs` | any of the 2^32 inputs differing (manual; minutes on many cores) |
 
 The first draft checked in 972 KB of `input output` hex lines for 4,853 inputs per op.
-Digests cover 47 times the inputs in 814 bytes and need no filesystem access under
-wasmtime. A digest can't show which input moved, but `parity.rs` names the input for
+The current 1,745-byte digest file pins both rounding families and the input
+corpus without filesystem access under wasmtime. A digest can't show which input moved, but `parity.rs` names the input for
 any tier difference, so a digest failure alone means the mirror itself moved. Check out
 the previous commit's mirror if the edge table doesn't explain it.
 
