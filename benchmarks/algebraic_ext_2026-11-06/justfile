@@ -15,3 +15,20 @@ results mode out:
 published:
     cargo run --release --manifest-path published-beta/Cargo.toml
     cargo run --release --manifest-path published-030/Cargo.toml
+
+build-arm:
+    bash build-arm.sh
+build-wasm:
+    bash build-wasm.sh
+health:
+    bash health.sh
+validate-wasm runner:
+    bash validate-wasm.sh {{runner}}
+observe root:
+    python3 analyze.py {{root}}
+summarize raw out:
+    python3 summarize.py {{raw}} {{out}}
+extract raw:
+    python3 extract.py {{raw}} codegen
+final-audit raw:
+    python3 audit.py {{raw}}

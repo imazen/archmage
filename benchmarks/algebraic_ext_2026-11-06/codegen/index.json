@@ -1,0 +1,310 @@
+[
+  {
+    "probe": "off-v3-poly-index",
+    "address": "0000000000176e00",
+    "symbol": "algebraic_ext_consumer::generated::__attune_poly_index_f32_v3",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": true,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "optimized no-LTO IR"
+  },
+  {
+    "probe": "thin-v3-poly-index",
+    "address": "000000000007ac40",
+    "symbol": "algebraic_ext_consumer::generated::__attune_poly_index_f32_v3",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": false,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "pre-link IR; linked assembly is final lowering evidence"
+  },
+  {
+    "probe": "off-v3-poly-token",
+    "address": "00000000001770e0",
+    "symbol": "algebraic_ext_consumer::generated::__attune_poly_token_f32_v3",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": true,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "optimized no-LTO IR"
+  },
+  {
+    "probe": "thin-v3-poly-token",
+    "address": "000000000007af20",
+    "symbol": "algebraic_ext_consumer::generated::__attune_poly_token_f32_v3",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": false,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "pre-link IR; linked assembly is final lowering evidence"
+  },
+  {
+    "probe": "off-v3-poly-map",
+    "address": "0000000000171f80",
+    "symbol": "algebraic_ext_consumer::generated::__attune_poly_map_f32_v3",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": true,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "optimized no-LTO IR"
+  },
+  {
+    "probe": "thin-v3-poly-map",
+    "address": "0000000000075dc0",
+    "symbol": "algebraic_ext_consumer::generated::__attune_poly_map_f32_v3",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": false,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "pre-link IR; linked assembly is final lowering evidence"
+  },
+  {
+    "probe": "off-v3-dot-index",
+    "address": "0000000000173a10",
+    "symbol": "algebraic_ext_consumer::generated::__attune_dot_index_f32_v3",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": true,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "optimized no-LTO IR"
+  },
+  {
+    "probe": "thin-v3-dot-index",
+    "address": "0000000000077850",
+    "symbol": "algebraic_ext_consumer::generated::__attune_dot_index_f32_v3",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": false,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "pre-link IR; linked assembly is final lowering evidence"
+  },
+  {
+    "probe": "off-v3-dot-ordinary-reduce",
+    "address": "000000000017a7c0",
+    "symbol": "algebraic_ext_consumer::generated::__attune_dot_index_ordinary_reduce_f32_v3",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": true,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "optimized no-LTO IR"
+  },
+  {
+    "probe": "thin-v3-dot-ordinary-reduce",
+    "address": "000000000007e600",
+    "symbol": "algebraic_ext_consumer::generated::__attune_dot_index_ordinary_reduce_f32_v3",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": true,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "pre-link IR; linked assembly is final lowering evidence"
+  },
+  {
+    "probe": "off-baseline-poly-index",
+    "address": "00000000001646c0",
+    "symbol": "algebraic_ext_consumer::generated::cases_f32::{closure#3}",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": true,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "optimized no-LTO IR"
+  },
+  {
+    "probe": "thin-baseline-poly-index",
+    "address": "0000000000068500",
+    "symbol": "algebraic_ext_consumer::generated::cases_f32::{closure#3}",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": false,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "pre-link IR; linked assembly is final lowering evidence"
+  },
+  {
+    "probe": "off-neon-poly-index",
+    "address": "00000000000e1070",
+    "symbol": "algebraic_ext_consumer::generated::cases_f32::{closure#3}",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": true,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "optimized no-LTO IR"
+  },
+  {
+    "probe": "thin-neon-poly-index",
+    "address": "000000000001d69c",
+    "symbol": "algebraic_ext_consumer::generated::cases_f32::{closure#3}",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": false,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "pre-link IR; linked assembly is final lowering evidence"
+  },
+  {
+    "probe": "off-neon-poly-token",
+    "address": "00000000000e14c0",
+    "symbol": "algebraic_ext_consumer::generated::cases_f32::{closure#5}",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": true,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "optimized no-LTO IR"
+  },
+  {
+    "probe": "thin-neon-poly-token",
+    "address": "000000000001daec",
+    "symbol": "algebraic_ext_consumer::generated::cases_f32::{closure#5}",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": false,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "pre-link IR; linked assembly is final lowering evidence"
+  },
+  {
+    "probe": "off-neon-poly-map",
+    "address": "00000000000e1910",
+    "symbol": "algebraic_ext_consumer::generated::cases_f32::{closure#7}",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": true,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "optimized no-LTO IR"
+  },
+  {
+    "probe": "thin-neon-poly-map",
+    "address": "000000000001df3c",
+    "symbol": "algebraic_ext_consumer::generated::cases_f32::{closure#7}",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": false,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "pre-link IR; linked assembly is final lowering evidence"
+  },
+  {
+    "probe": "off-neon-dot-index",
+    "address": "00000000000e3120",
+    "symbol": "algebraic_ext_consumer::generated::cases_f32::{closure#15}",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": true,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "optimized no-LTO IR"
+  },
+  {
+    "probe": "thin-neon-dot-index",
+    "address": "000000000001f74c",
+    "symbol": "algebraic_ext_consumer::generated::cases_f32::{closure#15}",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": false,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "pre-link IR; linked assembly is final lowering evidence"
+  },
+  {
+    "probe": "off-neon-dot-ordinary-reduce",
+    "address": "00000000000e3d30",
+    "symbol": "algebraic_ext_consumer::generated::cases_f32::{closure#25}",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": true,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "optimized no-LTO IR"
+  },
+  {
+    "probe": "thin-neon-dot-ordinary-reduce",
+    "address": "000000000002035c",
+    "symbol": "algebraic_ext_consumer::generated::cases_f32::{closure#25}",
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ],
+    "packed_ir": true,
+    "external_method_ir_references": 0,
+    "thin_ir_note": "pre-link IR; linked assembly is final lowering evidence"
+  }
+]

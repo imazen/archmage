@@ -1,0 +1,82 @@
+# native/timed-codegen/off.disasm:284326
+# Binary hash: bdae74f6a8744582a06768f2335a1d0a669bc37ba0a5eee5783abe1b39ebcee3  target-off/release/timing
+0000000000173a10 <algebraic_ext_consumer::generated::__attune_dot_index_f32_v3>:
+  173a10:	48 83 ec 18          	sub    $0x18,%rsp
+  173a14:	48 89 74 24 08       	mov    %rsi,0x8(%rsp)
+  173a19:	48 89 0c 24          	mov    %rcx,(%rsp)
+  173a1d:	48 39 ce             	cmp    %rcx,%rsi
+  173a20:	0f 85 ca 00 00 00    	jne    173af0 <algebraic_ext_consumer::generated::__attune_dot_index_f32_v3+0xe0>
+  173a26:	48 89 34 24          	mov    %rsi,(%rsp)
+  173a2a:	4c 89 4c 24 10       	mov    %r9,0x10(%rsp)
+  173a2f:	4c 39 ce             	cmp    %r9,%rsi
+  173a32:	0f 85 d1 00 00 00    	jne    173b09 <algebraic_ext_consumer::generated::__attune_dot_index_f32_v3+0xf9>
+  173a38:	48 89 f0             	mov    %rsi,%rax
+  173a3b:	48 83 e0 07          	and    $0x7,%rax
+  173a3f:	48 89 04 24          	mov    %rax,(%rsp)
+  173a43:	0f 85 d9 00 00 00    	jne    173b22 <algebraic_ext_consumer::generated::__attune_dot_index_f32_v3+0x112>
+  173a49:	48 83 fe 08          	cmp    $0x8,%rsi
+  173a4d:	74 60                	je     173aaf <algebraic_ext_consumer::generated::__attune_dot_index_f32_v3+0x9f>
+  173a4f:	48 85 f6             	test   %rsi,%rsi
+  173a52:	0f 84 e5 00 00 00    	je     173b3d <algebraic_ext_consumer::generated::__attune_dot_index_f32_v3+0x12d>
+  173a58:	48 89 f0             	mov    %rsi,%rax
+  173a5b:	48 c1 e8 03          	shr    $0x3,%rax
+  173a5f:	48 b9 fe ff ff ff ff 	movabs $0x3fffffffffffffe,%rcx
+  173a66:	ff ff 03 
+  173a69:	48 21 c1             	and    %rax,%rcx
+  173a6c:	c5 f8 57 c0          	vxorps %xmm0,%xmm0,%xmm0
+  173a70:	41 b9 20 00 00 00    	mov    $0x20,%r9d
+  173a76:	31 c0                	xor    %eax,%eax
+  173a78:	0f 1f 84 00 00 00 00 	nopl   0x0(%rax,%rax,1)
+  173a7f:	00 
+  173a80:	c4 a1 7c 10 4c 0a e0 	vmovups -0x20(%rdx,%r9,1),%ymm1
+  173a87:	c4 a1 7c 10 14 0a    	vmovups (%rdx,%r9,1),%ymm2
+  173a8d:	c4 a2 75 b8 44 0f e0 	vfmadd231ps -0x20(%rdi,%r9,1),%ymm1,%ymm0
+  173a94:	c4 a2 6d b8 04 0f    	vfmadd231ps (%rdi,%r9,1),%ymm2,%ymm0
+  173a9a:	48 83 c0 02          	add    $0x2,%rax
+  173a9e:	49 83 c1 40          	add    $0x40,%r9
+  173aa2:	48 39 c1             	cmp    %rax,%rcx
+  173aa5:	75 d9                	jne    173a80 <algebraic_ext_consumer::generated::__attune_dot_index_f32_v3+0x70>
+  173aa7:	40 f6 c6 08          	test   $0x8,%sil
+  173aab:	75 08                	jne    173ab5 <algebraic_ext_consumer::generated::__attune_dot_index_f32_v3+0xa5>
+  173aad:	eb 19                	jmp    173ac8 <algebraic_ext_consumer::generated::__attune_dot_index_f32_v3+0xb8>
+  173aaf:	c5 f8 57 c0          	vxorps %xmm0,%xmm0,%xmm0
+  173ab3:	31 c0                	xor    %eax,%eax
+  173ab5:	c5 fc 28 c8          	vmovaps %ymm0,%ymm1
+  173ab9:	48 c1 e0 05          	shl    $0x5,%rax
+  173abd:	c5 fc 10 04 02       	vmovups (%rdx,%rax,1),%ymm0
+  173ac2:	c4 e2 75 98 04 07    	vfmadd132ps (%rdi,%rax,1),%ymm1,%ymm0
+  173ac8:	c4 e3 7d 19 c1 01    	vextractf128 $0x1,%ymm0,%xmm1
+  173ace:	c5 f8 58 c1          	vaddps %xmm1,%xmm0,%xmm0
+  173ad2:	c5 f9 c6 c8 01       	vshufpd $0x1,%xmm0,%xmm0,%xmm1
+  173ad7:	c5 f8 58 c1          	vaddps %xmm1,%xmm0,%xmm0
+  173adb:	c5 fa 16 c8          	vmovshdup %xmm0,%xmm1
+  173adf:	c5 fa 58 c1          	vaddss %xmm1,%xmm0,%xmm0
+  173ae3:	c4 c1 7a 11 00       	vmovss %xmm0,(%r8)
+  173ae8:	48 83 c4 18          	add    $0x18,%rsp
+  173aec:	c5 f8 77             	vzeroupper
+  173aef:	c3                   	ret
+  173af0:	4c 8d 0d f1 ba 06 00 	lea    0x6baf1(%rip),%r9        # 1df5e8 <anon.dab8cf20f06930b135f7f94115c7b92a.12.llvm.13025722987067152333+0xc48>
+  173af7:	48 8d 74 24 08       	lea    0x8(%rsp),%rsi
+  173afc:	48 89 e2             	mov    %rsp,%rdx
+  173aff:	31 ff                	xor    %edi,%edi
+  173b01:	31 c9                	xor    %ecx,%ecx
+  173b03:	ff 15 57 16 07 00    	call   *0x71657(%rip)        # 1e5160 <_DYNAMIC+0xc98>
+  173b09:	4c 8d 0d f0 ba 06 00 	lea    0x6baf0(%rip),%r9        # 1df600 <anon.dab8cf20f06930b135f7f94115c7b92a.12.llvm.13025722987067152333+0xc60>
+  173b10:	48 89 e6             	mov    %rsp,%rsi
+  173b13:	48 8d 54 24 10       	lea    0x10(%rsp),%rdx
+  173b18:	31 ff                	xor    %edi,%edi
+  173b1a:	31 c9                	xor    %ecx,%ecx
+  173b1c:	ff 15 3e 16 07 00    	call   *0x7163e(%rip)        # 1e5160 <_DYNAMIC+0xc98>
+  173b22:	48 8d 15 0f 69 eb ff 	lea    -0x1496f1(%rip),%rdx        # 2a438 <anon.d80063126ca473c03f1b9a4e1d212d3d.204.llvm.8653011292040670968>
+  173b29:	4c 8d 0d 00 bb 06 00 	lea    0x6bb00(%rip),%r9        # 1df630 <anon.dab8cf20f06930b135f7f94115c7b92a.12.llvm.13025722987067152333+0xc90>
+  173b30:	48 89 e6             	mov    %rsp,%rsi
+  173b33:	31 ff                	xor    %edi,%edi
+  173b35:	31 c9                	xor    %ecx,%ecx
+  173b37:	ff 15 23 16 07 00    	call   *0x71623(%rip)        # 1e5160 <_DYNAMIC+0xc98>
+  173b3d:	48 8d 15 d4 ba 06 00 	lea    0x6bad4(%rip),%rdx        # 1df618 <anon.dab8cf20f06930b135f7f94115c7b92a.12.llvm.13025722987067152333+0xc78>
+  173b44:	31 ff                	xor    %edi,%edi
+  173b46:	31 f6                	xor    %esi,%esi
+  173b48:	ff 15 22 10 07 00    	call   *0x71022(%rip)        # 1e4b70 <_DYNAMIC+0x6a8>
+  173b4e:	cc                   	int3
+  173b4f:	cc                   	int3
+

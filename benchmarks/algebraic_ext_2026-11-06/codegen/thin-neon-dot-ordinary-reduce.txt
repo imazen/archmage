@@ -1,0 +1,66 @@
+# arm/timed-codegen/thin.disasm:19488
+# Binary hash: d41a3b6feb21b2d68461ce4d20d9af46a491bb356a334269ae5823b9c8fc59d2  target-thin/release/timing
+000000000002035c <algebraic_ext_consumer::generated::cases_f32::{closure#25}>:
+   2035c:	d100c3ff 	sub	sp, sp, #0x30
+   20360:	a9027bfd 	stp	x29, x30, [sp, #32]
+   20364:	910083fd 	add	x29, sp, #0x20
+   20368:	eb04005f 	cmp	x2, x4
+   2036c:	f90007e2 	str	x2, [sp, #8]
+   20370:	f81f83a4 	stur	x4, [x29, #-8]
+   20374:	540003a1 	b.ne	203e8 <algebraic_ext_consumer::generated::cases_f32::{closure#25}+0x8c>  // b.any
+   20378:	eb06005f 	cmp	x2, x6
+   2037c:	f81f83a2 	stur	x2, [x29, #-8]
+   20380:	f9000be6 	str	x6, [sp, #16]
+   20384:	54000401 	b.ne	20404 <algebraic_ext_consumer::generated::cases_f32::{closure#25}+0xa8>  // b.any
+   20388:	f2400848 	ands	x8, x2, #0x7
+   2038c:	f81f83a8 	stur	x8, [x29, #-8]
+   20390:	54000481 	b.ne	20420 <algebraic_ext_consumer::generated::cases_f32::{closure#25}+0xc4>  // b.any
+   20394:	b4000562 	cbz	x2, 20440 <algebraic_ext_consumer::generated::cases_f32::{closure#25}+0xe4>
+   20398:	6f00e400 	movi	v0.2d, #0x0
+   2039c:	6f00e401 	movi	v1.2d, #0x0
+   203a0:	d343fc48 	lsr	x8, x2, #3
+   203a4:	91004069 	add	x9, x3, #0x10
+   203a8:	9100402a 	add	x10, x1, #0x10
+   203ac:	ad7f8d42 	ldp	q2, q3, [x10, #-16]
+   203b0:	f1000508 	subs	x8, x8, #0x1
+   203b4:	ad7f9524 	ldp	q4, q5, [x9, #-16]
+   203b8:	91008129 	add	x9, x9, #0x20
+   203bc:	9100814a 	add	x10, x10, #0x20
+   203c0:	4e22cc81 	fmla	v1.4s, v4.4s, v2.4s
+   203c4:	4e23cca0 	fmla	v0.4s, v5.4s, v3.4s
+   203c8:	54ffff21 	b.ne	203ac <algebraic_ext_consumer::generated::cases_f32::{closure#25}+0x50>  // b.any
+   203cc:	4e20d420 	fadd	v0.4s, v1.4s, v0.4s
+   203d0:	6e20d400 	faddp	v0.4s, v0.4s, v0.4s
+   203d4:	7e30d800 	faddp	s0, v0.2s
+   203d8:	bd0000a0 	str	s0, [x5]
+   203dc:	a9427bfd 	ldp	x29, x30, [sp, #32]
+   203e0:	9100c3ff 	add	sp, sp, #0x30
+   203e4:	d65f03c0 	ret
+   203e8:	f0000ba5 	adrp	x5, 197000 <anon.135c5ada040a2615b756b32359d13779.2.llvm.183516181582875585+0xb70>
+   203ec:	911f20a5 	add	x5, x5, #0x7c8
+   203f0:	910023e1 	add	x1, sp, #0x8
+   203f4:	d10023a2 	sub	x2, x29, #0x8
+   203f8:	2a1f03e0 	mov	w0, wzr
+   203fc:	aa1f03e3 	mov	x3, xzr
+   20400:	97ffb9df 	bl	eb7c <core::panicking::assert_failed::<usize, usize>>
+   20404:	f0000ba5 	adrp	x5, 197000 <anon.135c5ada040a2615b756b32359d13779.2.llvm.183516181582875585+0xb70>
+   20408:	911f80a5 	add	x5, x5, #0x7e0
+   2040c:	d10023a1 	sub	x1, x29, #0x8
+   20410:	910043e2 	add	x2, sp, #0x10
+   20414:	2a1f03e0 	mov	w0, wzr
+   20418:	aa1f03e3 	mov	x3, xzr
+   2041c:	97ffb9d8 	bl	eb7c <core::panicking::assert_failed::<usize, usize>>
+   20420:	f0000902 	adrp	x2, 143000 <anon.1590d67402e28d23175d1891a862b11b.188.llvm.354879623456601867+0x659>
+   20424:	91304042 	add	x2, x2, #0xc10
+   20428:	f0000ba5 	adrp	x5, 197000 <anon.135c5ada040a2615b756b32359d13779.2.llvm.183516181582875585+0xb70>
+   2042c:	912040a5 	add	x5, x5, #0x810
+   20430:	d10023a1 	sub	x1, x29, #0x8
+   20434:	2a1f03e0 	mov	w0, wzr
+   20438:	aa1f03e3 	mov	x3, xzr
+   2043c:	97ffb9d0 	bl	eb7c <core::panicking::assert_failed::<usize, usize>>
+   20440:	f0000ba2 	adrp	x2, 197000 <anon.135c5ada040a2615b756b32359d13779.2.llvm.183516181582875585+0xb70>
+   20444:	911fe042 	add	x2, x2, #0x7f8
+   20448:	aa1f03e0 	mov	x0, xzr
+   2044c:	aa1f03e1 	mov	x1, xzr
+   20450:	97ffba1c 	bl	ecc0 <core::panicking::panic_bounds_check>
+
