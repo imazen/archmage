@@ -196,3 +196,34 @@ The source, paired intervals, input bands and full platform matrix belong to
 `8c0450faa9bb53343dacf6ad3b8fa75d4dd34aa51c78ee71ded7a30b7ebfd6ce`.
 Resource wrapper: 192 seconds, peak RSS 0.04 GiB. Near ties need the paired
 intervals; these means alone do not establish a universal ranking.
+
+## Algebraic performance is kernel-dependent
+
+The f32 dot-product controls measured the following means in ns/value over 1024
+inputs, 60 interleaved rounds per group. The ordinary loop accumulates in source
+order; the other forms may associate differently. These are not interchangeable
+bit contracts.
+
+| CPU / context | Ordinary loop | Algebraic loop | Explicit vector, separate | Explicit vector, fused | Lane-array algebraic |
+|---|---:|---:|---:|---:|---:|
+| Core Ultra 7 265K / V3 | 0.375 | 0.026 | 0.038 | 0.057 | 0.058 |
+| Ryzen 7900X / V3 | 0.698 | 0.047 | 0.065 | 0.070 | 0.073 |
+| Neoverse-N1 / NEON | 0.705 | 0.091 | 0.122 | 0.093 | 0.349 |
+
+This supports using the scalar algebraic API for reductions when reassociation
+is acceptable. It does not support replacing every explicit vector operation
+with an array map. The ARM lane-array reduction needs particular care. For the
+polynomial, even the direction varies: the Ryzen 7900X V4x ordinary loop
+measured 0.051 and its algebraic counterpart 0.067. Consult the paired intervals
+and generated code before making a kernel-specific change.
+
+Native timing/algebraic pipelines completed with resource-wrapper peak RSS
+0.04 GiB on the 265K, 0.11 GiB on the 7900X, and 0.03 GiB on Neoverse-N1.
+The source and raw rounds are retained with the matrix record.
+
+The practical choice is to keep the existing library minimum and use Rust 1.98+
+for explicitly algebraic consumer kernels where measurements justify it. An
+algebraic vector API could make those permissions easier to express, but it
+would need its own reviewed semantics and codegen checks. Do not apply these
+permissions to the correct-rounding kernels: their proofs depend on the stated
+sequence of rounded operations, including error-recovery steps.
