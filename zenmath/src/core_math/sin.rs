@@ -1922,7 +1922,7 @@ pub fn sin(x: f64) -> f64 {
     }
     if e < 1023 + 31 {
         let ax = x.abs();
-        let k = crate::scalar::roundeven(f64::from_bits(0x40b45f306dc9c883) * ax);
+        let k = crate::reference::roundeven(f64::from_bits(0x40b45f306dc9c883) * ax);
         let rh = fma(k, -f64::from_bits(0x3f2921fb54442d18), ax);
         let rl = k * (-f64::from_bits(0x3bc1a62633145c07));
         evaluate(x, rh + rl, k as u64, false)

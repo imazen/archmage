@@ -109,7 +109,7 @@ fn hard(x: f32, r: f64) -> f32 {
 pub fn cosf(x: f32) -> f32 {
     let ax = x.to_bits() << 1;
     if ax < 0x74000000 {
-        return 0.5 * crate::scalar::fmaf(x, -x, 2.0);
+        return 0.5 * crate::reference::fmaf(x, -x, 2.0);
     }
     if ax >= 0xff000000 {
         return if x.is_nan() { x + x } else { f32::NAN };

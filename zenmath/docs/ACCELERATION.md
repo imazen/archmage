@@ -68,3 +68,20 @@ calls. The original four-input V4x entry still uses four binary64 lanes. No
 512-bit automatic selection policy has been chosen from timings yet. Exact
 mixed-bit samples and lengths 0 through 17 passed on native V4x, together with
 legacy Magemath core/policy regressions, clippy and Rust 1.89 checking.
+
+## Full scalar context bodies and non-dispatch reference
+
+The scalar exp/ln/log2 context entries now inline shared complete algorithm
+bodies. Scalar pow uses a private arithmetic strategy at the two original fused
+operations and floor: V3/NEON proofs provide exact native instructions without
+probing per step. The scalar software strategy and rare accurate pow fallback
+remain independent. This retains polynomial order and the existing fallback
+algorithm; it does not contract formerly separate multiply/add operations.
+
+`scalar::reference` exposes the original non-dispatch scalar algorithms. Internal
+vector rescue, scalar polynomial steps and power-policy fallback call those
+private reference paths, not the ordinary API facade. The historical std plus
+compile-time FMA choice remains inside the reference f32 fused helper. This
+reference is independent of runtime selection, not a claim that it never uses
+an instruction guaranteed by the build. Ordinary scalar names will be wired to
+acceleration only after matched dispatch measurements justify the choice.

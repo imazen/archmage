@@ -175,6 +175,11 @@ const C: [f64; 6] = [
 
 /// Correctly rounded base-two logarithm (nearest-even).
 pub fn log2f(x: f32) -> f32 {
+    log2f_in_context(x)
+}
+
+#[inline(always)]
+pub(crate) fn log2f_in_context(x: f32) -> f32 {
     let mut ux = x.to_bits();
     if ux >= 0x7f800000 || ux == 0 {
         return super::log_special(x);

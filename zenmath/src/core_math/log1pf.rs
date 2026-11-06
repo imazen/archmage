@@ -126,7 +126,7 @@ pub fn log1pf(x: f32) -> f32 {
             return if ax == 0 {
                 x
             } else {
-                crate::scalar::fmaf(x, -x, x)
+                crate::reference::fmaf(x, -x, x)
             };
         }
         let z2 = z * z;

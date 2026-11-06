@@ -1264,7 +1264,7 @@ pub fn asinh(x: f64) -> f64 {
             two(x2h, 1.0)
         };
         let tl = tl + x2l;
-        let ah = crate::scalar::sqrt(th);
+        let ah = crate::reference::sqrt(th);
         let rs = 0.5 / th;
         let al = (tl - fma(ah, ah, -th)) * (rs * ah);
         let (ah, tl) = two(ah, ax);

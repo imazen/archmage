@@ -92,7 +92,7 @@ pub fn expm1f(x: f32) -> f32 {
             return if ax == 0 {
                 x
             } else {
-                crate::scalar::fmaf(x.abs(), f32::from_bits(0x33000000), x)
+                crate::reference::fmaf(x.abs(), f32::from_bits(0x33000000), x)
             };
         }
         let z2 = z * z;
@@ -112,7 +112,7 @@ pub fn expm1f(x: f32) -> f32 {
         };
     }
     let a = f64::from_bits(0x40471547652b82fe) * z;
-    let ia = crate::scalar::roundeven(a);
+    let ia = crate::reference::roundeven(a);
     let mut h = a - ia;
     let h2 = h * h;
     let u = (ia + f64::from_bits(0x4338000000000000)).to_bits();

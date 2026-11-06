@@ -52,7 +52,7 @@ pub(super) fn small(x: f64, short: bool) -> (f64, i32) {
             -f64::from_bits(0x3e2b1bbead603d8b) * x,
         )
     };
-    let id = crate::scalar::roundeven(hi);
+    let id = crate::reference::roundeven(hi);
     let q = (f64::from_bits(0x4338000000000000) + id).to_bits() as i32;
     ((hi - id) + lo, q)
 }

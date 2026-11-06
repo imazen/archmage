@@ -653,7 +653,7 @@ fn database(x: f64, f: f64) -> f64 {
 #[inline(never)]
 fn accurate(x: f64) -> f64 {
     let sx = 4096.0 * x;
-    let fx = crate::scalar::roundeven(sx);
+    let fx = crate::reference::roundeven(sx);
     let z = sx - fx;
     let k = fx as i64;
     let i1 = (k & 63) as usize;
@@ -731,7 +731,7 @@ pub fn exp2(x: f64) -> f64 {
     let ex = (ax >> 53).wrapping_sub(0x3ff);
     let frac = (ex >> 63) | (m << (ex & 63));
     let sx = 4096.0 * x;
-    let fx = crate::scalar::roundeven(sx);
+    let fx = crate::reference::roundeven(sx);
     let z = sx - fx;
     let z2 = z * z;
     let k = fx as i64;

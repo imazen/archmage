@@ -108,6 +108,11 @@ const TB: [u64; 64] = [
 
 /// Correctly rounded natural exponential (nearest-even).
 pub fn expf(x: f32) -> f32 {
+    expf_in_context(x)
+}
+
+#[inline(always)]
+pub(crate) fn expf_in_context(x: f32) -> f32 {
     let t = x.to_bits();
     let z = x as f64;
     let a = f64::from_bits(0x3ff71547652b82fe) * z;

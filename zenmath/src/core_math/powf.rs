@@ -478,7 +478,7 @@ fn is_exact(x: f32, y: f32) -> bool {
         }
         e /= 2;
         let dm = m as f32;
-        let s = crate::scalar::roundf(crate::scalar::sqrtf(dm));
+        let s = crate::reference::roundf(crate::reference::sqrtf(dm));
         if s * s != dm {
             return false;
         }
@@ -494,6 +494,30 @@ fn is_exact(x: f32, y: f32) -> bool {
 }
 /// Correctly rounded power (nearest-even), including negative-base and IEEE rails.
 pub fn powf(x0: f32, y0: f32) -> f32 {
+    powf_with_math(Software, x0, y0)
+}
+
+/// Arithmetic choices only at the original fused and floor operations.
+/// Implementations must preserve exact IEEE results; no dispatch inside a step.
+pub(crate) trait Math: Copy {
+    fn fma(self, a: f64, b: f64, c: f64) -> f64;
+    fn floor(self, x: f64) -> f64;
+}
+#[derive(Clone, Copy)]
+pub(crate) struct Software;
+impl Math for Software {
+    #[inline(always)]
+    fn fma(self, a: f64, b: f64, c: f64) -> f64 {
+        fma(a, b, c)
+    }
+    #[inline(always)]
+    fn floor(self, x: f64) -> f64 {
+        crate::reference::floor(x)
+    }
+}
+
+#[inline(always)]
+pub(crate) fn powf_with_math<M: Math>(math: M, x0: f32, y0: f32) -> f32 {
     let x = x0 as f64;
     let mut y = y0 as f64;
     let tx = x.to_bits();
@@ -550,7 +574,7 @@ pub fn powf(x0: f32, y0: f32) -> f32 {
     let j = ((m + (1_u64 << 46)) >> 47) as usize;
     e += i32::from(j > 13);
     let xd = f64::from_bits(m | (0x3ff_u64 << 52));
-    let mut z = fma(xd, FAST_IX[j], -1.0);
+    let mut z = math.fma(xd, FAST_IX[j], -1.0);
     let z2 = z * z;
     let z4 = z2 * z2;
     let c6 = FAST_C[6] + z * FAST_C[7];
@@ -575,8 +599,8 @@ pub fn powf(x0: f32, y0: f32) -> f32 {
     if z.abs() < f64::from_bits(0x3e50000000000000) {
         return (1.0 + z) as f32;
     }
-    let ia = crate::scalar::floor(z);
-    let h = fma(l, y, zt - ia);
+    let ia = math.floor(z);
+    let h = math.fma(l, y, zt - ia);
     let il = ia as i64;
     let jl = (il & 15) as usize;
     let el = (il - jl as i64) >> 4;
@@ -611,7 +635,7 @@ fn accurate(x0: f32, y0: f32, exact: bool) -> f32 {
     let ey = e as f64 * y;
     let eh = ey + zh;
     let el = ((ey - eh) + zh) + zl;
-    let ee = crate::scalar::roundeven(eh);
+    let ee = crate::reference::roundeven(eh);
     let (mut eh, el) = polydd(eh - ee, el, &ACCURATE_CE);
     let mut lh = eh.to_bits();
     if ((!exact && lh & 0xfffffff == 0) || (exact && (lh.wrapping_add(1) & 0xfffffff) <= 2))

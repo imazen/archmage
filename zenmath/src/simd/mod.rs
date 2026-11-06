@@ -9,6 +9,7 @@
 //! `runtime-dispatch` feature is enabled, regardless of unified Archmage features.
 //! Assumes nearest-even rounding and gradual underflow; NaN payloads unspecified.
 #![allow(clippy::missing_safety_doc)]
+mod context;
 mod correct;
 mod packed;
 mod soft_fma;

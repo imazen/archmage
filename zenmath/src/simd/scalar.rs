@@ -6,7 +6,7 @@ use archmage::prelude::*;
 /// sqrt on f32; nearest-even environment, gradual underflow.
 #[archmage::attune(_scalar, _scalar_t)]
 pub fn sqrtf(x: f32) -> f32 {
-    crate::scalar::sqrtf(x)
+    crate::reference::sqrtf(x)
 }
 
 /// sqrt on f32; nearest-even environment, gradual underflow.
@@ -51,7 +51,7 @@ pub fn sqrtf(x: f32) -> f32 {
 /// floor on f32; nearest-even environment, gradual underflow.
 #[archmage::attune(_scalar, _scalar_t)]
 pub fn floorf(x: f32) -> f32 {
-    crate::scalar::floorf(x)
+    crate::reference::floorf(x)
 }
 
 /// floor on f32; nearest-even environment, gradual underflow.
@@ -96,7 +96,7 @@ pub fn floorf(x: f32) -> f32 {
 /// ceil on f32; nearest-even environment, gradual underflow.
 #[archmage::attune(_scalar, _scalar_t)]
 pub fn ceilf(x: f32) -> f32 {
-    crate::scalar::ceilf(x)
+    crate::reference::ceilf(x)
 }
 
 /// ceil on f32; nearest-even environment, gradual underflow.
@@ -141,7 +141,7 @@ pub fn ceilf(x: f32) -> f32 {
 /// trunc on f32; nearest-even environment, gradual underflow.
 #[archmage::attune(_scalar, _scalar_t)]
 pub fn truncf(x: f32) -> f32 {
-    crate::scalar::floorf(x.abs()).copysign(x)
+    crate::reference::floorf(x.abs()).copysign(x)
 }
 
 /// trunc on f32; nearest-even environment, gradual underflow.
@@ -189,7 +189,7 @@ pub fn truncf(x: f32) -> f32 {
 /// roundeven on f32; nearest-even environment, gradual underflow.
 #[archmage::attune(_scalar, _scalar_t)]
 pub fn roundevenf(x: f32) -> f32 {
-    crate::scalar::roundevenf(x)
+    crate::reference::roundevenf(x)
 }
 
 /// roundeven on f32; nearest-even environment, gradual underflow.
@@ -236,7 +236,7 @@ pub fn roundevenf(x: f32) -> f32 {
 /// round on f32; nearest-even environment, gradual underflow.
 #[archmage::attune(_scalar, _scalar_t)]
 pub fn roundf(x: f32) -> f32 {
-    crate::scalar::roundf(x)
+    crate::reference::roundf(x)
 }
 
 /// round on f32; nearest-even environment, gradual underflow.
@@ -289,7 +289,7 @@ pub fn roundf(x: f32) -> f32 {
 /// fma on f32; nearest-even environment, gradual underflow.
 #[archmage::attune(_scalar, _scalar_t)]
 pub fn fmaf(x: f32, y: f32, z: f32) -> f32 {
-    crate::scalar::fmaf(x, y, z)
+    crate::reference::fmaf(x, y, z)
 }
 
 /// fma on f32; nearest-even environment, gradual underflow.
@@ -309,7 +309,7 @@ pub fn fmaf(x: f32, y: f32, z: f32) -> f32 {
 /// fma on f32; nearest-even environment, gradual underflow.
 #[archmage::attune(_wasm128, _wasm128_t)]
 pub fn fmaf(x: f32, y: f32, z: f32) -> f32 {
-    crate::scalar::fmaf(x, y, z)
+    crate::reference::fmaf(x, y, z)
 }
 
 /// Select a primitive once; runtime probes require `runtime-dispatch`.
@@ -333,7 +333,7 @@ pub fn fmaf(x: f32, y: f32, z: f32) -> f32 {
 /// sqrt on f64; nearest-even environment, gradual underflow.
 #[archmage::attune(_scalar, _scalar_t)]
 pub fn sqrt(x: f64) -> f64 {
-    crate::scalar::sqrt(x)
+    crate::reference::sqrt(x)
 }
 
 /// sqrt on f64; nearest-even environment, gradual underflow.
@@ -378,7 +378,7 @@ pub fn sqrt(x: f64) -> f64 {
 /// floor on f64; nearest-even environment, gradual underflow.
 #[archmage::attune(_scalar, _scalar_t)]
 pub fn floor(x: f64) -> f64 {
-    crate::scalar::floor(x)
+    crate::reference::floor(x)
 }
 
 /// floor on f64; nearest-even environment, gradual underflow.
@@ -423,7 +423,7 @@ pub fn floor(x: f64) -> f64 {
 /// ceil on f64; nearest-even environment, gradual underflow.
 #[archmage::attune(_scalar, _scalar_t)]
 pub fn ceil(x: f64) -> f64 {
-    crate::scalar::ceil(x)
+    crate::reference::ceil(x)
 }
 
 /// ceil on f64; nearest-even environment, gradual underflow.
@@ -468,7 +468,7 @@ pub fn ceil(x: f64) -> f64 {
 /// trunc on f64; nearest-even environment, gradual underflow.
 #[archmage::attune(_scalar, _scalar_t)]
 pub fn trunc(x: f64) -> f64 {
-    crate::scalar::floor(x.abs()).copysign(x)
+    crate::reference::floor(x.abs()).copysign(x)
 }
 
 /// trunc on f64; nearest-even environment, gradual underflow.
@@ -516,7 +516,7 @@ pub fn trunc(x: f64) -> f64 {
 /// roundeven on f64; nearest-even environment, gradual underflow.
 #[archmage::attune(_scalar, _scalar_t)]
 pub fn roundeven(x: f64) -> f64 {
-    crate::scalar::roundeven(x)
+    crate::reference::roundeven(x)
 }
 
 /// roundeven on f64; nearest-even environment, gradual underflow.
@@ -563,7 +563,7 @@ pub fn roundeven(x: f64) -> f64 {
 /// round on f64; nearest-even environment, gradual underflow.
 #[archmage::attune(_scalar, _scalar_t)]
 pub fn round(x: f64) -> f64 {
-    crate::scalar::round(x)
+    crate::reference::round(x)
 }
 
 /// round on f64; nearest-even environment, gradual underflow.
@@ -616,7 +616,7 @@ pub fn round(x: f64) -> f64 {
 /// fma on f64; nearest-even environment, gradual underflow.
 #[archmage::attune(_scalar, _scalar_t)]
 pub fn fma(x: f64, y: f64, z: f64) -> f64 {
-    crate::scalar::fma(x, y, z)
+    crate::reference::fma(x, y, z)
 }
 
 /// fma on f64; nearest-even environment, gradual underflow.
@@ -636,7 +636,7 @@ pub fn fma(x: f64, y: f64, z: f64) -> f64 {
 /// fma on f64; nearest-even environment, gradual underflow.
 #[archmage::attune(_wasm128, _wasm128_t)]
 pub fn fma(x: f64, y: f64, z: f64) -> f64 {
-    crate::scalar::fma(x, y, z)
+    crate::reference::fma(x, y, z)
 }
 
 /// Select a primitive once; runtime probes require `runtime-dispatch`.
@@ -671,7 +671,7 @@ pub fn fma(x: f64, y: f64, z: f64) -> f64 {
     _v4x_t(cfg(avx512))
 )]
 pub fn expf(x: f32) -> f32 {
-    crate::scalar::expf(x)
+    crate::core_math::expf_in_context(x)
 }
 
 /// Full scalar CORE-MATH algorithm in a feature context; scalar fallback remains software.
@@ -688,7 +688,7 @@ pub fn expf(x: f32) -> f32 {
     _v4x_t(cfg(avx512))
 )]
 pub fn logf(x: f32) -> f32 {
-    crate::scalar::logf(x)
+    crate::core_math::logf_in_context(x)
 }
 
 /// Full scalar CORE-MATH algorithm in a feature context; scalar fallback remains software.
@@ -705,7 +705,7 @@ pub fn logf(x: f32) -> f32 {
     _v4x_t(cfg(avx512))
 )]
 pub fn log2f(x: f32) -> f32 {
-    crate::scalar::log2f(x)
+    crate::core_math::log2f_in_context(x)
 }
 
 /// Full scalar CORE-MATH algorithm in a feature context; scalar fallback remains software.
@@ -722,5 +722,5 @@ pub fn log2f(x: f32) -> f32 {
     _v4x_t(cfg(avx512))
 )]
 pub fn powf(x: f32, y: f32) -> f32 {
-    crate::scalar::powf(x, y)
+    crate::core_math::powf_with_math(Token::from_context(), x, y)
 }

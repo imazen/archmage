@@ -47,9 +47,9 @@ pub fn hypotf(x: f32, y: f32) -> f32 {
     let y2 = yd * yd;
     let r2 = x2 + y2;
     if yd < xd * f64::from_bits(0x3f2fffffe0000000) {
-        return crate::scalar::fmaf(1.0 / 8192.0, ay, at);
+        return crate::reference::fmaf(1.0 / 8192.0, ay, at);
     }
-    let r = crate::scalar::sqrt(r2);
+    let r = crate::reference::sqrt(r2);
     let bits = r.to_bits();
     let c = r as f32;
     if bits > 0x47efffffe0000000 || ((bits + 1) & 0xfffffff) > 2 {

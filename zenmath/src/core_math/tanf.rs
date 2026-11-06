@@ -84,14 +84,14 @@ pub fn tanf(x: f32) -> f32 {
     let (z, i) = if e < 155 {
         if e < 115 {
             if e < 102 {
-                return crate::scalar::fmaf(x, x.abs(), x);
+                return crate::reference::fmaf(x, x.abs(), x);
             }
             let x2 = x * x;
-            return crate::scalar::fmaf(x, f32::from_bits(0x3eaaaaab) * x2, x);
+            return crate::reference::fmaf(x, f32::from_bits(0x3eaaaaab) * x2, x);
         }
         let hi = f64::from_bits(0x3fe45f306e000000) * x as f64;
         let lo = -f64::from_bits(0x3dfb1bbead603d8b) * x as f64;
-        let id = crate::scalar::roundeven(hi);
+        let id = crate::reference::roundeven(hi);
         ((hi - id) + lo, id as i64 as i32)
     } else if e < 255 {
         super::trig_reduce::big_scaled(u, 150)

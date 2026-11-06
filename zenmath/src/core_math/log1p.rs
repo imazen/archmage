@@ -895,7 +895,7 @@ fn refine(x: f64, a: f64) -> f64 {
         let (h, l) = fastsum(-0.5 * x2h, -0.5 * x2l, sh, sl);
         (x, h, l)
     } else {
-        let j = crate::scalar::roundeven(a * f64::from_bits(0x40f71547652b82fe)) as i64;
+        let j = crate::reference::roundeven(a * f64::from_bits(0x40f71547652b82fe)) as i64;
         let i = j + 34952;
         let je = i >> 16;
         let idx = [

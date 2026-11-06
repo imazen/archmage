@@ -61,10 +61,10 @@ pub fn atanf(x: f32) -> f32 {
             return if t << 1 == 0 {
                 x
             } else {
-                crate::scalar::fmaf(-x, x.abs(), x)
+                crate::reference::fmaf(-x, x.abs(), x)
             };
         }
-        return crate::scalar::fmaf(-f32::from_bits(0x3eaaaaab) * x, x * x, x);
+        return crate::reference::fmaf(-f32::from_bits(0x3eaaaaab) * x, x * x, x);
     }
     let z = if gt { 1.0 / (x as f64) } else { x as f64 };
     let z2 = z * z;

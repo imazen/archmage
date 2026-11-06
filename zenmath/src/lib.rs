@@ -56,7 +56,20 @@
 #[cfg(feature = "std")]
 extern crate std;
 
-pub mod scalar;
+// The original implementations remain non-dispatch reference functions.
+#[path = "scalar.rs"]
+mod reference;
+
+/// Ordinary scalar API. Numerical contracts do not depend on acceleration.
+pub mod scalar {
+    pub use crate::reference::*;
+
+    /// Non-dispatch reference algorithms, including the historical compile-time
+    /// hardware FMA choice with std. No runtime CPU selection occurs here.
+    pub mod reference {
+        pub use crate::reference::*;
+    }
+}
 
 #[cfg(feature = "special")]
 pub mod special;

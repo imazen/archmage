@@ -263,30 +263,30 @@ pub fn mathematical_sign(p: Prepared, out: f32) -> f32 {
 #[inline(always)]
 pub fn polynomial_exponent<const P: u64>(x: f32, y: f32) -> f32 {
     match (P & 3, P & (1 << 2) != 0) {
-        (1, false) => crate::scalar::log2_midp_f32(x) * y,
-        (1, true) => crate::scalar::unfused::log2_midp_f32(x) * y,
-        (2, false) => crate::scalar::log2_lowp_f32(x) * y,
-        (2, true) => crate::scalar::unfused::log2_lowp_f32(x) * y,
+        (1, false) => crate::reference::log2_midp_f32(x) * y,
+        (1, true) => crate::reference::unfused::log2_midp_f32(x) * y,
+        (2, false) => crate::reference::log2_lowp_f32(x) * y,
+        (2, true) => crate::reference::unfused::log2_lowp_f32(x) * y,
         _ => 0.0,
     }
 }
 #[inline(always)]
 fn exponential<const P: u64>(z: f32) -> f32 {
     match (P & 3, P & (1 << 2) != 0) {
-        (1, false) => crate::scalar::exp2_midp_f32(z),
-        (1, true) => crate::scalar::unfused::exp2_midp_f32(z),
-        (2, false) => crate::scalar::exp2_lowp_f32(z),
-        (2, true) => crate::scalar::unfused::exp2_lowp_f32(z),
+        (1, false) => crate::reference::exp2_midp_f32(z),
+        (1, true) => crate::reference::unfused::exp2_midp_f32(z),
+        (2, false) => crate::reference::exp2_lowp_f32(z),
+        (2, true) => crate::reference::unfused::exp2_lowp_f32(z),
         _ => unreachable!(),
     }
 }
 #[inline(always)]
 fn formula<const P: u64>(x: f32, y: f32) -> f32 {
     match (P & 3, P & (1 << 2) != 0) {
-        (1, false) => crate::scalar::pow_midp_f32(x, y),
-        (1, true) => crate::scalar::unfused::pow_midp_f32(x, y),
-        (2, false) => crate::scalar::pow_lowp_f32(x, y),
-        (2, true) => crate::scalar::unfused::pow_lowp_f32(x, y),
+        (1, false) => crate::reference::pow_midp_f32(x, y),
+        (1, true) => crate::reference::unfused::pow_midp_f32(x, y),
+        (2, false) => crate::reference::pow_lowp_f32(x, y),
+        (2, true) => crate::reference::unfused::pow_lowp_f32(x, y),
         _ => unreachable!(),
     }
 }
@@ -331,11 +331,11 @@ pub fn powf_with<const P: u64>(x: f32, y: f32) -> f32 {
         validate(P);
     }
     if P == 0 {
-        return crate::scalar::powf(x, y);
+        return crate::reference::powf(x, y);
     }
     let p = prepare::<P>(x, y);
     let out = if P & 3 == 0 {
-        crate::scalar::powf(p.x, p.y)
+        crate::reference::powf(p.x, p.y)
     } else if (P >> 9) & 3 == 2 {
         formula::<P>(p.x, p.y)
     } else if working_input(p) {
@@ -343,10 +343,10 @@ pub fn powf_with<const P: u64>(x: f32, y: f32) -> f32 {
         if (-126.0..=127.5).contains(&z) {
             mathematical_sign(p, exponential::<P>(z))
         } else {
-            crate::scalar::powf(p.x, p.y)
+            crate::reference::powf(p.x, p.y)
         }
     } else {
-        crate::scalar::powf(p.x, p.y)
+        crate::reference::powf(p.x, p.y)
     };
     finish::<P>(p, out)
 }

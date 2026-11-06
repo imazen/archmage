@@ -695,7 +695,7 @@ fn denormal(x: f64) -> f64 {
 }
 #[inline(never)]
 fn accurate(x: f64) -> f64 {
-    let t = crate::scalar::roundeven(x * f64::from_bits(0x40b71547652b82fe));
+    let t = crate::reference::roundeven(x * f64::from_bits(0x40b71547652b82fe));
     let jt = t as i64;
     let i0 = ((jt >> 6) & 63) as usize;
     let i1 = (jt & 63) as usize;
@@ -755,7 +755,7 @@ pub fn exp(x: f64) -> f64 {
             return 0.0;
         }
     }
-    let t = crate::scalar::roundeven(x * f64::from_bits(0x40b71547652b82fe));
+    let t = crate::reference::roundeven(x * f64::from_bits(0x40b71547652b82fe));
     let jt = t as i64;
     let i0 = ((jt >> 6) & 63) as usize;
     let i1 = (jt & 63) as usize;

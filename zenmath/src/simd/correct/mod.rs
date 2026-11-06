@@ -157,7 +157,7 @@ pub(crate) fn pow<T: Backend<N>, const N: usize>(t: T, x: [f32; N], y: [f32; N])
             let sign = (x[i].to_bits() & 0x80000000) & (0u32.wrapping_sub(u32::from(parity[i].1)));
             f32::from_bits(magnitude | sign)
         } else {
-            crate::scalar::powf(x[i], y[i])
+            crate::reference::powf(x[i], y[i])
         }
     })
 }
@@ -187,12 +187,12 @@ fn rescue<const OP: u8, const N: usize>(
     for i in 0..N {
         if needs[i] {
             out[i] = match OP {
-                0 => crate::scalar::expf(x[i]),
+                0 => crate::reference::expf(x[i]),
                 1 => {
                     if y[i] == 2.0 {
-                        crate::scalar::log2f(x[i])
+                        crate::reference::log2f(x[i])
                     } else {
-                        crate::scalar::logf(x[i])
+                        crate::reference::logf(x[i])
                     }
                 }
                 _ => unreachable!(),

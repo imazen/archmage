@@ -134,7 +134,7 @@ pub fn acosf(x: f32) -> f32 {
         (core::f64::consts::FRAC_PI_2 - xs) - (xs * x2) * poly(x2, &C)
     } else {
         let z = 1.0 - xs.abs();
-        let s = crate::scalar::sqrt(z).copysign(xs);
+        let s = crate::reference::sqrt(z).copysign(xs);
         let o = if bits >> 31 == 0 {
             0.0
         } else {

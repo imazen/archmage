@@ -127,7 +127,7 @@ pub fn cos(x: f64) -> f64 {
         return fma(x, -x, 1.0);
     }
     if e < 1023 + 31 {
-        let k = crate::scalar::roundeven(f64::from_bits(0x40b45f306dc9c883) * z);
+        let k = crate::reference::roundeven(f64::from_bits(0x40b45f306dc9c883) * z);
         let rh = fma(k, -f64::from_bits(0x3f2921fb54442d18), z);
         let rl = k * (-f64::from_bits(0x3bc1a62633145c07));
         evaluate(z, rh + rl, k as u64, false)

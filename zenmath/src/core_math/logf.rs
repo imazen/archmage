@@ -176,6 +176,11 @@ const C: [f64; 7] = [
 
 /// Correctly rounded natural logarithm (nearest-even).
 pub fn logf(x: f32) -> f32 {
+    logf_in_context(x)
+}
+
+#[inline(always)]
+pub(crate) fn logf_in_context(x: f32) -> f32 {
     let mut ux = x.to_bits();
     if ux == 0 || ux >= 0x7f800000 {
         return super::log_special(x);

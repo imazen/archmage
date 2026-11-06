@@ -109,7 +109,7 @@ pub fn sinf(x: f32) -> f32 {
             return if ax == 0 {
                 x
             } else {
-                crate::scalar::fmaf(-x, x.abs(), x)
+                crate::reference::fmaf(-x, x.abs(), x)
             };
         }
         return (-f32::from_bits(0x3e2aaaab) * x) * (x * x) + x;

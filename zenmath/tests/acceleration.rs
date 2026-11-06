@@ -950,3 +950,146 @@ fn eight_binary64_lane_contract() {
         );
     }
 }
+
+#[test]
+fn genuine_scalar_context_contract() {
+    type Unary = Box<dyn Fn(f32) -> f32>;
+    type Binary = Box<dyn Fn(f32, f32) -> f32>;
+    type UnaryCase = (&'static str, Unary, fn(f32) -> f32);
+    let mut unary: Vec<UnaryCase> = vec![
+        (
+            "scalar exp",
+            Box::new(|x| scalar::expf_scalar_t(ScalarToken, x)),
+            oracle::reference::expf,
+        ),
+        (
+            "scalar ln",
+            Box::new(|x| scalar::logf_scalar_t(ScalarToken, x)),
+            oracle::reference::logf,
+        ),
+        (
+            "scalar log2",
+            Box::new(|x| scalar::log2f_scalar_t(ScalarToken, x)),
+            oracle::reference::log2f,
+        ),
+    ];
+    let mut power: Vec<(&str, Binary)> = vec![(
+        "scalar pow",
+        Box::new(|x, y| scalar::powf_scalar_t(ScalarToken, x, y)),
+    )];
+    #[cfg(target_arch = "x86_64")]
+    if let Some(t) = X64V3Token::summon() {
+        unary.push((
+            "v3 expf",
+            Box::new(move |x| scalar::expf_v3_t(t, x)),
+            oracle::reference::expf,
+        ));
+        unary.push((
+            "v3 logf",
+            Box::new(move |x| scalar::logf_v3_t(t, x)),
+            oracle::reference::logf,
+        ));
+        unary.push((
+            "v3 log2f",
+            Box::new(move |x| scalar::log2f_v3_t(t, x)),
+            oracle::reference::log2f,
+        ));
+        power.push(("v3 pow", Box::new(move |x, y| scalar::powf_v3_t(t, x, y))));
+    }
+    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    if let Some(t) = X64V4xToken::summon() {
+        unary.push((
+            "v4x expf",
+            Box::new(move |x| scalar::expf_v4x_t(t, x)),
+            oracle::reference::expf,
+        ));
+        unary.push((
+            "v4x logf",
+            Box::new(move |x| scalar::logf_v4x_t(t, x)),
+            oracle::reference::logf,
+        ));
+        unary.push((
+            "v4x log2f",
+            Box::new(move |x| scalar::log2f_v4x_t(t, x)),
+            oracle::reference::log2f,
+        ));
+        power.push(("v4x pow", Box::new(move |x, y| scalar::powf_v4x_t(t, x, y))));
+    }
+    #[cfg(target_arch = "aarch64")]
+    if let Some(t) = NeonToken::summon() {
+        unary.push((
+            "neon expf",
+            Box::new(move |x| scalar::expf_neon_t(t, x)),
+            oracle::reference::expf,
+        ));
+        unary.push((
+            "neon logf",
+            Box::new(move |x| scalar::logf_neon_t(t, x)),
+            oracle::reference::logf,
+        ));
+        unary.push((
+            "neon log2f",
+            Box::new(move |x| scalar::log2f_neon_t(t, x)),
+            oracle::reference::log2f,
+        ));
+        power.push((
+            "neon pow",
+            Box::new(move |x, y| scalar::powf_neon_t(t, x, y)),
+        ));
+    }
+    #[cfg(target_arch = "wasm32")]
+    if let Some(t) = Wasm128Token::summon() {
+        unary.push((
+            "wasm128 expf",
+            Box::new(move |x| scalar::expf_wasm128_t(t, x)),
+            oracle::reference::expf,
+        ));
+        unary.push((
+            "wasm128 logf",
+            Box::new(move |x| scalar::logf_wasm128_t(t, x)),
+            oracle::reference::logf,
+        ));
+        unary.push((
+            "wasm128 log2f",
+            Box::new(move |x| scalar::log2f_wasm128_t(t, x)),
+            oracle::reference::log2f,
+        ));
+        power.push((
+            "wasm128 pow",
+            Box::new(move |x, y| scalar::powf_wasm128_t(t, x, y)),
+        ));
+    }
+
+    let mut state = 0x4c38479du32;
+    for i in 0..20000 {
+        state = state.wrapping_mul(1664525).wrapping_add(1013904223);
+        let x = match i % 4 {
+            0 => f32::from_bits(state),
+            1 => (i % 2048) as f32 / 128. - 8.,
+            2 => 0.125 + (i % 1024) as f32 / 64.,
+            _ => f32::from_bits(
+                [
+                    0, 0x80000000, 1, 0x7fffff, 0x3f800000, 0x3f800001, 0x7f800000, 0x7fc00001,
+                ][i % 8],
+            ),
+        };
+        for (label, fun, reference) in &unary {
+            eq32(fun(x), reference(x), label, x.to_bits());
+        }
+        let y = [
+            -33.,
+            -3.,
+            0.,
+            0.5,
+            1.,
+            2.,
+            2.4,
+            11.,
+            f32::from_bits(state.rotate_left(13)),
+        ][i % 9];
+        let want = oracle::reference::powf(x, y);
+        for (label, fun) in &power {
+            eq32(fun(x, y), want, label, x.to_bits());
+        }
+    }
+}

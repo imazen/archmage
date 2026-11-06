@@ -91,7 +91,7 @@ impl<const N: usize> Backend<N> for archmage::ScalarToken {
     }
     #[inline(always)]
     fn floor(self, a: Self::Raw) -> Self::Raw {
-        a.map(crate::scalar::floor)
+        a.map(crate::reference::floor)
     }
 }
 

@@ -61,11 +61,11 @@ pub fn tanhf(x: f32) -> f32 {
             return if ux << 1 == 0 {
                 x
             } else {
-                crate::scalar::fmaf(-x, x.abs(), x)
+                crate::reference::fmaf(-x, x.abs(), x)
             };
         }
         let x2 = x * x;
-        return crate::scalar::fmaf(x, -f32::from_bits(0x3eaaaaab) * x2, x);
+        return crate::reference::fmaf(x, -f32::from_bits(0x3eaaaaab) * x2, x);
     }
     if ux << 1 > 0x41102cb3_u32 << 1 {
         return 1.0_f32.copysign(x) - f32::from_bits(0x33000000).copysign(x);

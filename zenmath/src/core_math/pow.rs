@@ -106,7 +106,7 @@ fn exp1(rh: f64, rl: f64, s: f64) -> (f64, f64) {
             (f64::NAN, f64::NAN)
         };
     }
-    let k = crate::scalar::roundeven(rh * f64::from_bits(0x40b71547652b82fe));
+    let k = crate::reference::roundeven(rh * f64::from_bits(0x40b71547652b82fe));
     let zh = fma(f64::from_bits(0x3f262e42fefa39ef), -k, rh);
     let zl = fma(f64::from_bits(0x3bbabc9e3b39803f), -k, rl);
     let ki = k as i64;
@@ -265,7 +265,7 @@ fn exact(x: f64, y: f64, sign: u64) -> Option<f64> {
     let (mut e, mut m) = extract(x);
     if m == 1 {
         let g = e as f64 * y;
-        if g == crate::scalar::roundeven(g) && fma(e as f64, y, -g) == 0.0 {
+        if g == crate::reference::roundeven(g) && fma(e as f64, y, -g) == 0.0 {
             if g > 1023.0 {
                 return Some(f64::INFINITY.copysign(if sign == 0 { 1.0 } else { -1.0 }));
             }
@@ -348,7 +348,7 @@ pub fn pow(mut x: f64, y: f64) -> f64 {
     if y == 0.0 {
         return 1.0;
     }
-    let yi = y == crate::scalar::roundeven(y);
+    let yi = y == crate::reference::roundeven(y);
     let odd = yi && y.abs() < f64::from_bits(0x4340000000000000) && (y as i64) & 1 != 0;
     if y.is_infinite() {
         return if x.abs() == 1.0 {
@@ -401,7 +401,7 @@ pub fn pow(mut x: f64, y: f64) -> f64 {
         return x * x;
     }
     if y == 0.5 {
-        return crate::scalar::sqrt(x);
+        return crate::reference::sqrt(x);
     }
     if x == 1.0 {
         return s;

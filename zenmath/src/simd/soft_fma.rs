@@ -44,7 +44,7 @@ pub(crate) fn fma_soft_lanes<const N: usize>(a: [f64; N], b: [f64; N], c: [f64; 
     if any_slow != 0 {
         for i in 0..N {
             if slow[i] {
-                out[i] = crate::scalar::fma(a[i], b[i], c[i]);
+                out[i] = crate::reference::fma(a[i], b[i], c[i]);
             }
         }
     }

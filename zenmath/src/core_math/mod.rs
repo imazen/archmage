@@ -86,3 +86,9 @@ mod tanh;
 pub use tanh::tanh;
 mod asinh;
 pub use asinh::asinh;
+
+// Shared full algorithm bodies for feature contexts, without changing scalar APIs.
+#[cfg(feature = "archmage")]
+pub(crate) use powf::{Math as PowMath, powf_with_math};
+#[cfg(feature = "archmage")]
+pub(crate) use {expf::expf_in_context, log2f::log2f_in_context, logf::logf_in_context};
