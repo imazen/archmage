@@ -327,15 +327,27 @@ fn formula<const P: u64>(x: f32, y: f32) -> f32 {
 /// ```
 #[inline(always)]
 pub fn powf_with<const P: u64>(x: f32, y: f32) -> f32 {
+    evaluate_with_core::<P>(x, y, crate::reference::powf)
+}
+
+// The public reference policy always supplies the non-dispatch core. The
+// ordinary facade can supply its selected core without changing reference or
+// packed rescue semantics. Function items specialize away; no dynamic callback.
+#[inline(always)]
+pub(crate) fn evaluate_with_core<const P: u64>(
+    x: f32,
+    y: f32,
+    core: impl Fn(f32, f32) -> f32,
+) -> f32 {
     const {
         validate(P);
     }
     if P == 0 {
-        return crate::reference::powf(x, y);
+        return core(x, y);
     }
     let p = prepare::<P>(x, y);
     let out = if P & 3 == 0 {
-        crate::reference::powf(p.x, p.y)
+        core(p.x, p.y)
     } else if (P >> 9) & 3 == 2 {
         formula::<P>(p.x, p.y)
     } else if working_input(p) {
@@ -343,10 +355,10 @@ pub fn powf_with<const P: u64>(x: f32, y: f32) -> f32 {
         if (-126.0..=127.5).contains(&z) {
             mathematical_sign(p, exponential::<P>(z))
         } else {
-            crate::reference::powf(p.x, p.y)
+            core(p.x, p.y)
         }
     } else {
-        crate::reference::powf(p.x, p.y)
+        core(p.x, p.y)
     };
     finish::<P>(p, out)
 }

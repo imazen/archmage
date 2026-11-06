@@ -1304,6 +1304,15 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
   and the complement of equality for all generic float widths, including signalling
   NaNs; the documented x86 behavior change is recorded in the changelog.
 
+- **Draft generic power policy bypassed acceleration (2026-11-06):** ordinary
+  `scalar::powf_with` reused the reference policy evaluator and therefore called
+  software CORE power even when `runtime-dispatch` accelerated ordinary `powf`.
+  A private evaluator now accepts a statically specialized correct-core strategy;
+  the facade selects its ordinary core while `scalar::reference::powf_with` and
+  the shared bridge retain non-dispatch evaluation. Exact arbitrary-bit policy
+  parity, default/std/archmage/runtime configurations and MSRV checks cover this.
+
+
 - **Draft zenmath std software FMA (2026-11-05):** Rust 1.99.1 WASI
   and native x86 under Nehalem emulation
   `f32::mul_add` returns `0x00010002` for the independent subnormal case

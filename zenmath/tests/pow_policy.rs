@@ -120,3 +120,72 @@ fn debug_precondition_has_defined_release_formula() {
         .to_u64();
     assert!(pow::<P>(-2.0, 3.0).is_nan());
 }
+
+fn facade_parity<const P: u64>() {
+    let edges = [
+        0, 0x80000000, 1, 0x80000001, 0x007fffff, 0x00800000, 0x3f000000, 0x3f800000, 0xbf800000,
+        0x40000000, 0xc0000000, 0x7f7fffff, 0x7f800000, 0xff800000, 0x7fc00123, 0x7f800001,
+    ];
+    let mut state = 0x2b79f381u32;
+    for i in 0..20000 {
+        state = state.wrapping_mul(1664525).wrapping_add(1013904223);
+        let x = f32::from_bits(if i < edges.len() * edges.len() {
+            edges[i % edges.len()]
+        } else {
+            state
+        });
+        state = state.wrapping_mul(1664525).wrapping_add(1013904223);
+        let y = f32::from_bits(if i < edges.len() * edges.len() {
+            edges[i / edges.len()]
+        } else {
+            state
+        });
+        let got = zenmath::scalar::powf_with::<P>(x, y);
+        let want = zenmath::scalar::reference::powf_with::<P>(x, y);
+        assert!(
+            got.to_bits() == want.to_bits() || got.is_nan() && want.is_nan(),
+            "policy {P:x}: {:08x}^{:08x} got {:08x} expected {:08x}",
+            x.to_bits(),
+            y.to_bits(),
+            got.to_bits(),
+            want.to_bits()
+        );
+    }
+}
+#[test]
+fn ordinary_policy_matches_independent_non_dispatch_policy() {
+    facade_parity::<DEFAULT>();
+    facade_parity::<{ B::CORRECT.sign(PowSign::SignedMagnitude).to_u64() }>();
+    facade_parity::<
+        {
+            B::CORRECT
+                .range(PowRange::ClampUnitInterval)
+                .output(PowOutput::ClampUnitInterval)
+                .to_u64()
+        },
+    >();
+    facade_parity::<
+        {
+            B::CORRECT
+                .infinity(PowInfinity::RejectInputsToNaN)
+                .nan(PowNaN::CanonicalResult)
+                .to_u64()
+        },
+    >();
+    facade_parity::<{ B::MIDP.to_u64() }>();
+    facade_parity::<{ B::LOWP.to_u64() }>();
+    facade_parity::<
+        {
+            B::MIDP
+                .consistency(PowConsistency::PortableSeparate)
+                .to_u64()
+        },
+    >();
+    facade_parity::<
+        {
+            B::LOWP
+                .consistency(PowConsistency::PortableSeparate)
+                .to_u64()
+        },
+    >();
+}

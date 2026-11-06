@@ -96,3 +96,12 @@ pub use selected::{ceil, floor, floorf, round, roundf, sqrt, sqrtf};
     any(target_arch = "aarch64", target_arch = "wasm32")
 ))]
 pub use selected::{ceilf, roundevenf};
+
+/// Power with a compile-time policy, selecting the same core as ordinary
+/// [`powf`] where this crate enables acceleration. Reference policy evaluation
+/// remains independently available through [`reference::powf_with`].
+#[cfg(feature = "runtime-dispatch")]
+#[inline(always)]
+pub fn powf_with<const P: u64>(x: f32, y: f32) -> f32 {
+    crate::__pow_policy::evaluate_with_core::<P>(x, y, powf)
+}

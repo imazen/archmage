@@ -87,3 +87,11 @@ validated 89 full-domain cells against production kernels frozen at `5a9cc685`.
 Final facade and selector changes alter routing only; direct final tests cover
 those changes. The frozen kernel sweeps are not labeled as sweeps of later facade
 source.
+
+
+Generic `scalar::powf_with::<P>` uses the same selected correct core as ordinary
+`powf` when Zenmath runtime-dispatch is enabled, including transformed correct
+policies and approximation rescue. `scalar::reference::powf_with` retains the
+non-dispatch core; the shared policy bridge remains reference-only. Approximation
+polynomial arithmetic is unchanged by this routing choice. Magemath approximation
+rescue already calls ordinary scalar powf and does not gain another dispatcher.
