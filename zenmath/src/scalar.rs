@@ -1141,3 +1141,5 @@ pub use crate::core_math::log10;
 pub use crate::core_math::sin;
 pub use crate::core_math::tanf;
 pub use crate::core_math::{expm1f, log1pf};
+
+pub use crate::core_math::atan2;

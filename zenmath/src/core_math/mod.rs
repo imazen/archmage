@@ -64,3 +64,6 @@ mod sin;
 pub use sin::sin;
 mod cos;
 pub use cos::cos;
+mod atan2;
+mod atan2_tint;
+pub use atan2::atan2;

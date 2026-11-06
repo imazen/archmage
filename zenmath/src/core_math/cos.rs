@@ -38,7 +38,7 @@ fn accurate(x: f64) -> f64 {
     let i1 = ((k >> 6) & 63) as usize;
     let i2 = (k & 63) as usize;
     let s1 = S1U[if i1 <= 32 { i1 } else { 64 - i1 }];
-    let c1 = S1U[if i1 <= 32 { 32 - i1 } else { i1 - 32 }];
+    let c1 = S1U[i1.abs_diff(32)];
     let mut s = mh(s1, C2U[i2]);
     let t = mh(c1, S2U[i2]);
     s = if i1 < 32 { s + t } else { s - t };
