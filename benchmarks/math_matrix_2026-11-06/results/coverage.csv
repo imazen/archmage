@@ -1,0 +1,11 @@
+platform,file,groups,cells,min_rounds,incomplete,unreliable
+i265,timing-i265.json,36,1047,60,False,False
+i265,algebraic-i265.json,4,40,60,False,False
+i265,latency-i265.json,4,103,60,False,False
+r7900x,timing-r7900x-final.json,36,1428,36,False,False
+r7900x,algebraic-r7900x-final.json,4,60,60,False,False
+r7900x,latency-r7900x.json,4,137,60,False,False
+arm,timing-arm-final.json,36,1047,30,False,False
+arm,algebraic-arm-final.json,4,40,60,False,False
+arm,latency-arm.json,4,103,60,False,False
+wasm,timing-wasm.json,40,1086,30,False,False
