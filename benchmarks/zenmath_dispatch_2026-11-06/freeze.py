@@ -7,7 +7,7 @@ import hashlib, json, os, subprocess, sys, tarfile
 
 root = Path.cwd()
 out = root / sys.argv[1]
-out.mkdir(parents=True, exist_ok=True)
+out.mkdir(parents=True, exist_ok=False)
 files = []
 for folder in [
     "src",

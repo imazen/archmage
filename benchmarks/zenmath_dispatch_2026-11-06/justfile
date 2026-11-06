@@ -17,3 +17,8 @@ freeze out *binaries:
     python3 freeze.py {{out}} {{binaries}}
 dependency-identities snapshot:
     python3 dependencies.py {{snapshot}}
+
+check-freeze:
+    python3 test-freeze.py
+analyze input output:
+    cargo run --release --manifest-path analysis/Cargo.toml -- {{input}} {{output}}
