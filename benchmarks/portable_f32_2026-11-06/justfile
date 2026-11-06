@@ -20,3 +20,12 @@ identity:
     bash identity.sh
 cross-targets:
     cd ../.. && bash benchmarks/portable_f32_2026-11-06/run-targets.sh
+
+# Export-all keeps the safe extern-C kernel available to the host runner.
+wasm-kernel:
+    CARGO_PROFILE_RELEASE_LTO=false RUSTFLAGS='-Ctarget-feature=+simd128 -Clink-dead-code=yes -Clink-arg=--export-all' cargo build --locked --release --target wasm32-wasip1 --bin wasm-kernel --target-dir target-wasm-kernel
+wasm-host:
+    cargo build --locked --release --features wasm-bench --bin wasm-host --target-dir target-wasm-host
+
+replay:
+    bash replay.sh

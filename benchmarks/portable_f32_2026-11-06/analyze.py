@@ -42,7 +42,7 @@ for op in ['exp','ln','log2','pow']:
             cache.parent.mkdir(exist_ok=True)
             cache.write_bytes(b''.join(struct.pack('<Iddi',*r) for r in references))
     for (target,candidate),out in runs.items():
-        row=dict(target=target,candidate=candidate,op=op,n=len(out),correct=0,finite_pairs=0,finite_wrong=0,max_bit_steps=0,special_mismatch=0,zero_sign=0,nan_pairs=0,true_max_lower=0.0,true_max_upper=0.0,true_over1=0,central_n=0,central_wrong=0,central_true_max_upper=0.0)
+        row=dict(target=target,candidate=candidate,op=op,n=len(out),correct=0,finite_pairs=0,finite_wrong=0,max_bit_steps=0,special_mismatch=0,zero_sign=0,nan_pairs=0,true_max_lower=0.0,true_max_upper=0.0,true_over1=0,central_n=0,central_wrong=0,central_true_max_upper=0.0,central_max_abs=0.0,central_max_rel=0.0)
         worst=None
         for i,((x,y,ref),b) in enumerate(zip(records,out)):
             if a.true_real: assert same(ref,references[i][0]),('old oracle differs',op,i,hex(ref),hex(references[i][0]))
@@ -69,7 +69,13 @@ for op in ['exp','ln','log2','pow']:
                     err=true_error(b,lo,hi,e)
                     if err:
                         lower,upper=err
-                        if 100000<=i<200000:row['central_true_max_upper']=max(row['central_true_max_upper'],upper)
+                        if 100000<=i<200000:
+                            row['central_true_max_upper']=max(row['central_true_max_upper'],upper)
+                            abs_upper=math.nextafter(max(abs(flt(b)-lo),abs(flt(b)-hi)),math.inf)
+                            row['central_max_abs']=max(row['central_max_abs'],abs_upper)
+                            if not lo<=0<=hi:
+                                rel_upper=math.nextafter(abs_upper/min(abs(lo),abs(hi)),math.inf)
+                                row['central_max_rel']=max(row['central_max_rel'],rel_upper)
                         if lower>1:row['true_over1']+=1
                         if upper>row['true_max_upper']:
                             row['true_max_lower']=lower;row['true_max_upper']=upper
