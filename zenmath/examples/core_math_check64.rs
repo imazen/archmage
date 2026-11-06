@@ -9,6 +9,7 @@ fn main() {
         "log" => |x, _| scalar::log(x),
         "log10" => |x, _| scalar::log10(x),
         "atan" => |x, _| scalar::atan(x),
+        "log1p" => |x, _| scalar::log1p(x),
         "log2" => |x, _| scalar::log2(x),
         "exp2" => |x, _| scalar::exp2(x),
         "cbrt" => |x, _| scalar::cbrt(x),

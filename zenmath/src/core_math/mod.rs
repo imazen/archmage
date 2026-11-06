@@ -58,3 +58,5 @@ mod log10;
 pub use log10::log10;
 mod atan;
 pub use atan::atan;
+mod log1p;
+pub use log1p::log1p;
