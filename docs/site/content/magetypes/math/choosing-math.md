@@ -176,6 +176,9 @@ per 16 values in the main loop, with direct vector loads/stores and no
 extension calls or temporary-array stack traffic there. The function's
 assertion frame is outside the loop. This is evidence for these compiled
 kernels, not a guarantee that every algebraic expression has zero overhead.
+The timed strict-WASM modules likewise use packed `f32x4.mul`/`f32x4.add`
+in the polynomial loop, without extension calls. Their ordinary separate
+multiply/add instructions do not promise fused arithmetic.
 
 The focused external-crate matrix measures 644 cells across Ryzen V3/V4x,
 Neoverse-N1 and strict WASM, with LTO disabled and with thin LTO. Every cell
