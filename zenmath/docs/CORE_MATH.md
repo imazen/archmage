@@ -1,106 +1,125 @@
 # CORE-MATH Rust ports
 
-Draft implementation, 2026-11-05. The owner requested Rust ports of the subset
-used by zen crates, with correctly rounded defaults and separately pinned
-compatibility implementations. Consumer migration is not part of this change.
+Draft, unpublished. All **33 functions in the reviewed consumer subset** have
+safe Rust implementations, including the accurate fallback paths. No consumer
+has been migrated. Versioned libc compatibility remains separate.
 
 Source: [CORE-MATH](https://gitlab.inria.fr/core-math/core-math), commit
-`660067dfd3e751c8f07acc31c899ff410aa7206e`. Each port retains its upstream MIT
-notice. Shipping code is safe Rust, has no C dependency, and supports no_std.
-The contract assumes nearest-even rounding and gradual underflow. It does not
-emulate errno, exception flags, dynamic rounding modes, or NaN payloads.
+`660067dfd3e751c8f07acc31c899ff410aa7206e`. The per-file MIT notices are retained.
+There is no C dependency, host-libm fallback or unsafe Rust. The default build
+has no dependencies and supports `no_std`.
 
-## Coverage and remaining work
+## Coverage
 
-All 33 functions in the expanded port set are implemented: 17 binary32 and
-16 binary64. Cross-platform validation and performance work remain. Production call sites still need a precision-aware
-inventory that excludes tests and examples. Compatibility extraction remains
-separate; the existing zenmetrics-math ports have not moved.
+| Precision | Exports under `zenmath::scalar` |
+|---|---|
+| f32 (17) | exp2f, expf, log2f, logf, log10f, cbrtf, powf, sinf, cosf, tanf, atanf, atan2f, tanhf, log1pf, expm1f, acosf, hypotf |
+| f64 (16) | cbrt, exp2, exp, log2, log, log10, atan, log1p, sin, cos, atan2, tan, pow, atanh, tanh, asinh |
 
-Present in `scalar`: f32 exp2f, expf, log2f, logf, log10f, powf, cbrtf, sinf,
-cosf, tanf, atanf, atan2f, tanhf, log1pf and expm1f. `sincosf` composes the
-individual functions. Binary64 cbrt, exp2, exp, log, log2, log10, atan, log1p, sin, cos, atan2, tan and pow are ported. Explicit f64 FMA uses
-safe software arithmetic unless the std configuration guarantees hardware.
-Ordinary multiplication followed by addition keeps two roundings.
+`sincosf` composes the two f32 functions. Correctly rounded sqrt, rounding and
+f32/f64 FMA primitives support the ports. The existing lowp/midp approximation
+families retain their separate contracts.
 
-## Validation to date
+Assumptions: nearest-even rounding and gradual underflow. This does not emulate
+errno, exception flags, dynamic rounding modes or NaN payloads. NaNs are checked
+by classification. Signaling-NaN special cases in pow and hypot follow the
+pinned source; MPFR itself cannot represent signaling NaNs.
 
-On Core Ultra 7 265K, Rust 1.99.0, baseline x86-64, no_std default, debug:
-200,000 MPFR records passed for each of the 15 f32 functions and the two f64
-functions. These sampled checks are not an exhaustive correctness proof.
-`tools/core_math_oracle.c` and `tools/core_math_oracle64.c` generate independent
-directed MPFR bounds, increasing precision until both bounds round to the same
-result. The Rust checker compares exact bits, including signed zero; NaNs compare
-by classification. Missing, empty or malformed record files are errors.
+Explicit FMA uses software by default. `std` plus compile-time x86 FMA or
+AArch64 NEON selects hardware fused arithmetic. Ordinary `a * b + c` retains
+two roundings. There is no runtime CPU dispatch in these scalar ports yet.
 
-Source and logs are in the current experiment directory `~/tmp/zenmath-port`
-on the measurement host; durable artifact mirroring is pending. Logs
-`validation2.log` through `validation7.log` record the commands and resource
-wrapper results. The tangent, atan2, cbrt and exp2 build/check runs respectively
-reported peak RSS 0.16, 0.15, 0.15 and 0.15 GiB, all exit status zero.
+## Consumer scope
 
-Still required: upstream hard cases, checked-in regression vectors, release and
-std/FMA configurations, independent FMA regression coverage, ARM/WASM/i686/no-FMA
-runs, MSRV, clippy/rustdoc, codegen and performance comparisons. No cross-platform
-or performance conclusion for these new ports follows from the earlier C study.
+The inventory includes CPU scalar operations in the reviewed zen crate sources,
+not archived experiments or GPU DSL operations. Names alone are insufficient:
+argument types determine which precision must be ported.
 
-## Expanded checks
+| Representative production consumer | Needed precision / operations |
+|---|---|
+| zenmetrics-math `fdlibm.rs`, `fdlibm64.rs`, `glibc.rs` | f32 exp/pow; f64 pow/log/log2 (existing compatibility algorithms stay there) |
+| zenmetrics-stats special functions | f64 exp/log/sin |
+| cvvdp geometry and cw_ssim | f64 tan/atan/atan2 |
+| margarine `learned.rs` | f64 log1p |
+| zenpredict `feature_transform.rs`, aom-encode partition prediction | f32 log1p |
+| zenfilters `document/quad.rs::interior_angle` | f32 acos |
+| zenjxl-decoder `features/spline.rs::Point::abs` | f32 hypot |
+| zenmetrics-stats `panel.rs::mrr_h` | f64 atanh |
+| zenjpegai `encoder/lh.rs::cum_logit`, svtav1-encoder rate control | f64 tanh |
+| zensimx `metric/steerfix_packet.rs`, `bake_gradient.rs` | f64 asinh |
 
-Baseline x86 release samples passed for the implemented functions. The full
-upstream worst-case corpora passed for f32 pow (460,544), f64 cbrt (106,254),
-exp2 (77,182), exp (1,129,433), log2 (33,248), log (134,960), log10 (65,528),
-atan (55,770), log1p (347,771), sin (1,975,927), cos (1,107,744), and
-atan2 (28,123). MPFR has no signaling-NaN representation:
-the generator separately enforces CORE-MATH pow's sNaN propagation, including
-pow(sNaN,0) and pow(1,sNaN). This is a special-value contract, not an MPFR claim.
+This is a bounded source review, not a claim to cover every math operation in
+every zen repository. Special-function extraction and compatibility migration
+are recorded in [the inventory](INVENTORY.md).
 
-On Neoverse-N1, release samples for all 15 f32 functions and the first six f64
-functions passed (through log10), along with ordinary tests and clippy. The
-resource wrapper reported peak RSS 0.16 GiB, exit zero. On WASM/wasmtime, the
-checked-in exact-bit regressions through f64 atan and the independent rational
-FMA corpus passed. The initial native i686 invocation could not link its C
-runtime; the cross-based rerun passed those same regressions and FMA corpus
-(`validation-i686-cross.log`, peak RSS 0.05 GiB, exit zero).
+## Validation
 
-The baseline record files and logs are retained at
-`/mnt/v/output/archmage/core-math-rust-2026-11-05/`. The selected regression
-source is generated by `tools/select-core-regressions.py`; the FMA vectors are
-reused from magetypes' exact-rational generator. Neither test uses host libm as
-its expected value. Remaining validation includes the newly added f64 functions
-on ARM/WASM, MSRV, no-FMA emulation, std hardware paths, and performance/codegen.
+`tools/core_math_oracle.c` and `core_math_oracle64.c` generate independent MPFR
+records using directed bounds, increasing precision until both bounds round to
+the same target value. The checkers compare exact bits, including signed zero.
+Missing, empty or malformed records fail. Sample checks are not exhaustive proofs.
 
-The new binary64 sin, cos and atan2 ports each passed 200,000 release MPFR
-records on baseline x86-64. Atan2 also passed the samples and full upstream
-corpus in debug, and the complete crate passes all-target/all-feature clippy.
-Its 192-bit accurate path retains the upstream fail-closed check for unresolved
-rounding. These new functions still require the cross-platform reruns.
+| Configuration | Completed checks |
+|---|---|
+| Core Ultra 7 265K, Rust 1.99.1, baseline x86-64, no_std | 200,000 MPFR records for each of 33 functions; regressions; clippy |
+| Core Ultra 7 265K, x86-64-v3, std / hardware FMA | Same 200,000 records per function; regressions; clippy |
+| Neoverse-N1, Rust 1.97.1, no_std and std / hardware FMA | Same 200,000 records per function in both configurations; regressions; clippy |
+| WASM wasm32-wasip1 / wasmtime | Same 200,000 records per function; regressions; clippy |
+| x86-64 QEMU Nehalem, no FMA | Same 200,000 records per function |
+| i686 Linux via cross | All checked-in regressions and exact-rational FMA corpus |
+| Rust 1.89.0, x86-64 | All checked-in regressions and exact-rational FMA corpus |
 
-Binary64 tangent passed 200,000 MPFR samples and all 1,098,260 upstream hard
-cases in debug and release on baseline x86-64. Its retained 128-bit
-significand converts with integer nearest-even rounding. The release validation
-plus all ordinary tests and clippy passed (`validation16c.log`, peak RSS
-0.19 GiB, exit zero). Cross-target validation is still required.
+The selected regressions are generated by `tools/select-core-regressions.py`.
+The FMA corpus comes from magetypes' independent exact-rational generator at
+`f40f5d38`. The 256-bit pow fallback also has direct MPFR regression coverage.
+Neither uses std/libm as its expected-value oracle.
 
-Binary64 pow passed 200,000 MPFR samples and all 1,003,179 upstream hard cases
-in debug and release on baseline x86-64. A direct test of its 256-bit stage
-also passed selected MPFR pairs; exact fractional powers are proved using
-integer roots and exponent divisibility. All tests and clippy passed
-(`validation17c.log`, peak RSS 0.21 GiB, exit zero).
+The 19 available upstream hard-case files contain 8,873,361 records. All passed in release on
+baseline x86, x86-64-v3/std, and ARM64 software/hardware-FMA builds:
 
-The broader production-source audit found additional callers: f32 acos in
-zenfilters `document/quad.rs::interior_angle`, f32 hypot in zenjxl-decoder
-`features/spline.rs::Point::abs`, f64 atanh in zenmetrics-stats `panel.rs::mrr_h`,
-f64 tanh in zenjpegai `encoder/lh.rs::cum_logit`, and f64 asinh in zensimx
-`metric/steerfix_packet.rs`. These are added to the required port set rather
-than treating the earlier metric-focused inventory as complete.
+| Function | Cases |
+|---|---:|
+| powf | 460,544 |
+| atan2f | 4,724 |
+| hypotf | 7,244 |
+| cbrt | 106,254 |
+| exp2 | 77,182 |
+| exp | 1,129,433 |
+| log2 | 33,248 |
+| log | 134,960 |
+| log10 | 65,528 |
+| atan | 55,770 |
+| log1p | 347,771 |
+| sin | 1,975,927 |
+| cos | 1,107,744 |
+| atan2 | 28,123 |
+| tan | 1,098,260 |
+| pow | 1,003,179 |
+| atanh | 31,113 |
+| tanh | 31,450 |
+| asinh | 1,174,907 |
 
-f32 acos and hypot passed 200,000 MPFR samples each. Hypot also passed its
-7,244 upstream cases; its sNaN/Inf result is checked against the explicit
-CORE-MATH NaN contract because MPFR has no signaling NaN. The upstream acosf
-directory has no worst-case input file, so no full hard-case pass is claimed.
+Acosf has no upstream `.wc` file. No exhaustive binary32
+sweep or all-hard-cases-on-every-platform claim is made. Windows and macOS have
+not been run. The exact-power guard requires an integer exponent product with zero FMA
+residual; a rounded-to-integer product alone is insufficient. The retained
+upstream unresolved-rounding guards fail closed;
+passing a corpus is not a formal proof that these are unreachable.
 
-All 33 functions passed 200,000 MPFR samples each in the complete baseline
-x86 release rerun (`validation-all.log`). The new f64 atanh/tanh/asinh ports
-also passed all upstream hard cases: 31,113 / 31,450 / 1,174,907 respectively.
-The complete run includes ordinary tests, independent FMA tests, direct
-256-bit power fallback tests, and clippy; peak RSS 0.21 GiB, exit zero.
+Artifacts: `/mnt/v/output/archmage/core-math-rust-2026-11-05/`.
+`validation-all.log` reports run-heavy exit zero, peak RSS 0.21 GiB;
+`validation-arm-all.log` reports exit zero, peak RSS 0.21 GiB;
+`validation-final-cross.log` reports exit zero, peak RSS 0.19 GiB.
+`validation-final.log` repeats all x86 hard cases after review, with exit zero
+and peak RSS 0.22 GiB.
+The cross runner initially failed to locate the `.wasm` checker extension;
+correcting the script required no mathematical change.
+
+## Performance
+
+The earlier [C/ICX and Rust exp2f study](../../benchmarks/core_math_cost_2026-11-05/README.md)
+is distinct from measurements of the expanded Rust subset. Rust exp2f's baseline
+x86 widening was optimized there; those numbers do not establish performance
+for the other ports. The expanded benchmark source is in
+[the Rust cost report](../../benchmarks/core_math_rust_2026-11-05/README.md) and compares each port with std on the same
+input stream. Std is a performance reference with a different accuracy contract.

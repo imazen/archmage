@@ -103,7 +103,9 @@ consumer does not replace third-party notices.
    as internal support first. Leave gamma-family extensions, Bessel, complex,
    long-double, and f16/bf16 arithmetic outside the initial portable surface.
 
-No new scalar or vector implementations were added for this inventory review.
+The initial inventory review added no implementations. The subsequent authorized
+CORE-MATH port adds 33 scalar functions; [coverage and validation](CORE_MATH.md)
+now supersedes the gap list above for those operations.
 The source inventory is established work; the remaining job is contract-preserving
 extraction, completion of the host-dependent glibc fallback, and targeted gaps.
 
@@ -133,4 +135,6 @@ The separate software-helper run is not a paired CPU comparison.
 The standalone safe-Rust exp2 translation also exposes a baseline LLVM conversion
 dependency: exact bit widening improved 2.684 to 1.702 ns/value, but lost on V3
 (1.715 versus the ordinary cast's 1.466). Keep optimization choices per target
-and function, with identical result gates. No new exports or defaults were added.
+and function, with identical result gates. That compiler study changed no exports.
+The later Rust port adds the scalar functions on the unpublished draft; it does
+not change consumer defaults or compatibility implementations.

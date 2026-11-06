@@ -7,8 +7,12 @@
 //!
 //! ## What is here
 //!
+//! - **CORE-MATH ports** ([`scalar`]): 17 f32 and 16 f64 full-range
+//!   transcendental functions, with their accurate fallback paths. They assume
+//!   nearest-even rounding and gradual underflow; errno, exception flags,
+//!   dynamic rounding modes and NaN payloads are outside the contract.
 //! - **Correctly rounded primitives** ([`scalar`]): `sqrt`/`floor`/`ceil`/
-//!   `round`/`roundeven` for f32 and f64 and `fmaf` for f32. FMA is checked against independent exact-bit cases; platform
+//!   `round`/`roundeven` for f32 and f64 and `fmaf`/`fma` for f32/f64. FMA is checked against independent exact-bit cases; platform
 //!   `std` is not its oracle. NaN payloads may differ.
 //! - **f32 transcendentals** ([`scalar`]): `log2`/`exp2`/`ln`/`exp`/`log10`/`pow`/
 //!   `cbrt` at `_lowp` and `_midp`, plus `cbrt_midp_precise`, `sigmoid_midp` and
@@ -38,6 +42,8 @@
 //!
 //! ## Provenance
 //!
+//! CORE-MATH ports retain their upstream MIT notices and pin commit
+//! `660067dfd3e751c8f07acc31c899ff410aa7206e`.
 //! The scalar core is ported from `magetypes::nostd_math` (itself derived from
 //! compiler-builtins/libm, from musl; MIT). The f32 `_midp` functions start from
 //! `zensim::det_math`. `magetypes` does not depend on this crate and keeps its own

@@ -235,6 +235,7 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 #### Added
 
+- Draft zenmath adds 17 f32 and 16 f64 safe Rust CORE-MATH ports, with independent MPFR regressions and ARM/WASM/i686/no-FMA validation (0cbf7740).
 - `magemath::relaxed` shares the portable operations and special-value handling with backend-dependent rounding. `magemath::unfused` and `zenmath::scalar::unfused` are experiments pending the portable-rounding decision (71015113).
 - `zenmath` and `magemath`, unpublished draft crates. `zenmath` holds scalar math with defined bits on every target. `magemath::portable` holds `f32x8` kernels with the same bits on every tier and as the `zenmath` functions, with slice and fixed-array dispatchers.
 
