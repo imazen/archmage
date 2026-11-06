@@ -144,7 +144,8 @@ array representation can carry algebraic permissions through vectorization;
 it does not guarantee the same lowering for every kernel or compiler.
 The reproducible probes live in `benchmarks/math_matrix_2026-11-06/`.
 
-The corresponding x86 V3 assembly contracts the lane-map polynomial into three
+The codegen probe uses optimized builds with LTO disabled so emitted IR is
+post-optimization; timing builds use thin LTO. Its x86 V3 assembly contracts the lane-map polynomial into three
 `vfmadd213ps` instructions per eight values. Its hot loop loads inputs and stores
 outputs directly, with no temporary array on the stack and no calls. The function
 still has a small stack frame for the input-length assertions and cold panic
@@ -160,7 +161,7 @@ column enters a V3 feature context once per buffer. Inputs and outputs are
 black-boxed, and allocation is outside the measurement. This is throughput,
 not single-call latency. No `target-cpu=native` was used.
 
-| Operation | Rust std loop | Zenmath correct scalar loop | Packed V3 |
+| Operation | Rust std loop | Zenmath correct scalar loop | Correct packed V3 |
 |---|---:|---:|---:|
 | f32 exp | 1.218 | 1.704 | 0.849 |
 | f32 ln | 1.413 | 1.878 | 1.077 |
