@@ -62,3 +62,5 @@ mod log1p;
 pub use log1p::log1p;
 mod sin;
 pub use sin::sin;
+mod cos;
+pub use cos::cos;

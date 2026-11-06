@@ -10,6 +10,7 @@ fn main() {
         "log10" => |x, _| scalar::log10(x),
         "atan" => |x, _| scalar::atan(x),
         "log1p" => |x, _| scalar::log1p(x),
+        "cos" => |x, _| scalar::cos(x),
         "sin" => |x, _| scalar::sin(x),
         "log2" => |x, _| scalar::log2(x),
         "exp2" => |x, _| scalar::exp2(x),

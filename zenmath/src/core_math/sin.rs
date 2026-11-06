@@ -46,20 +46,20 @@ const T: [u64; 20] = [
     0x9afed7ec47e35742,
     0x1580cc11bf1edaea,
 ];
-const PS: [u128; 4] = [
+pub(super) const PS: [u128; 4] = [
     0xc90fdaa22168c234c4c6628b80dbed80,
     0x14abbce625be52beabb8e5506ca45b03,
     0xa335e33bad570e044c54995bb97635,
     0x265a5999d06c4,
 ];
-const PC: [u128; 5] = [
+pub(super) const PC: [u128; 5] = [
     0xffffffffffffffffffffffffffffffff,
     0x4ef4f326f91779692b71366cbcf0b096,
     0x40f07c206d6b0ecd4c9076e3db78fed,
     0x155d3c7e3cbef9eec6962368fb7c41,
     0x3c3e845b5510,
 ];
-const U1: [[f64; 4]; 128] = [
+pub(super) const U1: [[f64; 4]; 128] = [
     [
         f64::from_bits(0x0),
         f64::from_bits(0x0),
@@ -829,7 +829,7 @@ const U1: [[f64; 4]; 128] = [
         f64::from_bits(0x3c81354d4556e4cb),
     ],
 ];
-const U2: [[f64; 4]; 128] = [
+pub(super) const U2: [[f64; 4]; 128] = [
     [
         f64::from_bits(0x0),
         f64::from_bits(0x0),
@@ -1599,7 +1599,7 @@ const U2: [[f64; 4]; 128] = [
         f64::from_bits(0xbc7c3c6e16616fb2),
     ],
 ];
-const S1U: [u128; 33] = [
+pub(super) const S1U: [u128; 33] = [
     0x0,
     0xc8fb2f886ec09f376a17954b2b7c517,
     0x1917a6bc29b42be1d8e72d912977ee71,
@@ -1634,7 +1634,7 @@ const S1U: [u128; 33] = [
     0xffb10f1bcb6bef1d421e8edaaf59453e,
     0xffffffffffffffffffffffffffffffff,
 ];
-const S2U: [u128; 64] = [
+pub(super) const S2U: [u128; 64] = [
     0x0,
     0x3243f655d966c0c3b0abf2b35a62f8,
     0x6487eabb991cb611ad1d7b5620834a,
@@ -1700,7 +1700,7 @@ const S2U: [u128; 64] = [
     0xc2b4915da89e0b235bfac0f965612e2,
     0xc5d7e4435cfff45c6718c1dfd2aa612,
 ];
-const C2U: [u128; 64] = [
+pub(super) const C2U: [u128; 64] = [
     0xffffffffffffffffffffffffffffffff,
     0xfffffb10b0d19f76491a703231e0a12e,
     0xffffec42c3773235ec9e2e75cb525f2c,
@@ -1771,29 +1771,29 @@ fn two(x: f64, y: f64) -> (f64, f64) {
     let h = x + y;
     (h, y - (h - x))
 }
-fn sum(xh: f64, xl: f64, yh: f64, yl: f64) -> (f64, f64) {
+pub(super) fn sum(xh: f64, xl: f64, yh: f64, yl: f64) -> (f64, f64) {
     let (h, l) = two(xh, yh);
     (h, (xl + yl) + l)
 }
-fn mul(xh: f64, xl: f64, ch: f64, cl: f64) -> (f64, f64) {
+pub(super) fn mul(xh: f64, xl: f64, ch: f64, cl: f64) -> (f64, f64) {
     let h = ch * xh;
     (h, (cl * xh + ch * xl) + fma(ch, xh, -h))
 }
-fn mh(a: u128, b: u128) -> u128 {
+pub(super) fn mh(a: u128, b: u128) -> u128 {
     let ah = a >> 64;
     let al = a as u64 as u128;
     let bh = b >> 64;
     let bl = b as u64 as u128;
     ah * bh + ((ah * bl) >> 64) + ((al * bh) >> 64)
 }
-fn fixed_to_float(r: u128, sign: u64) -> f64 {
+pub(super) fn fixed_to_float(r: u128, sign: u64) -> f64 {
     let sh = ((r >> 64) as u64).leading_zeros();
     let h = (r >> (75 - sh)) as u64;
     let rb = ((r >> (74 - sh)) & 1) as usize;
     let scale = f64::from_bits((0x3ca0000000000000u64 | (sign << 63)) - ((sh as u64) << 52));
     h as f64 * scale + [0.375, 0.75][rb] * scale
 }
-fn reduce(x: f64, accurate: bool) -> (u128, u64, bool) {
+pub(super) fn reduce(x: f64, accurate: bool) -> (u128, u64, bool) {
     let bits = x.to_bits();
     let e = ((bits >> 52) & 2047) as i32;
     let m = ((1 << 52) | (bits & 0xfffffffffffff)) as u128;

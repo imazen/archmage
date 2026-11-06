@@ -1131,6 +1131,7 @@ pub fn sincosf(x: f32) -> (f32, f32) {
 pub use crate::core_math::atan;
 pub use crate::core_math::atan2f;
 pub use crate::core_math::cbrt;
+pub use crate::core_math::cos;
 pub use crate::core_math::exp;
 pub use crate::core_math::exp2;
 pub use crate::core_math::log;
