@@ -28,7 +28,7 @@ SOFTWARE.
 */
 
 #[inline(never)]
-fn core_exp2(x: f32) -> f32 {
+fn core_exp2<const BIT_WIDEN: bool>(x: f32) -> f32 {
     const TB: [f64; 64] = [
         f64::from_bits(0x3ff0000000000000),
         f64::from_bits(0x3ff02c9a3e778061),
@@ -131,7 +131,17 @@ fn core_exp2(x: f32) -> f32 {
         }
     }
     let off = f64::from_bits(0x42d8000000000000);
-    let xd = x as f64;
+    // This point admits only finite normal f32 inputs. The encoding conversion
+    // is exact and avoids a scalar SSE conversion with a merge dependency.
+    let xd = if BIT_WIDEN {
+        f64::from_bits(
+            ((t as u64 & 0x80000000) << 32)
+                | (((((t >> 23) & 255) as u64) + 896) << 52)
+                | (((t & 0x7fffff) as u64) << 29),
+        )
+    } else {
+        x as f64
+    };
     let h = xd - ((xd + off) - off);
     let h2 = h * h;
     let u = (x + 196608.0).to_bits();
@@ -174,7 +184,8 @@ fn main() {
     for row in data.chunks_exact(8) {
         let x = f32::from_bits(u32::from_ne_bytes(row[..4].try_into().unwrap()));
         let expected = u32::from_ne_bytes(row[4..].try_into().unwrap());
-        let actual = core_exp2(x);
+        let actual = core_exp2::<false>(x);
+        assert_eq!(core_exp2::<true>(x).to_bits(), actual.to_bits());
         assert!(
             actual.to_bits() == expected || (actual.is_nan() && f32::from_bits(expected).is_nan()),
             "{x:?}: {:08x} != {expected:08x}",
@@ -187,12 +198,12 @@ fn main() {
         .chunks_exact(4)
         .map(|b| f32::from_ne_bytes(b.try_into().unwrap()))
         .collect();
-    let funcs: [fn(f32) -> f32; 2] = [core_exp2, f32::exp2];
+    let funcs: [fn(f32) -> f32; 3] = [core_exp2::<false>, core_exp2::<true>, f32::exp2];
     let mut output = vec![0.0; input.len()];
     println!("kind,op,variant,round,value");
     for round in -2_i32..30 {
-        for k in 0..2 {
-            let v = ((round + 2 + k) % 2) as usize;
+        for k in 0..3 {
+            let v = ((round + 2 + k) % 3) as usize;
             let f = std::hint::black_box(funcs[v]);
             let start = std::time::Instant::now();
             for j in 0..128 {
@@ -205,7 +216,11 @@ fn main() {
             if round >= 0 {
                 println!(
                     "ns_per_element,exp2f,{},{} ,{ns:.9}",
-                    if v == 0 { "rust-core" } else { "rust-std" },
+                    match v {
+                        0 => "rust-core",
+                        1 => "rust-bit-widen",
+                        _ => "rust-std",
+                    },
                     round
                 );
             }
