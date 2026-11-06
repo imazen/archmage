@@ -177,6 +177,30 @@ extension calls or temporary-array stack traffic there. The function's
 assertion frame is outside the loop. This is evidence for these compiled
 kernels, not a guarantee that every algebraic expression has zero overhead.
 
+The focused external-crate matrix measures 644 cells across Ryzen V3/V4x,
+Neoverse-N1 and strict WASM, with LTO disabled and with thin LTO. Every cell
+has at least 30 interleaved rounds. Timing covers f32x8 and f64x4 polynomial,
+dot, division and remainder workloads; all six implemented vector widths
+have exact-representable fixture coverage.
+
+Selected thin-LTO means, in ns/input value:
+
+| Kernel / target | Ordinary vector | Tokenless extension | Consumer-local algebraic map |
+|---|---:|---:|---:|
+| f32 polynomial / Ryzen V3 | 0.08221 | 0.06407 | 0.06100 |
+| f32 dot / Neoverse NEON | 0.13704 | 0.09452 | 0.09065 |
+| f32 polynomial / strict WASM | 0.15327 | 0.15915 | 0.13641 |
+| f64 polynomial / Ryzen V3 | 0.11546 | 0.13904 | 0.15614 |
+
+The first two extension-minus-ordinary paired 95% intervals are
+[-0.03441, -0.00272] and [-0.04814, -0.03275] ns/value. The last two include
+zero, as do extension-minus-local-map intervals for all four rows. Thus these
+runs support selected gains, not a uniform speedup or a precise overhead bound.
+The WASM wrapper allocates per host call, amortized over 256 repetitions;
+native setup is outside timing. Native and WASM absolute times include that
+difference. Full tables, raw-data provenance and codegen extracts live in
+`benchmarks/algebraic_ext_2026-11-06/`.
+
 The separate extension crate can require Rust 1.98 while Magetypes retains its
 existing minimum. This does not make algebraic methods part of Magetypes' own
 API. A horizontal algebraic reduction also needs an explicit method; ordinary
