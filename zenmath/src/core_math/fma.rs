@@ -1,5 +1,6 @@
 //! Reused from magetypes soft_fma.rs at f40f5d38, including its Rust libm 0.2.16
-//! integer fallback (MIT, musl lineage). Nearest-even with gradual underflow.
+//! integer fallback (MIT, musl lineage; see LICENSE-libm.txt).
+//! Nearest-even with gradual underflow.
 #[inline]
 pub fn fma(x: f64, y: f64, z: f64) -> f64 {
     #[cfg(all(
