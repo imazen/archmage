@@ -173,3 +173,45 @@ const C: [f64; 7] = [
     f64::from_bits(0xbfb2880736c8762d),
     f64::from_bits(0x3fafc1ecf913961a),
 ];
+/// Correctly rounded base-ten logarithm (nearest-even).
+pub fn log10f(x: f32) -> f32 {
+    let mut ux = x.to_bits();
+    if ux >= 0x7f800000 || ux == 0 {
+        return super::log_special(x);
+    }
+    // Exact powers of ten representable in binary32 (upstream's hashed table).
+    const POW10: [u32; 11] = [
+        0x3f800000, 0x41200000, 0x42c80000, 0x447a0000, 0x461c4000, 0x47c35000, 0x49742400,
+        0x4b189680, 0x4cbebc20, 0x4e6e6b28, 0x501502f9,
+    ];
+    if let Some(n) = POW10.iter().position(|&b| b == ux) {
+        return n as f32;
+    }
+    if ux < 1 << 23 {
+        let n = ux.leading_zeros() - 8;
+        ux = (ux << n).wrapping_sub(n << 23);
+    }
+    let e = (((ux as i32) >> 23) - 127) as f64;
+    let m = ux & 0x7fffff;
+    let j = ((m + (1 << 16)) >> 17) as usize;
+    let z = f64::from_bits(((m as u64) << 29) | (0x3ff_u64 << 52)) * TR[j] - 1.0;
+    let z2 = z * z;
+    let mut r =
+        ((e * f64::from_bits(0x3fd34413509f79ff) + TL[j]) + z * B[0]) + z2 * (B[1] + z * B[2]);
+    let ub = r as f32;
+    let lb = (r + f64::from_bits(0x3ddaf23f00000000)) as f32;
+    if ub == lb {
+        return ub;
+    }
+    let mut f =
+        z * ((C[0] + z * C[1]) + z2 * ((C[2] + z * C[3]) + z2 * (C[4] + z * C[5] + z2 * C[6])));
+    f += (-f64::from_bits(0x3c90cee0ed4ca7e9)) * e;
+    f += TL[j] - TL[0];
+    let el = e * f64::from_bits(0x3fd34413509f7a00);
+    r = el + f;
+    if r.to_bits() & ((1 << 28) - 1) == 0 {
+        let dr = (el - r) + f;
+        r += dr * 32.0;
+    }
+    r as f32
+}

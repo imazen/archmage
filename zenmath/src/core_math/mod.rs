@@ -20,3 +20,11 @@ fn log_special(x: f32) -> f32 {
         f32::NAN
     }
 }
+mod atanf;
+mod fma;
+mod log10f;
+mod tanhf;
+pub use atanf::atanf;
+pub use fma::fma;
+pub use log10f::log10f;
+pub use tanhf::tanhf;

@@ -1120,4 +1120,5 @@ pub mod unfused {
 }
 
 // Correctly rounded full-range functions, separate from the approximation tiers.
+pub use crate::core_math::{atanf, fma, log10f, tanhf};
 pub use crate::core_math::{cbrtf, exp2f, expf, log2f, logf};
