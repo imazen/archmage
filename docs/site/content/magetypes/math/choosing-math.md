@@ -22,8 +22,11 @@ Rust's standard library nor a correctly rounded implementation promises those bi
 | Rust `algebraic_*` | Compiler-selected algebraic transformations; no reproducibility or precision bound | Opt-in kernels that tolerate reassociation and changed exceptional-value behavior |
 
 Zenmath and Magemath are unpublished draft crates in this repository. They are
-not changes to the published Magetypes methods. Magemath currently exposes f32x8;
-a larger type elsewhere in Magetypes does not imply a matching Magemath API.
+not changes to the numerical behavior of published Magetypes methods. The draft
+deprecates those methods and provides all 35 legacy transcendental names at
+widths four, eight and sixteen in Magemath; width sixteen requires `w512`.
+The `legacy` family preserves backend behavior, while `portable`, `relaxed`,
+and `unfused` retain their explicit rounding and exceptional-value contracts.
 The draft scalar set includes f32 `powf`, `expf`, `logf`, `log2f`, `log10f`,
 `sqrtf`, `floorf`, `ceilf`, `roundf`, and f64 `log2`. `roundf` uses ties away
 from zero; `roundevenf` is a separate operation. Do not benchmark ties-even

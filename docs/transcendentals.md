@@ -33,15 +33,19 @@ it when the legacy methods retire. Deprecation itself adds no dependency.
 Zenmath and Magemath are unpublished drafts, so this is a migration plan rather
 than a recommendation to switch a released consumer immediately.
 
-Current migration gaps (before removing any legacy method):
+The draft now covers all 35 deprecated names at widths four, eight and
+sixteen, including cbrt implementations owned by Magemath. Width sixteen
+requires `w512` (also enabled by `avx512`). See the
+[complete migration inventory](../magemath/docs/MIGRATION.md).
 
-| Legacy surface | Draft destination | Remaining work |
+| Surface | Draft destination | Review before migration |
 |---|---|---|
-| f32x8 lowp/midp log, exp, pow families | Magemath portable/relaxed kernels and array/slice forms | Select the matching rounding and special-value contract; same names do not promise identical exceptional results |
-| f32x8 cbrt variants | Magemath exposes the operations | Its bodies still delegate to Magetypes; move these implementations before removal |
-| f32x4 and f32x16 transcendental methods | Magemath currently documents f32x8 only | Add replacement widths or an explicit array/slice migration path; do not remove these methods yet |
-| Scalar transcendental math | Zenmath scalar functions | Complete feature separation and document accuracy independently of portability |
+| Existing lowp/midp methods, all three widths | Magemath `legacy` kernels and array/slice forms | Preserves the original backend rounding and exceptional behavior; NaN payloads remain unspecified |
+| Explicit portable/relaxed/unfused approximations | Matching Magemath family, all three widths | Select the intended rounding and exceptional-value contract |
+| Scalar transcendental math | Zenmath scalar functions | Select `correct-rounding`, `normal`, or `configurable`; normal currently shares the precise implementation |
 
+Replacement coverage does not authorize removal of the published methods.
+Keep deprecation and eventual removal with the API migration review.
 
 Deprecation validation (2026-11-06): regeneration, registry validation, token
 validation and intrinsic soundness passed. Magetypes all-target Clippy with
