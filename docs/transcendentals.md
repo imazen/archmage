@@ -116,7 +116,19 @@ log and pow functions also have `_unchecked`; the midp tier adds `_precise`.
 | (none) | Yes | No | General use |
 | `_precise` | Yes | `cbrt` only | `cbrt_midp_precise`; the other names are aliases |
 
-**Edge cases**: 0 → -inf, negative → NaN, +inf → +inf, NaN → NaN (for log functions)
+**Edge cases**: 0 → -inf, negative → NaN, +inf → +inf for the midp log functions. The lowp logs have no edge handling: results for 0 and negatives are finite and meaningless.
+
+**NaN inputs are not handled, and the results differ by backend** (measured 2026-11-05): among the operations listed below, only `cbrt_midp` returns NaN on all four measured backends.
+
+| Function, NaN input | Scalar, x86 V3 | NEON, WASM |
+|---------------------|----------------|------------|
+| `exp2_midp`, `exp_midp`, `exp2_lowp` | 2^-126 | NaN |
+| `log2_midp` | -383.4 | -383.4 |
+| `ln_midp` | -265.8 | -265.8 |
+| `log10_midp` | -115.4 | -115.4 |
+| `log2_lowp` | 128.6 | 128.6 |
+| `pow_midp(NaN, 2.4)` | 0 | 0 |
+| `cbrt_midp` | NaN | NaN |
 
 **Denormals**: only `cbrt_midp_precise` handles subnormal inputs, by rescaling. The other `_midp_precise` functions are the plain forms under another name, queued for removal, and do not: for 1e-42, `log2_midp_precise` returns about -127 instead of -139.5.
 

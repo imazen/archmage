@@ -55,9 +55,11 @@ the two forms run at the same speed.
 
 Choosing a form:
 
-- **`a * b + acc`** for reductions with one or a few accumulators. Rust never
-  contracts it into an FMA, so it rounds twice and gives the same bits on
-  every backend.
+- **`a * b + acc`** for reductions with one or a few accumulators. Ordinary Rust
+  arithmetic does not contract this expression into an FMA: each lane rounds
+  twice. Matching finite results across backends also requires the same
+  evaluation order and floating-point environment; a vector reduction can
+  still change association.
 - **`mul_add_relaxed`** for Horner-style chains when speed matters most: one
   FMA on x86 v3/v4 and NEON, a multiply then an add on the scalar backend and
   strict WASM, so it is fast everywhere but its bits differ by backend.

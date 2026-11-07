@@ -25,6 +25,14 @@ compares source and actual `cargo expand` output for the main forms on x86-64,
 AArch64, and WASM. Architecture guards are generated automatically; that output
 shows the functions remaining after rustc evaluates the guards.
 
+Do not add a manual ISA `cfg` to an `#[attune]` definition: the macro gates
+each feature-specific function itself. `attuned!` and generated dispatchers
+also gate their candidate calls. A manually written call to a specific name
+such as `add_two_v3_t(...)` still needs an x86 gate when it sits outside an
+already gated function: that name does not exist on ARM or WASM. A runtime
+`summon()` check alone cannot make an absent name resolve. The examples below
+therefore gate manual call sites and ordinary impls, not Attune definitions.
+
 | Definition | Meaning |
 | --- | --- |
 | `#[attune(v3)] fn work(...)` | Keep the name and signature; enable V3 features |
@@ -57,7 +65,6 @@ features from the proof, including supported trait bounds such as
 use archmage::prelude::*;
 
 // Direct feature body: called only from a matching feature context.
-#[cfg(target_arch = "x86_64")]
 #[attune(v3)]
 fn add_one(x: u32) -> u32 {
     x + 1
@@ -65,14 +72,12 @@ fn add_one(x: u32) -> u32 {
 
 // Inferred proof wrapper: safe to call from ordinary code after summon().
 // Its body is a V3 feature context, so the direct call above is safe.
-#[cfg(target_arch = "x86_64")]
 #[attune]
 fn add_two_v3_t(x: u32) -> u32 {
     add_one(x) + 1
 }
 
 // wrap: features come from the proof parameter; the name is unchanged.
-#[cfg(target_arch = "x86_64")]
 #[attune(wrap)]
 fn add_three(token: X64V3Token, x: u32) -> u32 {
     let _ = token;
@@ -255,13 +260,11 @@ fn dispatch_to_leaf<P: IntoConcreteToken>(parent: P, x: u32) -> u32 {
 }
 
 // reattune! probes for stronger tiers from a covered context.
-#[cfg(target_arch = "x86_64")]
 #[attune(v3)]
 fn widen_impl(x: u32) -> u32 {
     reattune!(leaf(x), [_v4x(cfg(avx512)), _v3, _scalar])
 }
 
-#[cfg(target_arch = "x86_64")]
 #[attune(wrap)]
 fn widen(token: X64V3Token, x: u32) -> u32 {
     widen_impl(x)
@@ -333,7 +336,6 @@ use archmage::prelude::*;
 
 struct Wrap<T>(T);
 
-#[cfg(target_arch = "x86_64")]
 #[attune(wrap)]
 fn get_free<T: Copy>(this: &Wrap<T>, token: X64V3Token) -> T {
     let _ = token;
