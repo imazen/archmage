@@ -1,5 +1,9 @@
 # magemath design record
 
+The proposed [composable numerical contracts](NUMERICAL-CONTRACTS.md) separate
+shared float policy from operation options, domains and implementation recipes.
+That proposal is not implemented; the surfaces below retain their current contracts.
+
 The [rounding comparison](../../benchmarks/magemath_rounding_cost_2026-11-05/README.md)
 records the current three-surface measurements and validation. The earlier
 [portable-only record](../../benchmarks/magemath_portable_cost_2026-11-05/README.md)
@@ -93,7 +97,8 @@ No tolerance was added to mirror comparisons or golden tests.
 Same op names in different modules, so the import path states the contract. The
 private `Step` trait shares polynomial bodies across `Fused`, `Relaxed` and
 `Unfused`; it is not exposed in public signatures. Public kernels remain generic
-only over the vector backend. A public policy parameter is unnecessary here.
+only over the vector backend. These named surfaces do not require a public policy
+parameter; the newer proposal addresses configurable operations and shared policies.
 
 `portable` currently stays fused, matching `zenmath::scalar`. `relaxed` uses
 `mul_add_relaxed`: V3/V4x and NEON round once, scalar and strict WASM round twice,

@@ -1,5 +1,9 @@
 # Compile-time power behavior (draft, implemented)
 
+The [composable-contract proposal](NUMERICAL-CONTRACTS.md) reviews which parts of
+this API can be shared with other operations. It does not change the implemented
+encoding or behavior documented here.
+
 Unpublished API in zenmath/magemath. Existing `powf`, array and slice functions
 keep their signatures and output-bit contracts. The new policy belongs to the
 operation, not the vector type. The packed `u64` is compile-time transport, not
