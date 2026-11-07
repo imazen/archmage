@@ -53,6 +53,26 @@ The loop is still ordinary Rust: LLVM decides whether to vectorize it.
 you want to write them yourself. Neither form guarantees a speedup; measure the
 complete kernel on your inputs.
 
+## Names, imports, and explicit tiers
+
+This guide uses `use archmage::prelude::*;` and bare macro names. Explicit
+imports or fully qualified `archmage::attuned!` calls also work; keep the call
+macro in scope inside annotated bodies too.
+
+For a single helper, `#[attune] fn helper_v3(...)` infers a V3 feature body;
+`helper_v3_t(...)` infers a token-taking proof wrapper. A `Token` parameter
+alone does not select the tier. Use `#[attune(v3)]` when you want an arbitrary
+name, or `#[attune(wrap)]` to derive features from a concrete proof parameter.
+
+For default families, prefer `attuned!(helper(...))`: it considers V3, NEON,
+WASM SIMD128, then scalar, filtered by architecture and availability. Use an
+explicit list for AVX-512 or a smaller family. See
+[which AVX-512 tier](@/attunement/reference.md#which-avx-512-tier) and the
+[per-tier width split](@/attunement/reference.md#per-tier-width-split).
+If migrating direct calls to legacy suffixed variants, read
+[preserving those callers](@/attunement/reference.md#preserve-callers-of-suffixed-variants)
+before switching to dispatcher-only output.
+
 ## Keep the boundary around the work
 
 Call `scale` once for the slice. Calling a dispatcher once per element adds

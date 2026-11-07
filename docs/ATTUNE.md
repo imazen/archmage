@@ -12,6 +12,36 @@ Magetypes retains its existing token-taking constructors, including `_t` names;
 tokenless. The `use(...)` constructor mode and adaptive-alias experiments are
 not part of this beta.
 
+## Start with the common forms
+
+For hand-written code, use `use archmage::prelude::*;` and the bare
+`#[attune]` / `attuned!` spellings, as in this guide. Explicit imports
+(`use archmage::{attune, attuned};`) or fully qualified paths
+(`#[archmage::attune]`, `archmage::attuned!`) are equally supported. Keep call
+macros in scope even inside annotated bodies: rewritten calls still resolve
+through the macro path you wrote.
+
+- Ordinary callers: `#[attune(dispatch)]` supplies one callable dispatcher.
+- Vector families with proof entry points: `#[attune(_*_t, define(f32x8))]`
+  plus `attuned!(work(data))` at the boundary.
+- Known-tier helpers: `#[attune(v3)]` keeps the function name. Bare
+  `#[attune]` infers V3 from `work_v3`, or a proof wrapper from `work_v3_t`.
+  A `Token` parameter alone does not select a tier or request a wrapper.
+
+Prefer the elided `attuned!(work(data))` when the family uses the default
+portable tiers. It selects V3 on x86, NEON on AArch64, or SIMD128 on WASM when
+available, then scalar. It never adds V4 or V4x, even with `avx512` enabled.
+Use an explicit list for AVX-512, a sparse family, or a forced proof entry:
+`attuned!(work(data), [_v4(cfg(avx512)), _v3, _neon, _wasm128, _scalar])`.
+The implementation sorts candidates by registry priority, not textual list
+order; V4x ranks above V4, then V3. Inside a feature body, `attuned!` uses
+covered features or an enclosing proof instead of upgrading at runtime.
+
+The [per-tier width recipe](#per-tier-width-split) shows a complete vector
+family with AVX-512. `reattune!`, custom names, selector-local visibility and
+inline policies, and trait/impl placement are advanced tools; ordinary free
+function kernels do not need them.
+
 ## One function
 
 The [interactive expansion view](https://imazen.github.io/archmage/attunement/expansions/)
@@ -146,6 +176,83 @@ single context tier ("generated outputs cannot be combined with wrap or a single
 context tier"). Inside `make(...)`, positional `pub`/`inline(...)` before a
 selector remain accepted, as does the old `make(_v3(feature))` gate shorthand;
 flat selectors take options in parentheses.
+
+### Which AVX-512 tier?
+
+Choose the weakest tier that provides the instructions your kernel needs.
+Vector width alone does not require V4x.
+
+| Tier | Feature requirement beyond V3 | Choose it for |
+| --- | --- | --- |
+| `v4` | AVX-512 F/BW/CD/DQ/VL, plus Archmage's AES/PCLMUL requirements | Ordinary 512-bit float/integer operations; retains CPUs such as Skylake-X |
+| `v4x` | V4 plus VPOPCNTDQ, IFMA, VBMI, VBMI2, BITALG, VNNI, VPCLMULQDQ, GFNI, VAES | Kernels using these extensions; excludes V4-only CPUs |
+
+Use `+v4(cfg(avx512))` to add V4 to a wildcard family or dispatcher; use
+`_v4_t(cfg(avx512))` for one proof output. Substitute `v4x` when needed.
+Prefer explicit `cfg(avx512)` over the accepted positional `(avx512)` shorthand.
+The gate is your **calling crate's** Cargo feature. For a Magetypes consumer:
+
+```toml
+[features]
+avx512 = ["archmage/avx512", "magetypes/avx512"]
+```
+
+Use the same gate in the call list. Enabling a Cargo feature makes the code
+available; it does not establish that the CPU supports it. Adding only V4x
+means a V4-only CPU falls back to V3; add both tiers if both implementations
+are useful. More features or wider vectors do not guarantee faster code.
+
+### Per-tier width split
+
+Two same-named declarations can generate disjoint tier outputs: eight lanes
+for the default family and sixteen for V4. Neither declaration emits the
+unsuffixed name, so they do not collide. Keep their data signatures identical
+and expose a slice boundary so callers do not need to know the lane count.
+
+This simplifies the [BRISQUE row-convolution pattern](https://github.com/imazen/zenmetrics/blob/2fb351fea29745b7123454b77a3336576b102a6a/crates/brisque/src/kernels.rs#L110)
+to elementwise scaling. The consumer uses V4x; this example needs only V4.
+
+```rust
+use archmage::prelude::*;
+
+#[attune(_*_t, define(f32x8))]
+fn scale(token: Token, values: &mut [f32]) {
+    let mut chunks = values.chunks_exact_mut(8);
+    for chunk in &mut chunks {
+        let data: &mut [f32; 8] = chunk.try_into().unwrap();
+        (f32x8::load_t(token, data) * f32x8::splat_t(token, 2.0)).store(data);
+    }
+    for value in chunks.into_remainder() {
+        *value *= 2.0;
+    }
+}
+
+#[attune(_v4_t(cfg(avx512)), define(f32x16))]
+fn scale(token: Token, values: &mut [f32]) {
+    let mut chunks = values.chunks_exact_mut(16);
+    for chunk in &mut chunks {
+        let data: &mut [f32; 16] = chunk.try_into().unwrap();
+        (f32x16::load_t(token, data) * f32x16::splat_t(token, 2.0)).store(data);
+    }
+    for value in chunks.into_remainder() {
+        *value *= 2.0;
+    }
+}
+
+pub fn apply(values: &mut [f32]) {
+    attuned!(scale(values), [_v4(cfg(avx512)), _v3, _neon, _wasm128, _scalar]);
+}
+
+let mut values = [1.0; 19]; // Includes a tail for either width.
+apply(&mut values);
+assert_eq!(values, [2.0; 19]);
+```
+
+The first declaration emits `scale_v3_t`, `scale_neon_t`,
+`scale_wasm128_t`, and `scale_scalar_t`; the second emits `scale_v4_t`.
+Do not also add `+v4` to the first declaration: that would generate a duplicate.
+The explicit call list connects these outputs by name; the elided call would
+use only the default eight-lane family.
 
 ### Visibility, inline, and naming
 
@@ -418,6 +525,70 @@ attributes keep their own defaults, so mixed files behave exactly as before.
 | `incant!(gain(plane, factor), [v3, scalar])` | `attuned!(gain(plane, factor), [_v3, _scalar])` | Call-list tier names take the `_` prefix. Outside a feature context the proof wrappers are called. `incant!` remains supported for legacy families and cannot dispatch unified direct bodies (E0133). |
 | `incant!(m(data) with token, [v3, scalar])` | `attuned!(m(data), [_v3, _scalar], using(token))` | `using(...)` selects by exact token type, evaluates once, and never probes. |
 | `#[autoversion] fn sum(data: &[f32]) -> f32` | `#[attune(dispatch)] fn sum(data: &[f32]) -> f32` | Same ordinary-loop dispatcher role. Unified defaults are V3/NEON/WASM128/scalar; legacy defaults also include V4. Unified dispatcher-only bodies are private and do not preserve the legacy suffixed API. Add explicit outputs/gates when migrating callers of those variants. |
+
+### Preserve callers of suffixed variants
+
+**`#[attune(dispatch)]` alone is not a call-preserving replacement for
+`#[autoversion]` when callers use `sum_v3(token, data)` or `sum_scalar(token,
+data)`.** It generates private bodies, not those callable proof entry points.
+Current `#[autoversion]` suffixed variants are private even when the dispatcher
+is public; this matters to same-module callers, not just exported APIs.
+First inventory direct callers, then preserve their names and proof signatures
+or migrate them explicitly. `_*` exposes direct feature functions, while
+`_*_t` exposes token-taking wrappers; they are not interchangeable signatures.
+
+This before/after keeps the ordinary dispatcher and both old proof-entry names
+for an explicitly V3/scalar family. The `names(...)` dictionary is needed only
+when preserving the legacy names rather than migrating callers to `_v3_t`.
+
+```rust
+mod before {
+    use archmage::prelude::*;
+    #[autoversion(v3, scalar)]
+    pub fn sum(data: &[u32]) -> u32 {
+        data.iter().copied().sum()
+    }
+
+    pub fn check(data: &[u32]) {
+        assert_eq!(sum(data), sum_scalar(ScalarToken, data));
+        #[cfg(target_arch = "x86_64")]
+        if let Some(token) = X64V3Token::summon() {
+            assert_eq!(sum(data), sum_v3(token, data));
+        }
+    }
+}
+
+mod after {
+    use archmage::prelude::*;
+    #[attune(_v3_t(pub(self)), _scalar_t(pub(self)), dispatch,
+        names(_v3_t = sum_v3, _scalar_t = sum_scalar))]
+    pub fn sum(data: &[u32]) -> u32 {
+        data.iter().copied().sum()
+    }
+
+    pub fn check(data: &[u32]) {
+        assert_eq!(sum(data), sum_scalar(ScalarToken, data));
+        #[cfg(target_arch = "x86_64")]
+        if let Some(token) = X64V3Token::summon() {
+            assert_eq!(sum(data), sum_v3(token, data));
+        }
+    }
+}
+
+let data = [1, 2, 3];
+assert_eq!(before::sum(&data), after::sum(&data));
+before::check(&data);
+after::check(&data);
+```
+
+For new matching-feature callers that do not need the old proof signature,
+request direct outputs with `#[attune(_*, dispatch)]` and call them within a
+covered context. Preserve any additional legacy tiers explicitly: unified
+defaults omit V4, and adding a Cargo gate to a formerly unconditional
+variant also changes its availability. The example explicitly keeps the proof
+outputs private with `pub(self)`; unified outputs otherwise inherit the source
+visibility. If the original dispatcher takes an explicit `ScalarToken`,
+preserve that dispatcher argument too; the tokenless example above does not.
 
 The migration is manual: no source converter and no replacement-deprecation
 machinery ship in this beta. A family can also be migrated incrementally, one

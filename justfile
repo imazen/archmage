@@ -333,6 +333,10 @@ docs-test:
     python3 xtask/check_docs.py
     python3 xtask/check_docs.py --features avx512
 
+# Test Markdown examples using the selected target and configured Cargo runner.
+docs-test-target target *pages:
+    python3 xtask/check_docs.py --target {{target}} {{pages}}
+
 # Build the documentation site (Zola)
 docs:
     cd docs/site && zola build -o ../../target/site
