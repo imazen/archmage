@@ -33,13 +33,19 @@ fn eq64(got: f64, want: f64, label: &str, bits: u64) {
 #[test]
 fn sqrtf_instruction_bits() {
     type Op = Box<dyn Fn(f32) -> f32>;
-    let mut forms: Vec<(&str, Op)> = vec![
+    let forms: Vec<(&str, Op)> = vec![
         ("selected", Box::new(scalar::sqrtf)),
         (
             "scalar",
             Box::new(|x| scalar::sqrtf_scalar_t(ScalarToken, x)),
         ),
     ];
+    #[cfg(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    ))]
+    let mut forms = forms;
     #[cfg(target_arch = "x86_64")]
     if let Some(t) = X64V1Token::summon() {
         forms.push(("v1", Box::new(move |x| scalar::sqrtf_v1_t(t, x))));
@@ -89,13 +95,19 @@ fn sqrtf_instruction_bits() {
 #[test]
 fn floorf_instruction_bits() {
     type Op = Box<dyn Fn(f32) -> f32>;
-    let mut forms: Vec<(&str, Op)> = vec![
+    let forms: Vec<(&str, Op)> = vec![
         ("selected", Box::new(scalar::floorf)),
         (
             "scalar",
             Box::new(|x| scalar::floorf_scalar_t(ScalarToken, x)),
         ),
     ];
+    #[cfg(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    ))]
+    let mut forms = forms;
     #[cfg(target_arch = "x86_64")]
     if let Some(t) = X64V2Token::summon() {
         forms.push(("v2", Box::new(move |x| scalar::floorf_v2_t(t, x))));
@@ -145,13 +157,19 @@ fn floorf_instruction_bits() {
 #[test]
 fn ceilf_instruction_bits() {
     type Op = Box<dyn Fn(f32) -> f32>;
-    let mut forms: Vec<(&str, Op)> = vec![
+    let forms: Vec<(&str, Op)> = vec![
         ("selected", Box::new(scalar::ceilf)),
         (
             "scalar",
             Box::new(|x| scalar::ceilf_scalar_t(ScalarToken, x)),
         ),
     ];
+    #[cfg(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    ))]
+    let mut forms = forms;
     #[cfg(target_arch = "x86_64")]
     if let Some(t) = X64V2Token::summon() {
         forms.push(("v2", Box::new(move |x| scalar::ceilf_v2_t(t, x))));
@@ -201,13 +219,19 @@ fn ceilf_instruction_bits() {
 #[test]
 fn truncf_instruction_bits() {
     type Op = Box<dyn Fn(f32) -> f32>;
-    let mut forms: Vec<(&str, Op)> = vec![
+    let forms: Vec<(&str, Op)> = vec![
         ("selected", Box::new(scalar::truncf)),
         (
             "scalar",
             Box::new(|x| scalar::truncf_scalar_t(ScalarToken, x)),
         ),
     ];
+    #[cfg(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    ))]
+    let mut forms = forms;
     #[cfg(target_arch = "x86_64")]
     if let Some(t) = X64V2Token::summon() {
         forms.push(("v2", Box::new(move |x| scalar::truncf_v2_t(t, x))));
@@ -257,13 +281,19 @@ fn truncf_instruction_bits() {
 #[test]
 fn roundevenf_instruction_bits() {
     type Op = Box<dyn Fn(f32) -> f32>;
-    let mut forms: Vec<(&str, Op)> = vec![
+    let forms: Vec<(&str, Op)> = vec![
         ("selected", Box::new(scalar::roundevenf)),
         (
             "scalar",
             Box::new(|x| scalar::roundevenf_scalar_t(ScalarToken, x)),
         ),
     ];
+    #[cfg(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    ))]
+    let mut forms = forms;
     #[cfg(target_arch = "x86_64")]
     if let Some(t) = X64V2Token::summon() {
         forms.push(("v2", Box::new(move |x| scalar::roundevenf_v2_t(t, x))));
@@ -316,13 +346,19 @@ fn roundevenf_instruction_bits() {
 #[test]
 fn roundf_instruction_bits() {
     type Op = Box<dyn Fn(f32) -> f32>;
-    let mut forms: Vec<(&str, Op)> = vec![
+    let forms: Vec<(&str, Op)> = vec![
         ("selected", Box::new(scalar::roundf)),
         (
             "scalar",
             Box::new(|x| scalar::roundf_scalar_t(ScalarToken, x)),
         ),
     ];
+    #[cfg(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    ))]
+    let mut forms = forms;
     #[cfg(target_arch = "x86_64")]
     if let Some(t) = X64V2Token::summon() {
         forms.push(("v2", Box::new(move |x| scalar::roundf_v2_t(t, x))));
@@ -372,13 +408,19 @@ fn roundf_instruction_bits() {
 #[test]
 fn fmaf_independent_exact_bits() {
     type Op = Box<dyn Fn(f32, f32, f32) -> f32>;
-    let mut forms: Vec<(&str, Op)> = vec![
+    let forms: Vec<(&str, Op)> = vec![
         ("selected", Box::new(scalar::fmaf)),
         (
             "scalar",
             Box::new(|a, b, c| scalar::fmaf_scalar_t(ScalarToken, a, b, c)),
         ),
     ];
+    #[cfg(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    ))]
+    let mut forms = forms;
     #[cfg(target_arch = "x86_64")]
     if let Some(t) = X64V3Token::summon() {
         forms.push(("v3", Box::new(move |a, b, c| scalar::fmaf_v3_t(t, a, b, c))));
@@ -412,13 +454,19 @@ fn fmaf_independent_exact_bits() {
 #[test]
 fn sqrt_instruction_bits() {
     type Op = Box<dyn Fn(f64) -> f64>;
-    let mut forms: Vec<(&str, Op)> = vec![
+    let forms: Vec<(&str, Op)> = vec![
         ("selected", Box::new(scalar::sqrt)),
         (
             "scalar",
             Box::new(|x| scalar::sqrt_scalar_t(ScalarToken, x)),
         ),
     ];
+    #[cfg(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    ))]
+    let mut forms = forms;
     #[cfg(target_arch = "x86_64")]
     if let Some(t) = X64V1Token::summon() {
         forms.push(("v1", Box::new(move |x| scalar::sqrt_v1_t(t, x))));
@@ -468,13 +516,19 @@ fn sqrt_instruction_bits() {
 #[test]
 fn floor_instruction_bits() {
     type Op = Box<dyn Fn(f64) -> f64>;
-    let mut forms: Vec<(&str, Op)> = vec![
+    let forms: Vec<(&str, Op)> = vec![
         ("selected", Box::new(scalar::floor)),
         (
             "scalar",
             Box::new(|x| scalar::floor_scalar_t(ScalarToken, x)),
         ),
     ];
+    #[cfg(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    ))]
+    let mut forms = forms;
     #[cfg(target_arch = "x86_64")]
     if let Some(t) = X64V2Token::summon() {
         forms.push(("v2", Box::new(move |x| scalar::floor_v2_t(t, x))));
@@ -524,13 +578,19 @@ fn floor_instruction_bits() {
 #[test]
 fn ceil_instruction_bits() {
     type Op = Box<dyn Fn(f64) -> f64>;
-    let mut forms: Vec<(&str, Op)> = vec![
+    let forms: Vec<(&str, Op)> = vec![
         ("selected", Box::new(scalar::ceil)),
         (
             "scalar",
             Box::new(|x| scalar::ceil_scalar_t(ScalarToken, x)),
         ),
     ];
+    #[cfg(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    ))]
+    let mut forms = forms;
     #[cfg(target_arch = "x86_64")]
     if let Some(t) = X64V2Token::summon() {
         forms.push(("v2", Box::new(move |x| scalar::ceil_v2_t(t, x))));
@@ -580,13 +640,19 @@ fn ceil_instruction_bits() {
 #[test]
 fn trunc_instruction_bits() {
     type Op = Box<dyn Fn(f64) -> f64>;
-    let mut forms: Vec<(&str, Op)> = vec![
+    let forms: Vec<(&str, Op)> = vec![
         ("selected", Box::new(scalar::trunc)),
         (
             "scalar",
             Box::new(|x| scalar::trunc_scalar_t(ScalarToken, x)),
         ),
     ];
+    #[cfg(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    ))]
+    let mut forms = forms;
     #[cfg(target_arch = "x86_64")]
     if let Some(t) = X64V2Token::summon() {
         forms.push(("v2", Box::new(move |x| scalar::trunc_v2_t(t, x))));
@@ -636,13 +702,19 @@ fn trunc_instruction_bits() {
 #[test]
 fn roundeven_instruction_bits() {
     type Op = Box<dyn Fn(f64) -> f64>;
-    let mut forms: Vec<(&str, Op)> = vec![
+    let forms: Vec<(&str, Op)> = vec![
         ("selected", Box::new(scalar::roundeven)),
         (
             "scalar",
             Box::new(|x| scalar::roundeven_scalar_t(ScalarToken, x)),
         ),
     ];
+    #[cfg(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    ))]
+    let mut forms = forms;
     #[cfg(target_arch = "x86_64")]
     if let Some(t) = X64V2Token::summon() {
         forms.push(("v2", Box::new(move |x| scalar::roundeven_v2_t(t, x))));
@@ -695,13 +767,19 @@ fn roundeven_instruction_bits() {
 #[test]
 fn round_instruction_bits() {
     type Op = Box<dyn Fn(f64) -> f64>;
-    let mut forms: Vec<(&str, Op)> = vec![
+    let forms: Vec<(&str, Op)> = vec![
         ("selected", Box::new(scalar::round)),
         (
             "scalar",
             Box::new(|x| scalar::round_scalar_t(ScalarToken, x)),
         ),
     ];
+    #[cfg(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    ))]
+    let mut forms = forms;
     #[cfg(target_arch = "x86_64")]
     if let Some(t) = X64V2Token::summon() {
         forms.push(("v2", Box::new(move |x| scalar::round_v2_t(t, x))));
@@ -751,13 +829,19 @@ fn round_instruction_bits() {
 #[test]
 fn fma_independent_exact_bits() {
     type Op = Box<dyn Fn(f64, f64, f64) -> f64>;
-    let mut forms: Vec<(&str, Op)> = vec![
+    let forms: Vec<(&str, Op)> = vec![
         ("selected", Box::new(scalar::fma)),
         (
             "scalar",
             Box::new(|a, b, c| scalar::fma_scalar_t(ScalarToken, a, b, c)),
         ),
     ];
+    #[cfg(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    ))]
+    let mut forms = forms;
     #[cfg(target_arch = "x86_64")]
     if let Some(t) = X64V3Token::summon() {
         forms.push(("v3", Box::new(move |a, b, c| scalar::fma_v3_t(t, a, b, c))));
@@ -843,16 +927,16 @@ fn power_length_failure_precedes_mutation() {
 
 #[test]
 fn required_tier_inventory() {
-    let mut tiers = vec![
+    let tiers = [
         ("scalar", ScalarToken::summon().is_some()),
         ("v1", X64V1Token::summon().is_some()),
         ("v2", X64V2Token::summon().is_some()),
         ("v3", X64V3Token::summon().is_some()),
         ("neon", NeonToken::summon().is_some()),
         ("wasm128", Wasm128Token::summon().is_some()),
+        #[cfg(feature = "avx512")]
+        ("v4x", X64V4xToken::summon().is_some()),
     ];
-    #[cfg(feature = "avx512")]
-    tiers.push(("v4x", X64V4xToken::summon().is_some()));
     for (name, ok) in &tiers {
         println!("TIER {name} supported={ok}");
     }
@@ -964,7 +1048,7 @@ fn genuine_scalar_context_contract() {
     type Unary = Box<dyn Fn(f32) -> f32>;
     type Binary = Box<dyn Fn(f32, f32) -> f32>;
     type UnaryCase = (&'static str, Unary, fn(f32) -> f32);
-    let mut unary: Vec<UnaryCase> = vec![
+    let unary: Vec<UnaryCase> = vec![
         (
             "scalar exp",
             Box::new(|x| scalar::expf_scalar_t(ScalarToken, x)),
@@ -981,10 +1065,16 @@ fn genuine_scalar_context_contract() {
             oracle::log2f,
         ),
     ];
-    let mut power: Vec<(&str, Binary)> = vec![(
+    let power: Vec<(&str, Binary)> = vec![(
         "scalar pow",
         Box::new(|x, y| scalar::powf_scalar_t(ScalarToken, x, y)),
     )];
+    #[cfg(any(
+        target_arch = "x86_64",
+        target_arch = "aarch64",
+        target_arch = "wasm32"
+    ))]
+    let (mut unary, mut power) = (unary, power);
     #[cfg(target_arch = "x86_64")]
     if let Some(t) = X64V3Token::summon() {
         unary.push((
