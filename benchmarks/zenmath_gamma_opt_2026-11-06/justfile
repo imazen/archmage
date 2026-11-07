@@ -1,0 +1,31 @@
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+fmt:
+    cargo +1.99.1 fmt
+
+check:
+    cargo +1.99.1 test --release
+    cargo +1.99.1 clippy --all-targets --release -- -D warnings
+
+build:
+    cargo +1.99.1 build --release
+
+# Run only on admitted remote host with explicit isolated output paths.
+generate rust proof summary:
+    PYTHONDONTWRITEBYTECODE=1 python3 generate.py --rust {{rust}} --proof {{proof}} --summary {{summary}}
+
+# Run in the admitted task-local environment; each output path must be new.
+oracle input output:
+    "$CARGO_TARGET_DIR/release/zenmath-gamma-opt" oracle {{input}} {{output}}
+
+vector-oracle input output:
+    "$CARGO_TARGET_DIR/release/zenmath-gamma-opt" vector-oracle {{input}} {{output}}
+
+analyze input mode output:
+    python3 analyze.py {{input}} --mode {{mode}} --out {{output}}
+
+extract run output manifest:
+    python3 extract_finalists.py --run {{run}} --out {{output}} --manifest {{manifest}}
+
+prepare-sweeps identity output:
+    python3 sweep_plan.py {{identity}} {{output}} --prepare-only

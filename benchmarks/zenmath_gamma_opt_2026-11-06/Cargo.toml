@@ -1,0 +1,25 @@
+[package]
+name = "zenmath-gamma-opt"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+zenmath = { path = "../../zenmath", default-features = false, features = ["archmage"] }
+archmage = { path = "../..", default-features = false, features = ["std"] }
+zenhash = { git = "https://github.com/imazen/zenhash", rev = "4c4a993ba4207f2f28529ce0406be8650d270118", default-features = false, features = ["std", "xxh3"] }
+
+[target.'cfg(target_arch = "x86_64")'.dependencies]
+zenbench = { version = "=0.1.11", default-features = false }
+
+[patch.crates-io]
+archmage = { path = "../.." }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+
+[lints.rust]
+unsafe_code = "forbid"
