@@ -101,9 +101,11 @@ rescue already calls ordinary scalar powf and does not gain another dispatcher.
 With `runtime-dispatch`, ordinary `scalar::powf_with` enters one whole native
 context for MIDP/LOWP arithmetic on x86 V3 and NEON. The shared polynomial bodies
 retain their coefficients, nesting and explicit fused/separate choice. The
-reference API remains non-dispatch. LOWP with separate arithmetic and an explicit
-positive-normal precondition retains the inline reference path: the native
-boundary gave no clear benefit in the measured gamma controls. Correct rescue
+reference API remains non-dispatch. On x86, LOWP with separate arithmetic and
+an explicit positive-normal precondition retains the inline reference path:
+the native boundary gave no clear benefit in the measured gamma controls.
+NEON uses native rounding for this policy too: its clean paired gamma controls
+improved against the original inline software floor sequence. Correct rescue
 inside a selected context calls its private correct core without another probe.
 
 The native study retained a linked executable (SHA-256
@@ -113,4 +115,6 @@ one rounding instruction; fused LOWP has seven FMAs and one rounding instruction
 Separate variants have no FMAs. This establishes elimination of per-step helper
 calls for that executable; callers still pay a whole-policy feature boundary.
 See `benchmarks/zenmath_pow_opt_2026-11-06` for the exact extraction and paired
-measurements. NEON performance is not established by this x86 observation.
+measurements. NEON has a separate measured policy comparison; its reference fused multiply-add
+already uses hardware, so its improvements must not be attributed to replacing
+software FMA alone.

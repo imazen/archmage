@@ -82,10 +82,15 @@ fn native<const P: u64>(x: f32, y: f32) -> f32 {
 }
 #[inline(always)]
 pub(crate) fn select<const P: u64>(x: f32, y: f32) -> f32 {
-    // LOWP separate precondition already inlines without software FMA. The
-    // measured native feature boundary supplied no clear benefit for this case.
-    if P & 3 == 0 || (P & 7 == 6 && (P >> 9) & 3 == 2) {
+    // Correct policies share ordinary correct-core selection.
+    if P & 3 == 0 {
         return crate::__pow_policy::evaluate_with_core::<P>(x, y, crate::scalar::powf);
+    }
+    // On x86 this already inlines without software FMA, and the native
+    // boundary had no clear benefit. NEON instead benefits from native floor.
+    #[cfg(target_arch = "x86_64")]
+    if P & 7 == 6 && (P >> 9) & 3 == 2 {
+        return crate::reference::powf_with::<P>(x, y);
     }
     #[cfg(target_arch = "x86_64")]
     if let Some(t) = super::available::<X64V3Token>() {
