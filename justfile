@@ -544,3 +544,14 @@ release-compat-recheck source output inventory:
 
 release-compat-audit directory source *options:
     python3 xtask/release_compat/audit.py {{directory}} --source {{source}} {{options}}
+
+# Exp-boundary exceptional-value classification, with an explicit required tier.
+portability-nan tier="scalar" stride="65537":
+    ARCHMAGE_NAN_STRIDE={{stride}} ARCHMAGE_TEST_TIER={{tier}} cargo test --release -p magetypes --features avx512 --test transcendental_nan
+
+# Frozen-main/live exceptional/fixed-fused comparison; output is required.
+portability-build:
+    cargo build --release --manifest-path benchmarks/math_portability_fma_2026-11-07/Cargo.toml
+
+portability-bench output filter="" contexts="scalar,scalar-v3,v3,baseline-v3":
+    STUDY_OUTPUT={{quote(output)}} STUDY_FILTER={{quote(filter)}} STUDY_CONTEXTS={{quote(contexts)}} benchmarks/math_portability_fma_2026-11-07/target/release/archmage-portability-study
