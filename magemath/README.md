@@ -113,3 +113,7 @@ the precise unsuffixed functions, `normal` exposes `magemath::normal::{array,sli
 using the same precise implementation today, and `configurable` exposes named
 approximations and power policies. Disabling defaults leaves primitives until a
 family is selected. See [the family and dependency mapping](docs/FEATURES.md).
+
+The [transcendental migration inventory](docs/MIGRATION.md) covers all 35
+legacy names at widths four/eight and optional sixteen, including exact legacy
+and existing portable/relaxed/unfused contract choices.

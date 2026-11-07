@@ -8,3 +8,6 @@
 //! Dispatch happens once per call: pass a whole buffer, not one element at a time.
 
 crate::surface::slice_surface!();
+
+#[cfg(feature = "configurable")]
+crate::width_surfaces::extra_slices!();

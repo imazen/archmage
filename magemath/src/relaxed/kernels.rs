@@ -10,3 +10,6 @@
 //! and differs by tier; it is never undefined behavior.
 
 crate::surface::kernels_surface!(crate::bodies::Relaxed);
+
+#[cfg(feature = "configurable")]
+crate::width_surfaces::extra_kernels!(Relaxed);

@@ -32,6 +32,6 @@ changes selected by Cargo feature unification.
 Zenmath does not depend on Magetypes. Magetypes does not need a Zenmath edge for
 deprecation. Magemath connects both crates and forwards the requested family
 features to Zenmath with dependency defaults disabled. Their dependency graph
-permits independent compilation after shared prerequisites; actual overlap and
-cold-build costs are measured in the power optimization study rather than
-inferred from the graph.
+permits independent compilation after shared prerequisites; actual overlap and new family
+cold-build costs remain pending measurement in the power optimization study.
+The dependency graph alone is not evidence of a compile-time improvement.

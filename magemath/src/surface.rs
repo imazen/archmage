@@ -160,6 +160,43 @@ macro_rules! kernels_surface {
         );
         #[cfg(feature = "configurable")]
         $crate::surface::kernel!($step, silu_midp, "SiLU `x · sigmoid(x)`, midp, per lane.");
+        #[cfg(feature = "configurable")]
+        $crate::surface::kernel!(
+            $step,
+            log2_midp_precise,
+            "Compatibility alias of `log2_midp`; same range and rounding."
+        );
+        #[cfg(feature = "configurable")]
+        $crate::surface::kernel!(
+            $step,
+            exp2_midp_precise,
+            "Compatibility alias of `exp2_midp`; same range and rounding."
+        );
+        #[cfg(feature = "configurable")]
+        $crate::surface::kernel!(
+            $step,
+            ln_midp_precise,
+            "Compatibility alias of `ln_midp`; same range and rounding."
+        );
+        #[cfg(feature = "configurable")]
+        $crate::surface::kernel!(
+            $step,
+            exp_midp_precise,
+            "Compatibility alias of `exp_midp`; same range and rounding."
+        );
+        #[cfg(feature = "configurable")]
+        $crate::surface::kernel!(
+            $step,
+            log10_midp_precise,
+            "Compatibility alias of `log10_midp`; same range and rounding."
+        );
+        #[cfg(feature = "configurable")]
+        $crate::surface::kernel!(
+            $step,
+            pow_midp_precise,
+            "Compatibility alias of `pow_midp`; same range and rounding.",
+            n
+        );
     };
 }
 
@@ -237,6 +274,18 @@ macro_rules! slice_surface {
         $crate::surface::slice_op!(sigmoid_midp_f32, sigmoid_midp);
         #[cfg(feature = "configurable")]
         $crate::surface::slice_op!(silu_midp_f32, silu_midp);
+        #[cfg(feature = "configurable")]
+        $crate::surface::slice_op!(log2_midp_precise_f32, log2_midp_precise);
+        #[cfg(feature = "configurable")]
+        $crate::surface::slice_op!(exp2_midp_precise_f32, exp2_midp_precise);
+        #[cfg(feature = "configurable")]
+        $crate::surface::slice_op!(ln_midp_precise_f32, ln_midp_precise);
+        #[cfg(feature = "configurable")]
+        $crate::surface::slice_op!(exp_midp_precise_f32, exp_midp_precise);
+        #[cfg(feature = "configurable")]
+        $crate::surface::slice_op!(log10_midp_precise_f32, log10_midp_precise);
+        #[cfg(feature = "configurable")]
+        $crate::surface::slice_op!(pow_midp_precise_f32, pow_midp_precise, n);
     };
 }
 
@@ -300,6 +349,18 @@ macro_rules! array_surface {
         $crate::surface::array_op!(sigmoid_midp_f32x8, sigmoid_midp);
         #[cfg(feature = "configurable")]
         $crate::surface::array_op!(silu_midp_f32x8, silu_midp);
+        #[cfg(feature = "configurable")]
+        $crate::surface::array_op!(log2_midp_precise_f32x8, log2_midp_precise);
+        #[cfg(feature = "configurable")]
+        $crate::surface::array_op!(exp2_midp_precise_f32x8, exp2_midp_precise);
+        #[cfg(feature = "configurable")]
+        $crate::surface::array_op!(ln_midp_precise_f32x8, ln_midp_precise);
+        #[cfg(feature = "configurable")]
+        $crate::surface::array_op!(exp_midp_precise_f32x8, exp_midp_precise);
+        #[cfg(feature = "configurable")]
+        $crate::surface::array_op!(log10_midp_precise_f32x8, log10_midp_precise);
+        #[cfg(feature = "configurable")]
+        $crate::surface::array_op!(pow_midp_precise_f32x8, pow_midp_precise, n);
     };
 }
 
