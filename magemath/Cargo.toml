@@ -31,15 +31,15 @@ avx512 = ["w512","magetypes/avx512", "archmage/avx512", "zenmath/avx512"]
 [dependencies]
 # Widths four and eight compile by default. Width sixteen is opt-in through
 # w512 (also enabled by avx512), matching Magetypes width availability.
-magetypes = { version = "0.9.31-beta.2", path = "../magetypes", default-features = false }
-archmage = { version = "0.9.31-beta.2", path = "..", default-features = false }
+magetypes = { version = "0.9.31", path = "../magetypes", default-features = false }
+archmage = { version = "0.9.31", path = "..", default-features = false }
 
 # Accurate fallback for exceptional or rounding-ambiguous CORE-MATH lanes.
-zenmath = { version = "0.9.31-beta.2", path = "../zenmath", default-features = false, features = ["archmage"] }
+zenmath = { version = "0.9.31", path = "../zenmath", default-features = false, features = ["archmage"] }
 
 [dev-dependencies]
 # Token-disable permutations in tests/dispatch.rs.
-archmage = { version = "0.9.31-beta.2", path = "..", features = ["std"] }
+archmage = { version = "0.9.31", path = "..", features = ["std"] }
 
 # zenbench does not build for wasm32; examples/wasm_cost.rs covers it there.
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
