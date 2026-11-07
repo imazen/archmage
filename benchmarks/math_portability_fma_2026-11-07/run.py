@@ -23,4 +23,12 @@ for op in ops:
         state.update(exit_code=result,finished=datetime.now(timezone.utc).isoformat())
         (out/'progress.json').write_text(json.dumps(state,indent=2)+'\n')
         if result: sys.exit(result)
+        packet=json.loads((out/f'{op}.json').read_text())
+        invalid=packet['unreliable'] or packet.get('incomplete',False) or any(
+            len(g['samples'])<50 or any(r.get('gate_clean') is not True for r in g['samples'])
+            for g in packet['comparisons'])
+        if invalid:
+            state.update(stage='invalid admission; study stopped', reason='No promotion claim; retain all rounds')
+            (out/'progress.json').write_text(json.dumps(state,indent=2)+'\n')
+            sys.exit(2)
 (out/'COMPLETE').write_text(identity+'\n')

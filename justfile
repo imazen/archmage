@@ -555,3 +555,7 @@ portability-build:
 
 portability-bench output filter="" contexts="scalar,scalar-v3,v3,baseline-v3":
     STUDY_OUTPUT={{quote(output)}} STUDY_FILTER={{quote(filter)}} STUDY_CONTEXTS={{quote(contexts)}} benchmarks/math_portability_fma_2026-11-07/target/release/archmage-portability-study
+
+# Assert the actual CPU model, then run the independent exact FMA fixtures.
+portability-fma-context context cpu:
+    ARCHMAGE_FMA_CONTEXT={{context}} CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="qemu-x86_64 -cpu {{cpu}}" cargo test -p magetypes --target x86_64-unknown-linux-gnu --test fma_contract --test fused_arithmetic

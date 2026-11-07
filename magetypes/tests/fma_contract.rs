@@ -39,12 +39,16 @@ macro_rules! check {
             let minus_z = magetypes::simd::generic::$ty::from_array_t($token, c.map(|v| -v));
             let add = x.mul_add_portable(y, z).to_array();
             let sub = x.mul_sub_portable(y, minus_z).to_array();
+            let named_add = x.mul_add_fused(y, z).to_array();
+            let named_sub = x.mul_sub_fused(y, minus_z).to_array();
             let fast_add = x.mul_add_relaxed(y, z).to_array();
             let fast_sub = x.mul_sub_relaxed(y, minus_z).to_array();
             for i in 0..$n {
                 let expected = $float::from_bits(rows[i][3]);
                 same!(add[i], expected);
                 same!(sub[i], expected);
+                same!(named_add[i], expected);
+                same!(named_sub[i], expected);
                 // Hardware native paths share the exact oracle. Scalar and WASM
                 // use separate multiply/add or the engine's relaxed instruction.
                 let fast = if ($token).type_id() == core::any::TypeId::of::<ScalarToken>()
@@ -116,5 +120,22 @@ fn selected_backend_contract() {
             archmage::incant!(vectors(), [v4x, v4, v3, neon, wasm128, scalar]);
         }
         tier => panic!("unsupported requested tier {tier}"),
+    }
+}
+
+// The runner names a CPU context; it must actually be present. The FMA
+// detector includes OS AVX-state support through Rust's existing detector.
+#[cfg(target_arch = "x86_64")]
+#[test]
+fn requested_cpu_context() {
+    let fma = std::is_x86_feature_detected!("fma");
+    let v3 = archmage::X64V3Token::summon().is_some();
+    assert!(!v3 || fma);
+    match std::env::var("ARCHMAGE_FMA_CONTEXT").as_deref().unwrap_or("auto") {
+        "auto" => {},
+        "v3" => assert!(v3 && fma, "required full V3 and FMA"),
+        "no-fma" => assert!(!fma && !v3, "required no-FMA execution"),
+        "fma-only" => assert!(fma && !v3, "required FMA without full V3"),
+        other => panic!("unknown FMA context {other}"),
     }
 }
