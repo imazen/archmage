@@ -79,14 +79,14 @@ pub fn powf(x: f32, y: f32) -> f32 {
 
 #[cfg(all(
     feature = "runtime-dispatch",
-    any(target_arch = "x86_64", target_arch = "aarch64"),
+    target_arch = "x86_64",
     any(
         feature = "correct-rounding",
         feature = "normal",
         feature = "configurable"
     )
 ))]
-#[archmage::attune(_v3_t, _neon_t)]
+#[archmage::attune(_v3_t)]
 pub(crate) fn powf_core(x: f32, y: f32) -> f32 {
     crate::core_math::powf_with_math(Token::from_context(), x, y)
 }

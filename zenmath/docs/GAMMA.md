@@ -36,6 +36,9 @@ and [vector bound](../../benchmarks/zenmath_gamma_opt_2026-11-06/VECTOR-BOUND.md
 explain the certificate. `gamma-tables.json` identifies the frozen source,
 binary and proof hashes. `tools/extract-gamma-finalists.py` checks every
 selected literal against both proof records and archived compiled Rust.
+The extraction manifest output hash names its raw, pre-format table file;
+the production source adds feature gates and rustfmt formatting. The auditor
+compares all 902 literal bits, not that raw text hash.
 Normal regeneration uses the resulting 902 bit literals in
 `tools/gamma-bits.json`; no floating-point literal is hand rounded.
 

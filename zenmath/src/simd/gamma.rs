@@ -9,7 +9,14 @@ pub(super) fn candidate<T: Backend<N>, const N: usize>(
     y: [f32; N],
 ) -> Option<[f32; N]> {
     // Uniform exponent guard is also required for dynamic-y callers.
+    const {
+        assert!(N > 0);
+    }
     let bits = y[0].to_bits();
+    const MASK: u32 = !(gamma::EXPONENT_BITS[0] ^ gamma::EXPONENT_BITS[1]);
+    if bits & MASK != gamma::EXPONENT_BITS[0] & MASK {
+        return None;
+    }
     let kind = if bits == gamma::EXPONENT_BITS[0] {
         0
     } else if bits == gamma::EXPONENT_BITS[1] {
@@ -20,7 +27,7 @@ pub(super) fn candidate<T: Backend<N>, const N: usize>(
     if y.iter().any(|v| v.to_bits() != bits)
         || !x
             .iter()
-            .any(|v| (gamma::MINIMUM[kind]..=gamma::MAXIMUM).contains(&v.to_bits()))
+            .all(|v| (gamma::MINIMUM[kind]..=gamma::MAXIMUM).contains(&v.to_bits()))
     {
         return None;
     }
@@ -75,4 +82,30 @@ fn global<T: Backend<N>, const N: usize, const K: usize, const C: usize>(
         }
         crate::reference::powf(x[i], f32::from_bits(gamma::EXPONENT_BITS[K]))
     })
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn mixed_domain_and_exponents_use_full_core() {
+        let t = archmage::ScalarToken;
+        for k in 0..2 {
+            let y = f32::from_bits(crate::gamma::EXPONENT_BITS[k]);
+            for x in [
+                [0.125, 0.5, 1.0, 2.0],
+                [0.0, -0.0, -1.0, f32::NAN],
+                [f32::from_bits(crate::gamma::MINIMUM[k] - 1), 0.5, 0.75, 1.0],
+            ] {
+                assert!(super::candidate(t, x, [y; 4]).is_none());
+                let got = super::super::correct::pow(t, x, [y; 4]);
+                for i in 0..4 {
+                    let want = crate::reference::powf(x[i], y);
+                    assert!(got[i].to_bits() == want.to_bits() || got[i].is_nan() && want.is_nan());
+                }
+            }
+            assert!(
+                super::candidate(t, [0.5; 4], [y, y, y, f32::from_bits(y.to_bits() + 1)]).is_none()
+            );
+        }
+    }
 }

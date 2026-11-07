@@ -121,7 +121,11 @@ mod selected {
         }
         #[cfg(target_arch = "aarch64")]
         if let Some(t) = archmage::NeonToken::summon() {
-            return crate::simd::__scalar_transcendentals::powf_core_neon_t(t, x, y);
+            return crate::simd::__scalar_transcendentals::powf_neon_t(t, x, y);
+        }
+        #[cfg(target_arch = "aarch64")]
+        if let Some(value) = crate::gamma::try_gamma(x, y) {
+            return value;
         }
         crate::reference::powf(x, y)
     }
@@ -178,6 +182,10 @@ pub fn powf_with<const P: u64>(x: f32, y: f32) -> f32 {
 ))]
 #[inline(always)]
 pub(crate) fn selected_powf(x: f32, y: f32) -> f32 {
+    // NEON's existing proof context inlines the candidate without enlarging
+    // the ordinary caller's general-input path. Other targets avoid entering
+    // a feature boundary for an accepted portable candidate.
+    #[cfg(not(all(feature = "runtime-dispatch", target_arch = "aarch64")))]
     if let Some(value) = crate::gamma::try_gamma(x, y) {
         return value;
     }

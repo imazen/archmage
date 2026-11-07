@@ -12,7 +12,15 @@ pub(crate) const MAXIMUM: u32 = 0x3f80_0000;
 /// `None` always continues the original complete CORE algorithm.
 #[inline(always)]
 pub(crate) fn try_gamma(x: f32, y: f32) -> Option<f32> {
-    match y.to_bits() {
+    let bits = y.to_bits();
+    // A single common-bit rejection keeps general dynamic exponents cheap.
+    // Exact exponent matching below is still required. Both admitted patterns
+    // satisfy this mask by construction; no certificate/arithmetic changes.
+    const MASK: u32 = !(EXPONENT_BITS[0] ^ EXPONENT_BITS[1]);
+    if bits & MASK != EXPONENT_BITS[0] & MASK {
+        return None;
+    }
+    match bits {
         bits if bits == EXPONENT_BITS[0] => piece::<0>(x),
         bits if bits == EXPONENT_BITS[1] => piece::<1>(x),
         _ => None,
