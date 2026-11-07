@@ -1,0 +1,261 @@
+{
+  "revision": "9f466de6581a0837bf2fa1af8ce3538b929e31e6",
+  "files": [
+    {
+      "path": "src/core_math/acosf.rs",
+      "sha256": "794d46970806eec78617ef14b21f71917fe95e00a8753dd29402942fd634559e"
+    },
+    {
+      "path": "src/core_math/asinh.rs",
+      "sha256": "5d365bc4a155c10cf48a566cda3c4e80bd607b91fcfc6555f484889bd1c9971f"
+    },
+    {
+      "path": "src/core_math/atan.rs",
+      "sha256": "9e5f8bb579171fd21401735df4f7b96b539ccc4b7bb9ea2d3289f30b3f2c39a6"
+    },
+    {
+      "path": "src/core_math/atan2.rs",
+      "sha256": "0c3a04927580fcecf48dd65270f49f15cfad7f61d6b73fa699e6df403f998c63"
+    },
+    {
+      "path": "src/core_math/atan2_tint.rs",
+      "sha256": "d86c885ee26fc4b594176268d48ae0575f5c46c181cc86ae4cfba978fd9dffa8"
+    },
+    {
+      "path": "src/core_math/atan2f.rs",
+      "sha256": "e5b3a58fa28f05cb44dbe953a6f5eba28b9acf4515dfd7aa5dce27df4190f1d4"
+    },
+    {
+      "path": "src/core_math/atanf.rs",
+      "sha256": "8e7f96860c2e2bff7314fd5be893dd333d801b6f42171616647e0b4a1bcc43a2"
+    },
+    {
+      "path": "src/core_math/atanh.rs",
+      "sha256": "f778af59cb044cc33516d62b26199cf6e52322fa93b271a21268686a8d665a48"
+    },
+    {
+      "path": "src/core_math/cbrt.rs",
+      "sha256": "68dad27cfb4eee418e2a14ff39a3337bf562d79eb6339b6113c592b6caa6cc76"
+    },
+    {
+      "path": "src/core_math/cbrtf.rs",
+      "sha256": "fdd59f130929de6a6c31107cb3d118f38751d917dfaa6266d9dbc4e5acb9efa8"
+    },
+    {
+      "path": "src/core_math/cos.rs",
+      "sha256": "b1995b0bfea1cfd39674eb1cd3a9f1b55e3200a36b23a25148617bb305fe41ae"
+    },
+    {
+      "path": "src/core_math/cosf.rs",
+      "sha256": "c2019415c66086cba030e991ae6415fd6561e224787a310bf890652be4576145"
+    },
+    {
+      "path": "src/core_math/exp.rs",
+      "sha256": "5e2292b775d4fe01a9a9d9befe34fa168784bcf6fa0fb2c749d2551203841dcf"
+    },
+    {
+      "path": "src/core_math/exp2.rs",
+      "sha256": "972ad8d5756f56f68cf2e44b6289060546aeb31351b0f7e64b279117578965dc"
+    },
+    {
+      "path": "src/core_math/exp2f.rs",
+      "sha256": "f8c11716d252a4139c6e850168f566ada74dc8d1e441f69e6dff190fac42b7d4"
+    },
+    {
+      "path": "src/core_math/expf.rs",
+      "sha256": "4ad3f24acad0d7486e9ddee1e488d2fd2785282daa1ed706731a43991d678f81"
+    },
+    {
+      "path": "src/core_math/expm1f.rs",
+      "sha256": "5ae7e525e0562f23c994bf997ef61577d8371b22a24c36f9fb263ed8ec3eb51c"
+    },
+    {
+      "path": "src/core_math/fma.rs",
+      "sha256": "79f301a53f99b1cc5ad94c018821039621cf2f9b4532c4f6cd0bf4f298999303"
+    },
+    {
+      "path": "src/core_math/hypotf.rs",
+      "sha256": "81fb038e291f133e0e81635cc4d8efa8cbc31f9ce153bc356a0339f61f371e1e"
+    },
+    {
+      "path": "src/core_math/log.rs",
+      "sha256": "fb864d249fb4aa7cce0b82b6da95ea6b5d39505a3ae2506d8c21d28c2c26e15c"
+    },
+    {
+      "path": "src/core_math/log10.rs",
+      "sha256": "c5c017d63dccc55a0222b312a71c6c8c6ffd097a04ae0f067ef69d25eab4048a"
+    },
+    {
+      "path": "src/core_math/log10f.rs",
+      "sha256": "a402288fdf4d7b1c63b85d71ef8d5023c35178e1a3afdfa8a2a3ac3558d2e70c"
+    },
+    {
+      "path": "src/core_math/log1p.rs",
+      "sha256": "cce55765aa73318c6dda0aac535b0f4570ddba78838c0eee4b562852c8313a9b"
+    },
+    {
+      "path": "src/core_math/log1pf.rs",
+      "sha256": "a93d36bcbb832ae91cfb04e75046f043baf732560810d90390d3fbf77fb664e8"
+    },
+    {
+      "path": "src/core_math/log2.rs",
+      "sha256": "790598e5fd7f2b933e784b61f15c5f955118d5b704a82be1f72517dada5c086d"
+    },
+    {
+      "path": "src/core_math/log2f.rs",
+      "sha256": "d5221bbd4735e5e1085b604bf982b77847f44679429cb389f326d25e9a7828ac"
+    },
+    {
+      "path": "src/core_math/log_accurate.rs",
+      "sha256": "586958cf83c180a1f1cdbe1425574a1ca1a77a59cd143e125fc24e57f3826917"
+    },
+    {
+      "path": "src/core_math/logf.rs",
+      "sha256": "ac73ac064abfd6db73dc4166e16d1af9254ee221c51ad3b3132bff1622a8b040"
+    },
+    {
+      "path": "src/core_math/mod.rs",
+      "sha256": "95d2952f10fe1a22a8a9741d68d233a203c3d963a31d200fff834b7801781478"
+    },
+    {
+      "path": "src/core_math/pow.rs",
+      "sha256": "2ad3eedf9772adad735228fa228acde03b70db4d9b1989f688fbbd8e3c622381"
+    },
+    {
+      "path": "src/core_math/pow_d_tables.rs",
+      "sha256": "6ad3d2c2553f313bfd8dad9e05ef59cd1a3c8dc973d0455153b69cfb6ee40d81"
+    },
+    {
+      "path": "src/core_math/pow_int.rs",
+      "sha256": "6498071bce4977485c9387968fadce92b26b1d63791d674c26467209cef00443"
+    },
+    {
+      "path": "src/core_math/pow_q_tables.rs",
+      "sha256": "38f7ad0ea2a3e63e8cf6704699d7be9a9344c52b0755882e03e9747dac7aabed"
+    },
+    {
+      "path": "src/core_math/pow_tables.rs",
+      "sha256": "56493fced7bba0fb8341370c787b0c8d7a31fa3aecd72e6d34294b95ee1e556c"
+    },
+    {
+      "path": "src/core_math/pow_tests.rs",
+      "sha256": "79d21fcbf1476c0b647abf4b1fb5221fdbaf5707f45d69865ffa0b5b2b7766a4"
+    },
+    {
+      "path": "src/core_math/powf.rs",
+      "sha256": "473c39629a1e3f055c535e3468e2807dc98e5cb5a0e01b005f584bcfaa8ec280"
+    },
+    {
+      "path": "src/core_math/sin.rs",
+      "sha256": "d57423bd82c7be4d3dbd27e7d0e7b42492ad65ad4a5f10726e8fa2d03f1a5f3b"
+    },
+    {
+      "path": "src/core_math/sinf.rs",
+      "sha256": "a68b4ddb7f2dd16cd9f55baaa4649dfa9f0edc3c6b66f8606daf8612c89625a0"
+    },
+    {
+      "path": "src/core_math/tan.rs",
+      "sha256": "5f4646af548e686f26bd5be7d98331d8fb82be3e1c1a38afcf0f5f1884e6d825"
+    },
+    {
+      "path": "src/core_math/tanf.rs",
+      "sha256": "896d571cacbfd3c7817740b961737f19f49332db8bfd119aff6fd68b2cda3a97"
+    },
+    {
+      "path": "src/core_math/tanh.rs",
+      "sha256": "8719f1d4dc167a6240c7eb6e3930a1fad4ca28aaf767ff3078c35a8b11a42eec"
+    },
+    {
+      "path": "src/core_math/tanhf.rs",
+      "sha256": "6b1c80133628911e09284298f00ba56bafb7420692f34db9e72437b4ba7b6992"
+    },
+    {
+      "path": "src/core_math/trig_reduce.rs",
+      "sha256": "09987da96edd35a36a1ed0d8b1aca231f93d8e7f1d38385cb20e9a210c58a0f4"
+    },
+    {
+      "path": "src/exact.rs",
+      "sha256": "dfa1893ecf7c570516c9e4f58627728697c633f41b6743364fe0976d63a27afd"
+    },
+    {
+      "path": "src/facade.rs",
+      "sha256": "bc30265a7a1567749f026f28cb4d08d9ee1ab3e01c7f5fbf82be08a4f9534d1d"
+    },
+    {
+      "path": "src/lib.rs",
+      "sha256": "942ae95a4d6063a904cd67ed6187721ca8af0889473cd8bd8f64a42a1bebcd30"
+    },
+    {
+      "path": "src/normal.rs",
+      "sha256": "655fc2e75e5b0d033fc3bc974837222931091af2445074c6aaf0e681240123d3"
+    },
+    {
+      "path": "src/pow_policy.rs",
+      "sha256": "322480d1b5c91463e45820e77c142812285e7755c41a29721c0bdf79dc471032"
+    },
+    {
+      "path": "src/scalar.rs",
+      "sha256": "13784162fdf33ef8737f59fe6e5b955e6c10fea641e4675e64463ce04131fcf0"
+    },
+    {
+      "path": "src/simd/array.rs",
+      "sha256": "989d079e23e056edb30b8ea7300051fdc5f9e5bd2a67b74c961da946214572c5"
+    },
+    {
+      "path": "src/simd/context.rs",
+      "sha256": "d7c50874fcebb7fdebc0a19d1d3bc68b1d8aeda7ec3b0c594b6d16b09bf54103"
+    },
+    {
+      "path": "src/simd/correct/expf_tables.rs",
+      "sha256": "e207132bc72c372b62e351264a366dc4bf737c37adabaf602738bbd8b67eedf8"
+    },
+    {
+      "path": "src/simd/correct/log2f_tables.rs",
+      "sha256": "1ea1ad4e1e844563d1a0113efb21517b0b36895046a33e1f35a825ac82b2d341"
+    },
+    {
+      "path": "src/simd/correct/logf_tables.rs",
+      "sha256": "b879e04b0661c19fbfa645dad1081dfe6b6e044236192f53a242b351c084dda7"
+    },
+    {
+      "path": "src/simd/correct/mod.rs",
+      "sha256": "d11e8329a1a948bb2b9a142890b9b62821a5c10229038a27ba96923f56b82e65"
+    },
+    {
+      "path": "src/simd/correct/powf_tables.rs",
+      "sha256": "33afefbd6c71ad01cabdb75dadc004d618efec658ac3103f3f5000e998afa0d9"
+    },
+    {
+      "path": "src/simd/mod.rs",
+      "sha256": "c99ce09aabd737e137f00c49e4da29e56da6aea50fbcd81d8fd1238cf26582cc"
+    },
+    {
+      "path": "src/simd/packed.rs",
+      "sha256": "39e7b011da6ae6141de1668aef4e0a88fbeed05c34e324b47566462dbadaf87b"
+    },
+    {
+      "path": "src/simd/policy.rs",
+      "sha256": "22c69fdeb891b486ce57909471b1b0bbbb5b181daa19ec629dd3a584bb07f4b8"
+    },
+    {
+      "path": "src/simd/scalar-transcendentals.rs",
+      "sha256": "ddb9d8512b7478fc0be4bc214a7ac82b8458b080018857733e82d9f827917404"
+    },
+    {
+      "path": "src/simd/scalar.rs",
+      "sha256": "d517369b3ddf0c1372dcc779659ec549bcdd6af0177ae9e0f990a4d9a32bc3bd"
+    },
+    {
+      "path": "src/simd/slice.rs",
+      "sha256": "d53899b76abdf8dcba9c0d67585ee5fd8ae6296c8f5d630f78b1d2664d172dc2"
+    },
+    {
+      "path": "src/simd/soft_fma.rs",
+      "sha256": "4976982a5a6481ec23718c1e7c0b7a278352c881c194bfa97bee25c781c2833d"
+    },
+    {
+      "path": "src/special.rs",
+      "sha256": "2bf3109ad77e735307c4f5829495fde7c2408a5e60ddd7b15ca04b53cfb37e01"
+    }
+  ]
+}

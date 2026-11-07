@@ -1,0 +1,245 @@
+# native/timed-codegen/thin.disasm:5589
+# Binary hash: 2fc63f6e84b5caaa6685c14be67fbd16286ddf38ffc72d64c3f991587c8ab4c5  target-thin/release/timing
+0000000000068500 <algebraic_ext_consumer::generated::cases_f32::{closure#3}>:
+   68500:	48 83 ec 18          	sub    $0x18,%rsp
+   68504:	48 89 54 24 08       	mov    %rdx,0x8(%rsp)
+   68509:	4c 89 04 24          	mov    %r8,(%rsp)
+   6850d:	4c 39 c2             	cmp    %r8,%rdx
+   68510:	0f 85 a6 03 00 00    	jne    688bc <algebraic_ext_consumer::generated::cases_f32::{closure#3}+0x3bc>
+   68516:	48 8b 44 24 20       	mov    0x20(%rsp),%rax
+   6851b:	48 89 54 24 10       	mov    %rdx,0x10(%rsp)
+   68520:	48 89 04 24          	mov    %rax,(%rsp)
+   68524:	48 39 c2             	cmp    %rax,%rdx
+   68527:	0f 85 9d 03 00 00    	jne    688ca <algebraic_ext_consumer::generated::cases_f32::{closure#3}+0x3ca>
+   6852d:	48 89 d0             	mov    %rdx,%rax
+   68530:	48 83 e0 07          	and    $0x7,%rax
+   68534:	48 89 04 24          	mov    %rax,(%rsp)
+   68538:	0f 85 a5 03 00 00    	jne    688e3 <algebraic_ext_consumer::generated::cases_f32::{closure#3}+0x3e3>
+   6853e:	48 85 d2             	test   %rdx,%rdx
+   68541:	0f 84 70 03 00 00    	je     688b7 <algebraic_ext_consumer::generated::cases_f32::{closure#3}+0x3b7>
+   68547:	48 89 d0             	mov    %rdx,%rax
+   6854a:	48 c1 e8 03          	shr    $0x3,%rax
+   6854e:	48 83 fa 20          	cmp    $0x20,%rdx
+   68552:	73 07                	jae    6855b <algebraic_ext_consumer::generated::cases_f32::{closure#3}+0x5b>
+   68554:	31 c9                	xor    %ecx,%ecx
+   68556:	e9 ef 02 00 00       	jmp    6884a <algebraic_ext_consumer::generated::cases_f32::{closure#3}+0x34a>
+   6855b:	48 b9 fc ff ff ff ff 	movabs $0x3fffffffffffffc,%rcx
+   68562:	ff ff 03 
+   68565:	48 21 c1             	and    %rax,%rcx
+   68568:	48 c1 e2 02          	shl    $0x2,%rdx
+   6856c:	48 83 e2 80          	and    $0xffffffffffffff80,%rdx
+   68570:	31 ff                	xor    %edi,%edi
+   68572:	0f 28 15 47 ee fa ff 	movaps -0x511b9(%rip),%xmm2        # 173c0 <anon.8bc0d3aaaa7b1c1474cbd5894c48e3cb.34.llvm.14334442652281146673+0x40>
+   68579:	0f 1f 80 00 00 00 00 	nopl   0x0(%rax)
+   68580:	f3 0f 10 44 3e 68    	movss  0x68(%rsi,%rdi,1),%xmm0
+   68586:	f3 0f 10 5c 3e 48    	movss  0x48(%rsi,%rdi,1),%xmm3
+   6858c:	0f 14 d8             	unpcklps %xmm0,%xmm3
+   6858f:	f3 0f 10 44 3e 28    	movss  0x28(%rsi,%rdi,1),%xmm0
+   68595:	f3 44 0f 10 0c 3e    	movss  (%rsi,%rdi,1),%xmm9
+   6859b:	f3 44 0f 10 44 3e 04 	movss  0x4(%rsi,%rdi,1),%xmm8
+   685a2:	f3 0f 10 7c 3e 08    	movss  0x8(%rsi,%rdi,1),%xmm7
+   685a8:	0f 14 f8             	unpcklps %xmm0,%xmm7
+   685ab:	0f 16 fb             	movlhps %xmm3,%xmm7
+   685ae:	f3 44 0f 10 54 3e 0c 	movss  0xc(%rsi,%rdi,1),%xmm10
+   685b5:	f3 0f 10 44 3e 6c    	movss  0x6c(%rsi,%rdi,1),%xmm0
+   685bb:	f3 0f 10 5c 3e 4c    	movss  0x4c(%rsi,%rdi,1),%xmm3
+   685c1:	0f 14 d8             	unpcklps %xmm0,%xmm3
+   685c4:	f3 0f 10 44 3e 2c    	movss  0x2c(%rsi,%rdi,1),%xmm0
+   685ca:	44 0f 14 d0          	unpcklps %xmm0,%xmm10
+   685ce:	44 0f 16 d3          	movlhps %xmm3,%xmm10
+   685d2:	f3 0f 10 44 3e 64    	movss  0x64(%rsi,%rdi,1),%xmm0
+   685d8:	f3 0f 10 5c 3e 44    	movss  0x44(%rsi,%rdi,1),%xmm3
+   685de:	0f 14 d8             	unpcklps %xmm0,%xmm3
+   685e1:	f3 0f 10 44 3e 24    	movss  0x24(%rsi,%rdi,1),%xmm0
+   685e7:	44 0f 14 c0          	unpcklps %xmm0,%xmm8
+   685eb:	44 0f 16 c3          	movlhps %xmm3,%xmm8
+   685ef:	f3 0f 10 44 3e 60    	movss  0x60(%rsi,%rdi,1),%xmm0
+   685f5:	f3 0f 10 5c 3e 40    	movss  0x40(%rsi,%rdi,1),%xmm3
+   685fb:	0f 14 d8             	unpcklps %xmm0,%xmm3
+   685fe:	f3 0f 10 44 3e 20    	movss  0x20(%rsi,%rdi,1),%xmm0
+   68604:	44 0f 14 c8          	unpcklps %xmm0,%xmm9
+   68608:	44 0f 16 cb          	movlhps %xmm3,%xmm9
+   6860c:	41 0f 28 d9          	movaps %xmm9,%xmm3
+   68610:	0f 28 35 29 ed fa ff 	movaps -0x512d7(%rip),%xmm6        # 17340 <anon.7edf9ba2c5a860ff16baf78a244bd201.57.llvm.2400480527901230001+0x90>
+   68617:	0f 59 de             	mulps  %xmm6,%xmm3
+   6861a:	41 0f 28 c0          	movaps %xmm8,%xmm0
+   6861e:	0f 59 c6             	mulps  %xmm6,%xmm0
+   68621:	41 0f 28 e2          	movaps %xmm10,%xmm4
+   68625:	0f 59 e6             	mulps  %xmm6,%xmm4
+   68628:	0f 28 cf             	movaps %xmm7,%xmm1
+   6862b:	0f 59 ce             	mulps  %xmm6,%xmm1
+   6862e:	44 0f 28 35 fa ea fa 	movaps -0x51506(%rip),%xmm14        # 17130 <anon.7edf9ba2c5a860ff16baf78a244bd201.49.llvm.2400480527901230001+0x1d0>
+   68635:	ff 
+   68636:	41 0f 58 ce          	addps  %xmm14,%xmm1
+   6863a:	41 0f 58 e6          	addps  %xmm14,%xmm4
+   6863e:	41 0f 58 c6          	addps  %xmm14,%xmm0
+   68642:	41 0f 58 de          	addps  %xmm14,%xmm3
+   68646:	41 0f 59 d9          	mulps  %xmm9,%xmm3
+   6864a:	41 0f 59 c0          	mulps  %xmm8,%xmm0
+   6864e:	41 0f 59 e2          	mulps  %xmm10,%xmm4
+   68652:	0f 59 cf             	mulps  %xmm7,%xmm1
+   68655:	0f 58 ca             	addps  %xmm2,%xmm1
+   68658:	0f 58 e2             	addps  %xmm2,%xmm4
+   6865b:	0f 58 c2             	addps  %xmm2,%xmm0
+   6865e:	0f 58 da             	addps  %xmm2,%xmm3
+   68661:	41 0f 59 d9          	mulps  %xmm9,%xmm3
+   68665:	41 0f 59 c0          	mulps  %xmm8,%xmm0
+   68669:	41 0f 59 e2          	mulps  %xmm10,%xmm4
+   6866d:	0f 59 cf             	mulps  %xmm7,%xmm1
+   68670:	f3 0f 10 6c 3e 78    	movss  0x78(%rsi,%rdi,1),%xmm5
+   68676:	f3 0f 10 7c 3e 58    	movss  0x58(%rsi,%rdi,1),%xmm7
+   6867c:	0f 14 fd             	unpcklps %xmm5,%xmm7
+   6867f:	f3 0f 10 6c 3e 38    	movss  0x38(%rsi,%rdi,1),%xmm5
+   68685:	f3 44 0f 10 54 3e 18 	movss  0x18(%rsi,%rdi,1),%xmm10
+   6868c:	44 0f 14 d5          	unpcklps %xmm5,%xmm10
+   68690:	44 0f 16 d7          	movlhps %xmm7,%xmm10
+   68694:	f3 0f 10 6c 3e 7c    	movss  0x7c(%rsi,%rdi,1),%xmm5
+   6869a:	f3 0f 10 7c 3e 5c    	movss  0x5c(%rsi,%rdi,1),%xmm7
+   686a0:	0f 14 fd             	unpcklps %xmm5,%xmm7
+   686a3:	f3 0f 10 6c 3e 3c    	movss  0x3c(%rsi,%rdi,1),%xmm5
+   686a9:	f3 44 0f 10 64 3e 1c 	movss  0x1c(%rsi,%rdi,1),%xmm12
+   686b0:	44 0f 14 e5          	unpcklps %xmm5,%xmm12
+   686b4:	44 0f 16 e7          	movlhps %xmm7,%xmm12
+   686b8:	f3 0f 10 6c 3e 74    	movss  0x74(%rsi,%rdi,1),%xmm5
+   686be:	f3 0f 10 7c 3e 54    	movss  0x54(%rsi,%rdi,1),%xmm7
+   686c4:	0f 14 fd             	unpcklps %xmm5,%xmm7
+   686c7:	f3 0f 10 6c 3e 34    	movss  0x34(%rsi,%rdi,1),%xmm5
+   686cd:	f3 44 0f 10 6c 3e 14 	movss  0x14(%rsi,%rdi,1),%xmm13
+   686d4:	44 0f 14 ed          	unpcklps %xmm5,%xmm13
+   686d8:	44 0f 16 ef          	movlhps %xmm7,%xmm13
+   686dc:	f3 0f 10 6c 3e 70    	movss  0x70(%rsi,%rdi,1),%xmm5
+   686e2:	f3 0f 10 7c 3e 50    	movss  0x50(%rsi,%rdi,1),%xmm7
+   686e8:	0f 14 fd             	unpcklps %xmm5,%xmm7
+   686eb:	f3 44 0f 10 44 3e 30 	movss  0x30(%rsi,%rdi,1),%xmm8
+   686f2:	f3 0f 10 6c 3e 10    	movss  0x10(%rsi,%rdi,1),%xmm5
+   686f8:	41 0f 14 e8          	unpcklps %xmm8,%xmm5
+   686fc:	0f 16 ef             	movlhps %xmm7,%xmm5
+   686ff:	0f 28 fd             	movaps %xmm5,%xmm7
+   68702:	0f 59 fe             	mulps  %xmm6,%xmm7
+   68705:	45 0f 28 cd          	movaps %xmm13,%xmm9
+   68709:	44 0f 59 ce          	mulps  %xmm6,%xmm9
+   6870d:	45 0f 28 c4          	movaps %xmm12,%xmm8
+   68711:	44 0f 59 c6          	mulps  %xmm6,%xmm8
+   68715:	45 0f 28 da          	movaps %xmm10,%xmm11
+   68719:	44 0f 59 de          	mulps  %xmm6,%xmm11
+   6871d:	45 0f 58 de          	addps  %xmm14,%xmm11
+   68721:	45 0f 58 c6          	addps  %xmm14,%xmm8
+   68725:	45 0f 58 ce          	addps  %xmm14,%xmm9
+   68729:	41 0f 58 fe          	addps  %xmm14,%xmm7
+   6872d:	0f 59 fd             	mulps  %xmm5,%xmm7
+   68730:	45 0f 59 cd          	mulps  %xmm13,%xmm9
+   68734:	45 0f 59 c4          	mulps  %xmm12,%xmm8
+   68738:	45 0f 59 da          	mulps  %xmm10,%xmm11
+   6873c:	44 0f 58 da          	addps  %xmm2,%xmm11
+   68740:	44 0f 58 c2          	addps  %xmm2,%xmm8
+   68744:	44 0f 58 ca          	addps  %xmm2,%xmm9
+   68748:	0f 58 fa             	addps  %xmm2,%xmm7
+   6874b:	0f 59 fd             	mulps  %xmm5,%xmm7
+   6874e:	45 0f 59 cd          	mulps  %xmm13,%xmm9
+   68752:	45 0f 59 c4          	mulps  %xmm12,%xmm8
+   68756:	45 0f 59 da          	mulps  %xmm10,%xmm11
+   6875a:	41 0f 28 eb          	movaps %xmm11,%xmm5
+   6875e:	41 0f 15 e8          	unpckhps %xmm8,%xmm5
+   68762:	45 0f 28 d1          	movaps %xmm9,%xmm10
+   68766:	44 0f c6 d7 33       	shufps $0x33,%xmm7,%xmm10
+   6876b:	44 0f c6 d5 e2       	shufps $0xe2,%xmm5,%xmm10
+   68770:	0f 28 e9             	movaps %xmm1,%xmm5
+   68773:	0f 15 ec             	unpckhps %xmm4,%xmm5
+   68776:	44 0f 28 e0          	movaps %xmm0,%xmm12
+   6877a:	44 0f c6 e3 33       	shufps $0x33,%xmm3,%xmm12
+   6877f:	44 0f c6 e5 e2       	shufps $0xe2,%xmm5,%xmm12
+   68784:	41 0f 28 e8          	movaps %xmm8,%xmm5
+   68788:	66 41 0f 15 eb       	unpckhpd %xmm11,%xmm5
+   6878d:	44 0f 28 ef          	movaps %xmm7,%xmm13
+   68791:	45 0f 15 e9          	unpckhps %xmm9,%xmm13
+   68795:	44 0f c6 ed 24       	shufps $0x24,%xmm5,%xmm13
+   6879a:	0f 28 ec             	movaps %xmm4,%xmm5
+   6879d:	66 0f 15 e9          	unpckhpd %xmm1,%xmm5
+   687a1:	44 0f 28 f3          	movaps %xmm3,%xmm14
+   687a5:	44 0f 15 f0          	unpckhps %xmm0,%xmm14
+   687a9:	44 0f c6 f5 24       	shufps $0x24,%xmm5,%xmm14
+   687ae:	41 0f 28 eb          	movaps %xmm11,%xmm5
+   687b2:	41 0f 14 e8          	unpcklps %xmm8,%xmm5
+   687b6:	45 0f 28 f9          	movaps %xmm9,%xmm15
+   687ba:	44 0f c6 ff 11       	shufps $0x11,%xmm7,%xmm15
+   687bf:	44 0f c6 fd e2       	shufps $0xe2,%xmm5,%xmm15
+   687c4:	0f 28 f1             	movaps %xmm1,%xmm6
+   687c7:	0f 14 f4             	unpcklps %xmm4,%xmm6
+   687ca:	0f 28 e8             	movaps %xmm0,%xmm5
+   687cd:	0f c6 eb 11          	shufps $0x11,%xmm3,%xmm5
+   687d1:	0f c6 ee e2          	shufps $0xe2,%xmm6,%xmm5
+   687d5:	45 0f 16 c3          	movlhps %xmm11,%xmm8
+   687d9:	41 0f 14 f9          	unpcklps %xmm9,%xmm7
+   687dd:	41 0f c6 f8 24       	shufps $0x24,%xmm8,%xmm7
+   687e2:	0f 16 e1             	movlhps %xmm1,%xmm4
+   687e5:	0f 14 d8             	unpcklps %xmm0,%xmm3
+   687e8:	0f c6 dc 24          	shufps $0x24,%xmm4,%xmm3
+   687ec:	44 0f 58 d2          	addps  %xmm2,%xmm10
+   687f0:	45 0f 11 54 39 70    	movups %xmm10,0x70(%r9,%rdi,1)
+   687f6:	44 0f 58 e2          	addps  %xmm2,%xmm12
+   687fa:	45 0f 11 64 39 60    	movups %xmm12,0x60(%r9,%rdi,1)
+   68800:	44 0f 58 ea          	addps  %xmm2,%xmm13
+   68804:	45 0f 11 6c 39 50    	movups %xmm13,0x50(%r9,%rdi,1)
+   6880a:	44 0f 58 f2          	addps  %xmm2,%xmm14
+   6880e:	45 0f 11 74 39 40    	movups %xmm14,0x40(%r9,%rdi,1)
+   68814:	44 0f 58 fa          	addps  %xmm2,%xmm15
+   68818:	45 0f 11 7c 39 30    	movups %xmm15,0x30(%r9,%rdi,1)
+   6881e:	0f 58 ea             	addps  %xmm2,%xmm5
+   68821:	41 0f 11 6c 39 20    	movups %xmm5,0x20(%r9,%rdi,1)
+   68827:	0f 58 fa             	addps  %xmm2,%xmm7
+   6882a:	41 0f 11 7c 39 10    	movups %xmm7,0x10(%r9,%rdi,1)
+   68830:	0f 58 da             	addps  %xmm2,%xmm3
+   68833:	41 0f 11 1c 39       	movups %xmm3,(%r9,%rdi,1)
+   68838:	48 83 ef 80          	sub    $0xffffffffffffff80,%rdi
+   6883c:	48 39 fa             	cmp    %rdi,%rdx
+   6883f:	0f 85 3b fd ff ff    	jne    68580 <algebraic_ext_consumer::generated::cases_f32::{closure#3}+0x80>
+   68845:	48 39 c8             	cmp    %rcx,%rax
+   68848:	74 6d                	je     688b7 <algebraic_ext_consumer::generated::cases_f32::{closure#3}+0x3b7>
+   6884a:	48 29 c8             	sub    %rcx,%rax
+   6884d:	48 c1 e1 05          	shl    $0x5,%rcx
+   68851:	48 83 c9 10          	or     $0x10,%rcx
+   68855:	0f 28 05 e4 ea fa ff 	movaps -0x5151c(%rip),%xmm0        # 17340 <anon.7edf9ba2c5a860ff16baf78a244bd201.57.llvm.2400480527901230001+0x90>
+   6885c:	0f 28 0d cd e8 fa ff 	movaps -0x51733(%rip),%xmm1        # 17130 <anon.7edf9ba2c5a860ff16baf78a244bd201.49.llvm.2400480527901230001+0x1d0>
+   68863:	0f 28 15 56 eb fa ff 	movaps -0x514aa(%rip),%xmm2        # 173c0 <anon.8bc0d3aaaa7b1c1474cbd5894c48e3cb.34.llvm.14334442652281146673+0x40>
+   6886a:	66 0f 1f 44 00 00    	nopw   0x0(%rax,%rax,1)
+   68870:	0f 10 5c 0e f0       	movups -0x10(%rsi,%rcx,1),%xmm3
+   68875:	0f 28 e3             	movaps %xmm3,%xmm4
+   68878:	0f 59 e0             	mulps  %xmm0,%xmm4
+   6887b:	0f 58 e1             	addps  %xmm1,%xmm4
+   6887e:	0f 59 e3             	mulps  %xmm3,%xmm4
+   68881:	0f 58 e2             	addps  %xmm2,%xmm4
+   68884:	0f 59 e3             	mulps  %xmm3,%xmm4
+   68887:	0f 58 e2             	addps  %xmm2,%xmm4
+   6888a:	41 0f 11 64 09 f0    	movups %xmm4,-0x10(%r9,%rcx,1)
+   68890:	0f 10 1c 0e          	movups (%rsi,%rcx,1),%xmm3
+   68894:	0f 28 e3             	movaps %xmm3,%xmm4
+   68897:	0f 59 e0             	mulps  %xmm0,%xmm4
+   6889a:	0f 58 e1             	addps  %xmm1,%xmm4
+   6889d:	0f 59 e3             	mulps  %xmm3,%xmm4
+   688a0:	0f 58 e2             	addps  %xmm2,%xmm4
+   688a3:	0f 59 e3             	mulps  %xmm3,%xmm4
+   688a6:	0f 58 e2             	addps  %xmm2,%xmm4
+   688a9:	41 0f 11 24 09       	movups %xmm4,(%r9,%rcx,1)
+   688ae:	48 83 c1 20          	add    $0x20,%rcx
+   688b2:	48 ff c8             	dec    %rax
+   688b5:	75 b9                	jne    68870 <algebraic_ext_consumer::generated::cases_f32::{closure#3}+0x370>
+   688b7:	48 83 c4 18          	add    $0x18,%rsp
+   688bb:	c3                   	ret
+   688bc:	4c 8d 0d fd ff 16 00 	lea    0x16fffd(%rip),%r9        # 1d88c0 <anon.e3becbfd9d9309d7348029d5fa319ae3.2.llvm.11080585718961047662+0xfa8>
+   688c3:	48 8d 74 24 08       	lea    0x8(%rsp),%rsi
+   688c8:	eb 0c                	jmp    688d6 <algebraic_ext_consumer::generated::cases_f32::{closure#3}+0x3d6>
+   688ca:	4c 8d 0d 07 00 17 00 	lea    0x170007(%rip),%r9        # 1d88d8 <anon.e3becbfd9d9309d7348029d5fa319ae3.2.llvm.11080585718961047662+0xfc0>
+   688d1:	48 8d 74 24 10       	lea    0x10(%rsp),%rsi
+   688d6:	48 89 e2             	mov    %rsp,%rdx
+   688d9:	31 ff                	xor    %edi,%edi
+   688db:	31 c9                	xor    %ecx,%ecx
+   688dd:	ff 15 d5 91 17 00    	call   *0x1791d5(%rip)        # 1e1ab8 <_DYNAMIC+0x340>
+   688e3:	48 8d 15 e6 f1 fa ff 	lea    -0x50e1a(%rip),%rdx        # 17ad0 <anon.574165b9a1e3cebd535338bb0d7973a0.751.llvm.2316785571840406366>
+   688ea:	4c 8d 0d ff ff 16 00 	lea    0x16ffff(%rip),%r9        # 1d88f0 <anon.e3becbfd9d9309d7348029d5fa319ae3.2.llvm.11080585718961047662+0xfd8>
+   688f1:	48 89 e6             	mov    %rsp,%rsi
+   688f4:	31 ff                	xor    %edi,%edi
+   688f6:	31 c9                	xor    %ecx,%ecx
+   688f8:	ff 15 ba 91 17 00    	call   *0x1791ba(%rip)        # 1e1ab8 <_DYNAMIC+0x340>
+   688fe:	cc                   	int3
+   688ff:	cc                   	int3
+

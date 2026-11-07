@@ -1,0 +1,97 @@
+# native/timed-codegen/thin.disasm:28635
+# Binary hash: 2fc63f6e84b5caaa6685c14be67fbd16286ddf38ffc72d64c3f991587c8ab4c5  target-thin/release/timing
+000000000007e600 <algebraic_ext_consumer::generated::__attune_dot_index_ordinary_reduce_f32_v3>:
+   7e600:	48 83 ec 18          	sub    $0x18,%rsp
+   7e604:	48 89 74 24 08       	mov    %rsi,0x8(%rsp)
+   7e609:	48 89 0c 24          	mov    %rcx,(%rsp)
+   7e60d:	48 39 ce             	cmp    %rcx,%rsi
+   7e610:	0f 85 03 01 00 00    	jne    7e719 <algebraic_ext_consumer::generated::__attune_dot_index_ordinary_reduce_f32_v3+0x119>
+   7e616:	48 89 34 24          	mov    %rsi,(%rsp)
+   7e61a:	4c 89 4c 24 10       	mov    %r9,0x10(%rsp)
+   7e61f:	4c 39 ce             	cmp    %r9,%rsi
+   7e622:	0f 85 0a 01 00 00    	jne    7e732 <algebraic_ext_consumer::generated::__attune_dot_index_ordinary_reduce_f32_v3+0x132>
+   7e628:	48 89 f0             	mov    %rsi,%rax
+   7e62b:	48 83 e0 07          	and    $0x7,%rax
+   7e62f:	48 89 04 24          	mov    %rax,(%rsp)
+   7e633:	0f 85 12 01 00 00    	jne    7e74b <algebraic_ext_consumer::generated::__attune_dot_index_ordinary_reduce_f32_v3+0x14b>
+   7e639:	48 83 fe 08          	cmp    $0x8,%rsi
+   7e63d:	0f 84 84 00 00 00    	je     7e6c7 <algebraic_ext_consumer::generated::__attune_dot_index_ordinary_reduce_f32_v3+0xc7>
+   7e643:	48 85 f6             	test   %rsi,%rsi
+   7e646:	0f 84 1a 01 00 00    	je     7e766 <algebraic_ext_consumer::generated::__attune_dot_index_ordinary_reduce_f32_v3+0x166>
+   7e64c:	48 89 f0             	mov    %rsi,%rax
+   7e64f:	48 c1 e8 03          	shr    $0x3,%rax
+   7e653:	48 b9 fe ff ff ff ff 	movabs $0x3fffffffffffffe,%rcx
+   7e65a:	ff ff 03 
+   7e65d:	48 21 c1             	and    %rax,%rcx
+   7e660:	c5 f0 57 c9          	vxorps %xmm1,%xmm1,%xmm1
+   7e664:	c5 f8 57 c0          	vxorps %xmm0,%xmm0,%xmm0
+   7e668:	41 b9 20 00 00 00    	mov    $0x20,%r9d
+   7e66e:	31 c0                	xor    %eax,%eax
+   7e670:	c4 a1 78 10 54 0a e0 	vmovups -0x20(%rdx,%r9,1),%xmm2
+   7e677:	c4 a1 78 10 5c 0a f0 	vmovups -0x10(%rdx,%r9,1),%xmm3
+   7e67e:	c4 a1 78 10 24 0a    	vmovups (%rdx,%r9,1),%xmm4
+   7e684:	c4 a2 69 b8 44 0f e0 	vfmadd231ps -0x20(%rdi,%r9,1),%xmm2,%xmm0
+   7e68b:	c4 a1 78 10 6c 0a 10 	vmovups 0x10(%rdx,%r9,1),%xmm5
+   7e692:	c4 e3 7d 19 ca 01    	vextractf128 $0x1,%ymm1,%xmm2
+   7e698:	c4 a2 61 b8 54 0f f0 	vfmadd231ps -0x10(%rdi,%r9,1),%xmm3,%xmm2
+   7e69f:	c4 a2 59 b8 04 0f    	vfmadd231ps (%rdi,%r9,1),%xmm4,%xmm0
+   7e6a5:	c4 a2 51 b8 54 0f 10 	vfmadd231ps 0x10(%rdi,%r9,1),%xmm5,%xmm2
+   7e6ac:	c4 e3 7d 18 ca 01    	vinsertf128 $0x1,%xmm2,%ymm0,%ymm1
+   7e6b2:	48 83 c0 02          	add    $0x2,%rax
+   7e6b6:	49 83 c1 40          	add    $0x40,%r9
+   7e6ba:	48 39 c1             	cmp    %rax,%rcx
+   7e6bd:	75 b1                	jne    7e670 <algebraic_ext_consumer::generated::__attune_dot_index_ordinary_reduce_f32_v3+0x70>
+   7e6bf:	40 f6 c6 08          	test   $0x8,%sil
+   7e6c3:	75 0c                	jne    7e6d1 <algebraic_ext_consumer::generated::__attune_dot_index_ordinary_reduce_f32_v3+0xd1>
+   7e6c5:	eb 30                	jmp    7e6f7 <algebraic_ext_consumer::generated::__attune_dot_index_ordinary_reduce_f32_v3+0xf7>
+   7e6c7:	c5 f0 57 c9          	vxorps %xmm1,%xmm1,%xmm1
+   7e6cb:	c5 f8 57 c0          	vxorps %xmm0,%xmm0,%xmm0
+   7e6cf:	31 c0                	xor    %eax,%eax
+   7e6d1:	48 c1 e0 05          	shl    $0x5,%rax
+   7e6d5:	c5 f8 10 1c 02       	vmovups (%rdx,%rax,1),%xmm3
+   7e6da:	c5 f8 10 64 02 10    	vmovups 0x10(%rdx,%rax,1),%xmm4
+   7e6e0:	c4 e2 79 98 1c 07    	vfmadd132ps (%rdi,%rax,1),%xmm0,%xmm3
+   7e6e6:	c4 e3 7d 19 ca 01    	vextractf128 $0x1,%ymm1,%xmm2
+   7e6ec:	c4 e2 59 b8 54 07 10 	vfmadd231ps 0x10(%rdi,%rax,1),%xmm4,%xmm2
+   7e6f3:	c5 f8 28 c3          	vmovaps %xmm3,%xmm0
+   7e6f7:	c5 f8 58 c2          	vaddps %xmm2,%xmm0,%xmm0
+   7e6fb:	c5 fa 16 c8          	vmovshdup %xmm0,%xmm1
+   7e6ff:	c5 f8 58 c1          	vaddps %xmm1,%xmm0,%xmm0
+   7e703:	c5 f9 c6 c8 01       	vshufpd $0x1,%xmm0,%xmm0,%xmm1
+   7e708:	c5 fa 58 c1          	vaddss %xmm1,%xmm0,%xmm0
+   7e70c:	c4 c1 7a 11 00       	vmovss %xmm0,(%r8)
+   7e711:	48 83 c4 18          	add    $0x18,%rsp
+   7e715:	c5 f8 77             	vzeroupper
+   7e718:	c3                   	ret
+   7e719:	4c 8d 0d 30 a5 15 00 	lea    0x15a530(%rip),%r9        # 1d8c50 <anon.e3becbfd9d9309d7348029d5fa319ae3.2.llvm.11080585718961047662+0x1338>
+   7e720:	48 8d 74 24 08       	lea    0x8(%rsp),%rsi
+   7e725:	48 89 e2             	mov    %rsp,%rdx
+   7e728:	31 ff                	xor    %edi,%edi
+   7e72a:	31 c9                	xor    %ecx,%ecx
+   7e72c:	ff 15 86 33 16 00    	call   *0x163386(%rip)        # 1e1ab8 <_DYNAMIC+0x340>
+   7e732:	4c 8d 0d 2f a5 15 00 	lea    0x15a52f(%rip),%r9        # 1d8c68 <anon.e3becbfd9d9309d7348029d5fa319ae3.2.llvm.11080585718961047662+0x1350>
+   7e739:	48 89 e6             	mov    %rsp,%rsi
+   7e73c:	48 8d 54 24 10       	lea    0x10(%rsp),%rdx
+   7e741:	31 ff                	xor    %edi,%edi
+   7e743:	31 c9                	xor    %ecx,%ecx
+   7e745:	ff 15 6d 33 16 00    	call   *0x16336d(%rip)        # 1e1ab8 <_DYNAMIC+0x340>
+   7e74b:	48 8d 15 7e 93 f9 ff 	lea    -0x66c82(%rip),%rdx        # 17ad0 <anon.574165b9a1e3cebd535338bb0d7973a0.751.llvm.2316785571840406366>
+   7e752:	4c 8d 0d 3f a5 15 00 	lea    0x15a53f(%rip),%r9        # 1d8c98 <anon.e3becbfd9d9309d7348029d5fa319ae3.2.llvm.11080585718961047662+0x1380>
+   7e759:	48 89 e6             	mov    %rsp,%rsi
+   7e75c:	31 ff                	xor    %edi,%edi
+   7e75e:	31 c9                	xor    %ecx,%ecx
+   7e760:	ff 15 52 33 16 00    	call   *0x163352(%rip)        # 1e1ab8 <_DYNAMIC+0x340>
+   7e766:	48 8d 15 13 a5 15 00 	lea    0x15a513(%rip),%rdx        # 1d8c80 <anon.e3becbfd9d9309d7348029d5fa319ae3.2.llvm.11080585718961047662+0x1368>
+   7e76d:	31 ff                	xor    %edi,%edi
+   7e76f:	31 f6                	xor    %esi,%esi
+   7e771:	ff 15 51 32 16 00    	call   *0x163251(%rip)        # 1e19c8 <_DYNAMIC+0x250>
+   7e777:	cc                   	int3
+   7e778:	cc                   	int3
+   7e779:	cc                   	int3
+   7e77a:	cc                   	int3
+   7e77b:	cc                   	int3
+   7e77c:	cc                   	int3
+   7e77d:	cc                   	int3
+   7e77e:	cc                   	int3
+   7e77f:	cc                   	int3
+

@@ -1,0 +1,25 @@
+[package]
+name = "zenmath-dispatch-study"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.89"
+publish = false
+[workspace]
+[features]
+default = []
+avx512 = ["zenmath/avx512", "archmage/avx512"]
+native-bench = ["dep:zenbench"]
+wasm-host = ["native-bench", "zenbench/wasm"]
+[dependencies]
+zenmath = { path = "../../zenmath", default-features = false, features = ["runtime-dispatch", "correct-rounding"] }
+archmage = { path = "../..", version = "0.9.31-beta.2", default-features = false, features = ["std"] }
+[target.'cfg(not(target_arch="wasm32"))'.dependencies]
+zenbench = { version = "=0.1.11", default-features = false, optional = true }
+[profile.release]
+lto = "thin"
+[[bin]]
+name = "timing"
+required-features = ["native-bench"]
+[[bin]]
+name = "wasm-host"
+required-features = ["wasm-host"]

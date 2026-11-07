@@ -1,0 +1,142 @@
+# arm/timed-codegen/thin.disasm:16844
+# Binary hash: d41a3b6feb21b2d68461ce4d20d9af46a491bb356a334269ae5823b9c8fc59d2  target-thin/release/timing
+000000000001daec <algebraic_ext_consumer::generated::cases_f32::{closure#5}>:
+   1daec:	d100c3ff 	sub	sp, sp, #0x30
+   1daf0:	fd000be8 	str	d8, [sp, #16]
+   1daf4:	a9027bfd 	stp	x29, x30, [sp, #32]
+   1daf8:	910083fd 	add	x29, sp, #0x20
+   1dafc:	eb04005f 	cmp	x2, x4
+   1db00:	f81f83a4 	stur	x4, [x29, #-8]
+   1db04:	f90003e2 	str	x2, [sp]
+   1db08:	54000e01 	b.ne	1dcc8 <algebraic_ext_consumer::generated::cases_f32::{closure#5}+0x1dc>  // b.any
+   1db0c:	eb06005f 	cmp	x2, x6
+   1db10:	f90007e2 	str	x2, [sp, #8]
+   1db14:	f81f83a6 	stur	x6, [x29, #-8]
+   1db18:	54000e01 	b.ne	1dcd8 <algebraic_ext_consumer::generated::cases_f32::{closure#5}+0x1ec>  // b.any
+   1db1c:	f2400848 	ands	x8, x2, #0x7
+   1db20:	f81f83a8 	stur	x8, [x29, #-8]
+   1db24:	54000e81 	b.ne	1dcf4 <algebraic_ext_consumer::generated::cases_f32::{closure#5}+0x208>  // b.any
+   1db28:	b4000c82 	cbz	x2, 1dcb8 <algebraic_ext_consumer::generated::cases_f32::{closure#5}+0x1cc>
+   1db2c:	d343fc48 	lsr	x8, x2, #3
+   1db30:	f100805f 	cmp	x2, #0x20
+   1db34:	54000062 	b.cs	1db40 <algebraic_ext_consumer::generated::cases_f32::{closure#5}+0x54>  // b.hs, b.nlast
+   1db38:	aa1f03e9 	mov	x9, xzr
+   1db3c:	14000045 	b	1dc50 <algebraic_ext_consumer::generated::cases_f32::{closure#5}+0x164>
+   1db40:	52955569 	mov	w9, #0xaaab                	// #43691
+   1db44:	aa0503ea 	mov	x10, x5
+   1db48:	aa0103eb 	mov	x11, x1
+   1db4c:	72a7c549 	movk	w9, #0x3e2a, lsl #16
+   1db50:	927edd0c 	and	x12, x8, #0x3fffffffffffffc
+   1db54:	4e040d20 	dup	v0.4s, w9
+   1db58:	927edd09 	and	x9, x8, #0x3fffffffffffffc
+   1db5c:	4f0167f1 	movi	v17.4s, #0x3f, lsl #24
+   1db60:	4f0167f3 	movi	v19.4s, #0x3f, lsl #24
+   1db64:	f100118c 	subs	x12, x12, #0x4
+   1db68:	ad434970 	ldp	q16, q18, [x11, #96]
+   1db6c:	4f0167e5 	movi	v5.4s, #0x3f, lsl #24
+   1db70:	4f0167e6 	movi	v6.4s, #0x3f, lsl #24
+   1db74:	4f0167f4 	movi	v20.4s, #0x3f, lsl #24
+   1db78:	4f0167f5 	movi	v21.4s, #0x3f, lsl #24
+   1db7c:	4f0167f7 	movi	v23.4s, #0x3f, lsl #24
+   1db80:	4f0167f8 	movi	v24.4s, #0x3f, lsl #24
+   1db84:	4f03f619 	fmov	v25.4s, #1.000000000000000000e+00
+   1db88:	4e20ce51 	fmla	v17.4s, v18.4s, v0.4s
+   1db8c:	4e20ce13 	fmla	v19.4s, v16.4s, v0.4s
+   1db90:	4f03f61a 	fmov	v26.4s, #1.000000000000000000e+00
+   1db94:	ad400961 	ldp	q1, q2, [x11]
+   1db98:	4f03f61b 	fmov	v27.4s, #1.000000000000000000e+00
+   1db9c:	ad411163 	ldp	q3, q4, [x11, #32]
+   1dba0:	4f03f61c 	fmov	v28.4s, #1.000000000000000000e+00
+   1dba4:	ad425967 	ldp	q7, q22, [x11, #64]
+   1dba8:	4f03f61d 	fmov	v29.4s, #1.000000000000000000e+00
+   1dbac:	4e20cc25 	fmla	v5.4s, v1.4s, v0.4s
+   1dbb0:	4e20cc46 	fmla	v6.4s, v2.4s, v0.4s
+   1dbb4:	4f03f61e 	fmov	v30.4s, #1.000000000000000000e+00
+   1dbb8:	4e20cc74 	fmla	v20.4s, v3.4s, v0.4s
+   1dbbc:	4e20cc97 	fmla	v23.4s, v4.4s, v0.4s
+   1dbc0:	4f03f61f 	fmov	v31.4s, #1.000000000000000000e+00
+   1dbc4:	4e20ced5 	fmla	v21.4s, v22.4s, v0.4s
+   1dbc8:	4e20ccf8 	fmla	v24.4s, v7.4s, v0.4s
+   1dbcc:	4f03f608 	fmov	v8.4s, #1.000000000000000000e+00
+   1dbd0:	4e32ce39 	fmla	v25.4s, v17.4s, v18.4s
+   1dbd4:	4f03f611 	fmov	v17.4s, #1.000000000000000000e+00
+   1dbd8:	4e30ce7a 	fmla	v26.4s, v19.4s, v16.4s
+   1dbdc:	4f03f613 	fmov	v19.4s, #1.000000000000000000e+00
+   1dbe0:	9102016b 	add	x11, x11, #0x80
+   1dbe4:	4e24cefd 	fmla	v29.4s, v23.4s, v4.4s
+   1dbe8:	4e23ce9e 	fmla	v30.4s, v20.4s, v3.4s
+   1dbec:	4e36cebb 	fmla	v27.4s, v21.4s, v22.4s
+   1dbf0:	4f03f615 	fmov	v21.4s, #1.000000000000000000e+00
+   1dbf4:	4e27cf1c 	fmla	v28.4s, v24.4s, v7.4s
+   1dbf8:	4f03f618 	fmov	v24.4s, #1.000000000000000000e+00
+   1dbfc:	4e32cf31 	fmla	v17.4s, v25.4s, v18.4s
+   1dc00:	4f03f612 	fmov	v18.4s, #1.000000000000000000e+00
+   1dc04:	4e30cf53 	fmla	v19.4s, v26.4s, v16.4s
+   1dc08:	4f03f610 	fmov	v16.4s, #1.000000000000000000e+00
+   1dc0c:	4e22ccdf 	fmla	v31.4s, v6.4s, v2.4s
+   1dc10:	4f03f606 	fmov	v6.4s, #1.000000000000000000e+00
+   1dc14:	4e21cca8 	fmla	v8.4s, v5.4s, v1.4s
+   1dc18:	4f03f605 	fmov	v5.4s, #1.000000000000000000e+00
+   1dc1c:	4e36cf75 	fmla	v21.4s, v27.4s, v22.4s
+   1dc20:	4e27cf98 	fmla	v24.4s, v28.4s, v7.4s
+   1dc24:	4e24cfb2 	fmla	v18.4s, v29.4s, v4.4s
+   1dc28:	4e23cfd0 	fmla	v16.4s, v30.4s, v3.4s
+   1dc2c:	ad034553 	stp	q19, q17, [x10, #96]
+   1dc30:	4e22cfe6 	fmla	v6.4s, v31.4s, v2.4s
+   1dc34:	4e21cd05 	fmla	v5.4s, v8.4s, v1.4s
+   1dc38:	ad025558 	stp	q24, q21, [x10, #64]
+   1dc3c:	ad014950 	stp	q16, q18, [x10, #32]
+   1dc40:	ac841945 	stp	q5, q6, [x10], #128
+   1dc44:	54fff8c1 	b.ne	1db5c <algebraic_ext_consumer::generated::cases_f32::{closure#5}+0x70>  // b.any
+   1dc48:	eb09011f 	cmp	x8, x9
+   1dc4c:	54000360 	b.eq	1dcb8 <algebraic_ext_consumer::generated::cases_f32::{closure#5}+0x1cc>  // b.none
+   1dc50:	5295556b 	mov	w11, #0xaaab                	// #43691
+   1dc54:	5280020a 	mov	w10, #0x10                  	// #16
+   1dc58:	cb090108 	sub	x8, x8, x9
+   1dc5c:	72a7c54b 	movk	w11, #0x3e2a, lsl #16
+   1dc60:	aa09154c 	orr	x12, x10, x9, lsl #5
+   1dc64:	4e040d60 	dup	v0.4s, w11
+   1dc68:	8b0c00aa 	add	x10, x5, x12
+   1dc6c:	8b0c002b 	add	x11, x1, x12
+   1dc70:	4f0167e1 	movi	v1.4s, #0x3f, lsl #24
+   1dc74:	4f0167e2 	movi	v2.4s, #0x3f, lsl #24
+   1dc78:	f1000508 	subs	x8, x8, #0x1
+   1dc7c:	ad7f9163 	ldp	q3, q4, [x11, #-16]
+   1dc80:	4f03f605 	fmov	v5.4s, #1.000000000000000000e+00
+   1dc84:	4f03f606 	fmov	v6.4s, #1.000000000000000000e+00
+   1dc88:	9100816b 	add	x11, x11, #0x20
+   1dc8c:	4e20cc61 	fmla	v1.4s, v3.4s, v0.4s
+   1dc90:	4e20cc82 	fmla	v2.4s, v4.4s, v0.4s
+   1dc94:	4e23cc25 	fmla	v5.4s, v1.4s, v3.4s
+   1dc98:	4f03f601 	fmov	v1.4s, #1.000000000000000000e+00
+   1dc9c:	4e24cc46 	fmla	v6.4s, v2.4s, v4.4s
+   1dca0:	4f03f602 	fmov	v2.4s, #1.000000000000000000e+00
+   1dca4:	4e23cca1 	fmla	v1.4s, v5.4s, v3.4s
+   1dca8:	4e24ccc2 	fmla	v2.4s, v6.4s, v4.4s
+   1dcac:	ad3f8941 	stp	q1, q2, [x10, #-16]
+   1dcb0:	9100814a 	add	x10, x10, #0x20
+   1dcb4:	54fffde1 	b.ne	1dc70 <algebraic_ext_consumer::generated::cases_f32::{closure#5}+0x184>  // b.any
+   1dcb8:	a9427bfd 	ldp	x29, x30, [sp, #32]
+   1dcbc:	fd400be8 	ldr	d8, [sp, #16]
+   1dcc0:	9100c3ff 	add	sp, sp, #0x30
+   1dcc4:	d65f03c0 	ret
+   1dcc8:	d0000bc5 	adrp	x5, 197000 <anon.135c5ada040a2615b756b32359d13779.2.llvm.183516181582875585+0xb70>
+   1dccc:	911320a5 	add	x5, x5, #0x4c8
+   1dcd0:	910003e1 	mov	x1, sp
+   1dcd4:	14000004 	b	1dce4 <algebraic_ext_consumer::generated::cases_f32::{closure#5}+0x1f8>
+   1dcd8:	d0000bc5 	adrp	x5, 197000 <anon.135c5ada040a2615b756b32359d13779.2.llvm.183516181582875585+0xb70>
+   1dcdc:	911380a5 	add	x5, x5, #0x4e0
+   1dce0:	910023e1 	add	x1, sp, #0x8
+   1dce4:	d10023a2 	sub	x2, x29, #0x8
+   1dce8:	2a1f03e0 	mov	w0, wzr
+   1dcec:	aa1f03e3 	mov	x3, xzr
+   1dcf0:	97ffc3a3 	bl	eb7c <core::panicking::assert_failed::<usize, usize>>
+   1dcf4:	d0000922 	adrp	x2, 143000 <anon.1590d67402e28d23175d1891a862b11b.188.llvm.354879623456601867+0x659>
+   1dcf8:	91304042 	add	x2, x2, #0xc10
+   1dcfc:	d0000bc5 	adrp	x5, 197000 <anon.135c5ada040a2615b756b32359d13779.2.llvm.183516181582875585+0xb70>
+   1dd00:	9113e0a5 	add	x5, x5, #0x4f8
+   1dd04:	d10023a1 	sub	x1, x29, #0x8
+   1dd08:	2a1f03e0 	mov	w0, wzr
+   1dd0c:	aa1f03e3 	mov	x3, xzr
+   1dd10:	97ffc39b 	bl	eb7c <core::panicking::assert_failed::<usize, usize>>
+

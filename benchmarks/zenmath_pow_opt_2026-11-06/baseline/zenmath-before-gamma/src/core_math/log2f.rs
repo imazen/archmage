@@ -1,0 +1,211 @@
+// Port of CORE-MATH 660067dfd3e751c8f07acc31c899ff410aa7206e.
+/* Correctly-rounded binary logarithm function for binary32 value.
+
+Copyright (c) 2022-2026 Alexei Sibidanov <sibid@uvic.ca>
+
+This file is part of the CORE-MATH project
+(https://core-math.gitlabpages.inria.fr/).
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
+const IX: [f64; 65] = [
+    f64::from_bits(0x3ff0000000000000),
+    f64::from_bits(0x3fef81f820000000),
+    f64::from_bits(0x3fef07c1f0000000),
+    f64::from_bits(0x3fee9131ac000000),
+    f64::from_bits(0x3fee1e1e1e000000),
+    f64::from_bits(0x3fedae6077000000),
+    f64::from_bits(0x3fed41d41d000000),
+    f64::from_bits(0x3fecd85689000000),
+    f64::from_bits(0x3fec71c71c000000),
+    f64::from_bits(0x3fec0e0704000000),
+    f64::from_bits(0x3febacf915000000),
+    f64::from_bits(0x3feb4e81b5000000),
+    f64::from_bits(0x3feaf286bd000000),
+    f64::from_bits(0x3fea98ef60000000),
+    f64::from_bits(0x3fea41a41a000000),
+    f64::from_bits(0x3fe9ec8e95000000),
+    f64::from_bits(0x3fe999999a000000),
+    f64::from_bits(0x3fe948b0fd000000),
+    f64::from_bits(0x3fe8f9c190000000),
+    f64::from_bits(0x3fe8acb90f000000),
+    f64::from_bits(0x3fe8618618000000),
+    f64::from_bits(0x3fe8181818000000),
+    f64::from_bits(0x3fe7d05f41000000),
+    f64::from_bits(0x3fe78a4c81000000),
+    f64::from_bits(0x3fe745d174000000),
+    f64::from_bits(0x3fe702e05c000000),
+    f64::from_bits(0x3fe6c16c17000000),
+    f64::from_bits(0x3fe6816817000000),
+    f64::from_bits(0x3fe642c859000000),
+    f64::from_bits(0x3fe6058160000000),
+    f64::from_bits(0x3fe5c9882c000000),
+    f64::from_bits(0x3fe58ed231000000),
+    f64::from_bits(0x3fe5555555000000),
+    f64::from_bits(0x3fe51d07eb000000),
+    f64::from_bits(0x3fe4e5e0a7000000),
+    f64::from_bits(0x3fe4afd6a0000000),
+    f64::from_bits(0x3fe47ae148000000),
+    f64::from_bits(0x3fe446f865000000),
+    f64::from_bits(0x3fe4141414000000),
+    f64::from_bits(0x3fe3e22cbd000000),
+    f64::from_bits(0x3fe3b13b14000000),
+    f64::from_bits(0x3fe3813814000000),
+    f64::from_bits(0x3fe3521cfb000000),
+    f64::from_bits(0x3fe323e34a000000),
+    f64::from_bits(0x3fe2f684be000000),
+    f64::from_bits(0x3fe2c9fb4e000000),
+    f64::from_bits(0x3fe29e412a000000),
+    f64::from_bits(0x3fe27350b9000000),
+    f64::from_bits(0x3fe2492492000000),
+    f64::from_bits(0x3fe21fb781000000),
+    f64::from_bits(0x3fe1f7047e000000),
+    f64::from_bits(0x3fe1cf06ae000000),
+    f64::from_bits(0x3fe1a7b961000000),
+    f64::from_bits(0x3fe1811812000000),
+    f64::from_bits(0x3fe15b1e5f000000),
+    f64::from_bits(0x3fe135c811000000),
+    f64::from_bits(0x3fe1111111000000),
+    f64::from_bits(0x3fe0ecf56c000000),
+    f64::from_bits(0x3fe0c97150000000),
+    f64::from_bits(0x3fe0a6810a000000),
+    f64::from_bits(0x3fe0842108000000),
+    f64::from_bits(0x3fe0624dd3000000),
+    f64::from_bits(0x3fe0410410000000),
+    f64::from_bits(0x3fe0204081000000),
+    0.5,
+];
+const LIX: [f64; 65] = [
+    f64::from_bits(0x0000000000000000),
+    f64::from_bits(0xbf96e7966ead8ac5),
+    f64::from_bits(0xbfa6bad38119a13a),
+    f64::from_bits(0xbfb0eb389ee9f560),
+    f64::from_bits(0xbfb663f6fc3a678d),
+    f64::from_bits(0xbfbbc8423d408321),
+    f64::from_bits(0xbfc08c588e79f8e9),
+    f64::from_bits(0xbfc32ae9e28fc362),
+    f64::from_bits(0xbfc5c01a3cde7f74),
+    f64::from_bits(0xbfc84c2bccf005a9),
+    f64::from_bits(0xbfcacf5e2c156d8f),
+    f64::from_bits(0xbfcd49ee4b90c47c),
+    f64::from_bits(0xbfcfbc16b67c143b),
+    f64::from_bits(0xbfd11307dc445fec),
+    f64::from_bits(0xbfd24407abf4dc03),
+    f64::from_bits(0xbfd37124cede831f),
+    f64::from_bits(0xbfd49a784a5bc715),
+    f64::from_bits(0xbfd5c01a3965cc38),
+    f64::from_bits(0xbfd6e221cc2bb868),
+    f64::from_bits(0xbfd800a564aa10b6),
+    f64::from_bits(0xbfd91bba8a906b7f),
+    f64::from_bits(0xbfda33760adbb56e),
+    f64::from_bits(0xbfdb47ebf91d417c),
+    f64::from_bits(0xbfdc592faf028f8e),
+    f64::from_bits(0xbfdd6753e1a43e85),
+    f64::from_bits(0xbfde726aa2157f61),
+    f64::from_bits(0xbfdf7a8567cd1cbd),
+    f64::from_bits(0xbfe03fda8a93ea1c),
+    f64::from_bits(0xbfe0c10500ed4fee),
+    f64::from_bits(0xbfe140c9fb5a8f7f),
+    f64::from_bits(0xbfe1bf311daefb44),
+    f64::from_bits(0xbfe23c41d317edc1),
+    f64::from_bits(0xbfe2b80347f8250c),
+    f64::from_bits(0xbfe3327c6a752222),
+    f64::from_bits(0xbfe3abb3fb080128),
+    f64::from_bits(0xbfe423b07f5114e5),
+    f64::from_bits(0xbfe49a784b147150),
+    f64::from_bits(0xbfe5101187e9b871),
+    f64::from_bits(0xbfe5848226c6c7c3),
+    f64::from_bits(0xbfe5f7cff3de8f2a),
+    f64::from_bits(0xbfe66a008d8ede91),
+    f64::from_bits(0xbfe6db19694a04aa),
+    f64::from_bits(0xbfe74b1fd6b5e715),
+    f64::from_bits(0xbfe7ba18f99ce2a5),
+    f64::from_bits(0xbfe82809d4d79ba9),
+    f64::from_bits(0xbfe894f749cf5047),
+    f64::from_bits(0xbfe900e615bac2f7),
+    f64::from_bits(0xbfe96bdad16f5160),
+    f64::from_bits(0xbfe9d5d9fe08baef),
+    f64::from_bits(0xbfea3ee7f3e4a7eb),
+    f64::from_bits(0xbfeaa708f4de7fe0),
+    f64::from_bits(0xbfeb0e4125ca68fe),
+    f64::from_bits(0xbfeb74948f9a72b0),
+    f64::from_bits(0xbfebda071b77c9e2),
+    f64::from_bits(0xbfec3e9ca4193f99),
+    f64::from_bits(0xbfeca258dd397814),
+    f64::from_bits(0xbfed053f6d543325),
+    f64::from_bits(0xbfed6753dfedaa39),
+    f64::from_bits(0xbfedc899aa874b31),
+    f64::from_bits(0xbfee29142f2e8b3d),
+    f64::from_bits(0xbfee88c6b41b14ae),
+    f64::from_bits(0xbfeee7b4718b4414),
+    f64::from_bits(0xbfef45e08c87b090),
+    f64::from_bits(0xbfefa34e117d8785),
+    f64::from_bits(0xbff0000000000000),
+];
+const B: [f64; 3] = [
+    f64::from_bits(0x3ff7154765bab2b5),
+    f64::from_bits(0xbfe71574d6939f6c),
+    f64::from_bits(0x3fdec60b584ca47f),
+];
+const C: [f64; 6] = [
+    f64::from_bits(0x3ff71547652b8314),
+    f64::from_bits(0xbfe71547652b7f67),
+    f64::from_bits(0x3fdec709db872c63),
+    f64::from_bits(0xbfd715476b064cdf),
+    f64::from_bits(0x3fd277c72c15441f),
+    f64::from_bits(0xbfcec4ff35b64c31),
+];
+
+/// Correctly rounded base-two logarithm (nearest-even).
+pub fn log2f(x: f32) -> f32 {
+    log2f_in_context(x)
+}
+
+#[inline(always)]
+pub(crate) fn log2f_in_context(x: f32) -> f32 {
+    let mut ux = x.to_bits();
+    if ux >= 0x7f800000 || ux == 0 {
+        return super::log_special(x);
+    }
+    if ux < 1 << 23 {
+        let n = ux.leading_zeros() - 8;
+        ux = (ux << n).wrapping_sub(n << 23);
+    }
+    let e = ((ux as i32) >> 23) - 127;
+    let m = ux & 0x7fffff;
+    if m == 0 {
+        return e as f32;
+    }
+    let j = ((m + (1 << 16)) >> 17) as usize;
+    let xd = f64::from_bits(((m as u64) << 29) | (0x3ff_u64 << 52));
+    let z = xd * IX[j] - 1.0;
+    let z2 = z * z;
+    let el = e as f64 - LIX[j];
+    let f = (el + z * B[0]) + z2 * (B[1] + z * B[2]);
+    let lb = f as f32;
+    let ub = (f + f64::from_bits(0x3df6610000000000)) as f32;
+    if lb == ub {
+        return lb;
+    }
+    let c0 = C[0] + z * C[1];
+    let c2 = C[2] + z * C[3];
+    let c4 = C[4] + z * C[5];
+    (el + z * (c0 + z2 * (c2 + z2 * c4))) as f32
+}

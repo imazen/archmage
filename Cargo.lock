@@ -330,6 +330,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "magemath"
+version = "0.9.31"
+dependencies = [
+ "archmage",
+ "magetypes",
+ "zenbench",
+ "zenmath",
+]
+
+[[package]]
 name = "magetypes"
 version = "0.9.31"
 dependencies = [
@@ -1027,6 +1037,13 @@ dependencies = [
  "serde_json",
  "sysinfo",
  "terminal_size",
+]
+
+[[package]]
+name = "zenmath"
+version = "0.9.31"
+dependencies = [
+ "archmage",
 ]
 
 [[package]]

@@ -1,0 +1,10 @@
+[package]
+name = "published-algebraic-consumer-beta"
+version = "0.0.0"
+edition = "2024"
+publish = false
+[workspace]
+[dependencies]
+algebraic-magetypes-prototype = { path = "../ext" }
+magetypes = { version = "=0.9.31-beta.2", default-features = false }
+archmage = { version = "=0.9.31-beta.2", default-features = false }

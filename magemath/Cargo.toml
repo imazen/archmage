@@ -1,0 +1,94 @@
+[package]
+name = "magemath"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+description = "Vector and fixed-array math on magetypes: portable fused and backend-relaxed kernels, with archmage dispatch and zenmath scalar mirrors."
+include = [
+    "src/**",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE*",
+]
+
+[features]
+default = ["std", "correct-rounding", "normal", "configurable"]
+# Additive API families. Normal currently shares precise implementations.
+correct-rounding = ["zenmath/correct-rounding"]
+normal = ["zenmath/normal"]
+configurable = ["zenmath/configurable"]
+# Runtime CPU detection for the dispatchers. Without it `summon()` only sees
+# compile-time target features, so a no_std build dispatches to what the build
+# guarantees. The kernels themselves are `no_std`.
+std = ["magetypes/std", "archmage/std", "zenmath/std"]
+# Native AVX-512 tier (`+v4x` dispatch arm). Pulls magetypes' 512-bit backends.
+w512 = ["magetypes/w512"]
+avx512 = ["w512","magetypes/avx512", "archmage/avx512", "zenmath/avx512"]
+
+[dependencies]
+# Widths four and eight compile by default. Width sixteen is opt-in through
+# w512 (also enabled by avx512), matching Magetypes width availability.
+magetypes = { version = "0.9.31", path = "../magetypes", default-features = false }
+archmage = { version = "0.9.31", path = "..", default-features = false }
+
+# Accurate fallback for exceptional or rounding-ambiguous CORE-MATH lanes.
+zenmath = { version = "0.9.31", path = "../zenmath", default-features = false, features = ["archmage"] }
+
+[dev-dependencies]
+# Token-disable permutations in tests/dispatch.rs.
+archmage = { version = "0.9.31", path = "..", features = ["std"] }
+
+# zenbench does not build for wasm32; examples/wasm_cost.rs covers it there.
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+zenbench = "0.1.10"
+
+[[bench]]
+name = "portable_cost"
+harness = false
+
+[[test]]
+name="core_exhaustive"
+required-features=["correct-rounding"]
+
+[[test]]
+name="core_math"
+required-features=["correct-rounding"]
+
+[[test]]
+name="dispatch"
+required-features=["configurable"]
+
+[[test]]
+name="exhaustive"
+required-features=["configurable"]
+
+[[test]]
+name="golden"
+required-features=["configurable"]
+
+[[test]]
+name="parity"
+required-features=["configurable"]
+
+[[test]]
+name="pow_policy"
+required-features=["configurable"]
+
+[[test]]
+name="pow_sign"
+required-features=["correct-rounding"]
+
+[[test]]
+name="reference"
+required-features=["configurable"]
+
+[[test]]
+name="legacy_superset"
+required-features=["configurable"]
+
+[[test]]
+name="width_parity"
+required-features=["configurable"]

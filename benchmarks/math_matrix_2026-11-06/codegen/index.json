@@ -1,0 +1,132 @@
+[
+  {
+    "probe": "arm-array-dot",
+    "platform": "arm",
+    "source_asm": "math_matrix_study-107ee31fd7b8ef38.s",
+    "line": 2768,
+    "symbol": "_RNCNvNtCsffbGKKrTuqY_17math_matrix_study9algebraic9cases_f32sd_0B5_",
+    "ir_packed": true,
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ]
+  },
+  {
+    "probe": "arm-auto-dot",
+    "platform": "arm",
+    "source_asm": "math_matrix_study-107ee31fd7b8ef38.s",
+    "line": 1371,
+    "symbol": "_RNCNvNtCsffbGKKrTuqY_17math_matrix_study9algebraic9cases_f32s0_0B5_",
+    "ir_packed": true,
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ]
+  },
+  {
+    "probe": "arm-fused-dot",
+    "platform": "arm",
+    "source_asm": "math_matrix_study-107ee31fd7b8ef38.s",
+    "line": 3260,
+    "symbol": "_RNCNvNtCsffbGKKrTuqY_17math_matrix_study9algebraic9cases_f32sh_0B5_",
+    "ir_packed": true,
+    "flags": []
+  },
+  {
+    "probe": "arm-array-polynomial",
+    "platform": "arm",
+    "source_asm": "math_matrix_study-107ee31fd7b8ef38.s",
+    "line": 2272,
+    "symbol": "_RNCNvNtCsffbGKKrTuqY_17math_matrix_study9algebraic9cases_f32s9_0B5_",
+    "ir_packed": true,
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ]
+  },
+  {
+    "probe": "v3-array-polynomial",
+    "platform": "r7900x",
+    "source_asm": "math_matrix_study-d62ccc0b1a7ac227.s",
+    "line": 163972,
+    "symbol": "_RNvNtCsl8sLjJBmgi8_17math_matrix_study9algebraic36___attune_poly_array_algebraic_f32_v3",
+    "ir_packed": true,
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ]
+  },
+  {
+    "probe": "v3-auto-dot",
+    "platform": "r7900x",
+    "source_asm": "math_matrix_study-d62ccc0b1a7ac227.s",
+    "line": 160990,
+    "symbol": "_RNvNtCsl8sLjJBmgi8_17math_matrix_study9algebraic29___attune_dot_algebraic_f32_v3",
+    "ir_packed": true,
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ]
+  },
+  {
+    "probe": "v3-ordinary-polynomial",
+    "platform": "r7900x",
+    "source_asm": "math_matrix_study-d62ccc0b1a7ac227.s",
+    "line": 160416,
+    "symbol": "_RNvNtCsl8sLjJBmgi8_17math_matrix_study9algebraic27___attune_poly_vector_f32_v3",
+    "ir_packed": true,
+    "flags": []
+  },
+  {
+    "probe": "v4x-auto-dot64",
+    "platform": "r7900x",
+    "source_asm": "math_matrix_study-d62ccc0b1a7ac227.s",
+    "line": 161799,
+    "symbol": "_RNvNtCsl8sLjJBmgi8_17math_matrix_study9algebraic30___attune_dot_algebraic_f64_v4x",
+    "ir_packed": true,
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ]
+  },
+  {
+    "probe": "wasm-array-dot",
+    "platform": "wasm",
+    "source_asm": "math_matrix_study-ba178c59a0ecbf47.s",
+    "line": 59672,
+    "symbol": "_RNCNvNtCsdrsRtign2uv_17math_matrix_study9algebraic9cases_f32sd_0B5_",
+    "ir_packed": true,
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ]
+  },
+  {
+    "probe": "wasm-array-polynomial",
+    "platform": "wasm",
+    "source_asm": "math_matrix_study-ba178c59a0ecbf47.s",
+    "line": 58522,
+    "symbol": "_RNCNvNtCsdrsRtign2uv_17math_matrix_study9algebraic9cases_f32s9_0B5_",
+    "ir_packed": true,
+    "flags": [
+      "arcp",
+      "contract",
+      "nsz",
+      "reassoc"
+    ]
+  }
+]

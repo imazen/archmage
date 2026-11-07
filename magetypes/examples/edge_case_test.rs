@@ -1,3 +1,5 @@
+// Exercises retained legacy transcendental contracts during migration.
+#![allow(deprecated)]
 //! Edge case testing for transcendental functions
 //!
 //! Run with: `cargo run --example edge_case_test --release`

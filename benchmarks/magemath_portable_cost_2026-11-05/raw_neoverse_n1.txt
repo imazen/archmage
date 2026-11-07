@@ -1,0 +1,140 @@
+    Finished `bench` profile [optimized] target(s) in 18.65s
+     Running benches/portable_cost.rs (target/release/deps/portable_cost-7b743766071e0a95)
+[zenbench] calibration: int=0.66ns/iter mem_bw=34.2GiB/s mem_lat=73.6ns
+[zenbench] timer resolution: 40ns, loop overhead: 0.34ns/iter, TSC: 0.025 ticks/ns (invariant)
+[zenbench] results → /home/ubuntu/tmp/zenmath-bench-tmp/zenbench/zenbench-1793907754-203915.txt
+═══════════════════════════════════════════════════════════════
+  zenbench  1793907754-203915
+═══════════════════════════════════════════════════════════════
+  exp2_midp, NEON  200 rounds × 85 calls
+                 mean ±mad µs  95% CI vs base     ops/s
+  ├─ portable    12.4 ±0.3µs  [-9.4%–-8.6%]      660M
+  ├─ relaxed     13.8 ±0.3µs  [13.4–14.3]µs      594M [1]
+  ╰─ unchecked    9.6 ±0.3µs  [-30.5%–-29.5%]    854M
+  [1] CV=24%
+  log2_midp, NEON  200 rounds × 93 calls
+                 mean ±mad µs  95% CI vs base     ops/s
+  ├─ portable    11.5 ±0.2µs  [-0.5%–+0.5%]      712M [1] [2]
+  ├─ relaxed     11.4 ±0.2µs  [11.1–11.8]µs      720M [3]
+  ╰─ unchecked    8.6 ±0.2µs  [-25.2%–-24.3%]    956M [4]
+  [1] CI crosses zero
+  [2] CV=30%
+  [3] CV=22%
+  [4] CV=29%
+  pow_midp(2.4), NEON  200 rounds × 35 calls
+                 mean ±mad µs  95% CI vs base     ops/s
+  ├─ portable    30.2 ±0.6µs  [-2.7%–-1.8%]      271M [1]
+  ├─ relaxed     32.0 ±0.7µs  [30.4–34.0]µs      256M [2]
+  ╰─ unchecked   24.8 ±0.5µs  [-21.9%–-21.0%]    331M [3]
+  [1] CV=21%
+  [2] CV=41%
+  [3] CV=33%
+  exp2_lowp, NEON  200 rounds × 144 calls
+                mean ±mad µs  95% CI vs base     ops/s
+  ├─ portable    8.2 ±0.2µs  [+12.3%–+13.3%]    1.00G
+  ├─ unchecked   6.1 ±0.1µs  [-17.9%–-17.0%]    1.34G [1]
+  ╰─ relaxed     7.4 ±0.2µs  [7.2–7.7]µs        1.11G [2]
+  [1] CV=33%
+  [2] CV=26%
+  log2_lowp, NEON  200 rounds × 140 calls
+                 mean ±mad µs  95% CI vs base     ops/s
+  ├─ portable    10.3 ±0.2µs  [+33.8%–+34.9%]     798M [1]
+  ├─ unchecked    7.9 ±0.1µs  [-0.7%–+0.1%]      1.04G [2] [3]
+  ╰─ relaxed      7.5 ±0.2µs  [7.3–7.8]µs        1.09G [4]
+  [1] CV=25%
+  [2] CI crosses zero
+  [3] CV=47%
+  [4] CV=26%
+  exp2_midp, scalar tier  200 rounds × 26 calls
+                  mean ±mad µs  95% CI vs base       ops/s
+  ├─ portable     40.7 ±0.8µs  [+0.2%–+0.9%]         201M [1] [2]
+  ├─ relaxed      39.8 ±0.7µs  [39.2–40.6]µs         206M
+  ├─ unchecked    37.6 ±0.6µs  [-5.5%–-4.9%]         218M
+  ├─ mirror      182.8 ±1.9µs  [+355.4%–+357.0%]    44.8M
+  ╰─ std          43.2 ±0.6µs  [+9.2%–+9.9%]         190M
+  [1] CI crosses zero
+  [2] CV=23%
+  log2_midp, scalar tier  200 rounds × 68 calls
+                  mean ±mad µs  95% CI vs base       ops/s
+  ├─ portable     14.7 ±0.2µs  [-2.3%–-1.7%]         559M [1]
+  ├─ relaxed      14.8 ±0.2µs  [14.6–15.2]µs         552M
+  ├─ unchecked    11.0 ±0.2µs  [-26.3%–-25.6%]       744M
+  ├─ mirror      124.8 ±0.7µs  [+739.9%–+741.6%]    65.7M
+  ╰─ std          46.5 ±0.4µs  [+215.4%–+216.2%]     176M
+  [1] CV=23%
+  pow_midp(2.4), scalar tier  200 rounds × 62 calls
+                  mean ±mad µs  95% CI vs base       ops/s
+  ├─ portable     55.8 ±0.4µs  [+1.1%–+1.4%]         147M
+  ├─ relaxed      55.0 ±0.5µs  [54.4–55.7]µs         149M
+  ├─ unchecked    47.9 ±0.5µs  [-14.3%–-14.0%]       171M [1]
+  ├─ mirror      374.5 ±2.1µs  [+579.7%–+581.0%]    21.9M
+  ╰─ std          81.9 ±0.8µs  [+49.2%–+49.6%]       100M
+  [1] CV=20%
+  exp2_lowp, scalar tier  200 rounds × 30 calls
+                  mean ±mad µs  95% CI vs base       ops/s
+  ├─ portable     35.8 ±0.8µs  [+14.9%–+15.9%]       229M [1]
+  ├─ unchecked    46.7 ±0.8µs  [+52.2%–+53.2%]       175M [2]
+  ├─ relaxed      30.3 ±0.5µs  [29.5–31.3]µs         270M [3]
+  ├─ mirror      111.0 ±2.0µs  [+261.5%–+263.9%]    73.8M
+  ╰─ std          45.2 ±0.8µs  [+46.4%–+47.4%]       181M [4]
+  [1] CV=30%
+  [2] CV=23%
+  [3] CV=21%
+  [4] CV=26%
+  log2_lowp, scalar tier  200 rounds × 41 calls
+                 mean ±mad µs  95% CI vs base       ops/s
+  ├─ portable    16.1 ±0.5µs  [+36.5%–+38.5%]       508M [1]
+  ├─ unchecked   10.6 ±0.4µs  [-1.0%–+0.8%]         772M [2]
+  ├─ relaxed     10.6 ±0.5µs  [10.3–11.0]µs         770M [3]
+  ├─ mirror      96.3 ±2.6µs  [+772.0%–+781.7%]    85.1M
+  ╰─ std         48.9 ±0.9µs  [+346.4%–+349.8%]     167M
+  [1] CV=138%
+  [2] CI crosses zero
+  [3] CV=25%
+  exp2_midp slice tail, len 1  200 rounds × 33K calls
+                       mean ±mad ns  95% CI vs base     ops/s
+  ├─ one loop, pad      33.2 ±1.0ns  [31.7–35.0]ns      30.1M [1]
+  ├─ loop then pad      34.6 ±1.1ns  [+1.6%–+3.1%]      28.9M [2]
+  ╰─ loop then mirror   40.5 ±1.4ns  [+19.5%–+21.2%]    24.7M [3]
+  [1] CV=37%
+  [2] CV=41%
+  [3] CV=34%
+  exp2_midp slice tail, len 7  200 rounds × 32K calls
+                        mean ±mad ns  95% CI vs base       ops/s
+  ├─ one loop, pad       34.5 ±1.3ns  [33.2–36.0]ns         203M [1]
+  ├─ loop then pad       33.4 ±0.9ns  [-2.4%–-0.9%]         209M [2] [3]
+  ╰─ loop then mirror   150.6 ±2.0ns  [+341.9%–+344.8%]    46.5M
+  [1] CV=30%
+  [2] CI crosses zero
+  [3] CV=28%
+  exp2_midp slice tail, len 8  200 rounds × 55K calls
+                       mean ±mad ns  95% CI vs base    ops/s
+  ├─ one loop, pad      21.0 ±0.4ns  [20.4–21.7]ns     382M [1]
+  ├─ loop then pad      18.7 ±0.4ns  [-10.9%–-9.9%]    428M [2]
+  ╰─ loop then mirror   20.2 ±0.4ns  [-4.8%–-3.8%]     396M [3]
+  [1] CV=24%
+  [2] CV=24%
+  [3] CV=26%
+  exp2_midp slice tail, len 9  200 rounds × 22K calls
+                       mean ±mad ns  95% CI vs base     ops/s
+  ├─ one loop, pad      39.9 ±1.0ns  [39.1–40.9]ns      225M
+  ├─ loop then pad      48.7 ±1.1ns  [+19.7%–+20.9%]    185M
+  ╰─ loop then mirror   57.5 ±1.8ns  [+37.9%–+39.7%]    157M [1]
+  [1] CV=30%
+  exp2_midp slice tail, len 15  200 rounds × 21K calls
+                        mean ±mad ns  95% CI vs base       ops/s
+  ├─ one loop, pad       41.1 ±0.9ns  [40.2–42.2]ns         365M
+  ├─ loop then pad       49.5 ±1.2ns  [+18.0%–+19.1%]       303M [1]
+  ╰─ loop then mirror   163.7 ±2.3ns  [+295.8%–+298.3%]    91.6M
+  [1] CV=26%
+  exp2_midp slice tail, len 1031  200 rounds × 620 calls
+                       mean ±mad µs  95% CI vs base   ops/s
+  ├─ one loop, pad      1.8 ±0.0µs  [1.7–1.9]µs      571M [1]
+  ├─ loop then pad      1.7 ±0.0µs  [-0.3%–+0.8%]    598M [2]
+  ╰─ loop then mirror   1.9 ±0.1µs  [+7.2%–+8.3%]    555M [3]
+  [1] CV=31%
+  [2] CI crosses zero
+  [3] CV=22%
+  total: 710.6s  (3191 noisy rounds)
+═══════════════════════════════════════════════════════════════
+  filter: cargo bench -- --group=NAME  format: --format=llm|csv|md|json

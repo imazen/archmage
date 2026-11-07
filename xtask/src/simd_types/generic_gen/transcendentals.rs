@@ -38,6 +38,9 @@ pub(super) fn gen_transcendentals(
         //!   whole range; the other `_midp_precise` names are aliases of the plain
         //!   forms, queued for removal
 
+        // Legacy methods call one another while migration preserves their exact behavior.
+        #![allow(deprecated)]
+
         use crate::simd::backends::{{{float_backend}, {convert_trait}, {int_backend}}};
         use crate::simd::generic::{{{float_type}, {int_type}}};
 
@@ -61,6 +64,7 @@ pub(super) fn gen_transcendentals(
             /// Uses rational polynomial approximation on the mantissa.
             /// Result is undefined for x <= 0.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn log2_lowp(self) -> Self {{
                 const P0: f32 = -1.850_383_3e-6;
                 const P1: f32 = 1.428_716_1;
@@ -90,6 +94,7 @@ pub(super) fn gen_transcendentals(
 
             /// Low-precision base-2 logarithm, no edge case handling.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn log2_lowp_unchecked(self) -> Self {{
                 self.log2_lowp()
             }}
@@ -97,6 +102,7 @@ pub(super) fn gen_transcendentals(
             /// Low-precision base-2 exponential: relative error at most 0.56% for x up
             /// to 127.99 and 1.23% above, where the input is clamped to 127.99.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn exp2_lowp(self) -> Self {{
                 const C0: f32 = 1.0;
                 const C1: f32 = core::f32::consts::LN_2;
@@ -120,48 +126,56 @@ pub(super) fn gen_transcendentals(
 
             /// Low-precision base-2 exponential, no edge case handling.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn exp2_lowp_unchecked(self) -> Self {{
                 self.exp2_lowp()
             }}
 
             /// Low-precision natural logarithm.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn ln_lowp(self) -> Self {{
                 self.log2_lowp() * splat_f32::<T>(self.1,core::f32::consts::LN_2)
             }}
 
             /// Low-precision natural logarithm, no edge case handling.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn ln_lowp_unchecked(self) -> Self {{
                 self.ln_lowp()
             }}
 
             /// Low-precision natural exponential.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn exp_lowp(self) -> Self {{
                 (self * splat_f32::<T>(self.1,core::f32::consts::LOG2_E)).exp2_lowp()
             }}
 
             /// Low-precision natural exponential, no edge case handling.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn exp_lowp_unchecked(self) -> Self {{
                 self.exp_lowp()
             }}
 
             /// Low-precision base-10 logarithm.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn log10_lowp(self) -> Self {{
                 self.log2_lowp() * splat_f32::<T>(self.1,core::f32::consts::LN_2 / core::f32::consts::LN_10)
             }}
 
             /// Low-precision base-10 logarithm, no edge case handling.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn log10_lowp_unchecked(self) -> Self {{
                 self.log10_lowp()
             }}
 
             /// Low-precision power function: `self^n`. Returns 0 for zero input.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn pow_lowp(self, n: f32) -> Self {{
                 let result = (self.log2_lowp() * splat_f32::<T>(self.1,n)).exp2_lowp();
                 // Zero masking: pow(0, n) = 0 for n > 0
@@ -171,6 +185,7 @@ pub(super) fn gen_transcendentals(
 
             /// Low-precision power function, no edge case handling.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn pow_lowp_unchecked(self, n: f32) -> Self {{
                 self.pow_lowp(n)
             }}
@@ -182,6 +197,7 @@ pub(super) fn gen_transcendentals(
             /// Uses (a-1)/(a+1) transform with odd polynomial evaluation.
             /// Result is undefined for x <= 0.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn log2_midp_unchecked(self) -> Self {{
                 const SQRT2_OVER_2: u32 = 0x3f35_04f3;
                 const ONE_BITS: u32 = 0x3f80_0000;
@@ -218,6 +234,7 @@ pub(super) fn gen_transcendentals(
             ///
             /// Returns -inf for 0, NaN for negative values, +inf for +inf.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn log2_midp(self) -> Self {{
                 let result = self.log2_midp_unchecked();
                 let zero = splat_f32::<T>(self.1,0.0);
@@ -238,6 +255,7 @@ pub(super) fn gen_transcendentals(
             /// handled: they return about -127 (for 1e-42 the true value is -139.5).
             /// Queued for removal.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn log2_midp_precise(self) -> Self {{
                 self.log2_midp()
             }}
@@ -248,6 +266,7 @@ pub(super) fn gen_transcendentals(
             /// Uses round-to-nearest splitting to keep |frac| <= 0.5, giving
             /// ~1000x less polynomial truncation error than floor-based splitting.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn exp2_midp_unchecked(self) -> Self {{
                 const C0: f32 = 1.0;
                 const C1: f32 = core::f32::consts::LN_2;
@@ -284,6 +303,7 @@ pub(super) fn gen_transcendentals(
             /// Returns 0 for x < -126 (denormal results can't be constructed),
             /// inf for x >= 128.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn exp2_midp(self) -> Self {{
                 let underflow_limit = splat_f32::<T>(self.1,-126.0);
                 let overflow_limit = splat_f32::<T>(self.1,128.0);
@@ -305,18 +325,21 @@ pub(super) fn gen_transcendentals(
             /// Same as [`exp2_midp`](Self::exp2_midp), which covers every input:
             /// a subnormal input is just close to zero. Queued for removal.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn exp2_midp_precise(self) -> Self {{
                 self.exp2_midp()
             }}
 
             /// Mid-precision natural logarithm (at most 4.1 ULP).
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn ln_midp(self) -> Self {{
                 self.log2_midp() * splat_f32::<T>(self.1,core::f32::consts::LN_2)
             }}
 
             /// Mid-precision natural logarithm, no edge case handling.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn ln_midp_unchecked(self) -> Self {{
                 self.log2_midp_unchecked() * splat_f32::<T>(self.1,core::f32::consts::LN_2)
             }}
@@ -325,6 +348,7 @@ pub(super) fn gen_transcendentals(
             /// handled: they return about -88 (for 1e-42 the true value is -96.7).
             /// Queued for removal.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn ln_midp_precise(self) -> Self {{
                 self.ln_midp()
             }}
@@ -336,12 +360,14 @@ pub(super) fn gen_transcendentals(
             /// 31.3 ULP for |x| <= 40, 64.1 ULP over [-87, 88.5] and 197.1 ULP above
             /// 88.5, where the product nears 128 (see `exp2_midp`).
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn exp_midp(self) -> Self {{
                 (self * splat_f32::<T>(self.1,core::f32::consts::LOG2_E)).exp2_midp()
             }}
 
             /// Mid-precision natural exponential, no edge case handling.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn exp_midp_unchecked(self) -> Self {{
                 (self * splat_f32::<T>(self.1,core::f32::consts::LOG2_E)).exp2_midp_unchecked()
             }}
@@ -349,6 +375,7 @@ pub(super) fn gen_transcendentals(
             /// Same as [`exp_midp`](Self::exp_midp), which covers every input:
             /// a subnormal input is just close to zero. Queued for removal.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn exp_midp_precise(self) -> Self {{
                 self.exp_midp()
             }}
@@ -362,6 +389,7 @@ pub(super) fn gen_transcendentals(
             /// exactly `1`. Conv pre-activations at ±100 produce clean 0/1
             /// lanes, not NaN.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn sigmoid_midp(self) -> Self {{
                 let one = splat_f32::<T>(self.1,1.0);
                 // Exact IEEE division, deliberately NOT `.recip()`. recip()'s
@@ -379,18 +407,21 @@ pub(super) fn gen_transcendentals(
             /// the result is `x * 0 = -0.0`, and for large positive `x` it is
             /// exactly `x`.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn silu_midp(self) -> Self {{
                 self * self.sigmoid_midp()
             }}
 
             /// Mid-precision base-10 logarithm (at most 4.5 ULP).
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn log10_midp(self) -> Self {{
                 self.log2_midp() * splat_f32::<T>(self.1,core::f32::consts::LN_2 / core::f32::consts::LN_10)
             }}
 
             /// Mid-precision base-10 logarithm, no edge case handling.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn log10_midp_unchecked(self) -> Self {{
                 self.log2_midp_unchecked()
                     * splat_f32::<T>(self.1,core::f32::consts::LN_2 / core::f32::consts::LN_10)
@@ -400,6 +431,7 @@ pub(super) fn gen_transcendentals(
             /// handled: they return about -38.2 (for 1e-42 the true value is -42.0).
             /// Queued for removal.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn log10_midp_precise(self) -> Self {{
                 self.log10_midp()
             }}
@@ -410,12 +442,14 @@ pub(super) fn gen_transcendentals(
             /// |n * log2(self)|. Measured for n = 2.4: at most 27.8 ULP (mean 3.7) on
             /// [2^-8, 2^8], 64.8 ULP on [2^-20, 2^20] and 144.9 ULP on [2^-50, 2^50].
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn pow_midp(self, n: f32) -> Self {{
                 (self.log2_midp() * splat_f32::<T>(self.1,n)).exp2_midp()
             }}
 
             /// Mid-precision power function, no edge case handling.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn pow_midp_unchecked(self, n: f32) -> Self {{
                 (self.log2_midp_unchecked() * splat_f32::<T>(self.1,n)).exp2_midp_unchecked()
             }}
@@ -424,6 +458,7 @@ pub(super) fn gen_transcendentals(
             /// handled: `pow_midp_precise(1e-42, 0.5)` returns about 7.7e-20, not
             /// 1.0e-21. Queued for removal.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn pow_midp_precise(self, n: f32) -> Self {{
                 self.pow_midp(n)
             }}
@@ -443,6 +478,7 @@ pub(super) fn gen_transcendentals(
             /// Returns ±0 for ±0 input. Does not handle denormals or infinity — use
             /// `cbrt_midp_precise` for those.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn cbrt_lowp(self) -> Self {{
                 const MAGIC: u32 = 0x2a50_8c2d;
 
@@ -484,6 +520,7 @@ pub(super) fn gen_transcendentals(
             /// the limit), and denormals and infinity are not handled: use
             /// `cbrt_midp_precise` for those.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn cbrt_midp(self) -> Self {{
                 const MAGIC: u32 = 0x2a50_8c2d;
 
@@ -518,6 +555,7 @@ pub(super) fn gen_transcendentals(
             /// 1e36 up run on x/8 with the result doubled so the Halley step cannot
             /// overflow, and ±0 and ±inf return themselves.
             #[inline(always)]
+            #[deprecated(note = "Transcendental math is moving to zenmath and magemath; see docs/transcendentals.md for migration contracts.")]
             pub fn cbrt_midp_precise(self) -> Self {{
                 let zero = splat_f32::<T>(self.1,0.0);
                 let one = splat_f32::<T>(self.1,1.0);

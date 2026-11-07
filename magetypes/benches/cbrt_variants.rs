@@ -1,3 +1,5 @@
+// Exercises retained legacy transcendental contracts during migration.
+#![allow(deprecated)]
 //! Benchmarks comparing cbrt and pow variants.
 //!
 //! Run:

@@ -1,3 +1,5 @@
+// Exercises retained legacy transcendental contracts during migration.
+#![allow(deprecated)]
 //! Ergonomics examples for the generic SIMD API.
 //!
 //! These tests demonstrate how to write platform-generic SIMD code using
