@@ -8,7 +8,9 @@ mod bench {
     use zenbench::prelude::*;
     macro_rules! method {
         ($name:ident, $op:ident $(, $arg:expr)?) => {
+            // This control deliberately measures the deprecated inherent methods.
             #[attune(dispatch, define(f32x8))]
+            #[allow(deprecated)]
             fn $name(data: &mut [f32], _exponents: &[f32]) {
                 let token = Token::from_context();
                 let (chunks, tail) = data.as_chunks_mut::<8>();

@@ -33,7 +33,12 @@ macro_rules! op_forms {
             form!(unfused_unchecked, |t, v| mm::unfused::kernels::$unchecked(t, v $(, $arg)?));
             form!(relaxed, |t, v| mm::relaxed::kernels::$op(t, v $(, $arg)?));
             form!(relaxed_unchecked, |t, v| mm::relaxed::kernels::$unchecked(t, v $(, $arg)?));
-            form!(method, |t, v| { let _ = t; v.$op($($arg)?) });
+            form!(method, |t, v| {
+                let _ = t;
+                // Keep the original inherent method as the benchmark control.
+                #[allow(deprecated)]
+                { v.$op($($arg)?) }
+            });
         }
     };
 }
