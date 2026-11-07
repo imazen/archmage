@@ -122,6 +122,8 @@ The `0.9.31-beta.1` entries cover changes since `0.9.30`, and the
 
 #### Changed
 
+- Float negation now flips exactly the sign bit on every backend. On x86, `-(+0.0)` now returns `-0.0`; NaN signs flip while payloads and signalling bits are preserved instead of passing through subtraction (#135).
+
 - Float `simd_ne` now uses unordered inequality on every backend, matching Rust `!=`. NaN lanes on x86 V3 and delegated V4/V4x widths now return true masks instead of false; integer comparisons are unchanged (#130).
 
 #### QUEUED BREAKING CHANGES

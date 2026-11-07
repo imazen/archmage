@@ -32,10 +32,9 @@ fn tolerance_for(op: &str) -> Tolerance {
     match op {
         // Exact: these should produce identical bits across all architectures
         "round" | "floor" | "ceil" | "abs" | "sqrt" | "add" | "sub" | "mul" | "div" | "to_i32"
-        | "to_i32_round" | "not" => Tolerance::Exact,
+        | "to_i32_round" | "not" | "neg" => Tolerance::Exact,
 
         // Relaxed: these have known platform-specific differences
-        "neg" => Tolerance::Relaxed("signed-zero (sub(0,x) vs xor sign bit)"),
         "min" | "max" => Tolerance::Relaxed("NaN propagation (SSE returns second operand)"),
         "mul_add" | "mul_sub" => Tolerance::Relaxed("FMA vs separate mul+add"),
         "rcp_approx" | "rsqrt_approx" | "recip" | "rsqrt" => {

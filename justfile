@@ -7,6 +7,14 @@ default: test
 test:
     cargo test --features "std avx512"
 
+# Exact float mask/negation bits, generated parity, and their documented contracts.
+test-float-contracts:
+    cargo test -p magetypes --features "std avx512" --test float_inequality --test float_negation --test scalar_parity --test doc_examples
+
+# Emit the named neg8_codegen probe for instruction inspection.
+float-contract-codegen:
+    cargo rustc -p magetypes --release --features "std avx512" --test float_negation -- --emit=asm
+
 # Run tests with all features (requires nightly for sleef)
 test-nightly:
     cargo +nightly test --all-features

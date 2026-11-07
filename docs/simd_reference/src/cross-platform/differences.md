@@ -131,18 +131,14 @@ Reduction associativity may differ between backends (tree vs left-fold), produci
 
 ## Negation and Signed Zero
 
-```rust
-// x86: subps(zero, x) — loses -0.0 sign
-_mm_sub_ps(_mm_setzero_ps(), x)  // neg(0.0) = +0.0, neg(-0.0) = +0.0
+The float `-v` operator flips exactly the sign bit on every backend, matching
+Rust's unary negation. `-(+0.0)` is `-0.0`, and `-(-0.0)` is `+0.0`.
+NaN payloads and signalling bits are preserved; only their sign changes.
 
-// NEON: vneg flips sign bit directly
-vnegq_f32(x)  // neg(0.0) = -0.0, neg(-0.0) = +0.0
-
-// WASM: f32x4_neg flips sign bit
-f32x4_neg(x)  // neg(0.0) = -0.0, neg(-0.0) = +0.0
-```
-
-**Magetypes:** The `-v` operator uses the backend's native negation. If signed-zero correctness matters, use `v.xor(sign_mask)` with a splat of `-0.0` to flip the sign bit directly.
+x86 uses sign-bit XOR, NEON and WASM use their native sign-flip operations,
+and the scalar backend uses Rust negation. This changes the earlier x86
+`0.0 - x` behavior for positive zero and NaNs. No explicit sign-mask workaround
+is needed.
 
 ## Min/Max NaN Propagation
 

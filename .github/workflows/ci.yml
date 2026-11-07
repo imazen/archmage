@@ -154,8 +154,8 @@ jobs:
 
       - name: Portable and native FMA contracts (std and no_std)
         run: |
-          cargo test -p magetypes --features "${{ env.FEATURES }}" --test fma_contract
-          cargo test -p magetypes --no-default-features --features w512 --test fma_contract
+          cargo test -p magetypes --features "${{ env.FEATURES }}" --test fma_contract --test float_inequality --test float_negation
+          cargo test -p magetypes --no-default-features --features w512 --test fma_contract --test float_inequality --test float_negation
 
       - name: Macro input, output, and diagnostic contracts
         run: |
@@ -250,8 +250,8 @@ jobs:
 
       - name: Portable and native FMA contracts (std and no_std)
         run: |
-          cargo test -p magetypes --features "${{ env.FEATURES }}" --test fma_contract
-          cargo test -p magetypes --no-default-features --features w512 --test fma_contract
+          cargo test -p magetypes --features "${{ env.FEATURES }}" --test fma_contract --test float_inequality --test float_negation
+          cargo test -p magetypes --no-default-features --features w512 --test fma_contract --test float_inequality --test float_negation
 
       - name: Macro input, output, and diagnostic contracts
         run: |

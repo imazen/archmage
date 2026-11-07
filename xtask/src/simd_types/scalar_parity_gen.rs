@@ -158,16 +158,13 @@ fn comparison_helpers() -> String {
             }}
         }}
 
-        /// f32 comparison that treats ±0 as equal (for ops where signed zero differs).
-        fn assert_f32_signed_zero_tolerant(scalar: &[f32], native: &[f32], op: &str, input: &[f32]) {{
+        /// Exact f32 bits, including signed zeros and every NaN bit.
+        fn assert_f32_bits_exact(scalar: &[f32], native: &[f32], op: &str, input: &[f32]) {{
             assert_eq!(scalar.len(), native.len(), "{{op}}: length mismatch");
             for i in 0..scalar.len() {{
                 let s = scalar[i];
                 let n = native[i];
-                if s.is_nan() && n.is_nan() {{ continue; }}
                 if s.to_bits() == n.to_bits() {{ continue; }}
-                // Allow ±0 difference
-                if s == 0.0 && n == 0.0 {{ continue; }}
                 panic!(
                     "{{op}} divergence at lane {{i}}: scalar={{s}} (0x{{:08x}}) native={{n}} (0x{{:08x}}) input={{input:?}}",
                     s.to_bits(), n.to_bits()
@@ -175,15 +172,13 @@ fn comparison_helpers() -> String {
             }}
         }}
 
-        /// f64 comparison that treats ±0 as equal.
-        fn assert_f64_signed_zero_tolerant(scalar: &[f64], native: &[f64], op: &str, input: &[f64]) {{
+        /// Exact f64 bits, including signed zeros and every NaN bit.
+        fn assert_f64_bits_exact(scalar: &[f64], native: &[f64], op: &str, input: &[f64]) {{
             assert_eq!(scalar.len(), native.len(), "{{op}}: length mismatch");
             for i in 0..scalar.len() {{
                 let s = scalar[i];
                 let n = native[i];
-                if s.is_nan() && n.is_nan() {{ continue; }}
                 if s.to_bits() == n.to_bits() {{ continue; }}
-                if s == 0.0 && n == 0.0 {{ continue; }}
                 panic!(
                     "{{op}} divergence at lane {{i}}: scalar={{s}} (0x{{:016x}}) native={{n}} (0x{{:016x}}) input={{input:?}}",
                     s.to_bits(), n.to_bits()
@@ -543,19 +538,19 @@ fn gen_float_type_tests(code: &mut String, elem: &str, lanes: usize) {
         });
     }
 
-    // neg — signed-zero tolerant (x86 backend uses sub(0,x) which loses -0)
+    // neg flips only the sign bit; NaN payloads and signalling bits are exact.
     {
-        let assert_sz = if elem == "f32" {
-            "assert_f32_signed_zero_tolerant"
+        let assert_bits = if elem == "f32" {
+            "assert_f32_bits_exact"
         } else {
-            "assert_f64_signed_zero_tolerant"
+            "assert_f64_bits_exact"
         };
         code.push_str(&formatdoc! {r#"
             #[test]
             fn neg() {{
                 run_unary("{type_name}::neg", |vs, vn| {{
                     ((-vs).to_array(), (-vn).to_array())
-                }}, super::{assert_sz});
+                }}, super::{assert_bits});
             }}
 
         "#});

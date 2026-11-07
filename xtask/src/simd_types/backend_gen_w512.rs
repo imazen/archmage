@@ -2509,7 +2509,7 @@ fn generate_x86_v4_float_impl_for_token(ty: &W512Type, token: &str) -> String {
 
             {arcane}
             fn neg(self, a: {inner}) -> {inner} {{
-                _mm512_sub_{s}(_mm512_setzero_{s}(), a)
+                _mm512_xor_{s}(a, _mm512_set1_{s}(-0.0))
             }}
 
             {arcane}

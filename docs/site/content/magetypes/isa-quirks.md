@@ -144,8 +144,6 @@ recommendations to depend on unusual NaN behavior.
 |---|---|---|---|---|---|
 | `min(NaN, 1)` and `max(NaN, 1)` | `1` | `1` | `NaN` | `1` | `1` |
 | `min(1, NaN)` and `max(1, NaN)` | `NaN` | `NaN` | `NaN` | `1` | `NaN` |
-| Negate `+0.0` | `+0.0` | `+0.0` | `-0.0` | `-0.0` | `-0.0` |
-| Negate `-0.0` | `+0.0` | `+0.0` | `+0.0` | `+0.0` | `+0.0` |
 
 x86 min/max select the second operand when a NaN is involved. NEON uses
 `vminq`/`vmaxq`, and WASM uses `min`/`max`, which propagate NaNs. Smaller scalar
@@ -158,8 +156,10 @@ Float `simd_ne` is unordered on every backend, matching Rust's `!=`:
 a lane is true when either operand is NaN. Its mask is the bitwise inverse
 of `simd_eq`, including NaN lanes. This changes the earlier ordered result
 on x86 V3 and the V4/V4x widths that delegate to it.
-If NaNs or signed zeros matter to min/max or negation, handle those remaining
-differences explicitly. Sign-bit XOR negation remains a separate follow-up.
+Unary float negation flips exactly the sign bit on every backend: `+0.0`
+becomes `-0.0`, and NaN payloads and signalling bits are preserved. The earlier
+x86 subtraction form could lose the zero sign and quiet NaNs. Min/max still
+have the NaN and equal-zero differences described above.
 
 ## Fused arithmetic and reductions
 

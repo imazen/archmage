@@ -1668,7 +1668,7 @@ fn generate_x86_float_impl(ty: &FloatVecType, token: &str) -> String {
 
             {arcane}
             fn neg(self, a: {inner}) -> {inner} {{
-                {p}_sub_{s}({setzero}(), a)
+                {p}_xor_{s}(a, {p}_set1_{s}(-0.0))
             }}
 
             // ====== Math ======

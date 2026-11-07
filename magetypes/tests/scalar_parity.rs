@@ -158,20 +158,13 @@ fn assert_f32_approx(scalar: &[f32], native: &[f32], op: &str, input: &[f32], re
     }
 }
 
-/// f32 comparison that treats ±0 as equal (for ops where signed zero differs).
-fn assert_f32_signed_zero_tolerant(scalar: &[f32], native: &[f32], op: &str, input: &[f32]) {
+/// Exact f32 bits, including signed zeros and every NaN bit.
+fn assert_f32_bits_exact(scalar: &[f32], native: &[f32], op: &str, input: &[f32]) {
     assert_eq!(scalar.len(), native.len(), "{op}: length mismatch");
     for i in 0..scalar.len() {
         let s = scalar[i];
         let n = native[i];
-        if s.is_nan() && n.is_nan() {
-            continue;
-        }
         if s.to_bits() == n.to_bits() {
-            continue;
-        }
-        // Allow ±0 difference
-        if s == 0.0 && n == 0.0 {
             continue;
         }
         panic!(
@@ -182,19 +175,13 @@ fn assert_f32_signed_zero_tolerant(scalar: &[f32], native: &[f32], op: &str, inp
     }
 }
 
-/// f64 comparison that treats ±0 as equal.
-fn assert_f64_signed_zero_tolerant(scalar: &[f64], native: &[f64], op: &str, input: &[f64]) {
+/// Exact f64 bits, including signed zeros and every NaN bit.
+fn assert_f64_bits_exact(scalar: &[f64], native: &[f64], op: &str, input: &[f64]) {
     assert_eq!(scalar.len(), native.len(), "{op}: length mismatch");
     for i in 0..scalar.len() {
         let s = scalar[i];
         let n = native[i];
-        if s.is_nan() && n.is_nan() {
-            continue;
-        }
         if s.to_bits() == n.to_bits() {
-            continue;
-        }
-        if s == 0.0 && n == 0.0 {
             continue;
         }
         panic!(
@@ -678,7 +665,7 @@ fn not() {
 fn neg() {
     run_unary("f32x4::neg", |vs, vn| {
         ((-vs).to_array(), (-vn).to_array())
-    }, super::assert_f32_signed_zero_tolerant);
+    }, super::assert_f32_bits_exact);
 }
 
 #[test]
@@ -1170,7 +1157,7 @@ fn not() {
 fn neg() {
     run_unary("f32x8::neg", |vs, vn| {
         ((-vs).to_array(), (-vn).to_array())
-    }, super::assert_f32_signed_zero_tolerant);
+    }, super::assert_f32_bits_exact);
 }
 
 #[test]
@@ -1662,7 +1649,7 @@ fn not() {
 fn neg() {
     run_unary("f64x2::neg", |vs, vn| {
         ((-vs).to_array(), (-vn).to_array())
-    }, super::assert_f64_signed_zero_tolerant);
+    }, super::assert_f64_bits_exact);
 }
 
 #[test]
@@ -2082,7 +2069,7 @@ fn not() {
 fn neg() {
     run_unary("f64x4::neg", |vs, vn| {
         ((-vs).to_array(), (-vn).to_array())
-    }, super::assert_f64_signed_zero_tolerant);
+    }, super::assert_f64_bits_exact);
 }
 
 #[test]

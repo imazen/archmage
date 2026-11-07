@@ -2566,6 +2566,23 @@ fn run_ci() -> Result<()> {
     if !tests.success() {
         bail!("Tests failed");
     }
+    let float_contracts = std::process::Command::new("cargo")
+        .args([
+            "test",
+            "-p",
+            "magetypes",
+            "--features",
+            "std avx512",
+            "--test",
+            "float_inequality",
+            "--test",
+            "float_negation",
+        ])
+        .status()
+        .context("Failed to run exact float contract tests")?;
+    if !float_contracts.success() {
+        bail!("Exact float contract tests failed");
+    }
     println!("└─ All tests passed ─────────────────────────────────────────────────┘\n");
 
     // Step 10: no_std compilation and tests

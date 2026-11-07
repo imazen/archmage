@@ -89,7 +89,7 @@ impl F32x16Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn neg(self, a: __m512) -> __m512 {
-        _mm512_sub_ps(_mm512_setzero_ps(), a)
+        _mm512_xor_ps(a, _mm512_set1_ps(-0.0))
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -323,7 +323,7 @@ impl F64x8Backend for X64V4Token {
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
     fn neg(self, a: __m512d) -> __m512d {
-        _mm512_sub_pd(_mm512_setzero_pd(), a)
+        _mm512_xor_pd(a, _mm512_set1_pd(-0.0))
     }
 
     #[arcane(suppress_const_test, _self = X64V4Token)]
@@ -2197,7 +2197,7 @@ impl F32x16Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn neg(self, a: __m512) -> __m512 {
-        _mm512_sub_ps(_mm512_setzero_ps(), a)
+        _mm512_xor_ps(a, _mm512_set1_ps(-0.0))
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
@@ -2431,7 +2431,7 @@ impl F64x8Backend for X64V4xToken {
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]
     fn neg(self, a: __m512d) -> __m512d {
-        _mm512_sub_pd(_mm512_setzero_pd(), a)
+        _mm512_xor_pd(a, _mm512_set1_pd(-0.0))
     }
 
     #[arcane(suppress_const_test, _self = X64V4xToken)]

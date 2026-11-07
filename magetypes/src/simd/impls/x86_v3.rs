@@ -92,7 +92,7 @@ impl F32x4Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn neg(self, a: __m128) -> __m128 {
-        _mm_sub_ps(_mm_setzero_ps(), a)
+        _mm_xor_ps(a, _mm_set1_ps(-0.0))
     }
 
     // ====== Math ======
@@ -392,7 +392,7 @@ impl F32x8Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn neg(self, a: __m256) -> __m256 {
-        _mm256_sub_ps(_mm256_setzero_ps(), a)
+        _mm256_xor_ps(a, _mm256_set1_ps(-0.0))
     }
 
     // ====== Math ======
@@ -730,7 +730,7 @@ impl F64x2Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn neg(self, a: __m128d) -> __m128d {
-        _mm_sub_pd(_mm_setzero_pd(), a)
+        _mm_xor_pd(a, _mm_set1_pd(-0.0))
     }
 
     // ====== Math ======
@@ -972,7 +972,7 @@ impl F64x4Backend for X64V3Token {
 
     #[arcane(suppress_const_test, _self = X64V3Token)]
     fn neg(self, a: __m256d) -> __m256d {
-        _mm256_sub_pd(_mm256_setzero_pd(), a)
+        _mm256_xor_pd(a, _mm256_set1_pd(-0.0))
     }
 
     // ====== Math ======
