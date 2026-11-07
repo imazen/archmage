@@ -17,11 +17,14 @@ fn corpus()->Vec<f32>{
 }
 '''
 for width in [4,8,16]:
- if width==16:s+='#[cfg(feature="w512")]\n'
- s+=f'#[attune(_scalar_t,_v3_t,_neon_t,_wasm128_t,_v4x_t(cfg(avx512)),define(f32x{width}))]\nfn width{width}(tier:&str){{\nlet t=Token::from_context();let data=corpus();for chunk in data.chunks({width}){{let mut input=[1.0;{width}];input[..chunk.len()].copy_from_slice(chunk);let v=f32x{width}::from_array_t(t,input);\n'
+ helpers={}
  kernel=f'magemath::legacy::kernels::f32x{width}'if width!=8 else 'magemath::legacy::kernels'
  for row in rows:
   name=row['name'];call=',y'if row['exponent']else '';method='y'if row['exponent']else ''
+  helper_start=len(s)
+  if width==16:s+='#[cfg(feature="w512")]\n'
+  # Bound debug stack frames without changing the corpus or assertions.
+  s+=f'#[attune(_scalar_t,_v3_t,_neon_t,_wasm128_t,_v4x_t(cfg(avx512)),define(f32x{width}),inline(never))]\nfn {name}_width{width}(tier:&str,data:&[f32]){{\nlet t=Token::from_context();for chunk in data.chunks({width}){{let mut input=[1.0;{width}];input[..chunk.len()].copy_from_slice(chunk);let v=f32x{width}::from_array_t(t,input);\n'
   s+=' {\n'
   if row['exponent']:s+='for y in [-3.0,-1.0,0.0,0.5,1.0,2.0,2.4,f32::INFINITY,f32::NAN]{\n'
   else:s+='let y=0.0;\n'
@@ -30,12 +33,19 @@ for width in [4,8,16]:
   # Small exact tail fixtures are lane-distinct and exercise every tail length.
   s+=f'if chunk.len()=={width}{{for len in 0..={width}{{let mut tail=input[..len].to_vec();attuned!(magemath::legacy::slice::{name}_f32x{width}(&mut tail{call}),[_v3,_neon,_wasm128,_scalar,_v4x(cfg(avx512))],using(t));for i in 0..len{{assert!(tail[i].to_bits()==want[i].to_bits()||tail[i].is_nan()&&want[i].is_nan(),"{{tier}}/slice/{name}/width{width}/tail{{len}}/lane{{i}} input{{:08x}}",input[i].to_bits());}}}}}}\n'
   if row['exponent']:s+='}\n'
-  s+='}\n'
- s+='}\n'
+  s+='}\n}\n'
+  helpers[name]=s[helper_start:]
+  s=s[:helper_start]
  for row in rows:
   name=row['name'];call=',y'if row['exponent']else '';method='y'if row['exponent']else ''
+  s+=helpers[name]
   s+=f'{{{"let y=2.4;" if row["exponent"] else ""}let mut got=data[..2*{width}+3].to_vec();let mut want=Vec::new();for chunk in got.chunks({width}){{let mut pad=[1.0;{width}];pad[..chunk.len()].copy_from_slice(chunk);let v=f32x{width}::from_array_t(t,pad);let out=black_box(v).{name}({method}).to_array();want.extend_from_slice(&out[..chunk.len()]);}}attuned!(magemath::legacy::slice::{name}_f32x{width}(&mut got{call}),[_v3,_neon,_wasm128,_scalar,_v4x(cfg(avx512))],using(t));for i in 0..got.len(){{assert!(got[i].to_bits()==want[i].to_bits()||got[i].is_nan()&&want[i].is_nan(),"{{tier}}/multiblock/{name}/width{width}/lane{{i}}");}}}}\n'
- s+='}\n' 
+  s+='}\n'
+ if width==16:s+='#[cfg(feature="w512")]\n'
+ s+=f'#[attune(_scalar_t,_v3_t,_neon_t,_wasm128_t,_v4x_t(cfg(avx512)),define(f32x{width}))]\nfn width{width}(tier:&str){{\nlet t=Token::from_context();let data=corpus();\n'
+ for row in rows:
+  s+=f'attuned!({row["name"]}_width{width}(tier,&data),[_v3,_neon,_wasm128,_scalar,_v4x(cfg(avx512))],using(t));\n'
+ s+='}\n'
 s+='''
 #[test]
 fn all_legacy_names_widths_and_tiers(){

@@ -697,6 +697,10 @@ magemath-generate:
 magemath-superset-check tiers:
     LEGACY_REQUIRE_TIERS={{tiers}} cargo test -p magemath --all-features --release --test legacy_superset --test width_parity -- --nocapture
 
+# Debug frames must fit the target's default stack; uses its configured runner.
+magemath-superset-debug-check target tiers:
+    LEGACY_REQUIRE_TIERS={{tiers}} cargo test --locked -p magemath --all-features --target {{target}} --test legacy_superset --test width_parity -- --nocapture
+
 zenmath-gamma-generate:
     python3 zenmath/tools/generate-gamma-tables.py
     cargo fmt -p zenmath

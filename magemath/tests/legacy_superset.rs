@@ -41,11 +41,11 @@ fn corpus() -> Vec<f32> {
     _neon_t,
     _wasm128_t,
     _v4x_t(cfg(avx512)),
-    define(f32x4)
+    define(f32x4),
+    inline(never)
 )]
-fn width4(tier: &str) {
+fn log2_lowp_width4(tier: &str, data: &[f32]) {
     let t = Token::from_context();
-    let data = corpus();
     for chunk in data.chunks(4) {
         let mut input = [1.0; 4];
         input[..chunk.len()].copy_from_slice(chunk);
@@ -80,6 +80,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).log2_lowp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log2_lowp_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log2_lowp/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn log2_lowp_unchecked_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log2_lowp_unchecked().to_array();
@@ -111,6 +150,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).log2_lowp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log2_lowp_unchecked_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log2_lowp_unchecked/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn exp2_lowp_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp2_lowp().to_array();
@@ -141,6 +219,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).exp2_lowp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp2_lowp_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp2_lowp/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn exp2_lowp_unchecked_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp2_lowp_unchecked().to_array();
@@ -172,6 +289,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).exp2_lowp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp2_lowp_unchecked_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp2_lowp_unchecked/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn ln_lowp_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).ln_lowp().to_array();
@@ -202,6 +358,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).ln_lowp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::ln_lowp_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/ln_lowp/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn ln_lowp_unchecked_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).ln_lowp_unchecked().to_array();
@@ -233,6 +428,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).ln_lowp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::ln_lowp_unchecked_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/ln_lowp_unchecked/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn exp_lowp_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp_lowp().to_array();
@@ -263,6 +497,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).exp_lowp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp_lowp_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp_lowp/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn exp_lowp_unchecked_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp_lowp_unchecked().to_array();
@@ -294,6 +567,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).exp_lowp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp_lowp_unchecked_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp_lowp_unchecked/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn log10_lowp_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log10_lowp().to_array();
@@ -324,6 +636,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).log10_lowp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log10_lowp_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log10_lowp/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn log10_lowp_unchecked_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log10_lowp_unchecked().to_array();
@@ -355,6 +706,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).log10_lowp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log10_lowp_unchecked_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log10_lowp_unchecked/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn pow_lowp_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             for y in [-3.0, -1.0, 0.0, 0.5, 1.0, 2.0, 2.4, f32::INFINITY, f32::NAN] {
                 let want = black_box(v).pow_lowp(y).to_array();
@@ -386,6 +776,46 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let y = 2.4;
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).pow_lowp(y).to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::pow_lowp_f32x4(&mut got, y),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/pow_lowp/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn pow_lowp_unchecked_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             for y in [-3.0, -1.0, 0.0, 0.5, 1.0, 2.0, 2.4, f32::INFINITY, f32::NAN] {
                 let want = black_box(v).pow_lowp_unchecked(y).to_array();
@@ -418,6 +848,46 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let y = 2.4;
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).pow_lowp_unchecked(y).to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::pow_lowp_unchecked_f32x4(&mut got, y),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/pow_lowp_unchecked/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn log2_midp_unchecked_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log2_midp_unchecked().to_array();
@@ -449,6 +919,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).log2_midp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log2_midp_unchecked_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log2_midp_unchecked/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn log2_midp_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log2_midp().to_array();
@@ -479,6 +988,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).log2_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log2_midp_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log2_midp/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn log2_midp_precise_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log2_midp_precise().to_array();
@@ -510,6 +1058,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).log2_midp_precise().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log2_midp_precise_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log2_midp_precise/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn exp2_midp_unchecked_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp2_midp_unchecked().to_array();
@@ -541,6 +1128,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).exp2_midp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp2_midp_unchecked_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp2_midp_unchecked/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn exp2_midp_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp2_midp().to_array();
@@ -571,6 +1197,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).exp2_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp2_midp_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp2_midp/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn exp2_midp_precise_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp2_midp_precise().to_array();
@@ -602,6 +1267,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).exp2_midp_precise().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp2_midp_precise_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp2_midp_precise/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn ln_midp_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).ln_midp().to_array();
@@ -632,6 +1336,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).ln_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::ln_midp_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/ln_midp/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn ln_midp_unchecked_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).ln_midp_unchecked().to_array();
@@ -663,6 +1406,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).ln_midp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::ln_midp_unchecked_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/ln_midp_unchecked/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn ln_midp_precise_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).ln_midp_precise().to_array();
@@ -693,6 +1475,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).ln_midp_precise().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::ln_midp_precise_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/ln_midp_precise/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn exp_midp_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp_midp().to_array();
@@ -723,6 +1544,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).exp_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp_midp_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp_midp/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn exp_midp_unchecked_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp_midp_unchecked().to_array();
@@ -754,6 +1614,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).exp_midp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp_midp_unchecked_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp_midp_unchecked/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn exp_midp_precise_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp_midp_precise().to_array();
@@ -785,6 +1684,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).exp_midp_precise().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp_midp_precise_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp_midp_precise/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn sigmoid_midp_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).sigmoid_midp().to_array();
@@ -815,6 +1753,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).sigmoid_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::sigmoid_midp_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/sigmoid_midp/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn silu_midp_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).silu_midp().to_array();
@@ -845,6 +1822,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).silu_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::silu_midp_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/silu_midp/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn log10_midp_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log10_midp().to_array();
@@ -875,6 +1891,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).log10_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log10_midp_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log10_midp/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn log10_midp_unchecked_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log10_midp_unchecked().to_array();
@@ -906,6 +1961,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).log10_midp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log10_midp_unchecked_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log10_midp_unchecked/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn log10_midp_precise_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log10_midp_precise().to_array();
@@ -937,6 +2031,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).log10_midp_precise().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log10_midp_precise_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log10_midp_precise/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn pow_midp_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             for y in [-3.0, -1.0, 0.0, 0.5, 1.0, 2.0, 2.4, f32::INFINITY, f32::NAN] {
                 let want = black_box(v).pow_midp(y).to_array();
@@ -968,6 +2101,46 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let y = 2.4;
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).pow_midp(y).to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::pow_midp_f32x4(&mut got, y),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/pow_midp/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn pow_midp_unchecked_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             for y in [-3.0, -1.0, 0.0, 0.5, 1.0, 2.0, 2.4, f32::INFINITY, f32::NAN] {
                 let want = black_box(v).pow_midp_unchecked(y).to_array();
@@ -1000,6 +2173,46 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let y = 2.4;
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).pow_midp_unchecked(y).to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::pow_midp_unchecked_f32x4(&mut got, y),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/pow_midp_unchecked/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn pow_midp_precise_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             for y in [-3.0, -1.0, 0.0, 0.5, 1.0, 2.0, 2.4, f32::INFINITY, f32::NAN] {
                 let want = black_box(v).pow_midp_precise(y).to_array();
@@ -1032,6 +2245,46 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let y = 2.4;
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).pow_midp_precise(y).to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::pow_midp_precise_f32x4(&mut got, y),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/pow_midp_precise/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn cbrt_lowp_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).cbrt_lowp().to_array();
@@ -1062,6 +2315,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).cbrt_lowp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::cbrt_lowp_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/cbrt_lowp/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn cbrt_midp_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).cbrt_midp().to_array();
@@ -1092,6 +2384,45 @@ fn width4(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 4 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(4) {
+            let mut pad = [1.0; 4];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x4::from_array_t(t, pad);
+            let out = black_box(v).cbrt_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::cbrt_midp_f32x4(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/cbrt_midp/width4/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x4),
+    inline(never)
+)]
+fn cbrt_midp_precise_width4(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(4) {
+        let mut input = [1.0; 4];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x4::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).cbrt_midp_precise().to_array();
@@ -1131,759 +2462,6 @@ fn width4(tier: &str) {
             let mut pad = [1.0; 4];
             pad[..chunk.len()].copy_from_slice(chunk);
             let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).log2_lowp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log2_lowp_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log2_lowp/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).log2_lowp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log2_lowp_unchecked_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log2_lowp_unchecked/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).exp2_lowp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp2_lowp_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp2_lowp/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).exp2_lowp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp2_lowp_unchecked_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp2_lowp_unchecked/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).ln_lowp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::ln_lowp_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/ln_lowp/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).ln_lowp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::ln_lowp_unchecked_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/ln_lowp_unchecked/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).exp_lowp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp_lowp_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp_lowp/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).exp_lowp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp_lowp_unchecked_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp_lowp_unchecked/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).log10_lowp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log10_lowp_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log10_lowp/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).log10_lowp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log10_lowp_unchecked_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log10_lowp_unchecked/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let y = 2.4;
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).pow_lowp(y).to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::pow_lowp_f32x4(&mut got, y),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/pow_lowp/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let y = 2.4;
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).pow_lowp_unchecked(y).to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::pow_lowp_unchecked_f32x4(&mut got, y),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/pow_lowp_unchecked/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).log2_midp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log2_midp_unchecked_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log2_midp_unchecked/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).log2_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log2_midp_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log2_midp/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).log2_midp_precise().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log2_midp_precise_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log2_midp_precise/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).exp2_midp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp2_midp_unchecked_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp2_midp_unchecked/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).exp2_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp2_midp_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp2_midp/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).exp2_midp_precise().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp2_midp_precise_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp2_midp_precise/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).ln_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::ln_midp_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/ln_midp/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).ln_midp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::ln_midp_unchecked_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/ln_midp_unchecked/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).ln_midp_precise().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::ln_midp_precise_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/ln_midp_precise/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).exp_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp_midp_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp_midp/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).exp_midp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp_midp_unchecked_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp_midp_unchecked/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).exp_midp_precise().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp_midp_precise_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp_midp_precise/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).sigmoid_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::sigmoid_midp_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/sigmoid_midp/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).silu_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::silu_midp_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/silu_midp/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).log10_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log10_midp_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log10_midp/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).log10_midp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log10_midp_unchecked_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log10_midp_unchecked/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).log10_midp_precise().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log10_midp_precise_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log10_midp_precise/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let y = 2.4;
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).pow_midp(y).to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::pow_midp_f32x4(&mut got, y),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/pow_midp/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let y = 2.4;
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).pow_midp_unchecked(y).to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::pow_midp_unchecked_f32x4(&mut got, y),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/pow_midp_unchecked/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let y = 2.4;
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).pow_midp_precise(y).to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::pow_midp_precise_f32x4(&mut got, y),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/pow_midp_precise/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).cbrt_lowp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::cbrt_lowp_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/cbrt_lowp/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
-            let out = black_box(v).cbrt_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::cbrt_midp_f32x4(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/cbrt_midp/width4/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 4 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(4) {
-            let mut pad = [1.0; 4];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x4::from_array_t(t, pad);
             let out = black_box(v).cbrt_midp_precise().to_array();
             want.extend_from_slice(&out[..chunk.len()]);
         }
@@ -1906,11 +2484,198 @@ fn width4(tier: &str) {
     _neon_t,
     _wasm128_t,
     _v4x_t(cfg(avx512)),
-    define(f32x8)
+    define(f32x4)
 )]
-fn width8(tier: &str) {
+fn width4(tier: &str) {
     let t = Token::from_context();
     let data = corpus();
+    attuned!(
+        log2_lowp_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log2_lowp_unchecked_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp2_lowp_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp2_lowp_unchecked_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        ln_lowp_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        ln_lowp_unchecked_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp_lowp_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp_lowp_unchecked_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log10_lowp_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log10_lowp_unchecked_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        pow_lowp_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        pow_lowp_unchecked_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log2_midp_unchecked_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log2_midp_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log2_midp_precise_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp2_midp_unchecked_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp2_midp_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp2_midp_precise_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        ln_midp_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        ln_midp_unchecked_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        ln_midp_precise_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp_midp_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp_midp_unchecked_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp_midp_precise_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        sigmoid_midp_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        silu_midp_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log10_midp_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log10_midp_unchecked_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log10_midp_precise_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        pow_midp_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        pow_midp_unchecked_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        pow_midp_precise_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        cbrt_lowp_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        cbrt_midp_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        cbrt_midp_precise_width4(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn log2_lowp_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
     for chunk in data.chunks(8) {
         let mut input = [1.0; 8];
         input[..chunk.len()].copy_from_slice(chunk);
@@ -1945,6 +2710,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).log2_lowp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log2_lowp_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log2_lowp/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn log2_lowp_unchecked_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log2_lowp_unchecked().to_array();
@@ -1975,6 +2779,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).log2_lowp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log2_lowp_unchecked_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log2_lowp_unchecked/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn exp2_lowp_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp2_lowp().to_array();
@@ -2005,6 +2848,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).exp2_lowp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp2_lowp_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp2_lowp/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn exp2_lowp_unchecked_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp2_lowp_unchecked().to_array();
@@ -2035,6 +2917,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).exp2_lowp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp2_lowp_unchecked_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp2_lowp_unchecked/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn ln_lowp_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).ln_lowp().to_array();
@@ -2065,6 +2986,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).ln_lowp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::ln_lowp_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/ln_lowp/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn ln_lowp_unchecked_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).ln_lowp_unchecked().to_array();
@@ -2095,6 +3055,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).ln_lowp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::ln_lowp_unchecked_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/ln_lowp_unchecked/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn exp_lowp_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp_lowp().to_array();
@@ -2125,6 +3124,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).exp_lowp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp_lowp_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp_lowp/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn exp_lowp_unchecked_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp_lowp_unchecked().to_array();
@@ -2155,6 +3193,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).exp_lowp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp_lowp_unchecked_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp_lowp_unchecked/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn log10_lowp_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log10_lowp().to_array();
@@ -2185,6 +3262,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).log10_lowp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log10_lowp_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log10_lowp/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn log10_lowp_unchecked_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log10_lowp_unchecked().to_array();
@@ -2215,6 +3331,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).log10_lowp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log10_lowp_unchecked_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log10_lowp_unchecked/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn pow_lowp_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             for y in [-3.0, -1.0, 0.0, 0.5, 1.0, 2.0, 2.4, f32::INFINITY, f32::NAN] {
                 let want = black_box(v).pow_lowp(y).to_array();
@@ -2246,6 +3401,46 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let y = 2.4;
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).pow_lowp(y).to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::pow_lowp_f32x8(&mut got, y),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/pow_lowp/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn pow_lowp_unchecked_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             for y in [-3.0, -1.0, 0.0, 0.5, 1.0, 2.0, 2.4, f32::INFINITY, f32::NAN] {
                 let want = black_box(v).pow_lowp_unchecked(y).to_array();
@@ -2278,6 +3473,46 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let y = 2.4;
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).pow_lowp_unchecked(y).to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::pow_lowp_unchecked_f32x8(&mut got, y),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/pow_lowp_unchecked/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn log2_midp_unchecked_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log2_midp_unchecked().to_array();
@@ -2308,6 +3543,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).log2_midp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log2_midp_unchecked_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log2_midp_unchecked/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn log2_midp_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log2_midp().to_array();
@@ -2338,6 +3612,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).log2_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log2_midp_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log2_midp/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn log2_midp_precise_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log2_midp_precise().to_array();
@@ -2368,6 +3681,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).log2_midp_precise().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log2_midp_precise_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log2_midp_precise/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn exp2_midp_unchecked_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp2_midp_unchecked().to_array();
@@ -2398,6 +3750,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).exp2_midp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp2_midp_unchecked_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp2_midp_unchecked/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn exp2_midp_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp2_midp().to_array();
@@ -2428,6 +3819,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).exp2_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp2_midp_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp2_midp/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn exp2_midp_precise_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp2_midp_precise().to_array();
@@ -2458,6 +3888,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).exp2_midp_precise().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp2_midp_precise_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp2_midp_precise/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn ln_midp_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).ln_midp().to_array();
@@ -2488,6 +3957,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).ln_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::ln_midp_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/ln_midp/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn ln_midp_unchecked_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).ln_midp_unchecked().to_array();
@@ -2518,6 +4026,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).ln_midp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::ln_midp_unchecked_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/ln_midp_unchecked/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn ln_midp_precise_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).ln_midp_precise().to_array();
@@ -2548,6 +4095,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).ln_midp_precise().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::ln_midp_precise_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/ln_midp_precise/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn exp_midp_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp_midp().to_array();
@@ -2578,6 +4164,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).exp_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp_midp_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp_midp/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn exp_midp_unchecked_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp_midp_unchecked().to_array();
@@ -2608,6 +4233,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).exp_midp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp_midp_unchecked_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp_midp_unchecked/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn exp_midp_precise_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp_midp_precise().to_array();
@@ -2638,6 +4302,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).exp_midp_precise().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp_midp_precise_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp_midp_precise/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn sigmoid_midp_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).sigmoid_midp().to_array();
@@ -2668,6 +4371,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).sigmoid_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::sigmoid_midp_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/sigmoid_midp/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn silu_midp_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).silu_midp().to_array();
@@ -2698,6 +4440,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).silu_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::silu_midp_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/silu_midp/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn log10_midp_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log10_midp().to_array();
@@ -2728,6 +4509,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).log10_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log10_midp_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log10_midp/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn log10_midp_unchecked_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log10_midp_unchecked().to_array();
@@ -2758,6 +4578,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).log10_midp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log10_midp_unchecked_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log10_midp_unchecked/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn log10_midp_precise_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log10_midp_precise().to_array();
@@ -2788,6 +4647,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).log10_midp_precise().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log10_midp_precise_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log10_midp_precise/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn pow_midp_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             for y in [-3.0, -1.0, 0.0, 0.5, 1.0, 2.0, 2.4, f32::INFINITY, f32::NAN] {
                 let want = black_box(v).pow_midp(y).to_array();
@@ -2819,6 +4717,46 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let y = 2.4;
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).pow_midp(y).to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::pow_midp_f32x8(&mut got, y),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/pow_midp/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn pow_midp_unchecked_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             for y in [-3.0, -1.0, 0.0, 0.5, 1.0, 2.0, 2.4, f32::INFINITY, f32::NAN] {
                 let want = black_box(v).pow_midp_unchecked(y).to_array();
@@ -2851,6 +4789,46 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let y = 2.4;
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).pow_midp_unchecked(y).to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::pow_midp_unchecked_f32x8(&mut got, y),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/pow_midp_unchecked/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn pow_midp_precise_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             for y in [-3.0, -1.0, 0.0, 0.5, 1.0, 2.0, 2.4, f32::INFINITY, f32::NAN] {
                 let want = black_box(v).pow_midp_precise(y).to_array();
@@ -2883,6 +4861,46 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let y = 2.4;
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).pow_midp_precise(y).to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::pow_midp_precise_f32x8(&mut got, y),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/pow_midp_precise/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn cbrt_lowp_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).cbrt_lowp().to_array();
@@ -2913,6 +4931,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).cbrt_lowp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::cbrt_lowp_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/cbrt_lowp/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn cbrt_midp_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).cbrt_midp().to_array();
@@ -2943,6 +5000,45 @@ fn width8(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 8 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(8) {
+            let mut pad = [1.0; 8];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x8::from_array_t(t, pad);
+            let out = black_box(v).cbrt_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::cbrt_midp_f32x8(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/cbrt_midp/width8/lane{i}"
+            );
+        }
+    }
+}
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8),
+    inline(never)
+)]
+fn cbrt_midp_precise_width8(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(8) {
+        let mut input = [1.0; 8];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x8::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).cbrt_midp_precise().to_array();
@@ -2981,759 +5077,6 @@ fn width8(tier: &str) {
             let mut pad = [1.0; 8];
             pad[..chunk.len()].copy_from_slice(chunk);
             let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).log2_lowp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log2_lowp_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log2_lowp/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).log2_lowp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log2_lowp_unchecked_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log2_lowp_unchecked/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).exp2_lowp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp2_lowp_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp2_lowp/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).exp2_lowp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp2_lowp_unchecked_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp2_lowp_unchecked/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).ln_lowp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::ln_lowp_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/ln_lowp/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).ln_lowp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::ln_lowp_unchecked_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/ln_lowp_unchecked/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).exp_lowp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp_lowp_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp_lowp/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).exp_lowp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp_lowp_unchecked_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp_lowp_unchecked/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).log10_lowp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log10_lowp_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log10_lowp/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).log10_lowp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log10_lowp_unchecked_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log10_lowp_unchecked/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let y = 2.4;
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).pow_lowp(y).to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::pow_lowp_f32x8(&mut got, y),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/pow_lowp/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let y = 2.4;
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).pow_lowp_unchecked(y).to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::pow_lowp_unchecked_f32x8(&mut got, y),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/pow_lowp_unchecked/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).log2_midp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log2_midp_unchecked_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log2_midp_unchecked/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).log2_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log2_midp_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log2_midp/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).log2_midp_precise().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log2_midp_precise_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log2_midp_precise/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).exp2_midp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp2_midp_unchecked_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp2_midp_unchecked/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).exp2_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp2_midp_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp2_midp/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).exp2_midp_precise().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp2_midp_precise_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp2_midp_precise/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).ln_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::ln_midp_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/ln_midp/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).ln_midp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::ln_midp_unchecked_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/ln_midp_unchecked/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).ln_midp_precise().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::ln_midp_precise_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/ln_midp_precise/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).exp_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp_midp_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp_midp/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).exp_midp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp_midp_unchecked_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp_midp_unchecked/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).exp_midp_precise().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp_midp_precise_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp_midp_precise/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).sigmoid_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::sigmoid_midp_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/sigmoid_midp/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).silu_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::silu_midp_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/silu_midp/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).log10_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log10_midp_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log10_midp/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).log10_midp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log10_midp_unchecked_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log10_midp_unchecked/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).log10_midp_precise().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log10_midp_precise_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log10_midp_precise/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let y = 2.4;
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).pow_midp(y).to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::pow_midp_f32x8(&mut got, y),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/pow_midp/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let y = 2.4;
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).pow_midp_unchecked(y).to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::pow_midp_unchecked_f32x8(&mut got, y),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/pow_midp_unchecked/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let y = 2.4;
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).pow_midp_precise(y).to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::pow_midp_precise_f32x8(&mut got, y),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/pow_midp_precise/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).cbrt_lowp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::cbrt_lowp_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/cbrt_lowp/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
-            let out = black_box(v).cbrt_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::cbrt_midp_f32x8(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/cbrt_midp/width8/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 8 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(8) {
-            let mut pad = [1.0; 8];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x8::from_array_t(t, pad);
             let out = black_box(v).cbrt_midp_precise().to_array();
             want.extend_from_slice(&out[..chunk.len()]);
         }
@@ -3750,6 +5093,193 @@ fn width8(tier: &str) {
         }
     }
 }
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x8)
+)]
+fn width8(tier: &str) {
+    let t = Token::from_context();
+    let data = corpus();
+    attuned!(
+        log2_lowp_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log2_lowp_unchecked_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp2_lowp_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp2_lowp_unchecked_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        ln_lowp_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        ln_lowp_unchecked_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp_lowp_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp_lowp_unchecked_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log10_lowp_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log10_lowp_unchecked_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        pow_lowp_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        pow_lowp_unchecked_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log2_midp_unchecked_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log2_midp_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log2_midp_precise_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp2_midp_unchecked_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp2_midp_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp2_midp_precise_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        ln_midp_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        ln_midp_unchecked_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        ln_midp_precise_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp_midp_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp_midp_unchecked_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp_midp_precise_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        sigmoid_midp_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        silu_midp_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log10_midp_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log10_midp_unchecked_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log10_midp_precise_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        pow_midp_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        pow_midp_unchecked_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        pow_midp_precise_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        cbrt_lowp_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        cbrt_midp_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        cbrt_midp_precise_width8(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+}
 #[cfg(feature = "w512")]
 #[attune(
     _scalar_t,
@@ -3757,11 +5287,11 @@ fn width8(tier: &str) {
     _neon_t,
     _wasm128_t,
     _v4x_t(cfg(avx512)),
-    define(f32x16)
+    define(f32x16),
+    inline(never)
 )]
-fn width16(tier: &str) {
+fn log2_lowp_width16(tier: &str, data: &[f32]) {
     let t = Token::from_context();
-    let data = corpus();
     for chunk in data.chunks(16) {
         let mut input = [1.0; 16];
         input[..chunk.len()].copy_from_slice(chunk);
@@ -3796,6 +5326,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).log2_lowp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log2_lowp_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log2_lowp/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn log2_lowp_unchecked_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log2_lowp_unchecked().to_array();
@@ -3827,6 +5397,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).log2_lowp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log2_lowp_unchecked_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log2_lowp_unchecked/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn exp2_lowp_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp2_lowp().to_array();
@@ -3857,6 +5467,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).exp2_lowp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp2_lowp_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp2_lowp/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn exp2_lowp_unchecked_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp2_lowp_unchecked().to_array();
@@ -3888,6 +5538,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).exp2_lowp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp2_lowp_unchecked_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp2_lowp_unchecked/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn ln_lowp_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).ln_lowp().to_array();
@@ -3918,6 +5608,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).ln_lowp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::ln_lowp_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/ln_lowp/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn ln_lowp_unchecked_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).ln_lowp_unchecked().to_array();
@@ -3949,6 +5679,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).ln_lowp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::ln_lowp_unchecked_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/ln_lowp_unchecked/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn exp_lowp_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp_lowp().to_array();
@@ -3979,6 +5749,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).exp_lowp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp_lowp_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp_lowp/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn exp_lowp_unchecked_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp_lowp_unchecked().to_array();
@@ -4010,6 +5820,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).exp_lowp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp_lowp_unchecked_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp_lowp_unchecked/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn log10_lowp_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log10_lowp().to_array();
@@ -4040,6 +5890,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).log10_lowp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log10_lowp_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log10_lowp/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn log10_lowp_unchecked_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log10_lowp_unchecked().to_array();
@@ -4071,6 +5961,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).log10_lowp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log10_lowp_unchecked_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log10_lowp_unchecked/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn pow_lowp_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             for y in [-3.0, -1.0, 0.0, 0.5, 1.0, 2.0, 2.4, f32::INFINITY, f32::NAN] {
                 let want = black_box(v).pow_lowp(y).to_array();
@@ -4103,6 +6033,47 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let y = 2.4;
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).pow_lowp(y).to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::pow_lowp_f32x16(&mut got, y),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/pow_lowp/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn pow_lowp_unchecked_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             for y in [-3.0, -1.0, 0.0, 0.5, 1.0, 2.0, 2.4, f32::INFINITY, f32::NAN] {
                 let want = black_box(v).pow_lowp_unchecked(y).to_array();
@@ -4135,6 +6106,47 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let y = 2.4;
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).pow_lowp_unchecked(y).to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::pow_lowp_unchecked_f32x16(&mut got, y),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/pow_lowp_unchecked/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn log2_midp_unchecked_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log2_midp_unchecked().to_array();
@@ -4166,6 +6178,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).log2_midp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log2_midp_unchecked_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log2_midp_unchecked/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn log2_midp_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log2_midp().to_array();
@@ -4196,6 +6248,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).log2_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log2_midp_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log2_midp/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn log2_midp_precise_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log2_midp_precise().to_array();
@@ -4227,6 +6319,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).log2_midp_precise().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log2_midp_precise_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log2_midp_precise/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn exp2_midp_unchecked_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp2_midp_unchecked().to_array();
@@ -4258,6 +6390,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).exp2_midp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp2_midp_unchecked_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp2_midp_unchecked/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn exp2_midp_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp2_midp().to_array();
@@ -4288,6 +6460,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).exp2_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp2_midp_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp2_midp/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn exp2_midp_precise_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp2_midp_precise().to_array();
@@ -4319,6 +6531,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).exp2_midp_precise().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp2_midp_precise_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp2_midp_precise/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn ln_midp_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).ln_midp().to_array();
@@ -4349,6 +6601,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).ln_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::ln_midp_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/ln_midp/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn ln_midp_unchecked_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).ln_midp_unchecked().to_array();
@@ -4380,6 +6672,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).ln_midp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::ln_midp_unchecked_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/ln_midp_unchecked/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn ln_midp_precise_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).ln_midp_precise().to_array();
@@ -4411,6 +6743,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).ln_midp_precise().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::ln_midp_precise_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/ln_midp_precise/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn exp_midp_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp_midp().to_array();
@@ -4441,6 +6813,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).exp_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp_midp_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp_midp/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn exp_midp_unchecked_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp_midp_unchecked().to_array();
@@ -4472,6 +6884,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).exp_midp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp_midp_unchecked_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp_midp_unchecked/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn exp_midp_precise_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).exp_midp_precise().to_array();
@@ -4503,6 +6955,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).exp_midp_precise().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::exp_midp_precise_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/exp_midp_precise/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn sigmoid_midp_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).sigmoid_midp().to_array();
@@ -4533,6 +7025,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).sigmoid_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::sigmoid_midp_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/sigmoid_midp/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn silu_midp_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).silu_midp().to_array();
@@ -4563,6 +7095,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).silu_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::silu_midp_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/silu_midp/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn log10_midp_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log10_midp().to_array();
@@ -4593,6 +7165,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).log10_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log10_midp_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log10_midp/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn log10_midp_unchecked_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log10_midp_unchecked().to_array();
@@ -4624,6 +7236,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).log10_midp_unchecked().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log10_midp_unchecked_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log10_midp_unchecked/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn log10_midp_precise_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).log10_midp_precise().to_array();
@@ -4655,6 +7307,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).log10_midp_precise().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::log10_midp_precise_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/log10_midp_precise/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn pow_midp_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             for y in [-3.0, -1.0, 0.0, 0.5, 1.0, 2.0, 2.4, f32::INFINITY, f32::NAN] {
                 let want = black_box(v).pow_midp(y).to_array();
@@ -4687,6 +7379,47 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let y = 2.4;
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).pow_midp(y).to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::pow_midp_f32x16(&mut got, y),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/pow_midp/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn pow_midp_unchecked_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             for y in [-3.0, -1.0, 0.0, 0.5, 1.0, 2.0, 2.4, f32::INFINITY, f32::NAN] {
                 let want = black_box(v).pow_midp_unchecked(y).to_array();
@@ -4719,6 +7452,47 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let y = 2.4;
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).pow_midp_unchecked(y).to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::pow_midp_unchecked_f32x16(&mut got, y),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/pow_midp_unchecked/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn pow_midp_precise_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             for y in [-3.0, -1.0, 0.0, 0.5, 1.0, 2.0, 2.4, f32::INFINITY, f32::NAN] {
                 let want = black_box(v).pow_midp_precise(y).to_array();
@@ -4751,6 +7525,47 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let y = 2.4;
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).pow_midp_precise(y).to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::pow_midp_precise_f32x16(&mut got, y),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/pow_midp_precise/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn cbrt_lowp_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).cbrt_lowp().to_array();
@@ -4781,6 +7596,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).cbrt_lowp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::cbrt_lowp_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/cbrt_lowp/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn cbrt_midp_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).cbrt_midp().to_array();
@@ -4811,6 +7666,46 @@ fn width16(tier: &str) {
                 }
             }
         }
+    }
+    {
+        let mut got = data[..2 * 16 + 3].to_vec();
+        let mut want = Vec::new();
+        for chunk in got.chunks(16) {
+            let mut pad = [1.0; 16];
+            pad[..chunk.len()].copy_from_slice(chunk);
+            let v = f32x16::from_array_t(t, pad);
+            let out = black_box(v).cbrt_midp().to_array();
+            want.extend_from_slice(&out[..chunk.len()]);
+        }
+        attuned!(
+            magemath::legacy::slice::cbrt_midp_f32x16(&mut got),
+            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+            using(t)
+        );
+        for i in 0..got.len() {
+            assert!(
+                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
+                "{tier}/multiblock/cbrt_midp/width16/lane{i}"
+            );
+        }
+    }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16),
+    inline(never)
+)]
+fn cbrt_midp_precise_width16(tier: &str, data: &[f32]) {
+    let t = Token::from_context();
+    for chunk in data.chunks(16) {
+        let mut input = [1.0; 16];
+        input[..chunk.len()].copy_from_slice(chunk);
+        let v = f32x16::from_array_t(t, input);
         {
             let y = 0.0;
             let want = black_box(v).cbrt_midp_precise().to_array();
@@ -4850,759 +7745,6 @@ fn width16(tier: &str) {
             let mut pad = [1.0; 16];
             pad[..chunk.len()].copy_from_slice(chunk);
             let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).log2_lowp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log2_lowp_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log2_lowp/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).log2_lowp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log2_lowp_unchecked_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log2_lowp_unchecked/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).exp2_lowp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp2_lowp_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp2_lowp/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).exp2_lowp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp2_lowp_unchecked_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp2_lowp_unchecked/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).ln_lowp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::ln_lowp_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/ln_lowp/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).ln_lowp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::ln_lowp_unchecked_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/ln_lowp_unchecked/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).exp_lowp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp_lowp_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp_lowp/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).exp_lowp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp_lowp_unchecked_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp_lowp_unchecked/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).log10_lowp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log10_lowp_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log10_lowp/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).log10_lowp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log10_lowp_unchecked_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log10_lowp_unchecked/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let y = 2.4;
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).pow_lowp(y).to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::pow_lowp_f32x16(&mut got, y),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/pow_lowp/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let y = 2.4;
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).pow_lowp_unchecked(y).to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::pow_lowp_unchecked_f32x16(&mut got, y),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/pow_lowp_unchecked/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).log2_midp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log2_midp_unchecked_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log2_midp_unchecked/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).log2_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log2_midp_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log2_midp/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).log2_midp_precise().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log2_midp_precise_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log2_midp_precise/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).exp2_midp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp2_midp_unchecked_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp2_midp_unchecked/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).exp2_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp2_midp_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp2_midp/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).exp2_midp_precise().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp2_midp_precise_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp2_midp_precise/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).ln_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::ln_midp_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/ln_midp/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).ln_midp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::ln_midp_unchecked_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/ln_midp_unchecked/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).ln_midp_precise().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::ln_midp_precise_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/ln_midp_precise/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).exp_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp_midp_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp_midp/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).exp_midp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp_midp_unchecked_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp_midp_unchecked/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).exp_midp_precise().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::exp_midp_precise_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/exp_midp_precise/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).sigmoid_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::sigmoid_midp_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/sigmoid_midp/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).silu_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::silu_midp_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/silu_midp/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).log10_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log10_midp_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log10_midp/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).log10_midp_unchecked().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log10_midp_unchecked_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log10_midp_unchecked/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).log10_midp_precise().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::log10_midp_precise_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/log10_midp_precise/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let y = 2.4;
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).pow_midp(y).to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::pow_midp_f32x16(&mut got, y),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/pow_midp/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let y = 2.4;
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).pow_midp_unchecked(y).to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::pow_midp_unchecked_f32x16(&mut got, y),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/pow_midp_unchecked/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let y = 2.4;
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).pow_midp_precise(y).to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::pow_midp_precise_f32x16(&mut got, y),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/pow_midp_precise/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).cbrt_lowp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::cbrt_lowp_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/cbrt_lowp/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
-            let out = black_box(v).cbrt_midp().to_array();
-            want.extend_from_slice(&out[..chunk.len()]);
-        }
-        attuned!(
-            magemath::legacy::slice::cbrt_midp_f32x16(&mut got),
-            [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
-            using(t)
-        );
-        for i in 0..got.len() {
-            assert!(
-                got[i].to_bits() == want[i].to_bits() || got[i].is_nan() && want[i].is_nan(),
-                "{tier}/multiblock/cbrt_midp/width16/lane{i}"
-            );
-        }
-    }
-    {
-        let mut got = data[..2 * 16 + 3].to_vec();
-        let mut want = Vec::new();
-        for chunk in got.chunks(16) {
-            let mut pad = [1.0; 16];
-            pad[..chunk.len()].copy_from_slice(chunk);
-            let v = f32x16::from_array_t(t, pad);
             let out = black_box(v).cbrt_midp_precise().to_array();
             want.extend_from_slice(&out[..chunk.len()]);
         }
@@ -5618,6 +7760,194 @@ fn width16(tier: &str) {
             );
         }
     }
+}
+#[cfg(feature = "w512")]
+#[attune(
+    _scalar_t,
+    _v3_t,
+    _neon_t,
+    _wasm128_t,
+    _v4x_t(cfg(avx512)),
+    define(f32x16)
+)]
+fn width16(tier: &str) {
+    let t = Token::from_context();
+    let data = corpus();
+    attuned!(
+        log2_lowp_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log2_lowp_unchecked_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp2_lowp_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp2_lowp_unchecked_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        ln_lowp_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        ln_lowp_unchecked_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp_lowp_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp_lowp_unchecked_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log10_lowp_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log10_lowp_unchecked_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        pow_lowp_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        pow_lowp_unchecked_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log2_midp_unchecked_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log2_midp_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log2_midp_precise_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp2_midp_unchecked_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp2_midp_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp2_midp_precise_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        ln_midp_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        ln_midp_unchecked_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        ln_midp_precise_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp_midp_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp_midp_unchecked_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        exp_midp_precise_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        sigmoid_midp_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        silu_midp_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log10_midp_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log10_midp_unchecked_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        log10_midp_precise_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        pow_midp_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        pow_midp_unchecked_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        pow_midp_precise_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        cbrt_lowp_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        cbrt_midp_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
+    attuned!(
+        cbrt_midp_precise_width16(tier, &data),
+        [_v3, _neon, _wasm128, _scalar, _v4x(cfg(avx512))],
+        using(t)
+    );
 }
 
 #[test]

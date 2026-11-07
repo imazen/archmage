@@ -1292,6 +1292,15 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
 
 ### Resolved (each with its regression coverage)
 
+- **Draft Magemath WASM debug legacy-parity stack exhaustion (2026-11-07):**
+  the width-16 scalar test function exceeded WASM's default stack before its
+  comparisons completed. The generator now gives each method a non-inlined
+  feature-context helper. The corpus, 210 direct comparisons, 212 assertions,
+  exponent sets and every slice tail remain unchanged. Reproduce all widths
+  with `just magemath-superset-debug-check wasm32-wasip1 scalar,wasm128`,
+  with `RUSTFLAGS="-C target-feature=+simd128"` and a configured WASM runner.
+  No math implementation or test expectation changed.
+
 - **Float negation bits (#135):** x86 uses sign-bit XOR instead of zero minus
   the input. `float_negation` requires exact sign, payload and signalling-bit
   preservation across every generic float width; generated scalar parity no longer
