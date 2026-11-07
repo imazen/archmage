@@ -1,7 +1,13 @@
 //! Exceptional-value contract at the clamped exp boundary. NaN payload/sign
 //! are unspecified. This deliberately does not promise std pow semantics.
 #![forbid(unsafe_code)]
-use archmage::{ScalarToken, SimdToken};
+use archmage::ScalarToken;
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
+use archmage::SimdToken;
 use std::hint::black_box;
 
 macro_rules! width {
@@ -47,16 +53,25 @@ macro_rules! width {
             // Caller selects exhaustive payload enumeration through the recipe.
             // Default still covers both signs and quiet/signalling families.
             let stride: u32 = std::env::var("ARCHMAGE_NAN_STRIDE")
-                .unwrap_or_else(|_| "65537".into()).parse().unwrap();
+                .unwrap_or_else(|_| "65537".into())
+                .parse()
+                .unwrap();
             assert!(stride > 0);
             for payload in (1..=0x007f_ffff_u32).step_by(stride as usize) {
                 for sign in [0, 0x8000_0000] {
-                    let a = core::array::from_fn(|i| f32::from_bits(
-                        sign | 0x7f80_0000 | ((payload + i as u32).min(0x007f_ffff))));
+                    let a = core::array::from_fn(|i| {
+                        f32::from_bits(sign | 0x7f80_0000 | ((payload + i as u32).min(0x007f_ffff)))
+                    });
                     let x = magetypes::simd::generic::$v::from_array_t(t, black_box(a));
                     for out in [x.exp2_lowp(), x.exp2_midp()] {
-                        for y in out.to_array() { assert!(y.is_nan(),
-                            "{} {} payload={payload:06x} sign={sign:08x}", T::NAME, stringify!($v)); }
+                        for y in out.to_array() {
+                            assert!(
+                                y.is_nan(),
+                                "{} {} payload={payload:06x} sign={sign:08x}",
+                                T::NAME,
+                                stringify!($v)
+                            );
+                        }
                     }
                 }
             }
@@ -64,6 +79,21 @@ macro_rules! width {
             let x = magetypes::simd::generic::$v::splat_t(t, black_box(-1.0));
             for out in [x.pow_midp(2.4), x.pow_midp_precise(2.4)] {
                 assert!(out.to_array().iter().all(|y| y.is_nan()));
+            }
+            for (base, exponent) in [
+                (1.0, f32::INFINITY),
+                (0.0, 0.0),
+                (f32::INFINITY, 0.0),
+                (-1.0, 0.0),
+                (f32::NEG_INFINITY, 2.4),
+            ] {
+                let x = magetypes::simd::generic::$v::splat_t(t, black_box(base));
+                assert!(
+                    x.pow_midp(black_box(exponent))
+                        .to_array()
+                        .iter()
+                        .all(|y| y.is_nan())
+                );
             }
             // Exponent NaNs propagate, except the existing lowp zero mask wins.
             let x = magetypes::simd::generic::$v::splat_t(t, black_box(2.0));
@@ -99,8 +129,12 @@ fn check<
 }
 
 #[cfg(not(feature = "w512"))]
-fn check<T: magetypes::simd::backends::F32x4Convert
-    + magetypes::simd::backends::F32x8Convert>(t: T) { x4(t); x8(t); }
+fn check<T: magetypes::simd::backends::F32x4Convert + magetypes::simd::backends::F32x8Convert>(
+    t: T,
+) {
+    x4(t);
+    x8(t);
+}
 
 #[test]
 fn scalar() {
