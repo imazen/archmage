@@ -128,6 +128,16 @@ assert len(json.loads((cost/'overlap.json').read_text()))==9
 bits=json.loads((REPO/'zenmath/tools/gamma-bits.json').read_text())
 assert len(bits)==902 and bits==re.findall(r'f64::from_bits\(0x([0-9a-f]{16})\)',(REPO/'zenmath/src/gamma_tables.rs').read_text())
 print('PASS two48-consumer feature matrices,54 cold builds/9 Cargo timelines,902 literal bits')
+# ARM used a stripped timed file; prove named disassembly has identical code/data.
+folder=ROOT/'sources/arm-build/codegen-final-gamma-arm-v6c'
+meta=json.loads((folder/'identity.json').read_text())
+timed=ROOT/'sources/arm-timing/gamma-timing-arm-v6'
+assert hashlib.sha256(timed.read_bytes()).hexdigest()==meta['timed_binary_sha256']=='ac0960ee7a24b48d8dfa85c66e9d4bbc2ec638e0e1212b0640ffc501cbf9e753'
+for section,row in meta['identical_sections'].items():
+    left=(folder/('linked'+section+'.bin')).read_bytes();right=(folder/('timed'+section+'.bin')).read_bytes()
+    assert left==right and len(left)==row['bytes'] and hashlib.sha256(left).hexdigest()==row['sha256']
+print('PASS exact timed ARM stripped file; named .text/.rodata byte identity')
+
 # Preservation regression: an existing immutable snapshot must fail before writes.
 existing=ROOT/'sources/native/frozen-final-gamma-native-v6'
 names=['identity.json','source.sha256','source.tar.gz']

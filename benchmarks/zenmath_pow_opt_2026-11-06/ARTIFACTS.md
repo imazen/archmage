@@ -21,7 +21,7 @@ verifies an atomic binary copy before publishing its identity.
 | Native replacements | `sources/native/results-native-repeat-v1/`, `timing-transfer-repeat-v2.json` | Same frozen matrix implementation; driver-only group filter |
 | Initial strict WASM 60/2,980 | `sources/wasm/timing-wasm-v3.json` | `frozen-wasm-guest-v1` guest `9a2e532978c9a5fa…`; `frozen-wasm-host-v1` host `cd0b2225915b4392…` |
 | Final native gamma 28/236 | `sources/native/timing-gamma-native-v6.json`, `timing-gamma-native-repeat-v6.json` | `sources/native/frozen-final-gamma-native-v6/` |
-| Final quiet NEON gamma 28/236 | `sources/arm-timing/timing-gamma-arm-v6.json` | `sources/arm-build/frozen-final-gamma-arm-v6/` |
+| Final quiet NEON gamma 28/236 | `sources/arm-timing/timing-gamma-arm-v6.json` | `sources/arm-build/frozen-final-gamma-arm-v6/`; timed stripped copy `sources/arm-timing/gamma-timing-arm-v6` |
 | Final strict WASM 3/153 on Ryzen 7900X | `sources/native/timing-gamma-wasm-r7900x-v5.json`, `timing-gamma-wasm-r7900x-repeat-v5.json` | Unchanged final v4 guest `acd5c6418a76677d…`, unchanged host `cd0b2225915b4392…` |
 | Final exact gamma domains | `sources/{native,arm-build,wasm}/gamma-full-*-v4/` | Matching `frozen-final-gamma-*-v4/`, including separate no-SIMD guest |
 | Final 54 cold builds | `sources/wasm/family-build-cost-final-v4/` | Each copied executable SHA in `build-cost.csv`; source `frozen-family-final-v4/` |
@@ -34,6 +34,10 @@ The final WASM guest source manifest is
 The snapshots' descriptive revision label includes “f7b5f136-plus-unrolled-v4”
 where they were frozen before the final commit label; the auditor verifies
 all 91 production Rust source files byte-for-byte against `4da80e0a`.
+The actual stripped ARM timing file is
+`ac0960ee7a24b48d8dfa85c66e9d4bbc2ec638e0e1212b0640ffc501cbf9e753`;
+the named unstripped build is `142d25a32d374846…`. Exact `.text` and `.rodata`
+identity links the named disassembly to the timed file; see CODEGEN.md.
 `run-identities.json` collects the selected original metadata without rewriting
 any immutable snapshot.
 

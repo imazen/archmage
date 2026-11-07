@@ -1,13 +1,15 @@
 # Linked codegen evidence
 
-These are disassemblies of the actual timed executables, including linking and
-thin LTO on native platforms. Whole functions contain guards, setup and rescue;
+These are linked disassemblies, including thin LTO on native platforms.
+The x86 file is the actual timed executable. ARM timing uses its stripped
+copy; `.text` and `.rodata` are checked byte-identical to the retained named
+build used for symbol extraction. Whole functions contain guards, setup and rescue;
 whole-function instruction counts are not throughput estimates.
 
-| Artifact under archive root | Actual executable SHA-256 |
+| Artifact under archive root | Disassembled executable SHA-256 |
 |---|---|
 | `sources/native/codegen-final-gamma-native-v6b` | `64ebda13f3ee500d9920b26bc7f1cfb7028dd4479e47b222b5fc95eb005e2b42` |
-| `sources/arm-build/codegen-final-gamma-arm-v6b` | `142d25a32d37484662bd9aacbb8df39d273ec1f073fdf32ecad96719422daff1` |
+| `sources/arm-build/codegen-final-gamma-arm-v6c` | `142d25a32d37484662bd9aacbb8df39d273ec1f073fdf32ecad96719422daff1` |
 | `sources/wasm/codegen-final-wasm-v4b` | `acd5c6418a76677d8e9792f8d26b42fda30c1c15f05d7e0238367a2855c9ce10` |
 
 On x86, `gamma_timing::__attune_contexts_v3::<11>` starts at `0x73220`,
@@ -21,6 +23,12 @@ whole function still has a 0x208-byte frame, guard state and fallback work;
 this is not a claim of a stack-free complete power loop. The scalar fixed
 current entry is `gamma_timing::fixed::<0, 2>` at `0x75f30`, extract
 `function-008.s`; the independent baseline and std have separate extracts.
+
+The actual timed ARM file has SHA-256
+`ac0960ee7a24b48d8dfa85c66e9d4bbc2ec638e0e1212b0640ffc501cbf9e753`.
+Its `.text` and `.rodata` are byte-identical to the named build above; both
+section dumps and hashes are archived in `codegen-final-gamma-arm-v6c`.
+This is code/data identity, not whole-file identity after stripping.
 
 On ARM, `gamma_timing::power::<11>` starts at `0x2a460`, full line 32639,
 extract `function-013.s`. The admitted first two-lane decode graph at

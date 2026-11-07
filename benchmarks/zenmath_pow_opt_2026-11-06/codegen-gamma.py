@@ -21,5 +21,19 @@ for i,line in enumerate(lines+['0 <END>:\n']):
         start=i;address=match[1];symbol=match[2]
 assert functions,'required linked symbols not found'
 meta=dict(binary=str(binary),binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),disassembly_sha256=hashlib.sha256((out/'linked.disasm').read_bytes()).hexdigest(),functions=functions,note='Exact linked binary. Functions include guards and complete rescue; instruction totals are not hot-path throughput estimates.')
+if len(sys.argv)>3:
+    timed=Path(sys.argv[3]).resolve()
+    meta['timed_binary_sha256']=hashlib.sha256(timed.read_bytes()).hexdigest()
+    meta['timed_binary']=str(timed)
+    sections={}
+    for section in ['.text','.rodata']:
+        outputs=[]
+        for label,source in [('linked',binary),('timed',timed)]:
+            path=out/(label+section+'.bin')
+            subprocess.run(['objcopy','--only-section='+section,'-O','binary',str(source),str(path)],check=True)
+            outputs.append(path.read_bytes())
+        assert outputs[0]==outputs[1],section
+        sections[section]=dict(bytes=len(outputs[0]),sha256=hashlib.sha256(outputs[0]).hexdigest())
+    meta['identical_sections']=sections
 (out/'identity.json').write_text(json.dumps(meta,indent=2)+'\n')
 print(f'PASS {len(functions)} exact linked function extracts')
