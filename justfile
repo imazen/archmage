@@ -534,3 +534,13 @@ fma-no-hardware:
 # Independently build/test the self-contained dispatch prototype (x86-64 host).
 artisanal-check:
     bash experiments/artisanal-dispatch/tools/native-check.sh
+
+# Validate an isolated stable candidate; run on an admitted worker under run-heavy.
+release-compat source output phase:
+    python3 xtask/release_compat/run.py --source {{source}} --output {{output}} --phase {{phase}}
+
+release-compat-recheck source output inventory:
+    python3 xtask/release_compat/recheck.py --source {{source}} --output {{output}} --inventory {{inventory}}
+
+release-compat-audit directory source *options:
+    python3 xtask/release_compat/audit.py {{directory}} --source {{source}} {{options}}

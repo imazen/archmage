@@ -1,5 +1,107 @@
 # Downstream compatibility
 
+## 0.9.31 stable candidate — 2026-11-07
+
+**No new compilation failure found in the independently checked consumer graphs.**
+All four explicit semver comparisons pass. This is a compile-only study, not
+runtime, numerical, cross-platform, all-target, or all-feature validation of
+consumers. Main's release version was not changed and nothing was published.
+
+Candidate: main `9199c31eeedca20e9cd001cc783441136c479d9d`, with
+`0.9.31-beta.2` replaced by `0.9.31` in Cargo manifests in an isolated copy.
+The candidate source archive SHA-256 is
+`45050baad16e4b98433c5dcaa0778f3b92c49639e1f95bbbb148e86612532f41`.
+Rust 1.99.0, x86_64 Linux, baseline compiler flags, Ryzen 7900X.
+
+### Semver
+
+| Package | Baseline | Result |
+|---|---|---|
+| archmage | 0.9.30 | pass |
+| archmage | 0.9.31-beta.2 | pass |
+| magetypes | 0.9.30 | pass; concrete-feature check: 2,040 safe methods, 40 feature-bearing, zero failures |
+| magetypes | 0.9.31-beta.2 | pass; concrete-feature check: 2,070 safe methods, 40 feature-bearing, zero failures |
+
+Used cargo-semver-checks 0.51.0 through `xtask/check_semver.py`, retaining the
+existing reviewed Magetypes concrete-impl guard. Proc-macro behavior is not
+covered by semver checking. Resource wrapper: rc=0, 20 s, peak RSS 0.34 GiB.
+
+### Consumer coverage and exclusions
+
+Registry discovery found 41 Archmage reverse dependencies and 22 Magetypes
+reverse dependencies, with the latter contained in the former. Latest
+non-yanked stable releases were pinned explicitly; `ultrajpeg` has only a
+non-yanked prerelease in this inventory. Exact versions and results are in the
+[consumer table](stable-0.9.31-consumers.csv).
+
+- **34 consumer graphs successfully compiled candidate Archmage and macros.**
+  **27 also compiled candidate Magetypes.** Cargo `compiler-artifact` messages
+  verify the local source paths; metadata resolution alone was not sufficient.
+- **Six passed while retaining older versions**, so they are not candidate
+  coverage: butterfly-fft, fgf, jpegli-rs, lattica, simdispatch, still265.
+- **One failed in both baseline and candidate configurations:** wasm_jpg 0.1.0
+  pins Archmage 0.9.19. Its linear-srgb dependency fails on missing
+  `__ARCHMAGE_ASSERT_TIER_*` members; this is not a newly introduced failure.
+- zenbitmaps' default feature set does not compile its optional Archmage
+  dependency. A separate successful `--features simd` candidate check supplies
+  its effective coverage above.
+
+Independent checks used newly extracted published packages with unchanged
+manifests. Published Cargo.lock files were preserved as Cargo.lock.published;
+fresh resolution models an upgrade rather than silently keeping locked older
+versions. The baseline uses registry resolution; the candidate adds
+configuration-only patches for all three workspace crates. Older incompatible
+requirements remain intact. Some graphs, such as ultrajpeg, legitimately contain
+both an older Archmage series and the candidate for compatible dependencies.
+
+### Cargo-copter results and verification
+
+Installed cargo-copter 0.3.0 ran 41 Archmage and 22 Magetypes consumer cases with
+`--only-check`, offering 0.9.30, beta.2 and the local candidate. Both commands
+returned 254. Its raw candidate summaries report 36/41 Archmage and 3/22
+Magetypes passes; these are **not** the final compatibility classification:
+
+- fast-ssim2 and zenflate failed after dependency rewriting created different
+  source paths across target-specific dependency entries. Both pass with
+  untouched manifests and configuration-only patches.
+- Many Magetypes cases mixed local and registry Archmage token types, producing
+  backend-trait/type errors. Patching the coherent workspace resolves these;
+  the independent compiled-artifact audit is the evidence for the counts above.
+- Forced upgrades of old incompatible requirements (for example jpegli-rs
+  from Archmage 0.1) do not model a normal 0.9.30-to-0.9.31 update.
+- Offered beta.2 rows can report success while actually resolving 0.9.30.
+  Some local rows also report an older resolved version. Do not infer effective
+  candidate or beta coverage from cargo-copter's summary or `Local` flag alone.
+- The report's `passed_test` counters are not runtime tests: command records
+  contain Fetch/Check only. No test coverage is claimed here.
+
+A preliminary independent run retained published lockfiles and confirmed that
+patches alone could leave older versions selected. It was stopped, marked
+INCOMPLETE, and preserved separately; the complete fresh-resolution run above
+supersedes it.
+
+Resource wrapper records: cargo-copter rc=1, 556 s, peak RSS 1.20 GiB;
+fresh-resolution checks rc=0, 142 s, peak RSS 1.19 GiB; compiled-artifact audit
+rc=0, 1 s, peak RSS 0.15 GiB; optional SIMD check rc=0, peak RSS 0.11 GiB.
+The recheck driver's rc=0 means it finished collecting results; per-consumer
+exit codes include the wasm_jpg failures described above.
+
+### Reproduce and inspect
+
+The runners live in `xtask/release_compat/`; `just release-compat`,
+`just release-compat-recheck`, and `just release-compat-audit` expose them.
+Use an isolated source copy and new output directories on an admitted worker
+under `run-heavy`. `prepare` changes candidate manifest versions and saves the
+registry inventory; `semver` and `copter` retain commands and exit codes.
+`recheck` preserves package lockfiles before fresh resolution; `audit` confirms
+which local crates actually compiled. Live consumer checkouts are never used.
+
+Full registry responses, package archives, candidate source, commands, logs,
+metadata, raw copter reports, and independent results are retained under
+`/mnt/v/output/archmage/stable-compat-2026-11-07/`, mirrored to the matching
+`/mnt/tower/output/archmage/` directory. These generated artifacts are outside
+Git; the CSV above is the compact committed result.
+
 ## 0.9.30 release check against local checkouts (2026-10-07)
 
 Every local repository under `~/work/zen/` and `~/work/` whose manifests depend
