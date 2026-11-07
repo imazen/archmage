@@ -1,6 +1,8 @@
 //! Intrinsic-only packed global Estrin-13/15 candidates, with per-lane rescue.
 use super::packed::{Backend, V};
 use crate::{gamma, gamma_tables as g};
+#[path = "gamma_polynomials.rs"]
+mod polynomials;
 
 #[inline(always)]
 pub(super) fn candidate<T: Backend<N>, const N: usize>(
@@ -32,56 +34,48 @@ pub(super) fn candidate<T: Backend<N>, const N: usize>(
         return None;
     }
     Some(if kind == 0 {
-        global::<_, N, 0, 14>(t, x, g::GLOBAL_DECODE_COEFF)
+        global::<_, N, 0>(t, x)
     } else {
-        global::<_, N, 1, 16>(t, x, g::GLOBAL_ENCODE_COEFF)
+        global::<_, N, 1>(t, x)
     })
 }
 
 #[inline(always)]
-fn global<T: Backend<N>, const N: usize, const K: usize, const C: usize>(
-    t: T,
-    x: [f32; N],
-    coefficients: [f64; C],
-) -> [f32; N] {
-    let valid = x.map(|v| (gamma::MINIMUM[K]..=gamma::MAXIMUM).contains(&v.to_bits()));
-    let safe: [u32; N] = core::array::from_fn(|i| {
-        if valid[i] {
-            x[i].to_bits()
-        } else {
-            gamma::MAXIMUM
-        }
-    });
-    let e = safe.map(|b| (b >> 23) as usize - 118);
-    let v = V::from_array_t(
-        t,
-        safe.map(|b| f64::from(f32::from_bits((b & 0x007f_ffff) | 0x3f80_0000)) - 1.5),
-    );
-    let mut coefficients = coefficients.map(|b| V::splat_t(t, b));
-    let mut count = C;
-    let mut power = v;
-    // Same pair/carry/square graph as the certified experimental vector body.
-    while count > 1 {
-        for i in 0..count / 2 {
-            coefficients[i] = coefficients[i * 2] + coefficients[i * 2 + 1] * power;
-        }
-        if count % 2 == 1 {
-            coefficients[count / 2] = coefficients[count - 1];
-        }
-        count = count.div_ceil(2);
-        if count > 1 {
-            power = power * power;
-        }
+fn global<T: Backend<N>, const N: usize, const K: usize>(t: T, x: [f32; N]) -> [f32; N] {
+    let mut valid = [false; N];
+    let mut reduced = [0.0; N];
+    let mut factors = [0.0; N];
+    let mut deltas = [0.0; N];
+    for i in 0..N {
+        let bits = x[i].to_bits();
+        valid[i] = (gamma::MINIMUM[K]..=gamma::MAXIMUM).contains(&bits);
+        let safe = if valid[i] { bits } else { gamma::MAXIMUM };
+        let e = (safe >> 23) as usize - 118;
+        reduced[i] = f64::from(f32::from_bits((safe & 0x007fffff) | 0x3f800000)) - 1.5;
+        factors[i] = g::GLOBAL_FACTOR[K][e];
+        deltas[i] = g::GLOBAL_ERROR[K][e];
     }
-    let y = (coefficients[0] * V::from_array_t(t, e.map(|i| g::GLOBAL_FACTOR[K][i]))).to_array();
-    core::array::from_fn(|i| {
-        if valid[i]
-            && let Some(value) = gamma::certificate(y[i], g::GLOBAL_ERROR[K][e[i]])
-        {
-            return value;
-        }
-        crate::reference::powf(x[i], f32::from_bits(gamma::EXPONENT_BITS[K]))
-    })
+    let v = V::from_array_t(t, reduced);
+    let q = if K == 0 {
+        polynomials::decode(t, v)
+    } else {
+        polynomials::encode(t, v)
+    };
+    let values = (q * V::from_array_t(t, factors)).to_array();
+    let mut out = [0.0; N];
+    for i in 0..N {
+        out[i] = if valid[i] {
+            gamma::certificate(values[i], deltas[i]).unwrap_or_else(|| rescue::<K>(x[i]))
+        } else {
+            rescue::<K>(x[i])
+        };
+    }
+    out
+}
+#[cold]
+#[inline(never)]
+fn rescue<const K: usize>(x: f32) -> f32 {
+    crate::reference::powf(x, f32::from_bits(gamma::EXPONENT_BITS[K]))
 }
 
 #[cfg(test)]

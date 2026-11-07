@@ -10,8 +10,11 @@ The private scalar candidate uses sixteen dyadic centers and a degree-five
 Estrin graph in binary64. Packed candidates use the approved global degree
 thirteen/decode and degree fifteen/encode graphs through Zenmath's private
 intrinsic backend. Both use separate multiply/add rounding. Uniform-exponent
-packed calls mask unused lanes to a valid filler before reduction. Each invalid
-or certificate-rejected lane uses the original reference power independently.
+packed calls select the candidate only when every lane is admitted, avoiding
+scalar rescue work for mixed-range blocks. Other blocks continue the original
+packed CORE path. The private polynomial still masks invalid lanes to a valid
+filler before reduction, and certificate-rejected lanes use the original
+reference power independently.
 Magemath's precise adapters delegate to this shared intrinsic implementation.
 
 For each admitted exponent band and center, the offline directed MPFR proof
@@ -22,9 +25,11 @@ only when both endpoints round to the same f32 bits. The helper returns `None`
 on rejection; no power rescue calls back into that helper. The independent
 `scalar::reference::powf` remains the original CORE algorithm.
 
-The ordinary scalar facade checks the candidate before runtime CPU selection.
-Proof contexts check it inside the context. A separate private core-only entry
-avoids repeating the guard after ordinary selection. Accurate policy rescue
+The ordinary scalar facade checks the candidate before runtime CPU selection
+on x86 and portable targets. NEON keeps the check inside its existing proof
+context after measured general-input overhead from the outer check. Explicit
+proof calls check inside the context. A private x86 core-only entry avoids
+repeating the guard after ordinary selection. Accurate policy rescue
 shares the candidate; the reference policy remains independent. Cargo family
 unification does not change these result bits.
 
@@ -54,6 +59,20 @@ This bounded two-exponent gate is not a full binary-power proof over 2^64 pairs.
 Performance remains selective. The frozen experimental C0 decode/bits/64
 composition lost to std (1.1443833 versus 0.9674650 ns/value; paired all-round
 95% difference interval +0.1694829..+0.1840226 ns/value), although fixed-power
-measurements won. Production guard, dynamic-exponent and whole-transfer
-measurements are required before choosing the final automatic policy; the
-experiment's fixed-exponent ratios do not establish those costs.
+measurements won. Production guard, dynamic-exponent and whole-transfer measurements are retained
+in the power study, separately from those experimental ratios. General scalar
+ARM differences overlap zero after guard placement. Packed ARM still pays
+measured guard overhead on general/mixed inputs (about 0.96 and 1.88 ns/value in
+the long-buffer controls); the corresponding paired intervals are positive.
+This is a selective gamma optimization, not a universal power speedup. A tested
+outlined NEON alternative did not remove that general-input cost and reduced
+the gamma advantage, so the existing inline polynomial is retained.
+
+The production generator emits named Estrin stages for both selected degrees.
+This is the same pair/carry/square graph as the proof, with each coefficient
+used in the same operation. It avoids coefficient array-map helper calls and
+an addressable vector scratch array found in the first linked implementation.
+The final staged and unrolled measurements remain separately identified;
+array-call and once-buffer slice controls include their actual ABI and copy
+costs. See the power study for final paired results rather than treating the
+first guard-only packed overhead figures as the final kernel's cost.
