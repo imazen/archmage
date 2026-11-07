@@ -203,6 +203,8 @@ pub(crate) fn pow_lowp<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>, n: f32) 
 }
 
 #[inline(always)]
+// TODO(math migration): move this legacy cube-root body here with bit parity.
+#[allow(deprecated)] // Temporary delegate until its implementation moves from Magetypes.
 pub(crate) fn cbrt_lowp<S: Step, T: F32x8Convert>(_token: T, x: f32x8<T>) -> f32x8<T> {
     // No multiply-add: plain IEEE operations already give the same bits
     // on every backend.
@@ -330,12 +332,16 @@ pub(crate) fn pow_midp<S: Step, T: F32x8Convert>(token: T, x: f32x8<T>, n: f32) 
 }
 
 #[inline(always)]
+// TODO(math migration): move this legacy cube-root body here with bit parity.
+#[allow(deprecated)] // Temporary delegate until its implementation moves from Magetypes.
 pub(crate) fn cbrt_midp<S: Step, T: F32x8Convert>(_token: T, x: f32x8<T>) -> f32x8<T> {
     // See `cbrt_lowp`: no multiply-add to fuse.
     x.cbrt_midp()
 }
 
 #[inline(always)]
+// TODO(math migration): move this legacy cube-root body here with bit parity.
+#[allow(deprecated)] // Temporary delegate until its implementation moves from Magetypes.
 pub(crate) fn cbrt_midp_precise<S: Step, T: F32x8Convert>(_token: T, x: f32x8<T>) -> f32x8<T> {
     // See `cbrt_lowp`: no multiply-add to fuse.
     x.cbrt_midp_precise()
