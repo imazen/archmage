@@ -1181,3 +1181,41 @@ Initial release.
 - **Zero overhead** — identical assembly to hand-written `unsafe` code
 - **`#[forbid(unsafe_code)]` compatible** — all unsafety is inside the macro expansion
 - **`no_std` + `alloc` by default** — `std` opt-in via feature flag
+
+## zenmath
+
+### [Unreleased]
+
+#### QUEUED BREAKING CHANGES
+
+- Draft no-default-features consumers must select a math family explicitly; primitives stay available (24118cd6).
+
+#### Added
+
+- Additive correct-rounding, normal and configurable families; normal uses explicit namespaces and currently shares precise implementations (24118cd6).
+- Certified two-exponent gamma candidates with independent original reference power and complete fallback (4aabb1b5).
+
+#### Fixed
+
+- Ordinary generic power policies use the accelerated correct core where selected, while reference policy calls remain non-dispatch (329fdc54).
+- Positive-normal power takes a compact guard into unchanged common arithmetic (168b7b67).
+- Scalar approximation contexts share fused/separate polynomial order and avoid per-step proof calls; measured NEON separate floor selection preserves bits (3dc19ce2, fbb72c5c).
+
+- Generate the exact certified packed gamma DAG without coefficient map calls
+  or an addressable Estrin scratch array (`4da80e0a`); retain the independent
+  reference and all bounds, tables and separate arithmetic.
+- Select measured gamma guard placement and all-admitted packed routing
+  (`f7b5f136`), with general-path and whole-transfer counterexamples documented.
+
+## magemath
+
+### [Unreleased]
+
+#### QUEUED BREAKING CHANGES
+
+- Draft no-default-features consumers must select their transcendental family (24118cd6).
+
+#### Added
+
+- All 35 deprecated Magetypes transcendental names at widths four/eight and optional sixteen, including compatibility aliases and an exact legacy contract namespace (9f466de6).
+- Shared width-specific vector bodies and cbrt implementations owned by Magemath, with no deprecated method delegation or Magetypes visibility change (9f466de6).

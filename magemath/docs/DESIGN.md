@@ -243,8 +243,9 @@ and zenjpegai's Cephes-derived `exp`.
 
 ## Not done
 
-- `f32x4`, `f32x16`, f64 vectors: waiting on a caller. `kernels` is written for `f32x8`;
-  other widths need a reviewed extension of the shared bodies.
+- f64 vector transcendentals remain caller-driven. The approved f32 expansion
+  now covers all 35 legacy names at widths four/eight and optional sixteen
+  through shared bodies; see [MIGRATION.md](MIGRATION.md).
 - `zenmath::special` and `zenmath::exact` are empty placeholders.
 - No consumer has migrated. zensr's `exp_midp_portable` is the nearest candidate, but it
   deliberately gives NaN the x86 answer (2^-126) so its model goldens hold; moving it to
@@ -252,15 +253,18 @@ and zenjpegai's Cephes-derived `exp`.
 - CI does not run these crates yet. Before landing, add `just test-magemath`,
   `test-magemath-wasm`, `test-magemath-no-fma` and a native ARM run to `ci.yml`,
   and exercise `windows-11-arm`, macOS ARM64 and i686.
-- Timing is not measured on Zen 5, on any AVX-512 tier, or on a WASM engine other than
-  wasmtime. So whether `+v4x` earns its place for `f32x8` is unmeasured: an earlier
-  revision of `exp2_midp` was 32 instructions there against 40 on v3, and the tier stays
-  behind the `avx512` feature until someone times it. Miri has not been run.
-- `zenmath` without `std` runs `fmaf` in software on every target. Its midp functions
+- The dispatch study measures four/eight-f64 variants and AVX-512 controls;
+  see `benchmarks/zenmath_dispatch_2026-11-06`. This power study measures V3,
+  NEON and Wasmtime 49, while true eight-lane AVX-512 gamma is correctness-gated.
+  Gamma AVX-512 performance, Zen 5 and other WASM engines are not measured here.
+- The ordinary reference `fmaf` without `std` uses software. Explicit
+  Archmage proof entries can use hardware FMA without `std`; ordinary automatic
+  selection requires `runtime-dispatch`. The following scalar-only observation
+  predates those context policies: Its midp functions
   took 4.5-8.5x the time of the scalar-tier vector kernel on aarch64, where `std`'s
   `mul_add` is one instruction. A scalar-only consumer with compile-time x86 FMA or AArch64 NEON can use
   the `std` feature for hardware FMA; other builds retain software because
-  std software FMA failed independent edge tests. This feature's speed is not measured.
+  std software FMA failed independent edge tests. Current policy-context measurements are in the power study; the historical ratio is not a claim about those entries.
 
 ## Existing implementation inventory
 

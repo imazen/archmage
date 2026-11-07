@@ -1,6 +1,11 @@
 # Existing math inventory and migration review
 
-Reviewed 2026-11-05. This reconciles work already implemented in
+Draft follow-up on 2026-11-06 adds Magemath
+widths four/eight/optional sixteen and an exact legacy contract surface for all
+35 deprecated Magetypes names; see [the migration inventory](../../magemath/docs/MIGRATION.md).
+The dated downstream extraction review below retains its original scope.
+
+Historical review, 2026-11-05: this reconciles work already implemented in
 `zenmetrics-math`; it is not a proposal to reimplement that crate. The later owner request authorizes draft Rust ports of the consumed CORE-MATH
 subset; see [port coverage and validation](CORE_MATH.md). Consumer migration
 remains separate.

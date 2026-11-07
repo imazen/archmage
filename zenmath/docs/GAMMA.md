@@ -60,13 +60,15 @@ Performance remains selective. The frozen experimental C0 decode/bits/64
 composition lost to std (1.1443833 versus 0.9674650 ns/value; paired all-round
 95% difference interval +0.1694829..+0.1840226 ns/value), although fixed-power
 measurements won. Production guard, dynamic-exponent and whole-transfer measurements are retained
-in the power study, separately from those experimental ratios. General scalar
-ARM differences overlap zero after guard placement. Packed ARM still pays
-measured guard overhead on general/mixed inputs (about 0.96 and 1.88 ns/value in
-the long-buffer controls); the corresponding paired intervals are positive.
-This is a selective gamma optimization, not a universal power speedup. A tested
-outlined NEON alternative did not remove that general-input cost and reduced
-the gamma advantage, so the existing inline polynomial is retained.
+in the power study, separately from those experimental ratios. General scalar ARM differences overlap zero after guard placement. The final
+once-buffer NEON decode control is 9.2024 versus std 10.7912 ns/value
+(paired all-round 95% difference interval -2.4957..-0.6820); encode's interval
+includes zero. General power still loses to std. The native historical-input
+once-buffer control regresses by 0.6851 ns/value against its pre-gamma version
+(interval +0.1365..+1.2328). The production C0 decode/bits/64 NEON control also
+loses narrowly to std (interval +0.0017..+0.0158). These are selective gamma
+improvements. The earlier outlined NEON candidate was rejected; all diagnostic
+stages remain archived.
 
 The production generator emits named Estrin stages for both selected degrees.
 This is the same pair/carry/square graph as the proof, with each coefficient
