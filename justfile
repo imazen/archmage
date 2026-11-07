@@ -11,6 +11,13 @@ test:
 test-float-contracts:
     cargo test -p magetypes --features "std avx512" --test float_inequality --test float_negation --test scalar_parity --test doc_examples
 
+# Run the same float contracts under ARM emulation and strict WASM SIMD.
+test-float-contracts-arm:
+    cross test -p magetypes --target aarch64-unknown-linux-gnu --features std --test float_inequality --test float_negation --test scalar_parity --test doc_examples
+
+test-float-contracts-wasm:
+    RUSTFLAGS="-C target-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test -p magetypes --target wasm32-wasip1 --features std --test float_inequality --test float_negation --test scalar_parity --test doc_examples
+
 # Emit the named neg8_codegen probe for instruction inspection.
 float-contract-codegen:
     cargo rustc -p magetypes --release --features "std avx512" --test float_negation -- --emit=asm

@@ -77,7 +77,15 @@ macro_rules! tier {
     ($name:ident, $token:ty) => {
         #[test]
         fn $name() {
-            if let Some(t) = <$token>::summon() {
+            let token = <$token>::summon();
+            if stringify!($name) == "scalar" || cfg!(not(target_arch = "x86_64")) {
+                assert!(
+                    token.is_some(),
+                    "required backend {} is unavailable",
+                    stringify!($name)
+                );
+            }
+            if let Some(t) = token {
                 x4(t);
                 x8(t);
                 d2(t);

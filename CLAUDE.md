@@ -1286,14 +1286,14 @@ Documented accuracy limits, left unfixed because every fix measured slower on ev
 
 - **Float negation bits (#135):** x86 uses sign-bit XOR instead of zero minus
   the input. `float_negation` requires exact sign, payload and signalling-bit
-  preservation across every float width; generated scalar parity no longer
+  preservation across every generic float width; generated scalar parity no longer
   tolerates zero-sign or NaN-bit differences for negation. Cross-architecture
   comparison classifies negation as exact.
 
 - **Float inequality NaN masks (#130):** x86 float `simd_ne` now uses the
   unordered predicate like Rust and the other backends. The generator and
   generated scalar parity include NaNs. `float_inequality` checks exact masks
-  and the complement of equality for all float widths, including signalling
+  and the complement of equality for all generic float widths, including signalling
   NaNs; the documented x86 behavior change is recorded in the changelog.
 
 - **Warnings in macro output and on untested targets (2026-10-23):** body

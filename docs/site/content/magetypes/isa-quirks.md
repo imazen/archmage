@@ -161,6 +161,12 @@ becomes `-0.0`, and NaN payloads and signalling bits are preserved. The earlier
 x86 subtraction form could lose the zero sign and quiet NaNs. Min/max still
 have the NaN and equal-zero differences described above.
 
+Regression coverage: `just test-float-contracts` checks exact masks and
+negation bits across f32x4/x8/x16 and f64x2/x4/x8. The corresponding
+`test-float-contracts-arm` and `test-float-contracts-wasm` recipes exercise
+NEON and strict SIMD128. `just float-contract-codegen` emits the named V3
+negation probe: its arithmetic is one `vxorps`, with no `vsubps`.
+
 ## Fused arithmetic and reductions
 
 | Example | x86 / NEON | WASM / scalar | What we fix up |
